@@ -80,9 +80,11 @@ import {
 import { desktopAssistantRuntimeSignal } from "../../desktop/linux/src/renderer/assistant-runtime.ts";
 import {
   assistantInspectionText,
+  assistantRarityInvalidation,
   assistantRarityResultDigest,
   assistantRarityResultSettlement,
   assistantRaritySettlement,
+  rarityInvalidationMatches,
 } from "../../desktop/linux/src/renderer/assistant-inspection.ts";
 import { formatSafeRarityEvidence } from "@sceneaxi/authoring-core/rarity-evidence";
 import { pollAssistantJob } from "../../desktop/linux/src/renderer/assistant-poll.ts";
@@ -1194,6 +1196,7 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
   });
 
   function mountRarityChrome(port?: unknown) {
+    const accept = new FakeElement("change-accept", { action: "change-accept" });
     const reject = new FakeElement("change-reject", { action: "change-reject" });
     const reload = new FakeElement("document-reload", { action: "document-reload" });
     const openRecent = new FakeElement("project-open-recent", { action: "project-open-recent" });
@@ -1252,6 +1255,7 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
       ]),
     );
     const documentListeners = new Map<string, (event: { readonly detail?: unknown }) => void>();
+    const dispatchedEvents: Array<{ readonly type: string; readonly detail?: unknown }> = [];
     const script = /<script>([\s\S]*?)<\/script>/.exec(desktopLinuxIndexHtml())?.[1];
     expect(script).toBeDefined();
     runInNewContext(script ?? "", {
@@ -1265,6 +1269,7 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
         // it by marking the detail accepted. Routing it back through the same
         // listener map lets a test stand in for that renderer.
         dispatchEvent: (event: { readonly type: string; readonly detail?: unknown }) => {
+          dispatchedEvents.push(event);
           documentListeners.get(event.type)?.(event);
           return true;
         },
@@ -1287,12 +1292,12 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
       ...(port === undefined ? {} : { sceneaxiDesktop: port }),
     });
     return {
-      shell, reject, reload, openRecent, removeRecent, recentSelect, play, undo,
+      shell, accept, reject, reload, openRecent, removeRecent, recentSelect, play, undo,
       runSession, runLive,
       runEvidence, proposal, empty, documentPath,
       contentHash, diff, reviewEvidence, evidence, evidenceEmpty, projectState, status,
       fileStatus, badge, changesTab, evidenceTab, changesPanel, evidencePanel,
-      documentListeners,
+      documentListeners, dispatchedEvents,
     };
   }
 
@@ -1307,6 +1312,7 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     requestDigest: `sha256:${"2".repeat(64)}`,
     outcomeDigest: `sha256:${"3".repeat(64)}`,
     provenanceDigest: `sha256:${"4".repeat(64)}`,
+    providerEvidenceDigest: `sha256:${"e".repeat(64)}`,
     namespaceDigest: `sha256:${"5".repeat(64)}`,
     tierRollDigest: `sha256:${"6".repeat(64)}`,
     candidateRollDigest: `sha256:${"7".repeat(64)}`,
@@ -1718,9 +1724,15 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     }
     for (const malformed of [
       { ...RARITY_EVIDENCE_FIXTURE, eventId: "Invalid event" },
+      { ...RARITY_EVIDENCE_FIXTURE, eventId: "valid-event\n" },
       { ...RARITY_EVIDENCE_FIXTURE, tier: "mythic" },
       { ...RARITY_EVIDENCE_FIXTURE, algorithmId: "other-algorithm" },
       { ...RARITY_EVIDENCE_FIXTURE, namespaceDigest: "sha256:short" },
+      { ...RARITY_EVIDENCE_FIXTURE, providerEvidenceDigest: "sha256:short" },
+      {
+        ...RARITY_EVIDENCE_FIXTURE,
+        providerEvidenceDigest: `${RARITY_EVIDENCE_FIXTURE.providerEvidenceDigest}\n`,
+      },
       {
         ...RARITY_EVIDENCE_FIXTURE,
         providerEvidence: {
@@ -1735,6 +1747,16 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
           model: {
             ...RARITY_EVIDENCE_FIXTURE.providerEvidence.model,
             model: "wayfinder\nraw-detail",
+          },
+        },
+      },
+      {
+        ...RARITY_EVIDENCE_FIXTURE,
+        providerEvidence: {
+          ...RARITY_EVIDENCE_FIXTURE.providerEvidence,
+          model: {
+            ...RARITY_EVIDENCE_FIXTURE.providerEvidence.model,
+            provider: "sceneaxi-fixture\n",
           },
         },
       },
@@ -1805,6 +1827,21 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
         evidence: RARITY_EVIDENCE_FIXTURE,
       }),
     ).toBeNull();
+    const invalidation = {
+      invalidated: true,
+      namespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
+    };
+    expect(
+      assistantRarityInvalidation(RARITY_EVIDENCE_FIXTURE.namespaceDigest, invalidation),
+    ).toMatchObject({
+      activeNamespaceDigest: null,
+      evidenceVisible: false,
+      status: expect.stringContaining("retired"),
+    });
+    expect(
+      rarityInvalidationMatches(RARITY_EVIDENCE_FIXTURE.namespaceDigest, invalidation),
+    ).toBe(true);
+    expect(rarityInvalidationMatches(`sha256:${"f".repeat(64)}`, invalidation)).toBe(false);
   });
 
   it("associates settlement only with the displayed rarity result", () => {
@@ -2011,21 +2048,67 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
   });
 
   it("retires displayed evidence when Reload proves the document is gone", async () => {
+    let statusReads = 0;
     const port = {
-      request: () =>
-        Promise.resolve({
-          ok: true,
-          action: "authoring",
-          data: {
-            ok: false,
-            diagnostics: [{ code: "document-not-found", message: "scene.json is gone" }],
-          },
-        }),
+      request: (request: { readonly action?: string; readonly payload?: { readonly op?: string } }) => {
+        if (request.action === "open-path") {
+          return Promise.resolve({
+            ok: true,
+            action: "open-path",
+            data: {
+              closed: true,
+              initialDigest: "sha256:initial",
+              tickDigests: ["sha256:tick"],
+              instanceCount: 1,
+              mountable: { sceneId: "desktop-scene" },
+              rarity: RARITY_EVIDENCE_FIXTURE,
+              raritySession: RARITY_PRODUCT_SESSION,
+            },
+          });
+        }
+        statusReads += 1;
+        return Promise.resolve(statusReads === 1
+          ? {
+              ok: true,
+              action: "authoring",
+              data: {
+                ok: true,
+                documentId: "scene",
+                contentHash: "sha256:accepted",
+                data: { rarity: { kind: "sceneaxi.rarity.namespace" } },
+                rarityNamespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
+                acceptedRarityEvidence: RARITY_EVIDENCE_FIXTURE,
+                undoAvailability: "unavailable",
+              },
+            }
+          : {
+              ok: true,
+              action: "authoring",
+              data: {
+                ok: false,
+                diagnostics: [{ code: "document-not-found", message: "scene.json is gone" }],
+              },
+            });
+      },
     };
-    const { shell, reload, status, evidence, evidenceEmpty, documentListeners } =
+    const {
+      shell, reload, play, status, evidence, evidenceEmpty, runEvidence,
+      documentListeners, dispatchedEvents,
+    } =
       mountRarityChrome(port);
-    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
-      detail: { replayed: true, snapshot: null, evidence: RARITY_EVIDENCE_FIXTURE },
+    documentListeners.set(DESKTOP_VIEWPORT_PLAY_EVENT, (event) => {
+      const detail = event.detail as { accepted: boolean; frame: number | null };
+      detail.accepted = true;
+      detail.frame = 1;
+    });
+
+    shell.clickListener?.({ target: reload });
+    await vi.waitFor(() => {
+      expect(status.textContent).toContain("· open ·");
+    });
+    shell.clickListener?.({ target: play });
+    await vi.waitFor(() => {
+      expect(runEvidence.hidden).toBe(false);
     });
     expect(evidence.hidden).toBe(false);
 
@@ -2036,6 +2119,174 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     expect(evidence.hidden).toBe(true);
     expect(evidence.textContent).toBe("");
     expect(evidenceEmpty.hidden).toBe(false);
+    expect(runEvidence.hidden).toBe(true);
+    expect(runEvidence.textContent).toBe("");
+    expect(dispatchedEvents).toContainEqual({
+      type: DESKTOP_RARITY_PROPOSAL_EVENT,
+      detail: {
+        invalidated: true,
+        namespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
+      },
+    });
+  });
+
+  it("retains displayed evidence when Reload cannot read the document", async () => {
+    const port = {
+      request: () =>
+        Promise.resolve({
+          ok: true,
+          action: "authoring",
+          data: {
+            ok: false,
+            diagnostics: [{ code: "document-read-failed", message: "scene.json is unreadable" }],
+          },
+        }),
+    };
+    const { shell, reload, status, evidence, documentListeners, dispatchedEvents } =
+      mountRarityChrome(port);
+    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+      detail: { replayed: true, snapshot: null, evidence: RARITY_EVIDENCE_FIXTURE },
+    });
+
+    shell.clickListener?.({ target: reload });
+    await vi.waitFor(() => {
+      expect(status.textContent).toContain("Open refused · document-read-failed");
+    });
+    expect(evidence.hidden).toBe(false);
+    expect(evidence.textContent).toContain(RARITY_EVIDENCE_FIXTURE.namespaceDigest);
+    expect(dispatchedEvents).not.toContainEqual({
+      type: DESKTOP_RARITY_PROPOSAL_EVENT,
+      detail: {
+        invalidated: true,
+        namespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
+      },
+    });
+  });
+
+  it("retains accepted evidence through unreadable recovery restart", async () => {
+    const pending = {
+      ...RARITY_PROPOSAL_SNAPSHOT,
+      phase: "pending",
+      journalRecoveryPending: true,
+      transactionId: "tx-recovery",
+      diagnostics: [{ code: "journal-write-failed", message: "recovery required" }],
+    };
+    const port = {
+      request: (request: { readonly payload?: { readonly op?: string } }) =>
+        Promise.resolve(
+          request.payload?.op === "accept"
+            ? { ok: true, action: "authoring", data: pending }
+            : request.payload?.op === "restart"
+              ? {
+                  ok: true,
+                  action: "authoring",
+                  data: {
+                    ok: false,
+                    diagnostics: [
+                      { code: "document-read-failed", message: "scene.json is unreadable" },
+                    ],
+                  },
+                }
+              : { ok: false, reason: "DESKTOP_TEST_NO_RUNTIME", message: "no runtime" },
+        ),
+    };
+    const {
+      shell, accept, reload, status, evidence,
+      documentListeners, dispatchedEvents,
+    } =
+      mountRarityChrome(port);
+    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+      detail: { replayed: true, snapshot: null, evidence: RARITY_EVIDENCE_FIXTURE },
+    });
+    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+      detail: {
+        replayed: false,
+        evidence: RARITY_EVIDENCE_FIXTURE,
+        snapshot: { ...RARITY_PROPOSAL_SNAPSHOT, renderedDiff: "translation.x: 0 → 3" },
+      },
+    });
+
+    shell.clickListener?.({ target: accept });
+    await vi.waitFor(() => {
+      expect(status.textContent).toContain("recovery pending");
+    });
+    shell.clickListener?.({ target: reload });
+    await vi.waitFor(() => {
+      expect(status.textContent).toContain("Recovery reset · recovery-pending");
+      expect(status.textContent).toContain("document-read-failed");
+    });
+    expect(evidence.hidden).toBe(false);
+    expect(evidence.textContent).toContain(RARITY_EVIDENCE_FIXTURE.namespaceDigest);
+    expect(dispatchedEvents).not.toContainEqual({
+      type: DESKTOP_RARITY_PROPOSAL_EVENT,
+      detail: {
+        invalidated: true,
+        namespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
+      },
+    });
+  });
+
+  it("settles and invalidates a staged rarity proposal on recovery restart", async () => {
+    const pending = {
+      ...RARITY_PROPOSAL_SNAPSHOT,
+      phase: "pending",
+      journalRecoveryPending: true,
+      transactionId: "tx-rarity-recovery",
+      diagnostics: [{ code: "journal-write-failed", message: "recovery required" }],
+      rarityEvidence: RARITY_EVIDENCE_FIXTURE,
+    };
+    const port = {
+      request: (request: { readonly payload?: { readonly op?: string } }) =>
+        Promise.resolve(
+          request.payload?.op === "accept"
+            ? { ok: true, action: "authoring", data: pending }
+            : request.payload?.op === "restart"
+              ? {
+                  ok: true,
+                  action: "authoring",
+                  data: {
+                    ok: false,
+                    diagnostics: [
+                      { code: "document-read-failed", message: "scene.json is unreadable" },
+                    ],
+                  },
+                }
+              : { ok: false, reason: "DESKTOP_TEST_NO_RUNTIME", message: "no runtime" },
+        ),
+    };
+    const {
+      shell, accept, reload, status, evidence, reviewEvidence,
+      documentListeners, dispatchedEvents,
+    } = mountRarityChrome(port);
+    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+      detail: {
+        replayed: false,
+        evidence: RARITY_EVIDENCE_FIXTURE,
+        snapshot: { ...RARITY_PROPOSAL_SNAPSHOT, rarityEvidence: RARITY_EVIDENCE_FIXTURE },
+      },
+    });
+
+    shell.clickListener?.({ target: accept });
+    await vi.waitFor(() => {
+      expect(status.textContent).toContain("recovery pending");
+    });
+    shell.clickListener?.({ target: reload });
+    await vi.waitFor(() => {
+      expect(status.textContent).toContain("Recovery reset · recovery-pending");
+    });
+    expect(evidence.hidden).toBe(true);
+    expect(reviewEvidence.hidden).toBe(true);
+    expect(dispatchedEvents).toContainEqual({
+      type: DESKTOP_RARITY_PROPOSAL_EVENT,
+      detail: { settled: "rejected", evidence: RARITY_EVIDENCE_FIXTURE },
+    });
+    expect(dispatchedEvents).toContainEqual({
+      type: DESKTOP_RARITY_PROPOSAL_EVENT,
+      detail: {
+        invalidated: true,
+        namespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
+      },
+    });
   });
 
   it("retires rarity evidence when Undo takes the accepted namespace back out", async () => {

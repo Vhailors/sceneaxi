@@ -32,6 +32,7 @@ export type RarityResolutionContext = Readonly<{
   scope: string;
   /** Explicit stable authoring/kernel event identity. */
   eventId: string;
+  providerEvidenceDigest?: string;
 }>;
 
 export type RarityResolution = Readonly<{
@@ -41,6 +42,8 @@ export type RarityResolution = Readonly<{
 }>;
 
 export type RarityResolutionResult = RarityValidationResult<RarityResolution>;
+
+const DIGEST_RE = /^sha256:[0-9a-f]{64}$/;
 
 function drawFor(digestValue: string, total: number): number {
   const hex = digestValue.slice("sha256:".length);
@@ -101,6 +104,17 @@ function contextRefusal(
       RARITY_REFUSE_CODES.invalidIdentifier,
       "rarity.context.eventId",
       "Rarity eventId must be a stable lowercase identifier.",
+    );
+  }
+  if (
+    context.providerEvidenceDigest !== undefined &&
+    (context.providerEvidenceDigest.length !== 71 ||
+      !DIGEST_RE.test(context.providerEvidenceDigest))
+  ) {
+    return refuseRarity(
+      RARITY_REFUSE_CODES.provenanceMismatch,
+      "rarity.context.providerEvidenceDigest",
+      "Rarity provider evidence digest must be sha256:<64 lowercase hex>.",
     );
   }
   return null;
@@ -180,6 +194,9 @@ export function resolveRarityRoll(
     candidateDraw,
     candidateTotalWeight,
     outcomeDigest,
+    ...(context.providerEvidenceDigest === undefined
+      ? {}
+      : { providerEvidenceDigest: context.providerEvidenceDigest }),
   });
   const record: RarityRollRecord = Object.freeze({
     eventId: context.eventId,

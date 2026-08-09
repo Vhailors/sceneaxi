@@ -66,6 +66,7 @@ export type RarityKernelResolutionInput = Readonly<{
   eventId: string;
   namespace: RarityNamespace;
   request: RarityRollRequest;
+  providerEvidence: ModelProviderCallEvidence;
 }>;
 
 export type RarityKernelResolver = (
@@ -87,6 +88,7 @@ export type SafeRarityEvidence = Readonly<{
   candidateId: string;
   namespaceDigest: string;
   provenanceDigest: string;
+  providerEvidenceDigest: string;
   algorithmId: string;
   scope: string;
   projectSeed: number | null;
@@ -141,7 +143,11 @@ export function safeRarityEvidenceFromNamespace(
   projectSeed: number | null = null,
 ): SafeRarityEvidence {
   const roll = namespace.rolls.find((candidate) => candidate.eventId === eventId);
-  if (roll === undefined || namespace.providerEvidence === undefined) {
+  if (
+    roll === undefined ||
+    roll.providerEvidence === undefined ||
+    roll.provenance.providerEvidenceDigest === undefined
+  ) {
     throw new Error("validated rarity namespace is missing its accepted roll evidence");
   }
   return Object.freeze({
@@ -150,6 +156,7 @@ export function safeRarityEvidenceFromNamespace(
     candidateId: roll.outcome.candidateId,
     namespaceDigest: digestRarityNamespace(namespace),
     provenanceDigest: digestRarityProvenance(roll.provenance),
+    providerEvidenceDigest: roll.provenance.providerEvidenceDigest,
     algorithmId: roll.provenance.algorithmId,
     scope: roll.provenance.scope,
     projectSeed,
@@ -162,7 +169,7 @@ export function safeRarityEvidenceFromNamespace(
     tierTotalWeight: roll.provenance.tierTotalWeight,
     candidateDraw: roll.provenance.candidateDraw,
     candidateTotalWeight: roll.provenance.candidateTotalWeight,
-    providerEvidence: namespace.providerEvidence,
+    providerEvidence: roll.providerEvidence,
   });
 }
 
@@ -325,7 +332,6 @@ export function stageRarityProviderProposal(input: Readonly<{
     kind: RARITY_NAMESPACE_KIND,
     policy: policy.value,
     rolls: Object.freeze([]),
-    providerEvidence: providerEvidence.value,
   });
   if (input.documentData.rarity !== undefined) {
     const current = validateRarityNamespace(input.documentData.rarity);
@@ -341,29 +347,23 @@ export function stageRarityProviderProposal(input: Readonly<{
         "rarity.policy",
       );
     }
-    // One namespace holds one provider call descriptor, and it describes every
-    // roll in it. Both ways of breaking that are refused here, at the single
-    // point the stored namespace is read, rather than on the branches that
-    // happen to reach it: a namespace whose rolls have no descriptor cannot
-    // borrow this call's — including the rolls a #240 kernel-only path produced,
-    // which legitimately have none — and one that already has a descriptor
-    // cannot be extended by a call carrying a different one.
-    if (existing.rolls.length > 0 && existing.providerEvidence === undefined) {
+    if (existing.rolls.some((roll) => roll.providerEvidence === undefined)) {
       return refuse(
         RARITY_AUTHORING_REFUSALS.providerEvidenceAbsent,
-        "The accepted rarity namespace already holds rolls with no provider evidence, so this call's descriptor cannot be attached to them; start a new rarity namespace instead.",
-        "rarity.providerEvidence",
+        "The accepted rarity history contains a roll with no provider evidence, so it cannot be extended by this call.",
+        "rarity.rolls.providerEvidence",
       );
     }
     if (
-      existing.providerEvidence !== undefined &&
-      canonicalRarityJson(existing.providerEvidence as unknown as JsonValue) !==
-        canonicalRarityJson(providerEvidence.value as unknown as JsonValue)
+      existing.rolls.some((roll) =>
+        canonicalRarityJson(roll.providerEvidence as unknown as JsonValue) !==
+          canonicalRarityJson(providerEvidence.value as unknown as JsonValue)
+      )
     ) {
       return refuse(
         RARITY_AUTHORING_REFUSALS.providerEvidenceConflict,
-        "The namespace records one provider call descriptor for every roll it holds, so a call with different model evidence cannot extend it; start a new rarity namespace instead.",
-        "rarity.providerEvidence",
+        "The accepted rarity history has different provider evidence, so this call cannot extend it.",
+        "rarity.rolls.providerEvidence",
       );
     }
   }
@@ -384,6 +384,7 @@ export function stageRarityProviderProposal(input: Readonly<{
         eventId: input.eventId,
         namespace: existing,
         request: request.value,
+        providerEvidence: providerEvidence.value,
       });
     } catch {
       return refuse(
@@ -416,7 +417,6 @@ export function stageRarityProviderProposal(input: Readonly<{
     kind: RARITY_NAMESPACE_KIND,
     policy: existing.rolls.length === 0 ? policy.value : existing.policy,
     rolls: existing.rolls,
-    providerEvidence: existing.providerEvidence ?? providerEvidence.value,
   });
   let resolved: ReturnType<RarityKernelResolver>;
   try {
@@ -426,6 +426,7 @@ export function stageRarityProviderProposal(input: Readonly<{
       eventId: input.eventId,
       namespace,
       request: request.value,
+      providerEvidence: providerEvidence.value,
     });
   } catch {
     return refuse(
@@ -445,8 +446,9 @@ export function stageRarityProviderProposal(input: Readonly<{
       canonicalRarityJson(existing.rolls as unknown as JsonValue) ||
     digestRarityPolicy(accepted.value.policy) !== digestRarityPolicy(namespace.policy) ||
     digestRarityRequest(roll.request) !== digestRarityRequest(request.value) ||
-    canonicalRarityJson(accepted.value.providerEvidence as unknown as JsonValue) !==
-      canonicalRarityJson(namespace.providerEvidence as unknown as JsonValue)
+    roll.providerEvidence === undefined ||
+    canonicalRarityJson(roll.providerEvidence as unknown as JsonValue) !==
+      canonicalRarityJson(providerEvidence.value as unknown as JsonValue)
   ) {
     return refuse(
       RARITY_AUTHORING_REFUSALS.resolutionMismatch,

@@ -28,16 +28,26 @@ export function formatSafeRarityEvidence(
   const evidenceFields = [
     "eventId", "tier", "candidateId", "scope", "algorithmId", "policyDigest",
     "requestDigest", "outcomeDigest", "provenanceDigest", "namespaceDigest",
-    "tierRollDigest", "candidateRollDigest",
+    "tierRollDigest", "candidateRollDigest", "providerEvidenceDigest",
     "projectSeed", "tierDraw", "tierTotalWeight", "candidateDraw",
     "candidateTotalWeight", "providerEvidence",
   ];
   const providerFields = ["schemaVersion", "kind", "operation", "profile", "model"];
   const modelFields = ["provider", "model", "quantization", "version"];
-  const identifier = /^[a-z0-9][a-z0-9._:-]{0,127}$/;
-  const digest = /^sha256:[0-9a-f]{64}$/;
-  const providerDescriptor =
-    /^(?!(?:.*[._:/+-])?(?:sk|key|token|secret|credential|password)(?:[._:/+-]|$))[a-z0-9][a-z0-9._:/+-]{0,127}$/;
+  const identifier = (value: unknown) =>
+    typeof value === "string" && value.length >= 1 && value.length <= 128 &&
+    /[a-z0-9]/.test(value[0] || "") &&
+    [...value].every((character) => /[a-z0-9._:-]/.test(character));
+  const digest = (value: unknown) =>
+    typeof value === "string" && value.length === 71 && value.startsWith("sha256:") &&
+    [...value.slice(7)].every((character) => /[0-9a-f]/.test(character));
+  const providerDescriptor = (value: unknown) =>
+    typeof value === "string" && value.length <= 128 &&
+    [...value].every((character) => /[a-z0-9._:/+-]/.test(character)) &&
+    /[a-z0-9]/.test(value[0] || "") &&
+    !value.split(/[._:/+-]/).some((segment) =>
+      ["sk", "key", "token", "secret", "credential", "password"].includes(segment)
+    );
   const numericFields = [
     "projectSeed",
     "tierDraw",
@@ -50,14 +60,15 @@ export function formatSafeRarityEvidence(
     Object.keys(record).length !== evidenceFields.length ||
     !evidenceFields.every((field) => Object.prototype.hasOwnProperty.call(record, field)) ||
     !["eventId", "candidateId", "scope"].every(
-      (field) => typeof record[field] === "string" && identifier.test(String(record[field])),
+      (field) => identifier(record[field]),
     ) ||
     !["common", "uncommon", "rare", "epic", "legendary"].includes(String(record["tier"])) ||
     record["algorithmId"] !== "sceneaxi.rarity.weighted-sha256-v1" ||
     ![
       "policyDigest", "requestDigest", "outcomeDigest", "provenanceDigest",
       "namespaceDigest", "tierRollDigest", "candidateRollDigest",
-    ].every((field) => typeof record[field] === "string" && digest.test(String(record[field]))) ||
+      "providerEvidenceDigest",
+    ].every((field) => digest(record[field])) ||
     !numericFields.every(
       (field) => typeof record[field] === "number" && Number.isSafeInteger(record[field]),
     ) ||
@@ -79,9 +90,7 @@ export function formatSafeRarityEvidence(
     model === null || model === undefined || typeof model !== "object" || Array.isArray(model) ||
     Object.keys(model).length !== modelFields.length ||
     !modelFields.every((field) => Object.prototype.hasOwnProperty.call(model, field)) ||
-    !modelFields.every((field) =>
-      typeof model[field] === "string" && providerDescriptor.test(String(model[field]))
-    )
+    !modelFields.every((field) => providerDescriptor(model[field]))
   ) {
     return null;
   }
@@ -94,6 +103,7 @@ export function formatSafeRarityEvidence(
     "request " + String(record["requestDigest"]),
     "outcome " + String(record["outcomeDigest"]),
     "provenance " + String(record["provenanceDigest"]),
+    "provider evidence " + String(record["providerEvidenceDigest"]),
     "namespace " + String(record["namespaceDigest"]),
     "tier draw " + String(record["tierDraw"]) + " / " + String(record["tierTotalWeight"]),
     "candidate draw " + String(record["candidateDraw"]) + " / " +
@@ -128,16 +138,16 @@ export function formatSafeRarityEvidence(
       !bootstrapFields.every((field) => Object.prototype.hasOwnProperty.call(bootstrap, field)) ||
       bootstrap["kind"] !== "product" ||
       typeof bootstrap["subjectId"] !== "string" ||
-      !identifier.test(bootstrap["subjectId"]) ||
-      typeof bootstrap["sessionId"] !== "string" || !digest.test(bootstrap["sessionId"]) ||
+      !identifier(bootstrap["subjectId"]) ||
+      !digest(bootstrap["sessionId"]) ||
       typeof bootstrap["openedAtMs"] !== "number" || !Number.isSafeInteger(bootstrap["openedAtMs"]) ||
       bootstrap["resumed"] !== false ||
       typeof bootstrap["kernelVersion"] !== "string" || bootstrap["kernelVersion"].length === 0 ||
       typeof bootstrap["bomVersion"] !== "string" || bootstrap["bomVersion"].length === 0 ||
-      typeof session["initialDigest"] !== "string" || !digest.test(session["initialDigest"]) ||
+      !digest(session["initialDigest"]) ||
       !Array.isArray(ticks) || ticks.length === 0 ||
-      !ticks.every((value) => typeof value === "string" && digest.test(value)) ||
-      typeof session["replayDigest"] !== "string" || !digest.test(session["replayDigest"]) ||
+      !ticks.every((value) => digest(value)) ||
+      !digest(session["replayDigest"]) ||
       ticks[ticks.length - 1] !== session["replayDigest"]
     ) {
       return null;

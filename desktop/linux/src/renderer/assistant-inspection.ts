@@ -18,6 +18,32 @@ export type AssistantRaritySettlement = Readonly<{
   status: string;
 }>;
 
+export function rarityInvalidationMatches(
+  displayedNamespaceDigest: string | null,
+  detail: unknown,
+): boolean {
+  if (displayedNamespaceDigest === null || typeof detail !== "object" || detail === null) {
+    return false;
+  }
+  const record = detail as Record<string, unknown>;
+  return record["invalidated"] === true &&
+    record["namespaceDigest"] === displayedNamespaceDigest;
+}
+
+export function assistantRarityInvalidation(
+  displayedNamespaceDigest: string | null,
+  detail: unknown,
+): AssistantRaritySettlement | null {
+  return rarityInvalidationMatches(displayedNamespaceDigest, detail)
+    ? Object.freeze({
+        activeNamespaceDigest: null,
+        evidenceText: "",
+        evidenceVisible: false,
+        status: "Rarity evidence retired · the bound namespace is no longer active.",
+      })
+    : null;
+}
+
 export function assistantRaritySettlement(
   activeNamespaceDigest: string | null,
   detail: unknown,

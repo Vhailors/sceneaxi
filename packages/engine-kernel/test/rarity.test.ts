@@ -341,7 +341,7 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
     expect(replayed.save()).toEqual(save);
   });
 
-  it("binds every evidenced roll command to the namespace provider descriptor", () => {
+  it("binds every evidenced command to its stored roll", () => {
     const base = manifest();
     const evidence: ModelProviderCallEvidence = {
       schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
@@ -355,13 +355,9 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
         version: "2026-08-09",
       },
     };
-    const evidenced = open(
-      {
-        ...base,
-        rarity: { ...(base.rarity as RarityNamespace), providerEvidence: evidence },
-      },
-      fixedHost(),
-    );
+    const evidenced = open(base, fixedHost());
+    evidenced.dispatch(rarityCommand("roll-bound", fixture.request, evidence));
+    evidenced.advance({ tick: 1, deltaMs: 16 });
     expect(() => evidenced.dispatch(rarityCommand("roll-unbound"))).toThrow(
       RARITY_REFUSE_CODES.provenanceMismatch,
     );
@@ -374,8 +370,8 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
       ),
     ).toThrow(RARITY_REFUSE_CODES.provenanceMismatch);
 
-    evidenced.dispatch(rarityCommand("roll-bound", fixture.request, evidence));
-    evidenced.advance({ tick: 1, deltaMs: 16 });
+    evidenced.dispatch(rarityCommand("roll-bound-2", fixture.request, evidence));
+    evidenced.advance({ tick: 2, deltaMs: 16 });
     const save = evidenced.save();
     const dispatch = save.events.find((event) => event.kind === "dispatch");
     expect(dispatch?.kind === "dispatch" ? dispatch.command : null).toMatchObject({
@@ -383,6 +379,45 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
       eventId: "roll-bound",
       providerEvidence: evidence,
     });
+    expect(save.productManifest.rarity?.rolls[0]?.providerEvidence).toEqual(evidence);
+  });
+
+  it("refuses provider evidence added without its roll provenance binding", () => {
+    const base = manifest();
+    const resolved = resolveRarityRoll(
+      {
+        projectSeed: base.seed,
+        scope: base.productId,
+        eventId: "roll-retroactive",
+      },
+      (base.rarity as RarityNamespace).policy,
+      fixture.request,
+    );
+    if (!resolved.ok) throw new Error(resolved.message);
+    const providerEvidence: ModelProviderCallEvidence = {
+      schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+      kind: MODEL_PROVIDER_CALL_EVIDENCE_KIND,
+      operation: "tool-call",
+      profile: "@sceneaxi/profile-game",
+      model: {
+        model: "wayfinder-rarity-fixture",
+        provider: "sceneaxi-fixture",
+        quantization: "deterministic-json",
+        version: "2026-08-09",
+      },
+    };
+    expect(() =>
+      open(
+        {
+          ...base,
+          rarity: {
+            ...(base.rarity as RarityNamespace),
+            rolls: [{ ...resolved.value.record, providerEvidence }],
+          },
+        },
+        fixedHost(),
+      ),
+    ).toThrow(RARITY_REFUSE_CODES.provenanceMismatch);
   });
 
   it("refuses stored rarity evidence outside Game or Web tool calls", () => {
@@ -403,13 +438,23 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
       { ...evidence, operation: "complete" },
       { ...evidence, profile: "@sceneaxi/profile-kids" },
     ] as ModelProviderCallEvidence[]) {
+      const resolved = resolveRarityRoll(
+        {
+          projectSeed: base.seed,
+          scope: base.productId,
+          eventId: "roll-invalid-evidence",
+        },
+        (base.rarity as RarityNamespace).policy,
+        fixture.request,
+      );
+      if (!resolved.ok) throw new Error(resolved.message);
       expect(() =>
         open(
           {
             ...base,
             rarity: {
               ...(base.rarity as RarityNamespace),
-              providerEvidence: invalidEvidence,
+              rolls: [{ ...resolved.value.record, providerEvidence: invalidEvidence }],
             },
           },
           fixedHost(),
@@ -418,7 +463,7 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
     }
   });
 
-  it("carries namespace provider evidence through save and replay of a generated roll", () => {
+  it("carries per-roll provider evidence through save and replay", () => {
     const base = manifest();
     const evidence: ModelProviderCallEvidence = {
       schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
@@ -432,24 +477,26 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
         version: "2026-08-09",
       },
     };
-    const session = open(
-      {
-        ...base,
-        rarity: { ...(base.rarity as RarityNamespace), providerEvidence: evidence },
-      },
-      fixedHost(),
-    );
+    const session = open(base, fixedHost());
     session.dispatch(rarityCommand("roll-0000", fixture.request, evidence));
     session.advance({ tick: 1, deltaMs: 16 });
     const terminal = session.observe();
     const save = session.save();
     expect(terminal.rarity?.rolls).toHaveLength(1);
-    expect(save.productManifest.rarity?.providerEvidence).toEqual(evidence);
+    expect(save.productManifest.rarity?.rolls[0]?.providerEvidence).toEqual(evidence);
 
     const replayed = replay(jsonCopy(save), fixedHost());
     expect(replayed.observe()).toEqual(terminal);
-    expect(replayed.observe().rarity?.providerEvidence).toEqual(evidence);
+    expect(replayed.observe().rarity?.rolls[0]?.providerEvidence).toEqual(evidence);
     expect(replayed.save()).toEqual(save);
+
+    const stripped = jsonCopy(save);
+    const strippedRoll = stripped.productManifest.rarity?.rolls[0];
+    if (strippedRoll === undefined) throw new Error("saved rarity roll missing");
+    delete (strippedRoll as { providerEvidence?: ModelProviderCallEvidence }).providerEvidence;
+    expect(() => replay(stripped, fixedHost())).toThrow(
+      RARITY_REFUSE_CODES.provenanceMismatch,
+    );
   });
 
   it("makes an identical event/request idempotent and requires a new event id to reroll", () => {

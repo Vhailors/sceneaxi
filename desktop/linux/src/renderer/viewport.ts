@@ -30,10 +30,12 @@ import { desktopAssistantRuntimeSignal } from "./assistant-runtime.js";
 import { decideAssistantStart } from "./assistant-start.js";
 import {
   assistantRaritySettlement,
+  assistantRarityInvalidation,
   assistantRarityResultDigest,
   assistantRarityResultSettlement,
   assistantInspectionText,
   isRarityProposalResult,
+  rarityInvalidationMatches,
 } from "./assistant-inspection.js";
 import { pollAssistantJob } from "./assistant-poll.js";
 import {
@@ -265,15 +267,37 @@ function installAssistantProductFlow(
   }
   let running = false;
   let activeRarityProposalDigest: string | null = null;
+  let displayedRarityResultDigest: string | null = null;
   const assistantViewport = createDesktopAssistantViewportController(mounts);
 
   document.addEventListener(DESKTOP_RARITY_PROPOSAL_EVENT, (event: Event) => {
+    const invalidation = assistantRarityInvalidation(
+      displayedRarityResultDigest,
+      (event as CustomEvent).detail,
+    );
+    if (invalidation !== null) {
+      activeRarityProposalDigest = null;
+      displayedRarityResultDigest = null;
+      resultView.textContent = invalidation.evidenceText;
+      resultView.setAttribute("hidden", "");
+      retry.removeAttribute("hidden");
+      status.textContent = invalidation.status;
+      running = false;
+      return;
+    }
     const settlement = assistantRaritySettlement(
       activeRarityProposalDigest,
       (event as CustomEvent).detail,
     );
     if (settlement === null) return;
     activeRarityProposalDigest = settlement.activeNamespaceDigest;
+    const detail = (event as CustomEvent<{
+      evidence?: { namespaceDigest?: unknown };
+    }>).detail;
+    const settledDigest = detail?.evidence?.namespaceDigest;
+    displayedRarityResultDigest = settlement.evidenceVisible && typeof settledDigest === "string"
+      ? settledDigest
+      : null;
     resultView.textContent = settlement.evidenceText;
     if (settlement.evidenceVisible) resultView.removeAttribute("hidden");
     else resultView.setAttribute("hidden", "");
@@ -311,8 +335,10 @@ function installAssistantProductFlow(
     const result = outcome.result;
     activeRarityProposalDigest = assistantRarityResultDigest(result);
     if (isRarityProposalResult(result)) {
+      displayedRarityResultDigest = result.evidence.namespaceDigest;
       const settlement = assistantRarityResultSettlement(result);
       if (settlement !== null) {
+        if (!settlement.evidenceVisible) displayedRarityResultDigest = null;
         resultView.textContent = settlement.evidenceText;
         if (settlement.evidenceVisible) resultView.removeAttribute("hidden");
         else resultView.setAttribute("hidden", "");
@@ -341,6 +367,7 @@ function installAssistantProductFlow(
       return;
     }
     assistantViewport.replace(result.mountable);
+    displayedRarityResultDigest = null;
     backend.frameMountedContent();
     manipulatorBar?.removeAttribute("hidden");
     resultView.textContent = assistantInspectionText(job);
@@ -364,6 +391,7 @@ function installAssistantProductFlow(
       return;
     }
     activeRarityProposalDigest = assistantRarityResultDigest(null);
+    displayedRarityResultDigest = null;
     running = true;
     retry?.setAttribute("hidden", "");
     resultView.setAttribute("hidden", "");
@@ -423,6 +451,7 @@ async function mountLiveViewport(): Promise<void> {
     return;
   }
   let scene = sceneResponse.data;
+  let displayedViewportRarityDigest: string | null = null;
 
   const canvas = document.createElement("canvas");
   canvas.setAttribute("data-live-viewport", "canvas");
@@ -536,6 +565,14 @@ async function mountLiveViewport(): Promise<void> {
     desktopAssistantRuntimeSignal({ status: "mounted", controlsBound: assistantBound }),
   );
 
+  document.addEventListener(DESKTOP_RARITY_PROPOSAL_EVENT, (event: Event) => {
+    if (!rarityInvalidationMatches(displayedViewportRarityDigest, (event as CustomEvent).detail)) {
+      return;
+    }
+    displayedViewportRarityDigest = null;
+    clearOverlayLine(RARITY_EVIDENCE_ID);
+  });
+
   document.addEventListener(DESKTOP_VIEWPORT_PLAY_EVENT, (event: Event) => {
     if (!(event instanceof CustomEvent)) return;
     const detail = event.detail as {
@@ -563,6 +600,9 @@ async function mountLiveViewport(): Promise<void> {
       `kernel playback acknowledged: ${exercise.tickDigests.length} ticks advanced · digest ${exercise.initialDigest.slice(0, 18)}… → ${exercise.tickDigests.at(-1)?.slice(0, 18)}… · composed scene redrawn at viewport frame ${frame.frame}`,
     );
     const rarity = rarityEvidenceReport(exercise);
+    displayedViewportRarityDigest = rarity === null || exercise.rarity === undefined
+      ? null
+      : exercise.rarity.namespaceDigest;
     if (rarity === null) clearOverlayLine(RARITY_EVIDENCE_ID);
     else rarityEvidenceLine(stage, rarity);
   });
@@ -584,6 +624,9 @@ async function mountLiveViewport(): Promise<void> {
         `kernel open path: ${exercise.tickDigests.length} ticks advanced · digest ${exercise.initialDigest.slice(0, 18)}… → ${exercise.tickDigests[exercise.tickDigests.length - 1]?.slice(0, 18)}… · session closed`,
       );
       const rarity = rarityEvidenceReport(exercise);
+      displayedViewportRarityDigest = rarity === null || exercise.rarity === undefined
+        ? null
+        : exercise.rarity.namespaceDigest;
       if (rarity === null) clearOverlayLine(RARITY_EVIDENCE_ID);
       else rarityEvidenceLine(stage, rarity);
     } else {

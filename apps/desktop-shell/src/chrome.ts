@@ -1368,7 +1368,10 @@ if (shell) {
   let activeConflictDetail = null;
   let activeReviewSnapshot = null;
   let rarityProposalStaged = false;
+  let activeRarityEvidence = null;
   let activeRarityEvidenceDigest = null;
+  let activeReviewRarityEvidenceDigest = null;
+  let activeRunRarityEvidenceDigest = null;
   let activeProject = null;
   let editableScene = null;
   let selectedSceneEntityId = null;
@@ -1525,6 +1528,7 @@ if (shell) {
 
   const syncRarityEvidence = (evidence) => {
     const text = rarityEvidenceText(evidence);
+    activeRarityEvidence = text !== null ? evidence : null;
     activeRarityEvidenceDigest = text !== null && evidence && typeof evidence === 'object' &&
       typeof evidence.namespaceDigest === 'string'
       ? evidence.namespaceDigest
@@ -1539,7 +1543,38 @@ if (shell) {
     return text;
   };
 
-  const clearRarityEvidence = () => syncRarityEvidence(null);
+  const clearRarityEvidence = (retireAll = false) => {
+    const invalidatedDigests = new Set();
+    if (activeRarityEvidenceDigest !== null) invalidatedDigests.add(activeRarityEvidenceDigest);
+    if (retireAll && activeReviewRarityEvidenceDigest !== null) {
+      invalidatedDigests.add(activeReviewRarityEvidenceDigest);
+    }
+    if (retireAll && activeRunRarityEvidenceDigest !== null) {
+      invalidatedDigests.add(activeRunRarityEvidenceDigest);
+    }
+    const invalidatedDigest = activeRarityEvidenceDigest;
+    const cleared = syncRarityEvidence(null);
+    if (retireAll || activeReviewRarityEvidenceDigest === invalidatedDigest) {
+      activeReviewRarityEvidenceDigest = null;
+      q('[data-change-rarity-evidence]').forEach((el) => {
+        el.textContent = '';
+        el.hidden = true;
+      });
+    }
+    if (retireAll || activeRunRarityEvidenceDigest === invalidatedDigest) {
+      activeRunRarityEvidenceDigest = null;
+      q('[data-run-rarity-evidence]').forEach((el) => {
+        el.textContent = '';
+        el.hidden = true;
+      });
+    }
+    invalidatedDigests.forEach((namespaceDigest) => {
+      document.dispatchEvent(new CustomEvent(T.product.rarityProposalEvent, {
+        detail: { invalidated: true, namespaceDigest },
+      }));
+    });
+    return cleared;
+  };
 
   const reconcileRarityEvidence = (status) => {
     if (!status || status.ok !== true) return;
@@ -1552,10 +1587,13 @@ if (shell) {
       ? accepted.namespaceDigest
       : null;
     if (digest === null || acceptedDigest !== digest || rarityEvidenceText(accepted) === null) {
-      clearRarityEvidence();
+      clearRarityEvidence(true);
       return;
     }
-    if (activeRarityEvidenceDigest !== digest) syncRarityEvidence(accepted);
+    if (activeRarityEvidenceDigest !== digest) {
+      clearRarityEvidence(true);
+      syncRarityEvidence(accepted);
+    }
   };
 
   const clearConflictOutcome = () => { activeConflictDetail = null; };
@@ -1587,6 +1625,10 @@ if (shell) {
     if (contentHash) contentHash.textContent = active ? projection.first.baseContentHash : '';
     if (renderedDiff) renderedDiff.textContent = active ? projection.diff : '';
     const rarityText = active ? rarityEvidenceText(snapshot.rarityEvidence) : null;
+    activeReviewRarityEvidenceDigest = rarityText !== null &&
+      typeof snapshot.rarityEvidence?.namespaceDigest === 'string'
+      ? snapshot.rarityEvidence.namespaceDigest
+      : null;
     if (rarityEvidence) {
       rarityEvidence.textContent = rarityText || '';
       rarityEvidence.hidden = rarityText === null;
@@ -1829,7 +1871,7 @@ if (shell) {
     // leave one project's tier, seed, and digests describing another's — while
     // forgetting a recent entry binds nothing and takes nothing away.
     rarityProposalStaged = false;
-    clearRarityEvidence();
+    clearRarityEvidence(true);
     if (activeProject !== null) await openProject();
   };
 
@@ -1883,11 +1925,23 @@ if (shell) {
     projectDirty = false;
     projectRecovering = false;
     undoAvailability = 'unavailable';
-    rarityProposalStaged = false;
-    syncReview(null);
+    if (rarityProposalStaged) {
+      const discardedEvidence = activeRarityEvidence;
+      rarityProposalStaged = false;
+      syncReview(null);
+      if (rarityEvidenceText(discardedEvidence) !== null) {
+        document.dispatchEvent(new CustomEvent(T.product.rarityProposalEvent, {
+          detail: { settled: 'rejected', evidence: discardedEvidence },
+        }));
+      }
+      clearRarityEvidence();
+    } else {
+      rarityProposalStaged = false;
+      syncReview(null);
+    }
     if (reason !== null || !status || status.ok !== true || typeof status.data !== 'object' || status.data === null || typeof status.contentHash !== 'string') {
       clearSceneProperty();
-      clearRarityEvidence();
+      if (reason === 'document-not-found') clearRarityEvidence(true);
       productStatus('refused', 'Recovery reset · ' + diagnostic + ' · ' + (reason || T.product.refusals.documentDataInvalid));
       return false;
     }
@@ -1944,7 +1998,7 @@ if (shell) {
     if (reason !== null || !status || status.ok !== true || typeof status.data !== 'object' || status.data === null || typeof status.contentHash !== 'string') {
       clearSceneProperty();
       const code = reason || T.product.refusals.documentDataInvalid;
-      if (code === 'document-not-found') clearRarityEvidence();
+      if (code === 'document-not-found') clearRarityEvidence(true);
       productStatus('refused', 'Open refused · ' + code);
       showOutcome('Open refused', code, 'The active Scene Document was not opened.');
       return false;
@@ -2308,6 +2362,10 @@ if (shell) {
     // for Accept, and retiring the dock under it would deny evidence the surface
     // is showing. Only a run with nothing staged may clear it.
     const runRarity = rarityEvidenceText(exercise.rarity, exercise.raritySession);
+    activeRunRarityEvidenceDigest = runRarity !== null && exercise.rarity &&
+      typeof exercise.rarity === 'object' && typeof exercise.rarity.namespaceDigest === 'string'
+      ? exercise.rarity.namespaceDigest
+      : null;
     if (!rarityProposalStaged) syncRarityEvidence(exercise.rarity);
     q('[data-run-rarity-evidence]').forEach((el) => {
       el.textContent = runRarity || '';

@@ -144,24 +144,22 @@ request under that event refuses `RARITY_EVENT_INPUT_CONFLICT`; an intentional
 reroll must use a new event id. Kids and Hosted refuse before the fixture provider
 runs.
 
-`providerEvidence` is a property of the namespace, so every roll it holds is
-described by one provider call descriptor. Extending an existing namespace from a
+`providerEvidence` is bound to each roll. Extending an existing namespace from a
 call whose model evidence differs would leave earlier rolls reporting a descriptor
 that is not theirs, so `stageRarityProviderProposal` refuses
 `RARITY_AUTHORING_PROVIDER_EVIDENCE_CONFLICT` instead. A namespace that already
-holds rolls and carries no descriptor at all refuses
+holds an evidence-less roll refuses
 `RARITY_AUTHORING_PROVIDER_EVIDENCE_ABSENT` rather than adopting this call's — the
 rolls a kernel-only #240 path produced legitimately have none, and borrowing a
 descriptor for them would invent provenance as surely as keeping a stale one.
 Both refusals are decided once, where the stored namespace is read, so the replay
 and extend paths cannot diverge. Between them, the descriptor
 `safeRarityEvidenceFromNamespace()` reports for a roll is always the descriptor of
-the call that produced that roll's input. The kernel additionally binds that
-descriptor to every evidenced `rarity-roll` dispatch event: the command must carry
-the exact namespace descriptor, while an evidence-less namespace requires an
-evidence-less command. Save/replay therefore refuses a missing or conflicting
-per-roll binding instead of attributing a later request to an earlier provider
-call.
+the call that produced that roll's input. The kernel additionally compares that
+roll-bound descriptor with its digest in the roll provenance and with the matching
+`rarity-roll` dispatch event. Open/save/replay therefore refuse a missing,
+retroactively added, or conflicting binding instead of attributing a later request
+to an earlier provider call.
 
 All four required surfaces render that evidence through one function,
 `formatSafeRarityEvidence()` on the import-free
@@ -226,7 +224,7 @@ evidence reconciliation through recovery, shared formatter and mode ownership,
 and executable refusal coverage). None of `85b8f75`, `fac19c4`, or `974b2af` is
 covered by the historical smoke observation below.
 
-Its executable desktop vector is unchanged by all of them —
+The current executable desktop vector is
 `tests/e2e/fixtures/rarity-provider/wayfinder-desktop.json`:
 
 - scope `desktop-linux-rarity`, seed `20260809`, event
@@ -240,10 +238,12 @@ Its executable desktop vector is unchanged by all of them —
   `sha256:e70812f13e9a23e08476afce6fd6e8690a3d74e41f1807c977d0d7b7482067d8`;
 - outcome digest
   `sha256:ec77ae2c1f62725339fbf87a0e39d61cfd680941fb975a045770cb31f0d0d5de`;
+- provider-evidence digest
+  `sha256:309285987a87148e1fb20a03ae9984e4bdecec9c7936b3e0f142d42f3592e7af`;
 - provenance digest
-  `sha256:db910560dd96620f7d42b5114a0f28b53140bb87569024c184c6ad20e93cfb6b`;
+  `sha256:a710a29af3c8fa4a7a5bf68c74c9dcd47d463ba10c2f13426f81657e99f9809a`;
 - namespace digest
-  `sha256:edff92bd9ac5a8e38044e76bda2f4339b7545d1b247f710fce3629a33070b1c8`.
+  `sha256:caa07bc955f0001a766741d4714333fa0c955fdf43095919c7dc4b2cff57c868`.
 
 Observed commands:
 
@@ -294,7 +294,14 @@ the shipped evidence contract to runtime validation, added semantic renderer
 bundle checks, bounded Agent input in the renderer, associated settlement with
 the displayed result, and retired evidence when a document was missing;
 `6a75109` corrected Node 20 smoke invocation. These are post-smoke source
-corrections; the smoke was not rerun after them or this follow-up review.
+corrections. `105d120` then bounded and filtered provider descriptors, separated
+missing documents from read failures, enforced the Agent prompt limit at the
+shared bridge, preserved staged evidence during Play, and handled late proposal
+settlement. This follow-up correction binds evidence to individual rolls, protects
+an unresolved ready Agent job, rejects final-line terminators in descriptors,
+retains evidence through unreadable recovery, and invalidates matching Assistant,
+Run, viewport, and Evidence output together. The smoke was not rerun after these
+changes.
 
 The pinned vector digests above, by contrast, are re-proved on every run:
 `tests/e2e/rarity-provider-desktop-golden.test.ts` compares runtime output to

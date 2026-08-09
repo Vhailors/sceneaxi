@@ -50,6 +50,7 @@ const acceptanceVector = JSON.parse(
     requestDigest: string;
     outcomeDigest: string;
     provenanceDigest: string;
+    providerEvidenceDigest: string;
     namespaceDigest: string;
     tierRollDigest: string;
     candidateRollDigest: string;
@@ -332,10 +333,20 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
 
     const path = join(root, DESKTOP_ACTIVE_DOCUMENT_PATH);
     const document = JSON.parse(readFileSync(path, "utf8")) as {
-      data: { rarity: { providerEvidence?: unknown } };
+      data: {
+        rarity: {
+          rolls: Array<{
+            providerEvidence?: unknown;
+            provenance: { providerEvidenceDigest?: string };
+          }>;
+        };
+      };
     };
-    expect(document.data.rarity.providerEvidence).toBeDefined();
-    delete document.data.rarity.providerEvidence;
+    expect(document.data.rarity.rolls[0]?.providerEvidence).toBeDefined();
+    const firstRoll = document.data.rarity.rolls[0];
+    if (firstRoll === undefined) throw new Error("accepted rarity roll missing");
+    delete firstRoll.providerEvidence;
+    delete firstRoll.provenance.providerEvidenceDigest;
     writeFileSync(path, `${JSON.stringify(document)}\n`);
     const tampered = documentBytes(root);
 
@@ -487,6 +498,40 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
       data: null,
     });
     expect(documentBytes(root)).toBe(before);
+  });
+
+  it("protects a ready rarity job until its proposal settles", async () => {
+    const root = projectRoot();
+    const bridge = createDesktopBridge({
+      cwd: root,
+      runRarityProvider: createDesktopRarityFixtureProvider(),
+    });
+    startRarity(bridge);
+    expect(await settledJob(bridge)).toMatchObject({
+      status: "ready",
+      result: { kind: "rarity-proposal", authoring: { phase: "reviewing" } },
+    });
+
+    expect(
+      bridge.handle({
+        action: "assistant",
+        payload: {
+          op: "start",
+          mode: "build",
+          route: "local",
+          profile: "@sceneaxi/profile-game",
+          prompt: "build a crate",
+        },
+      }),
+    ).toMatchObject({ ok: false, reason: "DESKTOP_ASSISTANT_BUSY" });
+    expect(bridge.handle({ action: "assistant", payload: { op: "status" } })).toMatchObject({
+      ok: true,
+      data: { status: "ready", result: { kind: "rarity-proposal" } },
+    });
+
+    expect(
+      bridge.handle({ action: "authoring", payload: { op: "reject" } }),
+    ).toMatchObject({ ok: true, data: { phase: "rejected" } });
   });
 
   it("turns an in-flight document change into an actionable stale-content refusal", async () => {
@@ -862,10 +907,18 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
     bridge.handle({ action: "authoring", payload: { op: "accept" } });
 
     const documentData = JSON.parse(documentBytes(root)).data as {
-      rarity: { providerEvidence?: unknown; rolls: readonly unknown[] };
+      rarity: {
+        rolls: Array<{
+          providerEvidence?: unknown;
+          provenance: { providerEvidenceDigest?: string };
+        }>;
+      };
     };
     expect(documentData.rarity.rolls).toHaveLength(1);
-    delete documentData.rarity.providerEvidence;
+    const firstRoll = documentData.rarity.rolls[0];
+    if (firstRoll === undefined) throw new Error("accepted rarity roll missing");
+    delete firstRoll.providerEvidence;
+    delete firstRoll.provenance.providerEvidenceDigest;
 
     const contribution = await createDesktopRarityFixtureProvider()({
       profile: "@sceneaxi/profile-game",
@@ -889,7 +942,7 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
     expect(staged).toMatchObject({
       ok: false,
       reason: RARITY_AUTHORING_REFUSALS.providerEvidenceAbsent,
-      path: "rarity.providerEvidence",
+      path: "rarity.rolls.providerEvidence",
     });
     expect(resolverCalls).toBe(0);
   });
@@ -906,10 +959,6 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
     const acceptedBytes = documentBytes(root);
     expect(acceptedBytes).toContain(DESKTOP_RARITY_FIXTURE_MODEL.version);
 
-    // `providerEvidence` is a namespace property, so every roll it holds is
-    // described by one descriptor. A second call from a different model may not
-    // extend it, because the rolls already stored would then report a descriptor
-    // that is not theirs.
     const requoted = createDesktopBridge({
       cwd: root,
       runRarityProvider: createDesktopRarityFixtureProvider({

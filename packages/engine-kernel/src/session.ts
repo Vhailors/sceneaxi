@@ -19,6 +19,7 @@ import {
   canonicalRarityJson,
   digestRarityPolicy,
   digestRarityRequest,
+  digestRarityValue,
   isRarityForbiddenInputKey,
   isRarityIdentifier,
   snapshotPlainRecord,
@@ -34,7 +35,6 @@ import {
   type ProductManifest,
   type RarityNamespace,
   type RarityPolicy,
-  type ModelProviderCallEvidence,
   type RarityRefuseCode,
   type RarityRollCommand,
   type RarityRollRecord,
@@ -80,7 +80,6 @@ interface PendingDispatch {
 type MutableRarityState = {
   readonly policy: RarityPolicy;
   rolls: RarityRollRecord[];
-  readonly providerEvidence?: ModelProviderCallEvidence;
 };
 
 export function open(
@@ -248,6 +247,13 @@ function validateManifest(manifest: ProductManifest): ProductManifest {
           projectSeed: manifest.seed,
           scope: manifest.productId,
           eventId: roll.eventId,
+          ...(roll.providerEvidence === undefined
+            ? {}
+            : {
+                providerEvidenceDigest: digestRarityValue(
+                  roll.providerEvidence as unknown as JsonValue,
+                ),
+              }),
         },
         rarity.policy,
         roll.request,
@@ -413,6 +419,19 @@ function verifySavedRarityCommand(
       RARITY_REFUSE_CODES.eventInputConflict,
       `rarity.rolls.${command.eventId}.request`,
       "An existing rarity event id was replayed with changed request bytes.",
+    );
+  }
+  if (
+    (command.providerEvidence === undefined) !== (roll.providerEvidence === undefined) ||
+    (command.providerEvidence !== undefined &&
+      roll.providerEvidence !== undefined &&
+      canonicalRarityJson(command.providerEvidence as unknown as JsonValue) !==
+        canonicalRarityJson(roll.providerEvidence as unknown as JsonValue))
+  ) {
+    throw rarityError(
+      RARITY_REFUSE_CODES.provenanceMismatch,
+      `rarity.rolls.${command.eventId}.providerEvidence`,
+      "A saved rarity dispatch must carry the exact provider evidence bound to its roll.",
     );
   }
 }
@@ -609,9 +628,6 @@ class SessionImpl implements KernelSession {
         : {
             policy: manifest.rarity.policy,
             rolls: [...manifest.rarity.rolls],
-            ...(manifest.rarity.providerEvidence === undefined
-              ? {}
-              : { providerEvidence: manifest.rarity.providerEvidence }),
           };
     this.events.push(...initialEvents);
   }
@@ -678,34 +694,67 @@ class SessionImpl implements KernelSession {
       }
       const request = validateRarityRollRequest(command.request, this.rarity.policy);
       if (!request.ok) throw rarityError(request.code, request.path, request.message);
-      const expectedEvidence = this.rarity.providerEvidence;
-      if (
-        (expectedEvidence === undefined) !== (command.providerEvidence === undefined) ||
-        (expectedEvidence !== undefined &&
-          command.providerEvidence !== undefined &&
-          canonicalRarityJson(expectedEvidence as unknown as JsonValue) !==
-            canonicalRarityJson(command.providerEvidence as unknown as JsonValue))
-      ) {
-        throw rarityError(
-          RARITY_REFUSE_CODES.provenanceMismatch,
-          `rarity.rolls.${command.eventId}.providerEvidence`,
-          "A rarity roll command must carry the exact provider evidence bound to its namespace, or carry none when the namespace is evidence-less.",
-        );
-      }
-      const prior =
-        this.rarity.rolls.find((roll) => roll.eventId === command.eventId)?.request ??
-        this.pending.find(
+      const priorRoll = this.rarity.rolls.find((roll) => roll.eventId === command.eventId);
+      const priorPending = this.pending.find(
           (item): item is PendingDispatch & { readonly command: RarityRollCommand } =>
             item.command.type === "rarity-roll" &&
             item.command.eventId === command.eventId,
-        )?.command.request;
-      if (prior === undefined) return false;
-      if (digestRarityRequest(prior) === digestRarityRequest(request.value)) return true;
-      throw rarityError(
-        RARITY_REFUSE_CODES.eventInputConflict,
-        `rarity.rolls.${command.eventId}.request`,
-        "An existing rarity event id cannot be reused with changed request bytes; reroll with a new event id.",
-      );
+        )?.command;
+      const priorRequest = priorRoll?.request ?? priorPending?.request;
+      const priorEvidence = priorRoll?.providerEvidence ?? priorPending?.providerEvidence;
+      if (priorRequest !== undefined) {
+        const evidenceMatches =
+          (priorEvidence === undefined) === (command.providerEvidence === undefined) &&
+          (priorEvidence === undefined ||
+            command.providerEvidence === undefined ||
+            canonicalRarityJson(priorEvidence as unknown as JsonValue) ===
+              canonicalRarityJson(command.providerEvidence as unknown as JsonValue));
+        if (!evidenceMatches) {
+          throw rarityError(
+            RARITY_REFUSE_CODES.provenanceMismatch,
+            `rarity.rolls.${command.eventId}.providerEvidence`,
+            "An existing rarity event must replay with its exact provider evidence.",
+          );
+        }
+        if (digestRarityRequest(priorRequest) === digestRarityRequest(request.value)) return true;
+        throw rarityError(
+          RARITY_REFUSE_CODES.eventInputConflict,
+          `rarity.rolls.${command.eventId}.request`,
+          "An existing rarity event id cannot be reused with changed request bytes; reroll with a new event id.",
+        );
+      }
+      const firstRoll = this.rarity.rolls[0];
+      const firstPending = this.pending.find(
+        (item): item is PendingDispatch & { readonly command: RarityRollCommand } =>
+          item.command.type === "rarity-roll",
+      )?.command;
+      const boundEvidence = firstRoll !== undefined
+        ? firstRoll.providerEvidence
+        : firstPending?.providerEvidence;
+      if (firstRoll !== undefined || firstPending !== undefined) {
+        if (boundEvidence === undefined) {
+          if (command.providerEvidence !== undefined) {
+            throw rarityError(
+              RARITY_REFUSE_CODES.provenanceMismatch,
+              `rarity.rolls.${command.eventId}.providerEvidence`,
+              "Provider evidence cannot be attached retroactively to an evidence-less rarity history.",
+            );
+          }
+          return false;
+        }
+        if (
+          command.providerEvidence === undefined ||
+          canonicalRarityJson(boundEvidence as unknown as JsonValue) !==
+            canonicalRarityJson(command.providerEvidence as unknown as JsonValue)
+        ) {
+          throw rarityError(
+            RARITY_REFUSE_CODES.provenanceMismatch,
+            `rarity.rolls.${command.eventId}.providerEvidence`,
+            "A new rarity event must carry the exact provider evidence bound to prior rolls.",
+          );
+        }
+      }
+      return false;
     }
     const actorIds = new Set(this.entities.keys());
     for (const item of this.pending) {
@@ -766,6 +815,13 @@ class SessionImpl implements KernelSession {
           projectSeed: this.manifest.seed,
           scope: this.manifest.productId,
           eventId: command.eventId,
+          ...(command.providerEvidence === undefined
+            ? {}
+            : {
+                providerEvidenceDigest: digestRarityValue(
+                  command.providerEvidence as unknown as JsonValue,
+                ),
+              }),
         },
         this.rarity.policy,
         command.request,
@@ -773,7 +829,12 @@ class SessionImpl implements KernelSession {
       if (!resolved.ok) {
         throw rarityError(resolved.code, resolved.path, resolved.message);
       }
-      rarityRolls.push(resolved.value.record);
+      rarityRolls.push(Object.freeze({
+        ...resolved.value.record,
+        ...(command.providerEvidence === undefined
+          ? {}
+          : { providerEvidence: command.providerEvidence }),
+      }));
     }
   }
 
@@ -784,9 +845,6 @@ class SessionImpl implements KernelSession {
       kind: RARITY_NAMESPACE_KIND,
       policy: this.rarity.policy,
       rolls: Object.freeze([...this.rarity.rolls]),
-      ...(this.rarity.providerEvidence === undefined
-        ? {}
-        : { providerEvidence: this.rarity.providerEvidence }),
     });
   }
 

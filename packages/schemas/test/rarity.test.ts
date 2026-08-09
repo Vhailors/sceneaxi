@@ -12,6 +12,7 @@ import {
   RARITY_REQUEST_KIND,
   RARITY_SCHEMA_VERSION,
   RARITY_TIERS,
+  digestRarityValue,
   digestRarityPolicy,
   digestRarityRequest,
   serializeRarityNamespace,
@@ -19,6 +20,7 @@ import {
   validateRarityPolicy,
   validateRarityRollRequest,
   type RarityNamespace,
+  type JsonValue,
   type RarityPolicy,
   type RarityRollRequest,
 } from "@sceneaxi/schemas";
@@ -303,7 +305,14 @@ describe("rarity domain contracts", () => {
     expect(schema.$defs.policy.properties.schemaVersion.const).toBe(
       RARITY_SCHEMA_VERSION,
     );
-    expect(schema.$defs.provenance.properties.algorithmId.const).toBe(
+    expect(schema.$defs.provenance.oneOf).toEqual([
+      { $ref: "#/$defs/plainProvenance" },
+      { $ref: "#/$defs/providerProvenance" },
+    ]);
+    expect(schema.$defs.plainProvenance.properties.algorithmId.const).toBe(
+      RARITY_ALGORITHM_ID,
+    );
+    expect(schema.$defs.providerProvenance.properties.algorithmId.const).toBe(
       RARITY_ALGORITHM_ID,
     );
     expect(schema.$defs.request.additionalProperties).toBe(false);
@@ -382,12 +391,24 @@ describe("rarity domain contracts", () => {
         eventId: vector.eventId,
         request: fixture.request,
         outcome: vector.outcome,
-        provenance: vector.provenance,
+        provenance: {
+          ...vector.provenance,
+          providerEvidenceDigest: digestRarityValue(providerEvidence as unknown as JsonValue),
+        },
+        providerEvidence,
       }],
-      providerEvidence,
     };
     expect(validateRarityNamespace(namespace).ok).toBe(true);
     expect(shippedSchemaViolations(namespace)).toEqual([]);
+    const retroactivelyAttributed = {
+      ...namespace,
+      rolls: [{
+        ...namespace.rolls[0],
+        provenance: vector.provenance,
+      }],
+    };
+    expect(validateRarityNamespace(retroactivelyAttributed)).toMatchObject({ ok: false });
+    expect(shippedSchemaViolations(retroactivelyAttributed)).not.toEqual([]);
 
     for (const [label, invalidEvidence] of [
       ["complete operation", { ...providerEvidence, operation: "complete" }],
@@ -395,6 +416,10 @@ describe("rarity domain contracts", () => {
       ["multiline descriptor", {
         ...providerEvidence,
         model: { ...providerEvidence.model, model: "fixture-rarity\nraw-detail" },
+      }],
+      ["trailing newline descriptor", {
+        ...providerEvidence,
+        model: { ...providerEvidence.model, provider: "sceneaxi-fixture\n" },
       }],
       ["unbounded descriptor", {
         ...providerEvidence,
@@ -408,7 +433,10 @@ describe("rarity domain contracts", () => {
         model: { ...providerEvidence.model, provider: "sk_live_fixture" },
       }],
     ] as const) {
-      const invalid = { ...namespace, providerEvidence: invalidEvidence };
+      const invalid = {
+        ...namespace,
+        rolls: [{ ...namespace.rolls[0], providerEvidence: invalidEvidence }],
+      };
       expect(validateRarityNamespace(invalid), label).toMatchObject({ ok: false });
       expect(shippedSchemaViolations(invalid), label).not.toEqual([]);
     }
@@ -619,21 +647,36 @@ describe("rarity domain contracts", () => {
         version: "2026-08-09",
       },
     } as const;
+    const vector = fixture.vectors[0];
+    if (vector === undefined) throw new Error("rarity fixture is empty");
+    const evidencedRoll = {
+      eventId: vector.eventId,
+      request: fixture.request,
+      outcome: vector.outcome,
+      provenance: {
+        ...vector.provenance,
+        providerEvidenceDigest: digestRarityValue(providerEvidence as unknown as JsonValue),
+      },
+      providerEvidence,
+    };
     expect(
       validateRarityNamespace({
         schemaVersion: RARITY_SCHEMA_VERSION,
         kind: RARITY_NAMESPACE_KIND,
         policy: fixture.policy,
-        rolls: [],
-        providerEvidence,
+        rolls: [evidencedRoll],
       }),
-    ).toMatchObject({ ok: true, value: { providerEvidence } });
+    ).toMatchObject({ ok: true, value: { rolls: [{ providerEvidence }] } });
     for (const invalidEvidence of [
       { ...providerEvidence, operation: "complete" },
       { ...providerEvidence, profile: "@sceneaxi/profile-kids" },
       {
         ...providerEvidence,
         model: { ...providerEvidence.model, model: "fixture\nraw-detail" },
+      },
+      {
+        ...providerEvidence,
+        model: { ...providerEvidence.model, provider: "sceneaxi-fixture\n" },
       },
       {
         ...providerEvidence,
@@ -652,8 +695,7 @@ describe("rarity domain contracts", () => {
           schemaVersion: RARITY_SCHEMA_VERSION,
           kind: RARITY_NAMESPACE_KIND,
           policy: fixture.policy,
-          rolls: [],
-          providerEvidence: invalidEvidence,
+          rolls: [{ ...evidencedRoll, providerEvidence: invalidEvidence }],
         }),
       ).toMatchObject({ ok: false, code: RARITY_REFUSE_CODES.provenanceMismatch });
     }
@@ -662,8 +704,10 @@ describe("rarity domain contracts", () => {
         schemaVersion: RARITY_SCHEMA_VERSION,
         kind: RARITY_NAMESPACE_KIND,
         policy: fixture.policy,
-        rolls: [],
-        providerEvidence: { ...providerEvidence, credential: "must-not-pass" },
+        rolls: [{
+          ...evidencedRoll,
+          providerEvidence: { ...providerEvidence, credential: "must-not-pass" },
+        }],
       }),
     ).toMatchObject({ ok: false, code: RARITY_REFUSE_CODES.provenanceMismatch });
     expect(

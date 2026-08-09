@@ -309,9 +309,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         type: "rarity-roll",
         eventId: input.eventId,
         request: input.request,
-        ...(input.namespace.providerEvidence === undefined
-          ? {}
-          : { providerEvidence: input.namespace.providerEvidence }),
+        providerEvidence: input.providerEvidence,
       });
       live.value.advance({ tick: 1, deltaMs: 0 });
       const rarity = live.value.observe().rarity;
@@ -361,7 +359,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       };
     }
     const roll = rarity.value.rolls.at(-1);
-    if (roll === undefined || rarity.value.providerEvidence === undefined) {
+    if (roll === undefined || roll.providerEvidence === undefined) {
       return {
         ok: false,
         reason: RARITY_REFUSE_CODES.outcomeMismatch,
@@ -403,7 +401,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         type: "rarity-roll",
         eventId: roll.eventId,
         request: roll.request,
-        providerEvidence: rarity.value.providerEvidence,
+        providerEvidence: roll.providerEvidence,
       });
       for (let tick = 1; tick <= OPEN_PATH_EXERCISE_TICKS; tick += 1) {
         live.value.advance({ tick, deltaMs: 100 });
@@ -621,7 +619,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       const roll = rarity.value.rolls.at(-1);
       if (
         roll === undefined ||
-        rarity.value.providerEvidence === undefined ||
+        roll.providerEvidence === undefined ||
         typeof data.productId !== "string" ||
         !Number.isSafeInteger(data.seed)
       ) {
@@ -633,6 +631,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         eventId: roll.eventId,
         namespace: rarity.value,
         request: roll.request,
+        providerEvidence: roll.providerEvidence,
       });
       if (
         !verified.ok ||
@@ -920,10 +919,12 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         "No BYOK Model Provider Port is configured for this desktop session. Local remains free and available.",
       );
     }
-    if (assistantJob?.status === "running") {
+    if (assistantJob?.status === "running" || rarityProposalEvidence !== null) {
       return bridgeRefuse(
         DESKTOP_BRIDGE_REFUSALS.assistantBusy,
-        "An assistant job is already running; poll its status before retrying.",
+        rarityProposalEvidence === null
+          ? "An assistant job is already running; poll its status before retrying."
+          : "A rarity proposal is still waiting for Accept or Reject; settle it before starting another assistant job.",
       );
     }
 

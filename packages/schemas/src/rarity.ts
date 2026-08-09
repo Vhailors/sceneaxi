@@ -37,8 +37,24 @@ export const RARITY_NAMESPACE_KIND = "sceneaxi.rarity.namespace" as const;
 export const RARITY_MAX_CANDIDATES = 64 as const;
 export const RARITY_PROVIDER_DESCRIPTOR_MAX_CHARS = 128 as const;
 
-const RARITY_PROVIDER_DESCRIPTOR_RE =
-  /^(?!(?:.*[._:/+-])?(?:sk|key|token|secret|credential|password)(?:[._:/+-]|$))[a-z0-9][a-z0-9._:/+-]*$/;
+const RARITY_PROVIDER_DESCRIPTOR_FORBIDDEN_SEGMENTS = new Set([
+  "sk",
+  "key",
+  "token",
+  "secret",
+  "credential",
+  "password",
+]);
+
+function isRarityProviderDescriptor(value: unknown): value is string {
+  return typeof value === "string" &&
+    value.length <= RARITY_PROVIDER_DESCRIPTOR_MAX_CHARS &&
+    [...value].every((character) => /[a-z0-9._:/+-]/.test(character)) &&
+    /[a-z0-9]/.test(value[0] ?? "") &&
+    !value.split(/[._:/+-]/).some((segment) =>
+      RARITY_PROVIDER_DESCRIPTOR_FORBIDDEN_SEGMENTS.has(segment)
+    );
+}
 
 /** Stable identifiers and cumulative-selection order. */
 export const RARITY_TIERS = Object.freeze([
@@ -121,6 +137,7 @@ export type RarityProvenance = Readonly<{
   candidateDraw: number;
   candidateTotalWeight: number;
   outcomeDigest: string;
+  providerEvidenceDigest?: string;
 }>;
 
 export type RarityRollRecord = Readonly<{
@@ -128,6 +145,7 @@ export type RarityRollRecord = Readonly<{
   request: RarityRollRequest;
   outcome: RarityOutcome;
   provenance: RarityProvenance;
+  providerEvidence?: ModelProviderCallEvidence;
 }>;
 
 /** Canonical project-owned namespace; this extends ProductManifest, not a second model. */
@@ -136,8 +154,6 @@ export type RarityNamespace = Readonly<{
   kind: typeof RARITY_NAMESPACE_KIND;
   policy: RarityPolicy;
   rolls: ReadonlyArray<RarityRollRecord>;
-  /** Exact, bounded input provenance when a Model Provider Port proposed this namespace. */
-  providerEvidence?: ModelProviderCallEvidence;
 }>;
 
 export type RarityValidationOk<Value> = Readonly<{
@@ -188,12 +204,9 @@ export function validateRarityProviderEvidence(
       evidence["profile"] !== "@sceneaxi/profile-web") ||
     model === undefined ||
     modelFields !== null ||
-    !["model", "provider", "quantization", "version"].every((field) => {
-      const descriptor = model[field];
-      return typeof descriptor === "string" &&
-        descriptor.length <= RARITY_PROVIDER_DESCRIPTOR_MAX_CHARS &&
-        RARITY_PROVIDER_DESCRIPTOR_RE.test(descriptor);
-    })
+    !["model", "provider", "quantization", "version"].every((field) =>
+      isRarityProviderDescriptor(model[field])
+    )
   ) {
     return refuseRarity(
       RARITY_REFUSE_CODES.provenanceMismatch,
@@ -204,8 +217,7 @@ export function validateRarityProviderEvidence(
   return ok(snapshotSculptJson(evidence) as unknown as ModelProviderCallEvidence);
 }
 
-const IDENTIFIER_RE = /^[a-z0-9][a-z0-9._:-]{0,127}$/;
-const DIGEST_RE = /^sha256:[0-9a-f]{64}$/;
+const DIGEST_PREFIX = "sha256:";
 
 /**
  * The one key set no authoring or provider caller may supply on rarity input,
@@ -238,7 +250,18 @@ export function isRarityForbiddenInputKey(key: string): boolean {
  * refuses.
  */
 export function isRarityIdentifier(value: unknown): value is string {
-  return typeof value === "string" && IDENTIFIER_RE.test(value);
+  return typeof value === "string" &&
+    value.length >= 1 &&
+    value.length <= 128 &&
+    /[a-z0-9]/.test(value[0] ?? "") &&
+    [...value].every((character) => /[a-z0-9._:-]/.test(character));
+}
+
+function isRarityDigest(value: unknown): value is string {
+  return typeof value === "string" &&
+    value.length === DIGEST_PREFIX.length + 64 &&
+    value.startsWith(DIGEST_PREFIX) &&
+    [...value.slice(DIGEST_PREFIX.length)].every((character) => /[0-9a-f]/.test(character));
 }
 
 function ok<Value>(value: Value): RarityValidationOk<Value> {
@@ -603,10 +626,16 @@ const PROVENANCE_FIELDS = Object.freeze([
 export function validateRarityProvenance(
   value: unknown,
 ): RarityValidationResult<RarityProvenance> {
+  const record = snapshotPlainRecord(value);
+  const hasProviderEvidenceDigest = record !== undefined &&
+    Object.hasOwn(record, "providerEvidenceDigest");
   const header = validateHeader(
     value,
     RARITY_PROVENANCE_KIND,
-    PROVENANCE_FIELDS,
+    [
+      ...PROVENANCE_FIELDS,
+      ...(hasProviderEvidenceDigest ? ["providerEvidenceDigest"] : []),
+    ],
     "rarity.provenance",
   );
   if (isRefusal(header)) return header;
@@ -630,8 +659,9 @@ export function validateRarityProvenance(
     "tierRollDigest",
     "candidateRollDigest",
     "outcomeDigest",
+    ...(hasProviderEvidenceDigest ? ["providerEvidenceDigest"] : []),
   ]) {
-    if (typeof header[field] !== "string" || !DIGEST_RE.test(header[field])) {
+    if (!isRarityDigest(header[field])) {
       return refuseRarity(
         RARITY_REFUSE_CODES.provenanceMismatch,
         `rarity.provenance.${field}`,
@@ -683,9 +713,16 @@ function validateRarityRollRecord(
       "Rarity roll record must be a plain JSON object.",
     );
   }
+  const hasProviderEvidence = Object.hasOwn(record, "providerEvidence");
   const fields = requireExactFields(
     record,
-    ["eventId", "request", "outcome", "provenance"],
+    [
+      "eventId",
+      "request",
+      "outcome",
+      "provenance",
+      ...(hasProviderEvidence ? ["providerEvidence"] : []),
+    ],
     path,
   );
   if (fields !== null) return fields;
@@ -709,12 +746,30 @@ function validateRarityRollRecord(
       "Rarity provenance eventId must equal the roll record eventId.",
     );
   }
+  const providerEvidence = hasProviderEvidence
+    ? validateRarityProviderEvidence(record["providerEvidence"], `${path}.providerEvidence`)
+    : undefined;
+  if (providerEvidence !== undefined && !providerEvidence.ok) return providerEvidence;
+  const providerEvidenceDigest = provenance.value.providerEvidenceDigest;
+  if (
+    (providerEvidence === undefined) !== (providerEvidenceDigest === undefined) ||
+    (providerEvidence !== undefined &&
+      providerEvidenceDigest !==
+        digestRarityValue(providerEvidence.value as unknown as JsonValue))
+  ) {
+    return refuseRarity(
+      RARITY_REFUSE_CODES.provenanceMismatch,
+      `${path}.provenance.providerEvidenceDigest`,
+      "Rarity roll provenance must bind its exact provider evidence.",
+    );
+  }
   return ok(
     snapshotSculptJson({
       eventId: record["eventId"],
       request: request.value,
       outcome: outcome.value,
       provenance: provenance.value,
+      ...(providerEvidence === undefined ? {} : { providerEvidence: providerEvidence.value }),
     }),
   );
 }
@@ -722,18 +777,10 @@ function validateRarityRollRecord(
 export function validateRarityNamespace(
   value: unknown,
 ): RarityValidationResult<RarityNamespace> {
-  const raw = snapshotPlainRecord(value);
-  const hasProviderEvidence = raw !== undefined && Object.hasOwn(raw, "providerEvidence");
   const header = validateHeader(
     value,
     RARITY_NAMESPACE_KIND,
-    [
-      "schemaVersion",
-      "kind",
-      "policy",
-      "rolls",
-      ...(hasProviderEvidence ? ["providerEvidence"] : []),
-    ],
+    ["schemaVersion", "kind", "policy", "rolls"],
     "rarity",
   );
   if (isRefusal(header)) return header;
@@ -762,11 +809,26 @@ export function validateRarityNamespace(
     events.add(roll.value.eventId);
     normalized.push(roll.value);
   }
-  let providerEvidence: ModelProviderCallEvidence | undefined;
-  if (hasProviderEvidence) {
-    const evidence = validateRarityProviderEvidence(header["providerEvidence"]);
-    if (!evidence.ok) return evidence;
-    providerEvidence = evidence.value;
+  const firstEvidence = normalized[0]?.providerEvidence;
+  if (firstEvidence !== undefined) {
+    const canonicalEvidence = canonicalRarityJson(firstEvidence as unknown as JsonValue);
+    const conflict = normalized.findIndex((roll) =>
+      roll.providerEvidence === undefined ||
+      canonicalRarityJson(roll.providerEvidence as unknown as JsonValue) !== canonicalEvidence
+    );
+    if (conflict !== -1) {
+      return refuseRarity(
+        RARITY_REFUSE_CODES.provenanceMismatch,
+        `rarity.rolls[${String(conflict)}].providerEvidence`,
+        "Every evidenced rarity roll must carry the same exact provider descriptor.",
+      );
+    }
+  } else if (normalized.some((roll) => roll.providerEvidence !== undefined)) {
+    return refuseRarity(
+      RARITY_REFUSE_CODES.provenanceMismatch,
+      "rarity.rolls.providerEvidence",
+      "Provider evidence cannot be attached retroactively to an evidence-less rarity history.",
+    );
   }
   return ok(
     snapshotSculptJson({
@@ -774,7 +836,6 @@ export function validateRarityNamespace(
       kind: RARITY_NAMESPACE_KIND,
       policy: policy.value,
       rolls: normalized,
-      ...(providerEvidence === undefined ? {} : { providerEvidence }),
     }),
   );
 }
