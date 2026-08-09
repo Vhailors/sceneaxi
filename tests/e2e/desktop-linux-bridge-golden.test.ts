@@ -1858,6 +1858,55 @@ describe("desktop renderer module accounting", () => {
     );
   });
 
+  it("does not claim Retry is safe when abandonment refuses or cannot be confirmed", async () => {
+    const running = {
+      ok: true as const,
+      action: "assistant" as const,
+      data: {
+        jobId: "desktop-assistant-1",
+        route: "local",
+        status: "running",
+        latestProgress: null,
+        progressCount: 0,
+      },
+    };
+    const refused = await pollAssistantJob({
+      attempts: 1,
+      wait: () => Promise.resolve(),
+      request: (request) =>
+        Promise.resolve(
+          (request as { payload?: { op?: string } }).payload?.op === "abandon"
+            ? {
+                ok: false as const,
+                reason: "DESKTOP_ASSISTANT_ABANDON_DENIED",
+                message: "The running job is still owned by another request.",
+                detail: null,
+              }
+            : running,
+        ),
+    });
+    expect(refused).toEqual({
+      ok: false,
+      reason: "DESKTOP_ASSISTANT_ABANDON_DENIED",
+      message: "The running job is still owned by another request.",
+    });
+
+    const rejected = await pollAssistantJob({
+      attempts: 1,
+      wait: () => Promise.resolve(),
+      request: (request) =>
+        (request as { payload?: { op?: string } }).payload?.op === "abandon"
+          ? Promise.reject(new Error("transport unavailable"))
+          : Promise.resolve(running),
+    });
+    expect(rejected).toEqual({
+      ok: false,
+      reason: DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed,
+      message:
+        "The assistant job did not finish in time, and its abandonment could not be confirmed; wait before retrying.",
+    });
+  });
+
   it("carries a refused job's redacted reason and detail into one poll outcome", async () => {
     const settled = async (job: unknown) =>
       pollAssistantJob({

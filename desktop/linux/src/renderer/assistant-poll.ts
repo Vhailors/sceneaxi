@@ -72,7 +72,16 @@ export async function pollAssistantJob(
     }
     await wait(ASSISTANT_POLL_INTERVAL_MS);
   }
-  await input.request({ action: "assistant", payload: { op: "abandon" } });
+  let abandoned: DesktopBridgeResponse;
+  try {
+    abandoned = await input.request({ action: "assistant", payload: { op: "abandon" } });
+  } catch {
+    return refuse(
+      DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed,
+      "The assistant job did not finish in time, and its abandonment could not be confirmed; wait before retrying.",
+    );
+  }
+  if (!abandoned.ok) return refuse(abandoned.reason, abandoned.message);
   return refuse(
     DESKTOP_BRIDGE_REFUSALS.assistantStatusTimeout,
     "The assistant job did not finish in time; it was abandoned and Retry may start a fresh job.",
