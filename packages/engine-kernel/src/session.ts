@@ -17,6 +17,7 @@ import {
   RARITY_REFUSE_CODES,
   RARITY_SCHEMA_VERSION,
   canonicalRarityJson,
+  digestRarityPolicy,
   digestRarityRequest,
   isRarityForbiddenInputKey,
   isRarityIdentifier,
@@ -135,6 +136,7 @@ export function replay(
     [],
     resolveKernelDigest(host.digest),
   );
+  const expectedRolls = rollsByEventId(expectedManifest.rarity);
   let hasPendingDispatch = false;
 
   for (const event of artifact.events) {
@@ -143,14 +145,14 @@ export function replay(
     }
     if (event.kind === "dispatch") {
       const command = validateCommand(event.command);
-      verifySavedRarityCommand(command, expectedManifest.rarity);
-      if (!session.dispatchRecorded(command, event.timestampMs)) {
+      if (!session.recordValidatedDispatch(command, event.timestampMs)) {
         throw rarityError(
           RARITY_REFUSE_CODES.duplicateEvent,
           `rarity.rolls.${command.type === "rarity-roll" ? command.eventId : ""}`,
           "A save artifact cannot record the same rarity event id twice.",
         );
       }
+      verifySavedRarityCommand(command, expectedManifest.rarity, expectedRolls);
       hasPendingDispatch = true;
     } else if (event.kind === "advance") {
       session.advance(event.clock);
@@ -229,7 +231,15 @@ function validateManifest(manifest: ProductManifest): ProductManifest {
       throw rarityError(validated.code, validated.path, validated.message);
     }
     rarity = validated.value;
+    const policyDigest = digestRarityPolicy(rarity.policy);
     for (const roll of rarity.rolls) {
+      if (roll.provenance.policyDigest !== policyDigest) {
+        throw rarityError(
+          RARITY_REFUSE_CODES.policyChanged,
+          `rarity.rolls.${roll.eventId}.provenance.policyDigest`,
+          "The rarity policy changed after this roll was accepted; a project's policy is immutable once it has rolled, and a new policy needs new event ids.",
+        );
+      }
       const resolved = resolveRarityRoll(
         {
           projectSeed: manifest.seed,
@@ -361,9 +371,25 @@ function withoutGeneratedRarityRolls(
       });
 }
 
+function rollsByEventId(
+  expected: RarityNamespace | undefined,
+): ReadonlyMap<string, RarityRollRecord> {
+  const byEventId = new Map<string, RarityRollRecord>();
+  if (expected === undefined) return byEventId;
+  for (const roll of expected.rolls) byEventId.set(roll.eventId, roll);
+  return byEventId;
+}
+
+/**
+ * Bind an already-validated saved dispatch to the accepted project-owned roll.
+ * The session has run its own policy-aware validation by this point, so the
+ * request here is normalized and only its canonical identity is still in
+ * question.
+ */
 function verifySavedRarityCommand(
   command: KernelCommand,
   expected: RarityNamespace | undefined,
+  expectedRolls: ReadonlyMap<string, RarityRollRecord>,
 ): void {
   if (command.type !== "rarity-roll") return;
   if (expected === undefined) {
@@ -373,7 +399,7 @@ function verifySavedRarityCommand(
       "A saved rarity dispatch has no project-owned rarity namespace.",
     );
   }
-  const roll = expected.rolls.find((candidate) => candidate.eventId === command.eventId);
+  const roll = expectedRolls.get(command.eventId);
   if (roll === undefined) {
     throw rarityError(
       RARITY_REFUSE_CODES.outcomeMismatch,
@@ -381,9 +407,7 @@ function verifySavedRarityCommand(
       "A saved rarity dispatch has no accepted project-owned outcome.",
     );
   }
-  const request = validateRarityRollRequest(command.request, expected.policy);
-  if (!request.ok) throw rarityError(request.code, request.path, request.message);
-  if (digestRarityRequest(request.value) !== roll.provenance.requestDigest) {
+  if (digestRarityRequest(command.request) !== roll.provenance.requestDigest) {
     throw rarityError(
       RARITY_REFUSE_CODES.eventInputConflict,
       `rarity.rolls.${command.eventId}.request`,
@@ -578,15 +602,17 @@ class SessionImpl implements KernelSession {
     if (!Number.isInteger(timestampMs)) {
       throw new KernelSessionError("host.nowMs must return an integer");
     }
-    this.dispatchRecorded(command, timestampMs);
+    this.recordValidatedDispatch(validateCommand(command), timestampMs);
   }
 
-  /** Returns false when the command was an accepted idempotent repeat and nothing was recorded. */
-  dispatchRecorded(command: KernelCommand, timestampMs: number): boolean {
+  /**
+   * Record a command `validateCommand` has already normalized. Returns false
+   * when it was an accepted idempotent repeat and nothing was recorded.
+   */
+  recordValidatedDispatch(validated: KernelCommand, timestampMs: number): boolean {
     if (!Number.isInteger(timestampMs)) {
       throw new KernelSessionError("dispatch timestampMs must be an integer");
     }
-    const validated = validateCommand(command);
     if (this.validateCommandState(validated)) return false;
     this.pending.push({ command: validated, timestampMs });
     this.events.push(

@@ -103,6 +103,44 @@ const SUPPORTED_KEYWORDS = new Set([
   "items",
 ]);
 
+/** The `type` values this evaluator implements; any other one throws. */
+const SUPPORTED_TYPES = new Set(["object", "array", "string", "integer"]);
+
+/** Keywords that, on their own, constrain a value. A node with none is inert. */
+const CONSTRAINING_KEYWORDS = ["$ref", "oneOf", "type", "const", "enum"];
+
+function assertEvaluable(node: SchemaNode, path: string): void {
+  const unsupported = Object.keys(node).find(
+    (keyword) => !SUPPORTED_KEYWORDS.has(keyword),
+  );
+  if (unsupported !== undefined) {
+    throw new Error(`rarity schema keyword "${unsupported}" is not evaluated`);
+  }
+  if (Object.hasOwn(node, "type") && !SUPPORTED_TYPES.has(node["type"] as string)) {
+    throw new Error(
+      `rarity schema type ${JSON.stringify(node["type"])} at ${path} is not evaluated`,
+    );
+  }
+  if (Object.hasOwn(node, "additionalProperties") && node["additionalProperties"] !== false) {
+    throw new Error(
+      `rarity schema additionalProperties at ${path} is only evaluated as false`,
+    );
+  }
+  if (
+    Object.hasOwn(node, "items") &&
+    (Array.isArray(node["items"]) ||
+      node["items"] === null ||
+      typeof node["items"] !== "object")
+  ) {
+    throw new Error(
+      `rarity schema items at ${path} is only evaluated as a single subschema`,
+    );
+  }
+  if (!CONSTRAINING_KEYWORDS.some((keyword) => Object.hasOwn(node, keyword))) {
+    throw new Error(`rarity schema node at ${path} constrains nothing`);
+  }
+}
+
 function resolveRef(ref: string): SchemaNode {
   if (!ref.startsWith("#/")) throw new Error(`unsupported $ref "${ref}"`);
   let node: unknown = schema;
@@ -120,12 +158,7 @@ function schemaViolations(
   value: unknown,
   path: string,
 ): string[] {
-  const unsupported = Object.keys(node).find(
-    (keyword) => !SUPPORTED_KEYWORDS.has(keyword),
-  );
-  if (unsupported !== undefined) {
-    throw new Error(`rarity schema keyword "${unsupported}" is not evaluated`);
-  }
+  assertEvaluable(node, path);
   if (typeof node["$ref"] === "string") {
     return schemaViolations(resolveRef(node["$ref"]), value, path);
   }
@@ -214,6 +247,33 @@ function shippedSchemaViolations(value: unknown): string[] {
   return schemaViolations(schema as unknown as SchemaNode, value, "$");
 }
 
+/** Every schema node the shipped contract declares, whether or not a value reaches it. */
+function everySchemaNode(): ReadonlyArray<readonly [string, SchemaNode]> {
+  const nodes: Array<readonly [string, SchemaNode]> = [];
+  const visit = (node: unknown, path: string): void => {
+    if (node === null || typeof node !== "object" || Array.isArray(node)) return;
+    const record = node as SchemaNode;
+    nodes.push([path, record]);
+    for (const key of ["properties", "$defs"]) {
+      const group = record[key];
+      if (group !== null && typeof group === "object" && !Array.isArray(group)) {
+        for (const [name, child] of Object.entries(group)) {
+          visit(child, `${path}.${key}.${name}`);
+        }
+      }
+    }
+    visit(record["items"], `${path}.items`);
+    const branches = record["oneOf"];
+    if (Array.isArray(branches)) {
+      branches.forEach((branch, index) => {
+        visit(branch, `${path}.oneOf[${String(index)}]`);
+      });
+    }
+  };
+  visit(schema, "$");
+  return nodes;
+}
+
 const policy = (tierWeights: Record<(typeof RARITY_TIERS)[number], number>) => ({
   schemaVersion: RARITY_SCHEMA_VERSION,
   kind: RARITY_POLICY_KIND,
@@ -231,6 +291,31 @@ describe("rarity domain contracts", () => {
       RARITY_ALGORITHM_ID,
     );
     expect(schema.$defs.request.additionalProperties).toBe(false);
+  });
+
+  it("declares no schema rule this suite would silently skip", () => {
+    const nodes = everySchemaNode();
+    expect(nodes.length).toBeGreaterThan(12);
+    for (const [path, node] of nodes) {
+      expect(() => {
+        assertEvaluable(node, path);
+      }, path).not.toThrow();
+    }
+  });
+
+  it.each([
+    ["numeric type", { type: "number", minimum: 0 }],
+    ["boolean type", { type: "boolean" }],
+    ["union type", { type: ["string", "null"] }],
+    ["subschema additionalProperties", { type: "object", additionalProperties: {} }],
+    ["open additionalProperties", { type: "object", additionalProperties: true }],
+    ["tuple items", { type: "array", items: [{ type: "string" }] }],
+    ["unknown keyword", { type: "string", multipleOf: 2 }],
+    ["inert node", { description: "constrains nothing" }],
+  ])("refuses to silently skip a %s rule", (_label, node) => {
+    expect(() => {
+      assertEvaluable(node as SchemaNode, "$.probe");
+    }).toThrow();
   });
 
   it("accepts every accepted rarity value this repository produces", () => {

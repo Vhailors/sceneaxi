@@ -70,6 +70,22 @@ The same event id plus the same canonical request digest is idempotent before or
 after resolution. Reusing an event id with changed request bytes refuses with
 `RARITY_EVENT_INPUT_CONFLICT`; a reroll needs a new event id.
 
+## The policy is immutable once a project has rolled
+
+Because every roll is verified by recomputation and the policy is one of the
+recomputation's inputs, a project's `tierWeights` are **immutable from its first
+accepted roll onward**. This is a deliberate consequence of exact historical
+replay, not an oversight: editing a weight would silently rewrite the outcome
+every stored roll already committed to. `open()` and `replay()` therefore refuse
+a namespace whose policy no longer matches its rolls' `policyDigest`, by the
+dedicated `RARITY_POLICY_CHANGED` code rather than a tamper-named one, so an
+operator reads the real cause.
+
+There is deliberately no historical-policy versioning, grandfathering, or
+migration machinery. A project that wants different weights takes a new policy
+and new event ids; the old rolls keep replaying exactly under the policy that
+produced them.
+
 Snapshots digest the complete rarity namespace. `save()` persists the current
 namespace back into `productManifest.rarity` and retains the dispatch/advance
 event stream. `replay()` removes event-produced terminal records from its

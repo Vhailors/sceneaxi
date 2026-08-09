@@ -59,6 +59,7 @@ export const RARITY_REFUSE_CODES = Object.freeze({
   providerEntropyForbidden: "RARITY_PROVIDER_ENTROPY_FORBIDDEN",
   seedInvalid: "RARITY_PROJECT_SEED_INVALID",
   policyAbsent: "RARITY_POLICY_ABSENT",
+  policyChanged: "RARITY_POLICY_CHANGED",
   outcomeMismatch: "RARITY_OUTCOME_MISMATCH",
   provenanceMismatch: "RARITY_PROVENANCE_MISMATCH",
 } as const);

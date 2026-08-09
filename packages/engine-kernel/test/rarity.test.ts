@@ -478,6 +478,43 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
     expect(replay(jsonCopy(save), fixedHost()).save()).toEqual(save);
   });
 
+  it("names a changed policy rather than reporting an accepted roll as tampered", () => {
+    const session = open(manifest(), fixedHost());
+    session.dispatch(rarityCommand("roll-0000"));
+    session.advance({ tick: 1, deltaMs: 16 });
+    const save = jsonCopy(session.save());
+
+    const rolled = save.productManifest.rarity;
+    if (rolled === undefined) throw new Error("saved rarity namespace missing");
+    const repriced = {
+      ...save.productManifest,
+      rarity: {
+        ...rolled,
+        policy: {
+          ...rolled.policy,
+          tierWeights: { ...rolled.policy.tierWeights, common: 2 },
+        },
+      },
+    };
+
+    for (const attempt of [
+      () => open(repriced, fixedHost()),
+      () => replay({ ...save, productManifest: repriced }, fixedHost()),
+    ]) {
+      try {
+        attempt();
+        throw new Error("a changed rarity policy was accepted");
+      } catch (error) {
+        expect(error).toBeInstanceOf(KernelSessionError);
+        expect((error as KernelSessionError).code).toBe(
+          RARITY_REFUSE_CODES.policyChanged,
+        );
+      }
+    }
+
+    expect(replay(jsonCopy(save), fixedHost()).save()).toEqual(save);
+  });
+
   it("refuses a manifest whose productId cannot be the rarity resolution scope", () => {
     const scoped = { ...manifest(), productId: `p${"x".repeat(128)}` };
     try {
