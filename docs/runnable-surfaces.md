@@ -19,13 +19,13 @@ a marketing word.
 | `@sceneaxi/cli` | **R2** | `pnpm build && node packages/cli/bin/sceneaxi.mjs --help` | `packages/cli/test/bin-smoke.test.ts` + the rest of `packages/cli/test/` |
 | `@sceneaxi/desktop-shell` | **R2** | `pnpm build && node apps/desktop-shell/bin/sceneaxi-desktop.mjs --help`; for standalone chrome, `… chrome > shell.html`; the packaged host activates the File/Edit/Run commands — New, Open, Save, Undo, Play — their palette rows and accelerators, plus selected-instance transforms and local add/remove | `apps/desktop-shell/test/bin-smoke.test.ts`, `apps/desktop-shell/test/{product-loop,visual-model,visual-tokens,chrome}.test.ts`, `tests/e2e/desktop-product-loop-golden.test.ts`, `tests/e2e/desktop-command-interactions-golden.test.ts`, `tests/parity/shell-cli-parity.test.ts` + the browser record in [`engine-desktop-surface.md`](engine-desktop-surface.md) |
 | `@sceneaxi/web-shell` (local authoring inspector + assistant transport) | **R2** | `pnpm build && node apps/web-shell/bin/sceneaxi-web-shell.mjs --cwd <project>`, then open the printed loopback URL or `POST /api/assistant` | `apps/web-shell/test/bin-smoke.test.ts` (spawns the binary and drives propose → accept plus a fixture assistant turn over a socket), `apps/web-shell/test/refuse-matrix.test.ts`, `tests/parity/shell-cli-parity.test.ts` |
-| `@sceneaxi/desktop-linux` (packaged Linux desktop app, ADR 0024) | **R2** | `cd desktop/linux && pnpm install && pnpm build && pnpm start`; first launch offers contained New/Open/Recent project lifecycle; a bound project exposes selected-instance translation/rotation/scale and validated-local-artifact add/remove, each staged as one E1 proposal and written only on Save; Assistant Build's Local route compiles and mounts a typed sculpt without a provider; the running host also publishes the permission-bound protocol-v1 local CLI bridge; distributable via `pnpm dist` (AppImage + `.deb` + `SHA256SUMS`), proven by `pnpm smoke --packaged` | `tests/e2e/desktop-project-lifecycle-golden.test.ts` (preload-shaped create/open/cancel/recent/restart interaction), `tests/desktop/desktop-project-lifecycle.test.ts` (root, symlink, migration, invalid-byte, atomic-state contract), `tests/e2e/desktop-linux-bridge-golden.test.ts` (assistant → typed artifact → headless mount/manipulator contract, no pixel claim), `tests/e2e/desktop-cli-local-bridge-golden.test.ts` (spawned CLI → Unix socket → shared authoring session), `tests/desktop/desktop-scene-property.test.ts` and `tests/e2e/desktop-scene-property-golden.test.ts` (selected-instance transforms, add/remove, refusals, settlement, persistence, and Play, plus byte-identical transform/add output against the protocol client and CLI), `tests/desktop/desktop-linux-seams.test.ts`, the spawned `--smoke` proof in CI (`.github/workflows/desktop-linux.yml`), and the recorded builds/pixel observations plus the offered workflow artifact in [`desktop-linux.md`](desktop-linux.md) |
+| `@sceneaxi/desktop-linux` (packaged Linux desktop app, ADR 0024) | **R2** | `cd desktop/linux && pnpm install && pnpm build && pnpm start`; first launch offers contained New/Open/Recent project lifecycle; Web Experience exposes native contained GLB/glTF import through E1 Change Review and project-owned copy; a bound project exposes selected-instance translation/rotation/scale and validated-local-artifact add/remove, each staged as one E1 proposal and written only on Save; Assistant Build's Local route compiles and mounts a typed sculpt without a provider; the running host also publishes the permission-bound protocol-v1 local CLI bridge; distributable via `pnpm dist` (AppImage + `.deb` + `SHA256SUMS`), proven by `pnpm smoke --packaged` | `tests/e2e/asset-ingestion-golden.test.ts` + `tests/desktop/desktop-asset-picker-host.test.ts`, `tests/e2e/desktop-project-lifecycle-golden.test.ts` (preload-shaped create/open/cancel/recent/restart interaction), `tests/desktop/desktop-project-lifecycle.test.ts` (root, symlink, migration, invalid-byte, atomic-state contract), `tests/e2e/desktop-linux-bridge-golden.test.ts` (assistant → typed artifact → headless mount/manipulator contract, no pixel claim), `tests/e2e/desktop-cli-local-bridge-golden.test.ts` (spawned CLI → Unix socket → shared authoring session), `tests/desktop/desktop-scene-property.test.ts` and `tests/e2e/desktop-scene-property-golden.test.ts` (selected-instance transforms, add/remove, refusals, settlement, persistence, and Play, plus byte-identical transform/add output against the protocol client and CLI), `tests/desktop/desktop-linux-seams.test.ts`, the spawned `--smoke` proof in CI (`.github/workflows/desktop-linux.yml`), and the recorded builds/pixel observations plus the offered workflow artifact in [`desktop-linux.md`](desktop-linux.md) / [`asset-ingestion.md`](asset-ingestion.md) |
 | Game profile (single object) | **R1** | `pnpm test:golden` | `tests/e2e/cli-golden-path.test.ts` |
 | Game profile (multi-object scene) | **R1** | `pnpm test:golden` | `tests/e2e/profile-game-scene-golden.test.ts` |
 | Web Experience profile | **R1** | `pnpm test:golden` | `tests/e2e/profile-web-golden-path.test.ts` |
 | Kids profile shared engine open path | **R0** | `pnpm test:golden` | `tests/e2e/profile-kids-refuse-golden.test.ts` |
 | Kids isolated build-and-play activity (`sites/kids`) | **R1** | `cd sites/kids && pnpm install --frozen-lockfile && pnpm dev` (development phase only, this widens the served policy to `connect-src 'self'` + `'unsafe-eval'` so hot reload works; for the shipped policy use `pnpm build && pnpm start`); root proof via `pnpm test:golden` | `tests/e2e/profile-kids-refuse-golden.test.ts`, `packages/profile-kids/test/activity.test.ts`, `tests/sites/kids-surface.test.ts` |
-| Importers + plugin host | **R1** | `pnpm test:golden` | `tests/e2e/importers-plugin-golden.test.ts`, `tests/e2e/plugin-capability-golden.test.ts` (the one registered capability, `sceneaxi.sculpt.intake-source.v1`, from the shipped seed through load to an addressed call) |
+| Importers + plugin host | **R1** | `pnpm test:golden` | `tests/e2e/asset-ingestion-golden.test.ts` (contained-copy desktop/CLI parity and Three projection), `tests/e2e/importers-plugin-golden.test.ts`, `tests/e2e/plugin-capability-golden.test.ts` (the one registered capability, `sceneaxi.sculpt.intake-source.v1`, from the shipped seed through load to an addressed call) |
 | Umbrella live open path (`/open`) | **R1** | `pnpm test:golden`; in a browser, `cd sites/umbrella && pnpm build && pnpm start` | `tests/e2e/umbrella-live-open-golden.test.ts` (headless surface, no pixel claim) + the browser record in `docs/three-presentation-core.md` |
 | Umbrella entitled editors (`/editor`: Engine Desktop + simplified Web Experience projection) | **R1** | `pnpm test:golden`; in a browser, `cd sites/umbrella && pnpm build && SCENEAXI_SITE_EDITOR_PREVIEW=1 pnpm start`, then use `?profile=web` for the Web projection | `tests/e2e/umbrella-editor-viewport-golden.test.ts` (headless surface, no pixel claim), `packages/site-kit/test/{editor-shell,web-experience-editor}.test.ts`, `tests/sites/web-experience-editor.test.ts`, `tests/parity/editor-shell-parity.test.ts`, + the browser records in `docs/three-presentation-core.md` and [`web-editor-shell.md`](web-editor-shell.md). Without preview, the product path is the existing `/login` session and entitlement seam; a refused request constructs neither editor and draws nothing. The Web subset and sandbox are owned by [`web-experience-editor.md`](web-experience-editor.md) |
 
@@ -58,10 +58,10 @@ The Game multi-object and Web Experience tests assert their replay digests again
 checked-in `golden-digests.json` evidence rather than values produced only within
 the same run.
 
-`asset list` deliberately reads Asset Package refs from Catalog Items'
-`assetPackage` fields. SceneAxi does not define a parallel document-backed asset
-schema: Asset Package and ingestion policy remain owned by
-factories-helpers#47/#48 and are cited here rather than rewritten.
+`asset list` reads Asset Package refs from Catalog Items' `assetPackage` fields.
+The separate `asset import` verb stages only the fixed contained-copy profile in
+[`asset-ingestion.md`](asset-ingestion.md); it does not broaden or rewrite the
+Asset Package and catalog policy owned by factories-helpers#47/#48.
 
 ## Why the binaries run built output
 
@@ -87,12 +87,13 @@ so the pixel claim is a recorded browser observation, never a gate inference.
 
 ## Why the CLI and shells have no kernel or plugin verbs
 
-`docs/dependency-matrix.json` allows `@sceneaxi/cli` and
-`@sceneaxi/desktop-shell` to depend on `@sceneaxi/schemas` and
-`@sceneaxi/authoring-core` **only**; `@sceneaxi/web-shell` additionally names
-`@sceneaxi/auth` and `@sceneaxi/billing` for its account/credits view model
-(`docs/auth-credits.md`). Kernel-session, presentation, and plugin-host verbs on
-any of those surfaces would still require widening the matrix.
+`docs/dependency-matrix.json` allows `@sceneaxi/desktop-shell` to depend on
+`@sceneaxi/schemas` and `@sceneaxi/authoring-core`; `@sceneaxi/cli` additionally
+names `@sceneaxi/importers` for the fixed contained-copy verb, and
+`@sceneaxi/web-shell` additionally names `@sceneaxi/auth` and
+`@sceneaxi/billing` for its account/credits view model (`docs/auth-credits.md`).
+Kernel-session, presentation, and plugin-host verbs on any of those surfaces
+would still require widening the matrix.
 
 The boundary is not widened. Those paths are proven in `tests/e2e/`, which may
 import any package. `scene compose` *is* on the CLI because `composeScene()`

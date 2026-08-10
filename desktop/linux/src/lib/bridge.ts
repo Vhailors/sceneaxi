@@ -42,10 +42,16 @@ import {
 } from "@sceneaxi/authoring-core";
 import {
   createDesktopSession,
+  DESKTOP_PRODUCT_REFUSALS,
   type DesktopDocumentStatus,
   type DesktopSession,
   type DesktopSnapshot,
 } from "@sceneaxi/desktop-shell";
+import {
+  materializeProjectAssetCopies,
+  proposeContainedGltfAssetImport,
+  type ProjectAssetManifestEntry,
+} from "@sceneaxi/importers";
 import { bootstrapOpenPath, resumeOpenPath } from "@sceneaxi/engine-orchestrator";
 import {
   RARITY_PROVIDER_REQUEST_MAX_CHARS,
@@ -268,6 +274,11 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     result?: NonNullable<DesktopAssistantJobSnapshot["result"]>;
     refusal?: NonNullable<DesktopAssistantJobSnapshot["refusal"]>;
   } | null = null;
+  let pendingAssetImport: Readonly<{
+    documentPath: string;
+    entry: ProjectAssetManifestEntry;
+    proposal: NonNullable<DesktopSnapshot["proposal"]>;
+  }> | null = null;
 
   const authoringSession = (): DesktopSession => {
     session ??= options.createAuthoringSession?.() ?? createDesktopSession({ cwd: options.cwd });
@@ -278,6 +289,16 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     rarityProposalEvidence === null
       ? snapshot
       : Object.freeze({ ...snapshot, rarityEvidence: rarityProposalEvidence });
+
+  const reconcilePendingAssetImport = <T extends DesktopSnapshot>(snapshot: T): T => {
+    if (
+      pendingAssetImport !== null &&
+      snapshot.proposal !== pendingAssetImport.proposal
+    ) {
+      pendingAssetImport = null;
+    }
+    return snapshot;
+  };
 
   const currentRarityAssistantResult = () => {
     const result = assistantJob?.result;
@@ -540,6 +561,11 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
   };
 
   const openPathExercise = (payload: unknown): DesktopBridgeResponse => {
+    const recoveryDocumentPath = containedDocumentPath(field(payload, "documentPath"));
+    if (recoveryDocumentPath !== null) {
+      const recovered = materializeProjectAssetCopies({ projectRoot: options.cwd, documentPath: recoveryDocumentPath });
+      if (!recovered.ok) return bridgeRefuse(recovered.reason, recovered.message);
+    }
     const read = readActiveDocument(payload, SCENE_DOCUMENT_REFUSALS);
     if (!read.ok) return bridgeRefuse(read.reason, read.message);
     const status = read.status;
@@ -670,9 +696,84 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
   });
 
   const activeScene = (payload: unknown): DesktopSceneResult => {
+    const documentPath = containedDocumentPath(field(payload, "documentPath"));
+    if (documentPath !== null) {
+      const recovered = materializeProjectAssetCopies({ projectRoot: options.cwd, documentPath });
+      if (!recovered.ok) return { ok: false, reason: recovered.reason, message: recovered.message };
+    }
     const read = readActiveDocument(payload, SCENE_DOCUMENT_REFUSALS);
     if (!read.ok) return { ok: false, reason: read.reason, message: read.message };
     return desktopSceneFromDocumentData(read.status.data);
+  };
+
+  const recoverAssetCopies = (documentPath: string) =>
+    materializeProjectAssetCopies({ projectRoot: options.cwd, documentPath });
+
+  /** Stage one native selection through the existing all-or-nothing E1 session. */
+  const assetImport = (payload: unknown): DesktopBridgeResponse => {
+    const profile = field(payload, "profile");
+    const sourcePath = field(payload, "sourcePath");
+    const documentPath = containedDocumentPath(field(payload, "documentPath"));
+    const requestedAssetId = field(payload, "assetId");
+    if (profile !== "web") {
+      return bridgeRefuse(
+        DESKTOP_PRODUCT_REFUSALS.webCapabilityRequired,
+        "Contained GLB/glTF import is available only on the Web Experience creator surface in this release.",
+      );
+    }
+    if (
+      typeof sourcePath !== "string" ||
+      documentPath === null ||
+      (requestedAssetId !== undefined && typeof requestedAssetId !== "string")
+    ) {
+      return bridgeRefuse(
+        DESKTOP_BRIDGE_REFUSALS.requestMalformed,
+        "asset-import requires a native absolute sourcePath and a documentPath inside the selected project.",
+      );
+    }
+    const proposed = proposeContainedGltfAssetImport({
+      projectRoot: options.cwd,
+      documentPath,
+      sourcePath,
+      ...(typeof requestedAssetId === "string" ? { assetId: requestedAssetId } : {}),
+    });
+    if (!proposed.ok) return bridgeRefuse(proposed.reason, proposed.message);
+    if (proposed.replayed) {
+      const copies = recoverAssetCopies(documentPath);
+      if (!copies.ok) return bridgeRefuse(copies.reason, copies.message);
+      return bridgeOk("asset-import", Object.freeze({
+        outcome: "replayed" as const,
+        entry: proposed.entry,
+        assetCopies: copies,
+      }));
+    }
+    const edit = proposed.proposal?.edits[0];
+    if (edit === undefined) {
+      return bridgeRefuse(DESKTOP_BRIDGE_REFUSALS.requestMalformed, "The importer produced no E1 proposal edit.");
+    }
+    const authoring = reconcilePendingAssetImport(authoringSession().proposeEdit({
+      documentPath: edit.documentPath,
+      jsonPointer: edit.jsonPointer,
+      newValue: edit.newValue,
+      expectedContentHash: edit.baseContentHash,
+    }));
+    if (authoring.phase !== "reviewing" || (authoring.diagnostics?.length ?? 0) > 0) {
+      return bridgeOk("asset-import", Object.freeze({ outcome: "refused" as const, authoring }));
+    }
+    if (authoring.proposal === null) {
+      return bridgeRefuse(DESKTOP_BRIDGE_REFUSALS.requestMalformed, "The authoring session retained no asset proposal for review.");
+    }
+    pendingAssetImport = Object.freeze({
+      documentPath,
+      entry: proposed.entry,
+      proposal: authoring.proposal,
+    });
+    return bridgeOk("asset-import", Object.freeze({
+      outcome: "reviewing" as const,
+      entry: proposed.entry,
+      authoring,
+      unifiedDiff: proposed.unifiedDiff,
+    }));
   };
 
   const authoring = (payload: unknown): DesktopBridgeResponse => {
@@ -879,6 +980,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       session = options.createAuthoringSession?.() ?? createDesktopSession({ cwd: options.cwd });
       const restartedEvidence = rarityProposalEvidence;
       rarityProposalEvidence = null;
+      pendingAssetImport = null;
       const restarted = statusWithProperties(session, documentPath);
       if (restartedEvidence !== null) {
         if (
@@ -980,7 +1082,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         newValue: field(payload, "newValue"),
       });
       if (!staged.ok) return bridgeOk("authoring", staged);
-      const snapshot = live.proposeEdit(staged.edit);
+      const snapshot = reconcilePendingAssetImport(live.proposeEdit(staged.edit));
       if (snapshot.phase !== "reviewing" || (snapshot.diagnostics?.length ?? 0) > 0) {
         return bridgeOk("authoring", withRarityProposalEvidence(snapshot));
       }
@@ -1011,28 +1113,59 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           "authoring propose requires a jsonPointer string, an optional SHA-256 expectedContentHash, and a documentPath inside the project directory.",
         );
       }
-      const snapshot: DesktopSnapshot = live.proposeEdit({
+      const snapshot: DesktopSnapshot = reconcilePendingAssetImport(live.proposeEdit({
         documentPath,
         jsonPointer,
         newValue: field(payload, "newValue"),
         ...(expectedContentHash !== undefined ? { expectedContentHash } : {}),
-      });
+      }));
       return bridgeOk("authoring", withRarityProposalEvidence(snapshot));
     }
     if (op === "accept") {
-      return bridgeOk(
-        "authoring",
+      const accepted = reconcilePendingAssetImport(
         settleRarityProposalEvidence(appliedWithProperties(live, live.accept())),
       );
+      if (
+        pendingAssetImport === null ||
+        accepted.phase !== "applied" ||
+        accepted.journalRecoveryPending ||
+        (accepted.diagnostics?.length ?? 0) > 0
+      ) {
+        return bridgeOk("authoring", accepted);
+      }
+      const pending = pendingAssetImport;
+      pendingAssetImport = null;
+      const copies = recoverAssetCopies(pending.documentPath);
+      return copies.ok
+        ? bridgeOk("authoring", Object.freeze({ ...accepted, assetImport: pending.entry, assetCopies: copies }))
+        : bridgeRefuse(copies.reason, copies.message);
     }
     if (op === "reject") {
-      return bridgeOk("authoring", settleRarityProposalEvidence(live.reject()));
+      const rejected = reconcilePendingAssetImport(
+        settleRarityProposalEvidence(live.reject()),
+      );
+      return bridgeOk("authoring", rejected);
     }
     if (op === "recover") {
-      return bridgeOk(
-        "authoring",
-        settleRarityProposalEvidence(appliedWithProperties(live, live.refreshRecovery())),
+      const recovered = reconcilePendingAssetImport(
+        settleRarityProposalEvidence(
+          appliedWithProperties(live, live.refreshRecovery()),
+        ),
       );
+      if (
+        pendingAssetImport === null ||
+        recovered.phase !== "applied" ||
+        recovered.journalRecoveryPending ||
+        (recovered.diagnostics?.length ?? 0) > 0
+      ) {
+        return bridgeOk("authoring", recovered);
+      }
+      const pending = pendingAssetImport;
+      pendingAssetImport = null;
+      const copies = recoverAssetCopies(pending.documentPath);
+      return copies.ok
+        ? bridgeOk("authoring", Object.freeze({ ...recovered, assetImport: pending.entry, assetCopies: copies }))
+        : bridgeRefuse(copies.reason, copies.message);
     }
     const result = live.undo();
     if (result.ok) {
@@ -1051,6 +1184,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         statusWithProperties(live, appliedDocumentPath, "undo");
       }
       rarityProposalEvidence = null;
+      pendingAssetImport = null;
     }
     return bridgeOk("authoring", result);
   };
@@ -1435,6 +1569,8 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       }
       case "open-path":
         return openPathExercise(payload);
+      case "asset-import":
+        return assetImport(payload);
       case "assistant":
         return assistant(payload);
       case "authoring":

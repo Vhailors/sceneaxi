@@ -16,8 +16,9 @@ or the gate fails.
 ## Why it lives in `@sceneaxi/schemas`
 
 Because it is the only place all five consumers can reach.
-`docs/dependency-matrix.json` allows `@sceneaxi/cli` and
-`@sceneaxi/desktop-shell` only `@sceneaxi/schemas` + `@sceneaxi/authoring-core`;
+`docs/dependency-matrix.json` allows `@sceneaxi/desktop-shell` to name
+`@sceneaxi/schemas` + `@sceneaxi/authoring-core`; `@sceneaxi/cli` additionally
+names `@sceneaxi/importers` for the unrelated offline contained-copy verb;
 `@sceneaxi/web-shell` adds `auth` and `billing`; the profiles may name the whole
 core train. The single package in every one of those allow-lists is `schemas`.
 
@@ -140,9 +141,10 @@ one source, and the parity suite asserts both surfaces render it.
 
 The shells and the CLI report and evaluate the policy. They do **not** open a
 kernel session, and that asymmetry is deliberate rather than unfinished work: the
-matrix allows them `schemas` + `authoring-core` only, and running an open path
-needs `@sceneaxi/engine-kernel`. The runnable open paths stay where they already
-are — in the profiles and in `tests/e2e/`, which may import any package. See
+matrix gives the CLI one additional importer edge but gives none of these surfaces
+`@sceneaxi/engine-kernel`, which running an open path needs. The runnable open
+paths stay where they already are — in the profiles and in `tests/e2e/`, which
+may import any package. See
 [`runnable-surfaces.md`](runnable-surfaces.md), *"Why the CLI and shells have no
 kernel or plugin verbs"*.
 

@@ -507,7 +507,7 @@ function profileSurfaces(view: DesktopVisualView): string {
   <code>&lt;main id=&quot;sceneaxi-mount&quot;&gt;&lt;/main&gt;</code>
   <div class="profile-actions">
     ${button(view.product.stageHtml, "Stage HTML", "ghost-button", ` data-product-action data-action="web-stage-html"`)}
-    ${button(view.product.injectAsset, "Inject assets/hero.glb", "ghost-button", ` data-product-action data-action="web-inject-asset"`)}
+    ${button(view.product.injectAsset, "Import GLB/glTF…", "ghost-button", ` data-product-action data-action="web-inject-asset"`)}
   </div>
 </div>`
           : `<p class="game-runtime-note">FreeJS behavior stays project-local; play reaches the composed scene without a site or billing package.</p>`;
@@ -1818,6 +1818,13 @@ if (shell) {
     return candidate && typeof candidate.project === 'function' ? candidate : null;
   };
 
+  const assetImportPort = () => {
+    const portable = globalThis.sceneaxiDesktop;
+    const linux = globalThis.sceneaxiDesktopLinux;
+    const candidate = portable || linux;
+    return candidate && typeof candidate.importAsset === 'function' ? candidate : null;
+  };
+
   const runtimeRequest = async (request) => {
     const port = desktopPort();
     if (port === null) return null;
@@ -1847,6 +1854,17 @@ if (shell) {
         message,
         detail: message,
       };
+    }
+  };
+
+  const assetImportRequest = async (request) => {
+    const port = assetImportPort();
+    if (port === null) return null;
+    try {
+      return await port.importAsset(request);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return { ok: false, reason: T.product.refusals.runtimeRequestFailed, message, detail: message };
     }
   };
 
@@ -2210,6 +2228,53 @@ if (shell) {
     projectDirty = true;
     projectRecovering = false;
     productStatus('dirty', T.product.documentPath + ' · staged · Save to apply');
+  };
+
+  const stageAssetImport = async () => {
+    if (shell.dataset.profile !== 'web') {
+      productStatus('refused', 'Import refused · ' + T.product.refusals.webCapabilityRequired);
+      return;
+    }
+    // The portable shell fixture has no native dialog. Preserve its bounded
+    // pre-existing asset-path proposal; packaged Linux always exposes the picker.
+    if (assetImportPort() === null) return stageWebEdit('asset');
+    if (projectRecovering) return reportRecoveryRefusal('Import');
+    if (projectDirty) {
+      productStatus('refused', 'Import refused · ' + T.product.refusals.profileSwitchDirty);
+      return;
+    }
+    if ((projectData === null || projectContentHash === null) && !(await openProject())) return;
+    const response = await assetImportRequest({ profile: shell.dataset.profile });
+    if (response === null || !response.ok) {
+      const code = response === null ? T.product.refusals.runtimeUnavailable : response.reason;
+      productStatus('refused', 'Import refused · ' + code);
+      showOutcome('Import refused', code, response?.message || 'No asset was staged.');
+      return;
+    }
+    if (response.data?.outcome === 'cancelled') {
+      productStatus('open', 'Asset selection cancelled · project bytes unchanged');
+      return;
+    }
+    if (response.data?.outcome === 'replayed') {
+      productStatus('open', 'Asset already accepted · canonical project copy verified');
+      return;
+    }
+    const snapshot = response.data?.authoring;
+    if (!isSessionSnapshot(snapshot) || reviewProjection(snapshot) === null) {
+      productStatus('refused', 'Import refused · ' + T.product.refusals.proposalNotReviewing);
+      return;
+    }
+    syncReview(snapshot);
+    const importedData = snapshot.proposal?.edits?.[0]?.newValue;
+    if (typeof importedData !== 'object' || importedData === null) {
+      productStatus('refused', 'Import refused · ' + T.product.refusals.documentDataInvalid);
+      return;
+    }
+    projectData = importedData;
+    projectDirty = true;
+    projectRecovering = false;
+    const name = response.data?.entry?.sourceName || 'asset';
+    productStatus('dirty', name + ' · import staged · review before Save');
   };
 
   const stageSceneOperation = async (operation, label) => {
@@ -2974,7 +3039,7 @@ if (shell) {
     else if (action === 'scene-instance-add') void productAction(() => stageSceneInstance('add-instance'));
     else if (action === 'scene-instance-remove') void productAction(() => stageSceneInstance('remove-instance'));
     else if (action === 'web-stage-html') void productAction(() => stageWebEdit('html'));
-    else if (action === 'web-inject-asset') void productAction(() => stageWebEdit('asset'));
+    else if (action === 'web-inject-asset') void productAction(stageAssetImport);
     else if (action === 'mode' && value) showModePanels(value);
     else if (action === 'dock-tab' && value) selectDockTab(value);
     else if (action === 'overlay') setOverlay(value || 'none');

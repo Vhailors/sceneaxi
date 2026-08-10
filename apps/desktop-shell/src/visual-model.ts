@@ -1312,10 +1312,10 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
           ),
     injectAsset:
       state.profile === "web"
-        ? control("web-inject-asset", "Inject assets/hero.glb", "live")
+        ? control("web-inject-asset", "Import GLB/glTF", "live")
         : control(
             "web-inject-asset",
-            "Inject assets/hero.glb",
+            "Import GLB/glTF",
             "inert",
             DESKTOP_VISUAL_REFUSALS.webCapabilityRequired,
           ),

@@ -9,7 +9,7 @@ This monorepo is the packaging home for:
 | Engine packages | `packages/engine-*` (kernel, presentation, orchestrator seeded; asset-compiler, platform-host, evidence delayed) |
 | Runtime/authoring core | `packages/authoring-core` (document model, propose/apply service, sessions, evidence hooks, Model Provider Port) |
 | Profiles | `packages/profile-*` |
-| Agent-first CLI | `packages/cli` (thin protocol adapter over authoring-core) |
+| Agent-first CLI | `packages/cli` (thin protocol adapter over authoring-core and the contained importer seam; no engine access) |
 | Shared schemas / external importers | `packages/schemas`, `packages/importers` |
 | Model-provider adapters | `packages/provider-openrouter` (fixture-tested, injected transport behind the Model Provider Port) |
 | Plugin host | `packages/plugin-host` (explicit capability-manifest loading and refusal) |

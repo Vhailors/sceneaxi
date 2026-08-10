@@ -7,7 +7,10 @@
   "author": "SceneAxi",
   "type": "module",
   "main": "dist/main.cjs",
-  "exports": { ".": "./src/index.ts", "./electron/provider-runtime": "./src/electron/provider-runtime.ts" },
+  "exports": {
+    ".": "./src/index.ts",
+    "./electron/provider-runtime": "./src/electron/provider-runtime.ts"
+  },
   "scripts": {
     "build": "node scripts/build.mjs",
     "check:renderer": "node scripts/check-renderer.mjs",
@@ -22,6 +25,7 @@
     "@sceneaxi/engine-kernel": "link:../../packages/engine-kernel",
     "@sceneaxi/engine-orchestrator": "link:../../packages/engine-orchestrator",
     "@sceneaxi/engine-presentation": "link:../../packages/engine-presentation",
+    "@sceneaxi/importers": "link:../../packages/importers",
     "@sceneaxi/provider-openrouter": "link:../../packages/provider-openrouter",
     "@sceneaxi/schemas": "link:../../packages/schemas",
     "@sceneaxi/site-kit": "link:../../packages/site-kit"
@@ -33,6 +37,8 @@
     "esbuild": "^0.28.1",
     "typescript": "~5.9.3"
   },
-  "sceneaxi": { "releaseGroup": "desktop" },
+  "sceneaxi": {
+    "releaseGroup": "desktop"
+  },
   "license": "UNLICENSED"
 }

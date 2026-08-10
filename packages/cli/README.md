@@ -8,7 +8,8 @@ Every verb has a real body. Held-key currency enforcement (sceneaxi#7) is
 implemented in `src/held-keys/` and wired into the dispatcher for every verb;
 see [Held-key enforcement](#held-key-enforcement-sceneaxi7) below.
 
-**Boundaries:** imports only `@sceneaxi/schemas` and `@sceneaxi/authoring-core`.
+**Boundaries:** imports only `@sceneaxi/schemas`, `@sceneaxi/authoring-core`, and
+the one `@sceneaxi/importers` authority used by offline asset ingestion.
 Direct engine imports are denied by `docs/dependency-matrix.json`. That is why
 there are no kernel-session, presentation, or plugin verbs here — those paths
 are proven end to end in `tests/e2e/`, which may import any package.
@@ -56,7 +57,7 @@ Command-first shape: `pnpm sceneaxi <group> <verb> [flags]`.
 |---|---|
 | `project` | `new`, `dev`, `test`, `capture`, `report`, `propose`, `apply` |
 | `scene` | `compose` (deterministic multi-object composition) |
-| `asset` | `list` |
+| `asset` | `list`, `import` (contained GLB/glTF copy via E1) |
 | `profile` | `list`, `open-path` |
 | `catalog` | `list` |
 | `evidence` | `list` |
@@ -75,6 +76,19 @@ pnpm sceneaxi project capture --document scene.json --out run.evidence.json
 pnpm sceneaxi project report --evidence run.evidence.json
 pnpm sceneaxi evidence list --dir .
 ```
+
+A contained offline asset import uses the same proposal/apply review boundary:
+
+```bash
+pnpm sceneaxi asset import --source /path/to/model.glb --document scene.json --cwd /path/to/project --out asset-import.json
+pnpm sceneaxi project apply --proposal asset-import.json --cwd /path/to/project
+```
+
+The accepted profile and absence boundaries are in
+[`docs/asset-ingestion.md`](../../docs/asset-ingestion.md).
+`project apply` then attempts project-copy materialization for every applied
+document and reports each result under `assetCopies`; accepted manifest bytes are
+the recovery authority if a copy is absent later.
 
 Composing several Sculpt Artifacts into one openable scene (`--artifact` repeats):
 

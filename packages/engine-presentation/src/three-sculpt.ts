@@ -8,13 +8,15 @@
 import {
   Box3,
   BoxGeometry,
+  BufferGeometry,
   CylinderGeometry,
+  Float32BufferAttribute,
   Group,
   Mesh,
   MeshStandardMaterial,
   Sphere,
   SphereGeometry,
-  type BufferGeometry,
+  Uint32BufferAttribute,
   type Material,
   type Object3D,
 } from "three";
@@ -41,7 +43,31 @@ export interface ThreeSculptPresentationBackend extends SculptPresentationBacken
   capture(): Uint8Array | null;
   /** Points the camera at the bounding sphere of everything currently mounted. */
   frameMountedContent(): void;
+  /**
+   * Replace one validated Sculpt proxy with its contained triangle projection.
+   * The same Three core, scene root, camera, surface, and frame counter remain
+   * authoritative; this is not a second renderer or a loader side channel.
+   */
+  mountTriangleAsset(input: ThreeTriangleAssetInput): void;
 }
+
+export type ThreeTrianglePrimitiveInput = Readonly<{
+  meshId: string;
+  positions: readonly number[];
+  normals?: readonly number[];
+  indices: readonly number[];
+  /** glTF-compatible column-major local-to-asset matrix. */
+  matrix: readonly number[];
+  baseColor: string;
+  metallic: number;
+  roughness: number;
+}>;
+
+export type ThreeTriangleAssetInput = Readonly<{
+  instanceId: string;
+  transform: SculptTransform;
+  meshes: readonly ThreeTrianglePrimitiveInput[];
+}>;
 
 function radians(degrees: number) {
   return (degrees * Math.PI) / 180;
@@ -97,6 +123,60 @@ function buildInstance(instance: SculptMountedInstance) {
     if (node.parentId === null) root.add(object);
     else nodes.get(node.parentId)?.add(object);
   }
+  return root;
+}
+
+function finiteArray(value: readonly number[], multiple: number) {
+  return value.length > 0 && value.length % multiple === 0 && value.every(Number.isFinite);
+}
+
+function buildTriangleAsset(input: ThreeTriangleAssetInput) {
+  if (input.meshes.length === 0) {
+    throw new Error("A contained triangle asset must carry at least one mesh.");
+  }
+  const root = new Group();
+  root.name = input.instanceId;
+  applyTransform(root, input.transform);
+  for (const mesh of input.meshes) {
+    const vertexCount = mesh.positions.length / 3;
+    if (
+      !finiteArray(mesh.positions, 3) ||
+      (mesh.normals !== undefined &&
+        (!finiteArray(mesh.normals, 3) || mesh.normals.length !== mesh.positions.length)) ||
+      mesh.indices.length === 0 ||
+      mesh.indices.length % 3 !== 0 ||
+      mesh.indices.some(
+        (index) => !Number.isSafeInteger(index) || index < 0 || index >= vertexCount,
+      ) ||
+      mesh.matrix.length !== 16 ||
+      !mesh.matrix.every(Number.isFinite) ||
+      !/^#[0-9a-f]{6}$/i.test(mesh.baseColor) ||
+      !Number.isFinite(mesh.metallic) || mesh.metallic < 0 || mesh.metallic > 1 ||
+      !Number.isFinite(mesh.roughness) || mesh.roughness < 0 || mesh.roughness > 1
+    ) {
+      throw new Error(`Contained triangle mesh "${mesh.meshId}" is invalid.`);
+    }
+    const geometry = new BufferGeometry();
+    geometry.setAttribute("position", new Float32BufferAttribute(mesh.positions, 3));
+    if (mesh.normals === undefined) geometry.computeVertexNormals();
+    else geometry.setAttribute("normal", new Float32BufferAttribute(mesh.normals, 3));
+    geometry.setIndex(new Uint32BufferAttribute(mesh.indices, 1));
+    geometry.computeBoundingBox();
+    geometry.computeBoundingSphere();
+    const object = new Mesh(
+      geometry,
+      new MeshStandardMaterial({
+        color: mesh.baseColor,
+        metalness: mesh.metallic,
+        roughness: mesh.roughness,
+      }),
+    );
+    object.name = mesh.meshId;
+    object.matrix.fromArray(mesh.matrix as number[]);
+    object.matrixAutoUpdate = false;
+    root.add(object);
+  }
+  root.updateMatrixWorld(true);
   return root;
 }
 
@@ -174,6 +254,17 @@ export function createThreeSculptPresentationBackend(
       const bounds = boundingSphereOf(core.content);
       if (bounds === null) return;
       core.camera.frameSphere(bounds.center, bounds.radius);
+    },
+
+    mountTriangleAsset(input) {
+      const previous = roots.get(input.instanceId);
+      if (previous !== undefined) {
+        core.content.remove(previous);
+        disposeSubtree(previous);
+      }
+      const next = buildTriangleAsset(input);
+      roots.set(input.instanceId, next);
+      core.content.add(next);
     },
 
     dispose() {

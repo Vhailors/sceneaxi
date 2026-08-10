@@ -119,6 +119,9 @@ importers:
       '@sceneaxi/authoring-core':
         specifier: workspace:^
         version: link:../authoring-core
+      '@sceneaxi/importers':
+        specifier: workspace:^
+        version: link:../importers
       '@sceneaxi/schemas':
         specifier: workspace:^
         version: link:../schemas

@@ -19,11 +19,13 @@ import { DESKTOP_MINIMUM_WINDOW } from "@sceneaxi/desktop-shell";
 import { DESKTOP_BYO_CONFIGURATION_CHANNEL } from "../lib/byo-configuration-contract.js";
 import {
   DESKTOP_ACTIVE_DOCUMENT_PATH,
+  DESKTOP_ASSET_IMPORT_CHANNEL,
   DESKTOP_BRIDGE_CHANNEL,
   DESKTOP_VIEWPORT_PLAY_EVENT,
   bridgeRefuse,
 } from "../lib/bridge-contract.js";
 import { createDesktopBridge, type DesktopBridge } from "../lib/bridge.js";
+import { createDesktopAssetPickerHost } from "../lib/asset-picker-host.js";
 import { DESKTOP_SCENE_TRANSLATION_X_PROPERTY } from "../lib/desktop-scene.js";
 import {
   resolveDesktopLocalBridgePaths,
@@ -189,6 +191,27 @@ async function start(): Promise<void> {
         "Choose New Project, Open Project, or a validated recent project before using the engine bridge.",
       ),
   );
+  ipcMain.handle(DESKTOP_ASSET_IMPORT_CHANNEL, async (_event, request: unknown) => {
+    if (bridge === null || activeRoot === null) {
+      return bridgeRefuse(
+        DESKTOP_PROJECT_REFUSALS.projectRequired,
+        "Choose a validated project before importing an asset.",
+      );
+    }
+    const picker = createDesktopAssetPickerHost({
+      chooseFile: () => dialog.showOpenDialog(window, {
+        title: "Import contained GLB/glTF asset",
+        buttonLabel: "Stage Import",
+        properties: ["openFile"],
+        filters: [{ name: "Contained glTF 2.0", extensions: ["glb", "gltf"] }],
+      }),
+      stage: (selection) => bridge?.handle(selection) ?? bridgeRefuse(
+        DESKTOP_PROJECT_REFUSALS.projectRequired,
+        "The selected project was closed before the asset could be staged.",
+      ),
+    });
+    return picker.chooseAndStage(payloadField(request, "profile"));
+  });
   ipcMain.handle(DESKTOP_BYO_CONFIGURATION_CHANNEL, (_event, request: unknown) =>
     byoRuntime.configuration.handle(request),
   );

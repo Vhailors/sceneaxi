@@ -33,7 +33,7 @@ IPC channel and the local socket adapter are two transports over that one
 | `src/lib/provider-key-store.ts` + `byo-configuration.ts` | main process | typed OS-secure credential store, redacted configuration controller, and per-session key lease for injected BYOK runners |
 | `src/electron/provider-key-store.ts` | privileged Electron process | `safeStorage` adapter; refuses locked, unsupported, basic-text, and failed backends and persists ciphertext only |
 | `src/electron/provider-runtime.ts` | privileged Electron process | composes the existing OpenRouter adapter, Model Provider Port, profile policies, exact model pin, secure key lease, and desktop runner over an injected transport session; it also owns the no-network rarity fixture provider used by the packaged Agent path and its acceptance tests |
-| `src/electron/preload.ts` | preload | exposes one frozen global: the existing engine request, typed project lifecycle method on its own IPC channel, and separate BYOK configuration method |
+| `src/electron/preload.ts` | preload | exposes one frozen global: the existing engine request, typed project lifecycle method, native asset-picker method, and separate BYOK configuration method on their bounded IPC channels |
 | `src/renderer/viewport.ts` | the window | the desktop tier's **one renderer-owning module** (see below) |
 
 Bridge actions and what each reaches — only through public seams:
@@ -43,6 +43,7 @@ Bridge actions and what each reaches — only through public seams:
 | `handshake` | identity only |
 | `scene` | re-read the requested project-contained Scene Document, validate and reproduce its stored composition through `composeScene()`, then return the shared `MountableScene` payload from `@sceneaxi/site-kit` |
 | `open-path` | the same requested document's composition — `documentPath` required exactly as for `scene` — through `bootstrapOpenPath()` from `@sceneaxi/engine-orchestrator`: a real kernel scene session opened, advanced, observed, closed, with its mountable payload returned for viewport synchronization. An accepted rarity namespace additionally opens a product session, verifies the accepted event through dispatch/advance/save/resume, and returns its safe result for Run and viewport presentation |
+| `asset-import` | the one contained GLB/glTF importer authority. The native picker supplies a local path; validation stages `/data` through the existing E1 session, Accept materializes the project copy, and Reject writes nothing. Exact limits and absence boundaries: [`asset-ingestion.md`](asset-ingestion.md) |
 | `assistant` | Build uses `runAssistantSculptAction()` in `@sceneaxi/authoring-core`: deterministic local compilation by default, or an explicitly injected BYOK runner. Agent uses the privileged no-network rarity fixture through the same Model Provider Port and stages its result in the existing DesktopSession review. Hosted refuses here because this tier has no identity/credit authority |
 | `authoring` | `createDesktopSession()` from `@sceneaxi/desktop-shell` — the same propose/accept protocol as the CLI and web-shell. A `documentPath` arrives from the renderer over IPC — here, and on `scene` and `open-path` alike — and the authoring core resolves it against `cwd` without a containment check of its own, so the bridge owns that constraint for every action that takes one: an absolute path, one escaping the project directory, or one whose **canonical** path leaves it through a symlink refuses `DESKTOP_BRIDGE_REQUEST_MALFORMED`. Containment is judged after symlink resolution because that is where the bytes land; a missing leaf still resolves, so this is containment and not an existence check |
 | `frame-report` | nothing: it *accepts* the renderer's real presentation frame so main and the smoke can see what was claimed |
@@ -231,7 +232,9 @@ the umbrella's `sculpt-viewport.tsx` makes, naming no Three type. The golden tes
 calls that module's exported construction seam and runs the resulting Three
 backend on the headless surface. Its playback synchronizer is exercised there as
 well: the golden replaces the mounted composition and proves a refused replacement
-rolls back to the prior mount set. The umbrella's owner list is unchanged.
+rolls back to the prior mount set. Contained ingestion uses that synchronizer's
+same-backend triangle replacement; its headless draw proof is
+`tests/e2e/asset-ingestion-golden.test.ts`. The umbrella's owner list is unchanged.
 
 ## Build, verify, run
 

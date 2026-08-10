@@ -39,6 +39,11 @@ import {
   type ComposedSceneOk,
   type MountableScene,
 } from "@sceneaxi/site-kit";
+import {
+  projectAssetManifestEntry,
+  projectAssetManifestFromDocumentData,
+  type ImportedAssetRenderMesh,
+} from "@sceneaxi/importers";
 import { DESKTOP_ACTIVE_DOCUMENT_PATH } from "./bridge-contract.js";
 
 /** Document id of the composed scene the desktop app opens. */
@@ -131,8 +136,54 @@ const propertyRequestDiagnostic = (message: string, documentPath: string) =>
 
 /** Refusal passed through when the committed starter artifact fails reconstruction. */
 export type DesktopSceneResult =
-  | { readonly ok: true; readonly composed: ComposedSceneOk; readonly mountable: MountableScene }
+  | { readonly ok: true; readonly composed: ComposedSceneOk; readonly mountable: DesktopMountableScene }
   | { readonly ok: false; readonly reason: string; readonly message: string };
+
+export type DesktopImportedAsset = Readonly<{
+  instanceId: string;
+  digest: string;
+  meshes: readonly ImportedAssetRenderMesh[];
+}>;
+
+export type DesktopMountableScene = MountableScene & Readonly<{
+  importedAssets?: readonly DesktopImportedAsset[];
+}>;
+
+function withImportedAssets(
+  data: unknown,
+  composed: ComposedSceneOk,
+  mountable: MountableScene,
+): DesktopSceneResult {
+  const manifest = projectAssetManifestFromDocumentData(data);
+  if (!manifest.ok) {
+    return Object.freeze({ ok: false as const, reason: manifest.reason, message: manifest.message });
+  }
+  const importedAssets: DesktopImportedAsset[] = [];
+  for (const entry of manifest.value.assets) {
+    const instance = composed.scene.instances.find((candidate) => candidate.instanceId === entry.instanceId);
+    if (instance?.artifactId !== entry.artifactId) {
+      return Object.freeze({
+        ok: false as const,
+        reason: DESKTOP_SCENE_NOT_COMPOSABLE,
+        message: `Asset manifest instance "${entry.instanceId}" is absent from the accepted composition.`,
+      });
+    }
+    const projected = projectAssetManifestEntry(entry);
+    if (!projected.ok) return Object.freeze({ ok: false as const, reason: projected.reason, message: projected.message });
+    importedAssets.push(Object.freeze({
+      instanceId: entry.instanceId,
+      digest: entry.digest,
+      meshes: projected.value.meshes,
+    }));
+  }
+  return Object.freeze({
+    ok: true as const,
+    composed,
+    mountable: importedAssets.length === 0
+      ? mountable
+      : Object.freeze({ ...mountable, importedAssets: Object.freeze(importedAssets) }),
+  });
+}
 
 /**
  * Placements of the desktop open scene, hierarchical per ADR 0014. Three instances
@@ -277,11 +328,7 @@ export function desktopOpenScene(): DesktopSceneResult {
     });
   }
 
-  return Object.freeze({
-    ok: true as const,
-    composed,
-    mountable: mountableScene(composed, desktopPlacementLabels()),
-  });
+  return withImportedAssets({}, composed, mountableScene(composed, desktopPlacementLabels()));
 }
 
 export function desktopSceneFromDocumentData(data: unknown): DesktopSceneResult {
@@ -313,11 +360,7 @@ export function desktopSceneFromDocumentData(data: unknown): DesktopSceneResult 
       message: "The active Scene Document composition could not be reproduced.",
     });
   }
-  return Object.freeze({
-    ok: true as const,
-    composed,
-    mountable: mountableScene(composed, desktopPlacementLabels()),
-  });
+  return withImportedAssets(data, composed, mountableScene(composed, desktopPlacementLabels()));
 }
 
 type DesktopEditableCompositionRead =

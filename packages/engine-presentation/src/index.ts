@@ -64,6 +64,8 @@ export type {
 export {
   createThreeSculptPresentationBackend,
   type ThreeSculptPresentationBackend,
+  type ThreeTriangleAssetInput,
+  type ThreeTrianglePrimitiveInput,
 } from "./three-sculpt.js";
 
 export {

@@ -2,5 +2,5 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": { "outDir": "dist" },
   "include": ["src", "test"],
-  "references": [{ "path": "../schemas" }, { "path": "../authoring-core" }]
+  "references": [{ "path": "../schemas" }, { "path": "../authoring-core" }, { "path": "../importers" }]
 }
