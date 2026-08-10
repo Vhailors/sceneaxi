@@ -228,7 +228,7 @@ describe("contained GLB/glTF project ingestion", () => {
     const valid = projectAssetManifestFromDocumentData(parsed.data);
     expect(valid.ok).toBe(true);
     if (!valid.ok) return;
-    const withEntryPath = structuredClone(valid.value) as {
+    const withEntryPath = structuredClone(valid.value) as unknown as {
       assets: Array<Record<string, unknown>>;
     };
     const entry = withEntryPath.assets[0];
@@ -242,7 +242,7 @@ describe("contained GLB/glTF project ingestion", () => {
       reason: CONTAINED_GLTF_REFUSALS.manifestInvalid,
     });
 
-    const withCredential = structuredClone(valid.value) as {
+    const withCredential = structuredClone(valid.value) as unknown as {
       assets: Array<Record<string, unknown>>;
     };
     const provenance = withCredential.assets[0]?.["provenance"];
