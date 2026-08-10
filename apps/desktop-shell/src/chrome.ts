@@ -142,7 +142,7 @@ const MODE_PANELS: Readonly<
     leftEmpty: "Sculpt authoring is not available on this surface; use packaged Assistant Build for a supported artifact path.",
     inspectorTitle: "SCULPT OBJECT",
     inspectorEmpty: "No bound Sculpt job. Build passes are shown only as a static reference.",
-    note: "DESKTOP_NO_DOCUMENT_BOUND · standalone Sculpt authoring writes nothing.",
+    note: `${DESKTOP_VISUAL_REFUSALS.noDocumentBound} · standalone Sculpt authoring writes nothing.`,
     noteTone: "accent" as const,
   }),
   compose: Object.freeze({
@@ -150,7 +150,7 @@ const MODE_PANELS: Readonly<
     leftEmpty: "Scene composition is consumed by Run; no composition editor is bound here.",
     inspectorTitle: "INSTANCE",
     inspectorEmpty: "No bound composition editor; Run validates the stored composed scene.",
-    note: "DESKTOP_NO_DOCUMENT_BOUND · this surface does not author placement transforms.",
+    note: `${DESKTOP_VISUAL_REFUSALS.noDocumentBound} · this surface does not author placement transforms.`,
     noteTone: "scene" as const,
   }),
   animate: Object.freeze({
@@ -158,7 +158,7 @@ const MODE_PANELS: Readonly<
     leftEmpty: "Animation authoring is not available on this surface.",
     inspectorTitle: "KEY",
     inspectorEmpty: "No bound timeline authoring job.",
-    note: "DESKTOP_NO_DOCUMENT_BOUND · no timeline edits are staged here.",
+    note: `${DESKTOP_VISUAL_REFUSALS.noDocumentBound} · no timeline edits are staged here.`,
     noteTone: "info" as const,
   }),
   run: Object.freeze({
@@ -174,7 +174,7 @@ const MODE_PANELS: Readonly<
     leftEmpty: "Delivery handoff creation is not available on this surface.",
     inspectorTitle: "DELIVERY HANDOFF",
     inspectorEmpty: "No handoff inspector is bound.",
-    note: "DESKTOP_NO_DOCUMENT_BOUND · no export, signing, upload, or release action is exposed here.",
+    note: `${DESKTOP_VISUAL_REFUSALS.noDocumentBound} · no export, signing, upload, or release action is exposed here.`,
     noteTone: "accent" as const,
   }),
   plugins: Object.freeze({
@@ -182,7 +182,7 @@ const MODE_PANELS: Readonly<
     leftEmpty: "No plugin host runs on this surface.",
     inspectorTitle: "PLUGIN",
     inspectorEmpty: "Plugin inspection is unavailable without a loaded host.",
-    note: "DESKTOP_NO_DOCUMENT_BOUND · no plugin operation is exposed here; registry work stays outside this surface.",
+    note: `${DESKTOP_VISUAL_REFUSALS.noDocumentBound} · no plugin operation is exposed here; registry work stays outside this surface.`,
     noteTone: "accent" as const,
   }),
 });

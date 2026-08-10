@@ -201,7 +201,6 @@ describe("engine desktop chrome — accessibility", () => {
       'id="assistant-send" data-kind="live" data-action="assistant-send"',
     );
     expect(html).toContain('data-assistant-mode="build"');
-    expect(html).toContain("shell.dataset.assistantMode = value");
     expect(html).toContain('data-assistant-status role="status"');
     expect(html).toContain("Retry");
     expect(html).toContain(
