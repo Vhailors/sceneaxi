@@ -1,6 +1,8 @@
 /** Golden proof for the offline desktop Ship → Export Web vertical. */
 import { createHash } from "node:crypto";
 import {
+  existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
@@ -21,7 +23,9 @@ import {
 } from "../../desktop/linux/src/index.ts";
 
 const exportCommit = vi.hoisted(() => ({
-  afterRename: null as (() => void) | null,
+  afterRename: null as
+    | ((oldPath: unknown, newPath: unknown) => void)
+    | null,
 }));
 
 vi.mock("node:fs", async (importOriginal) => {
@@ -33,7 +37,7 @@ vi.mock("node:fs", async (importOriginal) => {
       newPath: Parameters<typeof actual.renameSync>[1],
     ) => {
       actual.renameSync(oldPath, newPath);
-      exportCommit.afterRename?.();
+      exportCommit.afterRename?.(oldPath, newPath);
     },
   };
 });
@@ -55,6 +59,7 @@ const GOLDEN = JSON.parse(
 
 afterEach(() => {
   exportCommit.afterRename = null;
+  vi.restoreAllMocks();
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
@@ -318,6 +323,60 @@ describe("desktop static Web export", () => {
     expect(result).toMatchObject({
       ok: false,
       reason: DESKTOP_WEB_EXPORT_REFUSALS.assetInvalid,
+    });
+  });
+
+  it("preserves an unowned directory when staging cannot claim its path", () => {
+    const root = temporary("sceneaxi-export-owned-staging-");
+    expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
+    const webRoot = join(root, "exports/web");
+    mkdirSync(webRoot, { recursive: true });
+    const now = 1_754_844_800_000;
+    vi.spyOn(Date, "now").mockReturnValue(now);
+    const unowned = join(
+      webRoot,
+      `.sceneaxi-export-${process.pid}-${now.toString(36)}`,
+    );
+    mkdirSync(unowned);
+    const sentinel = join(unowned, "operator-data.txt");
+    writeFileSync(sentinel, "keep");
+    const bridge = createDesktopBridge({ cwd: root });
+
+    const result = exportDesktopWebProject({
+      projectRoot: root,
+      documentPath: "scene.json",
+      expectedContentHash: statusHash(bridge),
+      runtimeJavaScript: RUNTIME,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(existsSync(sentinel)).toBe(true);
+    expect(readFileSync(sentinel, "utf8")).toBe("keep");
+  });
+
+  it("refuses a committed bundle that changes before success", () => {
+    const root = temporary("sceneaxi-export-destination-race-");
+    expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
+    const bridge = createDesktopBridge({ cwd: root });
+    let committed = false;
+    exportCommit.afterRename = (_oldPath, newPath) => {
+      exportCommit.afterRename = null;
+      if (typeof newPath !== "string") throw new Error("export destination was not a path");
+      committed = true;
+      writeFileSync(join(newPath, "index.html"), "changed after commit");
+    };
+
+    const result = exportDesktopWebProject({
+      projectRoot: root,
+      documentPath: "scene.json",
+      expectedContentHash: statusHash(bridge),
+      runtimeJavaScript: RUNTIME,
+    });
+
+    expect(committed).toBe(true);
+    expect(result).toMatchObject({
+      ok: false,
+      reason: DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
     });
   });
 });

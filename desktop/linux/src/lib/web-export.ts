@@ -12,6 +12,7 @@ import {
   existsSync,
   lstatSync,
   mkdirSync,
+  mkdtempSync,
   readFileSync,
   readdirSync,
   realpathSync,
@@ -421,9 +422,9 @@ function writeOutput(
           `The content-addressed export directory already exists with different or unsafe bytes: ${destination}`,
         );
   }
-  const temporary = join(parent, `.sceneaxi-export-${process.pid}-${Date.now().toString(36)}`);
+  let temporary: string | null = null;
   try {
-    mkdirSync(temporary);
+    temporary = mkdtempSync(join(parent, ".sceneaxi-export-"));
     for (const [path, bytes] of expected) {
       const target = join(temporary, ...path.split("/"));
       mkdirSync(dirname(target), { recursive: true });
@@ -432,7 +433,9 @@ function writeOutput(
     renameSync(temporary, destination);
     return Object.freeze({ ok: true as const, replayed: false });
   } catch (error) {
-    if (existsSync(temporary)) rmSync(temporary, { recursive: true, force: true });
+    if (temporary !== null && existsSync(temporary)) {
+      rmSync(temporary, { recursive: true, force: true });
+    }
     if (existsSync(destination) && verifyExistingOutput(destination, expected)) {
       return Object.freeze({ ok: true as const, replayed: true });
     }
@@ -635,6 +638,13 @@ export function exportDesktopWebProject(
     return refuse(
       DESKTOP_WEB_EXPORT_REFUSALS.projectChanged,
       "scene.json could not be re-read after the static Web export was written.",
+    );
+  }
+
+  if (!verifyExistingOutput(destination, expected)) {
+    return refuse(
+      DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
+      `The content-addressed export directory changed before it could be reported: ${destination}`,
     );
   }
 
