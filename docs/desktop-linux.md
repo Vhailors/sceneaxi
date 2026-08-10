@@ -68,6 +68,8 @@ and the final source check.
 - `delivery-handoff.json`, validated through the existing Delivery Handoff v1
   contract with per-artifact SHA-256 values and the aggregate artifact-set digest.
 
+Every referenced asset uses the contained importer v1 eight-MiB byte limit.
+
 The fixed export format and runtime-bound tool version (the package and export
 format versions plus the packaged renderer SHA-256) make identical project and
 asset bytes under the same effective tool version produce identical bundle
@@ -79,7 +81,7 @@ never uploads, deploys, signs, approves, or releases anything.
 Named refusals cover no bound project, staged/recovery state, a stale document,
 invalid scene data, invalid or missing assets, unsafe paths, missing packaged
 runtime bytes, invalid generated handoff data, destination conflicts, and failed
-atomic writes. `tests/e2e/desktop-web-export-golden.test.ts` pins the source,
+exclusive writes. `tests/e2e/desktop-web-export-golden.test.ts` pins the source,
 artifact, and bundle digests and exercises the required refusal paths. The
 packaged smoke performs the same bridge request and verifies the output files,
 source bytes, and handoff digest before printing its proof line.

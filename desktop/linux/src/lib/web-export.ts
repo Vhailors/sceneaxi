@@ -9,14 +9,19 @@
  */
 import { createHash } from "node:crypto";
 import {
+  closeSync,
+  constants,
   existsSync,
+  fstatSync,
   lstatSync,
+  linkSync,
   mkdirSync,
   mkdtempSync,
+  openSync,
   readFileSync,
+  readSync,
   readdirSync,
   realpathSync,
-  renameSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -28,6 +33,7 @@ import {
   DESKTOP_WEB_STAGE_CONFIG,
 } from "@sceneaxi/desktop-shell";
 import {
+  PROJECT_ASSET_MAX_BYTES,
   projectAssetManifestFromDocumentData,
   type ProjectAssetManifestEntry,
 } from "@sceneaxi/importers";
@@ -212,31 +218,126 @@ function pathEntryExists(path: string): boolean {
   }
 }
 
+type ContainedFileRead =
+  | Readonly<{ ok: true; bytes: Buffer }>
+  | Readonly<{ ok: false; kind: "missing" | "unsafe" | "invalid"; detail: string }>;
+
+function readContainedFile(
+  root: string,
+  target: string,
+  limits: Readonly<{ maximumBytes?: number; expectedBytes?: number }> = {},
+): ContainedFileRead {
+  let descriptor: number | null = null;
+  try {
+    descriptor = openSync(target, constants.O_RDONLY | constants.O_NOFOLLOW);
+    const before = fstatSync(descriptor);
+    if (!before.isFile()) {
+      return Object.freeze({
+        ok: false as const,
+        kind: "unsafe" as const,
+        detail: "the opened path is not a regular file",
+      });
+    }
+    const canonical = realpathSync(`/proc/self/fd/${String(descriptor)}`);
+    if (!within(root, canonical)) {
+      return Object.freeze({
+        ok: false as const,
+        kind: "unsafe" as const,
+        detail: "the opened file resolves outside the project root",
+      });
+    }
+    if (
+      !Number.isSafeInteger(before.size) ||
+      before.size < 0 ||
+      (limits.maximumBytes !== undefined && before.size > limits.maximumBytes) ||
+      (limits.expectedBytes !== undefined && before.size !== limits.expectedBytes)
+    ) {
+      return Object.freeze({
+        ok: false as const,
+        kind: "invalid" as const,
+        detail: "the opened file length is outside its accepted bounds",
+      });
+    }
+    const bytes = Buffer.alloc(before.size);
+    let offset = 0;
+    while (offset < bytes.byteLength) {
+      const count = readSync(
+        descriptor,
+        bytes,
+        offset,
+        bytes.byteLength - offset,
+        null,
+      );
+      if (count === 0) {
+        return Object.freeze({
+          ok: false as const,
+          kind: "invalid" as const,
+          detail: "the opened file ended before its verified length",
+        });
+      }
+      offset += count;
+    }
+    const trailing = Buffer.alloc(1);
+    if (readSync(descriptor, trailing, 0, trailing.byteLength, null) !== 0) {
+      return Object.freeze({
+        ok: false as const,
+        kind: "invalid" as const,
+        detail: "the opened file grew beyond its verified length",
+      });
+    }
+    const after = fstatSync(descriptor);
+    if (bytes.byteLength !== before.size || after.size !== before.size) {
+      return Object.freeze({
+        ok: false as const,
+        kind: "invalid" as const,
+        detail: "the opened file length changed while it was being read",
+      });
+    }
+    return Object.freeze({ ok: true as const, bytes });
+  } catch (error) {
+    const code =
+      typeof error === "object" && error !== null && "code" in error
+        ? error.code
+        : null;
+    return Object.freeze({
+      ok: false as const,
+      kind:
+        code === "ENOENT"
+          ? "missing" as const
+          : code === "ELOOP"
+            ? "unsafe" as const
+            : "invalid" as const,
+      detail: error instanceof Error ? error.message : String(error),
+    });
+  } finally {
+    if (descriptor !== null) {
+      try {
+        closeSync(descriptor);
+      } catch {
+        descriptor = null;
+      }
+    }
+  }
+}
+
 function readProjectDocument(
   root: string,
 ): Readonly<{ ok: true; bytes: Buffer }> | DesktopWebExportRefusal {
   const documentFile = join(root, DESKTOP_ACTIVE_DOCUMENT_PATH);
-  try {
-    if (lstatSync(documentFile).isSymbolicLink() || !statSync(documentFile).isFile()) {
+  const read = readContainedFile(root, documentFile);
+  if (!read.ok) {
+    if (read.kind === "unsafe") {
       return refuse(
         DESKTOP_WEB_EXPORT_REFUSALS.unsafePath,
         "The active Scene Document must be a regular project file.",
       );
     }
-    const canonicalDocument = realpathSync(documentFile);
-    if (!within(root, canonicalDocument)) {
-      return refuse(
-        DESKTOP_WEB_EXPORT_REFUSALS.unsafePath,
-        "The active Scene Document resolves outside the project root.",
-      );
-    }
-    return Object.freeze({ ok: true as const, bytes: readFileSync(canonicalDocument) });
-  } catch (error) {
     return refuse(
       DESKTOP_WEB_EXPORT_REFUSALS.sceneInvalid,
-      `The active Scene Document could not be read: ${error instanceof Error ? error.message : String(error)}`,
+      `The active Scene Document could not be read: ${read.detail}`,
     );
   }
+  return read;
 }
 
 function referencedWebAssets(data: Readonly<Record<string, unknown>>):
@@ -289,52 +390,52 @@ function readProjectAsset(
     );
   }
   const target = resolve(root, path);
-  if (!within(root, target) || !existsSync(target)) {
+  if (!within(root, target)) {
     return refuse(
-      DESKTOP_WEB_EXPORT_REFUSALS.assetMissing,
-      `Referenced project asset ${path} is missing.`,
+      DESKTOP_WEB_EXPORT_REFUSALS.unsafePath,
+      `Referenced project asset ${path} resolves outside the project root.`,
     );
   }
-  try {
-    if (lstatSync(target).isSymbolicLink() || !statSync(target).isFile()) {
+  const read = readContainedFile(root, target, {
+    maximumBytes: PROJECT_ASSET_MAX_BYTES,
+    ...(manifestEntry === undefined
+      ? {}
+      : { expectedBytes: manifestEntry.byteLength }),
+  });
+  if (!read.ok) {
+    if (read.kind === "missing") {
+      return refuse(
+        DESKTOP_WEB_EXPORT_REFUSALS.assetMissing,
+        `Referenced project asset ${path} is missing.`,
+      );
+    }
+    if (read.kind === "unsafe") {
       return refuse(
         DESKTOP_WEB_EXPORT_REFUSALS.unsafePath,
-        `Referenced project asset ${path} must be a regular file, not a link or special file.`,
+        `Referenced project asset ${path} must be a contained regular file: ${read.detail}.`,
       );
     }
-    const canonical = realpathSync(target);
-    if (!within(root, canonical)) {
-      return refuse(
-        DESKTOP_WEB_EXPORT_REFUSALS.unsafePath,
-        `Referenced project asset ${path} resolves outside the project root.`,
-      );
-    }
-    const bytes = readFileSync(canonical);
-    const digest = sha256(bytes);
-    if (
-      manifestEntry !== undefined &&
-      (digest !== manifestEntry.digest || bytes.byteLength !== manifestEntry.byteLength)
-    ) {
-      return refuse(
-        DESKTOP_WEB_EXPORT_REFUSALS.assetInvalid,
-        `Referenced project asset ${path} does not match its accepted manifest digest and length.`,
-      );
-    }
-    return Object.freeze({
-      path,
-      bytes,
-      artifact: Object.freeze({
-        role: "asset-bundle" as const,
-        contentType: manifestEntry?.mediaType ?? contentType(path),
-        digest,
-      }),
-    });
-  } catch (error) {
     return refuse(
       DESKTOP_WEB_EXPORT_REFUSALS.assetInvalid,
-      `Referenced project asset ${path} could not be verified: ${error instanceof Error ? error.message : String(error)}`,
+      `Referenced project asset ${path} could not be verified: ${read.detail}.`,
     );
   }
+  const digest = sha256(read.bytes);
+  if (manifestEntry !== undefined && digest !== manifestEntry.digest) {
+    return refuse(
+      DESKTOP_WEB_EXPORT_REFUSALS.assetInvalid,
+      `Referenced project asset ${path} does not match its accepted manifest digest and length.`,
+    );
+  }
+  return Object.freeze({
+    path,
+    bytes: read.bytes,
+    artifact: Object.freeze({
+      role: "asset-bundle" as const,
+      contentType: manifestEntry?.mediaType ?? contentType(path),
+      digest,
+    }),
+  });
 }
 
 function revalidateProjectAssets(
@@ -507,7 +608,18 @@ function writeOutput(
       mkdirSync(dirname(target), { recursive: true });
       writeFileSync(target, bytes, { flag: "wx" });
     }
-    renameSync(temporary, destination);
+    mkdirSync(destination);
+    const claim = join(destination, ".sceneaxi-claim");
+    writeFileSync(claim, new Uint8Array(), { flag: "wx" });
+    for (const path of expected.keys()) {
+      const source = join(temporary, ...path.split("/"));
+      const target = join(destination, ...path.split("/"));
+      mkdirSync(dirname(target), { recursive: true });
+      linkSync(source, target);
+    }
+    rmSync(claim);
+    rmSync(temporary, { recursive: true });
+    temporary = null;
     return Object.freeze({ ok: true as const, replayed: false });
   } catch (error) {
     if (temporary !== null && existsSync(temporary)) {
@@ -530,7 +642,7 @@ function writeOutput(
     }
     return refuse(
       DESKTOP_WEB_EXPORT_REFUSALS.writeFailed,
-      `The static Web export could not be committed atomically: ${error instanceof Error ? error.message : String(error)}`,
+      `The static Web export could not be committed exclusively: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
 }

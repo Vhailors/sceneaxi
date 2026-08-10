@@ -9,6 +9,7 @@ import {
   readdirSync,
   rmSync,
   symlinkSync,
+  truncateSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -17,6 +18,7 @@ import { basename, join, relative, sep } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { contentHash } from "@sceneaxi/authoring-core";
 import { parseDeliveryHandoffText } from "@sceneaxi/schemas";
+import { PROJECT_ASSET_MAX_BYTES } from "../../packages/importers/src/index.ts";
 import {
   DESKTOP_WEB_EXPORT_REFUSALS,
   DESKTOP_WEB_EXPORT_TOOL_VERSION,
@@ -26,21 +28,51 @@ import {
 } from "../../desktop/linux/src/index.ts";
 
 const exportCommit = vi.hoisted(() => ({
-  afterRename: null as
+  afterCommit: null as
     | ((oldPath: unknown, newPath: unknown) => void)
     | null,
+  afterRealpath: null as ((path: unknown) => void) | null,
+  beforeMkdir: null as ((path: unknown) => void) | null,
 }));
 
 vi.mock("node:fs", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:fs")>();
+  const hookedRealpathSync = Object.assign(
+    (path: Parameters<typeof actual.realpathSync>[0]) => {
+      const result = actual.realpathSync(path);
+      exportCommit.afterRealpath?.(path);
+      return result;
+    },
+    { native: actual.realpathSync.native },
+  );
   return {
     ...actual,
+    linkSync: (
+      oldPath: Parameters<typeof actual.linkSync>[0],
+      newPath: Parameters<typeof actual.linkSync>[1],
+    ) => {
+      actual.linkSync(oldPath, newPath);
+      if (String(newPath).endsWith("/delivery-handoff.json")) {
+        exportCommit.afterCommit?.(
+          oldPath,
+          String(newPath).slice(0, -"/delivery-handoff.json".length),
+        );
+      }
+    },
+    mkdirSync: (
+      path: Parameters<typeof actual.mkdirSync>[0],
+      options?: Parameters<typeof actual.mkdirSync>[1],
+    ) => {
+      exportCommit.beforeMkdir?.(path);
+      return actual.mkdirSync(path, options);
+    },
+    realpathSync: hookedRealpathSync,
     renameSync: (
       oldPath: Parameters<typeof actual.renameSync>[0],
       newPath: Parameters<typeof actual.renameSync>[1],
     ) => {
       actual.renameSync(oldPath, newPath);
-      exportCommit.afterRename?.(oldPath, newPath);
+      exportCommit.afterCommit?.(oldPath, newPath);
     },
   };
 });
@@ -61,7 +93,9 @@ const GOLDEN = JSON.parse(
 };
 
 afterEach(() => {
-  exportCommit.afterRename = null;
+  exportCommit.afterCommit = null;
+  exportCommit.afterRealpath = null;
+  exportCommit.beforeMkdir = null;
   vi.restoreAllMocks();
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
@@ -380,7 +414,7 @@ describe("desktop static Web export", () => {
     ).toMatchObject({ ok: false, reason: DESKTOP_WEB_EXPORT_REFUSALS.projectDirty });
   });
 
-  it("refuses an asset that changes during the atomic export commit", () => {
+  it("refuses an asset that changes during the export commit", () => {
     const sourceRoot = temporary("sceneaxi-export-race-source-");
     const source = join(sourceRoot, "triangle.gltf");
     writeFileSync(source, containedTriangle());
@@ -388,8 +422,8 @@ describe("desktop static Web export", () => {
     seedWithAsset(root, source);
     const bridge = createDesktopBridge({ cwd: root });
     let committed = false;
-    exportCommit.afterRename = () => {
-      exportCommit.afterRename = null;
+    exportCommit.afterCommit = () => {
+      exportCommit.afterCommit = null;
       committed = true;
       writeFileSync(join(root, "assets/triangle.gltf"), "changed after capture");
     };
@@ -441,8 +475,8 @@ describe("desktop static Web export", () => {
     expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
     const bridge = createDesktopBridge({ cwd: root });
     let committed = false;
-    exportCommit.afterRename = (_oldPath, newPath) => {
-      exportCommit.afterRename = null;
+    exportCommit.afterCommit = (_oldPath, newPath) => {
+      exportCommit.afterCommit = null;
       if (typeof newPath !== "string") throw new Error("export destination was not a path");
       committed = true;
       writeFileSync(join(newPath, "index.html"), "changed after commit");
@@ -470,8 +504,8 @@ describe("desktop static Web export", () => {
     const outsideDocument = join(outside, "scene.json");
     writeFileSync(outsideDocument, readFileSync(documentPath));
     let committed = false;
-    exportCommit.afterRename = () => {
-      exportCommit.afterRename = null;
+    exportCommit.afterCommit = () => {
+      exportCommit.afterCommit = null;
       committed = true;
       unlinkSync(documentPath);
       symlinkSync(outsideDocument, documentPath);
@@ -501,5 +535,86 @@ describe("desktop static Web export", () => {
       reason: DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
     });
     expect(lstatSync(first.outputDirectory).isSymbolicLink()).toBe(true);
+  });
+
+  it("never replaces a directory raced into the content address", () => {
+    const root = temporary("sceneaxi-export-destination-claim-");
+    expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
+    const first = ship(root);
+    rmSync(first.outputDirectory, { recursive: true });
+    exportCommit.beforeMkdir = (path) => {
+      if (path !== first.outputDirectory) return;
+      exportCommit.beforeMkdir = null;
+      mkdirSync(first.outputDirectory);
+    };
+
+    const result = exportProject(root);
+
+    expect(result).toMatchObject({
+      ok: false,
+      reason: DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
+    });
+    expect(readdirSync(first.outputDirectory)).toEqual([]);
+  });
+
+  it("reads a contained asset through one stable file identity", () => {
+    const root = temporary("sceneaxi-export-stable-asset-");
+    expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
+    const asset = join(root, "assets/web-only.bin");
+    mkdirSync(join(root, "assets"), { recursive: true });
+    const inside = Buffer.from("contained bytes");
+    const outside = Buffer.from("outside bytes");
+    writeFileSync(asset, inside);
+    rewriteDocument(root, (document) => {
+      (document["data"] as Record<string, unknown>)["webExperience"] = {
+        html: "<main>Fixture</main>",
+        assets: ["assets/web-only.bin"],
+      };
+    });
+    const outsideRoot = temporary("sceneaxi-export-stable-asset-outside-");
+    const outsideAsset = join(outsideRoot, "outside.bin");
+    writeFileSync(outsideAsset, outside);
+    let swapped = false;
+    exportCommit.afterRealpath = (path) => {
+      if (path !== asset) return;
+      exportCommit.afterRealpath = null;
+      unlinkSync(asset);
+      symlinkSync(outsideAsset, asset);
+      swapped = true;
+    };
+    exportCommit.afterCommit = () => {
+      exportCommit.afterCommit = null;
+      if (!swapped) return;
+      unlinkSync(asset);
+      writeFileSync(asset, outside);
+    };
+
+    const result = exportProject(root);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(result.message);
+    expect(readFileSync(join(result.outputDirectory, "assets/web-only.bin"))).toEqual(
+      inside,
+    );
+  });
+
+  it("refuses an oversized Web-only asset before reading its bytes", () => {
+    const root = temporary("sceneaxi-export-oversized-web-asset-");
+    expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
+    const asset = join(root, "assets/web-only.bin");
+    mkdirSync(join(root, "assets"), { recursive: true });
+    writeFileSync(asset, "fixture");
+    truncateSync(asset, PROJECT_ASSET_MAX_BYTES + 1);
+    rewriteDocument(root, (document) => {
+      (document["data"] as Record<string, unknown>)["webExperience"] = {
+        html: "<main>Fixture</main>",
+        assets: ["assets/web-only.bin"],
+      };
+    });
+
+    expect(exportProject(root)).toMatchObject({
+      ok: false,
+      reason: DESKTOP_WEB_EXPORT_REFUSALS.assetInvalid,
+    });
   });
 });
