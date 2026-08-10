@@ -182,15 +182,20 @@ always has a refusal and a non-inert one never does.
 
 | Kind | Meaning | Examples |
 |---|---|---|
-| `view` | changes visual state; genuinely works | mode rail, dock tabs, profile switch, assistant open/close, its Ask/Build/Agent modes and its three route chips, menu openers, the palette openers, the outcome dismissal, the sculpt cancel, drawer toggles, the scene-entity selection |
+| `view` | changes visual state; genuinely works | mode rail, dock tabs, profile switch, assistant open/close, its Ask/Build/Agent modes and its three route chips, menu openers, the palette openers, the outcome dismissal, drawer toggles, the scene-entity selection |
 | `live` | delegates a product action to an injected desktop-host seam; refuses visibly when that host is absent | File New/Open/Save, Edit Undo when the active project's authoring journal reports a completed Save, Run Play, their palette rows and accelerators, Change Review's Accept and Reject, the Translation X field and its Stage control, stage Web HTML, inject a project-relative Web asset; and — only once the packaged Linux runtime binds them — the assistant prompt, Send, Retry, and the artifact manipulators |
-| `inert` | renders, keeps its focus stop, refuses by name | Undo when the active project's authoring journal has no completed Save or has recovery pending, Sculpt object, standalone-shell assistant prompt/Send/Retry and the four artifact manipulators, the three viewport-source tabs, and — on the refuse-only profile — every control except the seven named below |
+| `inert` | renders, keeps its focus stop, refuses by name | Undo when the active project's authoring journal has no completed Save or has recovery pending, Sculpt object and its static progress cancellation, standalone-shell assistant prompt/Send/Retry and the four artifact manipulators, the three viewport-source tabs, and — on the refuse-only profile — every control except the seven named below |
 
 The chrome imports no engine, profile, site, billing, or host package, and
-reaches no authoring package itself. Its live adapter calls the host's existing
-refusal envelope; that host remains solely responsible for project containment,
-the shared authoring session, the orchestrated kernel path, and the presentation
-runtime. No host is present in the standalone CLI render, so the assistant
+reaches no authoring package itself. Build and Run are the only product rooms in
+this shell; Sculpt, Scene composition, Animate, Ship, and Plugins remain
+presentation-only rail states whose panels print `DESKTOP_NO_DOCUMENT_BOUND`
+where no desktop operation is bound. Their mode buttons and dock tabs change
+presentation only and never claim that unsupported authoring work occurred. Its
+live adapter calls the host's existing refusal envelope; that host remains solely
+responsible for project containment, the shared authoring session, the
+orchestrated kernel path, and the presentation runtime. No host is present in the
+standalone CLI render, so the assistant
 product actions stay inert there and the project-loop `live` controls refuse
 `DESKTOP_RUNTIME_UNAVAILABLE` when clicked; `test/app.test.ts` proves a `chrome`
 invocation leaves a document byte-identical. The packaged Linux tier also renders
@@ -406,7 +411,7 @@ document also explains. `test/product-loop.test.ts` asserts that in both directi
 
 | Code | When |
 |---|---|
-| `OPEN_PATH_KIDS_REFUSED` | the refuse-only profile, and every control behind it that is not already refusing for a more specific reason — Open, Save, Play, the mode rail, the dock tabs, the two drawer toggles, the Change Review decisions, the sculpt cancel, and the driveable palette rows; the code comes from the shared open-path policy, not from here |
+| `OPEN_PATH_KIDS_REFUSED` | the refuse-only profile, and every control behind it that is not already refusing for a more specific reason — Open, Save, Play, the mode rail, the dock tabs, the two drawer toggles, the Change Review decisions, the static sculpt cancellation, and the driveable palette rows; the code comes from the shared open-path policy, not from here |
 | `DESKTOP_KIDS_ASSISTANT_DENIED` | assistant on Kids — its toggle, its close, its prompt, its Send, its Retry, its three route chips, and its three composer modes |
 | `DESKTOP_NO_PRESENTATION_RUNTIME` | the viewport: no renderer is mounted, so no pixels — the three viewport-source tabs, because switching what a viewport shows needs the runtime that is missing, and every `live` assistant control (prompt, Send, Retry, the four artifact manipulators) while `assistantRuntime` is `none` |
 | `DESKTOP_NO_KERNEL_SESSION` | the static `run` mode before a host-backed Play response; the chrome never invents a tick, frame, or body |
@@ -528,7 +533,10 @@ Two rules keep this honest:
   `section`, every one labelled.
 - **Real controls**: every action is a `<button type="button">`; the three
   non-button controls are the modelled assistant `<textarea>`, the
-  recent-project `<select>`, and the numeric Translation X `<input>`. Keyboard
+  recent-project `<select>`, and the numeric Translation X `<input>`. The
+  static `--sculpt running` preview has no bound job, so its cancellation control
+  is inert with `DESKTOP_NO_DOCUMENT_BOUND` rather than hiding progress locally.
+  Keyboard
   order is DOM order, and there are no click handlers on `div` or `span`.
 - **Inert controls stay reachable.** An inert control is marked `aria-disabled`
   rather than `disabled`, so it keeps its focus stop, and `aria-describedby`
@@ -669,7 +677,7 @@ sentence can return by review slip.
   Web stored-HTML/project-asset staging, assistant states including the
   non-reopenable deny, Change Review's proposal projection and empty state,
   sculpt pass advance and
-  clamping, overlays, window tiers, control kinds, refusal reachability, view
+  clamping, static sculpt cancellation refusal, overlays, window tiers, control kinds, refusal reachability, view
   freezing, and determinism — plus the emitted document: escaping (including a
   hostile selection name that cannot close the script tag), landmarks, labels,
   `aria` wiring, roving tabindex, the reduced-motion rule, the focus ring, the
@@ -692,8 +700,11 @@ sentence can return by review slip.
   `tests/e2e/desktop-command-interactions-golden.test.ts` loads the emitted
   document, then drives each `DESKTOP_INTERACTION_COMMANDS` id from its menu
   item, its palette row, and its accelerator, and asserts the host call or the
-  named refusal each one produces. A control that only closed its overlay would
-  fail there, which is the fault the palette rows carried before #226.
+  named refusal each one produces. `tests/e2e/desktop-control-inventory-golden.test.ts`
+  mounts the full emitted surface and observes mode, dock, drawer, assistant,
+  profile, overlay, refusal, and standalone product outcomes. A control that
+  only closed its overlay would fail there, which is the fault the palette rows
+  carried before #226.
 
 - **The model/renderer split is enforced, not conventional** —
   `apps/desktop-shell/test/control-accounting.test.ts`. Review round after review
@@ -1129,8 +1140,9 @@ sentence can return by review slip.
     `matchMedia('(prefers-reduced-motion: reduce)')` matched, the sculpt sweep
     resolved to `display: none`, and the progress animation collapsed to
     `1e-06s` while the `progressbar` kept `aria-valuenow="64"` and
-    `aria-label="Pass 3 of 5"` and the modelled `sculpt-cancel` stayed on screen
-    at `display: flex` with `data-kind="view"`.
+    `aria-label="Pass 3 of 5"`. The static preview's `sculpt-cancel` stayed on
+    screen at `display: flex` with `data-kind="inert"`,
+    `data-refusal="DESKTOP_NO_DOCUMENT_BOUND"`, and its accessible refusal.
   - **Window tiers match `WINDOW_TIERS` exactly**, measured as which children of
     `.shell-body` are still in flow: 1680×1000 `mode-rail, left-dock,
     viewport-column, inspector, assistant` with 0 drawer toggles visible;

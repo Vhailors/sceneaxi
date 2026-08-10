@@ -1236,7 +1236,12 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
       "inert",
       DESKTOP_VISUAL_REFUSALS.noDocumentBound,
     ),
-    cancel: control("sculpt-cancel", "Cancel after this pass", "view"),
+    cancel: control(
+      "sculpt-cancel",
+      "Cancel after this pass",
+      "inert",
+      DESKTOP_VISUAL_REFUSALS.noDocumentBound,
+    ),
   });
 
   const projection = assistantProjection(kids, control, state.assistantRuntime);
