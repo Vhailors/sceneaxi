@@ -208,16 +208,15 @@ describe("desktop selected composed-instance edit — public seam", () => {
       documentData: composed.document.data,
       contentHash: `sha256:${"f".repeat(64)}`,
     });
-    expect(inspected).toMatchObject({
-      ok: true,
-      entities: expect.arrayContaining([
-        {
-          id: removableInstanceId,
-          artifactId: alternate.artifact.artifactId,
-          canRemove: true,
-        },
-      ]),
-    });
+    expect(inspected.ok).toBe(true);
+    if (!inspected.ok) return;
+    expect(inspected.entities).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: removableInstanceId,
+        artifactId: alternate.artifact.artifactId,
+        canRemove: true,
+      }),
+    ]));
 
     const removed = stageDesktopSceneEdit({
       documentData: composed.document.data,

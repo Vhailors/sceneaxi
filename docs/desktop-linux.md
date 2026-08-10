@@ -49,10 +49,10 @@ Bridge actions and what each reaches — only through public seams:
 
 ### Selected composed-instance edit
 
-After a Game or Website project binds, the Project / Files panel exposes the
-validated instances in the stored composition. The executable selector fills nine
-bounded numeric fields: X/Y/Z translation, Euler rotation, and scale. Values come
-from the digest-bound `composedScene` in `scene.json`, never the legacy sample
+After a Game or Website project binds and opens, the Project / Files panel exposes
+the validated instances in the stored composition. The executable selector fills
+nine bounded numeric fields: X/Y/Z translation, Euler rotation, and scale. Values
+come from the digest-bound `composedScene` in `scene.json`, never the legacy sample
 `entities` object beside it.
 
 The canonical `edit-scene` operation is one of `set-transform-component`,
@@ -62,11 +62,16 @@ is limited to a non-root leaf while the two-instance scene minimum remains. Each
 operation rebuilds the composition and its evidence through `composeScene()`,
 then hands `/data/composedScene` to the existing `DesktopSession.proposeEdit()`
 path with the content hash returned by status. Nothing writes during staging.
-The inspector shows the shared rendered diff, Save calls the existing atomic
-accept path, Reload starts a new authoring session, and Play mounts the composition
-that session re-read. Invalid numeric input returns the scene validator's path and
-message under `validation-failed`; a stale status hash returns
-`content-hash-conflict`, matching the CLI refusal code.
+The inspector shows the shared rendered diff. Reject discards it without a write;
+Save uses the existing atomic accept and recovery path, and Undo restores the last
+completed Save. Reload re-reads through the long-lived session; the `restart`
+recovery seam and fresh-session proof reopen identical canonical bytes. Play mounts
+the composition the active session re-read. Malformed or out-of-range operations,
+stale selections, missing local artifact sources, invalid removals, and unsupported
+profiles return `invalid-proposal`. A composition that fails validation returns
+`validation-failed`; a stale status hash returns `content-hash-conflict`, matching
+the CLI refusal code, while document containment refuses
+`DESKTOP_BRIDGE_REQUEST_MALFORMED` at the bridge boundary.
 
 This is a narrow E1/Minimum-E2 projection over the one active `scene.json`.
 There are no tabs, arbitrary JSON editing, asset imports, evidence-byte rewrites,
@@ -75,14 +80,15 @@ artifact, and the Kids profile refuses before the authoring host is reached.
 
 The public helpers and bridge behavior are covered by
 `tests/desktop/desktop-scene-property.test.ts` and
-`tests/e2e/desktop-scene-property-golden.test.ts`. The latter also applies the
-same generated E1 edit through the protocol client and `sceneaxi project
-propose|apply`, then compares the three canonical document byte streams. The
-emitted-chrome interaction test in
-`tests/e2e/desktop-product-loop-golden.test.ts` clicks selection, all review
-decisions, transforms, add/remove, save, undo, reopen, Play, and redraw. The
-spawned Linux smoke repeats the selected transform and add/remove settlement on
-a scratch project and proves the real Three viewport reports the saved redraw.
+`tests/e2e/desktop-scene-property-golden.test.ts`. For representative transform
+and add operations, the latter projects the canonical operation into an E1 edit,
+applies it through the protocol client and `sceneaxi project propose|apply`, then
+compares all three document byte streams. The emitted-chrome interaction test in
+`tests/e2e/desktop-product-loop-golden.test.ts` clicks selection, both review
+decisions, representative transforms, add/remove, Save, Undo, reopen, Play, and
+redraw, including conflict and recovery handling. The spawned Linux smoke repeats
+Translation X, Rotation Y, Scale Z, and add/remove settlement on a scratch project;
+it also proves the real Three viewport reports the saved redraw.
 
 The UI is the Engine Desktop chrome from `@sceneaxi/desktop-shell`, **unforked**:
 `desktopLinuxIndexHtml()` renders `renderDesktopChrome(desktopVisualView(...))` and
@@ -468,10 +474,10 @@ describe — one more reason the record above must be re-taken from a fresh succ
 main-branch run. It also predates the contained project lifecycle in sceneaxi#224;
 the hard-bound seed observations below are historical and superseded by the
 first-launch contract above. It predates the typed scene-property edit in
-sceneaxi#225 the same way: the `authoring:` bullet below records the
-propose → accept → undo round trip the smoke asserted then, and the script now
-asserts select → stage → save → fresh-session reopen → Play instead, so that
-bullet is a historical observation and not the current proof line.
+sceneaxi#225 and the current composed-instance breadth the same way: the
+`authoring:` bullet below records the propose → accept → undo round trip the
+smoke asserted then. The current smoke proof is the one described under
+"Package and verify", so that bullet remains a historical observation.
 These lines never describe the offered bytes. All three launch modes
 printed the same proof (`pnpm smoke`, `pnpm smoke --packaged`, and the AppImage itself
 with `--appimage-extract-and-run --smoke`):

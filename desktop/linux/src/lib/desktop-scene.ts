@@ -325,10 +325,10 @@ type DesktopEditableCompositionRead =
   | Readonly<{ ok: false; diagnostics: readonly ApplyDiagnostic[] }>;
 
 /**
- * The one validated read behind both the inspection and the staged edit: a
- * content hash, a composition, and the editable starter entity inside it.
- * Every refusal on the property path is minted here, so the two public seams
- * cannot drift apart on which document they will accept.
+ * The one validated read behind inspection and staged edits: a content hash
+ * plus the digest-bound composition and its selectable instances. Every
+ * document-level refusal is minted here, so the public seams cannot drift on
+ * which document they accept.
  */
 function readEditableComposition(
   documentData: unknown,
@@ -390,10 +390,9 @@ function editableEntityOf(
 /**
  * The inspection shape both the read path and the staged-edit path answer with.
  *
- * A staged proposal has no document on disk to re-read, so the host reports the
- * entity the edit recomposed rather than leaving the surface to derive a value
- * of its own — a second, unvalidated authoring answer is exactly what this
- * vertical must not grow.
+ * A staged proposal has no document on disk to re-read, so the host reports all
+ * instances from the recomposed result rather than leaving the surface to derive
+ * values of its own. That prevents a second, unvalidated authoring answer.
  */
 export function desktopScenePropertyInspection(
   contentHash: string,
@@ -407,11 +406,11 @@ export function desktopScenePropertyInspection(
 }
 
 /**
- * Inspect the one typed property this vertical supports.
+ * Inspect the selected-instance transform surface this vertical supports.
  *
- * The property is taken from the validated, digest-bound composition rather
- * than the legacy sample fields beside it. That is what makes the displayed
- * value the value Play will actually mount after an accepted save.
+ * Values come from the validated, digest-bound composition rather than the
+ * legacy sample fields beside it. Play therefore mounts the values shown after
+ * an accepted Save.
  */
 export function inspectDesktopSceneProperties(input: Readonly<{
   documentData: unknown;

@@ -280,8 +280,9 @@ async function start(): Promise<void> {
   if (!scratchProject) fail(`authoring proof would run on the retired implicit project ${cwd}`);
 
   // The envelope only says the bridge answered; a refused proposal or failed apply
-  // also arrives inside `{ok: true}`. Read the typed property, session phases, and
-  // document bytes, then start a fresh session and play only what it re-read.
+  // also arrives inside `{ok: true}`. Read selected-instance values, session
+  // phases, and document bytes, then start a fresh session and play only what it
+  // re-read.
   const documentFile = join(cwd, SAMPLE_DOCUMENT);
   const seededBytes = readFileSync(documentFile, "utf8");
   const opened = proofBridge.handle({
