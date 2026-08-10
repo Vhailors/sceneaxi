@@ -19,6 +19,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runInNewContext } from "node:vm";
 import { afterAll, describe, expect, it, vi } from "vitest";
+import { Window as HappyWindow } from "happy-dom";
 import {
   MODEL_PROVIDER_PORT_SCHEMA_VERSION,
   RARITY_PROVIDER_REQUEST_MAX_CHARS,
@@ -63,6 +64,7 @@ import {
   desktopSceneFromDocumentData,
   seedDesktopProject,
   type DesktopAssistantJobSnapshot,
+  type DesktopBridgeResponse,
   type DesktopFrameReport,
   type DesktopRarityEvidence,
 } from "../../desktop/linux/src/index.ts";
@@ -75,7 +77,10 @@ import {
   mountDesktopScene,
   synchronizeViewportScene,
 } from "../../desktop/linux/src/renderer/viewport-playback.ts";
-import { createDesktopPresentationBackend } from "../../desktop/linux/src/renderer/viewport.ts";
+import {
+  createDesktopPresentationBackend,
+  installAssistantProductFlow,
+} from "../../desktop/linux/src/renderer/viewport.ts";
 import {
   DESKTOP_ASSISTANT_START_MODES,
   decideAssistantStart,
@@ -2908,6 +2913,7 @@ describe("desktop renderer behavior", () => {
       reason: DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed,
       message:
         "The assistant job did not finish in time, and its abandonment could not be confirmed; wait before retrying.",
+      retryJobId: "desktop-assistant-1",
     });
   });
 
@@ -3035,6 +3041,7 @@ describe("desktop renderer behavior", () => {
       ok: false,
       reason: "DESKTOP_ASSISTANT_ABANDON_DENIED",
       message: "The running job is still owned by another request.",
+      retryJobId: "desktop-assistant-1",
     });
 
     const rejected = await pollAssistantJob({
@@ -3051,7 +3058,120 @@ describe("desktop renderer behavior", () => {
       reason: DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed,
       message:
         "The assistant job did not finish in time, and its abandonment could not be confirmed; wait before retrying.",
+      retryJobId: "desktop-assistant-1",
     });
+  });
+
+  it("resumes an unconfirmed job before Retry starts fresh work", async () => {
+    const window = new HappyWindow();
+    const backend = createThreeSculptPresentationBackend();
+    const mounts = createSculptMountApi(backend);
+    try {
+      window.document.body.innerHTML = `
+        <main class="shell" data-assistant-mode="build" data-assistant-route="local" data-profile="game">
+          <textarea id="assistant-prompt">Build a blue crate</textarea>
+          <button id="assistant-send" data-action="assistant-send"></button>
+          <button id="assistant-retry" data-action="assistant-send" hidden></button>
+          <p data-assistant-status></p>
+          <pre data-assistant-result hidden></pre>
+          <section class="viewport">
+            <div data-assistant-manipulators>
+              <button data-action="assistant-manipulator" data-value="move-x"></button>
+            </div>
+          </section>
+        </main>
+      `;
+      vi.stubGlobal("document", window.document);
+
+      let starts = 0;
+      const runningJob = (jobId: string): DesktopBridgeResponse => ({
+        ok: true,
+        action: "assistant",
+        data: {
+          jobId,
+          route: "local",
+          status: "running",
+          latestProgress: null,
+          progressCount: 0,
+        },
+      });
+      const port = {
+        request: (request: unknown): Promise<DesktopBridgeResponse> => {
+          const payload = (request as { payload?: { op?: string } }).payload;
+          if (payload?.op !== "start") {
+            return Promise.reject(new Error("unexpected direct assistant request"));
+          }
+          starts += 1;
+          return Promise.resolve(runningJob(`desktop-assistant-${String(starts)}`));
+        },
+      };
+      const polledJobIds: string[] = [];
+      const pollJob: typeof pollAssistantJob = (input) => {
+        polledJobIds.push(input.jobId);
+        if (polledJobIds.length === 1) {
+          return Promise.resolve({
+            ok: false,
+            reason: DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed,
+            message: "The first abandonment could not be confirmed.",
+            retryJobId: input.jobId,
+          });
+        }
+        if (polledJobIds.length === 2) {
+          return Promise.resolve({
+            ok: false,
+            reason: DESKTOP_BRIDGE_REFUSALS.assistantStatusTimeout,
+            message: "The retained job was abandoned.",
+          });
+        }
+        return Promise.resolve({
+          ok: false,
+          reason: "DESKTOP_TEST_COMPLETE",
+          message: "The fresh job completed the test.",
+        });
+      };
+      const stage = window.document.querySelector(".viewport");
+      if (stage === null) throw new Error("missing viewport fixture");
+      expect(installAssistantProductFlow(stage, port, mounts, backend, pollJob)).toBe(true);
+
+      const send = window.document.querySelector("#assistant-send");
+      const retry = window.document.querySelector("#assistant-retry");
+      const status = window.document.querySelector("[data-assistant-status]");
+      if (send === null || retry === null || status === null) {
+        throw new Error("missing assistant fixture controls");
+      }
+
+      send.dispatchEvent(new window.Event("click"));
+      await vi.waitFor(() => {
+        expect(status.textContent).toContain("abandonment could not be confirmed");
+      });
+      expect(starts).toBe(1);
+      expect(polledJobIds).toEqual(["desktop-assistant-1"]);
+
+      retry.dispatchEvent(new window.Event("click"));
+      await vi.waitFor(() => {
+        expect(status.textContent).toContain(DESKTOP_BRIDGE_REFUSALS.assistantStatusTimeout);
+      });
+      expect(starts).toBe(1);
+      expect(polledJobIds).toEqual([
+        "desktop-assistant-1",
+        "desktop-assistant-1",
+      ]);
+
+      retry.dispatchEvent(new window.Event("click"));
+      await vi.waitFor(() => {
+        expect(status.textContent).toContain("DESKTOP_TEST_COMPLETE");
+      });
+      expect(starts).toBe(2);
+      expect(polledJobIds).toEqual([
+        "desktop-assistant-1",
+        "desktop-assistant-1",
+        "desktop-assistant-2",
+      ]);
+    } finally {
+      mounts.dispose();
+      window.close();
+      vi.unstubAllGlobals();
+    }
   });
 
   it("carries a refused job's redacted reason and detail into one poll outcome", async () => {

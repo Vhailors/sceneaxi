@@ -234,11 +234,12 @@ export function createDesktopPresentationBackend(
   return createThreeSculptPresentationBackend(options);
 }
 
-function installAssistantProductFlow(
+export function installAssistantProductFlow(
   stage: Element,
   port: BridgeGlobal,
   mounts: ReturnType<typeof createSculptMountApi>,
   backend: ReturnType<typeof createThreeSculptPresentationBackend>,
+  pollJob: typeof pollAssistantJob = pollAssistantJob,
 ): boolean {
   const shell = document.querySelector<HTMLElement>(".shell");
   const prompt = document.querySelector<HTMLTextAreaElement>("#assistant-prompt");
@@ -272,6 +273,7 @@ function installAssistantProductFlow(
   }
   let running = false;
   let assistantRunVersion = 0;
+  let recoveryJobId: string | null = null;
   let activeRarityProposalDigest: string | null = null;
   let displayedRarityResultDigest: string | null = null;
   const assistantViewport = createDesktopAssistantViewportController(mounts);
@@ -326,7 +328,7 @@ function installAssistantProductFlow(
   };
 
   const poll = async (jobId: string): Promise<void> => {
-    const outcome = await pollAssistantJob({
+    const outcome = await pollJob({
       request: (request) => port.request(request),
       jobId,
       onSnapshot: (job) => {
@@ -335,9 +337,11 @@ function installAssistantProductFlow(
       },
     });
     if (!outcome.ok) {
+      recoveryJobId = outcome.retryJobId ?? null;
       refused(outcome.reason, outcome.message);
       return;
     }
+    recoveryJobId = null;
     const job = outcome.job;
     const result = outcome.result;
     activeRarityProposalDigest = assistantRarityResultDigest(result);
@@ -416,6 +420,14 @@ function installAssistantProductFlow(
 
   const start = async (): Promise<void> => {
     if (running) return;
+    if (recoveryJobId !== null) {
+      const jobId = recoveryJobId;
+      running = true;
+      retry.setAttribute("hidden", "");
+      status.textContent = "Recovering assistant action…";
+      await poll(jobId);
+      return;
+    }
     const decision = decideAssistantStart({
       mode: shell.dataset.assistantMode,
       route: shell.dataset.assistantRoute,

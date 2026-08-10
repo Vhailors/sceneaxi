@@ -31,7 +31,7 @@ export type AssistantPollOutcome =
       job: DesktopAssistantJobSnapshot;
       result: NonNullable<DesktopAssistantJobSnapshot["result"]>;
     }>
-  | Readonly<{ ok: false; reason: string; message: string }>;
+  | Readonly<{ ok: false; reason: string; message: string; retryJobId?: string }>;
 
 export type AssistantPollInput = Readonly<{
   request: (request: unknown) => Promise<DesktopBridgeResponse>;
@@ -57,8 +57,17 @@ export type AssistantRaritySettlementAcknowledgementInput = Readonly<{
   wait?: (ms: number) => Promise<void>;
 }>;
 
-const refuse = (reason: string, message: string): AssistantPollOutcome =>
-  Object.freeze({ ok: false as const, reason, message });
+const refuse = (
+  reason: string,
+  message: string,
+  retryJobId?: string,
+): AssistantPollOutcome =>
+  Object.freeze({
+    ok: false as const,
+    reason,
+    message,
+    ...(retryJobId === undefined ? {} : { retryJobId }),
+  });
 
 const settledJobOutcome = (
   job: DesktopAssistantJobSnapshot | null,
@@ -123,14 +132,16 @@ export async function pollAssistantJob(
     return refuse(
       DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed,
       "The assistant job did not finish in time, and its abandonment could not be confirmed; wait before retrying.",
+      input.jobId,
     );
   }
-  if (!abandoned.ok) return refuse(abandoned.reason, abandoned.message);
+  if (!abandoned.ok) return refuse(abandoned.reason, abandoned.message, input.jobId);
   const abandonedJob = abandoned.data as DesktopAssistantJobSnapshot | null;
   if (abandonedJob?.jobId !== input.jobId) {
     return refuse(
       DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed,
       "The assistant job did not finish in time, and its abandonment could not be confirmed; wait before retrying.",
+      input.jobId,
     );
   }
   const abandonedOutcome = settledJobOutcome(abandonedJob, input.onSnapshot);
@@ -149,6 +160,7 @@ export async function pollAssistantJob(
     return refuse(
       DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed,
       "The assistant job did not finish in time, and its abandonment could not be confirmed; wait before retrying.",
+      input.jobId,
     );
   }
   return refuse(
