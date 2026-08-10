@@ -12,14 +12,22 @@
 import { composeScene, type ApplyDiagnostic } from "@sceneaxi/authoring-core";
 import {
   COMPOSED_SCENE_DOCUMENT_DATA_KEY,
+  DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS,
   SCENE_COMPOSITION_INTAKE_KIND,
   SCENE_COMPOSITION_SCHEMA_VERSION,
+  SCENE_MINIMUM_INSTANCES,
   composedSceneFromDocumentData,
+  desktopSceneTransformProperty,
   digestSceneArtifact,
   identitySculptTransform,
+  isDesktopSceneEditOperation,
+  isDesktopSceneEditProfile,
   isJsonObject,
   type ComposedScene,
   type ComposedSceneInstance,
+  type DesktopSceneEditOperation,
+  type DesktopSceneEditProfile,
+  type DesktopSceneTransformPropertyId,
   type SceneCompositionIntake,
   type SculptArtifact,
   type SculptTransform,
@@ -48,15 +56,20 @@ export const DESKTOP_RARITY_PROJECT_SEED = 20260809 as const;
 export const DESKTOP_SCENE_NOT_COMPOSABLE = "DESKTOP_SCENE_NOT_COMPOSABLE";
 
 export type DesktopSceneEditableProperty = Readonly<{
-  id: typeof DESKTOP_SCENE_TRANSLATION_X_PROPERTY.id;
+  id: DesktopSceneTransformPropertyId;
   label: string;
   value: number;
   step: number;
+  min: number;
+  max: number;
 }>;
 
 export type DesktopSceneEditableEntity = Readonly<{
   id: string;
   label: string;
+  artifactId: string;
+  parentInstanceId: string | null;
+  canRemove: boolean;
   properties: readonly DesktopSceneEditableProperty[];
 }>;
 
@@ -76,6 +89,17 @@ export type DesktopScenePropertyStageResult =
       ok: true;
       edit: DesktopScenePropertyProposalInput;
       entity: DesktopSceneEditableEntity;
+      sceneDigest: string;
+    }>
+  | Readonly<{ ok: false; diagnostics: readonly ApplyDiagnostic[] }>;
+
+export type DesktopSceneEditStageResult =
+  | Readonly<{
+      ok: true;
+      operation: DesktopSceneEditOperation;
+      edit: DesktopScenePropertyProposalInput;
+      inspection: DesktopScenePropertyInspection;
+      selectedInstanceId: string;
       sceneDigest: string;
     }>
   | Readonly<{ ok: false; diagnostics: readonly ApplyDiagnostic[] }>;
@@ -172,27 +196,46 @@ function desktopPlacementLabels(): ReadonlyMap<string, string> {
  * caller-supplied value, and `composeScene()` — not this module — owns the
  * validation diagnostic that value must produce.
  */
-function recomposeStoredScene(
+type DesktopStoredPlacement = Readonly<{
+  instanceId: string;
+  artifactId: string;
+  parentInstanceId: string | null;
+  transform: unknown;
+}>;
+
+function composeStoredPlacements(
   stored: ComposedScene,
-  transformFor: (instance: ComposedSceneInstance) => unknown,
+  placements: readonly DesktopStoredPlacement[],
 ) {
   const intake = {
     schemaVersion: SCENE_COMPOSITION_SCHEMA_VERSION,
     kind: SCENE_COMPOSITION_INTAKE_KIND,
     sceneId: stored.sceneId,
     rootInstanceId: stored.rootInstanceId,
-    placements: stored.instances.map((instance) => ({
+    placements,
+  };
+  const placedArtifactIds = new Set(placements.map((placement) => placement.artifactId));
+  const artifacts = new Map<string, SculptArtifact>();
+  for (const instance of stored.instances) {
+    if (!placedArtifactIds.has(instance.artifactId)) continue;
+    artifacts.set(instance.artifactId, instance.artifact);
+  }
+  return composeScene(intake, [...artifacts.values()]);
+}
+
+function recomposeStoredScene(
+  stored: ComposedScene,
+  transformFor: (instance: ComposedSceneInstance) => unknown,
+) {
+  return composeStoredPlacements(
+    stored,
+    stored.instances.map((instance) => ({
       instanceId: instance.instanceId,
       artifactId: instance.artifactId,
       parentInstanceId: instance.parentInstanceId,
       transform: transformFor(instance),
     })),
-  };
-  const artifacts = new Map<string, SculptArtifact>();
-  for (const instance of stored.instances) {
-    artifacts.set(instance.artifactId, instance.artifact);
-  }
-  return composeScene(intake, [...artifacts.values()]);
+  );
 }
 
 /**
@@ -278,14 +321,14 @@ export function desktopSceneFromDocumentData(data: unknown): DesktopSceneResult 
 }
 
 type DesktopEditableCompositionRead =
-  | Readonly<{ ok: true; stored: ComposedScene; instance: ComposedSceneInstance }>
+  | Readonly<{ ok: true; stored: ComposedScene }>
   | Readonly<{ ok: false; diagnostics: readonly ApplyDiagnostic[] }>;
 
 /**
- * The one validated read behind both the inspection and the staged edit: a
- * content hash, a composition, and the editable starter entity inside it.
- * Every refusal on the property path is minted here, so the two public seams
- * cannot drift apart on which document they will accept.
+ * The one validated read behind inspection and staged edits: a content hash
+ * plus the digest-bound composition and its selectable instances. Every
+ * document-level refusal is minted here, so the public seams cannot drift on
+ * which document they accept.
  */
 function readEditableComposition(
   documentData: unknown,
@@ -312,59 +355,62 @@ function readEditableComposition(
       documentPath,
     );
   }
-  const instance = stored.value.instances.find(
-    (candidate) =>
-      candidate.instanceId === DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
-  );
-  if (instance === undefined) {
-    return propertyDiagnostic(
-      `The active composition has no editable starter entity "${DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId}".`,
-      documentPath,
-    );
-  }
-  return Object.freeze({ ok: true as const, stored: stored.value, instance });
+  return Object.freeze({ ok: true as const, stored: stored.value });
 }
 
-function editableEntityOf(instance: ComposedSceneInstance): DesktopSceneEditableEntity {
+function editableEntityOf(
+  stored: ComposedScene,
+  instance: ComposedSceneInstance,
+): DesktopSceneEditableEntity {
+  const knownLabel = desktopPlacementLabels().get(instance.instanceId);
   return Object.freeze({
     id: instance.instanceId,
-    label: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityLabel,
-    properties: Object.freeze([
-      Object.freeze({
-        id: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.id,
-        label: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.label,
-        value: instance.localTransform.translation[0],
-        step: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.step,
-      }),
-    ]),
+    label: knownLabel ?? `Local ${instance.artifactId}`,
+    artifactId: instance.artifactId,
+    parentInstanceId: instance.parentInstanceId,
+    canRemove:
+      instance.instanceId !== stored.rootInstanceId &&
+      stored.instances.length > SCENE_MINIMUM_INSTANCES &&
+      !stored.instances.some((candidate) => candidate.parentInstanceId === instance.instanceId),
+    properties: Object.freeze(
+      DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.map((definition) =>
+        Object.freeze({
+          id: definition.id,
+          label: definition.label,
+          value: instance.localTransform[definition.field][definition.axis],
+          step: definition.step,
+          min: definition.min,
+          max: definition.max,
+        }),
+      ),
+    ),
   });
 }
 
 /**
  * The inspection shape both the read path and the staged-edit path answer with.
  *
- * A staged proposal has no document on disk to re-read, so the host reports the
- * entity the edit recomposed rather than leaving the surface to derive a value
- * of its own — a second, unvalidated authoring answer is exactly what this
- * vertical must not grow.
+ * A staged proposal has no document on disk to re-read, so the host reports all
+ * instances from the recomposed result rather than leaving the surface to derive
+ * values of its own. That prevents a second, unvalidated authoring answer.
  */
 export function desktopScenePropertyInspection(
   contentHash: string,
-  entity: DesktopSceneEditableEntity,
+  entities: DesktopSceneEditableEntity | readonly DesktopSceneEditableEntity[],
 ): DesktopScenePropertyInspection {
   return Object.freeze({
     ok: true as const,
     contentHash,
-    entities: Object.freeze([entity]),
+    entities: Object.freeze(Array.isArray(entities) ? [...entities] : [entities]),
   });
 }
 
 /**
- * Inspect the one typed property this vertical supports.
+ * Inspect the selected-instance transform surface this vertical supports.
  *
- * The property is taken from the validated, digest-bound composition rather
- * than the legacy sample fields beside it. That is what makes the displayed
- * value the value Play will actually mount after an accepted save.
+ * Values come from the validated, digest-bound composition rather than the
+ * legacy sample fields beside it. Play therefore mounts the values shown after
+ * an accepted Save.
  */
 export function inspectDesktopSceneProperties(input: Readonly<{
   documentData: unknown;
@@ -379,15 +425,204 @@ export function inspectDesktopSceneProperties(input: Readonly<{
   if (!read.ok) return read;
   return desktopScenePropertyInspection(
     input.contentHash,
-    editableEntityOf(read.instance),
+    read.stored.instances.map((instance) => editableEntityOf(read.stored, instance)),
   );
 }
 
+function nextCopyInstanceId(stored: ComposedScene, sourceInstanceId: string) {
+  const used = new Set(stored.instances.map((instance) => instance.instanceId));
+  for (let sequence = 1; sequence <= stored.instances.length + 1; sequence += 1) {
+    const candidate = `${sourceInstanceId}-copy-${String(sequence)}`;
+    if (!used.has(candidate)) return candidate;
+  }
+  return null;
+}
+
 /**
- * Recompose one supported translation into a new digest-bound composed-scene
- * value, then describe the ordinary E1 edit the shared session must stage.
- * This function writes nothing and owns no proposal state.
+ * Stage one canonical selected-instance operation as an ordinary E1 edit.
+ *
+ * Add copies only the selected instance's already-validated local artifact and
+ * uses an identity placement under the existing root. Remove is deliberately
+ * smaller than general composition authoring: only a non-root leaf may be
+ * removed, and the scene must remain above the composition minimum.
  */
+export function stageDesktopSceneEdit(input: Readonly<{
+  documentData: unknown;
+  contentHash: string;
+  documentPath?: string;
+  profile: unknown;
+  operation: unknown;
+}>): DesktopSceneEditStageResult {
+  const documentPath = input.documentPath ?? DESKTOP_ACTIVE_DOCUMENT_PATH;
+  if (!isDesktopSceneEditProfile(input.profile)) {
+    return propertyRequestDiagnostic(
+      "Selected-instance editing is supported only by the Game and Web desktop profiles.",
+      documentPath,
+    );
+  }
+  if (!isDesktopSceneEditOperation(input.operation)) {
+    return propertyRequestDiagnostic(
+      "The selected-instance edit operation is malformed or outside its numeric range.",
+      documentPath,
+    );
+  }
+  const read = readEditableComposition(input.documentData, input.contentHash, documentPath);
+  if (!read.ok) return read;
+  const operation = Object.freeze({ ...input.operation }) as DesktopSceneEditOperation;
+  let selectedInstanceId: string;
+  let composed;
+
+  if (operation.kind === "set-transform-component") {
+    const selected = read.stored.instances.find(
+      (instance) => instance.instanceId === operation.instanceId,
+    );
+    const definition = desktopSceneTransformProperty(operation.propertyId);
+    if (selected === undefined || definition === null) {
+      return propertyRequestDiagnostic(
+        `The selected instance or transform property is stale: ${operation.instanceId}.${operation.propertyId}.`,
+        documentPath,
+      );
+    }
+    composed = recomposeStoredScene(read.stored, (instance) => {
+      if (instance.instanceId !== operation.instanceId) return instance.localTransform;
+      const vector = [...instance.localTransform[definition.field]] as [number, number, number];
+      vector[definition.axis] = operation.value;
+      return {
+        ...instance.localTransform,
+        [definition.field]: Object.freeze(vector),
+      };
+    });
+    selectedInstanceId = selected.instanceId;
+  } else if (operation.kind === "add-instance") {
+    const source = read.stored.instances.find(
+      (instance) => instance.instanceId === operation.sourceInstanceId,
+    );
+    if (source === undefined) {
+      return propertyRequestDiagnostic(
+        `The selected local artifact source is missing: ${operation.sourceInstanceId}.`,
+        documentPath,
+      );
+    }
+    const addedInstanceId = nextCopyInstanceId(read.stored, source.instanceId);
+    if (addedInstanceId === null) {
+      return propertyRequestDiagnostic(
+        "No canonical instance identifier is available for the selected local artifact.",
+        documentPath,
+      );
+    }
+    const placements = [
+      ...read.stored.instances.map((instance) => ({
+        instanceId: instance.instanceId,
+        artifactId: instance.artifactId,
+        parentInstanceId: instance.parentInstanceId,
+        transform: instance.localTransform,
+        depth: instance.depth,
+      })),
+      {
+        instanceId: addedInstanceId,
+        artifactId: source.artifactId,
+        parentInstanceId: read.stored.rootInstanceId,
+        transform: identitySculptTransform(),
+        depth: 1,
+      },
+    ].sort(
+      (left, right) =>
+        left.depth - right.depth ||
+        (left.instanceId < right.instanceId
+          ? -1
+          : left.instanceId > right.instanceId
+            ? 1
+            : 0),
+    );
+    composed = composeStoredPlacements(
+      read.stored,
+      placements.map((placement) => ({
+        instanceId: placement.instanceId,
+        artifactId: placement.artifactId,
+        parentInstanceId: placement.parentInstanceId,
+        transform: placement.transform,
+      })),
+    );
+    selectedInstanceId = addedInstanceId;
+  } else {
+    const selected = read.stored.instances.find(
+      (instance) => instance.instanceId === operation.instanceId,
+    );
+    if (selected === undefined) {
+      return propertyRequestDiagnostic(
+        `The selected instance is stale: ${operation.instanceId}.`,
+        documentPath,
+      );
+    }
+    if (
+      selected.instanceId === read.stored.rootInstanceId ||
+      read.stored.instances.length <= SCENE_MINIMUM_INSTANCES ||
+      read.stored.instances.some(
+        (instance) => instance.parentInstanceId === selected.instanceId,
+      )
+    ) {
+      return propertyRequestDiagnostic(
+        "Remove supports only a non-root leaf while at least two composed instances remain.",
+        documentPath,
+      );
+    }
+    composed = composeStoredPlacements(
+      read.stored,
+      read.stored.instances
+        .filter((instance) => instance.instanceId !== selected.instanceId)
+        .map((instance) => ({
+          instanceId: instance.instanceId,
+          artifactId: instance.artifactId,
+          parentInstanceId: instance.parentInstanceId,
+          transform: instance.localTransform,
+        })),
+    );
+    selectedInstanceId = selected.parentInstanceId ?? read.stored.rootInstanceId;
+  }
+
+  if (!composed.ok) {
+    return propertyDiagnostic(`${composed.path}: ${composed.message}`, documentPath);
+  }
+  const edited = readEditableComposition(composed.document.data, input.contentHash, documentPath);
+  if (!edited.ok) return edited;
+  if (operation.kind === "add-instance") {
+    const sourceArtifact = read.stored.instances.find(
+      (instance) => instance.instanceId === operation.sourceInstanceId,
+    )?.artifact;
+    const addedArtifact = edited.stored.instances.find(
+      (instance) => instance.instanceId === selectedInstanceId,
+    )?.artifact;
+    if (
+      sourceArtifact === undefined ||
+      addedArtifact === undefined ||
+      digestSceneArtifact(sourceArtifact) !== digestSceneArtifact(addedArtifact)
+    ) {
+      return propertyDiagnostic(
+        "The add operation did not preserve the validated local artifact bytes.",
+        documentPath,
+      );
+    }
+  }
+  const inspection = desktopScenePropertyInspection(
+    input.contentHash,
+    edited.stored.instances.map((instance) => editableEntityOf(edited.stored, instance)),
+  );
+  return Object.freeze({
+    ok: true as const,
+    operation,
+    edit: Object.freeze({
+      documentPath,
+      jsonPointer: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.jsonPointer,
+      expectedContentHash: input.contentHash,
+      newValue: composed.scene,
+    }),
+    inspection,
+    selectedInstanceId,
+    sceneDigest: composed.sceneDigest,
+  });
+}
+
+/** Backward-compatible property facade over the canonical operation. */
 export function stageDesktopScenePropertyEdit(input: Readonly<{
   documentData: unknown;
   contentHash: string;
@@ -397,57 +632,37 @@ export function stageDesktopScenePropertyEdit(input: Readonly<{
   newValue: unknown;
 }>): DesktopScenePropertyStageResult {
   const documentPath = input.documentPath ?? DESKTOP_ACTIVE_DOCUMENT_PATH;
-  const read = readEditableComposition(
-    input.documentData,
-    input.contentHash,
-    documentPath,
-  );
-  if (!read.ok) return read;
-  if (
-    input.entityId !== DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId ||
-    input.propertyId !== DESKTOP_SCENE_TRANSLATION_X_PROPERTY.id
-  ) {
-    return propertyRequestDiagnostic(
-      `Only ${DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId}.${DESKTOP_SCENE_TRANSLATION_X_PROPERTY.id} is editable in this release.`,
-      documentPath,
-    );
-  }
-
-  const composed = recomposeStoredScene(read.stored, (instance) =>
-    instance.instanceId === input.entityId
-      ? {
-          ...instance.localTransform,
-          translation: Object.freeze([
-            input.newValue,
-            instance.localTransform.translation[1],
-            instance.localTransform.translation[2],
-          ]),
-        }
-      : instance.localTransform,
-  );
-  if (!composed.ok) {
+  if (typeof input.newValue !== "number" || !Number.isFinite(input.newValue)) {
     return propertyDiagnostic(
-      `${composed.path}: ${composed.message}`,
+      "$.placements[1].transform: Placement transform is invalid.",
       documentPath,
     );
   }
-  const edited = readEditableComposition(
-    composed.document.data,
-    input.contentHash,
+  const staged = stageDesktopSceneEdit({
+    documentData: input.documentData,
+    contentHash: input.contentHash,
     documentPath,
+    profile: "game" satisfies DesktopSceneEditProfile,
+    operation: {
+      kind: "set-transform-component",
+      instanceId: input.entityId,
+      propertyId: input.propertyId,
+      value: input.newValue,
+    },
+  });
+  if (!staged.ok) return staged;
+  if (!staged.inspection.ok) return staged.inspection;
+  const entity = staged.inspection.entities.find(
+    (candidate) => candidate.id === staged.selectedInstanceId,
   );
-  if (!edited.ok) return edited;
-
+  if (entity === undefined) {
+    return propertyRequestDiagnostic("The edited instance is no longer selectable.", documentPath);
+  }
   return Object.freeze({
     ok: true as const,
-    edit: Object.freeze({
-      documentPath,
-      jsonPointer: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.jsonPointer,
-      expectedContentHash: input.contentHash,
-      newValue: composed.scene,
-    }),
-    entity: editableEntityOf(edited.instance),
-    sceneDigest: composed.sceneDigest,
+    edit: staged.edit,
+    entity,
+    sceneDigest: staged.sceneDigest,
   });
 }
 

@@ -79,6 +79,7 @@ import {
   desktopSceneFromDocumentData,
   desktopScenePropertyInspection,
   inspectDesktopSceneProperties,
+  stageDesktopSceneEdit,
   stageDesktopScenePropertyEdit,
   type DesktopSceneResult,
 } from "./desktop-scene.js";
@@ -917,6 +918,43 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         );
       }
       return bridgeOk("authoring", statusWithProperties(live, documentPath));
+    }
+    if (op === "edit-scene") {
+      const documentPath = containedDocumentPath(field(payload, "documentPath"));
+      const expectedContentHash = field(payload, "expectedContentHash");
+      if (
+        documentPath === null ||
+        typeof expectedContentHash !== "string" ||
+        !/^sha256:[0-9a-f]{64}$/.test(expectedContentHash)
+      ) {
+        return bridgeRefuse(
+          DESKTOP_BRIDGE_REFUSALS.requestMalformed,
+          "authoring edit-scene requires a SHA-256 expectedContentHash and a documentPath inside the project directory.",
+        );
+      }
+      const status = live.status(documentPath);
+      if (!status.ok) return bridgeOk("authoring", status);
+      const staged = stageDesktopSceneEdit({
+        documentData: status.data,
+        contentHash: expectedContentHash,
+        documentPath,
+        profile: field(payload, "profile"),
+        operation: field(payload, "operation"),
+      });
+      if (!staged.ok) return bridgeOk("authoring", staged);
+      const snapshot = live.proposeEdit(staged.edit);
+      if (snapshot.phase !== "reviewing" || (snapshot.diagnostics?.length ?? 0) > 0) {
+        return bridgeOk("authoring", withRarityProposalEvidence(snapshot));
+      }
+      return bridgeOk(
+        "authoring",
+        Object.freeze({
+          ...snapshot,
+          editableScene: staged.inspection,
+          selectedInstanceId: staged.selectedInstanceId,
+          sceneEditOperation: staged.operation,
+        }),
+      );
     }
     if (op === "edit-property") {
       const documentPath = containedDocumentPath(field(payload, "documentPath"));

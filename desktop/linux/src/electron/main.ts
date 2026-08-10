@@ -280,8 +280,9 @@ async function start(): Promise<void> {
   if (!scratchProject) fail(`authoring proof would run on the retired implicit project ${cwd}`);
 
   // The envelope only says the bridge answered; a refused proposal or failed apply
-  // also arrives inside `{ok: true}`. Read the typed property, session phases, and
-  // document bytes, then start a fresh session and play only what it re-read.
+  // also arrives inside `{ok: true}`. Read selected-instance values, session
+  // phases, and document bytes, then start a fresh session and play only what it
+  // re-read.
   const documentFile = join(cwd, SAMPLE_DOCUMENT);
   const seededBytes = readFileSync(documentFile, "utf8");
   const opened = proofBridge.handle({
@@ -292,9 +293,19 @@ async function start(): Promise<void> {
   const openedHash = payloadField(opened.data, "contentHash");
   const editableScene = payloadField(opened.data, "editableScene");
   const editableEntities = payloadField(editableScene, "entities");
-  const editableEntity = Array.isArray(editableEntities) ? editableEntities[0] : undefined;
+  const editableEntity = Array.isArray(editableEntities)
+    ? editableEntities.find(
+        (entity) =>
+          payloadField(entity, "id") === DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
+      )
+    : undefined;
   const editableProperties = payloadField(editableEntity, "properties");
-  const editableProperty = Array.isArray(editableProperties) ? editableProperties[0] : undefined;
+  const editableProperty = Array.isArray(editableProperties)
+    ? editableProperties.find(
+        (property) =>
+          payloadField(property, "id") === DESKTOP_SCENE_TRANSLATION_X_PROPERTY.id,
+      )
+    : undefined;
   const initialPropertyValue = payloadField(editableProperty, "value");
   if (typeof openedHash !== "string" || initialPropertyValue !== -4.4) {
     fail("authoring status did not expose the typed starter translation");
@@ -330,6 +341,113 @@ async function start(): Promise<void> {
     fail("authoring accept reported applied but the document is unchanged");
   }
 
+  const currentContentHash = () => {
+    const response = proofBridge.handle({
+      action: "authoring",
+      payload: { op: "status", documentPath: SAMPLE_DOCUMENT },
+    });
+    if (!response.ok) fail(`authoring status refused: ${response.reason}`);
+    const contentHash = payloadField(response.data, "contentHash");
+    if (typeof contentHash !== "string") fail("authoring status returned no content hash");
+    return contentHash;
+  };
+  const stageSceneOperation = (operation: unknown) => {
+    const response = proofBridge.handle({
+      action: "authoring",
+      payload: {
+        op: "edit-scene",
+        documentPath: SAMPLE_DOCUMENT,
+        expectedContentHash: currentContentHash(),
+        profile: "game",
+        operation,
+      },
+    });
+    if (!response.ok) fail(`selected-instance edit refused: ${response.reason}`);
+    if (payloadField(response.data, "phase") !== "reviewing") {
+      fail("selected-instance edit did not reach Change Review");
+    }
+    return response;
+  };
+  const acceptSceneOperation = () => {
+    const response = proofBridge.handle({ action: "authoring", payload: { op: "accept" } });
+    if (!response.ok || payloadField(response.data, "phase") !== "applied") {
+      fail("selected-instance edit did not apply atomically");
+    }
+  };
+
+  stageSceneOperation({
+    kind: "set-transform-component",
+    instanceId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
+    propertyId: "rotation-y",
+    value: 45,
+  });
+  acceptSceneOperation();
+  stageSceneOperation({
+    kind: "set-transform-component",
+    instanceId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
+    propertyId: "scale-z",
+    value: 1.5,
+  });
+  acceptSceneOperation();
+  stageSceneOperation({
+    kind: "add-instance",
+    sourceInstanceId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
+  });
+  acceptSceneOperation();
+  const afterAddBytes = readFileSync(documentFile, "utf8");
+  const copiedInstanceId = `${DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId}-copy-1`;
+
+  stageSceneOperation({ kind: "remove-instance", instanceId: copiedInstanceId });
+  const rejectedRemove = proofBridge.handle({
+    action: "authoring",
+    payload: { op: "reject" },
+  });
+  if (
+    !rejectedRemove.ok ||
+    payloadField(rejectedRemove.data, "phase") !== "rejected" ||
+    readFileSync(documentFile, "utf8") !== afterAddBytes
+  ) {
+    fail("Remove Reject changed project bytes");
+  }
+  stageSceneOperation({ kind: "remove-instance", instanceId: copiedInstanceId });
+  acceptSceneOperation();
+  if (readFileSync(documentFile, "utf8") === afterAddBytes) {
+    fail("accepted Remove left project bytes unchanged");
+  }
+  const undoneRemove = proofBridge.handle({ action: "authoring", payload: { op: "undo" } });
+  if (
+    !undoneRemove.ok ||
+    payloadField(undoneRemove.data, "ok") !== true ||
+    readFileSync(documentFile, "utf8") !== afterAddBytes
+  ) {
+    fail("Undo did not restore the accepted local instance bytes");
+  }
+  const malformed = proofBridge.handle({
+    action: "authoring",
+    payload: {
+      op: "edit-scene",
+      documentPath: SAMPLE_DOCUMENT,
+      expectedContentHash: currentContentHash(),
+      profile: "game",
+      operation: {
+        kind: "set-transform-component",
+        instanceId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
+        propertyId: "scale-x",
+        value: 0,
+      },
+    },
+  });
+  const malformedDiagnostics = malformed.ok
+    ? payloadField(malformed.data, "diagnostics")
+    : undefined;
+  if (
+    !malformed.ok ||
+    !Array.isArray(malformedDiagnostics) ||
+    payloadField(malformedDiagnostics[0], "code") !== "invalid-proposal"
+  ) {
+    fail("out-of-range selected-instance input did not refuse by name");
+  }
+
   const savedBytes = readFileSync(documentFile, "utf8");
   const reopened = proofBridge.handle({
     action: "authoring",
@@ -338,9 +456,19 @@ async function start(): Promise<void> {
   if (!reopened.ok) fail(`authoring reopen refused: ${reopened.reason}`);
   const reopenedScene = payloadField(reopened.data, "editableScene");
   const reopenedEntities = payloadField(reopenedScene, "entities");
-  const reopenedEntity = Array.isArray(reopenedEntities) ? reopenedEntities[0] : undefined;
+  const reopenedEntity = Array.isArray(reopenedEntities)
+    ? reopenedEntities.find(
+        (entity) =>
+          payloadField(entity, "id") === DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
+      )
+    : undefined;
   const reopenedProperties = payloadField(reopenedEntity, "properties");
-  const reopenedProperty = Array.isArray(reopenedProperties) ? reopenedProperties[0] : undefined;
+  const reopenedProperty = Array.isArray(reopenedProperties)
+    ? reopenedProperties.find(
+        (property) =>
+          payloadField(property, "id") === DESKTOP_SCENE_TRANSLATION_X_PROPERTY.id,
+      )
+    : undefined;
   const reopenedValue = payloadField(reopenedProperty, "value");
   if (reopenedValue !== -3.25 || readFileSync(documentFile, "utf8") !== savedBytes) {
     fail("authoring reopen did not prove the saved translation bytes");
@@ -362,8 +490,20 @@ async function start(): Promise<void> {
     : undefined;
   const playedTransform = payloadField(playedEntity, "worldTransform");
   const playedTranslation = payloadField(playedTransform, "translation");
-  if (!Array.isArray(playedTranslation) || playedTranslation[0] !== -3.25) {
-    fail("Play did not reopen the saved composition translation");
+  const playedRotation = payloadField(playedTransform, "rotationEulerDegrees");
+  const playedScale = payloadField(playedTransform, "scale");
+  const playedCopy = Array.isArray(mountedInstances)
+    ? mountedInstances.find(
+        (instance) => payloadField(instance, "instanceId") === copiedInstanceId,
+      )
+    : undefined;
+  if (
+    !Array.isArray(playedTranslation) || playedTranslation[0] !== -3.25 ||
+    !Array.isArray(playedRotation) || playedRotation[1] !== 45 ||
+    !Array.isArray(playedScale) || playedScale[2] !== 1.5 ||
+    playedCopy === undefined
+  ) {
+    fail("Play did not reopen the saved translation, rotation, scale, and local instance");
   }
 
   const frameReport = await Promise.race([
@@ -434,6 +574,13 @@ async function start(): Promise<void> {
         initialPropertyValue,
         reopenedValue,
         playedTranslation: playedTranslation[0],
+        playedRotationY: playedRotation[1],
+        playedScaleZ: playedScale[2],
+        addedInstance: playedCopy !== undefined,
+        removeRejected: true,
+        removeApplied: true,
+        undoRestored: true,
+        malformedRefused: true,
         persisted: savedBytes !== seededBytes,
         scratchProject,
         project: cwd,

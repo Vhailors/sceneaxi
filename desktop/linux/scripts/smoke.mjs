@@ -112,9 +112,20 @@ if (
 if (
   proof.authoring?.initialPropertyValue !== -4.4 ||
   proof.authoring?.reopenedValue !== -3.25 ||
-  proof.authoring?.playedTranslation !== -3.25
+  proof.authoring?.playedTranslation !== -3.25 ||
+  proof.authoring?.playedRotationY !== 45 ||
+  proof.authoring?.playedScaleZ !== 1.5
 ) {
-  failures.push("the saved translation was not preserved through reopen and Play");
+  failures.push("the saved transform was not preserved through reopen and Play");
+}
+if (
+  proof.authoring?.addedInstance !== true ||
+  proof.authoring?.removeRejected !== true ||
+  proof.authoring?.removeApplied !== true ||
+  proof.authoring?.undoRestored !== true ||
+  proof.authoring?.malformedRefused !== true
+) {
+  failures.push("add/remove, Reject, Undo, or malformed-input evidence is incomplete");
 }
 if (
   proof.playbackDom?.accepted !== true ||
@@ -161,7 +172,7 @@ console.log(
   `  open path: ${proof.openPath.tickDigests.length} ticks, digest ${String(proof.openPath.initialDigest).slice(0, 18)}… → ${String(proof.openPath.tickDigests.at(-1)).slice(0, 18)}…`,
 );
 console.log(
-  `  authoring: scratch project, selected -4.4 → ${proof.authoring.proposedPhase} → ${proof.authoring.acceptedPhase} → reopened -3.25 → played and redrawn at frame ${proof.playbackDom.frame}`,
+  `  authoring: selected transform → ${proof.authoring.proposedPhase} → ${proof.authoring.acceptedPhase}; add/remove Reject+Undo; reopened translation ${proof.authoring.reopenedValue}, rotation ${proof.authoring.playedRotationY}, scale ${proof.authoring.playedScaleZ} → redrawn at frame ${proof.playbackDom.frame}`,
 );
 console.log(
   `  frame: backend ${proof.frameReport.backend} · surface ${proof.frameReport.surface ?? "unreported"} · pixelsDrawn ${proof.frameReport.pixelsDrawn ?? "unreported"} · drawCalls ${proof.frameReport.drawCalls}`,
