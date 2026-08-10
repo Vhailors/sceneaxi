@@ -11,12 +11,17 @@
  * provider adapter, so everything under `src/lib/**` stays pure TypeScript the
  * hermetic gate can test from `tests/desktop/`.
  *
+ * It also executes the renderer's esbuild contract. The browser-platform resolver
+ * supplies the module graph and metafile used to refuse Node builtins and any
+ * second module entering the Three presentation package.
+ *
  * Fail-closed: an empty `desktop/` tree, a missing required file, an app that is not
  * matrix-listed, any of that toolchain leaking into the hermetic root, an Electron import outside
  * `src/electron/`, a provider adapter import outside that privileged host, an import
- * that reaches into that privileged host from outside it, or any
- * committed secret value exits 1.
+ * that reaches into that privileged host from outside it, a refused renderer bundle
+ * contract, or any committed secret value exits 1.
  */
+import { spawnSync } from "node:child_process";
 import { existsSync, lstatSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -256,6 +261,21 @@ for (const dir of appDirs) {
         );
       }
     }
+  }
+  if (
+    manifest.dependencies?.["@sceneaxi/engine-presentation"] !== undefined &&
+    manifest.scripts?.["check:renderer"] === "node scripts/check-renderer.mjs"
+  ) {
+    const check = spawnSync(process.execPath, [join(dir, "scripts/check-renderer.mjs")], {
+      cwd: dir,
+      encoding: "utf8",
+    });
+    if (check.status !== 0) {
+      const detail = check.stderr.trim() || check.stdout.trim() || check.error?.message || "unknown refusal";
+      fail(`${manifest.name}: renderer browser bundle contract refused: ${detail}`);
+    }
+  } else if (manifest.dependencies?.["@sceneaxi/engine-presentation"] !== undefined) {
+    fail(`${manifest.name}: check:renderer must execute 'node scripts/check-renderer.mjs'`);
   }
 }
 

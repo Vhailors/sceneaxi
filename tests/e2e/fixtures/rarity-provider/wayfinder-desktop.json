@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "projectSeed": 20260809,
+  "scope": "desktop-linux-rarity",
+  "eventId": "wayfinder-drop-001",
+  "model": {
+    "model": "wayfinder-rarity-fixture",
+    "provider": "sceneaxi-fixture",
+    "quantization": "deterministic-json",
+    "version": "2026-08-09"
+  },
+  "policy": {
+    "schemaVersion": 1,
+    "kind": "sceneaxi.rarity.policy",
+    "tierWeights": {
+      "common": 55,
+      "uncommon": 25,
+      "rare": 12,
+      "epic": 6,
+      "legendary": 2
+    }
+  },
+  "request": {
+    "schemaVersion": 1,
+    "kind": "sceneaxi.rarity.request",
+    "candidates": [
+      { "candidateId": "wayfinder-stone", "tier": "common", "weight": 7 },
+      { "candidateId": "wayfinder-moss", "tier": "common", "weight": 3 },
+      { "candidateId": "wayfinder-copper", "tier": "uncommon", "weight": 5 },
+      { "candidateId": "wayfinder-silver", "tier": "rare", "weight": 3 },
+      { "candidateId": "wayfinder-aurora", "tier": "epic", "weight": 2 },
+      { "candidateId": "wayfinder-crown", "tier": "legendary", "weight": 1 }
+    ]
+  },
+  "expected": {
+    "tier": "uncommon",
+    "candidateId": "wayfinder-copper",
+    "policyDigest": "sha256:dc9fb14cf67da2aaaabf813969d5e2863b3d4ccdcbbe8cbbd366a1400aab7099",
+    "requestDigest": "sha256:e70812f13e9a23e08476afce6fd6e8690a3d74e41f1807c977d0d7b7482067d8",
+    "outcomeDigest": "sha256:ec77ae2c1f62725339fbf87a0e39d61cfd680941fb975a045770cb31f0d0d5de",
+    "providerEvidenceDigest": "sha256:309285987a87148e1fb20a03ae9984e4bdecec9c7936b3e0f142d42f3592e7af",
+    "provenanceDigest": "sha256:a710a29af3c8fa4a7a5bf68c74c9dcd47d463ba10c2f13426f81657e99f9809a",
+    "namespaceDigest": "sha256:caa07bc955f0001a766741d4714333fa0c955fdf43095919c7dc4b2cff57c868",
+    "tierRollDigest": "sha256:131e0db6132da857fe4479031e5a8504c31a7486c5fa71ab096c67bf8bfe9715",
+    "candidateRollDigest": "sha256:aeaa01fc8a389cb2d4368a88d07b2484beddaa5a10ed76931f6cfb555d19b3ed",
+    "tierDraw": 69,
+    "tierTotalWeight": 100,
+    "candidateDraw": 2,
+    "candidateTotalWeight": 5
+  }
+}

@@ -116,6 +116,13 @@ const PENDING_DIAGNOSTICS: readonly ApplyDiagnostic[] = Object.freeze([
   }),
 ]);
 
+const ACTIVE_PROPOSAL_DIAGNOSTICS: readonly ApplyDiagnostic[] = Object.freeze([
+  Object.freeze({
+    code: "invalid-proposal" as const,
+    message: "One proposal is already waiting for review; accept or reject it before staging another.",
+  }),
+]);
+
 /** Create a single-proposal desktop session bound to a working directory. */
 export function createDesktopSession(
   options: DesktopSessionOptions = {},
@@ -177,6 +184,24 @@ export function createDesktopSession(
     proposeEdit(input: ShellEditInput): DesktopSnapshot {
       if (journalRecoveryPending) return refusePending();
       const cwd = canonicalPath(input.cwd ?? sessionCwd);
+      if (phase === "reviewing" && proposal !== null) {
+        const conflictCheck = input.expectedContentHash === undefined
+          ? null
+          : shellPropose({ ...input, cwd });
+        if (
+          conflictCheck !== null &&
+          !conflictCheck.ok &&
+          conflictCheck.diagnostics.some(
+            (diagnostic) => diagnostic.code === "content-hash-conflict",
+          )
+        ) {
+          clearProposal("idle");
+          diagnostics = conflictCheck.diagnostics;
+          return snap();
+        }
+        diagnostics = ACTIVE_PROPOSAL_DIAGNOSTICS;
+        return snap();
+      }
       const result = shellPropose({ ...input, cwd });
       if (!result.ok) {
         clearProposal("idle");
@@ -300,14 +325,18 @@ export function createDesktopSession(
       let text: string;
       try {
         text = readFileSync(resolve(sessionCwd, documentPath), "utf8");
-      } catch {
+      } catch (error) {
+        const missing = typeof error === "object" && error !== null &&
+          "code" in error && error.code === "ENOENT";
         return {
           ok: false,
           documentPath,
           diagnostics: [
             {
-              code: "document-not-found",
-              message: `Document not found: ${documentPath}`,
+              code: missing ? "document-not-found" : "document-read-failed",
+              message: missing
+                ? `Document not found: ${documentPath}`
+                : `Document could not be read: ${documentPath}`,
               documentPath,
             },
           ],

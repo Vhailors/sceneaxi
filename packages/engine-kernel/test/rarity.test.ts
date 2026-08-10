@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  MODEL_PROVIDER_CALL_EVIDENCE_KIND,
+  MODEL_PROVIDER_PORT_SCHEMA_VERSION,
   RARITY_FIXTURES_PATH,
   RARITY_NAMESPACE_KIND,
   RARITY_POLICY_KIND,
@@ -10,7 +12,9 @@ import {
   RARITY_TIERS,
   type KernelCommand,
   type KernelSessionSaveArtifact,
+  type ModelProviderCallEvidence,
   type ProductManifest,
+  type RarityNamespace,
   type RarityOutcome,
   type RarityPolicy,
   type RarityProvenance,
@@ -66,8 +70,14 @@ function manifest(): ProductManifest {
 function rarityCommand(
   eventId: string,
   request: RarityRollRequest = fixture.request,
+  providerEvidence?: ModelProviderCallEvidence,
 ) {
-  return { type: "rarity-roll", eventId, request } as const;
+  return {
+    type: "rarity-roll",
+    eventId,
+    request,
+    ...(providerEvidence === undefined ? {} : { providerEvidence }),
+  } as const;
 }
 
 function jsonCopy<Value>(value: Value): Value {
@@ -320,8 +330,6 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
     const session = open(manifest(), fixedHost());
     session.dispatch(rarityCommand("roll-0000"));
     session.advance({ tick: 1, deltaMs: 16 });
-    session.dispatch(rarityCommand("roll-0015"));
-    session.advance({ tick: 2, deltaMs: 16 });
     const terminal = session.observe();
     const save = session.save();
     expect(save.productManifest.rarity).toEqual(terminal.rarity);
@@ -331,7 +339,176 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
     expect(replayed.save()).toEqual(save);
   });
 
-  it("makes an identical event/request idempotent and requires a new event id to reroll", () => {
+  it("binds provider evidence independently to each stored roll", () => {
+    const base = manifest();
+    const evidence: ModelProviderCallEvidence = {
+      schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+      kind: MODEL_PROVIDER_CALL_EVIDENCE_KIND,
+      operation: "tool-call",
+      profile: "@sceneaxi/profile-game",
+      model: {
+        model: "wayfinder-rarity-fixture",
+        provider: "sceneaxi-fixture",
+        quantization: "deterministic-json",
+        version: "2026-08-09",
+      },
+    };
+    const evidenced = open(base, fixedHost());
+    evidenced.dispatch(rarityCommand("roll-bound", fixture.request, evidence));
+    evidenced.advance({ tick: 1, deltaMs: 16 });
+    const differentEvidence: ModelProviderCallEvidence = {
+      ...evidence,
+      model: { ...evidence.model, version: "2026-09-01" },
+    };
+    evidenced.dispatch(rarityCommand("roll-unbound"));
+    evidenced.dispatch(rarityCommand("roll-different", fixture.request, differentEvidence));
+    evidenced.advance({ tick: 2, deltaMs: 16 });
+    const save = evidenced.save();
+    const dispatch = save.events.find((event) => event.kind === "dispatch");
+    expect(dispatch?.kind === "dispatch" ? dispatch.command : null).toMatchObject({
+      type: "rarity-roll",
+      eventId: "roll-bound",
+      providerEvidence: evidence,
+    });
+    expect(save.productManifest.rarity?.rolls.map((roll) => roll.providerEvidence)).toEqual([
+      evidence,
+      undefined,
+      differentEvidence,
+    ]);
+  });
+
+  it("refuses provider evidence added without its roll provenance binding", () => {
+    const base = manifest();
+    const resolved = resolveRarityRoll(
+      {
+        projectSeed: base.seed,
+        scope: base.productId,
+        eventId: "roll-retroactive",
+      },
+      (base.rarity as RarityNamespace).policy,
+      fixture.request,
+    );
+    if (!resolved.ok) throw new Error(resolved.message);
+    const providerEvidence: ModelProviderCallEvidence = {
+      schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+      kind: MODEL_PROVIDER_CALL_EVIDENCE_KIND,
+      operation: "tool-call",
+      profile: "@sceneaxi/profile-game",
+      model: {
+        model: "wayfinder-rarity-fixture",
+        provider: "sceneaxi-fixture",
+        quantization: "deterministic-json",
+        version: "2026-08-09",
+      },
+    };
+    expect(() =>
+      open(
+        {
+          ...base,
+          rarity: {
+            ...(base.rarity as RarityNamespace),
+            rolls: [{ ...resolved.value.record, providerEvidence }],
+          },
+        },
+        fixedHost(),
+      ),
+    ).toThrow(RARITY_REFUSE_CODES.provenanceMismatch);
+  });
+
+  it("refuses stored rarity evidence outside Game or Web tool calls", () => {
+    const base = manifest();
+    const evidence: ModelProviderCallEvidence = {
+      schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+      kind: MODEL_PROVIDER_CALL_EVIDENCE_KIND,
+      operation: "tool-call",
+      profile: "@sceneaxi/profile-game",
+      model: {
+        model: "wayfinder-rarity-fixture",
+        provider: "sceneaxi-fixture",
+        quantization: "deterministic-json",
+        version: "2026-08-09",
+      },
+    };
+    for (const invalidEvidence of [
+      { ...evidence, operation: "complete" },
+      { ...evidence, profile: "@sceneaxi/profile-kids" },
+    ] as ModelProviderCallEvidence[]) {
+      const resolved = resolveRarityRoll(
+        {
+          projectSeed: base.seed,
+          scope: base.productId,
+          eventId: "roll-invalid-evidence",
+        },
+        (base.rarity as RarityNamespace).policy,
+        fixture.request,
+      );
+      if (!resolved.ok) throw new Error(resolved.message);
+      expect(() =>
+        open(
+          {
+            ...base,
+            rarity: {
+              ...(base.rarity as RarityNamespace),
+              rolls: [{ ...resolved.value.record, providerEvidence: invalidEvidence }],
+            },
+          },
+          fixedHost(),
+        ),
+      ).toThrow(RARITY_REFUSE_CODES.provenanceMismatch);
+    }
+  });
+
+  it("carries per-roll provider evidence through save and replay", () => {
+    const base = manifest();
+    const evidence: ModelProviderCallEvidence = {
+      schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+      kind: MODEL_PROVIDER_CALL_EVIDENCE_KIND,
+      operation: "tool-call",
+      profile: "@sceneaxi/profile-game",
+      model: {
+        model: "wayfinder-rarity-fixture",
+        provider: "sceneaxi-fixture",
+        quantization: "deterministic-json",
+        version: "2026-08-09",
+      },
+    };
+    const session = open(base, fixedHost());
+    session.dispatch(rarityCommand("roll-0000", fixture.request, evidence));
+    session.advance({ tick: 1, deltaMs: 16 });
+    const terminal = session.observe();
+    const save = session.save();
+    expect(terminal.rarity?.rolls).toHaveLength(1);
+    expect(save.productManifest.rarity?.rolls[0]?.providerEvidence).toEqual(evidence);
+
+    const replayed = replay(jsonCopy(save), fixedHost());
+    expect(replayed.observe()).toEqual(terminal);
+    expect(replayed.observe().rarity?.rolls[0]?.providerEvidence).toEqual(evidence);
+    expect(replayed.save()).toEqual(save);
+
+    const nextEvidence: ModelProviderCallEvidence = {
+      ...evidence,
+      model: { ...evidence.model, version: "2026-09-01" },
+    };
+    replayed.dispatch(rarityCommand("roll-0001", fixture.request, nextEvidence));
+    replayed.advance({ tick: 2, deltaMs: 16 });
+    replayed.dispatch(rarityCommand("roll-0002"));
+    replayed.advance({ tick: 3, deltaMs: 16 });
+    expect(replayed.observe().rarity?.rolls.map((roll) => roll.providerEvidence)).toEqual([
+      evidence,
+      nextEvidence,
+      undefined,
+    ]);
+
+    const stripped = jsonCopy(save);
+    const strippedRoll = stripped.productManifest.rarity?.rolls[0];
+    if (strippedRoll === undefined) throw new Error("saved rarity roll missing");
+    delete (strippedRoll as { providerEvidence?: ModelProviderCallEvidence }).providerEvidence;
+    expect(() => replay(stripped, fixedHost())).toThrow(
+      RARITY_REFUSE_CODES.provenanceMismatch,
+    );
+  });
+
+  it("replays and explicitly rerolls evidence-less events", () => {
     const session = open(manifest(), fixedHost());
     session.dispatch(rarityCommand("roll-0000"));
     session.dispatch(rarityCommand("roll-0000"));
@@ -358,12 +535,30 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
       );
     }
 
+    const retroactiveEvidence: ModelProviderCallEvidence = {
+      schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+      kind: MODEL_PROVIDER_CALL_EVIDENCE_KIND,
+      operation: "tool-call",
+      profile: "@sceneaxi/profile-game",
+      model: {
+        model: "wayfinder-rarity-fixture",
+        provider: "sceneaxi-fixture",
+        quantization: "deterministic-json",
+        version: "2026-08-09",
+      },
+    };
+    expect(() =>
+      session.dispatch(rarityCommand("roll-0000", fixture.request, retroactiveEvidence))
+    ).toThrow(
+      RARITY_REFUSE_CODES.provenanceMismatch,
+    );
     session.dispatch(rarityCommand("reroll-0000", changed));
     session.advance({ tick: 2, deltaMs: 16 });
     expect(session.observe().rarity?.rolls.map((roll) => roll.eventId)).toEqual([
       "roll-0000",
       "reroll-0000",
     ]);
+    expect(session.observe().rarity?.rolls[1]?.providerEvidence).toBeUndefined();
   });
 
   it("refuses provider entropy at both request and command boundaries", () => {
@@ -440,28 +635,27 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
   });
 
   it("records the weighted outcome through dispatch, advance, save, and replay", () => {
-    const session = open(
-      {
-        productId: SKEWED_SCOPE,
-        seed: SKEWED_SEED,
-        rarity: {
-          schemaVersion: RARITY_SCHEMA_VERSION,
-          kind: RARITY_NAMESPACE_KIND,
-          policy: SKEWED_POLICY,
-          rolls: [],
+    const rolls = SKEWED_VECTORS.map((vector) => {
+      const session = open(
+        {
+          productId: SKEWED_SCOPE,
+          seed: SKEWED_SEED,
+          rarity: {
+            schemaVersion: RARITY_SCHEMA_VERSION,
+            kind: RARITY_NAMESPACE_KIND,
+            policy: SKEWED_POLICY,
+            rolls: [],
+          },
         },
-      },
-      fixedHost(),
-    );
-
-    let tick = 0;
-    for (const vector of SKEWED_VECTORS) {
+        fixedHost(),
+      );
       session.dispatch(rarityCommand(vector.eventId, SKEWED_REQUEST));
-      tick += 1;
-      session.advance({ tick, deltaMs: 16 });
-    }
-
-    const rolls = session.observe().rarity?.rolls ?? [];
+      session.advance({ tick: 1, deltaMs: 16 });
+      const roll = session.observe().rarity?.rolls[0];
+      if (roll === undefined) throw new Error(`missing weighted roll ${vector.eventId}`);
+      expect(replay(jsonCopy(session.save()), fixedHost()).observe().rarity?.rolls[0]).toEqual(roll);
+      return roll;
+    });
     expect(
       rolls.map((roll) => ({
         eventId: roll.eventId,
@@ -473,9 +667,6 @@ describe("rarity through kernel dispatch, advance, snapshot, save, and replay", 
         candidateTotalWeight: roll.provenance.candidateTotalWeight,
       })),
     ).toEqual(SKEWED_VECTORS.map((vector) => ({ ...vector })));
-
-    const save = session.save();
-    expect(replay(jsonCopy(save), fixedHost()).save()).toEqual(save);
   });
 
   it("names a changed policy rather than reporting an accepted roll as tampered", () => {

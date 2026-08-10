@@ -16,7 +16,12 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            desktop/linux/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile
+        working-directory: desktop/linux
       - run: pnpm gate
       - run: pnpm install --frozen-lockfile
         working-directory: sites/umbrella

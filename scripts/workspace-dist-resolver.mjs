@@ -23,6 +23,8 @@
 
 import { readFileSync } from "node:fs";
 
+import { exportEntries } from "./lib/package-exports.mjs";
+
 const REPO_ROOT = new URL("../", import.meta.url);
 
 const matrix = JSON.parse(
@@ -37,8 +39,44 @@ const BUILT_ENTRYPOINTS = new Map(
   ]),
 );
 
+/**
+ * `@sceneaxi/<pkg>/<subpath>` → the built file that subpath's source compiles to.
+ *
+ * A subpath is the same problem as a root import — the exports map points at
+ * TypeScript — so it needs the same rewrite, and a resolver that handled only
+ * bare names would send a shipped binary straight at a `.ts` file on every
+ * runtime that does not strip types. The mapping is read from each package's own
+ * `exports` map rather than guessed from the subpath text, because the two do not
+ * have to agree: `@sceneaxi/schemas/node/profile-conformance-suite` resolves to
+ * `src/profile-conformance-suite.ts`, one directory up from where its name reads.
+ * Targets that are not TypeScript under `src/` — the versioned JSON contracts —
+ * are left to Node, which can already load them from the path the map names.
+ */
+const BUILT_SUBPATHS = new Map();
+
+for (const [name, entry] of Object.entries(matrix.packages)) {
+  let manifest;
+  try {
+    manifest = JSON.parse(
+      readFileSync(new URL(`${entry.dir}/package.json`, REPO_ROOT), "utf8"),
+    );
+  } catch {
+    continue;
+  }
+  for (const [subpath, target] of exportEntries(manifest.exports)) {
+    if (subpath === "." || !target.startsWith("./src/") || !/\.tsx?$/.test(target)) {
+      continue;
+    }
+    const built = target.replace(/^\.\/src\//, "dist/src/").replace(/\.tsx?$/, ".js");
+    BUILT_SUBPATHS.set(
+      `${name}/${subpath.slice(2)}`,
+      new URL(`${entry.dir}/${built}`, REPO_ROOT).href,
+    );
+  }
+}
+
 export function resolve(specifier, context, nextResolve) {
-  const built = BUILT_ENTRYPOINTS.get(specifier);
+  const built = BUILT_ENTRYPOINTS.get(specifier) ?? BUILT_SUBPATHS.get(specifier);
   if (built !== undefined) {
     return { url: built, shortCircuit: true };
   }

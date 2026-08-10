@@ -19,9 +19,18 @@ const BIN = fileURLToPath(
 const BUILT_ENTRY = fileURLToPath(
   new URL("../dist/src/app.js", import.meta.url),
 );
+const NO_TYPE_STRIPPING_ARGS = process.allowedNodeEnvironmentFlags.has("--no-strip-types")
+  ? ["--no-strip-types"]
+  : process.allowedNodeEnvironmentFlags.has("--no-experimental-strip-types")
+    ? ["--no-experimental-strip-types"]
+    : [];
 
-function desktop(args: readonly string[], cwd: string) {
-  const result = spawnSync(process.execPath, [BIN, ...args], {
+function desktop(
+  args: readonly string[],
+  cwd: string,
+  nodeArgs: readonly string[] = [],
+) {
+  const result = spawnSync(process.execPath, [...nodeArgs, BIN, ...args], {
     cwd,
     encoding: "utf8",
   });
@@ -54,6 +63,26 @@ describe("sceneaxi-desktop binary", () => {
     expect(r.stderr).toBe("");
     expect(r.status).toBe(0);
     expect(r.stdout).toContain("sceneaxi-desktop <command>");
+  });
+
+  // CI pins a Node that strips TypeScript by default, which would resolve a
+  // source-backed `.ts` export target and hide a resolver that cannot map it.
+  // `engines.node` also admits runtimes without type stripping, where that is a
+  // hard ERR_UNKNOWN_FILE_EXTENSION at module load for *every* command — so the
+  // binary is started once with stripping off, which is the same resolution the
+  // lower half of the supported range performs.
+  it("starts on a runtime that does not strip types", () => {
+    const r = desktop(["--help"], cwd, NO_TYPE_STRIPPING_ARGS);
+    expect(r.stderr).not.toContain("ERR_UNKNOWN_FILE_EXTENSION");
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("sceneaxi-desktop <command>");
+  });
+
+  it("renders the chrome without type stripping, embedded functions intact", () => {
+    const r = desktop(["chrome"], cwd, NO_TYPE_STRIPPING_ARGS);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("data-run-rarity-evidence");
+    expect(r.stdout).toContain("data-change-rarity-evidence");
   });
 
   it("propagates exit codes: 2 for usage, 1 for refusal, 0 for success", () => {

@@ -95,5 +95,13 @@ describe("desktop local bridge contract", () => {
         apiKey: "must-not-cross-the-bridge",
       }),
     ).toBe(false);
+    expect(
+      validateDesktopLocalBridgeToolInput("sceneaxi.assistant.abandon", {
+        jobId: "desktop-assistant-1",
+      }),
+    ).toBe(true);
+    expect(
+      validateDesktopLocalBridgeToolInput("sceneaxi.assistant.abandon", {}),
+    ).toBe(false);
   });
 });

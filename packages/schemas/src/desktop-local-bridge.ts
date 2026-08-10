@@ -65,6 +65,15 @@ const assistantInput = Object.freeze({
   }),
 }) satisfies JsonObject;
 
+const assistantJobInput = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: Object.freeze(["jobId"]),
+  properties: Object.freeze({
+    jobId: Object.freeze({ type: "string", minLength: 1 }),
+  }),
+}) satisfies JsonObject;
+
 const tool = (
   definition: DesktopLocalBridgeTool,
 ): DesktopLocalBridgeTool => Object.freeze(definition);
@@ -185,12 +194,13 @@ export const DESKTOP_LOCAL_BRIDGE_TOOLS = Object.freeze([
   }),
   tool({
     name: "sceneaxi.assistant.abandon",
-    description: "Abandon the current assistant job before a retry.",
+    description:
+      "Abandon the exact assistant job identified by its start response before a retry.",
     permission: "assistant:run",
     mutatesProject: false,
     providerRoute: "none",
     creditRoute: "none",
-    inputSchema: noInput,
+    inputSchema: assistantJobInput,
   }),
 ] as const);
 
@@ -312,9 +322,11 @@ export function validateDesktopLocalBridgeToolInput(
     case "sceneaxi.project.recover":
     case "sceneaxi.project.undo":
     case "sceneaxi.assistant.status":
-    case "sceneaxi.assistant.abandon":
     case "sceneaxi.bridge.handshake":
       return exactKeys(input, []);
+    case "sceneaxi.assistant.abandon":
+      return exactKeys(input, ["jobId"]) &&
+        typeof input["jobId"] === "string" && input["jobId"].length > 0;
     case "sceneaxi.assistant.local.start":
     case "sceneaxi.assistant.byo.start":
       return assistantStartInput(input);

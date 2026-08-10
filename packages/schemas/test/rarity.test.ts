@@ -6,11 +6,13 @@ import {
   RARITY_NAMESPACE_KIND,
   RARITY_OUTCOME_KIND,
   RARITY_POLICY_KIND,
+  RARITY_PROVIDER_DESCRIPTOR_MAX_CHARS,
   RARITY_PROVENANCE_KIND,
   RARITY_REFUSE_CODES,
   RARITY_REQUEST_KIND,
   RARITY_SCHEMA_VERSION,
   RARITY_TIERS,
+  digestRarityValue,
   digestRarityPolicy,
   digestRarityRequest,
   serializeRarityNamespace,
@@ -18,6 +20,7 @@ import {
   validateRarityPolicy,
   validateRarityRollRequest,
   type RarityNamespace,
+  type JsonValue,
   type RarityPolicy,
   type RarityRollRequest,
 } from "@sceneaxi/schemas";
@@ -70,6 +73,12 @@ const schema = JSON.parse(
     };
     readonly request: { readonly additionalProperties: boolean };
     readonly provenance: {
+      readonly oneOf: ReadonlyArray<{ readonly $ref: string }>;
+    };
+    readonly plainProvenance: {
+      readonly properties: { readonly algorithmId: { readonly const: string } };
+    };
+    readonly providerProvenance: {
       readonly properties: { readonly algorithmId: { readonly const: string } };
     };
   };
@@ -97,9 +106,12 @@ const SUPPORTED_KEYWORDS = new Set([
   "enum",
   "const",
   "pattern",
+  "minLength",
+  "maxLength",
   "minimum",
   "maximum",
   "minItems",
+  "maxItems",
   "items",
 ]);
 
@@ -202,6 +214,10 @@ function schemaViolations(
     if (typeof minItems === "number" && value.length < minItems) {
       violations.push(`${path}: fewer than ${String(minItems)} items`);
     }
+    const maxItems = node["maxItems"];
+    if (typeof maxItems === "number" && value.length > maxItems) {
+      violations.push(`${path}: more than ${String(maxItems)} items`);
+    }
     const items = node["items"] as SchemaNode | undefined;
     if (items !== undefined) {
       value.forEach((entry, index) => {
@@ -214,6 +230,14 @@ function schemaViolations(
   }
   if (type === "string") {
     if (typeof value !== "string") return [`${path}: expected string`];
+    const minLength = node["minLength"];
+    if (typeof minLength === "number" && value.length < minLength) {
+      violations.push(`${path}: shorter than ${String(minLength)} characters`);
+    }
+    const maxLength = node["maxLength"];
+    if (typeof maxLength === "number" && value.length > maxLength) {
+      violations.push(`${path}: longer than ${String(maxLength)} characters`);
+    }
     const pattern = node["pattern"];
     if (typeof pattern === "string" && !new RegExp(pattern).test(value)) {
       violations.push(`${path}: pattern`);
@@ -287,7 +311,14 @@ describe("rarity domain contracts", () => {
     expect(schema.$defs.policy.properties.schemaVersion.const).toBe(
       RARITY_SCHEMA_VERSION,
     );
-    expect(schema.$defs.provenance.properties.algorithmId.const).toBe(
+    expect(schema.$defs.provenance.oneOf).toEqual([
+      { $ref: "#/$defs/plainProvenance" },
+      { $ref: "#/$defs/providerProvenance" },
+    ]);
+    expect(schema.$defs.plainProvenance.properties.algorithmId.const).toBe(
+      RARITY_ALGORITHM_ID,
+    );
+    expect(schema.$defs.providerProvenance.properties.algorithmId.const).toBe(
       RARITY_ALGORITHM_ID,
     );
     expect(schema.$defs.request.additionalProperties).toBe(false);
@@ -340,6 +371,121 @@ describe("rarity domain contracts", () => {
     for (const vector of fixture.vectors) {
       expect(shippedSchemaViolations(vector.outcome), vector.eventId).toEqual([]);
       expect(shippedSchemaViolations(vector.provenance), vector.eventId).toEqual([]);
+    }
+  });
+
+  it("keeps stored provider evidence identical in the schema and runtime", () => {
+    const vector = fixture.vectors[0];
+    const nextVector = fixture.vectors[1];
+    if (vector === undefined || nextVector === undefined) {
+      throw new Error("rarity fixture needs two vectors");
+    }
+    const providerEvidence = {
+      schemaVersion: 1,
+      kind: "sceneaxi.model-provider-call-evidence",
+      operation: "tool-call",
+      profile: "@sceneaxi/profile-game",
+      model: {
+        model: "fixture-rarity",
+        provider: "sceneaxi-fixture",
+        quantization: "deterministic",
+        version: "v1",
+      },
+    } as const;
+    const namespace = {
+      schemaVersion: RARITY_SCHEMA_VERSION,
+      kind: RARITY_NAMESPACE_KIND,
+      policy: fixture.policy,
+      rolls: [{
+        eventId: vector.eventId,
+        request: fixture.request,
+        outcome: vector.outcome,
+        provenance: {
+          ...vector.provenance,
+          providerEvidenceDigest: digestRarityValue(providerEvidence as unknown as JsonValue),
+        },
+        providerEvidence,
+      }],
+    };
+    expect(validateRarityNamespace(namespace).ok).toBe(true);
+    expect(shippedSchemaViolations(namespace)).toEqual([]);
+    const nextProviderEvidence = {
+      ...providerEvidence,
+      model: { ...providerEvidence.model, version: "v2" },
+    };
+    const nextEvidencedRoll = {
+      eventId: nextVector.eventId,
+      request: fixture.request,
+      outcome: nextVector.outcome,
+      provenance: {
+        ...nextVector.provenance,
+        providerEvidenceDigest: digestRarityValue(
+          nextProviderEvidence as unknown as JsonValue,
+        ),
+      },
+      providerEvidence: nextProviderEvidence,
+    };
+    expect(
+      validateRarityNamespace({ ...namespace, rolls: [namespace.rolls[0], nextEvidencedRoll] }),
+    ).toMatchObject({ ok: true });
+    expect(
+      validateRarityNamespace({
+        ...namespace,
+        rolls: [{
+          eventId: vector.eventId,
+          request: fixture.request,
+          outcome: vector.outcome,
+          provenance: vector.provenance,
+        }, nextEvidencedRoll],
+      }),
+    ).toMatchObject({ ok: true });
+    const retroactivelyAttributed = {
+      ...namespace,
+      rolls: [{
+        ...namespace.rolls[0],
+        provenance: vector.provenance,
+      }],
+    };
+    expect(validateRarityNamespace(retroactivelyAttributed)).toMatchObject({ ok: false });
+    expect(shippedSchemaViolations(retroactivelyAttributed)).not.toEqual([]);
+
+    for (const [label, invalidEvidence] of [
+      ["complete operation", { ...providerEvidence, operation: "complete" }],
+      ["Kids profile", { ...providerEvidence, profile: "@sceneaxi/profile-kids" }],
+      ["multiline descriptor", {
+        ...providerEvidence,
+        model: { ...providerEvidence.model, model: "fixture-rarity\nraw-detail" },
+      }],
+      ["trailing newline descriptor", {
+        ...providerEvidence,
+        model: { ...providerEvidence.model, provider: "sceneaxi-fixture\n" },
+      }],
+      ["unbounded descriptor", {
+        ...providerEvidence,
+        model: {
+          ...providerEvidence.model,
+          version: "v".repeat(RARITY_PROVIDER_DESCRIPTOR_MAX_CHARS + 1),
+        },
+      }],
+      ["credential-shaped descriptor", {
+        ...providerEvidence,
+        model: { ...providerEvidence.model, provider: "sk_live_fixture" },
+      }],
+      ["webhook-secret-shaped descriptor", {
+        ...providerEvidence,
+        model: { ...providerEvidence.model, provider: "whsec_abcdefgh" },
+      }],
+      ["slack-token-shaped descriptor", {
+        ...providerEvidence,
+        model: { ...providerEvidence.model, provider: "xoxb-12345678-abcdefghijklmnop" },
+      }],
+    ] as const) {
+      const invalid = {
+        ...namespace,
+        rolls: [{ ...namespace.rolls[0], providerEvidence: invalidEvidence }],
+      };
+      expect(validateRarityNamespace(invalid), label).toMatchObject({ ok: false });
+      expect(shippedSchemaViolations(invalid), label).not.toEqual([]);
     }
   });
 
@@ -533,6 +679,102 @@ describe("rarity domain contracts", () => {
       ok: false,
       code: RARITY_REFUSE_CODES.unexpectedProperty,
     });
+  });
+
+  it("retains exact Model Provider Port evidence and refuses tampered or unbounded input", () => {
+    const providerEvidence = {
+      schemaVersion: 1,
+      kind: "sceneaxi.model-provider-call-evidence",
+      operation: "tool-call",
+      profile: "@sceneaxi/profile-game",
+      model: {
+        model: "wayfinder-rarity-fixture",
+        provider: "sceneaxi-fixture",
+        quantization: "deterministic-json",
+        version: "2026-08-09",
+      },
+    } as const;
+    const vector = fixture.vectors[0];
+    if (vector === undefined) throw new Error("rarity fixture is empty");
+    const evidencedRoll = {
+      eventId: vector.eventId,
+      request: fixture.request,
+      outcome: vector.outcome,
+      provenance: {
+        ...vector.provenance,
+        providerEvidenceDigest: digestRarityValue(providerEvidence as unknown as JsonValue),
+      },
+      providerEvidence,
+    };
+    expect(
+      validateRarityNamespace({
+        schemaVersion: RARITY_SCHEMA_VERSION,
+        kind: RARITY_NAMESPACE_KIND,
+        policy: fixture.policy,
+        rolls: [evidencedRoll],
+      }),
+    ).toMatchObject({ ok: true, value: { rolls: [{ providerEvidence }] } });
+    for (const invalidEvidence of [
+      { ...providerEvidence, operation: "complete" },
+      { ...providerEvidence, profile: "@sceneaxi/profile-kids" },
+      {
+        ...providerEvidence,
+        model: { ...providerEvidence.model, model: "fixture\nraw-detail" },
+      },
+      {
+        ...providerEvidence,
+        model: { ...providerEvidence.model, provider: "sceneaxi-fixture\n" },
+      },
+      {
+        ...providerEvidence,
+        model: {
+          ...providerEvidence.model,
+          version: "v".repeat(RARITY_PROVIDER_DESCRIPTOR_MAX_CHARS + 1),
+        },
+      },
+      {
+        ...providerEvidence,
+        model: { ...providerEvidence.model, provider: "sk_live_fixture" },
+      },
+      {
+        ...providerEvidence,
+        model: { ...providerEvidence.model, provider: "whsec_abcdefgh" },
+      },
+      {
+        ...providerEvidence,
+        model: { ...providerEvidence.model, provider: "xoxb-12345678-abcdefghijklmnop" },
+      },
+    ]) {
+      expect(
+        validateRarityNamespace({
+          schemaVersion: RARITY_SCHEMA_VERSION,
+          kind: RARITY_NAMESPACE_KIND,
+          policy: fixture.policy,
+          rolls: [{ ...evidencedRoll, providerEvidence: invalidEvidence }],
+        }),
+      ).toMatchObject({ ok: false, code: RARITY_REFUSE_CODES.provenanceMismatch });
+    }
+    expect(
+      validateRarityNamespace({
+        schemaVersion: RARITY_SCHEMA_VERSION,
+        kind: RARITY_NAMESPACE_KIND,
+        policy: fixture.policy,
+        rolls: [{
+          ...evidencedRoll,
+          providerEvidence: { ...providerEvidence, credential: "must-not-pass" },
+        }],
+      }),
+    ).toMatchObject({ ok: false, code: RARITY_REFUSE_CODES.provenanceMismatch });
+    expect(
+      validateRarityRollRequest({
+        ...fixture.request,
+        candidates: Array.from({ length: 65 }, (_, index) => ({
+          candidateId: `bounded-${String(index)}`,
+          tier: "common",
+          weight: 1,
+        })),
+      }),
+    ).toMatchObject({ ok: false, code: RARITY_REFUSE_CODES.inputBoundExceeded });
   });
 
   it("keeps the remaining structural refusal codes reachable", () => {

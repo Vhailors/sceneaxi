@@ -7,6 +7,7 @@
     "sourceMap": false,
     "noEmit": true,
     "allowImportingTsExtensions": true,
+    "lib": ["es2023", "dom", "dom.iterable"],
     "paths": {
       "@sceneaxi/site-kit": [
         "./packages/site-kit/src/index.ts"

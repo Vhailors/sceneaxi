@@ -28,6 +28,7 @@
  *   families are named in a stack that falls back to the system UI face.
  */
 
+import { formatSafeRarityEvidence } from "@sceneaxi/authoring-core/rarity-evidence";
 import {
   DESKTOP_ASSISTANT_RUNTIME_EVENT,
   DESKTOP_DOCK_TAB_IDS,
@@ -51,6 +52,7 @@ import {
 import {
   DESKTOP_PRODUCT_REFUSAL_MESSAGES,
   DESKTOP_PRODUCT_REFUSALS,
+  DESKTOP_RARITY_PROPOSAL_EVENT,
   DESKTOP_VIEWPORT_PLAY_EVENT,
   DESKTOP_WEB_STAGE_CONFIG,
   DESKTOP_WEB_STARTER,
@@ -428,6 +430,7 @@ function leftDock(view: DesktopVisualView): string {
     return `<section class="dock-panel" data-mode-panel="${escapeHtml(mode)}" aria-label="${escapeHtml(panel.leftTitle)}"${mode === active ? "" : " hidden"}>
   <h2 class="panel-head"><span>${escapeHtml(panel.leftTitle)}</span></h2>
   <p class="panel-empty"${mode === "run" ? " data-run-session-report" : ""}>${escapeHtml(panel.leftEmpty)}</p>
+  ${mode === "run" ? `<pre class="change-diff" data-run-rarity-evidence hidden tabindex="0" role="region" aria-label="Safe rarity provenance for this run"></pre>` : ""}
   ${note(panel.note, panel.noteTone)}
 </section>`;
   }).join("");
@@ -588,6 +591,7 @@ function dock(view: DesktopVisualView): string {
           <div><dt>Document</dt><dd><code data-change-document></code></dd></div>
           <div><dt>Base content hash</dt><dd><code data-change-content-hash></code></dd></div>
         </dl>
+        <pre class="change-diff" data-change-rarity-evidence hidden tabindex="0" role="region" aria-label="Safe rarity provenance"></pre>
         <pre class="change-diff" data-change-diff tabindex="0" role="region" aria-label="Rendered proposal diff"></pre>
         <div class="change-actions">
           ${button(view.changeReview.reject, "Reject", "ghost-button", ` data-product-action data-action="change-reject"`)}
@@ -598,7 +602,7 @@ function dock(view: DesktopVisualView): string {
     `,
     assets: `<p class="panel-empty">No asset library is bound to this surface.</p>`,
     console: `<p class="panel-empty">No session is running, so there is no console output to show.</p>`,
-    evidence: `<p class="panel-empty">No evidence packet has been captured here. Evidence digests are produced by <code>sceneaxi project capture</code>, never invented by a viewer.</p>`,
+    evidence: `<p class="panel-empty" data-rarity-evidence-empty>No accepted rarity evidence has been opened or staged in this session.</p><pre class="change-diff" data-rarity-evidence hidden tabindex="0" role="region" aria-label="Rarity evidence"></pre><p class="panel-empty">No evidence packet has been captured here. Evidence digests are produced by <code>sceneaxi project capture</code>, never invented by a viewer.</p>`,
     timeline: `<p class="panel-empty">No clip is loaded, so the timeline has no tracks.</p>`,
   };
 
@@ -1330,6 +1334,7 @@ function script(view: DesktopVisualView): string {
     product: {
       documentPath: view.product.surface.project.activeFile,
       viewportPlayEvent: DESKTOP_VIEWPORT_PLAY_EVENT,
+      rarityProposalEvent: DESKTOP_RARITY_PROPOSAL_EVENT,
       webStarter: DESKTOP_WEB_STARTER,
       // Every name the script can print, serialized rather than typed out as a
       // literal in the browser body: a refusal the visitor reads is one the
@@ -1362,6 +1367,11 @@ if (shell) {
   // actually in the way instead of claiming a normal-open document.
   let activeConflictDetail = null;
   let activeReviewSnapshot = null;
+  let rarityProposalStaged = false;
+  let activeRarityEvidence = null;
+  let activeRarityEvidenceDigest = null;
+  let activeReviewRarityEvidenceDigest = null;
+  let activeRunRarityEvidenceDigest = null;
   let activeProject = null;
   let editableScene = null;
   let selectedSceneEntityId = null;
@@ -1510,6 +1520,109 @@ if (shell) {
       : null;
   };
 
+  // The authoring core's own safe-evidence rendering, not a browser paraphrase
+  // of it: the packaged renderer prints this exact function's output, so the
+  // Assistant, Change Review, Run, and Evidence surfaces cannot disagree about
+  // what an accepted roll's provenance says.
+  const rarityEvidenceText = ${String(formatSafeRarityEvidence)};
+
+  const syncRarityEvidence = (evidence) => {
+    const text = rarityEvidenceText(evidence);
+    activeRarityEvidence = text !== null ? evidence : null;
+    activeRarityEvidenceDigest = text !== null && evidence && typeof evidence === 'object' &&
+      typeof evidence.namespaceDigest === 'string'
+      ? evidence.namespaceDigest
+      : null;
+    const panel = shell.querySelector('[data-rarity-evidence]');
+    const empty = shell.querySelector('[data-rarity-evidence-empty]');
+    if (panel) {
+      panel.textContent = text || '';
+      panel.hidden = text === null;
+    }
+    if (empty) empty.hidden = text !== null;
+    return text;
+  };
+
+  const dispatchRarityInvalidations = (invalidatedDigests) => {
+    invalidatedDigests.forEach((namespaceDigest) => {
+      document.dispatchEvent(new CustomEvent(T.product.rarityProposalEvent, {
+        detail: { invalidated: true, namespaceDigest },
+      }));
+    });
+  };
+
+  const clearReviewRarityEvidence = () => {
+    activeReviewRarityEvidenceDigest = null;
+    q('[data-change-rarity-evidence]').forEach((el) => {
+      el.textContent = '';
+      el.hidden = true;
+    });
+  };
+
+  const clearRunRarityEvidence = () => {
+    activeRunRarityEvidenceDigest = null;
+    q('[data-run-rarity-evidence]').forEach((el) => {
+      el.textContent = '';
+      el.hidden = true;
+    });
+  };
+
+  const clearRarityEvidence = (retireAll = false) => {
+    const invalidatedDigests = new Set();
+    if (activeRarityEvidenceDigest !== null) invalidatedDigests.add(activeRarityEvidenceDigest);
+    if (retireAll && activeReviewRarityEvidenceDigest !== null) {
+      invalidatedDigests.add(activeReviewRarityEvidenceDigest);
+    }
+    if (retireAll && activeRunRarityEvidenceDigest !== null) {
+      invalidatedDigests.add(activeRunRarityEvidenceDigest);
+    }
+    const invalidatedDigest = activeRarityEvidenceDigest;
+    const cleared = syncRarityEvidence(null);
+    if (retireAll || activeReviewRarityEvidenceDigest === invalidatedDigest) {
+      clearReviewRarityEvidence();
+    }
+    if (retireAll || activeRunRarityEvidenceDigest === invalidatedDigest) {
+      clearRunRarityEvidence();
+    }
+    dispatchRarityInvalidations(invalidatedDigests);
+    return cleared;
+  };
+
+  const reconcileRarityEvidence = (status) => {
+    if (!status || status.ok !== true) return;
+    const accepted = status.acceptedRarityEvidence;
+    const digest = typeof status.rarityNamespaceDigest === 'string'
+      ? status.rarityNamespaceDigest
+      : null;
+    const acceptedDigest = accepted && typeof accepted === 'object' &&
+      typeof accepted.namespaceDigest === 'string'
+      ? accepted.namespaceDigest
+      : null;
+    if (digest === null || acceptedDigest !== digest || rarityEvidenceText(accepted) === null) {
+      clearRarityEvidence(true);
+      return;
+    }
+    const invalidatedDigests = new Set();
+    if (activeRarityEvidenceDigest !== digest) {
+      if (activeRarityEvidenceDigest !== null) {
+        invalidatedDigests.add(activeRarityEvidenceDigest);
+      }
+      syncRarityEvidence(accepted);
+    }
+    if (
+      activeReviewRarityEvidenceDigest !== null &&
+      activeReviewRarityEvidenceDigest !== digest
+    ) {
+      invalidatedDigests.add(activeReviewRarityEvidenceDigest);
+      clearReviewRarityEvidence();
+    }
+    if (activeRunRarityEvidenceDigest !== null && activeRunRarityEvidenceDigest !== digest) {
+      invalidatedDigests.add(activeRunRarityEvidenceDigest);
+      clearRunRarityEvidence();
+    }
+    dispatchRarityInvalidations(invalidatedDigests);
+  };
+
   const clearConflictOutcome = () => { activeConflictDetail = null; };
 
   const syncReview = (snapshot) => {
@@ -1534,9 +1647,42 @@ if (shell) {
     const documentPath = shell.querySelector('[data-change-document]');
     const contentHash = shell.querySelector('[data-change-content-hash]');
     const renderedDiff = shell.querySelector('[data-change-diff]');
+    const rarityEvidence = shell.querySelector('[data-change-rarity-evidence]');
     if (documentPath) documentPath.textContent = active ? projection.first.documentPath : '';
     if (contentHash) contentHash.textContent = active ? projection.first.baseContentHash : '';
     if (renderedDiff) renderedDiff.textContent = active ? projection.diff : '';
+    const rarityText = active ? rarityEvidenceText(snapshot.rarityEvidence) : null;
+    activeReviewRarityEvidenceDigest = rarityText !== null &&
+      typeof snapshot.rarityEvidence?.namespaceDigest === 'string'
+      ? snapshot.rarityEvidence.namespaceDigest
+      : null;
+    if (rarityEvidence) {
+      rarityEvidence.textContent = rarityText || '';
+      rarityEvidence.hidden = rarityText === null;
+    }
+    if (rarityText !== null) syncRarityEvidence(snapshot.rarityEvidence);
+    if (active) rarityProposalStaged = rarityText !== null;
+    const settledRarityText = snapshot &&
+      (snapshot.phase === 'applied' || snapshot.phase === 'rejected')
+      ? rarityEvidenceText(snapshot.rarityEvidence)
+      : null;
+    if (settledRarityText !== null) {
+      document.dispatchEvent(new CustomEvent(T.product.rarityProposalEvent, {
+        detail: {
+          settled: snapshot.phase,
+          evidence: snapshot.rarityEvidence,
+        },
+      }));
+    }
+    // Only the rarity proposal's own discard retires its provenance. Rejecting
+    // an unrelated property edit says nothing about rarity the project already
+    // accepted, and clearing the dock there would deny evidence that still
+    // exists in the project bytes.
+    if (snapshot?.phase === 'rejected') {
+      if (rarityProposalStaged) clearRarityEvidence();
+      rarityProposalStaged = false;
+    }
+    if (snapshot?.phase === 'applied') rarityProposalStaged = false;
     // A validated snapshot that reports no diagnostic is the host saying the
     // conflict is over, which is the only thing that resolves it.
     if (snapshot !== null &&
@@ -1747,6 +1893,12 @@ if (shell) {
       productStatus(activeProject === null ? 'closed' : 'open', 'Recent project removed · active project unchanged');
       return;
     }
+    // Only past this point has a root actually changed. The dock's provenance
+    // belongs to the project it was read from, so binding another one must not
+    // leave one project's tier, seed, and digests describing another's — while
+    // forgetting a recent entry binds nothing and takes nothing away.
+    rarityProposalStaged = false;
+    clearRarityEvidence(true);
     if (activeProject !== null) await openProject();
   };
 
@@ -1781,6 +1933,7 @@ if (shell) {
     return null;
   };
   const responseReason = (response) => responseDiagnostic(response)?.code ?? null;
+  const isRarityRefusal = (code) => typeof code === 'string' && code.startsWith('RARITY_');
 
   const restartProject = async (diagnostic) => {
     productStatus('recovering', T.product.documentPath + ' · ' + diagnostic + ' · re-opening fresh session…');
@@ -1800,14 +1953,43 @@ if (shell) {
     projectDirty = false;
     projectRecovering = false;
     undoAvailability = 'unavailable';
-    syncReview(null);
+    let restartedRarityEvidence = null;
+    if (rarityProposalStaged) {
+      restartedRarityEvidence = activeRarityEvidence;
+      rarityProposalStaged = false;
+      syncReview(null);
+      clearRarityEvidence();
+    } else {
+      rarityProposalStaged = false;
+      syncReview(null);
+    }
     if (reason !== null || !status || status.ok !== true || typeof status.data !== 'object' || status.data === null || typeof status.contentHash !== 'string') {
+      if (rarityEvidenceText(restartedRarityEvidence) !== null) {
+        document.dispatchEvent(new CustomEvent(T.product.rarityProposalEvent, {
+          detail: { retired: 'session-restarted', evidence: restartedRarityEvidence },
+        }));
+      }
       clearSceneProperty();
+      if (reason === 'document-not-found' || isRarityRefusal(reason)) clearRarityEvidence(true);
       productStatus('refused', 'Recovery reset · ' + diagnostic + ' · ' + (reason || T.product.refusals.documentDataInvalid));
       return false;
     }
     projectData = status.data;
     projectContentHash = status.contentHash;
+    reconcileRarityEvidence(status);
+    if (rarityEvidenceText(restartedRarityEvidence) !== null) {
+      const acceptedDigest = status.acceptedRarityEvidence &&
+        typeof status.acceptedRarityEvidence === 'object' &&
+        typeof status.acceptedRarityEvidence.namespaceDigest === 'string'
+        ? status.acceptedRarityEvidence.namespaceDigest
+        : null;
+      const restartedDigest = restartedRarityEvidence.namespaceDigest;
+      document.dispatchEvent(new CustomEvent(T.product.rarityProposalEvent, {
+        detail: acceptedDigest === restartedDigest
+          ? { settled: 'applied', evidence: restartedRarityEvidence }
+          : { retired: 'session-restarted', evidence: restartedRarityEvidence },
+      }));
+    }
     syncSceneProperties(status);
     undoAvailability = status.undoAvailability === 'available' || status.undoAvailability === 'recovery-pending'
       ? status.undoAvailability
@@ -1840,6 +2022,47 @@ if (shell) {
     return true;
   };
 
+  const refreshAuthoringState = async () => {
+    const response = await runtimeRequest({
+      action: 'authoring',
+      payload: { op: 'status', documentPath: T.product.documentPath },
+    });
+    const reason = responseReason(response);
+    const status = response?.ok ? response.data : null;
+    if (status && isSessionSnapshot(status.authoringSnapshot)) {
+      syncReview(status.authoringSnapshot);
+    }
+    if (reason !== null || !status || status.ok !== true || typeof status.data !== 'object' ||
+        status.data === null || typeof status.contentHash !== 'string') {
+      if (reason === 'document-not-found' || isRarityRefusal(reason)) {
+        clearRarityEvidence(true);
+      }
+      productStatus('refused', 'Authoring refresh refused · ' +
+        (reason || T.product.refusals.documentDataInvalid));
+      return false;
+    }
+    projectData = status.data;
+    projectContentHash = status.contentHash;
+    reconcileRarityEvidence(status);
+    syncSceneProperties(status);
+    undoAvailability = status.undoAvailability === 'available' || status.undoAvailability === 'recovery-pending'
+      ? status.undoAvailability
+      : 'unavailable';
+    syncCommandAvailability();
+    clearConflictOutcome();
+    const snapshot = isSessionSnapshot(status.authoringSnapshot)
+      ? status.authoringSnapshot
+      : null;
+    const reviewing = reviewProjection(snapshot) !== null;
+    productStatus(
+      reviewing ? 'dirty' : (projectRecovering ? 'recovering' : 'open'),
+      reviewing
+        ? T.product.documentPath + ' · current proposal restored · review before Save'
+        : T.product.documentPath + ' · authoring state refreshed · ' + status.documentId,
+    );
+    return true;
+  };
+
   const openProject = async () => {
     if (activeProject === null && projectPort() !== null) {
       productStatus('refused', 'Open refused · no project root selected');
@@ -1858,12 +2081,14 @@ if (shell) {
     if (reason !== null || !status || status.ok !== true || typeof status.data !== 'object' || status.data === null || typeof status.contentHash !== 'string') {
       clearSceneProperty();
       const code = reason || T.product.refusals.documentDataInvalid;
+      if (code === 'document-not-found' || isRarityRefusal(code)) clearRarityEvidence(true);
       productStatus('refused', 'Open refused · ' + code);
       showOutcome('Open refused', code, 'The active Scene Document was not opened.');
       return false;
     }
     projectData = status.data;
     projectContentHash = status.contentHash;
+    reconcileRarityEvidence(status);
     syncSceneProperties(status);
     projectDirty = false;
     projectRecovering = false;
@@ -2000,6 +2225,7 @@ if (shell) {
       return true;
     }
     if (applied) {
+      reconcileRarityEvidence(snapshot);
       projectData = null;
       projectContentHash = null;
       projectDirty = false;
@@ -2128,7 +2354,14 @@ if (shell) {
     projectContentHash = null;
     projectDirty = false;
     projectRecovering = false;
+    rarityProposalStaged = false;
     const reopened = await openProject();
+    // Whether the provenance is still real is a question the reopened document
+    // answers: an Undo that reverted the rarity apply leaves no namespace to
+    // describe, and one that reverted an unrelated Save leaves it exactly where
+    // it was. Clearing on the reverted-rarity case alone keeps the dock from
+    // both lies — digests for bytes that are gone, and an empty state over bytes
+    // that are still there.
     if (reopened) {
       productStatus('open', 'Undid last Save · restored ' + result.restoredPaths.join(', '));
     }
@@ -2206,6 +2439,21 @@ if (shell) {
     }
     showModePanels('run');
     const lastDigest = exercise.tickDigests[ticks - 1];
+    // Play reports the session it just ran. A staged rarity proposal has not
+    // changed project bytes yet, so that session carries no rarity — but the
+    // proposal's provenance is still on screen in Change Review and still waiting
+    // for Accept, and retiring the dock under it would deny evidence the surface
+    // is showing. Only a run with nothing staged may clear it.
+    const runRarity = rarityEvidenceText(exercise.rarity, exercise.raritySession);
+    activeRunRarityEvidenceDigest = runRarity !== null && exercise.rarity &&
+      typeof exercise.rarity === 'object' && typeof exercise.rarity.namespaceDigest === 'string'
+      ? exercise.rarity.namespaceDigest
+      : null;
+    if (!rarityProposalStaged) syncRarityEvidence(exercise.rarity);
+    q('[data-run-rarity-evidence]').forEach((el) => {
+      el.textContent = runRarity || '';
+      el.hidden = runRarity === null;
+    });
     const played = 'Played composed scene · ' + ticks + ' ticks · viewport frame ' + playback.frame + ' · session closed';
     q('[data-run-session-report]').forEach((el) => {
       el.textContent = 'Completed closed session · ' + ticks + ' ticks · terminal digest ' + String(lastDigest);
@@ -2726,6 +2974,38 @@ if (shell) {
       event.preventDefault();
       (event.shiftKey ? last : first).focus();
     }
+  });
+
+  // A replay staged nothing, so it moves no proposal into Change Review and
+  // leaves the project clean. Its provenance is still real and still belongs in
+  // the Evidence dock — the surface just may not claim there is something to
+  // accept or save.
+  document.addEventListener(T.product.rarityProposalEvent, (event) => {
+    const detail = event && event.detail;
+    if (!detail) return;
+    if (detail.settled === 'applied' || detail.settled === 'rejected') {
+      if (detail.refreshAuthoring === true) void refreshAuthoringState();
+      return;
+    }
+    if (detail.retired === 'session-restarted' || detail.retired === 'undo' ||
+        detail.retired === 'namespace-replaced' || detail.retired === 'document-missing') {
+      if (detail.refreshAuthoring === true) void refreshAuthoringState();
+      return;
+    }
+    if (detail.replayed === true) {
+      if (syncRarityEvidence(detail.evidence) === null) return;
+      selectDockTab('evidence');
+      productStatus(
+        projectRecovering ? 'recovering' : (projectDirty ? 'dirty' : (projectData === null ? 'closed' : 'open')),
+        T.product.documentPath + ' · identical rarity event replayed · project bytes unchanged, nothing staged',
+      );
+      return;
+    }
+    if (!isSessionSnapshot(detail.snapshot)) return;
+    if (!syncReview(detail.snapshot)) return;
+    syncRarityEvidence(detail.evidence);
+    selectDockTab('changes');
+    productStatus('dirty', T.product.documentPath + ' · rarity proposal staged · review before Save');
   });
 
   syncReview(null);

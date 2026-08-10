@@ -27,12 +27,15 @@ export {
   DESKTOP_BRIDGE_CHANNEL,
   DESKTOP_BRIDGE_GLOBAL,
   DESKTOP_BRIDGE_REFUSALS,
+  DESKTOP_RARITY_EVENT_ID,
+  DESKTOP_RARITY_PROPOSAL_EVENT,
   DESKTOP_VIEWPORT_PLAY_EVENT,
   bridgeOk,
   bridgeRefuse,
   type DesktopBridgeAction,
   type DesktopBridgeAssistantOp,
   type DesktopAssistantMountedResult,
+  type DesktopAssistantResult,
   type DesktopAssistantJobSnapshot,
   type DesktopBridgeAuthoringOp,
   type DesktopBridgeHandshake,
@@ -42,6 +45,9 @@ export {
   type DesktopBridgeRequest,
   type DesktopBridgeResponse,
   type DesktopFrameReport,
+  type DesktopRarityEvidence,
+  type DesktopRarityProposalResult,
+  type DesktopRarityRetirementReason,
 } from "./lib/bridge-contract.js";
 
 export {
@@ -51,6 +57,7 @@ export {
   type DesktopBridgeOptions,
   type DesktopAssistantRunRequest,
   type DesktopAssistantProfile,
+  type DesktopRarityProviderRunRequest,
   type OpenPathExercise,
 } from "./lib/bridge.js";
 
@@ -61,6 +68,8 @@ export {
   DESKTOP_ASSISTANT_SCENE_ID,
   DESKTOP_OPEN_PLACEMENTS,
   DESKTOP_OPEN_SCENE_ID,
+  DESKTOP_RARITY_PRODUCT_ID,
+  DESKTOP_RARITY_PROJECT_SEED,
   DESKTOP_SCENE_TRANSLATION_X_PROPERTY,
   DESKTOP_SCENE_NOT_COMPOSABLE,
   desktopAssistantScene,

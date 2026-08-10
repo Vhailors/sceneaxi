@@ -8,18 +8,30 @@
  */
 import {
   createModelProviderPort,
+  requestRarityProviderContribution,
   runAssistantSculptAction,
   type AssistantSculptResult,
   type CreateModelProviderPortOptions,
   type ModelDescriptor,
+  type RarityProviderContributionResult,
 } from "@sceneaxi/authoring-core";
+import {
+  MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+  RARITY_POLICY_KIND,
+  RARITY_REQUEST_KIND,
+  RARITY_SCHEMA_VERSION,
+  type JsonObject,
+} from "@sceneaxi/schemas";
 import {
   OPENROUTER_PROVIDER_ID,
   createOpenRouterAdapter,
   type OpenRouterEvalConfig,
   type OpenRouterTransport,
 } from "@sceneaxi/provider-openrouter";
-import type { DesktopAssistantRunRequest } from "../lib/bridge.js";
+import type {
+  DesktopAssistantRunRequest,
+  DesktopRarityProviderRunRequest,
+} from "../lib/bridge.js";
 import {
   DesktopByoRunnerRefusal,
   createDesktopByoConfiguration,
@@ -196,4 +208,97 @@ export function createPrivilegedDesktopByoRuntime(
       createProviderSession: options.createProviderSession,
     }),
   });
+}
+
+/** Checked-in provider identity for the packaged no-network Agent path. */
+export const DESKTOP_RARITY_FIXTURE_MODEL = Object.freeze({
+  model: "wayfinder-rarity-fixture",
+  provider: "sceneaxi-fixture",
+  quantization: "deterministic-json",
+  version: "2026-08-09",
+}) satisfies ModelDescriptor;
+
+export const DESKTOP_RARITY_FIXTURE_INPUT = Object.freeze({
+  policy: Object.freeze({
+    schemaVersion: RARITY_SCHEMA_VERSION,
+    kind: RARITY_POLICY_KIND,
+    tierWeights: Object.freeze({
+      common: 55,
+      uncommon: 25,
+      rare: 12,
+      epic: 6,
+      legendary: 2,
+    }),
+  }),
+  request: Object.freeze({
+    schemaVersion: RARITY_SCHEMA_VERSION,
+    kind: RARITY_REQUEST_KIND,
+    candidates: Object.freeze([
+      Object.freeze({ candidateId: "wayfinder-stone", tier: "common", weight: 7 }),
+      Object.freeze({ candidateId: "wayfinder-moss", tier: "common", weight: 3 }),
+      Object.freeze({ candidateId: "wayfinder-copper", tier: "uncommon", weight: 5 }),
+      Object.freeze({ candidateId: "wayfinder-silver", tier: "rare", weight: 3 }),
+      Object.freeze({ candidateId: "wayfinder-aurora", tier: "epic", weight: 2 }),
+      Object.freeze({ candidateId: "wayfinder-crown", tier: "legendary", weight: 1 }),
+    ]),
+  }),
+});
+
+export type CreateDesktopRarityFixtureProviderOptions = Readonly<{
+  /** Test-only replacement used for malformed/entropy refusal vectors. */
+  arguments?: JsonObject;
+  executedModel?: ModelDescriptor;
+  /** Observes the exact envelope the port dispatched, for no-network vectors. */
+  onDispatch?: (request: unknown) => void;
+}>;
+
+/**
+ * Privileged, deterministic fixture provider. It still crosses the real Model
+ * Provider Port and profile policy, but owns no credential, transport, or network.
+ */
+export function createDesktopRarityFixtureProvider(
+  options: CreateDesktopRarityFixtureProviderOptions = {},
+): (
+  request: DesktopRarityProviderRunRequest,
+) => Promise<RarityProviderContributionResult> {
+  const executedModel = Object.freeze({
+    ...(options.executedModel ?? DESKTOP_RARITY_FIXTURE_MODEL),
+  });
+  const port = createModelProviderPort({
+    adapter: Object.freeze({
+      routeKind: "third-party" as const,
+      capabilities: Object.freeze({
+        schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+        operations: Object.freeze(["tool-call" as const]),
+      }),
+      toolCall: (dispatched) => {
+        options.onDispatch?.(dispatched);
+        return Object.freeze({
+          response: Object.freeze({
+            schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+            operation: "tool-call" as const,
+            toolCalls: Object.freeze([
+              Object.freeze({
+                name: "propose_rarity",
+                arguments: options.arguments ??
+                  (DESKTOP_RARITY_FIXTURE_INPUT as unknown as JsonObject),
+              }),
+            ]),
+          }),
+          executedModel,
+        });
+      },
+    }),
+    profilePolicies: Object.freeze({
+      "@sceneaxi/profile-game": () => Object.freeze({ ok: true as const }),
+      "@sceneaxi/profile-web": () => Object.freeze({ ok: true as const }),
+    }),
+  });
+  return (request) =>
+    requestRarityProviderContribution({
+      port,
+      profile: request.profile,
+      model: DESKTOP_RARITY_FIXTURE_MODEL,
+      prompt: request.prompt,
+    });
 }

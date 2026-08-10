@@ -70,6 +70,9 @@ declared by the checked-in tool definition.
 | `assistant:read` | `sceneaxi.assistant.status` |
 | `assistant:run` | `sceneaxi.assistant.local.start`, `sceneaxi.assistant.byo.start`, `sceneaxi.assistant.abandon` |
 
+`sceneaxi.assistant.abandon` requires the exact `jobId` returned by its matching
+start call, so a delayed timeout or agent request cannot abandon newer work.
+
 `sceneaxi.project.recover` is a **write**, not a read. It resolves the shared
 session's pending apply through `resolveApplyTransaction()`, which rolls a
 prepared transaction forward or back on disk, so it carries `project:write` and

@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import {
   appendFileSync,
   cpSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -52,6 +53,10 @@ export function makeFixture(): string {
     cpSync(join(repoRoot, file), join(root, file));
   }
   symlinkSync(join(repoRoot, "node_modules"), join(root, "node_modules"), "dir");
+  const desktopModules = join(repoRoot, "desktop/linux/node_modules");
+  if (existsSync(desktopModules)) {
+    symlinkSync(desktopModules, join(root, "desktop/linux/node_modules"), "dir");
+  }
   return root;
 }
 

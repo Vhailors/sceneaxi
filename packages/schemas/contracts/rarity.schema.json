@@ -13,11 +13,11 @@
   "$defs": {
     "identifier": {
       "type": "string",
-      "pattern": "^[a-z0-9][a-z0-9._:-]{0,127}$"
+      "pattern": "^[a-z0-9][a-z0-9._:-]{0,127}(?![\\s\\S])"
     },
     "digest": {
       "type": "string",
-      "pattern": "^sha256:[0-9a-f]{64}$"
+      "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
     },
     "weight": {
       "type": "integer",
@@ -70,6 +70,7 @@
         "candidates": {
           "type": "array",
           "minItems": 1,
+          "maxItems": 64,
           "items": { "$ref": "#/$defs/candidate" }
         }
       }
@@ -86,6 +87,12 @@
       }
     },
     "provenance": {
+      "oneOf": [
+        { "$ref": "#/$defs/plainProvenance" },
+        { "$ref": "#/$defs/providerProvenance" }
+      ]
+    },
+    "plainProvenance": {
       "type": "object",
       "required": [
         "schemaVersion",
@@ -121,7 +128,51 @@
         "outcomeDigest": { "$ref": "#/$defs/digest" }
       }
     },
+    "providerProvenance": {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "kind",
+        "algorithmId",
+        "scope",
+        "eventId",
+        "policyDigest",
+        "requestDigest",
+        "tierRollDigest",
+        "tierDraw",
+        "tierTotalWeight",
+        "candidateRollDigest",
+        "candidateDraw",
+        "candidateTotalWeight",
+        "outcomeDigest",
+        "providerEvidenceDigest"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "kind": { "const": "sceneaxi.rarity.provenance" },
+        "algorithmId": { "const": "sceneaxi.rarity.weighted-sha256-v1" },
+        "scope": { "$ref": "#/$defs/identifier" },
+        "eventId": { "$ref": "#/$defs/identifier" },
+        "policyDigest": { "$ref": "#/$defs/digest" },
+        "requestDigest": { "$ref": "#/$defs/digest" },
+        "tierRollDigest": { "$ref": "#/$defs/digest" },
+        "tierDraw": { "$ref": "#/$defs/weight" },
+        "tierTotalWeight": { "$ref": "#/$defs/weight" },
+        "candidateRollDigest": { "$ref": "#/$defs/digest" },
+        "candidateDraw": { "$ref": "#/$defs/weight" },
+        "candidateTotalWeight": { "$ref": "#/$defs/weight" },
+        "outcomeDigest": { "$ref": "#/$defs/digest" },
+        "providerEvidenceDigest": { "$ref": "#/$defs/digest" }
+      }
+    },
     "rollRecord": {
+      "oneOf": [
+        { "$ref": "#/$defs/plainRollRecord" },
+        { "$ref": "#/$defs/providerRollRecord" }
+      ]
+    },
+    "plainRollRecord": {
       "type": "object",
       "required": ["eventId", "request", "outcome", "provenance"],
       "additionalProperties": false,
@@ -129,7 +180,19 @@
         "eventId": { "$ref": "#/$defs/identifier" },
         "request": { "$ref": "#/$defs/request" },
         "outcome": { "$ref": "#/$defs/outcome" },
-        "provenance": { "$ref": "#/$defs/provenance" }
+        "provenance": { "$ref": "#/$defs/plainProvenance" }
+      }
+    },
+    "providerRollRecord": {
+      "type": "object",
+      "required": ["eventId", "request", "outcome", "provenance", "providerEvidence"],
+      "additionalProperties": false,
+      "properties": {
+        "eventId": { "$ref": "#/$defs/identifier" },
+        "request": { "$ref": "#/$defs/request" },
+        "outcome": { "$ref": "#/$defs/outcome" },
+        "provenance": { "$ref": "#/$defs/providerProvenance" },
+        "providerEvidence": { "$ref": "#/$defs/providerEvidence" }
       }
     },
     "namespace": {
@@ -143,6 +206,48 @@
         "rolls": {
           "type": "array",
           "items": { "$ref": "#/$defs/rollRecord" }
+        }
+      }
+    },
+    "providerEvidence": {
+      "type": "object",
+      "required": ["schemaVersion", "kind", "operation", "profile", "model"],
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "kind": { "const": "sceneaxi.model-provider-call-evidence" },
+        "operation": { "const": "tool-call" },
+        "profile": { "enum": ["@sceneaxi/profile-game", "@sceneaxi/profile-web"] },
+        "model": {
+          "type": "object",
+          "required": ["model", "provider", "quantization", "version"],
+          "additionalProperties": false,
+          "properties": {
+            "model": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^(?![\\s\\S]*[^a-z0-9._:/+-])(?![\\s\\S]*://)(?!(?:[\\s\\S]*[._:/+-])?(?:sk|rk|whsec|key|token|secret|credential|password)(?:[._:/+-]|(?![\\s\\S])))(?!(?:[\\s\\S]*[._:/+-])?(?:sk_(?:test|live)_|rk_(?:test|live)_|whsec_|xox[abprs]-|gh[pousr]_|github_pat_|glpat-|npm_|pypi-|hf_|lin_api_|sq0atp-|sq0csp-))[a-z0-9][a-z0-9._:/+-]*(?![\\s\\S])"
+            },
+            "provider": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^(?![\\s\\S]*[^a-z0-9._:/+-])(?![\\s\\S]*://)(?!(?:[\\s\\S]*[._:/+-])?(?:sk|rk|whsec|key|token|secret|credential|password)(?:[._:/+-]|(?![\\s\\S])))(?!(?:[\\s\\S]*[._:/+-])?(?:sk_(?:test|live)_|rk_(?:test|live)_|whsec_|xox[abprs]-|gh[pousr]_|github_pat_|glpat-|npm_|pypi-|hf_|lin_api_|sq0atp-|sq0csp-))[a-z0-9][a-z0-9._:/+-]*(?![\\s\\S])"
+            },
+            "quantization": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^(?![\\s\\S]*[^a-z0-9._:/+-])(?![\\s\\S]*://)(?!(?:[\\s\\S]*[._:/+-])?(?:sk|rk|whsec|key|token|secret|credential|password)(?:[._:/+-]|(?![\\s\\S])))(?!(?:[\\s\\S]*[._:/+-])?(?:sk_(?:test|live)_|rk_(?:test|live)_|whsec_|xox[abprs]-|gh[pousr]_|github_pat_|glpat-|npm_|pypi-|hf_|lin_api_|sq0atp-|sq0csp-))[a-z0-9][a-z0-9._:/+-]*(?![\\s\\S])"
+            },
+            "version": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^(?![\\s\\S]*[^a-z0-9._:/+-])(?![\\s\\S]*://)(?!(?:[\\s\\S]*[._:/+-])?(?:sk|rk|whsec|key|token|secret|credential|password)(?:[._:/+-]|(?![\\s\\S])))(?!(?:[\\s\\S]*[._:/+-])?(?:sk_(?:test|live)_|rk_(?:test|live)_|whsec_|xox[abprs]-|gh[pousr]_|github_pat_|glpat-|npm_|pypi-|hf_|lin_api_|sq0atp-|sq0csp-))[a-z0-9][a-z0-9._:/+-]*(?![\\s\\S])"
+            }
+          }
         }
       }
     }

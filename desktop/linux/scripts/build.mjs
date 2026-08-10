@@ -17,6 +17,7 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { build } from "esbuild";
+import { bundleDesktopRenderer } from "./renderer-bundle.mjs";
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const dist = join(appRoot, "dist");
@@ -54,15 +55,7 @@ await build({
   external: ["electron"],
 });
 
-// Renderer: browser platform; the Three presentation core bundles in.
-await build({
-  ...common,
-  entryPoints: [join(appRoot, "src/renderer/viewport.ts")],
-  outfile: join(dist, "renderer.js"),
-  platform: "browser",
-  format: "iife",
-  target: "es2022",
-});
+await bundleDesktopRenderer({ appRoot, outfile: join(dist, "renderer.js") });
 
 // The chrome document: bundle the emitter, import it, write the bytes.
 await build({

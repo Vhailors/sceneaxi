@@ -41,7 +41,10 @@ import {
 } from "../lib/project-lifecycle-contract.js";
 import { createDesktopProjectLifecycle } from "../lib/project-lifecycle.js";
 import { createElectronProviderKeyStore } from "./provider-key-store.js";
-import { createPrivilegedDesktopByoRuntime } from "./provider-runtime.js";
+import {
+  createDesktopRarityFixtureProvider,
+  createPrivilegedDesktopByoRuntime,
+} from "./provider-runtime.js";
 
 // The bundle is CJS (Electron's main entry), so the native `__dirname` is real.
 declare const __dirname: string;
@@ -112,6 +115,7 @@ async function start(): Promise<void> {
   const byoRuntime = createPrivilegedDesktopByoRuntime({
     keyStore: providerKeyStore,
   });
+  const runRarityProvider = createDesktopRarityFixtureProvider();
   let bridge: DesktopBridge | null = null;
   let activeRoot: string | null = null;
 
@@ -127,6 +131,7 @@ async function start(): Promise<void> {
       ...(byoRuntime.runByoAssistant === undefined
         ? {}
         : { runByoAssistant: byoRuntime.runByoAssistant }),
+      runRarityProvider,
     });
     const localPaths = SMOKE
       ? {

@@ -92,7 +92,7 @@ namespace that matches no real export. `*` stands for exactly one path segment.
 |---|---|---|
 | `@sceneaxi/schemas` | `./src/index.ts` | `./node/*` (Node-only executable suites, never re-exported from the browser-safe root), `./testing/*` (fixture helpers for consumer tests), `./contracts/*.json` (versioned JSON contracts, importable directly) |
 | `@sceneaxi/profile-web` | `./src/index.ts` | — |
-| `@sceneaxi/authoring-core` | `./src/index.ts` | — |
+| `@sceneaxi/authoring-core` | `./src/index.ts` | `./rarity-evidence` (the shared safe-rarity-provenance formatter on an import-free module, so a browser bundle can reach it without the Node-bearing root barrel) |
 | `@sceneaxi/auth` | `./src/index.ts` | `./testing/*` (test-only issuance seam for genuine principal fixtures, never re-exported from the root barrel; unreachable from production source — see [the testing-subpath rule](DEPENDENCY-MATRIX.md#test-only-testing-subpaths)) |
 
 ## The checklist

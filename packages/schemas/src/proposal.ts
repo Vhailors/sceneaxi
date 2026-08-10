@@ -312,6 +312,7 @@ export type ApplyDiagnosticCode =
   | "invalid-proposal"
   | "invalid-pointer"
   | "document-not-found"
+  | "document-read-failed"
   | "validation-failed"
   | "parse-error"
   | "journal-invalid"

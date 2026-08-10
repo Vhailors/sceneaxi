@@ -40,6 +40,10 @@ export const DESKTOP_ASSISTANT_SCENE_ID = "desktop-assistant-output-scene";
 
 export const DESKTOP_ASSISTANT_INSTANCE_ID = "assistant-live-output";
 
+/** Existing ProductManifest identity carried by the canonical Scene Document. */
+export const DESKTOP_RARITY_PRODUCT_ID = "desktop-linux-rarity" as const;
+export const DESKTOP_RARITY_PROJECT_SEED = 20260809 as const;
+
 /** Refusal minted when the pipeline rejects the desktop composition. */
 export const DESKTOP_SCENE_NOT_COMPOSABLE = "DESKTOP_SCENE_NOT_COMPOSABLE";
 

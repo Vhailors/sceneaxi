@@ -8,6 +8,11 @@
  */
 import type { JsonValue } from "./document.js";
 import {
+  MODEL_PROVIDER_CALL_EVIDENCE_KIND,
+  MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+  type ModelProviderCallEvidence,
+} from "./model-provider.js";
+import {
   firstMissingKey,
   firstUnexpectedKey,
   snapshotPlainArray,
@@ -29,6 +34,66 @@ export const RARITY_REQUEST_KIND = "sceneaxi.rarity.request" as const;
 export const RARITY_OUTCOME_KIND = "sceneaxi.rarity.outcome" as const;
 export const RARITY_PROVENANCE_KIND = "sceneaxi.rarity.provenance" as const;
 export const RARITY_NAMESPACE_KIND = "sceneaxi.rarity.namespace" as const;
+export const RARITY_MAX_CANDIDATES = 64 as const;
+export const RARITY_PROVIDER_DESCRIPTOR_MAX_CHARS = 128 as const;
+
+const RARITY_PROVIDER_DESCRIPTOR_FORBIDDEN_SEGMENTS = new Set([
+  "sk",
+  "rk",
+  "whsec",
+  "key",
+  "token",
+  "secret",
+  "credential",
+  "password",
+]);
+
+const RARITY_PROVIDER_DESCRIPTOR_CREDENTIAL_PREFIXES = Object.freeze([
+  "sk_test_",
+  "sk_live_",
+  "rk_test_",
+  "rk_live_",
+  "whsec_",
+  "xoxa-",
+  "xoxb-",
+  "xoxp-",
+  "xoxr-",
+  "xoxs-",
+  "ghp_",
+  "gho_",
+  "ghu_",
+  "ghs_",
+  "ghr_",
+  "github_pat_",
+  "glpat-",
+  "npm_",
+  "pypi-",
+  "hf_",
+  "lin_api_",
+  "sq0atp-",
+  "sq0csp-",
+]);
+
+function hasRarityProviderCredentialShape(value: string): boolean {
+  return value.includes("://") ||
+    value.split(/[._:/+-]/).some((segment) =>
+      RARITY_PROVIDER_DESCRIPTOR_FORBIDDEN_SEGMENTS.has(segment)
+    ) ||
+    RARITY_PROVIDER_DESCRIPTOR_CREDENTIAL_PREFIXES.some((prefix) =>
+      value.startsWith(prefix) ||
+      [".", "_", ":", "/", "+", "-"].some((separator) =>
+        value.includes(`${separator}${prefix}`)
+      )
+    );
+}
+
+function isRarityProviderDescriptor(value: unknown): value is string {
+  return typeof value === "string" &&
+    value.length <= RARITY_PROVIDER_DESCRIPTOR_MAX_CHARS &&
+    [...value].every((character) => /[a-z0-9._:/+-]/.test(character)) &&
+    /[a-z0-9]/.test(value[0] ?? "") &&
+    !hasRarityProviderCredentialShape(value);
+}
 
 /** Stable identifiers and cumulative-selection order. */
 export const RARITY_TIERS = Object.freeze([
@@ -51,6 +116,7 @@ export const RARITY_REFUSE_CODES = Object.freeze({
   invalidWeight: "RARITY_WEIGHT_INVALID",
   weightOverflow: "RARITY_WEIGHT_TOTAL_OVERFLOW",
   emptyInput: "RARITY_INPUT_EMPTY",
+  inputBoundExceeded: "RARITY_INPUT_BOUND_EXCEEDED",
   zeroTotal: "RARITY_WEIGHT_TOTAL_ZERO",
   candidatePoolUnavailable: "RARITY_CANDIDATE_POOL_UNAVAILABLE",
   duplicateCandidate: "RARITY_CANDIDATE_DUPLICATE",
@@ -110,6 +176,7 @@ export type RarityProvenance = Readonly<{
   candidateDraw: number;
   candidateTotalWeight: number;
   outcomeDigest: string;
+  providerEvidenceDigest?: string;
 }>;
 
 export type RarityRollRecord = Readonly<{
@@ -117,6 +184,7 @@ export type RarityRollRecord = Readonly<{
   request: RarityRollRequest;
   outcome: RarityOutcome;
   provenance: RarityProvenance;
+  providerEvidence?: ModelProviderCallEvidence;
 }>;
 
 /** Canonical project-owned namespace; this extends ProductManifest, not a second model. */
@@ -143,8 +211,52 @@ export type RarityValidationResult<Value> =
   | RarityValidationOk<Value>
   | RarityValidationRefuse;
 
-const IDENTIFIER_RE = /^[a-z0-9][a-z0-9._:-]{0,127}$/;
-const DIGEST_RE = /^sha256:[0-9a-f]{64}$/;
+export function validateRarityProviderEvidence(
+  value: unknown,
+  path = "rarity.providerEvidence",
+): RarityValidationResult<ModelProviderCallEvidence> {
+  const evidence = snapshotPlainRecord(value);
+  const evidenceFields = evidence === undefined
+    ? null
+    : requireExactFields(
+        evidence,
+        ["schemaVersion", "kind", "operation", "profile", "model"],
+        path,
+      );
+  const model = evidence === undefined
+    ? undefined
+    : snapshotPlainRecord(evidence["model"]);
+  const modelFields = model === undefined
+    ? null
+    : requireExactFields(
+        model,
+        ["model", "provider", "quantization", "version"],
+        `${path}.model`,
+      );
+  if (
+    evidence === undefined ||
+    evidenceFields !== null ||
+    evidence["schemaVersion"] !== MODEL_PROVIDER_PORT_SCHEMA_VERSION ||
+    evidence["kind"] !== MODEL_PROVIDER_CALL_EVIDENCE_KIND ||
+    evidence["operation"] !== "tool-call" ||
+    (evidence["profile"] !== "@sceneaxi/profile-game" &&
+      evidence["profile"] !== "@sceneaxi/profile-web") ||
+    model === undefined ||
+    modelFields !== null ||
+    !["model", "provider", "quantization", "version"].every((field) =>
+      isRarityProviderDescriptor(model[field])
+    )
+  ) {
+    return refuseRarity(
+      RARITY_REFUSE_CODES.provenanceMismatch,
+      path,
+      "Rarity provider evidence must be an exact Game or Web tool-call descriptor.",
+    );
+  }
+  return ok(snapshotSculptJson(evidence) as unknown as ModelProviderCallEvidence);
+}
+
+const DIGEST_PREFIX = "sha256:";
 
 /**
  * The one key set no authoring or provider caller may supply on rarity input,
@@ -161,6 +273,8 @@ export const RARITY_FORBIDDEN_INPUT_KEYS = Object.freeze([
   "providerResponse",
 ] as const);
 
+export const RARITY_PROVIDER_REQUEST_MAX_CHARS = 2_000;
+
 const FORBIDDEN_REQUEST_KEYS: ReadonlySet<string> = new Set<string>(
   RARITY_FORBIDDEN_INPUT_KEYS,
 );
@@ -175,7 +289,22 @@ export function isRarityForbiddenInputKey(key: string): boolean {
  * refuses.
  */
 export function isRarityIdentifier(value: unknown): value is string {
-  return typeof value === "string" && IDENTIFIER_RE.test(value);
+  return typeof value === "string" &&
+    value.length >= 1 &&
+    value.length <= 128 &&
+    /[a-z0-9]/.test(value[0] ?? "") &&
+    [...value].every((character) => /[a-z0-9._:-]/.test(character));
+}
+
+export function isRarityProviderSafeIdentifier(value: unknown): value is string {
+  return isRarityIdentifier(value) && !hasRarityProviderCredentialShape(value);
+}
+
+function isRarityDigest(value: unknown): value is string {
+  return typeof value === "string" &&
+    value.length === DIGEST_PREFIX.length + 64 &&
+    value.startsWith(DIGEST_PREFIX) &&
+    [...value.slice(DIGEST_PREFIX.length)].every((character) => /[0-9a-f]/.test(character));
 }
 
 function ok<Value>(value: Value): RarityValidationOk<Value> {
@@ -412,6 +541,13 @@ export function validateRarityRollRequest(
       "Rarity candidates cannot be empty.",
     );
   }
+  if (candidates.length > RARITY_MAX_CANDIDATES) {
+    return refuseRarity(
+      RARITY_REFUSE_CODES.inputBoundExceeded,
+      "rarity.request.candidates",
+      `Rarity candidates cannot exceed ${String(RARITY_MAX_CANDIDATES)} entries.`,
+    );
+  }
 
   const normalized: RarityCandidate[] = [];
   const ids = new Set<string>();
@@ -533,10 +669,16 @@ const PROVENANCE_FIELDS = Object.freeze([
 export function validateRarityProvenance(
   value: unknown,
 ): RarityValidationResult<RarityProvenance> {
+  const record = snapshotPlainRecord(value);
+  const hasProviderEvidenceDigest = record !== undefined &&
+    Object.hasOwn(record, "providerEvidenceDigest");
   const header = validateHeader(
     value,
     RARITY_PROVENANCE_KIND,
-    PROVENANCE_FIELDS,
+    [
+      ...PROVENANCE_FIELDS,
+      ...(hasProviderEvidenceDigest ? ["providerEvidenceDigest"] : []),
+    ],
     "rarity.provenance",
   );
   if (isRefusal(header)) return header;
@@ -560,8 +702,9 @@ export function validateRarityProvenance(
     "tierRollDigest",
     "candidateRollDigest",
     "outcomeDigest",
+    ...(hasProviderEvidenceDigest ? ["providerEvidenceDigest"] : []),
   ]) {
-    if (typeof header[field] !== "string" || !DIGEST_RE.test(header[field])) {
+    if (!isRarityDigest(header[field])) {
       return refuseRarity(
         RARITY_REFUSE_CODES.provenanceMismatch,
         `rarity.provenance.${field}`,
@@ -613,9 +756,16 @@ function validateRarityRollRecord(
       "Rarity roll record must be a plain JSON object.",
     );
   }
+  const hasProviderEvidence = Object.hasOwn(record, "providerEvidence");
   const fields = requireExactFields(
     record,
-    ["eventId", "request", "outcome", "provenance"],
+    [
+      "eventId",
+      "request",
+      "outcome",
+      "provenance",
+      ...(hasProviderEvidence ? ["providerEvidence"] : []),
+    ],
     path,
   );
   if (fields !== null) return fields;
@@ -639,12 +789,30 @@ function validateRarityRollRecord(
       "Rarity provenance eventId must equal the roll record eventId.",
     );
   }
+  const providerEvidence = hasProviderEvidence
+    ? validateRarityProviderEvidence(record["providerEvidence"], `${path}.providerEvidence`)
+    : undefined;
+  if (providerEvidence !== undefined && !providerEvidence.ok) return providerEvidence;
+  const providerEvidenceDigest = provenance.value.providerEvidenceDigest;
+  if (
+    (providerEvidence === undefined) !== (providerEvidenceDigest === undefined) ||
+    (providerEvidence !== undefined &&
+      providerEvidenceDigest !==
+        digestRarityValue(providerEvidence.value as unknown as JsonValue))
+  ) {
+    return refuseRarity(
+      RARITY_REFUSE_CODES.provenanceMismatch,
+      `${path}.provenance.providerEvidenceDigest`,
+      "Rarity roll provenance must bind its exact provider evidence.",
+    );
+  }
   return ok(
     snapshotSculptJson({
       eventId: record["eventId"],
       request: request.value,
       outcome: outcome.value,
       provenance: provenance.value,
+      ...(providerEvidence === undefined ? {} : { providerEvidence: providerEvidence.value }),
     }),
   );
 }

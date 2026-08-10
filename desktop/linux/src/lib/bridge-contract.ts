@@ -15,15 +15,20 @@
 import type {
   AssistantSculptProgress,
   AssistantSculptSuccess,
+  SafeRarityEvidence,
 } from "@sceneaxi/authoring-core";
+import { EDITOR_SHELL_ASSISTANT_MODE_IDS } from "@sceneaxi/schemas";
 import type { MountableScene } from "@sceneaxi/site-kit";
+import type { DesktopSnapshot } from "@sceneaxi/desktop-shell";
 
 /** The one IPC channel the preload exposes and the main process serves. */
 export const DESKTOP_BRIDGE_CHANNEL = "sceneaxi:desktop-bridge";
 
 export const DESKTOP_VIEWPORT_PLAY_EVENT = "sceneaxi:desktop-viewport-play";
+export const DESKTOP_RARITY_PROPOSAL_EVENT = "sceneaxi:desktop-rarity-proposal";
 
 export const DESKTOP_ACTIVE_DOCUMENT_PATH = "scene.json";
+export const DESKTOP_RARITY_EVENT_ID = "wayfinder-drop-001" as const;
 
 /**
  * The chrome meta the renderer updates from the real frame report. Lives here —
@@ -65,6 +70,7 @@ export const DESKTOP_BRIDGE_REFUSALS = Object.freeze({
   assistantByoUnavailable: "DESKTOP_ASSISTANT_BYO_UNAVAILABLE",
   assistantHostedMeteringUnavailable:
     "DESKTOP_ASSISTANT_HOSTED_METERING_UNAVAILABLE",
+  rarityProviderUnavailable: "DESKTOP_RARITY_PROVIDER_UNAVAILABLE",
   /**
    * No presentation runtime owns the window canvas, so nothing can be mounted.
    *
@@ -117,6 +123,9 @@ export const DESKTOP_BRIDGE_AUTHORING_OPS = Object.freeze([
 
 export type DesktopBridgeAuthoringOp = (typeof DESKTOP_BRIDGE_AUTHORING_OPS)[number];
 
+/** Safe rarity fields allowed across preload, renderer, and local inspection surfaces. */
+export type DesktopRarityEvidence = SafeRarityEvidence;
+
 export const DESKTOP_BRIDGE_ASSISTANT_OPS = Object.freeze([
   "start",
   "status",
@@ -126,8 +135,54 @@ export const DESKTOP_BRIDGE_ASSISTANT_OPS = Object.freeze([
 export type DesktopBridgeAssistantOp =
   (typeof DESKTOP_BRIDGE_ASSISTANT_OPS)[number];
 
+const executableAssistantMode = (
+  mode: (typeof EDITOR_SHELL_ASSISTANT_MODE_IDS)[number],
+): mode is Exclude<(typeof EDITOR_SHELL_ASSISTANT_MODE_IDS)[number], "ask"> =>
+  mode !== "ask";
+
+export const DESKTOP_ASSISTANT_START_MODES = Object.freeze(
+  EDITOR_SHELL_ASSISTANT_MODE_IDS.filter(executableAssistantMode),
+);
+
+export type DesktopAssistantStartMode =
+  (typeof DESKTOP_ASSISTANT_START_MODES)[number];
+
+export const DESKTOP_ASSISTANT_START_MODE_REFUSAL_MESSAGE =
+  "Choose Build for a Sculpt Artifact or Agent for a fixture-backed rarity proposal; Ask is not implemented.";
+
+export function desktopAssistantStartMode(
+  value: unknown,
+): DesktopAssistantStartMode | null {
+  return DESKTOP_ASSISTANT_START_MODES.find((mode) => mode === value) ?? null;
+}
+
 export type DesktopAssistantMountedResult = Omit<AssistantSculptSuccess, "artifact"> &
   Readonly<{ mountable: MountableScene }>;
+
+export type DesktopRarityRetirementReason =
+  | "session-restarted"
+  | "undo"
+  | "namespace-replaced"
+  | "document-missing";
+
+/**
+ * An Agent run either staged a canonical diff or replayed an event the project
+ * already accepted. `replayed` is what tells the two apart, and a replay carries
+ * no `authoring` snapshot at all: nothing was staged, so there is no proposal to
+ * attach and no unrelated in-flight review to stamp this evidence onto.
+ */
+export type DesktopRarityProposalResult = Readonly<{
+  ok: true;
+  kind: "rarity-proposal";
+  replayed: boolean;
+  evidence: DesktopRarityEvidence;
+  authoring?: DesktopSnapshot & Readonly<{ rarityEvidence: DesktopRarityEvidence }>;
+  retirement?: Readonly<{ reason: DesktopRarityRetirementReason }>;
+}>;
+
+export type DesktopAssistantResult =
+  | DesktopAssistantMountedResult
+  | DesktopRarityProposalResult;
 
 export type DesktopAssistantJobSnapshot = Readonly<{
   jobId: string;
@@ -143,7 +198,7 @@ export type DesktopAssistantJobSnapshot = Readonly<{
   latestProgress: AssistantSculptProgress | null;
   /** How many progress entries the job has observed so far. */
   progressCount: number;
-  result?: DesktopAssistantMountedResult;
+  result?: DesktopAssistantResult;
   refusal?: Readonly<{
     ok: false;
     reason: string;

@@ -3,6 +3,7 @@
  * command/snapshot seam (ADR 0001 Design A). Durable save/replay shape is
  * versioned as contracts/kernel-session.schema.json.
  */
+import type { ModelProviderCallEvidence } from "./model-provider.js";
 import type { RarityNamespace, RarityRollRequest } from "./rarity.js";
 
 /** Major version of the Kernel Session contract (schema const). */
@@ -37,6 +38,7 @@ export type RarityRollCommand = {
   readonly type: "rarity-roll";
   readonly eventId: string;
   readonly request: RarityRollRequest;
+  readonly providerEvidence?: ModelProviderCallEvidence;
 };
 
 export type KernelCommand =
