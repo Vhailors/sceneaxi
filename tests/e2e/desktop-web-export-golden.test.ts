@@ -9,6 +9,7 @@ import {
   readFileSync,
   realpathSync,
   readdirSync,
+  renameSync,
   rmSync,
   symlinkSync,
   truncateSync,
@@ -54,20 +55,17 @@ vi.mock("node:child_process", async (importOriginal) => {
       Array.isArray(args[1])
     ) {
       const operands = args[1].map(String);
+      if (operands[0] !== "publish") {
+        return Reflect.apply(actual.execFileSync, actual, args);
+      }
       const options = args[2] as { stdio?: readonly unknown[] } | undefined;
-      const inheritedDescriptor = options?.stdio?.[3];
+      const inheritedDescriptor = options?.stdio?.[4];
       const parentDescriptor = typeof inheritedDescriptor === "number"
         ? inheritedDescriptor
         : -1;
       const parentAccess = `/proc/self/fd/${String(parentDescriptor)}`;
-      const source = (operands.at(-2) ?? "").replace(
-        "/proc/self/fd/3",
-        parentAccess,
-      );
-      const destination = (operands.at(-1) ?? "").replace(
-        "/proc/self/fd/3",
-        parentAccess,
-      );
+      const source = join(parentAccess, operands[1] ?? "");
+      const destination = join(parentAccess, operands[2] ?? "");
       exportCommit.beforePublish?.(source, destination);
       if (exportCommit.failPublish) {
         exportCommit.failPublish = false;
@@ -394,6 +392,10 @@ describe("desktop static Web export", () => {
       sourceProject: { contentHash: first.sourceProject.contentHash },
       bundleDigest: first.bundleDigest,
     });
+    expect(
+      readdirSync(join(firstRoot, "exports/web"))
+        .filter((name) => name.startsWith(".sceneaxi-export-")),
+    ).toEqual([]);
 
     const firstFiles = fileMap(first.outputDirectory);
     const secondFiles = fileMap(second.outputDirectory);
@@ -797,6 +799,31 @@ describe("desktop static Web export", () => {
     expect(readdirSync(outside)).toEqual([]);
   });
 
+  it("refuses publication after the held export parent is detached", () => {
+    const root = temporary("sceneaxi-export-detached-parent-");
+    expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
+    const first = ship(root);
+    rmSync(first.outputDirectory, { recursive: true });
+    const webRoot = join(root, "exports/web");
+    const outside = temporary("sceneaxi-export-detached-parent-outside-");
+    const detached = join(outside, "web");
+    let swapped = false;
+    exportCommit.beforePublish = () => {
+      exportCommit.beforePublish = null;
+      renameSync(webRoot, detached);
+      mkdirSync(webRoot);
+      swapped = true;
+    };
+
+    const result = exportProject(root);
+
+    expect(swapped).toBe(true);
+    expect(result.ok).toBe(false);
+    expect(
+      existsSync(join(detached, first.bundleDigest.slice("sha256:".length))),
+    ).toBe(false);
+  });
+
   it("prepares export ancestors through held directory identities", () => {
     const root = temporary("sceneaxi-export-ancestor-race-");
     expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
@@ -909,19 +936,22 @@ describe("desktop static Web export", () => {
     const interrupted = exportProject(root);
     const retainedStaging = readdirSync(join(root, "exports/web"))
       .filter((name) => name.startsWith(".sceneaxi-export-"));
-    const resumed = exportProject(root);
 
     expect(interrupted).toMatchObject({
       ok: false,
       reason: DESKTOP_WEB_EXPORT_REFUSALS.writeFailed,
     });
     expect(retainedStaging).toHaveLength(1);
-    expect(
-      lstatSync(join(root, "exports/web", retainedStaging[0] ?? ""))
-        .isDirectory(),
-    ).toBe(true);
+    const retained = join(root, "exports/web", retainedStaging[0] ?? "");
+    expect(lstatSync(retained).isDirectory()).toBe(true);
+    expect(readdirSync(retained)).toEqual([]);
+    const resumed = exportProject(root);
     expect(resumed.ok).toBe(true);
     if (!resumed.ok) throw new Error(resumed.message);
+    expect(
+      readdirSync(join(root, "exports/web"))
+        .filter((name) => name.startsWith(".sceneaxi-export-")),
+    ).toEqual([]);
     expect(readFileSync(join(resumed.outputDirectory, "sceneaxi-web.js"))).toEqual(
       RUNTIME,
     );
@@ -1024,8 +1054,11 @@ describe("desktop static Web export", () => {
     const outsideAsset = join(outsideRoot, "outside.bin");
     writeFileSync(outsideAsset, outside);
     let swapped = false;
+    let assetReads = 0;
     exportCommit.afterRealpath = (path, resolved) => {
       if (!String(path).startsWith("/proc/self/fd/") || resolved !== asset) return;
+      assetReads += 1;
+      if (assetReads !== 2) return;
       exportCommit.afterRealpath = null;
       unlinkSync(asset);
       symlinkSync(outsideAsset, asset);

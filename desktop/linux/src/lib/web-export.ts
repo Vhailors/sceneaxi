@@ -15,7 +15,6 @@ import {
   fstatSync,
   lstatSync,
   mkdirSync,
-  mkdtempSync,
   openSync,
   readSync,
   readdirSync,
@@ -24,7 +23,7 @@ import {
   writeFileSync,
   writeSync,
 } from "node:fs";
-import { basename, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { contentHash, parseDocumentText } from "@sceneaxi/authoring-core";
 import {
   DESKTOP_PRODUCT_REFUSALS,
@@ -118,11 +117,14 @@ type ExpectedFile = Readonly<{
   bytes?: Uint8Array;
 }>;
 
-type ExportWorkspace = Readonly<{
+type ExportParent = Readonly<{
   rootDescriptor: number;
   exportsDescriptor: number;
   webDescriptor: number;
   webDirectory: string;
+}>;
+
+type ExportWorkspace = Readonly<{
   stagingDescriptor: number;
   stagingDirectory: string;
   stagingName: string;
@@ -382,40 +384,25 @@ function openOrCreateDirectory(
   return Object.freeze({ descriptor, directory });
 }
 
-function prepareExportWorkspace(
+function prepareExportParent(
   root: string,
-): ExportWorkspace | DesktopWebExportRefusal {
+): ExportParent | DesktopWebExportRefusal {
   let rootDescriptor: number | null = null;
   let exportsDescriptor: number | null = null;
   let webDescriptor: number | null = null;
-  let stagingDescriptor: number | null = null;
-  let stagingName: string | null = null;
   try {
     rootDescriptor = openContainedDirectory(root, root);
     const exports = openOrCreateDirectory(rootDescriptor, root, "exports");
     exportsDescriptor = exports.descriptor;
     const web = openOrCreateDirectory(exportsDescriptor, exports.directory, "web");
     webDescriptor = web.descriptor;
-    const stableWeb = `/proc/self/fd/${String(webDescriptor)}`;
-    const stagingAccess = mkdtempSync(join(stableWeb, ".sceneaxi-export-"));
-    stagingName = basename(stagingAccess);
-    const stagingDirectory = join(web.directory, stagingName);
-    stagingDescriptor = openContainedDirectory(stagingDirectory, stagingAccess);
     return Object.freeze({
       rootDescriptor,
       exportsDescriptor,
       webDescriptor,
       webDirectory: web.directory,
-      stagingDescriptor,
-      stagingDirectory,
-      stagingName,
     });
   } catch (error) {
-    if (stagingDescriptor !== null) {
-      try {
-        closeSync(stagingDescriptor);
-      } catch {}
-    }
     for (const descriptor of [
       webDescriptor,
       exportsDescriptor,
@@ -433,15 +420,60 @@ function prepareExportWorkspace(
   }
 }
 
-function cleanupExportWorkspace(workspace: ExportWorkspace) {
+function prepareExportWorkspace(
+  parent: ExportParent,
+  stagingName: string,
+): ExportWorkspace | DesktopWebExportRefusal {
+  try {
+    const staging = openOrCreateDirectory(
+      parent.webDescriptor,
+      parent.webDirectory,
+      stagingName,
+    );
+    return Object.freeze({
+      stagingDescriptor: staging.descriptor,
+      stagingDirectory: staging.directory,
+      stagingName,
+    });
+  } catch (error) {
+    return refuse(
+      DESKTOP_WEB_EXPORT_REFUSALS.writeFailed,
+      `The project-owned export staging directory could not be prepared: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
+function cleanupExportWorkspace(
+  workspace: ExportWorkspace,
+  parent: ExportParent,
+  publisherExecutable: string,
+) {
+  try {
+    const held = fstatSync(workspace.stagingDescriptor);
+    const occupant = lstatSync(
+      join(
+        `/proc/self/fd/${String(parent.webDescriptor)}`,
+        workspace.stagingName,
+      ),
+    );
+    if (
+      held.isDirectory() &&
+      occupant.isDirectory() &&
+      held.dev === occupant.dev &&
+      held.ino === occupant.ino
+    ) {
+      execFileSync(publisherExecutable, ["clean"], {
+        stdio: ["ignore", "ignore", "ignore", workspace.stagingDescriptor],
+      });
+    }
+  } catch {}
   try {
     closeSync(workspace.stagingDescriptor);
   } catch {}
-  for (const descriptor of [
-    workspace.webDescriptor,
-    workspace.exportsDescriptor,
-    workspace.rootDescriptor,
-  ]) {
+}
+
+function cleanupExportParent(parent: ExportParent) {
+  for (const descriptor of [parent.webDescriptor, parent.exportsDescriptor, parent.rootDescriptor]) {
     try {
       closeSync(descriptor);
     } catch {}
@@ -717,8 +749,8 @@ function referencedWebAssets(data: Readonly<Record<string, unknown>>):
 function readProjectAsset(
   root: string,
   path: string,
-  workspace: ExportWorkspace,
   manifestEntry?: ProjectAssetManifestEntry,
+  workspace?: ExportWorkspace,
 ): ExportFile | DesktopWebExportRefusal {
   if (!SAFE_ASSET_PATH_RE.test(path)) {
     return refuse(
@@ -742,11 +774,13 @@ function readProjectAsset(
         ? {}
         : { expectedBytes: manifestEntry.byteLength }),
     },
-    {
-      descriptor: workspace.stagingDescriptor,
-      directory: workspace.stagingDirectory,
-      path,
-    },
+    workspace === undefined
+      ? undefined
+      : {
+          descriptor: workspace.stagingDescriptor,
+          directory: workspace.stagingDirectory,
+          path,
+        },
   );
   if (!read.ok) {
     if (read.kind === "missing") {
@@ -782,6 +816,47 @@ function readProjectAsset(
       digest,
     }),
   });
+}
+
+function stageProjectAsset(
+  root: string,
+  captured: ExportFile,
+  workspace: ExportWorkspace,
+  manifestEntry?: ProjectAssetManifestEntry,
+): DesktopWebExportRefusal | null {
+  const target = join(
+    `/proc/self/fd/${String(workspace.stagingDescriptor)}`,
+    ...captured.path.split("/"),
+  );
+  if (pathEntryExists(target)) {
+    const staged = streamContainedFile(
+      workspace.stagingDirectory,
+      target,
+      { expectedBytes: captured.byteLength },
+    );
+    if (staged.ok && staged.digest === captured.artifact.digest) return null;
+    return refuse(
+      DESKTOP_WEB_EXPORT_REFUSALS.writeFailed,
+      `Retained export staging for ${captured.path} has unexpected bytes.`,
+    );
+  }
+  const staged = readProjectAsset(
+    root,
+    captured.path,
+    manifestEntry,
+    workspace,
+  );
+  if ("ok" in staged) return staged;
+  if (
+    staged.byteLength !== captured.byteLength ||
+    staged.artifact.digest !== captured.artifact.digest
+  ) {
+    return refuse(
+      DESKTOP_WEB_EXPORT_REFUSALS.assetInvalid,
+      `Referenced project asset ${captured.path} changed while export staging was prepared.`,
+    );
+  }
+  return null;
 }
 
 function revalidateProjectAssets(
@@ -911,15 +986,49 @@ function verifyExistingOutput(
   }
 }
 
+function inspectExistingOutput(
+  parent: ExportParent,
+  destination: string,
+  expected: ReadonlyMap<string, ExpectedFile>,
+): Readonly<{ ok: true; replayed: true }> | DesktopWebExportRefusal | null {
+  const destinationName = relative(parent.webDirectory, destination);
+  const stableParent = `/proc/self/fd/${String(parent.webDescriptor)}`;
+  const stableDestination = join(stableParent, destinationName);
+  try {
+    if (
+      destinationName === "" ||
+      destinationName === ".." ||
+      destinationName.startsWith(`..${sep}`) ||
+      destinationName.includes(sep) ||
+      realpathSync(stableParent) !== parent.webDirectory
+    ) {
+      throw new Error("the export parent moved or the destination name is unsafe");
+    }
+    if (!pathEntryExists(stableDestination)) return null;
+    if (verifyExistingOutput(destination, expected, stableDestination)) {
+      return Object.freeze({ ok: true as const, replayed: true as const });
+    }
+    return refuse(
+      DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
+      `The content-addressed export directory already exists with different or unsafe bytes: ${destination}`,
+    );
+  } catch (error) {
+    return refuse(
+      DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
+      `The content-addressed export destination could not be inspected safely: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
 function writeOutput(
+  parent: ExportParent,
   workspace: ExportWorkspace,
   destination: string,
   expected: ReadonlyMap<string, ExpectedFile>,
   publisherExecutable: string,
 ): Readonly<{ ok: true; replayed: boolean }> | DesktopWebExportRefusal {
-  const parent = workspace.webDirectory;
-  const stableParent = `/proc/self/fd/${String(workspace.webDescriptor)}`;
-  const destinationName = relative(parent, destination);
+  const stableParent = `/proc/self/fd/${String(parent.webDescriptor)}`;
+  const destinationName = relative(parent.webDirectory, destination);
   const stableDestination = join(stableParent, destinationName);
   const stableStaging = join(stableParent, workspace.stagingName);
   try {
@@ -928,7 +1037,7 @@ function writeOutput(
       destinationName === ".." ||
       destinationName.startsWith(`..${sep}`) ||
       destinationName.includes(sep) ||
-      realpathSync(stableParent) !== parent
+      realpathSync(stableParent) !== parent.webDirectory
     ) {
       throw new Error("the export parent moved or the destination name is unsafe");
     }
@@ -972,11 +1081,18 @@ function writeOutput(
     execFileSync(
       publisherExecutable,
       [
-        join("/proc/self/fd/3", workspace.stagingName),
-        join("/proc/self/fd/3", destinationName),
+        "publish",
+        workspace.stagingName,
+        destinationName,
       ],
       {
-        stdio: ["ignore", "ignore", "ignore", workspace.webDescriptor],
+        stdio: [
+          "ignore",
+          "ignore",
+          "ignore",
+          parent.rootDescriptor,
+          parent.webDescriptor,
+        ],
       },
     );
 
@@ -989,7 +1105,7 @@ function writeOutput(
         `The content-addressed export directory was occupied during publication: ${destination}`,
       );
     }
-    if (realpathSync(stableParent) !== parent) {
+    if (realpathSync(stableParent) !== parent.webDirectory) {
       throw new Error("the export parent moved during commit");
     }
     if (!verifyExistingOutput(destination, expected, stableDestination)) {
@@ -1002,7 +1118,7 @@ function writeOutput(
   } catch (error) {
     try {
       if (
-        realpathSync(stableParent) === parent &&
+        realpathSync(stableParent) === parent.webDirectory &&
         pathEntryExists(stableDestination)
       ) {
         if (verifyExistingOutput(destination, expected, stableDestination)) {
@@ -1098,20 +1214,12 @@ export function exportDesktopWebProject(
     ...manifest.value.assets.map((entry) => entry.relativePath),
     ...webAssets.paths,
   ])].sort();
-  const workspace = prepareExportWorkspace(root);
-  if ("ok" in workspace) return workspace;
-  try {
-    const assetFiles: ExportFile[] = [];
-    for (const path of assetPaths) {
-      const file = readProjectAsset(
-        root,
-        path,
-        workspace,
-        manifestByPath.get(path),
-      );
-      if ("ok" in file) return file;
-      assetFiles.push(file);
-    }
+  const assetFiles: ExportFile[] = [];
+  for (const path of assetPaths) {
+    const file = readProjectAsset(root, path, manifestByPath.get(path));
+    if ("ok" in file) return file;
+    assetFiles.push(file);
+  }
 
   const sourceDigest = sha256(documentBytes);
   const runtimeDigest = sha256(input.runtimeJavaScript);
@@ -1208,63 +1316,92 @@ export function exportDesktopWebProject(
     }),
   );
 
-  const destination = join(
-    workspace.webDirectory,
-    validated.handoff.artifactSetDigest.slice("sha256:".length),
-  );
-  const written = writeOutput(
-    workspace,
-    destination,
-    expected,
-    input.publisherExecutable,
-  );
-  if (!written.ok) return written;
-
-  const movedAsset = revalidateProjectAssets(root, assetFiles, manifestByPath);
-  if (movedAsset !== null) return movedAsset;
-
-  // A source change during output construction refuses the result. The
-  // content-addressed output remains valid evidence for the earlier bytes, but
-  // it is not reported as the current project export.
-  const currentDocument = readProjectDocument(root);
-  if (!currentDocument.ok) {
-    if (currentDocument.reason === DESKTOP_WEB_EXPORT_REFUSALS.unsafePath) {
-      return currentDocument;
+  const parent = prepareExportParent(root);
+  if ("ok" in parent) return parent;
+  let workspace: ExportWorkspace | null = null;
+  try {
+    const digestName = validated.handoff.artifactSetDigest.slice("sha256:".length);
+    const destination = join(parent.webDirectory, digestName);
+    const existing = inspectExistingOutput(parent, destination, expected);
+    let written: Readonly<{ ok: true; replayed: boolean }>;
+    if (existing !== null) {
+      if (!existing.ok) return existing;
+      written = existing;
+    } else {
+      const prepared = prepareExportWorkspace(
+        parent,
+        `.sceneaxi-export-${digestName}`,
+      );
+      if ("ok" in prepared) return prepared;
+      workspace = prepared;
+      for (const asset of assetFiles) {
+        const staged = stageProjectAsset(
+          root,
+          asset,
+          workspace,
+          manifestByPath.get(asset.path),
+        );
+        if (staged !== null) return staged;
+      }
+      const result = writeOutput(
+        parent,
+        workspace,
+        destination,
+        expected,
+        input.publisherExecutable,
+      );
+      if (!result.ok) return result;
+      written = result;
     }
-    return refuse(
-      DESKTOP_WEB_EXPORT_REFUSALS.projectChanged,
-      "scene.json could not be re-read after the static Web export was written.",
-    );
-  }
-  if (sha256(currentDocument.bytes) !== sourceDigest) {
-    return refuse(
-      DESKTOP_WEB_EXPORT_REFUSALS.projectChanged,
-      "scene.json changed while the static Web export was being written; the result was not reported as current.",
-    );
-  }
 
-  if (!verifyExistingOutput(destination, expected)) {
-    return refuse(
-      DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
-      `The content-addressed export directory changed before it could be reported: ${destination}`,
-    );
-  }
+    const movedAsset = revalidateProjectAssets(root, assetFiles, manifestByPath);
+    if (movedAsset !== null) return movedAsset;
 
-  return Object.freeze({
-    ok: true as const,
-    replayed: written.replayed,
-    outputDirectory: destination,
-    handoffPath: join(destination, DESKTOP_WEB_EXPORT_HANDOFF_PATH),
-    sourceProject: Object.freeze({
-      documentId: parsed.document.id,
-      contentHash: sourceDigest,
-      sceneDigest: scene.mountable.sceneDigest,
-    }),
-    bundleDigest: validated.handoff.artifactSetDigest,
-    artifactPaths: Object.freeze(files.map((file) => file.path)),
-    handoff: validated.handoff,
-  });
+    // A source change during output construction refuses the result. The
+    // content-addressed output remains valid evidence for the earlier bytes, but
+    // it is not reported as the current project export.
+    const currentDocument = readProjectDocument(root);
+    if (!currentDocument.ok) {
+      if (currentDocument.reason === DESKTOP_WEB_EXPORT_REFUSALS.unsafePath) {
+        return currentDocument;
+      }
+      return refuse(
+        DESKTOP_WEB_EXPORT_REFUSALS.projectChanged,
+        "scene.json could not be re-read after the static Web export was written.",
+      );
+    }
+    if (sha256(currentDocument.bytes) !== sourceDigest) {
+      return refuse(
+        DESKTOP_WEB_EXPORT_REFUSALS.projectChanged,
+        "scene.json changed while the static Web export was being written; the result was not reported as current.",
+      );
+    }
+
+    if (!verifyExistingOutput(destination, expected)) {
+      return refuse(
+        DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
+        `The content-addressed export directory changed before it could be reported: ${destination}`,
+      );
+    }
+
+    return Object.freeze({
+      ok: true as const,
+      replayed: written.replayed,
+      outputDirectory: destination,
+      handoffPath: join(destination, DESKTOP_WEB_EXPORT_HANDOFF_PATH),
+      sourceProject: Object.freeze({
+        documentId: parsed.document.id,
+        contentHash: sourceDigest,
+        sceneDigest: scene.mountable.sceneDigest,
+      }),
+      bundleDigest: validated.handoff.artifactSetDigest,
+      artifactPaths: Object.freeze(files.map((file) => file.path)),
+      handoff: validated.handoff,
+    });
   } finally {
-    cleanupExportWorkspace(workspace);
+    if (workspace !== null) {
+      cleanupExportWorkspace(workspace, parent, input.publisherExecutable);
+    }
+    cleanupExportParent(parent);
   }
 }
