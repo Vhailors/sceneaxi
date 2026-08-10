@@ -91,8 +91,17 @@ export async function pollAssistantJob(
   const attempts = input.attempts ?? ASSISTANT_POLL_MAX_ATTEMPTS;
   const wait = input.wait ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
   for (let attempt = 0; attempt < attempts; attempt += 1) {
-    const response = await input.request({ action: "assistant", payload: { op: "status" } });
-    if (!response.ok) return refuse(response.reason, response.message);
+    let response: DesktopBridgeResponse;
+    try {
+      response = await input.request({ action: "assistant", payload: { op: "status" } });
+    } catch {
+      await wait(ASSISTANT_POLL_INTERVAL_MS);
+      continue;
+    }
+    if (!response.ok) {
+      await wait(ASSISTANT_POLL_INTERVAL_MS);
+      continue;
+    }
     const job = response.data as DesktopAssistantJobSnapshot | null;
     if (job?.jobId !== input.jobId) {
       return refuse(

@@ -2787,6 +2787,17 @@ describe("desktop renderer behavior", () => {
         requests.push(request);
         const abandoning =
           (request as { payload?: { op?: string } }).payload?.op === "abandon";
+        if (!abandoning && requests.length === 1) {
+          return Promise.reject(new Error("status transport unavailable"));
+        }
+        if (!abandoning && requests.length === 2) {
+          return Promise.resolve({
+            ok: false as const,
+            reason: "DESKTOP_ASSISTANT_STATUS_UNAVAILABLE",
+            message: "The assistant status is temporarily unavailable.",
+            detail: null,
+          });
+        }
         return Promise.resolve({
           ok: true as const,
           action: "assistant" as const,
