@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join, relative, sep } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { contentHash } from "@sceneaxi/authoring-core";
 import { parseDeliveryHandoffText } from "@sceneaxi/schemas";
 import {
@@ -19,6 +19,24 @@ import {
   exportDesktopWebProject,
   seedDesktopProject,
 } from "../../desktop/linux/src/index.ts";
+
+const exportCommit = vi.hoisted(() => ({
+  afterRename: null as (() => void) | null,
+}));
+
+vi.mock("node:fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs")>();
+  return {
+    ...actual,
+    renameSync: (
+      oldPath: Parameters<typeof actual.renameSync>[0],
+      newPath: Parameters<typeof actual.renameSync>[1],
+    ) => {
+      actual.renameSync(oldPath, newPath);
+      exportCommit.afterRename?.();
+    },
+  };
+});
 
 const roots: string[] = [];
 const RUNTIME = Buffer.from(
@@ -36,6 +54,7 @@ const GOLDEN = JSON.parse(
 };
 
 afterEach(() => {
+  exportCommit.afterRename = null;
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
@@ -272,5 +291,33 @@ describe("desktop static Web export", () => {
         },
       }),
     ).toMatchObject({ ok: false, reason: DESKTOP_WEB_EXPORT_REFUSALS.projectDirty });
+  });
+
+  it("refuses an asset that changes during the atomic export commit", () => {
+    const sourceRoot = temporary("sceneaxi-export-race-source-");
+    const source = join(sourceRoot, "triangle.gltf");
+    writeFileSync(source, containedTriangle());
+    const root = temporary("sceneaxi-export-race-");
+    seedWithAsset(root, source);
+    const bridge = createDesktopBridge({ cwd: root });
+    let committed = false;
+    exportCommit.afterRename = () => {
+      exportCommit.afterRename = null;
+      committed = true;
+      writeFileSync(join(root, "assets/triangle.gltf"), "changed after capture");
+    };
+
+    const result = exportDesktopWebProject({
+      projectRoot: root,
+      documentPath: "scene.json",
+      expectedContentHash: statusHash(bridge),
+      runtimeJavaScript: RUNTIME,
+    });
+
+    expect(committed).toBe(true);
+    expect(result).toMatchObject({
+      ok: false,
+      reason: DESKTOP_WEB_EXPORT_REFUSALS.assetInvalid,
+    });
   });
 });

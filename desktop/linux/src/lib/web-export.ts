@@ -266,6 +266,31 @@ function readProjectAsset(
   }
 }
 
+function revalidateProjectAssets(
+  root: string,
+  files: readonly ExportFile[],
+  manifestByPath: ReadonlyMap<string, ProjectAssetManifestEntry>,
+): DesktopWebExportRefusal | null {
+  for (const captured of files) {
+    const current = readProjectAsset(
+      root,
+      captured.path,
+      manifestByPath.get(captured.path),
+    );
+    if ("ok" in current) return current;
+    if (
+      current.bytes.byteLength !== captured.bytes.byteLength ||
+      current.artifact.digest !== captured.artifact.digest
+    ) {
+      return refuse(
+        DESKTOP_WEB_EXPORT_REFUSALS.assetInvalid,
+        `Referenced project asset ${captured.path} changed while the static Web export was being written.`,
+      );
+    }
+  }
+  return null;
+}
+
 function staticIndex(document: SceneDocument, sourceDigest: string): string {
   const title = document.title?.trim() || document.id;
   const escapedTitle = title
@@ -591,6 +616,9 @@ export function exportDesktopWebProject(
   );
   const written = writeOutput(webDirectory, destination, expected);
   if (!written.ok) return written;
+
+  const movedAsset = revalidateProjectAssets(root, assetFiles, manifestByPath);
+  if (movedAsset !== null) return movedAsset;
 
   // A source change during output construction refuses the result. The
   // content-addressed output remains valid evidence for the earlier bytes, but
