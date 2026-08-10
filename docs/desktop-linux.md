@@ -32,7 +32,7 @@ IPC channel and the local socket adapter are two transports over that one
 | `src/lib/local-rpc.ts` | main process | protocol-v1 same-user Unix-socket adapter over the closed project/assistant agent-tool registry; private discovery and explicit permissions |
 | `src/lib/provider-key-store.ts` + `byo-configuration.ts` | main process | typed OS-secure credential store, redacted configuration controller, and per-session key lease for injected BYOK runners |
 | `src/electron/provider-key-store.ts` | privileged Electron process | `safeStorage` adapter; refuses locked, unsupported, basic-text, and failed backends and persists ciphertext only |
-| `src/electron/provider-runtime.ts` | privileged Electron process | composes the existing OpenRouter adapter, Model Provider Port, profile policies, exact model pin, secure key lease, and desktop runner over an injected transport session; it also owns the no-network rarity fixture provider used by acceptance tests |
+| `src/electron/provider-runtime.ts` | privileged Electron process | composes the existing OpenRouter adapter, Model Provider Port, profile policies, exact model pin, secure key lease, and desktop runner over an injected transport session; it also owns the no-network rarity fixture provider used by the packaged Agent path and its acceptance tests |
 | `src/electron/preload.ts` | preload | exposes one frozen global: the existing engine request, typed project lifecycle method on its own IPC channel, and separate BYOK configuration method |
 | `src/renderer/viewport.ts` | the window | the desktop tier's **one renderer-owning module** (see below) |
 
@@ -218,6 +218,7 @@ rolls back to the prior mount set. The umbrella's owner list is unchanged.
 pnpm install                                   # repository root, once
 cd desktop/linux
 pnpm install                                   # tier-local: electron, esbuild, electron-builder
+pnpm check:renderer                            # browser graph + sole presentation owner
 pnpm build                                     # dist/ runtime bundles + chrome document
 pnpm start                                     # launch the window
 pnpm dist                                      # AppImage + .deb + release/SHA256SUMS

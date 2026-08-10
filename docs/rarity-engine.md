@@ -90,9 +90,9 @@ dedicated `RARITY_POLICY_CHANGED` code rather than a tamper-named one, so an
 operator reads the real cause.
 
 There is deliberately no historical-policy versioning, grandfathering, or
-migration machinery. A project that wants different weights takes a new policy
-and new event ids; the old rolls keep replaying exactly under the policy that
-produced them.
+migration machinery. Different weights require a new project with a new policy
+and new event ids; the old project's rolls keep replaying exactly under the
+policy that produced them.
 
 Snapshots digest the complete rarity namespace. `save()` persists the current
 namespace back into `productManifest.rarity` and retains the dispatch/advance
@@ -143,6 +143,12 @@ bytes, Change Review stays empty, and only the Evidence dock updates. A changed
 request under that event refuses `RARITY_EVENT_INPUT_CONFLICT`; an intentional
 reroll must use a new event id. Kids and Hosted refuse before the fixture provider
 runs.
+
+Once Accept, Reject, Undo, or a session restart settles or retires a staged rarity
+result, the terminal Assistant job remains available until the renderer reads it
+and acknowledges that exact job id. The renderer retries a transient
+acknowledgement failure only while the same Assistant run remains active; an old
+acknowledgement cannot abandon a newer job.
 
 `providerEvidence` is bound to each roll. Extending an existing namespace from a
 call whose model evidence differs would leave earlier rolls reporting a descriptor
@@ -198,54 +204,10 @@ unevaluated schema keyword fails the suite instead of being skipped. A field
 added to the runtime contract without the same field in the schema is therefore
 caught by the `additionalProperties: false` branch it would violate.
 
-## Integration acceptance evidence — 2026-08-09
+## Historical runtime observation — 2026-08-09
 
-The implementation landed as `3874b409fabbb058e415723eba2d26daa6e6e460` and was
-then corrected in review, so that commit is **not** the head this contract
-describes. The corrections are `a026e64` (named replay refusal, shared
-forbidden-key list), `71d0058` (provider-detail redaction, one document reader),
-`4dc8f30` (provider evidence carried through kernel replay), `8d424a1` (replay
-reported as a replay, the rarity product session reported beside the scene session
-rather than in place of it, Evidence retained on an unrelated reject, one shared
-evidence formatter, per-namespace evidence conflict refusal), `27c1ccf` (that
-formatter moved to a browser-safe entry so the renderer bundles again, plus the
-gate check that catches the class), `fd7aae9` (Run and viewport render the full
-shared provenance, evidence cleared on a project-root change, the operator's
-request carried to the provider), `9b45aca` (the shipped binaries' resolver taught
-to map workspace subpaths, provenance retired on Undo and preserved through Remove
-Recent, the overlay's line breaks preserved), `96ddee0` (Undo and the recovery
-restart stopped clearing the dock on the action and now re-read the reopened
-document, clearing only when `data.rarity` is gone), `85b8f75` (the stored-namespace
-evidence invariant moved to one authoring boundary, so rolls with no descriptor
-refuse instead of adopting a later call's), and `fac19c4` (assistant poll timeout
-reporting now claims Retry is safe only after abandonment succeeds), followed by
-`974b2af` (single-proposal atomicity, kernel replay and per-roll evidence checks,
-evidence reconciliation through recovery, shared formatter and mode ownership,
-and executable refusal coverage). None of `85b8f75`, `fac19c4`, or `974b2af` is
-covered by the historical smoke observation below.
-
-The current executable desktop vector is
-`tests/e2e/fixtures/rarity-provider/wayfinder-desktop.json`:
-
-- scope `desktop-linux-rarity`, seed `20260809`, event
-  `wayfinder-drop-001`;
-- fixture descriptor `sceneaxi-fixture` /
-  `wayfinder-rarity-fixture` / `deterministic-json` / `2026-08-09`;
-- selected result `uncommon` / `wayfinder-copper`;
-- policy digest
-  `sha256:dc9fb14cf67da2aaaabf813969d5e2863b3d4ccdcbbe8cbbd366a1400aab7099`;
-- request digest
-  `sha256:e70812f13e9a23e08476afce6fd6e8690a3d74e41f1807c977d0d7b7482067d8`;
-- outcome digest
-  `sha256:ec77ae2c1f62725339fbf87a0e39d61cfd680941fb975a045770cb31f0d0d5de`;
-- provider-evidence digest
-  `sha256:309285987a87148e1fb20a03ae9984e4bdecec9c7936b3e0f142d42f3592e7af`;
-- provenance digest
-  `sha256:a710a29af3c8fa4a7a5bf68c74c9dcd47d463ba10c2f13426f81657e99f9809a`;
-- namespace digest
-  `sha256:caa07bc955f0001a766741d4714333fa0c955fdf43095919c7dc4b2cff57c868`.
-
-Observed commands:
+The first integration verification ran at
+`3874b409fabbb058e415723eba2d26daa6e6e460` with:
 
 ```text
 pnpm exec vitest run tests/e2e/rarity-provider-desktop-golden.test.ts packages/schemas/test/rarity.test.ts packages/engine-kernel/test/rarity.test.ts packages/engine-orchestrator/test/open-path.test.ts tests/e2e/rarity-engine-golden.test.ts tests/e2e/desktop-linux-bridge-golden.test.ts tests/e2e/desktop-provider-host-golden.test.ts apps/desktop-shell/test/chrome.test.ts
@@ -256,68 +218,19 @@ xvfb-run -a pnpm --dir desktop/linux smoke
 pnpm gate
 ```
 
-Those counts belong to `3874b409fabbb058e415723eba2d26daa6e6e460` and to nothing
-after it: the gate passed 209 files and 3,542 tests there, and the golden suite 28
-files and 242 tests. Every review round since added tests, so the suite at the
-head is larger and these two numbers are a historical reading rather than a claim
-about it. The Linux built-runtime smoke, also observed at that commit, drew
+At that commit, the gate passed 209 files and 3,542 tests, and the golden suite
+passed 28 files and 242 tests. The Linux built-runtime smoke drew
 through the real `webgl-canvas` surface under Xvfb/SwiftShader (`pixelsDrawn
 true`, 15 draw calls) and completed its existing authoring and orchestrated kernel
 checks.
 
-That smoke has **not** been re-run since, and review rounds after it did change
-the tier's one renderer-owning module, `desktop/linux/src/renderer/viewport.ts`:
-the assistant-start decision moved to `renderer/assistant-start.ts`, the job poll
-to `renderer/assistant-poll.ts`, the result inspection to
-`renderer/assistant-inspection.ts`, and the rarity result gained its replayed
-branch. `fd7aae9` then rewrote the open-path report's rarity clause: what was a
-tier/candidate summary became `rarityEvidenceReport()`, printed on its own
-`rarityEvidenceLine` overlay above the frame report, and `AssistantPollOutcome`
-was narrowed so the poll consumer no longer re-checks an optional result.
-`9b45aca` gave that overlay `white-space: pre-wrap` so the shared formatter's line
-breaks survive, and made it clear itself when a run carries no rarity, and
-`96ddee0` moved the pixels-meta decision and the playable-exercise validation out
-to `renderer/playback-report.ts`, where the gate executes them. One of those
-rounds also
-imported the shared evidence formatter from the Node-bearing root barrel, which
-made `renderer.js` unbundlable until it was moved to the import-free
-`@sceneaxi/authoring-core/rarity-evidence` entry — a break `pnpm gate` could not
-see, because the root `build` stage is `tsc --build` rather than the esbuild
-bundle. `pnpm check:desktop` now runs the browser-platform esbuild graph and
-checks its metafile for Node imports and a second presentation owner; the pixel
-observation above, however, remains a reading of the earlier build and is not a
-claim about the renderer at this head. `fac19c4` later changed
-`renderer/assistant-poll.ts`, and `974b2af` changed the kernel, bridge, formatter,
-renderer, and recovery paths. `9a61731` then tightened stored evidence and
-Assistant settlement, `ba0c4f5` handled the abandonment race, `dd9cb10` matched
-the shipped evidence contract to runtime validation, added semantic renderer
-bundle checks, bounded Agent input in the renderer, associated settlement with
-the displayed result, and retired evidence when a document was missing;
-`6a75109` corrected Node 20 smoke invocation. These are post-smoke source
-corrections. `105d120` then bounded and filtered provider descriptors, separated
-missing documents from read failures, enforced the Agent prompt limit at the
-shared bridge, preserved staged evidence during Play, and handled late proposal
-settlement. `6cbf43a` binds evidence to individual rolls, protects
-an unresolved ready Agent job, rejects final-line terminators in descriptors,
-retains evidence through unreadable recovery, and invalidates matching Assistant,
-Run, viewport, and Evidence output together. `ce6b714` then reconciled Assistant
-lifecycle across restart and Undo, and compared each presentation surface with
-accepted project provenance. `7071775` preserved legacy evidence-less playback,
-refused new evidence-less extensions, retired Assistant results without calling
-Undo a rejection, expanded descriptor filtering, and added the corresponding
-contract and lifecycle regressions. `367ef34` added credential-shape filtering,
-named kernel replay refusals, restart and late-settlement reconciliation,
-no-write preservation for existing composed projects, and mounted desktop
-regressions. `d694f6d` added provider candidate filtering and refreshed late
-settlement state from current authoring status. `0d92018` enforced safe staging
-at the shared authoring boundary, retained terminal rarity jobs until explicit
-acknowledgement, refreshed retired presentation state, and preserved named
-rarity refusals through Play. The smoke was not rerun after these changes.
-
-The pinned vector digests above, by contrast, are re-proved on every run:
-`tests/e2e/rarity-provider-desktop-golden.test.ts` compares runtime output to
-those exact bytes, so a change that moved any of them would fail rather than
-silently outdate this section.
+Later review changed the kernel, bridge, renderer, evidence, recovery, and
+settlement paths. No later smoke observation is recorded here, so those counts
+and the pixel report apply only to that commit. `pnpm check:desktop` now validates
+the browser-platform renderer graph and its sole presentation owner, but that
+structural check does not create a newer pixel claim. The integration fixture
+owns the current vector and digests; the golden test recomputes them from runtime
+output and fails on drift.
 
 This record covers the checked-in no-network fixture and the built runtime on
 this host. It is not a packaged-artifact observation, live provider readiness,

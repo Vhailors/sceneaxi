@@ -210,7 +210,7 @@ export function createPrivilegedDesktopByoRuntime(
   });
 }
 
-/** Checked-in provider identity for the no-network rarity acceptance vector. */
+/** Checked-in provider identity for the packaged no-network Agent path. */
 export const DESKTOP_RARITY_FIXTURE_MODEL = Object.freeze({
   model: "wayfinder-rarity-fixture",
   provider: "sceneaxi-fixture",

@@ -177,7 +177,9 @@ export async function acknowledgeAssistantRaritySettlement(
         payload: { op: "abandon", jobId: input.jobId },
       });
       if (response.ok) return true;
-    } catch {}
+    } catch {
+      // A transient IPC failure leaves the terminal job available for another attempt.
+    }
     await wait(ASSISTANT_POLL_INTERVAL_MS);
   }
   return false;
