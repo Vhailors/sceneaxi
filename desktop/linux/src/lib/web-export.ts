@@ -18,7 +18,6 @@ import {
   mkdirSync,
   mkdtempSync,
   openSync,
-  readFileSync,
   readSync,
   readdirSync,
   realpathSync,
@@ -320,6 +319,90 @@ function readContainedFile(
   }
 }
 
+function openContainedDirectory(root: string, target: string) {
+  const descriptor = openSync(
+    target,
+    constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW,
+  );
+  try {
+    if (!fstatSync(descriptor).isDirectory()) {
+      throw new Error("the opened path is not a directory");
+    }
+    const canonical = realpathSync(`/proc/self/fd/${String(descriptor)}`);
+    if (!within(root, canonical)) {
+      throw new Error("the opened directory resolves outside its containment root");
+    }
+    return descriptor;
+  } catch (error) {
+    closeSync(descriptor);
+    throw error;
+  }
+}
+
+function walkContainedFiles(root: string, directory: string): string[] | null {
+  const paths: string[] = [];
+  const visit = (target: string, prefix: string): boolean => {
+    let descriptor: number | null = null;
+    try {
+      descriptor = openContainedDirectory(root, target);
+      const stableDirectory = `/proc/self/fd/${String(descriptor)}`;
+      for (const entry of readdirSync(stableDirectory, { withFileTypes: true })) {
+        const path = prefix === "" ? entry.name : `${prefix}/${entry.name}`;
+        if (entry.isDirectory()) {
+          if (!visit(join(stableDirectory, entry.name), path)) return false;
+        } else if (entry.isFile()) {
+          paths.push(path);
+        } else {
+          return false;
+        }
+      }
+      return within(root, realpathSync(stableDirectory));
+    } catch {
+      return false;
+    } finally {
+      if (descriptor !== null) closeSync(descriptor);
+    }
+  };
+  return visit(directory, "") ? paths : null;
+}
+
+function linkStagedFile(
+  rootDescriptor: number,
+  destination: string,
+  source: string,
+  path: string,
+) {
+  const segments = path.split("/");
+  const name = segments.pop();
+  if (name === undefined || name === "") throw new Error("invalid export path");
+  let descriptor = rootDescriptor;
+  const opened: number[] = [];
+  try {
+    for (const segment of segments) {
+      const target = join(`/proc/self/fd/${String(descriptor)}`, segment);
+      try {
+        mkdirSync(target);
+      } catch (error) {
+        if (
+          typeof error !== "object" ||
+          error === null ||
+          !("code" in error) ||
+          error.code !== "EEXIST"
+        ) throw error;
+      }
+      descriptor = openContainedDirectory(destination, target);
+      opened.push(descriptor);
+    }
+    const stableDirectory = `/proc/self/fd/${String(descriptor)}`;
+    if (!within(destination, realpathSync(stableDirectory))) {
+      throw new Error("the export directory moved outside its destination");
+    }
+    linkSync(source, join(stableDirectory, name));
+  } finally {
+    for (const openedDescriptor of opened.reverse()) closeSync(openedDescriptor);
+  }
+}
+
 function readProjectDocument(
   root: string,
 ): Readonly<{ ok: true; bytes: Buffer }> | DesktopWebExportRefusal {
@@ -522,33 +605,31 @@ function sceneBridgeJavaScript(scene: JsonValue): string {
 `;
 }
 
-function walkFiles(root: string, at = root): string[] {
-  return readdirSync(at, { withFileTypes: true }).flatMap((entry) => {
-    const target = join(at, entry.name);
-    const path = relative(root, target).split(sep).join("/");
-    if (entry.isSymbolicLink()) return [`!${path}`];
-    if (entry.isDirectory()) return walkFiles(root, target);
-    return entry.isFile() ? [path] : [`!${path}`];
-  });
-}
-
 function verifyExistingOutput(
   directory: string,
   expected: ReadonlyMap<string, Uint8Array>,
 ): boolean {
   try {
-    if (lstatSync(directory).isSymbolicLink() || !statSync(directory).isDirectory()) return false;
-    const actualPaths = walkFiles(directory).sort();
+    const walked = walkContainedFiles(directory, directory);
+    if (walked === null) return false;
+    const actualPaths = walked.sort();
     const expectedPaths = [...expected.keys()].sort();
     if (
       actualPaths.length !== expectedPaths.length ||
       actualPaths.some((path, index) => path !== expectedPaths[index])
     ) return false;
     for (const [path, bytes] of expected) {
-      const actual = readFileSync(join(directory, ...path.split("/")));
-      if (!actual.equals(Buffer.from(bytes))) return false;
+      const actual = readContainedFile(
+        directory,
+        join(directory, ...path.split("/")),
+        { expectedBytes: bytes.byteLength },
+      );
+      if (!actual.ok || !actual.bytes.equals(Buffer.from(bytes))) return false;
     }
-    return true;
+    const finalWalk = walkContainedFiles(directory, directory);
+    return finalWalk !== null &&
+      finalWalk.sort().every((path, index) => path === expectedPaths[index]) &&
+      finalWalk.length === expectedPaths.length;
   } catch {
     return false;
   }
@@ -609,15 +690,23 @@ function writeOutput(
       writeFileSync(target, bytes, { flag: "wx" });
     }
     mkdirSync(destination);
-    const claim = join(destination, ".sceneaxi-claim");
-    writeFileSync(claim, new Uint8Array(), { flag: "wx" });
-    for (const path of expected.keys()) {
-      const source = join(temporary, ...path.split("/"));
-      const target = join(destination, ...path.split("/"));
-      mkdirSync(dirname(target), { recursive: true });
-      linkSync(source, target);
+    const destinationDescriptor = openContainedDirectory(destination, destination);
+    try {
+      const stableDestination = `/proc/self/fd/${String(destinationDescriptor)}`;
+      const claim = join(stableDestination, ".sceneaxi-claim");
+      writeFileSync(claim, new Uint8Array(), { flag: "wx" });
+      for (const path of expected.keys()) {
+        linkStagedFile(
+          destinationDescriptor,
+          destination,
+          join(temporary, ...path.split("/")),
+          path,
+        );
+      }
+      rmSync(claim);
+    } finally {
+      closeSync(destinationDescriptor);
     }
-    rmSync(claim);
     rmSync(temporary, { recursive: true });
     temporary = null;
     return Object.freeze({ ok: true as const, replayed: false });

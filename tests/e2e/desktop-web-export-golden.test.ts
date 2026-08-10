@@ -6,6 +6,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   readdirSync,
   rmSync,
   symlinkSync,
@@ -14,7 +15,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, join, relative, sep } from "node:path";
+import { basename, dirname, join, relative, sep } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { contentHash } from "@sceneaxi/authoring-core";
 import { parseDeliveryHandoffText } from "@sceneaxi/schemas";
@@ -31,8 +32,9 @@ const exportCommit = vi.hoisted(() => ({
   afterCommit: null as
     | ((oldPath: unknown, newPath: unknown) => void)
     | null,
-  afterRealpath: null as ((path: unknown) => void) | null,
+  afterRealpath: null as ((path: unknown, resolved: string) => void) | null,
   beforeMkdir: null as ((path: unknown) => void) | null,
+  beforeReadFile: null as ((path: unknown) => void) | null,
 }));
 
 vi.mock("node:fs", async (importOriginal) => {
@@ -40,11 +42,17 @@ vi.mock("node:fs", async (importOriginal) => {
   const hookedRealpathSync = Object.assign(
     (path: Parameters<typeof actual.realpathSync>[0]) => {
       const result = actual.realpathSync(path);
-      exportCommit.afterRealpath?.(path);
+      exportCommit.afterRealpath?.(path, result);
       return result;
     },
     { native: actual.realpathSync.native },
   );
+  const hookedReadFileSync = ((
+    ...args: Parameters<typeof actual.readFileSync>
+  ) => {
+    exportCommit.beforeReadFile?.(args[0]);
+    return Reflect.apply(actual.readFileSync, actual, args);
+  }) as typeof actual.readFileSync;
   return {
     ...actual,
     linkSync: (
@@ -55,7 +63,9 @@ vi.mock("node:fs", async (importOriginal) => {
       if (String(newPath).endsWith("/delivery-handoff.json")) {
         exportCommit.afterCommit?.(
           oldPath,
-          String(newPath).slice(0, -"/delivery-handoff.json".length),
+          actual.realpathSync(
+            String(newPath).slice(0, -"/delivery-handoff.json".length),
+          ),
         );
       }
     },
@@ -66,6 +76,7 @@ vi.mock("node:fs", async (importOriginal) => {
       exportCommit.beforeMkdir?.(path);
       return actual.mkdirSync(path, options);
     },
+    readFileSync: hookedReadFileSync,
     realpathSync: hookedRealpathSync,
     renameSync: (
       oldPath: Parameters<typeof actual.renameSync>[0],
@@ -96,6 +107,7 @@ afterEach(() => {
   exportCommit.afterCommit = null;
   exportCommit.afterRealpath = null;
   exportCommit.beforeMkdir = null;
+  exportCommit.beforeReadFile = null;
   vi.restoreAllMocks();
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
@@ -557,6 +569,59 @@ describe("desktop static Web export", () => {
     expect(readdirSync(first.outputDirectory)).toEqual([]);
   });
 
+  it("never writes through a raced nested destination symlink", () => {
+    const root = temporary("sceneaxi-export-nested-destination-");
+    expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
+    const first = ship(root);
+    rmSync(first.outputDirectory, { recursive: true });
+    const outside = temporary("sceneaxi-export-nested-destination-outside-");
+    exportCommit.beforeMkdir = (path) => {
+      const candidate = String(path);
+      if (basename(candidate) !== "source") return;
+      if (realpathSync(dirname(candidate)) !== first.outputDirectory) return;
+      exportCommit.beforeMkdir = null;
+      symlinkSync(outside, candidate, "dir");
+    };
+
+    const result = exportProject(root);
+
+    expect(result).toMatchObject({
+      ok: false,
+      reason: DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
+    });
+    expect(readdirSync(outside)).toEqual([]);
+  });
+
+  it("refuses a replay whose artifact becomes an out-of-root symlink", () => {
+    const root = temporary("sceneaxi-export-replay-link-race-");
+    expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
+    const first = ship(root);
+    const index = join(first.outputDirectory, "index.html");
+    const outside = temporary("sceneaxi-export-replay-link-race-outside-");
+    const outsideIndex = join(outside, "index.html");
+    writeFileSync(outsideIndex, readFileSync(index));
+    let swapped = false;
+    const swap = (resolved: string) => {
+      if (resolved !== index || swapped) return;
+      exportCommit.afterRealpath = null;
+      exportCommit.beforeReadFile = null;
+      unlinkSync(index);
+      symlinkSync(outsideIndex, index);
+      swapped = true;
+    };
+    exportCommit.afterRealpath = (_path, resolved) => swap(resolved);
+    exportCommit.beforeReadFile = (path) => swap(String(path));
+
+    const result = exportProject(root);
+
+    expect(swapped).toBe(true);
+    expect(result).toMatchObject({
+      ok: false,
+      reason: DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
+    });
+    expect(lstatSync(index).isSymbolicLink()).toBe(true);
+  });
+
   it("reads a contained asset through one stable file identity", () => {
     const root = temporary("sceneaxi-export-stable-asset-");
     expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
@@ -575,8 +640,8 @@ describe("desktop static Web export", () => {
     const outsideAsset = join(outsideRoot, "outside.bin");
     writeFileSync(outsideAsset, outside);
     let swapped = false;
-    exportCommit.afterRealpath = (path) => {
-      if (path !== asset) return;
+    exportCommit.afterRealpath = (path, resolved) => {
+      if (!String(path).startsWith("/proc/self/fd/") || resolved !== asset) return;
       exportCommit.afterRealpath = null;
       unlinkSync(asset);
       symlinkSync(outsideAsset, asset);
@@ -586,13 +651,14 @@ describe("desktop static Web export", () => {
       exportCommit.afterCommit = null;
       if (!swapped) return;
       unlinkSync(asset);
-      writeFileSync(asset, outside);
+      writeFileSync(asset, inside);
     };
 
     const result = exportProject(root);
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error(result.message);
+    expect(swapped).toBe(true);
     expect(readFileSync(join(result.outputDirectory, "assets/web-only.bin"))).toEqual(
       inside,
     );
