@@ -2,7 +2,16 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { parseDocumentText } from "@sceneaxi/authoring-core";
+import {
+  composeScene,
+  parseDocumentText,
+  reconstructSculpt,
+} from "@sceneaxi/authoring-core";
+import {
+  SCENE_COMPOSITION_INTAKE_KIND,
+  SCENE_COMPOSITION_SCHEMA_VERSION,
+  composedSceneFromDocumentData,
+} from "@sceneaxi/schemas";
 import {
   DESKTOP_ACTIVE_DOCUMENT_PATH,
   DESKTOP_SCENE_TRANSLATION_X_PROPERTY,
@@ -153,6 +162,82 @@ describe("desktop selected composed-instance edit — public seam", () => {
       selectedInstanceId: "desktop-crate-root",
       inspection: { entities: [{}, {}, {}] },
     });
+  });
+
+  it("removes a leaf whose artifact has no remaining instance", () => {
+    const fixture = starter();
+    const stored = composedSceneFromDocumentData(fixture.data);
+    if (!stored.ok) throw new Error(stored.diagnostics[0]?.message);
+    const alternateInput = JSON.parse(
+      readFileSync(
+        join(
+          process.cwd(),
+          "tests/e2e/fixtures/sculpt-quality/richer-field-drone.intake.json",
+        ),
+        "utf8",
+      ),
+    ) as unknown;
+    const alternate = reconstructSculpt(alternateInput, { seed: 8002 });
+    if (!alternate.ok) throw new Error(alternate.message);
+    const removableInstanceId = DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId;
+    const originalArtifact = stored.value.instances.find(
+      (instance) => instance.artifactId !== alternate.artifact.artifactId,
+    )?.artifact;
+    if (originalArtifact === undefined) throw new Error("Starter artifact is missing.");
+    const composed = composeScene(
+      {
+        schemaVersion: SCENE_COMPOSITION_SCHEMA_VERSION,
+        kind: SCENE_COMPOSITION_INTAKE_KIND,
+        sceneId: stored.value.sceneId,
+        rootInstanceId: stored.value.rootInstanceId,
+        placements: stored.value.instances.map((instance) => ({
+          instanceId: instance.instanceId,
+          artifactId:
+            instance.instanceId === removableInstanceId
+              ? alternate.artifact.artifactId
+              : instance.artifactId,
+          parentInstanceId: instance.parentInstanceId,
+          transform: instance.localTransform,
+        })),
+      },
+      [originalArtifact, alternate.artifact],
+    );
+    if (!composed.ok) throw new Error(composed.message);
+
+    const inspected = inspectDesktopSceneProperties({
+      documentData: composed.document.data,
+      contentHash: `sha256:${"f".repeat(64)}`,
+    });
+    expect(inspected).toMatchObject({
+      ok: true,
+      entities: expect.arrayContaining([
+        {
+          id: removableInstanceId,
+          artifactId: alternate.artifact.artifactId,
+          canRemove: true,
+        },
+      ]),
+    });
+
+    const removed = stageDesktopSceneEdit({
+      documentData: composed.document.data,
+      contentHash: `sha256:${"f".repeat(64)}`,
+      profile: "game",
+      operation: { kind: "remove-instance", instanceId: removableInstanceId },
+    });
+    expect(removed).toMatchObject({
+      ok: true,
+      selectedInstanceId: "desktop-crate-root",
+      inspection: {
+        entities: [
+          { id: "desktop-crate-root", artifactId: originalArtifact.artifactId },
+          { id: "desktop-crate-stacked", artifactId: originalArtifact.artifactId },
+        ],
+      },
+    });
+    expect(readFileSync(join(fixture.dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8")).toBe(
+      fixture.bytes,
+    );
   });
 
   it("returns the scene validator's exact diagnostic for a non-numeric translation", () => {

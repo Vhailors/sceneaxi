@@ -214,8 +214,10 @@ function composeStoredPlacements(
     rootInstanceId: stored.rootInstanceId,
     placements,
   };
+  const placedArtifactIds = new Set(placements.map((placement) => placement.artifactId));
   const artifacts = new Map<string, SculptArtifact>();
   for (const instance of stored.instances) {
+    if (!placedArtifactIds.has(instance.artifactId)) continue;
     artifacts.set(instance.artifactId, instance.artifact);
   }
   return composeScene(intake, [...artifacts.values()]);
