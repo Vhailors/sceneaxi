@@ -663,21 +663,34 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
           reportProgress = request.onProgress;
         }),
     });
+    const started = bridge.handle({
+      action: "assistant",
+      payload: {
+        op: "start",
+        route: "byo",
+        profile: "@sceneaxi/profile-game",
+        prompt: "Never finishes",
+      },
+    });
+    expect(started.ok).toBe(true);
+    if (!started.ok || started.data === null) return;
+    const jobId = (started.data as DesktopAssistantJobSnapshot).jobId;
+    reportProgress?.({ phase: "waiting-provider", percent: 20, message: "Waiting" });
     expect(
       bridge.handle({
         action: "assistant",
-        payload: {
-          op: "start",
-          route: "byo",
-          profile: "@sceneaxi/profile-game",
-          prompt: "Never finishes",
-        },
-      }).ok,
-    ).toBe(true);
-    reportProgress?.({ phase: "waiting-provider", percent: 20, message: "Waiting" });
+        payload: { op: "abandon" },
+      }),
+    ).toMatchObject({
+      ok: false,
+      reason: DESKTOP_BRIDGE_REFUSALS.requestMalformed,
+    });
+    expect(
+      bridge.handle({ action: "assistant", payload: { op: "status" } }),
+    ).toMatchObject({ ok: true, data: { jobId, status: "running" } });
     const abandoned = bridge.handle({
       action: "assistant",
-      payload: { op: "abandon" },
+      payload: { op: "abandon", jobId },
     });
     expect(abandoned.ok).toBe(true);
     if (abandoned.ok) {
@@ -2767,6 +2780,7 @@ describe("desktop renderer behavior", () => {
   it("abandons a job that never settles and names the timeout", async () => {
     const requests: unknown[] = [];
     const outcome = await pollAssistantJob({
+      jobId: "desktop-assistant-1",
       attempts: 3,
       wait: () => Promise.resolve(),
       request: (request) => {
@@ -2805,7 +2819,10 @@ describe("desktop renderer behavior", () => {
     // The abandon is the point: without it the job stays running and the next
     // Retry is met with DESKTOP_ASSISTANT_BUSY.
     expect(requests).toHaveLength(4);
-    expect(requests.at(-1)).toEqual({ action: "assistant", payload: { op: "abandon" } });
+    expect(requests.at(-1)).toEqual({
+      action: "assistant",
+      payload: { op: "abandon", jobId: "desktop-assistant-1" },
+    });
     expect(requests.slice(0, 3)).toEqual(
       Array.from({ length: 3 }, () => ({ action: "assistant", payload: { op: "status" } })),
     );
@@ -2819,6 +2836,7 @@ describe("desktop renderer behavior", () => {
       evidence: {},
     };
     const outcome = await pollAssistantJob({
+      jobId: "desktop-assistant-1",
       attempts: 1,
       wait: () => Promise.resolve(),
       request: (request) => {
@@ -2842,6 +2860,43 @@ describe("desktop renderer behavior", () => {
       ok: true,
       job: { status: "ready", result },
       result,
+    });
+  });
+
+  it("does not consume a newer job that wins the abandonment race", async () => {
+    const outcome = await pollAssistantJob({
+      jobId: "desktop-assistant-1",
+      attempts: 1,
+      wait: () => Promise.resolve(),
+      request: (request) => {
+        const abandoning =
+          (request as { payload?: { op?: string } }).payload?.op === "abandon";
+        return Promise.resolve({
+          ok: true as const,
+          action: "assistant" as const,
+          data: abandoning
+            ? {
+                jobId: "desktop-assistant-2",
+                route: "local",
+                status: "running",
+                latestProgress: null,
+                progressCount: 0,
+              }
+            : {
+                jobId: "desktop-assistant-1",
+                route: "local",
+                status: "running",
+                latestProgress: null,
+                progressCount: 0,
+              },
+        });
+      },
+    });
+    expect(outcome).toEqual({
+      ok: false,
+      reason: DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed,
+      message:
+        "The assistant job did not finish in time, and its abandonment could not be confirmed; wait before retrying.",
     });
   });
 
@@ -2871,6 +2926,15 @@ describe("desktop renderer behavior", () => {
       wait: () => Promise.resolve(),
       request: () => {
         statusReads += 1;
+        if (statusReads === 1) return Promise.reject(new Error("transport unavailable"));
+        if (statusReads === 2) {
+          return Promise.resolve({
+            ok: false as const,
+            reason: "DESKTOP_ASSISTANT_STATUS_UNAVAILABLE",
+            message: "The assistant status is temporarily unavailable.",
+            detail: null,
+          });
+        }
         return Promise.resolve({
           ok: true as const,
           action: "assistant" as const,
@@ -2885,7 +2949,7 @@ describe("desktop renderer behavior", () => {
               kind: "rarity-proposal" as const,
               replayed: false,
               evidence,
-              authoring: statusReads === 1
+              authoring: statusReads === 3
                 ? { ...reviewing, rarityEvidence: evidence }
                 : applied,
             },
@@ -2893,7 +2957,7 @@ describe("desktop renderer behavior", () => {
         });
       },
     });
-    expect(statusReads).toBe(2);
+    expect(statusReads).toBe(4);
     expect(settled?.authoring?.phase).toBe("applied");
   });
 
@@ -2941,6 +3005,7 @@ describe("desktop renderer behavior", () => {
       },
     };
     const refused = await pollAssistantJob({
+      jobId: "desktop-assistant-1",
       attempts: 1,
       wait: () => Promise.resolve(),
       request: (request) =>
@@ -2962,6 +3027,7 @@ describe("desktop renderer behavior", () => {
     });
 
     const rejected = await pollAssistantJob({
+      jobId: "desktop-assistant-1",
       attempts: 1,
       wait: () => Promise.resolve(),
       request: (request) =>
@@ -2980,6 +3046,7 @@ describe("desktop renderer behavior", () => {
   it("carries a refused job's redacted reason and detail into one poll outcome", async () => {
     const settled = async (job: unknown) =>
       pollAssistantJob({
+        jobId: "j",
         attempts: 2,
         wait: () => Promise.resolve(),
         request: () =>

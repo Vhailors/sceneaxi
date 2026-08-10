@@ -1053,12 +1053,17 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     }
     if (op === "abandon") {
       const acknowledgedJobId = field(payload, "jobId");
-      const acknowledgementTargetsCurrent =
-        acknowledgedJobId === undefined ||
-        (typeof acknowledgedJobId === "string" && assistantJob?.jobId === acknowledgedJobId);
+      if (typeof acknowledgedJobId !== "string" || acknowledgedJobId.length === 0) {
+        return bridgeRefuse(
+          DESKTOP_BRIDGE_REFUSALS.requestMalformed,
+          "assistant abandon requires the exact non-empty jobId returned by start.",
+        );
+      }
+      if (assistantJob?.jobId !== acknowledgedJobId) {
+        return bridgeOk("assistant", null);
+      }
       const result = currentRarityAssistantResult();
       if (
-        acknowledgementTargetsCurrent &&
         result !== null &&
         (result.retirement !== undefined ||
           result.authoring?.phase === "applied" ||
@@ -1068,7 +1073,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         assistantJob = null;
         return bridgeOk("assistant", acknowledged);
       }
-      if (acknowledgementTargetsCurrent && assistantJob?.status === "running") {
+      if (assistantJob.status === "running") {
         assistantJob.status = "refused";
         assistantJob.refusal = Object.freeze({
           ok: false as const,

@@ -325,9 +325,10 @@ function installAssistantProductFlow(
     retry?.removeAttribute("hidden");
   };
 
-  const poll = async (): Promise<void> => {
+  const poll = async (jobId: string): Promise<void> => {
     const outcome = await pollAssistantJob({
       request: (request) => port.request(request),
+      jobId,
       onSnapshot: (job) => {
         const latest = job.latestProgress;
         if (latest !== null) status.textContent = `${latest.percent}% · ${latest.message}`;
@@ -437,10 +438,23 @@ function installAssistantProductFlow(
       refused(response.reason, response.message);
       return;
     }
+    const startedJob = response.data as DesktopAssistantJobSnapshot | null;
+    if (
+      startedJob === null ||
+      typeof startedJob !== "object" ||
+      typeof startedJob.jobId !== "string" ||
+      startedJob.jobId.length === 0
+    ) {
+      refused(
+        DESKTOP_BRIDGE_REFUSALS.assistantJobMissing,
+        "The assistant job disappeared; retry the prompt.",
+      );
+      return;
+    }
     assistantRunVersion += 1;
     activeRarityProposalDigest = assistantRarityResultDigest(null);
     displayedRarityResultDigest = null;
-    await poll();
+    await poll(startedJob.jobId);
   };
 
   sendControls.forEach((control) => {

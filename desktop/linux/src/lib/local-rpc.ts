@@ -179,7 +179,7 @@ function bridgeRequest(toolName: DesktopLocalBridgeToolName, input: Record<strin
     case "sceneaxi.assistant.status":
       return { action: "assistant", payload: { op: "status" } };
     case "sceneaxi.assistant.abandon":
-      return { action: "assistant", payload: { op: "abandon" } };
+      return { action: "assistant", payload: { op: "abandon", ...input } };
   }
 }
 

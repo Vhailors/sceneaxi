@@ -35,6 +35,7 @@ export type AssistantPollOutcome =
 
 export type AssistantPollInput = Readonly<{
   request: (request: unknown) => Promise<DesktopBridgeResponse>;
+  jobId: string;
   /** Called for every polled snapshot so the surface can show live progress. */
   onSnapshot?: (job: DesktopAssistantJobSnapshot) => void;
   attempts?: number;
@@ -93,13 +94,22 @@ export async function pollAssistantJob(
     const response = await input.request({ action: "assistant", payload: { op: "status" } });
     if (!response.ok) return refuse(response.reason, response.message);
     const job = response.data as DesktopAssistantJobSnapshot | null;
+    if (job?.jobId !== input.jobId) {
+      return refuse(
+        DESKTOP_BRIDGE_REFUSALS.assistantJobMissing,
+        "The assistant job disappeared; retry the prompt.",
+      );
+    }
     const outcome = settledJobOutcome(job, input.onSnapshot);
     if (outcome !== null) return outcome;
     await wait(ASSISTANT_POLL_INTERVAL_MS);
   }
   let abandoned: DesktopBridgeResponse;
   try {
-    abandoned = await input.request({ action: "assistant", payload: { op: "abandon" } });
+    abandoned = await input.request({
+      action: "assistant",
+      payload: { op: "abandon", jobId: input.jobId },
+    });
   } catch {
     return refuse(
       DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed,
@@ -108,6 +118,12 @@ export async function pollAssistantJob(
   }
   if (!abandoned.ok) return refuse(abandoned.reason, abandoned.message);
   const abandonedJob = abandoned.data as DesktopAssistantJobSnapshot | null;
+  if (abandonedJob?.jobId !== input.jobId) {
+    return refuse(
+      DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed,
+      "The assistant job did not finish in time, and its abandonment could not be confirmed; wait before retrying.",
+    );
+  }
   const abandonedOutcome = settledJobOutcome(abandonedJob, input.onSnapshot);
   if (abandonedOutcome?.ok) return abandonedOutcome;
   if (
@@ -144,9 +160,9 @@ export async function watchAssistantRaritySettlement(
     try {
       response = await input.request({ action: "assistant", payload: { op: "status" } });
     } catch {
-      return null;
+      continue;
     }
-    if (!response.ok) return null;
+    if (!response.ok) continue;
     const job = response.data as DesktopAssistantJobSnapshot | null;
     if (job?.jobId !== input.jobId) return null;
     const result = job.result;

@@ -130,8 +130,9 @@ OpenRouter session drops that same field again at the source, and the secure run
 replaces any failure or progress snapshot that echoes the key. `reason` and
 `message` are passed through as the authoring core wrote them — the redaction rule
 is scoped to `detail`, so an injected runner that authors its own `message` owns
-what that field says. A timeout first abandons the old job so its late result
-cannot overwrite the retry, and a runner that dispatches nothing takes its
+what that field says. A timeout first abandons the exact old job by its start
+identifier so its late result cannot overwrite the retry, and a runner that
+dispatches nothing takes its
 `running` claim back rather than leaving the seam permanently
 `DESKTOP_ASSISTANT_BUSY`. Streaming progress contains only deltas actually
 observed from a BYOK stream; the bridge retains the **newest** entry plus a count,

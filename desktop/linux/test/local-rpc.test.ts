@@ -173,6 +173,61 @@ describe("desktop same-user local RPC bridge", () => {
     });
   });
 
+  it("abandons only the assistant job identified by its start response", async () => {
+    const root = mkdtempSync(join(tmpdir(), "sceneaxi-local-rpc-"));
+    roots.push(root);
+    const projectRoot = join(root, "project");
+    expect(seedDesktopProject(projectRoot).ok).toBe(true);
+    const socketPath = join(root, "runtime", "desktop-v1.sock");
+    const server = await startDesktopLocalBridgeServer({
+      bridge: createDesktopBridge({ cwd: projectRoot }),
+      projectRoot,
+      socketPath,
+      discoveryPath: join(root, "config", "desktop-bridge-v1.json"),
+      capability: CAPABILITY,
+    });
+    servers.push(server);
+
+    const started = await request(socketPath, {
+      protocolVersion: 1,
+      id: "assistant-start",
+      capability: CAPABILITY,
+      permission: "assistant:run",
+      tool: "sceneaxi.assistant.local.start",
+      input: { prompt: "Build a blue crate", profile: "@sceneaxi/profile-game" },
+    });
+    expect(started).toMatchObject({
+      ok: true,
+      result: { jobId: "desktop-assistant-1" },
+    });
+
+    const untargeted = await request(socketPath, {
+      protocolVersion: 1,
+      id: "assistant-abandon-untargeted",
+      capability: CAPABILITY,
+      permission: "assistant:run",
+      tool: "sceneaxi.assistant.abandon",
+      input: {},
+    });
+    expect(untargeted).toMatchObject({
+      ok: false,
+      error: { code: "LOCAL_BRIDGE_INPUT_INVALID" },
+    });
+
+    const abandoned = await request(socketPath, {
+      protocolVersion: 1,
+      id: "assistant-abandon-targeted",
+      capability: CAPABILITY,
+      permission: "assistant:run",
+      tool: "sceneaxi.assistant.abandon",
+      input: { jobId: "desktop-assistant-1" },
+    });
+    expect(abandoned).toMatchObject({
+      ok: true,
+      result: { jobId: "desktop-assistant-1" },
+    });
+  });
+
   it("treats unparsable descriptor bytes as stale on both start and close", async () => {
     const root = mkdtempSync(join(tmpdir(), "sceneaxi-local-rpc-"));
     roots.push(root);

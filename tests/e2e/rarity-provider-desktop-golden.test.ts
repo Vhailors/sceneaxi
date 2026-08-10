@@ -654,7 +654,7 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
     expect(
       bridge.handle({
         action: "assistant",
-        payload: { op: "abandon" },
+        payload: { op: "abandon", jobId },
       }),
     ).toMatchObject({
       ok: true,
@@ -670,7 +670,11 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
         action: "assistant",
         payload: { op: "abandon", jobId },
       }),
-    ).toMatchObject({ ok: true, data: { status: "running" } });
+    ).toMatchObject({ ok: true, data: null });
+    expect(bridge.handle({ action: "assistant", payload: { op: "status" } })).toMatchObject({
+      ok: true,
+      data: { status: "running" },
+    });
   });
 
   it("turns an in-flight document change into an actionable stale-content refusal", async () => {
@@ -881,7 +885,7 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
     expect(
       bridge.handle({
         action: "assistant",
-        payload: { op: "abandon" },
+        payload: { op: "abandon", jobId: restarted.jobId },
       }),
     ).toMatchObject({ ok: true, data: { jobId: restarted.jobId } });
 
