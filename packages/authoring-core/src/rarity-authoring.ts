@@ -148,6 +148,7 @@ const providerCandidateIdentifierRefusal = (
     (candidate) =>
       isJsonObject(candidate) &&
       typeof candidate["candidateId"] === "string" &&
+      isRarityIdentifier(candidate["candidateId"]) &&
       !isRarityProviderSafeIdentifier(candidate["candidateId"]),
   );
   return unsafeCandidate === -1

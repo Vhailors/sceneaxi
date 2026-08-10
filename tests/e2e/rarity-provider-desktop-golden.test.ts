@@ -420,6 +420,39 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
     expect(documentBytes(root)).toBe(before);
   });
 
+  it("keeps malformed candidate identifiers distinct from credential shapes", async () => {
+    const root = projectRoot();
+    const before = documentBytes(root);
+    const malformedCandidate = "Wayfinder-Stone";
+    const bridge = createDesktopBridge({
+      cwd: root,
+      runRarityProvider: createDesktopRarityFixtureProvider({
+        arguments: {
+          ...DESKTOP_RARITY_FIXTURE_INPUT,
+          request: {
+            ...DESKTOP_RARITY_FIXTURE_INPUT.request,
+            candidates: DESKTOP_RARITY_FIXTURE_INPUT.request.candidates.map(
+              (candidate, index) => index === 0
+                ? { ...candidate, candidateId: malformedCandidate }
+                : candidate,
+            ),
+          },
+        } as unknown as import("@sceneaxi/schemas").JsonObject,
+      }),
+    });
+    startRarity(bridge);
+    const job = await settledJob(bridge);
+    expect(job).toMatchObject({
+      status: "refused",
+      refusal: {
+        reason: RARITY_REFUSE_CODES.invalidIdentifier,
+        message: "The provider rarity request failed validation.",
+      },
+    });
+    expect(JSON.stringify(job)).not.toContain(malformedCandidate);
+    expect(documentBytes(root)).toBe(before);
+  });
+
   it("refuses credential-shaped provider candidate identifiers without echoing them", async () => {
     const root = projectRoot();
     const before = documentBytes(root);
