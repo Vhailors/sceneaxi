@@ -34,6 +34,8 @@ import {
 } from "@sceneaxi/authoring-core";
 import {
   EDITOR_SHELL_ASSISTANT_MODE_IDS,
+  PROPOSAL_KIND,
+  PROPOSAL_SCHEMA_VERSION,
   RARITY_NAMESPACE_KIND,
   RARITY_POLICY_KIND,
   RARITY_REFUSE_CODES,
@@ -48,6 +50,7 @@ import {
   DESKTOP_RARITY_PROPOSAL_EVENT as SHELL_RARITY_PROPOSAL_EVENT,
   DESKTOP_VIEWPORT_PLAY_EVENT as SHELL_VIEWPORT_PLAY_EVENT,
   DESKTOP_VISUAL_REFUSALS,
+  type DesktopSnapshot,
 } from "@sceneaxi/desktop-shell";
 import {
   THREE_HEADLESS_SURFACE_LABEL,
@@ -1413,7 +1416,7 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     });
   });
 
-  const RARITY_EVIDENCE_FIXTURE = Object.freeze({
+  const RARITY_EVIDENCE_FIXTURE: DesktopRarityEvidence = Object.freeze({
     eventId: "wayfinder-drop-001",
     tier: "uncommon",
     candidateId: "wayfinder-copper",
@@ -1444,7 +1447,7 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
         version: "2026-08-09",
       },
     },
-  });
+  } satisfies DesktopRarityEvidence);
 
   const RARITY_REPLAY_DIGEST = `sha256:${"a".repeat(64)}`;
   const RARITY_PRODUCT_SESSION = Object.freeze({
@@ -1462,10 +1465,19 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     replayDigest: RARITY_REPLAY_DIGEST,
   });
 
-  const RARITY_PROPOSAL_SNAPSHOT = Object.freeze({
+  const RARITY_PROPOSAL_SNAPSHOT: DesktopSnapshot = Object.freeze({
     phase: "reviewing",
     proposal: {
-      edits: [{ documentPath: "scene.json", baseContentHash: "sha256:base" }],
+      schemaVersion: PROPOSAL_SCHEMA_VERSION,
+      kind: PROPOSAL_KIND,
+      edits: [{
+        documentPath: "scene.json",
+        baseContentHash: `sha256:${"0".repeat(64)}`,
+        jsonPointer: "/data",
+        oldValue: {},
+        newValue: {},
+      }],
+      diffs: [{ documentPath: "scene.json", unifiedDiff: "--- scene.json" }],
     },
     unifiedDiff: "--- scene.json",
     renderedDiff: "rarity: + uncommon / wayfinder-copper",
@@ -3168,7 +3180,9 @@ describe("desktop renderer behavior", () => {
       };
       const stage = window.document.querySelector(".viewport");
       if (stage === null) throw new Error("missing viewport fixture");
-      expect(installAssistantProductFlow(stage, port, mounts, backend, pollJob)).toBe(true);
+      expect(
+        installAssistantProductFlow(stage as unknown as Element, port, mounts, backend, pollJob),
+      ).toBe(true);
       const status = window.document.querySelector("[data-assistant-status]");
       if (status === null) throw new Error("missing assistant status");
 
@@ -3238,6 +3252,7 @@ describe("desktop renderer behavior", () => {
                   ok: false,
                   reason: DESKTOP_BRIDGE_REFUSALS.assistantBusy,
                   message: "A retained assistant job is still active.",
+                  detail: null,
                 }
               : runningJob("desktop-assistant-2"),
           );
@@ -3269,7 +3284,9 @@ describe("desktop renderer behavior", () => {
       };
       const stage = window.document.querySelector(".viewport");
       if (stage === null) throw new Error("missing viewport fixture");
-      expect(installAssistantProductFlow(stage, port, mounts, backend, pollJob)).toBe(true);
+      expect(
+        installAssistantProductFlow(stage as unknown as Element, port, mounts, backend, pollJob),
+      ).toBe(true);
 
       const send = window.document.querySelector("#assistant-send");
       const retry = window.document.querySelector("#assistant-retry");

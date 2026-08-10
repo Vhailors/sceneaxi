@@ -1313,7 +1313,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           kind: "rarity-proposal" as const,
           replayed: false as const,
           evidence: staged.evidence,
-          authoring: withRarityProposalEvidence(snapshot),
+          authoring: Object.freeze({ ...snapshot, rarityEvidence: staged.evidence }),
         });
       };
       try {

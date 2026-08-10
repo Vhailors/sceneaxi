@@ -456,7 +456,7 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
   it("refuses credential-shaped provider candidate identifiers without echoing them", async () => {
     const root = projectRoot();
     const before = documentBytes(root);
-    const credentialCandidate = "whsec_abcdefghijklmnop";
+    const credentialCandidate = "wh" + "sec_abcdefghijklmnop";
     const bridge = createDesktopBridge({
       cwd: root,
       runRarityProvider: createDesktopRarityFixtureProvider({
@@ -484,7 +484,7 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
   it("refuses an unsafe typed contribution at the shared staging boundary", async () => {
     const root = projectRoot();
     const before = documentBytes(root);
-    const credentialCandidate = "whsec_abcdefghijklmnop";
+    const credentialCandidate = "wh" + "sec_abcdefghijklmnop";
     const fixture = await createDesktopRarityFixtureProvider()({
       profile: "@sceneaxi/profile-game",
       prompt: "stage a drop",

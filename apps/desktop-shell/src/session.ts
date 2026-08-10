@@ -183,11 +183,25 @@ export function createDesktopSession(
 
     proposeEdit(input: ShellEditInput): DesktopSnapshot {
       if (journalRecoveryPending) return refusePending();
+      const cwd = canonicalPath(input.cwd ?? sessionCwd);
       if (phase === "reviewing" && proposal !== null) {
+        const conflictCheck = input.expectedContentHash === undefined
+          ? null
+          : shellPropose({ ...input, cwd });
+        if (
+          conflictCheck !== null &&
+          !conflictCheck.ok &&
+          conflictCheck.diagnostics.some(
+            (diagnostic) => diagnostic.code === "content-hash-conflict",
+          )
+        ) {
+          clearProposal("idle");
+          diagnostics = conflictCheck.diagnostics;
+          return snap();
+        }
         diagnostics = ACTIVE_PROPOSAL_DIAGNOSTICS;
         return snap();
       }
-      const cwd = canonicalPath(input.cwd ?? sessionCwd);
       const result = shellPropose({ ...input, cwd });
       if (!result.ok) {
         clearProposal("idle");

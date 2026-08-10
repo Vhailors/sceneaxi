@@ -59,6 +59,7 @@ import {
   DESKTOP_RARITY_PROPOSAL_EVENT,
   DESKTOP_VIEWPORT_PLAY_EVENT,
   PIXELS_META_NAME,
+  type DesktopAssistantJobSnapshot,
   type DesktopBridgeResponse,
   type DesktopRarityEvidence,
 } from "../lib/bridge-contract.js";

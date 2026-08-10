@@ -73,6 +73,12 @@ const schema = JSON.parse(
     };
     readonly request: { readonly additionalProperties: boolean };
     readonly provenance: {
+      readonly oneOf: ReadonlyArray<{ readonly $ref: string }>;
+    };
+    readonly plainProvenance: {
+      readonly properties: { readonly algorithmId: { readonly const: string } };
+    };
+    readonly providerProvenance: {
       readonly properties: { readonly algorithmId: { readonly const: string } };
     };
   };
