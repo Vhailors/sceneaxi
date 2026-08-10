@@ -596,7 +596,7 @@ async function mountLiveViewport(): Promise<void> {
 
   const mounts = createSculptMountApi(backend);
   try {
-    mountDesktopScene(mounts, scene);
+    mountDesktopScene(mounts, scene, backend);
     backend.frameMountedContent();
     backend.camera.attach(canvas);
   } catch (error) {
@@ -693,6 +693,7 @@ async function mountLiveViewport(): Promise<void> {
       frameMountedContent: () => backend.frameMountedContent(),
       current: scene,
       next: exercise.mountable,
+      triangleBackend: backend,
     });
     if (!synchronized.ok) return;
     scene = synchronized.scene;

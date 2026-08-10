@@ -12,6 +12,7 @@ import {
   type Proposal,
 } from "@sceneaxi/authoring-core";
 import { failure, success, type CliOutcome, type ResultPayload } from "./envelope.js";
+import { materializeProjectAssetCopies } from "@sceneaxi/importers";
 import { parseVerbArgs, requireFlag } from "./verb-args.js";
 import {
   diagnosticsToFailure as mapDiagnosticsToFailure,
@@ -148,10 +149,17 @@ export function runProjectApply(
     return mapDiagnosticsToFailure(result.diagnostics, path);
   }
 
+  const projectRoot = resolve(cwd ?? process.cwd());
+  const assetCopies = result.appliedPaths.map((documentPath) => ({
+    documentPath,
+    result: materializeProjectAssetCopies({ projectRoot, documentPath }),
+  }));
+
   return success(
     Object.freeze({
       status: "applied",
       appliedPaths: result.appliedPaths,
+      assetCopies,
       ...(result.journalRecoveryPending === true
         ? {
             journalRecoveryPending: true,

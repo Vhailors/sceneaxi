@@ -321,6 +321,34 @@ describe("Three presentation core — camera input wiring", () => {
     expect(() => backend.camera.attach({} as never)).toThrow(ThreePresentationError);
     backend.dispose();
   });
+
+  it("replaces a mounted proxy with contained triangle geometry on the same Three core", () => {
+    const backend = createThreeSculptPresentationBackend();
+    const mounts = createSculptMountApi(backend);
+    mounts.mount({ instanceId: "imported", artifact: fixtureArtifact(), transform });
+    backend.mountTriangleAsset({
+      instanceId: "imported",
+      transform,
+      meshes: [{
+        meshId: "triangle",
+        positions: [-1, 0, 0, 1, 0, 0, 0, 1, 0],
+        indices: [0, 1, 2],
+        matrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+        baseColor: "#3399e5",
+        metallic: 0,
+        roughness: 0.7,
+      }],
+    });
+
+    expect(mounts.render()).toMatchObject({
+      backend: "three",
+      drawCalls: 1,
+      instanceIds: ["imported"],
+      surface: "headless",
+      pixelsDrawn: false,
+    });
+    mounts.dispose();
+  });
 });
 
 const manifest: ProductManifest = {

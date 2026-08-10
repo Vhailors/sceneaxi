@@ -21,6 +21,7 @@ export const seam: PackageSeam = Object.freeze({
 
 export {
   DESKTOP_ACTIVE_DOCUMENT_PATH,
+  DESKTOP_ASSET_IMPORT_CHANNEL,
   DESKTOP_BRIDGE_ACTIONS,
   DESKTOP_BRIDGE_ASSISTANT_OPS,
   DESKTOP_BRIDGE_AUTHORING_OPS,
@@ -64,6 +65,12 @@ export {
 export { createDesktopAssistantViewportController } from "./lib/assistant-viewport.js";
 
 export {
+  createDesktopAssetPickerHost,
+  type DesktopAssetPickerHost,
+  type DesktopAssetPickerSelection,
+} from "./lib/asset-picker-host.js";
+
+export {
   DESKTOP_ASSISTANT_INSTANCE_ID,
   DESKTOP_ASSISTANT_SCENE_ID,
   DESKTOP_OPEN_PLACEMENTS,
@@ -85,6 +92,8 @@ export {
   type DesktopScenePropertyProposalInput,
   type DesktopScenePropertyStageResult,
   type DesktopSceneResult,
+  type DesktopImportedAsset,
+  type DesktopMountableScene,
 } from "./lib/desktop-scene.js";
 
 export {

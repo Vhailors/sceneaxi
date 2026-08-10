@@ -1,4 +1,8 @@
-import type { SculptMountApi } from "@sceneaxi/engine-presentation";
+import type {
+  SculptMountApi,
+  ThreeSculptPresentationBackend,
+  ThreeTriangleAssetInput,
+} from "@sceneaxi/engine-presentation";
 
 export type DesktopMountableInstance = {
   readonly instanceId: string;
@@ -12,6 +16,11 @@ export type DesktopMountablePayload = {
   readonly sceneDigest: string;
   readonly artifacts: Readonly<Record<string, unknown>>;
   readonly instances: readonly DesktopMountableInstance[];
+  readonly importedAssets?: readonly Readonly<{
+    instanceId: string;
+    digest: string;
+    meshes: ThreeTriangleAssetInput["meshes"];
+  }>[];
 };
 
 export function desktopMountablePayload(value: unknown): value is DesktopMountablePayload {
@@ -22,13 +31,15 @@ export function desktopMountablePayload(value: unknown): value is DesktopMountab
     typeof candidate.sceneDigest === "string" &&
     typeof candidate.artifacts === "object" &&
     candidate.artifacts !== null &&
-    Array.isArray(candidate.instances)
+    Array.isArray(candidate.instances) &&
+    (candidate.importedAssets === undefined || Array.isArray(candidate.importedAssets))
   );
 }
 
 export function mountDesktopScene(
   mounts: SculptMountApi,
   payload: DesktopMountablePayload,
+  triangleBackend?: Pick<ThreeSculptPresentationBackend, "mountTriangleAsset">,
 ): void {
   for (const instance of payload.instances) {
     mounts.mount({
@@ -37,6 +48,17 @@ export function mountDesktopScene(
       transform: instance.worldTransform,
     } as Parameters<SculptMountApi["mount"]>[0]);
   }
+  for (const asset of payload.importedAssets ?? []) {
+    const instance = payload.instances.find((candidate) => candidate.instanceId === asset.instanceId);
+    if (instance === undefined || triangleBackend === undefined) {
+      throw new Error(`Contained asset instance "${asset.instanceId}" has no presentation target.`);
+    }
+    triangleBackend.mountTriangleAsset({
+      instanceId: asset.instanceId,
+      transform: instance.worldTransform as ThreeTriangleAssetInput["transform"],
+      meshes: asset.meshes,
+    });
+  }
 }
 
 export function synchronizeViewportScene(input: {
@@ -44,6 +66,7 @@ export function synchronizeViewportScene(input: {
   readonly frameMountedContent: () => void;
   readonly current: DesktopMountablePayload;
   readonly next: unknown;
+  readonly triangleBackend?: Pick<ThreeSculptPresentationBackend, "mountTriangleAsset">;
 }):
   | { readonly ok: true; readonly scene: DesktopMountablePayload }
   | { readonly ok: false; readonly scene: DesktopMountablePayload; readonly error: unknown } {
@@ -57,19 +80,13 @@ export function synchronizeViewportScene(input: {
   const previous = input.mounts.list();
   try {
     for (const mounted of previous) input.mounts.unmount(mounted.instanceId);
-    mountDesktopScene(input.mounts, input.next);
+    mountDesktopScene(input.mounts, input.next, input.triangleBackend);
     input.frameMountedContent();
     return { ok: true, scene: input.next };
   } catch (error) {
     try {
       for (const mounted of input.mounts.list()) input.mounts.unmount(mounted.instanceId);
-      for (const mounted of previous) {
-        input.mounts.mount({
-          instanceId: mounted.instanceId,
-          artifact: mounted.artifact,
-          transform: mounted.transform,
-        });
-      }
+      mountDesktopScene(input.mounts, input.current, input.triangleBackend);
       input.frameMountedContent();
     } catch (rollbackError) {
       return { ok: false, scene: input.current, error: rollbackError };

@@ -48,6 +48,7 @@ import {
 } from "./registry-verbs.js";
 import { runSceneCompose, sceneComposeHelp } from "./scene-verbs.js";
 import { CLI_VERSION, PROTOCOL_SCHEMA_VERSION } from "./version.js";
+import { assetImportHelp, runAssetImport } from "./asset-verbs.js";
 
 export interface VerbContext {
   readonly path: readonly string[];
@@ -169,7 +170,13 @@ const sceneGroup = group(
   },
 );
 
-const assetGroup = group("asset", "Asset package operations (read-only)", {
+const assetGroup = group("asset", "Offline asset ingestion and package inspection", {
+  import: argVerb(
+    "import",
+    "Stage a contained GLB/glTF project copy through E1 Change Review",
+    (ctx) => runAssetImport(ctx.path, ctx.tokens),
+    assetImportHelp,
+  ),
   list: argVerb(
     "list",
     "List Asset Package refs declared by catalog items",

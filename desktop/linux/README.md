@@ -49,6 +49,12 @@ local-artifact add/remove, Reject, Undo, the saved composition's viewport redraw
 and the renderer's real presentation frame report (`backend three`, `surface
 webgl-canvas` where a drawing buffer exists).
 
+On Web Experience, **Import GLB/glTF…** opens a native file dialog and stages the
+selected contained asset through that same Change Review. Save owns the accepted
+manifest/copy; Reject owns no bytes; reopen and Play recover and redraw its real
+triangle projection through the one Three core. See
+[`docs/asset-ingestion.md`](../../docs/asset-ingestion.md).
+
 The packaged chrome also binds its Assistant **Build** mode to the bridge. Local
 is a deterministic, free compiler; BYOK is free of SceneAxi credits but runs
 only when the privileged host retrieves an OpenRouter key from the typed
@@ -92,6 +98,7 @@ silently adding identity or running a migration.
 | Privileged provider composition | `src/electron/provider-runtime.ts` | main process; exact OpenRouter pin and policy over an injected transport, with no live transport in the checked-in build |
 | BYOK configuration UI | `src/renderer/byo-configuration.ts` | the window; provider/key status and save/replace/remove/unavailable states |
 | Scene composition (one pipeline, two consumers) | `src/lib/desktop-scene.ts` | main process; gate-tested |
+| Native contained asset picker | `src/lib/asset-picker-host.ts` + `src/electron/main.ts` | pure dialog adapter + privileged Electron dialog |
 | Contained project lifecycle + versioned atomic recents | `src/lib/{project-lifecycle-contract,project-lifecycle,project-host}.ts` | pure typed host seam; gate-tested from `tests/desktop/` and packaged-like e2e |
 | Explicit New Project starter and one-time document migration | `src/lib/project-seed.ts` | main process; invoked only after New Project selects a root or by the isolated smoke |
 | Chrome document emitter (desktop-shell, unforked) | `src/lib/chrome-document.ts` | build time |

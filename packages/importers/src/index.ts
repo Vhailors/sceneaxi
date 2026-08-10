@@ -21,6 +21,31 @@ export const seam: PackageSeam = Object.freeze({
   releaseGroup: "importers",
 });
 
+export {
+  CONTAINED_GLTF_PROFILE_ID,
+  CONTAINED_GLTF_REFUSALS,
+  PROJECT_ASSET_COPY_POLICY,
+  PROJECT_ASSET_DIRECTORY,
+  PROJECT_ASSET_MANIFEST_KEY,
+  PROJECT_ASSET_MANIFEST_KIND,
+  PROJECT_ASSET_MANIFEST_SCHEMA_VERSION,
+  PROJECT_ASSET_MAX_BYTES,
+  PROJECT_ASSET_MAX_COUNT,
+  materializeProjectAssetCopies,
+  projectAssetManifestEntry,
+  projectAssetManifestFromDocumentData,
+  proposeContainedGltfAssetImport,
+  stageContainedGltfAssetImport,
+  type ContainedGltfProjection,
+  type ContainedGltfProposalResult,
+  type ContainedGltfRefusal,
+  type ContainedGltfStageResult,
+  type ImportedAssetRenderMesh,
+  type MaterializeAssetCopiesResult,
+  type ProjectAssetManifest,
+  type ProjectAssetManifestEntry,
+} from "./contained-gltf.js";
+
 export type SceneDocumentImportInput = Readonly<{
   /** Text-canonical SceneAxi document received from an external source. */
   sourceText: string;
