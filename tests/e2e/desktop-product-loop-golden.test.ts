@@ -17,6 +17,7 @@ import {
 import { createDocument, writeDocumentFile } from "@sceneaxi/authoring-core";
 import type { JsonValue } from "@sceneaxi/schemas";
 import {
+  DESKTOP_PRODUCT_REFUSALS,
   DESKTOP_VIEWPORT_PLAY_EVENT,
   createDesktopVisualState,
   desktopVisualView,
@@ -123,6 +124,72 @@ function mountChrome(
 }
 
 describe("desktop first-release product loop", () => {
+  it("executes the emitted Web asset-path decision in the mounted chrome", async () => {
+    const mountWebExperience = (webExperience: JsonValue) => {
+      const dir = projectDir();
+      const scene = desktopOpenScene();
+      if (!scene.ok) throw new Error(`desktop scene refused: ${scene.reason}`);
+      const written = writeDocumentFile(
+        join(dir, "scene.json"),
+        createDocument({
+          id: "desktop-web-paths",
+          data: {
+            ...scene.composed.document.data,
+            title: "Web paths",
+            webExperience,
+          },
+        }),
+        { cwd: dir },
+      );
+      if (!written.ok) throw new Error("desktop Web path fixture refused");
+      const requests: Array<{
+        action?: unknown;
+        payload?: { op?: unknown; newValue?: unknown };
+      }> = [];
+      const mounted = mountChrome(dir, ({ bridge, ipcClone }) => async (request) => {
+        const typed = ipcClone(request) as {
+          action?: unknown;
+          payload?: { op?: unknown; newValue?: unknown };
+        };
+        requests.push(typed);
+        return ipcClone(bridge.handle(typed));
+      });
+      mounted.start();
+      return { ...mounted, requests };
+    };
+
+    const accepted = mountWebExperience({
+      html: "<main>Existing</main>",
+      assets: ["assets/models/hero-1.glb"],
+    });
+    await click(accepted.window, "#profile-web");
+    await click(accepted.window, "#web-stage-html");
+    expect(
+      accepted.requests.find((request) => request.payload?.op === "propose")?.payload
+        ?.newValue,
+    ).toMatchObject({
+      webExperience: {
+        html: '<main id="sceneaxi-mount"></main>',
+        assets: ["assets/models/hero-1.glb"],
+      },
+    });
+
+    for (const webExperience of [
+      { html: "<main></main>", assets: ["assets/models/../../secret.glb"] },
+      { html: "<main></main>", assets: [4] },
+    ]) {
+      const refused = mountWebExperience(webExperience);
+      await click(refused.window, "#profile-web");
+      await click(refused.window, "#web-stage-html");
+      expect(
+        query(refused.window, "[data-project-status]")?.textContent,
+      ).toContain(`Stage refused · ${DESKTOP_PRODUCT_REFUSALS.documentDataInvalid}`);
+      expect(
+        refused.requests.some((request) => request.payload?.op === "propose"),
+      ).toBe(false);
+    }
+  });
+
   it("renders the active proposal and atomically accepts, rejects, and refuses stale hashes", async () => {
     const dir = projectDir();
     const bridge = createDesktopBridge({ cwd: dir });

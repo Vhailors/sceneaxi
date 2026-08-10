@@ -11,11 +11,13 @@
  * The window is locked down: context isolation on, sandbox on, no node integration,
  * and navigation away from the packaged document is refused.
  */
+import { createHash } from "node:crypto";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, sep } from "node:path";
 import { BrowserWindow, app, dialog, ipcMain } from "electron";
 import { DESKTOP_MINIMUM_WINDOW } from "@sceneaxi/desktop-shell";
+import { parseDeliveryHandoffText } from "@sceneaxi/schemas";
 import { DESKTOP_BYO_CONFIGURATION_CHANNEL } from "../lib/byo-configuration-contract.js";
 import {
   DESKTOP_ACTIVE_DOCUMENT_PATH,
@@ -118,7 +120,12 @@ async function start(): Promise<void> {
     keyStore: providerKeyStore,
   });
   const runRarityProvider = createDesktopRarityFixtureProvider();
-  const webExportRuntime = readFileSync(join(__dirname, "renderer.js"));
+  let webExportRuntime: Uint8Array | undefined;
+  try {
+    webExportRuntime = readFileSync(join(__dirname, "renderer.js"));
+  } catch {
+    webExportRuntime = undefined;
+  }
   let bridge: DesktopBridge | null = null;
   let activeRoot: string | null = null;
 
@@ -135,7 +142,7 @@ async function start(): Promise<void> {
         ? {}
         : { runByoAssistant: byoRuntime.runByoAssistant }),
       runRarityProvider,
-      webExportRuntime,
+      ...(webExportRuntime === undefined ? {} : { webExportRuntime }),
     });
     const localPaths = SMOKE
       ? {
@@ -519,6 +526,17 @@ async function start(): Promise<void> {
   const bundleDigest = payloadField(shipped.data, "bundleDigest");
   const sourceProject = payloadField(shipped.data, "sourceProject");
   const sourceDigest = payloadField(sourceProject, "contentHash");
+  const parsedHandoff = typeof handoffPath === "string" && existsSync(handoffPath)
+    ? parseDeliveryHandoffText(readFileSync(handoffPath, "utf8"))
+    : null;
+  const handoffArtifactsMatch = typeof exportDirectory === "string" &&
+    parsedHandoff?.ok === true &&
+    Object.entries(parsedHandoff.handoff.artifacts).every(([path, artifact]) => {
+      const artifactPath = join(exportDirectory, ...path.split("/"));
+      return existsSync(artifactPath) &&
+        `sha256:${createHash("sha256").update(readFileSync(artifactPath)).digest("hex")}` ===
+          artifact.digest;
+    });
   if (
     typeof exportDirectory !== "string" ||
     !exportDirectory.startsWith(`${cwd}${sep}exports${sep}web${sep}`) ||
@@ -528,7 +546,11 @@ async function start(): Promise<void> {
     typeof sourceDigest !== "string" ||
     readFileSync(join(exportDirectory, "source", SAMPLE_DOCUMENT), "utf8") !== savedBytes ||
     !readFileSync(join(exportDirectory, "index.html"), "utf8").includes("sceneaxi-web.js") ||
-    !readFileSync(handoffPath, "utf8").includes(bundleDigest)
+    parsedHandoff?.ok !== true ||
+    parsedHandoff.handoff.target !== "web" ||
+    parsedHandoff.handoff.artifactSetDigest !== bundleDigest ||
+    parsedHandoff.handoff.artifacts[`source/${SAMPLE_DOCUMENT}`]?.digest !== sourceDigest ||
+    !handoffArtifactsMatch
   ) {
     fail("Web export did not preserve source bytes, local runtime, and Delivery Handoff evidence");
   }
