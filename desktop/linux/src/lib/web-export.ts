@@ -14,6 +14,7 @@ import {
   fstatSync,
   lstatSync,
   mkdirSync,
+  mkdtempSync,
   openSync,
   readSync,
   readdirSync,
@@ -21,8 +22,9 @@ import {
   rmSync,
   statSync,
   writeFileSync,
+  writeSync,
 } from "node:fs";
-import { extname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { basename, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { contentHash, parseDocumentText } from "@sceneaxi/authoring-core";
 import {
   DESKTOP_PRODUCT_REFUSALS,
@@ -104,13 +106,34 @@ export type DesktopWebExportInput = Readonly<{
 
 type ExportFile = Readonly<{
   path: string;
-  bytes: Uint8Array;
+  byteLength: number;
+  bytes?: Uint8Array;
+  stagedPath?: string;
   artifact: DeliveryHandoffArtifact;
+}>;
+
+type ExpectedFile = Readonly<{
+  byteLength: number;
+  digest: string;
+  bytes?: Uint8Array;
+  stagedPath?: string;
+}>;
+
+type ExportWorkspace = Readonly<{
+  rootDescriptor: number;
+  exportsDescriptor: number;
+  webDescriptor: number;
+  webDirectory: string;
+  stagingDescriptor: number;
+  stagingDirectory: string;
+  stagingName: string;
 }>;
 
 const DIGEST_RE = /^sha256:[0-9a-f]{64}$/;
 const SAFE_ASSET_PATH_RE = new RegExp(DESKTOP_WEB_STAGE_CONFIG.assetPathPattern);
 const CREATED_AT = "1970-01-01T00:00:00.000Z";
+const STREAM_BUFFER_BYTES = 64 * 1024;
+const CLAIM_PATH = ".sceneaxi-claim";
 
 function refuse(
   reason: DesktopWebExportRefusalReason,
@@ -336,6 +359,114 @@ function openContainedDirectory(root: string, target: string) {
   }
 }
 
+function openOrCreateDirectory(
+  parentDescriptor: number,
+  parent: string,
+  name: string,
+) {
+  const target = join(`/proc/self/fd/${String(parentDescriptor)}`, name);
+  try {
+    mkdirSync(target);
+  } catch (error) {
+    if (
+      typeof error !== "object" ||
+      error === null ||
+      !("code" in error) ||
+      error.code !== "EEXIST"
+    ) throw error;
+  }
+  const directory = join(parent, name);
+  const descriptor = openContainedDirectory(directory, target);
+  if (realpathSync(`/proc/self/fd/${String(descriptor)}`) !== directory) {
+    closeSync(descriptor);
+    throw new Error("the prepared export directory moved unexpectedly");
+  }
+  return Object.freeze({ descriptor, directory });
+}
+
+function prepareExportWorkspace(
+  root: string,
+): ExportWorkspace | DesktopWebExportRefusal {
+  let rootDescriptor: number | null = null;
+  let exportsDescriptor: number | null = null;
+  let webDescriptor: number | null = null;
+  let stagingDescriptor: number | null = null;
+  let stagingName: string | null = null;
+  try {
+    rootDescriptor = openContainedDirectory(root, root);
+    const exports = openOrCreateDirectory(rootDescriptor, root, "exports");
+    exportsDescriptor = exports.descriptor;
+    const web = openOrCreateDirectory(exportsDescriptor, exports.directory, "web");
+    webDescriptor = web.descriptor;
+    const stableWeb = `/proc/self/fd/${String(webDescriptor)}`;
+    const stagingAccess = mkdtempSync(join(stableWeb, ".sceneaxi-export-"));
+    stagingName = basename(stagingAccess);
+    const stagingDirectory = join(web.directory, stagingName);
+    stagingDescriptor = openContainedDirectory(stagingDirectory, stagingAccess);
+    return Object.freeze({
+      rootDescriptor,
+      exportsDescriptor,
+      webDescriptor,
+      webDirectory: web.directory,
+      stagingDescriptor,
+      stagingDirectory,
+      stagingName,
+    });
+  } catch (error) {
+    if (stagingDescriptor !== null) {
+      try {
+        closeSync(stagingDescriptor);
+      } catch {}
+    }
+    if (stagingName !== null && webDescriptor !== null) {
+      try {
+        rmSync(join(`/proc/self/fd/${String(webDescriptor)}`, stagingName), {
+          recursive: true,
+          force: true,
+        });
+      } catch {}
+    }
+    for (const descriptor of [
+      webDescriptor,
+      exportsDescriptor,
+      rootDescriptor,
+    ]) {
+      if (descriptor === null) continue;
+      try {
+        closeSync(descriptor);
+      } catch {}
+    }
+    return refuse(
+      DESKTOP_WEB_EXPORT_REFUSALS.writeFailed,
+      `The project-owned export workspace could not be prepared: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
+function cleanupExportWorkspace(workspace: ExportWorkspace) {
+  try {
+    closeSync(workspace.stagingDescriptor);
+  } catch {}
+  try {
+    rmSync(
+      join(
+        `/proc/self/fd/${String(workspace.webDescriptor)}`,
+        workspace.stagingName,
+      ),
+      { recursive: true, force: true },
+    );
+  } catch {}
+  for (const descriptor of [
+    workspace.webDescriptor,
+    workspace.exportsDescriptor,
+    workspace.rootDescriptor,
+  ]) {
+    try {
+      closeSync(descriptor);
+    } catch {}
+  }
+}
+
 function walkContainedFiles(root: string, directory: string): string[] | null {
   const paths: string[] = [];
   const visit = (target: string, prefix: string): boolean => {
@@ -363,11 +494,10 @@ function walkContainedFiles(root: string, directory: string): string[] | null {
   return visit(directory, "") ? paths : null;
 }
 
-function writeOutputFile(
+function openOutputFile(
   rootDescriptor: number,
   destination: string,
   path: string,
-  bytes: Uint8Array,
 ) {
   const segments = path.split("/");
   const name = segments.pop();
@@ -394,9 +524,182 @@ function writeOutputFile(
     if (!within(destination, realpathSync(stableDirectory))) {
       throw new Error("the export directory moved outside its destination");
     }
-    writeFileSync(join(stableDirectory, name), bytes, { flag: "wx" });
+    return openSync(
+      join(stableDirectory, name),
+      constants.O_WRONLY |
+        constants.O_CREAT |
+        constants.O_EXCL |
+        constants.O_NOFOLLOW,
+      0o600,
+    );
   } finally {
     for (const openedDescriptor of opened.reverse()) closeSync(openedDescriptor);
+  }
+}
+
+function writeOutputFile(
+  rootDescriptor: number,
+  destination: string,
+  path: string,
+  bytes: Uint8Array,
+) {
+  const descriptor = openOutputFile(rootDescriptor, destination, path);
+  try {
+    writeFileSync(descriptor, bytes);
+  } finally {
+    closeSync(descriptor);
+  }
+}
+
+function removeOutputFile(
+  rootDescriptor: number,
+  destination: string,
+  path: string,
+) {
+  const segments = path.split("/");
+  const name = segments.pop();
+  if (name === undefined || name === "") throw new Error("invalid export path");
+  let descriptor = rootDescriptor;
+  const opened: number[] = [];
+  try {
+    for (const segment of segments) {
+      descriptor = openContainedDirectory(
+        destination,
+        join(`/proc/self/fd/${String(descriptor)}`, segment),
+      );
+      opened.push(descriptor);
+    }
+    const target = join(`/proc/self/fd/${String(descriptor)}`, name);
+    if (!lstatSync(target).isFile()) {
+      throw new Error("the incomplete export entry is not a regular file");
+    }
+    rmSync(target);
+  } finally {
+    for (const openedDescriptor of opened.reverse()) closeSync(openedDescriptor);
+  }
+}
+
+type StreamedFile =
+  | Readonly<{ ok: true; byteLength: number; digest: string }>
+  | Readonly<{ ok: false; kind: "missing" | "unsafe" | "invalid"; detail: string }>;
+
+function streamContainedFile(
+  root: string,
+  source: string,
+  limits: Readonly<{ maximumBytes?: number; expectedBytes?: number }>,
+  destination?: Readonly<{
+    descriptor: number;
+    directory: string;
+    path: string;
+  }>,
+): StreamedFile {
+  let sourceDescriptor: number | null = null;
+  let destinationDescriptor: number | null = null;
+  try {
+    sourceDescriptor = openSync(
+      source,
+      constants.O_RDONLY | constants.O_NOFOLLOW,
+    );
+    const before = fstatSync(sourceDescriptor);
+    const canonical = realpathSync(`/proc/self/fd/${String(sourceDescriptor)}`);
+    if (!before.isFile() || !within(root, canonical)) {
+      return Object.freeze({
+        ok: false as const,
+        kind: "unsafe" as const,
+        detail: "the opened file is not a contained regular file",
+      });
+    }
+    if (
+      !Number.isSafeInteger(before.size) ||
+      before.size < 0 ||
+      (limits.maximumBytes !== undefined && before.size > limits.maximumBytes) ||
+      (limits.expectedBytes !== undefined && before.size !== limits.expectedBytes)
+    ) {
+      return Object.freeze({
+        ok: false as const,
+        kind: "invalid" as const,
+        detail: "the opened file length is outside its accepted bounds",
+      });
+    }
+    if (destination !== undefined) {
+      destinationDescriptor = openOutputFile(
+        destination.descriptor,
+        destination.directory,
+        destination.path,
+      );
+    }
+    const hash = createHash("sha256");
+    const buffer = Buffer.alloc(Math.min(STREAM_BUFFER_BYTES, Math.max(1, before.size)));
+    let byteLength = 0;
+    while (byteLength < before.size) {
+      const count = readSync(
+        sourceDescriptor,
+        buffer,
+        0,
+        Math.min(buffer.byteLength, before.size - byteLength),
+        null,
+      );
+      if (count === 0) {
+        return Object.freeze({
+          ok: false as const,
+          kind: "invalid" as const,
+          detail: "the opened file ended before its verified length",
+        });
+      }
+      hash.update(buffer.subarray(0, count));
+      if (destinationDescriptor !== null) {
+        let written = 0;
+        while (written < count) {
+          const next = writeSync(
+            destinationDescriptor,
+            buffer,
+            written,
+            count - written,
+          );
+          if (next === 0) throw new Error("the export file write made no progress");
+          written += next;
+        }
+      }
+      byteLength += count;
+    }
+    const trailing = Buffer.alloc(1);
+    if (readSync(sourceDescriptor, trailing, 0, 1, null) !== 0) {
+      return Object.freeze({
+        ok: false as const,
+        kind: "invalid" as const,
+        detail: "the opened file grew beyond its verified length",
+      });
+    }
+    if (fstatSync(sourceDescriptor).size !== before.size) {
+      return Object.freeze({
+        ok: false as const,
+        kind: "invalid" as const,
+        detail: "the opened file length changed while it was being read",
+      });
+    }
+    return Object.freeze({
+      ok: true as const,
+      byteLength,
+      digest: `sha256:${hash.digest("hex")}`,
+    });
+  } catch (error) {
+    const code =
+      typeof error === "object" && error !== null && "code" in error
+        ? error.code
+        : null;
+    return Object.freeze({
+      ok: false as const,
+      kind:
+        code === "ENOENT"
+          ? "missing" as const
+          : code === "ELOOP"
+            ? "unsafe" as const
+            : "invalid" as const,
+      detail: error instanceof Error ? error.message : String(error),
+    });
+  } finally {
+    if (destinationDescriptor !== null) closeSync(destinationDescriptor);
+    if (sourceDescriptor !== null) closeSync(sourceDescriptor);
   }
 }
 
@@ -461,6 +764,7 @@ function referencedWebAssets(data: Readonly<Record<string, unknown>>):
 function readProjectAsset(
   root: string,
   path: string,
+  workspace: ExportWorkspace,
   manifestEntry?: ProjectAssetManifestEntry,
 ): ExportFile | DesktopWebExportRefusal {
   if (!SAFE_ASSET_PATH_RE.test(path)) {
@@ -476,12 +780,21 @@ function readProjectAsset(
       `Referenced project asset ${path} resolves outside the project root.`,
     );
   }
-  const read = readContainedFile(root, target, {
-    maximumBytes: PROJECT_ASSET_MAX_BYTES,
-    ...(manifestEntry === undefined
-      ? {}
-      : { expectedBytes: manifestEntry.byteLength }),
-  });
+  const read = streamContainedFile(
+    root,
+    target,
+    {
+      maximumBytes: PROJECT_ASSET_MAX_BYTES,
+      ...(manifestEntry === undefined
+        ? {}
+        : { expectedBytes: manifestEntry.byteLength }),
+    },
+    {
+      descriptor: workspace.stagingDescriptor,
+      directory: workspace.stagingDirectory,
+      path,
+    },
+  );
   if (!read.ok) {
     if (read.kind === "missing") {
       return refuse(
@@ -500,7 +813,7 @@ function readProjectAsset(
       `Referenced project asset ${path} could not be verified: ${read.detail}.`,
     );
   }
-  const digest = sha256(read.bytes);
+  const digest = read.digest;
   if (manifestEntry !== undefined && digest !== manifestEntry.digest) {
     return refuse(
       DESKTOP_WEB_EXPORT_REFUSALS.assetInvalid,
@@ -509,7 +822,8 @@ function readProjectAsset(
   }
   return Object.freeze({
     path,
-    bytes: read.bytes,
+    byteLength: read.byteLength,
+    stagedPath: path,
     artifact: Object.freeze({
       role: "asset-bundle" as const,
       contentType: manifestEntry?.mediaType ?? contentType(path),
@@ -524,15 +838,27 @@ function revalidateProjectAssets(
   manifestByPath: ReadonlyMap<string, ProjectAssetManifestEntry>,
 ): DesktopWebExportRefusal | null {
   for (const captured of files) {
-    const current = readProjectAsset(
-      root,
-      captured.path,
-      manifestByPath.get(captured.path),
-    );
-    if ("ok" in current) return current;
+    const target = resolve(root, captured.path);
+    const manifestEntry = manifestByPath.get(captured.path);
+    const current = streamContainedFile(root, target, {
+      maximumBytes: PROJECT_ASSET_MAX_BYTES,
+      ...(manifestEntry === undefined
+        ? {}
+        : { expectedBytes: manifestEntry.byteLength }),
+    });
+    if (!current.ok) {
+      return refuse(
+        current.kind === "missing"
+          ? DESKTOP_WEB_EXPORT_REFUSALS.assetMissing
+          : current.kind === "unsafe"
+            ? DESKTOP_WEB_EXPORT_REFUSALS.unsafePath
+            : DESKTOP_WEB_EXPORT_REFUSALS.assetInvalid,
+        `Referenced project asset ${captured.path} could not be revalidated: ${current.detail}.`,
+      );
+    }
     if (
-      current.bytes.byteLength !== captured.bytes.byteLength ||
-      current.artifact.digest !== captured.artifact.digest
+      current.byteLength !== captured.byteLength ||
+      current.digest !== captured.artifact.digest
     ) {
       return refuse(
         DESKTOP_WEB_EXPORT_REFUSALS.assetInvalid,
@@ -604,7 +930,7 @@ function sceneBridgeJavaScript(scene: JsonValue): string {
 
 function verifyExistingOutput(
   directory: string,
-  expected: ReadonlyMap<string, Uint8Array>,
+  expected: ReadonlyMap<string, ExpectedFile>,
   accessPath = directory,
 ): boolean {
   try {
@@ -616,13 +942,13 @@ function verifyExistingOutput(
       actualPaths.length !== expectedPaths.length ||
       actualPaths.some((path, index) => path !== expectedPaths[index])
     ) return false;
-    for (const [path, bytes] of expected) {
-      const actual = readContainedFile(
+    for (const [path, file] of expected) {
+      const actual = streamContainedFile(
         directory,
         join(accessPath, ...path.split("/")),
-        { expectedBytes: bytes.byteLength },
+        { expectedBytes: file.byteLength },
       );
-      if (!actual.ok || !actual.bytes.equals(Buffer.from(bytes))) return false;
+      if (!actual.ok || actual.digest !== file.digest) return false;
     }
     const finalWalk = walkContainedFiles(directory, accessPath);
     return finalWalk !== null &&
@@ -633,49 +959,61 @@ function verifyExistingOutput(
   }
 }
 
-function ensureDirectory(parent: string, name: string): string | DesktopWebExportRefusal {
-  const directory = join(parent, name);
+function prepareRecoverableOutput(
+  directory: string,
+  accessPath: string,
+  expected: ReadonlyMap<string, ExpectedFile>,
+  claimBytes: Uint8Array,
+): string | null {
+  let descriptor: number | null = null;
   try {
-    if (!pathEntryExists(directory)) mkdirSync(directory);
-    if (lstatSync(directory).isSymbolicLink() || !statSync(directory).isDirectory()) {
-      return refuse(
-        DESKTOP_WEB_EXPORT_REFUSALS.unsafePath,
-        `Export path ${directory} is not a regular directory owned by the project.`,
-      );
+    descriptor = openContainedDirectory(directory, accessPath);
+    const stableAccess = `/proc/self/fd/${String(descriptor)}`;
+    const walked = walkContainedFiles(directory, accessPath);
+    if (walked === null) return "the incomplete export could not be walked safely";
+    if (!walked.includes(CLAIM_PATH)) return "the ownership claim is absent";
+    if (walked.some((path) => path !== CLAIM_PATH && !expected.has(path))) {
+      return "the incomplete export contains an unexpected file";
     }
-    const canonical = realpathSync(directory);
-    if (!within(parent, canonical)) {
-      return refuse(
-        DESKTOP_WEB_EXPORT_REFUSALS.unsafePath,
-        `Export path ${directory} resolves outside its project-owned parent.`,
-      );
+    const claim = readContainedFile(directory, join(stableAccess, CLAIM_PATH), {
+      expectedBytes: claimBytes.byteLength,
+    });
+    if (!claim.ok || !claim.bytes.equals(Buffer.from(claimBytes))) {
+      return "the ownership claim is invalid";
     }
-    return canonical;
+    for (const path of walked) {
+      if (path === CLAIM_PATH) continue;
+      const file = expected.get(path);
+      if (file === undefined) return "the incomplete export file is unexpected";
+      const actual = streamContainedFile(
+        directory,
+        join(stableAccess, ...path.split("/")),
+        { expectedBytes: file.byteLength },
+      );
+      if (!actual.ok || actual.digest !== file.digest) {
+        removeOutputFile(descriptor, directory, path);
+      }
+    }
+    return null;
   } catch (error) {
-    return refuse(
-      DESKTOP_WEB_EXPORT_REFUSALS.writeFailed,
-      `Export directory ${directory} could not be prepared: ${error instanceof Error ? error.message : String(error)}`,
-    );
+    return error instanceof Error ? error.message : String(error);
+  } finally {
+    if (descriptor !== null) closeSync(descriptor);
   }
 }
 
 function writeOutput(
-  parent: string,
+  workspace: ExportWorkspace,
   destination: string,
-  expected: ReadonlyMap<string, Uint8Array>,
+  expected: ReadonlyMap<string, ExpectedFile>,
 ): Readonly<{ ok: true; replayed: boolean }> | DesktopWebExportRefusal {
-  let parentDescriptor: number;
-  try {
-    parentDescriptor = openContainedDirectory(parent, parent);
-  } catch (error) {
-    return refuse(
-      DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
-      `The content-addressed export parent could not be held safely: ${error instanceof Error ? error.message : String(error)}`,
-    );
-  }
-  const stableParent = `/proc/self/fd/${String(parentDescriptor)}`;
+  const parent = workspace.webDirectory;
+  const stableParent = `/proc/self/fd/${String(workspace.webDescriptor)}`;
   const destinationName = relative(parent, destination);
   const stableDestination = join(stableParent, destinationName);
+  const claimBytes = utf8(
+    `sceneaxi-web-export-claim-v1\n${destinationName}\n`,
+  );
   try {
     if (
       destinationName === "" ||
@@ -687,29 +1025,64 @@ function writeOutput(
       throw new Error("the export parent moved or the destination name is unsafe");
     }
     if (pathEntryExists(stableDestination)) {
-      return verifyExistingOutput(destination, expected, stableDestination)
-        ? Object.freeze({ ok: true as const, replayed: true })
-        : refuse(
-            DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
-            `The content-addressed export directory already exists with different or unsafe bytes: ${destination}`,
-          );
+      if (verifyExistingOutput(destination, expected, stableDestination)) {
+        return Object.freeze({ ok: true as const, replayed: true });
+      }
+      const recoveryFailure = prepareRecoverableOutput(
+        destination,
+        stableDestination,
+        expected,
+        claimBytes,
+      );
+      if (recoveryFailure !== null) {
+        return refuse(
+          DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
+          `The content-addressed export directory already exists with different or unsafe bytes: ${destination} (${recoveryFailure}).`,
+        );
+      }
+    } else {
+      mkdirSync(stableDestination);
     }
-    mkdirSync(stableDestination);
     const destinationDescriptor = openContainedDirectory(
       destination,
       stableDestination,
     );
     try {
       const stableDestination = `/proc/self/fd/${String(destinationDescriptor)}`;
-      const claim = join(stableDestination, ".sceneaxi-claim");
-      writeFileSync(claim, new Uint8Array(), { flag: "wx" });
-      for (const [path, bytes] of expected) {
-        writeOutputFile(
-          destinationDescriptor,
-          destination,
-          path,
-          bytes,
-        );
+      const claim = join(stableDestination, CLAIM_PATH);
+      if (!pathEntryExists(claim)) {
+        writeFileSync(claim, claimBytes, { flag: "wx" });
+      }
+      for (const [path, file] of expected) {
+        const target = join(stableDestination, ...path.split("/"));
+        if (pathEntryExists(target)) continue;
+        if (file.bytes !== undefined) {
+          writeOutputFile(
+            destinationDescriptor,
+            destination,
+            path,
+            file.bytes,
+          );
+        } else if (file.stagedPath !== undefined) {
+          const copied = streamContainedFile(
+            workspace.stagingDirectory,
+            join(
+              `/proc/self/fd/${String(workspace.stagingDescriptor)}`,
+              ...file.stagedPath.split("/"),
+            ),
+            { expectedBytes: file.byteLength },
+            {
+              descriptor: destinationDescriptor,
+              directory: destination,
+              path,
+            },
+          );
+          if (!copied.ok || copied.digest !== file.digest) {
+            throw new Error(`staged export file ${path} changed during commit`);
+          }
+        } else {
+          throw new Error(`export file ${path} has no staged bytes`);
+        }
       }
       rmSync(claim);
     } finally {
@@ -722,12 +1095,25 @@ function writeOutput(
   } catch (error) {
     try {
       if (pathEntryExists(stableDestination)) {
-        return verifyExistingOutput(destination, expected, stableDestination)
-          ? Object.freeze({ ok: true as const, replayed: true })
-          : refuse(
-              DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
-              `The content-addressed export directory was occupied during commit: ${destination}`,
-            );
+        if (verifyExistingOutput(destination, expected, stableDestination)) {
+          return Object.freeze({ ok: true as const, replayed: true });
+        }
+        const recoveryFailure = prepareRecoverableOutput(
+          destination,
+          stableDestination,
+          expected,
+          claimBytes,
+        );
+        if (recoveryFailure === null) {
+          return refuse(
+            DESKTOP_WEB_EXPORT_REFUSALS.writeFailed,
+            `The static Web export was interrupted and remains safely resumable: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        }
+        return refuse(
+          DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
+          `The content-addressed export directory was occupied during commit: ${destination} (${recoveryFailure}).`,
+        );
       }
     } catch {
       return refuse(
@@ -739,8 +1125,6 @@ function writeOutput(
       DESKTOP_WEB_EXPORT_REFUSALS.writeFailed,
       `The static Web export could not be committed exclusively: ${error instanceof Error ? error.message : String(error)}`,
     );
-  } finally {
-    closeSync(parentDescriptor);
   }
 }
 
@@ -812,12 +1196,20 @@ export function exportDesktopWebProject(
     ...manifest.value.assets.map((entry) => entry.relativePath),
     ...webAssets.paths,
   ])].sort();
-  const assetFiles: ExportFile[] = [];
-  for (const path of assetPaths) {
-    const file = readProjectAsset(root, path, manifestByPath.get(path));
-    if ("ok" in file) return file;
-    assetFiles.push(file);
-  }
+  const workspace = prepareExportWorkspace(root);
+  if ("ok" in workspace) return workspace;
+  try {
+    const assetFiles: ExportFile[] = [];
+    for (const path of assetPaths) {
+      const file = readProjectAsset(
+        root,
+        path,
+        workspace,
+        manifestByPath.get(path),
+      );
+      if ("ok" in file) return file;
+      assetFiles.push(file);
+    }
 
   const sourceDigest = sha256(documentBytes);
   const runtimeDigest = sha256(input.runtimeJavaScript);
@@ -828,7 +1220,7 @@ export function exportDesktopWebProject(
       "The source project byte digest disagrees with the authoring content hash.",
     );
   }
-  const coreFiles: ExportFile[] = [
+  const coreFiles = [
     Object.freeze({
       path: "index.html",
       bytes: utf8(staticIndex(parsed.document, sourceDigest)),
@@ -850,11 +1242,15 @@ export function exportDesktopWebProject(
       artifact: Object.freeze({ role: "metadata" as const, contentType: "application/json", digest: sourceDigest }),
     }),
   ].map((file) =>
-    file.artifact.digest === ""
-      ? Object.freeze({ ...file, artifact: Object.freeze({ ...file.artifact, digest: sha256(file.bytes) }) })
-      : file,
+    Object.freeze({
+      ...file,
+      byteLength: file.bytes.byteLength,
+      artifact: file.artifact.digest === ""
+        ? Object.freeze({ ...file.artifact, digest: sha256(file.bytes) })
+        : file.artifact,
+    }),
   );
-  const files = [...coreFiles, ...assetFiles].sort((left, right) =>
+  const files: ExportFile[] = [...coreFiles, ...assetFiles].sort((left, right) =>
     left.path < right.path ? -1 : left.path > right.path ? 1 : 0,
   );
   const artifacts = Object.freeze(
@@ -891,20 +1287,33 @@ export function exportDesktopWebProject(
     );
   }
   const handoffBytes = utf8(`${JSON.stringify(validated.handoff, null, 2)}\n`);
-  const expected = new Map<string, Uint8Array>(
-    files.map((file) => [file.path, file.bytes] as const),
+  const expected = new Map<string, ExpectedFile>(
+    files.map((file) => [
+      file.path,
+      Object.freeze({
+        byteLength: file.byteLength,
+        digest: file.artifact.digest,
+        ...(file.bytes === undefined ? {} : { bytes: file.bytes }),
+        ...(file.stagedPath === undefined
+          ? {}
+          : { stagedPath: file.stagedPath }),
+      }),
+    ] as const),
   );
-  expected.set(DESKTOP_WEB_EXPORT_HANDOFF_PATH, handoffBytes);
+  expected.set(
+    DESKTOP_WEB_EXPORT_HANDOFF_PATH,
+    Object.freeze({
+      byteLength: handoffBytes.byteLength,
+      digest: sha256(handoffBytes),
+      bytes: handoffBytes,
+    }),
+  );
 
-  const exportsDirectory = ensureDirectory(root, "exports");
-  if (typeof exportsDirectory !== "string") return exportsDirectory;
-  const webDirectory = ensureDirectory(exportsDirectory, "web");
-  if (typeof webDirectory !== "string") return webDirectory;
   const destination = join(
-    webDirectory,
+    workspace.webDirectory,
     validated.handoff.artifactSetDigest.slice("sha256:".length),
   );
-  const written = writeOutput(webDirectory, destination, expected);
+  const written = writeOutput(workspace, destination, expected);
   if (!written.ok) return written;
 
   const movedAsset = revalidateProjectAssets(root, assetFiles, manifestByPath);
@@ -951,4 +1360,7 @@ export function exportDesktopWebProject(
     artifactPaths: Object.freeze(files.map((file) => file.path)),
     handoff: validated.handoff,
   });
+  } finally {
+    cleanupExportWorkspace(workspace);
+  }
 }

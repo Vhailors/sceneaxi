@@ -36,6 +36,8 @@ const exportCommit = vi.hoisted(() => ({
   beforeMkdtemp: null as ((prefix: unknown) => void) | null,
   beforeMkdir: null as ((path: unknown) => void) | null,
   beforeReadFile: null as ((path: unknown) => void) | null,
+  failOpenSuffix: null as string | null,
+  maximumReadLength: 0,
   rejectLinks: false,
 }));
 
@@ -58,8 +60,10 @@ vi.mock("node:fs", async (importOriginal) => {
   const hookedWriteFileSync = ((
     ...args: Parameters<typeof actual.writeFileSync>
   ) => {
+    const target = typeof args[0] === "number"
+      ? actual.realpathSync(`/proc/self/fd/${String(args[0])}`)
+      : String(args[0]);
     const result = Reflect.apply(actual.writeFileSync, actual, args);
-    const target = String(args[0]);
     if (target.endsWith("/delivery-handoff.json")) {
       const directory = actual.realpathSync(
         target.slice(0, -"/delivery-handoff.json".length),
@@ -105,7 +109,36 @@ vi.mock("node:fs", async (importOriginal) => {
       exportCommit.beforeMkdtemp?.(prefix);
       return actual.mkdtempSync(prefix, options);
     },
+    openSync: (
+      path: Parameters<typeof actual.openSync>[0],
+      flags: Parameters<typeof actual.openSync>[1],
+      mode?: Parameters<typeof actual.openSync>[2],
+    ) => {
+      if (
+        exportCommit.failOpenSuffix !== null &&
+        String(path).endsWith(exportCommit.failOpenSuffix)
+      ) {
+        exportCommit.failOpenSuffix = null;
+        throw Object.assign(new Error("injected export write failure"), {
+          code: "EIO",
+        });
+      }
+      return actual.openSync(path, flags, mode);
+    },
     readFileSync: hookedReadFileSync,
+    readSync: (
+      descriptor: Parameters<typeof actual.readSync>[0],
+      buffer: Parameters<typeof actual.readSync>[1],
+      offset: Parameters<typeof actual.readSync>[2],
+      length: Parameters<typeof actual.readSync>[3],
+      position: Parameters<typeof actual.readSync>[4],
+    ) => {
+      exportCommit.maximumReadLength = Math.max(
+        exportCommit.maximumReadLength,
+        length,
+      );
+      return actual.readSync(descriptor, buffer, offset, length, position);
+    },
     realpathSync: hookedRealpathSync,
     renameSync: (
       oldPath: Parameters<typeof actual.renameSync>[0],
@@ -139,6 +172,8 @@ afterEach(() => {
   exportCommit.beforeMkdtemp = null;
   exportCommit.beforeMkdir = null;
   exportCommit.beforeReadFile = null;
+  exportCommit.failOpenSuffix = null;
+  exportCommit.maximumReadLength = 0;
   exportCommit.rejectLinks = false;
   vi.restoreAllMocks();
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
@@ -636,6 +671,29 @@ describe("desktop static Web export", () => {
     expect(readdirSync(outside)).toEqual([]);
   });
 
+  it("prepares export ancestors through held directory identities", () => {
+    const root = temporary("sceneaxi-export-ancestor-race-");
+    expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
+    const exportsRoot = join(root, "exports");
+    const outside = temporary("sceneaxi-export-ancestor-race-outside-");
+    let swapped = false;
+    exportCommit.beforeMkdir = (path) => {
+      const candidate = String(path);
+      if (basename(candidate) !== "web") return;
+      if (realpathSync(dirname(candidate)) !== exportsRoot) return;
+      exportCommit.beforeMkdir = null;
+      rmSync(exportsRoot, { recursive: true });
+      symlinkSync(outside, exportsRoot, "dir");
+      swapped = true;
+    };
+
+    const result = exportProject(root);
+
+    expect(swapped).toBe(true);
+    expect(result.ok).toBe(false);
+    expect(readdirSync(outside)).toEqual([]);
+  });
+
   it("exports when hard links are unavailable", () => {
     const root = temporary("sceneaxi-export-without-hardlinks-");
     expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
@@ -646,6 +704,46 @@ describe("desktop static Web export", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error(result.message);
     expect(readFileSync(join(result.outputDirectory, "sceneaxi-web.js"))).toEqual(
+      RUNTIME,
+    );
+  });
+
+  it("streams maximum-size assets through bounded reads", () => {
+    const root = temporary("sceneaxi-export-bounded-stream-");
+    expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
+    const asset = join(root, "assets/maximum.bin");
+    mkdirSync(join(root, "assets"), { recursive: true });
+    writeFileSync(asset, "fixture");
+    truncateSync(asset, PROJECT_ASSET_MAX_BYTES);
+    rewriteDocument(root, (document) => {
+      (document["data"] as Record<string, unknown>)["webExperience"] = {
+        html: "<main>Fixture</main>",
+        assets: ["assets/maximum.bin"],
+      };
+    });
+    exportCommit.maximumReadLength = 0;
+
+    const result = exportProject(root);
+
+    expect(result.ok).toBe(true);
+    expect(exportCommit.maximumReadLength).toBeLessThanOrEqual(64 * 1024);
+  });
+
+  it("resumes an export after an owned partial commit", () => {
+    const root = temporary("sceneaxi-export-resumable-commit-");
+    expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
+    exportCommit.failOpenSuffix = "/sceneaxi-web.js";
+
+    const interrupted = exportProject(root);
+    const resumed = exportProject(root);
+
+    expect(interrupted).toMatchObject({
+      ok: false,
+      reason: DESKTOP_WEB_EXPORT_REFUSALS.writeFailed,
+    });
+    expect(resumed.ok).toBe(true);
+    if (!resumed.ok) throw new Error(resumed.message);
+    expect(readFileSync(join(resumed.outputDirectory, "sceneaxi-web.js"))).toEqual(
       RUNTIME,
     );
   });
