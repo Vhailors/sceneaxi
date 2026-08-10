@@ -8,7 +8,9 @@ consumes (locked topology decision). This package, not the CLI, owns:
 - the bounded hybrid **Minimum E2 orchestration** over kernel and presentation
   seams; broader session orchestration remains later work;
 - **evidence hooks** (Evidence Packet emission points) — later tickets;
-- the provider-neutral **Model Provider Port** (sceneaxi#45).
+- the provider-neutral **Model Provider Port** (sceneaxi#45);
+- provider-to-kernel rarity proposal staging and its browser-safe evidence
+  formatter (sceneaxi#241).
 
 ## Assistant sculpt flow (sceneaxi#192)
 
@@ -54,6 +56,16 @@ adapter-attested executed model, provider, quantization, and version. See
 policy. This package contains no live provider adapter, credentials, fallback
 routing, network call, or production LLM-readiness claim; the fake adapter is a
 test fixture only.
+
+## Rarity proposal staging (sceneaxi#241)
+
+`requestRarityProviderContribution()` validates one typed provider contribution,
+and `stageRarityProviderProposal()` turns it into the ordinary `/data` E1 edit
+after an injected kernel resolution. Browser consumers can import the shared
+safe-provenance formatter from `@sceneaxi/authoring-core/rarity-evidence` without
+loading the Node-bearing root barrel. The domain, replay, redaction, and desktop
+acceptance rules have one owner:
+[`docs/rarity-engine.md`](../../docs/rarity-engine.md).
 
 ## Hybrid sculpt reconstruction and Minimum E2
 

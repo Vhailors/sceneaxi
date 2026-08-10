@@ -57,9 +57,13 @@ draw, outcome, provenance, or provider-response fields, so provider data can
 propose weights and candidates but cannot supply entropy or an authoritative
 result.
 
-Scopes, event ids, and candidate ids all answer to the single exported
-`isRarityIdentifier()` predicate, and the forbidden input keys are the single
-exported `RARITY_FORBIDDEN_INPUT_KEYS` list. Every boundary reads those rather
+Scopes, event ids, and candidate ids all answer to the exported
+`isRarityIdentifier()` predicate, and the forbidden input keys are the exported
+`RARITY_FORBIDDEN_INPUT_KEYS` list. Provider-authored candidate ids have one
+additional boundary: a syntactically valid id must also pass
+`isRarityProviderSafeIdentifier()`. Credential-shaped ids refuse as
+`RARITY_PROVIDER_ENTROPY_FORBIDDEN`, while malformed ids keep the ordinary
+`RARITY_IDENTIFIER_INVALID` result. Every boundary reads those predicates rather
 than restating them, because a boundary that accepts what the resolver refuses
 would queue an unresolvable command. A manifest that owns a rarity namespace is
 therefore refused at `open()` when its `productId` cannot be the resolution
@@ -122,6 +126,11 @@ Review renders the real canonical diff and the same safe evidence summary shown 
 Assistant and the dedicated Evidence dock. Accept uses the existing atomic apply;
 Reject writes nothing. A changed content hash stays the existing actionable
 `content-hash-conflict` recovery path.
+
+Provider policy and request refusals retain their stable reason code but replace
+provider-authored validation text and paths with fixed rarity-boundary messages.
+This keeps malformed input diagnosable without carrying candidate ids or other
+provider response fragments into Assistant status.
 
 After reopen, the desktop `open-path` action gives that namespace to
 `bootstrapOpenPath({ kind: "product" })`, dispatches the identical event, advances
