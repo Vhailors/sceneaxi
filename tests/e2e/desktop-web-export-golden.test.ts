@@ -35,11 +35,50 @@ const exportCommit = vi.hoisted(() => ({
   afterRealpath: null as ((path: unknown, resolved: string) => void) | null,
   beforeMkdtemp: null as ((prefix: unknown) => void) | null,
   beforeMkdir: null as ((path: unknown) => void) | null,
+  beforePublish: null as ((source: string, destination: string) => void) | null,
   beforeReadFile: null as ((path: unknown) => void) | null,
+  failPublish: false,
   failOpenSuffix: null as string | null,
   maximumReadLength: 0,
   rejectLinks: false,
 }));
+
+vi.mock("node:child_process", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:child_process")>();
+  const execFileSync = ((
+    ...args: Parameters<typeof actual.execFileSync>
+  ) => {
+    if (basename(String(args[0])) === "mv" && Array.isArray(args[1])) {
+      const operands = args[1].map(String);
+      const options = args[2] as { stdio?: readonly unknown[] } | undefined;
+      const inheritedDescriptor = options?.stdio?.[3];
+      const parentDescriptor = typeof inheritedDescriptor === "number"
+        ? inheritedDescriptor
+        : -1;
+      const parentAccess = `/proc/self/fd/${String(parentDescriptor)}`;
+      const source = (operands.at(-2) ?? "").replace(
+        "/proc/self/fd/3",
+        parentAccess,
+      );
+      const destination = (operands.at(-1) ?? "").replace(
+        "/proc/self/fd/3",
+        parentAccess,
+      );
+      exportCommit.beforePublish?.(source, destination);
+      if (exportCommit.failPublish) {
+        exportCommit.failPublish = false;
+        throw Object.assign(new Error("injected publication interruption"), {
+          code: "EINTR",
+        });
+      }
+      const result = Reflect.apply(actual.execFileSync, actual, args);
+      exportCommit.afterCommit?.(source, destination);
+      return result;
+    }
+    return Reflect.apply(actual.execFileSync, actual, args);
+  }) as typeof actual.execFileSync;
+  return { ...actual, execFileSync };
+});
 
 vi.mock("node:fs", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:fs")>();
@@ -171,7 +210,9 @@ afterEach(() => {
   exportCommit.afterRealpath = null;
   exportCommit.beforeMkdtemp = null;
   exportCommit.beforeMkdir = null;
+  exportCommit.beforePublish = null;
   exportCommit.beforeReadFile = null;
+  exportCommit.failPublish = false;
   exportCommit.failOpenSuffix = null;
   exportCommit.maximumReadLength = 0;
   exportCommit.rejectLinks = false;
@@ -271,8 +312,8 @@ function ship(root: string) {
     action: "ship",
     payload: { op: "export-web", documentPath: "scene.json", expectedContentHash },
   });
-  expect(response).toMatchObject({ ok: true, action: "ship" });
   if (!response.ok) throw new Error(response.message);
+  expect(response).toMatchObject({ ok: true, action: "ship" });
   return response.data as {
     replayed: boolean;
     outputDirectory: string;
@@ -621,12 +662,9 @@ describe("desktop static Web export", () => {
     expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
     const first = ship(root);
     rmSync(first.outputDirectory, { recursive: true });
-    exportCommit.beforeMkdir = (path) => {
-      const candidate = String(path);
-      if (basename(candidate) !== basename(first.outputDirectory)) return;
-      if (realpathSync(dirname(candidate)) !== dirname(first.outputDirectory)) return;
-      exportCommit.beforeMkdir = null;
-      mkdirSync(candidate);
+    exportCommit.beforePublish = (_source, destination) => {
+      exportCommit.beforePublish = null;
+      mkdirSync(destination);
     };
 
     const result = exportProject(root);
@@ -636,6 +674,29 @@ describe("desktop static Web export", () => {
       reason: DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
     });
     expect(readdirSync(first.outputDirectory)).toEqual([]);
+  });
+
+  it("never trusts a forged recovery claim at the content address", () => {
+    const root = temporary("sceneaxi-export-forged-claim-");
+    expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
+    const first = ship(root);
+    const digest = basename(first.outputDirectory);
+    rmSync(first.outputDirectory, { recursive: true });
+    mkdirSync(first.outputDirectory);
+    const claim = `sceneaxi-web-export-claim-v1\n${digest}\n`;
+    writeFileSync(join(first.outputDirectory, ".sceneaxi-claim"), claim);
+    writeFileSync(join(first.outputDirectory, "index.html"), "operator bytes");
+
+    const result = exportProject(root);
+
+    expect(result).toMatchObject({
+      ok: false,
+      reason: DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
+    });
+    expect(readFileSync(join(first.outputDirectory, ".sceneaxi-claim"), "utf8"))
+      .toBe(claim);
+    expect(readFileSync(join(first.outputDirectory, "index.html"), "utf8"))
+      .toBe("operator bytes");
   });
 
   it("holds the export parent when its pathname becomes a symlink", () => {
@@ -729,7 +790,7 @@ describe("desktop static Web export", () => {
     expect(exportCommit.maximumReadLength).toBeLessThanOrEqual(64 * 1024);
   });
 
-  it("resumes an export after an owned partial commit", () => {
+  it("retries an export after an interrupted staging write", () => {
     const root = temporary("sceneaxi-export-resumable-commit-");
     expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
     exportCommit.failOpenSuffix = "/sceneaxi-web.js";
@@ -748,26 +809,52 @@ describe("desktop static Web export", () => {
     );
   });
 
+  it("retries after publication is interrupted before the content address", () => {
+    const root = temporary("sceneaxi-export-interrupted-publication-");
+    expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
+    const first = ship(root);
+    rmSync(first.outputDirectory, { recursive: true });
+    exportCommit.failPublish = true;
+
+    const interrupted = exportProject(root);
+
+    expect(interrupted).toMatchObject({
+      ok: false,
+      reason: DESKTOP_WEB_EXPORT_REFUSALS.writeFailed,
+    });
+    expect(existsSync(first.outputDirectory)).toBe(false);
+
+    const retried = exportProject(root);
+    expect(retried.ok).toBe(true);
+    if (!retried.ok) throw new Error(retried.message);
+    expect(retried.outputDirectory).toBe(first.outputDirectory);
+  });
+
   it("never writes through a raced nested destination symlink", () => {
     const root = temporary("sceneaxi-export-nested-destination-");
     expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
     const first = ship(root);
     rmSync(first.outputDirectory, { recursive: true });
     const outside = temporary("sceneaxi-export-nested-destination-outside-");
+    let raced = false;
     exportCommit.beforeMkdir = (path) => {
       const candidate = String(path);
       if (basename(candidate) !== "source") return;
-      if (realpathSync(dirname(candidate)) !== first.outputDirectory) return;
+      if (!basename(realpathSync(dirname(candidate))).startsWith(".sceneaxi-export-")) {
+        return;
+      }
       exportCommit.beforeMkdir = null;
       symlinkSync(outside, candidate, "dir");
+      raced = true;
     };
 
     const result = exportProject(root);
 
     expect(result).toMatchObject({
       ok: false,
-      reason: DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
+      reason: DESKTOP_WEB_EXPORT_REFUSALS.writeFailed,
     });
+    expect(raced).toBe(true);
     expect(readdirSync(outside)).toEqual([]);
   });
 

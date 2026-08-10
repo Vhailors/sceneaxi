@@ -8,6 +8,7 @@
  * existing, non-identical directory.
  */
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import {
   closeSync,
   constants,
@@ -108,7 +109,6 @@ type ExportFile = Readonly<{
   path: string;
   byteLength: number;
   bytes?: Uint8Array;
-  stagedPath?: string;
   artifact: DeliveryHandoffArtifact;
 }>;
 
@@ -116,7 +116,6 @@ type ExpectedFile = Readonly<{
   byteLength: number;
   digest: string;
   bytes?: Uint8Array;
-  stagedPath?: string;
 }>;
 
 type ExportWorkspace = Readonly<{
@@ -133,7 +132,6 @@ const DIGEST_RE = /^sha256:[0-9a-f]{64}$/;
 const SAFE_ASSET_PATH_RE = new RegExp(DESKTOP_WEB_STAGE_CONFIG.assetPathPattern);
 const CREATED_AT = "1970-01-01T00:00:00.000Z";
 const STREAM_BUFFER_BYTES = 64 * 1024;
-const CLAIM_PATH = ".sceneaxi-claim";
 
 function refuse(
   reason: DesktopWebExportRefusalReason,
@@ -551,34 +549,6 @@ function writeOutputFile(
   }
 }
 
-function removeOutputFile(
-  rootDescriptor: number,
-  destination: string,
-  path: string,
-) {
-  const segments = path.split("/");
-  const name = segments.pop();
-  if (name === undefined || name === "") throw new Error("invalid export path");
-  let descriptor = rootDescriptor;
-  const opened: number[] = [];
-  try {
-    for (const segment of segments) {
-      descriptor = openContainedDirectory(
-        destination,
-        join(`/proc/self/fd/${String(descriptor)}`, segment),
-      );
-      opened.push(descriptor);
-    }
-    const target = join(`/proc/self/fd/${String(descriptor)}`, name);
-    if (!lstatSync(target).isFile()) {
-      throw new Error("the incomplete export entry is not a regular file");
-    }
-    rmSync(target);
-  } finally {
-    for (const openedDescriptor of opened.reverse()) closeSync(openedDescriptor);
-  }
-}
-
 type StreamedFile =
   | Readonly<{ ok: true; byteLength: number; digest: string }>
   | Readonly<{ ok: false; kind: "missing" | "unsafe" | "invalid"; detail: string }>;
@@ -823,7 +793,6 @@ function readProjectAsset(
   return Object.freeze({
     path,
     byteLength: read.byteLength,
-    stagedPath: path,
     artifact: Object.freeze({
       role: "asset-bundle" as const,
       contentType: manifestEntry?.mediaType ?? contentType(path),
@@ -959,49 +928,6 @@ function verifyExistingOutput(
   }
 }
 
-function prepareRecoverableOutput(
-  directory: string,
-  accessPath: string,
-  expected: ReadonlyMap<string, ExpectedFile>,
-  claimBytes: Uint8Array,
-): string | null {
-  let descriptor: number | null = null;
-  try {
-    descriptor = openContainedDirectory(directory, accessPath);
-    const stableAccess = `/proc/self/fd/${String(descriptor)}`;
-    const walked = walkContainedFiles(directory, accessPath);
-    if (walked === null) return "the incomplete export could not be walked safely";
-    if (!walked.includes(CLAIM_PATH)) return "the ownership claim is absent";
-    if (walked.some((path) => path !== CLAIM_PATH && !expected.has(path))) {
-      return "the incomplete export contains an unexpected file";
-    }
-    const claim = readContainedFile(directory, join(stableAccess, CLAIM_PATH), {
-      expectedBytes: claimBytes.byteLength,
-    });
-    if (!claim.ok || !claim.bytes.equals(Buffer.from(claimBytes))) {
-      return "the ownership claim is invalid";
-    }
-    for (const path of walked) {
-      if (path === CLAIM_PATH) continue;
-      const file = expected.get(path);
-      if (file === undefined) return "the incomplete export file is unexpected";
-      const actual = streamContainedFile(
-        directory,
-        join(stableAccess, ...path.split("/")),
-        { expectedBytes: file.byteLength },
-      );
-      if (!actual.ok || actual.digest !== file.digest) {
-        removeOutputFile(descriptor, directory, path);
-      }
-    }
-    return null;
-  } catch (error) {
-    return error instanceof Error ? error.message : String(error);
-  } finally {
-    if (descriptor !== null) closeSync(descriptor);
-  }
-}
-
 function writeOutput(
   workspace: ExportWorkspace,
   destination: string,
@@ -1011,9 +937,7 @@ function writeOutput(
   const stableParent = `/proc/self/fd/${String(workspace.webDescriptor)}`;
   const destinationName = relative(parent, destination);
   const stableDestination = join(stableParent, destinationName);
-  const claimBytes = utf8(
-    `sceneaxi-web-export-claim-v1\n${destinationName}\n`,
-  );
+  const stableStaging = join(stableParent, workspace.stagingName);
   try {
     if (
       destinationName === "" ||
@@ -1028,91 +952,87 @@ function writeOutput(
       if (verifyExistingOutput(destination, expected, stableDestination)) {
         return Object.freeze({ ok: true as const, replayed: true });
       }
-      const recoveryFailure = prepareRecoverableOutput(
-        destination,
-        stableDestination,
-        expected,
-        claimBytes,
+      return refuse(
+        DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
+        `The content-addressed export directory already exists with different or unsafe bytes: ${destination}`,
       );
-      if (recoveryFailure !== null) {
-        return refuse(
-          DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
-          `The content-addressed export directory already exists with different or unsafe bytes: ${destination} (${recoveryFailure}).`,
-        );
-      }
-    } else {
-      mkdirSync(stableDestination);
     }
-    const destinationDescriptor = openContainedDirectory(
-      destination,
-      stableDestination,
-    );
-    try {
-      const stableDestination = `/proc/self/fd/${String(destinationDescriptor)}`;
-      const claim = join(stableDestination, CLAIM_PATH);
-      if (!pathEntryExists(claim)) {
-        writeFileSync(claim, claimBytes, { flag: "wx" });
-      }
-      for (const [path, file] of expected) {
-        const target = join(stableDestination, ...path.split("/"));
-        if (pathEntryExists(target)) continue;
-        if (file.bytes !== undefined) {
-          writeOutputFile(
-            destinationDescriptor,
-            destination,
-            path,
-            file.bytes,
-          );
-        } else if (file.stagedPath !== undefined) {
-          const copied = streamContainedFile(
-            workspace.stagingDirectory,
-            join(
-              `/proc/self/fd/${String(workspace.stagingDescriptor)}`,
-              ...file.stagedPath.split("/"),
-            ),
-            { expectedBytes: file.byteLength },
-            {
-              descriptor: destinationDescriptor,
-              directory: destination,
-              path,
-            },
-          );
-          if (!copied.ok || copied.digest !== file.digest) {
-            throw new Error(`staged export file ${path} changed during commit`);
-          }
-        } else {
-          throw new Error(`export file ${path} has no staged bytes`);
+
+    for (const [path, file] of expected) {
+      const target = join(stableStaging, ...path.split("/"));
+      if (pathEntryExists(target)) {
+        const staged = streamContainedFile(
+          workspace.stagingDirectory,
+          target,
+          { expectedBytes: file.byteLength },
+        );
+        if (!staged.ok || staged.digest !== file.digest) {
+          throw new Error(`staged export file ${path} has unexpected bytes`);
         }
+      } else if (file.bytes !== undefined) {
+        writeOutputFile(
+          workspace.stagingDescriptor,
+          workspace.stagingDirectory,
+          path,
+          file.bytes,
+        );
+      } else {
+        throw new Error(`staged export file ${path} is missing`);
       }
-      rmSync(claim);
-    } finally {
-      closeSync(destinationDescriptor);
+    }
+
+    if (!verifyExistingOutput(workspace.stagingDirectory, expected, stableStaging)) {
+      throw new Error("the completed staging directory failed verification");
+    }
+
+    execFileSync(
+      "/usr/bin/mv",
+      [
+        "--no-target-directory",
+        "--no-clobber",
+        "--",
+        join("/proc/self/fd/3", workspace.stagingName),
+        join("/proc/self/fd/3", destinationName),
+      ],
+      {
+        stdio: ["ignore", "ignore", "ignore", workspace.webDescriptor],
+      },
+    );
+
+    if (pathEntryExists(stableStaging)) {
+      if (verifyExistingOutput(destination, expected, stableDestination)) {
+        return Object.freeze({ ok: true as const, replayed: true });
+      }
+      return refuse(
+        DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
+        `The content-addressed export directory was occupied during publication: ${destination}`,
+      );
     }
     if (realpathSync(stableParent) !== parent) {
       throw new Error("the export parent moved during commit");
     }
+    if (!verifyExistingOutput(destination, expected, stableDestination)) {
+      return refuse(
+        DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
+        `The published content-addressed export changed before verification: ${destination}`,
+      );
+    }
     return Object.freeze({ ok: true as const, replayed: false });
   } catch (error) {
     try {
-      if (pathEntryExists(stableDestination)) {
+      if (
+        realpathSync(stableParent) === parent &&
+        pathEntryExists(stableDestination)
+      ) {
         if (verifyExistingOutput(destination, expected, stableDestination)) {
-          return Object.freeze({ ok: true as const, replayed: true });
-        }
-        const recoveryFailure = prepareRecoverableOutput(
-          destination,
-          stableDestination,
-          expected,
-          claimBytes,
-        );
-        if (recoveryFailure === null) {
-          return refuse(
-            DESKTOP_WEB_EXPORT_REFUSALS.writeFailed,
-            `The static Web export was interrupted and remains safely resumable: ${error instanceof Error ? error.message : String(error)}`,
-          );
+          return Object.freeze({
+            ok: true as const,
+            replayed: pathEntryExists(stableStaging),
+          });
         }
         return refuse(
           DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
-          `The content-addressed export directory was occupied during commit: ${destination} (${recoveryFailure}).`,
+          `The content-addressed export directory was occupied during publication: ${destination}`,
         );
       }
     } catch {
@@ -1294,9 +1214,6 @@ export function exportDesktopWebProject(
         byteLength: file.byteLength,
         digest: file.artifact.digest,
         ...(file.bytes === undefined ? {} : { bytes: file.bytes }),
-        ...(file.stagedPath === undefined
-          ? {}
-          : { stagedPath: file.stagedPath }),
       }),
     ] as const),
   );
