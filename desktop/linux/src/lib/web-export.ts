@@ -20,7 +20,6 @@ import {
   readSync,
   readdirSync,
   realpathSync,
-  rmSync,
   statSync,
   writeFileSync,
   writeSync,
@@ -414,13 +413,6 @@ function prepareExportWorkspace(
   } catch (error) {
     if (stagingDescriptor !== null) {
       try {
-        removeOwnedStaging(
-          webDescriptor,
-          stagingName,
-          stagingDescriptor,
-        );
-      } catch {}
-      try {
         closeSync(stagingDescriptor);
       } catch {}
     }
@@ -441,33 +433,7 @@ function prepareExportWorkspace(
   }
 }
 
-function removeOwnedStaging(
-  webDescriptor: number | null,
-  stagingName: string | null,
-  stagingDescriptor: number,
-) {
-  if (webDescriptor === null || stagingName === null) return;
-  const path = join(`/proc/self/fd/${String(webDescriptor)}`, stagingName);
-  const held = fstatSync(stagingDescriptor);
-  const occupant = lstatSync(path);
-  if (
-    held.isDirectory() &&
-    occupant.isDirectory() &&
-    held.dev === occupant.dev &&
-    held.ino === occupant.ino
-  ) {
-    rmSync(path, { recursive: true });
-  }
-}
-
 function cleanupExportWorkspace(workspace: ExportWorkspace) {
-  try {
-    removeOwnedStaging(
-      workspace.webDescriptor,
-      workspace.stagingName,
-      workspace.stagingDescriptor,
-    );
-  } catch {}
   try {
     closeSync(workspace.stagingDescriptor);
   } catch {}

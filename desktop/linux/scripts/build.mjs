@@ -2,20 +2,18 @@
 /**
  * Build the desktop application's runtime files into `dist/`.
  *
- * Five outputs, all derived from `src/` and the linked workspace packages:
+ * Four outputs, all derived from `src/` and the linked workspace packages:
  * - `dist/main.cjs`     — Electron main process (bundled, only `electron` external)
  * - `dist/preload.cjs`  — the context-isolated bridge preload
  * - `dist/renderer.js`  — the live viewport bundle (Three core included)
  * - `dist/index.html`   — the Engine Desktop chrome document with the renderer
  *                         script injected, emitted by `desktopLinuxIndexHtml()`
- * - `dist/sceneaxi-publish-no-replace` — the Linux atomic publisher
  *
  * The workspace keeps source-backed package exports, so esbuild resolves the
  * `link:` dependencies straight to their TypeScript sources — the same resolution
  * strategy the sites tier uses through Next `transpilePackages` (ADR 0018/0024).
  */
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { spawnSync } from "node:child_process";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { build } from "esbuild";
@@ -28,25 +26,6 @@ const distBuild = join(appRoot, "dist-build");
 rmSync(dist, { recursive: true, force: true });
 rmSync(distBuild, { recursive: true, force: true });
 mkdirSync(dist, { recursive: true });
-
-const publisherExecutable = join(dist, "sceneaxi-publish-no-replace");
-const publisherBuild = spawnSync(
-  process.env["CC"] ?? "cc",
-  [
-    "-std=c11",
-    "-O2",
-    "-Wall",
-    "-Wextra",
-    "-Werror",
-    join(appRoot, "src/native/publish-no-replace.c"),
-    "-o",
-    publisherExecutable,
-  ],
-  { stdio: "inherit" },
-);
-if (publisherBuild.status !== 0) {
-  throw new Error("desktop-linux no-replace publisher failed to compile");
-}
 
 const common = {
   bundle: true,
@@ -130,4 +109,4 @@ if (leaked.length > 0) {
   process.exit(1);
 }
 
-console.log("desktop-linux build OK — dist/main.cjs, dist/preload.cjs, dist/renderer.js, dist/index.html, dist/sceneaxi-publish-no-replace");
+console.log("desktop runtime build OK — dist/main.cjs, dist/preload.cjs, dist/renderer.js, dist/index.html");

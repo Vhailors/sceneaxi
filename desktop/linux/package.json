@@ -12,7 +12,7 @@
     "./electron/provider-runtime": "./src/electron/provider-runtime.ts"
   },
   "scripts": {
-    "build": "node scripts/build.mjs",
+    "build": "node scripts/build-linux.mjs",
     "check:renderer": "node scripts/check-renderer.mjs",
     "start": "electron dist/main.cjs",
     "dist": "node scripts/dist.mjs",

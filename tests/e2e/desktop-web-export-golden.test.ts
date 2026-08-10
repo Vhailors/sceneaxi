@@ -848,6 +848,38 @@ describe("desktop static Web export", () => {
     }
   });
 
+  it("adds the native publisher only to the Linux runtime build", () => {
+    const appRoot = join(import.meta.dirname, "../../desktop/linux");
+    runFileSync(
+      process.execPath,
+      [join(appRoot, "scripts/build.mjs")],
+      {
+        cwd: appRoot,
+        env: { ...process.env, CC: "/missing-sceneaxi-compiler" },
+        stdio: "pipe",
+      },
+    );
+    expect(readdirSync(join(appRoot, "dist")).sort()).toEqual([
+      "index.html",
+      "main.cjs",
+      "preload.cjs",
+      "renderer.js",
+    ]);
+
+    runFileSync(
+      process.execPath,
+      [join(appRoot, "scripts/build-linux.mjs")],
+      { cwd: appRoot, stdio: "pipe" },
+    );
+    expect(readdirSync(join(appRoot, "dist")).sort()).toEqual([
+      "index.html",
+      "main.cjs",
+      "preload.cjs",
+      "renderer.js",
+      "sceneaxi-publish-no-replace",
+    ]);
+  });
+
   it("streams maximum-size assets through bounded reads", () => {
     const root = temporary("sceneaxi-export-bounded-stream-");
     expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
@@ -875,12 +907,19 @@ describe("desktop static Web export", () => {
     exportCommit.failOpenSuffix = "/sceneaxi-web.js";
 
     const interrupted = exportProject(root);
+    const retainedStaging = readdirSync(join(root, "exports/web"))
+      .filter((name) => name.startsWith(".sceneaxi-export-"));
     const resumed = exportProject(root);
 
     expect(interrupted).toMatchObject({
       ok: false,
       reason: DESKTOP_WEB_EXPORT_REFUSALS.writeFailed,
     });
+    expect(retainedStaging).toHaveLength(1);
+    expect(
+      lstatSync(join(root, "exports/web", retainedStaging[0] ?? ""))
+        .isDirectory(),
+    ).toBe(true);
     expect(resumed.ok).toBe(true);
     if (!resumed.ok) throw new Error(resumed.message);
     expect(readFileSync(join(resumed.outputDirectory, "sceneaxi-web.js"))).toEqual(

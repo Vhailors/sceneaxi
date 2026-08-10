@@ -1,5 +1,5 @@
 # Packaging for the Linux desktop application (ADR 0024).
-# Everything the app runs is bundled into dist/ by scripts/build.mjs, so no
+# Everything the app runs is emitted into dist/ by scripts/build-linux.mjs, so no
 # node_modules ship in the artifact; `electron` itself is the only runtime.
 appId: com.sceneaxi.engine-desktop
 productName: SceneAxi Engine Desktop

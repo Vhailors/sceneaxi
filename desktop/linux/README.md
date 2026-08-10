@@ -26,7 +26,7 @@ pnpm install
 cd desktop/linux
 pnpm install          # electron + esbuild + electron-builder, tier-local
 pnpm check:renderer   # browser graph and sole presentation owner
-pnpm build            # dist/main.cjs, dist/preload.cjs, dist/renderer.js, dist/index.html
+pnpm build            # four runtime files plus dist/sceneaxi-publish-no-replace
 pnpm start            # launch the window against the real GPU
 ```
 
