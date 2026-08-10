@@ -61,7 +61,8 @@ triangle projection through the one Three core. See
 offline bridge action. The result is written under
 `exports/web/<bundle SHA-256>/` inside the active project. It contains the
 exact source `scene.json`, accepted project assets, a static viewer using the
-packaged renderer bytes, and `delivery-handoff.json`. The handoff binds every
+packaged renderer bytes, the runtime-bound tool identity, and
+`delivery-handoff.json`. The handoff binds every
 exported artifact and the source identity; creating it performs no upload,
 deployment, signing, approval, or release. A byte-identical rerun verifies and
 reuses the existing directory. A different occupant at that content address

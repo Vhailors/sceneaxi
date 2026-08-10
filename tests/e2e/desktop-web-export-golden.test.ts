@@ -32,13 +32,14 @@ import {
 
 const exportCommit = vi.hoisted(() => ({
   afterCommit: null as
-    | ((oldPath: unknown, newPath: unknown) => void)
+    | ((oldPath: unknown, newPath: unknown, stagingDescriptor?: number) => void)
     | null,
   afterRealpath: null as ((path: unknown, resolved: string) => void) | null,
   beforeMkdtemp: null as ((prefix: unknown) => void) | null,
   beforeMkdir: null as ((path: unknown) => void) | null,
   beforePublish: null as ((source: string, destination: string) => void) | null,
   beforeReadFile: null as ((path: unknown) => void) | null,
+  beforeFstat: null as ((descriptor: number) => void) | null,
   failPublish: false,
   failOpenSuffix: null as string | null,
   maximumReadLength: 0,
@@ -60,6 +61,7 @@ vi.mock("node:child_process", async (importOriginal) => {
       }
       const options = args[2] as { stdio?: readonly unknown[] } | undefined;
       const inheritedDescriptor = options?.stdio?.[4];
+      const inheritedStagingDescriptor = options?.stdio?.[5];
       const parentDescriptor = typeof inheritedDescriptor === "number"
         ? inheritedDescriptor
         : -1;
@@ -74,7 +76,13 @@ vi.mock("node:child_process", async (importOriginal) => {
         });
       }
       const result = Reflect.apply(actual.execFileSync, actual, args);
-      exportCommit.afterCommit?.(source, destination);
+      exportCommit.afterCommit?.(
+        source,
+        destination,
+        typeof inheritedStagingDescriptor === "number"
+          ? inheritedStagingDescriptor
+          : undefined,
+      );
       return result;
     }
     return Reflect.apply(actual.execFileSync, actual, args);
@@ -84,6 +92,12 @@ vi.mock("node:child_process", async (importOriginal) => {
 
 vi.mock("node:fs", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:fs")>();
+  const hookedFstatSync = ((
+    ...args: Parameters<typeof actual.fstatSync>
+  ) => {
+    exportCommit.beforeFstat?.(args[0]);
+    return Reflect.apply(actual.fstatSync, actual, args);
+  }) as typeof actual.fstatSync;
   const hookedRealpathSync = Object.assign(
     (path: Parameters<typeof actual.realpathSync>[0]) => {
       const result = actual.realpathSync(path);
@@ -117,6 +131,7 @@ vi.mock("node:fs", async (importOriginal) => {
   }) as typeof actual.writeFileSync;
   return {
     ...actual,
+    fstatSync: hookedFstatSync,
     linkSync: (
       oldPath: Parameters<typeof actual.linkSync>[0],
       newPath: Parameters<typeof actual.linkSync>[1],
@@ -240,6 +255,7 @@ afterEach(() => {
   exportCommit.beforeMkdir = null;
   exportCommit.beforePublish = null;
   exportCommit.beforeReadFile = null;
+  exportCommit.beforeFstat = null;
   exportCommit.failPublish = false;
   exportCommit.failOpenSuffix = null;
   exportCommit.maximumReadLength = 0;
@@ -489,6 +505,21 @@ describe("desktop static Web export", () => {
       `${DESKTOP_WEB_EXPORT_TOOL_VERSION}+export.1.renderer.${sha256(alternateRuntime).slice("sha256:".length)}`,
     );
     expect(first.handoff.product.version).not.toBe(second.handoff.product.version);
+    expect(first.bundleDigest).not.toBe(second.bundleDigest);
+    const firstToolVersionBytes = Buffer.from(`${first.handoff.product.version}\n`);
+    const secondToolVersionBytes = Buffer.from(`${second.handoff.product.version}\n`);
+    expect(
+      readFileSync(join(first.outputDirectory, "sceneaxi-tool-version.txt")),
+    ).toEqual(firstToolVersionBytes);
+    expect(
+      readFileSync(join(second.outputDirectory, "sceneaxi-tool-version.txt")),
+    ).toEqual(secondToolVersionBytes);
+    expect(first.handoff.artifacts["sceneaxi-tool-version.txt"]?.digest).toBe(
+      sha256(firstToolVersionBytes),
+    );
+    expect(second.handoff.artifacts["sceneaxi-tool-version.txt"]?.digest).toBe(
+      sha256(secondToolVersionBytes),
+    );
     expect(first.handoff.artifacts["sceneaxi-web.js"]?.digest).toBe(sha256(RUNTIME));
     expect(second.handoff.artifacts["sceneaxi-web.js"]?.digest).toBe(
       sha256(alternateRuntime),
@@ -677,6 +708,44 @@ describe("desktop static Web export", () => {
       .toBe("keep");
   });
 
+  it("never cleans a successfully published workspace", () => {
+    const root = temporary("sceneaxi-export-published-cleanup-");
+    expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
+    let movedBundle: string | null = null;
+    exportCommit.afterCommit = (source, destination, stagingDescriptor) => {
+      exportCommit.afterCommit = null;
+      if (typeof source !== "string" || typeof destination !== "string") {
+        throw new Error("publication paths were not strings");
+      }
+      const stableSource = join(realpathSync(dirname(source)), basename(source));
+      const stableDestination = join(
+        realpathSync(dirname(destination)),
+        basename(destination),
+      );
+      exportCommit.beforeFstat = (descriptor) => {
+        if (descriptor !== stagingDescriptor) return;
+        let held: string;
+        try {
+          held = realpathSync(`/proc/self/fd/${String(descriptor)}`);
+        } catch {
+          return;
+        }
+        if (held !== stableDestination) return;
+        exportCommit.beforeFstat = null;
+        renameSync(destination, source);
+        movedBundle = stableSource;
+      };
+    };
+
+    const result = exportProject(root);
+
+    expect(result.ok).toBe(true);
+    expect(movedBundle).not.toBeNull();
+    expect(readFileSync(join(movedBundle ?? "", "sceneaxi-web.js"))).toEqual(
+      RUNTIME,
+    );
+  });
+
   it("refuses a committed bundle that changes before success", () => {
     const root = temporary("sceneaxi-export-destination-race-");
     expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
@@ -818,6 +887,29 @@ describe("desktop static Web export", () => {
     expect(swapped).toBe(true);
     expect(result.ok).toBe(false);
     expect(readdirSync(outside)).toEqual([]);
+  });
+
+  it("names symlinked export ancestors as unsafe paths", () => {
+    for (const nested of [false, true]) {
+      const root = temporary(
+        nested
+          ? "sceneaxi-export-unsafe-web-parent-"
+          : "sceneaxi-export-unsafe-exports-parent-",
+      );
+      expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
+      const outside = temporary("sceneaxi-export-unsafe-parent-outside-");
+      const target = nested ? join(root, "exports/web") : join(root, "exports");
+      if (nested) mkdirSync(join(root, "exports"));
+      symlinkSync(outside, target, "dir");
+
+      const result = exportProject(root);
+
+      expect(result).toMatchObject({
+        ok: false,
+        reason: DESKTOP_WEB_EXPORT_REFUSALS.unsafePath,
+      });
+      expect(readdirSync(outside)).toEqual([]);
+    }
   });
 
   it("refuses publication after the held export parent is detached", () => {

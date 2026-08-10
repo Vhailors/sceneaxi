@@ -62,6 +62,7 @@ and the final source check.
 
 - `index.html`, a network-closed static viewer document;
 - `sceneaxi-web.js`, the exact packaged desktop renderer bytes;
+- `sceneaxi-tool-version.txt`, the runtime-bound desktop export tool identity;
 - `sceneaxi-scene.js`, the validated `MountableScene` bridge for that viewer;
 - `source/scene.json`, byte-identical to the source project document;
 - every accepted or Web-referenced contained asset at its project-relative path;

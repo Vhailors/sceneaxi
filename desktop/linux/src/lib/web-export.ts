@@ -136,11 +136,31 @@ const SAFE_ASSET_PATH_RE = new RegExp(DESKTOP_WEB_STAGE_CONFIG.assetPathPattern)
 const CREATED_AT = "1970-01-01T00:00:00.000Z";
 const STREAM_BUFFER_BYTES = 64 * 1024;
 
+class UnsafeExportPathError extends Error {}
+
 function refuse(
   reason: DesktopWebExportRefusalReason,
   message: string,
 ): DesktopWebExportRefusal {
   return Object.freeze({ ok: false as const, reason, message });
+}
+
+function exportPreparationRefusal(error: unknown, operation: string) {
+  const code =
+    typeof error === "object" && error !== null && "code" in error
+      ? error.code
+      : null;
+  const unsafe =
+    error instanceof UnsafeExportPathError ||
+    code === "ELOOP" ||
+    code === "ENOTDIR" ||
+    code === "ENOENT";
+  return refuse(
+    unsafe
+      ? DESKTOP_WEB_EXPORT_REFUSALS.unsafePath
+      : DESKTOP_WEB_EXPORT_REFUSALS.writeFailed,
+    `The project-owned export ${operation} could not be prepared: ${error instanceof Error ? error.message : String(error)}`,
+  );
 }
 
 function sha256(bytes: Uint8Array | string) {
@@ -347,11 +367,13 @@ function openContainedDirectory(root: string, target: string) {
   );
   try {
     if (!fstatSync(descriptor).isDirectory()) {
-      throw new Error("the opened path is not a directory");
+      throw new UnsafeExportPathError("the opened path is not a directory");
     }
     const canonical = realpathSync(`/proc/self/fd/${String(descriptor)}`);
     if (!within(root, canonical)) {
-      throw new Error("the opened directory resolves outside its containment root");
+      throw new UnsafeExportPathError(
+        "the opened directory resolves outside its containment root",
+      );
     }
     return descriptor;
   } catch (error) {
@@ -380,7 +402,9 @@ function openOrCreateDirectory(
   const descriptor = openContainedDirectory(directory, target);
   if (realpathSync(`/proc/self/fd/${String(descriptor)}`) !== directory) {
     closeSync(descriptor);
-    throw new Error("the prepared export directory moved unexpectedly");
+    throw new UnsafeExportPathError(
+      "the prepared export directory moved unexpectedly",
+    );
   }
   return Object.freeze({ descriptor, directory });
 }
@@ -414,10 +438,7 @@ function prepareExportParent(
         closeSync(descriptor);
       } catch {}
     }
-    return refuse(
-      DESKTOP_WEB_EXPORT_REFUSALS.writeFailed,
-      `The project-owned export workspace could not be prepared: ${error instanceof Error ? error.message : String(error)}`,
-    );
+    return exportPreparationRefusal(error, "workspace");
   }
 }
 
@@ -439,10 +460,7 @@ function prepareExportWorkspace(
       stagingName,
     });
   } catch (error) {
-    return refuse(
-      DESKTOP_WEB_EXPORT_REFUSALS.writeFailed,
-      `The project-owned export staging directory could not be prepared: ${error instanceof Error ? error.message : String(error)}`,
-    );
+    return exportPreparationRefusal(error, "staging directory");
   }
 }
 
@@ -450,6 +468,7 @@ function cleanupExportWorkspace(
   workspace: ExportWorkspace,
   parent: ExportParent,
   publisherExecutable: string,
+  published: boolean,
 ) {
   try {
     const held = fstatSync(workspace.stagingDescriptor);
@@ -463,7 +482,8 @@ function cleanupExportWorkspace(
       held.isDirectory() &&
       occupant.isDirectory() &&
       held.dev === occupant.dev &&
-      held.ino === occupant.ino
+      held.ino === occupant.ino &&
+      !published
     ) {
       execFileSync(publisherExecutable, ["clean"], {
         stdio: ["ignore", "ignore", "ignore", workspace.stagingDescriptor],
@@ -1228,6 +1248,7 @@ export function exportDesktopWebProject(
   const sourceDigest = sha256(documentBytes);
   const runtimeDigest = sha256(input.runtimeJavaScript);
   const toolVersion = runtimeBoundToolVersion(runtimeDigest);
+  const toolVersionBytes = utf8(`${toolVersion}\n`);
   if (sourceDigest !== exactHash) {
     return refuse(
       DESKTOP_WEB_EXPORT_REFUSALS.sceneInvalid,
@@ -1249,6 +1270,11 @@ export function exportDesktopWebProject(
       path: "sceneaxi-web.js",
       bytes: Buffer.from(input.runtimeJavaScript),
       artifact: Object.freeze({ role: "application" as const, contentType: "application/javascript", digest: runtimeDigest }),
+    }),
+    Object.freeze({
+      path: "sceneaxi-tool-version.txt",
+      bytes: toolVersionBytes,
+      artifact: Object.freeze({ role: "metadata" as const, contentType: "text/plain", digest: sha256(toolVersionBytes) }),
     }),
     Object.freeze({
       path: "source/scene.json",
@@ -1323,6 +1349,7 @@ export function exportDesktopWebProject(
   const parent = prepareExportParent(root);
   if ("ok" in parent) return parent;
   let workspace: ExportWorkspace | null = null;
+  let workspacePublished = false;
   try {
     const digestName = validated.handoff.artifactSetDigest.slice("sha256:".length);
     const destination = join(parent.webDirectory, digestName);
@@ -1352,6 +1379,7 @@ export function exportDesktopWebProject(
         input.publisherExecutable,
       );
       if (!result.ok) return result;
+      workspacePublished = !result.replayed;
       written = result;
     }
 
@@ -1401,7 +1429,12 @@ export function exportDesktopWebProject(
     });
   } finally {
     if (workspace !== null) {
-      cleanupExportWorkspace(workspace, parent, input.publisherExecutable);
+      cleanupExportWorkspace(
+        workspace,
+        parent,
+        input.publisherExecutable,
+        workspacePublished,
+      );
     }
     cleanupExportParent(parent);
   }
