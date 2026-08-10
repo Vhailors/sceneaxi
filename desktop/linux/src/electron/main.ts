@@ -126,6 +126,14 @@ async function start(): Promise<void> {
   } catch {
     webExportRuntime = undefined;
   }
+  const webExportPublisherExecutable = app.isPackaged
+    ? join(
+        process.resourcesPath,
+        "app.asar.unpacked",
+        "dist",
+        "sceneaxi-publish-no-replace",
+      )
+    : join(__dirname, "sceneaxi-publish-no-replace");
   let bridge: DesktopBridge | null = null;
   let activeRoot: string | null = null;
 
@@ -142,6 +150,7 @@ async function start(): Promise<void> {
         ? {}
         : { runByoAssistant: byoRuntime.runByoAssistant }),
       runRarityProvider,
+      webExportPublisherExecutable,
       ...(webExportRuntime === undefined ? {} : { webExportRuntime }),
     });
     const localPaths = SMOKE

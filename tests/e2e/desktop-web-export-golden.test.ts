@@ -1,5 +1,6 @@
 /** Golden proof for the offline desktop Ship → Export Web vertical. */
 import { createHash } from "node:crypto";
+import { execFileSync as runFileSync } from "node:child_process";
 import {
   existsSync,
   lstatSync,
@@ -16,7 +17,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, relative, sep } from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { contentHash } from "@sceneaxi/authoring-core";
 import { parseDeliveryHandoffText } from "@sceneaxi/schemas";
 import { PROJECT_ASSET_MAX_BYTES } from "../../packages/importers/src/index.ts";
@@ -48,7 +49,10 @@ vi.mock("node:child_process", async (importOriginal) => {
   const execFileSync = ((
     ...args: Parameters<typeof actual.execFileSync>
   ) => {
-    if (basename(String(args[0])) === "mv" && Array.isArray(args[1])) {
+    if (
+      basename(String(args[0])) === "sceneaxi-publish-no-replace" &&
+      Array.isArray(args[1])
+    ) {
       const operands = args[1].map(String);
       const options = args[2] as { stdio?: readonly unknown[] } | undefined;
       const inheritedDescriptor = options?.stdio?.[3];
@@ -191,6 +195,8 @@ vi.mock("node:fs", async (importOriginal) => {
 });
 
 const roots: string[] = [];
+const nativeHelperRoot = mkdtempSync(join(tmpdir(), "sceneaxi-publisher-helper-"));
+const publisherExecutable = join(nativeHelperRoot, "sceneaxi-publish-no-replace");
 const RUNTIME = Buffer.from(
   '/* SceneAxi deterministic Web renderer fixture v1 */\nvoid globalThis.sceneaxiDesktopLinux;\n',
 );
@@ -204,6 +210,30 @@ const GOLDEN = JSON.parse(
   bundleDigest: string;
   artifactDigests: Record<string, string>;
 };
+
+beforeAll(() => {
+  runFileSync(
+    process.env["CC"] ?? "cc",
+    [
+      "-std=c11",
+      "-O2",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      join(
+        import.meta.dirname,
+        "../../desktop/linux/src/native/publish-no-replace.c",
+      ),
+      "-o",
+      publisherExecutable,
+    ],
+    { stdio: "inherit" },
+  );
+});
+
+afterAll(() => {
+  rmSync(nativeHelperRoot, { recursive: true, force: true });
+});
 
 afterEach(() => {
   exportCommit.afterCommit = null;
@@ -289,6 +319,7 @@ function exportProject(root: string, runtimeJavaScript = RUNTIME) {
     documentPath: "scene.json",
     expectedContentHash: statusHash(bridge),
     runtimeJavaScript,
+    publisherExecutable,
   });
 }
 
@@ -306,7 +337,11 @@ function rewriteDocument(
 }
 
 function ship(root: string) {
-  const bridge = createDesktopBridge({ cwd: root, webExportRuntime: RUNTIME });
+  const bridge = createDesktopBridge({
+    cwd: root,
+    webExportRuntime: RUNTIME,
+    webExportPublisherExecutable: publisherExecutable,
+  });
   const expectedContentHash = statusHash(bridge);
   const response = bridge.handle({
     action: "ship",
@@ -469,6 +504,7 @@ describe("desktop static Web export", () => {
         documentPath: "scene.json",
         expectedContentHash: contentHash(invalid),
         runtimeJavaScript: RUNTIME,
+        publisherExecutable,
       }),
     ).toMatchObject({ ok: false, reason: DESKTOP_WEB_EXPORT_REFUSALS.sceneInvalid });
 
@@ -480,6 +516,7 @@ describe("desktop static Web export", () => {
         documentPath: "scene.json",
         expectedContentHash: `sha256:${"0".repeat(64)}`,
         runtimeJavaScript: RUNTIME,
+        publisherExecutable,
       }),
     ).toMatchObject({ ok: false, reason: DESKTOP_WEB_EXPORT_REFUSALS.projectChanged });
   });
@@ -494,6 +531,7 @@ describe("desktop static Web export", () => {
     const missingBridge = createDesktopBridge({
       cwd: missingRoot,
       webExportRuntime: RUNTIME,
+      webExportPublisherExecutable: publisherExecutable,
     });
     expect(
       missingBridge.handle({
@@ -508,7 +546,11 @@ describe("desktop static Web export", () => {
 
     const dirtyRoot = temporary("sceneaxi-export-dirty-");
     expect(seedDesktopProject(dirtyRoot).ok).toBe(true);
-    const dirtyBridge = createDesktopBridge({ cwd: dirtyRoot, webExportRuntime: RUNTIME });
+    const dirtyBridge = createDesktopBridge({
+      cwd: dirtyRoot,
+      webExportRuntime: RUNTIME,
+      webExportPublisherExecutable: publisherExecutable,
+    });
     const before = statusHash(dirtyBridge);
     expect(
       dirtyBridge.handle({
@@ -553,6 +595,7 @@ describe("desktop static Web export", () => {
       documentPath: "scene.json",
       expectedContentHash: statusHash(bridge),
       runtimeJavaScript: RUNTIME,
+      publisherExecutable,
     });
 
     expect(committed).toBe(true);
@@ -583,11 +626,32 @@ describe("desktop static Web export", () => {
       documentPath: "scene.json",
       expectedContentHash: statusHash(bridge),
       runtimeJavaScript: RUNTIME,
+      publisherExecutable,
     });
 
     expect(result.ok).toBe(true);
     expect(existsSync(sentinel)).toBe(true);
     expect(readFileSync(sentinel, "utf8")).toBe("keep");
+  });
+
+  it("preserves a staging pathname reoccupied after publication", () => {
+    const root = temporary("sceneaxi-export-reoccupied-staging-");
+    expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
+    let replacement: string | null = null;
+    exportCommit.afterCommit = (source) => {
+      exportCommit.afterCommit = null;
+      if (typeof source !== "string") throw new Error("staging source was not a path");
+      replacement = join(realpathSync(dirname(source)), basename(source));
+      mkdirSync(source);
+      writeFileSync(join(source, "operator-data.txt"), "keep");
+    };
+
+    const result = exportProject(root);
+
+    expect(result.ok).toBe(true);
+    expect(replacement).not.toBeNull();
+    expect(readFileSync(join(replacement ?? "", "operator-data.txt"), "utf8"))
+      .toBe("keep");
   });
 
   it("refuses a committed bundle that changes before success", () => {
@@ -607,6 +671,7 @@ describe("desktop static Web export", () => {
       documentPath: "scene.json",
       expectedContentHash: statusHash(bridge),
       runtimeJavaScript: RUNTIME,
+      publisherExecutable,
     });
 
     expect(committed).toBe(true);
@@ -767,6 +832,20 @@ describe("desktop static Web export", () => {
     expect(readFileSync(join(result.outputDirectory, "sceneaxi-web.js"))).toEqual(
       RUNTIME,
     );
+  });
+
+  it("publishes without resolving a host utility from PATH", () => {
+    const root = temporary("sceneaxi-export-packaged-publisher-");
+    expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
+    const previousPath = process.env["PATH"];
+    process.env["PATH"] = "";
+    try {
+      const result = exportProject(root);
+      expect(result.ok).toBe(true);
+    } finally {
+      if (previousPath === undefined) delete process.env["PATH"];
+      else process.env["PATH"] = previousPath;
+    }
   });
 
   it("streams maximum-size assets through bounded reads", () => {

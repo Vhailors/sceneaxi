@@ -114,6 +114,7 @@ export type DesktopBridgeOptions = {
   readonly createAuthoringSession?: () => DesktopSession;
   /** The already-built sole renderer owner copied into static Web exports. */
   readonly webExportRuntime?: Uint8Array;
+  readonly webExportPublisherExecutable?: string;
 };
 
 export type DesktopAssistantProfile =
@@ -1245,11 +1246,19 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         "The packaged static Web renderer bytes are unavailable.",
       );
     }
+    const publisherExecutable = options.webExportPublisherExecutable;
+    if (publisherExecutable === undefined) {
+      return bridgeRefuse(
+        DESKTOP_WEB_EXPORT_REFUSALS.writeFailed,
+        "The packaged no-replace Web export publisher is unavailable.",
+      );
+    }
     const exported = exportDesktopWebProject({
       projectRoot: options.cwd,
       documentPath,
       expectedContentHash,
       runtimeJavaScript,
+      publisherExecutable,
     });
     return exported.ok
       ? bridgeOk("ship", exported)

@@ -103,6 +103,7 @@ export type DesktopWebExportInput = Readonly<{
   documentPath: typeof DESKTOP_ACTIVE_DOCUMENT_PATH;
   expectedContentHash: string;
   runtimeJavaScript: Uint8Array;
+  publisherExecutable: string;
 }>;
 
 type ExportFile = Readonly<{
@@ -413,15 +414,14 @@ function prepareExportWorkspace(
   } catch (error) {
     if (stagingDescriptor !== null) {
       try {
-        closeSync(stagingDescriptor);
+        removeOwnedStaging(
+          webDescriptor,
+          stagingName,
+          stagingDescriptor,
+        );
       } catch {}
-    }
-    if (stagingName !== null && webDescriptor !== null) {
       try {
-        rmSync(join(`/proc/self/fd/${String(webDescriptor)}`, stagingName), {
-          recursive: true,
-          force: true,
-        });
+        closeSync(stagingDescriptor);
       } catch {}
     }
     for (const descriptor of [
@@ -441,18 +441,35 @@ function prepareExportWorkspace(
   }
 }
 
+function removeOwnedStaging(
+  webDescriptor: number | null,
+  stagingName: string | null,
+  stagingDescriptor: number,
+) {
+  if (webDescriptor === null || stagingName === null) return;
+  const path = join(`/proc/self/fd/${String(webDescriptor)}`, stagingName);
+  const held = fstatSync(stagingDescriptor);
+  const occupant = lstatSync(path);
+  if (
+    held.isDirectory() &&
+    occupant.isDirectory() &&
+    held.dev === occupant.dev &&
+    held.ino === occupant.ino
+  ) {
+    rmSync(path, { recursive: true });
+  }
+}
+
 function cleanupExportWorkspace(workspace: ExportWorkspace) {
   try {
-    closeSync(workspace.stagingDescriptor);
+    removeOwnedStaging(
+      workspace.webDescriptor,
+      workspace.stagingName,
+      workspace.stagingDescriptor,
+    );
   } catch {}
   try {
-    rmSync(
-      join(
-        `/proc/self/fd/${String(workspace.webDescriptor)}`,
-        workspace.stagingName,
-      ),
-      { recursive: true, force: true },
-    );
+    closeSync(workspace.stagingDescriptor);
   } catch {}
   for (const descriptor of [
     workspace.webDescriptor,
@@ -932,6 +949,7 @@ function writeOutput(
   workspace: ExportWorkspace,
   destination: string,
   expected: ReadonlyMap<string, ExpectedFile>,
+  publisherExecutable: string,
 ): Readonly<{ ok: true; replayed: boolean }> | DesktopWebExportRefusal {
   const parent = workspace.webDirectory;
   const stableParent = `/proc/self/fd/${String(workspace.webDescriptor)}`;
@@ -986,11 +1004,8 @@ function writeOutput(
     }
 
     execFileSync(
-      "/usr/bin/mv",
+      publisherExecutable,
       [
-        "--no-target-directory",
-        "--no-clobber",
-        "--",
         join("/proc/self/fd/3", workspace.stagingName),
         join("/proc/self/fd/3", destinationName),
       ],
@@ -1055,11 +1070,12 @@ export function exportDesktopWebProject(
   if (
     input.documentPath !== DESKTOP_ACTIVE_DOCUMENT_PATH ||
     !isAbsolute(input.projectRoot) ||
-    !DIGEST_RE.test(input.expectedContentHash)
+    !DIGEST_RE.test(input.expectedContentHash) ||
+    !isAbsolute(input.publisherExecutable)
   ) {
     return refuse(
       DESKTOP_WEB_EXPORT_REFUSALS.requestMalformed,
-      "Web export requires an absolute project root, scene.json, and the exact current content hash.",
+      "Web export requires absolute project and publisher paths, scene.json, and the exact current content hash.",
     );
   }
   if (input.runtimeJavaScript.byteLength === 0) {
@@ -1230,7 +1246,12 @@ export function exportDesktopWebProject(
     workspace.webDirectory,
     validated.handoff.artifactSetDigest.slice("sha256:".length),
   );
-  const written = writeOutput(workspace, destination, expected);
+  const written = writeOutput(
+    workspace,
+    destination,
+    expected,
+    input.publisherExecutable,
+  );
   if (!written.ok) return written;
 
   const movedAsset = revalidateProjectAssets(root, assetFiles, manifestByPath);
