@@ -21,6 +21,16 @@ static int same_directory(int left, int right) {
          left_stat.st_ino == right_stat.st_ino;
 }
 
+static int same_entry(int parent, const char *name, int descriptor) {
+  struct stat entry_stat;
+  struct stat descriptor_stat;
+  return fstatat(parent, name, &entry_stat, AT_SYMLINK_NOFOLLOW) == 0 &&
+         fstat(descriptor, &descriptor_stat) == 0 &&
+         S_ISDIR(entry_stat.st_mode) && S_ISDIR(descriptor_stat.st_mode) &&
+         entry_stat.st_dev == descriptor_stat.st_dev &&
+         entry_stat.st_ino == descriptor_stat.st_ino;
+}
+
 static int clear_directory(int descriptor) {
   int scan = dup(descriptor);
   if (scan < 0) return -1;
@@ -83,25 +93,31 @@ int main(int argc, char **argv) {
   if (exports < 0) return 74;
   int web = openat(exports, "web", O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
   close(exports);
-  if (web < 0 || !same_directory(web, 4)) {
+  if (web < 0 || !same_directory(web, 4) || !same_entry(web, argv[2], 5)) {
     if (web >= 0) close(web);
     return 74;
   }
-  char source[256];
-  char destination[256];
-  int source_length = snprintf(source, sizeof(source), "exports/web/%s", argv[2]);
-  int destination_length =
-      snprintf(destination, sizeof(destination), "exports/web/%s", argv[3]);
-  if (
-      source_length < 0 || (size_t)source_length >= sizeof(source) ||
-      destination_length < 0 ||
-      (size_t)destination_length >= sizeof(destination)) {
+  if (renameat2(web, argv[2], web, argv[3], RENAME_NOREPLACE) == 0) {
+    int current_exports =
+        openat(3, "exports", O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+    int current_web = current_exports < 0
+        ? -1
+        : openat(
+              current_exports,
+              "web",
+              O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+    if (current_exports >= 0) close(current_exports);
+    if (current_web >= 0 && same_directory(current_web, web)) {
+      close(current_web);
+      close(web);
+      return 0;
+    }
+    if (current_web >= 0) close(current_web);
+    if (renameat2(web, argv[3], web, argv[2], RENAME_NOREPLACE) != 0) {
+      clear_directory(5);
+    }
     close(web);
-    return 64;
-  }
-  if (renameat2(3, source, 3, destination, RENAME_NOREPLACE) == 0) {
-    close(web);
-    return 0;
+    return 74;
   }
   int saved_errno = errno;
   close(web);

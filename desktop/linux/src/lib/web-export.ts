@@ -15,6 +15,7 @@ import {
   fstatSync,
   lstatSync,
   mkdirSync,
+  mkdtempSync,
   openSync,
   readSync,
   readdirSync,
@@ -23,7 +24,7 @@ import {
   writeFileSync,
   writeSync,
 } from "node:fs";
-import { extname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { basename, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { contentHash, parseDocumentText } from "@sceneaxi/authoring-core";
 import {
   DESKTOP_PRODUCT_REFUSALS,
@@ -422,17 +423,19 @@ function prepareExportParent(
 
 function prepareExportWorkspace(
   parent: ExportParent,
-  stagingName: string,
 ): ExportWorkspace | DesktopWebExportRefusal {
   try {
-    const staging = openOrCreateDirectory(
-      parent.webDescriptor,
-      parent.webDirectory,
-      stagingName,
+    const stableWeb = `/proc/self/fd/${String(parent.webDescriptor)}`;
+    const stagingAccess = mkdtempSync(join(stableWeb, ".sceneaxi-export-"));
+    const stagingName = basename(stagingAccess);
+    const stagingDirectory = join(parent.webDirectory, stagingName);
+    const stagingDescriptor = openContainedDirectory(
+      stagingDirectory,
+      stagingAccess,
     );
     return Object.freeze({
-      stagingDescriptor: staging.descriptor,
-      stagingDirectory: staging.directory,
+      stagingDescriptor,
+      stagingDirectory,
       stagingName,
     });
   } catch (error) {
@@ -1092,6 +1095,7 @@ function writeOutput(
           "ignore",
           parent.rootDescriptor,
           parent.webDescriptor,
+          workspace.stagingDescriptor,
         ],
       },
     );
@@ -1328,10 +1332,7 @@ export function exportDesktopWebProject(
       if (!existing.ok) return existing;
       written = existing;
     } else {
-      const prepared = prepareExportWorkspace(
-        parent,
-        `.sceneaxi-export-${digestName}`,
-      );
+      const prepared = prepareExportWorkspace(parent);
       if ("ok" in prepared) return prepared;
       workspace = prepared;
       for (const asset of assetFiles) {

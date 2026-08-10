@@ -636,6 +636,27 @@ describe("desktop static Web export", () => {
     expect(readFileSync(sentinel, "utf8")).toBe("keep");
   });
 
+  it("never adopts a predictable staging directory", () => {
+    const root = temporary("sceneaxi-export-predictable-staging-");
+    expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
+    const first = ship(root);
+    rmSync(first.outputDirectory, { recursive: true });
+    const unowned = join(
+      root,
+      "exports/web",
+      `.sceneaxi-export-${first.bundleDigest.slice("sha256:".length)}`,
+    );
+    mkdirSync(unowned);
+    const sentinel = join(unowned, "operator-data.txt");
+    writeFileSync(sentinel, "keep");
+
+    const result = exportProject(root);
+
+    expect(result.ok).toBe(true);
+    expect(readFileSync(sentinel, "utf8")).toBe("keep");
+    expect(existsSync(first.outputDirectory)).toBe(true);
+  });
+
   it("preserves a staging pathname reoccupied after publication", () => {
     const root = temporary("sceneaxi-export-reoccupied-staging-");
     expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
@@ -951,7 +972,8 @@ describe("desktop static Web export", () => {
     expect(
       readdirSync(join(root, "exports/web"))
         .filter((name) => name.startsWith(".sceneaxi-export-")),
-    ).toEqual([]);
+    ).toEqual(retainedStaging);
+    expect(readdirSync(retained)).toEqual([]);
     expect(readFileSync(join(resumed.outputDirectory, "sceneaxi-web.js"))).toEqual(
       RUNTIME,
     );
