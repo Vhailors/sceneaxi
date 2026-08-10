@@ -764,6 +764,20 @@ export {
   validateComposedScene,
   validateSceneCompositionIntake,
 } from "./scene-composition.js";
+
+export {
+  DESKTOP_SCENE_EDIT_PROFILES,
+  DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS,
+  desktopSceneTransformProperty,
+  isDesktopSceneEditOperation,
+  isDesktopSceneEditProfile,
+} from "./desktop-scene-edit.js";
+export type {
+  DesktopSceneEditOperation,
+  DesktopSceneEditProfile,
+  DesktopSceneTransformPropertyDefinition,
+  DesktopSceneTransformPropertyId,
+} from "./desktop-scene-edit.js";
 export type {
   ComposedScene,
   ComposedSceneArtifactDigest,

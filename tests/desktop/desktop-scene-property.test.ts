@@ -8,6 +8,7 @@ import {
   DESKTOP_SCENE_TRANSLATION_X_PROPERTY,
   inspectDesktopSceneProperties,
   seedDesktopProject,
+  stageDesktopSceneEdit,
   stageDesktopScenePropertyEdit,
 } from "../../desktop/linux/src/index.ts";
 
@@ -26,32 +27,67 @@ function starter() {
   return { dir, bytes, data: parsed.document.data };
 }
 
-describe("desktop supported Scene Document property — public seam", () => {
-  it("exposes the starter entity's typed translation and stages one real composition edit", () => {
+describe("desktop selected composed-instance edit — public seam", () => {
+  it("exposes every instance and all nine bounded transform components", () => {
     const fixture = starter();
     const contentHash = `sha256:${"a".repeat(64)}`;
     const inspected = inspectDesktopSceneProperties({
       documentData: fixture.data,
       contentHash,
     });
-    expect(inspected).toEqual({
-      ok: true,
-      contentHash,
-      entities: [
-        {
-          id: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
-          label: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityLabel,
-          properties: [
-            {
-              id: "translation-x",
-              label: "Translation X",
-              value: -4.4,
-              step: 0.1,
-            },
-          ],
-        },
-      ],
+    expect(inspected).toMatchObject({ ok: true, contentHash });
+    if (!inspected.ok) return;
+    expect(inspected.entities.map((entity) => entity.id)).toEqual([
+      "desktop-crate-root",
+      "desktop-crate-beside",
+      "desktop-crate-stacked",
+    ]);
+    const beside = inspected.entities.find(
+      (entity) => entity.id === DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
+    );
+    expect(beside).toMatchObject({
+      artifactId: "starter-service-crate-artifact",
+      parentInstanceId: "desktop-crate-root",
+      canRemove: true,
     });
+    expect(beside?.properties.map((property) => property.id)).toEqual([
+      "translation-x", "translation-y", "translation-z",
+      "rotation-x", "rotation-y", "rotation-z",
+      "scale-x", "scale-y", "scale-z",
+    ]);
+    expect(beside?.properties[0]).toMatchObject({ value: -4.4, step: 0.1 });
+    expect(beside?.properties[6]).toMatchObject({ value: 1, min: 0.000001 });
+  });
+
+  it("stages translation, rotation, and scale as real composition edits without writing", () => {
+    const fixture = starter();
+    const contentHash = `sha256:${"a".repeat(64)}`;
+    const operations = [
+      { propertyId: "translation-z", value: 2.5 },
+      { propertyId: "rotation-y", value: 45 },
+      { propertyId: "scale-x", value: 1.25 },
+    ] as const;
+    for (const operation of operations) {
+      const staged = stageDesktopSceneEdit({
+        documentData: fixture.data,
+        contentHash,
+        profile: "game",
+        operation: {
+          kind: "set-transform-component",
+          instanceId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
+          ...operation,
+        },
+      });
+      expect(staged).toMatchObject({
+        ok: true,
+        operation: { kind: "set-transform-component", ...operation },
+        edit: {
+          documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+          jsonPointer: "/data/composedScene",
+          expectedContentHash: contentHash,
+        },
+      });
+    }
 
     const staged = stageDesktopScenePropertyEdit({
       documentData: fixture.data,
@@ -67,11 +103,56 @@ describe("desktop supported Scene Document property — public seam", () => {
         jsonPointer: "/data/composedScene",
         expectedContentHash: contentHash,
       },
-      entity: { properties: [{ value: -3.25 }] },
     });
+    if (staged.ok) {
+      expect(staged.entity.properties.find((property) => property.id === "translation-x"))
+        .toMatchObject({ value: -3.25 });
+    }
     expect(readFileSync(join(fixture.dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8")).toBe(
       fixture.bytes,
     );
+  });
+
+  it("adds and removes only validated local artifact instances", () => {
+    const fixture = starter();
+    const contentHash = `sha256:${"d".repeat(64)}`;
+    const added = stageDesktopSceneEdit({
+      documentData: fixture.data,
+      contentHash,
+      profile: "game",
+      operation: {
+        kind: "add-instance",
+        sourceInstanceId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
+      },
+    });
+    expect(added).toMatchObject({
+      ok: true,
+      selectedInstanceId: "desktop-crate-beside-copy-1",
+      inspection: { entities: [{}, {}, {}, { artifactId: "starter-service-crate-artifact" }] },
+    });
+    if (!added.ok) return;
+    const addedScene = added.edit.newValue as {
+      instances: Array<{ instanceId: string; artifact: unknown }>;
+    };
+    const sourceArtifact = addedScene.instances.find(
+      (instance) => instance.instanceId === DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
+    )?.artifact;
+    const copiedArtifact = addedScene.instances.find(
+      (instance) => instance.instanceId === added.selectedInstanceId,
+    )?.artifact;
+    expect(copiedArtifact).toEqual(sourceArtifact);
+
+    const removed = stageDesktopSceneEdit({
+      documentData: { ...(fixture.data as object), composedScene: added.edit.newValue },
+      contentHash,
+      profile: "web",
+      operation: { kind: "remove-instance", instanceId: added.selectedInstanceId },
+    });
+    expect(removed).toMatchObject({
+      ok: true,
+      selectedInstanceId: "desktop-crate-root",
+      inspection: { entities: [{}, {}, {}] },
+    });
   });
 
   it("returns the scene validator's exact diagnostic for a non-numeric translation", () => {
@@ -117,7 +198,7 @@ describe("desktop supported Scene Document property — public seam", () => {
       documentData: fixture.data,
       contentHash,
       entityId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
-      propertyId: "rotation-y",
+      propertyId: "opacity",
       newValue: -3.25,
     });
     expect(unsupportedProperty).toEqual({
@@ -125,7 +206,7 @@ describe("desktop supported Scene Document property — public seam", () => {
       diagnostics: [
         {
           code: "invalid-proposal",
-          message: `Only ${DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId}.${DESKTOP_SCENE_TRANSLATION_X_PROPERTY.id} is editable in this release.`,
+          message: "The selected-instance edit operation is malformed or outside its numeric range.",
           documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
         },
       ],
@@ -134,7 +215,7 @@ describe("desktop supported Scene Document property — public seam", () => {
     const unsupportedEntity = stageDesktopScenePropertyEdit({
       documentData: fixture.data,
       contentHash,
-      entityId: "desktop-crate-stacked",
+      entityId: "missing-instance",
       propertyId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.id,
       newValue: -3.25,
     });
@@ -161,5 +242,33 @@ describe("desktop supported Scene Document property — public seam", () => {
     expect(readFileSync(join(fixture.dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8")).toBe(
       fixture.bytes,
     );
+  });
+
+  it("refuses stale selection, missing local assets, malformed ranges, root removal, and Kids", () => {
+    const fixture = starter();
+    const contentHash = `sha256:${"e".repeat(64)}`;
+    const request = (profile: unknown, operation: unknown) =>
+      stageDesktopSceneEdit({ documentData: fixture.data, contentHash, profile, operation });
+
+    expect(request("game", {
+      kind: "set-transform-component",
+      instanceId: "missing-instance",
+      propertyId: "translation-x",
+      value: 1,
+    })).toMatchObject({ ok: false, diagnostics: [{ code: "invalid-proposal", message: expect.stringContaining("stale") }] });
+    expect(request("game", { kind: "add-instance", sourceInstanceId: "missing-instance" }))
+      .toMatchObject({ ok: false, diagnostics: [{ code: "invalid-proposal", message: expect.stringContaining("missing") }] });
+    expect(request("game", { kind: "remove-instance", instanceId: "desktop-crate-root" }))
+      .toMatchObject({ ok: false, diagnostics: [{ code: "invalid-proposal" }] });
+    expect(request("game", {
+      kind: "set-transform-component",
+      instanceId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
+      propertyId: "scale-y",
+      value: 0,
+    })).toMatchObject({ ok: false, diagnostics: [{ code: "invalid-proposal", message: expect.stringContaining("range") }] });
+    expect(request("kids", {
+      kind: "remove-instance",
+      instanceId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
+    })).toMatchObject({ ok: false, diagnostics: [{ code: "invalid-proposal", message: expect.stringContaining("Game and Web") }] });
   });
 });

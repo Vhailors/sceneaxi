@@ -47,14 +47,19 @@ Bridge actions and what each reaches — only through public seams:
 | `authoring` | `createDesktopSession()` from `@sceneaxi/desktop-shell` — the same propose/accept protocol as the CLI and web-shell. A `documentPath` arrives from the renderer over IPC — here, and on `scene` and `open-path` alike — and the authoring core resolves it against `cwd` without a containment check of its own, so the bridge owns that constraint for every action that takes one: an absolute path, one escaping the project directory, or one whose **canonical** path leaves it through a symlink refuses `DESKTOP_BRIDGE_REQUEST_MALFORMED`. Containment is judged after symlink resolution because that is where the bytes land; a missing leaf still resolves, so this is containment and not an existence check |
 | `frame-report` | nothing: it *accepts* the renderer's real presentation frame so main and the smoke can see what was claimed |
 
-### Typed Scene Document property edit
+### Selected composed-instance edit
 
 After a Game or Website project binds, the Project / Files panel exposes the
-starter instance `desktop-crate-beside`. Selecting it shows one numeric property,
-Translation X. The property comes from the validated `composedScene` stored in
-`scene.json`; it is not the legacy sample `entities` object beside that composition.
+validated instances in the stored composition. The executable selector fills nine
+bounded numeric fields: X/Y/Z translation, Euler rotation, and scale. Values come
+from the digest-bound `composedScene` in `scene.json`, never the legacy sample
+`entities` object beside it.
 
-`edit-property` rebuilds the composition and its evidence through `composeScene()`,
+The canonical `edit-scene` operation is one of `set-transform-component`,
+`add-instance`, or `remove-instance`. Add may copy only an artifact already
+validated in the open composition and preserves its exact artifact digest; Remove
+is limited to a non-root leaf while the two-instance scene minimum remains. Each
+operation rebuilds the composition and its evidence through `composeScene()`,
 then hands `/data/composedScene` to the existing `DesktopSession.proposeEdit()`
 path with the content hash returned by status. Nothing writes during staging.
 The inspector shows the shared rendered diff, Save calls the existing atomic
@@ -63,14 +68,21 @@ that session re-read. Invalid numeric input returns the scene validator's path a
 message under `validation-failed`; a stale status hash returns
 `content-hash-conflict`, matching the CLI refusal code.
 
+This is a narrow E1/Minimum-E2 projection over the one active `scene.json`.
+There are no tabs, arbitrary JSON editing, asset imports, evidence-byte rewrites,
+or general composition editor. Add cannot introduce an external or unvalidated
+artifact, and the Kids profile refuses before the authoring host is reached.
+
 The public helpers and bridge behavior are covered by
 `tests/desktop/desktop-scene-property.test.ts` and
 `tests/e2e/desktop-scene-property-golden.test.ts`. The latter also applies the
 same generated E1 edit through the protocol client and `sceneaxi project
 propose|apply`, then compares the three canonical document byte streams. The
 emitted-chrome interaction test in
-`tests/e2e/desktop-product-loop-golden.test.ts` clicks the full select, review,
-save, reopen, and Play path.
+`tests/e2e/desktop-product-loop-golden.test.ts` clicks selection, all review
+decisions, transforms, add/remove, save, undo, reopen, Play, and redraw. The
+spawned Linux smoke repeats the selected transform and add/remove settlement on
+a scratch project and proves the real Three viewport reports the saved redraw.
 
 The UI is the Engine Desktop chrome from `@sceneaxi/desktop-shell`, **unforked**:
 `desktopLinuxIndexHtml()` renders `renderDesktopChrome(desktopVisualView(...))` and

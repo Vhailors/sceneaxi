@@ -11,6 +11,7 @@ import {
   DESKTOP_SCENE_TRANSLATION_X_PROPERTY,
   createDesktopBridge,
   seedDesktopProject,
+  stageDesktopSceneEdit,
   stageDesktopScenePropertyEdit,
 } from "../../desktop/linux/src/index.ts";
 
@@ -49,10 +50,12 @@ describe("desktop typed Scene Document edit golden", () => {
     const bridge = createDesktopBridge({ cwd: dir, nowMs: () => 1_753_920_000_000 });
     const before = readFileSync(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8");
     const opened = editableStatus(bridge);
-    expect(opened.editableScene.entities[0]).toMatchObject({
-      id: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
-      properties: [{ id: "translation-x", value: -4.4 }],
-    });
+    const openedBeside = opened.editableScene.entities.find(
+      (entity) => entity.id === DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
+    );
+    expect(openedBeside?.id).toBe(DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId);
+    expect(openedBeside?.properties.find((property) => property.id === "translation-x"))
+      .toMatchObject({ value: -4.4 });
 
     const proposed = bridge.handle({
       action: "authoring",
@@ -96,19 +99,21 @@ describe("desktop typed Scene Document edit golden", () => {
     if (!reopened.ok) return;
     expect(reopened.data).toMatchObject({
       ok: true,
-      editableScene: {
-        ok: true,
-        entities: [{ properties: [{ value: -3.25 }] }],
-      },
+      editableScene: { ok: true },
     });
+    const reopenedData = reopened.data as {
+      editableScene: { entities: Array<{ id: string; properties: Array<{ id: string; value: number }> }> };
+    };
+    expect(reopenedData.editableScene.entities.find(
+      (entity) => entity.id === DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
+    )?.properties.find((property) => property.id === "translation-x")?.value).toBe(-3.25);
     expect(readFileSync(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8")).toBe(persisted);
 
     const played = bridge.handle({
       action: "open-path",
       payload: { documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
     });
-    expect(played.ok).toBe(true);
-    if (!played.ok) return;
+    if (!played.ok) throw new Error(JSON.stringify(played));
     const beside = (played.data as {
       mountable: { instances: Array<{ instanceId: string; worldTransform: { translation: number[] } }> };
     }).mountable.instances.find(
@@ -229,5 +234,161 @@ describe("desktop typed Scene Document edit golden", () => {
     const cliBytes = readFileSync(join(cliDir, DESKTOP_ACTIVE_DOCUMENT_PATH));
     expect(desktopBytes.equals(protocolBytes)).toBe(true);
     expect(desktopBytes.equals(cliBytes)).toBe(true);
+  });
+
+  it("settles selected transforms and add/remove through review, persistence, undo, and Play", () => {
+    const dir = seed("breadth-loop");
+    const bridge = createDesktopBridge({ cwd: dir, nowMs: () => 1_753_920_000_000 });
+    const documentFile = join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH);
+    const initialBytes = readFileSync(documentFile, "utf8");
+    const selected = DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId;
+
+    const status = () => editableStatus(bridge);
+    const stage = (operation: unknown) => {
+      const response = bridge.handle({
+        action: "authoring",
+        payload: {
+          op: "edit-scene",
+          documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+          expectedContentHash: status().contentHash,
+          profile: "game",
+          operation,
+        },
+      });
+      expect(response).toMatchObject({ ok: true, data: { phase: "reviewing" } });
+      return response;
+    };
+    const accept = () =>
+      expect(bridge.handle({ action: "authoring", payload: { op: "accept" } }))
+        .toMatchObject({ ok: true, data: { phase: "applied" } });
+
+    stage({ kind: "set-transform-component", instanceId: selected, propertyId: "rotation-y", value: 45 });
+    expect(readFileSync(documentFile, "utf8")).toBe(initialBytes);
+    expect(bridge.handle({ action: "authoring", payload: { op: "reject" } }))
+      .toMatchObject({ ok: true, data: { phase: "rejected" } });
+    expect(readFileSync(documentFile, "utf8")).toBe(initialBytes);
+
+    for (const [propertyId, value] of [
+      ["translation-z", 2.5],
+      ["rotation-y", 45],
+      ["scale-z", 1.5],
+    ] as const) {
+      stage({ kind: "set-transform-component", instanceId: selected, propertyId, value });
+      accept();
+    }
+
+    const added = stage({ kind: "add-instance", sourceInstanceId: selected });
+    expect(added).toMatchObject({
+      ok: true,
+      data: { selectedInstanceId: "desktop-crate-beside-copy-1" },
+    });
+    accept();
+    const afterAdd = readFileSync(documentFile, "utf8");
+    const reopened = bridge.handle({
+      action: "authoring",
+      payload: { op: "restart", documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
+    });
+    expect(reopened).toMatchObject({ ok: true, data: { ok: true } });
+    expect(readFileSync(documentFile, "utf8")).toBe(afterAdd);
+
+    stage({ kind: "remove-instance", instanceId: "desktop-crate-beside-copy-1" });
+    accept();
+    expect(status().editableScene.entities.some(
+      (entity) => entity.id === "desktop-crate-beside-copy-1",
+    )).toBe(false);
+    expect(bridge.handle({ action: "authoring", payload: { op: "undo" } }))
+      .toMatchObject({ ok: true, data: { ok: true } });
+    expect(readFileSync(documentFile, "utf8")).toBe(afterAdd);
+
+    const played = bridge.handle({
+      action: "open-path",
+      payload: { documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
+    });
+    if (!played.ok) throw new Error(JSON.stringify(played));
+    const instances = (played.data as {
+      mountable: { instances: Array<{ instanceId: string; worldTransform: {
+        translation: number[]; rotationEulerDegrees: number[]; scale: number[];
+      } }> };
+    }).mountable.instances;
+    expect(instances.find((instance) => instance.instanceId === selected)?.worldTransform)
+      .toMatchObject({ translation: [-4.4, 0, 2.5], rotationEulerDegrees: [0, 45, 0], scale: [1, 1, 1.5] });
+    expect(instances.some((instance) => instance.instanceId === "desktop-crate-beside-copy-1"))
+      .toBe(true);
+  });
+
+  it("keeps canonical transform and add bytes identical across desktop, protocol, and CLI", () => {
+    const cases = [
+      { kind: "set-transform-component", instanceId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId, propertyId: "rotation-z", value: 30 },
+      { kind: "add-instance", sourceInstanceId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId },
+    ] as const;
+    for (const [index, operation] of cases.entries()) {
+      const desktopDir = seed(`breadth-parity-desktop-${String(index)}`);
+      const protocolDir = seed(`breadth-parity-protocol-${String(index)}`);
+      const cliDir = seed(`breadth-parity-cli-${String(index)}`);
+      const initial = readFileSync(join(desktopDir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8");
+      cpSync(join(desktopDir, DESKTOP_ACTIVE_DOCUMENT_PATH), join(protocolDir, DESKTOP_ACTIVE_DOCUMENT_PATH));
+      cpSync(join(desktopDir, DESKTOP_ACTIVE_DOCUMENT_PATH), join(cliDir, DESKTOP_ACTIVE_DOCUMENT_PATH));
+      const parsed = parseDocumentText(initial);
+      if (!parsed.ok) throw new Error(parsed.message);
+      const bridge = createDesktopBridge({ cwd: desktopDir });
+      const opened = editableStatus(bridge);
+      expect(bridge.handle({
+        action: "authoring",
+        payload: {
+          op: "edit-scene",
+          documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+          expectedContentHash: opened.contentHash,
+          profile: "game",
+          operation,
+        },
+      })).toMatchObject({ ok: true, data: { phase: "reviewing" } });
+      expect(bridge.handle({ action: "authoring", payload: { op: "accept" } }))
+        .toMatchObject({ ok: true, data: { phase: "applied" } });
+
+      const staged = stageDesktopSceneEdit({
+        documentData: parsed.document.data,
+        contentHash: opened.contentHash,
+        profile: "game",
+        operation,
+      });
+      if (!staged.ok) throw new Error(staged.diagnostics[0]?.message);
+      expect(shellProposeAndApply({ ...staged.edit, cwd: protocolDir }).ok).toBe(true);
+      expect(runCli([
+        "project", "propose", "--cwd", cliDir,
+        "--document", staged.edit.documentPath,
+        "--pointer", staged.edit.jsonPointer,
+        "--value", JSON.stringify(staged.edit.newValue),
+        "--out", "edit.json",
+      ]).exitCode).toBe(ExitCode.OK);
+      expect(runCli(["project", "apply", "--cwd", cliDir, "--proposal", "edit.json"]).exitCode)
+        .toBe(ExitCode.OK);
+
+      const desktopBytes = readFileSync(join(desktopDir, DESKTOP_ACTIVE_DOCUMENT_PATH));
+      expect(desktopBytes.equals(readFileSync(join(protocolDir, DESKTOP_ACTIVE_DOCUMENT_PATH))))
+        .toBe(true);
+      expect(desktopBytes.equals(readFileSync(join(cliDir, DESKTOP_ACTIVE_DOCUMENT_PATH))))
+        .toBe(true);
+    }
+  });
+
+  it("refuses malformed, stale, missing-asset, Kids, and escaping edit-scene requests", () => {
+    const dir = seed("breadth-refusals");
+    const bridge = createDesktopBridge({ cwd: dir });
+    const contentHash = editableStatus(bridge).contentHash;
+    const edit = (profile: unknown, operation: unknown, documentPath = DESKTOP_ACTIVE_DOCUMENT_PATH) =>
+      bridge.handle({
+        action: "authoring",
+        payload: { op: "edit-scene", documentPath, expectedContentHash: contentHash, profile, operation },
+      });
+    expect(edit("game", { kind: "set-transform-component", instanceId: "bad", propertyId: "scale-x", value: 0 }))
+      .toMatchObject({ ok: true, data: { ok: false, diagnostics: [{ code: "invalid-proposal" }] } });
+    expect(edit("game", { kind: "remove-instance", instanceId: "missing-instance" }))
+      .toMatchObject({ ok: true, data: { ok: false, diagnostics: [{ message: expect.stringContaining("stale") }] } });
+    expect(edit("game", { kind: "add-instance", sourceInstanceId: "missing-instance" }))
+      .toMatchObject({ ok: true, data: { ok: false, diagnostics: [{ message: expect.stringContaining("missing") }] } });
+    expect(edit("kids", { kind: "remove-instance", instanceId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId }))
+      .toMatchObject({ ok: true, data: { ok: false, diagnostics: [{ message: expect.stringContaining("Game and Web") }] } });
+    expect(edit("game", { kind: "remove-instance", instanceId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId }, "../scene.json"))
+      .toMatchObject({ ok: false, reason: "DESKTOP_BRIDGE_REQUEST_MALFORMED" });
   });
 });

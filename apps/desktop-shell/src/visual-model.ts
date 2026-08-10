@@ -39,6 +39,7 @@ import {
   EDITOR_SHELL_MODE_IDS,
   EDITOR_SHELL_VIEWPORT_SOURCES,
   EDITOR_SHELL_WINDOW_TIERS,
+  DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS,
   editorShellDockTabsFor,
   editorShellModeRow,
   OPEN_PATH_REFUSE_CODES,
@@ -1088,9 +1089,14 @@ export type DesktopVisualView = Readonly<{
     open: DesktopControl;
     save: DesktopControl;
     play: DesktopControl;
+    selectSceneEntity: DesktopControl;
     selectStarterEntity: DesktopControl;
+    transformProperties: readonly DesktopControl[];
     translationX: DesktopControl;
+    stageSceneEdit: DesktopControl;
     stageTranslationX: DesktopControl;
+    addSceneInstance: DesktopControl;
+    removeSceneInstance: DesktopControl;
     stageHtml: DesktopControl;
     injectAsset: DesktopControl;
   }>;
@@ -1261,6 +1267,21 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
   });
 
   const productSurface = desktopProductSurface(state.profile);
+  const selectSceneEntity = control(
+    "scene-entity-desktop-crate-beside",
+    "Selected composed instance",
+    "view",
+  );
+  const transformProperties = Object.freeze(
+    DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.map((definition) =>
+      control(`scene-property-${definition.id}`, definition.label, "live"),
+    ),
+  );
+  const stageSceneEdit = control(
+    "scene-property-stage",
+    "Stage selected transform",
+    "live",
+  );
   const product = Object.freeze({
     surface: productSurface,
     surfaces: Object.freeze(DESKTOP_PROFILE_IDS.map(desktopProductSurface)),
@@ -1272,21 +1293,14 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
     open: control("project-open", "Open scene.json", "live"),
     save: control("project-save", "Save scene.json", "live"),
     play: control("scene-play", "Play composed scene", "live"),
-    selectStarterEntity: control(
-      "scene-entity-desktop-crate-beside",
-      "Select placed starter entity",
-      "view",
-    ),
-    translationX: control(
-      "scene-property-translation-x",
-      "Translation X",
-      "live",
-    ),
-    stageTranslationX: control(
-      "scene-property-stage",
-      "Stage Translation X",
-      "live",
-    ),
+    selectSceneEntity,
+    selectStarterEntity: selectSceneEntity,
+    transformProperties,
+    translationX: transformProperties[0] as DesktopControl,
+    stageSceneEdit,
+    stageTranslationX: stageSceneEdit,
+    addSceneInstance: control("scene-instance-add", "Add local instance", "live"),
+    removeSceneInstance: control("scene-instance-remove", "Remove selected instance", "live"),
     stageHtml:
       state.profile === "web"
         ? control("web-stage-html", "Stage starter HTML", "live")

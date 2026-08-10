@@ -465,9 +465,9 @@ describe("desktop first-release product loop", () => {
       query(window, "[data-project-status]")?.textContent ?? "";
     expect(shell?.dataset.tier).toBe("narrow");
     expect(shell?.dataset.profile).toBe("game");
-    expect(window.document.querySelectorAll("button")).toHaveLength(65);
+    expect(window.document.querySelectorAll("button")).toHaveLength(66);
     expect(window.document.querySelectorAll('button:not([tabindex="-1"])')).toHaveLength(
-      60,
+      61,
     );
 
     const refusalHelp = query(window, "#status-refusal-help");
@@ -965,8 +965,10 @@ describe("desktop first-release product loop", () => {
     expect(query(window, "[data-scene-entities]")?.hidden).toBe(true);
     expect(query(window, "[data-scene-property-editor]")?.hidden).toBe(true);
     expect(
-      query(window, "#scene-entity-desktop-crate-beside")?.getAttribute("aria-pressed"),
-    ).toBe("false");
+      (query(window, "#scene-entity-desktop-crate-beside") as
+        | (HappyHTMLElement & { value: string })
+        | null)?.value,
+    ).toBe("");
 
     // Nothing to stage against a document that is gone, and it says so.
     await click(window, "#scene-property-stage");
@@ -1161,8 +1163,10 @@ describe("desktop first-release product loop", () => {
     expect(query(window, '[data-mode-panel="build"]')?.hidden).toBe(false);
     expect(query(window, "[data-scene-property-editor]")?.hidden).toBe(false);
     expect(
-      query(window, "#scene-entity-desktop-crate-beside")?.getAttribute("aria-pressed"),
-    ).toBe("true");
+      (query(window, "#scene-entity-desktop-crate-beside") as
+        | (HappyHTMLElement & { value: string })
+        | null)?.value,
+    ).toBe("desktop-crate-beside");
     expect(
       (query(window, "#scene-property-translation-x") as
         | (HappyHTMLElement & { value: string })
@@ -1175,6 +1179,80 @@ describe("desktop first-release product loop", () => {
     await click(window, "#scene-entity-desktop-crate-beside");
     expect(shell?.dataset.mode).toBe("build");
     expect(query(window, "#dock-console")?.getAttribute("aria-selected")).toBe("true");
+  });
+
+  it("selects any composed instance and redraws accepted transforms and add/remove settlement", async () => {
+    const dir = projectDir();
+    const { window, start } = mountChrome(dir);
+    let played: Array<{
+      instanceId: string;
+      worldTransform: { rotationEulerDegrees: number[]; scale: number[] };
+    }> = [];
+    window.document.addEventListener(DESKTOP_VIEWPORT_PLAY_EVENT, (event) => {
+      const detail = (event as HappyCustomEvent).detail as {
+        accepted: boolean;
+        frame?: number;
+        exercise: { mountable: { instances: typeof played } };
+      };
+      played = detail.exercise.mountable.instances;
+      detail.accepted = true;
+      detail.frame = 44;
+    });
+    start();
+    await click(window, "#project-open");
+
+    const selection = query(window, "#scene-entity-desktop-crate-beside") as
+      | (HappyHTMLElement & { value: string })
+      | null;
+    if (selection === null) throw new Error("composed-instance selector missing");
+    selection.value = "desktop-crate-stacked";
+    selection.dispatchEvent(new window.Event("change", { bubbles: true }));
+    expect(query(window, "[data-scene-property-entity-id]")?.textContent)
+      .toBe("desktop-crate-stacked");
+
+    const settleTransform = async (selector: string, value: string) => {
+      const input = query(window, selector) as (HappyHTMLElement & { value: string }) | null;
+      if (input === null) throw new Error(`missing transform input ${selector}`);
+      input.value = value;
+      await click(window, "#scene-property-stage");
+      expect(query(window, "[data-change-proposal]")?.hidden).toBe(false);
+      await click(window, "#change-review-accept");
+      expect(query(window, "[data-change-proposal]")?.hidden).toBe(true);
+    };
+    await settleTransform("#scene-property-rotation-y", "45");
+    await settleTransform("#scene-property-scale-x", "1.25");
+
+    await click(window, "#scene-instance-add");
+    expect(query(window, "[data-change-proposal]")?.hidden).toBe(false);
+    selection.value = "desktop-crate-stacked-copy-1";
+    selection.dispatchEvent(new window.Event("change", { bubbles: true }));
+    expect(query(window, "[data-scene-property-entity-id]")?.textContent)
+      .toBe("desktop-crate-stacked-copy-1");
+    await click(window, "#change-review-accept");
+    const afterAdd = readFileSync(join(dir, "scene.json"), "utf8");
+
+    await click(window, "#scene-instance-remove");
+    await click(window, "#change-review-reject");
+    expect(readFileSync(join(dir, "scene.json"), "utf8")).toBe(afterAdd);
+    selection.value = "desktop-crate-stacked-copy-1";
+    selection.dispatchEvent(new window.Event("change", { bubbles: true }));
+    expect(query(window, "[data-scene-property-entity-id]")?.textContent)
+      .toBe("desktop-crate-stacked-copy-1");
+    await click(window, "#scene-instance-remove");
+    expect(query(window, "[data-change-proposal]")?.hidden).toBe(false);
+    await click(window, "#change-review-accept");
+    expect(query(window, "[data-project-status]")?.textContent).toContain("saved");
+    expect(readFileSync(join(dir, "scene.json"), "utf8")).not.toBe(afterAdd);
+    await click(window, '[data-command="edit-undo"]');
+    expect(readFileSync(join(dir, "scene.json"), "utf8")).toBe(afterAdd);
+
+    await click(window, "#scene-play");
+    expect(played.find((instance) => instance.instanceId === "desktop-crate-stacked")?.worldTransform)
+      .toMatchObject({ rotationEulerDegrees: [0, 45, 0], scale: [1.25, 1, 1] });
+    expect(played.some((instance) => instance.instanceId === "desktop-crate-stacked-copy-1"))
+      .toBe(true);
+    expect(query(window, "[data-project-status]")?.textContent)
+      .toContain("viewport frame 44");
   });
 
   it("names the diagnostic the conflict dialog is actually reporting", async () => {

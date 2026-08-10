@@ -44,7 +44,8 @@ stays a real software rasterizer rather than a stub. `--smoke` prints one JSON
 line proving: bridge handshake, a real kernel scene session bootstrapped through
 `@sceneaxi/engine-orchestrator` with digests that move across ticks, an
 authoring selection → proposal review → atomic save → fresh-session reopen → Play
-round trip for the starter entity's Translation X, the saved composition's
+round trip for selected X/Y/Z translation, rotation, and scale plus the bounded
+local-artifact add/remove operation, Reject and Undo, the saved composition's
 viewport redraw, and the renderer's real presentation frame report (`backend
 three`, `surface webgl-canvas` where a drawing buffer exists).
 

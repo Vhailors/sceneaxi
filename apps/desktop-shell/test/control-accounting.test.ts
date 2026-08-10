@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS } from "@sceneaxi/schemas";
 import {
   ACCENT,
   DESKTOP_DOCK_TAB_IDS,
@@ -176,8 +177,10 @@ describe("engine desktop chrome — control accounting (model → document)", ()
           expect(control.refusal, `${label} ${control.id}`).toBeNull();
           continue;
         }
-        expect(html, `${label} ${control.id}`).toContain(
-          `id="${control.id}" data-kind="inert" aria-disabled="true" data-refusal="${control.refusal}"`,
+        expect(html, `${label} ${control.id}`).toMatch(
+          new RegExp(
+            `id="${control.id}"[^>]*data-kind="inert"[^>]*aria-disabled="true"[^>]*data-refusal="${control.refusal}"`,
+          ),
         );
         expect(html, `${label} ${control.id}`).toContain(
           `id="refusal-${control.refusal}"`,
@@ -220,15 +223,24 @@ describe("engine desktop chrome — control accounting (document → model)", ()
       const html = render(state);
       expect(html, label).not.toMatch(/<(a|details|summary)\b/i);
       const inputs = html.match(/<input\b[^>]*>/g) ?? [];
-      expect(inputs, label).toHaveLength(1);
-      expect(inputs[0], label).toMatch(
-        /id="scene-property-translation-x" data-kind="(live|inert)"/,
+      expect(inputs, label).toHaveLength(DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.length);
+      expect(inputs.map((tag) => /\sid="([^"]+)"/.exec(tag)?.[1]), label).toEqual(
+        DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.map(
+          (definition) => `scene-property-${definition.id}`,
+        ),
       );
+      for (const tag of inputs) {
+        expect(tag, label).toMatch(/data-kind="(live|inert)"/);
+      }
       const selects = html.match(/<select\b[^>]*>/g) ?? [];
-      expect(selects, label).toHaveLength(1);
-      expect(selects[0], label).toMatch(
-        /id="project-recent-select" data-kind="(view|inert)"/,
-      );
+      expect(selects, label).toHaveLength(2);
+      expect(selects.map((tag) => /\sid="([^"]+)"/.exec(tag)?.[1]), label).toEqual([
+        "project-recent-select",
+        "scene-entity-desktop-crate-beside",
+      ]);
+      for (const tag of selects) {
+        expect(tag, label).toMatch(/data-kind="(view|inert)"/);
+      }
       const textareas = html.match(/<textarea\b[^>]*>/g) ?? [];
       expect(textareas, label).toHaveLength(1);
       expect(textareas[0], label).toMatch(
