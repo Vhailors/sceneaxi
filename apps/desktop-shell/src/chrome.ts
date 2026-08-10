@@ -1662,15 +1662,6 @@ if (shell) {
     }
     if (rarityText !== null) syncRarityEvidence(snapshot.rarityEvidence);
     if (active) rarityProposalStaged = rarityText !== null;
-    // Only the rarity proposal's own discard retires its provenance. Rejecting
-    // an unrelated property edit says nothing about rarity the project already
-    // accepted, and clearing the dock there would deny evidence that still
-    // exists in the project bytes.
-    if (snapshot?.phase === 'rejected') {
-      if (rarityProposalStaged) clearRarityEvidence();
-      rarityProposalStaged = false;
-    }
-    if (snapshot?.phase === 'applied') rarityProposalStaged = false;
     const settledRarityText = snapshot &&
       (snapshot.phase === 'applied' || snapshot.phase === 'rejected')
       ? rarityEvidenceText(snapshot.rarityEvidence)
@@ -1683,6 +1674,15 @@ if (shell) {
         },
       }));
     }
+    // Only the rarity proposal's own discard retires its provenance. Rejecting
+    // an unrelated property edit says nothing about rarity the project already
+    // accepted, and clearing the dock there would deny evidence that still
+    // exists in the project bytes.
+    if (snapshot?.phase === 'rejected') {
+      if (rarityProposalStaged) clearRarityEvidence();
+      rarityProposalStaged = false;
+    }
+    if (snapshot?.phase === 'applied') rarityProposalStaged = false;
     // A validated snapshot that reports no diagnostic is the host saying the
     // conflict is over, which is the only thing that resolves it.
     if (snapshot !== null &&

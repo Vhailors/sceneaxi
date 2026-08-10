@@ -139,10 +139,16 @@ const refuse = (
   Object.freeze({ ok: false as const, reason, message, ...(path === undefined ? {} : { path }) });
 
 const providerCandidateIdentifierRefusal = (
-  request: RarityRollRequest,
+  request: unknown,
 ): RarityAuthoringRefusal | null => {
-  const unsafeCandidate = request.candidates.findIndex(
-    (candidate) => !isRarityProviderSafeIdentifier(candidate.candidateId),
+  const candidates = isJsonObject(request) && Array.isArray(request["candidates"])
+    ? request["candidates"]
+    : [];
+  const unsafeCandidate = candidates.findIndex(
+    (candidate) =>
+      isJsonObject(candidate) &&
+      typeof candidate["candidateId"] === "string" &&
+      !isRarityProviderSafeIdentifier(candidate["candidateId"]),
   );
   return unsafeCandidate === -1
     ? null
@@ -267,12 +273,12 @@ export async function requestRarityProviderContribution(input: Readonly<{
       forbidden === undefined ? undefined : `rarity.provider.${forbidden}`,
     );
   }
+  const candidateRefusal = providerCandidateIdentifierRefusal(call.arguments.request);
+  if (candidateRefusal !== null) return candidateRefusal;
   const policy = validateRarityPolicy(call.arguments.policy);
   if (!policy.ok) return refuse(policy.code, policy.message, policy.path);
   const request = validateRarityRollRequest(call.arguments.request, policy.value);
   if (!request.ok) return refuse(request.code, request.message, request.path);
-  const candidateRefusal = providerCandidateIdentifierRefusal(request.value);
-  if (candidateRefusal !== null) return candidateRefusal;
   return Object.freeze({
     ok: true as const,
     value: Object.freeze({
@@ -340,12 +346,12 @@ export function stageRarityProviderProposal(input: Readonly<{
       "rarity.eventId",
     );
   }
+  const candidateRefusal = providerCandidateIdentifierRefusal(input.contribution.request);
+  if (candidateRefusal !== null) return candidateRefusal;
   const policy = validateRarityPolicy(input.contribution.policy);
   if (!policy.ok) return refuse(policy.code, policy.message, policy.path);
   const request = validateRarityRollRequest(input.contribution.request, policy.value);
   if (!request.ok) return refuse(request.code, request.message, request.path);
-  const candidateRefusal = providerCandidateIdentifierRefusal(request.value);
-  if (candidateRefusal !== null) return candidateRefusal;
 
   let existing: RarityNamespace = Object.freeze({
     schemaVersion: RARITY_SCHEMA_VERSION,

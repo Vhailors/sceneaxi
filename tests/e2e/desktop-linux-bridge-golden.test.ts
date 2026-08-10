@@ -1546,7 +1546,7 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
   // directly. The proposal under review is installed through the rarity event in
   // both cases; only its `rarityEvidence` member differs, which is exactly the
   // difference the clear is supposed to key on.
-  const rejectingPort = () => {
+  const rejectingPort = (rarityEvidence?: DesktopRarityEvidence) => {
     const rejected = {
       phase: "rejected",
       proposal: null,
@@ -1556,6 +1556,7 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
       journalRecoveryPending: false,
       transactionId: null,
       diagnostics: [],
+      ...(rarityEvidence === undefined ? {} : { rarityEvidence }),
     };
     return {
       request: (request: { readonly payload?: { readonly op?: string } }) =>
@@ -2763,8 +2764,8 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
   });
 
   it("retires rarity evidence when the rarity proposal itself is rejected", async () => {
-    const { reject, shell, evidence, evidenceEmpty, status, documentListeners } =
-      mountRarityChrome(rejectingPort());
+    const { reject, shell, evidence, evidenceEmpty, status, documentListeners, dispatchedEvents } =
+      mountRarityChrome(rejectingPort(RARITY_EVIDENCE_FIXTURE));
 
     documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
       detail: {
@@ -2779,6 +2780,14 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     await rejectSettled(status);
     expect(evidence.hidden).toBe(true);
     expect(evidenceEmpty.hidden).toBe(false);
+    expect(
+      dispatchedEvents
+        .filter((event) => event.type === DESKTOP_RARITY_PROPOSAL_EVENT)
+        .map((event) => {
+          const detail = event.detail as Record<string, unknown>;
+          return detail["settled"] ?? (detail["invalidated"] === true ? "invalidated" : null);
+        }),
+    ).toEqual(["rejected", "invalidated"]);
   });
 });
 
@@ -3107,7 +3116,7 @@ describe("desktop renderer behavior", () => {
     });
   });
 
-  it("resumes an unconfirmed job before Retry starts fresh work", async () => {
+  it("adopts a retained assistant job when the renderer initializes", async () => {
     const window = new HappyWindow();
     const backend = createThreeSculptPresentationBackend();
     const mounts = createSculptMountApi(backend);
@@ -3129,6 +3138,75 @@ describe("desktop renderer behavior", () => {
       vi.stubGlobal("document", window.document);
 
       let starts = 0;
+      const retainedJob: DesktopBridgeResponse = {
+        ok: true,
+        action: "assistant",
+        data: {
+          jobId: "desktop-assistant-retained",
+          route: "local",
+          status: "running",
+          latestProgress: null,
+          progressCount: 0,
+        },
+      };
+      const port = {
+        request: (request: unknown): Promise<DesktopBridgeResponse> => {
+          const operation = (request as { payload?: { op?: string } }).payload?.op;
+          if (operation === "status") return Promise.resolve(retainedJob);
+          if (operation === "start") starts += 1;
+          return Promise.reject(new Error("unexpected assistant request"));
+        },
+      };
+      const polledJobIds: string[] = [];
+      const pollJob: typeof pollAssistantJob = (input) => {
+        polledJobIds.push(input.jobId);
+        return Promise.resolve({
+          ok: false,
+          reason: "DESKTOP_TEST_RECOVERED",
+          message: "The retained renderer job was recovered.",
+        });
+      };
+      const stage = window.document.querySelector(".viewport");
+      if (stage === null) throw new Error("missing viewport fixture");
+      expect(installAssistantProductFlow(stage, port, mounts, backend, pollJob)).toBe(true);
+      const status = window.document.querySelector("[data-assistant-status]");
+      if (status === null) throw new Error("missing assistant status");
+
+      await vi.waitFor(() => {
+        expect(status.textContent).toContain("DESKTOP_TEST_RECOVERED");
+      });
+      expect(polledJobIds).toEqual(["desktop-assistant-retained"]);
+      expect(starts).toBe(0);
+    } finally {
+      mounts.dispose();
+      window.close();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("recovers a busy retained job before Retry starts fresh work", async () => {
+    const window = new HappyWindow();
+    const backend = createThreeSculptPresentationBackend();
+    const mounts = createSculptMountApi(backend);
+    try {
+      window.document.body.innerHTML = `
+        <main class="shell" data-assistant-mode="build" data-assistant-route="local" data-profile="game">
+          <textarea id="assistant-prompt">Build a blue crate</textarea>
+          <button id="assistant-send" data-action="assistant-send"></button>
+          <button id="assistant-retry" data-action="assistant-send" hidden></button>
+          <p data-assistant-status></p>
+          <pre data-assistant-result hidden></pre>
+          <section class="viewport">
+            <div data-assistant-manipulators>
+              <button data-action="assistant-manipulator" data-value="move-x"></button>
+            </div>
+          </section>
+        </main>
+      `;
+      vi.stubGlobal("document", window.document);
+
+      let starts = 0;
+      let statusReads = 0;
       const runningJob = (jobId: string): DesktopBridgeResponse => ({
         ok: true,
         action: "assistant",
@@ -3143,11 +3221,26 @@ describe("desktop renderer behavior", () => {
       const port = {
         request: (request: unknown): Promise<DesktopBridgeResponse> => {
           const payload = (request as { payload?: { op?: string } }).payload;
+          if (payload?.op === "status") {
+            statusReads += 1;
+            return Promise.resolve(
+              statusReads === 1 ? { ok: true, action: "assistant", data: null } :
+                runningJob("desktop-assistant-retained"),
+            );
+          }
           if (payload?.op !== "start") {
             return Promise.reject(new Error("unexpected direct assistant request"));
           }
           starts += 1;
-          return Promise.resolve(runningJob(`desktop-assistant-${String(starts)}`));
+          return Promise.resolve(
+            starts === 1
+              ? {
+                  ok: false,
+                  reason: DESKTOP_BRIDGE_REFUSALS.assistantBusy,
+                  message: "A retained assistant job is still active.",
+                }
+              : runningJob("desktop-assistant-2"),
+          );
         },
       };
       const polledJobIds: string[] = [];
@@ -3185,12 +3278,16 @@ describe("desktop renderer behavior", () => {
         throw new Error("missing assistant fixture controls");
       }
 
+      await vi.waitFor(() => expect(statusReads).toBe(1));
+      await Promise.resolve();
+      await Promise.resolve();
       send.dispatchEvent(new window.Event("click"));
       await vi.waitFor(() => {
         expect(status.textContent).toContain("abandonment could not be confirmed");
       });
       expect(starts).toBe(1);
-      expect(polledJobIds).toEqual(["desktop-assistant-1"]);
+      expect(statusReads).toBe(2);
+      expect(polledJobIds).toEqual(["desktop-assistant-retained"]);
 
       retry.dispatchEvent(new window.Event("click"));
       await vi.waitFor(() => {
@@ -3198,8 +3295,8 @@ describe("desktop renderer behavior", () => {
       });
       expect(starts).toBe(1);
       expect(polledJobIds).toEqual([
-        "desktop-assistant-1",
-        "desktop-assistant-1",
+        "desktop-assistant-retained",
+        "desktop-assistant-retained",
       ]);
 
       retry.dispatchEvent(new window.Event("click"));
@@ -3208,8 +3305,8 @@ describe("desktop renderer behavior", () => {
       });
       expect(starts).toBe(2);
       expect(polledJobIds).toEqual([
-        "desktop-assistant-1",
-        "desktop-assistant-1",
+        "desktop-assistant-retained",
+        "desktop-assistant-retained",
         "desktop-assistant-2",
       ]);
     } finally {

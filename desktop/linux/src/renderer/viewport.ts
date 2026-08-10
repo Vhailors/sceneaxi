@@ -418,6 +418,35 @@ export function installAssistantProductFlow(
     running = false;
   };
 
+  const recoverCurrentJob = async (): Promise<boolean> => {
+    let response: Awaited<ReturnType<BridgeGlobal["request"]>>;
+    try {
+      response = await port.request({ action: "assistant", payload: { op: "status" } });
+    } catch {
+      return false;
+    }
+    if (!response.ok) return false;
+    const current = response.data;
+    if (
+      current === null ||
+      typeof current !== "object" ||
+      !("jobId" in current) ||
+      typeof current.jobId !== "string" ||
+      current.jobId.length === 0
+    ) {
+      return false;
+    }
+    assistantRunVersion += 1;
+    recoveryJobId = current.jobId;
+    activeRarityProposalDigest = null;
+    displayedRarityResultDigest = null;
+    running = true;
+    retry.setAttribute("hidden", "");
+    status.textContent = "Recovering retained assistant action…";
+    await poll(current.jobId);
+    return true;
+  };
+
   const start = async (): Promise<void> => {
     if (running) return;
     if (recoveryJobId !== null) {
@@ -447,6 +476,12 @@ export function installAssistantProductFlow(
       payload: decision.payload,
     });
     if (!response.ok) {
+      if (
+        response.reason === DESKTOP_BRIDGE_REFUSALS.assistantBusy &&
+        await recoverCurrentJob()
+      ) {
+        return;
+      }
       refused(response.reason, response.message);
       return;
     }
@@ -477,6 +512,14 @@ export function installAssistantProductFlow(
       );
     });
   });
+  running = true;
+  void recoverCurrentJob()
+    .then((recovered) => {
+      if (!recovered) running = false;
+    })
+    .catch((error: unknown) =>
+      refused(DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed, refusalText(error)),
+    );
   return true;
 }
 

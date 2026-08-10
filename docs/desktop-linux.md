@@ -133,7 +133,8 @@ is scoped to `detail`, so an injected runner that authors its own `message` owns
 what that field says. A timeout abandons the exact old job by its start identifier
 when that can be confirmed. If it cannot, Retry resumes recovery for the retained
 exact job before any fresh start, so its late result cannot overwrite newer work.
-A runner that dispatches nothing takes its
+Renderer initialization and a busy start response also query the bridge's current
+job and resume polling that exact identifier before any fresh start. A runner that dispatches nothing takes its
 `running` claim back rather than leaving the seam permanently
 `DESKTOP_ASSISTANT_BUSY`. Streaming progress contains only deltas actually
 observed from a BYOK stream; the bridge retains the **newest** entry plus a count,
@@ -391,6 +392,13 @@ The legacy starter migration remains part of the explicit New Project seed helpe
 a valid document lacking composed-scene data can be migrated by that helper while
 retaining its id, title, entities, material, and other data; existing composed data
 is never rewritten. Normal Open Project never invokes the seed helper.
+
+Rarity v1 authoring is **new-project-only** in this release. The New Project
+starter owns the stable `productId` and project seed required by Agent rarity;
+Open Project keeps a pre-existing composed document byte-identical and Agent
+rarity refuses `RARITY_AUTHORING_PROJECT_IDENTITY_INVALID` when that identity is
+absent. There is no silent identity rewrite or general existing-project rarity
+migration in v1.
 
 The profile switch presents **Game**, **Website (Web)**, and **Kids**:
 

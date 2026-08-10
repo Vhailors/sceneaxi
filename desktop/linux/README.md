@@ -63,12 +63,20 @@ provider's own failure detail is redacted — whether the runner threw it or
 returned it — because it may echo credential material. A timed-out job is
 abandoned by its exact start identifier when that can be confirmed. If it cannot,
 Retry resumes recovery for the retained exact job before any fresh start, so a
-late provider result cannot replace newer work. Assistant **Agent** uses the
+late provider result cannot replace newer work. Renderer startup and a busy start
+response likewise adopt and poll the bridge's retained exact job before offering
+fresh work. Assistant **Agent** uses the
 privileged no-network rarity fixture through the same Model Provider Port, then
 stages the canonical result in the existing Change Review; it does not mount a
 second artifact or accept provider entropy. Ask refuses clearly rather than
 pretending it produces build output. The shell visual model owns the manipulator controls
 and tokens; the renderer only binds their Mount API effects.
+
+Rarity v1 authoring is available only to projects created through **New Project**
+in this release, because that starter owns the required stable product identity
+and seed. **Open Project** preserves pre-existing composed projects byte-for-byte;
+Agent rarity refuses the named project-identity requirement there instead of
+silently adding identity or running a migration.
 
 ## Shape
 

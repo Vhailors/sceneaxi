@@ -397,7 +397,7 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
           request: {
             ...DESKTOP_RARITY_FIXTURE_INPUT.request,
             candidates: DESKTOP_RARITY_FIXTURE_INPUT.request.candidates.map((candidate, index) =>
-              index === 0 ? { ...candidate, candidateId: credentialCandidate } : candidate,
+              index < 2 ? { ...candidate, candidateId: credentialCandidate } : candidate,
             ),
           },
         } as unknown as import("@sceneaxi/schemas").JsonObject,
@@ -431,7 +431,7 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
           request: {
             ...fixture.value.request,
             candidates: fixture.value.request.candidates.map((candidate, index) =>
-              index === 0 ? { ...candidate, candidateId: credentialCandidate } : candidate,
+              index < 2 ? { ...candidate, candidateId: credentialCandidate } : candidate,
             ),
           },
         },
