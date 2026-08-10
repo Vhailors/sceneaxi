@@ -34,7 +34,10 @@ import {
 } from "@sceneaxi/authoring-core";
 import {
   EDITOR_SHELL_ASSISTANT_MODE_IDS,
+  RARITY_NAMESPACE_KIND,
+  RARITY_POLICY_KIND,
   RARITY_REFUSE_CODES,
+  RARITY_SCHEMA_VERSION,
   SCENE_COMPOSITION_INTAKE_KIND,
   SCENE_COMPOSITION_SCHEMA_VERSION,
   type SceneCompositionIntake,
@@ -55,6 +58,8 @@ import {
   DESKTOP_BRIDGE_ACTIONS,
   DESKTOP_ACTIVE_DOCUMENT_PATH,
   DESKTOP_BRIDGE_REFUSALS,
+  DESKTOP_RARITY_PRODUCT_ID,
+  DESKTOP_RARITY_PROJECT_SEED,
   DESKTOP_RARITY_PROPOSAL_EVENT,
   DESKTOP_VIEWPORT_PLAY_EVENT,
   createDesktopAssistantViewportController,
@@ -932,6 +937,46 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
       exercise.bootstrap["sessionId"],
     );
     expect((again.data as typeof exercise).tickDigests).toEqual(exercise.tickDigests);
+  });
+
+  it("opens the composed scene when rarity has no accepted roll", () => {
+    const dir = mkdtempSync(join(tmpdir(), "sceneaxi-desktop-preroll-"));
+    tmpDirs.push(dir);
+    const document = createDocument({
+      id: "scene",
+      data: {
+        ...activeDocumentData("pre-roll-scene"),
+        productId: DESKTOP_RARITY_PRODUCT_ID,
+        seed: DESKTOP_RARITY_PROJECT_SEED,
+        rarity: {
+          schemaVersion: RARITY_SCHEMA_VERSION,
+          kind: RARITY_NAMESPACE_KIND,
+          policy: {
+            schemaVersion: RARITY_SCHEMA_VERSION,
+            kind: RARITY_POLICY_KIND,
+            tierWeights: { common: 1, uncommon: 1, rare: 1, epic: 1, legendary: 1 },
+          },
+          rolls: [],
+        },
+      },
+    });
+    const written = writeDocumentFile(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), document, {
+      cwd: dir,
+    });
+    if (!written.ok) throw new Error("pre-roll desktop document refused");
+
+    const response = bridgeAt(dir).handle({
+      action: "open-path",
+      payload: { documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
+    });
+    expect(response.ok).toBe(true);
+    if (!response.ok) return;
+    expect(response.data).toMatchObject({
+      bootstrap: { kind: "scene", subjectId: "pre-roll-scene" },
+      closed: true,
+    });
+    expect(response.data).not.toHaveProperty("rarity");
+    expect(response.data).not.toHaveProperty("raritySession");
   });
 
   it("runs the shared authoring session: propose, accept, undo — never a fork", () => {

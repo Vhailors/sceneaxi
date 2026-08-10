@@ -723,34 +723,6 @@ class SessionImpl implements KernelSession {
           "An existing rarity event id cannot be reused with changed request bytes; reroll with a new event id.",
         );
       }
-      const firstRoll = this.rarity.rolls[0];
-      const firstPending = this.pending.find(
-        (item): item is PendingDispatch & { readonly command: RarityRollCommand } =>
-          item.command.type === "rarity-roll",
-      )?.command;
-      const boundEvidence = firstRoll !== undefined
-        ? firstRoll.providerEvidence
-        : firstPending?.providerEvidence;
-      if (firstRoll !== undefined || firstPending !== undefined) {
-        if (boundEvidence === undefined) {
-          throw rarityError(
-            RARITY_REFUSE_CODES.provenanceMismatch,
-            `rarity.rolls.${command.eventId}.providerEvidence`,
-            "An evidence-less rarity history can replay its existing event but cannot be extended.",
-          );
-        }
-        if (
-          command.providerEvidence === undefined ||
-          canonicalRarityJson(boundEvidence as unknown as JsonValue) !==
-            canonicalRarityJson(command.providerEvidence as unknown as JsonValue)
-        ) {
-          throw rarityError(
-            RARITY_REFUSE_CODES.provenanceMismatch,
-            `rarity.rolls.${command.eventId}.providerEvidence`,
-            "A new rarity event must carry the exact provider evidence bound to prior rolls.",
-          );
-        }
-      }
       return false;
     }
     const actorIds = new Set(this.entities.keys());

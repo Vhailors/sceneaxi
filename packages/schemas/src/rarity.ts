@@ -852,27 +852,6 @@ export function validateRarityNamespace(
     events.add(roll.value.eventId);
     normalized.push(roll.value);
   }
-  const firstEvidence = normalized[0]?.providerEvidence;
-  if (firstEvidence !== undefined) {
-    const canonicalEvidence = canonicalRarityJson(firstEvidence as unknown as JsonValue);
-    const conflict = normalized.findIndex((roll) =>
-      roll.providerEvidence === undefined ||
-      canonicalRarityJson(roll.providerEvidence as unknown as JsonValue) !== canonicalEvidence
-    );
-    if (conflict !== -1) {
-      return refuseRarity(
-        RARITY_REFUSE_CODES.provenanceMismatch,
-        `rarity.rolls[${String(conflict)}].providerEvidence`,
-        "Every evidenced rarity roll must carry the same exact provider descriptor.",
-      );
-    }
-  } else if (normalized.some((roll) => roll.providerEvidence !== undefined)) {
-    return refuseRarity(
-      RARITY_REFUSE_CODES.provenanceMismatch,
-      "rarity.rolls.providerEvidence",
-      "Provider evidence cannot be attached retroactively to an evidence-less rarity history.",
-    );
-  }
   return ok(
     snapshotSculptJson({
       schemaVersion: RARITY_SCHEMA_VERSION,

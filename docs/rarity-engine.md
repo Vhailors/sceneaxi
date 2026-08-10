@@ -68,11 +68,12 @@ scope — never later, inside `advance()`.
 ## Kernel authority and replay
 
 `dispatch({ type: "rarity-roll", eventId, request, providerEvidence? })` validates
-and records a pending command without changing the snapshot. Evidence is required
-exactly when the opened namespace carries it, and must be byte-identical. The
-existing `advance()` path resolves the command and appends the accepted roll
-record. Presentation, providers, and the orchestrator do not resolve or mutate
-rarity; the orchestrator returns the kernel session unchanged.
+and records a pending command without changing the snapshot. Provider evidence is
+owned per event: replay of an existing event must match its exact evidence presence
+and bytes, while a distinct event may carry its own descriptor or none. The existing
+`advance()` path resolves the command and appends the accepted roll record.
+Presentation, providers, and the orchestrator do not resolve or mutate rarity; the
+orchestrator returns the kernel session unchanged.
 
 The same event id plus the same canonical request digest is idempotent before or
 after resolution. Reusing an event id with changed request bytes refuses with
@@ -150,18 +151,15 @@ and acknowledges that exact job id. The renderer retries a transient
 acknowledgement failure only while the same Assistant run remains active; an old
 acknowledgement cannot abandon a newer job.
 
-`providerEvidence` is bound to each roll. Extending an existing namespace from a
-call whose model evidence differs would leave earlier rolls reporting a descriptor
-that is not theirs, so `stageRarityProviderProposal` refuses
-`RARITY_AUTHORING_PROVIDER_EVIDENCE_CONFLICT` instead. A namespace that already
-holds an evidence-less roll refuses
-`RARITY_AUTHORING_PROVIDER_EVIDENCE_ABSENT` rather than adopting this call's — the
-rolls a kernel-only #240 path produced legitimately have none, and borrowing a
-descriptor for them would invent provenance as surely as keeping a stale one.
-Both refusals are decided once, where the stored namespace is read, so the replay
-and extend paths cannot diverge. Between them, the descriptor
-`safeRarityEvidenceFromNamespace()` reports for a roll is always the descriptor of
-the call that produced that roll's input. The kernel additionally compares that
+`providerEvidence` is bound to each roll. `stageRarityProviderProposal` preserves
+the accepted prefix byte-for-byte and requires the new roll to carry the exact
+descriptor of the call that produced its input. Earlier evidence-less rolls remain
+evidence-less, and later calls may use a different pinned descriptor only under a
+new event id; neither case rewrites earlier provenance. Replay of an existing event
+still requires its exact descriptor, so evidence cannot be attached retroactively.
+The descriptor `safeRarityEvidenceFromNamespace()` reports for a roll is therefore
+always the descriptor of the call that produced that roll's input. The kernel
+additionally compares that
 roll-bound descriptor with its digest in the roll provenance and with the matching
 `rarity-roll` dispatch event. Open/save/replay therefore refuse a missing,
 retroactively added, or conflicting binding instead of attributing a later request

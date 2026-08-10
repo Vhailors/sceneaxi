@@ -400,13 +400,17 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
   ):
     | Readonly<{
         ok: true;
-        session: OpenPathRaritySession;
+        session?: OpenPathRaritySession;
         evidence?: DesktopRarityEvidence;
       }>
     | Readonly<{ ok: false; reason: string; message: string; detail?: string | null }> => {
     const rarity = validateRarityNamespace(rarityValue);
     if (!rarity.ok) {
       return { ok: false, reason: rarity.code, message: rarity.message, detail: rarity.path };
+    }
+    const roll = rarity.value.rolls.at(-1);
+    if (roll === undefined) {
+      return { ok: true };
     }
     const productId = documentData.productId;
     const seed = documentData.seed;
@@ -415,14 +419,6 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         ok: false,
         reason: DESKTOP_BRIDGE_REFUSALS.requestMalformed,
         message: "The active rarity project has no valid ProductManifest identity.",
-      };
-    }
-    const roll = rarity.value.rolls.at(-1);
-    if (roll === undefined) {
-      return {
-        ok: false,
-        reason: RARITY_REFUSE_CODES.outcomeMismatch,
-        message: "The active rarity namespace has no accepted outcome.",
       };
     }
     const bootstrapped = bootstrapOpenPath(

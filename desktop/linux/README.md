@@ -60,9 +60,10 @@ live center viewport mounts it, adds translate/rotate/scale manipulators, and sh
 read-only materials, supported collider physics, and procedural settings.
 Progress, named refusals, and Retry remain on the surface, while a BYOK
 provider's own failure detail is redacted — whether the runner threw it or
-returned it — because it may echo credential material. A timed-out
-job is abandoned by its exact start identifier before Retry is offered, so a
-late provider result cannot replace the newer job. Assistant **Agent** uses the
+returned it — because it may echo credential material. A timed-out job is
+abandoned by its exact start identifier when that can be confirmed. If it cannot,
+Retry resumes recovery for the retained exact job before any fresh start, so a
+late provider result cannot replace newer work. Assistant **Agent** uses the
 privileged no-network rarity fixture through the same Model Provider Port, then
 stages the canonical result in the existing Change Review; it does not mount a
 second artifact or accept provider entropy. Ask refuses clearly rather than

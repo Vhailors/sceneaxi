@@ -27,9 +27,11 @@ import {
   resolveApplyTransaction,
   stageRarityProviderProposal,
   undoLastApply,
+  type RarityKernelResolutionInput,
   type RarityProviderContributionResult,
 } from "@sceneaxi/authoring-core";
 import { createDesktopSession, shellApply } from "@sceneaxi/desktop-shell";
+import { open } from "@sceneaxi/engine-kernel";
 
 const acceptanceVector = JSON.parse(
   readFileSync(
@@ -78,6 +80,28 @@ function projectRoot() {
 
 function documentBytes(root: string) {
   return readFileSync(join(root, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8");
+}
+
+function resolveWithKernel(input: RarityKernelResolutionInput) {
+  const session = open(
+    {
+      productId: input.productId,
+      seed: input.seed,
+      entities: [],
+      rarity: input.namespace,
+    },
+    { nowMs: () => 1_726_000_000_000 },
+  );
+  session.dispatch({
+    type: "rarity-roll",
+    eventId: input.eventId,
+    request: input.request,
+    providerEvidence: input.providerEvidence,
+  });
+  session.advance({ tick: 1, deltaMs: 0 });
+  const rarity = session.observe().rarity;
+  if (rarity === undefined) throw new Error("kernel rarity resolution missing");
+  return Object.freeze({ ok: true as const, value: rarity });
 }
 
 function startRarity(bridge: DesktopBridge, profile = "@sceneaxi/profile-game", route = "local") {
@@ -460,7 +484,7 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
     expect(await settledJob(replayed)).toMatchObject({
       status: "refused",
       refusal: {
-        reason: RARITY_AUTHORING_REFUSALS.providerEvidenceAbsent,
+        reason: RARITY_REFUSE_CODES.provenanceMismatch,
         recoverable: true,
       },
     });
@@ -1212,12 +1236,7 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
     expect(resolverCalls).toBe(0);
   });
 
-  it("refuses to attach a call's descriptor to rolls that carry none", async () => {
-    // Reachable through the authoring-core seam rather than the desktop, whose
-    // event id is a single constant: a namespace holding rolls with no provider
-    // evidence — what a kernel-only #240 path legitimately produces — must not
-    // adopt this call's descriptor, because `safeRarityEvidenceFromNamespace`
-    // would then report it as the provenance of rolls it never produced.
+  it("extends evidence-less history without rewriting prior provenance", async () => {
     const root = projectRoot();
     const bridge = createDesktopBridge({
       cwd: root,
@@ -1247,7 +1266,6 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
     });
     if (!contribution.ok) throw new Error(contribution.reason);
 
-    let resolverCalls = 0;
     const staged = stageRarityProviderProposal({
       documentData,
       documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
@@ -1255,20 +1273,19 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
       profile: "@sceneaxi/profile-game",
       eventId: "wayfinder-drop-002",
       contribution: contribution.value,
-      resolve: () => {
-        resolverCalls += 1;
-        throw new Error("the kernel resolver must not run for a refused namespace");
-      },
+      resolve: resolveWithKernel,
     });
-    expect(staged).toMatchObject({
-      ok: false,
-      reason: RARITY_AUTHORING_REFUSALS.providerEvidenceAbsent,
-      path: "rarity.rolls.providerEvidence",
-    });
-    expect(resolverCalls).toBe(0);
+    expect(staged.ok).toBe(true);
+    if (!staged.ok) throw new Error(staged.reason);
+    expect(staged.namespace.rolls).toHaveLength(2);
+    expect(staged.namespace.rolls[0]?.providerEvidence).toBeUndefined();
+    expect(staged.namespace.rolls[0]?.provenance.providerEvidenceDigest).toBeUndefined();
+    expect(staged.namespace.rolls[1]?.providerEvidence).toEqual(
+      contribution.value.providerEvidence,
+    );
   });
 
-  it("refuses to extend an accepted namespace from a call with different model evidence", async () => {
+  it("allows a new event to carry different model evidence", async () => {
     const root = projectRoot();
     const first = createDesktopBridge({
       cwd: root,
@@ -1280,20 +1297,29 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
     const acceptedBytes = documentBytes(root);
     expect(acceptedBytes).toContain(DESKTOP_RARITY_FIXTURE_MODEL.version);
 
-    const requoted = createDesktopBridge({
-      cwd: root,
-      runRarityProvider: createDesktopRarityFixtureProvider({
-        executedModel: { ...DESKTOP_RARITY_FIXTURE_MODEL, version: "2026-09-01" },
-      }),
+    const contribution = await createDesktopRarityFixtureProvider({
+      executedModel: { ...DESKTOP_RARITY_FIXTURE_MODEL, version: "2026-09-01" },
+    })({
+      profile: "@sceneaxi/profile-game",
+      prompt: "stage a drop",
     });
-    startRarity(requoted);
-    expect(await settledJob(requoted)).toMatchObject({
-      status: "refused",
-      refusal: {
-        reason: RARITY_AUTHORING_REFUSALS.providerEvidenceConflict,
-        recoverable: true,
-      },
+    if (!contribution.ok) throw new Error(contribution.reason);
+    const documentData = JSON.parse(acceptedBytes).data as Record<string, unknown>;
+    const staged = stageRarityProviderProposal({
+      documentData,
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      expectedContentHash: `sha256:${"0".repeat(64)}`,
+      profile: "@sceneaxi/profile-game",
+      eventId: "wayfinder-drop-002",
+      contribution: contribution.value,
+      resolve: resolveWithKernel,
     });
+    expect(staged.ok).toBe(true);
+    if (!staged.ok) throw new Error(staged.reason);
+    expect(staged.namespace.rolls.map((roll) => roll.providerEvidence?.model.version)).toEqual([
+      DESKTOP_RARITY_FIXTURE_MODEL.version,
+      "2026-09-01",
+    ]);
     expect(documentBytes(root)).toBe(acceptedBytes);
     expect(documentBytes(root)).not.toContain("2026-09-01");
   });

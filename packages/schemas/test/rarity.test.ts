@@ -370,7 +370,10 @@ describe("rarity domain contracts", () => {
 
   it("keeps stored provider evidence identical in the schema and runtime", () => {
     const vector = fixture.vectors[0];
-    if (vector === undefined) throw new Error("rarity fixture is empty");
+    const nextVector = fixture.vectors[1];
+    if (vector === undefined || nextVector === undefined) {
+      throw new Error("rarity fixture needs two vectors");
+    }
     const providerEvidence = {
       schemaVersion: 1,
       kind: "sceneaxi.model-provider-call-evidence",
@@ -400,6 +403,36 @@ describe("rarity domain contracts", () => {
     };
     expect(validateRarityNamespace(namespace).ok).toBe(true);
     expect(shippedSchemaViolations(namespace)).toEqual([]);
+    const nextProviderEvidence = {
+      ...providerEvidence,
+      model: { ...providerEvidence.model, version: "v2" },
+    };
+    const nextEvidencedRoll = {
+      eventId: nextVector.eventId,
+      request: fixture.request,
+      outcome: nextVector.outcome,
+      provenance: {
+        ...nextVector.provenance,
+        providerEvidenceDigest: digestRarityValue(
+          nextProviderEvidence as unknown as JsonValue,
+        ),
+      },
+      providerEvidence: nextProviderEvidence,
+    };
+    expect(
+      validateRarityNamespace({ ...namespace, rolls: [namespace.rolls[0], nextEvidencedRoll] }),
+    ).toMatchObject({ ok: true });
+    expect(
+      validateRarityNamespace({
+        ...namespace,
+        rolls: [{
+          eventId: vector.eventId,
+          request: fixture.request,
+          outcome: vector.outcome,
+          provenance: vector.provenance,
+        }, nextEvidencedRoll],
+      }),
+    ).toMatchObject({ ok: true });
     const retroactivelyAttributed = {
       ...namespace,
       rolls: [{

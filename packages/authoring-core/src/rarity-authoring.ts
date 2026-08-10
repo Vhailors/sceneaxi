@@ -367,25 +367,6 @@ export function stageRarityProviderProposal(input: Readonly<{
         "rarity.policy",
       );
     }
-    if (existing.rolls.some((roll) => roll.providerEvidence === undefined)) {
-      return refuse(
-        RARITY_AUTHORING_REFUSALS.providerEvidenceAbsent,
-        "The accepted rarity history contains a roll with no provider evidence, so it cannot be extended by this call.",
-        "rarity.rolls.providerEvidence",
-      );
-    }
-    if (
-      existing.rolls.some((roll) =>
-        canonicalRarityJson(roll.providerEvidence as unknown as JsonValue) !==
-          canonicalRarityJson(providerEvidence.value as unknown as JsonValue)
-      )
-    ) {
-      return refuse(
-        RARITY_AUTHORING_REFUSALS.providerEvidenceConflict,
-        "The accepted rarity history has different provider evidence, so this call cannot extend it.",
-        "rarity.rolls.providerEvidence",
-      );
-    }
   }
   const prior = existing.rolls.find((roll) => roll.eventId === input.eventId);
   if (prior !== undefined) {
