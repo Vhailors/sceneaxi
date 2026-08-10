@@ -86,6 +86,9 @@ pnpm sceneaxi project apply --proposal asset-import.json --cwd /path/to/project
 
 The accepted profile and absence boundaries are in
 [`docs/asset-ingestion.md`](../../docs/asset-ingestion.md).
+`project apply` then attempts project-copy materialization for every applied
+document and reports each result under `assetCopies`; accepted manifest bytes are
+the recovery authority if a copy is absent later.
 
 Composing several Sculpt Artifacts into one openable scene (`--artifact` repeats):
 

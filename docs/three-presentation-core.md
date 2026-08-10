@@ -90,6 +90,15 @@ loop.start();
 Pass `background: null` to request a transparent scene clear and an alpha-enabled
 WebGL drawing buffer; captured PNG pixels retain that transparency.
 
+The contained GLB/glTF path does not add a loader or renderer. After the desktop
+mounts the manifest's validated Sculpt proxy through the Mount API, it calls
+`mountTriangleAsset()` on that same backend to replace the matching instance with
+the importer's numeric triangle projection. The method retains the existing Three
+core, content root, camera, draw surface, and frame counter; it revalidates the
+neutral arrays and material scalars at the presentation boundary and exposes no
+Three type. Profile, provenance, filesystem, and network decisions remain outside
+this package in [`asset-ingestion.md`](asset-ingestion.md).
+
 Kernel snapshots to a canvas through the ADR 0002 seam:
 
 ```ts
@@ -110,7 +119,8 @@ only, and presentation invents no state the kernel does not own.
 - **Node gates** (`pnpm gate`) cover mount/present/capture/dispose lifecycle and
   refusals, the frame path through an injected surface, orbit/zoom math and
   clamping, pointer/wheel input wiring, snapshot interpolation and non-mutation,
-  the render loop, and that the canvas path really constructs a `WebGLRenderer`
+  contained-triangle replacement on the same scene root, the render loop, and
+  that the canvas path really constructs a `WebGLRenderer`
   (which must fail in node, where no WebGL context exists).
 - **Real browser**, manually, since node has no WebGL. Verified 2026-07-25 in
   Chrome against a committed fixture artifact served through Vite:
@@ -184,6 +194,11 @@ only, and presentation invents no state the kernel does not own.
   workflow artifact `/engine` offers — packaging is not bit-reproducible, so the
   two are never the same bytes. Both records and these observations are owned by
   [`desktop-linux.md`](desktop-linux.md).
+  Contained asset acceptance and reopen/Play additionally replace the manifest's
+  proxy with its revalidated triangle projection on this same backend; the
+  deterministic headless draw evidence is in
+  `tests/e2e/asset-ingestion-golden.test.ts`. That test makes no new pixel claim,
+  so the pixel observation above remains the desktop surface's recorded one.
 
 Reproduce the standalone snippets by serving a page that runs the consumer
 snippets above against a validated Sculpt Artifact;

@@ -29,7 +29,11 @@ receives a kernel session, so presentation cannot advance simulation.
 
 `createThreeSculptPresentationBackend(options)` is the same core behind the
 Sculpt Mount boundary, and additionally exposes `camera` (orbit/zoom), `resize`,
-`capture`, and `frameMountedContent()`.
+`capture`, `frameMountedContent()`, and `mountTriangleAsset()`. The last method
+replaces an already-mounted Sculpt proxy with validated neutral triangle arrays
+inside the same scene root; it is not a loader, filesystem seam, or second
+renderer. The fixed input profile and provenance remain owned by
+[`docs/asset-ingestion.md`](../../docs/asset-ingestion.md).
 
 Both take one core options object:
 

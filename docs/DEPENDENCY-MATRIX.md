@@ -30,8 +30,9 @@ L4  sites              site-kit ← the three non-Kids sites (leaves; ADR 0018),
                        identity plane (ADR 0021)
 L4  desktop            the packaged desktop applications (leaf; ADR 0024). desktop/linux
                        consumes schemas, desktop-shell, site-kit, authoring-core, the
-                       three engine packages it draws and opens through, and
-                       provider-openrouter from src/electron/** alone (sceneaxi#235);
+                       three engine packages it draws and opens through, importers for
+                       contained asset ingestion, and provider-openrouter from
+                       src/electron/** alone (sceneaxi#235);
                        no profile, no Kids, no auth/billing, no plugin host.
                        desktop/windows packages that same built application for Windows
                        and names no SceneAxi
@@ -50,7 +51,7 @@ L4  desktop            the packaged desktop applications (leaf; ADR 0024). deskt
 | engine-orchestrator | ✓ | ✓ | | — | | | | | | |
 | authoring-core | ✓ | ✓ | ✓ | ✓ | — | | | | | |
 | profile-game / profile-web / profile-kids | ✓ | ✓ | ✓ | ✓ | ✓ | — (never each other) | | | | |
-| cli | ✓ | | | | ✓ | | — | | | |
+| cli | ✓ | | | | ✓ | | — | ✓ (importers only) | | |
 | importers / provider-openrouter | ✓ | | | | ✓ | | | — | | |
 | plugin-host | ✓ | | | | | | | | — | |
 | auth | ✓ | | | | | | | | | |
@@ -61,15 +62,16 @@ L4  desktop            the packaged desktop applications (leaf; ADR 0024). deskt
 | site-kit | ✓ | | | | ✓ | | | | | |
 | site-umbrella (→ site-kit ✓, auth ✓, billing ✓) | | | ✓ | | | | | | | |
 | site-catalog-game / site-catalog-web (→ site-kit ✓) | | | | | | | | | | |
-| desktop-linux (→ site-kit ✓) | ✓ | ✓ | ✓ | ✓ | ✓ | | | ✓ (provider-openrouter, `src/electron/` alone) | | ✓ (desktop-shell alone) |
+| desktop-linux (→ site-kit ✓) | ✓ | ✓ | ✓ | ✓ | ✓ | | | ✓ (importers; provider-openrouter in `src/electron/` alone) | | ✓ (desktop-shell alone) |
 | desktop-windows | | | | | | | | | | |
 | desktop-macos (stages desktop-linux dist) | ✓ | | | | | | | | | |
 
 Deliberate denials that carry design intent:
 
 - **cli → engine packages: denied.** The CLI is a thin protocol adapter (verbs +
-  envelope) over `authoring-core`. Denying direct engine access makes it structurally
-  impossible for the orbiting CLI to become the missing core (Sol review F2).
+  envelope) over `authoring-core` and the contained-copy authority in `importers`.
+  Denying direct engine access makes it structurally impossible for the orbiting
+  CLI to become the missing core (Sol review F2).
 - **shells → cli: denied.** Shells are protocol *clients* of `authoring-core`'s
   application service — one behavior, many faces — not spawners of the CLI binary.
 - **web-shell → `auth` + `billing`: allowed; desktop-shell → either: denied.** The
@@ -223,10 +225,11 @@ Recorded in `dependency-matrix.json → releaseGroups` and stamped on every mani
   hermetic lockfile. Deployable, not consumable — its root export is a gate-tested
   package seam rather than a registry consumer surface, and it uses `link:` dependencies
   (into `packages/` **or** `apps/`, the one
-  widening the desktop tier holds). `desktop-linux` alone may name
+  widening the desktop tier holds). `desktop-linux` names `importers` from its
+  project/bridge layer for the fixed contained-copy profile. It alone may also name
   `provider-openrouter`, and only from `src/electron/**`: `pnpm check:desktop` refuses
-  that adapter — and any re-export of the privileged host that would launder it — from
-  `src/lib/**`, `src/renderer/**`, and the package root. Build, distribution, and the
+  that provider adapter — and any re-export of the privileged host that would
+  launder it — from `src/lib/**`, `src/renderer/**`, and the package root. Build, distribution, and the
   recorded checksums: [`desktop-linux.md`](desktop-linux.md). `desktop-windows` holds an empty allow list:
   it packages the already-built `desktop/linux` runtime and imports no SceneAxi
   package, so it is a second install root rather than a second application —

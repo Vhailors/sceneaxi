@@ -33,7 +33,7 @@ IPC channel and the local socket adapter are two transports over that one
 | `src/lib/provider-key-store.ts` + `byo-configuration.ts` | main process | typed OS-secure credential store, redacted configuration controller, and per-session key lease for injected BYOK runners |
 | `src/electron/provider-key-store.ts` | privileged Electron process | `safeStorage` adapter; refuses locked, unsupported, basic-text, and failed backends and persists ciphertext only |
 | `src/electron/provider-runtime.ts` | privileged Electron process | composes the existing OpenRouter adapter, Model Provider Port, profile policies, exact model pin, secure key lease, and desktop runner over an injected transport session; it also owns the no-network rarity fixture provider used by the packaged Agent path and its acceptance tests |
-| `src/electron/preload.ts` | preload | exposes one frozen global: the existing engine request, typed project lifecycle method on its own IPC channel, and separate BYOK configuration method |
+| `src/electron/preload.ts` | preload | exposes one frozen global: the existing engine request, typed project lifecycle method, native asset-picker method, and separate BYOK configuration method on their bounded IPC channels |
 | `src/renderer/viewport.ts` | the window | the desktop tier's **one renderer-owning module** (see below) |
 
 Bridge actions and what each reaches — only through public seams:
@@ -232,7 +232,9 @@ the umbrella's `sculpt-viewport.tsx` makes, naming no Three type. The golden tes
 calls that module's exported construction seam and runs the resulting Three
 backend on the headless surface. Its playback synchronizer is exercised there as
 well: the golden replaces the mounted composition and proves a refused replacement
-rolls back to the prior mount set. The umbrella's owner list is unchanged.
+rolls back to the prior mount set. Contained ingestion uses that synchronizer's
+same-backend triangle replacement; its headless draw proof is
+`tests/e2e/asset-ingestion-golden.test.ts`. The umbrella's owner list is unchanged.
 
 ## Build, verify, run
 

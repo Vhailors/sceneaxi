@@ -25,7 +25,7 @@ a marketing word.
 | Web Experience profile | **R1** | `pnpm test:golden` | `tests/e2e/profile-web-golden-path.test.ts` |
 | Kids profile shared engine open path | **R0** | `pnpm test:golden` | `tests/e2e/profile-kids-refuse-golden.test.ts` |
 | Kids isolated build-and-play activity (`sites/kids`) | **R1** | `cd sites/kids && pnpm install --frozen-lockfile && pnpm dev` (development phase only, this widens the served policy to `connect-src 'self'` + `'unsafe-eval'` so hot reload works; for the shipped policy use `pnpm build && pnpm start`); root proof via `pnpm test:golden` | `tests/e2e/profile-kids-refuse-golden.test.ts`, `packages/profile-kids/test/activity.test.ts`, `tests/sites/kids-surface.test.ts` |
-| Importers + plugin host | **R1** | `pnpm test:golden` | `tests/e2e/importers-plugin-golden.test.ts`, `tests/e2e/plugin-capability-golden.test.ts` (the one registered capability, `sceneaxi.sculpt.intake-source.v1`, from the shipped seed through load to an addressed call) |
+| Importers + plugin host | **R1** | `pnpm test:golden` | `tests/e2e/asset-ingestion-golden.test.ts` (contained-copy desktop/CLI parity and Three projection), `tests/e2e/importers-plugin-golden.test.ts`, `tests/e2e/plugin-capability-golden.test.ts` (the one registered capability, `sceneaxi.sculpt.intake-source.v1`, from the shipped seed through load to an addressed call) |
 | Umbrella live open path (`/open`) | **R1** | `pnpm test:golden`; in a browser, `cd sites/umbrella && pnpm build && pnpm start` | `tests/e2e/umbrella-live-open-golden.test.ts` (headless surface, no pixel claim) + the browser record in `docs/three-presentation-core.md` |
 | Umbrella entitled editors (`/editor`: Engine Desktop + simplified Web Experience projection) | **R1** | `pnpm test:golden`; in a browser, `cd sites/umbrella && pnpm build && SCENEAXI_SITE_EDITOR_PREVIEW=1 pnpm start`, then use `?profile=web` for the Web projection | `tests/e2e/umbrella-editor-viewport-golden.test.ts` (headless surface, no pixel claim), `packages/site-kit/test/{editor-shell,web-experience-editor}.test.ts`, `tests/sites/web-experience-editor.test.ts`, `tests/parity/editor-shell-parity.test.ts`, + the browser records in `docs/three-presentation-core.md` and [`web-editor-shell.md`](web-editor-shell.md). Without preview, the product path is the existing `/login` session and entitlement seam; a refused request constructs neither editor and draws nothing. The Web subset and sandbox are owned by [`web-experience-editor.md`](web-experience-editor.md) |
 
@@ -87,12 +87,13 @@ so the pixel claim is a recorded browser observation, never a gate inference.
 
 ## Why the CLI and shells have no kernel or plugin verbs
 
-`docs/dependency-matrix.json` allows `@sceneaxi/cli` and
-`@sceneaxi/desktop-shell` to depend on `@sceneaxi/schemas` and
-`@sceneaxi/authoring-core` **only**; `@sceneaxi/web-shell` additionally names
-`@sceneaxi/auth` and `@sceneaxi/billing` for its account/credits view model
-(`docs/auth-credits.md`). Kernel-session, presentation, and plugin-host verbs on
-any of those surfaces would still require widening the matrix.
+`docs/dependency-matrix.json` allows `@sceneaxi/desktop-shell` to depend on
+`@sceneaxi/schemas` and `@sceneaxi/authoring-core`; `@sceneaxi/cli` additionally
+names `@sceneaxi/importers` for the fixed contained-copy verb, and
+`@sceneaxi/web-shell` additionally names `@sceneaxi/auth` and
+`@sceneaxi/billing` for its account/credits view model (`docs/auth-credits.md`).
+Kernel-session, presentation, and plugin-host verbs on any of those surfaces
+would still require widening the matrix.
 
 The boundary is not widened. Those paths are proven in `tests/e2e/`, which may
 import any package. `scene compose` *is* on the CLI because `composeScene()`

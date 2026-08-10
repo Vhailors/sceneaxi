@@ -69,8 +69,8 @@ pnpm sceneaxi-desktop chrome --width 1024 --height 700
 ```
 
 The product-loop model is `src/product-loop.ts` (active project file, profile
-capabilities, Web HTML and project-relative asset staging). The static visual
-model is `src/visual-model.ts` (modes, mode-dependent dock tabs, profile switch,
+capabilities, Web HTML and the portable project-relative asset fixture). The
+static visual model is `src/visual-model.ts` (modes, mode-dependent dock tabs, profile switch,
 assistant states, Change Review controls and empty state, command palette,
 overlays, sculpt progress, window tiers, refusals). `src/chrome.ts` renders that
 model and contains the packaged-host adapter that validates session snapshots,
@@ -113,6 +113,12 @@ When a host snapshot
 has already cleared a stale proposal, a blocked decision names its own outcome and
 carries the recorded conflict as detail, so it neither claims a normal-open
 document nor replays the earlier action's status sentence over a newer one.
+
+The Web control is labelled **Import GLB/glTF…**. A packaged host that exposes
+the native picker port stages the fixed contained-copy profile documented in
+[`docs/asset-ingestion.md`](../../docs/asset-ingestion.md). The standalone shell
+has no native dialog; its injected portable fixture retains the earlier bounded
+project-relative asset proposal for transport-level coverage.
 
 The first-release loop has one honest active file, `scene.json`. In the packaged
 host, first launch shows New Project and Open Project without binding or seeding

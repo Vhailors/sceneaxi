@@ -136,10 +136,17 @@ application publishes a versioned same-user Unix socket over the **same**
 `createDesktopBridge().handle()` this ADR already decided, and `@sceneaxi/cli` gains
 the `desktop bridge status|tools|call` group that discovers and calls it. Nothing else
 above moves: the socket adds no second authoring implementation, no renderer, no
-matrix edge (the CLI keeps `schemas` + `authoring-core`, and the desktop tier depends
-on no CLI package), no identity surface, and no held-key gate — the new verbs ship
+matrix edge (at the time of this amendment the CLI kept `schemas` +
+`authoring-core`; see the later contained-asset note below, and the desktop tier
+depends on no CLI package), no identity surface, and no held-key gate — the new verbs ship
 ungated because local authoring is free. Kids isolation, general-E2 bounds, and
 Stripe live-mode posture stay untouched, and hosted assistant work still refuses here
 for want of a credit plane. That contract's owner — protocol, discovery,
 permissions, BYOK secure storage, and proof map — is
 [`../desktop-local-bridge.md`](../desktop-local-bridge.md).
+
+A later, unrelated contained-asset vertical adds the narrow
+`@sceneaxi/cli` → `@sceneaxi/importers` edge while keeping every engine package
+denied to the CLI. Its current contract and proof owner is
+[`../asset-ingestion.md`](../asset-ingestion.md); it does not change this local
+socket amendment.

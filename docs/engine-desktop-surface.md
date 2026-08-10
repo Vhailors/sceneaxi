@@ -119,7 +119,7 @@ asserted rather than remembered.
 |---|---|
 | Colours, typography, metrics, contrast deviations, archive provenance | `apps/desktop-shell/src/visual-tokens.ts` |
 | Shared chrome vocabulary — the seven modes, rail labels, dock-tab derivation, assistant modes, window-tier thresholds, structural metrics | `packages/schemas/src/editor-shell.ts` (sceneaxi#184); this model **derives** its tables from it, and the umbrella web editor projects the same rows — parity is a data identity in `tests/parity/editor-shell-parity.test.ts`, and the web surface's own record is [`web-editor-shell.md`](web-editor-shell.md) |
-| First-release project/file and per-profile product loop, including host-projected New/Open/Recent lifecycle, selected composed-instance transforms and local add/remove, Web stored-HTML, and project-relative asset staging | `apps/desktop-shell/src/product-loop.ts` + emitted adapter in `chrome.ts` (sceneaxi#196/#224/#225); root validation, scene-edit validation and staging, and persistence remain host-owned |
+| First-release project/file and per-profile product loop, including host-projected New/Open/Recent lifecycle, selected composed-instance transforms and local add/remove, Web stored-HTML, the portable project-relative asset fixture, and the packaged host's contained-asset invocation | `apps/desktop-shell/src/product-loop.ts` + emitted adapter in `chrome.ts` (sceneaxi#196/#224/#225); root validation, scene-edit/import validation and staging, and persistence remain host-owned, with the contained profile owned by [`asset-ingestion.md`](asset-ingestion.md) |
 | Mode/profile/dock/assistant/overlay/sculpt state, refusals, window tiers, control kinds, and Change Review's static controls/empty state | `apps/desktop-shell/src/visual-model.ts` |
 | The emitted document (markup, stylesheet, behaviour script), including validated host-snapshot projection and the active Change Review decision flow | `apps/desktop-shell/src/chrome.ts` |
 | The `chrome` command and its flags | `apps/desktop-shell/src/app.ts` |
@@ -183,7 +183,7 @@ always has a refusal and a non-inert one never does.
 | Kind | Meaning | Examples |
 |---|---|---|
 | `view` | changes visual state; genuinely works | mode rail, dock tabs, profile switch, assistant open/close, its Ask/Build/Agent modes and its three route chips, menu openers, the palette openers, the outcome dismissal, drawer toggles, the composed-instance selector |
-| `live` | delegates a product action to an injected desktop-host seam; refuses visibly when that host is absent | File New/Open/Save, Edit Undo when the active project's authoring journal reports a completed Save, Run Play, their palette rows and accelerators, Change Review's Accept and Reject, the nine selected-instance transform fields, Stage, local-copy Add and leaf Remove, stage Web HTML, inject a project-relative Web asset; and — only once the packaged Linux runtime binds them — the assistant prompt, Send, Retry, and the artifact manipulators |
+| `live` | delegates a product action to an injected desktop-host seam; refuses visibly when that host is absent | File New/Open/Save, Edit Undo when the active project's authoring journal reports a completed Save, Run Play, their palette rows and accelerators, Change Review's Accept and Reject, the nine selected-instance transform fields, Stage, local-copy Add and leaf Remove, stage Web HTML, and the **Import GLB/glTF…** control; and — only once the packaged Linux runtime binds them — the assistant prompt, Send, Retry, and the artifact manipulators |
 | `inert` | renders, keeps its focus stop, refuses by name | Undo when the active project's authoring journal has no completed Save or has recovery pending, Sculpt object and its static progress cancellation, standalone-shell assistant prompt/Send/Retry and the four artifact manipulators, the three viewport-source tabs, and — on the refuse-only profile — every control except the seven named below |
 
 The chrome imports no engine, profile, site, billing, or host package, and
@@ -235,12 +235,16 @@ displays the rendered diff and any diagnostic message; Save is the existing
 accept. The operations, their refusals, and byte-level CLI parity are owned by
 `docs/desktop-linux.md`.
 
-Web Experience stages either starter HTML or `assets/hero.glb` by proposing one
-replacement of `/data`. The proposal carries the content hash returned by Open;
-the shared shell protocol compares it with the hash read while constructing the
-proposal, so an external edit made after Open refuses with
-`content-hash-conflict` before stale data can enter review. Save accepts that
-exact pending proposal through the
+Web Experience stages starter HTML through the shared shell decision. Its second
+control is **Import GLB/glTF…**: when the packaged Linux host exposes the native
+picker port, the selected file goes through the fixed contained-copy authority
+owned by [`asset-ingestion.md`](asset-ingestion.md), then returns one `/data` E1
+proposal to this same Change Review. The portable fixture host has no native
+dialog; only there, the control preserves the earlier bounded
+`assets/hero.glb` reference proposal so the transport-free shell remains
+executable. Both proposal paths bind the content hash read from the document, so
+an external edit made after Open refuses with `content-hash-conflict` before
+stale data can enter review. Save accepts that exact pending proposal through the
 long-lived shared session. Pending or journal-recovery results keep the surface
 in `recovering`; Save calls the bridge's `recover` operation until the session
 reaches a terminal state, while Open is the explicit escape that starts a fresh
@@ -251,10 +255,11 @@ indeterminate session. A
 staged proposal also blocks profile switching until Save applies it or Open
 rejects it and clears its browser copy, so Web work cannot later be accepted
 under Game or Kids. The HTML is stored and displayed only as escaped text—never inserted into
-the chrome DOM. Invalid existing Web data and asset paths outside normalized
-`assets/` refuse before a proposal is made. The shared staging decision caps
-stored markup at 100,000 characters, asset paths at 512 characters, and each
-document's asset list at 256 entries.
+the chrome DOM. On the portable fallback, invalid existing Web data and asset
+paths outside normalized `assets/` refuse before a proposal is made; that shared
+decision caps stored markup at 100,000 characters, asset paths at 512 characters,
+and the fallback document asset list at 256 entries. The native profile's
+separate limits and refusal matrix are not copied here.
 
 Play calls the host's existing `open-path` action with the active document path.
 In the packaged desktop the bridge re-reads that document, validates and
@@ -269,15 +274,17 @@ Play refuses. On success the Run panels replace their pre-play empty state with
 the returned tick, terminal digest, viewport frame, and closed-session evidence.
 The shell neither constructs a renderer nor invents a pixel claim.
 
-The staging decision itself lives in exactly one place. `desktopWebStageDecision()`
+The HTML/portable-fixture staging decision itself lives in exactly one place. `desktopWebStageDecision()`
 closes over no module binding, so `chrome.ts` embeds `String(desktopWebStageDecision)`
 into the emitted script and passes it the serialized `DESKTOP_WEB_STAGE_CONFIG`:
 the browser runs the same function `stageWebHtml()` and `stageWebAssetInjection()`
 call, rather than a hand-copied paraphrase that can — and previously did — lose a
 guard. The exported wrappers add only the deeper finite-JSON check an in-process
 caller needs, after the shared decision has answered, so the refusal order is
-identical on both sides. `test/product-loop.test.ts` asserts the emitted document
-contains that exact function and still parses as JavaScript.
+identical on both sides. Packaged contained import bypasses this fixture decision
+and reaches the native picker/importer port instead. `test/product-loop.test.ts`
+asserts the emitted document contains the shared function and still parses as
+JavaScript.
 
 Two loop properties the surface depends on. **One request at a time:** every live
 control reads the retained document before its first `await`, and the host holds a
@@ -296,9 +303,10 @@ the sizes in the recorded browser evidence; Play refusals go to the product stat
 for the same reason, since the run report is hidden there too.
 
 The Game surface names scene authoring, composed-scene play, and project-local
-FreeJS behavior. Web Experience names stored HTML, site canvas, asset injection,
-and the same composed-scene play path without importing any site or billing
-package. Kids remains `OPEN_PATH_KIDS_REFUSED`: the central control mint demotes
+FreeJS behavior. Web Experience names stored HTML, site canvas, contained asset
+import (with the portable fixture fallback described above), and the same
+composed-scene play path without importing any site or billing package. Kids
+remains `OPEN_PATH_KIDS_REFUSED`: the central control mint demotes
 every new live control alongside the existing modes and panels, while the three
 profile chips still let the operator leave the refusal.
 
@@ -417,13 +425,13 @@ document also explains. `test/product-loop.test.ts` asserts that in both directi
 | `DESKTOP_NO_KERNEL_SESSION` | the static `run` mode before a host-backed Play response; the chrome never invents a tick, frame, or body |
 | `DESKTOP_NO_DOCUMENT_BOUND` | authoring controls not covered by the first-release project loop (for example Sculpt) |
 | `DESKTOP_UNDO_UNAVAILABLE` | Edit Undo and its palette row when the active project's authoring journal has no completed Save |
-| `DESKTOP_WEB_CAPABILITY_REQUIRED` | the Web stored-HTML and asset-injection controls on Game and Kids; these controls are already inert with the more specific capability refusal, so the Kids demotion preserves it |
+| `DESKTOP_WEB_CAPABILITY_REQUIRED` | the Web stored-HTML and asset-import controls on Game and Kids; these controls are already inert with the more specific capability refusal, so the Kids demotion preserves it |
 | `DESKTOP_WINDOW_BELOW_MINIMUM` | the window is smaller than 900×600 |
 
 | Product-loop code | When |
 |---|---|
 | `DESKTOP_WEB_CAPABILITY_REQUIRED` | staging asked for outside Web Experience (the same code the control carries) |
-| `DESKTOP_WEB_ASSET_PATH_INVALID` | an injected asset is outside the normalized `assets/` subset, exceeds 512 characters, or would exceed 256 stored assets |
+| `DESKTOP_WEB_ASSET_PATH_INVALID` | the portable fixture's injected asset reference is outside the normalized `assets/` subset, exceeds 512 characters, or would exceed 256 stored assets; the packaged native importer has its own `ASSET_IMPORT_*` refusal registry |
 | `DESKTOP_WEB_HTML_INVALID` | stored markup exceeds 100,000 characters or carries a null byte |
 | `DESKTOP_DOCUMENT_DATA_INVALID` | the open document's data, or its existing `webExperience` value, is not data this loop may replace |
 | `DESKTOP_RUNTIME_UNAVAILABLE` | no packaged host port is attached |
@@ -674,7 +682,8 @@ sentence can return by review slip.
 
 - **Node gates** (`pnpm gate`) cover the whole model — mode/dock-tab derivation,
   the active project file, profile capability projection and the Kids refusal,
-  Web stored-HTML/project-asset staging, assistant states including the
+  Web stored-HTML/portable project-asset staging and the packaged import-port
+  invocation, assistant states including the
   non-reopenable deny, Change Review's proposal projection and empty state,
   sculpt pass advance and
   clamping, static sculpt cancellation refusal, overlays, window tiers, control kinds, refusal reachability, view

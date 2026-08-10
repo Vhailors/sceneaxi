@@ -12,7 +12,10 @@ The fixed profile id is `sceneaxi.gltf-contained-triangles-v1`. Input is one
 `.glb` with one JSON and one BIN chunk, or one `.gltf` whose single buffer is an
 embedded base64 data URI. It may contain triangle primitives with POSITION,
 optional NORMAL, optional indices, node transforms, and metallic/roughness base
-color material values. The limit is 8 MiB and 16 accepted assets per project.
+color material values. POSITION and NORMAL are float32; indices may be unsigned
+8-, 16-, or 32-bit values. Parsing is bounded to 64 JSON levels, 250,000 values
+per accessor, and 250,000 triangles in aggregate. The source-byte limit is 8 MiB,
+and a project may retain at most 16 accepted assets.
 
 External buffers, images, textures, animations, skins, cameras, extensions,
 non-triangle modes, sparse/interleaved accessors, additional buffers/scenes, and
@@ -31,11 +34,13 @@ typed E1 edit replacing `/data`. Change Review remains all-or-nothing.
 
 The accepted manifest at `scene.json.data.assetManifest` owns the canonical
 base64 bytes, byte length, media type, stable digest, importer/profile version,
-derived artifact/instance identity, and `copy` policy. It contains no source path
-and no credential. Reject writes neither document nor asset. Accept atomically
-writes the Scene Document, then materializes `assets/<asset-id>.glb|gltf` from the
-accepted canonical bytes with an exclusive temporary file and rename. A crash or
-missing copy is recoverable on scene open/Play; conflicting target bytes refuse.
+derived artifact/instance identity, original basename, project-relative copy
+path, and `copy` policy. It contains no source path and no credential. Reject
+writes neither document nor asset. Accept atomically writes the Scene Document,
+then materializes `assets/<asset-id>.glb|gltf` from the accepted canonical bytes
+through an exclusive temporary file and no-overwrite hard-link publication. A
+crash or missing copy is recoverable on scene open/Play; conflicting target bytes
+refuse.
 
 The composition carries a digest-bound Sculpt proxy so the existing scene and
 kernel contracts remain unchanged. The desktop `MountableScene` additionally
@@ -49,6 +54,8 @@ project model, provider path, renderer, or protocol.
   then the existing Change Review Save/Reject path.
 - CLI: `sceneaxi asset import --source <path> --document scene.json --cwd
   <project> --out <proposal.json>`, followed by `sceneaxi project apply`.
+  `--asset-id <lowercase-slug>` may override the identity otherwise derived from
+  the source basename.
 - Behavioral refusal and manifest tests:
   `packages/importers/test/contained-gltf.test.ts`.
 - Native cancel/selection adapter:
