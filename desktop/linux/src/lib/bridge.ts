@@ -277,6 +277,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
   let pendingAssetImport: Readonly<{
     documentPath: string;
     entry: ProjectAssetManifestEntry;
+    proposal: NonNullable<DesktopSnapshot["proposal"]>;
   }> | null = null;
 
   const authoringSession = (): DesktopSession => {
@@ -288,6 +289,16 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     rarityProposalEvidence === null
       ? snapshot
       : Object.freeze({ ...snapshot, rarityEvidence: rarityProposalEvidence });
+
+  const reconcilePendingAssetImport = <T extends DesktopSnapshot>(snapshot: T): T => {
+    if (
+      pendingAssetImport !== null &&
+      snapshot.proposal !== pendingAssetImport.proposal
+    ) {
+      pendingAssetImport = null;
+    }
+    return snapshot;
+  };
 
   const currentRarityAssistantResult = () => {
     const result = assistantJob?.result;
@@ -740,16 +751,23 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     if (edit === undefined) {
       return bridgeRefuse(DESKTOP_BRIDGE_REFUSALS.requestMalformed, "The importer produced no E1 proposal edit.");
     }
-    const authoring = authoringSession().proposeEdit({
+    const authoring = reconcilePendingAssetImport(authoringSession().proposeEdit({
       documentPath: edit.documentPath,
       jsonPointer: edit.jsonPointer,
       newValue: edit.newValue,
       expectedContentHash: edit.baseContentHash,
-    });
+    }));
     if (authoring.phase !== "reviewing" || (authoring.diagnostics?.length ?? 0) > 0) {
       return bridgeOk("asset-import", Object.freeze({ outcome: "refused" as const, authoring }));
     }
-    pendingAssetImport = Object.freeze({ documentPath, entry: proposed.entry });
+    if (authoring.proposal === null) {
+      return bridgeRefuse(DESKTOP_BRIDGE_REFUSALS.requestMalformed, "The authoring session retained no asset proposal for review.");
+    }
+    pendingAssetImport = Object.freeze({
+      documentPath,
+      entry: proposed.entry,
+      proposal: authoring.proposal,
+    });
     return bridgeOk("asset-import", Object.freeze({
       outcome: "reviewing" as const,
       entry: proposed.entry,
@@ -1064,7 +1082,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         newValue: field(payload, "newValue"),
       });
       if (!staged.ok) return bridgeOk("authoring", staged);
-      const snapshot = live.proposeEdit(staged.edit);
+      const snapshot = reconcilePendingAssetImport(live.proposeEdit(staged.edit));
       if (snapshot.phase !== "reviewing" || (snapshot.diagnostics?.length ?? 0) > 0) {
         return bridgeOk("authoring", withRarityProposalEvidence(snapshot));
       }
@@ -1095,17 +1113,24 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           "authoring propose requires a jsonPointer string, an optional SHA-256 expectedContentHash, and a documentPath inside the project directory.",
         );
       }
-      const snapshot: DesktopSnapshot = live.proposeEdit({
+      const snapshot: DesktopSnapshot = reconcilePendingAssetImport(live.proposeEdit({
         documentPath,
         jsonPointer,
         newValue: field(payload, "newValue"),
         ...(expectedContentHash !== undefined ? { expectedContentHash } : {}),
-      });
+      }));
       return bridgeOk("authoring", withRarityProposalEvidence(snapshot));
     }
     if (op === "accept") {
-      const accepted = settleRarityProposalEvidence(appliedWithProperties(live, live.accept()));
-      if (pendingAssetImport === null || accepted.phase !== "applied") {
+      const accepted = reconcilePendingAssetImport(
+        settleRarityProposalEvidence(appliedWithProperties(live, live.accept())),
+      );
+      if (
+        pendingAssetImport === null ||
+        accepted.phase !== "applied" ||
+        accepted.journalRecoveryPending ||
+        (accepted.diagnostics?.length ?? 0) > 0
+      ) {
         return bridgeOk("authoring", accepted);
       }
       const pending = pendingAssetImport;
@@ -1116,14 +1141,31 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         : bridgeRefuse(copies.reason, copies.message);
     }
     if (op === "reject") {
-      pendingAssetImport = null;
-      return bridgeOk("authoring", settleRarityProposalEvidence(live.reject()));
+      const rejected = reconcilePendingAssetImport(
+        settleRarityProposalEvidence(live.reject()),
+      );
+      return bridgeOk("authoring", rejected);
     }
     if (op === "recover") {
-      return bridgeOk(
-        "authoring",
-        settleRarityProposalEvidence(appliedWithProperties(live, live.refreshRecovery())),
+      const recovered = reconcilePendingAssetImport(
+        settleRarityProposalEvidence(
+          appliedWithProperties(live, live.refreshRecovery()),
+        ),
       );
+      if (
+        pendingAssetImport === null ||
+        recovered.phase !== "applied" ||
+        recovered.journalRecoveryPending ||
+        (recovered.diagnostics?.length ?? 0) > 0
+      ) {
+        return bridgeOk("authoring", recovered);
+      }
+      const pending = pendingAssetImport;
+      pendingAssetImport = null;
+      const copies = recoverAssetCopies(pending.documentPath);
+      return copies.ok
+        ? bridgeOk("authoring", Object.freeze({ ...recovered, assetImport: pending.entry, assetCopies: copies }))
+        : bridgeRefuse(copies.reason, copies.message);
     }
     const result = live.undo();
     if (result.ok) {

@@ -95,4 +95,54 @@ describe("offline asset ingestion vertical", () => {
     expect(readFileSync(join(cliRoot, "assets/triangle.gltf"))).toEqual(sourceBytes);
     expect(readFileSync(join(desktopRoot, "assets/triangle.gltf"))).toEqual(sourceBytes);
   });
+
+  it("never applies stale asset metadata to a replacement proposal", () => {
+    const root = seededRoot("sceneaxi-desktop-stale-asset-");
+    const sourceRoot = temporary("sceneaxi-desktop-stale-asset-source-");
+    const source = join(sourceRoot, "triangle.gltf");
+    writeFileSync(source, containedTriangle());
+    const before = JSON.parse(readFileSync(join(root, "scene.json"), "utf8")) as {
+      data: unknown;
+    };
+    const bridge = createDesktopBridge({ cwd: root });
+
+    expect(bridge.handle({
+      action: "asset-import",
+      payload: { profile: "web", documentPath: "scene.json", sourcePath: source },
+    })).toMatchObject({ ok: true, data: { outcome: "reviewing" } });
+    expect(bridge.handle({
+      action: "authoring",
+      payload: {
+        op: "propose",
+        documentPath: "scene.json",
+        jsonPointer: "/id",
+        newValue: "stale-request",
+        expectedContentHash: `sha256:${"0".repeat(64)}`,
+      },
+    })).toMatchObject({
+      ok: true,
+      data: { phase: "idle", diagnostics: [{ code: "content-hash-conflict" }] },
+    });
+    expect(bridge.handle({
+      action: "authoring",
+      payload: {
+        op: "propose",
+        documentPath: "scene.json",
+        jsonPointer: "/id",
+        newValue: "replacement-review",
+      },
+    })).toMatchObject({ ok: true, data: { phase: "reviewing" } });
+
+    const accepted = bridge.handle({ action: "authoring", payload: { op: "accept" } });
+    expect(accepted).toMatchObject({ ok: true, data: { phase: "applied" } });
+    if (!accepted.ok) return;
+    expect(accepted.data).not.toHaveProperty("assetImport");
+    expect(() => readFileSync(join(root, "assets/triangle.gltf"))).toThrow();
+    const after = JSON.parse(readFileSync(join(root, "scene.json"), "utf8")) as {
+      id: string;
+      data: unknown;
+    };
+    expect(after.id).toBe("replacement-review");
+    expect(after.data).toEqual(before.data);
+  });
 });

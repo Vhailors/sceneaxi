@@ -210,6 +210,53 @@ describe("contained GLB/glTF project ingestion", () => {
     expect(proposed).toMatchObject({ ok: true, replayed: false, entry: { mediaType: "model/gltf-binary" } });
   });
 
+  it("refuses unknown manifest entry and provenance fields", () => {
+    const root = project();
+    const sourceRoot = temporary("sceneaxi-contained-gltf-manifest-keys-");
+    const source = join(sourceRoot, "triangle.gltf");
+    writeFileSync(source, gltfBytes());
+    const proposed = proposeContainedGltfAssetImport({
+      projectRoot: root,
+      documentPath: "scene.json",
+      sourcePath: source,
+    });
+    expect(proposed.ok).toBe(true);
+    if (!proposed.ok || proposed.proposal === null) return;
+    expect(apply({ proposal: proposed.proposal, cwd: root }).ok).toBe(true);
+
+    const parsed = parseDocumentTextForTest(root);
+    const valid = projectAssetManifestFromDocumentData(parsed.data);
+    expect(valid.ok).toBe(true);
+    if (!valid.ok) return;
+    const withEntryPath = structuredClone(valid.value) as {
+      assets: Array<Record<string, unknown>>;
+    };
+    const entry = withEntryPath.assets[0];
+    expect(entry).toBeDefined();
+    if (entry === undefined) return;
+    entry["sourcePath"] = "/private/creator/triangle.gltf";
+    expect(projectAssetManifestFromDocumentData({
+      [PROJECT_ASSET_MANIFEST_KEY]: withEntryPath,
+    })).toMatchObject({
+      ok: false,
+      reason: CONTAINED_GLTF_REFUSALS.manifestInvalid,
+    });
+
+    const withCredential = structuredClone(valid.value) as {
+      assets: Array<Record<string, unknown>>;
+    };
+    const provenance = withCredential.assets[0]?.["provenance"];
+    expect(provenance).toBeTypeOf("object");
+    if (provenance === null || typeof provenance !== "object" || Array.isArray(provenance)) return;
+    (provenance as Record<string, unknown>)["credential"] = "must-not-persist";
+    expect(projectAssetManifestFromDocumentData({
+      [PROJECT_ASSET_MANIFEST_KEY]: withCredential,
+    })).toMatchObject({
+      ok: false,
+      reason: CONTAINED_GLTF_REFUSALS.manifestInvalid,
+    });
+  });
+
   it("names duplicate replay, duplicate content, and conflicting identity without changing project bytes", () => {
     const root = project();
     const sourceRoot = temporary("sceneaxi-contained-gltf-identity-");

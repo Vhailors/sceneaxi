@@ -200,6 +200,32 @@ const GLB_BIN_CHUNK = 0x004e4942;
 const GLTF_JSON_MAXIMUM_DEPTH = 64;
 const GLTF_MAXIMUM_VERTICES = 250_000;
 const GLTF_MAXIMUM_TRIANGLES = 250_000;
+const PROJECT_ASSET_MANIFEST_KEYS = Object.freeze([
+  "schemaVersion",
+  "kind",
+  "assets",
+]);
+const PROJECT_ASSET_MANIFEST_ENTRY_KEYS = Object.freeze([
+  "assetId",
+  "sourceName",
+  "relativePath",
+  "mediaType",
+  "byteLength",
+  "digest",
+  "canonicalBytesBase64",
+  "copyPolicy",
+  "profile",
+  "artifactId",
+  "instanceId",
+  "provenance",
+]);
+const PROJECT_ASSET_PROVENANCE_KEYS = Object.freeze([
+  "importer",
+  "importerVersion",
+  "sourceDigest",
+  "formatVersion",
+  "contained",
+]);
 
 function refuse(reason: ContainedGltfRefusal, message: string): Refusal {
   return Object.freeze({ ok: false as const, reason, message });
@@ -225,6 +251,15 @@ function plainRecord(value: unknown): value is Record<string, unknown> {
   }
   const prototype = Object.getPrototypeOf(value) as unknown;
   return prototype === Object.prototype || prototype === null;
+}
+
+function hasExactKeys(
+  value: Record<string, unknown>,
+  expected: readonly string[],
+): boolean {
+  const keys = Object.keys(value);
+  return keys.length === expected.length &&
+    keys.every((key) => expected.includes(key));
 }
 
 function finiteNumber(value: unknown): value is number {
@@ -773,7 +808,7 @@ function manifestFrom(value: unknown): ProjectAssetManifest | Refusal {
     value["kind"] !== PROJECT_ASSET_MANIFEST_KIND ||
     !Array.isArray(value["assets"]) ||
     value["assets"].length > PROJECT_ASSET_MAX_COUNT ||
-    Object.keys(value).some((key) => !["schemaVersion", "kind", "assets"].includes(key))
+    !hasExactKeys(value, PROJECT_ASSET_MANIFEST_KEYS)
   ) {
     return refuse(CONTAINED_GLTF_REFUSALS.manifestInvalid, "The project asset manifest header or asset list is invalid.");
   }
@@ -798,7 +833,9 @@ function manifestFrom(value: unknown): ProjectAssetManifest | Refusal {
       entry["profile"] !== CONTAINED_GLTF_PROFILE_ID ||
       typeof entry["artifactId"] !== "string" || !ID_RE.test(entry["artifactId"]) ||
       typeof entry["instanceId"] !== "string" || !ID_RE.test(entry["instanceId"]) ||
+      !hasExactKeys(entry, PROJECT_ASSET_MANIFEST_ENTRY_KEYS) ||
       !plainRecord(provenance) ||
+      !hasExactKeys(provenance, PROJECT_ASSET_PROVENANCE_KEYS) ||
       provenance["importer"] !== "@sceneaxi/importers" ||
       provenance["importerVersion"] !== 1 ||
       provenance["sourceDigest"] !== entry["digest"] ||
