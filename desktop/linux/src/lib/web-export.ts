@@ -109,7 +109,6 @@ type ExportFile = Readonly<{
 const DIGEST_RE = /^sha256:[0-9a-f]{64}$/;
 const SAFE_ASSET_PATH_RE = new RegExp(DESKTOP_WEB_STAGE_CONFIG.assetPathPattern);
 const CREATED_AT = "1970-01-01T00:00:00.000Z";
-const TOOL_NAME = `@sceneaxi/desktop-linux@${DESKTOP_WEB_EXPORT_TOOL_VERSION}/export-web-v${String(DESKTOP_WEB_EXPORT_VERSION)}`;
 
 function refuse(
   reason: DesktopWebExportRefusalReason,
@@ -136,6 +135,35 @@ function canonicalJson(value: JsonValue): string {
 
 function utf8(value: string): Uint8Array {
   return Buffer.from(value, "utf8");
+}
+
+function runtimeBoundToolVersion(runtimeDigest: string): string {
+  return `${DESKTOP_WEB_EXPORT_TOOL_VERSION}+export.${String(DESKTOP_WEB_EXPORT_VERSION)}.renderer.${runtimeDigest.slice("sha256:".length)}`;
+}
+
+function deliveryDisplayName(document: SceneDocument): string {
+  const source = document.title?.trim() || document.id;
+  const scalars: string[] = [];
+  for (let index = 0; index < source.length && scalars.length < 200;) {
+    const first = source.charCodeAt(index);
+    if (first >= 0xd800 && first <= 0xdbff) {
+      const second = source.charCodeAt(index + 1);
+      if (second >= 0xdc00 && second <= 0xdfff) {
+        scalars.push(source.slice(index, index + 2));
+        index += 2;
+      } else {
+        scalars.push("\ufffd");
+        index += 1;
+      }
+    } else if (first >= 0xdc00 && first <= 0xdfff) {
+      scalars.push("\ufffd");
+      index += 1;
+    } else {
+      scalars.push(source[index] ?? "");
+      index += 1;
+    }
+  }
+  return scalars.join("");
 }
 
 function contentType(path: string): string {
@@ -167,6 +195,48 @@ function contentType(path: string): string {
 function within(parent: string, candidate: string): boolean {
   const rel = relative(parent, candidate);
   return rel === "" || (rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel));
+}
+
+function pathEntryExists(path: string): boolean {
+  try {
+    lstatSync(path);
+    return true;
+  } catch (error) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === "ENOENT"
+    ) return false;
+    throw error;
+  }
+}
+
+function readProjectDocument(
+  root: string,
+): Readonly<{ ok: true; bytes: Buffer }> | DesktopWebExportRefusal {
+  const documentFile = join(root, DESKTOP_ACTIVE_DOCUMENT_PATH);
+  try {
+    if (lstatSync(documentFile).isSymbolicLink() || !statSync(documentFile).isFile()) {
+      return refuse(
+        DESKTOP_WEB_EXPORT_REFUSALS.unsafePath,
+        "The active Scene Document must be a regular project file.",
+      );
+    }
+    const canonicalDocument = realpathSync(documentFile);
+    if (!within(root, canonicalDocument)) {
+      return refuse(
+        DESKTOP_WEB_EXPORT_REFUSALS.unsafePath,
+        "The active Scene Document resolves outside the project root.",
+      );
+    }
+    return Object.freeze({ ok: true as const, bytes: readFileSync(canonicalDocument) });
+  } catch (error) {
+    return refuse(
+      DESKTOP_WEB_EXPORT_REFUSALS.sceneInvalid,
+      `The active Scene Document could not be read: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
 }
 
 function referencedWebAssets(data: Readonly<Record<string, unknown>>):
@@ -386,7 +456,7 @@ function verifyExistingOutput(
 function ensureDirectory(parent: string, name: string): string | DesktopWebExportRefusal {
   const directory = join(parent, name);
   try {
-    if (!existsSync(directory)) mkdirSync(directory);
+    if (!pathEntryExists(directory)) mkdirSync(directory);
     if (lstatSync(directory).isSymbolicLink() || !statSync(directory).isDirectory()) {
       return refuse(
         DESKTOP_WEB_EXPORT_REFUSALS.unsafePath,
@@ -414,13 +484,20 @@ function writeOutput(
   destination: string,
   expected: ReadonlyMap<string, Uint8Array>,
 ): Readonly<{ ok: true; replayed: boolean }> | DesktopWebExportRefusal {
-  if (existsSync(destination)) {
-    return verifyExistingOutput(destination, expected)
-      ? Object.freeze({ ok: true as const, replayed: true })
-      : refuse(
-          DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
-          `The content-addressed export directory already exists with different or unsafe bytes: ${destination}`,
-        );
+  try {
+    if (pathEntryExists(destination)) {
+      return verifyExistingOutput(destination, expected)
+        ? Object.freeze({ ok: true as const, replayed: true })
+        : refuse(
+            DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
+            `The content-addressed export directory already exists with different or unsafe bytes: ${destination}`,
+          );
+    }
+  } catch (error) {
+    return refuse(
+      DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
+      `The content-addressed export destination could not be inspected safely: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
   let temporary: string | null = null;
   try {
@@ -436,8 +513,20 @@ function writeOutput(
     if (temporary !== null && existsSync(temporary)) {
       rmSync(temporary, { recursive: true, force: true });
     }
-    if (existsSync(destination) && verifyExistingOutput(destination, expected)) {
-      return Object.freeze({ ok: true as const, replayed: true });
+    try {
+      if (pathEntryExists(destination)) {
+        return verifyExistingOutput(destination, expected)
+          ? Object.freeze({ ok: true as const, replayed: true })
+          : refuse(
+              DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
+              `The content-addressed export directory was occupied during commit: ${destination}`,
+            );
+      }
+    } catch {
+      return refuse(
+        DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
+        `The content-addressed export destination could not be inspected after a failed commit: ${destination}`,
+      );
     }
     return refuse(
       DESKTOP_WEB_EXPORT_REFUSALS.writeFailed,
@@ -468,31 +557,18 @@ export function exportDesktopWebProject(
   }
 
   let root: string;
-  let documentBytes: Buffer;
   try {
     root = realpathSync(input.projectRoot);
     if (!statSync(root).isDirectory()) throw new Error("project root is not a directory");
-    const documentFile = join(root, DESKTOP_ACTIVE_DOCUMENT_PATH);
-    if (lstatSync(documentFile).isSymbolicLink() || !statSync(documentFile).isFile()) {
-      return refuse(
-        DESKTOP_WEB_EXPORT_REFUSALS.unsafePath,
-        "The active Scene Document must be a regular project file.",
-      );
-    }
-    const canonicalDocument = realpathSync(documentFile);
-    if (!within(root, canonicalDocument)) {
-      return refuse(
-        DESKTOP_WEB_EXPORT_REFUSALS.unsafePath,
-        "The active Scene Document resolves outside the project root.",
-      );
-    }
-    documentBytes = readFileSync(canonicalDocument);
   } catch (error) {
     return refuse(
       DESKTOP_WEB_EXPORT_REFUSALS.sceneInvalid,
-      `The active Scene Document could not be read: ${error instanceof Error ? error.message : String(error)}`,
+      `The project root could not be read: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
+  const sourceDocument = readProjectDocument(root);
+  if (!sourceDocument.ok) return sourceDocument;
+  const documentBytes = sourceDocument.bytes;
 
   const exactHash = contentHash(documentBytes.toString("utf8"));
   if (exactHash !== input.expectedContentHash) {
@@ -535,6 +611,8 @@ export function exportDesktopWebProject(
   }
 
   const sourceDigest = sha256(documentBytes);
+  const runtimeDigest = sha256(input.runtimeJavaScript);
+  const toolVersion = runtimeBoundToolVersion(runtimeDigest);
   if (sourceDigest !== exactHash) {
     return refuse(
       DESKTOP_WEB_EXPORT_REFUSALS.sceneInvalid,
@@ -555,7 +633,7 @@ export function exportDesktopWebProject(
     Object.freeze({
       path: "sceneaxi-web.js",
       bytes: Buffer.from(input.runtimeJavaScript),
-      artifact: Object.freeze({ role: "application" as const, contentType: "application/javascript", digest: "" }),
+      artifact: Object.freeze({ role: "application" as const, contentType: "application/javascript", digest: runtimeDigest }),
     }),
     Object.freeze({
       path: "source/scene.json",
@@ -578,8 +656,8 @@ export function exportDesktopWebProject(
     kind: DELIVERY_HANDOFF_KIND,
     product: Object.freeze({
       id: parsed.document.id,
-      displayName: parsed.document.title?.trim() || parsed.document.id,
-      version: DESKTOP_WEB_EXPORT_TOOL_VERSION,
+      displayName: deliveryDisplayName(parsed.document),
+      version: toolVersion,
     }),
     target: "web",
     artifacts,
@@ -588,7 +666,7 @@ export function exportDesktopWebProject(
       createdAt: CREATED_AT,
       build: Object.freeze({
         id: `web-${sourceDigest.slice("sha256:".length)}`,
-        tool: TOOL_NAME,
+        tool: `@sceneaxi/desktop-linux@${toolVersion}/export-web-v${String(DESKTOP_WEB_EXPORT_VERSION)}`,
         startedAt: CREATED_AT,
         completedAt: CREATED_AT,
       }),
@@ -626,18 +704,20 @@ export function exportDesktopWebProject(
   // A source change during output construction refuses the result. The
   // content-addressed output remains valid evidence for the earlier bytes, but
   // it is not reported as the current project export.
-  try {
-    const after = readFileSync(join(root, DESKTOP_ACTIVE_DOCUMENT_PATH));
-    if (sha256(after) !== sourceDigest) {
-      return refuse(
-        DESKTOP_WEB_EXPORT_REFUSALS.projectChanged,
-        "scene.json changed while the static Web export was being written; the result was not reported as current.",
-      );
+  const currentDocument = readProjectDocument(root);
+  if (!currentDocument.ok) {
+    if (currentDocument.reason === DESKTOP_WEB_EXPORT_REFUSALS.unsafePath) {
+      return currentDocument;
     }
-  } catch {
     return refuse(
       DESKTOP_WEB_EXPORT_REFUSALS.projectChanged,
       "scene.json could not be re-read after the static Web export was written.",
+    );
+  }
+  if (sha256(currentDocument.bytes) !== sourceDigest) {
+    return refuse(
+      DESKTOP_WEB_EXPORT_REFUSALS.projectChanged,
+      "scene.json changed while the static Web export was being written; the result was not reported as current.",
     );
   }
 

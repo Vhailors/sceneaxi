@@ -2,11 +2,13 @@
 import { createHash } from "node:crypto";
 import {
   existsSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
   rmSync,
+  symlinkSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -17,6 +19,7 @@ import { contentHash } from "@sceneaxi/authoring-core";
 import { parseDeliveryHandoffText } from "@sceneaxi/schemas";
 import {
   DESKTOP_WEB_EXPORT_REFUSALS,
+  DESKTOP_WEB_EXPORT_TOOL_VERSION,
   createDesktopBridge,
   exportDesktopWebProject,
   seedDesktopProject,
@@ -125,6 +128,29 @@ function statusHash(bridge: ReturnType<typeof createDesktopBridge>) {
   return (response.data as { contentHash: string }).contentHash;
 }
 
+function exportProject(root: string, runtimeJavaScript = RUNTIME) {
+  const bridge = createDesktopBridge({ cwd: root });
+  return exportDesktopWebProject({
+    projectRoot: root,
+    documentPath: "scene.json",
+    expectedContentHash: statusHash(bridge),
+    runtimeJavaScript,
+  });
+}
+
+function rewriteDocument(
+  root: string,
+  mutate: (document: Record<string, unknown>) => void,
+) {
+  const document = JSON.parse(
+    readFileSync(join(root, "scene.json"), "utf8"),
+  ) as Record<string, unknown>;
+  mutate(document);
+  const bytes = Buffer.from(`${JSON.stringify(document, null, 2)}\n`);
+  writeFileSync(join(root, "scene.json"), bytes);
+  return bytes;
+}
+
 function ship(root: string) {
   const bridge = createDesktopBridge({ cwd: root, webExportRuntime: RUNTIME });
   const expectedContentHash = statusHash(bridge);
@@ -220,6 +246,62 @@ describe("desktop static Web export", () => {
         ),
       },
     ).toEqual(GOLDEN);
+  });
+
+  it("projects every valid document identity into a valid handoff display name", () => {
+    const titledRoot = temporary("sceneaxi-export-display-title-");
+    expect(seedDesktopProject(titledRoot)).toEqual({ ok: true, migrated: false });
+    const title = `${"😀".repeat(199)}\ud800tail`;
+    const titledBytes = rewriteDocument(titledRoot, (document) => {
+      document["title"] = title;
+    });
+    const titled = exportProject(titledRoot);
+    expect(titled.ok).toBe(true);
+    if (!titled.ok) throw new Error(titled.message);
+    expect(titled.handoff.product.displayName).toBe(
+      `${"😀".repeat(199)}\ufffd`,
+    );
+    expect(readFileSync(join(titled.outputDirectory, "source/scene.json"))).toEqual(
+      titledBytes,
+    );
+
+    const idRoot = temporary("sceneaxi-export-display-id-");
+    expect(seedDesktopProject(idRoot)).toEqual({ ok: true, migrated: false });
+    const longId = "a".repeat(240);
+    rewriteDocument(idRoot, (document) => {
+      document["id"] = longId;
+      delete document["title"];
+    });
+    const identified = exportProject(idRoot);
+    expect(identified.ok).toBe(true);
+    if (!identified.ok) throw new Error(identified.message);
+    expect(identified.handoff.product.id).toBe(longId);
+    expect(identified.handoff.product.displayName).toBe("a".repeat(200));
+  });
+
+  it("binds the effective tool version to the packaged renderer bytes", () => {
+    const firstRoot = temporary("sceneaxi-export-runtime-first-");
+    const secondRoot = temporary("sceneaxi-export-runtime-second-");
+    expect(seedDesktopProject(firstRoot)).toEqual({ ok: true, migrated: false });
+    expect(seedDesktopProject(secondRoot)).toEqual({ ok: true, migrated: false });
+    const alternateRuntime = Buffer.from("alternate packaged renderer");
+    const first = exportProject(firstRoot, RUNTIME);
+    const second = exportProject(secondRoot, alternateRuntime);
+    expect(first.ok).toBe(true);
+    expect(second.ok).toBe(true);
+    if (!first.ok) throw new Error(first.message);
+    if (!second.ok) throw new Error(second.message);
+    expect(first.handoff.product.version).toBe(
+      `${DESKTOP_WEB_EXPORT_TOOL_VERSION}+export.1.renderer.${sha256(RUNTIME).slice("sha256:".length)}`,
+    );
+    expect(second.handoff.product.version).toBe(
+      `${DESKTOP_WEB_EXPORT_TOOL_VERSION}+export.1.renderer.${sha256(alternateRuntime).slice("sha256:".length)}`,
+    );
+    expect(first.handoff.product.version).not.toBe(second.handoff.product.version);
+    expect(first.handoff.artifacts["sceneaxi-web.js"]?.digest).toBe(sha256(RUNTIME));
+    expect(second.handoff.artifacts["sceneaxi-web.js"]?.digest).toBe(
+      sha256(alternateRuntime),
+    );
   });
 
   it("refuses an invalid scene and stale source identity by name", () => {
@@ -378,5 +460,46 @@ describe("desktop static Web export", () => {
       ok: false,
       reason: DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
     });
+  });
+
+  it("refuses when the source becomes an out-of-root symlink", () => {
+    const root = temporary("sceneaxi-export-source-link-");
+    expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
+    const outside = temporary("sceneaxi-export-source-link-outside-");
+    const documentPath = join(root, "scene.json");
+    const outsideDocument = join(outside, "scene.json");
+    writeFileSync(outsideDocument, readFileSync(documentPath));
+    let committed = false;
+    exportCommit.afterRename = () => {
+      exportCommit.afterRename = null;
+      committed = true;
+      unlinkSync(documentPath);
+      symlinkSync(outsideDocument, documentPath);
+    };
+
+    const result = exportProject(root);
+
+    expect(committed).toBe(true);
+    expect(lstatSync(documentPath).isSymbolicLink()).toBe(true);
+    expect(result).toMatchObject({
+      ok: false,
+      reason: DESKTOP_WEB_EXPORT_REFUSALS.unsafePath,
+    });
+  });
+
+  it("refuses a dangling symlink at the content address without replacing it", () => {
+    const root = temporary("sceneaxi-export-destination-link-");
+    expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
+    const first = ship(root);
+    rmSync(first.outputDirectory, { recursive: true, force: true });
+    symlinkSync(join(root, "missing-export-target"), first.outputDirectory);
+
+    const result = exportProject(root);
+
+    expect(result).toMatchObject({
+      ok: false,
+      reason: DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
+    });
+    expect(lstatSync(first.outputDirectory).isSymbolicLink()).toBe(true);
   });
 });

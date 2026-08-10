@@ -68,8 +68,10 @@ and the final source check.
 - `delivery-handoff.json`, validated through the existing Delivery Handoff v1
   contract with per-artifact SHA-256 values and the aggregate artifact-set digest.
 
-The fixed export format and tool version make identical project bytes, asset
-bytes, and renderer bytes produce identical bundle bytes. Existing identical
+The fixed export format and runtime-bound tool version (the package and export
+format versions plus the packaged renderer SHA-256) make identical project and
+asset bytes under the same effective tool version produce identical bundle
+bytes. Existing identical
 output is a verified replay; an unexpected file, link, or changed byte at the
 content address refuses. The path never calls a provider or delivery adapter and
 never uploads, deploys, signs, approves, or releases anything.
