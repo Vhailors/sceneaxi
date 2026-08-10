@@ -36,9 +36,9 @@ const ACTIVE_PROJECT = Object.freeze({
 
 const CONTENT_HASH = `sha256:${"a".repeat(64)}`;
 
-function projectStatus() {
+function projectStatus(hasActiveProject: boolean) {
   return {
-    active: ACTIVE_PROJECT,
+    active: hasActiveProject ? ACTIVE_PROJECT : null,
     recents: [ACTIVE_PROJECT],
     recovery: null,
   };
@@ -124,6 +124,25 @@ function engineResponse(
       },
     };
   }
+  if (action === "ship" && op === "export-web") {
+    return {
+      ok: true,
+      action,
+      data: {
+        replayed: false,
+        outputDirectory: "/tmp/sceneaxi-command-test/exports/web/aaaaaaaa",
+        handoffPath:
+          "/tmp/sceneaxi-command-test/exports/web/aaaaaaaa/delivery-handoff.json",
+        sourceProject: {
+          documentId: "command-test",
+          contentHash: CONTENT_HASH,
+          sceneDigest: `sha256:${"b".repeat(64)}`,
+        },
+        bundleDigest: `sha256:${"c".repeat(64)}`,
+        artifactPaths: ["index.html", "source/scene.json"],
+      },
+    };
+  }
   return {
     ok: false,
     reason: "DESKTOP_COMMAND_TEST_UNEXPECTED",
@@ -146,6 +165,7 @@ async function harness(
     | "available"
     | "unavailable"
     | "recovery-pending" = "unavailable",
+  hasActiveProject = true,
 ) {
   const window = new HappyWindow({ width: 1200, height: 800 });
   windows.push(window);
@@ -161,13 +181,13 @@ async function harness(
         const action = String(typed["action"]);
         calls.push({ plane: "project", action, op: null });
         if (action === "status") {
-          return clone({ ok: true, data: { status: projectStatus() } });
+          return clone({ ok: true, data: { status: projectStatus(hasActiveProject) } });
         }
         return clone({
           ok: true,
           data: {
             outcome: action === "choose-new" ? "created" : "opened",
-            status: projectStatus(),
+            status: projectStatus(hasActiveProject),
           },
         });
       },
@@ -251,6 +271,8 @@ function expectedEffect(command: DesktopInteractionCommand) {
       return { plane: "project", action: "choose-open", op: null } as const;
     case "project-save":
       return { plane: "engine", action: "authoring", op: "accept" } as const;
+    case "ship-export-web":
+      return { plane: "engine", action: "ship", op: "export-web" } as const;
     case "edit-undo":
       return { plane: "engine", action: "authoring", op: "undo" } as const;
     case "run-play":
@@ -285,6 +307,15 @@ async function invoke(
     expect(element(window, ".shell").dataset.mode).toBe("run");
     expect(element(window, "[data-project-status]").textContent).toContain(
       "Played composed scene",
+    );
+  }
+  if (command.id === "ship-export-web") {
+    expect(element(window, ".shell").dataset.mode).toBe("ship");
+    expect(element(window, "[data-project-status]").textContent).toContain(
+      "Exported Web bundle",
+    );
+    expect(element(window, "[data-ship-bundle-digest]").textContent).toBe(
+      `sha256:${"c".repeat(64)}`,
     );
   }
 }
@@ -342,6 +373,31 @@ describe("desktop command menu, palette, and accelerator parity", () => {
     await settle(window);
     expect(event.defaultPrevented).toBe(true);
     expect(calls).toContainEqual({ plane: "project", action: "choose-open", op: null });
+  });
+
+  it("refuses Export Web by name when no project is open", async () => {
+    const { window, calls } = await harness("web", "unavailable", false);
+    await click(window, "#mode-ship");
+    calls.splice(0);
+    await click(window, "#ship-export-web");
+    expect(calls).toEqual([]);
+    expect(element(window, "[data-project-status]").textContent).toContain(
+      DESKTOP_PRODUCT_REFUSALS.projectRequired,
+    );
+    expect(element(window, "[data-outcome-code]").textContent).toContain(
+      DESKTOP_PRODUCT_REFUSALS.projectRequired,
+    );
+  });
+
+  it("retires Ship evidence when the project becomes dirty", async () => {
+    const { window } = await harness();
+    await click(window, "#ship-export-web");
+    expect(element(window, "[data-ship-export-evidence]").hidden).toBe(false);
+    await click(window, "#web-stage-html");
+    expect(element(window, "[data-ship-export-evidence]").hidden).toBe(true);
+    expect(element(window, "[data-ship-export-status]").textContent).toContain(
+      "No export has run for the current saved project bytes",
+    );
   });
 
   it("contains focus in the palette even when every row is inert", async () => {

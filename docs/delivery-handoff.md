@@ -76,6 +76,17 @@ The handoff is data, not delivery authority. Creating or validating one never
 uploads an artifact, spends money, signs a build, accesses credentials, or
 approves a release.
 
+## Desktop Web export producer
+
+The packaged Linux desktop's Ship → Export Web job is a first-party producer of
+this existing contract, not a second delivery authority. It writes
+`delivery-handoff.json` beside a contained static viewer under the active
+project's content-addressed `exports/web/` directory. Its artifact record binds
+the viewer, renderer, scene bridge, exact source `scene.json`, and every included
+asset. The manifest file is not an artifact in its own record, avoiding a
+self-referential digest. [`desktop-linux.md`](desktop-linux.md) owns the export
+layout, refusal rules, and executable evidence.
+
 ## Minimal example
 
 ```json

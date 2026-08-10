@@ -216,6 +216,8 @@ describe("desktop product loop", () => {
       htmlMaxLength: DESKTOP_WEB_HTML_MAX_LENGTH,
       assetPathMaxLength: DESKTOP_WEB_ASSET_PATH_MAX_LENGTH,
       assetMaxCount: DESKTOP_WEB_ASSET_MAX_COUNT,
+      assetPathPattern:
+        "^assets\\/(?:[A-Za-z0-9][A-Za-z0-9._-]*\\/)*[A-Za-z0-9][A-Za-z0-9._-]*$",
       refusals: { ...DESKTOP_PRODUCT_REFUSALS },
     });
   });

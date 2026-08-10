@@ -16,6 +16,8 @@
  * - `authoring`    → `createDesktopSession()` from `@sceneaxi/desktop-shell` — the
  *                    same propose/accept protocol layer as the CLI and web-shell,
  *                    never a second editor state machine.
+ * - `ship`         → deterministic local static Web files plus a validated
+ *                    Delivery Handoff; no adapter, credential, or deploy path.
  * - `assistant`    → the deterministic local compiler by default, or one
  *                    explicitly injected BYOK runner. Hosted refuses here
  *                    because this tier has no identity or credit authority.
@@ -60,6 +62,7 @@ import {
   validateRarityNamespace,
 } from "@sceneaxi/schemas";
 import {
+  DESKTOP_ACTIVE_DOCUMENT_PATH,
   DESKTOP_BRIDGE_ACTIONS,
   DESKTOP_BRIDGE_ASSISTANT_OPS,
   DESKTOP_BRIDGE_AUTHORING_OPS,
@@ -90,6 +93,10 @@ import {
   type DesktopSceneResult,
 } from "./desktop-scene.js";
 import { DesktopByoRunnerRefusal } from "./byo-configuration.js";
+import {
+  DESKTOP_WEB_EXPORT_REFUSALS,
+  exportDesktopWebProject,
+} from "./web-export.js";
 
 export type DesktopBridgeOptions = {
   /** Working directory the authoring session binds to. */
@@ -105,6 +112,8 @@ export type DesktopBridgeOptions = {
     request: DesktopRarityProviderRunRequest,
   ) => Promise<RarityProviderContributionResult>;
   readonly createAuthoringSession?: () => DesktopSession;
+  /** The already-built sole renderer owner copied into static Web exports. */
+  readonly webExportRuntime?: Uint8Array;
 };
 
 export type DesktopAssistantProfile =
@@ -1189,6 +1198,64 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     return bridgeOk("authoring", result);
   };
 
+  const ship = (payload: unknown): DesktopBridgeResponse => {
+    const op = field(payload, "op");
+    const documentPath = containedDocumentPath(field(payload, "documentPath"));
+    const expectedContentHash = field(payload, "expectedContentHash");
+    if (
+      op !== "export-web" ||
+      documentPath !== DESKTOP_ACTIVE_DOCUMENT_PATH ||
+      typeof expectedContentHash !== "string" ||
+      !/^sha256:[0-9a-f]{64}$/.test(expectedContentHash)
+    ) {
+      return bridgeRefuse(
+        DESKTOP_WEB_EXPORT_REFUSALS.requestMalformed,
+        "ship export-web requires scene.json and the exact current SHA-256 content hash.",
+      );
+    }
+    const live = authoringSession();
+    const snapshot = live.snapshot();
+    if (
+      snapshot.phase === "reviewing" ||
+      snapshot.phase === "pending" ||
+      snapshot.journalRecoveryPending
+    ) {
+      return bridgeRefuse(
+        DESKTOP_WEB_EXPORT_REFUSALS.projectDirty,
+        "Save or reject the staged proposal and resolve durable recovery before exporting.",
+      );
+    }
+    const status = live.status(documentPath);
+    if (!status.ok) {
+      return bridgeRefuse(
+        DESKTOP_WEB_EXPORT_REFUSALS.sceneInvalid,
+        status.diagnostics[0]?.message ?? "The active Scene Document is invalid.",
+      );
+    }
+    if (status.contentHash !== expectedContentHash) {
+      return bridgeRefuse(
+        DESKTOP_WEB_EXPORT_REFUSALS.projectChanged,
+        "scene.json changed after the renderer read it; reopen before exporting.",
+      );
+    }
+    const runtimeJavaScript = options.webExportRuntime;
+    if (runtimeJavaScript === undefined || runtimeJavaScript.byteLength === 0) {
+      return bridgeRefuse(
+        DESKTOP_WEB_EXPORT_REFUSALS.runtimeMissing,
+        "The packaged static Web renderer bytes are unavailable.",
+      );
+    }
+    const exported = exportDesktopWebProject({
+      projectRoot: options.cwd,
+      documentPath,
+      expectedContentHash,
+      runtimeJavaScript,
+    });
+    return exported.ok
+      ? bridgeOk("ship", exported)
+      : bridgeRefuse(exported.reason, exported.message);
+  };
+
   /**
    * What crosses the seam is bounded: the newest progress entry and how many
    * have accrued, never the accumulated log. The renderer polls this every 50ms
@@ -1571,6 +1638,8 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         return openPathExercise(payload);
       case "asset-import":
         return assetImport(payload);
+      case "ship":
+        return ship(payload);
       case "assistant":
         return assistant(payload);
       case "authoring":

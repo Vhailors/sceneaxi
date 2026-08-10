@@ -43,6 +43,7 @@ describe("desktop-linux seam", () => {
       "scene",
       "open-path",
       "asset-import",
+      "ship",
       "assistant",
       "authoring",
       "frame-report",

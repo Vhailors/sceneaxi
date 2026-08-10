@@ -356,7 +356,12 @@ lifecycle seam (`src/lib/{project-lifecycle-contract,project-lifecycle,project-h
 sceneaxi#224) and never by a default: first launch binds no root and writes no
 project, a root reaches the host only from a native directory dialog or its own
 validated versioned recent registry, and invalid bytes are refused rather than
-replaced — `docs/desktop-linux.md` owns that contract. Every successful
+replaced — `docs/desktop-linux.md` owns that contract. Ship → Export Web is the
+offline `src/lib/web-export.ts` job: it writes a content-addressed static viewer
+from exact project, asset, and packaged-renderer bytes plus the existing Delivery
+Handoff v1, and never calls a deploy adapter; `docs/desktop-linux.md` owns its
+layout and refusal contract and `tests/e2e/desktop-web-export-golden.test.ts`
+pins its digests. Every successful
 assistant artifact is projected through the shared
 `MountableScene` boundary before the renderer may mount it — directly, not through
 `composeScene()`, because composition's own contract calls a one-instance scene a

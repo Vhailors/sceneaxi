@@ -129,6 +129,8 @@ export const DESKTOP_PRODUCT_REFUSALS = Object.freeze({
   authoringRefused: "DESKTOP_AUTHORING_REFUSED",
   proposalNotReviewing: "DESKTOP_PROPOSAL_NOT_REVIEWING",
   proposalNotDiscarded: "DESKTOP_PROPOSAL_NOT_DISCARDED",
+  projectRequired: "DESKTOP_EXPORT_PROJECT_REQUIRED",
+  exportDirty: "DESKTOP_WEB_EXPORT_PROJECT_DIRTY",
   profileSwitchDirty: "DESKTOP_PROFILE_SWITCH_DIRTY",
   undoStagedProposal: "DESKTOP_UNDO_STAGED_PROPOSAL",
   applyNotCompleted: "DESKTOP_APPLY_NOT_COMPLETED",
@@ -165,6 +167,10 @@ export const DESKTOP_PRODUCT_REFUSAL_MESSAGES: Readonly<
     "The host did not park the edit for review, so nothing is staged to save.",
   [DESKTOP_PRODUCT_REFUSALS.proposalNotDiscarded]:
     "A staged proposal is still held by the host, so re-opening would abandon an edit the host still has.",
+  [DESKTOP_PRODUCT_REFUSALS.projectRequired]:
+    "Choose New Project, Open Project, or a validated recent project before exporting.",
+  [DESKTOP_PRODUCT_REFUSALS.exportDirty]:
+    "Web export requires saved project bytes; save or discard the staged proposal and resolve recovery first.",
   [DESKTOP_PRODUCT_REFUSALS.profileSwitchDirty]:
     "One proposal is already staged; save it or re-open the project to discard it before staging another edit, changing the project, or switching profiles.",
   [DESKTOP_PRODUCT_REFUSALS.undoStagedProposal]:
@@ -203,6 +209,9 @@ export const DESKTOP_WEB_STARTER = Object.freeze({
 export const DESKTOP_WEB_HTML_MAX_LENGTH = 100_000;
 export const DESKTOP_WEB_ASSET_PATH_MAX_LENGTH = 512;
 export const DESKTOP_WEB_ASSET_MAX_COUNT = 256;
+/** One portable path grammar shared by staging and static Web export. */
+export const DESKTOP_WEB_ASSET_PATH_PATTERN =
+  "^assets\\/(?:[A-Za-z0-9][A-Za-z0-9._-]*\\/)*[A-Za-z0-9][A-Za-z0-9._-]*$";
 
 export type DesktopWebStageOperation = Readonly<{
   profile: string;
@@ -219,6 +228,7 @@ export type DesktopWebStageConfig = Readonly<{
   htmlMaxLength: number;
   assetPathMaxLength: number;
   assetMaxCount: number;
+  assetPathPattern: string;
   refusals: Readonly<
     Pick<
       typeof DESKTOP_PRODUCT_REFUSALS,
@@ -236,6 +246,7 @@ export const DESKTOP_WEB_STAGE_CONFIG: DesktopWebStageConfig = Object.freeze({
   htmlMaxLength: DESKTOP_WEB_HTML_MAX_LENGTH,
   assetPathMaxLength: DESKTOP_WEB_ASSET_PATH_MAX_LENGTH,
   assetMaxCount: DESKTOP_WEB_ASSET_MAX_COUNT,
+  assetPathPattern: DESKTOP_WEB_ASSET_PATH_PATTERN,
   refusals: DESKTOP_PRODUCT_REFUSALS,
 });
 
@@ -252,8 +263,7 @@ export function desktopWebStageDecision(
   operation: DesktopWebStageOperation,
   config: DesktopWebStageConfig,
 ): DesktopStageDecision {
-  const assetPattern =
-    /^assets\/(?:[A-Za-z0-9][A-Za-z0-9._-]*\/)*[A-Za-z0-9][A-Za-z0-9._-]*$/;
+  const assetPattern = new RegExp(config.assetPathPattern);
   const refuse = (
     reason: DesktopProductRefusal,
     message: string,

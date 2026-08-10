@@ -44,6 +44,14 @@ export const DESKTOP_INTERACTION_COMMANDS = Object.freeze([
     allowInTextEntry: false,
   }),
   Object.freeze({
+    id: "ship-export-web",
+    label: "Export Web",
+    menu: "file" as const,
+    accelerator: "",
+    key: null,
+    allowInTextEntry: false,
+  }),
+  Object.freeze({
     id: "edit-undo",
     label: "Undo",
     menu: "edit" as const,

@@ -11,7 +11,7 @@
  * The window is locked down: context isolation on, sandbox on, no node integration,
  * and navigation away from the packaged document is refused.
  */
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, sep } from "node:path";
 import { BrowserWindow, app, dialog, ipcMain } from "electron";
@@ -118,6 +118,7 @@ async function start(): Promise<void> {
     keyStore: providerKeyStore,
   });
   const runRarityProvider = createDesktopRarityFixtureProvider();
+  const webExportRuntime = readFileSync(join(__dirname, "renderer.js"));
   let bridge: DesktopBridge | null = null;
   let activeRoot: string | null = null;
 
@@ -134,6 +135,7 @@ async function start(): Promise<void> {
         ? {}
         : { runByoAssistant: byoRuntime.runByoAssistant }),
       runRarityProvider,
+      webExportRuntime,
     });
     const localPaths = SMOKE
       ? {
@@ -502,6 +504,34 @@ async function start(): Promise<void> {
     payload: { documentPath: SAMPLE_DOCUMENT },
   });
   if (!openPath.ok) fail(`saved open-path refused: ${openPath.reason}`);
+
+  const shipped = proofBridge.handle({
+    action: "ship",
+    payload: {
+      op: "export-web",
+      documentPath: SAMPLE_DOCUMENT,
+      expectedContentHash: currentContentHash(),
+    },
+  });
+  if (!shipped.ok) fail(`Web export refused: ${shipped.reason}`);
+  const exportDirectory = payloadField(shipped.data, "outputDirectory");
+  const handoffPath = payloadField(shipped.data, "handoffPath");
+  const bundleDigest = payloadField(shipped.data, "bundleDigest");
+  const sourceProject = payloadField(shipped.data, "sourceProject");
+  const sourceDigest = payloadField(sourceProject, "contentHash");
+  if (
+    typeof exportDirectory !== "string" ||
+    !exportDirectory.startsWith(`${cwd}${sep}exports${sep}web${sep}`) ||
+    typeof handoffPath !== "string" ||
+    !existsSync(handoffPath) ||
+    typeof bundleDigest !== "string" ||
+    typeof sourceDigest !== "string" ||
+    readFileSync(join(exportDirectory, "source", SAMPLE_DOCUMENT), "utf8") !== savedBytes ||
+    !readFileSync(join(exportDirectory, "index.html"), "utf8").includes("sceneaxi-web.js") ||
+    !readFileSync(handoffPath, "utf8").includes(bundleDigest)
+  ) {
+    fail("Web export did not preserve source bytes, local runtime, and Delivery Handoff evidence");
+  }
   const mountable = payloadField(openPath.data, "mountable");
   const mountedInstances = payloadField(mountable, "instances");
   const playedEntity = Array.isArray(mountedInstances)
@@ -607,6 +637,13 @@ async function start(): Promise<void> {
         persisted: savedBytes !== seededBytes,
         scratchProject,
         project: cwd,
+      },
+      ship: {
+        exported: true,
+        outputDirectory: exportDirectory,
+        bundleDigest,
+        sourceDigest,
+        handoffPresent: true,
       },
       frameReport,
       playbackDom,

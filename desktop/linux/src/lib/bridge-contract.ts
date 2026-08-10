@@ -46,6 +46,7 @@ export const DESKTOP_BRIDGE_ACTIONS = Object.freeze([
   "scene",
   "open-path",
   "asset-import",
+  "ship",
   "assistant",
   "authoring",
   "frame-report",

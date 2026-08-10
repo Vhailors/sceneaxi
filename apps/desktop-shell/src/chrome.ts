@@ -172,10 +172,10 @@ const MODE_PANELS: Readonly<
   }),
   ship: Object.freeze({
     leftTitle: "TARGETS",
-    leftEmpty: "Delivery handoff creation is not available on this surface.",
+    leftEmpty: "Static Web · contained project files · Delivery Handoff v1.",
     inspectorTitle: "DELIVERY HANDOFF",
-    inspectorEmpty: "No handoff inspector is bound.",
-    note: `${DESKTOP_VISUAL_REFUSALS.noDocumentBound} · no export, signing, upload, or release action is exposed here.`,
+    inspectorEmpty: "No export has run for the current saved project bytes.",
+    note: "Export writes a local content-addressed bundle. It never signs, uploads, deploys, approves, or releases it.",
     noteTone: "accent" as const,
   }),
   plugins: Object.freeze({
@@ -646,7 +646,7 @@ function inspector(view: DesktopVisualView): string {
     const panel = MODE_PANELS[mode];
     return `<section class="inspector-panel" data-mode-panel="${escapeHtml(mode)}" aria-label="${escapeHtml(panel.inspectorTitle)}"${mode === active ? "" : " hidden"}>
   <h2 class="panel-head"><span>${escapeHtml(panel.inspectorTitle)}</span></h2>
-  <p class="panel-empty"${mode === "run" ? " data-run-live-report" : ""}>${escapeHtml(panel.inspectorEmpty)}</p>
+  <p class="panel-empty"${mode === "run" ? " data-run-live-report" : mode === "ship" ? ' data-ship-export-status aria-live="polite"' : ""}>${escapeHtml(panel.inspectorEmpty)}</p>
   ${
     mode === "build"
       ? `<div class="scene-property-editor" data-scene-property-editor hidden>
@@ -670,7 +670,17 @@ function inspector(view: DesktopVisualView): string {
     <p class="scene-property-diagnostic" data-scene-property-diagnostic aria-live="polite">Select this entity to edit its saved composition.</p>
     <pre class="scene-property-review" data-scene-property-review hidden></pre>
   </div>`
-      : ""
+      : mode === "ship"
+        ? `<div class="ship-export-panel">
+    ${button(view.product.exportWeb, "Export Web", "primary-button block-button", ` data-product-action data-command="ship-export-web"`)}
+    <dl class="ship-export-evidence" data-ship-export-evidence hidden>
+      <div><dt>Output</dt><dd><code data-ship-output></code></dd></div>
+      <div><dt>Bundle digest</dt><dd><code data-ship-bundle-digest></code></dd></div>
+      <div><dt>Source project</dt><dd><code data-ship-source-digest></code></dd></div>
+      <div><dt>Handoff</dt><dd><code data-ship-handoff-path></code></dd></div>
+    </dl>
+  </div>`
+        : ""
   }
 </section>`;
   }).join("");
@@ -1047,6 +1057,7 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .scene-property-input:focus{outline:1px solid var(--accent);outline-offset:1px}.scene-property-input.is-inert{color:var(--inert)}
 .scene-property-diagnostic{margin:0;font-size:9px;line-height:1.45;color:var(--dim);overflow-wrap:anywhere}
 .scene-property-review{max-height:150px;margin:0;padding:8px;overflow:auto;border:1px solid var(--line);border-radius:4px;background:var(--well);color:var(--dim);font-family:var(--mono);font-size:8px;line-height:1.45;white-space:pre-wrap}
+.ship-export-panel{padding:0 12px 12px}.ship-export-evidence{display:grid;gap:8px;margin:12px 0 0}.ship-export-evidence div{min-width:0}.ship-export-evidence dt{font:9px/1.4 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}.ship-export-evidence dd{margin:2px 0 0;color:var(--dim);overflow-wrap:anywhere}.ship-export-evidence code{font-size:9px}
 .pass-list{list-style:none;margin:0;padding:10px 11px;display:flex;flex-direction:column;gap:6px}
 .pass-row{display:flex;align-items:center;gap:10px;padding:6px 9px;background:var(--raised);border:1px solid var(--line);border-radius:4px}
 .pass-order{width:14px;height:14px;border-radius:3px;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font-size:9px;font-weight:700;flex:none}
@@ -1408,13 +1419,28 @@ if (shell) {
   let selectedSceneEntityId = null;
   let sceneRefusalText = null;
   let undoAvailability = 'unavailable';
+  let shippedSourceDigest = null;
   // One product request at a time. Every live control reads \`projectData\` before
   // its first await, so two overlapping clicks would each build a proposal from
   // the same pre-edit document and the second would replace the first in the
   // host's single-proposal session — both reporting success, one edit gone.
   let inFlight = false;
 
+  const clearShipEvidence = () => {
+    shippedSourceDigest = null;
+    q('[data-ship-export-evidence]').forEach((el) => { el.hidden = true; });
+    q('[data-ship-output], [data-ship-bundle-digest], [data-ship-source-digest], [data-ship-handoff-path]')
+      .forEach((el) => { el.textContent = ''; });
+    q('[data-ship-export-status]').forEach((el) => {
+      el.textContent = 'No export has run for the current saved project bytes.';
+    });
+  };
+
   const productStatus = (state, text) => {
+    if (
+      shippedSourceDigest !== null &&
+      (projectDirty || projectRecovering || shippedSourceDigest !== projectContentHash)
+    ) clearShipEvidence();
     const pill = shell.querySelector('[data-project-state]');
     if (pill) pill.dataset.projectState = state;
     q('[data-project-status]').forEach((el) => { el.textContent = text; });
@@ -2636,6 +2662,78 @@ if (shell) {
     productStatus(projectRecovering ? 'recovering' : (projectDirty ? 'dirty' : (projectData === null ? 'closed' : 'open')), played);
   };
 
+  const shipStatus = (text) => {
+    q('[data-ship-export-status]').forEach((el) => { el.textContent = text; });
+  };
+
+  const exportWeb = async () => {
+    if (activeProject === null && projectPort() !== null) {
+      const code = T.product.refusals.projectRequired;
+      shipStatus('Export refused · ' + code);
+      productStatus('refused', 'Export refused · ' + code);
+      showOutcome('Export Web refused', code, 'Choose New Project or Open Project first.');
+      return;
+    }
+    if (projectDirty || projectRecovering) {
+      const code = T.product.refusals.exportDirty;
+      shipStatus('Export refused · ' + code);
+      productStatus(projectRecovering ? 'recovering' : 'dirty', 'Export refused · ' + code);
+      showOutcome('Export Web refused', code, 'Save or discard the staged proposal and resolve recovery before exporting.');
+      return;
+    }
+    if ((projectData === null || projectContentHash === null) && !(await openProject())) return;
+    if (projectContentHash === null) {
+      shipStatus('Export refused · ' + T.product.refusals.documentDataInvalid);
+      return;
+    }
+    clearShipEvidence();
+    shipStatus('Writing deterministic local Web bundle…');
+    const response = await runtimeRequest({
+      action: 'ship',
+      payload: {
+        op: 'export-web',
+        documentPath: T.product.documentPath,
+        expectedContentHash: projectContentHash,
+      },
+    });
+    if (response === null || !response.ok) {
+      const code = response === null
+        ? T.product.refusals.runtimeUnavailable
+        : (response.reason || T.product.refusals.runtimeRequestRefused);
+      const message = response?.message || 'The packaged host did not produce a Web export.';
+      shipStatus('Export refused · ' + code + ' · ' + message);
+      productStatus('refused', 'Export refused · ' + code);
+      showOutcome('Export Web refused', code, message);
+      return;
+    }
+    const result = response.data;
+    const source = result && result.sourceProject;
+    const digestPattern = /^sha256:[0-9a-f]{64}$/;
+    if (
+      !result || typeof result.outputDirectory !== 'string' ||
+      typeof result.handoffPath !== 'string' || typeof result.bundleDigest !== 'string' ||
+      !digestPattern.test(result.bundleDigest) ||
+      !source || typeof source.contentHash !== 'string' ||
+      !digestPattern.test(source.contentHash) || source.contentHash !== projectContentHash
+    ) {
+      const code = T.product.refusals.runtimeRequestRefused;
+      shipStatus('Export refused · ' + code + ' · invalid export evidence');
+      productStatus('refused', 'Export refused · ' + code);
+      showOutcome('Export Web refused', code, 'The host returned no complete export evidence.');
+      return;
+    }
+    showModePanels('ship');
+    q('[data-ship-output]').forEach((el) => { el.textContent = result.outputDirectory; });
+    q('[data-ship-bundle-digest]').forEach((el) => { el.textContent = result.bundleDigest; });
+    q('[data-ship-source-digest]').forEach((el) => { el.textContent = source.contentHash; });
+    q('[data-ship-handoff-path]').forEach((el) => { el.textContent = result.handoffPath; });
+    q('[data-ship-export-evidence]').forEach((el) => { el.hidden = false; });
+    shippedSourceDigest = source.contentHash;
+    const outcome = result.replayed === true ? 'Verified existing' : 'Exported';
+    shipStatus(outcome + ' deterministic Web bundle · no deployment performed.');
+    productStatus('open', outcome + ' Web bundle · ' + result.bundleDigest);
+  };
+
   const switchProfile = async (value) => {
     if (shell.dataset.profile === value) return;
     if (projectRecovering) {
@@ -2977,6 +3075,7 @@ if (shell) {
     'project-new': () => chooseProject('choose-new'),
     'project-open': () => chooseProject('choose-open'),
     'project-save': saveProject,
+    'ship-export-web': exportWeb,
     'edit-undo': undoProject,
     'run-play': playScene,
   });
