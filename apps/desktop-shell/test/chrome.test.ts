@@ -217,6 +217,9 @@ describe("engine desktop chrome — accessibility", () => {
     expect(unavailable).toContain(
       `id="assistant-send" data-kind="inert" aria-disabled="true" data-refusal="${DESKTOP_VISUAL_REFUSALS.noPresentationRuntime}"`,
     );
+    expect(unavailable).toContain(
+      `${DESKTOP_VISUAL_REFUSALS.noPresentationRuntime} — assistant actions are unavailable until a packaged host binds.`,
+    );
   });
   it("uses landmarks rather than anonymous divs for every region", () => {
     const html = render();
@@ -465,9 +468,7 @@ describe("engine desktop chrome — accessibility", () => {
     expect(html).not.toContain(`onclick="steal()"`);
   });
 
-  it("offers the modelled cancel while a sculpt pass runs", () => {
-    // A running sculpt with no cancel affordance is a gap, not just an
-    // accounting one: the model declares a live control for it.
+  it("renders static sculpt progress with a named refusal for cancellation", () => {
     const running = render(
       createDesktopVisualState({ mode: "sculpt", sculpt: "running" }),
     );
@@ -475,14 +476,11 @@ describe("engine desktop chrome — accessibility", () => {
       /<div class="sculpt-progress" role="status" data-sculpt-progress>/,
     );
     expect(running).toContain(
-      'id="sculpt-cancel" data-kind="view" data-action="sculpt-cancel"',
+      `id="sculpt-cancel" data-kind="inert" aria-disabled="true" data-refusal="${DESKTOP_VISUAL_REFUSALS.noDocumentBound}"`,
     );
     expect(running).toContain("Cancel after this pass");
-    // Idle still ships the region, hidden — the model's own cancel-sculpt state.
     const idle = render(createDesktopVisualState({ mode: "sculpt" }));
     expect(idle).toContain('data-sculpt-progress hidden>');
-    const script = /<script>(.*)<\/script>/s.exec(running)?.[1] ?? "";
-    expect(script).toContain("[data-sculpt-progress]");
   });
 
   it("draws the assistant thinking state the model can hold", () => {

@@ -313,18 +313,20 @@ describe("desktop visual model — sculpt run", () => {
     expect(applyDesktopVisualAction(idle, { type: "advance-sculpt", by: 0.5 })).toBe(idle);
   });
 
-  it("reports the run in the status line and stops on cancel", () => {
+  it("keeps the pure preview state action separate from the inert UI control", () => {
     const running = drive([{ type: "start-sculpt" }]);
     expect(desktopVisualView(running).statusText).toBe("Sculpting — pass 1 of 5");
     const cancelled = applyDesktopVisualAction(running, { type: "cancel-sculpt" });
     expect(cancelled.sculpt).toBe("idle");
-    expect(desktopVisualView(cancelled).statusText).toBe("Ready");
+    expect(desktopVisualView(running).sculpt.cancel.kind).toBe("inert");
   });
 
-  it("refuses to start a sculpt: no document is bound", () => {
+  it("refuses both sculpt controls because no sculpt job is bound", () => {
     const view = desktopVisualView(createDesktopVisualState());
-    expect(view.sculpt.start.kind).toBe("inert");
-    expect(view.sculpt.start.refusal).toBe(DESKTOP_VISUAL_REFUSALS.noDocumentBound);
+    for (const control of [view.sculpt.start, view.sculpt.cancel]) {
+      expect(control.kind).toBe("inert");
+      expect(control.refusal).toBe(DESKTOP_VISUAL_REFUSALS.noDocumentBound);
+    }
   });
 });
 

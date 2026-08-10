@@ -139,26 +139,26 @@ const MODE_PANELS: Readonly<
   }),
   sculpt: Object.freeze({
     leftTitle: "SCULPT LIBRARY",
-    leftEmpty: "No sculpt artifacts are loaded on this surface.",
+    leftEmpty: "Sculpt authoring is not available on this surface; use packaged Assistant Build for a supported artifact path.",
     inspectorTitle: "SCULPT OBJECT",
-    inspectorEmpty: "The brief, references, and pass plan need a bound document.",
-    note: "Nothing enters the scene until you review it.",
+    inspectorEmpty: "No bound Sculpt job. Build passes are shown only as a static reference.",
+    note: "DESKTOP_NO_DOCUMENT_BOUND · standalone Sculpt authoring writes nothing.",
     noteTone: "accent" as const,
   }),
   compose: Object.freeze({
     leftTitle: "SCENE INSTANCES",
-    leftEmpty: "No composed scene is open.",
+    leftEmpty: "Scene composition is consumed by Run; no composition editor is bound here.",
     inspectorTitle: "INSTANCE",
-    inspectorEmpty: "Instance transforms appear when a composed scene is bound.",
-    note: "Placement is axis-aligned in v1 and is a projection: it never rewrites a Sculpt Artifact, because its evidence binds its exact bytes.",
+    inspectorEmpty: "No bound composition editor; Run validates the stored composed scene.",
+    note: "DESKTOP_NO_DOCUMENT_BOUND · this surface does not author placement transforms.",
     noteTone: "scene" as const,
   }),
   animate: Object.freeze({
     leftTitle: "CLIPS",
-    leftEmpty: "No clips are loaded.",
+    leftEmpty: "Animation authoring is not available on this surface.",
     inspectorTitle: "KEY",
-    inspectorEmpty: "Key and track details need a bound document.",
-    note: "Socket values are advanced by the kernel and read back as frozen observations — the timeline authors them, it does not own them at runtime.",
+    inspectorEmpty: "No bound timeline authoring job.",
+    note: "DESKTOP_NO_DOCUMENT_BOUND · no timeline edits are staged here.",
     noteTone: "info" as const,
   }),
   run: Object.freeze({
@@ -171,18 +171,18 @@ const MODE_PANELS: Readonly<
   }),
   ship: Object.freeze({
     leftTitle: "TARGETS",
-    leftEmpty: "No delivery handoff has been created here.",
+    leftEmpty: "Delivery handoff creation is not available on this surface.",
     inspectorTitle: "DELIVERY HANDOFF",
-    inspectorEmpty: "Handoff fields and digests need a captured evidence packet.",
-    note: "A handoff is data, not authority. Creating one never uploads, signs, spends, or approves a release — an independent adapter does that.",
+    inspectorEmpty: "No handoff inspector is bound.",
+    note: "DESKTOP_NO_DOCUMENT_BOUND · no export, signing, upload, or release action is exposed here.",
     noteTone: "accent" as const,
   }),
   plugins: Object.freeze({
     leftTitle: "LOADED",
     leftEmpty: "No plugin host runs on this surface.",
     inspectorTitle: "PLUGIN",
-    inspectorEmpty: "Manifest, capabilities, and isolation checks need a loaded plugin.",
-    note: "A plugin may only claim capability IDs already in the versioned registry — a new capability needs a public contract first, not a new manifest string.",
+    inspectorEmpty: "Plugin inspection is unavailable without a loaded host.",
+    note: "DESKTOP_NO_DOCUMENT_BOUND · no plugin operation is exposed here; registry work stays outside this surface.",
     noteTone: "accent" as const,
   }),
 });
@@ -680,6 +680,10 @@ function inspector(view: DesktopVisualView): string {
  */
 function assistant(view: DesktopVisualView): string {
   const denial = kidsAssistantDenial();
+  const assistantStatus =
+    view.state.assistantRuntime === "local"
+      ? "Ready for a local or BYOK prompt."
+      : `${DESKTOP_VISUAL_REFUSALS.noPresentationRuntime} — assistant actions are unavailable until a packaged host binds.`;
   return `
 <aside class="assistant" aria-label="Assistant">
   <div class="assistant-head">
@@ -696,7 +700,7 @@ function assistant(view: DesktopVisualView): string {
   <div class="assistant-body">
     <p class="assistant-empty">Local runs on-device and is free. BYOK calls only a provider you configure and never touches credits. Hosted AI is metered and refuses here until its identity and credit seam is available.</p>
     <p class="assistant-thinking" role="status" data-assistant-thinking${view.assistant.thinking ? "" : " hidden"}><span class="dot" aria-hidden="true"></span>Thinking…</p>
-    <p class="assistant-progress" data-assistant-status role="status">Ready for a local prompt.</p>
+    <p class="assistant-progress" data-assistant-status role="status">${escapeHtml(assistantStatus)}</p>
     <div class="assistant-result" data-assistant-result hidden></div>
     ${button(view.assistant.retry, "Retry", "ghost-button assistant-retry", ` data-action="assistant-send" hidden`)}
     <p class="assistant-foot">Successful Build output is validated as a Sculpt Artifact, mounted in the center viewport, and remains transformable through the Mount API.</p>
@@ -2888,11 +2892,6 @@ if (shell) {
     } else if (action === 'assistant-route' && value) {
       shell.dataset.assistantRoute = value;
       q('.assistant-route').forEach((m) => m.setAttribute('aria-pressed', String(m.dataset.value === value)));
-    } else if (action === 'sculpt-cancel') {
-      // The model's cancel-sculpt takes the phase back to idle, which is the
-      // state this document renders with the progress region hidden.
-      const progress = shell.querySelector('[data-sculpt-progress]');
-      if (progress) progress.hidden = true;
     }
   });
 
