@@ -385,6 +385,41 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
     expect(documentBytes(root)).toBe(before);
   });
 
+  it("redacts nested provider property names from validation refusals", async () => {
+    const root = projectRoot();
+    const before = documentBytes(root);
+    const nestedKey = "sk_live_nested-provider-key";
+    const nestedValue = "credential-shaped-provider-value";
+    const bridge = createDesktopBridge({
+      cwd: root,
+      runRarityProvider: createDesktopRarityFixtureProvider({
+        arguments: {
+          ...DESKTOP_RARITY_FIXTURE_INPUT,
+          request: {
+            ...DESKTOP_RARITY_FIXTURE_INPUT.request,
+            candidates: DESKTOP_RARITY_FIXTURE_INPUT.request.candidates.map(
+              (candidate, index) => index === 0
+                ? { ...candidate, [nestedKey]: nestedValue }
+                : candidate,
+            ),
+          },
+        } as unknown as import("@sceneaxi/schemas").JsonObject,
+      }),
+    });
+    startRarity(bridge);
+    const job = await settledJob(bridge);
+    expect(job).toMatchObject({
+      status: "refused",
+      refusal: {
+        reason: RARITY_REFUSE_CODES.unexpectedProperty,
+        message: "The provider rarity request failed validation.",
+      },
+    });
+    expect(JSON.stringify(job)).not.toContain(nestedKey);
+    expect(JSON.stringify(job)).not.toContain(nestedValue);
+    expect(documentBytes(root)).toBe(before);
+  });
+
   it("refuses credential-shaped provider candidate identifiers without echoing them", async () => {
     const root = projectRoot();
     const before = documentBytes(root);

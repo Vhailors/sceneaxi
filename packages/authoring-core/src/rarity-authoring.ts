@@ -276,9 +276,21 @@ export async function requestRarityProviderContribution(input: Readonly<{
   const candidateRefusal = providerCandidateIdentifierRefusal(call.arguments.request);
   if (candidateRefusal !== null) return candidateRefusal;
   const policy = validateRarityPolicy(call.arguments.policy);
-  if (!policy.ok) return refuse(policy.code, policy.message, policy.path);
+  if (!policy.ok) {
+    return refuse(
+      policy.code,
+      "The provider rarity policy failed validation.",
+      "rarity.provider.policy",
+    );
+  }
   const request = validateRarityRollRequest(call.arguments.request, policy.value);
-  if (!request.ok) return refuse(request.code, request.message, request.path);
+  if (!request.ok) {
+    return refuse(
+      request.code,
+      "The provider rarity request failed validation.",
+      "rarity.provider.request",
+    );
+  }
   return Object.freeze({
     ok: true as const,
     value: Object.freeze({
@@ -349,9 +361,21 @@ export function stageRarityProviderProposal(input: Readonly<{
   const candidateRefusal = providerCandidateIdentifierRefusal(input.contribution.request);
   if (candidateRefusal !== null) return candidateRefusal;
   const policy = validateRarityPolicy(input.contribution.policy);
-  if (!policy.ok) return refuse(policy.code, policy.message, policy.path);
+  if (!policy.ok) {
+    return refuse(
+      policy.code,
+      "The provider rarity policy failed validation.",
+      "rarity.provider.policy",
+    );
+  }
   const request = validateRarityRollRequest(input.contribution.request, policy.value);
-  if (!request.ok) return refuse(request.code, request.message, request.path);
+  if (!request.ok) {
+    return refuse(
+      request.code,
+      "The provider rarity request failed validation.",
+      "rarity.provider.request",
+    );
+  }
 
   let existing: RarityNamespace = Object.freeze({
     schemaVersion: RARITY_SCHEMA_VERSION,
