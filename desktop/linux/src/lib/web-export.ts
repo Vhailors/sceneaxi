@@ -11,12 +11,9 @@ import { createHash } from "node:crypto";
 import {
   closeSync,
   constants,
-  existsSync,
   fstatSync,
   lstatSync,
-  linkSync,
   mkdirSync,
-  mkdtempSync,
   openSync,
   readSync,
   readdirSync,
@@ -25,7 +22,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { contentHash, parseDocumentText } from "@sceneaxi/authoring-core";
 import {
   DESKTOP_PRODUCT_REFUSALS,
@@ -366,11 +363,11 @@ function walkContainedFiles(root: string, directory: string): string[] | null {
   return visit(directory, "") ? paths : null;
 }
 
-function linkStagedFile(
+function writeOutputFile(
   rootDescriptor: number,
   destination: string,
-  source: string,
   path: string,
+  bytes: Uint8Array,
 ) {
   const segments = path.split("/");
   const name = segments.pop();
@@ -397,7 +394,7 @@ function linkStagedFile(
     if (!within(destination, realpathSync(stableDirectory))) {
       throw new Error("the export directory moved outside its destination");
     }
-    linkSync(source, join(stableDirectory, name));
+    writeFileSync(join(stableDirectory, name), bytes, { flag: "wx" });
   } finally {
     for (const openedDescriptor of opened.reverse()) closeSync(openedDescriptor);
   }
@@ -608,9 +605,10 @@ function sceneBridgeJavaScript(scene: JsonValue): string {
 function verifyExistingOutput(
   directory: string,
   expected: ReadonlyMap<string, Uint8Array>,
+  accessPath = directory,
 ): boolean {
   try {
-    const walked = walkContainedFiles(directory, directory);
+    const walked = walkContainedFiles(directory, accessPath);
     if (walked === null) return false;
     const actualPaths = walked.sort();
     const expectedPaths = [...expected.keys()].sort();
@@ -621,12 +619,12 @@ function verifyExistingOutput(
     for (const [path, bytes] of expected) {
       const actual = readContainedFile(
         directory,
-        join(directory, ...path.split("/")),
+        join(accessPath, ...path.split("/")),
         { expectedBytes: bytes.byteLength },
       );
       if (!actual.ok || !actual.bytes.equals(Buffer.from(bytes))) return false;
     }
-    const finalWalk = walkContainedFiles(directory, directory);
+    const finalWalk = walkContainedFiles(directory, accessPath);
     return finalWalk !== null &&
       finalWalk.sort().every((path, index) => path === expectedPaths[index]) &&
       finalWalk.length === expectedPaths.length;
@@ -666,57 +664,65 @@ function writeOutput(
   destination: string,
   expected: ReadonlyMap<string, Uint8Array>,
 ): Readonly<{ ok: true; replayed: boolean }> | DesktopWebExportRefusal {
+  let parentDescriptor: number;
   try {
-    if (pathEntryExists(destination)) {
-      return verifyExistingOutput(destination, expected)
+    parentDescriptor = openContainedDirectory(parent, parent);
+  } catch (error) {
+    return refuse(
+      DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
+      `The content-addressed export parent could not be held safely: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+  const stableParent = `/proc/self/fd/${String(parentDescriptor)}`;
+  const destinationName = relative(parent, destination);
+  const stableDestination = join(stableParent, destinationName);
+  try {
+    if (
+      destinationName === "" ||
+      destinationName === ".." ||
+      destinationName.startsWith(`..${sep}`) ||
+      destinationName.includes(sep) ||
+      realpathSync(stableParent) !== parent
+    ) {
+      throw new Error("the export parent moved or the destination name is unsafe");
+    }
+    if (pathEntryExists(stableDestination)) {
+      return verifyExistingOutput(destination, expected, stableDestination)
         ? Object.freeze({ ok: true as const, replayed: true })
         : refuse(
             DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
             `The content-addressed export directory already exists with different or unsafe bytes: ${destination}`,
           );
     }
-  } catch (error) {
-    return refuse(
-      DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
-      `The content-addressed export destination could not be inspected safely: ${error instanceof Error ? error.message : String(error)}`,
+    mkdirSync(stableDestination);
+    const destinationDescriptor = openContainedDirectory(
+      destination,
+      stableDestination,
     );
-  }
-  let temporary: string | null = null;
-  try {
-    temporary = mkdtempSync(join(parent, ".sceneaxi-export-"));
-    for (const [path, bytes] of expected) {
-      const target = join(temporary, ...path.split("/"));
-      mkdirSync(dirname(target), { recursive: true });
-      writeFileSync(target, bytes, { flag: "wx" });
-    }
-    mkdirSync(destination);
-    const destinationDescriptor = openContainedDirectory(destination, destination);
     try {
       const stableDestination = `/proc/self/fd/${String(destinationDescriptor)}`;
       const claim = join(stableDestination, ".sceneaxi-claim");
       writeFileSync(claim, new Uint8Array(), { flag: "wx" });
-      for (const path of expected.keys()) {
-        linkStagedFile(
+      for (const [path, bytes] of expected) {
+        writeOutputFile(
           destinationDescriptor,
           destination,
-          join(temporary, ...path.split("/")),
           path,
+          bytes,
         );
       }
       rmSync(claim);
     } finally {
       closeSync(destinationDescriptor);
     }
-    rmSync(temporary, { recursive: true });
-    temporary = null;
+    if (realpathSync(stableParent) !== parent) {
+      throw new Error("the export parent moved during commit");
+    }
     return Object.freeze({ ok: true as const, replayed: false });
   } catch (error) {
-    if (temporary !== null && existsSync(temporary)) {
-      rmSync(temporary, { recursive: true, force: true });
-    }
     try {
-      if (pathEntryExists(destination)) {
-        return verifyExistingOutput(destination, expected)
+      if (pathEntryExists(stableDestination)) {
+        return verifyExistingOutput(destination, expected, stableDestination)
           ? Object.freeze({ ok: true as const, replayed: true })
           : refuse(
               DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
@@ -733,6 +739,8 @@ function writeOutput(
       DESKTOP_WEB_EXPORT_REFUSALS.writeFailed,
       `The static Web export could not be committed exclusively: ${error instanceof Error ? error.message : String(error)}`,
     );
+  } finally {
+    closeSync(parentDescriptor);
   }
 }
 

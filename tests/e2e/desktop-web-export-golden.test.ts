@@ -33,8 +33,10 @@ const exportCommit = vi.hoisted(() => ({
     | ((oldPath: unknown, newPath: unknown) => void)
     | null,
   afterRealpath: null as ((path: unknown, resolved: string) => void) | null,
+  beforeMkdtemp: null as ((prefix: unknown) => void) | null,
   beforeMkdir: null as ((path: unknown) => void) | null,
   beforeReadFile: null as ((path: unknown) => void) | null,
+  rejectLinks: false,
 }));
 
 vi.mock("node:fs", async (importOriginal) => {
@@ -53,12 +55,32 @@ vi.mock("node:fs", async (importOriginal) => {
     exportCommit.beforeReadFile?.(args[0]);
     return Reflect.apply(actual.readFileSync, actual, args);
   }) as typeof actual.readFileSync;
+  const hookedWriteFileSync = ((
+    ...args: Parameters<typeof actual.writeFileSync>
+  ) => {
+    const result = Reflect.apply(actual.writeFileSync, actual, args);
+    const target = String(args[0]);
+    if (target.endsWith("/delivery-handoff.json")) {
+      const directory = actual.realpathSync(
+        target.slice(0, -"/delivery-handoff.json".length),
+      );
+      if (/\/[0-9a-f]{64}$/.test(directory)) {
+        exportCommit.afterCommit?.(args[0], directory);
+      }
+    }
+    return result;
+  }) as typeof actual.writeFileSync;
   return {
     ...actual,
     linkSync: (
       oldPath: Parameters<typeof actual.linkSync>[0],
       newPath: Parameters<typeof actual.linkSync>[1],
     ) => {
+      if (exportCommit.rejectLinks) {
+        throw Object.assign(new Error("hard links are unavailable"), {
+          code: "ENOTSUP",
+        });
+      }
       actual.linkSync(oldPath, newPath);
       if (String(newPath).endsWith("/delivery-handoff.json")) {
         exportCommit.afterCommit?.(
@@ -76,6 +98,13 @@ vi.mock("node:fs", async (importOriginal) => {
       exportCommit.beforeMkdir?.(path);
       return actual.mkdirSync(path, options);
     },
+    mkdtempSync: (
+      prefix: Parameters<typeof actual.mkdtempSync>[0],
+      options?: Parameters<typeof actual.mkdtempSync>[1],
+    ) => {
+      exportCommit.beforeMkdtemp?.(prefix);
+      return actual.mkdtempSync(prefix, options);
+    },
     readFileSync: hookedReadFileSync,
     realpathSync: hookedRealpathSync,
     renameSync: (
@@ -85,6 +114,7 @@ vi.mock("node:fs", async (importOriginal) => {
       actual.renameSync(oldPath, newPath);
       exportCommit.afterCommit?.(oldPath, newPath);
     },
+    writeFileSync: hookedWriteFileSync,
   };
 });
 
@@ -106,8 +136,10 @@ const GOLDEN = JSON.parse(
 afterEach(() => {
   exportCommit.afterCommit = null;
   exportCommit.afterRealpath = null;
+  exportCommit.beforeMkdtemp = null;
   exportCommit.beforeMkdir = null;
   exportCommit.beforeReadFile = null;
+  exportCommit.rejectLinks = false;
   vi.restoreAllMocks();
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
@@ -454,7 +486,7 @@ describe("desktop static Web export", () => {
     });
   });
 
-  it("preserves an unowned directory when staging cannot claim its path", () => {
+  it("preserves unrelated export scratch directories", () => {
     const root = temporary("sceneaxi-export-owned-staging-");
     expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
     const webRoot = join(root, "exports/web");
@@ -555,9 +587,11 @@ describe("desktop static Web export", () => {
     const first = ship(root);
     rmSync(first.outputDirectory, { recursive: true });
     exportCommit.beforeMkdir = (path) => {
-      if (path !== first.outputDirectory) return;
+      const candidate = String(path);
+      if (basename(candidate) !== basename(first.outputDirectory)) return;
+      if (realpathSync(dirname(candidate)) !== dirname(first.outputDirectory)) return;
       exportCommit.beforeMkdir = null;
-      mkdirSync(first.outputDirectory);
+      mkdirSync(candidate);
     };
 
     const result = exportProject(root);
@@ -567,6 +601,53 @@ describe("desktop static Web export", () => {
       reason: DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
     });
     expect(readdirSync(first.outputDirectory)).toEqual([]);
+  });
+
+  it("holds the export parent when its pathname becomes a symlink", () => {
+    const root = temporary("sceneaxi-export-parent-race-");
+    expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
+    const webRoot = join(root, "exports/web");
+    mkdirSync(webRoot, { recursive: true });
+    const outside = temporary("sceneaxi-export-parent-race-outside-");
+    let swapped = false;
+    const swap = () => {
+      if (swapped) return;
+      rmSync(webRoot, { recursive: true });
+      symlinkSync(outside, webRoot, "dir");
+      swapped = true;
+    };
+    exportCommit.afterRealpath = (path, resolved) => {
+      if (!String(path).startsWith("/proc/self/fd/") || resolved !== webRoot) return;
+      exportCommit.afterRealpath = null;
+      exportCommit.beforeMkdtemp = null;
+      swap();
+    };
+    exportCommit.beforeMkdtemp = (prefix) => {
+      if (dirname(String(prefix)) !== webRoot) return;
+      exportCommit.afterRealpath = null;
+      exportCommit.beforeMkdtemp = null;
+      swap();
+    };
+
+    const result = exportProject(root);
+
+    expect(swapped).toBe(true);
+    expect(result.ok).toBe(false);
+    expect(readdirSync(outside)).toEqual([]);
+  });
+
+  it("exports when hard links are unavailable", () => {
+    const root = temporary("sceneaxi-export-without-hardlinks-");
+    expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
+    exportCommit.rejectLinks = true;
+
+    const result = exportProject(root);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(result.message);
+    expect(readFileSync(join(result.outputDirectory, "sceneaxi-web.js"))).toEqual(
+      RUNTIME,
+    );
   });
 
   it("never writes through a raced nested destination symlink", () => {
