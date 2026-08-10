@@ -130,6 +130,7 @@ describe("desktop mounted control inventory", () => {
       "#viewport-source-sculpt-preview",
       "#sculpt-start",
       "#sculpt-cancel",
+      "#assistant-prompt",
       "#assistant-send",
       "#assistant-retry",
     ];
@@ -141,6 +142,7 @@ describe("desktop mounted control inventory", () => {
       expect(code, selector).toBeTruthy();
       expect(element(window, `#refusal-${code}`).textContent).not.toBe("");
     }
+    expect(element(window, "#assistant-prompt").getAttribute("readonly")).not.toBeNull();
 
     const progress = element(window, "[data-sculpt-progress]");
     expect(progress.hidden).toBe(false);
@@ -181,10 +183,6 @@ describe("desktop mounted control inventory", () => {
 
     await click(window, "#change-review-accept");
     expect(status()).toContain(DESKTOP_PRODUCT_REFUSALS.proposalNotReviewing);
-
-    const prompt = element(window, "#assistant-prompt");
-    prompt.textContent = "local crate";
-    expect(prompt.textContent).toBe("local crate");
   });
 
   it("projects the refuse-only profile without leaving live product controls", async () => {
