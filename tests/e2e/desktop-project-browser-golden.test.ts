@@ -171,7 +171,8 @@ describe("desktop project and asset browser golden path", () => {
     if (match?.[1] === undefined) throw new Error("desktop chrome script missing");
     window.document.write(html.replace(match[0], ""));
     window.document.addEventListener(DESKTOP_VIEWPORT_SCENE_OPEN_EVENT, (event) => {
-      const detail = (event as CustomEvent).detail as {
+      if (!("detail" in event)) return;
+      const detail = event.detail as {
         mountable?: {
           instances?: Array<{ instanceId?: string }>;
           importedAssets?: Array<{ instanceId?: string; digest?: string }>;
@@ -179,13 +180,15 @@ describe("desktop project and asset browser golden path", () => {
         asset?: { instanceId?: string; digest?: string };
         accepted: boolean;
         frame: number | null;
-      };
+      } | null;
+      if (detail?.asset === undefined) return;
+      const selectedAsset = detail.asset;
       if (detail.mountable?.instances?.some((instance) =>
-        instance.instanceId === detail.asset?.instanceId) &&
+        instance.instanceId === selectedAsset.instanceId) &&
         detail.mountable.importedAssets?.some((asset) =>
-          asset.instanceId === detail.asset?.instanceId && asset.digest === detail.asset.digest)) {
-        openedAssetInstance = detail.asset?.instanceId ?? null;
-        openedAssetDigest = detail.asset?.digest ?? null;
+          asset.instanceId === selectedAsset.instanceId && asset.digest === selectedAsset.digest)) {
+        openedAssetInstance = selectedAsset.instanceId ?? null;
+        openedAssetDigest = selectedAsset.digest ?? null;
         detail.accepted = true;
         detail.frame = 7;
       }
