@@ -187,8 +187,27 @@ async function start(): Promise<void> {
     activeRoot = null;
     await localBridgeServer?.close();
     localBridgeServer = null;
+    let activeBridgeForDirtyCheck: DesktopBridge | null = null;
+    const nextProjectBrowser = createDesktopProjectBrowser({
+      root,
+      stateDirectory: SMOKE
+        ? join(root, ".sceneaxi-runtime")
+        : join(app.getPath("userData"), "project-lifecycle"),
+      isDirty: () => {
+        const response = activeBridgeForDirtyCheck?.handle({
+          action: "authoring",
+          payload: { op: "status", documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
+        });
+        if (response === undefined || !response.ok) return true;
+        const snapshot = payloadField(response.data, "authoringSnapshot");
+        const phase = payloadField(snapshot, "phase");
+        return phase === "reviewing" || phase === "pending" ||
+          payloadField(snapshot, "journalRecoveryPending") === true;
+      },
+    });
     const next = createDesktopBridge({
       cwd: root,
+      projectBrowser: nextProjectBrowser,
       onFrameReport: (report) => frameReported?.(report),
       ...(byoRuntime.runByoAssistant === undefined
         ? {}
@@ -200,6 +219,7 @@ async function start(): Promise<void> {
         : { webExportPublisherExecutable }),
       ...(webExportRuntime === undefined ? {} : { webExportRuntime }),
     });
+    activeBridgeForDirtyCheck = next;
     const localPaths = SMOKE
       ? {
           socketPath: join(root, ".sceneaxi-runtime", "desktop-v1.sock"),
@@ -230,23 +250,7 @@ async function start(): Promise<void> {
       );
     }
     bridge = next;
-    projectBrowser = createDesktopProjectBrowser({
-      root,
-      stateDirectory: SMOKE
-        ? join(root, ".sceneaxi-runtime")
-        : join(app.getPath("userData"), "project-lifecycle"),
-      isDirty: () => {
-        const response = next.handle({
-          action: "authoring",
-          payload: { op: "status", documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
-        });
-        if (!response.ok) return true;
-        const snapshot = payloadField(response.data, "authoringSnapshot");
-        const phase = payloadField(snapshot, "phase");
-        return phase === "reviewing" || phase === "pending" ||
-          payloadField(snapshot, "journalRecoveryPending") === true;
-      },
-    });
+    projectBrowser = nextProjectBrowser;
     activeRoot = root;
     return next;
   };

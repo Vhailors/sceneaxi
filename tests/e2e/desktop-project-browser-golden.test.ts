@@ -97,7 +97,28 @@ describe("desktop project and asset browser golden path", () => {
     const source = join(temporary("source"), "triangle.gltf");
     writeFileSync(source, containedTriangle());
     expect(seedDesktopProject(root).ok).toBe(true);
-    const bridge = createDesktopBridge({ cwd: root });
+    let dirty = false;
+    let bridgeForDirtyCheck: ReturnType<typeof createDesktopBridge> | null = null;
+    const browser = createDesktopProjectBrowser({
+      root,
+      stateDirectory,
+      isDirty: () => {
+        if (dirty) return true;
+        const response = bridgeForDirtyCheck?.handle({
+          action: "authoring",
+          payload: { op: "status", documentPath: "scene.json" },
+        });
+        if (response === undefined || !response.ok) return true;
+        const snapshot = (response.data as { authoringSnapshot?: {
+          phase?: unknown;
+          journalRecoveryPending?: unknown;
+        } }).authoringSnapshot;
+        return snapshot?.phase === "reviewing" || snapshot?.phase === "pending" ||
+          snapshot?.journalRecoveryPending === true;
+      },
+    });
+    const bridge = createDesktopBridge({ cwd: root, projectBrowser: browser });
+    bridgeForDirtyCheck = bridge;
     expect(bridge.handle({
       action: "asset-import",
       payload: { profile: "web", documentPath: "scene.json", sourcePath: source },
@@ -117,12 +138,6 @@ describe("desktop project and asset browser golden path", () => {
       },
       activate: () => undefined,
     });
-    let dirty = false;
-    const browser = createDesktopProjectBrowser({
-      root,
-      stateDirectory,
-      isDirty: () => dirty,
-    });
     const sceneRequests: unknown[] = [];
     let openedAssetInstance: string | null = null;
     let openedAssetDigest: string | null = null;
@@ -137,7 +152,9 @@ describe("desktop project and asset browser golden path", () => {
       value: {
         project: async (request: unknown) => clone(await host.handle(clone(request))),
         request: async (request: unknown) => {
-          if ((request as { action?: unknown }).action === "scene") sceneRequests.push(request);
+          if ((request as { action?: unknown }).action === "project-browser-open") {
+            sceneRequests.push(request);
+          }
           return clone(bridge.handle(clone(request)));
         },
         browseProject: async (request: unknown) => clone(browser.handle(clone(request))),
@@ -217,12 +234,12 @@ describe("desktop project and asset browser golden path", () => {
     runtimePort.request = async (request: unknown) => {
       const response = await runtimeRequest(request) as {
         ok?: boolean;
-        data?: { importedAssets?: Array<{ digest?: string }> };
+        data?: { mountable?: { importedAssets?: Array<{ digest?: string }> } };
       };
-      if ((request as { action?: unknown }).action === "scene" && response.ok === true) {
+      if ((request as { action?: unknown }).action === "project-browser-open" && response.ok === true) {
         const replacement = clone(response);
-        if (replacement.data?.importedAssets?.[0] !== undefined) {
-          replacement.data.importedAssets[0].digest = `sha256:${"0".repeat(64)}`;
+        if (replacement.data?.mountable?.importedAssets?.[0] !== undefined) {
+          replacement.data.mountable.importedAssets[0].digest = `sha256:${"0".repeat(64)}`;
         }
         return replacement;
       }
@@ -270,6 +287,14 @@ describe("desktop project and asset browser golden path", () => {
       return response;
     };
     await click(window, '[data-action="project-browser-open"]');
+    expect(raced).toBe(false);
+    expect(query(window, "[data-project-status]")?.textContent).toContain("scene.json · open");
+    desktopPort.browseProject = browseProject;
+    expect(bridge.handle({
+      action: "asset-import",
+      payload: { profile: "web", documentPath: "scene.json", sourcePath: racedSource },
+    })).toMatchObject({ ok: true, data: { outcome: "reviewing" } });
+    await click(window, '[data-action="project-browser-open"]');
     expect(query(window, "[data-project-status]")?.textContent).toContain(
       DESKTOP_PROJECT_BROWSER_REFUSALS.dirty,
     );
@@ -277,14 +302,15 @@ describe("desktop project and asset browser golden path", () => {
       action: "authoring",
       payload: { op: "status", documentPath: "scene.json" },
     })).toMatchObject({ data: { authoringSnapshot: { phase: "reviewing" } } });
-    desktopPort.browseProject = browseProject;
     await click(window, '[data-action="change-reject"]');
 
     let releaseOpen: (() => void) | undefined;
-    desktopPort.browseProject = (request: unknown) => {
-      if ((request as { action?: unknown }).action !== "open") return browseProject(request);
+    runtimePort.request = (request: unknown) => {
+      if ((request as { action?: unknown }).action !== "project-browser-open") {
+        return runtimeRequest(request);
+      }
       return new Promise((resolve) => {
-        releaseOpen = () => resolve(clone(browser.handle(clone(request))));
+        releaseOpen = () => resolve(clone(bridge.handle(clone(request))));
       });
     };
     query(window, '[data-action="project-browser-open"]')?.click();
@@ -308,14 +334,23 @@ describe("desktop project and asset browser golden path", () => {
     releaseOpen?.();
     await settle();
     expect(query(window, "[data-busy]")).toBeNull();
-    desktopPort.browseProject = browseProject;
+    runtimePort.request = runtimeRequest;
 
     delete desktopPort.browseProject;
-    query(window, '[data-action="project-browser-open"]')?.click();
+    const refusedSelect = query(window, "#project-browser-file-select") as unknown as {
+      value: string;
+      dispatchEvent(event: Event): boolean;
+    };
+    refusedSelect.value = "assets/triangle.gltf";
+    refusedSelect.dispatchEvent(new window.Event("change", { bubbles: true }) as unknown as Event);
+    expect(refusedSelect.value).toBe("scene.json");
     await settle();
     expect(query(window, "[data-outcome-code]")?.textContent).toBe(
       DESKTOP_PRODUCT_REFUSALS.runtimeRequestRefused,
     );
+    expect(refusedSelect.value).toBe("scene.json");
+    await click(window, '[data-action="project-browser-open"]');
+    expect(query(window, "[data-project-status]")?.textContent).toContain("scene.json · open");
     desktopPort.browseProject = browseProject;
 
     const restarted = createDesktopProjectBrowser({ root, stateDirectory });
@@ -336,8 +371,9 @@ describe("desktop project and asset browser golden path", () => {
         ? { ok: false, reason: "DESKTOP_PROJECT_BROWSER_MANIFEST_INVALID", message: "invalid", detail: null }
         : browseProject(request);
     await click(window, '[data-action="project-browser-open"]');
-    expect(query(window, "#project-browser-file-select")?.textContent).toBe("");
-    expect(query(window, '[data-project-asset="assets/triangle.gltf"]')).toBeNull();
-    expect(query(window, "[data-project-browser-detail]")?.hidden).toBe(true);
+    expect(query(window, "[data-project-status]")?.textContent).toContain("scene.json · open");
+    expect(query(window, "#project-browser-file-select")?.textContent).toContain(
+      "scene-document · valid",
+    );
   });
 });

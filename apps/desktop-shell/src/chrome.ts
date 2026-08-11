@@ -2053,7 +2053,11 @@ if (shell) {
   };
 
   const projectBrowserAction = async (action, path, targetPath) => {
-    if (projectBrowserPort() === null) {
+    const restoreSelection = () => {
+      if (projectBrowserStatus !== null) renderProjectBrowser(projectBrowserStatus);
+    };
+    if (action !== 'open' && projectBrowserPort() === null) {
+      restoreSelection();
       const code = T.product.refusals.runtimeRequestRefused;
       productStatus('refused', 'Project browser refused · ' + code);
       showOutcome('Project browser refused', code, 'The packaged project-browser host is unavailable.');
@@ -2067,33 +2071,37 @@ if (shell) {
       ...(typeof targetPath === 'string' ? { targetPath } : {}),
       ...((action === 'rename' || action === 'delete') ? { confirmed: true } : {}),
     };
-    const response = await projectBrowserRequest(request);
+    const response = action === 'open'
+      ? await runtimeRequest({
+          action: 'project-browser-open',
+          payload: { profile: shell.dataset.profile, path },
+        })
+      : await projectBrowserRequest(request);
     if (!response || !response.ok) {
+      restoreSelection();
       const code = response?.reason || T.product.refusals.runtimeRequestRefused;
+      if (action === 'open' && code === T.product.refusals.projectBrowserDirty) {
+        const authoritative = await runtimeRequest({
+          action: 'authoring',
+          payload: { op: 'status', documentPath: T.product.documentPath },
+        });
+        const status = authoritative?.ok ? authoritative.data : null;
+        if (status && isSessionSnapshot(status.authoringSnapshot)) {
+          syncReview(status.authoringSnapshot);
+        }
+      }
       productStatus('refused', 'Project browser refused · ' + code);
       showOutcome('Project browser refused', code, response?.message || 'No project file changed.');
       return false;
     }
     if (!renderProjectBrowser(response.data?.status)) {
+      restoreSelection();
       productStatus('refused', 'Project browser refused · ' + T.product.refusals.runtimeRequestRefused);
       return false;
     }
-    if (action === 'open' && path === response.data.status.activeDocumentPath) {
-      return openProject(true);
-    }
     if (action === 'open') {
       const file = response.data.status.files.find((candidate) => candidate.path === path);
-      if (!file || file.kind !== 'asset' || response.data.outcome !== 'validated') {
-        const code = T.product.refusals.runtimeRequestRefused;
-        productStatus('refused', 'Project browser refused · ' + code);
-        showOutcome('Project browser refused', code, 'The selected asset did not pass canonical validation.');
-        return false;
-      }
-      const authoring = await runtimeRequest({
-        action: 'authoring',
-        payload: { op: 'status', documentPath: response.data.status.activeDocumentPath },
-      });
-      const authoringStatus = authoring?.ok ? authoring.data : null;
+      const authoringStatus = response.data.authoringStatus;
       const authoringSnapshot = authoringStatus && isSessionSnapshot(authoringStatus.authoringSnapshot)
         ? authoringStatus.authoringSnapshot
         : null;
@@ -2101,35 +2109,36 @@ if (shell) {
       if (!authoringStatus || authoringStatus.ok !== true || authoringSnapshot === null ||
           reviewProjection(authoringSnapshot) !== null || authoringSnapshot.phase === 'pending' ||
           authoringSnapshot.journalRecoveryPending === true) {
-        const code = authoring?.ok
-          ? T.product.refusals.projectBrowserDirty
-          : (authoring?.reason || T.product.refusals.runtimeRequestRefused);
-        productStatus('refused', 'Asset open refused · ' + code);
-        showOutcome('Asset open refused', code, 'Resolve authoritative authoring state before opening an asset.');
+        const code = T.product.refusals.projectBrowserDirty;
+        productStatus('refused', 'Open refused · ' + code);
+        showOutcome('Open refused', code, 'Resolve authoritative authoring state before opening a project file.');
         return false;
       }
-      const scene = await runtimeRequest({
-        action: 'scene',
-        payload: { documentPath: response.data.status.activeDocumentPath },
-      });
-      if (!scene || !scene.ok) {
-        const code = scene?.reason || T.product.refusals.runtimeRequestRefused;
-        productStatus('refused', 'Asset open refused · ' + code);
-        showOutcome('Asset open refused', code, scene?.message || 'The canonical scene was not opened.');
+      if (file?.kind === 'document' && response.data.outcome === 'opened') {
+        productStatus('opening', T.product.documentPath + ' · opening…');
+        return applyOpenedProjectStatus(authoringStatus, authoringSnapshot, false);
+      }
+      if (!file || file.kind !== 'asset' || response.data.outcome !== 'validated') {
+        const code = T.product.refusals.runtimeRequestRefused;
+        productStatus('refused', 'Project browser refused · ' + code);
+        showOutcome('Project browser refused', code, 'The selected asset did not pass canonical validation.');
         return false;
       }
-      const selectedAsset = { instanceId: file.instanceId, digest: file.digest };
-      const importedAssets = scene.data && Array.isArray(scene.data.importedAssets)
-        ? scene.data.importedAssets
+      const selectedAsset = response.data.asset;
+      const mountable = response.data.mountable;
+      const importedAssets = mountable && Array.isArray(mountable.importedAssets)
+        ? mountable.importedAssets
         : [];
-      if (!importedAssets.some((asset) => asset && asset.instanceId === selectedAsset.instanceId &&
-          asset.digest === selectedAsset.digest)) {
+      if (!selectedAsset || selectedAsset.instanceId !== file.instanceId ||
+          selectedAsset.digest !== file.digest ||
+          !importedAssets.some((asset) => asset && asset.instanceId === selectedAsset.instanceId &&
+            asset.digest === selectedAsset.digest)) {
         const code = T.product.refusals.runtimeRequestRefused;
         productStatus('refused', 'Asset open refused · ' + code);
         showOutcome('Asset open refused', code, 'The scene bridge did not return the validated asset identity and digest.');
         return false;
       }
-      const detail = { mountable: scene.data, asset: selectedAsset, accepted: false, frame: null };
+      const detail = { mountable, asset: selectedAsset, accepted: false, frame: null };
       document.dispatchEvent(new CustomEvent(T.product.viewportSceneOpenEvent, { detail }));
       if (detail.accepted !== true || !Number.isInteger(detail.frame)) {
         const code = T.product.refusals.runtimeRequestRefused;
@@ -2427,6 +2436,24 @@ if (shell) {
     return true;
   };
 
+  const applyOpenedProjectStatus = async (status, authoringSnapshot, synchronizeBrowser) => {
+    projectData = status.data;
+    projectContentHash = status.contentHash;
+    reconcileRarityEvidence(status);
+    syncSceneProperties(status);
+    projectDirty = false;
+    projectRecovering = false;
+    undoAvailability = status.undoAvailability === 'available' || status.undoAvailability === 'recovery-pending'
+      ? status.undoAvailability
+      : 'unavailable';
+    syncCommandAvailability();
+    syncReview(authoringSnapshot);
+    clearConflictOutcome();
+    productStatus('open', withSceneRefusal(T.product.documentPath + ' · open · ' + status.documentId));
+    if (synchronizeBrowser) await syncProjectBrowser();
+    return true;
+  };
+
   const openProject = async (refuseDirty = false) => {
     if (activeProject === null && projectPort() !== null) {
       productStatus('refused', 'Open refused · no project root selected');
@@ -2462,21 +2489,7 @@ if (shell) {
       showOutcome('Open refused', code, 'The active Scene Document was not opened.');
       return false;
     }
-    projectData = status.data;
-    projectContentHash = status.contentHash;
-    reconcileRarityEvidence(status);
-    syncSceneProperties(status);
-    projectDirty = false;
-    projectRecovering = false;
-    undoAvailability = status.undoAvailability === 'available' || status.undoAvailability === 'recovery-pending'
-      ? status.undoAvailability
-      : 'unavailable';
-    syncCommandAvailability();
-    syncReview(authoringSnapshot);
-    clearConflictOutcome();
-    productStatus('open', withSceneRefusal(T.product.documentPath + ' · open · ' + status.documentId));
-    await syncProjectBrowser();
-    return true;
+    return applyOpenedProjectStatus(status, authoringSnapshot, true);
   };
 
   const stageWebEdit = async (kind) => {
@@ -3462,7 +3475,12 @@ if (shell) {
         return;
       }
       const path = browserFile.value;
-      if (path) void productAction(() => projectBrowserAction('select', path));
+      if (path) {
+        if (typeof projectBrowserStatus?.selectedPath === 'string') {
+          browserFile.value = projectBrowserStatus.selectedPath;
+        }
+        void productAction(() => projectBrowserAction('select', path));
+      }
       return;
     }
     const el = event.target instanceof Element ? event.target.closest('[data-action="scene-entity-select"]') : null;

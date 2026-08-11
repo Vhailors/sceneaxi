@@ -239,7 +239,7 @@ export function createDesktopProjectBrowser(
   const root = realpathSync(options.root);
   let stateDirectory: string | null = null;
   let initialized = false;
-  let stateInvalid = false;
+  let initializationRefusal: DesktopProjectBrowserResponse | null = null;
   let selectedPath = DESKTOP_ACTIVE_DOCUMENT_PATH;
   let writeSequence = 0;
   let cachedStatus: DesktopProjectBrowserStatus | null = null;
@@ -264,34 +264,40 @@ export function createDesktopProjectBrowser(
   };
 
   const initialize = (): DesktopProjectBrowserResponse | null => {
-    if (initialized) return stateInvalid
-      ? projectBrowserRefuse(
-          DESKTOP_PROJECT_BROWSER_REFUSALS.stateInvalid,
-          "The project-browser recent state is invalid and was left byte-identical.",
-        )
-      : null;
+    if (initialized) return initializationRefusal;
     initialized = true;
     const paths = statePaths();
     const read = readContainedRegularFile(paths.directory, paths.file, {
       maximumBytes: STATE_MAX_BYTES,
     });
     if (!read.ok) {
-      stateInvalid = read.kind !== "missing";
+      if (read.kind !== "missing") {
+        initializationRefusal = projectBrowserRefuse(
+          DESKTOP_PROJECT_BROWSER_REFUSALS.stateInvalid,
+          "The project-browser recent state is invalid and was left byte-identical.",
+        );
+      }
     } else {
       try {
         const parsed = exactStoredState(JSON.parse(read.bytes.toString("utf8")));
-        if (parsed === null) stateInvalid = true;
-        else if (parsed.root === root) selectedPath = parsed.selectedPath;
+        if (parsed === null) {
+          initializationRefusal = projectBrowserRefuse(
+            DESKTOP_PROJECT_BROWSER_REFUSALS.stateInvalid,
+            "The project-browser recent state is invalid and was left byte-identical.",
+          );
+        } else if (parsed.root === root) {
+          const restored = requestPath(parsed.selectedPath);
+          if (!("value" in restored)) initializationRefusal = restored;
+          else selectedPath = restored.value;
+        }
       } catch {
-        stateInvalid = true;
-      }
-    }
-    return stateInvalid
-      ? projectBrowserRefuse(
+        initializationRefusal = projectBrowserRefuse(
           DESKTOP_PROJECT_BROWSER_REFUSALS.stateInvalid,
           "The project-browser recent state is invalid and was left byte-identical.",
-        )
-      : null;
+        );
+      }
+    }
+    return initializationRefusal;
   };
 
   const persist = (): DesktopProjectBrowserResponse | null => {
@@ -406,7 +412,11 @@ export function createDesktopProjectBrowser(
     });
     const files = Object.freeze([documentFileRecord, ...assets]);
     if (!files.some((file) => file.path === selectedPath)) {
-      selectedPath = DESKTOP_ACTIVE_DOCUMENT_PATH;
+      return projectBrowserRefuse(
+        DESKTOP_PROJECT_BROWSER_REFUSALS.fileMissing,
+        "The persisted project-browser selection is not the active document or an admitted manifest asset.",
+        selectedPath,
+      );
     }
     const value = Object.freeze({
       schemaVersion: DESKTOP_PROJECT_BROWSER_STATE_SCHEMA_VERSION,

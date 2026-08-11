@@ -407,6 +407,54 @@ describe("contained desktop project and asset browser", () => {
     expect(readFileSync(stateFile, "utf8")).toBe(oversized);
   });
 
+  it("refuses noncanonical persisted selections instead of silently restoring another file", () => {
+    const { root } = admittedProject();
+    const cases = [
+      {
+        label: "traversal",
+        selectedPath: "../outside.gltf",
+        reason: DESKTOP_PROJECT_BROWSER_REFUSALS.pathTraversal,
+      },
+      {
+        label: "absolute",
+        selectedPath: join(root, "assets/triangle.gltf"),
+        reason: DESKTOP_PROJECT_BROWSER_REFUSALS.pathOutsideRoot,
+      },
+      {
+        label: "malformed",
+        selectedPath: "",
+        reason: DESKTOP_PROJECT_BROWSER_REFUSALS.requestMalformed,
+      },
+      {
+        label: "missing",
+        selectedPath: "assets/not-admitted.gltf",
+        reason: DESKTOP_PROJECT_BROWSER_REFUSALS.fileMissing,
+      },
+    ] as const;
+
+    for (const entry of cases) {
+      const stateDirectory = temporary(`stored-${entry.label}`);
+      const stateFile = join(stateDirectory, DESKTOP_PROJECT_BROWSER_STATE_FILE);
+      const stored = `${JSON.stringify({
+        schemaVersion: 1,
+        root: resolve(root),
+        selectedPath: entry.selectedPath,
+      })}\n`;
+      writeFileSync(stateFile, stored, "utf8");
+      const browser = createDesktopProjectBrowser({ root, stateDirectory });
+
+      expect(browser.handle({ action: "status", profile: "web" })).toMatchObject({
+        ok: false,
+        reason: entry.reason,
+      });
+      expect(browser.handle({ action: "status", profile: "web" })).toMatchObject({
+        ok: false,
+        reason: entry.reason,
+      });
+      expect(readFileSync(stateFile, "utf8")).toBe(stored);
+    }
+  });
+
   it("recovers selection through a symlinked user-data parent", () => {
     const { root } = admittedProject();
     const realUserData = temporary("real-user-data");
