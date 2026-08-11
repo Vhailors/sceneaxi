@@ -185,6 +185,8 @@ vi.mock("node:fs", async (importOriginal) => {
     ) => {
       if (
         exportCommit.failOpenSuffix !== null &&
+        typeof flags === "number" &&
+        (flags & actual.constants.O_WRONLY) !== 0 &&
         String(path).endsWith(exportCommit.failOpenSuffix)
       ) {
         exportCommit.failOpenSuffix = null;
@@ -1251,6 +1253,22 @@ describe("desktop static Web export", () => {
     expect(readFileSync(join(resumed.outputDirectory, "sceneaxi-web.js"))).toEqual(
       RUNTIME,
     );
+  });
+
+  it("reports asset staging write failures as export write failures", () => {
+    const sourceRoot = temporary("sceneaxi-export-asset-write-source-");
+    const source = join(sourceRoot, "triangle.gltf");
+    writeFileSync(source, containedTriangle());
+    const root = temporary("sceneaxi-export-asset-write-");
+    seedWithAsset(root, source);
+    exportCommit.failOpenSuffix = "/triangle.gltf";
+
+    const result = exportProject(root);
+
+    expect(result).toMatchObject({
+      ok: false,
+      reason: DESKTOP_WEB_EXPORT_REFUSALS.writeFailed,
+    });
   });
 
   it("retries after publication is interrupted before the content address", () => {

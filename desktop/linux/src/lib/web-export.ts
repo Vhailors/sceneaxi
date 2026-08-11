@@ -649,7 +649,11 @@ function writeOutputFile(
 
 type StreamedFile =
   | Readonly<{ ok: true; byteLength: number; digest: string }>
-  | Readonly<{ ok: false; kind: "missing" | "unsafe" | "invalid"; detail: string }>;
+  | Readonly<{
+      ok: false;
+      kind: "missing" | "unsafe" | "invalid" | "write";
+      detail: string;
+    }>;
 
 function streamContainedFile(
   root: string,
@@ -684,11 +688,19 @@ function streamContainedFile(
       });
     }
     if (destination !== undefined) {
-      destinationDescriptor = openOutputFile(
-        destination.descriptor,
-        destination.directory,
-        destination.path,
-      );
+      try {
+        destinationDescriptor = openOutputFile(
+          destination.descriptor,
+          destination.directory,
+          destination.path,
+        );
+      } catch (error) {
+        return Object.freeze({
+          ok: false as const,
+          kind: "write" as const,
+          detail: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
     const hash = createHash("sha256");
     const buffer = Buffer.alloc(Math.min(STREAM_BUFFER_BYTES, Math.max(1, before.size)));
@@ -710,16 +722,24 @@ function streamContainedFile(
       }
       hash.update(buffer.subarray(0, count));
       if (destinationDescriptor !== null) {
-        let written = 0;
-        while (written < count) {
-          const next = writeSync(
-            destinationDescriptor,
-            buffer,
-            written,
-            count - written,
-          );
-          if (next === 0) throw new Error("the export file write made no progress");
-          written += next;
+        try {
+          let written = 0;
+          while (written < count) {
+            const next = writeSync(
+              destinationDescriptor,
+              buffer,
+              written,
+              count - written,
+            );
+            if (next === 0) throw new Error("the export file write made no progress");
+            written += next;
+          }
+        } catch (error) {
+          return Object.freeze({
+            ok: false as const,
+            kind: "write" as const,
+            detail: error instanceof Error ? error.message : String(error),
+          });
         }
       }
       byteLength += count;
@@ -877,6 +897,12 @@ function readProjectAsset(
       return refuse(
         DESKTOP_WEB_EXPORT_REFUSALS.unsafePath,
         `Referenced project asset ${path} must be a contained regular file: ${read.detail}.`,
+      );
+    }
+    if (read.kind === "write") {
+      return refuse(
+        DESKTOP_WEB_EXPORT_REFUSALS.writeFailed,
+        `Referenced project asset ${path} could not be written to export staging: ${read.detail}.`,
       );
     }
     return refuse(
