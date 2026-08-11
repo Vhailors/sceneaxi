@@ -4,8 +4,9 @@ The packaged **Linux desktop application**: the Engine Desktop editor chrome fro
 `@sceneaxi/desktop-shell` in an Electron window, connected to the real engine
 stack — `composeScene()` composition, the orchestrated kernel open path, the one
 Three presentation core drawing real pixels in the renderer process, and the
-shared authoring propose/accept session. Not a static HTML export: every claim
-below is exercised by a spawned binary or a gate test.
+shared authoring propose/accept session. Its Ship room also writes a contained,
+deterministic static Web export; every runtime claim below is exercised by a
+spawned binary or a gate test.
 
 Ownership map, the first-download record (the offered workflow artifact, its
 checksums, and the date it expires), and what stays deliberately absent:
@@ -25,7 +26,7 @@ pnpm install
 cd desktop/linux
 pnpm install          # electron + esbuild + electron-builder, tier-local
 pnpm check:renderer   # browser graph and sole presentation owner
-pnpm build            # dist/main.cjs, dist/preload.cjs, dist/renderer.js, dist/index.html
+pnpm build            # four runtime files plus dist/sceneaxi-publish-no-replace
 pnpm start            # launch the window against the real GPU
 ```
 
@@ -46,6 +47,7 @@ line proving: bridge handshake, a real kernel scene session bootstrapped through
 authoring selection → proposal review → atomic save → fresh-session reopen → Play
 round trip for selected Translation X, Rotation Y, and Scale Z plus bounded
 local-artifact add/remove, Reject, Undo, the saved composition's viewport redraw,
+a static Web export whose source bytes and Delivery Handoff digests are verified,
 and the renderer's real presentation frame report (`backend three`, `surface
 webgl-canvas` where a drawing buffer exists).
 
@@ -54,6 +56,13 @@ selected contained asset through that same Change Review. Save owns the accepted
 manifest/copy; Reject owns no bytes; reopen and Play recover and redraw its real
 triangle projection through the one Three core. See
 [`docs/asset-ingestion.md`](../../docs/asset-ingestion.md).
+
+**File → Export Web** and the Ship rail's **Export Web** button run the same
+offline bridge action for a clean, bound project. It writes a content-addressed
+static viewer and Delivery Handoff inside that project; it never uploads or
+deploys the result. Windows and macOS refuse the action by name. The exact
+layout, replay rules, limits, and refusal contract live in
+[`docs/desktop-linux.md`](../../docs/desktop-linux.md#ship--export-web).
 
 The packaged chrome also binds its Assistant **Build** mode to the bridge. Local
 is a deterministic, free compiler; BYOK is free of SceneAxi credits but runs

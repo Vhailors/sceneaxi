@@ -487,6 +487,7 @@ export function runDesktopCommand(
         documentPath: status.documentPath,
         documentId: status.documentId,
         contentHash: status.contentHash,
+        contentByteLength: status.contentByteLength,
         dataKeys: status.dataKeys,
         undoAvailability: status.undoAvailability,
         data: status.data,

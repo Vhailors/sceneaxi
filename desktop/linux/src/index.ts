@@ -62,6 +62,21 @@ export {
   type OpenPathExercise,
 } from "./lib/bridge.js";
 
+export {
+  DESKTOP_WEB_EXPORT_ASSET_MAX_TOTAL_BYTES,
+  DESKTOP_WEB_EXPORT_HANDOFF_PATH,
+  DESKTOP_WEB_EXPORT_REFUSALS,
+  DESKTOP_WEB_EXPORT_ROOT,
+  DESKTOP_WEB_EXPORT_TOOL_VERSION,
+  DESKTOP_WEB_EXPORT_VERSION,
+  exportDesktopWebProject,
+  type DesktopWebExportInput,
+  type DesktopWebExportRefusal,
+  type DesktopWebExportRefusalReason,
+  type DesktopWebExportResult,
+  type DesktopWebExportSuccess,
+} from "./lib/web-export.js";
+
 export { createDesktopAssistantViewportController } from "./lib/assistant-viewport.js";
 
 export {

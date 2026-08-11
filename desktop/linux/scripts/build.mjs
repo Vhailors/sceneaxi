@@ -109,4 +109,4 @@ if (leaked.length > 0) {
   process.exit(1);
 }
 
-console.log("desktop-linux build OK — dist/main.cjs, dist/preload.cjs, dist/renderer.js, dist/index.html");
+console.log("desktop runtime build OK — dist/main.cjs, dist/preload.cjs, dist/renderer.js, dist/index.html");

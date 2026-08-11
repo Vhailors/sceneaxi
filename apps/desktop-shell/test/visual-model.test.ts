@@ -137,10 +137,15 @@ describe("desktop visual model — profile switch", () => {
     // Every mode is inert: no mode may be entered from behind the refusal.
     expect(view.modes.every((mode) => mode.control.kind === "inert")).toBe(true);
     expect(
-      [view.product.open, view.product.save, view.product.play].map(
+      [
+        view.product.open,
+        view.product.save,
+        view.product.play,
+        view.product.exportWeb,
+      ].map(
         (control) => control.refusal,
       ),
-    ).toEqual(Array(3).fill(DESKTOP_VISUAL_REFUSALS.kidsRefuseOnly));
+    ).toEqual(Array(4).fill(DESKTOP_VISUAL_REFUSALS.kidsRefuseOnly));
     expect(view.product.stageHtml.refusal).toBe(
       DESKTOP_VISUAL_REFUSALS.webCapabilityRequired,
     );
@@ -442,6 +447,7 @@ describe("desktop visual model — refusals and honesty", () => {
         view.product.open,
         view.product.save,
         view.product.play,
+        view.product.exportWeb,
         view.product.stageHtml,
         view.product.injectAsset,
         ...view.menus.map((menu) => menu.control),
@@ -487,6 +493,7 @@ describe("desktop visual model — refusals and honesty", () => {
       view.product.open,
       view.product.save,
       view.product.play,
+      view.product.exportWeb,
       view.product.stageHtml,
       view.product.injectAsset,
       view.overlay.search,
@@ -525,6 +532,7 @@ describe("desktop visual model — refusals and honesty", () => {
         view.product.open,
         view.product.save,
         view.product.play,
+        view.product.exportWeb,
         view.product.stageHtml,
         view.product.injectAsset,
         view.overlay.search,

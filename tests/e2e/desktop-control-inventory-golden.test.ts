@@ -69,7 +69,7 @@ describe("desktop mounted control inventory", () => {
       await click(window, `#mode-${mode}`);
       expect(shell.dataset.mode).toBe(mode);
       expect(element(window, `#mode-${mode}`).getAttribute("aria-pressed")).toBe("true");
-      if (!["build", "run"].includes(mode)) {
+      if (!["build", "run", "ship"].includes(mode)) {
         expect(element(window, `[data-mode-panel="${mode}"]`).textContent).toContain(
           DESKTOP_VISUAL_REFUSALS.noDocumentBound,
         );

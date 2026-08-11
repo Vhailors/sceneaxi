@@ -97,9 +97,11 @@ Start-Process .\SceneAxi-Engine-Desktop-<version>-windows-x64.exe
 ```
 
 Choose the default per-user install unless an operator has a separate machine-wide
-policy. This root stages the unchanged desktop application, so first launch, the
+policy. This root stages the shared desktop application, so first launch, the
 contained project lifecycle, the product tabs, and the Kids refuse-only posture are
-owned by [`desktop-linux.md`](desktop-linux.md).
+owned by [`desktop-linux.md`](desktop-linux.md). Export Web v1 is the platform
+exception: the Windows runtime refuses it by the named platform rule that document
+owns.
 
 ## Fail-closed update behavior
 

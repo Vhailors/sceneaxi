@@ -2,7 +2,8 @@
 /**
  * Packaged-app smoke: launch the real application with `--smoke` and assert the
  * proof line it prints — handshake, kernel open path with moving digests, the
- * typed edit/review/save/reopen/play round trip, and the renderer's real frame report.
+ * typed edit/review/save/reopen/play round trip, the static Web export, and the
+ * renderer's real frame report.
  *
  * Two launch modes:
  * - default: `electron dist/main.cjs --smoke` (the built runtime, dev install)
@@ -128,6 +129,26 @@ if (
   failures.push("add/remove, Reject, Undo, or malformed-input evidence is incomplete");
 }
 if (
+  proof.ship?.exported !== true ||
+  proof.ship?.handoffPresent !== true ||
+  typeof proof.ship?.bundleDigest !== "string" ||
+  !/^sha256:[0-9a-f]{64}$/.test(proof.ship.bundleDigest) ||
+  typeof proof.ship?.sourceDigest !== "string" ||
+  !/^sha256:[0-9a-f]{64}$/.test(proof.ship.sourceDigest)
+) {
+  failures.push("Ship did not produce deterministic bundle and Delivery Handoff digests");
+}
+if (
+  typeof proof.ship?.outputDirectory !== "string" ||
+  !proof.ship.outputDirectory.startsWith(`${project}${sep}exports${sep}web${sep}`) ||
+  typeof proof.ship?.bundleDigest !== "string" ||
+  !proof.ship.outputDirectory.endsWith(
+    `${sep}${proof.ship.bundleDigest.slice("sha256:".length)}`,
+  )
+) {
+  failures.push("Ship wrote outside the isolated smoke project's content-addressed Web export root");
+}
+if (
   proof.playbackDom?.accepted !== true ||
   proof.playbackDom?.state !== "acknowledged" ||
   typeof proof.playbackDom?.frame !== "number"
@@ -173,6 +194,9 @@ console.log(
 );
 console.log(
   `  authoring: selected transform → ${proof.authoring.proposedPhase} → ${proof.authoring.acceptedPhase}; add/remove Reject+Undo; reopened translation ${proof.authoring.reopenedValue}, rotation ${proof.authoring.playedRotationY}, scale ${proof.authoring.playedScaleZ} → redrawn at frame ${proof.playbackDom.frame}`,
+);
+console.log(
+  `  ship: static Web bundle ${proof.ship.bundleDigest} · source ${proof.ship.sourceDigest} · Delivery Handoff present`,
 );
 console.log(
   `  frame: backend ${proof.frameReport.backend} · surface ${proof.frameReport.surface ?? "unreported"} · pixelsDrawn ${proof.frameReport.pixelsDrawn ?? "unreported"} · drawCalls ${proof.frameReport.drawCalls}`,

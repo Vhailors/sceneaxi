@@ -51,6 +51,7 @@ export type DesktopDocumentStatus =
       readonly documentPath: string;
       readonly documentId: string;
       readonly contentHash: string;
+      readonly contentByteLength: number;
       readonly dataKeys: readonly string[];
       readonly undoAvailability: ApplyUndoAvailability;
       /** Validated document data for project-loop proposals; never executable. */
@@ -364,6 +365,7 @@ export function createDesktopSession(
         documentPath,
         documentId: validation.document.id,
         contentHash: contentHash(text),
+        contentByteLength: Buffer.byteLength(text, "utf8"),
         dataKeys: Object.freeze(Object.keys(validation.document.data).sort()),
         undoAvailability: (() => {
           if (journalRecoveryPending) return "recovery-pending";

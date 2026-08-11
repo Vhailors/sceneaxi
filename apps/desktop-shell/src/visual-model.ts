@@ -1089,6 +1089,7 @@ export type DesktopVisualView = Readonly<{
     open: DesktopControl;
     save: DesktopControl;
     play: DesktopControl;
+    exportWeb: DesktopControl;
     selectSceneEntity: DesktopControl;
     selectStarterEntity: DesktopControl;
     transformProperties: readonly DesktopControl[];
@@ -1293,6 +1294,7 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
     open: control("project-open", "Open scene.json", "live"),
     save: control("project-save", "Save scene.json", "live"),
     play: control("scene-play", "Play composed scene", "live"),
+    exportWeb: control("ship-export-web", "Export Web", "live"),
     selectSceneEntity,
     selectStarterEntity: selectSceneEntity,
     transformProperties,

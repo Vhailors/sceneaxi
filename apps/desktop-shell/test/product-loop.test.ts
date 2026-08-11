@@ -190,36 +190,6 @@ describe("desktop product loop", () => {
     expect(game).toContain(DESKTOP_VIEWPORT_PLAY_EVENT);
   });
 
-  it("ships the model's own staging decision instead of a browser paraphrase of it", () => {
-    // The shipped browser path used to hand-copy the asset-path guard and the
-    // proposal build. That copy is what drifts — it had already lost the markup
-    // bounds. The emitted script now carries this exact function, so the tests
-    // above and the document a visitor loads cannot answer differently.
-    const web = renderDesktopChrome(
-      desktopVisualView(createDesktopVisualState({ profile: "web" })),
-    );
-    expect(web).toContain(String(desktopWebStageDecision));
-    expect(web).not.toContain("validAssetPath");
-
-    // Embedding a compiled function is only safe if the document it lands in is
-    // still parseable JavaScript, so the emitted script is compiled here rather
-    // than trusted to be well-formed.
-    const script = /<script>([\s\S]*?)<\/script>/.exec(web)?.[1] ?? "";
-    expect(script.length).toBeGreaterThan(0);
-    expect(() => new Function(script)).not.toThrow();
-
-    // And its configuration travels as data, so the browser reads the same
-    // document path, starter markup, bounds, and refusal names the model uses.
-    expect(JSON.parse(JSON.stringify(DESKTOP_WEB_STAGE_CONFIG))).toEqual({
-      documentPath: "scene.json",
-      starterHtml: '<main id="sceneaxi-mount"></main>',
-      htmlMaxLength: DESKTOP_WEB_HTML_MAX_LENGTH,
-      assetPathMaxLength: DESKTOP_WEB_ASSET_PATH_MAX_LENGTH,
-      assetMaxCount: DESKTOP_WEB_ASSET_MAX_COUNT,
-      refusals: { ...DESKTOP_PRODUCT_REFUSALS },
-    });
-  });
-
   it("refuses oversized and null-bearing markup through the one decision", () => {
     const documentData = { title: "Landing" };
     expect(

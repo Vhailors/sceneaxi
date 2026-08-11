@@ -59,6 +59,7 @@ describe("desktop shell commands", () => {
     expect(r.result["documentId"]).toBe("scene");
     expect(r.result["dataKeys"]).toEqual(["entities"]);
     expect(r.result["contentHash"]).toMatch(/^sha256:[0-9a-f]{64}$/);
+    expect(r.result["contentByteLength"]).toBeGreaterThan(0);
     expect(r.result["undoAvailability"]).toBe("unavailable");
   });
 

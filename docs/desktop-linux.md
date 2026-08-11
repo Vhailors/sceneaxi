@@ -44,9 +44,55 @@ Bridge actions and what each reaches — only through public seams:
 | `scene` | re-read the requested project-contained Scene Document, validate and reproduce its stored composition through `composeScene()`, then return the shared `MountableScene` payload from `@sceneaxi/site-kit` |
 | `open-path` | the same requested document's composition — `documentPath` required exactly as for `scene` — through `bootstrapOpenPath()` from `@sceneaxi/engine-orchestrator`: a real kernel scene session opened, advanced, observed, closed, with its mountable payload returned for viewport synchronization. An accepted rarity namespace additionally opens a product session, verifies the accepted event through dispatch/advance/save/resume, and returns its safe result for Run and viewport presentation |
 | `asset-import` | the one contained GLB/glTF importer authority. The native picker supplies a local path; validation stages `/data` through the existing E1 session, Accept materializes the project copy, and Reject writes nothing. Exact limits and absence boundaries: [`asset-ingestion.md`](asset-ingestion.md) |
+| `ship` | `export-web` validates the current exact `scene.json` bytes and composed scene, verifies every accepted/referenced asset, reuses the packaged renderer bytes, and writes one content-addressed static Web directory plus a validated Delivery Handoff. It is offline and owns no deployment adapter or authority |
 | `assistant` | Build uses `runAssistantSculptAction()` in `@sceneaxi/authoring-core`: deterministic local compilation by default, or an explicitly injected BYOK runner. Agent uses the privileged no-network rarity fixture through the same Model Provider Port and stages its result in the existing DesktopSession review. Hosted refuses here because this tier has no identity/credit authority |
 | `authoring` | `createDesktopSession()` from `@sceneaxi/desktop-shell` — the same propose/accept protocol as the CLI and web-shell. A `documentPath` arrives from the renderer over IPC — here, and on `scene` and `open-path` alike — and the authoring core resolves it against `cwd` without a containment check of its own, so the bridge owns that constraint for every action that takes one: an absolute path, one escaping the project directory, or one whose **canonical** path leaves it through a symlink refuses `DESKTOP_BRIDGE_REQUEST_MALFORMED`. Containment is judged after symlink resolution because that is where the bytes land; a missing leaf still resolves, so this is containment and not an existence check |
 | `frame-report` | nothing: it *accepts* the renderer's real presentation frame so main and the smoke can see what was claimed |
+
+### Ship → Export Web
+
+The packaged chrome exposes one `Export Web` command in the File menu, command
+palette, and Ship panel. It first requires a bound project with no staged
+proposal or recovery state. The host retains the exact content hash and byte
+length from the authoring status read; Ship presents that hash, and the bridge
+pairs it with the retained length. The host refuses size drift before hashing or
+allocating replacement bytes, and refuses if the bytes move between status,
+validation, writing, and the final source check. Windows and macOS refuse
+`DESKTOP_WEB_EXPORT_PLATFORM_UNSUPPORTED` before opening a project session or
+preparing export storage.
+
+`src/lib/web-export.ts` owns the export. Its output root is
+`exports/web/<bundle-sha256>/` under the project and contains:
+
+- `index.html`, a network-closed static viewer document;
+- `sceneaxi-web.js`, the exact packaged desktop renderer bytes;
+- `sceneaxi-tool-version.txt`, the runtime-bound desktop export tool identity;
+- `sceneaxi-scene.js`, the validated `MountableScene` bridge for that viewer;
+- `source/scene.json`, byte-identical to the source project document;
+- every accepted or Web-referenced contained asset at its project-relative path;
+- `delivery-handoff.json`, validated through the existing Delivery Handoff v1
+  contract with per-artifact SHA-256 values and the aggregate artifact-set digest.
+
+Every referenced asset uses the contained importer v1 eight-MiB byte limit.
+Export also enforces a 64-MiB aggregate asset budget before it reads the first
+asset that would exceed the bound, refusing
+`DESKTOP_WEB_EXPORT_ASSET_BUDGET_EXCEEDED` by name.
+
+The fixed export format and runtime-bound tool version (the package and export
+format versions plus the packaged renderer SHA-256) make identical project and
+asset bytes under the same effective tool version produce identical bundle
+bytes. Existing identical
+output is a verified replay; an unexpected file, link, or changed byte at the
+content address refuses. The path never calls a provider or delivery adapter and
+never uploads, deploys, signs, approves, or releases anything.
+
+Named refusals cover no bound project, staged/recovery state, a stale document,
+invalid scene data, invalid or missing assets, unsafe paths, missing packaged
+runtime bytes, invalid generated handoff data, destination conflicts, and failed
+exclusive writes. `tests/e2e/desktop-web-export-golden.test.ts` pins the source,
+artifact, and bundle digests and exercises the required refusal paths. The
+packaged smoke performs the same bridge request and verifies the output files,
+source bytes, and handoff digest before printing its proof line.
 
 ### Selected composed-instance edit
 
@@ -243,7 +289,7 @@ pnpm install                                   # repository root, once
 cd desktop/linux
 pnpm install                                   # tier-local: electron, esbuild, electron-builder
 pnpm check:renderer                            # browser graph + sole presentation owner
-pnpm build                                     # dist/ runtime bundles + chrome document
+pnpm build                                     # four runtime files + sceneaxi-publish-no-replace
 pnpm start                                     # launch the window
 pnpm dist                                      # AppImage + .deb + release/SHA256SUMS
 (cd release && sha256sum -c SHA256SUMS)        # verify

@@ -24,7 +24,7 @@ const run = (command, args) => {
   }
 };
 
-run(process.execPath, [join(appRoot, "scripts/build.mjs")]);
+run(process.execPath, [join(appRoot, "scripts/build-linux.mjs")]);
 run(join(appRoot, "node_modules/.bin/electron-builder"), ["--linux"]);
 
 const artifacts = readdirSync(release)
