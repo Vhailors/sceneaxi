@@ -23,6 +23,7 @@ import { contentHash } from "@sceneaxi/authoring-core";
 import { parseDeliveryHandoffText } from "@sceneaxi/schemas";
 import { PROJECT_ASSET_MAX_BYTES } from "../../packages/importers/src/index.ts";
 import {
+  DESKTOP_WEB_EXPORT_ASSET_MAX_TOTAL_BYTES,
   DESKTOP_WEB_EXPORT_REFUSALS,
   DESKTOP_WEB_EXPORT_TOOL_VERSION,
   createDesktopBridge,
@@ -40,7 +41,11 @@ const exportCommit = vi.hoisted(() => ({
   beforeMkdir: null as ((path: unknown) => void) | null,
   beforePublish: null as ((source: string, destination: string) => void) | null,
   beforeReadFile: null as ((path: unknown) => void) | null,
+  beforeStreamRead: null as ((descriptor: number) => void) | null,
   beforeFstat: null as ((descriptor: number) => void) | null,
+  closedPaths: [] as string[],
+  descriptorPaths: new Map<number, string>(),
+  failOutputCloseSuffix: null as string | null,
   failPublish: false,
   failOpenSuffix: null as string | null,
   maximumReadLength: 0,
@@ -144,6 +149,22 @@ vi.mock("node:fs", async (importOriginal) => {
   }) as typeof actual.writeFileSync;
   return {
     ...actual,
+    closeSync: (descriptor: number) => {
+      const target = exportCommit.descriptorPaths.get(descriptor) ?? "";
+      exportCommit.descriptorPaths.delete(descriptor);
+      exportCommit.closedPaths.push(target);
+      actual.closeSync(descriptor);
+      if (
+        exportCommit.failOutputCloseSuffix !== null &&
+        target.includes("/exports/web/") &&
+        target.endsWith(exportCommit.failOutputCloseSuffix)
+      ) {
+        exportCommit.failOutputCloseSuffix = null;
+        throw Object.assign(new Error("injected delayed export write failure"), {
+          code: "EIO",
+        });
+      }
+    },
     fstatSync: hookedFstatSync,
     linkSync: (
       oldPath: Parameters<typeof actual.linkSync>[0],
@@ -194,7 +215,12 @@ vi.mock("node:fs", async (importOriginal) => {
           code: "EIO",
         });
       }
-      return actual.openSync(path, flags, mode);
+      const descriptor = actual.openSync(path, flags, mode);
+      exportCommit.descriptorPaths.set(
+        descriptor,
+        actual.realpathSync(`/proc/self/fd/${String(descriptor)}`),
+      );
+      return descriptor;
     },
     opendirSync: hookedOpendirSync,
     readFileSync: hookedReadFileSync,
@@ -206,6 +232,7 @@ vi.mock("node:fs", async (importOriginal) => {
       length: Parameters<typeof actual.readSync>[3],
       position: Parameters<typeof actual.readSync>[4],
     ) => {
+      exportCommit.beforeStreamRead?.(descriptor);
       exportCommit.maximumReadLength = Math.max(
         exportCommit.maximumReadLength,
         length,
@@ -273,7 +300,11 @@ afterEach(() => {
   exportCommit.beforeMkdir = null;
   exportCommit.beforePublish = null;
   exportCommit.beforeReadFile = null;
+  exportCommit.beforeStreamRead = null;
   exportCommit.beforeFstat = null;
+  exportCommit.closedPaths = [];
+  exportCommit.descriptorPaths.clear();
+  exportCommit.failOutputCloseSuffix = null;
   exportCommit.failPublish = false;
   exportCommit.failOpenSuffix = null;
   exportCommit.maximumReadLength = 0;
@@ -1269,6 +1300,73 @@ describe("desktop static Web export", () => {
       ok: false,
       reason: DESKTOP_WEB_EXPORT_REFUSALS.writeFailed,
     });
+  });
+
+  it("classifies delayed asset close failures and still closes the source", () => {
+    const sourceRoot = temporary("sceneaxi-export-asset-close-source-");
+    const source = join(sourceRoot, "triangle.gltf");
+    writeFileSync(source, containedTriangle());
+    const root = temporary("sceneaxi-export-asset-close-");
+    seedWithAsset(root, source);
+    exportCommit.failOutputCloseSuffix = "/triangle.gltf";
+
+    const result = exportProject(root);
+
+    expect(result).toMatchObject({
+      ok: false,
+      reason: DESKTOP_WEB_EXPORT_REFUSALS.writeFailed,
+    });
+    const destinationClose = exportCommit.closedPaths.findIndex(
+      (path) => path.includes("/exports/web/") && path.endsWith("/triangle.gltf"),
+    );
+    expect(destinationClose).toBeGreaterThanOrEqual(0);
+    expect(exportCommit.closedPaths.slice(destinationClose + 1)).toContain(
+      join(root, "assets/triangle.gltf"),
+    );
+  });
+
+  it("refuses assets beyond the aggregate budget before reading their bytes", () => {
+    const root = temporary("sceneaxi-export-asset-budget-");
+    expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
+    const assetDirectory = join(root, "assets");
+    mkdirSync(assetDirectory, { recursive: true });
+    const assetPaths = Array.from({ length: 8 }, (_, index) =>
+      `assets/full-${String(index)}.bin`
+    );
+    for (const path of assetPaths) {
+      const asset = join(root, path);
+      writeFileSync(asset, "fixture");
+      truncateSync(asset, PROJECT_ASSET_MAX_BYTES);
+    }
+    const overBudgetPath = "assets/over-budget.bin";
+    writeFileSync(join(root, overBudgetPath), "x");
+    rewriteDocument(root, (document) => {
+      (document["data"] as Record<string, unknown>)["webExperience"] = {
+        html: "<main>Fixture</main>",
+        assets: [...assetPaths, overBudgetPath],
+      };
+    });
+    let overBudgetAssetRead = false;
+    exportCommit.beforeStreamRead = (descriptor) => {
+      if (
+        realpathSync(`/proc/self/fd/${String(descriptor)}`) ===
+        join(root, overBudgetPath)
+      ) {
+        overBudgetAssetRead = true;
+      }
+    };
+
+    const result = exportProject(root);
+
+    expect(DESKTOP_WEB_EXPORT_ASSET_MAX_TOTAL_BYTES).toBe(
+      8 * PROJECT_ASSET_MAX_BYTES,
+    );
+    expect(result).toMatchObject({
+      ok: false,
+      reason: DESKTOP_WEB_EXPORT_REFUSALS.assetBudgetExceeded,
+    });
+    expect(overBudgetAssetRead).toBe(false);
+    expect(existsSync(join(root, "exports"))).toBe(false);
   });
 
   it("retries after publication is interrupted before the content address", () => {

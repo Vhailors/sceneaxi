@@ -53,6 +53,7 @@ export const DESKTOP_WEB_EXPORT_VERSION = 1 as const;
 export const DESKTOP_WEB_EXPORT_TOOL_VERSION = "0.0.0" as const;
 export const DESKTOP_WEB_EXPORT_ROOT = "exports/web" as const;
 export const DESKTOP_WEB_EXPORT_HANDOFF_PATH = "delivery-handoff.json" as const;
+export const DESKTOP_WEB_EXPORT_ASSET_MAX_TOTAL_BYTES = 64 * 1024 * 1024;
 
 export const DESKTOP_WEB_EXPORT_REFUSALS = Object.freeze({
   requestMalformed: "DESKTOP_WEB_EXPORT_REQUEST_MALFORMED",
@@ -63,6 +64,7 @@ export const DESKTOP_WEB_EXPORT_REFUSALS = Object.freeze({
   assetManifestInvalid: "DESKTOP_WEB_EXPORT_ASSET_MANIFEST_INVALID",
   assetMissing: "DESKTOP_WEB_EXPORT_ASSET_MISSING",
   assetInvalid: "DESKTOP_WEB_EXPORT_ASSET_INVALID",
+  assetBudgetExceeded: "DESKTOP_WEB_EXPORT_ASSET_BUDGET_EXCEEDED",
   unsafePath: "DESKTOP_WEB_EXPORT_UNSAFE_PATH",
   runtimeMissing: "DESKTOP_WEB_EXPORT_RUNTIME_MISSING",
   handoffInvalid: "DESKTOP_WEB_EXPORT_HANDOFF_INVALID",
@@ -651,7 +653,7 @@ type StreamedFile =
   | Readonly<{ ok: true; byteLength: number; digest: string }>
   | Readonly<{
       ok: false;
-      kind: "missing" | "unsafe" | "invalid" | "write";
+      kind: "missing" | "unsafe" | "invalid" | "budget" | "write";
       detail: string;
     }>;
 
@@ -661,6 +663,7 @@ function streamContainedFile(
   limits: Readonly<{
     maximumBytes?: number;
     expectedBytes?: number;
+    remainingBudgetBytes?: number;
   }>,
   destination?: Readonly<{
     descriptor: number;
@@ -670,70 +673,41 @@ function streamContainedFile(
 ): StreamedFile {
   let sourceDescriptor: number | null = null;
   let destinationDescriptor: number | null = null;
-  try {
-    const opened = openContainedRegularFile(root, source);
-    if (!opened.ok) return opened;
-    sourceDescriptor = opened.descriptor;
-    const before = opened.stats;
-    if (
-      !Number.isSafeInteger(before.size) ||
-      before.size < 0 ||
-      (limits.maximumBytes !== undefined && before.size > limits.maximumBytes) ||
-      (limits.expectedBytes !== undefined && before.size !== limits.expectedBytes)
-    ) {
-      return Object.freeze({
-        ok: false as const,
-        kind: "invalid" as const,
-        detail: "the opened file length is outside its accepted bounds",
-      });
-    }
-    if (destination !== undefined) {
-      try {
-        destinationDescriptor = openOutputFile(
-          destination.descriptor,
-          destination.directory,
-          destination.path,
-        );
-      } catch (error) {
-        return Object.freeze({
-          ok: false as const,
-          kind: "write" as const,
-          detail: error instanceof Error ? error.message : String(error),
-        });
-      }
-    }
-    const hash = createHash("sha256");
-    const buffer = Buffer.alloc(Math.min(STREAM_BUFFER_BYTES, Math.max(1, before.size)));
-    let byteLength = 0;
-    while (byteLength < before.size) {
-      const count = readSync(
-        sourceDescriptor,
-        buffer,
-        0,
-        Math.min(buffer.byteLength, before.size - byteLength),
-        null,
-      );
-      if (count === 0) {
+  const streamed = (() => {
+    try {
+      const opened = openContainedRegularFile(root, source);
+      if (!opened.ok) return opened;
+      sourceDescriptor = opened.descriptor;
+      const before = opened.stats;
+      if (
+        !Number.isSafeInteger(before.size) ||
+        before.size < 0 ||
+        (limits.maximumBytes !== undefined && before.size > limits.maximumBytes) ||
+        (limits.expectedBytes !== undefined && before.size !== limits.expectedBytes)
+      ) {
         return Object.freeze({
           ok: false as const,
           kind: "invalid" as const,
-          detail: "the opened file ended before its verified length",
+          detail: "the opened file length is outside its accepted bounds",
         });
       }
-      hash.update(buffer.subarray(0, count));
-      if (destinationDescriptor !== null) {
+      if (
+        limits.remainingBudgetBytes !== undefined &&
+        before.size > limits.remainingBudgetBytes
+      ) {
+        return Object.freeze({
+          ok: false as const,
+          kind: "budget" as const,
+          detail: "the aggregate asset byte budget would be exceeded",
+        });
+      }
+      if (destination !== undefined) {
         try {
-          let written = 0;
-          while (written < count) {
-            const next = writeSync(
-              destinationDescriptor,
-              buffer,
-              written,
-              count - written,
-            );
-            if (next === 0) throw new Error("the export file write made no progress");
-            written += next;
-          }
+          destinationDescriptor = openOutputFile(
+            destination.descriptor,
+            destination.directory,
+            destination.path,
+          );
         } catch (error) {
           return Object.freeze({
             ok: false as const,
@@ -742,47 +716,130 @@ function streamContainedFile(
           });
         }
       }
-      byteLength += count;
-    }
-    const trailing = Buffer.alloc(1);
-    if (readSync(sourceDescriptor, trailing, 0, 1, null) !== 0) {
+      const hash = createHash("sha256");
+      const buffer = Buffer.alloc(
+        Math.min(STREAM_BUFFER_BYTES, Math.max(1, before.size)),
+      );
+      let byteLength = 0;
+      while (byteLength < before.size) {
+        const count = readSync(
+          sourceDescriptor,
+          buffer,
+          0,
+          Math.min(buffer.byteLength, before.size - byteLength),
+          null,
+        );
+        if (count === 0) {
+          return Object.freeze({
+            ok: false as const,
+            kind: "invalid" as const,
+            detail: "the opened file ended before its verified length",
+          });
+        }
+        hash.update(buffer.subarray(0, count));
+        if (destinationDescriptor !== null) {
+          try {
+            let written = 0;
+            while (written < count) {
+              const next = writeSync(
+                destinationDescriptor,
+                buffer,
+                written,
+                count - written,
+              );
+              if (next === 0) {
+                throw new Error("the export file write made no progress");
+              }
+              written += next;
+            }
+          } catch (error) {
+            return Object.freeze({
+              ok: false as const,
+              kind: "write" as const,
+              detail: error instanceof Error ? error.message : String(error),
+            });
+          }
+        }
+        byteLength += count;
+      }
+      const trailing = Buffer.alloc(1);
+      if (readSync(sourceDescriptor, trailing, 0, 1, null) !== 0) {
+        return Object.freeze({
+          ok: false as const,
+          kind: "invalid" as const,
+          detail: "the opened file grew beyond its verified length",
+        });
+      }
+      if (fstatSync(sourceDescriptor).size !== before.size) {
+        return Object.freeze({
+          ok: false as const,
+          kind: "invalid" as const,
+          detail: "the opened file length changed while it was being read",
+        });
+      }
+      return Object.freeze({
+        ok: true as const,
+        byteLength,
+        digest: `sha256:${hash.digest("hex")}`,
+      });
+    } catch (error) {
+      const code =
+        typeof error === "object" && error !== null && "code" in error
+          ? error.code
+          : null;
       return Object.freeze({
         ok: false as const,
-        kind: "invalid" as const,
-        detail: "the opened file grew beyond its verified length",
+        kind:
+          code === "ENOENT"
+            ? "missing" as const
+            : code === "ELOOP"
+              ? "unsafe" as const
+              : "invalid" as const,
+        detail: error instanceof Error ? error.message : String(error),
       });
     }
-    if (fstatSync(sourceDescriptor).size !== before.size) {
-      return Object.freeze({
-        ok: false as const,
-        kind: "invalid" as const,
-        detail: "the opened file length changed while it was being read",
-      });
+  })();
+  let destinationCloseFailed = false;
+  let destinationCloseError: unknown;
+  let sourceCloseFailed = false;
+  let sourceCloseError: unknown;
+  if (destinationDescriptor !== null) {
+    try {
+      closeSync(destinationDescriptor);
+    } catch (error) {
+      destinationCloseFailed = true;
+      destinationCloseError = error;
     }
-    return Object.freeze({
-      ok: true as const,
-      byteLength,
-      digest: `sha256:${hash.digest("hex")}`,
-    });
-  } catch (error) {
-    const code =
-      typeof error === "object" && error !== null && "code" in error
-        ? error.code
-        : null;
+  }
+  if (sourceDescriptor !== null) {
+    try {
+      closeSync(sourceDescriptor);
+    } catch (error) {
+      sourceCloseFailed = true;
+      sourceCloseError = error;
+    }
+  }
+  if (destinationCloseFailed) {
     return Object.freeze({
       ok: false as const,
-      kind:
-        code === "ENOENT"
-          ? "missing" as const
-          : code === "ELOOP"
-            ? "unsafe" as const
-            : "invalid" as const,
-      detail: error instanceof Error ? error.message : String(error),
+      kind: "write" as const,
+      detail:
+        destinationCloseError instanceof Error
+          ? destinationCloseError.message
+          : String(destinationCloseError),
     });
-  } finally {
-    if (destinationDescriptor !== null) closeSync(destinationDescriptor);
-    if (sourceDescriptor !== null) closeSync(sourceDescriptor);
   }
+  if (sourceCloseFailed) {
+    return Object.freeze({
+      ok: false as const,
+      kind: "invalid" as const,
+      detail:
+        sourceCloseError instanceof Error
+          ? sourceCloseError.message
+          : String(sourceCloseError),
+    });
+  }
+  return streamed;
 }
 
 function projectDocumentReadRefusal(
@@ -855,6 +912,7 @@ function readProjectAsset(
   path: string,
   manifestEntry?: ProjectAssetManifestEntry,
   workspace?: ExportWorkspace,
+  remainingBudgetBytes?: number,
 ): ExportFile | DesktopWebExportRefusal {
   if (!SAFE_ASSET_PATH_RE.test(path)) {
     return refuse(
@@ -877,6 +935,9 @@ function readProjectAsset(
       ...(manifestEntry === undefined
         ? {}
         : { expectedBytes: manifestEntry.byteLength }),
+      ...(remainingBudgetBytes === undefined
+        ? {}
+        : { remainingBudgetBytes }),
     },
     workspace === undefined
       ? undefined
@@ -903,6 +964,12 @@ function readProjectAsset(
       return refuse(
         DESKTOP_WEB_EXPORT_REFUSALS.writeFailed,
         `Referenced project asset ${path} could not be written to export staging: ${read.detail}.`,
+      );
+    }
+    if (read.kind === "budget") {
+      return refuse(
+        DESKTOP_WEB_EXPORT_REFUSALS.assetBudgetExceeded,
+        `Referenced project assets exceed the ${String(DESKTOP_WEB_EXPORT_ASSET_MAX_TOTAL_BYTES)} byte aggregate Web export budget.`,
       );
     }
     return refuse(
@@ -1332,10 +1399,18 @@ export function exportDesktopWebProject(
     ...webAssets.paths,
   ])].sort();
   const assetFiles: ExportFile[] = [];
+  let assetTotalBytes = 0;
   for (const path of assetPaths) {
-    const file = readProjectAsset(root, path, manifestByPath.get(path));
+    const file = readProjectAsset(
+      root,
+      path,
+      manifestByPath.get(path),
+      undefined,
+      DESKTOP_WEB_EXPORT_ASSET_MAX_TOTAL_BYTES - assetTotalBytes,
+    );
     if ("ok" in file) return file;
     assetFiles.push(file);
+    assetTotalBytes += file.byteLength;
   }
 
   const sourceDigest = sha256(documentBytes);

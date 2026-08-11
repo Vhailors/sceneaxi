@@ -74,6 +74,9 @@ preparing export storage.
   contract with per-artifact SHA-256 values and the aggregate artifact-set digest.
 
 Every referenced asset uses the contained importer v1 eight-MiB byte limit.
+Export also enforces a 64-MiB aggregate asset budget before it reads the first
+asset that would exceed the bound, refusing
+`DESKTOP_WEB_EXPORT_ASSET_BUDGET_EXCEEDED` by name.
 
 The fixed export format and runtime-bound tool version (the package and export
 format versions plus the packaged renderer SHA-256) make identical project and
