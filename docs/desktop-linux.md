@@ -476,7 +476,10 @@ after acknowledging a frame; the sole authoring target remains `scene.json`. The
 selected project-relative path is recovered from the
 atomically written mode-0600 `project-browser.json` beside recent-project state.
 That file contains only its schema version, canonical root, and selected path —
-never document/asset bytes, credentials, or secrets. Rename and Delete require an
+never document/asset bytes, credentials, or secrets. If Undo removes the manifest
+entry named by that path, status retains `DESKTOP_PROJECT_BROWSER_FILE_MISSING`;
+an explicit Select of a currently listed canonical file replaces the stale path
+and restores normal browsing. Rename and Delete require an
 explicit confirmation even to be considered, then refuse dirty/recovery state and
 revalidate containment and identity. Both canonical row kinds are immutable in
 the approved v1 contracts: `scene.json` is the one active document, while the

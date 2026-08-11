@@ -2043,7 +2043,14 @@ if (shell) {
   const syncProjectBrowser = async () => {
     clearProjectBrowser();
     if (activeProject === null || projectBrowserPort() === null) return true;
-    const response = await projectBrowserRequest({ action: 'status', profile: shell.dataset.profile });
+    let response = await projectBrowserRequest({ action: 'status', profile: shell.dataset.profile });
+    if (response?.reason === T.product.refusals.projectBrowserFileMissing) {
+      response = await projectBrowserRequest({
+        action: 'select',
+        profile: shell.dataset.profile,
+        path: T.product.documentPath,
+      });
+    }
     if (!response || !response.ok || !renderProjectBrowser(response.data?.status)) {
       const code = response?.reason || T.product.refusals.runtimeRequestRefused;
       productStatus('refused', 'Project browser refused · ' + code);

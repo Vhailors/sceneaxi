@@ -10,12 +10,16 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { contentHash } from "@sceneaxi/authoring-core";
+import { createDesktopSession } from "@sceneaxi/desktop-shell";
 import {
+  DESKTOP_SCENE_TRANSLATION_X_PROPERTY,
   DESKTOP_PROJECT_BROWSER_REFUSALS,
   DESKTOP_PROJECT_BROWSER_STATE_FILE,
   createDesktopBridge,
   createDesktopProjectBrowser,
+  desktopSceneFromDocumentData,
   seedDesktopProject,
+  stageDesktopScenePropertyEdit,
 } from "../../desktop/linux/src/index.ts";
 
 const roots: string[] = [];
@@ -50,6 +54,23 @@ function containedTriangle(offset = 0) {
     scenes: [{ nodes: [0] }],
     scene: 0,
   }));
+}
+
+function transformedDocument(text: string, translationX: number) {
+  const document = JSON.parse(text) as {
+    data: Record<string, unknown>;
+  };
+  const staged = stageDesktopScenePropertyEdit({
+    documentData: document.data,
+    contentHash: contentHash(text),
+    documentPath: "scene.json",
+    entityId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
+    propertyId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.id,
+    newValue: translationX,
+  });
+  if (!staged.ok) throw new Error(JSON.stringify(staged.diagnostics));
+  document.data.composedScene = staged.edit.newValue;
+  return `${JSON.stringify(document)}\n`;
 }
 
 function admittedProject() {
@@ -163,6 +184,126 @@ describe("contained desktop project and asset browser", () => {
       path: "scene.json",
     })).toMatchObject({ ok: false, reason: DESKTOP_PROJECT_BROWSER_REFUSALS.dirty });
 
+  });
+
+  it("recovers an undone persisted asset selection through an explicit valid Select", () => {
+    const { root, stateDirectory, bridge } = admittedProject();
+    const browser = createDesktopProjectBrowser({ root, stateDirectory });
+    expect(browser.handle({
+      action: "select",
+      profile: "web",
+      path: "assets/triangle.gltf",
+    })).toMatchObject({
+      ok: true,
+      data: { status: { selectedPath: "assets/triangle.gltf" } },
+    });
+    expect(bridge.handle({ action: "authoring", payload: { op: "undo" } })).toMatchObject({
+      ok: true,
+      data: { ok: true },
+    });
+    expect(browser.handle({ action: "status", profile: "web" })).toMatchObject({
+      ok: false,
+      reason: DESKTOP_PROJECT_BROWSER_REFUSALS.fileMissing,
+    });
+
+    const restarted = createDesktopProjectBrowser({ root, stateDirectory });
+    expect(restarted.handle({ action: "status", profile: "web" })).toMatchObject({
+      ok: false,
+      reason: DESKTOP_PROJECT_BROWSER_REFUSALS.fileMissing,
+    });
+    expect(restarted.handle({
+      action: "select",
+      profile: "web",
+      path: "scene.json",
+    })).toMatchObject({
+      ok: true,
+      data: { outcome: "selected", status: { selectedPath: "scene.json" } },
+    });
+    expect(restarted.handle({ action: "status", profile: "web" })).toMatchObject({
+      ok: true,
+      data: { status: { selectedPath: "scene.json" } },
+    });
+    expect(createDesktopProjectBrowser({ root, stateDirectory }).handle({
+      action: "status",
+      profile: "web",
+    })).toMatchObject({
+      ok: true,
+      data: { status: { selectedPath: "scene.json" } },
+    });
+  });
+
+  it("binds browser metadata, authoring status, and scene projection to one document hash", () => {
+    const { root } = admittedProject();
+    const documentPath = join(root, "scene.json");
+    const initialText = readFileSync(documentPath, "utf8");
+    const changedText = transformedDocument(initialText, 3.25);
+    const initialScene = desktopSceneFromDocumentData(
+      (JSON.parse(initialText) as { data: unknown }).data,
+    );
+    const changedScene = desktopSceneFromDocumentData(
+      (JSON.parse(changedText) as { data: unknown }).data,
+    );
+    if (!initialScene.ok || !changedScene.ok) throw new Error("test scene did not compose");
+    expect(changedScene.mountable.sceneDigest).not.toBe(initialScene.mountable.sceneDigest);
+
+    const replacedDuringBrowser = createDesktopProjectBrowser({
+      root,
+      stateDirectory: temporary("snapshot-browser-state"),
+      isDirty: () => false,
+    });
+    const mismatched = createDesktopBridge({
+      cwd: root,
+      projectBrowser: {
+        handle(request: unknown) {
+          const response = replacedDuringBrowser.handle(request);
+          if (response.ok && (request as { action?: unknown }).action === "open") {
+            writeFileSync(documentPath, changedText, "utf8");
+          }
+          return response;
+        },
+      },
+    });
+    expect(mismatched.handle({
+      action: "project-browser-open",
+      payload: { profile: "web", path: "assets/triangle.gltf" },
+    })).toMatchObject({
+      ok: false,
+      reason: DESKTOP_PROJECT_BROWSER_REFUSALS.documentInvalid,
+    });
+
+    writeFileSync(documentPath, initialText, "utf8");
+    const projectedBrowser = createDesktopProjectBrowser({
+      root,
+      stateDirectory: temporary("snapshot-projection-state"),
+      isDirty: () => false,
+    });
+    const baseSession = createDesktopSession({ cwd: root });
+    let replacedAfterStatus = false;
+    const projected = createDesktopBridge({
+      cwd: root,
+      projectBrowser: projectedBrowser,
+      createAuthoringSession: () => ({
+        ...baseSession,
+        status(path: string) {
+          const result = baseSession.status(path);
+          if (!replacedAfterStatus) {
+            replacedAfterStatus = true;
+            writeFileSync(documentPath, changedText, "utf8");
+          }
+          return result;
+        },
+      }),
+    });
+    expect(projected.handle({
+      action: "project-browser-open",
+      payload: { profile: "web", path: "assets/triangle.gltf" },
+    })).toMatchObject({
+      ok: true,
+      data: {
+        mountable: { sceneDigest: initialScene.mountable.sceneDigest },
+      },
+    });
+    expect(readFileSync(documentPath, "utf8")).toBe(changedText);
   });
 
   it("confirmation-gates immutable rename/delete and names dirty, duplicate, traversal, and outside-root refusals", () => {

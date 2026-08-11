@@ -375,5 +375,18 @@ describe("desktop project and asset browser golden path", () => {
     expect(query(window, "#project-browser-file-select")?.textContent).toContain(
       "scene-document · valid",
     );
+    desktopPort.browseProject = browseProject;
+    await selectProjectFile(window, "assets/triangle.gltf");
+    await click(window, '[data-command="edit-undo"]');
+    expect((query(window, "#project-browser-file-select") as unknown as { value?: string }).value)
+      .toBe("scene.json");
+    expect(query(window, '[data-project-asset="assets/triangle.gltf"]')).toBeNull();
+    expect(createDesktopProjectBrowser({ root, stateDirectory }).handle({
+      action: "status",
+      profile: "web",
+    })).toMatchObject({
+      ok: true,
+      data: { status: { selectedPath: "scene.json" } },
+    });
   });
 });

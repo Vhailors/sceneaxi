@@ -1270,6 +1270,17 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         file.path,
       );
     }
+    const documentFile = browserStatus.files.find((candidate) => candidate.kind === "document");
+    if (
+      documentFile === undefined ||
+      field(authoringStatus, "contentHash") !== documentFile.digest
+    ) {
+      return bridgeRefuse(
+        DESKTOP_PROJECT_BROWSER_REFUSALS.documentInvalid,
+        "The active Scene Document changed while the project-browser Open snapshot was being validated.",
+        browserStatus.activeDocumentPath,
+      );
+    }
 
     if (file.kind === "document") {
       return bridgeOk("project-browser-open", Object.freeze({
@@ -1277,7 +1288,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         authoringStatus,
       }));
     }
-    const scene = activeScene({ documentPath: browserStatus.activeDocumentPath });
+    const scene = desktopSceneFromDocumentData(field(authoringStatus, "data"));
     if (!scene.ok) return bridgeRefuse(scene.reason, scene.message);
     const asset = Object.freeze({ instanceId: file.instanceId, digest: file.digest });
     if (!(scene.mountable.importedAssets ?? []).some((candidate) =>

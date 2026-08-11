@@ -329,7 +329,9 @@ export function createDesktopProjectBrowser(
     }
   };
 
-  const status = (): DesktopProjectBrowserStatus | DesktopProjectBrowserResponse => {
+  const status = (
+    selectionRecoveryPath: string | null = null,
+  ): DesktopProjectBrowserStatus | DesktopProjectBrowserResponse => {
     cachedStatus = null;
     cachedDocumentFingerprint = null;
     cachedAssetFingerprints.clear();
@@ -411,18 +413,25 @@ export function createDesktopProjectBrowser(
       });
     });
     const files = Object.freeze([documentFileRecord, ...assets]);
-    if (!files.some((file) => file.path === selectedPath)) {
-      return projectBrowserRefuse(
-        DESKTOP_PROJECT_BROWSER_REFUSALS.fileMissing,
-        "The persisted project-browser selection is not the active document or an admitted manifest asset.",
-        selectedPath,
-      );
+    let statusSelectedPath = selectedPath;
+    if (!files.some((file) => file.path === statusSelectedPath)) {
+      if (
+        selectionRecoveryPath === null ||
+        !files.some((file) => file.path === selectionRecoveryPath)
+      ) {
+        return projectBrowserRefuse(
+          DESKTOP_PROJECT_BROWSER_REFUSALS.fileMissing,
+          "The persisted project-browser selection is not the active document or an admitted manifest asset.",
+          selectedPath,
+        );
+      }
+      statusSelectedPath = selectionRecoveryPath;
     }
     const value = Object.freeze({
       schemaVersion: DESKTOP_PROJECT_BROWSER_STATE_SCHEMA_VERSION,
       root,
       activeDocumentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
-      selectedPath,
+      selectedPath: statusSelectedPath,
       files,
     });
     cachedStatus = value;
@@ -521,12 +530,19 @@ export function createDesktopProjectBrowser(
       }
       const initializedState = initialize();
       if (initializedState !== null) return initializedState;
+      const selectionRecovery = action === "select"
+        ? requestPath(own(request, "path"))
+        : null;
       const reused = action === "status" ? null : cachedStatusIfCurrent();
-      const current = reused ?? status();
+      const current = reused ?? status(
+        selectionRecovery !== null && "value" in selectionRecovery
+          ? selectionRecovery.value
+          : null,
+      );
       if ("ok" in current) return current;
       if (action === "status") return ok("listed", current);
 
-      const path = requestPath(own(request, "path"));
+      const path = selectionRecovery ?? requestPath(own(request, "path"));
       if (!("value" in path)) return path;
       const selected = selectedFile(current, path.value);
       if ("ok" in selected) return selected;
@@ -546,6 +562,7 @@ export function createDesktopProjectBrowser(
         const written = persist();
         if (written !== null) {
           selectedPath = previous;
+          cachedStatus = null;
           return written;
         }
         const nextStatus = Object.freeze({
