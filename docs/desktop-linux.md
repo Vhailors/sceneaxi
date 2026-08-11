@@ -466,12 +466,14 @@ on-disk validation of the project copy. A missing copy, changed bytes, wrong
 file type, traversal, or symlink refuses by the stable
 `DESKTOP_PROJECT_BROWSER_*` diagnostic rather than being hidden or opened.
 
-Selection and Open travel through the typed preload/main-process browser channel.
-Opening an asset validates its canonical instance-and-digest pair through the existing
-desktop `scene` bridge, synchronizes the returned `MountableScene` into the existing
-viewport, and reports success only after the renderer acknowledges a frame; the sole
-authoring target remains `scene.json`. Open refuses authoritative Change Review and
-recovery state at the final open boundary. The selected project-relative path is recovered from the
+Selection travels through the typed preload/main-process project-browser channel.
+Open travels through the existing desktop bridge's synchronous
+`project-browser-open` action, which performs contained browser validation,
+authoritative Change Review or recovery refusal, and, for an asset, canonical
+instance-and-digest-bound `MountableScene` projection before returning. The renderer
+synchronizes that scene into the existing viewport and reports asset-open success only
+after acknowledging a frame; the sole authoring target remains `scene.json`. The
+selected project-relative path is recovered from the
 atomically written mode-0600 `project-browser.json` beside recent-project state.
 That file contains only its schema version, canonical root, and selected path —
 never document/asset bytes, credentials, or secrets. Rename and Delete require an
