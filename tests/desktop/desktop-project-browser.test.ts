@@ -137,6 +137,7 @@ describe("contained desktop project and asset browser", () => {
     const restarted = createDesktopProjectBrowser({
       root,
       stateDirectory,
+      isDirty: () => false,
     });
     expect(statusOf(restarted.handle({ action: "status", profile: "game" })).selectedPath)
       .toBe("assets/triangle.gltf");
@@ -153,11 +154,20 @@ describe("contained desktop project and asset browser", () => {
     });
     expect(readFileSync(join(root, "scene.json"), "utf8")).toBe(documentBytes);
 
+    expect(createDesktopProjectBrowser({
+      root,
+      stateDirectory: temporary("unknown-dirty-state"),
+    }).handle({
+      action: "open",
+      profile: "web",
+      path: "scene.json",
+    })).toMatchObject({ ok: false, reason: DESKTOP_PROJECT_BROWSER_REFUSALS.dirty });
+
   });
 
   it("confirmation-gates immutable rename/delete and names dirty, duplicate, traversal, and outside-root refusals", () => {
     const { root, stateDirectory, bridge } = admittedProject();
-    const clean = createDesktopProjectBrowser({ root, stateDirectory });
+    const clean = createDesktopProjectBrowser({ root, stateDirectory, isDirty: () => false });
     const request = { profile: "web" as const, path: "assets/triangle.gltf" };
 
     expect(clean.handle({ action: "delete", ...request })).toMatchObject({
@@ -380,6 +390,35 @@ describe("contained desktop project and asset browser", () => {
     expect(browser.handle({ action: "status", profile: "web" })).toMatchObject({
       ok: false,
       reason: DESKTOP_PROJECT_BROWSER_REFUSALS.stateInvalid,
+    });
+  });
+
+  it("recovers selection through a symlinked user-data parent", () => {
+    const { root } = admittedProject();
+    const realUserData = temporary("real-user-data");
+    const linkParent = temporary("linked-user-data-parent");
+    const linkedUserData = join(linkParent, "user-data");
+    symlinkSync(realUserData, linkedUserData, "dir");
+    const stateDirectory = join(linkedUserData, "project-lifecycle");
+    const browser = createDesktopProjectBrowser({
+      root,
+      stateDirectory,
+      isDirty: () => false,
+    });
+    expect(browser.handle({
+      action: "select",
+      profile: "web",
+      path: "assets/triangle.gltf",
+    })).toMatchObject({ ok: true, data: { outcome: "selected" } });
+
+    const restarted = createDesktopProjectBrowser({
+      root,
+      stateDirectory,
+      isDirty: () => false,
+    });
+    expect(restarted.handle({ action: "status", profile: "web" })).toMatchObject({
+      ok: true,
+      data: { status: { selectedPath: "assets/triangle.gltf" } },
     });
   });
 });

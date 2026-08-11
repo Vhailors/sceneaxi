@@ -32,7 +32,6 @@ import {
   DESKTOP_ASSET_IMPORT_CHANNEL,
   DESKTOP_BRIDGE_CHANNEL,
   DESKTOP_VIEWPORT_PLAY_EVENT,
-  DESKTOP_VIEWPORT_SCENE_OPEN_EVENT,
   bridgeRefuse,
 } from "../lib/bridge-contract.js";
 import { createDesktopBridge, type DesktopBridge } from "../lib/bridge.js";
@@ -624,25 +623,58 @@ async function start(): Promise<void> {
     : undefined;
   const browserAssetPath = payloadField(browserAsset, "path");
   const browserAssetInstanceId = payloadField(browserAsset, "instanceId");
+  const browserAssetDigest = payloadField(browserAsset, "digest");
   if (
     payloadField(browserListed, "ok") !== true ||
     payloadField(browserListedStatus, "activeDocumentPath") !== SAMPLE_DOCUMENT ||
     !Array.isArray(browserFiles) ||
     typeof browserAssetPath !== "string" ||
-    typeof browserAssetInstanceId !== "string"
+    typeof browserAssetInstanceId !== "string" ||
+    typeof browserAssetDigest !== "string"
   ) {
     fail("project browser preload channel did not list the canonical document and asset");
   }
-  const browserSelected: unknown = await invokeProjectBrowser({
-    action: "select",
-    profile: "web",
-    path: browserAssetPath,
-  });
-  const browserOpened: unknown = await invokeProjectBrowser({
-    action: "open",
-    profile: "web",
-    path: browserAssetPath,
-  });
+  const browserUiOpen = (await window.webContents.executeJavaScript(
+    `(async () => {
+      const waitFor = async (predicate) => {
+        for (let attempt = 0; attempt < 400; attempt += 1) {
+          if (predicate()) return true;
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+        return false;
+      };
+      const selector = document.querySelector('#project-browser-file-select');
+      const opener = document.querySelector('[data-action="project-browser-open"]');
+      if (!(selector instanceof HTMLSelectElement) || !(opener instanceof HTMLButtonElement)) {
+        return { selected: false, opened: false, frame: null, instanceId: null, digest: null };
+      }
+      selector.value = ${JSON.stringify(browserAssetPath)};
+      selector.dispatchEvent(new Event('change', { bubbles: true }));
+      const selected = await waitFor(() =>
+        document.querySelector('[data-busy]') === null &&
+        document.querySelector('#project-browser-file-select')?.value === ${JSON.stringify(browserAssetPath)});
+      document.querySelector('[data-action="project-browser-open"]')?.click();
+      const opened = await waitFor(() =>
+        document.querySelector('[data-busy]') === null &&
+        document.querySelector('.viewport')?.dataset.assetOpen === ${JSON.stringify(browserAssetInstanceId)} &&
+        document.querySelector('.viewport')?.dataset.assetDigest === ${JSON.stringify(browserAssetDigest)});
+      const status = document.querySelector('[data-project-status]')?.textContent ?? '';
+      const frame = /opened at viewport frame ([0-9]+)/.exec(status);
+      return {
+        selected,
+        opened,
+        frame: frame === null ? null : Number(frame[1]),
+        instanceId: document.querySelector('.viewport')?.dataset.assetOpen ?? null,
+        digest: document.querySelector('.viewport')?.dataset.assetDigest ?? null,
+      };
+    })()`,
+  )) as {
+    selected: boolean;
+    opened: boolean;
+    frame: number | null;
+    instanceId: string | null;
+    digest: string | null;
+  };
   const browserUnconfirmed: unknown = await invokeProjectBrowser({
     action: "delete",
     profile: "web",
@@ -659,10 +691,11 @@ async function start(): Promise<void> {
     stateDirectory: join(cwd, ".sceneaxi-runtime"),
   }).handle({ action: "status", profile: "web" });
   if (
-    payloadField(browserSelected, "ok") !== true ||
-    payloadField(payloadField(browserSelected, "data"), "outcome") !== "selected" ||
-    payloadField(browserOpened, "ok") !== true ||
-    payloadField(payloadField(browserOpened, "data"), "outcome") !== "validated" ||
+    browserUiOpen.selected !== true ||
+    browserUiOpen.opened !== true ||
+    typeof browserUiOpen.frame !== "number" ||
+    browserUiOpen.instanceId !== browserAssetInstanceId ||
+    browserUiOpen.digest !== browserAssetDigest ||
     payloadField(browserUnconfirmed, "ok") !== false ||
     payloadField(browserUnconfirmed, "reason") !==
       DESKTOP_PROJECT_BROWSER_REFUSALS.confirmationRequired ||
@@ -673,39 +706,6 @@ async function start(): Promise<void> {
     readFileSync(documentFile, "utf8") !== savedBytes
   ) {
     fail("project browser asset selection, bridge open, recovery, or protected mutation evidence is incomplete");
-  }
-  const browserScene: unknown = await window.webContents.executeJavaScript(
-    `globalThis.sceneaxiDesktopLinux.request(${JSON.stringify({
-      action: "scene",
-      payload: { documentPath: SAMPLE_DOCUMENT },
-    })})`,
-  );
-  const browserSceneData = payloadField(browserScene, "data");
-  if (payloadField(browserScene, "ok") !== true) {
-    fail("project browser asset open did not reach the scene bridge through preload IPC");
-  }
-  const browserAssetOpenDom = (await window.webContents.executeJavaScript(
-    `(() => {
-      const detail = {
-        mountable: ${JSON.stringify(browserSceneData)},
-        instanceId: ${JSON.stringify(browserAssetInstanceId)},
-        accepted: false,
-        frame: null,
-      };
-      document.dispatchEvent(new CustomEvent(${JSON.stringify(DESKTOP_VIEWPORT_SCENE_OPEN_EVENT)}, { detail }));
-      return {
-        accepted: detail.accepted,
-        frame: detail.frame,
-        instanceId: document.querySelector('.viewport')?.dataset.assetOpen ?? null,
-      };
-    })()`,
-  )) as { accepted: boolean; frame: number | null; instanceId: string | null };
-  if (
-    browserAssetOpenDom.accepted !== true ||
-    typeof browserAssetOpenDom.frame !== "number" ||
-    browserAssetOpenDom.instanceId !== browserAssetInstanceId
-  ) {
-    fail("project browser asset open did not reach the packaged viewport");
   }
   const browserConfirmationRefusal = payloadField(browserUnconfirmed, "reason");
   const browserProtectedRefusal = payloadField(browserProtected, "reason");
@@ -882,7 +882,8 @@ async function start(): Promise<void> {
         selected: true,
         opened: true,
         assetPath: browserAssetPath,
-        assetFrame: browserAssetOpenDom.frame,
+        assetDigest: browserAssetDigest,
+        assetFrame: browserUiOpen.frame,
         restored: true,
         activeDocumentPath: SAMPLE_DOCUMENT,
         confirmationRefusal: browserConfirmationRefusal,

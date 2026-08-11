@@ -132,6 +132,8 @@ if (
   proof.projectBrowser?.listed !== true ||
   proof.projectBrowser?.selected !== true ||
   proof.projectBrowser?.opened !== true ||
+  typeof proof.projectBrowser?.assetDigest !== "string" ||
+  !/^sha256:[0-9a-f]{64}$/.test(proof.projectBrowser.assetDigest) ||
   typeof proof.projectBrowser?.assetFrame !== "number" ||
   typeof proof.projectBrowser?.assetPath !== "string" ||
   !/^assets\/[a-z0-9][a-z0-9-]{0,63}\.gltf$/.test(proof.projectBrowser.assetPath) ||

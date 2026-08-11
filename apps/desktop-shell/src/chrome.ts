@@ -2079,7 +2079,7 @@ if (shell) {
       return false;
     }
     if (action === 'open' && path === response.data.status.activeDocumentPath) {
-      return openProject();
+      return openProject(true);
     }
     if (action === 'open') {
       const file = response.data.status.files.find((candidate) => candidate.path === path);
@@ -2087,6 +2087,25 @@ if (shell) {
         const code = T.product.refusals.runtimeRequestRefused;
         productStatus('refused', 'Project browser refused · ' + code);
         showOutcome('Project browser refused', code, 'The selected asset did not pass canonical validation.');
+        return false;
+      }
+      const authoring = await runtimeRequest({
+        action: 'authoring',
+        payload: { op: 'status', documentPath: response.data.status.activeDocumentPath },
+      });
+      const authoringStatus = authoring?.ok ? authoring.data : null;
+      const authoringSnapshot = authoringStatus && isSessionSnapshot(authoringStatus.authoringSnapshot)
+        ? authoringStatus.authoringSnapshot
+        : null;
+      if (authoringSnapshot !== null) syncReview(authoringSnapshot);
+      if (!authoringStatus || authoringStatus.ok !== true || authoringSnapshot === null ||
+          reviewProjection(authoringSnapshot) !== null || authoringSnapshot.phase === 'pending' ||
+          authoringSnapshot.journalRecoveryPending === true) {
+        const code = authoring?.ok
+          ? T.product.refusals.projectBrowserDirty
+          : (authoring?.reason || T.product.refusals.runtimeRequestRefused);
+        productStatus('refused', 'Asset open refused · ' + code);
+        showOutcome('Asset open refused', code, 'Resolve authoritative authoring state before opening an asset.');
         return false;
       }
       const scene = await runtimeRequest({
@@ -2099,7 +2118,18 @@ if (shell) {
         showOutcome('Asset open refused', code, scene?.message || 'The canonical scene was not opened.');
         return false;
       }
-      const detail = { mountable: scene.data, instanceId: file.instanceId, accepted: false, frame: null };
+      const selectedAsset = { instanceId: file.instanceId, digest: file.digest };
+      const importedAssets = scene.data && Array.isArray(scene.data.importedAssets)
+        ? scene.data.importedAssets
+        : [];
+      if (!importedAssets.some((asset) => asset && asset.instanceId === selectedAsset.instanceId &&
+          asset.digest === selectedAsset.digest)) {
+        const code = T.product.refusals.runtimeRequestRefused;
+        productStatus('refused', 'Asset open refused · ' + code);
+        showOutcome('Asset open refused', code, 'The scene bridge did not return the validated asset identity and digest.');
+        return false;
+      }
+      const detail = { mountable: scene.data, asset: selectedAsset, accepted: false, frame: null };
       document.dispatchEvent(new CustomEvent(T.product.viewportSceneOpenEvent, { detail }));
       if (detail.accepted !== true || !Number.isInteger(detail.frame)) {
         const code = T.product.refusals.runtimeRequestRefused;
@@ -2397,14 +2427,14 @@ if (shell) {
     return true;
   };
 
-  const openProject = async () => {
+  const openProject = async (refuseDirty = false) => {
     if (activeProject === null && projectPort() !== null) {
       productStatus('refused', 'Open refused · no project root selected');
       showOutcome('Open refused', T.product.refusals.runtimeRequestRefused, 'Choose New Project or Open Project first.');
       return false;
     }
-    if (projectRecovering) return restartProject('recovery-pending');
-    if (!(await discardStagedProposal())) return false;
+    if (projectRecovering && !refuseDirty) return restartProject('recovery-pending');
+    if (!refuseDirty && !(await discardStagedProposal())) return false;
     productStatus('opening', T.product.documentPath + ' · opening…');
     const response = await runtimeRequest({
       action: 'authoring',
@@ -2412,6 +2442,18 @@ if (shell) {
     });
     const reason = responseReason(response);
     const status = response?.ok ? response.data : null;
+    const authoringSnapshot = status && isSessionSnapshot(status.authoringSnapshot)
+      ? status.authoringSnapshot
+      : null;
+    if (authoringSnapshot !== null) syncReview(authoringSnapshot);
+    if (refuseDirty && (authoringSnapshot === null ||
+        reviewProjection(authoringSnapshot) !== null || authoringSnapshot.phase === 'pending' ||
+          authoringSnapshot.journalRecoveryPending === true)) {
+      const code = T.product.refusals.projectBrowserDirty;
+      productStatus('refused', 'Open refused · ' + code);
+      showOutcome('Open refused', code, 'Resolve the authoritative Change Review or recovery state before opening.');
+      return false;
+    }
     if (reason !== null || !status || status.ok !== true || typeof status.data !== 'object' || status.data === null || typeof status.contentHash !== 'string') {
       clearSceneProperty();
       const code = reason || T.product.refusals.documentDataInvalid;
@@ -2430,7 +2472,7 @@ if (shell) {
       ? status.undoAvailability
       : 'unavailable';
     syncCommandAvailability();
-    syncReview(null);
+    syncReview(authoringSnapshot);
     clearConflictOutcome();
     productStatus('open', withSceneRefusal(T.product.documentPath + ' · open · ' + status.documentId));
     await syncProjectBrowser();

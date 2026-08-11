@@ -719,15 +719,19 @@ async function mountLiveViewport(): Promise<void> {
     if (!(event instanceof CustomEvent)) return;
     const detail = event.detail as {
       mountable?: unknown;
-      instanceId?: unknown;
+      asset?: { instanceId?: unknown; digest?: unknown };
       accepted?: unknown;
       frame?: unknown;
     } | null;
     if (
       detail === null ||
-      typeof detail.instanceId !== "string" ||
+      typeof detail.asset?.instanceId !== "string" ||
+      typeof detail.asset.digest !== "string" ||
       !desktopMountablePayload(detail.mountable) ||
-      !detail.mountable.instances.some((instance) => instance.instanceId === detail.instanceId)
+      !detail.mountable.instances.some((instance) =>
+        instance.instanceId === detail.asset?.instanceId) ||
+      !detail.mountable.importedAssets?.some((asset) =>
+        asset.instanceId === detail.asset?.instanceId && asset.digest === detail.asset.digest)
     ) return;
     const synchronized = synchronizeViewportScene({
       mounts,
@@ -742,10 +746,11 @@ async function mountLiveViewport(): Promise<void> {
     updatePixelsMeta(frame);
     detail.accepted = true;
     detail.frame = frame.frame;
-    stage.dataset.assetOpen = detail.instanceId;
+    stage.dataset.assetOpen = detail.asset.instanceId;
+    stage.dataset.assetDigest = detail.asset.digest;
     openPathLine(
       stage,
-      `asset ${detail.instanceId} opened through the canonical scene at viewport frame ${frame.frame}`,
+      `asset ${detail.asset.instanceId} opened through the canonical scene at viewport frame ${frame.frame}`,
     );
   });
 

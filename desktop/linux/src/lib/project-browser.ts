@@ -19,7 +19,7 @@ import {
   writeFileSync,
   type Stats,
 } from "node:fs";
-import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { contentHash, parseDocumentText } from "@sceneaxi/authoring-core";
 import {
   CONTAINED_GLTF_REFUSALS,
@@ -84,6 +84,18 @@ function containedFingerprint(root: string, path: string): string {
   } finally {
     closeSync(opened.descriptor);
   }
+}
+
+function canonicalPathFromExistingAncestor(path: string): string {
+  let existing = resolve(path);
+  const suffix: string[] = [];
+  while (!existsSync(existing)) {
+    const parent = dirname(existing);
+    if (parent === existing) break;
+    suffix.unshift(basename(existing));
+    existing = parent;
+  }
+  return join(realpathSync(existing), ...suffix);
 }
 
 function valid(message = "Canonical bytes and metadata are valid."):
@@ -224,7 +236,7 @@ export function createDesktopProjectBrowser(
   options: DesktopProjectBrowserOptions,
 ): DesktopProjectBrowser {
   const root = realpathSync(options.root);
-  const stateFile = join(options.stateDirectory, STATE_FILE);
+  let stateDirectory: string | null = null;
   let initialized = false;
   let stateInvalid = false;
   let selectedPath = DESKTOP_ACTIVE_DOCUMENT_PATH;
@@ -232,6 +244,23 @@ export function createDesktopProjectBrowser(
   let cachedStatus: DesktopProjectBrowserStatus | null = null;
   let cachedDocumentFingerprint: string | null = null;
   const cachedAssetFingerprints = new Map<string, string>();
+
+  const statePaths = () => {
+    const directory = stateDirectory ?? canonicalPathFromExistingAncestor(options.stateDirectory);
+    stateDirectory = directory;
+    return Object.freeze({
+      directory,
+      file: join(directory, STATE_FILE),
+    });
+  };
+
+  const authoringIsDirty = () => {
+    try {
+      return options.isDirty?.() !== false;
+    } catch {
+      return true;
+    }
+  };
 
   const initialize = (): DesktopProjectBrowserResponse | null => {
     if (initialized) return stateInvalid
@@ -241,7 +270,8 @@ export function createDesktopProjectBrowser(
         )
       : null;
     initialized = true;
-    const read = readContainedRegularFile(resolve(options.stateDirectory), stateFile);
+    const paths = statePaths();
+    const read = readContainedRegularFile(paths.directory, paths.file);
     if (!read.ok) {
       stateInvalid = read.kind !== "missing";
     } else {
@@ -262,21 +292,22 @@ export function createDesktopProjectBrowser(
   };
 
   const persist = (): DesktopProjectBrowserResponse | null => {
+    const paths = statePaths();
     const bytes = `${JSON.stringify({
       schemaVersion: DESKTOP_PROJECT_BROWSER_STATE_SCHEMA_VERSION,
       root,
       selectedPath,
     })}\n`;
-    const temporary = `${stateFile}.tmp-${process.pid}-${writeSequence++}`;
+    const temporary = `${paths.file}.tmp-${process.pid}-${writeSequence++}`;
     let descriptor: number | null = null;
     try {
-      mkdirSync(options.stateDirectory, { recursive: true });
+      mkdirSync(paths.directory, { recursive: true });
       descriptor = openSync(temporary, "wx", 0o600);
       writeFileSync(descriptor, bytes, "utf8");
       fsyncSync(descriptor);
       closeSync(descriptor);
       descriptor = null;
-      renameSync(temporary, stateFile);
+      renameSync(temporary, paths.file);
       return null;
     } catch (error) {
       if (descriptor !== null) closeSync(descriptor);
@@ -490,7 +521,7 @@ export function createDesktopProjectBrowser(
       const currentStatus = selected.status;
 
       if (action === "select" || action === "open") {
-        if (action === "open" && options.isDirty?.() === true) {
+        if (action === "open" && authoringIsDirty()) {
           return projectBrowserRefuse(
             DESKTOP_PROJECT_BROWSER_REFUSALS.dirty,
             "Open refuses while Change Review, recovery, or another unsaved authoring change is active.",
@@ -519,7 +550,7 @@ export function createDesktopProjectBrowser(
         );
       }
 
-      if (options.isDirty?.() === true) {
+      if (authoringIsDirty()) {
         return projectBrowserRefuse(
           DESKTOP_PROJECT_BROWSER_REFUSALS.dirty,
           "Rename and delete refuse while Change Review, recovery, or another unsaved authoring change is active.",
