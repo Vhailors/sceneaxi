@@ -53,9 +53,13 @@ Bridge actions and what each reaches — only through public seams:
 
 The packaged chrome exposes one `Export Web` command in the File menu, command
 palette, and Ship panel. It first requires a bound project with no staged
-proposal or recovery state, then passes the exact authoring content hash to the
-host. The host refuses if the bytes move between status, validation, writing,
-and the final source check.
+proposal or recovery state. The host retains the exact content hash and byte
+length from the authoring status read; Ship presents that hash, and the bridge
+pairs it with the retained length. The host refuses size drift before hashing or
+allocating replacement bytes, and refuses if the bytes move between status,
+validation, writing, and the final source check. Windows and macOS refuse
+`DESKTOP_WEB_EXPORT_PLATFORM_UNSUPPORTED` before opening a project session or
+preparing export storage.
 
 `src/lib/web-export.ts` owns the export. Its output root is
 `exports/web/<bundle-sha256>/` under the project and contains:

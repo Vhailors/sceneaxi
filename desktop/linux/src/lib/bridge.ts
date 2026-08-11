@@ -115,6 +115,7 @@ export type DesktopBridgeOptions = {
   /** The already-built sole renderer owner copied into static Web exports. */
   readonly webExportRuntime?: Uint8Array;
   readonly webExportPublisherExecutable?: string;
+  readonly webExportPlatform?: NodeJS.Platform;
 };
 
 export type DesktopAssistantProfile =
@@ -288,6 +289,11 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     documentPath: string;
     entry: ProjectAssetManifestEntry;
     proposal: NonNullable<DesktopSnapshot["proposal"]>;
+  }> | null = null;
+  let documentStatusIdentity: Readonly<{
+    documentPath: string;
+    contentHash: string;
+    contentByteLength: number;
   }> | null = null;
 
   const authoringSession = (): DesktopSession => {
@@ -899,9 +905,15 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     ) => {
       const status = live.status(documentPath);
       if (!status.ok) {
+        documentStatusIdentity = null;
         reconcileRarityAssistantDocument(status, retirementReason);
         return status;
       }
+      documentStatusIdentity = Object.freeze({
+        documentPath,
+        contentHash: status.contentHash,
+        contentByteLength: status.contentByteLength,
+      });
       const rarity = rarityStatus(status.data);
       if (!rarity.ok) {
         const refused = Object.freeze({
@@ -1201,7 +1213,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
 
   const ship = (payload: unknown): DesktopBridgeResponse => {
     const op = field(payload, "op");
-    const documentPath = containedDocumentPath(field(payload, "documentPath"));
+    const documentPath = field(payload, "documentPath");
     const expectedContentHash = field(payload, "expectedContentHash");
     if (
       op !== "export-web" ||
@@ -1214,6 +1226,12 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         "ship export-web requires scene.json and the exact current SHA-256 content hash.",
       );
     }
+    if ((options.webExportPlatform ?? process.platform) !== "linux") {
+      return bridgeRefuse(
+        DESKTOP_WEB_EXPORT_REFUSALS.platformUnsupported,
+        "Export Web is available only in the Linux desktop runtime.",
+      );
+    }
     const live = authoringSession();
     const snapshot = live.snapshot();
     if (
@@ -1224,6 +1242,16 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       return bridgeRefuse(
         DESKTOP_WEB_EXPORT_REFUSALS.projectDirty,
         "Save or reject the staged proposal and resolve durable recovery before exporting.",
+      );
+    }
+    if (
+      documentStatusIdentity === null ||
+      documentStatusIdentity.documentPath !== documentPath ||
+      documentStatusIdentity.contentHash !== expectedContentHash
+    ) {
+      return bridgeRefuse(
+        DESKTOP_WEB_EXPORT_REFUSALS.projectChanged,
+        "Reopen scene.json before exporting so Ship can verify its exact byte identity.",
       );
     }
     const runtimeJavaScript = options.webExportRuntime;
@@ -1244,6 +1272,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       projectRoot: options.cwd,
       documentPath,
       expectedContentHash,
+      expectedContentByteLength: documentStatusIdentity.contentByteLength,
       runtimeJavaScript,
       publisherExecutable,
     });

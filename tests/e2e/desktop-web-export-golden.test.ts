@@ -337,22 +337,31 @@ function seedWithAsset(root: string, source: string) {
   ).toMatchObject({ ok: true, data: { phase: "applied" } });
 }
 
-function statusHash(bridge: ReturnType<typeof createDesktopBridge>) {
+function statusIdentity(bridge: ReturnType<typeof createDesktopBridge>) {
   const response = bridge.handle({
     action: "authoring",
     payload: { op: "status", documentPath: "scene.json" },
   });
   expect(response).toMatchObject({ ok: true, data: { ok: true } });
   if (!response.ok) throw new Error(response.message);
-  return (response.data as { contentHash: string }).contentHash;
+  return response.data as {
+    contentHash: string;
+    contentByteLength: number;
+  };
+}
+
+function statusHash(bridge: ReturnType<typeof createDesktopBridge>) {
+  return statusIdentity(bridge).contentHash;
 }
 
 function exportProject(root: string, runtimeJavaScript = RUNTIME) {
   const bridge = createDesktopBridge({ cwd: root });
+  const identity = statusIdentity(bridge);
   return exportDesktopWebProject({
     projectRoot: root,
     documentPath: "scene.json",
-    expectedContentHash: statusHash(bridge),
+    expectedContentHash: identity.contentHash,
+    expectedContentByteLength: identity.contentByteLength,
     runtimeJavaScript,
     publisherExecutable,
   });
@@ -557,6 +566,7 @@ describe("desktop static Web export", () => {
         projectRoot: root,
         documentPath: "scene.json",
         expectedContentHash: contentHash(invalid),
+        expectedContentByteLength: Buffer.byteLength(invalid),
         runtimeJavaScript: RUNTIME,
         publisherExecutable,
       }),
@@ -564,11 +574,13 @@ describe("desktop static Web export", () => {
 
     const staleRoot = temporary("sceneaxi-export-stale-");
     expect(seedDesktopProject(staleRoot)).toEqual({ ok: true, migrated: false });
+    const staleIdentity = statusIdentity(createDesktopBridge({ cwd: staleRoot }));
     expect(
       exportDesktopWebProject({
         projectRoot: staleRoot,
         documentPath: "scene.json",
         expectedContentHash: `sha256:${"0".repeat(64)}`,
+        expectedContentByteLength: staleIdentity.contentByteLength,
         runtimeJavaScript: RUNTIME,
         publisherExecutable,
       }),
@@ -657,10 +669,42 @@ describe("desktop static Web export", () => {
     expect(existsSync(join(root, "exports"))).toBe(false);
   });
 
+  it("refuses unsupported desktop platforms before project access", () => {
+    for (const webExportPlatform of ["win32", "darwin"] as const) {
+      const root = temporary(`sceneaxi-export-${webExportPlatform}-`);
+      let sessionCreated = false;
+      const bridge = createDesktopBridge({
+        cwd: root,
+        webExportPlatform,
+        createAuthoringSession: () => {
+          sessionCreated = true;
+          throw new Error("unsupported platform reached the authoring session");
+        },
+      });
+
+      const result = bridge.handle({
+        action: "ship",
+        payload: {
+          op: "export-web",
+          documentPath: "scene.json",
+          expectedContentHash: `sha256:${"0".repeat(64)}`,
+        },
+      });
+
+      expect(result).toMatchObject({
+        ok: false,
+        reason: DESKTOP_WEB_EXPORT_REFUSALS.platformUnsupported,
+      });
+      expect(sessionCreated).toBe(false);
+      expect(readdirSync(root)).toEqual([]);
+    }
+  });
+
   it("refuses final document size drift without an unbounded replacement read", () => {
     const root = temporary("sceneaxi-export-document-size-drift-");
     expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
     const bridge = createDesktopBridge({ cwd: root });
+    const identity = statusIdentity(bridge);
     let replaced = false;
     exportCommit.afterCommit = () => {
       exportCommit.afterCommit = null;
@@ -672,7 +716,8 @@ describe("desktop static Web export", () => {
     const result = exportDesktopWebProject({
       projectRoot: root,
       documentPath: "scene.json",
-      expectedContentHash: statusHash(bridge),
+      expectedContentHash: identity.contentHash,
+      expectedContentByteLength: identity.contentByteLength,
       runtimeJavaScript: RUNTIME,
       publisherExecutable,
     });
@@ -685,7 +730,7 @@ describe("desktop static Web export", () => {
     expect(exportCommit.maximumReadLength).toBeLessThanOrEqual(64 * 1024);
   });
 
-  it("refuses initial document size drift through bounded reads", () => {
+  it("refuses initial document size drift before reading replacement bytes", () => {
     const root = temporary("sceneaxi-export-initial-size-drift-");
     expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
     const bridge = createDesktopBridge({
@@ -710,7 +755,7 @@ describe("desktop static Web export", () => {
       ok: false,
       reason: DESKTOP_WEB_EXPORT_REFUSALS.projectChanged,
     });
-    expect(exportCommit.maximumReadLength).toBeLessThanOrEqual(64 * 1024);
+    expect(exportCommit.maximumReadLength).toBe(0);
     expect(existsSync(join(root, "exports"))).toBe(false);
   });
 
@@ -721,13 +766,14 @@ describe("desktop static Web export", () => {
     const root = temporary("sceneaxi-export-fifo-asset-");
     seedWithAsset(root, source);
     const bridge = createDesktopBridge({ cwd: root });
-    const expectedContentHash = statusHash(bridge);
+    const identity = statusIdentity(bridge);
     replaceWithFifo(join(root, "assets/triangle.gltf"));
 
     const result = exportDesktopWebProject({
       projectRoot: root,
       documentPath: "scene.json",
-      expectedContentHash,
+      expectedContentHash: identity.contentHash,
+      expectedContentByteLength: identity.contentByteLength,
       runtimeJavaScript: RUNTIME,
       publisherExecutable,
     });
@@ -746,6 +792,7 @@ describe("desktop static Web export", () => {
     const root = temporary("sceneaxi-export-race-");
     seedWithAsset(root, source);
     const bridge = createDesktopBridge({ cwd: root });
+    const identity = statusIdentity(bridge);
     let committed = false;
     exportCommit.afterCommit = () => {
       exportCommit.afterCommit = null;
@@ -756,7 +803,8 @@ describe("desktop static Web export", () => {
     const result = exportDesktopWebProject({
       projectRoot: root,
       documentPath: "scene.json",
-      expectedContentHash: statusHash(bridge),
+      expectedContentHash: identity.contentHash,
+      expectedContentByteLength: identity.contentByteLength,
       runtimeJavaScript: RUNTIME,
       publisherExecutable,
     });
@@ -783,11 +831,13 @@ describe("desktop static Web export", () => {
     const sentinel = join(unowned, "operator-data.txt");
     writeFileSync(sentinel, "keep");
     const bridge = createDesktopBridge({ cwd: root });
+    const identity = statusIdentity(bridge);
 
     const result = exportDesktopWebProject({
       projectRoot: root,
       documentPath: "scene.json",
-      expectedContentHash: statusHash(bridge),
+      expectedContentHash: identity.contentHash,
+      expectedContentByteLength: identity.contentByteLength,
       runtimeJavaScript: RUNTIME,
       publisherExecutable,
     });
@@ -880,6 +930,7 @@ describe("desktop static Web export", () => {
     const root = temporary("sceneaxi-export-destination-race-");
     expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
     const bridge = createDesktopBridge({ cwd: root });
+    const identity = statusIdentity(bridge);
     let committed = false;
     exportCommit.afterCommit = (_oldPath, newPath) => {
       exportCommit.afterCommit = null;
@@ -891,7 +942,8 @@ describe("desktop static Web export", () => {
     const result = exportDesktopWebProject({
       projectRoot: root,
       documentPath: "scene.json",
-      expectedContentHash: statusHash(bridge),
+      expectedContentHash: identity.contentHash,
+      expectedContentByteLength: identity.contentByteLength,
       runtimeJavaScript: RUNTIME,
       publisherExecutable,
     });

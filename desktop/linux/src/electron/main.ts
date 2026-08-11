@@ -44,6 +44,7 @@ import {
   DESKTOP_PROJECT_REFUSALS,
 } from "../lib/project-lifecycle-contract.js";
 import { createDesktopProjectLifecycle } from "../lib/project-lifecycle.js";
+import { DESKTOP_WEB_EXPORT_REFUSALS } from "../lib/web-export.js";
 import { createElectronProviderKeyStore } from "./provider-key-store.js";
 import {
   createDesktopRarityFixtureProvider,
@@ -121,19 +122,22 @@ async function start(): Promise<void> {
   });
   const runRarityProvider = createDesktopRarityFixtureProvider();
   let webExportRuntime: Uint8Array | undefined;
-  try {
-    webExportRuntime = readFileSync(join(__dirname, "renderer.js"));
-  } catch {
-    webExportRuntime = undefined;
+  let webExportPublisherExecutable: string | undefined;
+  if (process.platform === "linux") {
+    try {
+      webExportRuntime = readFileSync(join(__dirname, "renderer.js"));
+    } catch {
+      webExportRuntime = undefined;
+    }
+    webExportPublisherExecutable = app.isPackaged
+      ? join(
+          process.resourcesPath,
+          "app.asar.unpacked",
+          "dist",
+          "sceneaxi-publish-no-replace",
+        )
+      : join(__dirname, "sceneaxi-publish-no-replace");
   }
-  const webExportPublisherExecutable = app.isPackaged
-    ? join(
-        process.resourcesPath,
-        "app.asar.unpacked",
-        "dist",
-        "sceneaxi-publish-no-replace",
-      )
-    : join(__dirname, "sceneaxi-publish-no-replace");
   let bridge: DesktopBridge | null = null;
   let activeRoot: string | null = null;
 
@@ -150,7 +154,10 @@ async function start(): Promise<void> {
         ? {}
         : { runByoAssistant: byoRuntime.runByoAssistant }),
       runRarityProvider,
-      webExportPublisherExecutable,
+      webExportPlatform: process.platform,
+      ...(webExportPublisherExecutable === undefined
+        ? {}
+        : { webExportPublisherExecutable }),
       ...(webExportRuntime === undefined ? {} : { webExportRuntime }),
     });
     const localPaths = SMOKE
@@ -529,39 +536,52 @@ async function start(): Promise<void> {
       expectedContentHash: currentContentHash(),
     },
   });
-  if (!shipped.ok) fail(`Web export refused: ${shipped.reason}`);
-  const exportDirectory = payloadField(shipped.data, "outputDirectory");
-  const handoffPath = payloadField(shipped.data, "handoffPath");
-  const bundleDigest = payloadField(shipped.data, "bundleDigest");
-  const sourceProject = payloadField(shipped.data, "sourceProject");
-  const sourceDigest = payloadField(sourceProject, "contentHash");
-  const parsedHandoff = typeof handoffPath === "string" && existsSync(handoffPath)
-    ? parseDeliveryHandoffText(readFileSync(handoffPath, "utf8"))
-    : null;
-  const handoffArtifactsMatch = typeof exportDirectory === "string" &&
-    parsedHandoff?.ok === true &&
-    Object.entries(parsedHandoff.handoff.artifacts).every(([path, artifact]) => {
-      const artifactPath = join(exportDirectory, ...path.split("/"));
-      return existsSync(artifactPath) &&
-        `sha256:${createHash("sha256").update(readFileSync(artifactPath)).digest("hex")}` ===
-          artifact.digest;
-    });
-  if (
-    typeof exportDirectory !== "string" ||
-    !exportDirectory.startsWith(`${cwd}${sep}exports${sep}web${sep}`) ||
-    typeof handoffPath !== "string" ||
-    !existsSync(handoffPath) ||
-    typeof bundleDigest !== "string" ||
-    typeof sourceDigest !== "string" ||
-    readFileSync(join(exportDirectory, "source", SAMPLE_DOCUMENT), "utf8") !== savedBytes ||
-    !readFileSync(join(exportDirectory, "index.html"), "utf8").includes("sceneaxi-web.js") ||
-    parsedHandoff?.ok !== true ||
-    parsedHandoff.handoff.target !== "web" ||
-    parsedHandoff.handoff.artifactSetDigest !== bundleDigest ||
-    parsedHandoff.handoff.artifacts[`source/${SAMPLE_DOCUMENT}`]?.digest !== sourceDigest ||
-    !handoffArtifactsMatch
+  let exportDirectory: unknown = null;
+  let bundleDigest: unknown = null;
+  let sourceDigest: unknown = null;
+  if (process.platform === "linux") {
+    if (!shipped.ok) fail(`Web export refused: ${shipped.reason}`);
+    exportDirectory = payloadField(shipped.data, "outputDirectory");
+    const handoffPath = payloadField(shipped.data, "handoffPath");
+    bundleDigest = payloadField(shipped.data, "bundleDigest");
+    const sourceProject = payloadField(shipped.data, "sourceProject");
+    sourceDigest = payloadField(sourceProject, "contentHash");
+    const parsedHandoff = typeof handoffPath === "string" && existsSync(handoffPath)
+      ? parseDeliveryHandoffText(readFileSync(handoffPath, "utf8"))
+      : null;
+    const verifiedExportDirectory = typeof exportDirectory === "string"
+      ? exportDirectory
+      : null;
+    const handoffArtifactsMatch = verifiedExportDirectory !== null &&
+      parsedHandoff?.ok === true &&
+      Object.entries(parsedHandoff.handoff.artifacts).every(([path, artifact]) => {
+        const artifactPath = join(verifiedExportDirectory, ...path.split("/"));
+        return existsSync(artifactPath) &&
+          `sha256:${createHash("sha256").update(readFileSync(artifactPath)).digest("hex")}` ===
+            artifact.digest;
+      });
+    if (
+      typeof exportDirectory !== "string" ||
+      !exportDirectory.startsWith(`${cwd}${sep}exports${sep}web${sep}`) ||
+      typeof handoffPath !== "string" ||
+      !existsSync(handoffPath) ||
+      typeof bundleDigest !== "string" ||
+      typeof sourceDigest !== "string" ||
+      readFileSync(join(exportDirectory, "source", SAMPLE_DOCUMENT), "utf8") !== savedBytes ||
+      !readFileSync(join(exportDirectory, "index.html"), "utf8").includes("sceneaxi-web.js") ||
+      parsedHandoff?.ok !== true ||
+      parsedHandoff.handoff.target !== "web" ||
+      parsedHandoff.handoff.artifactSetDigest !== bundleDigest ||
+      parsedHandoff.handoff.artifacts[`source/${SAMPLE_DOCUMENT}`]?.digest !== sourceDigest ||
+      !handoffArtifactsMatch
+    ) {
+      fail("Web export did not preserve source bytes, local runtime, and Delivery Handoff evidence");
+    }
+  } else if (
+    shipped.ok ||
+    shipped.reason !== DESKTOP_WEB_EXPORT_REFUSALS.platformUnsupported
   ) {
-    fail("Web export did not preserve source bytes, local runtime, and Delivery Handoff evidence");
+    fail("Non-Linux Web export did not refuse its unsupported platform by name");
   }
   const mountable = payloadField(openPath.data, "mountable");
   const mountedInstances = payloadField(mountable, "instances");
@@ -669,13 +689,18 @@ async function start(): Promise<void> {
         scratchProject,
         project: cwd,
       },
-      ship: {
-        exported: true,
-        outputDirectory: exportDirectory,
-        bundleDigest,
-        sourceDigest,
-        handoffPresent: true,
-      },
+      ship: shipped.ok
+        ? {
+            exported: true,
+            outputDirectory: exportDirectory,
+            bundleDigest,
+            sourceDigest,
+            handoffPresent: true,
+          }
+        : {
+            exported: false,
+            refusal: shipped.reason,
+          },
       frameReport,
       playbackDom,
       viewportDom,
