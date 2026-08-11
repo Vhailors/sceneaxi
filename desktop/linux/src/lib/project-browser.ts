@@ -11,10 +11,8 @@ import {
   closeSync,
   existsSync,
   fsyncSync,
-  lstatSync,
   mkdirSync,
   openSync,
-  readFileSync,
   realpathSync,
   renameSync,
   unlinkSync,
@@ -24,6 +22,7 @@ import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { contentHash, parseDocumentText } from "@sceneaxi/authoring-core";
 import { projectAssetManifestFromDocumentData } from "@sceneaxi/importers";
 import { DESKTOP_ACTIVE_DOCUMENT_PATH } from "./bridge-contract.js";
+import { readContainedRegularFile } from "./contained-file.js";
 import {
   DESKTOP_PROJECT_BROWSER_ACTIONS,
   DESKTOP_PROJECT_BROWSER_REFUSALS,
@@ -142,45 +141,22 @@ function assetValidation(root: string, path: string, expected: {
       "The admitted asset path resolves outside the contained project root.",
     );
   }
-  try {
-    const link = lstatSync(absolute);
-    if (link.isSymbolicLink()) {
-      return invalid(
-        "refused",
-        DESKTOP_PROJECT_BROWSER_REFUSALS.symlinkEscape,
-        "Project asset symlinks are refused; the manifest copy must be a regular file.",
-      );
-    }
-    if (!link.isFile()) {
-      return invalid(
-        "invalid",
-        DESKTOP_PROJECT_BROWSER_REFUSALS.fileInvalid,
-        "The admitted asset path is not a regular file.",
-      );
-    }
-    const canonical = realpathSync(absolute);
-    if (!within(root, canonical)) {
-      return invalid(
-        "refused",
-        DESKTOP_PROJECT_BROWSER_REFUSALS.symlinkEscape,
-        "The admitted asset resolves outside the contained project root.",
-      );
-    }
-    const bytes = readFileSync(canonical);
-    if (bytes.byteLength !== expected.byteLength || sha256(bytes) !== expected.digest) {
-      return invalid(
-        "invalid",
-        DESKTOP_PROJECT_BROWSER_REFUSALS.fileInvalid,
-        "The project copy does not match the manifest's canonical byte length and digest.",
-      );
-    }
-    return valid("Project copy matches the accepted manifest bytes and digest.");
-  } catch (error) {
-    if (own(error, "code") === "ENOENT") {
+  const read = readContainedRegularFile(root, absolute, {
+    expectedBytes: expected.byteLength,
+  });
+  if (!read.ok) {
+    if (read.kind === "missing") {
       return invalid(
         "missing",
         DESKTOP_PROJECT_BROWSER_REFUSALS.fileMissing,
         "The manifest admits this asset, but its project copy is missing.",
+      );
+    }
+    if (read.kind === "unsafe" && read.cause !== "nonregular") {
+      return invalid(
+        "refused",
+        DESKTOP_PROJECT_BROWSER_REFUSALS.symlinkEscape,
+        "Project asset symlinks and paths resolving outside the contained root are refused.",
       );
     }
     return invalid(
@@ -189,6 +165,14 @@ function assetValidation(root: string, path: string, expected: {
       "The admitted project copy could not be validated.",
     );
   }
+  if (sha256(read.bytes) !== expected.digest) {
+    return invalid(
+      "invalid",
+      DESKTOP_PROJECT_BROWSER_REFUSALS.fileInvalid,
+      "The project copy does not match the manifest's canonical byte length and digest.",
+    );
+  }
+  return valid("Project copy matches the accepted manifest bytes and digest.");
 }
 
 export function createDesktopProjectBrowser(
@@ -209,17 +193,17 @@ export function createDesktopProjectBrowser(
         )
       : null;
     initialized = true;
-    try {
-      const stored = lstatSync(stateFile);
-      if (!stored.isFile() || stored.isSymbolicLink()) {
-        stateInvalid = true;
-      } else {
-        const parsed = exactStoredState(JSON.parse(readFileSync(stateFile, "utf8")));
+    const read = readContainedRegularFile(resolve(options.stateDirectory), stateFile);
+    if (!read.ok) {
+      stateInvalid = read.kind !== "missing";
+    } else {
+      try {
+        const parsed = exactStoredState(JSON.parse(read.bytes.toString("utf8")));
         if (parsed === null) stateInvalid = true;
         else if (parsed.root === root) selectedPath = parsed.selectedPath;
+      } catch {
+        stateInvalid = true;
       }
-    } catch (error) {
-      stateInvalid = own(error, "code") !== "ENOENT";
     }
     return stateInvalid
       ? projectBrowserRefuse(
@@ -259,23 +243,18 @@ export function createDesktopProjectBrowser(
 
   const status = (): DesktopProjectBrowserStatus | DesktopProjectBrowserResponse => {
     const documentFile = join(root, DESKTOP_ACTIVE_DOCUMENT_PATH);
-    let text: string;
-    let documentRealPath: string;
-    try {
-      const link = lstatSync(documentFile);
-      documentRealPath = realpathSync(documentFile);
-      if (link.isSymbolicLink() || !link.isFile() || !within(root, documentRealPath)) {
-        return projectBrowserRefuse(
-          DESKTOP_PROJECT_BROWSER_REFUSALS.symlinkEscape,
-          `${DESKTOP_ACTIVE_DOCUMENT_PATH} must be a regular file directly inside the contained root.`,
-        );
-      }
-      text = readFileSync(documentRealPath, "utf8");
-    } catch (error) {
-      if (own(error, "code") === "ENOENT") {
+    const read = readContainedRegularFile(root, documentFile);
+    if (!read.ok) {
+      if (read.kind === "missing") {
         return projectBrowserRefuse(
           DESKTOP_PROJECT_BROWSER_REFUSALS.documentMissing,
           `The contained root has no ${DESKTOP_ACTIVE_DOCUMENT_PATH}.`,
+        );
+      }
+      if (read.kind === "unsafe") {
+        return projectBrowserRefuse(
+          DESKTOP_PROJECT_BROWSER_REFUSALS.symlinkEscape,
+          `${DESKTOP_ACTIVE_DOCUMENT_PATH} must be a regular file directly inside the contained root.`,
         );
       }
       return projectBrowserRefuse(
@@ -283,6 +262,7 @@ export function createDesktopProjectBrowser(
         `The active ${DESKTOP_ACTIVE_DOCUMENT_PATH} could not be read safely.`,
       );
     }
+    const text = read.bytes.toString("utf8");
     const parsed = parseDocumentText(text);
     if (!parsed.ok) {
       return projectBrowserRefuse(
@@ -381,8 +361,6 @@ export function createDesktopProjectBrowser(
 
   return Object.freeze({
     handle(request: unknown): DesktopProjectBrowserResponse {
-      const initializedState = initialize();
-      if (initializedState !== null) return initializedState;
       const action = own(request, "action");
       const profile = own(request, "profile");
       if (profile === "kids") {
@@ -401,6 +379,8 @@ export function createDesktopProjectBrowser(
           "A project-browser request requires a known action and the active game or web profile.",
         );
       }
+      const initializedState = initialize();
+      if (initializedState !== null) return initializedState;
       const current = status();
       if ("ok" in current) return current;
       if (action === "status") return ok("listed", current);

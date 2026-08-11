@@ -239,9 +239,9 @@ describe("engine desktop chrome — control accounting (document → model)", ()
         "project-browser-file-select",
         "scene-entity-desktop-crate-beside",
       ]);
-      for (const tag of selects) {
-        expect(tag, label).toMatch(/data-kind="(view|inert)"/);
-      }
+      expect(selects[0], label).toMatch(/data-kind="(view|inert)"/);
+      expect(selects[1], label).toMatch(/data-kind="(live|inert)"/);
+      expect(selects[2], label).toMatch(/data-kind="(view|inert)"/);
       const textareas = html.match(/<textarea\b[^>]*>/g) ?? [];
       expect(textareas, label).toHaveLength(1);
       expect(textareas[0], label).toMatch(

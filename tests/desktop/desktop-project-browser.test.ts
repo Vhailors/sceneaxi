@@ -232,4 +232,22 @@ describe("contained desktop project and asset browser", () => {
       reason: DESKTOP_PROJECT_BROWSER_REFUSALS.manifestInvalid,
     });
   });
+
+  it("refuses Kids before consulting invalid persisted browser state", () => {
+    const { root, stateDirectory } = admittedProject();
+    writeFileSync(join(stateDirectory, DESKTOP_PROJECT_BROWSER_STATE_FILE), "not-json", "utf8");
+    const browser = createDesktopProjectBrowser({ root, stateDirectory });
+    const before = readFileSync(join(stateDirectory, DESKTOP_PROJECT_BROWSER_STATE_FILE), "utf8");
+
+    expect(browser.handle({ action: "status", profile: "kids" })).toMatchObject({
+      ok: false,
+      reason: DESKTOP_PROJECT_BROWSER_REFUSALS.kidsDenied,
+    });
+    expect(readFileSync(join(stateDirectory, DESKTOP_PROJECT_BROWSER_STATE_FILE), "utf8"))
+      .toBe(before);
+    expect(browser.handle({ action: "status", profile: "web" })).toMatchObject({
+      ok: false,
+      reason: DESKTOP_PROJECT_BROWSER_REFUSALS.stateInvalid,
+    });
+  });
 });

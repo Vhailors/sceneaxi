@@ -306,7 +306,7 @@ function projectFileSelect(
       ? ` aria-disabled="true" data-refusal="${escapeHtml(ctrl.refusal ?? "")}"`
       : "",
     described,
-    ` data-action="project-browser-select" size="${Math.max(1, Math.min(5, files.length))}"`,
+    ` data-product-action data-action="project-browser-select" size="${Math.max(1, Math.min(5, files.length))}"`,
     files
       .map((file) => `<option value="${escapeHtml(file.path)}"${file.active ? " selected" : ""}>${escapeHtml(file.path)} · ${escapeHtml(file.label)}</option>`)
       .join(""),
@@ -502,9 +502,9 @@ function leftDock(view: DesktopVisualView): string {
         <div><dt>Status</dt><dd data-project-browser-validation></dd></div>
       </dl>
       <div class="project-browser-actions">
-        ${button(view.product.openBrowserFile, "Open selected", "ghost-button", ` data-action="project-browser-open"`)}
-        ${button(view.product.renameBrowserFile, "Rename…", "ghost-button", ` data-action="project-browser-rename"`)}
-        ${button(view.product.deleteBrowserFile, "Delete…", "ghost-button", ` data-action="project-browser-delete"`)}
+        ${button(view.product.openBrowserFile, "Open selected", "ghost-button", ` data-product-action data-action="project-browser-open"`)}
+        ${button(view.product.renameBrowserFile, "Rename…", "ghost-button", ` data-product-action data-action="project-browser-rename"`)}
+        ${button(view.product.deleteBrowserFile, "Delete…", "ghost-button", ` data-product-action data-action="project-browser-delete"`)}
       </div>
     </section>
     <div class="scene-entities" data-scene-entities hidden>
@@ -2036,7 +2036,13 @@ if (shell) {
   };
 
   const projectBrowserAction = async (action, path, targetPath) => {
-    if (projectBrowserPort() === null || typeof path !== 'string' || path.length === 0) return;
+    if (projectBrowserPort() === null) {
+      const code = T.product.refusals.runtimeRequestRefused;
+      productStatus('refused', 'Project browser refused · ' + code);
+      showOutcome('Project browser refused', code, 'The packaged project-browser host is unavailable.');
+      return false;
+    }
+    if (typeof path !== 'string' || path.length === 0) return false;
     const request = {
       action,
       profile: shell.dataset.profile,
@@ -3357,8 +3363,13 @@ if (shell) {
     const browserFile = event.target instanceof Element
       ? event.target.closest('[data-action="project-browser-select"]')
       : null;
-    if (browserFile && browserFile.tagName === 'SELECT' &&
-        browserFile.getAttribute('aria-disabled') !== 'true') {
+    if (browserFile && browserFile.tagName === 'SELECT') {
+      if (browserFile.getAttribute('aria-disabled') === 'true') {
+        if (typeof projectBrowserStatus?.selectedPath === 'string') {
+          browserFile.value = projectBrowserStatus.selectedPath;
+        }
+        return;
+      }
       const path = browserFile.value;
       if (path) void productAction(() => projectBrowserAction('select', path));
       return;

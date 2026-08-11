@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { Window as HappyWindow, type HTMLElement as HappyHTMLElement } from "happy-dom";
 import {
+  DESKTOP_PRODUCT_REFUSALS,
   createDesktopVisualState,
   desktopVisualView,
   renderDesktopChrome,
@@ -179,6 +180,53 @@ describe("desktop project and asset browser golden path", () => {
     await selectProjectFile(window, "scene.json");
     await click(window, '[data-action="project-browser-open"]');
     expect(query(window, "[data-project-status]")?.textContent).toContain("scene.json · open");
+
+    const desktopPort = (
+      window as unknown as {
+        sceneaxiDesktopLinux: {
+          browseProject?: (request: unknown) => Promise<unknown>;
+        };
+      }
+    ).sceneaxiDesktopLinux;
+    const browseProject = desktopPort.browseProject;
+    if (browseProject === undefined) throw new Error("project-browser port missing");
+    let releaseOpen: (() => void) | undefined;
+    desktopPort.browseProject = (request: unknown) => {
+      if ((request as { action?: unknown }).action !== "open") return browseProject(request);
+      return new Promise((resolve) => {
+        releaseOpen = () => resolve(clone(browser.handle(clone(request))));
+      });
+    };
+    query(window, '[data-action="project-browser-open"]')?.click();
+    await settle();
+    for (const selector of [
+      "#project-browser-file-select",
+      '[data-action="project-browser-open"]',
+      '[data-action="project-browser-rename"]',
+      '[data-action="project-browser-delete"]',
+    ]) {
+      expect(query(window, selector)?.dataset.busy).toBe("true");
+      expect(query(window, selector)?.getAttribute("aria-disabled")).toBe("true");
+    }
+    const fileSelect = query(window, "#project-browser-file-select") as unknown as {
+      value: string;
+      dispatchEvent(event: Event): boolean;
+    };
+    fileSelect.value = "assets/triangle.gltf";
+    fileSelect.dispatchEvent(new window.Event("change", { bubbles: true }) as unknown as Event);
+    expect(fileSelect.value).toBe("scene.json");
+    releaseOpen?.();
+    await settle();
+    expect(query(window, "[data-busy]")).toBeNull();
+    desktopPort.browseProject = browseProject;
+
+    delete desktopPort.browseProject;
+    query(window, '[data-action="project-browser-open"]')?.click();
+    await settle();
+    expect(query(window, "[data-outcome-code]")?.textContent).toBe(
+      DESKTOP_PRODUCT_REFUSALS.runtimeRequestRefused,
+    );
+    desktopPort.browseProject = browseProject;
 
     const restarted = createDesktopProjectBrowser({ root, stateDirectory });
     expect(restarted.handle({ action: "status", profile: "web" })).toMatchObject({
