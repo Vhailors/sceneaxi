@@ -146,8 +146,9 @@ Rules the gate enforces (`pnpm check:desktop`, `pnpm check:boundaries`,
 - The project browser lists only the active `scene.json` and admitted manifest
   assets; it does not scan the root or expose stored bytes. Its recent state holds
   only root/selection metadata. Opening an asset validates its canonical instance
-  through the existing scene bridge without changing the canonical authoring
-  target, and rename/delete cannot bypass Change Review or the immutable v1
+  through the existing scene bridge and synchronizes that scene into the existing
+  viewport without changing the canonical authoring target; rename/delete cannot
+  bypass Change Review or the immutable v1
   manifest contract.
 - Provider secrets exist only transiently in the password control during
   submission and in the privileged main process during secure save/retrieval and

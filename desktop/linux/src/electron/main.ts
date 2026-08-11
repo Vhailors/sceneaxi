@@ -32,6 +32,7 @@ import {
   DESKTOP_ASSET_IMPORT_CHANNEL,
   DESKTOP_BRIDGE_CHANNEL,
   DESKTOP_VIEWPORT_PLAY_EVENT,
+  DESKTOP_VIEWPORT_SCENE_OPEN_EVENT,
   bridgeRefuse,
 } from "../lib/bridge-contract.js";
 import { createDesktopBridge, type DesktopBridge } from "../lib/bridge.js";
@@ -246,10 +247,6 @@ async function start(): Promise<void> {
         return phase === "reviewing" || phase === "pending" ||
           payloadField(snapshot, "journalRecoveryPending") === true;
       },
-      openAsset: ({ documentPath }) => next.handle({
-        action: "scene",
-        payload: { documentPath },
-      }),
     });
     activeRoot = root;
     return next;
@@ -626,11 +623,13 @@ async function start(): Promise<void> {
     ? browserFiles.find((file) => payloadField(file, "kind") === "asset")
     : undefined;
   const browserAssetPath = payloadField(browserAsset, "path");
+  const browserAssetInstanceId = payloadField(browserAsset, "instanceId");
   if (
     payloadField(browserListed, "ok") !== true ||
     payloadField(browserListedStatus, "activeDocumentPath") !== SAMPLE_DOCUMENT ||
     !Array.isArray(browserFiles) ||
-    typeof browserAssetPath !== "string"
+    typeof browserAssetPath !== "string" ||
+    typeof browserAssetInstanceId !== "string"
   ) {
     fail("project browser preload channel did not list the canonical document and asset");
   }
@@ -663,7 +662,7 @@ async function start(): Promise<void> {
     payloadField(browserSelected, "ok") !== true ||
     payloadField(payloadField(browserSelected, "data"), "outcome") !== "selected" ||
     payloadField(browserOpened, "ok") !== true ||
-    payloadField(payloadField(browserOpened, "data"), "outcome") !== "opened" ||
+    payloadField(payloadField(browserOpened, "data"), "outcome") !== "validated" ||
     payloadField(browserUnconfirmed, "ok") !== false ||
     payloadField(browserUnconfirmed, "reason") !==
       DESKTOP_PROJECT_BROWSER_REFUSALS.confirmationRequired ||
@@ -674,6 +673,39 @@ async function start(): Promise<void> {
     readFileSync(documentFile, "utf8") !== savedBytes
   ) {
     fail("project browser asset selection, bridge open, recovery, or protected mutation evidence is incomplete");
+  }
+  const browserScene: unknown = await window.webContents.executeJavaScript(
+    `globalThis.sceneaxiDesktopLinux.request(${JSON.stringify({
+      action: "scene",
+      payload: { documentPath: SAMPLE_DOCUMENT },
+    })})`,
+  );
+  const browserSceneData = payloadField(browserScene, "data");
+  if (payloadField(browserScene, "ok") !== true) {
+    fail("project browser asset open did not reach the scene bridge through preload IPC");
+  }
+  const browserAssetOpenDom = (await window.webContents.executeJavaScript(
+    `(() => {
+      const detail = {
+        mountable: ${JSON.stringify(browserSceneData)},
+        instanceId: ${JSON.stringify(browserAssetInstanceId)},
+        accepted: false,
+        frame: null,
+      };
+      document.dispatchEvent(new CustomEvent(${JSON.stringify(DESKTOP_VIEWPORT_SCENE_OPEN_EVENT)}, { detail }));
+      return {
+        accepted: detail.accepted,
+        frame: detail.frame,
+        instanceId: document.querySelector('.viewport')?.dataset.assetOpen ?? null,
+      };
+    })()`,
+  )) as { accepted: boolean; frame: number | null; instanceId: string | null };
+  if (
+    browserAssetOpenDom.accepted !== true ||
+    typeof browserAssetOpenDom.frame !== "number" ||
+    browserAssetOpenDom.instanceId !== browserAssetInstanceId
+  ) {
+    fail("project browser asset open did not reach the packaged viewport");
   }
   const browserConfirmationRefusal = payloadField(browserUnconfirmed, "reason");
   const browserProtectedRefusal = payloadField(browserProtected, "reason");
@@ -850,6 +882,7 @@ async function start(): Promise<void> {
         selected: true,
         opened: true,
         assetPath: browserAssetPath,
+        assetFrame: browserAssetOpenDom.frame,
         restored: true,
         activeDocumentPath: SAMPLE_DOCUMENT,
         confirmationRefusal: browserConfirmationRefusal,

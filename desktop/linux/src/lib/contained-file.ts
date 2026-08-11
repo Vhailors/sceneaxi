@@ -128,7 +128,7 @@ export function readContainedRegularFile(
         detail: "the opened file length changed while it was being read",
       });
     }
-    return Object.freeze({ ok: true as const, bytes });
+    return Object.freeze({ ok: true as const, bytes, stats: after });
   } catch (error) {
     const code =
       typeof error === "object" && error !== null && "code" in error

@@ -30,7 +30,6 @@ export const DESKTOP_PROJECT_BROWSER_REFUSALS = Object.freeze({
   dirty: "DESKTOP_PROJECT_BROWSER_DIRTY",
   confirmationRequired: "DESKTOP_PROJECT_BROWSER_CONFIRMATION_REQUIRED",
   operationNotPermitted: "DESKTOP_PROJECT_BROWSER_OPERATION_NOT_PERMITTED",
-  openFailed: "DESKTOP_PROJECT_BROWSER_OPEN_FAILED",
   stateInvalid: "DESKTOP_PROJECT_BROWSER_STATE_INVALID",
   stateWriteFailed: "DESKTOP_PROJECT_BROWSER_STATE_WRITE_FAILED",
   kidsDenied: OPEN_PATH_REFUSE_CODES.kidsRefused,
@@ -110,7 +109,7 @@ export type DesktopProjectBrowserResponse =
       ok: true;
       action: "project-browser";
       data: Readonly<{
-        outcome: "listed" | "selected" | "opened";
+        outcome: "listed" | "selected" | "validated" | "opened";
         status: DesktopProjectBrowserStatus;
       }>;
     }>

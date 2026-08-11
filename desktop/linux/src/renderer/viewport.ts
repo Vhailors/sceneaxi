@@ -58,6 +58,7 @@ import {
   DESKTOP_BRIDGE_REFUSALS,
   DESKTOP_RARITY_PROPOSAL_EVENT,
   DESKTOP_VIEWPORT_PLAY_EVENT,
+  DESKTOP_VIEWPORT_SCENE_OPEN_EVENT,
   PIXELS_META_NAME,
   type DesktopAssistantJobSnapshot,
   type DesktopBridgeResponse,
@@ -712,6 +713,40 @@ async function mountLiveViewport(): Promise<void> {
       : exercise.rarity.namespaceDigest;
     if (rarity === null) clearOverlayLine(RARITY_EVIDENCE_ID);
     else rarityEvidenceLine(stage, rarity);
+  });
+
+  document.addEventListener(DESKTOP_VIEWPORT_SCENE_OPEN_EVENT, (event: Event) => {
+    if (!(event instanceof CustomEvent)) return;
+    const detail = event.detail as {
+      mountable?: unknown;
+      instanceId?: unknown;
+      accepted?: unknown;
+      frame?: unknown;
+    } | null;
+    if (
+      detail === null ||
+      typeof detail.instanceId !== "string" ||
+      !desktopMountablePayload(detail.mountable) ||
+      !detail.mountable.instances.some((instance) => instance.instanceId === detail.instanceId)
+    ) return;
+    const synchronized = synchronizeViewportScene({
+      mounts,
+      frameMountedContent: () => backend.frameMountedContent(),
+      current: scene,
+      next: detail.mountable,
+      triangleBackend: backend,
+    });
+    if (!synchronized.ok) return;
+    scene = synchronized.scene;
+    const frame = mounts.render();
+    updatePixelsMeta(frame);
+    detail.accepted = true;
+    detail.frame = frame.frame;
+    stage.dataset.assetOpen = detail.instanceId;
+    openPathLine(
+      stage,
+      `asset ${detail.instanceId} opened through the canonical scene at viewport frame ${frame.frame}`,
+    );
   });
 
   // Everything below runs after `loop.start()`, so it names itself on its own line

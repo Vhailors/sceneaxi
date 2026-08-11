@@ -27,6 +27,7 @@ export const DESKTOP_PROJECT = Object.freeze({
 });
 
 export const DESKTOP_VIEWPORT_PLAY_EVENT = "sceneaxi:desktop-viewport-play";
+export const DESKTOP_VIEWPORT_SCENE_OPEN_EVENT = "sceneaxi:desktop-viewport-scene-open";
 export const DESKTOP_RARITY_PROPOSAL_EVENT = "sceneaxi:desktop-rarity-proposal";
 
 export const DESKTOP_PRODUCT_CAPABILITY_IDS = Object.freeze([

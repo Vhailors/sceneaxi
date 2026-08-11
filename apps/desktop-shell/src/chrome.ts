@@ -55,6 +55,7 @@ import {
   DESKTOP_PRODUCT_REFUSALS,
   DESKTOP_RARITY_PROPOSAL_EVENT,
   DESKTOP_VIEWPORT_PLAY_EVENT,
+  DESKTOP_VIEWPORT_SCENE_OPEN_EVENT,
   DESKTOP_WEB_STAGE_CONFIG,
   DESKTOP_WEB_STARTER,
   desktopWebStageDecision,
@@ -1417,6 +1418,7 @@ function script(view: DesktopVisualView): string {
     product: {
       documentPath: view.product.surface.project.activeFile,
       viewportPlayEvent: DESKTOP_VIEWPORT_PLAY_EVENT,
+      viewportSceneOpenEvent: DESKTOP_VIEWPORT_SCENE_OPEN_EVENT,
       rarityProposalEvent: DESKTOP_RARITY_PROPOSAL_EVENT,
       webStarter: DESKTOP_WEB_STARTER,
       // Every name the script can print, serialized rather than typed out as a
@@ -2024,7 +2026,22 @@ if (shell) {
     return true;
   };
 
+  const clearProjectBrowser = () => {
+    projectBrowserStatus = null;
+    const list = shell.querySelector('#project-browser-file-select');
+    if (list) list.replaceChildren();
+    const detail = shell.querySelector('[data-project-browser-detail]');
+    if (detail) {
+      detail.hidden = true;
+      detail.querySelectorAll('[data-project-browser-path], [data-project-browser-type], [data-project-browser-digest], [data-project-browser-provenance], [data-project-browser-validation]')
+        .forEach((element) => { element.textContent = ''; });
+    }
+    const assetSurface = shell.querySelector('[data-project-assets]');
+    if (assetSurface) assetSurface.replaceChildren();
+  };
+
   const syncProjectBrowser = async () => {
+    clearProjectBrowser();
     if (activeProject === null || projectBrowserPort() === null) return true;
     const response = await projectBrowserRequest({ action: 'status', profile: shell.dataset.profile });
     if (!response || !response.ok || !renderProjectBrowser(response.data?.status)) {
@@ -2064,6 +2081,36 @@ if (shell) {
     if (action === 'open' && path === response.data.status.activeDocumentPath) {
       return openProject();
     }
+    if (action === 'open') {
+      const file = response.data.status.files.find((candidate) => candidate.path === path);
+      if (!file || file.kind !== 'asset' || response.data.outcome !== 'validated') {
+        const code = T.product.refusals.runtimeRequestRefused;
+        productStatus('refused', 'Project browser refused · ' + code);
+        showOutcome('Project browser refused', code, 'The selected asset did not pass canonical validation.');
+        return false;
+      }
+      const scene = await runtimeRequest({
+        action: 'scene',
+        payload: { documentPath: response.data.status.activeDocumentPath },
+      });
+      if (!scene || !scene.ok) {
+        const code = scene?.reason || T.product.refusals.runtimeRequestRefused;
+        productStatus('refused', 'Asset open refused · ' + code);
+        showOutcome('Asset open refused', code, scene?.message || 'The canonical scene was not opened.');
+        return false;
+      }
+      const detail = { mountable: scene.data, instanceId: file.instanceId, accepted: false, frame: null };
+      document.dispatchEvent(new CustomEvent(T.product.viewportSceneOpenEvent, { detail }));
+      if (detail.accepted !== true || !Number.isInteger(detail.frame)) {
+        const code = T.product.refusals.runtimeRequestRefused;
+        productStatus('refused', 'Asset open refused · ' + code);
+        showOutcome('Asset open refused', code, 'The packaged viewport did not accept the canonical asset scene.');
+        return false;
+      }
+      productStatus('open', path + ' · opened at viewport frame ' + detail.frame +
+        ' · active authoring target remains ' + response.data.status.activeDocumentPath);
+      return true;
+    }
     productStatus('open', path + ' · ' + response.data.outcome + ' · active authoring target remains ' +
       response.data.status.activeDocumentPath);
     return true;
@@ -2071,11 +2118,13 @@ if (shell) {
 
   const applyProjectLifecycleStatus = (status) => {
     if (!status || !Array.isArray(status.recents)) return false;
+    const previousRoot = activeProject?.root ?? null;
     const candidate = status.active;
     activeProject = candidate && typeof candidate.name === 'string' &&
       typeof candidate.root === 'string' && candidate.documentPath === T.product.documentPath
       ? candidate
       : null;
+    if ((activeProject?.root ?? null) !== previousRoot) clearProjectBrowser();
     const launcher = shell.querySelector('[data-project-launcher]');
     const bound = shell.querySelector('[data-project-bound]');
     if (launcher) launcher.hidden = activeProject !== null;

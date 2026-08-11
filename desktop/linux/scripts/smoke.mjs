@@ -132,6 +132,7 @@ if (
   proof.projectBrowser?.listed !== true ||
   proof.projectBrowser?.selected !== true ||
   proof.projectBrowser?.opened !== true ||
+  typeof proof.projectBrowser?.assetFrame !== "number" ||
   typeof proof.projectBrowser?.assetPath !== "string" ||
   !/^assets\/[a-z0-9][a-z0-9-]{0,63}\.gltf$/.test(proof.projectBrowser.assetPath) ||
   proof.projectBrowser?.restored !== true ||

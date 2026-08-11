@@ -849,12 +849,30 @@ function manifestFrom(value: unknown): ProjectAssetManifest | Refusal {
     const entryId = entry["assetId"];
     const entryDigest = entry["digest"];
     const entryPath = entry["relativePath"];
+    const entryMediaType = entry["mediaType"];
     if (
       typeof entryId !== "string" ||
       typeof entryDigest !== "string" ||
       typeof entryPath !== "string"
     ) {
       return refuse(CONTAINED_GLTF_REFUSALS.manifestInvalid, "A project asset manifest entry has invalid identity fields.");
+    }
+    if (relativePaths.has(entryPath)) {
+      return refuse(
+        CONTAINED_GLTF_REFUSALS.duplicatePath,
+        `Project asset manifest path "${entryPath}" is owned by more than one asset identity.`,
+      );
+    }
+    const extension = entryMediaType === "model/gltf-binary" ? "glb" : "gltf";
+    if (
+      entryPath !== `${PROJECT_ASSET_DIRECTORY}/${entryId}.${extension}` ||
+      entry["artifactId"] !== `${entryId}-asset-artifact` ||
+      entry["instanceId"] !== `${entryId}-instance`
+    ) {
+      return refuse(
+        CONTAINED_GLTF_REFUSALS.manifestInvalid,
+        "A project asset manifest entry does not own its canonical path and composition identities.",
+      );
     }
     const decoded = decodeBase64(entry["canonicalBytesBase64"]);
     const reparsed = decoded === null
@@ -869,12 +887,6 @@ function manifestFrom(value: unknown): ProjectAssetManifest | Refusal {
       reparsed.mediaType !== entry["mediaType"]
     ) {
       return refuse(CONTAINED_GLTF_REFUSALS.manifestInvalid, "A project asset manifest entry does not reproduce its canonical bytes.");
-    }
-    if (relativePaths.has(entryPath)) {
-      return refuse(
-        CONTAINED_GLTF_REFUSALS.duplicatePath,
-        `Project asset manifest path "${entryPath}" is owned by more than one asset identity.`,
-      );
     }
     if (ids.has(entryId) || digests.has(entryDigest)) {
       return refuse(CONTAINED_GLTF_REFUSALS.manifestInvalid, "Project asset manifest identities and digests must be unique.");

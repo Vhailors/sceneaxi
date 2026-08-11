@@ -17,6 +17,7 @@ import {
   renameSync,
   unlinkSync,
   writeFileSync,
+  type Stats,
 } from "node:fs";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { contentHash, parseDocumentText } from "@sceneaxi/authoring-core";
@@ -26,9 +27,11 @@ import {
 } from "@sceneaxi/importers";
 import {
   DESKTOP_ACTIVE_DOCUMENT_PATH,
-  type DesktopBridgeResponse,
 } from "./bridge-contract.js";
-import { readContainedRegularFile } from "./contained-file.js";
+import {
+  openContainedRegularFile,
+  readContainedRegularFile,
+} from "./contained-file.js";
 import {
   DESKTOP_PROJECT_BROWSER_ACTIONS,
   DESKTOP_PROJECT_BROWSER_REFUSALS,
@@ -53,11 +56,6 @@ export type DesktopProjectBrowserOptions = Readonly<{
   root: string;
   stateDirectory: string;
   isDirty?: () => boolean;
-  openAsset?: (request: Readonly<{
-    profile: "game" | "web";
-    documentPath: typeof DESKTOP_ACTIVE_DOCUMENT_PATH;
-    asset: DesktopProjectAssetFile;
-  }>) => DesktopBridgeResponse;
 }>;
 
 export type DesktopProjectBrowser = Readonly<{
@@ -72,6 +70,20 @@ function own(value: unknown, key: string): unknown {
 
 function sha256(bytes: Uint8Array): string {
   return `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
+}
+
+function fileFingerprint(stats: Stats): string {
+  return [stats.dev, stats.ino, stats.size, stats.mtimeMs, stats.ctimeMs].join(":");
+}
+
+function containedFingerprint(root: string, path: string): string {
+  const opened = openContainedRegularFile(root, join(root, ...path.split("/")));
+  if (!opened.ok) return [opened.kind, opened.cause, opened.detail].join(":");
+  try {
+    return fileFingerprint(opened.stats);
+  } finally {
+    closeSync(opened.descriptor);
+  }
 }
 
 function valid(message = "Canonical bytes and metadata are valid."):
@@ -143,47 +155,69 @@ function exactStoredState(value: unknown): StoredBrowserState | null {
 function assetValidation(root: string, path: string, expected: {
   readonly byteLength: number;
   readonly digest: string;
-}): DesktopProjectBrowserValidation {
+}): Readonly<{
+  validation: DesktopProjectBrowserValidation;
+  fingerprint: string;
+}> {
   const absolute = join(root, ...path.split("/"));
   if (!within(root, absolute)) {
-    return invalid(
-      "refused",
-      DESKTOP_PROJECT_BROWSER_REFUSALS.pathOutsideRoot,
-      "The admitted asset path resolves outside the contained project root.",
-    );
+    return Object.freeze({
+      validation: invalid(
+        "refused",
+        DESKTOP_PROJECT_BROWSER_REFUSALS.pathOutsideRoot,
+        "The admitted asset path resolves outside the contained project root.",
+      ),
+      fingerprint: "outside-root",
+    });
   }
   const read = readContainedRegularFile(root, absolute, {
     expectedBytes: expected.byteLength,
   });
   if (!read.ok) {
+    const fingerprint = [read.kind, read.cause, read.detail].join(":");
     if (read.kind === "missing") {
-      return invalid(
-        "missing",
-        DESKTOP_PROJECT_BROWSER_REFUSALS.fileMissing,
-        "The manifest admits this asset, but its project copy is missing.",
-      );
+      return Object.freeze({
+        validation: invalid(
+          "missing",
+          DESKTOP_PROJECT_BROWSER_REFUSALS.fileMissing,
+          "The manifest admits this asset, but its project copy is missing.",
+        ),
+        fingerprint,
+      });
     }
     if (read.kind === "unsafe" && read.cause !== "nonregular") {
-      return invalid(
-        "refused",
-        DESKTOP_PROJECT_BROWSER_REFUSALS.symlinkEscape,
-        "Project asset symlinks and paths resolving outside the contained root are refused.",
-      );
+      return Object.freeze({
+        validation: invalid(
+          "refused",
+          DESKTOP_PROJECT_BROWSER_REFUSALS.symlinkEscape,
+          "Project asset symlinks and paths resolving outside the contained root are refused.",
+        ),
+        fingerprint,
+      });
     }
-    return invalid(
-      "invalid",
-      DESKTOP_PROJECT_BROWSER_REFUSALS.fileInvalid,
-      "The admitted project copy could not be validated.",
-    );
+    return Object.freeze({
+      validation: invalid(
+        "invalid",
+        DESKTOP_PROJECT_BROWSER_REFUSALS.fileInvalid,
+        "The admitted project copy could not be validated.",
+      ),
+      fingerprint,
+    });
   }
   if (sha256(read.bytes) !== expected.digest) {
-    return invalid(
-      "invalid",
-      DESKTOP_PROJECT_BROWSER_REFUSALS.fileInvalid,
-      "The project copy does not match the manifest's canonical byte length and digest.",
-    );
+    return Object.freeze({
+      validation: invalid(
+        "invalid",
+        DESKTOP_PROJECT_BROWSER_REFUSALS.fileInvalid,
+        "The project copy does not match the manifest's canonical byte length and digest.",
+      ),
+      fingerprint: fileFingerprint(read.stats),
+    });
   }
-  return valid("Project copy matches the accepted manifest bytes and digest.");
+  return Object.freeze({
+    validation: valid("Project copy matches the accepted manifest bytes and digest."),
+    fingerprint: fileFingerprint(read.stats),
+  });
 }
 
 export function createDesktopProjectBrowser(
@@ -195,6 +229,9 @@ export function createDesktopProjectBrowser(
   let stateInvalid = false;
   let selectedPath = DESKTOP_ACTIVE_DOCUMENT_PATH;
   let writeSequence = 0;
+  let cachedStatus: DesktopProjectBrowserStatus | null = null;
+  let cachedDocumentFingerprint: string | null = null;
+  const cachedAssetFingerprints = new Map<string, string>();
 
   const initialize = (): DesktopProjectBrowserResponse | null => {
     if (initialized) return stateInvalid
@@ -253,6 +290,9 @@ export function createDesktopProjectBrowser(
   };
 
   const status = (): DesktopProjectBrowserStatus | DesktopProjectBrowserResponse => {
+    cachedStatus = null;
+    cachedDocumentFingerprint = null;
+    cachedAssetFingerprints.clear();
     const documentFile = join(root, DESKTOP_ACTIVE_DOCUMENT_PATH);
     const read = readContainedRegularFile(root, documentFile);
     if (!read.ok) {
@@ -308,8 +348,10 @@ export function createDesktopProjectBrowser(
       validation: valid("The active text-canonical Scene Document is valid."),
       mutable: false as const,
     });
-    const assets: DesktopProjectAssetFile[] = manifest.value.assets.map((entry) =>
-      Object.freeze({
+    const assets: DesktopProjectAssetFile[] = manifest.value.assets.map((entry) => {
+      const checked = assetValidation(root, entry.relativePath, entry);
+      cachedAssetFingerprints.set(entry.relativePath, checked.fingerprint);
+      return Object.freeze({
         kind: "asset" as const,
         path: entry.relativePath,
         fileType: entry.mediaType === "model/gltf-binary"
@@ -324,25 +366,63 @@ export function createDesktopProjectBrowser(
         instanceId: entry.instanceId,
         copyPolicy: entry.copyPolicy,
         provenance: entry.provenance,
-        validation: assetValidation(root, entry.relativePath, entry),
+        validation: checked.validation,
         mutable: false as const,
-      }),
-    );
+      });
+    });
     const files = Object.freeze([documentFileRecord, ...assets]);
     if (!files.some((file) => file.path === selectedPath)) {
       selectedPath = DESKTOP_ACTIVE_DOCUMENT_PATH;
     }
-    return Object.freeze({
+    const value = Object.freeze({
       schemaVersion: DESKTOP_PROJECT_BROWSER_STATE_SCHEMA_VERSION,
       root,
       activeDocumentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
       selectedPath,
       files,
     });
+    cachedStatus = value;
+    cachedDocumentFingerprint = fileFingerprint(read.stats);
+    return value;
+  };
+
+  const refreshCachedAssets = (
+    value: DesktopProjectBrowserStatus,
+  ): DesktopProjectBrowserStatus => {
+    let changed = false;
+    const files = value.files.map((file) => {
+      if (file.kind !== "asset") return file;
+      const fingerprint = containedFingerprint(root, file.path);
+      if (cachedAssetFingerprints.get(file.path) === fingerprint) return file;
+      changed = true;
+      const checked = assetValidation(root, file.path, file);
+      cachedAssetFingerprints.set(file.path, checked.fingerprint);
+      return Object.freeze({
+        ...file,
+        validation: checked.validation,
+      });
+    });
+    if (!changed) return value;
+    const refreshed = Object.freeze({ ...value, files: Object.freeze(files) });
+    cachedStatus = refreshed;
+    return refreshed;
+  };
+
+  const cachedStatusIfCurrent = (): DesktopProjectBrowserStatus | null => {
+    if (cachedStatus === null || cachedDocumentFingerprint === null) return null;
+    const opened = openContainedRegularFile(root, join(root, DESKTOP_ACTIVE_DOCUMENT_PATH));
+    if (!opened.ok) return null;
+    try {
+      return fileFingerprint(opened.stats) === cachedDocumentFingerprint
+        ? refreshCachedAssets(cachedStatus)
+        : null;
+    } finally {
+      closeSync(opened.descriptor);
+    }
   };
 
   const ok = (
-    outcome: "listed" | "selected" | "opened",
+    outcome: "listed" | "selected" | "validated" | "opened",
     value: DesktopProjectBrowserStatus,
   ): DesktopProjectBrowserResponse => Object.freeze({
     ok: true as const,
@@ -353,7 +433,10 @@ export function createDesktopProjectBrowser(
   const selectedFile = (
     value: DesktopProjectBrowserStatus,
     path: string,
-  ): DesktopProjectBrowserFile | DesktopProjectBrowserResponse => {
+  ): Readonly<{
+    file: DesktopProjectBrowserFile;
+    status: DesktopProjectBrowserStatus;
+  }> | DesktopProjectBrowserResponse => {
     const file = value.files.find((candidate) => candidate.path === path);
     if (file === undefined) {
       return projectBrowserRefuse(
@@ -369,7 +452,7 @@ export function createDesktopProjectBrowser(
         path,
       );
     }
-    return file;
+    return Object.freeze({ file, status: value });
   };
 
   return Object.freeze({
@@ -394,49 +477,25 @@ export function createDesktopProjectBrowser(
       }
       const initializedState = initialize();
       if (initializedState !== null) return initializedState;
-      const current = status();
+      const reused = action === "status" ? null : cachedStatusIfCurrent();
+      const current = reused ?? status();
       if ("ok" in current) return current;
       if (action === "status") return ok("listed", current);
 
       const path = requestPath(own(request, "path"));
       if (!("value" in path)) return path;
-      const file = selectedFile(current, path.value);
-      if ("ok" in file) return file;
+      const selected = selectedFile(current, path.value);
+      if ("ok" in selected) return selected;
+      const { file } = selected;
+      const currentStatus = selected.status;
 
       if (action === "select" || action === "open") {
-        if (action === "open" && file.kind === "asset") {
-          let opened: DesktopBridgeResponse;
-          try {
-            opened = options.openAsset?.({
-              profile,
-              documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
-              asset: file,
-            }) ?? projectBrowserRefuse(
-              DESKTOP_PROJECT_BROWSER_REFUSALS.openFailed,
-              "The packaged desktop has no asset-open bridge operation bound.",
-              file.path,
-            );
-          } catch (error) {
-            return projectBrowserRefuse(
-              DESKTOP_PROJECT_BROWSER_REFUSALS.openFailed,
-              "The existing desktop scene bridge failed while opening the admitted asset.",
-              error instanceof Error ? error.message : String(error),
-            );
-          }
-          const instances = opened.ok ? own(opened.data, "instances") : undefined;
-          if (
-            !opened.ok ||
-            !Array.isArray(instances) ||
-            !instances.some((instance) => own(instance, "instanceId") === file.instanceId)
-          ) {
-            return projectBrowserRefuse(
-              DESKTOP_PROJECT_BROWSER_REFUSALS.openFailed,
-              "The existing desktop scene bridge did not open the admitted asset's canonical scene instance.",
-              opened.ok
-                ? file.instanceId
-                : `${opened.reason}: ${opened.message}`,
-            );
-          }
+        if (action === "open" && options.isDirty?.() === true) {
+          return projectBrowserRefuse(
+            DESKTOP_PROJECT_BROWSER_REFUSALS.dirty,
+            "Open refuses while Change Review, recovery, or another unsaved authoring change is active.",
+            file.path,
+          );
         }
         const previous = selectedPath;
         selectedPath = file.path;
@@ -445,10 +504,19 @@ export function createDesktopProjectBrowser(
           selectedPath = previous;
           return written;
         }
-        return ok(action === "select" ? "selected" : "opened", {
-          ...current,
+        const nextStatus = Object.freeze({
+          ...currentStatus,
           selectedPath,
         });
+        cachedStatus = nextStatus;
+        return ok(
+          action === "select"
+            ? "selected"
+            : file.kind === "asset"
+              ? "validated"
+              : "opened",
+          nextStatus,
+        );
       }
 
       if (options.isDirty?.() === true) {

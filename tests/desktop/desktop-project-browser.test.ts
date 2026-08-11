@@ -79,7 +79,7 @@ function statusOf(response: ReturnType<ReturnType<typeof createDesktopProjectBro
 
 describe("contained desktop project and asset browser", () => {
   it("lists only canonical project identities and restores selection without persisting contents", () => {
-    const { root, stateDirectory, sourceBytes, bridge } = admittedProject();
+    const { root, stateDirectory, sourceBytes } = admittedProject();
     const documentBytes = readFileSync(join(root, "scene.json"), "utf8");
     const browser = createDesktopProjectBrowser({ root, stateDirectory });
 
@@ -137,10 +137,6 @@ describe("contained desktop project and asset browser", () => {
     const restarted = createDesktopProjectBrowser({
       root,
       stateDirectory,
-      openAsset: ({ documentPath }) => bridge.handle({
-        action: "scene",
-        payload: { documentPath },
-      }),
     });
     expect(statusOf(restarted.handle({ action: "status", profile: "game" })).selectedPath)
       .toBe("assets/triangle.gltf");
@@ -151,28 +147,16 @@ describe("contained desktop project and asset browser", () => {
     })).toMatchObject({
       ok: true,
       data: {
-        outcome: "opened",
+        outcome: "validated",
         status: { activeDocumentPath: "scene.json", selectedPath: "assets/triangle.gltf" },
       },
     });
     expect(readFileSync(join(root, "scene.json"), "utf8")).toBe(documentBytes);
 
-    const unavailable = createDesktopProjectBrowser({
-      root,
-      stateDirectory: temporary("open-unavailable-state"),
-    });
-    expect(unavailable.handle({
-      action: "open",
-      profile: "web",
-      path: "assets/triangle.gltf",
-    })).toMatchObject({
-      ok: false,
-      reason: DESKTOP_PROJECT_BROWSER_REFUSALS.openFailed,
-    });
   });
 
   it("confirmation-gates immutable rename/delete and names dirty, duplicate, traversal, and outside-root refusals", () => {
-    const { root, stateDirectory } = admittedProject();
+    const { root, stateDirectory, bridge } = admittedProject();
     const clean = createDesktopProjectBrowser({ root, stateDirectory });
     const request = { profile: "web" as const, path: "assets/triangle.gltf" };
 
@@ -218,6 +202,34 @@ describe("contained desktop project and asset browser", () => {
       ok: false,
       reason: DESKTOP_PROJECT_BROWSER_REFUSALS.dirty,
     });
+    expect(dirty.handle({ action: "open", profile: "web", path: "scene.json" }))
+      .toMatchObject({ ok: false, reason: DESKTOP_PROJECT_BROWSER_REFUSALS.dirty });
+
+    const stagedSource = join(temporary("staged-source"), "staged.gltf");
+    writeFileSync(stagedSource, containedTriangle(0.75));
+    expect(bridge.handle({
+      action: "asset-import",
+      payload: { profile: "web", documentPath: "scene.json", sourcePath: stagedSource },
+    })).toMatchObject({ ok: true, data: { outcome: "reviewing" } });
+    const reviewing = createDesktopProjectBrowser({
+      root,
+      stateDirectory: temporary("reviewing-state"),
+      isDirty: () => {
+        const response = bridge.handle({
+          action: "authoring",
+          payload: { op: "status", documentPath: "scene.json" },
+        });
+        if (!response.ok) return true;
+        return (response.data as { authoringSnapshot?: { phase?: unknown } })
+          .authoringSnapshot?.phase === "reviewing";
+      },
+    });
+    expect(reviewing.handle({ action: "open", profile: "web", path: "scene.json" }))
+      .toMatchObject({ ok: false, reason: DESKTOP_PROJECT_BROWSER_REFUSALS.dirty });
+    expect(bridge.handle({
+      action: "authoring",
+      payload: { op: "status", documentPath: "scene.json" },
+    })).toMatchObject({ data: { authoringSnapshot: { phase: "reviewing" } } });
   });
 
   it("reports admitted-copy missing, invalid, symlink, and malformed-manifest states without scanning", () => {
@@ -309,6 +321,47 @@ describe("contained desktop project and asset browser", () => {
     }).handle({ action: "status", profile: "web" })).toMatchObject({
       ok: false,
       reason: DESKTOP_PROJECT_BROWSER_REFUSALS.manifestInvalid,
+    });
+  });
+
+  it("refreshes changed asset validation without reparsing an unchanged document", () => {
+    const admitted = admittedProject();
+    const secondSource = join(temporary("refresh-source"), "second.gltf");
+    writeFileSync(secondSource, containedTriangle(0.5));
+    expect(admitted.bridge.handle({
+      action: "asset-import",
+      payload: { profile: "web", documentPath: "scene.json", sourcePath: secondSource },
+    }).ok).toBe(true);
+    expect(admitted.bridge.handle({ action: "authoring", payload: { op: "accept" } }).ok)
+      .toBe(true);
+    const browser = createDesktopProjectBrowser({
+      root: admitted.root,
+      stateDirectory: admitted.stateDirectory,
+    });
+    expect(browser.handle({ action: "status", profile: "web" })).toMatchObject({ ok: true });
+    writeFileSync(join(admitted.root, "assets/triangle.gltf"), "changed", "utf8");
+
+    const selected = browser.handle({
+      action: "select",
+      profile: "web",
+      path: "assets/second.gltf",
+    });
+    expect(selected).toMatchObject({
+      ok: true,
+      data: {
+        outcome: "selected",
+        status: {
+          files: expect.arrayContaining([
+            expect.objectContaining({
+              path: "assets/triangle.gltf",
+              validation: expect.objectContaining({
+                state: "invalid",
+                reason: DESKTOP_PROJECT_BROWSER_REFUSALS.fileInvalid,
+              }),
+            }),
+          ]),
+        },
+      },
     });
   });
 

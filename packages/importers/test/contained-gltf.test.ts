@@ -314,6 +314,40 @@ describe("contained GLB/glTF project ingestion", () => {
       ok: false,
       reason: CONTAINED_GLTF_REFUSALS.manifestInvalid,
     });
+
+    for (const field of ["artifactId", "instanceId"] as const) {
+      const aliased = structuredClone(valid.value) as unknown as {
+        assets: Array<Record<typeof field, string>>;
+      };
+      const firstIdentity = aliased.assets[0]?.[field];
+      const aliasedEntry = aliased.assets[1];
+      expect(firstIdentity).toBeTypeOf("string");
+      expect(aliasedEntry).toBeDefined();
+      if (firstIdentity === undefined || aliasedEntry === undefined) return;
+      aliasedEntry[field] = firstIdentity;
+      expect(projectAssetManifestFromDocumentData({
+        [PROJECT_ASSET_MANIFEST_KEY]: aliased,
+      })).toMatchObject({
+        ok: false,
+        reason: CONTAINED_GLTF_REFUSALS.manifestInvalid,
+      });
+    }
+
+    for (const relativePath of ["assets/not-first.gltf", "assets/first.glb"]) {
+      const mismatchedPath = structuredClone(valid.value) as unknown as {
+        assets: Array<{ relativePath: string }>;
+      };
+      const pathEntry = mismatchedPath.assets[0];
+      expect(pathEntry).toBeDefined();
+      if (pathEntry === undefined) return;
+      pathEntry.relativePath = relativePath;
+      expect(projectAssetManifestFromDocumentData({
+        [PROJECT_ASSET_MANIFEST_KEY]: mismatchedPath,
+      })).toMatchObject({
+        ok: false,
+        reason: CONTAINED_GLTF_REFUSALS.manifestInvalid,
+      });
+    }
   });
 
   it("names duplicate replay, duplicate content, and conflicting identity without changing project bytes", () => {

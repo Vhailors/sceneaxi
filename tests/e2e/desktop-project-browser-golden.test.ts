@@ -12,6 +12,7 @@ import {
 } from "@sceneaxi/desktop-shell";
 import {
   DESKTOP_PROJECT_BROWSER_REFUSALS,
+  DESKTOP_VIEWPORT_SCENE_OPEN_EVENT,
   createDesktopBridge,
   createDesktopProjectBrowser,
   createDesktopProjectHost,
@@ -113,16 +114,13 @@ describe("desktop project and asset browser golden path", () => {
       activate: () => undefined,
     });
     let dirty = false;
-    const assetOpenRequests: string[] = [];
     const browser = createDesktopProjectBrowser({
       root,
       stateDirectory,
       isDirty: () => dirty,
-      openAsset: ({ documentPath, asset }) => {
-        assetOpenRequests.push(asset.path);
-        return bridge.handle({ action: "scene", payload: { documentPath } });
-      },
     });
+    const sceneRequests: unknown[] = [];
+    let openedAssetInstance: string | null = null;
 
     const window = new HappyWindow({ width: 1200, height: 800 });
     windows.push(window);
@@ -133,7 +131,10 @@ describe("desktop project and asset browser golden path", () => {
     Object.defineProperty(window, "sceneaxiDesktopLinux", {
       value: {
         project: async (request: unknown) => clone(await host.handle(clone(request))),
-        request: async (request: unknown) => clone(bridge.handle(clone(request))),
+        request: async (request: unknown) => {
+          if ((request as { action?: unknown }).action === "scene") sceneRequests.push(request);
+          return clone(bridge.handle(clone(request)));
+        },
         browseProject: async (request: unknown) => clone(browser.handle(clone(request))),
       },
     });
@@ -147,6 +148,20 @@ describe("desktop project and asset browser golden path", () => {
     const match = /<script>([\s\S]*?)<\/script>/.exec(html);
     if (match?.[1] === undefined) throw new Error("desktop chrome script missing");
     window.document.write(html.replace(match[0], ""));
+    window.document.addEventListener(DESKTOP_VIEWPORT_SCENE_OPEN_EVENT, (event) => {
+      const detail = (event as CustomEvent).detail as {
+        mountable?: { instances?: Array<{ instanceId?: string }> };
+        instanceId?: string;
+        accepted: boolean;
+        frame: number | null;
+      };
+      if (detail.mountable?.instances?.some((instance) =>
+        instance.instanceId === detail.instanceId)) {
+        openedAssetInstance = detail.instanceId ?? null;
+        detail.accepted = true;
+        detail.frame = 7;
+      }
+    });
     window.eval(match[1]);
     await settle();
 
@@ -173,9 +188,10 @@ describe("desktop project and asset browser golden path", () => {
     expect(query(window, '[data-project-asset="assets/triangle.gltf"]')?.textContent)
       .toMatch(/sha256:[0-9a-f]{64}/);
     await click(window, '[data-action="project-browser-open"]');
-    expect(assetOpenRequests).toEqual(["assets/triangle.gltf"]);
+    expect(sceneRequests).toHaveLength(1);
+    expect(openedAssetInstance).toBe("triangle-instance");
     expect(query(window, "[data-project-status]")?.textContent).toContain(
-      "active authoring target remains scene.json",
+      "opened at viewport frame 7 · active authoring target remains scene.json",
     );
 
     await click(window, '[data-action="project-browser-rename"]');
@@ -245,5 +261,15 @@ describe("desktop project and asset browser golden path", () => {
     expect(query(window, "[data-project-status]")?.textContent).toContain(
       DESKTOP_PROJECT_BROWSER_REFUSALS.dirty,
     );
+
+    dirty = false;
+    desktopPort.browseProject = async (request: unknown) =>
+      (request as { action?: unknown }).action === "status"
+        ? { ok: false, reason: "DESKTOP_PROJECT_BROWSER_MANIFEST_INVALID", message: "invalid", detail: null }
+        : browseProject(request);
+    await click(window, '[data-action="project-browser-open"]');
+    expect(query(window, "#project-browser-file-select")?.textContent).toBe("");
+    expect(query(window, '[data-project-asset="assets/triangle.gltf"]')).toBeNull();
+    expect(query(window, "[data-project-browser-detail]")?.hidden).toBe(true);
   });
 });
