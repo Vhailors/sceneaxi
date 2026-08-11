@@ -219,10 +219,14 @@ root reloads the same unforked chrome against a newly bound instance of the
 existing engine bridge; it does not create a second authoring implementation.
 
 The left dock owns one project/file answer rather than parallel mock panels:
-`SceneAxi Project` has one active validated document, `scene.json`. Open calls
-the host's authoring `status` operation and retains its validated inert `data`;
-since the lifecycle above now owns choosing a root, that control's title-bar
-label reads **Reload** — it re-reads the bound project and never selects one, and
+`scene.json` remains the one active authoring target. Once a root binds, a separate
+typed browser port fills the file selector with that document and its admitted
+manifest assets, fills the selected row's type, digest, provenance, and validation
+detail, and fills the Assets dock from the same response. Open selected, Rename,
+and Delete are modelled controls; the exact containment, confirmation, and
+immutability rules live in `docs/desktop-linux.md`. The title-bar **Reload**
+control still calls the host's authoring `status` operation and retains its
+validated inert `data`; it re-reads the bound project and never selects one, and
 under a host with no bound root it refuses instead of opening.
 
 Once a bound project has been opened, the same panel selects among the validated
@@ -654,7 +658,7 @@ against.
 | Informational blue | the member carries both `#5B9CFF` and a lighter `#8FB7F5` for the same informational role | `#5B9CFF` | the two archive members disagree, so the shared sheet settles it: Foundations v2 canonicalises `--info` to `#5B9CFF`, D1 makes the sheet binding, and the value clears the text floor here anyway (6.16:1 at worst on `SURFACE`, 6.48:1 on the note's own fill) — so there is no accessibility reason to keep the member's lighter variant, and keeping it would be drift from the shared layer. |
 | Kids profile | a working editor with only the assistant locked | the **whole editor body** refuses | **contract conflict, resolved for the repository.** Kids authoring exists only on its dedicated, simplified origin (`kids-first-release.md`); the shared desktop open path remains `OPEN_PATH_KIDS_REFUSED`. An adult editor that merely looked disabled under a Kids badge would cross that boundary. Every control behind the refusal goes inert — in the emitted bytes, not only after a click, and decided in one place rather than remembered per call site — so no mode can be entered and no removed panel can be opened from behind it; the seven chrome controls enumerated above stay live so the refusal is a state you can leave and its named reasons remain reachable. |
 | Panel inventory | fixture object trees, digests, byte sizes, fps, triangle counts, run timings, evidence rows | real structure with honest empty and inert states | the chrome mounts no renderer itself and reports only results returned by the packaged host, so it has no authority to invent fps, a triangle count, or a `14.2 MB` artifact. Rendering the archive's fixtures would be inventing file sizes and hashes. Change Review was the one fixture queue kept, and sceneaxi#227 retired that exception too: the panel is populated only by the active `DesktopSession` proposal — its real document path, base content hash, and rendered diff — with an honest empty state when none exists. It is therefore the one panel here that **does** write: Accept applies the whole proposal through the shared authoring session (`writesDocuments: true`), Reject discards it without writing, and there is no per-row or partial acceptance to have. |
-| Project lifecycle (sceneaxi#224) | a Project / Files panel drawn with files already present, like the rest of the fixture inventory above; no project selection, recents, or unbound state is recorded | an unbound launcher with New Project, Open Project, a recent chooser, Open Recent, and Remove, replaced by the bound project's name, canonical root, and active `scene.json` once a root validates | **product decision, not a visual one.** First launch must not silently choose a project root, so the panel has to have an unbound state the archive never drew. The controls ship under the rules already on this page: each declares its kind — the chooser `view`, the four actions `live`, exactly like the rest of the project loop, so a standalone render refuses `DESKTOP_RUNTIME_UNAVAILABLE` when one is clicked — and all of them go inert through the central mint on Kids, before a dialog or a storage read. No colour, size, or geometry is claimed for them from the archive, which is why there is no `DEVIATIONS` row. Their rendered contrast has not been swept in a browser — see the caveat on the recorded sweep below. |
+| Project lifecycle and contained browser (sceneaxi#224 plus the contained browser slice) | a Project / Files panel drawn with fixture files already present, plus a fixture Assets inventory; no project selection, recents, unbound state, validation detail, or file operation is recorded | an unbound launcher with New Project, Open Project, a recent chooser, Open Recent, and Remove; after binding, one canonical file selector, a metadata detail card, Open selected, Rename, Delete, and an Assets dock populated only from the host response | **product decision, not a visual one.** First launch must not silently choose a project root, and a bound panel must not preserve the archive's invented inventory. The lifecycle chooser is `view`; its four actions and the browser's selector and three actions are `live`, so standalone chrome refuses them without a host and Kids demotes them through the central mint before a dialog, state read, or project read. The detail and Assets regions start empty and receive no fabricated digest, provenance, or status. No archive colour or geometry is claimed for the added regions, and their rendered contrast has not been swept in a browser; see the caveat below. |
 | Ship Web export | a Ship room that names a Delivery Handoff but explicitly exposes no export action | one `Export Web` action shared by the File menu, palette, and Ship inspector, followed by only the returned output path, bundle digest, source digest, and handoff path | **product decision, not a visual one.** The accepted vertical makes Ship a real offline product job while retaining the archive's room. The new control is modelled `live`, goes inert through the central Kids refusal, and refuses by name without a clean bound project. Evidence fields start empty and appear only from the packaged host's validated response; no fabricated hash, size, deployment, or release state is drawn. No new colour, token, or geometry is claimed from the archive, and the added controls retain the recorded browser-sweep caveat below. |
 | Selected composed-instance edit (sceneaxi#225 plus this narrow breadth vertical) | nothing recorded: the archive draws no composed-instance selector or property editor in the Build inspector | one composed-instance `<select>` under the bound project; a Build-inspector editor carrying the selected identity; bounded X/Y/Z translation, Euler rotation, and scale fields; Stage, local-copy Add, and leaf Remove; the staged proposal's own diff; and the host's named inspection refusal | **product decision, not a visual one.** The operation stays on the existing E1/Minimum-E2 seam: selection is `view`; the nine fields and three actions are `live`; all go inert through the central mint on Kids before a session or document is reached. Add names no external artifact and can only copy already-validated local bytes; Remove is a non-root leaf operation, not a general hierarchy editor. No colour, size, or geometry is claimed from the archive, and the added controls have not received a new browser contrast sweep; the recorded-sweep caveat below remains explicit. |
 | Assistant product flow (sceneaxi#192) | nothing recorded: this document has never carried an assistant composer inventory from the archive, and the archive is a design input for visual values, not for product flow | a real prompt `<textarea>`, three provider-route chips (`local`, `byo`, `hosted`), progress and result regions that report actual work, a `Retry` action, and a viewport manipulator bar (`Move +X`, `Move +Y`, `Rotate Y`, `Scale +`) | **product decision, not a visual one.** sceneaxi#192 turns the assistant from a drawn panel into a flow that a runtime performs, so the surface needs controls for the states that flow really has. They ship as modelled controls under the rules already on this page: each declares its kind, all of them are `inert` with a named refusal in the standalone CLI render and become `live` only when the packaged Linux runtime binds them, and all of them are denied on Kids. No colour, size, or geometry is claimed for them from the archive, which is why there is no `DEVIATIONS` row: there is no archive value to compare against. Their rendered contrast has not been swept in a browser — see the caveat on the recorded sweep below. |
@@ -789,16 +793,19 @@ sentence can return by review slip.
   also with 0 overflow.
 
   **This record predates the contained project lifecycle (sceneaxi#224), the
-  typed scene-property edit (sceneaxi#225), and the current composed-instance
-  breadth, and has not been re-run for them.** It observed the left dock already showing the active
+  contained project/asset browser, the typed scene-property edit (sceneaxi#225),
+  and the current composed-instance breadth, and has not been re-run for them.**
+  It observed the left dock already showing the active
   `scene.json` and a title-bar control labelled `Open`; today that panel starts
   as the unbound launcher, the title-bar control reads `Reload`, reaching the
   authoring loop takes a New/Open/Recent choice first, and an opened project adds
-  the composed-instance selector, nine transform fields, Stage, local-copy Add,
-  and leaf Remove, none of which this run saw. The refusal, profile, and
+  the canonical file selector, detail card, three file actions, admitted Assets
+  cards, the composed-instance selector, nine transform fields, Stage,
+  local-copy Add, and leaf Remove, none of which this run saw. The refusal, profile, and
   overflow readings above stand for the document as it was on 2026-08-05; the
   lifecycle's own behaviour is gate evidence in
-  `tests/e2e/desktop-project-lifecycle-golden.test.ts` and the scene edits' in
+  `tests/e2e/desktop-project-lifecycle-golden.test.ts`, the browser's in
+  `tests/e2e/desktop-project-browser-golden.test.ts`, and the scene edits' in
   `tests/e2e/desktop-scene-property-golden.test.ts` and
   `tests/e2e/desktop-product-loop-golden.test.ts`, not a browser record.
 
@@ -824,9 +831,10 @@ sentence can return by review slip.
   1024×700 (the Kids drawer tier), and 800×560, and it exercises the Kids switch
   at the drawer tiers, not only at 1680×1000.
 
-  **This sweep predates the assistant product controls, the project
-  lifecycle, the typed scene-property edit and its current breadth, and the
-  Change Review rework, and has not been re-run for any of them.** sceneaxi#192 later added, to
+  **This sweep predates the assistant product controls, the project lifecycle,
+  the contained project/asset browser, the typed scene-property edit and its
+  current breadth, and the Change Review rework, and has not been re-run for any
+  of them.** sceneaxi#192 later added, to
   the documents that render the assistant panel and the viewport, eight further
   buttons — `Retry`, the three provider-route chips, and the four artifact
   manipulators — plus the modelled prompt `<textarea>`; sceneaxi#224 then added
@@ -838,7 +846,9 @@ sentence can return by review slip.
   leaf Remove; every document emits the Build inspector that carries them. sceneaxi#227
   then replaced the fixture Change Review queue with the active proposal,
   removing its three rows and the bulk accept/reject pair and adding a focusable
-  diff region. Everything
+  diff region. The contained browser slice later added one file `<select>`, three
+  file action buttons, a selected-file detail region, and host-populated asset
+  cards. Everything
   below therefore describes the document as it stood on 2026-07-28, and four
   claims in it are stale by name:
 
@@ -910,7 +920,9 @@ sentence can return by review slip.
   predates sceneaxi#225 and this breadth vertical identically: the composed-instance
   selector, Stage, Add, Remove, and nine transform inputs — all demoted on `kids`
   by the central mint — came after it, so the same figures are low
-  again and none of those controls was measured either.
+  again and none of those controls was measured either. The contained browser's
+  file selector, three file action buttons, detail region, and Assets cards also
+  postdate the addendum, so none of their text or control states was measured.
 
   **It predates sceneaxi#226 as well, which reshaped the chrome it measured.**
   Nothing in this addendum has been re-run against the current document, and the

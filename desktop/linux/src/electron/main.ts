@@ -255,11 +255,11 @@ async function start(): Promise<void> {
     return next;
   };
 
-  const lifecycle = SMOKE
-    ? null
-    : createDesktopProjectLifecycle({
-        stateDirectory: join(app.getPath("userData"), "project-lifecycle"),
-      });
+  const lifecycle = createDesktopProjectLifecycle({
+    stateDirectory: smokeRoot === null
+      ? join(app.getPath("userData"), "project-lifecycle")
+      : join(smokeRoot, ".sceneaxi-runtime"),
+  });
   let smokeBridge: DesktopBridge | null = null;
   if (smokeRoot !== null) {
     smokeBridge = await activateProject(smokeRoot);
@@ -284,7 +284,11 @@ async function start(): Promise<void> {
       fail("smoke asset did not apply through the existing authoring bridge");
     }
     unlinkSync(sourcePath);
-  } else if (lifecycle !== null) {
+    const openedSmokeProject = lifecycle.openProject(smokeRoot);
+    if (!openedSmokeProject.ok) {
+      fail(`smoke project lifecycle did not bind the contained root: ${openedSmokeProject.reason}`);
+    }
+  } else {
     const startup = lifecycle.startup();
     if (startup.ok && startup.data.status.active !== null) {
       await activateProject(startup.data.status.active.root);
@@ -356,47 +360,40 @@ async function start(): Promise<void> {
   window.webContents.on("will-navigate", (event) => event.preventDefault());
   window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
 
-  if (lifecycle !== null) {
-    const projectHost = createDesktopProjectHost({
-      lifecycle,
-      dialogs: {
-        async chooseNewProjectRoot() {
-          const selected = await dialog.showOpenDialog(window, {
-            title: "New SceneAxi Project",
-            buttonLabel: "Create starter project here",
-            properties: ["openDirectory", "createDirectory"],
-          });
-          return selected.canceled ? null : (selected.filePaths[0] ?? null);
-        },
-        async chooseOpenProjectRoot() {
-          const selected = await dialog.showOpenDialog(window, {
-            title: "Open SceneAxi Project",
-            buttonLabel: "Open Project",
-            properties: ["openDirectory"],
-          });
-          return selected.canceled ? null : (selected.filePaths[0] ?? null);
-        },
+  const projectHost = createDesktopProjectHost({
+    lifecycle,
+    dialogs: {
+      async chooseNewProjectRoot() {
+        if (SMOKE) return null;
+        const selected = await dialog.showOpenDialog(window, {
+          title: "New SceneAxi Project",
+          buttonLabel: "Create starter project here",
+          properties: ["openDirectory", "createDirectory"],
+        });
+        return selected.canceled ? null : (selected.filePaths[0] ?? null);
       },
-      activate: activateProject,
-    });
-    ipcMain.handle(DESKTOP_PROJECT_CHANNEL, async (_event, request: unknown) => {
-      const before = activeRoot;
-      const response = await projectHost.handle(request);
-      if (desktopProjectReloadRequired(before, response)) {
-        // Let the invoke response cross the preload boundary, then reload the
-        // unforked chrome so its one renderer owner mounts the newly active root.
-        setTimeout(() => window.webContents.reload(), 0);
-      }
-      return response;
-    });
-  } else {
-    ipcMain.handle(DESKTOP_PROJECT_CHANNEL, () =>
-      bridgeRefuse(
-        DESKTOP_PROJECT_REFUSALS.requestMalformed,
-        "Project dialogs are disabled in the packaged smoke proof.",
-      ),
-    );
-  }
+      async chooseOpenProjectRoot() {
+        if (SMOKE) return null;
+        const selected = await dialog.showOpenDialog(window, {
+          title: "Open SceneAxi Project",
+          buttonLabel: "Open Project",
+          properties: ["openDirectory"],
+        });
+        return selected.canceled ? null : (selected.filePaths[0] ?? null);
+      },
+    },
+    activate: activateProject,
+  });
+  ipcMain.handle(DESKTOP_PROJECT_CHANNEL, async (_event, request: unknown) => {
+    const before = activeRoot;
+    const response = await projectHost.handle(request);
+    if (desktopProjectReloadRequired(before, response)) {
+      // Let the invoke response cross the preload boundary, then reload the
+      // unforked chrome so its one renderer owner mounts the newly active root.
+      setTimeout(() => window.webContents.reload(), 0);
+    }
+    return response;
+  });
 
   await window.loadFile(join(__dirname, "index.html"));
 
@@ -709,7 +706,15 @@ async function start(): Promise<void> {
     !restartedBrowser.ok || restartedBrowser.data.status.selectedPath !== browserAssetPath ||
     readFileSync(documentFile, "utf8") !== savedBytes
   ) {
-    fail("project browser asset selection, bridge open, recovery, or protected mutation evidence is incomplete");
+    fail(`project browser asset selection, bridge open, recovery, or protected mutation evidence is incomplete: ${JSON.stringify({
+      browserUiOpen,
+      browserAssetInstanceId,
+      browserAssetDigest,
+      browserUnconfirmed,
+      browserProtected,
+      restartedBrowser,
+      documentBytesPreserved: readFileSync(documentFile, "utf8") === savedBytes,
+    })}`);
   }
   const browserConfirmationRefusal = payloadField(browserUnconfirmed, "reason");
   const browserProtectedRefusal = payloadField(browserProtected, "reason");

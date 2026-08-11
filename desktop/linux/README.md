@@ -47,9 +47,11 @@ line proving: bridge handshake, a real kernel scene session bootstrapped through
 authoring selection → proposal review → atomic save → fresh-session reopen → Play
 round trip for selected Translation X, Rotation Y, and Scale Z plus bounded
 local-artifact add/remove, Reject, Undo, the saved composition's viewport redraw,
-a static Web export whose source bytes and Delivery Handoff digests are verified,
-and the renderer's real presentation frame report (`backend three`, `surface
-webgl-canvas` where a drawing buffer exists).
+project-browser listing and selection, digest-bound asset Open with a viewport
+frame acknowledgement, restart selection recovery, confirmation and immutable
+mutation refusals, a static Web export whose source bytes and Delivery Handoff
+digests are verified, and the renderer's real presentation frame report
+(`backend three`, `surface webgl-canvas` where a drawing buffer exists).
 
 On Web Experience, **Import GLB/glTF…** opens a native file dialog and stages the
 selected contained asset through that same Change Review. Save owns the accepted
@@ -146,11 +148,10 @@ Rules the gate enforces (`pnpm check:desktop`, `pnpm check:boundaries`,
 - The project browser lists only the active `scene.json` and admitted manifest
   assets; it does not scan the root or expose stored bytes. Its recent state holds
   only root/selection metadata. Opening an asset validates its canonical instance
-  and digest
-  through the existing scene bridge and synchronizes that scene into the existing
-  viewport without changing the canonical authoring target; Open, rename, and delete cannot
-  bypass Change Review or the immutable v1
-  manifest contract.
+  and digest through the existing scene bridge and synchronizes that scene into
+  the existing viewport without changing the canonical authoring target. Open,
+  rename, and delete cannot bypass Change Review or the immutable v1 manifest
+  contract.
 - Provider secrets exist only transiently in the password control during
   submission and in the privileged main process during secure save/retrieval and
   a provider session. The field and privileged lease are explicitly cleared; no
