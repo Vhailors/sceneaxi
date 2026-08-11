@@ -35,6 +35,7 @@ const exportCommit = vi.hoisted(() => ({
     | ((oldPath: unknown, newPath: unknown, stagingDescriptor?: number) => void)
     | null,
   afterRealpath: null as ((path: unknown, resolved: string) => void) | null,
+  beforeDirectoryRead: null as ((path: unknown) => void) | null,
   beforeMkdtemp: null as ((prefix: unknown) => void) | null,
   beforeMkdir: null as ((path: unknown) => void) | null,
   beforePublish: null as ((source: string, destination: string) => void) | null,
@@ -112,6 +113,18 @@ vi.mock("node:fs", async (importOriginal) => {
     exportCommit.beforeReadFile?.(args[0]);
     return Reflect.apply(actual.readFileSync, actual, args);
   }) as typeof actual.readFileSync;
+  const hookedOpendirSync = ((
+    ...args: Parameters<typeof actual.opendirSync>
+  ) => {
+    exportCommit.beforeDirectoryRead?.(args[0]);
+    return Reflect.apply(actual.opendirSync, actual, args);
+  }) as typeof actual.opendirSync;
+  const hookedReaddirSync = ((
+    ...args: Parameters<typeof actual.readdirSync>
+  ) => {
+    exportCommit.beforeDirectoryRead?.(args[0]);
+    return Reflect.apply(actual.readdirSync, actual, args);
+  }) as typeof actual.readdirSync;
   const hookedWriteFileSync = ((
     ...args: Parameters<typeof actual.writeFileSync>
   ) => {
@@ -181,7 +194,9 @@ vi.mock("node:fs", async (importOriginal) => {
       }
       return actual.openSync(path, flags, mode);
     },
+    opendirSync: hookedOpendirSync,
     readFileSync: hookedReadFileSync,
+    readdirSync: hookedReaddirSync,
     readSync: (
       descriptor: Parameters<typeof actual.readSync>[0],
       buffer: Parameters<typeof actual.readSync>[1],
@@ -251,6 +266,7 @@ afterAll(() => {
 afterEach(() => {
   exportCommit.afterCommit = null;
   exportCommit.afterRealpath = null;
+  exportCommit.beforeDirectoryRead = null;
   exportCommit.beforeMkdtemp = null;
   exportCommit.beforeMkdir = null;
   exportCommit.beforePublish = null;
@@ -617,16 +633,21 @@ describe("desktop static Web export", () => {
   it("refuses a FIFO scene document before preparing export storage", () => {
     const root = temporary("sceneaxi-export-fifo-document-");
     expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
-    const bridge = createDesktopBridge({ cwd: root });
+    const bridge = createDesktopBridge({
+      cwd: root,
+      webExportRuntime: RUNTIME,
+      webExportPublisherExecutable: publisherExecutable,
+    });
     const expectedContentHash = statusHash(bridge);
     replaceWithFifo(join(root, "scene.json"));
 
-    const result = exportDesktopWebProject({
-      projectRoot: root,
-      documentPath: "scene.json",
-      expectedContentHash,
-      runtimeJavaScript: RUNTIME,
-      publisherExecutable,
+    const result = bridge.handle({
+      action: "ship",
+      payload: {
+        op: "export-web",
+        documentPath: "scene.json",
+        expectedContentHash,
+      },
     });
 
     expect(result).toMatchObject({
@@ -634,6 +655,34 @@ describe("desktop static Web export", () => {
       reason: DESKTOP_WEB_EXPORT_REFUSALS.unsafePath,
     });
     expect(existsSync(join(root, "exports"))).toBe(false);
+  });
+
+  it("refuses final document size drift without an unbounded replacement read", () => {
+    const root = temporary("sceneaxi-export-document-size-drift-");
+    expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
+    const bridge = createDesktopBridge({ cwd: root });
+    let replaced = false;
+    exportCommit.afterCommit = () => {
+      exportCommit.afterCommit = null;
+      replaced = true;
+      truncateSync(join(root, "scene.json"), PROJECT_ASSET_MAX_BYTES + 1);
+      exportCommit.maximumReadLength = 0;
+    };
+
+    const result = exportDesktopWebProject({
+      projectRoot: root,
+      documentPath: "scene.json",
+      expectedContentHash: statusHash(bridge),
+      runtimeJavaScript: RUNTIME,
+      publisherExecutable,
+    });
+
+    expect(replaced).toBe(true);
+    expect(result).toMatchObject({
+      ok: false,
+      reason: DESKTOP_WEB_EXPORT_REFUSALS.projectChanged,
+    });
+    expect(exportCommit.maximumReadLength).toBeLessThanOrEqual(64 * 1024);
   });
 
   it("refuses a FIFO accepted asset before preparing export storage", () => {
@@ -1200,6 +1249,33 @@ describe("desktop static Web export", () => {
       reason: DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
     });
     expect(lstatSync(index).isSymbolicLink()).toBe(true);
+  });
+
+  it("rejects an unexpected replay subtree without entering it", () => {
+    const root = temporary("sceneaxi-export-replay-subtree-");
+    expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
+    const first = ship(root);
+    const unexpected = join(first.outputDirectory, "unexpected");
+    mkdirSync(join(unexpected, "nested", "tree"), { recursive: true });
+    writeFileSync(join(unexpected, "nested", "tree", "bytes.bin"), "unexpected");
+    let enteredUnexpectedTree = false;
+    exportCommit.beforeDirectoryRead = (path) => {
+      const resolved = realpathSync(String(path));
+      if (
+        resolved === unexpected ||
+        resolved.startsWith(`${unexpected}${sep}`)
+      ) {
+        enteredUnexpectedTree = true;
+      }
+    };
+
+    const result = exportProject(root);
+
+    expect(result).toMatchObject({
+      ok: false,
+      reason: DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
+    });
+    expect(enteredUnexpectedTree).toBe(false);
   });
 
   it("reads a contained asset through one stable file identity", () => {

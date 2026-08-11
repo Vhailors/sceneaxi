@@ -17,8 +17,8 @@ import {
   mkdirSync,
   mkdtempSync,
   openSync,
+  opendirSync,
   readSync,
-  readdirSync,
   realpathSync,
   statSync,
   writeFileSync,
@@ -540,19 +540,39 @@ function cleanupExportParent(parent: ExportParent) {
   }
 }
 
-function walkContainedFiles(root: string, directory: string): string[] | null {
-  const paths: string[] = [];
+function matchesContainedFileSet(
+  root: string,
+  directory: string,
+  expectedPaths: ReadonlySet<string>,
+): boolean {
+  const expectedDirectories = new Set<string>();
+  for (const path of expectedPaths) {
+    const segments = path.split("/");
+    if (segments.some((segment) => segment === "")) return false;
+    for (let index = 1; index < segments.length; index += 1) {
+      expectedDirectories.add(segments.slice(0, index).join("/"));
+    }
+  }
+  let foundFiles = 0;
   const visit = (target: string, prefix: string): boolean => {
     let descriptor: number | null = null;
+    let entries: ReturnType<typeof opendirSync> | null = null;
     try {
       descriptor = openContainedDirectory(root, target);
       const stableDirectory = `/proc/self/fd/${String(descriptor)}`;
-      for (const entry of readdirSync(stableDirectory, { withFileTypes: true })) {
+      entries = opendirSync(stableDirectory);
+      for (
+        let entry = entries.readSync();
+        entry !== null;
+        entry = entries.readSync()
+      ) {
         const path = prefix === "" ? entry.name : `${prefix}/${entry.name}`;
         if (entry.isDirectory()) {
+          if (!expectedDirectories.has(path)) return false;
           if (!visit(join(stableDirectory, entry.name), path)) return false;
         } else if (entry.isFile()) {
-          paths.push(path);
+          if (!expectedPaths.has(path)) return false;
+          foundFiles += 1;
         } else {
           return false;
         }
@@ -561,10 +581,11 @@ function walkContainedFiles(root: string, directory: string): string[] | null {
     } catch {
       return false;
     } finally {
+      if (entries !== null) entries.closeSync();
       if (descriptor !== null) closeSync(descriptor);
     }
   };
-  return visit(directory, "") ? paths : null;
+  return visit(directory, "") && foundFiles === expectedPaths.size;
 }
 
 function openOutputFile(
@@ -741,9 +762,14 @@ function streamContainedFile(
 
 function readProjectDocument(
   root: string,
+  expectedBytes?: number,
 ): Readonly<{ ok: true; bytes: Buffer }> | DesktopWebExportRefusal {
   const documentFile = join(root, DESKTOP_ACTIVE_DOCUMENT_PATH);
-  const read = readContainedFile(root, documentFile);
+  const read = readContainedFile(
+    root,
+    documentFile,
+    expectedBytes === undefined ? {} : { expectedBytes },
+  );
   if (!read.ok) {
     if (read.kind === "unsafe") {
       return refuse(
@@ -1012,14 +1038,10 @@ function verifyExistingOutput(
   accessPath = directory,
 ): boolean {
   try {
-    const walked = walkContainedFiles(directory, accessPath);
-    if (walked === null) return false;
-    const actualPaths = walked.sort();
-    const expectedPaths = [...expected.keys()].sort();
-    if (
-      actualPaths.length !== expectedPaths.length ||
-      actualPaths.some((path, index) => path !== expectedPaths[index])
-    ) return false;
+    const expectedPaths = new Set(expected.keys());
+    if (!matchesContainedFileSet(directory, accessPath, expectedPaths)) {
+      return false;
+    }
     for (const [path, file] of expected) {
       const actual = streamContainedFile(
         directory,
@@ -1028,10 +1050,7 @@ function verifyExistingOutput(
       );
       if (!actual.ok || actual.digest !== file.digest) return false;
     }
-    const finalWalk = walkContainedFiles(directory, accessPath);
-    return finalWalk !== null &&
-      finalWalk.sort().every((path, index) => path === expectedPaths[index]) &&
-      finalWalk.length === expectedPaths.length;
+    return matchesContainedFileSet(directory, accessPath, expectedPaths);
   } catch {
     return false;
   }
@@ -1417,7 +1436,7 @@ export function exportDesktopWebProject(
     // A source change during output construction refuses the result. The
     // content-addressed output remains valid evidence for the earlier bytes, but
     // it is not reported as the current project export.
-    const currentDocument = readProjectDocument(root);
+    const currentDocument = readProjectDocument(root, documentBytes.byteLength);
     if (!currentDocument.ok) {
       if (currentDocument.reason === DESKTOP_WEB_EXPORT_REFUSALS.unsafePath) {
         return currentDocument;

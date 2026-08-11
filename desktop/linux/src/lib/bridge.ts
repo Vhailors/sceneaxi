@@ -1226,19 +1226,6 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         "Save or reject the staged proposal and resolve durable recovery before exporting.",
       );
     }
-    const status = live.status(documentPath);
-    if (!status.ok) {
-      return bridgeRefuse(
-        DESKTOP_WEB_EXPORT_REFUSALS.sceneInvalid,
-        status.diagnostics[0]?.message ?? "The active Scene Document is invalid.",
-      );
-    }
-    if (status.contentHash !== expectedContentHash) {
-      return bridgeRefuse(
-        DESKTOP_WEB_EXPORT_REFUSALS.projectChanged,
-        "scene.json changed after the renderer read it; reopen before exporting.",
-      );
-    }
     const runtimeJavaScript = options.webExportRuntime;
     if (runtimeJavaScript === undefined || runtimeJavaScript.byteLength === 0) {
       return bridgeRefuse(
