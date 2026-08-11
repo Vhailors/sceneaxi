@@ -262,16 +262,15 @@ type ContainedFileRead =
   | Readonly<{ ok: true; bytes: Buffer }>
   | Readonly<{ ok: false; kind: "missing" | "unsafe" | "invalid"; detail: string }>;
 
-function readContainedFile(
-  root: string,
-  target: string,
-  limits: Readonly<{ maximumBytes?: number; expectedBytes?: number }> = {},
-): ContainedFileRead {
+function openContainedRegularFile(root: string, target: string) {
   let descriptor: number | null = null;
   try {
-    descriptor = openSync(target, constants.O_RDONLY | constants.O_NOFOLLOW);
-    const before = fstatSync(descriptor);
-    if (!before.isFile()) {
+    descriptor = openSync(
+      target,
+      constants.O_RDONLY | constants.O_NONBLOCK | constants.O_NOFOLLOW,
+    );
+    const stats = fstatSync(descriptor);
+    if (!stats.isFile()) {
       return Object.freeze({
         ok: false as const,
         kind: "unsafe" as const,
@@ -286,6 +285,44 @@ function readContainedFile(
         detail: "the opened file resolves outside the project root",
       });
     }
+    const openedDescriptor = descriptor;
+    descriptor = null;
+    return Object.freeze({
+      ok: true as const,
+      descriptor: openedDescriptor,
+      stats,
+    });
+  } catch (error) {
+    const code =
+      typeof error === "object" && error !== null && "code" in error
+        ? error.code
+        : null;
+    return Object.freeze({
+      ok: false as const,
+      kind:
+        code === "ENOENT"
+          ? "missing" as const
+          : code === "ELOOP"
+            ? "unsafe" as const
+            : "invalid" as const,
+      detail: error instanceof Error ? error.message : String(error),
+    });
+  } finally {
+    if (descriptor !== null) closeSync(descriptor);
+  }
+}
+
+function readContainedFile(
+  root: string,
+  target: string,
+  limits: Readonly<{ maximumBytes?: number; expectedBytes?: number }> = {},
+): ContainedFileRead {
+  let descriptor: number | null = null;
+  try {
+    const opened = openContainedRegularFile(root, target);
+    if (!opened.ok) return opened;
+    descriptor = opened.descriptor;
+    const before = opened.stats;
     if (
       !Number.isSafeInteger(before.size) ||
       before.size < 0 ||
@@ -604,19 +641,10 @@ function streamContainedFile(
   let sourceDescriptor: number | null = null;
   let destinationDescriptor: number | null = null;
   try {
-    sourceDescriptor = openSync(
-      source,
-      constants.O_RDONLY | constants.O_NOFOLLOW,
-    );
-    const before = fstatSync(sourceDescriptor);
-    const canonical = realpathSync(`/proc/self/fd/${String(sourceDescriptor)}`);
-    if (!before.isFile() || !within(root, canonical)) {
-      return Object.freeze({
-        ok: false as const,
-        kind: "unsafe" as const,
-        detail: "the opened file is not a contained regular file",
-      });
-    }
+    const opened = openContainedRegularFile(root, source);
+    if (!opened.ok) return opened;
+    sourceDescriptor = opened.descriptor;
+    const before = opened.stats;
     if (
       !Number.isSafeInteger(before.size) ||
       before.size < 0 ||

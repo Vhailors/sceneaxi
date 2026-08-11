@@ -270,6 +270,11 @@ function temporary(prefix: string) {
   return root;
 }
 
+function replaceWithFifo(path: string) {
+  unlinkSync(path);
+  runFileSync("mkfifo", ["--", path]);
+}
+
 function sha256(bytes: Uint8Array | string) {
   return `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
 }
@@ -607,6 +612,53 @@ describe("desktop static Web export", () => {
         },
       }),
     ).toMatchObject({ ok: false, reason: DESKTOP_WEB_EXPORT_REFUSALS.projectDirty });
+  });
+
+  it("refuses a FIFO scene document before preparing export storage", () => {
+    const root = temporary("sceneaxi-export-fifo-document-");
+    expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
+    const bridge = createDesktopBridge({ cwd: root });
+    const expectedContentHash = statusHash(bridge);
+    replaceWithFifo(join(root, "scene.json"));
+
+    const result = exportDesktopWebProject({
+      projectRoot: root,
+      documentPath: "scene.json",
+      expectedContentHash,
+      runtimeJavaScript: RUNTIME,
+      publisherExecutable,
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      reason: DESKTOP_WEB_EXPORT_REFUSALS.unsafePath,
+    });
+    expect(existsSync(join(root, "exports"))).toBe(false);
+  });
+
+  it("refuses a FIFO accepted asset before preparing export storage", () => {
+    const sourceRoot = temporary("sceneaxi-export-fifo-source-");
+    const source = join(sourceRoot, "triangle.gltf");
+    writeFileSync(source, containedTriangle());
+    const root = temporary("sceneaxi-export-fifo-asset-");
+    seedWithAsset(root, source);
+    const bridge = createDesktopBridge({ cwd: root });
+    const expectedContentHash = statusHash(bridge);
+    replaceWithFifo(join(root, "assets/triangle.gltf"));
+
+    const result = exportDesktopWebProject({
+      projectRoot: root,
+      documentPath: "scene.json",
+      expectedContentHash,
+      runtimeJavaScript: RUNTIME,
+      publisherExecutable,
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      reason: DESKTOP_WEB_EXPORT_REFUSALS.unsafePath,
+    });
+    expect(existsSync(join(root, "exports"))).toBe(false);
   });
 
   it("refuses an asset that changes during the export commit", () => {
