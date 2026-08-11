@@ -228,16 +228,36 @@ vi.mock("node:fs", async (importOriginal) => {
     readSync: (
       descriptor: Parameters<typeof actual.readSync>[0],
       buffer: Parameters<typeof actual.readSync>[1],
-      offset: Parameters<typeof actual.readSync>[2],
-      length: Parameters<typeof actual.readSync>[3],
-      position: Parameters<typeof actual.readSync>[4],
+      offsetOrOptions?: Parameters<typeof actual.readSync>[2],
+      length?: number,
+      position?: number | null,
     ) => {
       exportCommit.beforeStreamRead?.(descriptor);
+      const measuredLength =
+        typeof offsetOrOptions === "number"
+          ? (length ?? 0)
+          : typeof offsetOrOptions === "object" &&
+              offsetOrOptions !== null &&
+              "length" in offsetOrOptions &&
+              typeof offsetOrOptions.length === "number"
+            ? offsetOrOptions.length
+            : buffer.byteLength;
       exportCommit.maximumReadLength = Math.max(
         exportCommit.maximumReadLength,
-        length,
+        measuredLength,
       );
-      return actual.readSync(descriptor, buffer, offset, length, position);
+      if (typeof offsetOrOptions === "number") {
+        return (
+          actual.readSync as (
+            fd: number,
+            buffer: NodeJS.ArrayBufferView,
+            offset: number,
+            length: number,
+            position?: number | null,
+          ) => number
+        )(descriptor, buffer, offsetOrOptions, length ?? 0, position);
+      }
+      return actual.readSync(descriptor, buffer, offsetOrOptions);
     },
     realpathSync: hookedRealpathSync,
     renameSync: (
