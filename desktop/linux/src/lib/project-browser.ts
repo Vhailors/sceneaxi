@@ -20,8 +20,14 @@ import {
 } from "node:fs";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { contentHash, parseDocumentText } from "@sceneaxi/authoring-core";
-import { projectAssetManifestFromDocumentData } from "@sceneaxi/importers";
-import { DESKTOP_ACTIVE_DOCUMENT_PATH } from "./bridge-contract.js";
+import {
+  CONTAINED_GLTF_REFUSALS,
+  projectAssetManifestFromDocumentData,
+} from "@sceneaxi/importers";
+import {
+  DESKTOP_ACTIVE_DOCUMENT_PATH,
+  type DesktopBridgeResponse,
+} from "./bridge-contract.js";
 import { readContainedRegularFile } from "./contained-file.js";
 import {
   DESKTOP_PROJECT_BROWSER_ACTIONS,
@@ -47,6 +53,11 @@ export type DesktopProjectBrowserOptions = Readonly<{
   root: string;
   stateDirectory: string;
   isDirty?: () => boolean;
+  openAsset?: (request: Readonly<{
+    profile: "game" | "web";
+    documentPath: typeof DESKTOP_ACTIVE_DOCUMENT_PATH;
+    asset: DesktopProjectAssetFile;
+  }>) => DesktopBridgeResponse;
 }>;
 
 export type DesktopProjectBrowser = Readonly<{
@@ -274,7 +285,9 @@ export function createDesktopProjectBrowser(
     const manifest = projectAssetManifestFromDocumentData(parsed.document.data);
     if (!manifest.ok) {
       return projectBrowserRefuse(
-        DESKTOP_PROJECT_BROWSER_REFUSALS.manifestInvalid,
+        manifest.reason === CONTAINED_GLTF_REFUSALS.duplicatePath
+          ? DESKTOP_PROJECT_BROWSER_REFUSALS.duplicatePath
+          : DESKTOP_PROJECT_BROWSER_REFUSALS.manifestInvalid,
         "The accepted project asset manifest is invalid, so assets were not enumerated.",
         manifest.message,
       );
@@ -391,6 +404,40 @@ export function createDesktopProjectBrowser(
       if ("ok" in file) return file;
 
       if (action === "select" || action === "open") {
+        if (action === "open" && file.kind === "asset") {
+          let opened: DesktopBridgeResponse;
+          try {
+            opened = options.openAsset?.({
+              profile,
+              documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+              asset: file,
+            }) ?? projectBrowserRefuse(
+              DESKTOP_PROJECT_BROWSER_REFUSALS.openFailed,
+              "The packaged desktop has no asset-open bridge operation bound.",
+              file.path,
+            );
+          } catch (error) {
+            return projectBrowserRefuse(
+              DESKTOP_PROJECT_BROWSER_REFUSALS.openFailed,
+              "The existing desktop scene bridge failed while opening the admitted asset.",
+              error instanceof Error ? error.message : String(error),
+            );
+          }
+          const instances = opened.ok ? own(opened.data, "instances") : undefined;
+          if (
+            !opened.ok ||
+            !Array.isArray(instances) ||
+            !instances.some((instance) => own(instance, "instanceId") === file.instanceId)
+          ) {
+            return projectBrowserRefuse(
+              DESKTOP_PROJECT_BROWSER_REFUSALS.openFailed,
+              "The existing desktop scene bridge did not open the admitted asset's canonical scene instance.",
+              opened.ok
+                ? file.instanceId
+                : `${opened.reason}: ${opened.message}`,
+            );
+          }
+        }
         const previous = selectedPath;
         selectedPath = file.path;
         const written = persist();

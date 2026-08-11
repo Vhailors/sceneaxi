@@ -257,6 +257,65 @@ describe("contained GLB/glTF project ingestion", () => {
     });
   });
 
+  it("refuses duplicate manifest paths and media types that disagree with canonical bytes", () => {
+    const root = project();
+    const sourceRoot = temporary("sceneaxi-contained-gltf-manifest-semantics-");
+    const firstSource = join(sourceRoot, "first.gltf");
+    const secondSource = join(sourceRoot, "second.gltf");
+    writeFileSync(firstSource, gltfBytes());
+    writeFileSync(secondSource, gltfBytes(0.25));
+    const first = proposeContainedGltfAssetImport({
+      projectRoot: root,
+      documentPath: "scene.json",
+      sourcePath: firstSource,
+    });
+    expect(first.ok).toBe(true);
+    if (!first.ok || first.proposal === null) return;
+    expect(apply({ proposal: first.proposal, cwd: root }).ok).toBe(true);
+    const second = proposeContainedGltfAssetImport({
+      projectRoot: root,
+      documentPath: "scene.json",
+      sourcePath: secondSource,
+    });
+    expect(second.ok).toBe(true);
+    if (!second.ok || second.proposal === null) return;
+    expect(apply({ proposal: second.proposal, cwd: root }).ok).toBe(true);
+
+    const parsed = parseDocumentTextForTest(root);
+    const valid = projectAssetManifestFromDocumentData(parsed.data);
+    expect(valid.ok).toBe(true);
+    if (!valid.ok) return;
+    const duplicatePath = structuredClone(valid.value) as unknown as {
+      assets: Array<{ relativePath: string }>;
+    };
+    const firstPath = duplicatePath.assets[0]?.relativePath;
+    const secondEntry = duplicatePath.assets[1];
+    expect(firstPath).toBeTypeOf("string");
+    expect(secondEntry).toBeDefined();
+    if (firstPath === undefined || secondEntry === undefined) return;
+    secondEntry.relativePath = firstPath;
+    expect(projectAssetManifestFromDocumentData({
+      [PROJECT_ASSET_MANIFEST_KEY]: duplicatePath,
+    })).toMatchObject({
+      ok: false,
+      reason: CONTAINED_GLTF_REFUSALS.duplicatePath,
+    });
+
+    const mediaMismatch = structuredClone(valid.value) as unknown as {
+      assets: Array<{ mediaType: string }>;
+    };
+    const mediaEntry = mediaMismatch.assets[0];
+    expect(mediaEntry).toBeDefined();
+    if (mediaEntry === undefined) return;
+    mediaEntry.mediaType = "model/gltf-binary";
+    expect(projectAssetManifestFromDocumentData({
+      [PROJECT_ASSET_MANIFEST_KEY]: mediaMismatch,
+    })).toMatchObject({
+      ok: false,
+      reason: CONTAINED_GLTF_REFUSALS.manifestInvalid,
+    });
+  });
+
   it("names duplicate replay, duplicate content, and conflicting identity without changing project bytes", () => {
     const root = project();
     const sourceRoot = temporary("sceneaxi-contained-gltf-identity-");

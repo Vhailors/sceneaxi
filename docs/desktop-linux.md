@@ -466,8 +466,9 @@ file type, traversal, or symlink refuses by the stable
 `DESKTOP_PROJECT_BROWSER_*` diagnostic rather than being hidden or opened.
 
 Selection and Open travel through the typed preload/main-process browser channel.
-Opening an asset exposes only its validated metadata; the sole authoring target
-remains `scene.json`. The selected project-relative path is recovered from the
+Opening an asset validates its canonical scene instance through the existing
+desktop `scene` bridge and exposes only its validated metadata; the sole authoring
+target remains `scene.json`. The selected project-relative path is recovered from the
 atomically written mode-0600 `project-browser.json` beside recent-project state.
 That file contains only its schema version, canonical root, and selected path —
 never document/asset bytes, credentials, or secrets. Rename and Delete require an

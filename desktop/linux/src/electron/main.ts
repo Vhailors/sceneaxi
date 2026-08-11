@@ -13,7 +13,14 @@
  * and navigation away from the packaged document is refused.
  */
 import { createHash } from "node:crypto";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, sep } from "node:path";
 import { BrowserWindow, app, dialog, ipcMain } from "electron";
@@ -94,6 +101,27 @@ function smokeProjectDir(): string {
   return dir;
 }
 
+function smokeAssetBytes(): Buffer {
+  const positions = Buffer.from(new Float32Array([
+    -1, 0, 0,
+    1, 0, 0,
+    0, 1, 0,
+  ]).buffer);
+  return Buffer.from(JSON.stringify({
+    asset: { version: "2.0" },
+    buffers: [{
+      byteLength: positions.byteLength,
+      uri: `data:application/octet-stream;base64,${positions.toString("base64")}`,
+    }],
+    bufferViews: [{ buffer: 0, byteLength: positions.byteLength }],
+    accessors: [{ bufferView: 0, componentType: 5126, count: 3, type: "VEC3" }],
+    meshes: [{ primitives: [{ attributes: { POSITION: 0 } }] }],
+    nodes: [{ mesh: 0 }],
+    scenes: [{ nodes: [0] }],
+    scene: 0,
+  }));
+}
+
 /** Read one own property off an unknown bridge payload, without asserting a shape. */
 function payloadField(value: unknown, name: string): unknown {
   if (typeof value !== "object" || value === null) return undefined;
@@ -151,9 +179,6 @@ async function start(): Promise<void> {
   let bridge: DesktopBridge | null = null;
   let projectBrowser: DesktopProjectBrowser | null = null;
   let activeRoot: string | null = null;
-  // Read through a function so TypeScript does not freeze the outer variable's
-  // startup `null` before `activateProject()` assigns it asynchronously.
-  const currentProjectBrowser = (): DesktopProjectBrowser | null => projectBrowser;
 
   const activateProject = async (root: string): Promise<DesktopBridge> => {
     if (bridge !== null && activeRoot === root) return bridge;
@@ -221,6 +246,10 @@ async function start(): Promise<void> {
         return phase === "reviewing" || phase === "pending" ||
           payloadField(snapshot, "journalRecoveryPending") === true;
       },
+      openAsset: ({ documentPath }) => next.handle({
+        action: "scene",
+        payload: { documentPath },
+      }),
     });
     activeRoot = root;
     return next;
@@ -234,6 +263,27 @@ async function start(): Promise<void> {
   let smokeBridge: DesktopBridge | null = null;
   if (smokeRoot !== null) {
     smokeBridge = await activateProject(smokeRoot);
+    const sourcePath = join(smokeRoot, "smoke-source.gltf");
+    writeFileSync(sourcePath, smokeAssetBytes());
+    const stagedAsset = smokeBridge.handle({
+      action: "asset-import",
+      payload: {
+        profile: "web",
+        documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+        sourcePath,
+      },
+    });
+    if (!stagedAsset.ok || payloadField(stagedAsset.data, "outcome") !== "reviewing") {
+      fail("smoke asset did not reach Change Review");
+    }
+    const acceptedAsset = smokeBridge.handle({
+      action: "authoring",
+      payload: { op: "accept" },
+    });
+    if (!acceptedAsset.ok || payloadField(acceptedAsset.data, "phase") !== "applied") {
+      fail("smoke asset did not apply through the existing authoring bridge");
+    }
+    unlinkSync(sourcePath);
   } else if (lifecycle !== null) {
     const startup = lifecycle.startup();
     if (startup.ok && startup.data.status.active !== null) {
@@ -561,35 +611,48 @@ async function start(): Promise<void> {
     fail("authoring reopen did not prove the saved translation bytes");
   }
 
-  const proofBrowser = currentProjectBrowser();
-  if (proofBrowser === null) fail("project browser is unavailable for the smoke root");
-  const browserListed = proofBrowser.handle({ action: "status", profile: "web" });
+  const invokeProjectBrowser = async (request: unknown) =>
+    await window.webContents.executeJavaScript(
+      `globalThis.sceneaxiDesktopLinux.browseProject(${JSON.stringify(request)})`,
+    );
+  const browserListed: unknown = await invokeProjectBrowser({
+    action: "status",
+    profile: "web",
+  });
+  const browserListedData = payloadField(browserListed, "data");
+  const browserListedStatus = payloadField(browserListedData, "status");
+  const browserFiles = payloadField(browserListedStatus, "files");
+  const browserAsset = Array.isArray(browserFiles)
+    ? browserFiles.find((file) => payloadField(file, "kind") === "asset")
+    : undefined;
+  const browserAssetPath = payloadField(browserAsset, "path");
   if (
-    !browserListed.ok ||
-    payloadField(browserListed.data.status, "activeDocumentPath") !== SAMPLE_DOCUMENT ||
-    !Array.isArray(payloadField(browserListed.data.status, "files"))
+    payloadField(browserListed, "ok") !== true ||
+    payloadField(browserListedStatus, "activeDocumentPath") !== SAMPLE_DOCUMENT ||
+    !Array.isArray(browserFiles) ||
+    typeof browserAssetPath !== "string"
   ) {
-    fail("project browser did not list the canonical active document");
+    fail("project browser preload channel did not list the canonical document and asset");
   }
-  const browserSelected = proofBrowser.handle({
+  const browserSelected: unknown = await invokeProjectBrowser({
     action: "select",
     profile: "web",
-    path: SAMPLE_DOCUMENT,
+    path: browserAssetPath,
   });
-  const browserOpened = proofBrowser.handle({
+  const browserOpened: unknown = await invokeProjectBrowser({
     action: "open",
     profile: "web",
-    path: SAMPLE_DOCUMENT,
+    path: browserAssetPath,
   });
-  const browserUnconfirmed = proofBrowser.handle({
+  const browserUnconfirmed: unknown = await invokeProjectBrowser({
     action: "delete",
     profile: "web",
-    path: SAMPLE_DOCUMENT,
+    path: browserAssetPath,
   });
-  const browserProtected = proofBrowser.handle({
+  const browserProtected: unknown = await invokeProjectBrowser({
     action: "delete",
     profile: "web",
-    path: SAMPLE_DOCUMENT,
+    path: browserAssetPath,
     confirmed: true,
   });
   const restartedBrowser = createDesktopProjectBrowser({
@@ -597,17 +660,23 @@ async function start(): Promise<void> {
     stateDirectory: join(cwd, ".sceneaxi-runtime"),
   }).handle({ action: "status", profile: "web" });
   if (
-    !browserSelected.ok || browserSelected.data.outcome !== "selected" ||
-    !browserOpened.ok || browserOpened.data.outcome !== "opened" ||
-    browserUnconfirmed.ok ||
-    browserUnconfirmed.reason !== DESKTOP_PROJECT_BROWSER_REFUSALS.confirmationRequired ||
-    browserProtected.ok ||
-    browserProtected.reason !== DESKTOP_PROJECT_BROWSER_REFUSALS.operationNotPermitted ||
-    !restartedBrowser.ok || restartedBrowser.data.status.selectedPath !== SAMPLE_DOCUMENT ||
+    payloadField(browserSelected, "ok") !== true ||
+    payloadField(payloadField(browserSelected, "data"), "outcome") !== "selected" ||
+    payloadField(browserOpened, "ok") !== true ||
+    payloadField(payloadField(browserOpened, "data"), "outcome") !== "opened" ||
+    payloadField(browserUnconfirmed, "ok") !== false ||
+    payloadField(browserUnconfirmed, "reason") !==
+      DESKTOP_PROJECT_BROWSER_REFUSALS.confirmationRequired ||
+    payloadField(browserProtected, "ok") !== false ||
+    payloadField(browserProtected, "reason") !==
+      DESKTOP_PROJECT_BROWSER_REFUSALS.operationNotPermitted ||
+    !restartedBrowser.ok || restartedBrowser.data.status.selectedPath !== browserAssetPath ||
     readFileSync(documentFile, "utf8") !== savedBytes
   ) {
-    fail("project browser selection, open, recovery, or protected mutation evidence is incomplete");
+    fail("project browser asset selection, bridge open, recovery, or protected mutation evidence is incomplete");
   }
+  const browserConfirmationRefusal = payloadField(browserUnconfirmed, "reason");
+  const browserProtectedRefusal = payloadField(browserProtected, "reason");
 
   const openPath = proofBridge.handle({
     action: "open-path",
@@ -780,10 +849,11 @@ async function start(): Promise<void> {
         listed: true,
         selected: true,
         opened: true,
+        assetPath: browserAssetPath,
         restored: true,
         activeDocumentPath: SAMPLE_DOCUMENT,
-        confirmationRefusal: browserUnconfirmed.reason,
-        protectedRefusal: browserProtected.reason,
+        confirmationRefusal: browserConfirmationRefusal,
+        protectedRefusal: browserProtectedRefusal,
       },
       ship: shipped.ok
         ? {

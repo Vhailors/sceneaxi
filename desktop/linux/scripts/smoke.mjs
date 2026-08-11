@@ -132,6 +132,8 @@ if (
   proof.projectBrowser?.listed !== true ||
   proof.projectBrowser?.selected !== true ||
   proof.projectBrowser?.opened !== true ||
+  typeof proof.projectBrowser?.assetPath !== "string" ||
+  !/^assets\/[a-z0-9][a-z0-9-]{0,63}\.gltf$/.test(proof.projectBrowser.assetPath) ||
   proof.projectBrowser?.restored !== true ||
   proof.projectBrowser?.activeDocumentPath !== "scene.json" ||
   proof.projectBrowser?.confirmationRefusal !== "DESKTOP_PROJECT_BROWSER_CONFIRMATION_REQUIRED" ||
@@ -207,7 +209,7 @@ console.log(
   `  authoring: selected transform → ${proof.authoring.proposedPhase} → ${proof.authoring.acceptedPhase}; add/remove Reject+Undo; reopened translation ${proof.authoring.reopenedValue}, rotation ${proof.authoring.playedRotationY}, scale ${proof.authoring.playedScaleZ} → redrawn at frame ${proof.playbackDom.frame}`,
 );
 console.log(
-  `  project browser: list/select/open/restart · ${proof.projectBrowser.confirmationRefusal} · ${proof.projectBrowser.protectedRefusal}`,
+  `  project browser: list/select/open/restart ${proof.projectBrowser.assetPath} · ${proof.projectBrowser.confirmationRefusal} · ${proof.projectBrowser.protectedRefusal}`,
 );
 console.log(
   `  ship: static Web bundle ${proof.ship.bundleDigest} · source ${proof.ship.sourceDigest} · Delivery Handoff present`,

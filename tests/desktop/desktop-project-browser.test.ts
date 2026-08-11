@@ -30,8 +30,12 @@ function temporary(label: string) {
   return root;
 }
 
-function containedTriangle() {
-  const positions = new Float32Array([-1, 0, 0, 1, 0, 0, 0, 1, 0]);
+function containedTriangle(offset = 0) {
+  const positions = new Float32Array([
+    -1 + offset, 0, 0,
+    1 + offset, 0, 0,
+    offset, 1, 0,
+  ]);
   const bytes = Buffer.from(positions.buffer);
   return Buffer.from(JSON.stringify({
     asset: { version: "2.0" },
@@ -65,7 +69,7 @@ function admittedProject() {
     ok: true,
     data: { phase: "applied" },
   });
-  return { root, stateDirectory, sourceBytes };
+  return { root, stateDirectory, sourceBytes, bridge };
 }
 
 function statusOf(response: ReturnType<ReturnType<typeof createDesktopProjectBrowser>["handle"]>) {
@@ -75,7 +79,7 @@ function statusOf(response: ReturnType<ReturnType<typeof createDesktopProjectBro
 
 describe("contained desktop project and asset browser", () => {
   it("lists only canonical project identities and restores selection without persisting contents", () => {
-    const { root, stateDirectory, sourceBytes } = admittedProject();
+    const { root, stateDirectory, sourceBytes, bridge } = admittedProject();
     const documentBytes = readFileSync(join(root, "scene.json"), "utf8");
     const browser = createDesktopProjectBrowser({ root, stateDirectory });
 
@@ -130,7 +134,14 @@ describe("contained desktop project and asset browser", () => {
     expect(stateText).not.toContain(sourceBytes.toString("base64"));
     expect(stateText.toLowerCase()).not.toMatch(/credential|secret|password/);
 
-    const restarted = createDesktopProjectBrowser({ root, stateDirectory });
+    const restarted = createDesktopProjectBrowser({
+      root,
+      stateDirectory,
+      openAsset: ({ documentPath }) => bridge.handle({
+        action: "scene",
+        payload: { documentPath },
+      }),
+    });
     expect(statusOf(restarted.handle({ action: "status", profile: "game" })).selectedPath)
       .toBe("assets/triangle.gltf");
     expect(restarted.handle({
@@ -145,6 +156,19 @@ describe("contained desktop project and asset browser", () => {
       },
     });
     expect(readFileSync(join(root, "scene.json"), "utf8")).toBe(documentBytes);
+
+    const unavailable = createDesktopProjectBrowser({
+      root,
+      stateDirectory: temporary("open-unavailable-state"),
+    });
+    expect(unavailable.handle({
+      action: "open",
+      profile: "web",
+      path: "assets/triangle.gltf",
+    })).toMatchObject({
+      ok: false,
+      reason: DESKTOP_PROJECT_BROWSER_REFUSALS.openFailed,
+    });
   });
 
   it("confirmation-gates immutable rename/delete and names dirty, duplicate, traversal, and outside-root refusals", () => {
@@ -228,6 +252,61 @@ describe("contained desktop project and asset browser", () => {
     writeFileSync(documentPath, `${JSON.stringify(document)}\n`, "utf8");
     const malformed = createDesktopProjectBrowser({ root, stateDirectory: temporary("manifest-state") });
     expect(malformed.handle({ action: "status", profile: "web" })).toMatchObject({
+      ok: false,
+      reason: DESKTOP_PROJECT_BROWSER_REFUSALS.duplicatePath,
+    });
+  });
+
+  it("refuses distinct manifest identities that alias one path and mismatched media metadata", () => {
+    const duplicated = admittedProject();
+    const secondSource = join(temporary("second-source"), "second.gltf");
+    writeFileSync(secondSource, containedTriangle(0.25));
+    expect(duplicated.bridge.handle({
+      action: "asset-import",
+      payload: {
+        profile: "web",
+        documentPath: "scene.json",
+        sourcePath: secondSource,
+      },
+    })).toMatchObject({ ok: true, data: { outcome: "reviewing" } });
+    expect(duplicated.bridge.handle({
+      action: "authoring",
+      payload: { op: "accept" },
+    })).toMatchObject({ ok: true, data: { phase: "applied" } });
+    const duplicateDocumentPath = join(duplicated.root, "scene.json");
+    const duplicateDocument = JSON.parse(readFileSync(duplicateDocumentPath, "utf8")) as {
+      data: { assetManifest: { assets: Array<{ relativePath: string }> } };
+    };
+    expect(duplicateDocument.data.assetManifest.assets).toHaveLength(2);
+    const firstPath = duplicateDocument.data.assetManifest.assets[0]?.relativePath;
+    const second = duplicateDocument.data.assetManifest.assets[1];
+    expect(firstPath).toBeTypeOf("string");
+    expect(second).toBeDefined();
+    if (firstPath === undefined || second === undefined) return;
+    second.relativePath = firstPath;
+    writeFileSync(duplicateDocumentPath, `${JSON.stringify(duplicateDocument)}\n`, "utf8");
+    expect(createDesktopProjectBrowser({
+      root: duplicated.root,
+      stateDirectory: temporary("duplicate-path-state"),
+    }).handle({ action: "status", profile: "web" })).toMatchObject({
+      ok: false,
+      reason: DESKTOP_PROJECT_BROWSER_REFUSALS.duplicatePath,
+    });
+
+    const mismatched = admittedProject();
+    const mismatchDocumentPath = join(mismatched.root, "scene.json");
+    const mismatchDocument = JSON.parse(readFileSync(mismatchDocumentPath, "utf8")) as {
+      data: { assetManifest: { assets: Array<{ mediaType: string }> } };
+    };
+    const asset = mismatchDocument.data.assetManifest.assets[0];
+    expect(asset).toBeDefined();
+    if (asset === undefined) return;
+    asset.mediaType = "model/gltf-binary";
+    writeFileSync(mismatchDocumentPath, `${JSON.stringify(mismatchDocument)}\n`, "utf8");
+    expect(createDesktopProjectBrowser({
+      root: mismatched.root,
+      stateDirectory: temporary("media-mismatch-state"),
+    }).handle({ action: "status", profile: "web" })).toMatchObject({
       ok: false,
       reason: DESKTOP_PROJECT_BROWSER_REFUSALS.manifestInvalid,
     });

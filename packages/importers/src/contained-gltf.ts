@@ -79,6 +79,7 @@ export const CONTAINED_GLTF_REFUSALS = Object.freeze({
   malformed: "ASSET_IMPORT_MALFORMED",
   notContained: "ASSET_IMPORT_NOT_CONTAINED",
   manifestInvalid: "ASSET_IMPORT_MANIFEST_INVALID",
+  duplicatePath: "ASSET_IMPORT_DUPLICATE_PATH",
   duplicateContent: "ASSET_IMPORT_DUPLICATE_CONTENT",
   identityConflict: "ASSET_IMPORT_IDENTITY_CONFLICT",
   assetLimit: "ASSET_IMPORT_ASSET_LIMIT",
@@ -815,6 +816,7 @@ function manifestFrom(value: unknown): ProjectAssetManifest | Refusal {
   const entries: ProjectAssetManifestEntry[] = [];
   const ids = new Set<string>();
   const digests = new Set<string>();
+  const relativePaths = new Set<string>();
   for (const entry of value["assets"]) {
     if (!plainRecord(entry)) {
       return refuse(CONTAINED_GLTF_REFUSALS.manifestInvalid, "Every project asset manifest entry must be an object.");
@@ -846,7 +848,12 @@ function manifestFrom(value: unknown): ProjectAssetManifest | Refusal {
     }
     const entryId = entry["assetId"];
     const entryDigest = entry["digest"];
-    if (typeof entryId !== "string" || typeof entryDigest !== "string") {
+    const entryPath = entry["relativePath"];
+    if (
+      typeof entryId !== "string" ||
+      typeof entryDigest !== "string" ||
+      typeof entryPath !== "string"
+    ) {
       return refuse(CONTAINED_GLTF_REFUSALS.manifestInvalid, "A project asset manifest entry has invalid identity fields.");
     }
     const decoded = decodeBase64(entry["canonicalBytesBase64"]);
@@ -858,15 +865,23 @@ function manifestFrom(value: unknown): ProjectAssetManifest | Refusal {
       decoded.byteLength !== entry["byteLength"] ||
       sha256(decoded) !== entryDigest ||
       reparsed === null ||
-      "ok" in reparsed
+      "ok" in reparsed ||
+      reparsed.mediaType !== entry["mediaType"]
     ) {
       return refuse(CONTAINED_GLTF_REFUSALS.manifestInvalid, "A project asset manifest entry does not reproduce its canonical bytes.");
+    }
+    if (relativePaths.has(entryPath)) {
+      return refuse(
+        CONTAINED_GLTF_REFUSALS.duplicatePath,
+        `Project asset manifest path "${entryPath}" is owned by more than one asset identity.`,
+      );
     }
     if (ids.has(entryId) || digests.has(entryDigest)) {
       return refuse(CONTAINED_GLTF_REFUSALS.manifestInvalid, "Project asset manifest identities and digests must be unique.");
     }
     ids.add(entryId);
     digests.add(entryDigest);
+    relativePaths.add(entryPath);
     entries.push(Object.freeze(entry as unknown as ProjectAssetManifestEntry));
   }
   return Object.freeze({

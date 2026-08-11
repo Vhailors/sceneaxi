@@ -36,7 +36,9 @@ The accepted manifest at `scene.json.data.assetManifest` owns the canonical
 base64 bytes, byte length, media type, stable digest, importer/profile version,
 derived artifact/instance identity, original basename, project-relative copy
 path, and `copy` policy. It contains no source path and no credential. Reject
-writes neither document nor asset. Accept atomically writes the Scene Document,
+Duplicate copy paths refuse, and the declared media type is revalidated against
+the canonical bytes before any consumer receives the manifest. Reject writes
+neither document nor asset. Accept atomically writes the Scene Document,
 then materializes `assets/<asset-id>.glb|gltf` from the accepted canonical bytes
 through an exclusive temporary file and no-overwrite hard-link publication. A
 crash or missing copy is recoverable on scene open/Play; conflicting target bytes

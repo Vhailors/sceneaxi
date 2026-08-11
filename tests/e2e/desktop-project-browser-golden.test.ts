@@ -113,10 +113,15 @@ describe("desktop project and asset browser golden path", () => {
       activate: () => undefined,
     });
     let dirty = false;
+    const assetOpenRequests: string[] = [];
     const browser = createDesktopProjectBrowser({
       root,
       stateDirectory,
       isDirty: () => dirty,
+      openAsset: ({ documentPath, asset }) => {
+        assetOpenRequests.push(asset.path);
+        return bridge.handle({ action: "scene", payload: { documentPath } });
+      },
     });
 
     const window = new HappyWindow({ width: 1200, height: 800 });
@@ -168,6 +173,7 @@ describe("desktop project and asset browser golden path", () => {
     expect(query(window, '[data-project-asset="assets/triangle.gltf"]')?.textContent)
       .toMatch(/sha256:[0-9a-f]{64}/);
     await click(window, '[data-action="project-browser-open"]');
+    expect(assetOpenRequests).toEqual(["assets/triangle.gltf"]);
     expect(query(window, "[data-project-status]")?.textContent).toContain(
       "active authoring target remains scene.json",
     );
