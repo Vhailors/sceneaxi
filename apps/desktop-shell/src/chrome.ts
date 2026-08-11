@@ -292,6 +292,28 @@ function recentProjectSelect(ctrl: DesktopControl): string {
   ].join("");
 }
 
+function projectFileSelect(
+  ctrl: DesktopControl,
+  files: DesktopVisualView["product"]["surface"]["project"]["files"],
+): string {
+  const inert = ctrl.kind === "inert";
+  const described = inert
+    ? ` aria-describedby="refusal-${escapeHtml(ctrl.refusal ?? "")}"`
+    : "";
+  return [
+    `<select id="${escapeHtml(ctrl.id)}" data-kind="${escapeHtml(ctrl.kind)}"`,
+    inert
+      ? ` aria-disabled="true" data-refusal="${escapeHtml(ctrl.refusal ?? "")}"`
+      : "",
+    described,
+    ` data-action="project-browser-select" size="${Math.max(1, Math.min(5, files.length))}"`,
+    files
+      .map((file) => `<option value="${escapeHtml(file.path)}"${file.active ? " selected" : ""}>${escapeHtml(file.path)} · ${escapeHtml(file.label)}</option>`)
+      .join(""),
+    `</select>`,
+  ].join("");
+}
+
 /**
  * The whole closed registry, each code printed with the registry's own sentence.
  *
@@ -453,14 +475,6 @@ function leftDock(view: DesktopVisualView): string {
   ${note(panel.note, panel.noteTone)}
 </section>`;
   }).join("");
-  const files = project.files
-    .map(
-      (file) => `<div class="project-file${file.active ? " is-active" : ""}"${file.active ? ' aria-current="page"' : ""} data-project-file="${escapeHtml(file.path)}">
-  <span class="project-file-mark" aria-hidden="true">◇</span>
-  <span><b>${escapeHtml(file.path)}</b><em>${escapeHtml(file.label)}</em></span>
-</div>`,
-    )
-    .join("");
   return `<aside class="left-dock" id="left-dock" aria-label="Project files and editor panels">
 <section class="project-panel" aria-labelledby="project-files-title">
   <h2 class="panel-head" id="project-files-title"><span>PROJECT / FILES</span><span class="project-name" data-project-name>${escapeHtml(project.name)}</span></h2>
@@ -478,7 +492,21 @@ function leftDock(view: DesktopVisualView): string {
     </div>
   </div>
   <div class="project-bound" data-project-bound hidden>
-    <div class="project-files">${files}</div>
+    <div class="project-files" data-project-files>${projectFileSelect(view.product.browseFile, project.files)}</div>
+    <section class="project-browser-detail" data-project-browser-detail hidden aria-live="polite">
+      <strong data-project-browser-path></strong>
+      <dl>
+        <div><dt>Type</dt><dd data-project-browser-type></dd></div>
+        <div><dt>Digest</dt><dd data-project-browser-digest></dd></div>
+        <div><dt>Provenance</dt><dd data-project-browser-provenance></dd></div>
+        <div><dt>Status</dt><dd data-project-browser-validation></dd></div>
+      </dl>
+      <div class="project-browser-actions">
+        ${button(view.product.openBrowserFile, "Open selected", "ghost-button", ` data-action="project-browser-open"`)}
+        ${button(view.product.renameBrowserFile, "Rename…", "ghost-button", ` data-action="project-browser-rename"`)}
+        ${button(view.product.deleteBrowserFile, "Delete…", "ghost-button", ` data-action="project-browser-delete"`)}
+      </div>
+    </section>
     <div class="scene-entities" data-scene-entities hidden>
       <p class="scene-entities-label">COMPOSED INSTANCE</p>
       ${sceneEntitySelect(view.product.selectSceneEntity)}
@@ -614,7 +642,7 @@ function dock(view: DesktopVisualView): string {
       </article>
       <p class="change-empty" data-change-empty>Nothing waiting for review. Generated edits land here before they touch the scene.</p>
     `,
-    assets: `<p class="panel-empty">No asset library is bound to this surface.</p>`,
+    assets: `<div class="asset-browser" data-project-assets><p class="panel-empty">No admitted project assets are present.</p></div>`,
     console: `<p class="panel-empty">No session is running, so there is no console output to show.</p>`,
     evidence: `<p class="panel-empty" data-rarity-evidence-empty>No accepted rarity evidence has been opened or staged in this session.</p><pre class="change-diff" data-rarity-evidence hidden tabindex="0" role="region" aria-label="Rarity evidence"></pre><p class="panel-empty">No evidence packet has been captured here. Evidence digests are produced by <code>sceneaxi project capture</code>, never invented by a viewer.</p>`,
     timeline: `<p class="panel-empty">No clip is loaded, so the timeline has no tracks.</p>`,
@@ -1029,12 +1057,25 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .project-recent-select.is-inert{color:var(--inert);border-color:var(--line-control)}
 .project-bound{min-width:0}
 .project-files{padding:7px}
-.project-file{display:flex;align-items:center;gap:9px;padding:8px 9px;border:1px solid transparent;border-radius:4px;color:var(--dim)}
-.project-file.is-active{background:${ACCENT.surface};border-color:${ACCENT.line};color:var(--text)}
-.project-file-mark{color:var(--accent);font-size:14px}
-.project-file b,.project-file em{display:block}
-.project-file b{font-family:var(--mono);font-size:10px;font-weight:500}
-.project-file em{font-size:9px;font-style:normal;color:var(--dim);margin-top:2px}
+.project-files select{width:100%;min-width:0;padding:3px;border:1px solid var(--line-control);border-radius:4px;background:var(--raised);color:var(--dim);font-family:var(--mono);font-size:9px}
+.project-files select[aria-disabled="true"]{color:var(--inert);cursor:not-allowed}
+.project-files option{padding:6px;color:var(--dim)}
+.project-files option:checked{background:${ACCENT.surface};color:var(--text)}
+.project-browser-detail{margin:0 7px 8px;padding:8px;border:1px solid var(--line);border-radius:4px;background:var(--well);min-width:0}
+.project-browser-detail>strong{display:block;overflow-wrap:anywhere;font-family:var(--mono);font-size:9px;color:var(--text)}
+.project-browser-detail dl{display:grid;gap:5px;margin:8px 0}
+.project-browser-detail dl div{display:grid;grid-template-columns:54px minmax(0,1fr);gap:6px;min-width:0}
+.project-browser-detail dt{font-family:var(--mono);font-size:8px;color:var(--faint);text-transform:uppercase}
+.project-browser-detail dd{margin:0;min-width:0;overflow-wrap:anywhere;font-family:var(--mono);font-size:8px;line-height:1.45;color:var(--dim)}
+.project-browser-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:5px}
+.project-browser-actions button{min-width:0;height:auto;min-height:24px;padding:4px 6px;font-size:8px;white-space:normal}
+.project-browser-actions button:first-child{grid-column:1/-1}
+.asset-browser{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr));gap:8px;padding:10px;min-width:0}
+.asset-browser .panel-empty{grid-column:1/-1}
+.asset-browser-card{min-width:0;padding:9px 10px;border:1px solid var(--line-card);border-radius:4px;background:var(--well)}
+.asset-browser-card strong,.asset-browser-card span{display:block;overflow-wrap:anywhere}
+.asset-browser-card strong{font-family:var(--mono);font-size:9px;color:var(--text)}
+.asset-browser-card span{margin-top:4px;font-family:var(--mono);font-size:8px;line-height:1.45;color:var(--dim)}
 .scene-entities{padding:0 7px 9px}
 .scene-entities-label{margin:0 3px 5px;font-family:var(--mono);font-size:8px;letter-spacing:.12em;color:var(--faint)}
 .scene-entities select{width:100%;min-width:0;height:30px;padding:0 7px;border:1px solid var(--line-card);border-radius:4px;background:var(--raised);color:var(--text);font-family:var(--mono);font-size:9px}
@@ -1415,6 +1456,7 @@ if (shell) {
   let activeReviewRarityEvidenceDigest = null;
   let activeRunRarityEvidenceDigest = null;
   let activeProject = null;
+  let projectBrowserStatus = null;
   let editableScene = null;
   let selectedSceneEntityId = null;
   let sceneRefusalText = null;
@@ -1851,6 +1893,13 @@ if (shell) {
     return candidate && typeof candidate.importAsset === 'function' ? candidate : null;
   };
 
+  const projectBrowserPort = () => {
+    const portable = globalThis.sceneaxiDesktop;
+    const linux = globalThis.sceneaxiDesktopLinux;
+    const candidate = portable || linux;
+    return candidate && typeof candidate.browseProject === 'function' ? candidate : null;
+  };
+
   const runtimeRequest = async (request) => {
     const port = desktopPort();
     if (port === null) return null;
@@ -1892,6 +1941,126 @@ if (shell) {
       const message = error instanceof Error ? error.message : String(error);
       return { ok: false, reason: T.product.refusals.runtimeRequestFailed, message, detail: message };
     }
+  };
+
+  const projectBrowserRequest = async (request) => {
+    const port = projectBrowserPort();
+    if (port === null) return null;
+    try {
+      return await port.browseProject(request);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return { ok: false, reason: T.product.refusals.runtimeRequestFailed, message, detail: message };
+    }
+  };
+
+  const renderProjectBrowser = (status) => {
+    if (!status || !Array.isArray(status.files) || typeof status.selectedPath !== 'string' ||
+        status.activeDocumentPath !== T.product.documentPath) return false;
+    const files = status.files.filter((file) => file && typeof file.path === 'string' &&
+      typeof file.fileType === 'string' && typeof file.digest === 'string' &&
+      file.validation && typeof file.validation.state === 'string');
+    if (files.length !== status.files.length ||
+        !files.some((file) => file.path === status.selectedPath)) return false;
+    projectBrowserStatus = status;
+    const list = shell.querySelector('#project-browser-file-select');
+    if (list && list.tagName === 'SELECT') {
+      list.replaceChildren();
+      files.forEach((file) => {
+        const option = document.createElement('option');
+        option.value = file.path;
+        option.textContent = file.path + ' · ' + file.fileType + ' · ' + file.validation.state;
+        list.append(option);
+      });
+      list.value = status.selectedPath;
+    }
+    const selected = files.find((file) => file.path === status.selectedPath);
+    const detail = shell.querySelector('[data-project-browser-detail]');
+    if (!selected || !detail) return false;
+    detail.hidden = false;
+    const put = (selector, value) => {
+      const element = detail.querySelector(selector);
+      if (element) element.textContent = value;
+    };
+    put('[data-project-browser-path]', selected.path +
+      (selected.path === status.activeDocumentPath ? ' · active authoring target' : ' · manifest asset'));
+    put('[data-project-browser-type]', selected.fileType + ' · ' + selected.mediaType + ' · ' + selected.byteLength + ' bytes');
+    put('[data-project-browser-digest]', selected.digest);
+    put('[data-project-browser-provenance]', JSON.stringify(selected.provenance));
+    put('[data-project-browser-validation]', selected.validation.state +
+      (selected.validation.reason ? ' · ' + selected.validation.reason : '') +
+      ' · ' + selected.validation.message);
+    const assetSurface = shell.querySelector('[data-project-assets]');
+    if (assetSurface) {
+      assetSurface.replaceChildren();
+      const assets = files.filter((file) => file.kind === 'asset');
+      if (assets.length === 0) {
+        const empty = document.createElement('p');
+        empty.className = 'panel-empty';
+        empty.textContent = 'No admitted project assets are present.';
+        assetSurface.append(empty);
+      } else {
+        assets.forEach((asset) => {
+          const card = document.createElement('article');
+          card.className = 'asset-browser-card';
+          card.dataset.projectAsset = asset.path;
+          const name = document.createElement('strong');
+          name.textContent = asset.path;
+          const type = document.createElement('span');
+          type.textContent = asset.fileType + ' · ' + asset.mediaType + ' · ' + asset.byteLength + ' bytes';
+          const digest = document.createElement('span');
+          digest.textContent = asset.digest;
+          const provenance = document.createElement('span');
+          provenance.textContent = JSON.stringify(asset.provenance);
+          const validation = document.createElement('span');
+          validation.textContent = asset.validation.state +
+            (asset.validation.reason ? ' · ' + asset.validation.reason : '') +
+            ' · ' + asset.validation.message;
+          card.append(name, type, digest, provenance, validation);
+          assetSurface.append(card);
+        });
+      }
+    }
+    return true;
+  };
+
+  const syncProjectBrowser = async () => {
+    if (activeProject === null || projectBrowserPort() === null) return true;
+    const response = await projectBrowserRequest({ action: 'status', profile: shell.dataset.profile });
+    if (!response || !response.ok || !renderProjectBrowser(response.data?.status)) {
+      const code = response?.reason || T.product.refusals.runtimeRequestRefused;
+      productStatus('refused', 'Project browser refused · ' + code);
+      return false;
+    }
+    return true;
+  };
+
+  const projectBrowserAction = async (action, path, targetPath) => {
+    if (projectBrowserPort() === null || typeof path !== 'string' || path.length === 0) return;
+    const request = {
+      action,
+      profile: shell.dataset.profile,
+      path,
+      ...(typeof targetPath === 'string' ? { targetPath } : {}),
+      ...((action === 'rename' || action === 'delete') ? { confirmed: true } : {}),
+    };
+    const response = await projectBrowserRequest(request);
+    if (!response || !response.ok) {
+      const code = response?.reason || T.product.refusals.runtimeRequestRefused;
+      productStatus('refused', 'Project browser refused · ' + code);
+      showOutcome('Project browser refused', code, response?.message || 'No project file changed.');
+      return false;
+    }
+    if (!renderProjectBrowser(response.data?.status)) {
+      productStatus('refused', 'Project browser refused · ' + T.product.refusals.runtimeRequestRefused);
+      return false;
+    }
+    if (action === 'open' && path === response.data.status.activeDocumentPath) {
+      return openProject();
+    }
+    productStatus('open', path + ' · ' + response.data.outcome + ' · active authoring target remains ' +
+      response.data.status.activeDocumentPath);
+    return true;
   };
 
   const applyProjectLifecycleStatus = (status) => {
@@ -2209,6 +2378,7 @@ if (shell) {
     syncReview(null);
     clearConflictOutcome();
     productStatus('open', withSceneRefusal(T.product.documentPath + ' · open · ' + status.documentId));
+    await syncProjectBrowser();
     return true;
   };
 
@@ -2453,7 +2623,10 @@ if (shell) {
       await restartProject('journal-not-found');
       return;
     }
-    if (applySaveSnapshot(snapshot)) return;
+    if (applySaveSnapshot(snapshot)) {
+      await syncProjectBrowser();
+      return;
+    }
     if (recovering && snapshot && snapshot.journalRecoveryPending !== true) projectRecovering = false;
     productStatus(projectRecovering ? 'recovering' : 'refused', 'Save refused · ' + (reason || T.product.refusals.applyNotCompleted));
     if (reason === 'content-hash-conflict' || reason === 'journal-conflict') {
@@ -3128,6 +3301,23 @@ if (shell) {
     }
     if (action === 'project-open-recent') void productAction(() => chooseProject('open-recent'));
     else if (action === 'project-remove-recent') void productAction(() => chooseProject('remove-recent'));
+    else if (action === 'project-browser-open') {
+      const path = projectBrowserStatus?.selectedPath;
+      if (typeof path === 'string') void productAction(() => projectBrowserAction('open', path));
+    }
+    else if (action === 'project-browser-rename') {
+      const path = projectBrowserStatus?.selectedPath;
+      if (typeof path === 'string' && globalThis.confirm('Confirm rename request for ' + path + '?')) {
+        const target = globalThis.prompt('New project-relative path', path);
+        if (typeof target === 'string') void productAction(() => projectBrowserAction('rename', path, target));
+      }
+    }
+    else if (action === 'project-browser-delete') {
+      const path = projectBrowserStatus?.selectedPath;
+      if (typeof path === 'string' && globalThis.confirm('Confirm delete request for ' + path + '?')) {
+        void productAction(() => projectBrowserAction('delete', path));
+      }
+    }
     else if (action === 'document-reload') void productAction(openProject);
     else if (action === 'change-accept') void productAction(acceptProposal);
     else if (action === 'change-reject') void productAction(() => rejectProposal('rejected'));
@@ -3164,6 +3354,15 @@ if (shell) {
   });
 
   shell.addEventListener('change', (event) => {
+    const browserFile = event.target instanceof Element
+      ? event.target.closest('[data-action="project-browser-select"]')
+      : null;
+    if (browserFile && browserFile.tagName === 'SELECT' &&
+        browserFile.getAttribute('aria-disabled') !== 'true') {
+      const path = browserFile.value;
+      if (path) void productAction(() => projectBrowserAction('select', path));
+      return;
+    }
     const el = event.target instanceof Element ? event.target.closest('[data-action="scene-entity-select"]') : null;
     if (!el || el.tagName !== 'SELECT' || el.getAttribute('aria-disabled') === 'true') return;
     const value = el.value;

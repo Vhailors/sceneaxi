@@ -1088,6 +1088,10 @@ export type DesktopVisualView = Readonly<{
     removeRecent: DesktopControl;
     open: DesktopControl;
     save: DesktopControl;
+    browseFile: DesktopControl;
+    openBrowserFile: DesktopControl;
+    renameBrowserFile: DesktopControl;
+    deleteBrowserFile: DesktopControl;
     play: DesktopControl;
     exportWeb: DesktopControl;
     selectSceneEntity: DesktopControl;
@@ -1293,6 +1297,10 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
     removeRecent: control("project-remove-recent", "Remove recent project", "live"),
     open: control("project-open", "Open scene.json", "live"),
     save: control("project-save", "Save scene.json", "live"),
+    browseFile: control("project-browser-file-select", "Project file", "view"),
+    openBrowserFile: control("project-browser-open", "Open selected project file", "live"),
+    renameBrowserFile: control("project-browser-rename", "Rename selected project file", "view"),
+    deleteBrowserFile: control("project-browser-delete", "Delete selected project file", "view"),
     play: control("scene-play", "Play composed scene", "live"),
     exportWeb: control("ship-export-web", "Export Web", "live"),
     selectSceneEntity,

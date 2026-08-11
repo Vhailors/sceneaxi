@@ -109,6 +109,7 @@ silently adding identity or running a migration.
 | Scene composition (one pipeline, two consumers) | `src/lib/desktop-scene.ts` | main process; gate-tested |
 | Native contained asset picker | `src/lib/asset-picker-host.ts` + `src/electron/main.ts` | pure dialog adapter + privileged Electron dialog |
 | Contained project lifecycle + versioned atomic recents | `src/lib/{project-lifecycle-contract,project-lifecycle,project-host}.ts` | pure typed host seam; gate-tested from `tests/desktop/` and packaged-like e2e |
+| Contained project + asset browser | `src/lib/{project-browser-contract,project-browser}.ts` | canonical document/manifest projection, validated metadata, restart selection, and confirmation-gated immutable mutation refusals |
 | Explicit New Project starter and one-time document migration | `src/lib/project-seed.ts` | main process; invoked only after New Project selects a root or by the isolated smoke |
 | Chrome document emitter (desktop-shell, unforked) | `src/lib/chrome-document.ts` | build time |
 | Electron entries (window, IPC adapter, smoke) | `src/electron/{main,preload}.ts` | Electron only |
@@ -142,6 +143,11 @@ Rules the gate enforces (`pnpm check:desktop`, `pnpm check:boundaries`,
   before persistence, refuses traversal and symlink escapes, and stores only
   canonical root strings in a versioned atomically-renamed file. Kids refuses
   before the host opens a dialog or reads that registry.
+- The project browser lists only the active `scene.json` and admitted manifest
+  assets; it does not scan the root or expose stored bytes. Its recent state holds
+  only root/selection metadata. Selecting or opening an asset never changes the
+  canonical authoring target, and rename/delete cannot bypass Change Review or
+  the immutable v1 manifest contract.
 - Provider secrets exist only transiently in the password control during
   submission and in the privileged main process during secure save/retrieval and
   a provider session. The field and privileged lease are explicitly cleared; no

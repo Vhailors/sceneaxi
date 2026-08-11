@@ -117,6 +117,30 @@ export {
 } from "./lib/project-seed.js";
 
 export {
+  DESKTOP_PROJECT_BROWSER_ACTIONS,
+  DESKTOP_PROJECT_BROWSER_CHANNEL,
+  DESKTOP_PROJECT_BROWSER_REFUSALS,
+  DESKTOP_PROJECT_BROWSER_STATE_SCHEMA_VERSION,
+  projectBrowserRefuse,
+  type DesktopProjectAssetFile,
+  type DesktopProjectBrowserAction,
+  type DesktopProjectBrowserFile,
+  type DesktopProjectBrowserRefusalReason,
+  type DesktopProjectBrowserRequest,
+  type DesktopProjectBrowserResponse,
+  type DesktopProjectBrowserStatus,
+  type DesktopProjectBrowserValidation,
+  type DesktopProjectDocumentFile,
+} from "./lib/project-browser-contract.js";
+
+export {
+  DESKTOP_PROJECT_BROWSER_STATE_FILE,
+  createDesktopProjectBrowser,
+  type DesktopProjectBrowser,
+  type DesktopProjectBrowserOptions,
+} from "./lib/project-browser.js";
+
+export {
   DESKTOP_PROJECT_ACTIONS,
   DESKTOP_PROJECT_CHANNEL,
   DESKTOP_PROJECT_REFUSALS,

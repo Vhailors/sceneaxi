@@ -233,9 +233,10 @@ describe("engine desktop chrome — control accounting (document → model)", ()
         expect(tag, label).toMatch(/data-kind="(live|inert)"/);
       }
       const selects = html.match(/<select\b[^>]*>/g) ?? [];
-      expect(selects, label).toHaveLength(2);
+      expect(selects, label).toHaveLength(3);
       expect(selects.map((tag) => /\sid="([^"]+)"/.exec(tag)?.[1]), label).toEqual([
         "project-recent-select",
+        "project-browser-file-select",
         "scene-entity-desktop-crate-beside",
       ]);
       for (const tag of selects) {

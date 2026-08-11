@@ -45,6 +45,15 @@ import {
   DESKTOP_PROJECT_REFUSALS,
 } from "../lib/project-lifecycle-contract.js";
 import { createDesktopProjectLifecycle } from "../lib/project-lifecycle.js";
+import {
+  DESKTOP_PROJECT_BROWSER_CHANNEL,
+  DESKTOP_PROJECT_BROWSER_REFUSALS,
+  projectBrowserRefuse,
+} from "../lib/project-browser-contract.js";
+import {
+  createDesktopProjectBrowser,
+  type DesktopProjectBrowser,
+} from "../lib/project-browser.js";
 import { DESKTOP_WEB_EXPORT_REFUSALS } from "../lib/web-export.js";
 import { createElectronProviderKeyStore } from "./provider-key-store.js";
 import {
@@ -140,11 +149,16 @@ async function start(): Promise<void> {
       : join(__dirname, "sceneaxi-publish-no-replace");
   }
   let bridge: DesktopBridge | null = null;
+  let projectBrowser: DesktopProjectBrowser | null = null;
   let activeRoot: string | null = null;
+  // Read through a function so TypeScript does not freeze the outer variable's
+  // startup `null` before `activateProject()` assigns it asynchronously.
+  const currentProjectBrowser = (): DesktopProjectBrowser | null => projectBrowser;
 
   const activateProject = async (root: string): Promise<DesktopBridge> => {
     if (bridge !== null && activeRoot === root) return bridge;
     bridge = null;
+    projectBrowser = null;
     activeRoot = null;
     await localBridgeServer?.close();
     localBridgeServer = null;
@@ -191,6 +205,23 @@ async function start(): Promise<void> {
       );
     }
     bridge = next;
+    projectBrowser = createDesktopProjectBrowser({
+      root,
+      stateDirectory: SMOKE
+        ? join(root, ".sceneaxi-runtime")
+        : join(app.getPath("userData"), "project-lifecycle"),
+      isDirty: () => {
+        const response = next.handle({
+          action: "authoring",
+          payload: { op: "status", documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
+        });
+        if (!response.ok) return true;
+        const snapshot = payloadField(response.data, "authoringSnapshot");
+        const phase = payloadField(snapshot, "phase");
+        return phase === "reviewing" || phase === "pending" ||
+          payloadField(snapshot, "journalRecoveryPending") === true;
+      },
+    });
     activeRoot = root;
     return next;
   };
@@ -238,6 +269,13 @@ async function start(): Promise<void> {
     });
     return picker.chooseAndStage(payloadField(request, "profile"));
   });
+  ipcMain.handle(DESKTOP_PROJECT_BROWSER_CHANNEL, (_event, request: unknown) =>
+    projectBrowser?.handle(request) ??
+      projectBrowserRefuse(
+        DESKTOP_PROJECT_BROWSER_REFUSALS.projectRequired,
+        "Choose New Project, Open Project, or a validated recent project before browsing project files.",
+      ),
+  );
   ipcMain.handle(DESKTOP_BYO_CONFIGURATION_CHANNEL, (_event, request: unknown) =>
     byoRuntime.configuration.handle(request),
   );
@@ -523,6 +561,54 @@ async function start(): Promise<void> {
     fail("authoring reopen did not prove the saved translation bytes");
   }
 
+  const proofBrowser = currentProjectBrowser();
+  if (proofBrowser === null) fail("project browser is unavailable for the smoke root");
+  const browserListed = proofBrowser.handle({ action: "status", profile: "web" });
+  if (
+    !browserListed.ok ||
+    payloadField(browserListed.data.status, "activeDocumentPath") !== SAMPLE_DOCUMENT ||
+    !Array.isArray(payloadField(browserListed.data.status, "files"))
+  ) {
+    fail("project browser did not list the canonical active document");
+  }
+  const browserSelected = proofBrowser.handle({
+    action: "select",
+    profile: "web",
+    path: SAMPLE_DOCUMENT,
+  });
+  const browserOpened = proofBrowser.handle({
+    action: "open",
+    profile: "web",
+    path: SAMPLE_DOCUMENT,
+  });
+  const browserUnconfirmed = proofBrowser.handle({
+    action: "delete",
+    profile: "web",
+    path: SAMPLE_DOCUMENT,
+  });
+  const browserProtected = proofBrowser.handle({
+    action: "delete",
+    profile: "web",
+    path: SAMPLE_DOCUMENT,
+    confirmed: true,
+  });
+  const restartedBrowser = createDesktopProjectBrowser({
+    root: cwd,
+    stateDirectory: join(cwd, ".sceneaxi-runtime"),
+  }).handle({ action: "status", profile: "web" });
+  if (
+    !browserSelected.ok || browserSelected.data.outcome !== "selected" ||
+    !browserOpened.ok || browserOpened.data.outcome !== "opened" ||
+    browserUnconfirmed.ok ||
+    browserUnconfirmed.reason !== DESKTOP_PROJECT_BROWSER_REFUSALS.confirmationRequired ||
+    browserProtected.ok ||
+    browserProtected.reason !== DESKTOP_PROJECT_BROWSER_REFUSALS.operationNotPermitted ||
+    !restartedBrowser.ok || restartedBrowser.data.status.selectedPath !== SAMPLE_DOCUMENT ||
+    readFileSync(documentFile, "utf8") !== savedBytes
+  ) {
+    fail("project browser selection, open, recovery, or protected mutation evidence is incomplete");
+  }
+
   const openPath = proofBridge.handle({
     action: "open-path",
     payload: { documentPath: SAMPLE_DOCUMENT },
@@ -689,6 +775,15 @@ async function start(): Promise<void> {
         persisted: savedBytes !== seededBytes,
         scratchProject,
         project: cwd,
+      },
+      projectBrowser: {
+        listed: true,
+        selected: true,
+        opened: true,
+        restored: true,
+        activeDocumentPath: SAMPLE_DOCUMENT,
+        confirmationRefusal: browserUnconfirmed.reason,
+        protectedRefusal: browserProtected.reason,
       },
       ship: shipped.ok
         ? {

@@ -455,6 +455,30 @@ closing the active project. The window title and Project / Files panel show the
 validated document title (or root basename), canonical root, and active
 `scene.json`.
 
+Once a root is bound, that panel is a real contained browser over exactly two
+canonical sources: the active `scene.json` and
+`scene.json.data.assetManifest.assets`. It never walks the directory. The
+document row reports the authoring-core content hash and Scene Document identity;
+asset rows report the manifest's supported GLB/glTF type, byte length, digest,
+copy policy, importer provenance, artifact/instance identity, and a fresh
+on-disk validation of the project copy. A missing copy, changed bytes, wrong
+file type, traversal, or symlink refuses by the stable
+`DESKTOP_PROJECT_BROWSER_*` diagnostic rather than being hidden or opened.
+
+Selection and Open travel through the typed preload/main-process browser channel.
+Opening an asset exposes only its validated metadata; the sole authoring target
+remains `scene.json`. The selected project-relative path is recovered from the
+atomically written mode-0600 `project-browser.json` beside recent-project state.
+That file contains only its schema version, canonical root, and selected path —
+never document/asset bytes, credentials, or secrets. Rename and Delete require an
+explicit confirmation even to be considered, then refuse dirty/recovery state and
+revalidate containment and identity. Both canonical row kinds are immutable in
+the approved v1 contracts: `scene.json` is the one active document, while the
+asset manifest owns each asset id and copy path and defines no rename/delete
+transaction. They therefore end in
+`DESKTOP_PROJECT_BROWSER_OPERATION_NOT_PERMITTED`; this slice does not invent a
+second mutation protocol.
+
 The legacy starter migration remains part of the explicit New Project seed helper:
 a valid document lacking composed-scene data can be migrated by that helper while
 retaining its id, title, entities, material, and other data; existing composed data

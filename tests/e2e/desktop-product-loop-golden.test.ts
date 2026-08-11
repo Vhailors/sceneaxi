@@ -532,9 +532,9 @@ describe("desktop first-release product loop", () => {
       query(window, "[data-project-status]")?.textContent ?? "";
     expect(shell?.dataset.tier).toBe("narrow");
     expect(shell?.dataset.profile).toBe("game");
-    expect(window.document.querySelectorAll("button")).toHaveLength(69);
+    expect(window.document.querySelectorAll("button")).toHaveLength(72);
     expect(window.document.querySelectorAll('button:not([tabindex="-1"])')).toHaveLength(
-      64,
+      67,
     );
 
     const refusalHelp = query(window, "#status-refusal-help");

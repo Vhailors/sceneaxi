@@ -136,7 +136,7 @@ describe("desktop project lifecycle packaged-like interaction", () => {
     expect(query(window, "[data-project-launcher]")?.hidden).toBe(true);
     expect(query(window, "[data-project-bound]")?.hidden).toBe(false);
     expect(query(window, "[data-project-root]")?.textContent).toBe(resolve(created));
-    expect(query(window, "[data-project-file]")?.textContent).toContain("scene.json");
+    expect(query(window, "#project-browser-file-select")?.textContent).toContain("scene.json");
     expect(window.document.title).toContain(resolve(created));
     expect(query(window, "[data-project-status]")?.textContent).toContain("open · scene");
 
