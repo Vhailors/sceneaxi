@@ -22,7 +22,7 @@ This monorepo is the packaging home for:
 | Production activation control | [`docs/production-activation.md`](docs/production-activation.md) — exact input/owner inventory and preflight, activation, verification, rollback/refusal, and evidence checklist; it authorizes no deployment |
 | Isolated Kids origin | `sites/kids` — a self-contained install root with an empty SceneAxi allow list and a curated in-memory build-and-play activity, not deployed ([`docs/kids-first-release.md`](docs/kids-first-release.md)) |
 | Public live open path | `sites/umbrella/src/app/open/` — a committed Sculpt Artifact composed and drawn in a real WebGL canvas (ADR 0022) |
-| Packaged Linux desktop app | `desktop/linux` — Electron over the desktop-shell chrome and the real engine stack, AppImage + `.deb` with recorded checksums (ADR 0024; [`docs/desktop-linux.md`](docs/desktop-linux.md)) |
+| Packaged Linux desktop app | `desktop/linux` — Electron over the desktop-shell chrome and the real engine stack, with an offline static Web export plus Delivery Handoff; AppImage + `.deb` have recorded checksums (ADR 0024; [`docs/desktop-linux.md`](docs/desktop-linux.md)) |
 | Windows packaging of that app | `desktop/windows` — a signing/update wrapper that stages the built `desktop/linux` runtime; fails closed without operator-supplied signing inputs and has no public artifact yet ([`docs/desktop-windows.md`](docs/desktop-windows.md)) |
 | macOS desktop packaging | `desktop/macos` — separate signing/notarization/update install root that stages the existing desktop runtime; no public artifact exists yet ([`docs/desktop-macos.md`](docs/desktop-macos.md)) |
 

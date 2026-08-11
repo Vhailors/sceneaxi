@@ -192,10 +192,12 @@ the image, and start the installed copy:
 open "/Applications/SceneAxi Engine Desktop.app"
 ```
 
-Nothing about first launch is macOS-specific: this root stages the unchanged
-desktop application, so its contained project lifecycle (New Project, Open
-Project, recents, restart recovery), the product tabs, and the Kids refuse-only
-posture are owned by [`desktop-linux.md`](desktop-linux.md).
+Nothing about first launch is macOS-specific: this root stages the shared desktop
+application, so its contained project lifecycle (New Project, Open Project,
+recents, restart recovery), the product tabs, and the Kids refuse-only posture
+are owned by [`desktop-linux.md`](desktop-linux.md). Export Web v1 is the platform
+exception: the macOS runtime refuses it by the named platform rule that document
+owns.
 
 ## Update behavior
 

@@ -395,7 +395,7 @@ function readContainedFile(
       try {
         closeSync(descriptor);
       } catch {
-        descriptor = null;
+        // Best-effort cleanup cannot change the completed read result.
       }
     }
   }
@@ -477,7 +477,9 @@ function prepareExportParent(
       if (descriptor === null) continue;
       try {
         closeSync(descriptor);
-      } catch {}
+      } catch {
+        // Preserve the preparation refusal that triggered cleanup.
+      }
     }
     return exportPreparationRefusal(error, "workspace");
   }
@@ -530,17 +532,23 @@ function cleanupExportWorkspace(
         stdio: ["ignore", "ignore", "ignore", workspace.stagingDescriptor],
       });
     }
-  } catch {}
+  } catch {
+    // Cleanup is best-effort after the export result has been decided.
+  }
   try {
     closeSync(workspace.stagingDescriptor);
-  } catch {}
+  } catch {
+    // Cleanup is best-effort after the export result has been decided.
+  }
 }
 
 function cleanupExportParent(parent: ExportParent) {
   for (const descriptor of [parent.webDescriptor, parent.exportsDescriptor, parent.rootDescriptor]) {
     try {
       closeSync(descriptor);
-    } catch {}
+    } catch {
+      // Cleanup is best-effort after the export result has been decided.
+    }
   }
 }
 

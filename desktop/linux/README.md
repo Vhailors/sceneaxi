@@ -58,15 +58,11 @@ triangle projection through the one Three core. See
 [`docs/asset-ingestion.md`](../../docs/asset-ingestion.md).
 
 **File → Export Web** and the Ship rail's **Export Web** button run the same
-offline bridge action. The result is written under
-`exports/web/<bundle SHA-256>/` inside the active project. It contains the
-exact source `scene.json`, accepted project assets, a static viewer using the
-packaged renderer bytes, the runtime-bound tool identity, and
-`delivery-handoff.json`. The handoff binds every
-exported artifact and the source identity; creating it performs no upload,
-deployment, signing, approval, or release. A byte-identical rerun verifies and
-reuses the existing directory. A different occupant at that content address
-refuses instead of being overwritten.
+offline bridge action for a clean, bound project. It writes a content-addressed
+static viewer and Delivery Handoff inside that project; it never uploads or
+deploys the result. Windows and macOS refuse the action by name. The exact
+layout, replay rules, limits, and refusal contract live in
+[`docs/desktop-linux.md`](../../docs/desktop-linux.md#ship--export-web).
 
 The packaged chrome also binds its Assistant **Build** mode to the bridge. Local
 is a deterministic, free compiler; BYOK is free of SceneAxi credits but runs

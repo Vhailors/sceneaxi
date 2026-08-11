@@ -5,8 +5,9 @@
  * adapts it: `ipcMain.handle` serves the synchronous bridge, the window loads the
  * build-time Engine Desktop chrome document, and `--smoke` runs the packaged-app
  * proof — handshake, real kernel open path, typed edit/review/save/reopen/Play in
- * a scratch project, and the renderer's real frame report — then prints one JSON
- * line and exits, so CI can assert the packaged binary is not a static HTML export.
+ * a scratch project, a verified static Web export, and the renderer's real frame
+ * report — then prints one JSON line and exits, so CI can assert the packaged
+ * binary is not only a static HTML document.
  *
  * The window is locked down: context isolation on, sandbox on, no node integration,
  * and navigation away from the packaged document is refused.

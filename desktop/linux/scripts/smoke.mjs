@@ -2,7 +2,8 @@
 /**
  * Packaged-app smoke: launch the real application with `--smoke` and assert the
  * proof line it prints — handshake, kernel open path with moving digests, the
- * typed edit/review/save/reopen/play round trip, and the renderer's real frame report.
+ * typed edit/review/save/reopen/play round trip, the static Web export, and the
+ * renderer's real frame report.
  *
  * Two launch modes:
  * - default: `electron dist/main.cjs --smoke` (the built runtime, dev install)

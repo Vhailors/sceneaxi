@@ -289,7 +289,7 @@ pnpm install                                   # repository root, once
 cd desktop/linux
 pnpm install                                   # tier-local: electron, esbuild, electron-builder
 pnpm check:renderer                            # browser graph + sole presentation owner
-pnpm build                                     # dist/ runtime bundles + chrome document
+pnpm build                                     # four runtime files + sceneaxi-publish-no-replace
 pnpm start                                     # launch the window
 pnpm dist                                      # AppImage + .deb + release/SHA256SUMS
 (cd release && sha256sum -c SHA256SUMS)        # verify
