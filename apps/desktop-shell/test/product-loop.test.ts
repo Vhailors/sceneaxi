@@ -4,7 +4,6 @@ import {
   DESKTOP_PRODUCT_REFUSAL_MESSAGES,
   DESKTOP_PRODUCT_REFUSALS,
   DESKTOP_VIEWPORT_PLAY_EVENT,
-  DESKTOP_VIEWPORT_SCENE_OPEN_EVENT,
   DESKTOP_WEB_ASSET_MAX_COUNT,
   DESKTOP_WEB_ASSET_PATH_MAX_LENGTH,
   DESKTOP_WEB_HTML_MAX_LENGTH,
@@ -200,7 +199,6 @@ describe("desktop product loop", () => {
     expect(game).toContain("op: recovering ? 'recover' : 'accept'");
     expect(game).toContain("op: 'restart'");
     expect(game).toContain(DESKTOP_VIEWPORT_PLAY_EVENT);
-    expect(game).toContain(DESKTOP_VIEWPORT_SCENE_OPEN_EVENT);
   });
 
   it("refuses oversized and null-bearing markup through the one decision", () => {

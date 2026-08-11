@@ -393,6 +393,20 @@ describe("contained desktop project and asset browser", () => {
     });
   });
 
+  it("refuses oversized persisted browser state without changing it", () => {
+    const { root, stateDirectory } = admittedProject();
+    const oversized = "x".repeat(20 * 1024);
+    const stateFile = join(stateDirectory, DESKTOP_PROJECT_BROWSER_STATE_FILE);
+    writeFileSync(stateFile, oversized, "utf8");
+    const browser = createDesktopProjectBrowser({ root, stateDirectory });
+
+    expect(browser.handle({ action: "status", profile: "web" })).toMatchObject({
+      ok: false,
+      reason: DESKTOP_PROJECT_BROWSER_REFUSALS.stateInvalid,
+    });
+    expect(readFileSync(stateFile, "utf8")).toBe(oversized);
+  });
+
   it("recovers selection through a symlinked user-data parent", () => {
     const { root } = admittedProject();
     const realUserData = temporary("real-user-data");

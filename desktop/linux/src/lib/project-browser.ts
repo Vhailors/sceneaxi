@@ -45,6 +45,7 @@ import {
 } from "./project-browser-contract.js";
 
 const STATE_FILE = "project-browser.json";
+const STATE_MAX_BYTES = 16 * 1024;
 
 type StoredBrowserState = Readonly<{
   schemaVersion: typeof DESKTOP_PROJECT_BROWSER_STATE_SCHEMA_VERSION;
@@ -271,7 +272,9 @@ export function createDesktopProjectBrowser(
       : null;
     initialized = true;
     const paths = statePaths();
-    const read = readContainedRegularFile(paths.directory, paths.file);
+    const read = readContainedRegularFile(paths.directory, paths.file, {
+      maximumBytes: STATE_MAX_BYTES,
+    });
     if (!read.ok) {
       stateInvalid = read.kind !== "missing";
     } else {
