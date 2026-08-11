@@ -9,6 +9,7 @@
  */
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
+import { StringDecoder } from "node:string_decoder";
 import {
   closeSync,
   constants,
@@ -652,7 +653,11 @@ type StreamedFile =
 function streamContainedFile(
   root: string,
   source: string,
-  limits: Readonly<{ maximumBytes?: number; expectedBytes?: number }>,
+  limits: Readonly<{
+    maximumBytes?: number;
+    expectedBytes?: number;
+    digestEncoding?: "bytes" | "utf8";
+  }>,
   destination?: Readonly<{
     descriptor: number;
     directory: string;
@@ -686,6 +691,9 @@ function streamContainedFile(
       );
     }
     const hash = createHash("sha256");
+    const decoder = limits.digestEncoding === "utf8"
+      ? new StringDecoder("utf8")
+      : null;
     const buffer = Buffer.alloc(Math.min(STREAM_BUFFER_BYTES, Math.max(1, before.size)));
     let byteLength = 0;
     while (byteLength < before.size) {
@@ -703,7 +711,9 @@ function streamContainedFile(
           detail: "the opened file ended before its verified length",
         });
       }
-      hash.update(buffer.subarray(0, count));
+      const chunk = buffer.subarray(0, count);
+      if (decoder === null) hash.update(chunk);
+      else hash.update(decoder.write(chunk), "utf8");
       if (destinationDescriptor !== null) {
         let written = 0;
         while (written < count) {
@@ -734,6 +744,7 @@ function streamContainedFile(
         detail: "the opened file length changed while it was being read",
       });
     }
+    if (decoder !== null) hash.update(decoder.end(), "utf8");
     return Object.freeze({
       ok: true as const,
       byteLength,
@@ -760,29 +771,39 @@ function streamContainedFile(
   }
 }
 
-function readProjectDocument(
-  root: string,
-  expectedBytes?: number,
-): Readonly<{ ok: true; bytes: Buffer }> | DesktopWebExportRefusal {
-  const documentFile = join(root, DESKTOP_ACTIVE_DOCUMENT_PATH);
-  const read = readContainedFile(
-    root,
-    documentFile,
-    expectedBytes === undefined ? {} : { expectedBytes },
-  );
-  if (!read.ok) {
-    if (read.kind === "unsafe") {
-      return refuse(
-        DESKTOP_WEB_EXPORT_REFUSALS.unsafePath,
-        "The active Scene Document must be a regular project file.",
-      );
-    }
+function projectDocumentReadRefusal(
+  read: Readonly<{
+    kind: "missing" | "unsafe" | "invalid";
+    detail: string;
+  }>,
+) {
+  if (read.kind === "unsafe") {
     return refuse(
-      DESKTOP_WEB_EXPORT_REFUSALS.sceneInvalid,
-      `The active Scene Document could not be read: ${read.detail}`,
+      DESKTOP_WEB_EXPORT_REFUSALS.unsafePath,
+      "The active Scene Document must be a regular project file.",
     );
   }
-  return read;
+  return refuse(
+    DESKTOP_WEB_EXPORT_REFUSALS.sceneInvalid,
+    `The active Scene Document could not be read: ${read.detail}`,
+  );
+}
+
+function readProjectDocumentIdentity(root: string) {
+  const documentFile = join(root, DESKTOP_ACTIVE_DOCUMENT_PATH);
+  const read = streamContainedFile(root, documentFile, {
+    digestEncoding: "utf8",
+  });
+  return read.ok ? read : projectDocumentReadRefusal(read);
+}
+
+function readProjectDocument(
+  root: string,
+  expectedBytes: number,
+): Readonly<{ ok: true; bytes: Buffer }> | DesktopWebExportRefusal {
+  const documentFile = join(root, DESKTOP_ACTIVE_DOCUMENT_PATH);
+  const read = readContainedFile(root, documentFile, { expectedBytes });
+  return read.ok ? read : projectDocumentReadRefusal(read);
 }
 
 function referencedWebAssets(data: Readonly<Record<string, unknown>>):
@@ -1248,8 +1269,24 @@ export function exportDesktopWebProject(
       `The project root could not be read: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
-  const sourceDocument = readProjectDocument(root);
-  if (!sourceDocument.ok) return sourceDocument;
+  const sourceIdentity = readProjectDocumentIdentity(root);
+  if (!sourceIdentity.ok) return sourceIdentity;
+  if (sourceIdentity.digest !== input.expectedContentHash) {
+    return refuse(
+      DESKTOP_WEB_EXPORT_REFUSALS.projectChanged,
+      "scene.json changed after the desktop authoring status was read; reopen it before exporting.",
+    );
+  }
+  const sourceDocument = readProjectDocument(root, sourceIdentity.byteLength);
+  if (!sourceDocument.ok) {
+    if (sourceDocument.reason === DESKTOP_WEB_EXPORT_REFUSALS.unsafePath) {
+      return sourceDocument;
+    }
+    return refuse(
+      DESKTOP_WEB_EXPORT_REFUSALS.projectChanged,
+      "scene.json changed while its verified bytes were being opened for export.",
+    );
+  }
   const documentBytes = sourceDocument.bytes;
 
   const exactHash = contentHash(documentBytes.toString("utf8"));

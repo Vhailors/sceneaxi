@@ -685,6 +685,35 @@ describe("desktop static Web export", () => {
     expect(exportCommit.maximumReadLength).toBeLessThanOrEqual(64 * 1024);
   });
 
+  it("refuses initial document size drift through bounded reads", () => {
+    const root = temporary("sceneaxi-export-initial-size-drift-");
+    expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
+    const bridge = createDesktopBridge({
+      cwd: root,
+      webExportRuntime: RUNTIME,
+      webExportPublisherExecutable: publisherExecutable,
+    });
+    const expectedContentHash = statusHash(bridge);
+    truncateSync(join(root, "scene.json"), 64 * 1024 + 1);
+    exportCommit.maximumReadLength = 0;
+
+    const result = bridge.handle({
+      action: "ship",
+      payload: {
+        op: "export-web",
+        documentPath: "scene.json",
+        expectedContentHash,
+      },
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      reason: DESKTOP_WEB_EXPORT_REFUSALS.projectChanged,
+    });
+    expect(exportCommit.maximumReadLength).toBeLessThanOrEqual(64 * 1024);
+    expect(existsSync(join(root, "exports"))).toBe(false);
+  });
+
   it("refuses a FIFO accepted asset before preparing export storage", () => {
     const sourceRoot = temporary("sceneaxi-export-fifo-source-");
     const source = join(sourceRoot, "triangle.gltf");
