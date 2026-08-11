@@ -129,6 +129,22 @@ if (
   failures.push("add/remove, Reject, Undo, or malformed-input evidence is incomplete");
 }
 if (
+  proof.projectBrowser?.listed !== true ||
+  proof.projectBrowser?.selected !== true ||
+  proof.projectBrowser?.opened !== true ||
+  typeof proof.projectBrowser?.assetDigest !== "string" ||
+  !/^sha256:[0-9a-f]{64}$/.test(proof.projectBrowser.assetDigest) ||
+  typeof proof.projectBrowser?.assetFrame !== "number" ||
+  typeof proof.projectBrowser?.assetPath !== "string" ||
+  !/^assets\/[a-z0-9][a-z0-9-]{0,63}\.gltf$/.test(proof.projectBrowser.assetPath) ||
+  proof.projectBrowser?.restored !== true ||
+  proof.projectBrowser?.activeDocumentPath !== "scene.json" ||
+  proof.projectBrowser?.confirmationRefusal !== "DESKTOP_PROJECT_BROWSER_CONFIRMATION_REQUIRED" ||
+  proof.projectBrowser?.protectedRefusal !== "DESKTOP_PROJECT_BROWSER_OPERATION_NOT_PERMITTED"
+) {
+  failures.push("project browser did not prove list/select/open/restart and protected mutation refusals");
+}
+if (
   proof.ship?.exported !== true ||
   proof.ship?.handoffPresent !== true ||
   typeof proof.ship?.bundleDigest !== "string" ||
@@ -194,6 +210,9 @@ console.log(
 );
 console.log(
   `  authoring: selected transform → ${proof.authoring.proposedPhase} → ${proof.authoring.acceptedPhase}; add/remove Reject+Undo; reopened translation ${proof.authoring.reopenedValue}, rotation ${proof.authoring.playedRotationY}, scale ${proof.authoring.playedScaleZ} → redrawn at frame ${proof.playbackDom.frame}`,
+);
+console.log(
+  `  project browser: list/select/open/restart ${proof.projectBrowser.assetPath} · ${proof.projectBrowser.confirmationRefusal} · ${proof.projectBrowser.protectedRefusal}`,
 );
 console.log(
   `  ship: static Web bundle ${proof.ship.bundleDigest} · source ${proof.ship.sourceDigest} · Delivery Handoff present`,

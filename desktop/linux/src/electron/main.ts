@@ -13,7 +13,14 @@
  * and navigation away from the packaged document is refused.
  */
 import { createHash } from "node:crypto";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, sep } from "node:path";
 import { BrowserWindow, app, dialog, ipcMain } from "electron";
@@ -45,6 +52,15 @@ import {
   DESKTOP_PROJECT_REFUSALS,
 } from "../lib/project-lifecycle-contract.js";
 import { createDesktopProjectLifecycle } from "../lib/project-lifecycle.js";
+import {
+  DESKTOP_PROJECT_BROWSER_CHANNEL,
+  DESKTOP_PROJECT_BROWSER_REFUSALS,
+  projectBrowserRefuse,
+} from "../lib/project-browser-contract.js";
+import {
+  createDesktopProjectBrowser,
+  type DesktopProjectBrowser,
+} from "../lib/project-browser.js";
 import { DESKTOP_WEB_EXPORT_REFUSALS } from "../lib/web-export.js";
 import { createElectronProviderKeyStore } from "./provider-key-store.js";
 import {
@@ -83,6 +99,27 @@ function smokeProjectDir(): string {
   const dir = mkdtempSync(join(tmpdir(), "sceneaxi-desktop-smoke-"));
   seedProject(dir);
   return dir;
+}
+
+function smokeAssetBytes(): Buffer {
+  const positions = Buffer.from(new Float32Array([
+    -1, 0, 0,
+    1, 0, 0,
+    0, 1, 0,
+  ]).buffer);
+  return Buffer.from(JSON.stringify({
+    asset: { version: "2.0" },
+    buffers: [{
+      byteLength: positions.byteLength,
+      uri: `data:application/octet-stream;base64,${positions.toString("base64")}`,
+    }],
+    bufferViews: [{ buffer: 0, byteLength: positions.byteLength }],
+    accessors: [{ bufferView: 0, componentType: 5126, count: 3, type: "VEC3" }],
+    meshes: [{ primitives: [{ attributes: { POSITION: 0 } }] }],
+    nodes: [{ mesh: 0 }],
+    scenes: [{ nodes: [0] }],
+    scene: 0,
+  }));
 }
 
 /** Read one own property off an unknown bridge payload, without asserting a shape. */
@@ -140,16 +177,37 @@ async function start(): Promise<void> {
       : join(__dirname, "sceneaxi-publish-no-replace");
   }
   let bridge: DesktopBridge | null = null;
+  let projectBrowser: DesktopProjectBrowser | null = null;
   let activeRoot: string | null = null;
 
   const activateProject = async (root: string): Promise<DesktopBridge> => {
     if (bridge !== null && activeRoot === root) return bridge;
     bridge = null;
+    projectBrowser = null;
     activeRoot = null;
     await localBridgeServer?.close();
     localBridgeServer = null;
+    let activeBridgeForDirtyCheck: DesktopBridge | null = null;
+    const nextProjectBrowser = createDesktopProjectBrowser({
+      root,
+      stateDirectory: SMOKE
+        ? join(root, ".sceneaxi-runtime")
+        : join(app.getPath("userData"), "project-lifecycle"),
+      isDirty: () => {
+        const response = activeBridgeForDirtyCheck?.handle({
+          action: "authoring",
+          payload: { op: "status", documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
+        });
+        if (response === undefined || !response.ok) return true;
+        const snapshot = payloadField(response.data, "authoringSnapshot");
+        const phase = payloadField(snapshot, "phase");
+        return phase === "reviewing" || phase === "pending" ||
+          payloadField(snapshot, "journalRecoveryPending") === true;
+      },
+    });
     const next = createDesktopBridge({
       cwd: root,
+      projectBrowser: nextProjectBrowser,
       onFrameReport: (report) => frameReported?.(report),
       ...(byoRuntime.runByoAssistant === undefined
         ? {}
@@ -161,6 +219,7 @@ async function start(): Promise<void> {
         : { webExportPublisherExecutable }),
       ...(webExportRuntime === undefined ? {} : { webExportRuntime }),
     });
+    activeBridgeForDirtyCheck = next;
     const localPaths = SMOKE
       ? {
           socketPath: join(root, ".sceneaxi-runtime", "desktop-v1.sock"),
@@ -191,19 +250,45 @@ async function start(): Promise<void> {
       );
     }
     bridge = next;
+    projectBrowser = nextProjectBrowser;
     activeRoot = root;
     return next;
   };
 
-  const lifecycle = SMOKE
-    ? null
-    : createDesktopProjectLifecycle({
-        stateDirectory: join(app.getPath("userData"), "project-lifecycle"),
-      });
+  const lifecycle = createDesktopProjectLifecycle({
+    stateDirectory: smokeRoot === null
+      ? join(app.getPath("userData"), "project-lifecycle")
+      : join(smokeRoot, ".sceneaxi-runtime"),
+  });
   let smokeBridge: DesktopBridge | null = null;
   if (smokeRoot !== null) {
     smokeBridge = await activateProject(smokeRoot);
-  } else if (lifecycle !== null) {
+    const sourcePath = join(smokeRoot, "smoke-source.gltf");
+    writeFileSync(sourcePath, smokeAssetBytes());
+    const stagedAsset = smokeBridge.handle({
+      action: "asset-import",
+      payload: {
+        profile: "web",
+        documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+        sourcePath,
+      },
+    });
+    if (!stagedAsset.ok || payloadField(stagedAsset.data, "outcome") !== "reviewing") {
+      fail("smoke asset did not reach Change Review");
+    }
+    const acceptedAsset = smokeBridge.handle({
+      action: "authoring",
+      payload: { op: "accept" },
+    });
+    if (!acceptedAsset.ok || payloadField(acceptedAsset.data, "phase") !== "applied") {
+      fail("smoke asset did not apply through the existing authoring bridge");
+    }
+    unlinkSync(sourcePath);
+    const openedSmokeProject = lifecycle.openProject(smokeRoot);
+    if (!openedSmokeProject.ok) {
+      fail(`smoke project lifecycle did not bind the contained root: ${openedSmokeProject.reason}`);
+    }
+  } else {
     const startup = lifecycle.startup();
     if (startup.ok && startup.data.status.active !== null) {
       await activateProject(startup.data.status.active.root);
@@ -238,6 +323,13 @@ async function start(): Promise<void> {
     });
     return picker.chooseAndStage(payloadField(request, "profile"));
   });
+  ipcMain.handle(DESKTOP_PROJECT_BROWSER_CHANNEL, (_event, request: unknown) =>
+    projectBrowser?.handle(request) ??
+      projectBrowserRefuse(
+        DESKTOP_PROJECT_BROWSER_REFUSALS.projectRequired,
+        "Choose New Project, Open Project, or a validated recent project before browsing project files.",
+      ),
+  );
   ipcMain.handle(DESKTOP_BYO_CONFIGURATION_CHANNEL, (_event, request: unknown) =>
     byoRuntime.configuration.handle(request),
   );
@@ -268,47 +360,40 @@ async function start(): Promise<void> {
   window.webContents.on("will-navigate", (event) => event.preventDefault());
   window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
 
-  if (lifecycle !== null) {
-    const projectHost = createDesktopProjectHost({
-      lifecycle,
-      dialogs: {
-        async chooseNewProjectRoot() {
-          const selected = await dialog.showOpenDialog(window, {
-            title: "New SceneAxi Project",
-            buttonLabel: "Create starter project here",
-            properties: ["openDirectory", "createDirectory"],
-          });
-          return selected.canceled ? null : (selected.filePaths[0] ?? null);
-        },
-        async chooseOpenProjectRoot() {
-          const selected = await dialog.showOpenDialog(window, {
-            title: "Open SceneAxi Project",
-            buttonLabel: "Open Project",
-            properties: ["openDirectory"],
-          });
-          return selected.canceled ? null : (selected.filePaths[0] ?? null);
-        },
+  const projectHost = createDesktopProjectHost({
+    lifecycle,
+    dialogs: {
+      async chooseNewProjectRoot() {
+        if (SMOKE) return null;
+        const selected = await dialog.showOpenDialog(window, {
+          title: "New SceneAxi Project",
+          buttonLabel: "Create starter project here",
+          properties: ["openDirectory", "createDirectory"],
+        });
+        return selected.canceled ? null : (selected.filePaths[0] ?? null);
       },
-      activate: activateProject,
-    });
-    ipcMain.handle(DESKTOP_PROJECT_CHANNEL, async (_event, request: unknown) => {
-      const before = activeRoot;
-      const response = await projectHost.handle(request);
-      if (desktopProjectReloadRequired(before, response)) {
-        // Let the invoke response cross the preload boundary, then reload the
-        // unforked chrome so its one renderer owner mounts the newly active root.
-        setTimeout(() => window.webContents.reload(), 0);
-      }
-      return response;
-    });
-  } else {
-    ipcMain.handle(DESKTOP_PROJECT_CHANNEL, () =>
-      bridgeRefuse(
-        DESKTOP_PROJECT_REFUSALS.requestMalformed,
-        "Project dialogs are disabled in the packaged smoke proof.",
-      ),
-    );
-  }
+      async chooseOpenProjectRoot() {
+        if (SMOKE) return null;
+        const selected = await dialog.showOpenDialog(window, {
+          title: "Open SceneAxi Project",
+          buttonLabel: "Open Project",
+          properties: ["openDirectory"],
+        });
+        return selected.canceled ? null : (selected.filePaths[0] ?? null);
+      },
+    },
+    activate: activateProject,
+  });
+  ipcMain.handle(DESKTOP_PROJECT_CHANNEL, async (_event, request: unknown) => {
+    const before = activeRoot;
+    const response = await projectHost.handle(request);
+    if (desktopProjectReloadRequired(before, response)) {
+      // Let the invoke response cross the preload boundary, then reload the
+      // unforked chrome so its one renderer owner mounts the newly active root.
+      setTimeout(() => window.webContents.reload(), 0);
+    }
+    return response;
+  });
 
   await window.loadFile(join(__dirname, "index.html"));
 
@@ -523,6 +608,117 @@ async function start(): Promise<void> {
     fail("authoring reopen did not prove the saved translation bytes");
   }
 
+  const invokeProjectBrowser = async (request: unknown) =>
+    await window.webContents.executeJavaScript(
+      `globalThis.sceneaxiDesktopLinux.browseProject(${JSON.stringify(request)})`,
+    );
+  const browserListed: unknown = await invokeProjectBrowser({
+    action: "status",
+    profile: "web",
+  });
+  const browserListedData = payloadField(browserListed, "data");
+  const browserListedStatus = payloadField(browserListedData, "status");
+  const browserFiles = payloadField(browserListedStatus, "files");
+  const browserAsset = Array.isArray(browserFiles)
+    ? browserFiles.find((file) => payloadField(file, "kind") === "asset")
+    : undefined;
+  const browserAssetPath = payloadField(browserAsset, "path");
+  const browserAssetInstanceId = payloadField(browserAsset, "instanceId");
+  const browserAssetDigest = payloadField(browserAsset, "digest");
+  if (
+    payloadField(browserListed, "ok") !== true ||
+    payloadField(browserListedStatus, "activeDocumentPath") !== SAMPLE_DOCUMENT ||
+    !Array.isArray(browserFiles) ||
+    typeof browserAssetPath !== "string" ||
+    typeof browserAssetInstanceId !== "string" ||
+    typeof browserAssetDigest !== "string"
+  ) {
+    fail("project browser preload channel did not list the canonical document and asset");
+  }
+  const browserUiOpen = (await window.webContents.executeJavaScript(
+    `(async () => {
+      const waitFor = async (predicate) => {
+        for (let attempt = 0; attempt < 400; attempt += 1) {
+          if (predicate()) return true;
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+        return false;
+      };
+      const selector = document.querySelector('#project-browser-file-select');
+      const opener = document.querySelector('[data-action="project-browser-open"]');
+      if (!(selector instanceof HTMLSelectElement) || !(opener instanceof HTMLButtonElement)) {
+        return { selected: false, opened: false, frame: null, instanceId: null, digest: null };
+      }
+      selector.value = ${JSON.stringify(browserAssetPath)};
+      selector.dispatchEvent(new Event('change', { bubbles: true }));
+      const selected = await waitFor(() =>
+        document.querySelector('[data-busy]') === null &&
+        document.querySelector('#project-browser-file-select')?.value === ${JSON.stringify(browserAssetPath)});
+      document.querySelector('[data-action="project-browser-open"]')?.click();
+      const opened = await waitFor(() =>
+        document.querySelector('[data-busy]') === null &&
+        document.querySelector('.viewport')?.dataset.assetOpen === ${JSON.stringify(browserAssetInstanceId)} &&
+        document.querySelector('.viewport')?.dataset.assetDigest === ${JSON.stringify(browserAssetDigest)});
+      const status = document.querySelector('[data-project-status]')?.textContent ?? '';
+      const frame = /opened at viewport frame ([0-9]+)/.exec(status);
+      return {
+        selected,
+        opened,
+        frame: frame === null ? null : Number(frame[1]),
+        instanceId: document.querySelector('.viewport')?.dataset.assetOpen ?? null,
+        digest: document.querySelector('.viewport')?.dataset.assetDigest ?? null,
+      };
+    })()`,
+  )) as {
+    selected: boolean;
+    opened: boolean;
+    frame: number | null;
+    instanceId: string | null;
+    digest: string | null;
+  };
+  const browserUnconfirmed: unknown = await invokeProjectBrowser({
+    action: "delete",
+    profile: "web",
+    path: browserAssetPath,
+  });
+  const browserProtected: unknown = await invokeProjectBrowser({
+    action: "delete",
+    profile: "web",
+    path: browserAssetPath,
+    confirmed: true,
+  });
+  const restartedBrowser = createDesktopProjectBrowser({
+    root: cwd,
+    stateDirectory: join(cwd, ".sceneaxi-runtime"),
+  }).handle({ action: "status", profile: "web" });
+  if (
+    browserUiOpen.selected !== true ||
+    browserUiOpen.opened !== true ||
+    typeof browserUiOpen.frame !== "number" ||
+    browserUiOpen.instanceId !== browserAssetInstanceId ||
+    browserUiOpen.digest !== browserAssetDigest ||
+    payloadField(browserUnconfirmed, "ok") !== false ||
+    payloadField(browserUnconfirmed, "reason") !==
+      DESKTOP_PROJECT_BROWSER_REFUSALS.confirmationRequired ||
+    payloadField(browserProtected, "ok") !== false ||
+    payloadField(browserProtected, "reason") !==
+      DESKTOP_PROJECT_BROWSER_REFUSALS.operationNotPermitted ||
+    !restartedBrowser.ok || restartedBrowser.data.status.selectedPath !== browserAssetPath ||
+    readFileSync(documentFile, "utf8") !== savedBytes
+  ) {
+    fail(`project browser asset selection, bridge open, recovery, or protected mutation evidence is incomplete: ${JSON.stringify({
+      browserUiOpen,
+      browserAssetInstanceId,
+      browserAssetDigest,
+      browserUnconfirmed,
+      browserProtected,
+      restartedBrowser,
+      documentBytesPreserved: readFileSync(documentFile, "utf8") === savedBytes,
+    })}`);
+  }
+  const browserConfirmationRefusal = payloadField(browserUnconfirmed, "reason");
+  const browserProtectedRefusal = payloadField(browserProtected, "reason");
+
   const openPath = proofBridge.handle({
     action: "open-path",
     payload: { documentPath: SAMPLE_DOCUMENT },
@@ -689,6 +885,18 @@ async function start(): Promise<void> {
         persisted: savedBytes !== seededBytes,
         scratchProject,
         project: cwd,
+      },
+      projectBrowser: {
+        listed: true,
+        selected: true,
+        opened: true,
+        assetPath: browserAssetPath,
+        assetDigest: browserAssetDigest,
+        assetFrame: browserUiOpen.frame,
+        restored: true,
+        activeDocumentPath: SAMPLE_DOCUMENT,
+        confirmationRefusal: browserConfirmationRefusal,
+        protectedRefusal: browserProtectedRefusal,
       },
       ship: shipped.ok
         ? {

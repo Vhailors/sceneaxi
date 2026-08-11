@@ -41,6 +41,7 @@ describe("desktop-linux seam", () => {
     expect(DESKTOP_BRIDGE_ACTIONS).toEqual([
       "handshake",
       "scene",
+      "project-browser-open",
       "open-path",
       "asset-import",
       "ship",

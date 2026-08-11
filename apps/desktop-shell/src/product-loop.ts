@@ -27,6 +27,7 @@ export const DESKTOP_PROJECT = Object.freeze({
 });
 
 export const DESKTOP_VIEWPORT_PLAY_EVENT = "sceneaxi:desktop-viewport-play";
+export const DESKTOP_VIEWPORT_SCENE_OPEN_EVENT = "sceneaxi:desktop-viewport-scene-open";
 export const DESKTOP_RARITY_PROPOSAL_EVENT = "sceneaxi:desktop-rarity-proposal";
 
 export const DESKTOP_PRODUCT_CAPABILITY_IDS = Object.freeze([
@@ -132,6 +133,8 @@ export const DESKTOP_PRODUCT_REFUSALS = Object.freeze({
   projectRequired: "DESKTOP_EXPORT_PROJECT_REQUIRED",
   exportDirty: "DESKTOP_WEB_EXPORT_PROJECT_DIRTY",
   profileSwitchDirty: "DESKTOP_PROFILE_SWITCH_DIRTY",
+  projectBrowserDirty: "DESKTOP_PROJECT_BROWSER_DIRTY",
+  projectBrowserFileMissing: "DESKTOP_PROJECT_BROWSER_FILE_MISSING",
   undoStagedProposal: "DESKTOP_UNDO_STAGED_PROPOSAL",
   applyNotCompleted: "DESKTOP_APPLY_NOT_COMPLETED",
   recoveryPending: "DESKTOP_RECOVERY_PENDING",
@@ -173,6 +176,10 @@ export const DESKTOP_PRODUCT_REFUSAL_MESSAGES: Readonly<
     "Web export requires saved project bytes; save or discard the staged proposal and resolve recovery first.",
   [DESKTOP_PRODUCT_REFUSALS.profileSwitchDirty]:
     "One proposal is already staged; save it or re-open the project to discard it before staging another edit, changing the project, or switching profiles.",
+  [DESKTOP_PRODUCT_REFUSALS.projectBrowserDirty]:
+    "Opening a project-browser file refuses while Change Review or recovery is active.",
+  [DESKTOP_PRODUCT_REFUSALS.projectBrowserFileMissing]:
+    "The saved browser selection is no longer the active document or an admitted manifest asset.",
   [DESKTOP_PRODUCT_REFUSALS.undoStagedProposal]:
     "Undo restores the last completed Save and the host drops the staged proposal with it, so save that proposal or re-open the project to discard it first.",
   [DESKTOP_PRODUCT_REFUSALS.applyNotCompleted]:

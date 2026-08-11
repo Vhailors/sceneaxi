@@ -11,8 +11,10 @@ import {
   renderDesktopChrome,
 } from "@sceneaxi/desktop-shell";
 import {
+  DESKTOP_PROJECT_BROWSER_REFUSALS,
   DESKTOP_PROJECT_REFUSALS,
   createDesktopBridge,
+  createDesktopProjectBrowser,
   createDesktopProjectHost,
   createDesktopProjectLifecycle,
   type DesktopBridge,
@@ -74,6 +76,7 @@ describe("desktop project lifecycle packaged-like interaction", () => {
     const openChoices: Array<string | null> = [null, opened, invalid];
     const lifecycle = createDesktopProjectLifecycle({ stateDirectory: state });
     let activeBridge: DesktopBridge | null = null;
+    let activeBrowser: ReturnType<typeof createDesktopProjectBrowser> | null = null;
     const host = createDesktopProjectHost({
       lifecycle,
       dialogs: {
@@ -85,7 +88,12 @@ describe("desktop project lifecycle packaged-like interaction", () => {
         },
       },
       activate(root) {
-        activeBridge = createDesktopBridge({ cwd: root });
+        activeBrowser = createDesktopProjectBrowser({
+          root,
+          stateDirectory: join(state, "project-browser"),
+          isDirty: () => false,
+        });
+        activeBridge = createDesktopBridge({ cwd: root, projectBrowser: activeBrowser });
       },
     });
 
@@ -107,6 +115,19 @@ describe("desktop project lifecycle packaged-like interaction", () => {
                   detail: null,
                 }
               : bridge.handle(clone(request)),
+          );
+        },
+        browseProject: async (request: unknown) => {
+          const browser = activeBrowser;
+          return clone(
+            browser === null
+              ? {
+                  ok: false,
+                  reason: DESKTOP_PROJECT_BROWSER_REFUSALS.projectRequired,
+                  message: "Choose a project first.",
+                  detail: null,
+                }
+              : browser.handle(clone(request)),
           );
         },
       },
@@ -136,7 +157,7 @@ describe("desktop project lifecycle packaged-like interaction", () => {
     expect(query(window, "[data-project-launcher]")?.hidden).toBe(true);
     expect(query(window, "[data-project-bound]")?.hidden).toBe(false);
     expect(query(window, "[data-project-root]")?.textContent).toBe(resolve(created));
-    expect(query(window, "[data-project-file]")?.textContent).toContain("scene.json");
+    expect(query(window, "#project-browser-file-select")?.textContent).toContain("scene.json");
     expect(window.document.title).toContain(resolve(created));
     expect(query(window, "[data-project-status]")?.textContent).toContain("open · scene");
 

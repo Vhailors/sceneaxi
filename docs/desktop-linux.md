@@ -42,6 +42,7 @@ Bridge actions and what each reaches — only through public seams:
 |---|---|
 | `handshake` | identity only |
 | `scene` | re-read the requested project-contained Scene Document, validate and reproduce its stored composition through `composeScene()`, then return the shared `MountableScene` payload from `@sceneaxi/site-kit` |
+| `project-browser-open` | validate and persist the selected canonical browser identity, refuse authoritative Change Review or recovery state, and return either the active authoring status or an exact digest-bound asset `MountableScene` in one synchronous decision |
 | `open-path` | the same requested document's composition — `documentPath` required exactly as for `scene` — through `bootstrapOpenPath()` from `@sceneaxi/engine-orchestrator`: a real kernel scene session opened, advanced, observed, closed, with its mountable payload returned for viewport synchronization. An accepted rarity namespace additionally opens a product session, verifies the accepted event through dispatch/advance/save/resume, and returns its safe result for Run and viewport presentation |
 | `asset-import` | the one contained GLB/glTF importer authority. The native picker supplies a local path; validation stages `/data` through the existing E1 session, Accept materializes the project copy, and Reject writes nothing. Exact limits and absence boundaries: [`asset-ingestion.md`](asset-ingestion.md) |
 | `ship` | `export-web` validates the current exact `scene.json` bytes and composed scene, verifies every accepted/referenced asset, reuses the packaged renderer bytes, and writes one content-addressed static Web directory plus a validated Delivery Handoff. It is offline and owns no deployment adapter or authority |
@@ -454,6 +455,38 @@ entries can be opened only after membership validation and can be removed withou
 closing the active project. The window title and Project / Files panel show the
 validated document title (or root basename), canonical root, and active
 `scene.json`.
+
+Once a root is bound, that panel is a real contained browser over exactly two
+canonical sources: the active `scene.json` and
+`scene.json.data.assetManifest.assets`. It never walks the directory. The
+document row reports the authoring-core content hash and Scene Document identity;
+asset rows report the manifest's supported GLB/glTF type, byte length, digest,
+copy policy, importer provenance, artifact/instance identity, and a fresh
+on-disk validation of the project copy. A missing copy, changed bytes, wrong
+file type, traversal, or symlink refuses by the stable
+`DESKTOP_PROJECT_BROWSER_*` diagnostic rather than being hidden or opened.
+
+Selection travels through the typed preload/main-process project-browser channel.
+Open travels through the existing desktop bridge's synchronous
+`project-browser-open` action, which performs contained browser validation,
+authoritative Change Review or recovery refusal, and, for an asset, canonical
+instance-and-digest-bound `MountableScene` projection before returning. The renderer
+synchronizes that scene into the existing viewport and reports asset-open success only
+after acknowledging a frame; the sole authoring target remains `scene.json`. The
+selected project-relative path is recovered from the
+atomically written mode-0600 `project-browser.json` beside recent-project state.
+That file contains only its schema version, canonical root, and selected path —
+never document/asset bytes, credentials, or secrets. If Undo removes the manifest
+entry named by that path, status retains `DESKTOP_PROJECT_BROWSER_FILE_MISSING`;
+an explicit Select of a currently listed canonical file replaces the stale path
+and restores normal browsing. Rename and Delete require an
+explicit confirmation even to be considered, then refuse dirty/recovery state and
+revalidate containment and identity. Both canonical row kinds are immutable in
+the approved v1 contracts: `scene.json` is the one active document, while the
+asset manifest owns each asset id and copy path and defines no rename/delete
+transaction. They therefore end in
+`DESKTOP_PROJECT_BROWSER_OPERATION_NOT_PERMITTED`; this slice does not invent a
+second mutation protocol.
 
 The legacy starter migration remains part of the explicit New Project seed helper:
 a valid document lacking composed-scene data can be migrated by that helper while

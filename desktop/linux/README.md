@@ -47,9 +47,11 @@ line proving: bridge handshake, a real kernel scene session bootstrapped through
 authoring selection → proposal review → atomic save → fresh-session reopen → Play
 round trip for selected Translation X, Rotation Y, and Scale Z plus bounded
 local-artifact add/remove, Reject, Undo, the saved composition's viewport redraw,
-a static Web export whose source bytes and Delivery Handoff digests are verified,
-and the renderer's real presentation frame report (`backend three`, `surface
-webgl-canvas` where a drawing buffer exists).
+project-browser listing and selection, digest-bound asset Open with a viewport
+frame acknowledgement, restart selection recovery, confirmation and immutable
+mutation refusals, a static Web export whose source bytes and Delivery Handoff
+digests are verified, and the renderer's real presentation frame report
+(`backend three`, `surface webgl-canvas` where a drawing buffer exists).
 
 On Web Experience, **Import GLB/glTF…** opens a native file dialog and stages the
 selected contained asset through that same Change Review. Save owns the accepted
@@ -109,6 +111,7 @@ silently adding identity or running a migration.
 | Scene composition (one pipeline, two consumers) | `src/lib/desktop-scene.ts` | main process; gate-tested |
 | Native contained asset picker | `src/lib/asset-picker-host.ts` + `src/electron/main.ts` | pure dialog adapter + privileged Electron dialog |
 | Contained project lifecycle + versioned atomic recents | `src/lib/{project-lifecycle-contract,project-lifecycle,project-host}.ts` | pure typed host seam; gate-tested from `tests/desktop/` and packaged-like e2e |
+| Contained project + asset browser | `src/lib/{project-browser-contract,project-browser}.ts` | canonical document/manifest projection, validated metadata, restart selection, and confirmation-gated immutable mutation refusals |
 | Explicit New Project starter and one-time document migration | `src/lib/project-seed.ts` | main process; invoked only after New Project selects a root or by the isolated smoke |
 | Chrome document emitter (desktop-shell, unforked) | `src/lib/chrome-document.ts` | build time |
 | Electron entries (window, IPC adapter, smoke) | `src/electron/{main,preload}.ts` | Electron only |
@@ -142,6 +145,13 @@ Rules the gate enforces (`pnpm check:desktop`, `pnpm check:boundaries`,
   before persistence, refuses traversal and symlink escapes, and stores only
   canonical root strings in a versioned atomically-renamed file. Kids refuses
   before the host opens a dialog or reads that registry.
+- The project browser lists only the active `scene.json` and admitted manifest
+  assets; it does not scan the root or expose stored bytes. Its recent state holds
+  only root/selection metadata. Opening an asset validates its canonical instance
+  and digest through the existing scene bridge and synchronizes that scene into
+  the existing viewport without changing the canonical authoring target. Open,
+  rename, and delete cannot bypass Change Review or the immutable v1 manifest
+  contract.
 - Provider secrets exist only transiently in the password control during
   submission and in the privileged main process during secure save/retrieval and
   a provider session. The field and privileged lease are explicitly cleared; no

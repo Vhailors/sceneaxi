@@ -97,6 +97,10 @@ import {
   DESKTOP_WEB_EXPORT_REFUSALS,
   exportDesktopWebProject,
 } from "./web-export.js";
+import {
+  DESKTOP_PROJECT_BROWSER_REFUSALS,
+  type DesktopProjectBrowserResponse,
+} from "./project-browser-contract.js";
 
 export type DesktopBridgeOptions = {
   /** Working directory the authoring session binds to. */
@@ -116,6 +120,9 @@ export type DesktopBridgeOptions = {
   readonly webExportRuntime?: Uint8Array;
   readonly webExportPublisherExecutable?: string;
   readonly webExportPlatform?: NodeJS.Platform;
+  readonly projectBrowser?: Readonly<{
+    handle(request: unknown): DesktopProjectBrowserResponse;
+  }>;
 };
 
 export type DesktopAssistantProfile =
@@ -1211,6 +1218,96 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     return bridgeOk("authoring", result);
   };
 
+  const projectBrowserOpen = (payload: unknown): DesktopBridgeResponse => {
+    if (options.projectBrowser === undefined) {
+      return bridgeRefuse(
+        DESKTOP_PROJECT_BROWSER_REFUSALS.projectRequired,
+        "Choose a validated project before opening a project-browser file.",
+      );
+    }
+    const profile = field(payload, "profile");
+    const path = field(payload, "path");
+    const opened = options.projectBrowser.handle({ action: "open", profile, path });
+    if (!opened.ok) return bridgeRefuse(opened.reason, opened.message, opened.detail);
+    const browserStatus = opened.data.status;
+    const file = browserStatus.files.find((candidate) => candidate.path === path);
+    if (file === undefined || browserStatus.activeDocumentPath !== DESKTOP_ACTIVE_DOCUMENT_PATH) {
+      return bridgeRefuse(
+        DESKTOP_PROJECT_BROWSER_REFUSALS.fileMissing,
+        "The validated browser response did not retain the requested canonical file identity.",
+        typeof path === "string" ? path : null,
+      );
+    }
+
+    const authoringResponse = authoring({
+      op: "status",
+      documentPath: browserStatus.activeDocumentPath,
+    });
+    if (!authoringResponse.ok) return authoringResponse;
+    const authoringStatus = authoringResponse.data;
+    if (field(authoringStatus, "ok") !== true) {
+      const diagnostics = field(authoringStatus, "diagnostics");
+      const diagnostic = Array.isArray(diagnostics) ? diagnostics[0] : undefined;
+      const reason = field(diagnostic, "code");
+      const message = field(diagnostic, "message");
+      return bridgeRefuse(
+        typeof reason === "string" ? reason : DESKTOP_PROJECT_BROWSER_REFUSALS.documentInvalid,
+        typeof message === "string"
+          ? message
+          : "The active Scene Document could not be opened through the authoring session.",
+        file.path,
+      );
+    }
+    const authoringSnapshot = field(authoringStatus, "authoringSnapshot");
+    const phase = field(authoringSnapshot, "phase");
+    if (
+      (phase !== "idle" && phase !== "applied" && phase !== "rejected") ||
+      field(authoringSnapshot, "journalRecoveryPending") === true
+    ) {
+      return bridgeRefuse(
+        DESKTOP_PROJECT_BROWSER_REFUSALS.dirty,
+        "Open refuses while Change Review, recovery, or another unsaved authoring change is active.",
+        file.path,
+      );
+    }
+    const documentFile = browserStatus.files.find((candidate) => candidate.kind === "document");
+    if (
+      documentFile === undefined ||
+      field(authoringStatus, "contentHash") !== documentFile.digest
+    ) {
+      return bridgeRefuse(
+        DESKTOP_PROJECT_BROWSER_REFUSALS.documentInvalid,
+        "The active Scene Document changed while the project-browser Open snapshot was being validated.",
+        browserStatus.activeDocumentPath,
+      );
+    }
+
+    if (file.kind === "document") {
+      return bridgeOk("project-browser-open", Object.freeze({
+        ...opened.data,
+        authoringStatus,
+      }));
+    }
+    const scene = desktopSceneFromDocumentData(field(authoringStatus, "data"));
+    if (!scene.ok) return bridgeRefuse(scene.reason, scene.message);
+    const asset = Object.freeze({ instanceId: file.instanceId, digest: file.digest });
+    if (!(scene.mountable.importedAssets ?? []).some((candidate) =>
+      candidate.instanceId === asset.instanceId && candidate.digest === asset.digest
+    )) {
+      return bridgeRefuse(
+        DESKTOP_PROJECT_BROWSER_REFUSALS.fileInvalid,
+        "The canonical scene does not contain the validated asset identity and digest.",
+        file.path,
+      );
+    }
+    return bridgeOk("project-browser-open", Object.freeze({
+      ...opened.data,
+      authoringStatus,
+      mountable: scene.mountable,
+      asset,
+    }));
+  };
+
   const ship = (payload: unknown): DesktopBridgeResponse => {
     const op = field(payload, "op");
     const documentPath = field(payload, "documentPath");
@@ -1659,6 +1756,8 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         if (!scene.ok) return bridgeRefuse(scene.reason, scene.message);
         return bridgeOk("scene", scene.mountable);
       }
+      case "project-browser-open":
+        return projectBrowserOpen(payload);
       case "open-path":
         return openPathExercise(payload);
       case "asset-import":

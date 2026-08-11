@@ -49,6 +49,7 @@ import {
   DESKTOP_PRODUCT_REFUSALS,
   DESKTOP_RARITY_PROPOSAL_EVENT as SHELL_RARITY_PROPOSAL_EVENT,
   DESKTOP_VIEWPORT_PLAY_EVENT as SHELL_VIEWPORT_PLAY_EVENT,
+  DESKTOP_VIEWPORT_SCENE_OPEN_EVENT as SHELL_VIEWPORT_SCENE_OPEN_EVENT,
   DESKTOP_VISUAL_REFUSALS,
   type DesktopSnapshot,
 } from "@sceneaxi/desktop-shell";
@@ -65,6 +66,7 @@ import {
   DESKTOP_RARITY_PROJECT_SEED,
   DESKTOP_RARITY_PROPOSAL_EVENT,
   DESKTOP_VIEWPORT_PLAY_EVENT,
+  DESKTOP_VIEWPORT_SCENE_OPEN_EVENT,
   createDesktopAssistantViewportController,
   createDesktopBridge,
   desktopAssistantScene,
@@ -3598,6 +3600,8 @@ describe("desktop renderer behavior", () => {
   it("shares one event name per surface with the shell", () => {
     expect(DESKTOP_VIEWPORT_PLAY_EVENT).toBe("sceneaxi:desktop-viewport-play");
     expect(DESKTOP_VIEWPORT_PLAY_EVENT).toBe(SHELL_VIEWPORT_PLAY_EVENT);
+    expect(DESKTOP_VIEWPORT_SCENE_OPEN_EVENT).toBe("sceneaxi:desktop-viewport-scene-open");
+    expect(DESKTOP_VIEWPORT_SCENE_OPEN_EVENT).toBe(SHELL_VIEWPORT_SCENE_OPEN_EVENT);
     expect(DESKTOP_RARITY_PROPOSAL_EVENT).toBe(SHELL_RARITY_PROPOSAL_EVENT);
   });
 

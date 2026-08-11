@@ -153,8 +153,19 @@ describe("desktop product loop", () => {
       desktopVisualView(createDesktopVisualState({ profile: "kids" })),
     );
 
-    expect(game).toContain('class="project-file is-active" aria-current="page"');
-    expect(game).toContain('data-project-file="scene.json"');
+    expect(game).toContain(
+      'id="project-browser-file-select" data-kind="live" data-product-action',
+    );
+    expect(game).toContain(
+      'id="project-browser-open" data-kind="live" data-product-action',
+    );
+    expect(game).toContain(
+      'id="project-browser-rename" data-kind="live" data-product-action',
+    );
+    expect(game).toContain(
+      'id="project-browser-delete" data-kind="live" data-product-action',
+    );
+    expect(game).toContain('<option value="scene.json" selected>scene.json');
     expect(game).toContain(
       'id="project-open" data-kind="live" data-product-action data-action="document-reload"',
     );

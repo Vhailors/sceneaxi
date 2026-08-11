@@ -120,15 +120,20 @@ the native picker port stages the fixed contained-copy profile documented in
 has no native dialog; its injected portable fixture retains the earlier bounded
 project-relative asset proposal for transport-level coverage.
 
-The first-release loop has one honest active file, `scene.json`. In the packaged
+The first-release loop has one canonical authoring target, `scene.json`. In the packaged
 host, first launch shows New Project and Open Project without binding or seeding
 an implicit root. New Project creates the existing starter only after a native
 directory choice; Open Project and Recent validate a canonical root before the
 shared authoring session is rebound. The chrome displays the host-provided
 project name, canonical root, and active document, but never receives file
 contents through the lifecycle port. Standalone chrome has no lifecycle port,
-so those controls refuse honestly. Reload validates
-and reads it through the long-lived authoring session. An opened project selects
+so those controls refuse honestly. Once bound, the packaged host's separate
+project-browser port supplies metadata for that document and its admitted
+manifest assets; the exact listing, selection, Open, and immutable mutation
+contract is owned by
+[`docs/desktop-linux.md`](../../docs/desktop-linux.md#first-launch-and-product-tabs).
+Reload validates and reads the active document through the long-lived authoring
+session. An opened project selects
 among the validated composed instances the host reports. The Build inspector
 exposes bounded X/Y/Z translation, rotation, and scale plus separate local-copy
 Add and leaf Remove controls. Each asks the host for one canonical E1 proposal,
@@ -278,11 +283,14 @@ executed semantically in
 `tests/e2e/desktop-product-loop-golden.test.ts` is the authoring/play vertical.
 `tests/e2e/desktop-project-lifecycle-golden.test.ts` drives the emitted UI through
 a preload-shaped project host for first launch, create, cancel, open, invalid
-bytes, recents, removal, and restart. The former
-test executes the emitted browser script at the narrow window tier, clicks all
-three profile surfaces plus Open, Web asset staging, Save recovery, and Play
-against the real host bridge, and observes the viewport playback acknowledgement.
-It also drives Change Review end to end — the rendered proposal, Accept writing,
+bytes, recents, removal, and restart.
+`tests/e2e/desktop-project-browser-golden.test.ts` drives canonical document and
+manifest listing, selection and restart recovery, asset Open, and the protected
+rename/delete refusals through the same emitted UI. The desktop product-loop test
+executes the emitted browser script at the narrow window tier, clicks all three
+profile surfaces plus Open, Web asset staging, Save recovery, and Play against
+the real host bridge, and observes the viewport playback acknowledgement. It
+also drives Change Review end to end — the rendered proposal, Accept writing,
 Reject leaving the document untouched, a stale base hash refusing, the outcome
 dialog naming the diagnostic it was raised for, and the default emitted document
 carrying no review row.
