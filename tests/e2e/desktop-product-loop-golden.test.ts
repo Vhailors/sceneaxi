@@ -1494,6 +1494,18 @@ describe("desktop first-release product loop", () => {
     start();
     await click(window, "#project-open");
 
+    const identityText = (instanceId: string, field: "artifact" | "instance" | "parent") =>
+      query(
+        window,
+        `[data-scene-identity="${instanceId}"] [data-scene-identity-${field}]`,
+      )?.textContent;
+    expect(identityText("desktop-crate-beside", "artifact"))
+      .toBe("starter-service-crate-artifact");
+    expect(identityText("desktop-crate-beside", "instance"))
+      .toBe("desktop-crate-beside");
+    expect(identityText("desktop-crate-beside", "parent"))
+      .toBe("desktop-crate-root");
+
     const hierarchy = query(window, "#scene-entity-desktop-crate-beside") as
       | (HappyHTMLElement & {
           value: string;
@@ -1530,6 +1542,12 @@ describe("desktop first-release product loop", () => {
       `${objectIdentity} · instance desktop-crate-beside · parent desktop-crate-stacked`,
     );
     expect(optionText("desktop-crate-beside")).not.toContain("Placed beside the root");
+    expect(identityText("desktop-crate-beside", "artifact"))
+      .toBe("starter-service-crate-artifact");
+    expect(identityText("desktop-crate-beside", "instance"))
+      .toBe("desktop-crate-beside");
+    expect(identityText("desktop-crate-beside", "parent"))
+      .toBe("desktop-crate-stacked");
   });
 
   it("names the diagnostic the conflict dialog is actually reporting", async () => {

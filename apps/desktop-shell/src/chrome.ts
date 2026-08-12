@@ -532,6 +532,7 @@ function leftDock(view: DesktopVisualView): string {
     <div class="scene-entities" data-scene-entities hidden>
       <p class="scene-entities-label">PROJECT HIERARCHY · ORDERED MULTI-SELECT</p>
       ${sceneEntitySelect(view.product.selectSceneEntity)}
+      <ol class="scene-entity-identities" data-scene-identities aria-label="Hierarchy object identities and parentage"></ol>
     </div>
     <p class="scene-entities-refusal" data-scene-entities-refusal aria-live="polite" hidden></p>
     <p class="project-root" data-project-root></p>
@@ -1106,6 +1107,14 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .scene-entities{padding:0 7px 9px}
 .scene-entities-label{margin:0 3px 5px;font-family:var(--mono);font-size:8px;letter-spacing:.12em;color:var(--faint)}
 .scene-entities select{width:100%;min-width:0;height:112px;padding:4px 7px;border:1px solid var(--line-card);border-radius:4px;background:var(--raised);color:var(--text);font-family:var(--mono);font-size:9px}
+.scene-entity-identities{display:grid;gap:5px;min-width:0;margin:6px 0 0;padding:0;list-style:none}
+.scene-entity-identity{min-width:0;margin-left:calc(var(--scene-depth,0) * 7px);padding:6px 7px;border:1px solid var(--line-card);border-left:2px solid var(--accent);border-radius:4px;background:var(--well)}
+.scene-entity-identity>span{display:block;margin-bottom:4px;font-size:9px;color:var(--text)}
+.scene-entity-identity dl{display:grid;gap:3px;margin:0}
+.scene-entity-identity dl div{display:grid;grid-template-columns:42px minmax(0,1fr);gap:5px;min-width:0}
+.scene-entity-identity dt{font-family:var(--mono);font-size:7px;line-height:1.45;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
+.scene-entity-identity dd{min-width:0;margin:0}
+.scene-entity-identity code{display:block;min-width:0;font-size:8px;line-height:1.45;color:var(--dim);white-space:normal;overflow-wrap:anywhere}
 .scene-entity{width:100%;min-width:0;padding:8px 9px;border:1px solid var(--line-card);border-radius:4px;background:var(--raised);color:var(--dim);text-align:left}
 .scene-entity span,.scene-entity code{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .scene-entity span{font-size:10px;color:var(--text)}.scene-entity code{margin-top:3px;font-size:8px;color:var(--dim)}
@@ -1551,9 +1560,11 @@ if (shell) {
     selectedSceneEntityId = null;
     selectedSceneEntityIds = [];
     const entities = shell.querySelector('[data-scene-entities]');
+    const identities = shell.querySelector('[data-scene-identities]');
     const editor = shell.querySelector('[data-scene-property-editor]');
     const review = shell.querySelector('[data-scene-property-review]');
     if (entities) entities.hidden = true;
+    if (identities) identities.replaceChildren();
     if (editor) editor.hidden = true;
     if (review) { review.hidden = true; review.textContent = ''; }
     sceneEntitiesRefusal('');
@@ -1657,6 +1668,38 @@ if (shell) {
     editableScene = inspected;
     const entities = shell.querySelector('[data-scene-entities]');
     if (entities) entities.hidden = false;
+    const identities = shell.querySelector('[data-scene-identities]');
+    if (identities) {
+      identities.replaceChildren();
+      entitiesList.forEach((entity) => {
+        const item = document.createElement('li');
+        item.className = 'scene-entity-identity';
+        item.dataset.sceneIdentity = entity.id;
+        item.style.setProperty('--scene-depth', String(entity.depth));
+        const kind = document.createElement('span');
+        kind.textContent = entity.parentInstanceId === null ? 'Object · hierarchy root' : 'Object · hierarchy child';
+        item.appendChild(kind);
+        const fields = document.createElement('dl');
+        [
+          ['Artifact', entity.artifactId, 'artifact'],
+          ['Instance', entity.id, 'instance'],
+          ['Parent', entity.parentInstanceId === null ? 'root' : entity.parentInstanceId, 'parent'],
+        ].forEach(([label, value, field]) => {
+          const row = document.createElement('div');
+          const term = document.createElement('dt');
+          const description = document.createElement('dd');
+          const code = document.createElement('code');
+          term.textContent = label;
+          code.textContent = value;
+          code.setAttribute('data-scene-identity-' + field, '');
+          description.appendChild(code);
+          row.append(term, description);
+          fields.appendChild(row);
+        });
+        item.appendChild(fields);
+        identities.appendChild(item);
+      });
+    }
     q('[data-action="scene-entity-select"]').forEach((el) => {
       if (el.tagName !== 'SELECT') return;
       el.replaceChildren();
