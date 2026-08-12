@@ -1,9 +1,10 @@
 /** End-to-end project browser over lifecycle, preload-shaped ports, and authoring bridge. */
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { Window as HappyWindow, type HTMLElement as HappyHTMLElement } from "happy-dom";
+import { EDITOR_COMMAND_REGISTRY } from "@sceneaxi/schemas";
 import {
   DESKTOP_PRODUCT_REFUSALS,
   createDesktopVisualState,
@@ -117,7 +118,13 @@ describe("desktop project and asset browser golden path", () => {
           snapshot?.journalRecoveryPending === true;
       },
     });
-    const bridge = createDesktopBridge({ cwd: root, projectBrowser: browser });
+    const bridge = createDesktopBridge({
+      cwd: root,
+      projectBrowser: browser,
+      commandCapabilities: [...new Set(
+        EDITOR_COMMAND_REGISTRY.map((command) => command.capability.id),
+      )],
+    });
     bridgeForDirtyCheck = bridge;
     expect(bridge.handle({
       action: "asset-import",
@@ -139,6 +146,7 @@ describe("desktop project and asset browser golden path", () => {
       activate: () => undefined,
     });
     const sceneRequests: unknown[] = [];
+    let hierarchyInspectionCount = 0;
     let openedAssetInstance: string | null = null;
     let openedAssetDigest: string | null = null;
 
@@ -154,6 +162,13 @@ describe("desktop project and asset browser golden path", () => {
         request: async (request: unknown) => {
           if ((request as { action?: unknown }).action === "project-browser-open") {
             sceneRequests.push(request);
+          }
+          if (
+            (request as { action?: unknown }).action === "command" &&
+            (request as { payload?: { commandId?: unknown } }).payload?.commandId ===
+              "scene-hierarchy-inspect"
+          ) {
+            hierarchyInspectionCount += 1;
           }
           return clone(bridge.handle(clone(request)));
         },
@@ -264,6 +279,45 @@ describe("desktop project and asset browser golden path", () => {
     await selectProjectFile(window, "scene.json");
     await click(window, '[data-action="project-browser-open"]');
     expect(query(window, "[data-project-status]")?.textContent).toContain("scene.json · open");
+
+    await click(window, "#scene-entity-desktop-crate-beside");
+    const parent = query(window, "#scene-instance-parent") as unknown as {
+      value: string;
+    } | null;
+    const policy = query(window, "#scene-instance-policy") as unknown as {
+      value: string;
+    } | null;
+    if (parent === null || policy === null) throw new Error("reparent controls missing");
+    parent.value = "desktop-crate-stacked";
+    policy.value = "preserve-local";
+    const beforeReparent = readFileSync(join(root, "scene.json"), "utf8");
+    await click(window, "#scene-instance-reparent");
+    expect(query(window, "[data-change-proposal]")?.hidden).toBe(false);
+    const reviewBeforeOpen = {
+      documentPath: query(window, "[data-change-document]")?.textContent,
+      contentHash: query(window, "[data-change-content-hash]")?.textContent,
+      diff: query(window, "[data-change-diff]")?.textContent,
+      badge: query(window, "[data-change-badge]")?.textContent,
+    };
+    const inspectionsBeforeDirtyOpen = hierarchyInspectionCount;
+    await click(window, '[data-action="project-browser-open"]');
+    expect(query(window, "[data-project-status]")?.textContent).toContain(
+      DESKTOP_PROJECT_BROWSER_REFUSALS.dirty,
+    );
+    expect(hierarchyInspectionCount).toBe(inspectionsBeforeDirtyOpen + 1);
+    expect(query(window, "[data-change-proposal]")?.hidden).toBe(false);
+    expect({
+      documentPath: query(window, "[data-change-document]")?.textContent,
+      contentHash: query(window, "[data-change-content-hash]")?.textContent,
+      diff: query(window, "[data-change-diff]")?.textContent,
+      badge: query(window, "[data-change-badge]")?.textContent,
+    }).toEqual(reviewBeforeOpen);
+    expect(readFileSync(join(root, "scene.json"), "utf8")).toBe(beforeReparent);
+    await click(window, '[data-action="change-accept"]');
+    expect(readFileSync(join(root, "scene.json"), "utf8")).not.toBe(beforeReparent);
+    expect(query(window, "[data-change-proposal]")?.hidden).toBe(true);
+    await click(window, '[data-command="edit-undo"]');
+    expect(readFileSync(join(root, "scene.json"), "utf8")).toBe(beforeReparent);
 
     const desktopPort = (
       window as unknown as {

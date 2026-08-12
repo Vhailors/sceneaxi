@@ -2161,7 +2161,13 @@ if (shell) {
         });
         const status = authoritative?.ok ? authoritative.data : null;
         if (status && isSessionSnapshot(status.authoringSnapshot)) {
-          syncReview(status.authoringSnapshot);
+          const hierarchyReviewRedacted = status.authoringSnapshot.phase === 'reviewing' &&
+            reviewProjection(status.authoringSnapshot) === null;
+          if (hierarchyReviewRedacted) {
+            await syncSceneHierarchy(true);
+          } else {
+            syncReview(status.authoringSnapshot);
+          }
         }
       }
       productStatus('refused', 'Project browser refused · ' + code);
@@ -2410,10 +2416,13 @@ if (shell) {
       profile: shell.dataset.profile,
     });
     if (response?.ok && response.data && typeof response.data === 'object') {
-      if (restoreReview && isSessionSnapshot(response.data.authoringSnapshot)) {
-        syncReview(response.data.authoringSnapshot);
+      let reviewRestored = !restoreReview;
+      if (restoreReview && isSessionSnapshot(response.data.authoringSnapshot) &&
+          reviewProjection(response.data.authoringSnapshot) !== null) {
+        reviewRestored = syncReview(response.data.authoringSnapshot);
       }
-      return syncSceneProperties({ editableScene: response.data });
+      const propertiesSynced = syncSceneProperties({ editableScene: response.data });
+      return propertiesSynced && reviewRestored;
     }
     const diagnostic = responseDiagnostic(response) || {
       code: T.product.refusals.authoringRefused,
