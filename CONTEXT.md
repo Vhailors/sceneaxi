@@ -1,5 +1,16 @@
 # SceneAxi context and glossary
 
+## Full desktop editor v1
+
+The captain-authorized packaged Electron editor program is specified by
+[sceneaxi#249](https://github.com/Vhailors/sceneaxi/issues/249). Its canonical
+current-state inventory, evidence links, first slice, and dependency-ordered
+issue graph are in
+[`docs/full-editor-v1-capability-matrix.md`](docs/full-editor-v1-capability-matrix.md).
+It expands packaged desktop authoring under the 2026-08-11 amendment to
+[ADR 0003](docs/adr/0003-editor-sequencing-e1-first-e2-specified.md); it does not
+expand the entitled Web editor or the refuse-only Kids surface.
+
 ## Hybrid sculpt vertical
 
 The post-MVP openable path is:
@@ -39,6 +50,20 @@ three-instance demo, and stable evidence are indexed by
 [`docs/scene-composition.md`](docs/scene-composition.md).
 
 ## Glossary
+
+- **Full desktop editor v1** — the captain-confirmed Electron desktop contract
+  in sceneaxi#249: the existing text-canonical E1 persistence path underneath a
+  full command-driven editor, shipped through dependency-ordered vertical
+  slices. It is not a second authoring core and not a Web/Kids scope grant.
+- **Shared command registry** — the versioned product-command source consumed by
+  UI, CLI, and assistant clients, carrying schemas, permissions, refusals,
+  progress, evidence, and undo/redo declarations. It is distinct from the
+  held-key CLI command map and the same-user local-bridge tool registry, whose
+  fail-closed purposes remain intact.
+- **Real / partial / fake** — inventory status from the full-editor matrix:
+  real has working applicable evidence; partial has a working bounded path and
+  names its next dependency; fake has no backing product operation and must be
+  removed or visibly disabled with a named refusal.
 
 - **Hybrid core** — the Godot-like engine/library core plus AI sculpt
   authoring direction. It does not mean a full Godot editor.
