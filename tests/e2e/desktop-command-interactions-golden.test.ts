@@ -49,6 +49,7 @@ function engineResponse(
   state: {
     undoAvailability: "available" | "unavailable" | "recovery-pending";
     redoAvailability: "available" | "unavailable" | "recovery-pending";
+    projectGitResponse?: unknown;
   },
 ) {
   const payload = request["payload"] as Record<string, unknown> | undefined;
@@ -176,6 +177,9 @@ function engineResponse(
     };
   }
   if (action === "project-git") {
+    if (state.projectGitResponse !== undefined) {
+      return { ok: true, action: "command", data: state.projectGitResponse };
+    }
     return {
       ok: true,
       action: "command",
@@ -221,6 +225,7 @@ async function harness(
     | "unavailable"
     | "recovery-pending" = "unavailable",
   hasActiveProject = true,
+  projectGitResponse?: unknown,
 ) {
   const window = new HappyWindow({ width: 1200, height: 800 });
   windows.push(window);
@@ -228,9 +233,11 @@ async function harness(
   const state: {
     undoAvailability: "available" | "unavailable" | "recovery-pending";
     redoAvailability: "available" | "unavailable" | "recovery-pending";
+    projectGitResponse?: unknown;
   } = {
     undoAvailability: initialUndoAvailability,
     redoAvailability: "unavailable",
+    ...(projectGitResponse === undefined ? {} : { projectGitResponse }),
   };
   const clone = <T>(value: T): T => window.eval(`(${JSON.stringify(value)})`) as T;
   Object.defineProperty(window, "structuredClone", { value: clone });
@@ -467,6 +474,34 @@ describe("desktop command menu, palette, and accelerator parity", () => {
     expect(element(window, "[data-outcome-code]").textContent).toContain(
       DESKTOP_PRODUCT_REFUSALS.projectRequired,
     );
+  });
+
+  it("refuses incomplete contained Git evidence without rendering it", async () => {
+    const { window } = await harness("web", "unavailable", true, {
+      schemaVersion: 1,
+      kind: "sceneaxi.project-git-state",
+      projectId: "project-command-test",
+      branch: "main",
+      head: "a".repeat(40),
+      detached: false,
+      canonicalFiles: ["scene.json", "sceneaxi.project.json"],
+      entries: [],
+      canonicalChanges: [],
+      unrelatedChanges: [],
+      workingTreeDiff: "",
+      stagedDiff: "",
+      clean: true,
+      undoScope: "sceneaxi-document-only",
+    });
+    await click(window, '[data-menu-trigger="file"]');
+    await click(window, "#menu-command-project-git-status");
+    expect(element(window, "[data-project-status]").textContent).toContain(
+      DESKTOP_PRODUCT_REFUSALS.runtimeRequestRefused,
+    );
+    expect(element(window, "[data-outcome-code]").textContent).toBe(
+      DESKTOP_PRODUCT_REFUSALS.runtimeRequestRefused,
+    );
+    expect(element(window, "[data-project-git-evidence]").hidden).toBe(true);
   });
 
   it("retires Ship evidence when the project becomes dirty", async () => {

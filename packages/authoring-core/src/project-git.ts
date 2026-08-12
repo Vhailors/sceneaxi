@@ -1,6 +1,6 @@
 /** Contained local Git inspection and preparation for one selected native project. */
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, realpathSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import {
   PROJECT_GIT_DIAGNOSTICS,
@@ -16,7 +16,16 @@ import {
   type ProjectGitRepositoryState,
   type ProjectGitStateResult,
 } from "@sceneaxi/schemas";
-import { canonicalPath } from "./atomic-write.js";
+import {
+  AtomicWriteLockError,
+  canonicalPath,
+  type AtomicWriteLockSet,
+} from "./atomic-write.js";
+import {
+  applyJournalRecoveryPending,
+  beginApplyJournalTransaction,
+  endApplyJournalTransaction,
+} from "./apply-journal.js";
 
 export const PROJECT_GIT_OPERATIONS = Object.freeze([
   "status",
@@ -81,6 +90,9 @@ function runGit(
   root: string,
   args: readonly string[],
 ): GitResult {
+  const environment = Object.fromEntries(
+    Object.entries(process.env).filter(([name]) => !name.startsWith("GIT_")),
+  );
   const result = spawnSync(executable, [
     "-c", "core.fsmonitor=false",
     "-c", "core.untrackedCache=false",
@@ -91,7 +103,7 @@ function runGit(
     cwd: root,
     encoding: "utf8",
     env: {
-      ...process.env,
+      ...environment,
       GIT_TERMINAL_PROMPT: "0",
       GIT_OPTIONAL_LOCKS: "0",
       LC_ALL: "C",
@@ -145,10 +157,20 @@ function selectedPaths(
   return Object.freeze(normalized.sort());
 }
 
+type MutationGuard = Readonly<{ lockSet: AtomicWriteLockSet }>;
+
+function transactionDirtyFailure(): ProjectGitFailure {
+  return failure(
+    PROJECT_GIT_DIAGNOSTICS.transactionDirty,
+    ".sceneaxi/journal",
+    "A SceneAxi authoring transaction is active; Git preparation cannot race it.",
+  );
+}
+
 function mutationGuard(
   root: string,
   authoring: ProjectGitAuthoringState | undefined,
-): ProjectGitFailure | null {
+): ProjectGitFailure | MutationGuard {
   if (authoring?.reviewStaged === true) {
     return failure(
       PROJECT_GIT_DIAGNOSTICS.reviewStaged,
@@ -163,16 +185,25 @@ function mutationGuard(
       "SceneAxi authoring recovery is pending; resolve it before changing the Git index.",
     );
   }
-  if (authoring?.transactionDirty === true ||
-    existsSync(resolve(root, ".sceneaxi", "journal", ".active")) ||
-    existsSync(resolve(root, ".sceneaxi", "journal", ".operation"))) {
+  if (authoring?.transactionDirty === true) {
+    return transactionDirtyFailure();
+  }
+  let lockSet: AtomicWriteLockSet;
+  try {
+    lockSet = beginApplyJournalTransaction(root, []);
+  } catch (error) {
+    if (error instanceof AtomicWriteLockError) return transactionDirtyFailure();
+    throw error;
+  }
+  if (applyJournalRecoveryPending(root)) {
+    endApplyJournalTransaction(lockSet);
     return failure(
-      PROJECT_GIT_DIAGNOSTICS.transactionDirty,
-      ".sceneaxi/journal",
-      "A SceneAxi authoring transaction is active; Git preparation cannot race it.",
+      PROJECT_GIT_DIAGNOSTICS.recoveryPending,
+      ".sceneaxi/journal/.active",
+      "SceneAxi authoring recovery is pending; resolve it before changing the Git index.",
     );
   }
-  return null;
+  return Object.freeze({ lockSet });
 }
 
 function parseStatus(output: string, canonicalFiles: ReadonlySet<string>): readonly ProjectGitEntry[] {
@@ -378,20 +409,24 @@ export function stageProjectGitPaths(
   const selection = selectedPaths(prepared.root, paths);
   if ("diagnostic" in selection) return selection;
   const guard = mutationGuard(prepared.root, options.authoring);
-  if (guard !== null) return guard;
-  const before = repositoryState(prepared);
-  if (!before.ok) return before;
-  if (before.state.detached) {
-    return failure(PROJECT_GIT_DIAGNOSTICS.detachedWorktree, "$git.HEAD", "Git staging is refused on a detached worktree.");
+  if ("diagnostic" in guard) return guard;
+  try {
+    const before = repositoryState(prepared);
+    if (!before.ok) return before;
+    if (before.state.detached) {
+      return failure(PROJECT_GIT_DIAGNOSTICS.detachedWorktree, "$git.HEAD", "Git staging is refused on a detached worktree.");
+    }
+    if (before.state.conflicts.length > 0) {
+      return failure(PROJECT_GIT_DIAGNOSTICS.mergeConflict, before.state.conflicts[0] ?? "$git.index", "Resolve the reported merge conflict before staging project paths.");
+    }
+    const staged = runGit(prepared.executable, prepared.root, ["--literal-pathspecs", "add", "--", ...selection]);
+    if (!staged.ok) {
+      return failure(PROJECT_GIT_DIAGNOSTICS.commandFailed, "$input.paths", "Git refused the explicit selected-path staging operation.");
+    }
+    return repositoryState(prepared);
+  } finally {
+    endApplyJournalTransaction(guard.lockSet);
   }
-  if (before.state.conflicts.length > 0) {
-    return failure(PROJECT_GIT_DIAGNOSTICS.mergeConflict, before.state.conflicts[0] ?? "$git.index", "Resolve the reported merge conflict before staging project paths.");
-  }
-  const staged = runGit(prepared.executable, prepared.root, ["--literal-pathspecs", "add", "--", ...selection]);
-  if (!staged.ok) {
-    return failure(PROJECT_GIT_DIAGNOSTICS.commandFailed, "$input.paths", "Git refused the explicit selected-path staging operation.");
-  }
-  return repositoryState(prepared);
 }
 
 /** Validate an exact staged selection and return commit evidence without creating a commit. */
@@ -412,40 +447,44 @@ export function prepareProjectGitCommit(
   const selection = selectedPaths(prepared.root, paths);
   if ("diagnostic" in selection) return selection;
   const guard = mutationGuard(prepared.root, options.authoring);
-  if (guard !== null) return guard;
-  const stateResult = repositoryState(prepared);
-  if (!stateResult.ok) return stateResult;
-  if (stateResult.state.detached) {
-    return failure(PROJECT_GIT_DIAGNOSTICS.detachedWorktree, "$git.HEAD", "Commit preparation is refused on a detached worktree.");
+  if ("diagnostic" in guard) return guard;
+  try {
+    const stateResult = repositoryState(prepared);
+    if (!stateResult.ok) return stateResult;
+    if (stateResult.state.detached) {
+      return failure(PROJECT_GIT_DIAGNOSTICS.detachedWorktree, "$git.HEAD", "Commit preparation is refused on a detached worktree.");
+    }
+    if (stateResult.state.conflicts.length > 0) {
+      return failure(PROJECT_GIT_DIAGNOSTICS.mergeConflict, stateResult.state.conflicts[0] ?? "$git.index", "Resolve the reported merge conflict before preparing a commit.");
+    }
+    const stagedPaths = stateResult.state.entries
+      .filter((entry) => entry.index !== " " && entry.index !== "?")
+      .map((entry) => entry.path)
+      .sort();
+    if (selection.length !== stagedPaths.length || selection.some((path, index) => stagedPaths[index] !== path)) {
+      return failure(
+        PROJECT_GIT_DIAGNOSTICS.selectionMismatch,
+        "$input.paths",
+        "Commit preparation requires the explicit selection to equal the complete staged path set; unrelated staged paths remain visible and untouched.",
+      );
+    }
+    return Object.freeze({
+      ok: true as const,
+      preparation: Object.freeze({
+        schemaVersion: PROJECT_GIT_SCHEMA_VERSION,
+        kind: "sceneaxi.project-git-commit-preparation",
+        message: message.trim(),
+        selectedPaths: selection,
+        stagedDiff: stateResult.state.stagedDiff,
+        state: stateResult.state,
+        commitCreated: false as const,
+        hooksBypassed: false as const,
+        undoScope: "sceneaxi-document-only" as const,
+      }),
+    });
+  } finally {
+    endApplyJournalTransaction(guard.lockSet);
   }
-  if (stateResult.state.conflicts.length > 0) {
-    return failure(PROJECT_GIT_DIAGNOSTICS.mergeConflict, stateResult.state.conflicts[0] ?? "$git.index", "Resolve the reported merge conflict before preparing a commit.");
-  }
-  const stagedPaths = stateResult.state.entries
-    .filter((entry) => entry.index !== " " && entry.index !== "?")
-    .map((entry) => entry.path)
-    .sort();
-  if (selection.length !== stagedPaths.length || selection.some((path, index) => stagedPaths[index] !== path)) {
-    return failure(
-      PROJECT_GIT_DIAGNOSTICS.selectionMismatch,
-      "$input.paths",
-      "Commit preparation requires the explicit selection to equal the complete staged path set; unrelated staged paths remain visible and untouched.",
-    );
-  }
-  return Object.freeze({
-    ok: true as const,
-    preparation: Object.freeze({
-      schemaVersion: PROJECT_GIT_SCHEMA_VERSION,
-      kind: "sceneaxi.project-git-commit-preparation",
-      message: message.trim(),
-      selectedPaths: selection,
-      stagedDiff: stateResult.state.stagedDiff,
-      state: stateResult.state,
-      commitCreated: false as const,
-      hooksBypassed: false as const,
-      undoScope: "sceneaxi-document-only" as const,
-    }),
-  });
 }
 
 /** Dangerous or history-facing operations are outside the contained v1 surface. */

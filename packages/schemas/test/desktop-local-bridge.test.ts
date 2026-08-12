@@ -74,7 +74,7 @@ describe("desktop local bridge contract", () => {
       { name: "sceneaxi.project.migration.recover", permission: "project:write", mutatesProject: true },
       { name: "sceneaxi.project.git.status", permission: "project:read", mutatesProject: false },
       { name: "sceneaxi.project.git.diff", permission: "project:read", mutatesProject: false },
-      { name: "sceneaxi.project.git.stage", permission: "project:write", mutatesProject: false },
+      { name: "sceneaxi.project.git.stage", permission: "project:write", mutatesProject: true },
       { name: "sceneaxi.project.git.commit.prepare", permission: "project:write", mutatesProject: false },
       { name: "sceneaxi.project.propose", permission: "project:write", mutatesProject: false },
       { name: "sceneaxi.project.accept", permission: "project:write", mutatesProject: true },

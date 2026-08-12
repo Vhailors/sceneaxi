@@ -2,6 +2,7 @@ import {
   mkdtempSync,
   mkdirSync,
   readFileSync,
+  readdirSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -11,8 +12,12 @@ import { join } from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  apply,
+  acquireAtomicWriteLocks,
   inspectProjectGit,
   prepareProjectGitCommit,
+  propose,
+  releaseAtomicWriteLocks,
   refuseUnsupportedProjectGitOperation,
   serializeDocument,
   stageProjectGitPaths,
@@ -127,6 +132,63 @@ describe("contained project Git service", () => {
       ":(top)**",
       "scene.json",
     ]);
+  });
+
+  it("contains Git repository overrides inside the selected project", () => {
+    const { root } = repository("environment");
+    writeFileSync(join(root, "scene.json"), readFileSync(join(root, "scene.json"), "utf8").replace("Contained", "Contained override"));
+    const outside = mkdtempSync(join(tmpdir(), "sceneaxi-project-git-index-"));
+    roots.push(outside);
+    const outsideIndex = join(outside, "index");
+    const previousIndex = process.env["GIT_INDEX_FILE"];
+    process.env["GIT_INDEX_FILE"] = outsideIndex;
+    try {
+      expect(stageProjectGitPaths({ root }, ["scene.json"])).toMatchObject({ ok: true });
+    } finally {
+      if (previousIndex === undefined) delete process.env["GIT_INDEX_FILE"];
+      else process.env["GIT_INDEX_FILE"] = previousIndex;
+    }
+    expect(() => readFileSync(outsideIndex)).toThrow();
+    expect(git(root, "diff", "--cached", "--name-only").trim()).toBe("scene.json");
+  });
+
+  it("distinguishes completed, recoverable, and active authoring journal state", () => {
+    const { root } = repository("journal");
+    const proposed = propose({
+      cwd: root,
+      documentPath: "scene.json",
+      jsonPointer: "/title",
+      newValue: "Saved",
+    });
+    expect(proposed.ok).toBe(true);
+    if (!proposed.ok) return;
+    expect(apply({ cwd: root, proposal: proposed.proposal })).toMatchObject({ ok: true });
+    expect(readFileSync(join(root, ".sceneaxi", "journal", ".active"), "utf8").trim()).toBe("null");
+    expect(stageProjectGitPaths({ root }, ["scene.json"])).toMatchObject({ ok: true });
+
+    const journalDirectory = join(root, ".sceneaxi", "journal");
+    const journalName = readdirSync(journalDirectory).find((name) => name.endsWith(".json"));
+    expect(journalName).toBeDefined();
+    if (journalName === undefined) return;
+    const completed = JSON.parse(readFileSync(join(journalDirectory, journalName), "utf8")) as Record<string, unknown>;
+    const prepared = { ...completed, state: "prepared" };
+    delete prepared["completedAt"];
+    writeFileSync(join(journalDirectory, ".active"), `${JSON.stringify(prepared, null, 2)}\n`);
+    expect(stageProjectGitPaths({ root }, ["scene.json"])).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.recoveryPending },
+    });
+
+    writeFileSync(join(journalDirectory, ".active"), "null\n");
+    const lockSet = acquireAtomicWriteLocks([join(journalDirectory, ".operation")]);
+    try {
+      expect(stageProjectGitPaths({ root }, ["scene.json"])).toMatchObject({
+        ok: false,
+        diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.transactionDirty },
+      });
+    } finally {
+      releaseAtomicWriteLocks(lockSet);
+    }
   });
 
   it("reports conflicts read-only and refuses every unsafe mutation state before index changes", () => {

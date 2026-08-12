@@ -1655,6 +1655,25 @@ if (shell) {
       (snapshot.diagnostics === null || Array.isArray(snapshot.diagnostics));
   };
 
+  const isProjectGitEntry = (entry) => entry !== null && typeof entry === 'object' &&
+    typeof entry.path === 'string' && typeof entry.index === 'string' &&
+    typeof entry.worktree === 'string' && typeof entry.canonical === 'boolean' &&
+    typeof entry.conflict === 'boolean';
+
+  const isProjectGitState = (state) => state !== null && typeof state === 'object' &&
+    state.schemaVersion === 1 && state.kind === 'sceneaxi.project-git-state' &&
+    typeof state.projectId === 'string' &&
+    (state.branch === null || typeof state.branch === 'string') &&
+    (state.head === null || typeof state.head === 'string') &&
+    typeof state.detached === 'boolean' &&
+    Array.isArray(state.canonicalFiles) && state.canonicalFiles.every((path) => typeof path === 'string') &&
+    Array.isArray(state.entries) && state.entries.every(isProjectGitEntry) &&
+    Array.isArray(state.canonicalChanges) && state.canonicalChanges.every(isProjectGitEntry) &&
+    Array.isArray(state.unrelatedChanges) && state.unrelatedChanges.every(isProjectGitEntry) &&
+    Array.isArray(state.conflicts) && state.conflicts.every((path) => typeof path === 'string') &&
+    typeof state.workingTreeDiff === 'string' && typeof state.stagedDiff === 'string' &&
+    typeof state.clean === 'boolean' && state.undoScope === 'sceneaxi-document-only';
+
   const reviewProjection = (snapshot) => {
     if (!isSessionSnapshot(snapshot)) return null;
     const proposal = snapshot && snapshot.proposal;
@@ -3101,10 +3120,7 @@ if (shell) {
       return;
     }
     const state = response.data;
-    if (!state || state.kind !== 'sceneaxi.project-git-state' ||
-        !Array.isArray(state.entries) || !Array.isArray(state.canonicalChanges) ||
-        !Array.isArray(state.unrelatedChanges) || typeof state.workingTreeDiff !== 'string' ||
-        typeof state.stagedDiff !== 'string') {
+    if (!isProjectGitState(state)) {
       const code = T.product.refusals.runtimeRequestRefused;
       productStatus('refused', 'Repository inspection refused · ' + code);
       showOutcome('Repository inspection refused', code, 'The host returned no complete repository evidence.');

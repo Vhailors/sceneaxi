@@ -73,7 +73,9 @@ const commandTool = (definition: Readonly<{
     ...definition,
     permission: command.permission,
     mutatesProject:
-      command.mutation === "commits-project" || command.mutation === "reverts-project",
+      command.mutation === "commits-project" ||
+      command.mutation === "reverts-project" ||
+      command.mutation === "stages-change",
     creditRoute: "none",
     inputSchema: command.inputSchema,
   });
