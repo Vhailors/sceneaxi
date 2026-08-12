@@ -69,6 +69,19 @@ export {
 } from "./project-model.js";
 
 export {
+  PROJECT_GIT_OPERATIONS,
+  PROJECT_GIT_UNSUPPORTED_OPERATIONS,
+  inspectProjectGit,
+  prepareProjectGitCommit,
+  refuseUnsupportedProjectGitOperation,
+  stageProjectGitPaths,
+  type ProjectGitAuthoringState,
+  type ProjectGitOperation,
+  type ProjectGitOptions,
+  type ProjectGitUnsupportedOperation,
+} from "./project-git.js";
+
+export {
   getAtPointer,
   pointerTokens,
   setAtPointer,

@@ -6,6 +6,7 @@
  * becoming competing sources of permission or result metadata.
  */
 import type { JsonObject } from "./document.js";
+import { PROJECT_GIT_DIAGNOSTICS } from "./project-git.js";
 
 export const EDITOR_COMMAND_SCHEMA_VERSION = 1 as const;
 
@@ -50,6 +51,10 @@ export type EditorCommandId =
   | "project-migration-propose"
   | "project-migration-commit"
   | "project-migration-recover"
+  | "project-git-status"
+  | "project-git-diff"
+  | "project-git-stage"
+  | "project-git-commit-prepare"
   | "project-open"
   | "project-save"
   | "ship-export-web"
@@ -100,6 +105,8 @@ export type EditorCommandDefinition = Readonly<{
       | "project-inspection"
       | "project-migration-proposal"
       | "project-migration-evidence"
+      | "project-git-state"
+      | "project-git-commit-preparation"
       | "authoring-snapshot"
       | "undo-result"
       | "redo-result"
@@ -115,7 +122,7 @@ export type EditorCommandDefinition = Readonly<{
     commandId: "edit-undo" | "edit-redo" | null;
   }>;
   inputSchema: JsonObject;
-  inputShape: "none" | "document" | "export" | "assistant" | "assistant-agent" | "job" | "migration-approval";
+  inputShape: "none" | "document" | "export" | "assistant" | "assistant-agent" | "job" | "migration-approval" | "git-paths" | "git-commit";
 }>;
 
 export type EditorCommandInvocation = Readonly<{
@@ -247,6 +254,30 @@ const migrationApprovalInput = Object.freeze({
   }),
 }) satisfies JsonObject;
 
+const gitPathsInput = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: Object.freeze(["paths"]),
+  properties: Object.freeze({
+    paths: Object.freeze({
+      type: "array",
+      minItems: 1,
+      uniqueItems: true,
+      items: Object.freeze({ type: "string", minLength: 1 }),
+    }),
+  }),
+}) satisfies JsonObject;
+
+const gitCommitInput = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: Object.freeze(["paths", "message"]),
+  properties: Object.freeze({
+    ...gitPathsInput.properties,
+    message: Object.freeze({ type: "string", minLength: 1, maxLength: 4096 }),
+  }),
+}) satisfies JsonObject;
+
 const CLIENTS = Object.freeze([...EDITOR_COMMAND_CLIENTS]);
 const BASE_REFUSALS = Object.freeze([
   EDITOR_COMMAND_REFUSALS.clientDenied,
@@ -357,6 +388,66 @@ const DEFINITIONS = [
     undo: undo("none"),
     inputSchema: noInput,
     inputShape: "none",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "project-git-status",
+    label: "Repository Status",
+    acceptedClients: CLIENTS,
+    permission: "project:read",
+    capability: capability("project.git.read"),
+    mutation: "none",
+    progress: immediate(["inspecting", "completed"]),
+    evidence: evidence("project-git-state", "project"),
+    refusals: [...BASE_REFUSALS, ...Object.values(PROJECT_GIT_DIAGNOSTICS)],
+    undo: undo("none"),
+    inputSchema: noInput,
+    inputShape: "none",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "project-git-diff",
+    label: "Repository Diff",
+    acceptedClients: CLIENTS,
+    permission: "project:read",
+    capability: capability("project.git.read"),
+    mutation: "none",
+    progress: immediate(["inspecting", "completed"]),
+    evidence: evidence("project-git-state", "project"),
+    refusals: [...BASE_REFUSALS, ...Object.values(PROJECT_GIT_DIAGNOSTICS)],
+    undo: undo("none"),
+    inputSchema: noInput,
+    inputShape: "none",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "project-git-stage",
+    label: "Stage Selected Paths",
+    acceptedClients: CLIENTS,
+    permission: "project:write",
+    capability: capability("project.git.stage"),
+    mutation: "stages-change",
+    progress: immediate(["validating", "staging", "completed"]),
+    evidence: evidence("project-git-state", "project"),
+    refusals: [...BASE_REFUSALS, ...Object.values(PROJECT_GIT_DIAGNOSTICS)],
+    undo: undo("none"),
+    inputSchema: gitPathsInput,
+    inputShape: "git-paths",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "project-git-commit-prepare",
+    label: "Prepare Git Commit",
+    acceptedClients: CLIENTS,
+    permission: "project:write",
+    capability: capability("project.git.commit-prepare"),
+    mutation: "none",
+    progress: immediate(["validating", "prepared"]),
+    evidence: evidence("project-git-commit-preparation", "project"),
+    refusals: [...BASE_REFUSALS, ...Object.values(PROJECT_GIT_DIAGNOSTICS)],
+    undo: undo("none"),
+    inputSchema: gitCommitInput,
+    inputShape: "git-commit",
   }),
   definition({
     schemaVersion: 1,
@@ -652,6 +743,19 @@ export function validateEditorCommandInput(
       return exactKeys(input, ["approved", "proposalDigest"]) &&
         input["approved"] === true && typeof input["proposalDigest"] === "string" &&
         /^sha256:[0-9a-f]{64}$/.test(input["proposalDigest"]);
+    case "git-paths": {
+      const paths = input["paths"];
+      return exactKeys(input, ["paths"]) && Array.isArray(paths) && paths.length > 0 &&
+        paths.every((path) => typeof path === "string" && path.length > 0) &&
+        new Set(paths).size === paths.length;
+    }
+    case "git-commit": {
+      const paths = input["paths"];
+      return exactKeys(input, ["paths", "message"]) && Array.isArray(paths) && paths.length > 0 &&
+        paths.every((path) => typeof path === "string" && path.length > 0) &&
+        new Set(paths).size === paths.length && typeof input["message"] === "string" &&
+        input["message"].trim().length > 0 && input["message"].length <= 4096;
+    }
   }
 }
 

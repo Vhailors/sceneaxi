@@ -194,6 +194,10 @@ function bridgeRequest(toolName: DesktopLocalBridgeToolName, input: JsonObject):
     case "sceneaxi.project.migration.propose":
     case "sceneaxi.project.migration.commit":
     case "sceneaxi.project.migration.recover":
+    case "sceneaxi.project.git.status":
+    case "sceneaxi.project.git.diff":
+    case "sceneaxi.project.git.stage":
+    case "sceneaxi.project.git.commit.prepare":
     case "sceneaxi.run.play":
     case "sceneaxi.assistant.local.start":
     case "sceneaxi.assistant.byo.start":

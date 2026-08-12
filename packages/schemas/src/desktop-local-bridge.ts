@@ -125,6 +125,30 @@ export const DESKTOP_LOCAL_BRIDGE_TOOLS = Object.freeze([
     description: "Deterministically recover the one prepared project migration transaction.",
     providerRoute: "none",
   }),
+  commandTool({
+    name: "sceneaxi.project.git.status",
+    commandId: "project-git-status",
+    description: "Inspect contained canonical and unrelated working-tree state without changing either.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.project.git.diff",
+    commandId: "project-git-diff",
+    description: "Read the canonical unstaged and staged project diff with the same repository evidence as desktop.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.project.git.stage",
+    commandId: "project-git-stage",
+    description: "Stage only the explicitly selected contained project paths after registered capability checks.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.project.git.commit.prepare",
+    commandId: "project-git-commit-prepare",
+    description: "Prepare evidence for an exact staged selection without creating a commit or bypassing hooks.",
+    providerRoute: "none",
+  }),
   tool({
     name: "sceneaxi.project.propose",
     commandId: null,

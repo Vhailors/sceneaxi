@@ -718,6 +718,7 @@ function inspector(view: DesktopVisualView): string {
       <div><dt>Source project</dt><dd><code data-ship-source-digest></code></dd></div>
       <div><dt>Handoff</dt><dd><code data-ship-handoff-path></code></dd></div>
     </dl>
+    <pre class="change-diff" data-project-git-evidence hidden role="region" aria-label="Contained Git repository evidence"></pre>
   </div>`
         : ""
   }
@@ -3090,6 +3091,34 @@ if (shell) {
     productStatus('open', outcome + ' Web bundle · ' + result.bundleDigest);
   };
 
+  const inspectProjectRepository = async (commandId) => {
+    const response = await commandRequest(commandId, {});
+    if (response === null || !response.ok) {
+      const code = response?.reason || T.product.refusals.runtimeUnavailable;
+      const message = response?.message || 'The packaged host did not produce contained Git evidence.';
+      productStatus('refused', 'Repository inspection refused · ' + code);
+      showOutcome('Repository inspection refused', code, message);
+      return;
+    }
+    const state = response.data;
+    if (!state || state.kind !== 'sceneaxi.project-git-state' ||
+        !Array.isArray(state.entries) || !Array.isArray(state.canonicalChanges) ||
+        !Array.isArray(state.unrelatedChanges) || typeof state.workingTreeDiff !== 'string' ||
+        typeof state.stagedDiff !== 'string') {
+      const code = T.product.refusals.runtimeRequestRefused;
+      productStatus('refused', 'Repository inspection refused · ' + code);
+      showOutcome('Repository inspection refused', code, 'The host returned no complete repository evidence.');
+      return;
+    }
+    showModePanels('ship');
+    q('[data-project-git-evidence]').forEach((el) => {
+      el.textContent = JSON.stringify(state, null, 2);
+      el.hidden = false;
+    });
+    const label = commandId === 'project-git-diff' ? 'diff' : 'status';
+    productStatus('open', 'Repository ' + label + ' · ' + state.entries.length + ' working-tree change(s) · ' + state.conflicts.length + ' conflict(s)');
+  };
+
   const switchProfile = async (value) => {
     if (shell.dataset.profile === value) return;
     if (projectRecovering) {
@@ -3433,6 +3462,8 @@ if (shell) {
     'project-new': () => chooseProject('choose-new'),
     'project-open': () => chooseProject('choose-open'),
     'project-save': saveProject,
+    'project-git-status': () => inspectProjectRepository('project-git-status'),
+    'project-git-diff': () => inspectProjectRepository('project-git-diff'),
     'ship-export-web': exportWeb,
     'edit-undo': undoProject,
     'edit-redo': redoProject,

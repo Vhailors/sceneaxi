@@ -69,6 +69,8 @@ function engineResponse(
             ? { action: "open-path", payload: input }
             : commandId === "ship-export-web"
               ? { action: "ship", payload: { op: "export-web", ...input } }
+              : commandId === "project-git-status" || commandId === "project-git-diff"
+                ? { action: "project-git", payload: { op: commandId } }
               : null;
     if (translated !== null) return engineResponse(translated, state);
   }
@@ -170,6 +172,29 @@ function engineResponse(
         },
         bundleDigest: `sha256:${"c".repeat(64)}`,
         artifactPaths: ["index.html", "source/scene.json"],
+      },
+    };
+  }
+  if (action === "project-git") {
+    return {
+      ok: true,
+      action: "command",
+      data: {
+        schemaVersion: 1,
+        kind: "sceneaxi.project-git-state",
+        projectId: "project-command-test",
+        branch: "main",
+        head: "a".repeat(40),
+        detached: false,
+        canonicalFiles: ["scene.json", "sceneaxi.project.json"],
+        entries: [],
+        canonicalChanges: [],
+        unrelatedChanges: [],
+        conflicts: [],
+        workingTreeDiff: "",
+        stagedDiff: "",
+        clean: true,
+        undoScope: "sceneaxi-document-only",
       },
     };
   }
@@ -314,6 +339,10 @@ function expectedEffect(command: DesktopInteractionCommand) {
       return { plane: "project", action: "choose-open", op: null } as const;
     case "project-save":
       return { plane: "engine", action: "command", op: "project-save" } as const;
+    case "project-git-status":
+      return { plane: "engine", action: "command", op: "project-git-status" } as const;
+    case "project-git-diff":
+      return { plane: "engine", action: "command", op: "project-git-diff" } as const;
     case "ship-export-web":
       return { plane: "engine", action: "command", op: "ship-export-web" } as const;
     case "edit-undo":
@@ -361,6 +390,12 @@ async function invoke(
     );
     expect(element(window, "[data-ship-bundle-digest]").textContent).toBe(
       `sha256:${"c".repeat(64)}`,
+    );
+  }
+  if (command.id === "project-git-status" || command.id === "project-git-diff") {
+    expect(element(window, ".shell").dataset.mode).toBe("ship");
+    expect(element(window, "[data-project-git-evidence]").textContent).toContain(
+      '"kind": "sceneaxi.project-git-state"',
     );
   }
 }

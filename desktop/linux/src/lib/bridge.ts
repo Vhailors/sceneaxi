@@ -36,10 +36,13 @@ import {
   ASSISTANT_SCULPT_REFUSALS,
   commitProjectMigration,
   inspectProjectModel,
+  inspectProjectGit,
+  prepareProjectGitCommit,
   proposeProjectMigration,
   recoverProjectMigration,
   runAssistantSculptAction,
   safeRarityEvidenceFromNamespace,
+  stageProjectGitPaths,
   stageRarityProviderProposal,
   type AssistantSculptProgress,
   type AssistantSculptResult,
@@ -1911,6 +1914,46 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         return recovered.ok
           ? bridgeOk("command", recovered)
           : bridgeRefuse(recovered.diagnostic.code, recovered.diagnostic.message, recovered.diagnostic.path);
+      }
+      case "project-git-status":
+      case "project-git-diff": {
+        const inspected = inspectProjectGit(
+          { root: options.cwd, ...(options.commandProfile === undefined ? {} : { profile: options.commandProfile }) },
+          validated.command.id === "project-git-diff" ? "diff" : "status",
+        );
+        return inspected.ok
+          ? bridgeOk("command", inspected.state)
+          : bridgeRefuse(inspected.diagnostic.code, inspected.diagnostic.message, inspected.diagnostic.path);
+      }
+      case "project-git-stage": {
+        const snapshot = authoringSession().snapshot();
+        const staged = stageProjectGitPaths({
+          root: options.cwd,
+          ...(options.commandProfile === undefined ? {} : { profile: options.commandProfile }),
+          authoring: {
+            reviewStaged: snapshot.phase === "reviewing" && snapshot.proposal !== null,
+            recoveryPending: snapshot.journalRecoveryPending,
+            transactionDirty: snapshot.phase === "pending",
+          },
+        }, input["paths"] as readonly string[]);
+        return staged.ok
+          ? bridgeOk("command", staged.state)
+          : bridgeRefuse(staged.diagnostic.code, staged.diagnostic.message, staged.diagnostic.path);
+      }
+      case "project-git-commit-prepare": {
+        const snapshot = authoringSession().snapshot();
+        const prepared = prepareProjectGitCommit({
+          root: options.cwd,
+          ...(options.commandProfile === undefined ? {} : { profile: options.commandProfile }),
+          authoring: {
+            reviewStaged: snapshot.phase === "reviewing" && snapshot.proposal !== null,
+            recoveryPending: snapshot.journalRecoveryPending,
+            transactionDirty: snapshot.phase === "pending",
+          },
+        }, input["paths"] as readonly string[], String(input["message"]));
+        return prepared.ok
+          ? bridgeOk("command", prepared.preparation)
+          : bridgeRefuse(prepared.diagnostic.code, prepared.diagnostic.message, prepared.diagnostic.path);
       }
       case "ship-export-web":
         return ship({

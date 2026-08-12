@@ -29,6 +29,8 @@ function interaction<
     | "project-new"
     | "project-open"
     | "project-save"
+    | "project-git-status"
+    | "project-git-diff"
     | "ship-export-web"
     | "edit-undo"
     | "edit-redo"
@@ -71,6 +73,18 @@ export const DESKTOP_INTERACTION_COMMANDS = Object.freeze([
     menu: "file" as const,
     accelerator: "Ctrl/Cmd+S",
     key: "s",
+    allowInTextEntry: false,
+  }),
+  interaction("project-git-status", {
+    menu: "file" as const,
+    accelerator: "",
+    key: null,
+    allowInTextEntry: false,
+  }),
+  interaction("project-git-diff", {
+    menu: "file" as const,
+    accelerator: "",
+    key: null,
     allowInTextEntry: false,
   }),
   interaction("ship-export-web", {
