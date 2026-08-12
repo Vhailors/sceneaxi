@@ -175,6 +175,22 @@ describe("contained project Git service", () => {
       ok: false,
       diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.repositoryEscape },
     });
+
+    const alternateRepository = repository("alternate-objects");
+    const outsideObjects = mkdtempSync(join(tmpdir(), "sceneaxi-project-git-objects-outside-"));
+    roots.push(outsideObjects);
+    mkdirSync(join(outsideObjects, "objects"));
+    writeFileSync(
+      join(alternateRepository.root, ".git", "objects", "info", "alternates"),
+      `${join(outsideObjects, "objects")}\n`,
+    );
+    expect(inspectProjectGit({ root: alternateRepository.root })).toMatchObject({
+      ok: false,
+      diagnostic: {
+        code: PROJECT_GIT_DIAGNOSTICS.repositoryEscape,
+        path: "$git.objects.alternates",
+      },
+    });
   });
 
   it("preserves both sides when a canonical file is renamed", () => {

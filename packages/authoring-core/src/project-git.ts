@@ -385,6 +385,34 @@ function context(
       "The selected worktree stores Git repository, object, or index state outside the project root.",
     );
   }
+  const alternatesPath = canonicalPath(resolve(objectDirectory, "info", "alternates"));
+  if (!within(root, alternatesPath)) {
+    return failure(
+      PROJECT_GIT_DIAGNOSTICS.repositoryEscape,
+      "$git.objects.alternates",
+      "The selected repository resolves alternate object storage outside the project root.",
+    );
+  }
+  try {
+    if (readFileSync(alternatesPath, "utf8").trim().length > 0) {
+      return failure(
+        PROJECT_GIT_DIAGNOSTICS.repositoryEscape,
+        "$git.objects.alternates",
+        "Contained Git refuses repositories that use alternate object storage.",
+      );
+    }
+  } catch (error) {
+    const code = error instanceof Error && "code" in error
+      ? (error as NodeJS.ErrnoException).code
+      : undefined;
+    if (code !== "ENOENT") {
+      return failure(
+        PROJECT_GIT_DIAGNOSTICS.repositoryUnavailable,
+        "$git.objects.alternates",
+        "Contained Git could not verify alternate object storage.",
+      );
+    }
+  }
   const configuredFilters = runGit(executable, root, [
     "config", "--local", "--includes", "--get-regexp",
     "^filter\\..*\\.(clean|process)$",
