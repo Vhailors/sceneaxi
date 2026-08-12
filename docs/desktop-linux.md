@@ -349,7 +349,12 @@ on this host; CI under Xvfb owns the packaged smoke proof.
 
 ## First download record
 
-Verified 2026-08-05 by downloading `sceneaxi-desktop-linux` from the successful
+The Linux tier's `desktop/linux/package.json` is the version source for the
+application and both installer names; electron-builder reads that manifest, and the
+offer/docs lockstep test refuses a different recorded version or product identity.
+This keeps the beta on `0.0.0` and changes no package or SDK release posture.
+
+Verified 2026-08-12 by downloading `sceneaxi-desktop-linux` from the successful
 main-branch workflow run below and running its own `sha256sum -c SHA256SUMS`.
 Electron packaging is **not bit-reproducible**, so these digests identify that
 workflow artifact only; a source rebuild produces its own `SHA256SUMS` beside its
@@ -373,28 +378,21 @@ until the landing page's "Coming soon" rows move with it.
 |---|---|
 | Version | `0.0.0` |
 | Platform | Linux x86_64 |
-| Repository artifact | [workflow run 30739014112](https://github.com/Vhailors/sceneaxi/actions/runs/30739014112) |
-| Source commit | `b338a911b1e2646d815538c75daf82db5d8d6cd9` |
+| Repository artifact | [workflow run 31629556282](https://github.com/Vhailors/sceneaxi/actions/runs/31629556282) |
+| Source commit | `364b66632b155e02a831b7ab968840e8622a13c4` |
 | Actions artifact | `sceneaxi-desktop-linux` |
 | Checksum file | `SHA256SUMS` |
-| Verified | 2026-08-05 |
+| Verified | 2026-08-12 |
 | Artifact retention | 90 days |
-| Download expires by | 2026-11-03 |
+| Download expires by | 2026-11-10 |
 
-**This download expires.** A workflow artifact is not a release. Run 30739014112
-predates this branch — its source commit is the branch base — so GitHub fixed that
-artifact's retention at upload time from the repository default, at most the 90 days
-GitHub's own default gives. The upload step now declares `retention-days: 90`
-explicitly, which governs every later run rather than this one. Either way these files
-are gone on or before **2026-11-03**, 90 days after the verification date above. That
-date is an upper bound twice over: a shorter inherited default expires sooner, and
-retention runs from the run itself, which is on or before the verification date.
-Nothing in this
-repository can observe that deletion: the run page keeps resolving afterwards, and
-`resolveDesktopAppOffer()` reads no clock, because a page that renders a different
-record per visitor would be worse than one that states its own expiry. `/engine`
-therefore prints the date beside the CTA, and the record above must be re-recorded
-from a fresh successful main-branch run before it, or the offer stops being true.
+**This download expires.** A workflow artifact is not a release. Run 31629556282
+was produced from the current main-branch source commit and uploaded only after the
+workflow's type-check, packaging, checksum, and packaged-smoke steps passed. GitHub
+applies the declared 90-day retention window to this run, so these files expire on or
+before **2026-11-10**. The run page may remain after the artifact expires; nothing in
+this repository can observe that deletion, so `/engine` prints the date beside the CTA
+and the record must be re-recorded from a fresh successful main-branch run before then.
 Until then the honest fallback is the source build in this document.
 
 The record is deliberately kept **out of the build it describes**: the tier bundles
@@ -410,8 +408,8 @@ independent.
 <!-- desktop-linux:artifacts -->
 | Artifact | File | Bytes | SHA-256 |
 |---|---|---|---|
-| AppImage | `SceneAxi-Engine-Desktop-0.0.0-linux-x86_64.AppImage` | 115165695 | `ea962d2a44a5d141bfca8aee5d650575b3e4d1123f01c68d3bd0c3791e194527` |
-| deb | `SceneAxi-Engine-Desktop-0.0.0-linux-amd64.deb` | 89870252 | `0b5b4ba2f2df41200087300f60543675d26357bbd22fd8cf19a5473ee17b99ac` |
+| AppImage | `SceneAxi-Engine-Desktop-0.0.0-linux-x86_64.AppImage` | 115350176 | `a7fa01895cc61c643cd53c199d952c469a2750d814c0c0d21d2ec0d2c72f4626` |
+| deb | `SceneAxi-Engine-Desktop-0.0.0-linux-amd64.deb` | 89999508 | `f304334b83f663d17a8b420b1a138fe4a58755debf7b20626f2cdc154ca34509` |
 
 The workflow pins Node 24 and pnpm 9.15.0; the tier lockfile supplies Electron
 43.2.0, electron-builder 26.15.3, and esbuild 0.28.1 on `ubuntu-latest`. Its
@@ -419,7 +417,7 @@ packaged smoke runs under Xvfb with SwiftShader before upload.
 
 ## Download, verify, and install
 
-Open [workflow run 30739014112](https://github.com/Vhailors/sceneaxi/actions/runs/30739014112)
+Open [workflow run 31629556282](https://github.com/Vhailors/sceneaxi/actions/runs/31629556282)
 and select `sceneaxi-desktop-linux` under **Artifacts**. GitHub may require sign-in
 with repository access. Extract the downloaded bundle, then verify both packaged
 files before running either one:
@@ -575,7 +573,7 @@ Three sources, and they are not interchangeable. Electron packaging is not
 bit-reproducible, so a proof of *this source* is not a proof of *those bytes*, and
 mixing them would let the record claim more than it verified.
 
-**Workflow run 30739014112 — the bytes offered above.** The run succeeded, and
+**Workflow run 31629556282 — the bytes offered above.** The run succeeded, and
 `.github/workflows/desktop-linux.yml` puts every check before the upload: the tier is
 type-checked, `pnpm dist` packages both files, `sha256sum -c SHA256SUMS` runs in
 `desktop/linux/release`, and `xvfb-run -a pnpm smoke --packaged` launches the packaged
@@ -583,26 +581,36 @@ app under Xvfb with SwiftShader. Only then does `actions/upload-artifact` publis
 same files, with `if-no-files-found: error`. The run log is that evidence; no transcript
 of it is copied here.
 
-**The download — 2026-08-05.** `sceneaxi-desktop-linux` was downloaded from that run
+**The download — 2026-08-12.** `sceneaxi-desktop-linux` was downloaded from that run
 and its own `sha256sum -c SHA256SUMS` checked locally; both files matched, which is
 where the byte sizes and digests in the table above come from. That is the whole claim
 made about the downloaded files: they were verified, not separately launched here.
+The packaged smoke evidence immediately below is from the same workflow run, not a
+local launch of the downloaded files.
+
+**Packaged smoke — workflow run 31629556282.** The uploaded build passed the smoke
+from electron-builder's `linux-unpacked` output under Xvfb with SwiftShader. Its proof
+reported four advancing open-path ticks, hierarchy edits persisted through
+review/reopen/Play, project-browser list/select/open/restart, a deterministic Web
+export with Delivery Handoff, and a real Three WebGL frame with `pixelsDrawn true` and
+16 draw calls. This is the current packaged-runtime evidence; the older source-build
+notes below remain historical and are not attributed to these bytes.
 
 **A local source build — recorded 2026-08-05, `pnpm dist` at the tier root on source
 commit `342e5ff11676b7de38d22d94814fae75c7929868`.** A different build with its own
 digests, kept because it is where the behaviour below was observed in detail. It is
-also a *later source* than the offered artifact, which was packaged from this branch's
-base `b338a911` and therefore predates the unified product loop
+an earlier source than the offered artifact, which was packaged from the later
+main-branch commit and therefore does not describe the current offered bytes or
+product loop
 ([sceneaxi#196](https://github.com/Vhailors/sceneaxi/issues/196)) these observations
-describe — one more reason the record above must be re-taken from a fresh successful
-main-branch run. It also predates the contained project lifecycle in sceneaxi#224;
+describe. It also predates the contained project lifecycle in sceneaxi#224;
 the hard-bound seed observations below are historical and superseded by the
 first-launch contract above. It predates the typed scene-property edit in
 sceneaxi#225 and the hierarchy/multi-select/parenting breadth in sceneaxi#253 the
 same way: the `authoring:` bullet below records the propose → accept → undo round
 trip the smoke asserted then. The current smoke proof is the one described under
 "Package and verify", so that bullet remains a historical observation.
-These lines never describe the offered bytes. All three launch modes
+These historical lines never describe the offered bytes. All three launch modes
 printed the same proof (`pnpm smoke`, `pnpm smoke --packaged`, and the AppImage itself
 with `--appimage-extract-and-run --smoke`):
 

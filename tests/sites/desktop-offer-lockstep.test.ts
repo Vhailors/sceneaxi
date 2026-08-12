@@ -28,6 +28,13 @@ import {
 } from "../../sites/umbrella/src/lib/download-platform.ts";
 
 const doc = readFileSync(new URL("../../docs/desktop-linux.md", import.meta.url), "utf8");
+const desktopManifest = JSON.parse(
+  readFileSync(new URL("../../desktop/linux/package.json", import.meta.url), "utf8"),
+) as { name: string; version: string };
+const desktopBuilder = readFileSync(
+  new URL("../../desktop/linux/electron-builder.yml", import.meta.url),
+  "utf8",
+);
 
 function documentedArtifacts(): ReadonlyArray<{
   kind: string;
@@ -87,11 +94,22 @@ describe("desktop offer ↔ recorded build lockstep", () => {
       `| Download expires by | ${DESKTOP_LINUX_APP_OFFER.artifactExpiresBy} |`,
     );
     expect(doc).toContain("This download expires");
-    // The recorded run predates the declaration, so the doc and the note must bound
-    // its retention rather than attribute it to a setting that governs later runs.
-    expect(doc).toContain("governs every later run");
-    expect(DESKTOP_LINUX_APP_OFFER.retentionNote).toContain("upper bound");
-    expect(DESKTOP_LINUX_APP_OFFER.retentionNote).toContain("repository default");
+    expect(doc).toContain("declared 90-day retention window");
+    expect(DESKTOP_LINUX_APP_OFFER.retentionNote).toContain("workflow artifact");
+    expect(DESKTOP_LINUX_APP_OFFER.retentionNote).toContain("90-day retention window");
+  });
+
+  it("uses the desktop manifest as the version source and locks product identity", () => {
+    expect(desktopManifest.name).toBe("@sceneaxi/desktop-linux");
+    expect(DESKTOP_LINUX_APP_OFFER.version).toBe(desktopManifest.version);
+    expect(DESKTOP_LINUX_APP_OFFER.productName).toBe("SceneAxi Engine Desktop");
+    expect(desktopBuilder).toContain(`productName: ${DESKTOP_LINUX_APP_OFFER.productName}`);
+    expect(desktopBuilder).toContain("appId: com.sceneaxi.engine-desktop");
+    expect(desktopBuilder).toContain("executableName: sceneaxi-engine-desktop");
+    for (const artifact of DESKTOP_LINUX_APP_OFFER.artifacts) {
+      expect(artifact.fileName).toContain(`-${desktopManifest.version}-`);
+    }
+    expect(doc).toContain(`| Version | \`${desktopManifest.version}\` |`);
   });
 
   it("attributes every proof to the build it came from", () => {

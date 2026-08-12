@@ -79,7 +79,7 @@ export type DesktopAppOffer = {
 };
 
 const REPOSITORY = "Vhailors/sceneaxi" as const;
-const WORKFLOW_RUN_ID = 30739014112;
+const WORKFLOW_RUN_ID = 31629556282;
 const DOWNLOAD_HREF = `https://github.com/${REPOSITORY}/actions/runs/${WORKFLOW_RUN_ID}`;
 /** Declared on the upload step in `.github/workflows/desktop-linux.yml`. */
 const ARTIFACT_RETENTION_DAYS = 90;
@@ -88,9 +88,9 @@ export const DESKTOP_LINUX_APP_OFFER: DesktopAppOffer = /* @__PURE__ */ Object.f
   productName: "SceneAxi Engine Desktop",
   version: "0.0.0",
   platform: "Linux x86_64",
-  verifiedOn: "2026-08-05",
+  verifiedOn: "2026-08-12",
   repository: REPOSITORY,
-  sourceCommit: "b338a911b1e2646d815538c75daf82db5d8d6cd9",
+  sourceCommit: "364b66632b155e02a831b7ab968840e8622a13c4",
   workflowRunId: WORKFLOW_RUN_ID,
   downloadHref: DOWNLOAD_HREF,
   ciWorkflow: "desktop-linux",
@@ -101,19 +101,19 @@ export const DESKTOP_LINUX_APP_OFFER: DesktopAppOffer = /* @__PURE__ */ Object.f
       kind: "AppImage" as const,
       platform: "Linux x86_64" as const,
       fileName: "SceneAxi-Engine-Desktop-0.0.0-linux-x86_64.AppImage",
-      sha256: "ea962d2a44a5d141bfca8aee5d650575b3e4d1123f01c68d3bd0c3791e194527",
-      byteSize: 115165695,
+      sha256: "a7fa01895cc61c643cd53c199d952c469a2750d814c0c0d21d2ec0d2c72f4626",
+      byteSize: 115350176,
       verifyCommand:
-        "echo 'ea962d2a44a5d141bfca8aee5d650575b3e4d1123f01c68d3bd0c3791e194527  SceneAxi-Engine-Desktop-0.0.0-linux-x86_64.AppImage' | sha256sum -c -",
+        "echo 'a7fa01895cc61c643cd53c199d952c469a2750d814c0c0d21d2ec0d2c72f4626  SceneAxi-Engine-Desktop-0.0.0-linux-x86_64.AppImage' | sha256sum -c -",
     }),
     /* @__PURE__ */ Object.freeze({
       kind: "deb" as const,
       platform: "Linux x86_64" as const,
       fileName: "SceneAxi-Engine-Desktop-0.0.0-linux-amd64.deb",
-      sha256: "0b5b4ba2f2df41200087300f60543675d26357bbd22fd8cf19a5473ee17b99ac",
-      byteSize: 89870252,
+      sha256: "f304334b83f663d17a8b420b1a138fe4a58755debf7b20626f2cdc154ca34509",
+      byteSize: 89999508,
       verifyCommand:
-        "echo '0b5b4ba2f2df41200087300f60543675d26357bbd22fd8cf19a5473ee17b99ac  SceneAxi-Engine-Desktop-0.0.0-linux-amd64.deb' | sha256sum -c -",
+        "echo 'f304334b83f663d17a8b420b1a138fe4a58755debf7b20626f2cdc154ca34509  SceneAxi-Engine-Desktop-0.0.0-linux-amd64.deb' | sha256sum -c -",
     }),
   ]),
   verifyCommand: "sha256sum -c SHA256SUMS",
@@ -131,11 +131,11 @@ export const DESKTOP_LINUX_APP_OFFER: DesktopAppOffer = /* @__PURE__ */ Object.f
     }),
   ]),
   reproducibilityNote:
-    "Electron packaging is not bit-reproducible. These checksums identify workflow run 30739014112 only; a source rebuild produces its own SHA256SUMS beside its own files.",
+    "Electron packaging is not bit-reproducible. These checksums identify workflow run 31629556282 only; a source rebuild produces its own SHA256SUMS beside its own files.",
   artifactRetentionDays: ARTIFACT_RETENTION_DAYS,
-  artifactExpiresBy: "2026-11-03",
+  artifactExpiresBy: "2026-11-10",
   retentionNote:
-    "That date is an upper bound: retention runs from the workflow run rather than from the verification date, and this run predates the workflow declaring its window, so it inherited whatever the repository default was. After that date the run page still opens but holds no artifact, and no code here can observe that, so build from the repository or wait for a re-recorded run rather than trusting this page's checksums forever.",
+    "This is a workflow artifact rather than a release. GitHub applies the workflow's declared 90-day retention window to this run; the run page may remain after the artifact expires, so build from the repository or wait for a re-recorded run rather than trusting this page's checksums forever.",
 });
 
 const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
