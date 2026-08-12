@@ -132,6 +132,7 @@ function payloadField(value: unknown, name: string): unknown {
 
 let reportedFailure = false;
 let localBridgeServer: DesktopLocalBridgeServer | null = null;
+let closeActiveDesktopBridge: (() => boolean) | null = null;
 
 /** Print the one `{ok:false}` proof line and exit; later callers stay silent. */
 function reportFailure(message: string): void {
@@ -178,11 +179,15 @@ async function start(): Promise<void> {
       : join(__dirname, "sceneaxi-publish-no-replace");
   }
   let bridge: DesktopBridge | null = null;
+  closeActiveDesktopBridge = () => bridge?.close() ?? true;
   let projectBrowser: DesktopProjectBrowser | null = null;
   let activeRoot: string | null = null;
 
   const activateProject = async (root: string): Promise<DesktopBridge> => {
     if (bridge !== null && activeRoot === root) return bridge;
+    if (bridge !== null && !bridge.close()) {
+      throw new Error("The active project's desktop mutation-owner lease could not be released.");
+    }
     bridge = null;
     projectBrowser = null;
     activeRoot = null;
@@ -863,6 +868,9 @@ async function start(): Promise<void> {
 
   await localBridgeServer?.close();
   localBridgeServer = null;
+  if (bridge !== null && !bridge.close()) {
+    fail("The desktop mutation-owner lease could not be released after smoke verification.");
+  }
   rmSync(cwd, { recursive: true, force: true });
 
   console.log(
@@ -932,6 +940,14 @@ void start().catch((error: unknown) => {
 });
 
 app.on("window-all-closed", () => {
+  if (
+    closeActiveDesktopBridge !== null &&
+    !closeActiveDesktopBridge() &&
+    !closeActiveDesktopBridge()
+  ) {
+    reportFailure("The desktop mutation-owner lease could not be released during shutdown.");
+    return;
+  }
   const closing = localBridgeServer?.close() ?? Promise.resolve();
   localBridgeServer = null;
   void closing.finally(() => app.quit());

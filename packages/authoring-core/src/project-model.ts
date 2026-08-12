@@ -17,7 +17,16 @@ import {
   type ProjectVersionCapabilityResult,
   type SceneDocument,
 } from "@sceneaxi/schemas";
-import { atomicWriteAll, atomicWriteFile, canonicalPath } from "./atomic-write.js";
+import {
+  atomicWriteAll,
+  atomicWriteFile,
+  canonicalPath,
+  type AtomicWriteLockSet,
+} from "./atomic-write.js";
+import {
+  beginApplyJournalTransaction,
+  endApplyJournalTransactionChecked,
+} from "./apply-journal.js";
 import { contentHash } from "./content-hash.js";
 
 export const PROJECT_MIGRATION_PROPOSAL_PATH =
@@ -335,9 +344,84 @@ function parseJournal(value: unknown): MigrationJournal | null {
   });
 }
 
-function recover(root: string, expectedProposalDigest?: string): ProjectMigrationCommitResult {
+export function projectMigrationRecoveryPending(root: string): boolean {
   const canonicalRoot = rootPath(root);
-  if (typeof canonicalRoot !== "string") return canonicalRoot;
+  if (typeof canonicalRoot !== "string") return true;
+  const candidate = join(canonicalRoot, ...PROJECT_MIGRATION_JOURNAL_PATH.split("/"));
+  if (!existsSync(candidate)) return false;
+  const journalPath = containedPath(canonicalRoot, PROJECT_MIGRATION_JOURNAL_PATH, true);
+  if (typeof journalPath !== "string") return true;
+  const journal = parseJournal(readJson(journalPath));
+  return journal === null || journal.state !== "completed";
+}
+
+const pendingMigrationOperationCleanups = new Map<string, AtomicWriteLockSet>();
+
+function withMigrationOperation(
+  root: string,
+  operation: () => ProjectMigrationCommitResult,
+): ProjectMigrationCommitResult {
+  const pendingCleanup = pendingMigrationOperationCleanups.get(root);
+  if (pendingCleanup !== undefined) {
+    try {
+      if (endApplyJournalTransactionChecked(pendingCleanup).length > 0) {
+        return failure(
+          PROJECT_MANIFEST_DIAGNOSTICS.mutationConflict,
+          ".sceneaxi-authoring-operation",
+          "The previous migration operation lock still requires cleanup.",
+        );
+      }
+      pendingMigrationOperationCleanups.delete(root);
+    } catch {
+      return failure(
+        PROJECT_MANIFEST_DIAGNOSTICS.mutationConflict,
+        ".sceneaxi-authoring-operation",
+        "The previous migration operation lock still requires cleanup.",
+      );
+    }
+  }
+  let lockSet: AtomicWriteLockSet;
+  try {
+    lockSet = beginApplyJournalTransaction(root, []);
+  } catch {
+    return failure(
+      PROJECT_MANIFEST_DIAGNOSTICS.mutationConflict,
+      ".sceneaxi-authoring-operation",
+      "Another authoring or migration operation owns the selected project root.",
+    );
+  }
+  let result: ProjectMigrationCommitResult;
+  try {
+    result = operation();
+  } catch (error) {
+    result = failure(
+      PROJECT_MANIFEST_DIAGNOSTICS.writeFailed,
+      PROJECT_MIGRATION_JOURNAL_PATH,
+      error instanceof Error ? error.message : String(error),
+    );
+  }
+  try {
+    if (endApplyJournalTransactionChecked(lockSet).length === 0) return result;
+    pendingMigrationOperationCleanups.set(root, lockSet);
+    return failure(
+      PROJECT_MANIFEST_DIAGNOSTICS.writeFailed,
+      ".sceneaxi-authoring-operation",
+      "The migration operation lock could not be released cleanly.",
+    );
+  } catch {
+    pendingMigrationOperationCleanups.set(root, lockSet);
+    return failure(
+      PROJECT_MANIFEST_DIAGNOSTICS.writeFailed,
+      ".sceneaxi-authoring-operation",
+      "The migration operation lock could not be released cleanly.",
+    );
+  }
+}
+
+function recoverLocked(
+  canonicalRoot: string,
+  expectedProposalDigest?: string,
+): ProjectMigrationCommitResult {
   const journalPath = containedPath(canonicalRoot, PROJECT_MIGRATION_JOURNAL_PATH, true);
   if (typeof journalPath !== "string") {
     return failure(PROJECT_MANIFEST_DIAGNOSTICS.proposalRequired, PROJECT_MIGRATION_JOURNAL_PATH, "No prepared project migration exists.");
@@ -392,6 +476,16 @@ export function commitProjectMigration(input: Readonly<{
   }
   const canonicalRoot = rootPath(input.root);
   if (typeof canonicalRoot !== "string") return canonicalRoot;
+  return withMigrationOperation(canonicalRoot, () => commitProjectMigrationLocked(
+    canonicalRoot,
+    input.proposalDigest,
+  ));
+}
+
+function commitProjectMigrationLocked(
+  canonicalRoot: string,
+  proposalDigest: string,
+): ProjectMigrationCommitResult {
   const proposalPath = containedPath(canonicalRoot, PROJECT_MIGRATION_PROPOSAL_PATH, true);
   if (typeof proposalPath !== "string") {
     return failure(PROJECT_MANIFEST_DIAGNOSTICS.proposalRequired, PROJECT_MIGRATION_PROPOSAL_PATH, "A persisted migration proposal is required before commit.");
@@ -400,14 +494,14 @@ export function commitProjectMigration(input: Readonly<{
   if (proposal === null) {
     return failure(PROJECT_MANIFEST_DIAGNOSTICS.proposalRequired, PROJECT_MIGRATION_PROPOSAL_PATH, "The persisted migration proposal is invalid.");
   }
-  if (proposal.proposalDigest !== input.proposalDigest) {
+  if (proposal.proposalDigest !== proposalDigest) {
     return failure(PROJECT_MANIFEST_DIAGNOSTICS.approvalMismatch, PROJECT_MIGRATION_PROPOSAL_PATH, "Approval does not bind the reviewed proposal digest.");
   }
   const inspected = inspectProjectModel(canonicalRoot);
   if (!inspected.ok) return inspected;
   if (inspected.manifest !== null) {
     const journalPath = join(canonicalRoot, ...PROJECT_MIGRATION_JOURNAL_PATH.split("/"));
-    if (existsSync(journalPath)) return recover(canonicalRoot, input.proposalDigest);
+    if (existsSync(journalPath)) return recoverLocked(canonicalRoot, proposalDigest);
     return failure(PROJECT_MANIFEST_DIAGNOSTICS.mutationConflict, PROJECT_MANIFEST_PATH, "The project is already native and has no matching recovery journal.");
   }
   const rebuilt = buildProposal(inspected.document, inspected.documentBytes);
@@ -432,11 +526,13 @@ export function commitProjectMigration(input: Readonly<{
       return failure(PROJECT_MANIFEST_DIAGNOSTICS.writeFailed, PROJECT_MIGRATION_JOURNAL_PATH, error instanceof Error ? error.message : String(error));
     }
   }
-  return recover(canonicalRoot, input.proposalDigest);
+  return recoverLocked(canonicalRoot, proposalDigest);
 }
 
 export function recoverProjectMigration(root: string): ProjectMigrationCommitResult {
-  return recover(root);
+  const canonicalRoot = rootPath(root);
+  if (typeof canonicalRoot !== "string") return canonicalRoot;
+  return withMigrationOperation(canonicalRoot, () => recoverLocked(canonicalRoot));
 }
 
 export function writeNativeProjectSeed(input: Readonly<{

@@ -24,15 +24,19 @@ import {
   type Proposal,
 } from "@sceneaxi/authoring-core";
 import {
+  acquireProjectGitDesktopOwner,
   createProjectGitAuthoringAuthority,
   prepareProjectGitCommit,
+  releaseProjectGitDesktopOwner,
   stageProjectGitPaths,
   type ProjectGitAuthoringAuthority,
   type ProjectGitAuthoringState,
+  type ProjectGitDesktopOwner,
 } from "@sceneaxi-internal/project-git-authority";
 import {
   PROJECT_GIT_DIAGNOSTICS,
   type ProjectGitCommitPreparationResult,
+  type ProjectGitFailure,
   type ProjectGitStateResult,
 } from "@sceneaxi/schemas";
 import {
@@ -121,6 +125,7 @@ type DesktopProjectGitProfile = "game" | "web" | "kids";
 type RootProjectGitAuthority = {
   readonly root: string;
   readonly authority: ProjectGitAuthoringAuthority;
+  readonly owner: ProjectGitDesktopOwner;
   readonly sessions: Set<WeakRef<DesktopSession>>;
 };
 type DesktopProjectGitBinding = Readonly<{
@@ -131,6 +136,16 @@ type DesktopProjectGitBinding = Readonly<{
 
 const projectGitBindings = new WeakMap<object, DesktopProjectGitBinding>();
 const rootProjectGitAuthorities = new Map<string, RootProjectGitAuthority>();
+
+export class DesktopProjectMutationOwnerError extends Error {
+  readonly diagnostic: ProjectGitFailure["diagnostic"];
+
+  constructor(diagnostic: ProjectGitFailure["diagnostic"]) {
+    super(diagnostic.message);
+    this.name = "DesktopProjectMutationOwnerError";
+    this.diagnostic = diagnostic;
+  }
+}
 
 function liveRootBindings(rootAuthority: RootProjectGitAuthority): readonly DesktopProjectGitBinding[] {
   const live: DesktopProjectGitBinding[] = [];
@@ -185,13 +200,15 @@ function rootProjectGitAuthority(root: string): RootProjectGitAuthority {
   const canonicalRoot = canonicalPath(root);
   const existing = rootProjectGitAuthorities.get(canonicalRoot);
   if (existing !== undefined) return existing;
+  const owner = acquireProjectGitDesktopOwner(canonicalRoot);
+  if ("diagnostic" in owner) throw new DesktopProjectMutationOwnerError(owner.diagnostic);
   const sessions = new Set<WeakRef<DesktopSession>>();
   let rootAuthority: RootProjectGitAuthority;
   const authority = createProjectGitAuthoringAuthority(
     canonicalRoot,
     () => aggregateProjectGitState(rootAuthority),
   );
-  rootAuthority = { root: canonicalRoot, authority, sessions };
+  rootAuthority = { root: canonicalRoot, authority, owner, sessions };
   rootProjectGitAuthorities.set(canonicalRoot, rootAuthority);
   return rootAuthority;
 }
@@ -201,21 +218,29 @@ export function bindDesktopSessionProjectGitAuthority(
   root: string,
   readProfile: () => DesktopProjectGitProfile,
 ): void {
-  releaseDesktopSessionProjectGitAuthority(session);
+  if (!releaseDesktopSessionProjectGitAuthority(session)) {
+    throw new DesktopProjectMutationOwnerError(Object.freeze({
+      code: PROJECT_GIT_DIAGNOSTICS.transactionDirty,
+      path: ".sceneaxi-desktop-mutation-owner",
+      message: "The previous desktop mutation-owner lease could not be released cleanly.",
+    }));
+  }
   const rootAuthority = rootProjectGitAuthority(root);
   const sessionRef = new WeakRef(session);
   rootAuthority.sessions.add(sessionRef);
   projectGitBindings.set(session, Object.freeze({ rootAuthority, readProfile, sessionRef }));
 }
 
-export function releaseDesktopSessionProjectGitAuthority(session: DesktopSession): void {
+export function releaseDesktopSessionProjectGitAuthority(session: DesktopSession): boolean {
   const binding = projectGitBindings.get(session);
-  if (binding === undefined) return;
-  binding.rootAuthority.sessions.delete(binding.sessionRef);
-  projectGitBindings.delete(session);
-  if (liveRootBindings(binding.rootAuthority).length === 0) {
+  if (binding === undefined) return true;
+  if (liveRootBindings(binding.rootAuthority).length === 1) {
+    if (!releaseProjectGitDesktopOwner(binding.rootAuthority.owner)) return false;
     rootProjectGitAuthorities.delete(binding.rootAuthority.root);
   }
+  binding.rootAuthority.sessions.delete(binding.sessionRef);
+  projectGitBindings.delete(session);
+  return true;
 }
 
 function desktopSessionProjectGitBinding(

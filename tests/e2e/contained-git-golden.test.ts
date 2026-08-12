@@ -4,6 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  acquireAtomicWriteLocks,
+  releaseAtomicWriteLocks,
   serializeDocument,
   writeNativeProjectSeed,
 } from "@sceneaxi/authoring-core";
@@ -134,5 +136,31 @@ describe("contained Git client parity", () => {
       reason: PROJECT_GIT_DIAGNOSTICS.kidsDenied,
     });
     expect(git(root, "diff", "--cached", "--name-only").trim()).toBe("");
+  });
+
+  it("refuses a second process owner and releases the root lease synchronously", () => {
+    const root = project();
+    writeFileSync(join(root, "notes.txt"), "cross-process authority\n");
+    const externalOwner = acquireAtomicWriteLocks([
+      join(root, ".sceneaxi-desktop-mutation-owner"),
+    ]);
+    try {
+      const refused = createDesktopBridge({ cwd: root });
+      expect(command(refused, "project-git-stage", "desktop-control", {
+        paths: ["notes.txt"],
+      })).toMatchObject({
+        ok: false,
+        reason: PROJECT_GIT_DIAGNOSTICS.transactionDirty,
+      });
+    } finally {
+      releaseAtomicWriteLocks(externalOwner);
+    }
+
+    const owner = createDesktopBridge({ cwd: root });
+    expect(command(owner, "project-git-stage", "desktop-control", {
+      paths: ["notes.txt"],
+    })).toMatchObject({ ok: true });
+    expect(owner.close()).toBe(true);
+    expect(owner.close()).toBe(true);
   });
 });

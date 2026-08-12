@@ -23,10 +23,13 @@ import {
   releaseAtomicWriteLocksChecked,
 } from "../src/atomic-write.js";
 import {
+  PROJECT_MIGRATION_JOURNAL_PATH,
   apply,
   acquireAtomicWriteLocks,
+  commitProjectMigration,
   inspectProjectGit,
   propose,
+  proposeProjectMigration,
   releaseAtomicWriteLocks,
   refuseUnsupportedProjectGitOperation,
   serializeDocument,
@@ -373,14 +376,60 @@ describe("contained project Git service", () => {
     const { root } = repository("stage-rollback");
     const indexPath = join(root, ".git", "index");
     const beforeIndex = readFileSync(indexPath);
+    const beforeObjects = git(root, "count-objects", "-v");
     writeFileSync(join(root, "large-untracked.bin"), randomBytes(900 * 1024));
 
     expect(stageProjectGitPaths(mutationOptions(root), ["large-untracked.bin"])).toMatchObject({
       ok: false,
-      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.stageRolledBack },
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.evidenceTooLarge },
     });
     expect(readFileSync(indexPath)).toEqual(beforeIndex);
+    expect(git(root, "count-objects", "-v")).toBe(beforeObjects);
     expect(git(root, "diff", "--cached", "--name-only").trim()).toBe("");
+  });
+
+  it("refuses a selected file replaced by a directory before index publication", () => {
+    const { root } = repository("stage-directory-race");
+    const selected = join(root, "selected.txt");
+    writeFileSync(selected, "selected file\n");
+    const wrapper = join(root, "git-replaces-selected.sh");
+    writeFileSync(wrapper, [
+      "#!/bin/sh",
+      "for arg in \"$@\"; do",
+      "  if [ \"$arg\" = \"add\" ]; then",
+      `    rm -f -- ${JSON.stringify(selected)}`,
+      `    mkdir -- ${JSON.stringify(selected)}`,
+      `    printf child > ${JSON.stringify(join(selected, "child.txt"))}`,
+      "    break",
+      "  fi",
+      "done",
+      "exec git \"$@\"",
+      "",
+    ].join("\n"));
+    chmodSync(wrapper, 0o700);
+
+    expect(stageProjectGitPaths(
+      { ...mutationOptions(root), gitExecutable: wrapper },
+      ["selected.txt"],
+    )).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.selectionMismatch },
+    });
+    expect(git(root, "diff", "--cached", "--name-only").trim()).toBe("");
+  });
+
+  it("refuses non-UTF-8 Git filenames without lossy evidence", () => {
+    const { root } = repository("filename-encoding");
+    const path = Buffer.concat([
+      Buffer.from(`${root}/invalid-`, "utf8"),
+      Buffer.from([0xff]),
+    ]);
+    writeFileSync(path, "invalid filename bytes\n");
+
+    expect(inspectProjectGit({ root })).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.filenameEncodingUnsupported },
+    });
   });
 
   it("uses the live index lock protocol and discards a blocked prospective index", () => {
@@ -595,6 +644,39 @@ describe("contained project Git service", () => {
     rmSync(join(journalDirectory, ".active"), { recursive: true });
     writeFileSync(join(journalDirectory, ".active"), "null\n");
     expect(stageProjectGitPaths(mutationOptions(root), ["scene.json"])).toMatchObject({ ok: true });
+  });
+
+  it("treats prepared and invalid migration journals as recovery pending", () => {
+    const root = mkdtempSync(join(tmpdir(), "sceneaxi-project-git-migration-journal-"));
+    roots.push(root);
+    const document = createDocument({ id: "migration-pending", title: "Legacy" });
+    writeFileSync(join(root, "scene.json"), serializeDocument(document));
+    const proposed = proposeProjectMigration(root);
+    if (!proposed.ok) throw new Error("migration proposal refused");
+    expect(commitProjectMigration({
+      root,
+      approved: true,
+      proposalDigest: proposed.proposal.proposalDigest,
+    })).toMatchObject({ ok: true });
+    git(root, "init", "-b", "main");
+    git(root, "config", "user.name", "SceneAxi Test");
+    git(root, "config", "user.email", "sceneaxi@example.invalid");
+    git(root, "add", ".");
+    git(root, "commit", "-m", "seed migrated project");
+    writeFileSync(join(root, "notes.txt"), "pending migration\n");
+    const journalPath = join(root, PROJECT_MIGRATION_JOURNAL_PATH);
+    const journal = JSON.parse(readFileSync(journalPath, "utf8")) as Record<string, unknown>;
+    writeFileSync(journalPath, `${JSON.stringify({ ...journal, state: "prepared" }, null, 2)}\n`);
+
+    expect(stageProjectGitPaths(mutationOptions(root), ["notes.txt"])).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.recoveryPending },
+    });
+    writeFileSync(journalPath, "not valid json\n");
+    expect(stageProjectGitPaths(mutationOptions(root), ["notes.txt"])).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.recoveryPending },
+    });
   });
 
   it("reports conflicts read-only and refuses every unsafe mutation state before index changes", () => {

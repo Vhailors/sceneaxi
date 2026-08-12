@@ -20,6 +20,7 @@ export const PROJECT_GIT_DIAGNOSTICS = Object.freeze({
   commitMessageInvalid: "PROJECT_GIT_COMMIT_MESSAGE_INVALID",
   operationUnsupported: "PROJECT_GIT_OPERATION_UNSUPPORTED",
   evidenceTooLarge: "PROJECT_GIT_EVIDENCE_TOO_LARGE",
+  filenameEncodingUnsupported: "PROJECT_GIT_FILENAME_ENCODING_UNSUPPORTED",
   commandFailed: "PROJECT_GIT_COMMAND_FAILED",
   stageRolledBack: "PROJECT_GIT_STAGE_ROLLED_BACK",
   stageRollbackFailed: "PROJECT_GIT_STAGE_ROLLBACK_FAILED",

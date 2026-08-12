@@ -14,10 +14,12 @@ import {
   PROJECT_MIGRATION_EVIDENCE_PATH,
   PROJECT_MIGRATION_JOURNAL_PATH,
   PROJECT_MIGRATION_PROPOSAL_PATH,
+  acquireAtomicWriteLocks,
   commitProjectMigration,
   inspectProjectModel,
   proposeProjectMigration,
   recoverProjectMigration,
+  releaseAtomicWriteLocks,
   serializeDocument,
 } from "@sceneaxi/authoring-core";
 import {
@@ -122,6 +124,53 @@ describe("native project migration host", () => {
     expect(readFileSync(join(first.root, PROJECT_MANIFEST_PATH), "utf8")).toBe(
       readFileSync(join(second.root, PROJECT_MANIFEST_PATH), "utf8"),
     );
+  });
+
+  it("serializes migration commit and recovery through the authoring operation authority", () => {
+    const project = legacyProject("operation-authority");
+    const proposed = proposeProjectMigration(project.root);
+    if (!proposed.ok) throw new Error("proposal refused");
+    const operationLock = acquireAtomicWriteLocks([
+      join(project.root, ".sceneaxi-authoring-operation"),
+    ]);
+    try {
+      expect(commitProjectMigration({
+        root: project.root,
+        approved: true,
+        proposalDigest: proposed.proposal.proposalDigest,
+      })).toMatchObject({
+        ok: false,
+        diagnostic: { code: PROJECT_MANIFEST_DIAGNOSTICS.mutationConflict },
+      });
+      expect(existsSync(join(project.root, PROJECT_MIGRATION_JOURNAL_PATH))).toBe(false);
+    } finally {
+      releaseAtomicWriteLocks(operationLock);
+    }
+
+    expect(commitProjectMigration({
+      root: project.root,
+      approved: true,
+      proposalDigest: proposed.proposal.proposalDigest,
+    })).toMatchObject({ ok: true });
+    const journalPath = join(project.root, PROJECT_MIGRATION_JOURNAL_PATH);
+    const journal = JSON.parse(readFileSync(journalPath, "utf8")) as Record<string, unknown>;
+    writeFileSync(journalPath, `${JSON.stringify({ ...journal, state: "prepared" }, null, 2)}\n`);
+    rmSync(join(project.root, PROJECT_MANIFEST_PATH));
+    rmSync(join(project.root, PROJECT_MIGRATION_EVIDENCE_PATH));
+
+    const recoveryLock = acquireAtomicWriteLocks([
+      join(project.root, ".sceneaxi-authoring-operation"),
+    ]);
+    try {
+      expect(recoverProjectMigration(project.root)).toMatchObject({
+        ok: false,
+        diagnostic: { code: PROJECT_MANIFEST_DIAGNOSTICS.mutationConflict },
+      });
+      expect(existsSync(join(project.root, PROJECT_MANIFEST_PATH))).toBe(false);
+    } finally {
+      releaseAtomicWriteLocks(recoveryLock);
+    }
+    expect(recoverProjectMigration(project.root)).toMatchObject({ ok: true, recovered: true });
   });
 
   it("refuses source changes and canonical asset escapes before manifest mutation", () => {
