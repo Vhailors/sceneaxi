@@ -11,6 +11,7 @@ import {
   DESKTOP_SCENE_HIERARCHY_REFUSALS,
   SCENE_COMPOSITION_INTAKE_KIND,
   SCENE_COMPOSITION_SCHEMA_VERSION,
+  SCENE_MAXIMUM_INSTANCES,
   composedSceneFromDocumentData,
 } from "@sceneaxi/schemas";
 import {
@@ -163,6 +164,47 @@ describe("desktop selected composed-instance edit — public seam", () => {
       selectedInstanceId: "desktop-crate-root",
       inspection: { entities: [{}, {}, {}] },
     });
+  });
+
+  it("refuses object creation at the composition instance budget by name", () => {
+    const fixture = starter();
+    const stored = composedSceneFromDocumentData(fixture.data);
+    if (!stored.ok) throw new Error(stored.diagnostics[0]?.message);
+    const first = stored.value.instances[0];
+    if (first === undefined) throw new Error("starter instance is missing");
+    const rootInstanceId = "budget-instance-0";
+    const composed = composeScene(
+      {
+        schemaVersion: SCENE_COMPOSITION_SCHEMA_VERSION,
+        kind: SCENE_COMPOSITION_INTAKE_KIND,
+        sceneId: "desktop-budget-scene",
+        rootInstanceId,
+        placements: Array.from({ length: SCENE_MAXIMUM_INSTANCES }, (_unused, index) => ({
+          instanceId: `budget-instance-${String(index)}`,
+          artifactId: first.artifact.artifactId,
+          parentInstanceId: index === 0 ? null : rootInstanceId,
+          transform: first.localTransform,
+        })),
+      },
+      [first.artifact],
+    );
+    if (!composed.ok) throw new Error(composed.message);
+
+    expect(stageDesktopSceneEdit({
+      documentData: composed.document.data,
+      contentHash: `sha256:${"2".repeat(64)}`,
+      profile: "game",
+      operation: {
+        kind: "create-object",
+        sourceInstanceId: "budget-instance-1",
+        parentInstanceId: rootInstanceId,
+      },
+    })).toMatchObject({
+      ok: false,
+      reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+    });
+    expect(readFileSync(join(fixture.dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8"))
+      .toBe(fixture.bytes);
   });
 
   it("reparents with explicit preserve-world or preserve-local deterministic transforms", () => {

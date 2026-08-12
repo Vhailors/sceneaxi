@@ -62,7 +62,10 @@ describe("CLI → local desktop bridge golden path", () => {
     expect(seedDesktopProject(projectRoot).ok).toBe(true);
     const discoveryPath = join(root, "config", "desktop-bridge-v1.json");
     const server = await startDesktopLocalBridgeServer({
-      bridge: createDesktopBridge({ cwd: projectRoot }),
+      bridge: createDesktopBridge({
+        cwd: projectRoot,
+        commandCapabilities: ["scene.compose", "authoring.change-review", "runtime.play"],
+      }),
       projectRoot,
       socketPath: join(root, "runtime", "desktop-v1.sock"),
       discoveryPath,

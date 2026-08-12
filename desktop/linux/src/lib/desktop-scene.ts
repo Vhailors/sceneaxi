@@ -18,6 +18,7 @@ import {
   DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS,
   SCENE_COMPOSITION_INTAKE_KIND,
   SCENE_COMPOSITION_SCHEMA_VERSION,
+  SCENE_MAXIMUM_INSTANCES,
   SCENE_MINIMUM_INSTANCES,
   composedSceneFromDocumentData,
   desktopSceneTransformProperty,
@@ -632,9 +633,25 @@ export function stageDesktopSceneEdit(input: Readonly<{
       documentPath,
     );
   }
+  const operation = Object.freeze({ ...input.operation }) as DesktopSceneEditOperation;
   const read = readEditableComposition(input.documentData, input.contentHash, documentPath);
   if (!read.ok) return read;
-  const operation = Object.freeze({ ...input.operation }) as DesktopSceneEditOperation;
+  const manifest = operation.kind === "add-instance" ||
+      operation.kind === "remove-instance" ||
+      operation.kind === "create-object" ||
+      operation.kind === "remove-objects"
+    ? projectAssetManifestFromDocumentData(input.documentData)
+    : null;
+  if (manifest !== null && !manifest.ok) {
+    return hierarchyDiagnostic(
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+      manifest.message,
+      documentPath,
+    );
+  }
+  const manifestInstanceIds = new Set(
+    manifest?.ok === true ? manifest.value.assets.map((entry) => entry.instanceId) : [],
+  );
   let selectedInstanceId: string;
   let selectedInstanceIds: readonly string[];
   let composed;
@@ -668,6 +685,20 @@ export function stageDesktopSceneEdit(input: Readonly<{
     if (source === undefined) {
       return propertyRequestDiagnostic(
         `The selected local artifact source is missing: ${operation.sourceInstanceId}.`,
+        documentPath,
+      );
+    }
+    if (manifestInstanceIds.has(source.instanceId)) {
+      return hierarchyDiagnostic(
+        DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+        `Imported asset instance ${source.instanceId} remains owned by its asset manifest.`,
+        documentPath,
+      );
+    }
+    if (read.stored.instances.length >= SCENE_MAXIMUM_INSTANCES) {
+      return hierarchyDiagnostic(
+        DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+        `Object creation cannot exceed the v1 maximum of ${String(SCENE_MAXIMUM_INSTANCES)} instances.`,
         documentPath,
       );
     }
@@ -723,6 +754,13 @@ export function stageDesktopSceneEdit(input: Readonly<{
         documentPath,
       );
     }
+    if (manifestInstanceIds.has(selected.instanceId)) {
+      return hierarchyDiagnostic(
+        DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+        `Imported asset instance ${selected.instanceId} remains owned by its asset manifest.`,
+        documentPath,
+      );
+    }
     if (
       selected.instanceId === read.stored.rootInstanceId ||
       read.stored.instances.length <= SCENE_MINIMUM_INSTANCES ||
@@ -759,6 +797,13 @@ export function stageDesktopSceneEdit(input: Readonly<{
         documentPath,
       );
     }
+    if (manifestInstanceIds.has(source.instanceId)) {
+      return hierarchyDiagnostic(
+        DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+        `Imported asset instance ${source.instanceId} remains owned by its asset manifest.`,
+        documentPath,
+      );
+    }
     const parent = read.stored.instances.find(
       (instance) => instance.instanceId === operation.parentInstanceId,
     );
@@ -766,6 +811,13 @@ export function stageDesktopSceneEdit(input: Readonly<{
       return hierarchyDiagnostic(
         DESKTOP_SCENE_HIERARCHY_REFUSALS.parentMissing,
         `The requested parent is missing: ${operation.parentInstanceId}.`,
+        documentPath,
+      );
+    }
+    if (read.stored.instances.length >= SCENE_MAXIMUM_INSTANCES) {
+      return hierarchyDiagnostic(
+        DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+        `Object creation cannot exceed the v1 maximum of ${String(SCENE_MAXIMUM_INSTANCES)} instances.`,
         documentPath,
       );
     }
@@ -802,6 +854,16 @@ export function stageDesktopSceneEdit(input: Readonly<{
       return hierarchyDiagnostic(selection.reason, selection.message, documentPath);
     }
     const removed = new Set(selection.selection.instanceIds);
+    const imported = selection.selection.instanceIds.find((instanceId) =>
+      manifestInstanceIds.has(instanceId)
+    );
+    if (imported !== undefined) {
+      return hierarchyDiagnostic(
+        DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+        `Imported asset instance ${imported} remains owned by its asset manifest.`,
+        documentPath,
+      );
+    }
     if (removed.has(read.stored.rootInstanceId)) {
       return hierarchyDiagnostic(
         DESKTOP_SCENE_HIERARCHY_REFUSALS.protectedRoot,
@@ -918,7 +980,9 @@ export function stageDesktopSceneEdit(input: Readonly<{
   }
 
   if (!composed.ok) {
-    return operation.kind === "reparent-object"
+    return operation.kind === "reparent-object" ||
+      operation.kind === "create-object" ||
+      operation.kind === "add-instance"
       ? hierarchyDiagnostic(
           DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
           `${composed.path}: ${composed.message}`,

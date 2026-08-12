@@ -70,6 +70,9 @@ import {
   editorCommand,
   editorCommandTerminalResult,
   editorCommandTransactionResult,
+  isDesktopSceneEditOperation,
+  isDesktopSceneEditProfile,
+  isDesktopSceneReparentPolicy,
   validateEditorCommandInvocation,
   validateRarityNamespace,
   type EditorCommandId,
@@ -829,6 +832,38 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         `Unknown authoring operation ${JSON.stringify(op)}. Known: ${DESKTOP_BRIDGE_AUTHORING_OPS.join(", ")}.`,
       );
     }
+    if (op === "edit-scene") {
+      const profile = field(payload, "profile");
+      const operation = field(payload, "operation");
+      const transformPolicy = field(operation, "transformPolicy");
+      if (options.commandProfile === "kids" || profile === "kids") {
+        return bridgeRefuse(
+          DESKTOP_SCENE_HIERARCHY_REFUSALS.kidsDenied,
+          "Scene hierarchy editing is denied for Kids before project access.",
+        );
+      }
+      if (
+        field(operation, "kind") === "reparent-object" &&
+        !isDesktopSceneReparentPolicy(transformPolicy)
+      ) {
+        return bridgeRefuse(
+          DESKTOP_SCENE_HIERARCHY_REFUSALS.policyInvalid,
+          "Reparenting requires transformPolicy preserve-world or preserve-local.",
+        );
+      }
+      if (!isDesktopSceneEditProfile(profile) || !isDesktopSceneEditOperation(operation)) {
+        return bridgeRefuse(
+          DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+          "Scene hierarchy editing requires a Game or Web profile and one supported operation.",
+        );
+      }
+      if (options.commandCapabilities?.includes("scene.compose") !== true) {
+        return bridgeRefuse(
+          DESKTOP_SCENE_HIERARCHY_REFUSALS.capabilityMissing,
+          "Scene hierarchy editing requires missing capability scene.compose.",
+        );
+      }
+    }
     const rarityStatus = (data: Readonly<Record<string, unknown>>) => {
       if (data.rarity === undefined) {
         return Object.freeze({
@@ -960,7 +995,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         reconcileRarityAssistantDocument(refused, retirementReason);
         return refused;
       }
-      let editableScene = inspectDesktopSceneProperties({
+      const editableScene = inspectDesktopSceneProperties({
         documentData: status.data,
         contentHash: status.contentHash,
         documentPath,
@@ -968,13 +1003,6 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           ? {}
           : { selection: selectedSceneInstanceIds }),
       });
-      if (!editableScene.ok && editableScene.reason === DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale) {
-        editableScene = inspectDesktopSceneProperties({
-          documentData: status.data,
-          contentHash: status.contentHash,
-          documentPath,
-        });
-      }
       if (editableScene.ok) selectedSceneInstanceIds = editableScene.selection.instanceIds;
       const enriched = Object.freeze({
         ...status,
@@ -1896,11 +1924,13 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         `${validated.command.id} is denied for Kids before execution.`,
       ));
     }
-    if (
-      options.commandCapabilities !== undefined &&
-      !options.commandCapabilities.includes(validated.command.capability.id)
-    ) {
-      const reason = validated.command.id.startsWith("scene-")
+    const hierarchyCommand = validated.command.id.startsWith("scene-");
+    const capabilityMissing = hierarchyCommand
+      ? options.commandCapabilities?.includes(validated.command.capability.id) !== true
+      : options.commandCapabilities !== undefined &&
+        !options.commandCapabilities.includes(validated.command.capability.id);
+    if (capabilityMissing) {
+      const reason = hierarchyCommand
         ? DESKTOP_SCENE_HIERARCHY_REFUSALS.capabilityMissing
         : EDITOR_COMMAND_REFUSALS.capabilityDenied;
       return commandTransaction(validated.command.id, bridgeRefuse(

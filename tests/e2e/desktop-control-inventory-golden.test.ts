@@ -8,6 +8,7 @@
  */
 import { afterEach, describe, expect, it } from "vitest";
 import { Window as HappyWindow, type HTMLElement as HappyHTMLElement } from "happy-dom";
+import { DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS } from "@sceneaxi/schemas";
 import {
   DESKTOP_MODE_IDS,
   DESKTOP_PRODUCT_REFUSALS,
@@ -27,9 +28,16 @@ function mount(
   state = createDesktopVisualState({
     window: { width: 1000, height: 700 },
   }),
+  runtime?: Readonly<{
+    request(request: unknown): Promise<unknown>;
+    project(request: unknown): Promise<unknown>;
+  }>,
 ) {
   const window = new HappyWindow({ width: 1000, height: 700 });
   windows.push(window);
+  if (runtime !== undefined) {
+    Object.assign(window, { sceneaxiDesktop: runtime });
+  }
   const html = renderDesktopChrome(desktopVisualView(state));
   const match = /<script>([\s\S]*?)<\/script>/.exec(html);
   if (match?.[1] === undefined) throw new Error("desktop chrome script missing");
@@ -61,6 +69,73 @@ async function escape(window: HappyWindow) {
 }
 
 describe("desktop mounted control inventory", () => {
+  it("renders project-backed instance, object, and parent identities", async () => {
+    const properties = DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.map((definition) => ({
+      id: definition.id,
+      value: definition.id.startsWith("scale-") ? 1 : 0,
+    }));
+    const snapshot = {
+      phase: "idle",
+      unifiedDiff: null,
+      renderedDiff: null,
+      proposal: null,
+      appliedPaths: null,
+      journalRecoveryPending: false,
+      transactionId: null,
+      diagnostics: null,
+    };
+    const status = {
+      ok: true,
+      documentId: "scene",
+      data: {},
+      contentHash: `sha256:${"3".repeat(64)}`,
+      authoringSnapshot: snapshot,
+      editableScene: {
+        ok: true,
+        selection: { instanceIds: ["child-instance"], primaryInstanceId: "child-instance" },
+        entities: [
+          {
+            id: "root-instance",
+            label: "Root",
+            artifactId: "root-object",
+            parentInstanceId: null,
+            depth: 0,
+            properties,
+          },
+          {
+            id: "child-instance",
+            label: "Child",
+            artifactId: "child-object",
+            parentInstanceId: "root-instance",
+            depth: 1,
+            properties,
+          },
+        ],
+      },
+    };
+    const window = mount(undefined, {
+      project: async () => ({
+        ok: true,
+        data: {
+          status: {
+            active: { name: "Hierarchy", root: "/project", documentPath: "scene.json" },
+            recents: [],
+          },
+        },
+      }),
+      request: async () => ({ ok: true, data: status }),
+    });
+    await settle();
+
+    const select = element(window, '[data-action="scene-entity-select"]') as unknown as {
+      options: ArrayLike<{ textContent: string | null }>;
+    };
+    expect(Array.from(select.options, (option) => option.textContent)).toEqual([
+      "Root · instance root-instance · object root-object · root",
+      "  Child · instance child-instance · object child-object · parent root-instance",
+    ]);
+  });
+
   it("makes every presentation control produce an observable state change", async () => {
     const window = mount();
     const shell = element(window, ".shell");

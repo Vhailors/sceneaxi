@@ -1644,8 +1644,9 @@ if (shell) {
       entitiesList.forEach((entity) => {
         const option = document.createElement('option');
         option.value = entity.id;
-        option.textContent = '  '.repeat(entity.depth) + entity.label + ' · ' + entity.id +
-          (entity.parentInstanceId === null ? ' · root' : ' ← ' + entity.parentInstanceId);
+        option.textContent = '  '.repeat(entity.depth) + entity.label +
+          ' · instance ' + entity.id + ' · object ' + entity.artifactId +
+          (entity.parentInstanceId === null ? ' · root' : ' · parent ' + entity.parentInstanceId);
         el.appendChild(option);
       });
       const fallback = entitiesList.find((entity) => entity.id === 'desktop-crate-beside')?.id || entitiesList[0]?.id || '';

@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -12,6 +12,7 @@ import {
   DESKTOP_ACTIVE_DOCUMENT_PATH,
   createDesktopBridge,
   seedDesktopProject,
+  type DesktopBridgeOptions,
 } from "../../desktop/linux/src/index.ts";
 
 const dirs: string[] = [];
@@ -24,6 +25,40 @@ function fixture() {
   dirs.push(root);
   expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
   return root;
+}
+
+const HIERARCHY_CAPABILITIES = Object.freeze([
+  "scene.compose",
+  "authoring.change-review",
+  "authoring.undo",
+  "authoring.redo",
+  "runtime.play",
+]);
+
+function hierarchyBridge(
+  root: string,
+  options: Omit<DesktopBridgeOptions, "cwd"> = {},
+) {
+  return createDesktopBridge({
+    cwd: root,
+    commandCapabilities: HIERARCHY_CAPABILITIES,
+    ...options,
+  });
+}
+
+function containedTriangle() {
+  const positions = new Float32Array([-1, 0, 0, 1, 0, 0, 0, 1, 0]);
+  const bytes = Buffer.from(positions.buffer);
+  return Buffer.from(JSON.stringify({
+    asset: { version: "2.0" },
+    buffers: [{ byteLength: bytes.byteLength, uri: `data:application/octet-stream;base64,${bytes.toString("base64")}` }],
+    bufferViews: [{ buffer: 0, byteLength: bytes.byteLength }],
+    accessors: [{ bufferView: 0, componentType: 5126, count: 3, type: "VEC3" }],
+    meshes: [{ primitives: [{ attributes: { POSITION: 0 } }] }],
+    nodes: [{ mesh: 0 }],
+    scenes: [{ nodes: [0] }],
+    scene: 0,
+  }));
 }
 
 function command(
@@ -54,7 +89,7 @@ describe("full-editor hierarchy vertical", () => {
     const root = fixture();
     const clients = ["desktop-control", "cli", "local-agent"] as const;
     const results = clients.map((client) => {
-      const bridge = createDesktopBridge({ cwd: root });
+      const bridge = hierarchyBridge(root);
       const selected = command(bridge, "scene-selection-set", client, {
         documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
         instanceIds: ["desktop-crate-stacked", "desktop-crate-beside"],
@@ -98,7 +133,7 @@ describe("full-editor hierarchy vertical", () => {
     const root = fixture();
     const path = join(root, DESKTOP_ACTIVE_DOCUMENT_PATH);
     const before = readFileSync(path, "utf8");
-    const bridge = createDesktopBridge({ cwd: root, nowMs: () => 1_753_920_000_000 });
+    const bridge = hierarchyBridge(root, { nowMs: () => 1_753_920_000_000 });
     const staged = command(bridge, "scene-object-reparent", "desktop-control", {
       documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
       expectedContentHash: contentHash(bridge),
@@ -135,7 +170,7 @@ describe("full-editor hierarchy vertical", () => {
     const after = readFileSync(path, "utf8");
     expect(after).not.toBe(before);
 
-    const reopened = createDesktopBridge({ cwd: root });
+    const reopened = hierarchyBridge(root);
     expect(command(reopened, "scene-hierarchy-inspect", "local-agent", {
       documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
     })).toMatchObject({
@@ -163,7 +198,7 @@ describe("full-editor hierarchy vertical", () => {
   it("commits byte-identical reparent results for desktop, CLI, and assistant clients", () => {
     const bytes = (["desktop-control", "cli", "local-agent"] as const).map((client) => {
       const root = fixture();
-      const bridge = createDesktopBridge({ cwd: root, nowMs: () => 1_753_920_000_000 });
+      const bridge = hierarchyBridge(root, { nowMs: () => 1_753_920_000_000 });
       const staged = command(bridge, "scene-object-reparent", client, {
         documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
         expectedContentHash: contentHash(bridge),
@@ -182,7 +217,7 @@ describe("full-editor hierarchy vertical", () => {
 
   it("creates and multi-removes only validated local objects through review", () => {
     const root = fixture();
-    const bridge = createDesktopBridge({ cwd: root });
+    const bridge = hierarchyBridge(root);
     const create = command(bridge, "scene-object-create", "cli", {
       documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
       expectedContentHash: contentHash(bridge),
@@ -225,17 +260,17 @@ describe("full-editor hierarchy vertical", () => {
     const createAuthoringSession = vi.fn(() => {
       throw new Error("must not reach project authority");
     });
-    const kids = createDesktopBridge({ cwd: root, commandProfile: "kids", createAuthoringSession });
+    const kids = hierarchyBridge(root, { commandProfile: "kids", createAuthoringSession });
     expect(command(kids, "scene-hierarchy-inspect", "desktop-control", {
       documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
     })).toMatchObject({ ok: false, reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.kidsDenied });
-    const missing = createDesktopBridge({ cwd: root, commandCapabilities: [], createAuthoringSession });
+    const missing = createDesktopBridge({ cwd: root, createAuthoringSession });
     expect(command(missing, "scene-hierarchy-inspect", "cli", {
       documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
     })).toMatchObject({ ok: false, reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.capabilityMissing });
     expect(createAuthoringSession).not.toHaveBeenCalled();
 
-    const bridge = createDesktopBridge({ cwd: root });
+    const bridge = hierarchyBridge(root);
     expect(command(bridge, "scene-selection-set", "local-agent", {
       documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
       instanceIds: ["missing-object"],
@@ -258,5 +293,136 @@ describe("full-editor hierarchy vertical", () => {
       },
     })).toMatchObject({ ok: false, reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.policyInvalid });
     expect(readFileSync(path, "utf8")).toBe(before);
+  });
+
+  it("fails closed before session access for raw and registered hierarchy requests", () => {
+    const root = fixture();
+    const createAuthoringSession = vi.fn(() => {
+      throw new Error("must not reach project authority");
+    });
+    const operation = {
+      kind: "create-object",
+      sourceInstanceId: "desktop-crate-beside",
+      parentInstanceId: "desktop-crate-root",
+    };
+    const raw = (bridge: ReturnType<typeof createDesktopBridge>, profile: unknown, value: unknown) =>
+      bridge.handle({
+        action: "authoring",
+        payload: {
+          op: "edit-scene",
+          documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+          expectedContentHash: `sha256:${"1".repeat(64)}`,
+          profile,
+          operation: value,
+        },
+      });
+
+    expect(raw(createDesktopBridge({ cwd: root, createAuthoringSession }), "game", operation))
+      .toMatchObject({ ok: false, reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.capabilityMissing });
+    expect(raw(hierarchyBridge(root, { commandProfile: "kids", createAuthoringSession }), "game", operation))
+      .toMatchObject({ ok: false, reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.kidsDenied });
+    expect(raw(hierarchyBridge(root, { createAuthoringSession }), "game", { kind: "unknown" }))
+      .toMatchObject({ ok: false, reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported });
+    expect(raw(hierarchyBridge(root, { createAuthoringSession }), "profile-game", operation))
+      .toMatchObject({ ok: false, reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported });
+    expect(raw(hierarchyBridge(root, { createAuthoringSession }), "game", {
+      kind: "reparent-object",
+      instanceId: "desktop-crate-beside",
+      parentInstanceId: "desktop-crate-root",
+      transformPolicy: "implicit",
+    })).toMatchObject({ ok: false, reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.policyInvalid });
+    expect(createAuthoringSession).not.toHaveBeenCalled();
+  });
+
+  it("preserves stale selection refusal after undo removes the selected copy", () => {
+    const root = fixture();
+    const bridge = hierarchyBridge(root);
+    expect(command(bridge, "scene-object-create", "desktop-control", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      expectedContentHash: contentHash(bridge),
+      profile: "game",
+      sourceInstanceId: "desktop-crate-beside",
+      parentInstanceId: "desktop-crate-root",
+    })).toMatchObject({ ok: true, data: { selectedInstanceIds: ["desktop-crate-beside-copy-1"] } });
+    expect(command(bridge, "change-review-accept", "desktop-control", {})).toMatchObject({ ok: true });
+    expect(command(bridge, "edit-undo", "desktop-control", {})).toMatchObject({ ok: true });
+    expect(command(bridge, "scene-hierarchy-inspect", "desktop-control", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+    })).toMatchObject({
+      ok: false,
+      reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+    });
+  });
+
+  it("refuses manifest-backed create and remove without staging or rewriting bytes", () => {
+    const root = fixture();
+    const sourceRoot = mkdtempSync(join(tmpdir(), "sceneaxi-hierarchy-asset-source-"));
+    dirs.push(sourceRoot);
+    const source = join(sourceRoot, "triangle.gltf");
+    writeFileSync(source, containedTriangle());
+    const bridge = hierarchyBridge(root);
+    expect(bridge.handle({
+      action: "asset-import",
+      payload: { profile: "web", documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH, sourcePath: source },
+    })).toMatchObject({ ok: true, data: { outcome: "reviewing" } });
+    expect(bridge.handle({ action: "authoring", payload: { op: "accept" } }))
+      .toMatchObject({ ok: true, data: { phase: "applied" } });
+
+    const path = join(root, DESKTOP_ACTIVE_DOCUMENT_PATH);
+    const acceptedBytes = readFileSync(path, "utf8");
+    const acceptedStatus = bridge.handle({
+      action: "authoring",
+      payload: { op: "status", documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
+    });
+    const document = JSON.parse(acceptedBytes) as {
+      data: { assetManifest: { assets: Array<{ instanceId: string }> } };
+    };
+    const importedInstanceId = document.data.assetManifest.assets[0]?.instanceId;
+    if (importedInstanceId === undefined) throw new Error("accepted asset manifest is empty");
+
+    expect(command(bridge, "scene-object-create", "cli", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      expectedContentHash: contentHash(bridge),
+      profile: "game",
+      sourceInstanceId: importedInstanceId,
+      parentInstanceId: "desktop-crate-root",
+    })).toMatchObject({ ok: false, reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported });
+    expect(command(bridge, "scene-object-remove", "local-agent", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      expectedContentHash: contentHash(bridge),
+      profile: "web",
+      instanceIds: [importedInstanceId],
+    })).toMatchObject({ ok: false, reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported });
+    expect(bridge.handle({
+      action: "authoring",
+      payload: {
+        op: "edit-scene",
+        documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+        expectedContentHash: contentHash(bridge),
+        profile: "game",
+        operation: { kind: "add-instance", sourceInstanceId: importedInstanceId },
+      },
+    })).toMatchObject({
+      ok: true,
+      data: { ok: false, reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported },
+    });
+    expect(bridge.handle({
+      action: "authoring",
+      payload: {
+        op: "edit-scene",
+        documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+        expectedContentHash: contentHash(bridge),
+        profile: "web",
+        operation: { kind: "remove-instance", instanceId: importedInstanceId },
+      },
+    })).toMatchObject({
+      ok: true,
+      data: { ok: false, reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported },
+    });
+    expect(readFileSync(path, "utf8")).toBe(acceptedBytes);
+    expect(bridge.handle({
+      action: "authoring",
+      payload: { op: "status", documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
+    })).toEqual(acceptedStatus);
   });
 });

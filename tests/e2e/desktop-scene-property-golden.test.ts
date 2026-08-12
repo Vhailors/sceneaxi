@@ -47,7 +47,11 @@ function editableStatus(bridge: ReturnType<typeof createDesktopBridge>) {
 describe("desktop typed Scene Document edit golden", () => {
   it("reviews without writing, saves atomically, reopens persisted bytes, and plays the saved transform", () => {
     const dir = seed("loop");
-    const bridge = createDesktopBridge({ cwd: dir, nowMs: () => 1_753_920_000_000 });
+    const bridge = createDesktopBridge({
+      cwd: dir,
+      nowMs: () => 1_753_920_000_000,
+      commandCapabilities: ["scene.compose"],
+    });
     const before = readFileSync(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8");
     const opened = editableStatus(bridge);
     const openedBeside = opened.editableScene.entities.find(
@@ -238,7 +242,11 @@ describe("desktop typed Scene Document edit golden", () => {
 
   it("settles selected transforms and add/remove through review, persistence, undo, and Play", () => {
     const dir = seed("breadth-loop");
-    const bridge = createDesktopBridge({ cwd: dir, nowMs: () => 1_753_920_000_000 });
+    const bridge = createDesktopBridge({
+      cwd: dir,
+      nowMs: () => 1_753_920_000_000,
+      commandCapabilities: ["scene.compose"],
+    });
     const documentFile = join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH);
     const initialBytes = readFileSync(documentFile, "utf8");
     const selected = DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId;
@@ -330,7 +338,10 @@ describe("desktop typed Scene Document edit golden", () => {
       cpSync(join(desktopDir, DESKTOP_ACTIVE_DOCUMENT_PATH), join(cliDir, DESKTOP_ACTIVE_DOCUMENT_PATH));
       const parsed = parseDocumentText(initial);
       if (!parsed.ok) throw new Error(parsed.message);
-      const bridge = createDesktopBridge({ cwd: desktopDir });
+      const bridge = createDesktopBridge({
+        cwd: desktopDir,
+        commandCapabilities: ["scene.compose"],
+      });
       const opened = editableStatus(bridge);
       expect(bridge.handle({
         action: "authoring",
@@ -373,7 +384,7 @@ describe("desktop typed Scene Document edit golden", () => {
 
   it("refuses malformed, stale, missing-asset, Kids, and escaping edit-scene requests", () => {
     const dir = seed("breadth-refusals");
-    const bridge = createDesktopBridge({ cwd: dir });
+    const bridge = createDesktopBridge({ cwd: dir, commandCapabilities: ["scene.compose"] });
     const contentHash = editableStatus(bridge).contentHash;
     const edit = (profile: unknown, operation: unknown, documentPath = DESKTOP_ACTIVE_DOCUMENT_PATH) =>
       bridge.handle({
@@ -381,13 +392,13 @@ describe("desktop typed Scene Document edit golden", () => {
         payload: { op: "edit-scene", documentPath, expectedContentHash: contentHash, profile, operation },
       });
     expect(edit("game", { kind: "set-transform-component", instanceId: "bad", propertyId: "scale-x", value: 0 }))
-      .toMatchObject({ ok: true, data: { ok: false, diagnostics: [{ code: "invalid-proposal" }] } });
+      .toMatchObject({ ok: false, reason: "SCENE_HIERARCHY_INPUT_UNSUPPORTED" });
     expect(edit("game", { kind: "remove-instance", instanceId: "missing-instance" }))
       .toMatchObject({ ok: true, data: { ok: false, diagnostics: [{ message: expect.stringContaining("stale") }] } });
     expect(edit("game", { kind: "add-instance", sourceInstanceId: "missing-instance" }))
       .toMatchObject({ ok: true, data: { ok: false, diagnostics: [{ message: expect.stringContaining("missing") }] } });
     expect(edit("kids", { kind: "remove-instance", instanceId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId }))
-      .toMatchObject({ ok: true, data: { ok: false, diagnostics: [{ message: expect.stringContaining("Game and Web") }] } });
+      .toMatchObject({ ok: false, reason: "SCENE_HIERARCHY_KIDS_DENIED" });
     expect(edit("game", { kind: "remove-instance", instanceId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId }, "../scene.json"))
       .toMatchObject({ ok: false, reason: "DESKTOP_BRIDGE_REQUEST_MALFORMED" });
   });
