@@ -255,6 +255,124 @@ describe("desktop mounted control inventory", () => {
     expect(element(window, "[data-scene-property-editor]").hidden).toBe(false);
   });
 
+  it("serializes rapid hierarchy selections before staging from the latest one", async () => {
+    const properties = DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.map((definition) => ({
+      id: definition.id,
+      value: definition.id.startsWith("scale-") ? 1 : 0,
+    }));
+    const entities = ["root", "first", "second"].map((id, index) => ({
+      id,
+      label: id,
+      artifactId: `${id}-object`,
+      parentInstanceId: index === 0 ? null : "root",
+      depth: index === 0 ? 0 : 1,
+      properties,
+    }));
+    const hierarchy = {
+      rootInstanceId: "root",
+      objects: entities.map((entity) => ({ id: entity.id, parentId: entity.parentInstanceId })),
+    };
+    const status = {
+      ok: true,
+      documentId: "scene",
+      data: {},
+      contentHash: `sha256:${"5".repeat(64)}`,
+      authoringSnapshot: {
+        phase: "idle",
+        unifiedDiff: null,
+        renderedDiff: null,
+        proposal: null,
+        appliedPaths: null,
+        journalRecoveryPending: false,
+        transactionId: null,
+        diagnostics: null,
+      },
+      editableScene: {
+        ok: true,
+        contentHash: `sha256:${"5".repeat(64)}`,
+        entities,
+        hierarchy,
+        selection: { schemaVersion: 1, instanceIds: ["root"], primaryInstanceId: "root" },
+      },
+    };
+    const selectionRequests: Array<{
+      input: string[];
+      resolve(response: unknown): void;
+    }> = [];
+    const commandRequests: Array<{ payload?: { commandId?: string; input?: Record<string, unknown> } }> = [];
+    const window = mount(undefined, {
+      project: async () => ({
+        ok: true,
+        data: {
+          status: {
+            active: { name: "Selection queue", root: "/project", documentPath: "scene.json" },
+            recents: [],
+          },
+        },
+      }),
+      request: async (request) => {
+        const command = request as { action?: string; payload?: { commandId?: string; input?: { instanceIds?: string[] } } };
+        if (command.action !== "command") return { ok: true, data: status };
+        commandRequests.push(command);
+        if (command.payload?.commandId !== "scene-selection-set") {
+          return { ok: false, reason: "EXPECTED_STAGING_REFUSAL", message: "Request observed." };
+        }
+        return await new Promise((resolve) => {
+          selectionRequests.push({
+            input: [...(command.payload?.input?.instanceIds ?? [])],
+            resolve,
+          });
+        });
+      },
+    });
+    await settle();
+
+    const select = element(window, '[data-action="scene-entity-select"]') as unknown as {
+      options: ArrayLike<{ selected: boolean; value: string }>;
+      dispatchEvent(event: Event): boolean;
+    };
+    const choose = (id: string) => {
+      Array.from(select.options).forEach((option) => {
+        option.selected = option.value === id;
+      });
+      select.dispatchEvent(new window.Event("change", { bubbles: true }));
+    };
+    choose("first");
+    await settle();
+    expect(selectionRequests.map((request) => request.input)).toEqual([["first"]]);
+
+    choose("second");
+    element(window, '[data-action="scene-instance-add"]').click();
+    await settle();
+    expect(selectionRequests.map((request) => request.input)).toEqual([["first"]]);
+    expect(commandRequests.some((request) => request.payload?.commandId === "scene-object-create")).toBe(false);
+
+    selectionRequests[0]?.resolve({
+      ok: true,
+      data: {
+        contentHash: status.contentHash,
+        hierarchy,
+        selection: { schemaVersion: 1, instanceIds: ["first"], primaryInstanceId: "first" },
+      },
+    });
+    await settle();
+    expect(selectionRequests.map((request) => request.input)).toEqual([["first"], ["second"]]);
+    expect(commandRequests.some((request) => request.payload?.commandId === "scene-object-create")).toBe(false);
+
+    selectionRequests[1]?.resolve({
+      ok: true,
+      data: {
+        contentHash: status.contentHash,
+        hierarchy,
+        selection: { schemaVersion: 1, instanceIds: ["second"], primaryInstanceId: "second" },
+      },
+    });
+    await settle();
+    expect(commandRequests.find((request) => request.payload?.commandId === "scene-object-create"))
+      .toMatchObject({ payload: { input: { sourceInstanceId: "second" } } });
+    expect(Array.from(select.options).find((option) => option.value === "second")?.selected).toBe(true);
+  });
+
   it("makes every presentation control produce an observable state change", async () => {
     const window = mount();
     const shell = element(window, ".shell");

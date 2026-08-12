@@ -2837,8 +2837,7 @@ if (shell) {
     }, 'reparent ' + policy.value);
   };
 
-  const setSceneSelection = async (select) => {
-    const instanceIds = Array.from(select.selectedOptions).map((option) => option.value).filter(Boolean);
+  const setSceneSelection = async (instanceIds) => {
     const response = await commandRequest('scene-selection-set', {
       documentPath: T.product.documentPath,
       profile: shell.dataset.profile,
@@ -3707,11 +3706,11 @@ if (shell) {
       showSceneProperty(selectedSceneEntityIds[0]);
       if (shell.dataset.mode !== 'build') showModePanels('build');
     }
-    // Selection is non-mutating, so it does not occupy the mutation lane. The
-    // next hierarchy/property mutation still awaits this exact request: a
-    // keyboard selection followed immediately by Stage cannot be dropped or
-    // race a stale host selection response over the staged snapshot.
-    sceneSelectionPending = setSceneSelection(el);
+    const instanceIds = [...selectedSceneEntityIds];
+    sceneSelectionPending = sceneSelectionPending.then(
+      () => setSceneSelection(instanceIds),
+      () => setSceneSelection(instanceIds),
+    );
   });
 
   // Tab is deliberately not captured inside a menu — every item keeps its plain

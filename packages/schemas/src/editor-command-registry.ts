@@ -353,6 +353,14 @@ const BASE_REFUSALS = Object.freeze([
   EDITOR_COMMAND_REFUSALS.capabilityDenied,
   EDITOR_COMMAND_REFUSALS.kidsDenied,
 ]);
+const HIERARCHY_BASE_REFUSALS = Object.freeze([
+  EDITOR_COMMAND_REFUSALS.clientDenied,
+  EDITOR_COMMAND_REFUSALS.schemaUnsupported,
+  DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+  EDITOR_COMMAND_REFUSALS.permissionDenied,
+  DESKTOP_SCENE_HIERARCHY_REFUSALS.capabilityMissing,
+  DESKTOP_SCENE_HIERARCHY_REFUSALS.kidsDenied,
+]);
 
 const immediate = (phases: readonly string[] = ["completed"]) =>
   Object.freeze({ kind: "immediate" as const, minimum: 0 as const, maximum: 100 as const, phases });
@@ -541,7 +549,7 @@ const DEFINITIONS = [
     progress: immediate(["inspecting", "completed"]),
     evidence: evidence("scene-hierarchy", "project"),
     refusals: [
-      ...BASE_REFUSALS,
+      ...HIERARCHY_BASE_REFUSALS,
       DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
       "DESKTOP_SCENE_NOT_COMPOSABLE",
     ],
@@ -560,9 +568,8 @@ const DEFINITIONS = [
     progress: immediate(),
     evidence: evidence("scene-hierarchy", "project"),
     refusals: [
-      ...BASE_REFUSALS,
+      ...HIERARCHY_BASE_REFUSALS,
       DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
-      DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
     ],
     undo: undo("none"),
     inputSchema: sceneSelectionInput,
@@ -579,10 +586,9 @@ const DEFINITIONS = [
     progress: immediate(["validating", "reviewing"]),
     evidence: evidence("scene-hierarchy", "change-review"),
     refusals: [
-      ...BASE_REFUSALS,
+      ...HIERARCHY_BASE_REFUSALS,
       DESKTOP_SCENE_HIERARCHY_REFUSALS.parentMissing,
       DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
-      DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
     ],
     undo: undo("records-entry", "edit-undo"),
     inputSchema: sceneCreateInput,
@@ -599,10 +605,9 @@ const DEFINITIONS = [
     progress: immediate(["validating", "reviewing"]),
     evidence: evidence("scene-hierarchy", "change-review"),
     refusals: [
-      ...BASE_REFUSALS,
+      ...HIERARCHY_BASE_REFUSALS,
       DESKTOP_SCENE_HIERARCHY_REFUSALS.protectedRoot,
       DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
-      DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
     ],
     undo: undo("records-entry", "edit-undo"),
     inputSchema: sceneRemoveInput,
@@ -619,13 +624,12 @@ const DEFINITIONS = [
     progress: immediate(["validating", "reviewing"]),
     evidence: evidence("scene-hierarchy", "change-review"),
     refusals: [
-      ...BASE_REFUSALS,
+      ...HIERARCHY_BASE_REFUSALS,
       DESKTOP_SCENE_HIERARCHY_REFUSALS.cycle,
       DESKTOP_SCENE_HIERARCHY_REFUSALS.parentMissing,
       DESKTOP_SCENE_HIERARCHY_REFUSALS.protectedRoot,
       DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
       DESKTOP_SCENE_HIERARCHY_REFUSALS.policyInvalid,
-      DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
     ],
     undo: undo("records-entry", "edit-undo"),
     inputSchema: sceneReparentInput,

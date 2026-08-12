@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+  DESKTOP_SCENE_HIERARCHY_REFUSALS,
   EDITOR_COMMAND_REFUSALS,
   EDITOR_COMMAND_REGISTRY,
   contracts,
@@ -60,6 +61,14 @@ describe("full-editor command registry", () => {
   });
 
   it("registers hierarchy inputs once for desktop, CLI, and assistant clients", () => {
+    const hierarchyBaseRefusals = [
+      EDITOR_COMMAND_REFUSALS.clientDenied,
+      EDITOR_COMMAND_REFUSALS.schemaUnsupported,
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+      EDITOR_COMMAND_REFUSALS.permissionDenied,
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.capabilityMissing,
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.kidsDenied,
+    ];
     for (const id of [
       "scene-hierarchy-inspect",
       "scene-selection-set",
@@ -67,11 +76,17 @@ describe("full-editor command registry", () => {
       "scene-object-remove",
       "scene-object-reparent",
     ] as const) {
-      expect(editorCommand(id)).toMatchObject({
+      const command = editorCommand(id);
+      expect(command).toMatchObject({
         acceptedClients: ["desktop-control", "cli", "local-agent"],
         capability: { id: "scene.compose" },
         evidence: { kind: "scene-hierarchy" },
       });
+      expect(command?.refusals).toEqual(expect.arrayContaining(hierarchyBaseRefusals));
+      expect(command?.refusals).not.toContain(EDITOR_COMMAND_REFUSALS.inputInvalid);
+      expect(command?.refusals).not.toContain(EDITOR_COMMAND_REFUSALS.capabilityDenied);
+      expect(command?.refusals).not.toContain(EDITOR_COMMAND_REFUSALS.kidsDenied);
+      expect(new Set(command?.refusals).size).toBe(command?.refusals.length);
     }
     expect(validateEditorCommandInvocation({
       schemaVersion: 1,
