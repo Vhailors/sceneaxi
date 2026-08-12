@@ -387,7 +387,7 @@ until the landing page's "Coming soon" rows move with it.
 | Download expires by | 2026-11-10 |
 
 **This download expires.** A workflow artifact is not a release. Run 31629556282
-was produced from the current main-branch source commit and uploaded only after the
+was produced from the recorded main-branch source commit and uploaded only after the
 workflow's type-check, packaging, checksum, and packaged-smoke steps passed. GitHub
 applies the declared 90-day retention window to this run, so these files expire on or
 before **2026-11-10**. The run page may remain after the artifact expires; nothing in
@@ -600,10 +600,10 @@ notes below remain historical and are not attributed to these bytes.
 commit `342e5ff11676b7de38d22d94814fae75c7929868`.** A different build with its own
 digests, kept because it is where the behaviour below was observed in detail. It is
 an earlier source than the offered artifact, which was packaged from the later
-main-branch commit and therefore does not describe the current offered bytes or
-product loop
-([sceneaxi#196](https://github.com/Vhailors/sceneaxi/issues/196)) these observations
-describe. It also predates the contained project lifecycle in sceneaxi#224;
+main-branch commit, so it does not describe the current offered bytes. The behaviour
+below records that earlier build's unified product loop
+([sceneaxi#196](https://github.com/Vhailors/sceneaxi/issues/196)), not the later
+artifact. It also predates the contained project lifecycle in sceneaxi#224;
 the hard-bound seed observations below are historical and superseded by the
 first-launch contract above. It predates the typed scene-property edit in
 sceneaxi#225 and the hierarchy/multi-select/parenting breadth in sceneaxi#253 the
