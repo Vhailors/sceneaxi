@@ -69,13 +69,20 @@ export type ProjectGitAuthoringAuthority = Readonly<{
   [projectGitAuthoringAuthorityBrand]: true;
 }>;
 
-const projectGitAuthoringAuthorities = new WeakMap<object, () => ProjectGitAuthoringState>();
+const projectGitAuthoringAuthorities = new WeakMap<
+  object,
+  Readonly<{ root: string; readState: () => ProjectGitAuthoringState }>
+>();
 
 export function createProjectGitAuthoringAuthority(
+  root: string,
   readState: () => ProjectGitAuthoringState,
 ): ProjectGitAuthoringAuthority {
   const authority = Object.freeze({}) as ProjectGitAuthoringAuthority;
-  projectGitAuthoringAuthorities.set(authority, readState);
+  projectGitAuthoringAuthorities.set(authority, Object.freeze({
+    root: canonicalPath(root),
+    readState,
+  }));
   return authority;
 }
 
@@ -201,9 +208,12 @@ function selectedPaths(
 }
 
 type MutationGuard = Readonly<{
+  root: string;
   lockSet: AtomicWriteLockSet;
   excludedPaths: ReadonlySet<string>;
 }>;
+
+const pendingMutationCleanups = new Map<string, AtomicWriteLockSet>();
 
 function transactionDirtyFailure(): ProjectGitFailure {
   return failure(
@@ -217,10 +227,10 @@ function mutationGuard(
   root: string,
   authoring: ProjectGitAuthoringAuthority | undefined,
 ): ProjectGitFailure | MutationGuard {
-  const readAuthoring = authoring === undefined
+  const authoringAuthority = authoring === undefined
     ? undefined
     : projectGitAuthoringAuthorities.get(authoring);
-  if (readAuthoring === undefined) {
+  if (authoringAuthority === undefined || authoringAuthority.root !== root) {
     return failure(
       PROJECT_GIT_DIAGNOSTICS.transactionDirty,
       "$authoring",
@@ -229,7 +239,7 @@ function mutationGuard(
   }
   let authoringState: ProjectGitAuthoringState;
   try {
-    authoringState = readAuthoring();
+    authoringState = authoringAuthority.readState();
   } catch {
     return transactionDirtyFailure();
   }
@@ -249,6 +259,17 @@ function mutationGuard(
   }
   if (authoringState.transactionDirty) {
     return transactionDirtyFailure();
+  }
+  const pendingCleanup = pendingMutationCleanups.get(root);
+  if (pendingCleanup !== undefined) {
+    try {
+      if (endApplyJournalTransactionChecked(pendingCleanup).length > 0) {
+        return transactionDirtyFailure();
+      }
+      pendingMutationCleanups.delete(root);
+    } catch {
+      return transactionDirtyFailure();
+    }
   }
   const operationPath = canonicalPath(applyJournalOperationResource(root));
   if (!within(root, operationPath)) {
@@ -308,7 +329,7 @@ function mutationGuard(
       relative(root, path).split(sep).join("/"),
     ),
   );
-  return Object.freeze({ lockSet, excludedPaths });
+  return Object.freeze({ root, lockSet, excludedPaths });
 }
 
 function parseStatus(
@@ -508,6 +529,11 @@ function containedGitDirectory(root: string): string | ProjectGitFailure {
     ["objects/info/alternates", "file", false],
     ["objects/info/http-alternates", "file", false],
     ["objects/pack", "directory", false],
+    ["info", "directory", false],
+    ["info/exclude", "file", false],
+    ["info/attributes", "file", false],
+    ["info/sparse-checkout", "file", false],
+    ["info/grafts", "file", false],
     ["refs", "directory", true],
   ] as const;
   for (const [name, kind, required] of controlNodes) {
@@ -542,6 +568,13 @@ function containedGitDirectory(root: string): string | ProjectGitFailure {
     return repositoryEscape(
       "$git.config",
       "Contained Git refuses repository configuration includes.",
+    );
+  }
+  const pathValuedConfiguration = /^\s*(?:(?:core\.)?(?:excludesfile|attributesfile|worktree|hookspath|alternaterefscommand)|include(?:if\.[^.\s]+)*\.path)\s*(?:=|\s)/imu;
+  if (pathValuedConfiguration.test(config)) {
+    return repositoryEscape(
+      "$git.config",
+      "Contained Git refuses local configuration that redirects metadata, worktree, hooks, or alternate-ref commands.",
     );
   }
   return gitDirectory;
@@ -852,8 +885,12 @@ function restoreGitIndex(ctx: Context, snapshot: GitIndexSnapshot): boolean {
 
 function releaseMutationGuard(guard: MutationGuard): readonly string[] {
   try {
-    return endApplyJournalTransactionChecked(guard.lockSet);
+    const failures = endApplyJournalTransactionChecked(guard.lockSet);
+    if (failures.length === 0) pendingMutationCleanups.delete(guard.root);
+    else pendingMutationCleanups.set(guard.root, guard.lockSet);
+    return failures;
   } catch {
+    pendingMutationCleanups.set(guard.root, guard.lockSet);
     return Object.freeze(["$authoring.lock"]);
   }
 }

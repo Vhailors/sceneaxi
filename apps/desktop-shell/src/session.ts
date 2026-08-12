@@ -13,7 +13,6 @@ import { resolve } from "node:path";
 import {
   canonicalPath,
   contentHash,
-  createProjectGitAuthoringAuthority,
   applyRedoAvailability,
   applyUndoAvailability,
   parseDocumentText,
@@ -22,9 +21,16 @@ import {
   undoLastApply,
   type ApplyUndoAvailability,
   type ApplyDiagnostic,
-  type ProjectGitAuthoringAuthority,
+  type ProjectGitOptions,
   type Proposal,
 } from "@sceneaxi/authoring-core";
+import {
+  createProjectGitDesktopSessionBinding,
+  type ProjectGitDesktopSessionBinding,
+} from "@sceneaxi/authoring-core/desktop-session-authority";
+import {
+  PROJECT_GIT_DIAGNOSTICS,
+} from "@sceneaxi/schemas";
 import {
   shellApply,
   shellPropose,
@@ -107,12 +113,46 @@ export type DesktopSessionOptions = {
   readonly operations?: Partial<DesktopSessionOperations>;
 };
 
-const projectGitAuthorities = new WeakMap<object, ProjectGitAuthoringAuthority>();
+const projectGitBindings = new WeakMap<object, ProjectGitDesktopSessionBinding>();
 
-export function desktopSessionProjectGitAuthoringAuthority(
+function desktopSessionProjectGitBinding(
   session: DesktopSession,
-): ProjectGitAuthoringAuthority | undefined {
-  return projectGitAuthorities.get(session);
+): ProjectGitDesktopSessionBinding | undefined {
+  return projectGitBindings.get(session);
+}
+
+function unavailableProjectGitAuthority() {
+  return Object.freeze({
+    ok: false as const,
+    diagnostic: Object.freeze({
+      code: PROJECT_GIT_DIAGNOSTICS.transactionDirty,
+      path: "$authoring",
+      message: "Authoritative SceneAxi review and recovery state is unavailable.",
+    }),
+  });
+}
+
+export function stageDesktopSessionProjectGitPaths(
+  session: DesktopSession,
+  options: ProjectGitOptions,
+  paths: readonly string[],
+) {
+  const binding = desktopSessionProjectGitBinding(session);
+  return binding === undefined
+    ? unavailableProjectGitAuthority()
+    : binding.stage(options, paths);
+}
+
+export function prepareDesktopSessionProjectGitCommit(
+  session: DesktopSession,
+  options: ProjectGitOptions,
+  paths: readonly string[],
+  message: string,
+) {
+  const binding = desktopSessionProjectGitBinding(session);
+  return binding === undefined
+    ? unavailableProjectGitAuthority()
+    : binding.prepare(options, paths, message);
 }
 
 /**
@@ -201,7 +241,7 @@ export function createDesktopSession(
     return snap();
   };
 
-  const authority = createProjectGitAuthoringAuthority(() => {
+  const gitBinding = createProjectGitDesktopSessionBinding(sessionCwd, () => {
     const current = snap();
     return Object.freeze({
       reviewStaged: current.phase === "reviewing" && current.proposal !== null,
@@ -467,6 +507,6 @@ export function createDesktopSession(
       return { ok: true, transactionId: result.transactionId, restoredPaths: result.documentPaths };
     },
   };
-  projectGitAuthorities.set(session, authority);
+  projectGitBindings.set(session, gitBinding);
   return Object.freeze(session);
 }

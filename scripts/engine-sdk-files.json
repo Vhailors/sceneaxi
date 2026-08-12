@@ -8,6 +8,7 @@
   "packages/authoring-core/src/assistant-sculpt.ts",
   "packages/authoring-core/src/atomic-write.ts",
   "packages/authoring-core/src/content-hash.ts",
+  "packages/authoring-core/src/desktop-session-authority.ts",
   "packages/authoring-core/src/index.ts",
   "packages/authoring-core/src/json-invariants.ts",
   "packages/authoring-core/src/json-pointer.ts",

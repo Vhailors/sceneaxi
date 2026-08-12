@@ -15,19 +15,26 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
 import { afterEach, describe, expect, it } from "vitest";
+import * as authoringCoreSdk from "@sceneaxi/authoring-core";
+import {
+  atomicWriteLockArtifactPaths,
+  releaseAtomicWriteLocksChecked,
+} from "../src/atomic-write.js";
 import {
   apply,
   acquireAtomicWriteLocks,
-  createProjectGitAuthoringAuthority,
   inspectProjectGit,
-  prepareProjectGitCommit,
   propose,
   releaseAtomicWriteLocks,
   refuseUnsupportedProjectGitOperation,
   serializeDocument,
-  stageProjectGitPaths,
   writeNativeProjectSeed,
 } from "@sceneaxi/authoring-core";
+import {
+  createProjectGitAuthoringAuthority,
+  prepareProjectGitCommit,
+  stageProjectGitPaths,
+} from "../src/project-git.js";
 import {
   PROJECT_GIT_DIAGNOSTICS,
   PROJECT_MANIFEST_PATH,
@@ -43,7 +50,7 @@ const authoringReady = Object.freeze({
 });
 
 function mutationOptions(root: string) {
-  return { root, authoring: createProjectGitAuthoringAuthority(() => authoringReady) };
+  return { root, authoring: createProjectGitAuthoringAuthority(root, () => authoringReady) };
 }
 
 afterEach(() => {
@@ -73,6 +80,12 @@ function repository(label: string) {
 }
 
 describe("contained project Git service", () => {
+  it("keeps Git mutation authority outside the public SDK root", () => {
+    expect(Object.hasOwn(authoringCoreSdk, "createProjectGitAuthoringAuthority")).toBe(false);
+    expect(Object.hasOwn(authoringCoreSdk, "stageProjectGitPaths")).toBe(false);
+    expect(Object.hasOwn(authoringCoreSdk, "prepareProjectGitCommit")).toBe(false);
+  });
+
   it("reports canonical and unrelated changes with stable diffs without changing either", () => {
     const { root } = repository("inspect");
     writeFileSync(join(root, "scene.json"), readFileSync(join(root, "scene.json"), "utf8").replace("Contained", "Changed"));
@@ -258,6 +271,34 @@ describe("contained project Git service", () => {
     expect(inspectProjectGit({ root: linkedConfig.root })).toMatchObject({
       ok: false,
       diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.repositoryEscape },
+    });
+
+    const linkedExclude = repository("linked-exclude");
+    const excludeOutside = mkdtempSync(join(tmpdir(), "sceneaxi-project-git-exclude-outside-"));
+    roots.push(excludeOutside);
+    mkdirSync(join(linkedExclude.root, ".git", "info"), { recursive: true });
+    writeFileSync(join(excludeOutside, "exclude"), "outside-ignore\n");
+    rmSync(join(linkedExclude.root, ".git", "info", "exclude"), { force: true });
+    symlinkSync(join(excludeOutside, "exclude"), join(linkedExclude.root, ".git", "info", "exclude"));
+    expect(inspectProjectGit({
+      root: linkedExclude.root,
+      gitExecutable: "sceneaxi-git-must-not-run",
+    })).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.repositoryEscape, path: "$git.info.exclude" },
+    });
+
+    const configuredExclude = repository("configured-exclude");
+    writeFileSync(
+      join(configuredExclude.root, ".git", "config"),
+      `${readFileSync(join(configuredExclude.root, ".git", "config"), "utf8")}\n[core]\n\texcludesFile = ${join(excludeOutside, "exclude")}\n`,
+    );
+    expect(inspectProjectGit({
+      root: configuredExclude.root,
+      gitExecutable: "sceneaxi-git-must-not-run",
+    })).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.repositoryEscape, path: "$git.config" },
     });
 
     const gitlink = repository("gitlink");
@@ -463,7 +504,7 @@ describe("contained project Git service", () => {
     for (const state of guarded) {
       expect(stageProjectGitPaths({
         root,
-        authoring: createProjectGitAuthoringAuthority(() => state),
+        authoring: createProjectGitAuthoringAuthority(root, () => state),
       }, ["notes.txt"])).toMatchObject({
         ok: false,
         diagnostic: { code: state.code },
@@ -495,7 +536,7 @@ describe("contained project Git service", () => {
     const { root } = repository("live-authority");
     writeFileSync(join(root, "notes.txt"), "live state\n");
     let state = authoringReady;
-    const authority = createProjectGitAuthoringAuthority(() => state);
+    const authority = createProjectGitAuthoringAuthority(root, () => state);
     state = Object.freeze({ ...authoringReady, reviewStaged: true });
     expect(stageProjectGitPaths({ root, authoring: authority }, ["notes.txt"])).toMatchObject({
       ok: false,
@@ -503,6 +544,45 @@ describe("contained project Git service", () => {
     });
     state = authoringReady;
     expect(stageProjectGitPaths({ root, authoring: authority }, ["notes.txt"])).toMatchObject({ ok: true });
+  });
+
+  it("binds authoring authority to its live session root", () => {
+    const first = repository("authority-first");
+    const second = repository("authority-second");
+    writeFileSync(join(second.root, "notes.txt"), "wrong root\n");
+    const authority = createProjectGitAuthoringAuthority(first.root, () => authoringReady);
+
+    expect(stageProjectGitPaths({
+      root: second.root,
+      authoring: authority,
+    }, ["notes.txt"])).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.transactionDirty, path: "$authoring" },
+    });
+    expect(git(second.root, "diff", "--cached", "--name-only").trim()).toBe("");
+  });
+
+  it("keeps checked lock ownership retryable until cleanup succeeds", () => {
+    const { root } = repository("retryable-lock-release");
+    const lockSet = acquireAtomicWriteLocks([join(root, ".sceneaxi-authoring-operation")]);
+    const [artifact] = atomicWriteLockArtifactPaths(lockSet);
+    expect(artifact).toBeDefined();
+    if (artifact === undefined) return;
+    const owner = readFileSync(artifact, "utf8");
+    let released = false;
+    try {
+      writeFileSync(artifact, `${JSON.stringify({ token: "not-the-owner" })}\n`);
+      expect(releaseAtomicWriteLocksChecked(lockSet)).toContain(artifact);
+      writeFileSync(artifact, owner);
+      expect(releaseAtomicWriteLocksChecked(lockSet)).toEqual([]);
+      released = true;
+      expect(existsSync(artifact)).toBe(false);
+    } finally {
+      if (!released) {
+        writeFileSync(artifact, owner);
+        releaseAtomicWriteLocksChecked(lockSet);
+      }
+    }
   });
 
   it("refuses missing Git, capability, Kids, path escape, and unsupported history operations by name", () => {

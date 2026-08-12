@@ -707,6 +707,8 @@ const UMBRELLA_AUTHORITY_IMPORTERS = new Map([
   ],
   ["sites/umbrella/src/index", new Set()],
 ]);
+const PROJECT_GIT_SESSION_AUTHORITY = "@sceneaxi/authoring-core/desktop-session-authority";
+const PROJECT_GIT_SESSION_AUTHORITY_OWNER = "apps/desktop-shell/src/session";
 // Path-segment containment via relative(), never raw startsWith, so a sibling directory
 // whose name merely begins with "testing" is not treated as inside it.
 const contains = (parent, candidate) => {
@@ -736,6 +738,14 @@ for (const [name, { dir }] of manifests) {
         }
         if (isTestingSubpath(resourcePath)) {
           fail(`${name}: ${relative(root, file)} imports test-only subpath ${spec} — production source may not reach a testing/ seam`);
+        }
+        if (
+          resourcePath === PROJECT_GIT_SESSION_AUTHORITY &&
+          (name !== "@sceneaxi/desktop-shell" || fromModule !== PROJECT_GIT_SESSION_AUTHORITY_OWNER)
+        ) {
+          fail(
+            `${name}: ${relative(root, file)} imports the Git mutation authority outside its live DesktopSession owner`,
+          );
         }
       } else {
         for (const resolved of resolvePackageLocalSpecifiers({ dir, file, spec: resourcePath })) {

@@ -37,12 +37,10 @@ import {
   commitProjectMigration,
   inspectProjectModel,
   inspectProjectGit,
-  prepareProjectGitCommit,
   proposeProjectMigration,
   recoverProjectMigration,
   runAssistantSculptAction,
   safeRarityEvidenceFromNamespace,
-  stageProjectGitPaths,
   stageRarityProviderProposal,
   type AssistantSculptProgress,
   type AssistantSculptResult,
@@ -51,8 +49,9 @@ import {
 } from "@sceneaxi/authoring-core";
 import {
   createDesktopSession,
-  desktopSessionProjectGitAuthoringAuthority,
   DESKTOP_PRODUCT_REFUSALS,
+  prepareDesktopSessionProjectGitCommit,
+  stageDesktopSessionProjectGitPaths,
   type DesktopDocumentStatus,
   type DesktopSession,
   type DesktopSnapshot,
@@ -1930,36 +1929,18 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           : bridgeRefuse(inspected.diagnostic.code, inspected.diagnostic.message, inspected.diagnostic.path);
       }
       case "project-git-stage": {
-        const authority = desktopSessionProjectGitAuthoringAuthority(authoringSession());
-        if (authority === undefined) {
-          return bridgeRefuse(
-            PROJECT_GIT_DIAGNOSTICS.transactionDirty,
-            "Authoritative SceneAxi review and recovery state is unavailable.",
-            "$authoring",
-          );
-        }
-        const staged = stageProjectGitPaths({
+        const staged = stageDesktopSessionProjectGitPaths(authoringSession(), {
           root: options.cwd,
           profile: activeCommandProfile,
-          authoring: authority,
         }, input["paths"] as readonly string[]);
         return staged.ok
           ? bridgeOk("command", staged.state)
           : bridgeRefuse(staged.diagnostic.code, staged.diagnostic.message, staged.diagnostic.path);
       }
       case "project-git-commit-prepare": {
-        const authority = desktopSessionProjectGitAuthoringAuthority(authoringSession());
-        if (authority === undefined) {
-          return bridgeRefuse(
-            PROJECT_GIT_DIAGNOSTICS.transactionDirty,
-            "Authoritative SceneAxi review and recovery state is unavailable.",
-            "$authoring",
-          );
-        }
-        const prepared = prepareProjectGitCommit({
+        const prepared = prepareDesktopSessionProjectGitCommit(authoringSession(), {
           root: options.cwd,
           profile: activeCommandProfile,
-          authoring: authority,
         }, input["paths"] as readonly string[], String(input["message"]));
         return prepared.ok
           ? bridgeOk("command", prepared.preparation)
