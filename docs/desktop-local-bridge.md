@@ -117,7 +117,7 @@ pnpm sceneaxi desktop bridge call \
 pnpm sceneaxi desktop bridge call \
   --tool sceneaxi.scene.hierarchy.inspect \
   --allow project:read \
-  --input-json '{"documentPath":"scene.json"}' \
+  --input-json '{"documentPath":"scene.json","profile":"game"}' \
   --json
 
 pnpm sceneaxi desktop bridge call \

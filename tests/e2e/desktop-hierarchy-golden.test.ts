@@ -374,6 +374,36 @@ describe("full-editor hierarchy vertical", () => {
         ]),
       },
     });
+    const stagedWhileStale = command(bridge, "scene-object-reparent", "desktop-control", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      expectedContentHash: contentHash(bridge),
+      profile: "game",
+      instanceId: "desktop-crate-beside",
+      parentInstanceId: "desktop-crate-stacked",
+      transformPolicy: "preserve-local",
+    });
+    expect(stagedWhileStale).toMatchObject({
+      ok: true,
+      data: {
+        phase: "reviewing",
+        editableScene: {
+          ok: false,
+          reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+        },
+      },
+    });
+    if (stagedWhileStale.ok) {
+      expect(stagedWhileStale.data).not.toHaveProperty("selectedInstanceIds");
+    }
+    expect(command(bridge, "scene-hierarchy-inspect", "desktop-control", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      profile: "game",
+    })).toMatchObject({
+      ok: true,
+      data: { ok: false, reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale },
+    });
+    expect(command(bridge, "change-review-reject", "desktop-control", {}))
+      .toMatchObject({ ok: true });
     expect(command(bridge, "scene-selection-set", "desktop-control", {
       documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
       profile: "game",
@@ -381,6 +411,34 @@ describe("full-editor hierarchy vertical", () => {
     })).toMatchObject({
       ok: true,
       data: { selection: { instanceIds: ["desktop-crate-beside"] } },
+    });
+    expect(command(bridge, "scene-hierarchy-inspect", "desktop-control", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      profile: "game",
+    })).toMatchObject({
+      ok: true,
+      data: { selection: { instanceIds: ["desktop-crate-beside"] } },
+    });
+  });
+
+  it("keeps selection unchanged when hierarchy proposal settlement refuses", () => {
+    const root = fixture();
+    const bridge = hierarchyBridge(root);
+    expect(command(bridge, "scene-selection-set", "desktop-control", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      profile: "game",
+      instanceIds: ["desktop-crate-beside"],
+    })).toMatchObject({ ok: true });
+
+    expect(command(bridge, "scene-object-create", "desktop-control", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      expectedContentHash: `sha256:${"0".repeat(64)}`,
+      profile: "game",
+      sourceInstanceId: "desktop-crate-beside",
+      parentInstanceId: "desktop-crate-root",
+    })).toMatchObject({
+      ok: true,
+      data: { diagnostics: [{ code: "content-hash-conflict" }] },
     });
     expect(command(bridge, "scene-hierarchy-inspect", "desktop-control", {
       documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,

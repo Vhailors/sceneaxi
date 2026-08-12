@@ -14,6 +14,7 @@ import {
   digestComposedScene,
   digestSceneArtifact,
   digestScenePlacements,
+  deriveCanonicalLocalSculptTransform,
   identitySculptTransform,
   projectSceneInstanceHierarchy,
   resolveScenePlacements,
@@ -226,6 +227,18 @@ describe("scene composition contracts", () => {
   });
 
   it("normalizes after quantization and refuses non-representable transforms", () => {
+    expect(deriveCanonicalLocalSculptTransform(
+      transform([0, 0, 0], [2, 1, 1]),
+      transform([1, 0, 0]),
+    )).toMatchObject({ ok: true, value: { translation: [0.5, 0, 0] } });
+    expect(deriveCanonicalLocalSculptTransform(
+      transform([0, 0, 0], [3, 1, 1]),
+      transform([1, 0, 0]),
+    )).toEqual({
+      ok: false,
+      message: "No canonical local transform reproduces the exact world transform.",
+    });
+
     expect(
       composeSculptTransforms(
         identity,

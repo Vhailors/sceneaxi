@@ -821,6 +821,7 @@ export {
   SCENE_MINIMUM_SCALE,
   composeSculptTransforms,
   composedSceneFromDocumentData,
+  deriveCanonicalLocalSculptTransform,
   digestComposedScene,
   digestSceneArtifact,
   digestScenePlacements,
@@ -830,6 +831,8 @@ export {
   validateComposedScene,
   validateSceneCompositionIntake,
 } from "./scene-composition.js";
+
+export type { CanonicalLocalSculptTransformResult } from "./scene-composition.js";
 
 export {
   DESKTOP_SCENE_EDIT_PROFILES,

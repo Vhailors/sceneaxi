@@ -265,6 +265,47 @@ describe("desktop selected composed-instance edit — public seam", () => {
       .toBe(fixture.bytes);
   });
 
+  it("refuses preserve-world when no canonical local transform round-trips exactly", () => {
+    const fixture = starter();
+    const stored = composedSceneFromDocumentData(fixture.data);
+    if (!stored.ok) throw new Error(stored.diagnostics[0]?.message);
+    const artifacts = [...new Map(
+      stored.value.instances.map((instance) => [instance.artifactId, instance.artifact]),
+    ).values()];
+    const composed = composeScene({
+      schemaVersion: SCENE_COMPOSITION_SCHEMA_VERSION,
+      kind: SCENE_COMPOSITION_INTAKE_KIND,
+      sceneId: stored.value.sceneId,
+      rootInstanceId: stored.value.rootInstanceId,
+      placements: stored.value.instances.map((instance) => ({
+        instanceId: instance.instanceId,
+        artifactId: instance.artifactId,
+        parentInstanceId: instance.parentInstanceId,
+        transform: instance.instanceId === "desktop-crate-beside"
+          ? { ...instance.localTransform, translation: [1, 0, 0] }
+          : instance.instanceId === "desktop-crate-stacked"
+            ? { ...instance.localTransform, translation: [0, 0, 0], scale: [3, 1, 1] }
+            : instance.localTransform,
+      })),
+    }, artifacts);
+    if (!composed.ok) throw new Error(composed.message);
+
+    expect(stageDesktopSceneEdit({
+      documentData: composed.document.data,
+      contentHash: `sha256:${"9".repeat(64)}`,
+      profile: "game",
+      operation: {
+        kind: "reparent-object",
+        instanceId: "desktop-crate-beside",
+        parentInstanceId: "desktop-crate-stacked",
+        transformPolicy: "preserve-world",
+      },
+    })).toMatchObject({
+      ok: false,
+      reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+    });
+  });
+
   it("refuses hierarchy cycles, missing parents, protected roots, stale selections, and invalid policy by name", () => {
     const fixture = starter();
     const contentHash = `sha256:${"8".repeat(64)}`;

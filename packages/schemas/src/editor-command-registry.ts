@@ -6,7 +6,10 @@
  * becoming competing sources of permission or result metadata.
  */
 import type { JsonObject } from "./document.js";
-import { DESKTOP_SCENE_HIERARCHY_REFUSALS } from "./desktop-scene-edit.js";
+import {
+  DESKTOP_SCENE_HIERARCHY_REFUSALS,
+  type DesktopSceneHierarchyRefusal,
+} from "./desktop-scene-edit.js";
 
 export const EDITOR_COMMAND_SCHEMA_VERSION = 1 as const;
 
@@ -154,7 +157,7 @@ export type EditorCommandValidation =
     }>
   | Readonly<{
       ok: false;
-      reason: EditorCommandRefusal;
+      reason: EditorCommandRefusal | DesktopSceneHierarchyRefusal;
       message: string;
     }>;
 
@@ -590,7 +593,7 @@ const DEFINITIONS = [
       DESKTOP_SCENE_HIERARCHY_REFUSALS.parentMissing,
       DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
     ],
-    undo: undo("records-entry", "edit-undo"),
+    undo: undo("none"),
     inputSchema: sceneCreateInput,
     inputShape: "scene-create",
   }),
@@ -609,7 +612,7 @@ const DEFINITIONS = [
       DESKTOP_SCENE_HIERARCHY_REFUSALS.protectedRoot,
       DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
     ],
-    undo: undo("records-entry", "edit-undo"),
+    undo: undo("none"),
     inputSchema: sceneRemoveInput,
     inputShape: "scene-remove",
   }),
@@ -631,7 +634,7 @@ const DEFINITIONS = [
       DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
       DESKTOP_SCENE_HIERARCHY_REFUSALS.policyInvalid,
     ],
-    undo: undo("records-entry", "edit-undo"),
+    undo: undo("none"),
     inputSchema: sceneReparentInput,
     inputShape: "scene-reparent",
   }),
@@ -902,7 +905,7 @@ export function validateEditorCommandInput(
 }
 
 const refusal = (
-  reason: EditorCommandRefusal,
+  reason: EditorCommandRefusal | DesktopSceneHierarchyRefusal,
   message: string,
 ): EditorCommandValidation => Object.freeze({ ok: false as const, reason, message });
 
@@ -913,10 +916,14 @@ export function validateEditorCommandInvocation(
   if (!isCommandObject(value)) {
     return refusal(EDITOR_COMMAND_REFUSALS.inputInvalid, "A command invocation must be an object.");
   }
+  const requestedCommand = editorCommand(value["commandId"]);
+  const requestedHierarchyCommand = requestedCommand?.id.startsWith("scene-") === true;
   const invocationKeys = ["schemaVersion", "commandId", "client", "permission", "profile", "input"];
   if (Object.keys(value).some((key) => !invocationKeys.includes(key))) {
     return refusal(
-      EDITOR_COMMAND_REFUSALS.inputInvalid,
+      requestedHierarchyCommand
+        ? DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported
+        : EDITOR_COMMAND_REFUSALS.inputInvalid,
       "A command invocation has unknown fields.",
     );
   }
@@ -927,10 +934,11 @@ export function validateEditorCommandInvocation(
       `Editor command schema version ${String(schemaVersion)} is unsupported.`,
     );
   }
-  const command = editorCommand(value["commandId"]);
+  const command = requestedCommand;
   if (command === undefined) {
     return refusal(EDITOR_COMMAND_REFUSALS.commandUnknown, "The editor command is not registered.");
   }
+  const hierarchyCommand = command.id.startsWith("scene-");
   const client = value["client"];
   if (!EDITOR_COMMAND_CLIENTS.some((candidate) => candidate === client) ||
     !command.acceptedClients.some((candidate) => candidate === client)) {
@@ -947,18 +955,27 @@ export function validateEditorCommandInvocation(
   }
   const profile = value["profile"];
   if (profile !== undefined && profile !== "game" && profile !== "web" && profile !== "kids") {
-    return refusal(EDITOR_COMMAND_REFUSALS.inputInvalid, "The editor command profile is invalid.");
+    return refusal(
+      hierarchyCommand
+        ? DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported
+        : EDITOR_COMMAND_REFUSALS.inputInvalid,
+      "The editor command profile is invalid.",
+    );
   }
   if (profile === "kids") {
     return refusal(
-      EDITOR_COMMAND_REFUSALS.kidsDenied,
+      hierarchyCommand
+        ? DESKTOP_SCENE_HIERARCHY_REFUSALS.kidsDenied
+        : EDITOR_COMMAND_REFUSALS.kidsDenied,
       `${command.id} is denied for Kids before execution.`,
     );
   }
   const input = value["input"];
   if (!validateEditorCommandInput(command, input)) {
     return refusal(
-      EDITOR_COMMAND_REFUSALS.inputInvalid,
+      hierarchyCommand
+        ? DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported
+        : EDITOR_COMMAND_REFUSALS.inputInvalid,
       `Input does not match the registered schema for ${command.id}.`,
     );
   }
@@ -970,13 +987,15 @@ export function validateEditorCommandInvocation(
   }
   if (input["profile"] === "kids") {
     return refusal(
-      EDITOR_COMMAND_REFUSALS.kidsDenied,
+      hierarchyCommand
+        ? DESKTOP_SCENE_HIERARCHY_REFUSALS.kidsDenied
+        : EDITOR_COMMAND_REFUSALS.kidsDenied,
       `${command.id} is denied for Kids before execution.`,
     );
   }
-  if (command.id.startsWith("scene-") && profile !== input["profile"]) {
+  if (hierarchyCommand && profile !== input["profile"]) {
     return refusal(
-      EDITOR_COMMAND_REFUSALS.inputInvalid,
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
       `${command.id} requires one matching explicit invocation and input profile.`,
     );
   }
@@ -1013,7 +1032,10 @@ export function createEditorCommandInvocation(
     // Kids denial belongs to the execution boundary. Construction must still
     // carry the valid invocation there so every client observes the same named
     // refusal instead of translating it into an internal transport error.
-    if (validated.reason === EDITOR_COMMAND_REFUSALS.kidsDenied) {
+    if (
+      validated.reason === EDITOR_COMMAND_REFUSALS.kidsDenied ||
+      validated.reason === DESKTOP_SCENE_HIERARCHY_REFUSALS.kidsDenied
+    ) {
       return invocation;
     }
     registryError(validated.message);

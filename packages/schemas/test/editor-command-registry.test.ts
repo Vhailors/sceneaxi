@@ -109,7 +109,10 @@ describe("full-editor command registry", () => {
       client: "local-agent",
       permission: "project:read",
       input: { documentPath: "scene.json" },
-    })).toMatchObject({ ok: false, reason: EDITOR_COMMAND_REFUSALS.inputInvalid });
+    })).toMatchObject({
+      ok: false,
+      reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+    });
     expect(validateEditorCommandInvocation({
       schemaVersion: 1,
       commandId: "scene-selection-set",
@@ -117,7 +120,25 @@ describe("full-editor command registry", () => {
       permission: "project:read",
       profile: "kids",
       input: { documentPath: "scene.json", profile: "kids", instanceIds: ["root"] },
-    })).toMatchObject({ ok: false, reason: EDITOR_COMMAND_REFUSALS.kidsDenied });
+    })).toMatchObject({
+      ok: false,
+      reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.kidsDenied,
+    });
+    expect(validateEditorCommandInvocation({
+      schemaVersion: 1,
+      commandId: "scene-hierarchy-inspect",
+      client: "cli",
+      permission: "project:read",
+      profile: "game",
+      input: { documentPath: "scene.json", profile: "game" },
+      extra: true,
+    })).toMatchObject({
+      ok: false,
+      reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+    });
+    for (const id of ["scene-object-create", "scene-object-remove", "scene-object-reparent"] as const) {
+      expect(editorCommand(id)?.undo).toEqual({ kind: "none", commandId: null });
+    }
   });
 
   it("rejects duplicate ids and invalid registry declarations", () => {

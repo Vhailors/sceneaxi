@@ -21,6 +21,7 @@ import {
   SCENE_MAXIMUM_INSTANCES,
   SCENE_MINIMUM_INSTANCES,
   composedSceneFromDocumentData,
+  deriveCanonicalLocalSculptTransform,
   desktopSceneTransformProperty,
   digestSceneArtifact,
   identitySculptTransform,
@@ -959,23 +960,17 @@ export function stageDesktopSceneEdit(input: Readonly<{
             (instance) => instance.instanceId === ancestor?.parentInstanceId,
           );
     }
-    const axes = [0, 1, 2] as const;
-    const localTransform = operation.transformPolicy === "preserve-local"
-      ? child.localTransform
-      : Object.freeze({
-          translation: Object.freeze(axes.map((axis) =>
-            Math.round(((child.worldTransform.translation[axis] - parent.worldTransform.translation[axis]) /
-              parent.worldTransform.scale[axis]) * 1_000_000) / 1_000_000,
-          ) as unknown as Vector3),
-          rotationEulerDegrees: Object.freeze(axes.map((axis) =>
-            Math.round((child.worldTransform.rotationEulerDegrees[axis] -
-              parent.worldTransform.rotationEulerDegrees[axis]) * 1_000_000) / 1_000_000,
-          ) as unknown as Vector3),
-          scale: Object.freeze(axes.map((axis) =>
-            Math.round((child.worldTransform.scale[axis] / parent.worldTransform.scale[axis]) *
-              1_000_000) / 1_000_000,
-          ) as unknown as Vector3),
-        });
+    const derived = operation.transformPolicy === "preserve-world"
+      ? deriveCanonicalLocalSculptTransform(parent.worldTransform, child.worldTransform)
+      : null;
+    if (derived !== null && !derived.ok) {
+      return hierarchyDiagnostic(
+        DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+        derived.message,
+        documentPath,
+      );
+    }
+    const localTransform = derived?.ok === true ? derived.value : child.localTransform;
     composed = composeStoredPlacements(
       read.stored,
       read.stored.instances.map((instance) => ({

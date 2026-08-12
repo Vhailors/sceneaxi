@@ -1019,6 +1019,19 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       reconcileRarityAssistantDocument(enriched, retirementReason);
       return enriched;
     };
+    const currentSceneSelection = (
+      documentData: Readonly<Record<string, unknown>>,
+      contentHash: string,
+      documentPath: string,
+    ) => {
+      if (selectedSceneInstanceIds.length === 0) return null;
+      return inspectDesktopSceneProperties({
+        documentData,
+        contentHash,
+        documentPath,
+        selection: selectedSceneInstanceIds,
+      });
+    };
     /**
      * A snapshot the surface can re-read its property panel from.
      *
@@ -1136,6 +1149,13 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       }
       const status = live.status(documentPath);
       if (!status.ok) return bridgeOk("authoring", status);
+      const priorSelection = currentSceneSelection(
+        status.data,
+        status.contentHash,
+        documentPath,
+      );
+      const selectionWasStale = priorSelection?.ok === false &&
+        priorSelection.reason === DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale;
       const staged = stageDesktopSceneEdit({
         documentData: status.data,
         contentHash: expectedContentHash,
@@ -1144,18 +1164,22 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         operation: field(payload, "operation"),
       });
       if (!staged.ok) return bridgeOk("authoring", staged);
-      selectedSceneInstanceIds = staged.selectedInstanceIds;
       const snapshot = live.proposeEdit(staged.edit);
       if (snapshot.phase !== "reviewing" || (snapshot.diagnostics?.length ?? 0) > 0) {
         return bridgeOk("authoring", withRarityProposalEvidence(snapshot));
       }
+      if (!selectionWasStale) selectedSceneInstanceIds = staged.selectedInstanceIds;
       return bridgeOk(
         "authoring",
         Object.freeze({
           ...snapshot,
-          editableScene: staged.inspection,
-          selectedInstanceId: staged.selectedInstanceId,
-          selectedInstanceIds: staged.selectedInstanceIds,
+          editableScene: selectionWasStale ? priorSelection : staged.inspection,
+          ...(selectionWasStale
+            ? {}
+            : {
+                selectedInstanceId: staged.selectedInstanceId,
+                selectedInstanceIds: staged.selectedInstanceIds,
+              }),
           sceneEditOperation: staged.operation,
         }),
       );
@@ -1175,6 +1199,13 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       }
       const status = live.status(documentPath);
       if (!status.ok) return bridgeOk("authoring", status);
+      const priorSelection = currentSceneSelection(
+        status.data,
+        status.contentHash,
+        documentPath,
+      );
+      const selectionWasStale = priorSelection?.ok === false &&
+        priorSelection.reason === DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale;
       const staged = stageDesktopScenePropertyEdit({
         documentData: status.data,
         contentHash: expectedContentHash,
@@ -1184,16 +1215,18 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         newValue: field(payload, "newValue"),
       });
       if (!staged.ok) return bridgeOk("authoring", staged);
-      selectedSceneInstanceIds = staged.inspection.selection.instanceIds;
       const snapshot = reconcilePendingAssetImport(live.proposeEdit(staged.edit));
       if (snapshot.phase !== "reviewing" || (snapshot.diagnostics?.length ?? 0) > 0) {
         return bridgeOk("authoring", withRarityProposalEvidence(snapshot));
+      }
+      if (!selectionWasStale) {
+        selectedSceneInstanceIds = staged.inspection.selection.instanceIds;
       }
       return bridgeOk(
         "authoring",
         Object.freeze({
           ...snapshot,
-          editableScene: staged.inspection,
+          editableScene: selectionWasStale ? priorSelection : staged.inspection,
         }),
       );
     }
