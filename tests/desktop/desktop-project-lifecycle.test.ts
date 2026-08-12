@@ -14,6 +14,12 @@ import { basename, join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { createDocument, writeDocumentFile } from "@sceneaxi/authoring-core";
 import {
+  PROJECT_MANIFEST_DIAGNOSTICS,
+  PROJECT_MANIFEST_PATH,
+  createProjectManifest,
+  parseProjectManifestText,
+} from "@sceneaxi/schemas";
+import {
   DESKTOP_PROJECT_REFUSALS,
   DESKTOP_RECENT_PROJECTS_FILE,
   DESKTOP_RECENT_PROJECTS_QUARANTINE_PREFIX,
@@ -78,6 +84,31 @@ describe("desktop contained project lifecycle", () => {
       source: "new",
     });
     expect(existsSync(join(chosen, "scene.json"))).toBe(true);
+    expect(existsSync(join(chosen, PROJECT_MANIFEST_PATH))).toBe(true);
+    expect(created.data.status.active?.inspection).toMatchObject({
+      state: "native",
+      migration: { required: false },
+    });
+
+    const manifestBytes = readFileSync(join(chosen, PROJECT_MANIFEST_PATH), "utf8");
+    const manifest = parseProjectManifestText(manifestBytes);
+    if (!manifest.ok) throw new Error(manifest.diagnostic.message);
+    const identity = manifest.manifest.objects[0]?.id;
+    const saved = writeDocumentFile(
+      join(chosen, "scene.json"),
+      createDocument({ id: "scene", data: { saved: true } }),
+      { cwd: chosen },
+    );
+    expect(saved.ok).toBe(true);
+    const reopened = createDesktopProjectLifecycle({ stateDirectory: state });
+    expect(statusOf(reopened.startup()).active?.inspection.projectId).toBe(
+      manifest.manifest.projectId,
+    );
+    const reopenedManifest = parseProjectManifestText(
+      readFileSync(join(chosen, PROJECT_MANIFEST_PATH), "utf8"),
+    );
+    expect(reopenedManifest.ok && reopenedManifest.manifest.objects[0]?.id).toBe(identity);
+    expect(readFileSync(join(chosen, PROJECT_MANIFEST_PATH), "utf8")).toBe(manifestBytes);
 
     const bytes = readFileSync(join(chosen, "scene.json"), "utf8");
     const repeated = lifecycle.createProject(chosen);
@@ -96,6 +127,13 @@ describe("desktop contained project lifecycle", () => {
     writeFileSync(notDirectory, "not a directory", "utf8");
     const invalidBytes = "{ definitely-not-json";
     writeFileSync(join(invalid, "scene.json"), invalidBytes, "utf8");
+    const occupiedManifest = temporaryRoot("occupied-manifest");
+    const occupiedManifestBytes = "do-not-replace";
+    writeFileSync(
+      join(occupiedManifest, PROJECT_MANIFEST_PATH),
+      occupiedManifestBytes,
+      "utf8",
+    );
     const lifecycle = createDesktopProjectLifecycle({ stateDirectory: state });
 
     expect(lifecycle.openProject("relative/project")).toMatchObject({
@@ -119,6 +157,14 @@ describe("desktop contained project lifecycle", () => {
       reason: DESKTOP_PROJECT_REFUSALS.documentInvalid,
     });
     expect(readFileSync(join(invalid, "scene.json"), "utf8")).toBe(invalidBytes);
+    expect(lifecycle.createProject(occupiedManifest)).toMatchObject({
+      ok: false,
+      reason: DESKTOP_PROJECT_REFUSALS.documentExists,
+    });
+    expect(existsSync(join(occupiedManifest, "scene.json"))).toBe(false);
+    expect(readFileSync(join(occupiedManifest, PROJECT_MANIFEST_PATH), "utf8")).toBe(
+      occupiedManifestBytes,
+    );
     expect(existsSync(join(state, DESKTOP_RECENT_PROJECTS_FILE))).toBe(false);
   });
 
@@ -143,6 +189,27 @@ describe("desktop contained project lifecycle", () => {
     expect(readFileSync(join(state, DESKTOP_RECENT_PROJECTS_FILE), "utf8")).not.toContain(
       alias,
     );
+  });
+
+  it("refuses an unknown native project major without changing project or recent bytes", () => {
+    const state = temporaryRoot("unknown-major-state");
+    const project = validProject("unknown-major", "Unknown major");
+    const manifest = createProjectManifest({
+      document: createDocument({ id: "unknown-major", title: "Unknown major" }),
+    });
+    const unsupported = `${JSON.stringify({
+      ...manifest,
+      formatVersion: { major: 2, minor: 0 },
+    }, null, 2)}\n`;
+    writeFileSync(join(project, PROJECT_MANIFEST_PATH), unsupported, "utf8");
+
+    const lifecycle = createDesktopProjectLifecycle({ stateDirectory: state });
+    expect(lifecycle.openProject(project)).toMatchObject({
+      ok: false,
+      reason: PROJECT_MANIFEST_DIAGNOSTICS.versionUnsupported,
+    });
+    expect(readFileSync(join(project, PROJECT_MANIFEST_PATH), "utf8")).toBe(unsupported);
+    expect(existsSync(join(state, DESKTOP_RECENT_PROJECTS_FILE))).toBe(false);
   });
 
   it("migrates recents atomically, omits missing entries, removes entries, and restores the last valid root", () => {

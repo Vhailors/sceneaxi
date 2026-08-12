@@ -17,6 +17,10 @@
         "id": {
           "enum": [
             "project-new",
+            "project-inspect",
+            "project-migration-propose",
+            "project-migration-commit",
+            "project-migration-recover",
             "ship-export-web",
             "project-open",
             "project-save",
@@ -60,7 +64,7 @@
           "additionalProperties": false,
           "required": ["kind", "target"],
           "properties": {
-            "kind": { "enum": ["none", "project-binding", "authoring-snapshot", "undo-result", "kernel-session", "sculpt-artifact", "rarity-proposal", "command-progress"] },
+            "kind": { "enum": ["none", "project-binding", "project-inspection", "project-migration-proposal", "project-migration-evidence", "authoring-snapshot", "undo-result", "kernel-session", "sculpt-artifact", "rarity-proposal", "command-progress"] },
             "target": { "enum": ["none", "project", "change-review", "live-viewport"] }
           }
         },
@@ -75,7 +79,7 @@
           }
         },
         "inputSchema": { "type": "object" },
-        "inputShape": { "enum": ["none", "document", "export", "assistant", "assistant-agent", "job"] }
+        "inputShape": { "enum": ["none", "document", "export", "assistant", "assistant-agent", "job", "migration-approval"] }
       }
     }
   }

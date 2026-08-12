@@ -324,6 +324,41 @@ export type {
 } from "./editor-command-registry.js";
 
 export {
+  LEGACY_PROJECT_FORMAT_VERSION,
+  PROJECT_CAPABILITIES,
+  PROJECT_FORMAT_VERSION,
+  PROJECT_MANIFEST_DIAGNOSTICS,
+  PROJECT_MANIFEST_KIND,
+  PROJECT_MANIFEST_PATH,
+  PROJECT_MANIFEST_SCHEMA_VERSION,
+  PROJECT_MIGRATION_ID,
+  canonicalProjectManifestJson,
+  createProjectManifest,
+  deterministicProjectAssetId,
+  deterministicProjectId,
+  deterministicProjectObjectId,
+  isCanonicalProjectPath,
+  parseProjectManifestText,
+  projectManifestDigest,
+  projectVersionCapabilityResult,
+  serializeProjectManifest,
+  validateProjectManifest,
+} from "./project-manifest.js";
+export type {
+  ProjectAssetIdentity,
+  ProjectCapability,
+  ProjectCapabilityGrant,
+  ProjectFormatVersion,
+  ProjectManifest,
+  ProjectManifestDiagnostic,
+  ProjectManifestDiagnosticCode,
+  ProjectManifestValidation,
+  ProjectMigrationRecord,
+  ProjectObjectIdentity,
+  ProjectVersionCapabilityResult,
+} from "./project-manifest.js";
+
+export {
   DELIVERY_ARTIFACT_ROLES,
   DELIVERY_HANDOFF_KIND,
   DELIVERY_HANDOFF_SCHEMA_VERSION,
@@ -546,6 +581,7 @@ export const contracts = Object.freeze({
   modelProviderPort: "contracts/model-provider-port.schema.json",
   desktopLocalBridge: "contracts/desktop-local-bridge.schema.json",
   editorCommandRegistry: "contracts/editor-command-registry.schema.json",
+  projectManifest: "contracts/project-manifest.schema.json",
   sculptIntake: "contracts/sculpt-intake.schema.json",
   objectSculptSpec: "contracts/object-sculpt-spec.schema.json",
   sculptArtifact: "contracts/sculpt-artifact.schema.json",

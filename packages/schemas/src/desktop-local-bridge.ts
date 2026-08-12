@@ -100,6 +100,30 @@ export const DESKTOP_LOCAL_BRIDGE_TOOLS = Object.freeze([
     creditRoute: "none",
     inputSchema: documentInput,
   }),
+  commandTool({
+    name: "sceneaxi.project.inspect",
+    commandId: "project-inspect",
+    description: "Inspect the active native project version and exact capability grants.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.project.migration.propose",
+    commandId: "project-migration-propose",
+    description: "Persist a deterministic migration proposal for review without changing existing project bytes.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.project.migration.commit",
+    commandId: "project-migration-commit",
+    description: "Commit only the exact reviewed and explicitly approved project migration proposal.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.project.migration.recover",
+    commandId: "project-migration-recover",
+    description: "Deterministically recover the one prepared project migration transaction.",
+    providerRoute: "none",
+  }),
   tool({
     name: "sceneaxi.project.propose",
     commandId: null,
@@ -318,9 +342,16 @@ export function validateDesktopLocalBridgeToolInput(
     case "sceneaxi.project.reject":
     case "sceneaxi.project.recover":
     case "sceneaxi.project.undo":
+    case "sceneaxi.project.inspect":
+    case "sceneaxi.project.migration.propose":
+    case "sceneaxi.project.migration.recover":
     case "sceneaxi.assistant.status":
     case "sceneaxi.bridge.handshake":
       return exactKeys(input, []);
+    case "sceneaxi.project.migration.commit":
+      return exactKeys(input, ["approved", "proposalDigest"]) &&
+        input["approved"] === true && typeof input["proposalDigest"] === "string" &&
+        /^sha256:[0-9a-f]{64}$/.test(input["proposalDigest"]);
     case "sceneaxi.run.play":
       return documentPathInput(input);
     case "sceneaxi.assistant.abandon":

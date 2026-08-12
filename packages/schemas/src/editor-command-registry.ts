@@ -44,6 +44,10 @@ export type EditorCommandRefusal =
 
 export type EditorCommandId =
   | "project-new"
+  | "project-inspect"
+  | "project-migration-propose"
+  | "project-migration-commit"
+  | "project-migration-recover"
   | "project-open"
   | "project-save"
   | "ship-export-web"
@@ -90,6 +94,9 @@ export type EditorCommandDefinition = Readonly<{
     kind:
       | "none"
       | "project-binding"
+      | "project-inspection"
+      | "project-migration-proposal"
+      | "project-migration-evidence"
       | "authoring-snapshot"
       | "undo-result"
       | "kernel-session"
@@ -104,7 +111,7 @@ export type EditorCommandDefinition = Readonly<{
     commandId: "edit-undo" | null;
   }>;
   inputSchema: JsonObject;
-  inputShape: "none" | "document" | "export" | "assistant" | "assistant-agent" | "job";
+  inputShape: "none" | "document" | "export" | "assistant" | "assistant-agent" | "job" | "migration-approval";
 }>;
 
 export type EditorCommandInvocation = Readonly<{
@@ -208,6 +215,19 @@ const jobInput = Object.freeze({
   }),
 }) satisfies JsonObject;
 
+const migrationApprovalInput = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: Object.freeze(["approved", "proposalDigest"]),
+  properties: Object.freeze({
+    approved: Object.freeze({ const: true }),
+    proposalDigest: Object.freeze({
+      type: "string",
+      pattern: "^sha256:[0-9a-f]{64}$",
+    }),
+  }),
+}) satisfies JsonObject;
+
 const CLIENTS = Object.freeze([...EDITOR_COMMAND_CLIENTS]);
 const BASE_REFUSALS = Object.freeze([
   EDITOR_COMMAND_REFUSALS.clientDenied,
@@ -255,6 +275,66 @@ const DEFINITIONS = [
     progress: immediate(),
     evidence: evidence("project-binding", "project"),
     refusals: [...BASE_REFUSALS, "DESKTOP_PROJECT_SELECTION_CANCELLED"],
+    undo: undo("none"),
+    inputSchema: noInput,
+    inputShape: "none",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "project-inspect",
+    label: "Inspect Project Version",
+    acceptedClients: CLIENTS,
+    permission: "project:read",
+    capability: capability("project.inspect"),
+    mutation: "none",
+    progress: immediate(),
+    evidence: evidence("project-inspection", "project"),
+    refusals: [...BASE_REFUSALS, "PROJECT_MANIFEST_MALFORMED"],
+    undo: undo("none"),
+    inputSchema: noInput,
+    inputShape: "none",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "project-migration-propose",
+    label: "Propose Project Migration",
+    acceptedClients: CLIENTS,
+    permission: "project:write",
+    capability: capability("project.migrate"),
+    mutation: "stages-change",
+    progress: immediate(["inspecting", "reviewing"]),
+    evidence: evidence("project-migration-proposal", "change-review"),
+    refusals: [...BASE_REFUSALS, "PROJECT_MIGRATION_CHAIN_INVALID", "PROJECT_MIGRATION_MUTATION_CONFLICT"],
+    undo: undo("none"),
+    inputSchema: noInput,
+    inputShape: "none",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "project-migration-commit",
+    label: "Commit Approved Project Migration",
+    acceptedClients: CLIENTS,
+    permission: "project:write",
+    capability: capability("project.migrate"),
+    mutation: "commits-project",
+    progress: immediate(["approved", "prepared", "committed"]),
+    evidence: evidence("project-migration-evidence", "project"),
+    refusals: [...BASE_REFUSALS, "PROJECT_MIGRATION_APPROVAL_REQUIRED", "PROJECT_MIGRATION_APPROVAL_MISMATCH", "PROJECT_MIGRATION_SOURCE_CHANGED"],
+    undo: undo("none"),
+    inputSchema: migrationApprovalInput,
+    inputShape: "migration-approval",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "project-migration-recover",
+    label: "Recover Project Migration",
+    acceptedClients: CLIENTS,
+    permission: "project:write",
+    capability: capability("project.migrate"),
+    mutation: "commits-project",
+    progress: immediate(["validating", "recovering", "committed"]),
+    evidence: evidence("project-migration-evidence", "project"),
+    refusals: [...BASE_REFUSALS, "PROJECT_MIGRATION_RECOVERY_INVALID", "PROJECT_MIGRATION_SOURCE_CHANGED"],
     undo: undo("none"),
     inputSchema: noInput,
     inputShape: "none",
@@ -534,6 +614,10 @@ export function validateEditorCommandInput(
     case "job":
       return exactKeys(input, ["jobId"]) &&
         typeof input["jobId"] === "string" && input["jobId"].length > 0;
+    case "migration-approval":
+      return exactKeys(input, ["approved", "proposalDigest"]) &&
+        input["approved"] === true && typeof input["proposalDigest"] === "string" &&
+        /^sha256:[0-9a-f]{64}$/.test(input["proposalDigest"]);
   }
 }
 
