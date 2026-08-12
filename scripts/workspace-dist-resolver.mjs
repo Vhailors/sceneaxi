@@ -60,7 +60,7 @@ const BUILT_INTERNALS = new Map([
   ],
   [
     "@sceneaxi-internal/project-git-authority",
-    new URL("packages/authoring-core/dist/src/project-git.js", REPO_ROOT).href,
+    new URL("packages/authoring-core/dist/internal/project-git-authority.js", REPO_ROOT).href,
   ],
 ]);
 

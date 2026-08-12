@@ -39,7 +39,7 @@ import {
   createProjectGitAuthoringAuthority,
   prepareProjectGitCommit,
   stageProjectGitPaths,
-} from "../src/project-git.js";
+} from "../internal/project-git-authority.js";
 import {
   PROJECT_GIT_DIAGNOSTICS,
   PROJECT_MANIFEST_PATH,
@@ -318,6 +318,17 @@ describe("contained project Git service", () => {
       ok: false,
       diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.repositoryEscape, path: "$git.objects" },
     });
+
+    const nested = repository("loose-object-entry-indirection");
+    mkdirSync(join(nested.root, ".git", "objects", "cd"));
+    symlinkSync(join(outside, "object"), join(nested.root, ".git", "objects", "cd", "0".repeat(38)));
+    expect(inspectProjectGit({
+      root: nested.root,
+      gitExecutable: "sceneaxi-git-must-not-run",
+    })).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.repositoryEscape, path: "$git.objects" },
+    });
   });
 
   it("refuses Git control-file indirections and gitlinks before inspection", () => {
@@ -370,7 +381,6 @@ describe("contained project Git service", () => {
 
   it("preserves both sides when a canonical file is renamed", () => {
     const { root } = repository("rename");
-    git(root, "config", "status.renames", "true");
     renameSync(join(root, "scene.json"), join(root, "moved.json"));
     git(root, "add", "-A");
     const result = inspectProjectGit({ root });
@@ -708,7 +718,7 @@ describe("contained project Git service", () => {
       "#!/bin/sh",
       "trigger=0",
       "for arg in \"$@\"; do",
-      "  if [ \"$arg\" = \"add\" ] || [ \"$arg\" = \"hash-object\" ]; then trigger=1; fi",
+      "  if [ \"$arg\" = \"status\" ] || [ \"$arg\" = \"diff\" ] || [ \"$arg\" = \"add\" ] || [ \"$arg\" = \"hash-object\" ]; then trigger=1; fi",
       "done",
       "if [ \"$trigger\" = \"1\" ]; then",
       `  git config --local filter.escape.clean ${JSON.stringify(`touch ${sentinel} && cat`)}`,
@@ -844,6 +854,13 @@ describe("contained project Git service", () => {
     const journal = JSON.parse(readFileSync(journalPath, "utf8")) as Record<string, unknown>;
     writeFileSync(journalPath, `${JSON.stringify({ ...journal, state: "prepared" }, null, 2)}\n`);
 
+    const manifestBytes = readFileSync(join(root, PROJECT_MANIFEST_PATH));
+    unlinkSync(join(root, PROJECT_MANIFEST_PATH));
+    expect(stageProjectGitPaths(mutationOptions(root), ["notes.txt"])).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.recoveryPending },
+    });
+    writeFileSync(join(root, PROJECT_MANIFEST_PATH), manifestBytes);
     expect(stageProjectGitPaths(mutationOptions(root), ["notes.txt"])).toMatchObject({
       ok: false,
       diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.recoveryPending },

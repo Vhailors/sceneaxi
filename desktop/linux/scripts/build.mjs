@@ -38,7 +38,7 @@ const common = {
     ),
     "@sceneaxi-internal/project-git-authority": resolve(
       appRoot,
-      "../../packages/authoring-core/src/project-git.ts",
+      "../../packages/authoring-core/internal/project-git-authority.ts",
     ),
   },
 };

@@ -1,6 +1,6 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": { "outDir": "dist" },
-  "include": ["src", "test"],
+  "include": ["src", "internal", "test"],
   "references": [{ "path": "../schemas" }]
 }

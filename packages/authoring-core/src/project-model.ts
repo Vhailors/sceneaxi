@@ -1,5 +1,15 @@
 /** Node host for the SceneAxi-native versioned project manifest. */
-import { existsSync, lstatSync, readFileSync, realpathSync } from "node:fs";
+import {
+  closeSync,
+  constants,
+  existsSync,
+  fstatSync,
+  lstatSync,
+  openSync,
+  readFileSync,
+  readSync,
+  realpathSync,
+} from "node:fs";
 import { isAbsolute, join, relative, sep } from "node:path";
 import {
   PROJECT_MANIFEST_DIAGNOSTICS,
@@ -348,19 +358,43 @@ export function projectMigrationRecoveryPending(root: string): boolean {
   const canonicalRoot = rootPath(root);
   if (typeof canonicalRoot !== "string") return true;
   const candidate = join(canonicalRoot, ...PROJECT_MIGRATION_JOURNAL_PATH.split("/"));
+  let descriptor: number | undefined;
   try {
-    const stat = lstatSync(candidate);
-    if (stat.isSymbolicLink() || !stat.isFile()) return true;
+    descriptor = openSync(
+      candidate,
+      constants.O_RDONLY | constants.O_NONBLOCK | constants.O_NOFOLLOW,
+    );
+    const initial = fstatSync(descriptor);
+    if (!initial.isFile() || initial.size > 1024 * 1024) return true;
+    const bytes = Buffer.alloc(initial.size);
+    let offset = 0;
+    while (offset < bytes.length) {
+      const count = readSync(descriptor, bytes, offset, bytes.length - offset, offset);
+      if (count === 0) return true;
+      offset += count;
+    }
+    const final = fstatSync(descriptor);
+    if (
+      initial.dev !== final.dev || initial.ino !== final.ino || initial.mode !== final.mode ||
+      initial.size !== final.size || initial.mtimeMs !== final.mtimeMs ||
+      initial.ctimeMs !== final.ctimeMs
+    ) return true;
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(bytes.toString("utf8"));
+    } catch {
+      return true;
+    }
+    const journal = parseJournal(parsed);
+    return journal === null || journal.state !== "completed";
   } catch (error) {
     const code = error instanceof Error && "code" in error
       ? (error as NodeJS.ErrnoException).code
       : undefined;
     return code !== "ENOENT";
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor);
   }
-  const journalPath = containedPath(canonicalRoot, PROJECT_MIGRATION_JOURNAL_PATH, true);
-  if (typeof journalPath !== "string") return true;
-  const journal = parseJournal(readJson(journalPath));
-  return journal === null || journal.state !== "completed";
 }
 
 const pendingMigrationOperationCleanups = new Map<string, AtomicWriteLockSet>();
