@@ -345,7 +345,10 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
   let sceneSelectionStale = false;
   let pendingSceneSelection: Readonly<{
     documentPath: string;
+    baseContentHash: string;
     instanceIds: readonly string[];
+    proposal: NonNullable<DesktopSnapshot["proposal"]>;
+    transactionId: string | null;
   }> | null = null;
 
   const authoringSession = (): DesktopSession => {
@@ -414,14 +417,41 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
   };
 
   const settlePendingSceneSelection = (snapshot: DesktopSnapshot) => {
+    const pending = pendingSceneSelection;
+    if (pending === null) return snapshot;
+    const proposalMatches = snapshot.proposal === pending.proposal &&
+      pending.proposal.edits.some((edit) =>
+        edit.documentPath === pending.documentPath &&
+        edit.baseContentHash === pending.baseContentHash
+      );
     if (
-      pendingSceneSelection !== null &&
+      snapshot.phase === "pending" &&
+      proposalMatches &&
+      typeof snapshot.transactionId === "string"
+    ) {
+      pendingSceneSelection = Object.freeze({
+        ...pending,
+        transactionId: snapshot.transactionId,
+      });
+      return snapshot;
+    }
+    const transactionMatches = pending.transactionId === null ||
+      snapshot.transactionId === pending.transactionId;
+    if (
       snapshot.phase === "applied" &&
-      snapshot.appliedPaths?.includes(pendingSceneSelection.documentPath) === true &&
+      proposalMatches &&
+      transactionMatches &&
+      snapshot.appliedPaths?.includes(pending.documentPath) === true &&
       !snapshot.journalRecoveryPending &&
       (snapshot.diagnostics?.length ?? 0) === 0
     ) {
-      selectedSceneInstanceIds = pendingSceneSelection.instanceIds;
+      selectedSceneInstanceIds = pending.instanceIds;
+    }
+    if (
+      snapshot.phase !== "reviewing" ||
+      !proposalMatches ||
+      (snapshot.diagnostics?.length ?? 0) > 0
+    ) {
       pendingSceneSelection = null;
     }
     return snapshot;
@@ -1369,7 +1399,21 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         profile: field(payload, "profile"),
         operation: field(payload, "operation"),
       });
-      if (!staged.ok) return authoringOk(staged);
+      if (!staged.ok) {
+        const diagnostic = staged.diagnostics[0];
+        return authoringOk(staged.reason === undefined
+          ? staged
+          : Object.freeze({
+              ...staged,
+              diagnostics: Object.freeze([
+                Object.freeze({
+                  code: staged.reason,
+                  message: diagnostic?.message ?? "The hierarchy operation was refused.",
+                  documentPath,
+                }),
+              ]),
+            }));
+      }
       const snapshot = live.proposeEdit(staged.edit);
       if (snapshot.phase !== "reviewing" || (snapshot.diagnostics?.length ?? 0) > 0) {
         if (snapshot.phase !== "reviewing") pendingSceneSelection = null;
@@ -1377,10 +1421,15 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           ? withRarityProposalEvidence(snapshot)
           : genericAuthoringSnapshot(snapshot));
       }
-      pendingSceneSelection = Object.freeze({
-        documentPath,
-        instanceIds: staged.selectedInstanceIds,
-      });
+      if (snapshot.proposal !== null) {
+        pendingSceneSelection = Object.freeze({
+          documentPath,
+          baseContentHash: expectedContentHash,
+          instanceIds: staged.selectedInstanceIds,
+          proposal: snapshot.proposal,
+          transactionId: null,
+        });
+      }
       return authoringOk(hierarchyCommandResponse
         ? Object.freeze({
             ...snapshot,
@@ -1433,10 +1482,15 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           ? withRarityProposalEvidence(snapshot)
           : genericAuthoringSnapshot(snapshot));
       }
-      pendingSceneSelection = Object.freeze({
-        documentPath,
-        instanceIds: staged.inspection.selection.instanceIds,
-      });
+      if (snapshot.proposal !== null) {
+        pendingSceneSelection = Object.freeze({
+          documentPath,
+          baseContentHash: expectedContentHash,
+          instanceIds: staged.inspection.selection.instanceIds,
+          proposal: snapshot.proposal,
+          transactionId: null,
+        });
+      }
       return authoringOk(hierarchyCommandResponse
         ? Object.freeze({ ...snapshot, editableScene: staged.inspection })
         : genericAuthoringSnapshot(snapshot));
@@ -1474,6 +1528,9 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         newValue: proposalValue,
         ...(expectedContentHash !== undefined ? { expectedContentHash } : {}),
       }));
+      if (pendingSceneSelection?.proposal !== snapshot.proposal) {
+        pendingSceneSelection = null;
+      }
       return authoringOk(snapshot);
     }
     if (op === "accept") {
@@ -2383,6 +2440,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         }
         selectedSceneInstanceIds = inspected.selection.instanceIds;
         sceneSelectionStale = false;
+        pendingSceneSelection = null;
         return bridgeOk("command", inspected);
       }
       case "scene-property-set": {
@@ -2395,19 +2453,28 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           propertyId: input["propertyId"],
           newValue: input["newValue"],
         }, true);
-        if (!staged.ok) return staged;
+        if (!staged.ok) return commandTransaction(validated.command.id, staged);
         if (field(staged.data, "ok") === false) {
           if (field(staged.data, "reason") === DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale) {
-            return bridgeOk("command", staged.data);
+            return commandTransaction(
+              validated.command.id,
+              bridgeOk("command", staged.data),
+            );
           }
           const diagnostics = field(staged.data, "diagnostics");
           const diagnostic = Array.isArray(diagnostics) ? diagnostics[0] : undefined;
-          return bridgeRefuse(
-            DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
-            String(field(diagnostic, "message") ?? "The scene property command was refused before review."),
+          return commandTransaction(
+            validated.command.id,
+            bridgeRefuse(
+              DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+              String(field(diagnostic, "message") ?? "The scene property command was refused before review."),
+            ),
           );
         }
-        return bridgeOk("command", staged.data);
+        return commandTransaction(
+          validated.command.id,
+          bridgeOk("command", staged.data),
+        );
       }
       case "scene-object-create":
       case "scene-object-remove":

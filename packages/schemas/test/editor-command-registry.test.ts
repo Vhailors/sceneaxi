@@ -90,7 +90,7 @@ describe("full-editor command registry", () => {
       expect(new Set(command?.refusals).size).toBe(command?.refusals.length);
     }
     expect(editorCommand("scene-property-set")).toMatchObject({
-      acceptedClients: ["desktop-control"],
+      acceptedClients: ["desktop-control", "cli", "local-agent"],
       capability: { id: "scene.compose" },
       mutation: "stages-change",
       undo: { kind: "none", commandId: null },

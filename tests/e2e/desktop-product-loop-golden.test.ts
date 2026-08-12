@@ -1425,6 +1425,53 @@ describe("desktop first-release product loop", () => {
     );
   });
 
+  it("discards a delayed selection response after profile change", async () => {
+    let releaseSelection = () => {};
+    const selectionGate = new Promise<void>((resolve) => {
+      releaseSelection = resolve;
+    });
+    let markSelectionResponded = () => {};
+    const selectionResponded = new Promise<void>((resolve) => {
+      markSelectionResponded = resolve;
+    });
+    const { window, start } = mountChrome(projectDir(), ({ bridge, ipcClone }) =>
+      async (request) => {
+        const typed = ipcClone(request) as {
+          action?: unknown;
+          payload?: { commandId?: unknown; input?: Record<string, unknown> };
+        };
+        if (typed.action === "command" && typed.payload?.commandId === "scene-selection-set") {
+          await selectionGate;
+          const input = typed.payload.input ?? {};
+          const response = ipcClone(bridge.handle({
+            ...typed,
+            payload: {
+              ...typed.payload,
+              input: { ...input, instanceIds: ["desktop-crate-root"] },
+            },
+          }));
+          markSelectionResponded();
+          return response;
+        }
+        return ipcClone(bridge.handle(typed));
+      });
+    start();
+    await click(window, "#project-open");
+    const selection = query(window, "#scene-entity-desktop-crate-beside") as
+      | (HappyHTMLElement & { value: string })
+      | null;
+    if (selection === null) throw new Error("hierarchy multi-selector missing");
+    selection.value = "desktop-crate-stacked";
+    selection.dispatchEvent(new window.Event("change", { bubbles: true }));
+    await click(window, "#profile-web");
+    releaseSelection();
+    await selectionResponded;
+    for (let turn = 0; turn < 5; turn += 1) await Promise.resolve();
+    expect(query(window, ".shell")?.dataset.profile).toBe("web");
+    expect(query(window, "[data-scene-property-entity-id]")?.textContent)
+      .toBe("desktop-crate-stacked");
+  });
+
   it("renders object identity and current parentage after reparent and reopen", async () => {
     const { window, start } = mountChrome(projectDir());
     start();

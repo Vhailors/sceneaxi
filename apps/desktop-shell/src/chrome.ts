@@ -1491,6 +1491,7 @@ if (shell) {
   let selectedSceneEntityId = null;
   let selectedSceneEntityIds = [];
   let sceneSelectionPending = Promise.resolve();
+  let sceneSelectionGeneration = 0;
   let sceneRefusalText = null;
   let undoAvailability = 'unavailable';
   let redoAvailability = 'unavailable';
@@ -2243,7 +2244,10 @@ if (shell) {
       typeof candidate.root === 'string' && candidate.documentPath === T.product.documentPath
       ? candidate
       : null;
-    if ((activeProject?.root ?? null) !== previousRoot) clearProjectBrowser();
+    if ((activeProject?.root ?? null) !== previousRoot) {
+      sceneSelectionGeneration += 1;
+      clearProjectBrowser();
+    }
     const launcher = shell.querySelector('[data-project-launcher]');
     const bound = shell.querySelector('[data-project-bound]');
     if (launcher) launcher.hidden = activeProject !== null;
@@ -2314,6 +2318,7 @@ if (shell) {
       showOutcome('Recent project refused', T.product.refusals.runtimeRequestRefused, 'Choose a validated recent project first.');
       return;
     }
+    sceneSelectionGeneration += 1;
     productStatus('opening', action === 'choose-new' ? 'Choose a directory for the explicit starter project…' : 'Choose a project directory…');
     const response = await projectRequest({
       action,
@@ -2438,6 +2443,7 @@ if (shell) {
   };
 
   const restartProject = async (diagnostic) => {
+    sceneSelectionGeneration += 1;
     productStatus('recovering', T.product.documentPath + ' · ' + diagnostic + ' · re-opening fresh session…');
     const response = await runtimeRequest({
       action: 'authoring',
@@ -2603,6 +2609,7 @@ if (shell) {
   };
 
   const openProject = async (refuseDirty = false) => {
+    sceneSelectionGeneration += 1;
     if (activeProject === null && projectPort() !== null) {
       productStatus('refused', 'Open refused · no project root selected');
       showOutcome('Open refused', T.product.refusals.runtimeRequestRefused, 'Choose New Project or Open Project first.');
@@ -2875,12 +2882,13 @@ if (shell) {
     }, 'reparent ' + policy.value);
   };
 
-  const setSceneSelection = async (instanceIds) => {
+  const setSceneSelection = async (instanceIds, generation) => {
     const response = await commandRequest('scene-selection-set', {
       documentPath: T.product.documentPath,
       profile: shell.dataset.profile,
       instanceIds,
     });
+    if (generation !== sceneSelectionGeneration) return;
     const diagnostic = responseDiagnostic(response);
     if (diagnostic !== null) {
       syncSceneProperties({ editableScene });
@@ -3272,6 +3280,7 @@ if (shell) {
       productStatus('refused', 'Profile switch refused · ' + T.product.refusals.profileSwitchDirty);
       return;
     }
+    sceneSelectionGeneration += 1;
     shell.dataset.profile = value;
     q('.profile-chip').forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.value === value)));
     setProfile(value);
@@ -3749,9 +3758,10 @@ if (shell) {
       if (shell.dataset.mode !== 'build') showModePanels('build');
     }
     const instanceIds = [...selectedSceneEntityIds];
+    const generation = sceneSelectionGeneration;
     sceneSelectionPending = sceneSelectionPending.then(
-      () => setSceneSelection(instanceIds),
-      () => setSceneSelection(instanceIds),
+      () => setSceneSelection(instanceIds, generation),
+      () => setSceneSelection(instanceIds, generation),
     );
   });
 

@@ -600,7 +600,7 @@ const DEFINITIONS = [
     schemaVersion: 1,
     id: "scene-property-set",
     label: "Set Scene Object Property",
-    acceptedClients: ["desktop-control"],
+    acceptedClients: CLIENTS,
     permission: "project:write",
     capability: capability("scene.compose"),
     mutation: "stages-change",

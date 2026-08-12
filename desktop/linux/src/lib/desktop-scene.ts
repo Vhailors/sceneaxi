@@ -757,10 +757,18 @@ export function stageDesktopSceneEdit(input: Readonly<{
       (instance) => instance.instanceId === operation.instanceId,
     );
     if (selected === undefined) {
-      return propertyRequestDiagnostic(
-        `The selected instance is stale: ${operation.instanceId}.`,
-        documentPath,
+      const stale = desktopScenePropertyInspection(
+        input.contentHash,
+        read.stored,
+        [operation.instanceId],
       );
+      return stale.ok
+        ? hierarchyDiagnostic(
+            DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+            `The selected instance is stale: ${operation.instanceId}.`,
+            documentPath,
+          )
+        : stale;
     }
     if (manifestInstanceIds.has(selected.instanceId)) {
       return hierarchyDiagnostic(
@@ -769,8 +777,14 @@ export function stageDesktopSceneEdit(input: Readonly<{
         documentPath,
       );
     }
+    if (selected.instanceId === read.stored.rootInstanceId) {
+      return hierarchyDiagnostic(
+        DESKTOP_SCENE_HIERARCHY_REFUSALS.protectedRoot,
+        "The project hierarchy root is protected and cannot be removed.",
+        documentPath,
+      );
+    }
     if (
-      selected.instanceId === read.stored.rootInstanceId ||
       read.stored.instances.length <= SCENE_MINIMUM_INSTANCES ||
       read.stored.instances.some(
         (instance) => instance.parentInstanceId === selected.instanceId,

@@ -387,6 +387,148 @@ describe("full-editor hierarchy vertical", () => {
     expect(new Set(bytes).size).toBe(1);
   });
 
+  it("returns reviewing transaction results for property clients", () => {
+    for (const client of ["desktop-control", "cli", "local-agent"] as const) {
+      const root = fixture();
+      const bridge = hierarchyBridge(root);
+      const staged = command(bridge, "scene-property-set", client, {
+        documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+        expectedContentHash: contentHash(bridge),
+        profile: "game",
+        instanceId: "desktop-crate-beside",
+        propertyId: "translation-x",
+        newValue: -3.25,
+      });
+      expect(staged).toMatchObject({
+        ok: true,
+        data: {
+          phase: "reviewing",
+          transaction: {
+            commandId: "scene-property-set",
+            status: "reviewing",
+            progress: { phase: "reviewing", terminal: false },
+            evidence: { kind: "scene-hierarchy", target: "change-review" },
+            refusal: null,
+            undo: { kind: "none", commandId: null },
+          },
+        },
+      });
+    }
+  });
+
+  it("keeps explicit selection newer than a staged proposal", () => {
+    const root = fixture();
+    const bridge = hierarchyBridge(root);
+    expect(command(bridge, "scene-object-create", "desktop-control", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      expectedContentHash: contentHash(bridge),
+      profile: "game",
+      sourceInstanceId: "desktop-crate-beside",
+      parentInstanceId: "desktop-crate-root",
+    })).toMatchObject({
+      ok: true,
+      data: { phase: "reviewing", selectedInstanceIds: ["desktop-crate-beside-copy-1"] },
+    });
+    expect(command(bridge, "scene-selection-set", "desktop-control", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      profile: "game",
+      instanceIds: ["desktop-crate-stacked"],
+    })).toMatchObject({ ok: true });
+    expect(command(bridge, "change-review-accept", "desktop-control", {}))
+      .toMatchObject({ ok: true, data: { phase: "applied" } });
+    expect(command(bridge, "scene-hierarchy-inspect", "desktop-control", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      profile: "game",
+    })).toMatchObject({
+      ok: true,
+      data: { selection: { instanceIds: ["desktop-crate-stacked"] } },
+    });
+  });
+
+  it("invalidates staged selection when its proposal is discarded", () => {
+    const root = fixture();
+    const bridge = hierarchyBridge(root);
+    expect(command(bridge, "scene-selection-set", "desktop-control", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      profile: "game",
+      instanceIds: ["desktop-crate-beside"],
+    })).toMatchObject({ ok: true });
+    expect(command(bridge, "scene-object-create", "desktop-control", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      expectedContentHash: contentHash(bridge),
+      profile: "game",
+      sourceInstanceId: "desktop-crate-beside",
+      parentInstanceId: "desktop-crate-root",
+    })).toMatchObject({ ok: true, data: { phase: "reviewing" } });
+    expect(bridge.handle({
+      action: "authoring",
+      payload: {
+        op: "propose",
+        documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+        expectedContentHash: `sha256:${"0".repeat(64)}`,
+        jsonPointer: "/data/material/roughness",
+        newValue: 0.7,
+      },
+    })).toMatchObject({
+      ok: true,
+      data: { phase: "idle", diagnostics: [{ code: "content-hash-conflict" }] },
+    });
+    expect(bridge.handle({
+      action: "authoring",
+      payload: {
+        op: "propose",
+        documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+        expectedContentHash: contentHash(bridge),
+        jsonPointer: "/data/material/roughness",
+        newValue: 0.8,
+      },
+    })).toMatchObject({ ok: true, data: { phase: "reviewing" } });
+    expect(bridge.handle({ action: "authoring", payload: { op: "accept" } }))
+      .toMatchObject({ ok: true, data: { phase: "applied" } });
+    expect(command(bridge, "scene-hierarchy-inspect", "desktop-control", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      profile: "game",
+    })).toMatchObject({
+      ok: true,
+      data: { selection: { instanceIds: ["desktop-crate-beside"] } },
+    });
+  });
+
+  it("names legacy root and stale remove refusals before proposal", () => {
+    const root = fixture();
+    const bridge = hierarchyBridge(root);
+    const remove = (instanceId: string) => bridge.handle({
+      action: "authoring",
+      payload: {
+        op: "edit-scene",
+        documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+        expectedContentHash: contentHash(bridge),
+        profile: "game",
+        operation: { kind: "remove-instance", instanceId },
+      },
+    });
+    expect(remove("desktop-crate-root")).toMatchObject({
+      ok: true,
+      data: {
+        ok: false,
+        reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.protectedRoot,
+        diagnostics: [{ code: DESKTOP_SCENE_HIERARCHY_REFUSALS.protectedRoot }],
+      },
+    });
+    expect(remove("missing-instance")).toMatchObject({
+      ok: true,
+      data: {
+        ok: false,
+        reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+        diagnostics: [{ code: DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale }],
+        hierarchy: { rootInstanceId: "desktop-crate-root" },
+        entities: expect.arrayContaining([
+          expect.objectContaining({ id: "desktop-crate-beside" }),
+        ]),
+      },
+    });
+  });
+
   it("creates and multi-removes only validated local objects through review", () => {
     const root = fixture();
     const bridge = hierarchyBridge(root);
