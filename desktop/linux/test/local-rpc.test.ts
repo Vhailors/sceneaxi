@@ -176,6 +176,13 @@ describe("desktop same-user local RPC bridge", () => {
       ok: true,
       result: { documentPath: "scene.json" },
     });
+    if (!status.ok) return;
+    const genericStatus = status.result as {
+      data?: Readonly<Record<string, unknown>>;
+      dataKeys?: readonly string[];
+    };
+    expect(genericStatus.data).not.toHaveProperty("composedScene");
+    expect(genericStatus.dataKeys).not.toContain("composedScene");
   });
 
   it("requires a non-Kids hierarchy profile before local-agent project access", async () => {

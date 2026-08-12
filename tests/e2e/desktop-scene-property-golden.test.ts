@@ -169,7 +169,7 @@ describe("desktop typed Scene Document edit golden", () => {
     expect(beside?.worldTransform.translation[0]).toBe(-3.25);
   });
 
-  it("returns the shared validation diagnostic and the CLI conflict reason", () => {
+  it("returns the hierarchy input refusal and the CLI conflict reason", () => {
     const dir = seed("refusals");
     const bridge = createDesktopBridge({ cwd: dir, commandCapabilities: ["scene.compose"] });
     const opened = editableStatus(bridge);
@@ -185,17 +185,9 @@ describe("desktop typed Scene Document edit golden", () => {
         newValue: "left",
       },
     });
-    expect(invalid.ok).toBe(true);
-    if (!invalid.ok) return;
-    expect(invalid.data).toEqual({
+    expect(invalid).toMatchObject({
       ok: false,
-      diagnostics: [
-        {
-          code: "validation-failed",
-          message: "$.placements[1].transform: Placement transform is invalid.",
-          documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
-        },
-      ],
+      reason: "SCENE_HIERARCHY_INPUT_UNSUPPORTED",
     });
 
     const current = readFileSync(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8");
@@ -450,6 +442,6 @@ describe("desktop typed Scene Document edit golden", () => {
     expect(edit("kids", { kind: "remove-instance", instanceId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId }))
       .toMatchObject({ ok: false, reason: "SCENE_HIERARCHY_KIDS_DENIED" });
     expect(edit("game", { kind: "remove-instance", instanceId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId }, "../scene.json"))
-      .toMatchObject({ ok: false, reason: "DESKTOP_BRIDGE_REQUEST_MALFORMED" });
+      .toMatchObject({ ok: false, reason: "SCENE_HIERARCHY_INPUT_UNSUPPORTED" });
   });
 });

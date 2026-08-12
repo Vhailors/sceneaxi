@@ -260,6 +260,12 @@ function field(value: unknown, name: string): unknown {
   return descriptor !== undefined && "value" in descriptor ? descriptor.value : undefined;
 }
 
+function hasExactFields(value: unknown, fields: readonly string[]): boolean {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+  const keys = Object.keys(value);
+  return keys.length === fields.length && fields.every((name) => Object.hasOwn(value, name));
+}
+
 function frameReportOf(payload: unknown): DesktopFrameReport | null {
   const backend = field(payload, "backend");
   const label = field(payload, "label");
@@ -335,6 +341,19 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     rarityProposalEvidence === null
       ? snapshot
       : Object.freeze({ ...snapshot, rarityEvidence: rarityProposalEvidence });
+
+  const genericAuthoringSnapshot = (snapshot: DesktopSnapshot) => {
+    const decorated = withRarityProposalEvidence(snapshot);
+    if (!decorated.proposal?.edits.some((edit) => edit.jsonPointer === "/data/composedScene")) {
+      return decorated;
+    }
+    return Object.freeze({
+      ...decorated,
+      unifiedDiff: null,
+      renderedDiff: null,
+      proposal: null,
+    });
+  };
 
   const reconcilePendingAssetImport = <T extends DesktopSnapshot>(snapshot: T): T => {
     if (
@@ -682,7 +701,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
    * it has been resolved, since a link inside the project is an escape the text of the
    * path does not show.
    */
-  const containedDocumentPath = (value: unknown): string | null => {
+  const lexicalDocumentPath = (value: unknown): string | null => {
     if (typeof value !== "string" || value.length === 0) return null;
     if (
       isAbsolute(value) ||
@@ -693,11 +712,19 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     const root = resolve(options.cwd);
     const target = resolve(root, value);
     if (target !== root && !target.startsWith(`${root}${sep}`)) return null;
+    return value;
+  };
+
+  const containedDocumentPath = (value: unknown): string | null => {
+    const documentPath = lexicalDocumentPath(value);
+    if (documentPath === null) return null;
+    const root = resolve(options.cwd);
+    const target = resolve(root, documentPath);
     const realRoot = canonicalPath(root);
     const realTarget = canonicalPath(target);
     if (realRoot === null || realTarget === null) return null;
     if (realTarget !== realRoot && !realTarget.startsWith(`${realRoot}${sep}`)) return null;
-    return value;
+    return documentPath;
   };
 
   /**
@@ -829,11 +856,29 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     hierarchyCommandResponse = false,
   ): DesktopBridgeResponse => {
     const op = field(payload, "op");
+    let hierarchyDocumentPath: string | null = null;
     if (!isAuthoringOp(op)) {
       return bridgeRefuse(
         DESKTOP_BRIDGE_REFUSALS.authoringOpUnknown,
         `Unknown authoring operation ${JSON.stringify(op)}. Known: ${DESKTOP_BRIDGE_AUTHORING_OPS.join(", ")}.`,
       );
+    }
+    if (op === "propose") {
+      const jsonPointer = field(payload, "jsonPointer");
+      const newValue = field(payload, "newValue");
+      if (
+        jsonPointer === "/data/composedScene" ||
+        (jsonPointer === "/data" &&
+          typeof newValue === "object" &&
+          newValue !== null &&
+          !Array.isArray(newValue) &&
+          Object.hasOwn(newValue, "composedScene"))
+      ) {
+        return bridgeRefuse(
+          DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+          "Generic authoring proposals cannot supply or target scene hierarchy data.",
+        );
+      }
     }
     if (op === "edit-scene" || op === "edit-property") {
       const profile = field(payload, "profile");
@@ -861,6 +906,22 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           "Scene hierarchy editing requires missing capability scene.compose.",
         );
       }
+      const expectedFields = op === "edit-scene"
+        ? ["op", "documentPath", "expectedContentHash", "profile", "operation"]
+        : ["op", "documentPath", "expectedContentHash", "profile", "entityId", "propertyId", "newValue"];
+      const documentPath = lexicalDocumentPath(field(payload, "documentPath"));
+      const expectedContentHash = field(payload, "expectedContentHash");
+      if (
+        !hasExactFields(payload, expectedFields) ||
+        documentPath === null ||
+        typeof expectedContentHash !== "string" ||
+        !/^sha256:[0-9a-f]{64}$/.test(expectedContentHash)
+      ) {
+        return bridgeRefuse(
+          DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+          "Scene hierarchy editing requires one exact contained mutation envelope.",
+        );
+      }
       if (op === "edit-scene") {
         const operation = field(payload, "operation");
         const transformPolicy = field(operation, "transformPolicy");
@@ -879,6 +940,23 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
             "Scene hierarchy editing requires one supported operation.",
           );
         }
+      } else if (!isDesktopSceneEditOperation({
+        kind: "set-transform-component",
+        instanceId: field(payload, "entityId"),
+        propertyId: field(payload, "propertyId"),
+        value: field(payload, "newValue"),
+      })) {
+        return bridgeRefuse(
+          DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+          "Scene property editing requires one supported instance, property, and finite bounded value.",
+        );
+      }
+      hierarchyDocumentPath = containedDocumentPath(documentPath);
+      if (hierarchyDocumentPath === null) {
+        return bridgeRefuse(
+          DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+          "Scene hierarchy editing requires a contained project document path.",
+        );
       }
     }
     const rarityStatus = (data: Readonly<Record<string, unknown>>) => {
@@ -1000,7 +1078,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         const refused = Object.freeze({
           ok: false as const,
           documentPath,
-          authoringSnapshot: withRarityProposalEvidence(live.snapshot()),
+          authoringSnapshot: genericAuthoringSnapshot(live.snapshot()),
           diagnostics: Object.freeze([
             Object.freeze({
               code: rarity.reason,
@@ -1014,8 +1092,12 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       }
       const enriched = Object.freeze({
         ...status,
+        dataKeys: Object.freeze(status.dataKeys.filter((key) => key !== "composedScene")),
+        data: Object.freeze(Object.fromEntries(
+          Object.entries(status.data).filter(([key]) => key !== "composedScene"),
+        )),
         ...rarity.value,
-        authoringSnapshot: withRarityProposalEvidence(live.snapshot()),
+        authoringSnapshot: genericAuthoringSnapshot(live.snapshot()),
       });
       reconcileRarityAssistantDocument(enriched, retirementReason);
       return enriched;
@@ -1099,16 +1181,12 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       return bridgeOk("authoring", statusWithEvidence(live, documentPath));
     }
     if (op === "edit-scene") {
-      const documentPath = containedDocumentPath(field(payload, "documentPath"));
+      const documentPath = hierarchyDocumentPath;
       const expectedContentHash = field(payload, "expectedContentHash");
-      if (
-        documentPath === null ||
-        typeof expectedContentHash !== "string" ||
-        !/^sha256:[0-9a-f]{64}$/.test(expectedContentHash)
-      ) {
+      if (documentPath === null || typeof expectedContentHash !== "string") {
         return bridgeRefuse(
-          DESKTOP_BRIDGE_REFUSALS.requestMalformed,
-          "authoring edit-scene requires a SHA-256 expectedContentHash and a documentPath inside the project directory.",
+          DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+          "Scene hierarchy editing requires one exact contained mutation envelope.",
         );
       }
       const status = live.status(documentPath);
@@ -1152,16 +1230,12 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         : snapshot);
     }
     if (op === "edit-property") {
-      const documentPath = containedDocumentPath(field(payload, "documentPath"));
+      const documentPath = hierarchyDocumentPath;
       const expectedContentHash = field(payload, "expectedContentHash");
-      if (
-        documentPath === null ||
-        typeof expectedContentHash !== "string" ||
-        !/^sha256:[0-9a-f]{64}$/.test(expectedContentHash)
-      ) {
+      if (documentPath === null || typeof expectedContentHash !== "string") {
         return bridgeRefuse(
-          DESKTOP_BRIDGE_REFUSALS.requestMalformed,
-          "authoring edit-property requires a SHA-256 expectedContentHash and a documentPath inside the project directory.",
+          DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+          "Scene hierarchy editing requires one exact contained mutation envelope.",
         );
       }
       const status = live.status(documentPath);
@@ -1215,10 +1289,26 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           "authoring propose requires a jsonPointer string, an optional SHA-256 expectedContentHash, and a documentPath inside the project directory.",
         );
       }
+      const suppliedValue = field(payload, "newValue");
+      let proposedValue = suppliedValue;
+      if (
+        jsonPointer === "/data" &&
+        typeof suppliedValue === "object" &&
+        suppliedValue !== null &&
+        !Array.isArray(suppliedValue)
+      ) {
+        const privateStatus = live.status(documentPath);
+        if (privateStatus.ok && Object.hasOwn(privateStatus.data, "composedScene")) {
+          proposedValue = Object.freeze({
+            ...suppliedValue,
+            composedScene: privateStatus.data.composedScene,
+          });
+        }
+      }
       const snapshot: DesktopSnapshot = reconcilePendingAssetImport(live.proposeEdit({
         documentPath,
         jsonPointer,
-        newValue: field(payload, "newValue"),
+        newValue: proposedValue,
         ...(expectedContentHash !== undefined ? { expectedContentHash } : {}),
       }));
       return bridgeOk("authoring", withRarityProposalEvidence(snapshot));
@@ -2024,7 +2114,10 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
             : { selection: selectedSceneInstanceIds }),
         });
         if (inspected.ok) selectedSceneInstanceIds = inspected.selection.instanceIds;
-        return bridgeOk("command", inspected);
+        return bridgeOk("command", Object.freeze({
+          ...inspected,
+          authoringSnapshot: withRarityProposalEvidence(authoringSession().snapshot()),
+        }));
       }
       case "scene-selection-set": {
         const documentPath = input["documentPath"];

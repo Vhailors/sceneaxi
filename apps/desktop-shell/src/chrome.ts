@@ -2404,12 +2404,15 @@ if (shell) {
     });
   };
 
-  const syncSceneHierarchy = async () => {
+  const syncSceneHierarchy = async (restoreReview = false) => {
     const response = await commandRequest('scene-hierarchy-inspect', {
       documentPath: T.product.documentPath,
       profile: shell.dataset.profile,
     });
     if (response?.ok && response.data && typeof response.data === 'object') {
+      if (restoreReview && isSessionSnapshot(response.data.authoringSnapshot)) {
+        syncReview(response.data.authoringSnapshot);
+      }
       return syncSceneProperties({ editableScene: response.data });
     }
     const diagnostic = responseDiagnostic(response) || {
@@ -2523,8 +2526,13 @@ if (shell) {
     });
     const reason = responseReason(response);
     const status = response?.ok ? response.data : null;
-    if (status && isSessionSnapshot(status.authoringSnapshot)) {
-      syncReview(status.authoringSnapshot);
+    const statusSnapshot = status && isSessionSnapshot(status.authoringSnapshot)
+      ? status.authoringSnapshot
+      : null;
+    const hierarchyReviewRedacted = statusSnapshot?.phase === 'reviewing' &&
+      reviewProjection(statusSnapshot) === null;
+    if (statusSnapshot !== null && !hierarchyReviewRedacted) {
+      syncReview(statusSnapshot);
     }
     if (reason !== null || !status || status.ok !== true || typeof status.data !== 'object' ||
         status.data === null || typeof status.contentHash !== 'string') {
@@ -2538,7 +2546,7 @@ if (shell) {
     projectData = status.data;
     projectContentHash = status.contentHash;
     reconcileRarityEvidence(status);
-    await syncSceneHierarchy();
+    await syncSceneHierarchy(hierarchyReviewRedacted);
     undoAvailability = status.undoAvailability === 'available' || status.undoAvailability === 'recovery-pending'
       ? status.undoAvailability
       : 'unavailable';
@@ -2547,10 +2555,7 @@ if (shell) {
       : 'unavailable';
     syncCommandAvailability();
     clearConflictOutcome();
-    const snapshot = isSessionSnapshot(status.authoringSnapshot)
-      ? status.authoringSnapshot
-      : null;
-    const reviewing = reviewProjection(snapshot) !== null;
+    const reviewing = reviewCount() > 0;
     productStatus(
       reviewing ? 'dirty' : (projectRecovering ? 'recovering' : 'open'),
       reviewing
@@ -2561,12 +2566,14 @@ if (shell) {
   };
 
   const applyOpenedProjectStatus = async (status, authoringSnapshot, synchronizeBrowser) => {
+    const hierarchyReviewRedacted = authoringSnapshot?.phase === 'reviewing' &&
+      reviewProjection(authoringSnapshot) === null;
     projectData = status.data;
     projectContentHash = status.contentHash;
     reconcileRarityEvidence(status);
-    await syncSceneHierarchy();
     projectDirty = false;
     projectRecovering = false;
+    await syncSceneHierarchy(hierarchyReviewRedacted);
     undoAvailability = status.undoAvailability === 'available' || status.undoAvailability === 'recovery-pending'
       ? status.undoAvailability
       : 'unavailable';
@@ -2574,9 +2581,14 @@ if (shell) {
       ? status.redoAvailability
       : 'unavailable';
     syncCommandAvailability();
-    syncReview(authoringSnapshot);
+    if (!hierarchyReviewRedacted) syncReview(authoringSnapshot);
     clearConflictOutcome();
-    productStatus('open', withSceneRefusal(T.product.documentPath + ' · open · ' + status.documentId));
+    const reviewing = reviewCount() > 0;
+    productStatus(
+      reviewing ? 'dirty' : 'open',
+      withSceneRefusal(T.product.documentPath +
+        (reviewing ? ' · current proposal restored · review before Save' : ' · open · ' + status.documentId)),
+    );
     if (synchronizeBrowser) await syncProjectBrowser();
     return true;
   };
@@ -2599,8 +2611,10 @@ if (shell) {
     const authoringSnapshot = status && isSessionSnapshot(status.authoringSnapshot)
       ? status.authoringSnapshot
       : null;
-    if (authoringSnapshot !== null) syncReview(authoringSnapshot);
-    if (refuseDirty && (authoringSnapshot === null ||
+    const hierarchyReviewRedacted = authoringSnapshot?.phase === 'reviewing' &&
+      reviewProjection(authoringSnapshot) === null;
+    if (authoringSnapshot !== null && !hierarchyReviewRedacted) syncReview(authoringSnapshot);
+    if (refuseDirty && (authoringSnapshot === null || authoringSnapshot.phase === 'reviewing' ||
         reviewProjection(authoringSnapshot) !== null || authoringSnapshot.phase === 'pending' ||
           authoringSnapshot.journalRecoveryPending === true)) {
       const code = T.product.refusals.projectBrowserDirty;

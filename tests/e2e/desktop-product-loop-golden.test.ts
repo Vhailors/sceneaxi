@@ -469,6 +469,7 @@ describe("desktop first-release product loop", () => {
       "scene-hierarchy-inspect",
       "propose",
       "accept",
+      "scene-hierarchy-inspect",
       "status",
       "scene-hierarchy-inspect",
       "propose",
