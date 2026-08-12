@@ -326,8 +326,12 @@ function readActiveJournal(
 }
 
 export function applyJournalRecoveryPending(cwd: string): boolean {
-  const active = readActiveJournal(cwd);
-  return !active.ok || active.entry !== null;
+  try {
+    const active = readActiveJournal(cwd);
+    return !active.ok || active.entry !== null;
+  } catch {
+    return true;
+  }
 }
 
 export function prepareApplyJournal(

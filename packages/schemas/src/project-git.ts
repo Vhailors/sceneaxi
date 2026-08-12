@@ -18,6 +18,7 @@ export const PROJECT_GIT_DIAGNOSTICS = Object.freeze({
   selectionMismatch: "PROJECT_GIT_SELECTION_MISMATCH",
   commitMessageInvalid: "PROJECT_GIT_COMMIT_MESSAGE_INVALID",
   operationUnsupported: "PROJECT_GIT_OPERATION_UNSUPPORTED",
+  evidenceTooLarge: "PROJECT_GIT_EVIDENCE_TOO_LARGE",
   commandFailed: "PROJECT_GIT_COMMAND_FAILED",
 } as const);
 
@@ -26,6 +27,7 @@ export type ProjectGitDiagnosticCode =
 
 export type ProjectGitEntry = Readonly<{
   path: string;
+  sourcePath?: string;
   index: string;
   worktree: string;
   canonical: boolean;

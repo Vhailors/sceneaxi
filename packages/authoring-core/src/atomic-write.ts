@@ -566,6 +566,16 @@ export function releaseAtomicWriteLocks(lockSet: AtomicWriteLockSet): void {
   releaseLocks(state.held);
 }
 
+export function atomicWriteLockArtifactPaths(
+  lockSet: AtomicWriteLockSet,
+): readonly string[] {
+  const state = lockSetStates.get(lockSet);
+  if (state === undefined || !state.active) {
+    throw new AtomicWriteLockError("lock capability");
+  }
+  return Object.freeze(state.held.map((lock) => lock.path));
+}
+
 function releaseLocks(held: readonly HeldLock[]): void {
   const syncedDirectories = new Set<string>();
   for (const lock of [...held].reverse()) {

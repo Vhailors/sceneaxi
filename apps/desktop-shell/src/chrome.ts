@@ -1657,6 +1657,7 @@ if (shell) {
 
   const isProjectGitEntry = (entry) => entry !== null && typeof entry === 'object' &&
     typeof entry.path === 'string' && typeof entry.index === 'string' &&
+    (entry.sourcePath === undefined || typeof entry.sourcePath === 'string') &&
     typeof entry.worktree === 'string' && typeof entry.canonical === 'boolean' &&
     typeof entry.conflict === 'boolean';
 

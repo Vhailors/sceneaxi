@@ -1,6 +1,7 @@
 /** Contained local Git inspection and preparation for one selected native project. */
 import { spawnSync } from "node:child_process";
 import { readFileSync, realpathSync } from "node:fs";
+import { devNull } from "node:os";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import {
   PROJECT_GIT_DIAGNOSTICS,
@@ -18,6 +19,7 @@ import {
 } from "@sceneaxi/schemas";
 import {
   AtomicWriteLockError,
+  atomicWriteLockArtifactPaths,
   canonicalPath,
   type AtomicWriteLockSet,
 } from "./atomic-write.js";
@@ -61,10 +63,14 @@ export type ProjectGitOptions = Readonly<{
 
 type GitResult = Readonly<{
   ok: boolean;
+  status: number | null;
   stdout: string;
   stderr: string;
   missing: boolean;
+  overflow: boolean;
 }>;
+
+const PROJECT_GIT_OUTPUT_LIMIT = 256 * 1024 * 1024;
 
 const REQUIRED_CAPABILITY: Readonly<Record<ProjectGitOperation, ProjectCapability>> =
   Object.freeze({
@@ -104,17 +110,24 @@ function runGit(
     encoding: "utf8",
     env: {
       ...environment,
+      GIT_CONFIG_GLOBAL: devNull,
+      GIT_CONFIG_NOSYSTEM: "1",
       GIT_TERMINAL_PROMPT: "0",
       GIT_OPTIONAL_LOCKS: "0",
       LC_ALL: "C",
     },
-    maxBuffer: 16 * 1024 * 1024,
+    maxBuffer: PROJECT_GIT_OUTPUT_LIMIT,
   });
+  const errorCode = result.error !== undefined && "code" in result.error
+    ? result.error.code
+    : undefined;
   return Object.freeze({
     ok: result.status === 0 && result.error === undefined,
+    status: result.status,
     stdout: result.stdout ?? "",
     stderr: result.stderr ?? "",
-    missing: result.error !== undefined && "code" in result.error && result.error.code === "ENOENT",
+    missing: errorCode === "ENOENT",
+    overflow: errorCode === "ENOBUFS",
   });
 }
 
@@ -157,7 +170,10 @@ function selectedPaths(
   return Object.freeze(normalized.sort());
 }
 
-type MutationGuard = Readonly<{ lockSet: AtomicWriteLockSet }>;
+type MutationGuard = Readonly<{
+  lockSet: AtomicWriteLockSet;
+  excludedPaths: ReadonlySet<string>;
+}>;
 
 function transactionDirtyFailure(): ProjectGitFailure {
   return failure(
@@ -188,6 +204,14 @@ function mutationGuard(
   if (authoring?.transactionDirty === true) {
     return transactionDirtyFailure();
   }
+  const operationPath = canonicalPath(resolve(root, ".sceneaxi", "journal", ".operation"));
+  if (!within(root, operationPath)) {
+    return failure(
+      PROJECT_GIT_DIAGNOSTICS.pathEscape,
+      ".sceneaxi/journal/.operation",
+      "The SceneAxi authoring journal resolves outside the selected project root.",
+    );
+  }
   let lockSet: AtomicWriteLockSet;
   try {
     lockSet = beginApplyJournalTransaction(root, []);
@@ -203,10 +227,19 @@ function mutationGuard(
       "SceneAxi authoring recovery is pending; resolve it before changing the Git index.",
     );
   }
-  return Object.freeze({ lockSet });
+  const excludedPaths = new Set(
+    atomicWriteLockArtifactPaths(lockSet).map((path) =>
+      relative(root, path).split(sep).join("/"),
+    ),
+  );
+  return Object.freeze({ lockSet, excludedPaths });
 }
 
-function parseStatus(output: string, canonicalFiles: ReadonlySet<string>): readonly ProjectGitEntry[] {
+function parseStatus(
+  output: string,
+  canonicalFiles: ReadonlySet<string>,
+  excludedPaths: ReadonlySet<string>,
+): readonly ProjectGitEntry[] {
   const tokens = output.split("\0");
   const entries: ProjectGitEntry[] = [];
   for (let index = 0; index < tokens.length; index += 1) {
@@ -215,17 +248,22 @@ function parseStatus(output: string, canonicalFiles: ReadonlySet<string>): reado
     const indexState = token[0] ?? " ";
     const worktreeState = token[1] ?? " ";
     const path = token.slice(3);
+    let sourcePath: string | undefined;
     if (indexState === "R" || indexState === "C" || worktreeState === "R" || worktreeState === "C") {
       index += 1;
+      sourcePath = tokens[index];
     }
+    if (excludedPaths.has(path) || (sourcePath !== undefined && excludedPaths.has(sourcePath))) continue;
     const conflict = indexState === "U" || worktreeState === "U" ||
       (indexState === "A" && worktreeState === "A") ||
       (indexState === "D" && worktreeState === "D");
     entries.push(Object.freeze({
       path,
+      ...(sourcePath === undefined ? {} : { sourcePath }),
       index: indexState,
       worktree: worktreeState,
-      canonical: canonicalFiles.has(path),
+      canonical: canonicalFiles.has(path) ||
+        (sourcePath !== undefined && canonicalFiles.has(sourcePath)),
       conflict,
     }));
   }
@@ -290,7 +328,15 @@ function context(
     );
   }
   const executable = options.gitExecutable ?? "git";
-  const repository = runGit(executable, root, ["rev-parse", "--show-toplevel"]);
+  const repository = runGit(executable, root, [
+    "rev-parse",
+    "--path-format=absolute",
+    "--show-toplevel",
+    "--git-dir",
+    "--git-common-dir",
+    "--git-path", "objects",
+    "--git-path", "index",
+  ]);
   if (repository.missing) {
     return failure(
       PROJECT_GIT_DIAGNOSTICS.missingGit,
@@ -305,9 +351,13 @@ function context(
       "The selected project root is not a readable Git worktree.",
     );
   }
-  let gitRoot: string;
+  let repositoryPaths: readonly string[];
   try {
-    gitRoot = realpathSync(repository.stdout.trim());
+    const reported = repository.stdout.trim().split("\n");
+    if (reported.length !== 5 || reported.some((path) => !isAbsolute(path))) {
+      throw new Error("incomplete repository paths");
+    }
+    repositoryPaths = reported.map((path) => canonicalPath(path));
   } catch {
     return failure(
       PROJECT_GIT_DIAGNOSTICS.repositoryUnavailable,
@@ -315,11 +365,49 @@ function context(
       "Git reported a worktree root that cannot be resolved.",
     );
   }
+  const [gitRoot, gitDirectory, gitCommonDirectory, objectDirectory, indexPath] = repositoryPaths;
   if (gitRoot !== root) {
     return failure(
       PROJECT_GIT_DIAGNOSTICS.repositoryEscape,
       "$root",
       "The selected project is nested in or resolves through a different Git worktree root.",
+    );
+  }
+  if (
+    gitDirectory === undefined || gitCommonDirectory === undefined ||
+    objectDirectory === undefined || indexPath === undefined ||
+    !within(root, gitDirectory) || !within(root, gitCommonDirectory) ||
+    !within(root, objectDirectory) || !within(root, indexPath)
+  ) {
+    return failure(
+      PROJECT_GIT_DIAGNOSTICS.repositoryEscape,
+      "$root",
+      "The selected worktree stores Git repository, object, or index state outside the project root.",
+    );
+  }
+  const configuredFilters = runGit(executable, root, [
+    "config", "--local", "--includes", "--get-regexp",
+    "^filter\\..*\\.(clean|process)$",
+  ]);
+  if (configuredFilters.overflow) {
+    return failure(
+      PROJECT_GIT_DIAGNOSTICS.evidenceTooLarge,
+      "$git.config",
+      "Git filter configuration exceeds the contained evidence limit.",
+    );
+  }
+  if (configuredFilters.stdout.trim().length > 0) {
+    return failure(
+      PROJECT_GIT_DIAGNOSTICS.commandFailed,
+      "$git.filter",
+      "Contained Git refuses repositories with configured clean or process filters.",
+    );
+  }
+  if (configuredFilters.status !== 1) {
+    return failure(
+      PROJECT_GIT_DIAGNOSTICS.repositoryUnavailable,
+      "$git.config",
+      "Contained Git could not verify repository filter configuration.",
     );
   }
   const canonicalFiles = Object.freeze([
@@ -345,7 +433,10 @@ function context(
   });
 }
 
-function repositoryState(ctx: Context): ProjectGitStateResult {
+function repositoryState(
+  ctx: Context,
+  excludedPaths: ReadonlySet<string> = new Set(),
+): ProjectGitStateResult {
   const status = runGit(ctx.executable, ctx.root, [
     "-c", "core.quotepath=false",
     "status", "--porcelain=v1", "-z", "--untracked-files=all", "--", ".",
@@ -358,6 +449,13 @@ function repositoryState(ctx: Context): ProjectGitStateResult {
     "-c", "core.quotepath=false",
     "diff", "--cached", "--no-ext-diff", "--no-textconv", "--no-renames", "--full-index", "--no-color", "--binary", "--src-prefix=a/", "--dst-prefix=b/", "--", ".",
   ]);
+  if (status.overflow || working.overflow || staged.overflow) {
+    return failure(
+      PROJECT_GIT_DIAGNOSTICS.evidenceTooLarge,
+      "$root",
+      "Git status or diff evidence exceeds the contained 256 MiB response limit.",
+    );
+  }
   if (!status.ok || !working.ok || !staged.ok) {
     return failure(
       PROJECT_GIT_DIAGNOSTICS.commandFailed,
@@ -368,7 +466,7 @@ function repositoryState(ctx: Context): ProjectGitStateResult {
   const branchResult = runGit(ctx.executable, ctx.root, ["symbolic-ref", "--quiet", "--short", "HEAD"]);
   const headResult = runGit(ctx.executable, ctx.root, ["rev-parse", "--verify", "HEAD"]);
   const canonical = new Set(ctx.canonicalFiles);
-  const entries = parseStatus(status.stdout, canonical);
+  const entries = parseStatus(status.stdout, canonical, excludedPaths);
   const conflicts = Object.freeze(entries.filter((entry) => entry.conflict).map((entry) => entry.path));
   const state: ProjectGitRepositoryState = Object.freeze({
     schemaVersion: PROJECT_GIT_SCHEMA_VERSION,
@@ -411,7 +509,7 @@ export function stageProjectGitPaths(
   const guard = mutationGuard(prepared.root, options.authoring);
   if ("diagnostic" in guard) return guard;
   try {
-    const before = repositoryState(prepared);
+    const before = repositoryState(prepared, guard.excludedPaths);
     if (!before.ok) return before;
     if (before.state.detached) {
       return failure(PROJECT_GIT_DIAGNOSTICS.detachedWorktree, "$git.HEAD", "Git staging is refused on a detached worktree.");
@@ -423,7 +521,7 @@ export function stageProjectGitPaths(
     if (!staged.ok) {
       return failure(PROJECT_GIT_DIAGNOSTICS.commandFailed, "$input.paths", "Git refused the explicit selected-path staging operation.");
     }
-    return repositoryState(prepared);
+    return repositoryState(prepared, guard.excludedPaths);
   } finally {
     endApplyJournalTransaction(guard.lockSet);
   }
@@ -449,7 +547,7 @@ export function prepareProjectGitCommit(
   const guard = mutationGuard(prepared.root, options.authoring);
   if ("diagnostic" in guard) return guard;
   try {
-    const stateResult = repositoryState(prepared);
+    const stateResult = repositoryState(prepared, guard.excludedPaths);
     if (!stateResult.ok) return stateResult;
     if (stateResult.state.detached) {
       return failure(PROJECT_GIT_DIAGNOSTICS.detachedWorktree, "$git.HEAD", "Commit preparation is refused on a detached worktree.");
