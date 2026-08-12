@@ -31,6 +31,7 @@ describe("full-editor command registry", () => {
       "project-open",
       "project-save",
       "edit-undo",
+      "edit-redo",
       "run-play",
       "change-review-accept",
       "change-review-reject",
@@ -46,7 +47,7 @@ describe("full-editor command registry", () => {
         capability: { profiles: ["game", "web"] },
         progress: { minimum: 0, maximum: 100 },
       });
-      expect(["edit-undo", null]).toContain(command.undo.commandId);
+      expect(["edit-undo", "edit-redo", null]).toContain(command.undo.commandId);
       expect(command.acceptedClients.length).toBeGreaterThan(0);
       expect(command.refusals.length).toBeGreaterThan(0);
       expect(command.evidence.kind).toBeTruthy();

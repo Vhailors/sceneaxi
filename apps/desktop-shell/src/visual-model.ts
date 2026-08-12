@@ -252,6 +252,7 @@ export const DESKTOP_VISUAL_REFUSALS = Object.freeze({
   noActiveCommand: "EDITOR_COMMAND_ACTIVE_JOB_MISMATCH",
   /** Undo requires a completed Save in the active project's authoring journal. */
   undoUnavailable: "DESKTOP_UNDO_UNAVAILABLE",
+  redoUnavailable: "DESKTOP_REDO_UNAVAILABLE",
   /** The window is smaller than the editor chrome's declared minimum. */
   windowBelowMinimum: "DESKTOP_WINDOW_BELOW_MINIMUM",
   /**
@@ -283,6 +284,8 @@ export const DESKTOP_REFUSAL_MESSAGES: Readonly<
     "Cancel requires the exact active command job returned by the registered start operation.",
   [DESKTOP_VISUAL_REFUSALS.undoUnavailable]:
     "Undo becomes available when the active project authoring journal reports a completed Save.",
+  [DESKTOP_VISUAL_REFUSALS.redoUnavailable]:
+    "Redo becomes available after Undo and remains available until a new mutation commits.",
   [DESKTOP_VISUAL_REFUSALS.windowBelowMinimum]:
     "The editor chrome refuses below its minimum window size rather than rendering an unusable layout.",
   [DESKTOP_VISUAL_REFUSALS.webCapabilityRequired]:
@@ -1374,12 +1377,14 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
                   label: command.label,
                   accelerator: command.accelerator,
                   control:
-                    command.id === "edit-undo"
+                    command.id === "edit-undo" || command.id === "edit-redo"
                       ? control(
                           `menu-command-${command.id}`,
                           command.label,
                           "inert",
-                          DESKTOP_VISUAL_REFUSALS.undoUnavailable,
+                          command.id === "edit-redo"
+                            ? DESKTOP_VISUAL_REFUSALS.redoUnavailable
+                            : DESKTOP_VISUAL_REFUSALS.undoUnavailable,
                         )
                       : control(
                           `menu-command-${command.id}`,
@@ -1486,12 +1491,14 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
                   name: item.name,
                   shortcut: item.shortcut,
                   control:
-                    item.id === "edit-undo"
+                    item.id === "edit-undo" || item.id === "edit-redo"
                       ? control(
                           `palette-${item.id}`,
                           item.name,
                           "inert",
-                          DESKTOP_VISUAL_REFUSALS.undoUnavailable,
+                          item.id === "edit-redo"
+                            ? DESKTOP_VISUAL_REFUSALS.redoUnavailable
+                            : DESKTOP_VISUAL_REFUSALS.undoUnavailable,
                         )
                       : control(`palette-${item.id}`, item.name, "live"),
                 }),

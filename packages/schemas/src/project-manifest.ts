@@ -20,6 +20,7 @@ export const PROJECT_CAPABILITIES = Object.freeze([
   "project.migrate",
   "authoring.change-review",
   "authoring.undo",
+  "authoring.redo",
   "runtime.play",
   "delivery.export-web",
   "assistant.build.local",

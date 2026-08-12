@@ -208,6 +208,7 @@ describe("desktop shell commands", () => {
 
       expect(session.undo()).toEqual({
         ok: true,
+        transactionId: expect.any(String),
         restoredPaths: ["scene.json"],
       });
       expect(readFileSync(join(overrideCwd, "scene.json"), "utf8")).toBe(
@@ -258,6 +259,7 @@ describe("desktop shell commands", () => {
 
       expect(session.undo()).toEqual({
         ok: true,
+        transactionId: expect.any(String),
         restoredPaths: ["scene.json"],
       });
       expect(readFileSync(join(rootC, "scene.json"), "utf8")).toBe(beforeC);
@@ -266,6 +268,7 @@ describe("desktop shell commands", () => {
 
       expect(session.undo()).toEqual({
         ok: true,
+        transactionId: expect.any(String),
         restoredPaths: ["scene.json"],
       });
       expect(readFileSync(join(rootB, "scene.json"), "utf8")).toBe(beforeB);

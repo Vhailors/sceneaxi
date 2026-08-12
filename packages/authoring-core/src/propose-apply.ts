@@ -933,10 +933,10 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
           return {
             ok: true,
             appliedPaths: plans.map((plan) => plan.documentPath),
+            transactionId: journal.transactionId,
             ...(recovered.journalRecoveryPending === true
               ? {
                   journalRecoveryPending: true,
-                  transactionId: journal.transactionId,
                 }
               : {}),
           };
@@ -958,10 +958,10 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
           return {
             ok: true,
             appliedPaths: plans.map((plan) => plan.documentPath),
+            transactionId: journal.transactionId,
             ...(recovered.journalRecoveryPending === true
               ? {
                   journalRecoveryPending: true,
-                  transactionId: journal.transactionId,
                 }
               : {}),
           };
@@ -1014,6 +1014,7 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
     return {
       ok: true,
       appliedPaths: plans.map((plan) => plan.documentPath),
+      transactionId: journal.transactionId,
     };
   } finally {
     endApplyJournalTransaction(transaction);

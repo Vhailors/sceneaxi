@@ -380,8 +380,13 @@ describe("desktop visual model — overlays and palette", () => {
       kind: "inert",
       refusal: DESKTOP_VISUAL_REFUSALS.undoUnavailable,
     });
+    expect(rows.find((row) => row.commandId === "edit-redo")?.control).toMatchObject({
+      kind: "inert",
+      refusal: DESKTOP_VISUAL_REFUSALS.redoUnavailable,
+    });
     expect(
-      rows.filter((row) => row.commandId !== "edit-undo").every((row) => row.control.kind === "live"),
+      rows.filter((row) => row.commandId !== "edit-undo" && row.commandId !== "edit-redo")
+        .every((row) => row.control.kind === "live"),
     ).toBe(true);
   });
 

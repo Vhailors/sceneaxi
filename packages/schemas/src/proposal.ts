@@ -318,6 +318,7 @@ export type ApplyDiagnosticCode =
   | "journal-invalid"
   | "journal-not-found"
   | "journal-conflict"
+  | "invalid-transaction-phase"
   | "apply-failed"
   | "apply-in-progress";
 
@@ -336,16 +337,10 @@ export type ApplyApplied = {
   readonly ok: true;
   readonly applicationState?: never;
   readonly appliedPaths: readonly string[];
-} & (
-  | {
-      readonly journalRecoveryPending: true;
-      readonly transactionId: string;
-    }
-  | {
-      readonly journalRecoveryPending?: never;
-      readonly transactionId?: never;
-    }
-);
+  /** Durable identity shared by every command client, including completed writes. */
+  readonly transactionId: string;
+  readonly journalRecoveryPending?: true;
+};
 
 export type ApplyIndeterminate = {
   readonly ok: false;

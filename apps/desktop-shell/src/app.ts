@@ -79,6 +79,7 @@ const COMMAND_FLAGS: Readonly<Record<string, ReadonlySet<string>>> =
     propose: new Set(["--document", "--pointer", "--value", "--cwd"]),
     apply: new Set(["--document", "--pointer", "--value", "--cwd"]),
     undo: new Set(["--cwd"]),
+    redo: new Set(["--cwd"]),
     "open-path": new Set(["--profile", "--operation"]),
     chrome: new Set([
       "--mode",
@@ -470,8 +471,15 @@ export function runDesktopCommand(
   if (command === "undo") {
     const result = session.undo();
     if (!result.ok) return diagnosticsResult(command, result.diagnostics);
-    return ok(command, { restoredPaths: result.restoredPaths }, [
+    return ok(command, { transactionId: result.transactionId, restoredPaths: result.restoredPaths }, [
       "The last completed apply was reverted",
+    ]);
+  }
+  if (command === "redo") {
+    const result = session.redo();
+    if (!result.ok) return diagnosticsResult(command, result.diagnostics);
+    return ok(command, { transactionId: result.transactionId, restoredPaths: result.restoredPaths }, [
+      "The next undone apply was restored",
     ]);
   }
 
@@ -490,6 +498,7 @@ export function runDesktopCommand(
         contentByteLength: status.contentByteLength,
         dataKeys: status.dataKeys,
         undoAvailability: status.undoAvailability,
+        redoAvailability: status.redoAvailability,
         data: status.data,
       },
       ["Run `sceneaxi-desktop propose --document ... --pointer ... --value ...` to edit"],

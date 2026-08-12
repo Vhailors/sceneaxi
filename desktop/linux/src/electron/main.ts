@@ -25,6 +25,7 @@ import { tmpdir } from "node:os";
 import { join, sep } from "node:path";
 import { BrowserWindow, app, dialog, ipcMain } from "electron";
 import { DESKTOP_MINIMUM_WINDOW } from "@sceneaxi/desktop-shell";
+import { inspectProjectModel } from "@sceneaxi/authoring-core";
 import { parseDeliveryHandoffText } from "@sceneaxi/schemas";
 import { DESKTOP_BYO_CONFIGURATION_CHANNEL } from "../lib/byo-configuration-contract.js";
 import {
@@ -205,8 +206,13 @@ async function start(): Promise<void> {
           payloadField(snapshot, "journalRecoveryPending") === true;
       },
     });
+    const inspectedProject = inspectProjectModel(root);
+    const commandCapabilities = inspectedProject.ok && inspectedProject.inspection.state === "native"
+      ? inspectedProject.inspection.capabilities.map((grant) => grant.id)
+      : undefined;
     const next = createDesktopBridge({
       cwd: root,
+      ...(commandCapabilities === undefined ? {} : { commandCapabilities }),
       projectBrowser: nextProjectBrowser,
       onFrameReport: (report) => frameReported?.(report),
       ...(byoRuntime.runByoAssistant === undefined

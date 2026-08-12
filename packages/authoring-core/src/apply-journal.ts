@@ -45,7 +45,7 @@ export type ApplyJournalEntry = {
   readonly kind: typeof APPLY_JOURNAL_KIND;
   readonly transactionId: string;
   readonly createdAt: string;
-  readonly state: "prepared" | "completed" | "undoing" | "undone" | "aborted";
+  readonly state: "prepared" | "completed" | "undoing" | "redoing" | "undone" | "aborted";
   readonly completedAt?: string;
   readonly completionOrder?: number;
   readonly documents: readonly ApplyJournalDocument[];
@@ -216,7 +216,7 @@ function parseJournal(text: string): ApplyJournalEntry | null {
   const raw = value as Record<string, unknown>;
   const state = String(raw["state"]);
   const isCompletedState =
-    state === "completed" || state === "undoing" || state === "undone";
+    state === "completed" || state === "undoing" || state === "redoing" || state === "undone";
   const hasReservedOrder = state === "prepared" || isCompletedState;
   if (
     raw["schemaVersion"] !== APPLY_JOURNAL_SCHEMA_VERSION ||
@@ -225,7 +225,7 @@ function parseJournal(text: string): ApplyJournalEntry | null {
     !TRANSACTION_ID_RE.test(raw["transactionId"]) ||
     typeof raw["createdAt"] !== "string" ||
     !Number.isFinite(Date.parse(raw["createdAt"])) ||
-    !["prepared", "completed", "undoing", "undone", "aborted"].includes(
+    !["prepared", "completed", "undoing", "redoing", "undone", "aborted"].includes(
       String(raw["state"]),
     ) ||
     !Array.isArray(raw["documents"]) ||
@@ -310,7 +310,7 @@ function readActiveJournal(
   const entry = parseJournal(text);
   if (
     entry === null ||
-    (entry.state !== "prepared" && entry.state !== "undoing")
+    (entry.state !== "prepared" && entry.state !== "undoing" && entry.state !== "redoing")
   ) {
     return {
       ok: false,
@@ -474,7 +474,8 @@ function readJournals(
       parsed === null ||
       `${parsed.transactionId}.json` !== name ||
       parsed.state === "prepared" ||
-      parsed.state === "undoing"
+      parsed.state === "undoing" ||
+      parsed.state === "redoing"
     ) {
       return {
         ok: false,
@@ -495,6 +496,8 @@ export type ApplyUndoAvailability =
   | "available"
   | "unavailable"
   | "recovery-pending";
+
+export type ApplyRedoAvailability = ApplyUndoAvailability;
 
 function latestCompletedJournal(
   entries: readonly ApplyJournalEntry[],
@@ -600,6 +603,42 @@ export function applyUndoAvailability(
         fileExists(path) &&
         contentHash(readFileSync(path, "utf8")) === document.afterContentHash
       );
+    })
+      ? "available"
+      : "unavailable";
+  } catch {
+    return "unavailable";
+  }
+}
+
+function nextRedoJournal(entries: readonly ApplyJournalEntry[]): ApplyJournalEntry | undefined {
+  const completedOrder = Math.max(
+    0,
+    ...entries
+      .filter((entry) => entry.state === "completed")
+      .map((entry) => entry.completionOrder ?? 0),
+  );
+  return entries
+    .filter(
+      (entry) => entry.state === "undone" && (entry.completionOrder ?? 0) > completedOrder,
+    )
+    .sort((a, b) => (a.completionOrder ?? 0) - (b.completionOrder ?? 0))[0];
+}
+
+export function applyRedoAvailability(
+  input: { readonly cwd?: string } = {},
+): ApplyRedoAvailability {
+  try {
+    const cwd = input.cwd ?? process.cwd();
+    const active = readActiveJournal(cwd);
+    if (!active.ok) return "unavailable";
+    if (active.entry !== null) return "recovery-pending";
+    const journals = readJournals(cwd);
+    if (!journals.ok) return "unavailable";
+    const next = nextRedoJournal(journals.entries);
+    return next !== undefined && next.documents.every((document) => {
+      const path = canonicalPath(resolve(cwd, document.documentPath));
+      return fileExists(path) && contentHash(readFileSync(path, "utf8")) === document.beforeContentHash;
     })
       ? "available"
       : "unavailable";
@@ -722,7 +761,9 @@ function recoverIncompleteAppliesLocked(cwd: string): RecoveryOperationResult {
   const recovered = recoverJournalEntry(
     cwd,
     active.entry,
-    active.entry.state === "prepared" ? "after" : "before",
+    active.entry.state === "prepared" || active.entry.state === "redoing"
+      ? "after"
+      : "before",
   );
   if (!recovered.ok) return recovered;
   return {
@@ -766,7 +807,8 @@ function readApplyTransactionLocked(
     entry === null ||
     entry.transactionId !== transactionId ||
     entry.state === "prepared" ||
-    entry.state === "undoing"
+    entry.state === "undoing" ||
+    entry.state === "redoing"
   ) {
     return {
       ok: false,
@@ -1108,6 +1150,131 @@ export function undoLastApply(
         ok: true,
         transactionId: latest.transactionId,
         documentPaths: latest.documents.map((document) => document.documentPath),
+      };
+    } finally {
+      releaseAtomicWriteLocks(documentLocks);
+    }
+  } finally {
+    releaseAtomicWriteLocks(operationLock);
+  }
+}
+
+/** Restore the exact after-image from the next entry on the durable redo branch. */
+export function redoLastApply(
+  input: { readonly cwd?: string } = {},
+): JournalOperationResult {
+  const cwd = input.cwd ?? process.cwd();
+  if (!fileExists(journalDirectory(cwd))) {
+    return {
+      ok: false,
+      diagnostics: [{ code: "journal-not-found", message: "No undone apply journal is available to redo." }],
+    };
+  }
+  let operationLock: AtomicWriteLockSet;
+  try {
+    operationLock = acquireAtomicWriteLocks([journalOperationResource(cwd)]);
+  } catch (error) {
+    if (error instanceof AtomicWriteLockError) {
+      return {
+        ok: false,
+        diagnostics: [{
+          code: "apply-in-progress",
+          message: "Another apply or journal operation is in progress.",
+          reReadHint: "Retry redo after the active authoring operation completes.",
+        }],
+      };
+    }
+    throw error;
+  }
+  try {
+    const recovered = recoverIncompleteAppliesLocked(cwd);
+    if (!recovered.ok) return recovered;
+    if (recovered.journalRecoveryPending === true) {
+      return { ok: false, diagnostics: journalRecoveryPendingDiagnostics() };
+    }
+    const journals = readJournals(cwd);
+    if (!journals.ok) return journals;
+    const next = nextRedoJournal(journals.entries);
+    if (next === undefined) {
+      return {
+        ok: false,
+        diagnostics: [{ code: "journal-not-found", message: "No undone apply journal is available to redo." }],
+      };
+    }
+    const plans = next.documents.map((document) => ({
+      path: canonicalPath(resolve(cwd, document.documentPath)),
+      contents: document.afterContent,
+      expectedContentHash: document.beforeContentHash,
+    }));
+    let documentLocks: AtomicWriteLockSet;
+    try {
+      documentLocks = acquireAtomicWriteLocks(plans.map((plan) => plan.path));
+    } catch (error) {
+      if (error instanceof AtomicWriteLockError) {
+        return {
+          ok: false,
+          diagnostics: [{
+            code: "journal-conflict",
+            message: "Cannot redo the undone apply: canonical documents changed or are busy.",
+            reReadHint: "Re-read the affected documents; redo refused to overwrite them.",
+          }],
+        };
+      }
+      throw error;
+    }
+    try {
+      try {
+        verifyAtomicWritePreconditions(plans, documentLocks);
+      } catch (error) {
+        if (error instanceof AtomicWriteConflictError || error instanceof AtomicWriteLockError) {
+          return {
+            ok: false,
+            diagnostics: [{
+              code: "journal-conflict",
+              message: "Cannot redo the undone apply: canonical documents changed or are busy.",
+              reReadHint: "Re-read the affected documents; redo refused to overwrite them.",
+            }],
+          };
+        }
+        throw error;
+      }
+      const redoing = { ...next, state: "redoing" as const };
+      writeActiveJournal(cwd, redoing);
+      try {
+        atomicWriteAll(plans, { token: next.transactionId, lockSet: documentLocks });
+      } catch (error) {
+        if (error instanceof AtomicWriteError && !error.rollbackComplete) {
+          return recoverJournalEntry(cwd, redoing, "after", documentLocks);
+        }
+        writeActiveJournal(cwd, null);
+        if (error instanceof AtomicWriteConflictError || error instanceof AtomicWriteLockError || error instanceof AtomicWriteError) {
+          return {
+            ok: false,
+            diagnostics: [{
+              code: "journal-conflict",
+              message: "Cannot redo the undone apply: canonical documents changed or are busy.",
+              reReadHint: "Re-read the affected documents; redo refused to overwrite them.",
+            }],
+          };
+        }
+        throw error;
+      }
+      try {
+        writeJournal(cwd, { ...redoing, state: "completed" });
+        writeActiveJournal(cwd, null);
+        cacheLatestCompletedJournal(cwd, next);
+      } catch {
+        return {
+          ok: true,
+          transactionId: next.transactionId,
+          documentPaths: next.documents.map((document) => document.documentPath),
+          journalRecoveryPending: true,
+        };
+      }
+      return {
+        ok: true,
+        transactionId: next.transactionId,
+        documentPaths: next.documents.map((document) => document.documentPath),
       };
     } finally {
       releaseAtomicWriteLocks(documentLocks);
