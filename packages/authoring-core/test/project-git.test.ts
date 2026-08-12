@@ -305,6 +305,21 @@ describe("contained project Git service", () => {
     });
   });
 
+  it("refuses immediate loose-object indirection before invoking Git", () => {
+    const { root } = repository("loose-object-indirection");
+    const outside = mkdtempSync(join(tmpdir(), "sceneaxi-project-git-loose-object-outside-"));
+    roots.push(outside);
+    symlinkSync(outside, join(root, ".git", "objects", "ab"));
+
+    expect(inspectProjectGit({
+      root,
+      gitExecutable: "sceneaxi-git-must-not-run",
+    })).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.repositoryEscape, path: "$git.objects" },
+    });
+  });
+
   it("refuses Git control-file indirections and gitlinks before inspection", () => {
     const linkedConfig = repository("linked-config");
     const outside = mkdtempSync(join(tmpdir(), "sceneaxi-project-git-config-outside-"));
@@ -414,7 +429,7 @@ describe("contained project Git service", () => {
     writeFileSync(wrapper, [
       "#!/bin/sh",
       "for arg in \"$@\"; do",
-      "  if [ \"$arg\" = \"add\" ]; then",
+      "  if [ \"$arg\" = \"add\" ] || [ \"$arg\" = \"hash-object\" ]; then",
       `    rm -f -- ${JSON.stringify(selected)}`,
       `    mkdir -- ${JSON.stringify(selected)}`,
       `    printf child > ${JSON.stringify(join(selected, "child.txt"))}`,
@@ -448,6 +463,99 @@ describe("contained project Git service", () => {
       ok: false,
       diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.filenameEncodingUnsupported },
     });
+  });
+
+  it("preserves a leading UTF-8 BOM in exact Git filenames", () => {
+    const { root } = repository("filename-bom");
+    const name = "\uFEFFnotes.txt";
+    const path = Buffer.concat([
+      Buffer.from(`${root}/`, "utf8"),
+      Buffer.from([0xef, 0xbb, 0xbf]),
+      Buffer.from("notes.txt", "utf8"),
+    ]);
+    writeFileSync(path, "bom filename\n");
+
+    expect(inspectProjectGit({ root })).toMatchObject({
+      ok: true,
+      state: { unrelatedChanges: [{ path: name }] },
+    });
+    expect(stageProjectGitPaths(mutationOptions(root), [name])).toMatchObject({ ok: true });
+    expect(git(root, "diff", "--cached", "--name-only", "-z")).toBe(`${name}\0`);
+  });
+
+  it("refuses a selected file that changes during prospective validation and cleans up", () => {
+    const { root } = repository("stage-revalidation-race");
+    const selected = join(root, "selected.txt");
+    const wrapper = join(root, "git-removes-selected-during-validation.sh");
+    writeFileSync(selected, "captured bytes\n");
+    writeFileSync(wrapper, [
+      "#!/bin/sh",
+      "for arg in \"$@\"; do",
+      "  if [ \"$arg\" = \"cat-file\" ]; then",
+      `    rm -f -- ${JSON.stringify(selected)}`,
+      "    break",
+      "  fi",
+      "done",
+      "exec git \"$@\"",
+      "",
+    ].join("\n"));
+    chmodSync(wrapper, 0o700);
+
+    expect(stageProjectGitPaths(
+      { ...mutationOptions(root), gitExecutable: wrapper },
+      ["selected.txt"],
+    )).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.selectionMismatch },
+    });
+    expect(git(root, "diff", "--cached", "--name-only").trim()).toBe("");
+    expect(readdirSync(join(root, ".git")).some((name) => name.startsWith(".sceneaxi-index-"))).toBe(false);
+    expect(readdirSync(root).filter((name) => name.startsWith(".sceneaxi-lock-"))).toEqual([]);
+  });
+
+  it("validates symlink and executable modes before index publication", () => {
+    const raced = repository("stage-mode-race");
+    const link = join(raced.root, "selected-link");
+    const wrapper = join(raced.root, "git-rewrites-selected-mode.sh");
+    symlinkSync("same-bytes", link);
+    writeFileSync(wrapper, [
+      "#!/bin/bash",
+      "args=(\"$@\")",
+      "for ((index = 0; index < ${#args[@]}; index += 1)); do",
+      "  if [[ \"${args[$index]}\" == \"add\" ]]; then",
+      `    rm -f -- ${JSON.stringify(link)}`,
+      `    printf same-bytes > ${JSON.stringify(link)}`,
+      "    git \"${args[@]}\"",
+      "    status=$?",
+      `    rm -f -- ${JSON.stringify(link)}`,
+      `    ln -s same-bytes ${JSON.stringify(link)}`,
+      "    exit $status",
+      "  fi",
+      "  if [[ \"${args[$index]}\" == \"120000\" ]]; then args[$index]=100644; fi",
+      "done",
+      "exec git \"${args[@]}\"",
+      "",
+    ].join("\n"));
+    chmodSync(wrapper, 0o700);
+
+    expect(stageProjectGitPaths(
+      { ...mutationOptions(raced.root), gitExecutable: wrapper },
+      ["selected-link"],
+    )).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.selectionMismatch },
+    });
+    expect(git(raced.root, "diff", "--cached", "--name-only").trim()).toBe("");
+
+    const exact = repository("stage-exact-modes");
+    writeFileSync(join(exact.root, "executable.sh"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+    symlinkSync("executable.sh", join(exact.root, "executable-link"));
+    expect(stageProjectGitPaths(
+      mutationOptions(exact.root),
+      ["executable-link", "executable.sh"],
+    )).toMatchObject({ ok: true });
+    expect(git(exact.root, "ls-files", "--stage", "executable-link").split(" ")[0]).toBe("120000");
+    expect(git(exact.root, "ls-files", "--stage", "executable.sh").split(" ")[0]).toBe("100755");
   });
 
   it("uses the live index lock protocol and discards a blocked prospective index", () => {
@@ -588,6 +696,40 @@ describe("contained project Git service", () => {
     expect(git(root, "diff", "--cached", "--name-only").trim()).toBe("");
   });
 
+  it("stages captured bytes without executing a filter introduced after preflight", () => {
+    const { root } = repository("filter-race");
+    const outside = mkdtempSync(join(tmpdir(), "sceneaxi-project-git-filter-race-outside-"));
+    roots.push(outside);
+    const sentinel = join(outside, "executed");
+    const wrapper = join(root, "git-introduces-filter.sh");
+    writeFileSync(join(root, ".gitattributes"), "notes.txt filter=escape\n");
+    writeFileSync(join(root, "notes.txt"), "captured without filter\n");
+    writeFileSync(wrapper, [
+      "#!/bin/sh",
+      "trigger=0",
+      "for arg in \"$@\"; do",
+      "  if [ \"$arg\" = \"add\" ] || [ \"$arg\" = \"hash-object\" ]; then trigger=1; fi",
+      "done",
+      "if [ \"$trigger\" = \"1\" ]; then",
+      `  git config --local filter.escape.clean ${JSON.stringify(`touch ${sentinel} && cat`)}`,
+      "  git \"$@\"",
+      "  status=$?",
+      "  git config --local --unset-all filter.escape.clean",
+      "  exit $status",
+      "fi",
+      "exec git \"$@\"",
+      "",
+    ].join("\n"));
+    chmodSync(wrapper, 0o700);
+
+    expect(stageProjectGitPaths(
+      { ...mutationOptions(root), gitExecutable: wrapper },
+      ["notes.txt"],
+    )).toMatchObject({ ok: true });
+    expect(existsSync(sentinel)).toBe(false);
+    expect(git(root, "show", ":notes.txt")).toBe("captured without filter\n");
+  });
+
   it("refuses evidence that cannot cross every local client transport", () => {
     const { root } = repository("large-diff");
     const largePath = join(root, "large.bin");
@@ -600,6 +742,22 @@ describe("contained project Git service", () => {
       ok: false,
       diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.evidenceTooLarge },
     });
+  });
+
+  it("refuses oversized selected files before reading or mutating Git state", () => {
+    const { root } = repository("selected-evidence-bound");
+    const selected = join(root, "huge-sparse.bin");
+    const beforeIndex = readFileSync(join(root, ".git", "index"));
+    const beforeObjects = git(root, "count-objects", "-v");
+    execFileSync("truncate", ["-s", "8G", selected]);
+
+    expect(stageProjectGitPaths(mutationOptions(root), ["huge-sparse.bin"])).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.evidenceTooLarge },
+    });
+    expect(readFileSync(join(root, ".git", "index"))).toEqual(beforeIndex);
+    expect(git(root, "count-objects", "-v")).toBe(beforeObjects);
+    expect(readdirSync(join(root, ".git")).some((name) => name.startsWith(".sceneaxi-index-"))).toBe(false);
   });
 
   it("returns a stable refusal for malformed journal storage without leaking a lock", () => {
@@ -691,6 +849,18 @@ describe("contained project Git service", () => {
       diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.recoveryPending },
     });
     writeFileSync(journalPath, "not valid json\n");
+    expect(stageProjectGitPaths(mutationOptions(root), ["notes.txt"])).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.recoveryPending },
+    });
+    unlinkSync(journalPath);
+    symlinkSync("missing-migration-journal.json", journalPath);
+    expect(stageProjectGitPaths(mutationOptions(root), ["notes.txt"])).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.recoveryPending },
+    });
+    unlinkSync(journalPath);
+    execFileSync("mkfifo", [journalPath]);
     expect(stageProjectGitPaths(mutationOptions(root), ["notes.txt"])).toMatchObject({
       ok: false,
       diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.recoveryPending },

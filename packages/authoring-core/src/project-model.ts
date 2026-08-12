@@ -348,7 +348,15 @@ export function projectMigrationRecoveryPending(root: string): boolean {
   const canonicalRoot = rootPath(root);
   if (typeof canonicalRoot !== "string") return true;
   const candidate = join(canonicalRoot, ...PROJECT_MIGRATION_JOURNAL_PATH.split("/"));
-  if (!existsSync(candidate)) return false;
+  try {
+    const stat = lstatSync(candidate);
+    if (stat.isSymbolicLink() || !stat.isFile()) return true;
+  } catch (error) {
+    const code = error instanceof Error && "code" in error
+      ? (error as NodeJS.ErrnoException).code
+      : undefined;
+    return code !== "ENOENT";
+  }
   const journalPath = containedPath(canonicalRoot, PROJECT_MIGRATION_JOURNAL_PATH, true);
   if (typeof journalPath !== "string") return true;
   const journal = parseJournal(readJson(journalPath));
