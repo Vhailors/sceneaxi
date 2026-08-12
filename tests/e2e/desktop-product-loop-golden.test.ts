@@ -15,7 +15,7 @@ import {
   type HTMLElement as HappyHTMLElement,
 } from "happy-dom";
 import { createDocument, writeDocumentFile } from "@sceneaxi/authoring-core";
-import type { JsonValue } from "@sceneaxi/schemas";
+import { EDITOR_COMMAND_REGISTRY, type JsonValue } from "@sceneaxi/schemas";
 import {
   DESKTOP_PRODUCT_REFUSALS,
   DESKTOP_VIEWPORT_PLAY_EVENT,
@@ -69,7 +69,7 @@ async function click(window: HappyWindow, selector: string) {
   const element = query(window, selector);
   if (element === null) throw new Error(`missing product-loop control ${selector}`);
   element.click();
-  for (let turn = 0; turn < 20; turn += 1) {
+  for (let turn = 0; turn < 60; turn += 1) {
     await Promise.resolve();
     if (window.document.querySelector("[data-busy]") === null) return;
   }
@@ -101,7 +101,7 @@ function requestOperation(request: unknown): string | null {
     case "run-play":
       return "open-path";
     default:
-      return null;
+      return typeof typed.payload?.commandId === "string" ? typed.payload.commandId : null;
   }
 }
 
@@ -117,7 +117,13 @@ function mountChrome(
   dir: string,
   intercept?: (port: ChromeHarnessPort) => (request: unknown) => Promise<unknown>,
 ) {
-  const bridge = createDesktopBridge({ cwd: dir, nowMs: () => 1_753_920_000_000 });
+  const bridge = createDesktopBridge({
+    cwd: dir,
+    nowMs: () => 1_753_920_000_000,
+    commandCapabilities: [...new Set(
+      EDITOR_COMMAND_REGISTRY.map((command) => command.capability.id),
+    )],
+  });
   const window = new HappyWindow({ width: 1000, height: 700 });
   windows.push(window);
   const ipcClone = <T>(value: T): T => window.eval(`(${JSON.stringify(value)})`) as T;
@@ -447,29 +453,34 @@ describe("desktop first-release product loop", () => {
     expect(requests).toHaveLength(stageConflictRequests);
     // Re-reading the document is that resolution.
     await click(window, "#project-open");
-    expect(requests).toHaveLength(stageConflictRequests + 1);
+    expect(requests).toHaveLength(stageConflictRequests + 2);
     await click(window, "#change-review-reject");
     expect(status()).toContain("nothing under review · DESKTOP_PROPOSAL_NOT_REVIEWING");
-    expect(requests).toHaveLength(stageConflictRequests + 1);
+    expect(requests).toHaveLength(stageConflictRequests + 2);
 
     expect(requests.map((request) => requestOperation(request) ?? request.action)).toEqual([
       "status",
+      "scene-hierarchy-inspect",
       "propose",
       "propose",
       "reject",
       "reject",
       "status",
+      "scene-hierarchy-inspect",
       "propose",
       "accept",
       "status",
+      "scene-hierarchy-inspect",
       "propose",
       "accept",
       "reject",
       "reject",
       "status",
+      "scene-hierarchy-inspect",
       "propose",
       "propose",
       "status",
+      "scene-hierarchy-inspect",
     ]);
   });
 
@@ -744,20 +755,27 @@ describe("desktop first-release product loop", () => {
 
     expect(requests.map((request) => requestOperation(request) ?? request.action)).toEqual([
       "status",
+      "scene-hierarchy-inspect",
       "propose",
       "status",
+      "scene-hierarchy-inspect",
       "propose",
       "reject",
       "status",
+      "scene-hierarchy-inspect",
       "status",
+      "scene-hierarchy-inspect",
       "propose",
       "accept",
       "restart",
+      "scene-hierarchy-inspect",
       "status",
+      "scene-hierarchy-inspect",
       "propose",
       "accept",
       "recover",
       "restart",
+      "scene-hierarchy-inspect",
       "open-path",
       "open-path",
     ]);

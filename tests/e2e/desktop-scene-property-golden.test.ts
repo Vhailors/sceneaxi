@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { parseDocumentText } from "@sceneaxi/authoring-core";
+import { createEditorCommandInvocation } from "@sceneaxi/schemas";
 import { ExitCode, runCli } from "../../packages/cli/src/index.ts";
 import { shellProposeAndApply } from "../../apps/desktop-shell/src/index.ts";
 import {
@@ -33,7 +34,18 @@ function editableStatus(bridge: ReturnType<typeof createDesktopBridge>) {
     payload: { op: "status", documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
   });
   if (!response.ok) throw new Error(response.reason);
-  return response.data as {
+  const inspected = bridge.handle({
+    action: "command",
+    payload: createEditorCommandInvocation("scene-hierarchy-inspect", "desktop-control", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      profile: "game",
+    }),
+  });
+  if (!inspected.ok) throw new Error(inspected.reason);
+  return {
+    ...response.data,
+    editableScene: inspected.data,
+  } as {
     ok: true;
     contentHash: string;
     data: Record<string, unknown>;
@@ -101,11 +113,9 @@ describe("desktop typed Scene Document edit golden", () => {
     });
     expect(reopened.ok).toBe(true);
     if (!reopened.ok) return;
-    expect(reopened.data).toMatchObject({
-      ok: true,
-      editableScene: { ok: true },
-    });
-    const reopenedData = reopened.data as {
+    expect(reopened.data).toMatchObject({ ok: true });
+    expect(reopened.data).not.toHaveProperty("editableScene");
+    const reopenedData = editableStatus(bridge) as {
       editableScene: { entities: Array<{ id: string; properties: Array<{ id: string; value: number }> }> };
     };
     expect(reopenedData.editableScene.entities.find(
@@ -128,7 +138,7 @@ describe("desktop typed Scene Document edit golden", () => {
 
   it("returns the shared validation diagnostic and the CLI conflict reason", () => {
     const dir = seed("refusals");
-    const bridge = createDesktopBridge({ cwd: dir });
+    const bridge = createDesktopBridge({ cwd: dir, commandCapabilities: ["scene.compose"] });
     const opened = editableStatus(bridge);
     const invalid = bridge.handle({
       action: "authoring",
@@ -185,7 +195,7 @@ describe("desktop typed Scene Document edit golden", () => {
     const parsed = parseDocumentText(initial);
     if (!parsed.ok) throw new Error(parsed.message);
 
-    const bridge = createDesktopBridge({ cwd: desktopDir });
+    const bridge = createDesktopBridge({ cwd: desktopDir, commandCapabilities: ["scene.compose"] });
     const status = editableStatus(bridge);
     const desktop = bridge.handle({
       action: "authoring",

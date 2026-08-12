@@ -968,7 +968,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         retireRarityAssistantResult(result.evidence, reason ?? "namespace-replaced");
       }
     };
-    const statusWithProperties = (
+    const statusWithEvidence = (
       live: DesktopSession,
       documentPath: string,
       retirementReason?: DesktopRarityRetirementReason,
@@ -1001,20 +1001,10 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         reconcileRarityAssistantDocument(refused, retirementReason);
         return refused;
       }
-      const editableScene = inspectDesktopSceneProperties({
-        documentData: status.data,
-        contentHash: status.contentHash,
-        documentPath,
-        ...(selectedSceneInstanceIds.length === 0
-          ? {}
-          : { selection: selectedSceneInstanceIds }),
-      });
-      if (editableScene.ok) selectedSceneInstanceIds = editableScene.selection.instanceIds;
       const enriched = Object.freeze({
         ...status,
         ...rarity.value,
         authoringSnapshot: withRarityProposalEvidence(live.snapshot()),
-        editableScene,
       });
       reconcileRarityAssistantDocument(enriched, retirementReason);
       return enriched;
@@ -1094,7 +1084,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       const restartedEvidence = rarityProposalEvidence;
       rarityProposalEvidence = null;
       pendingAssetImport = null;
-      const restarted = statusWithProperties(session, documentPath);
+      const restarted = statusWithEvidence(session, documentPath);
       if (restartedEvidence !== null) {
         if (
           restarted.ok &&
@@ -1132,7 +1122,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           "authoring status requires a documentPath string inside the project directory.",
         );
       }
-      return bridgeOk("authoring", statusWithProperties(live, documentPath));
+      return bridgeOk("authoring", statusWithEvidence(live, documentPath));
     }
     if (op === "edit-scene") {
       const documentPath = containedDocumentPath(field(payload, "documentPath"));
@@ -1156,6 +1146,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       );
       const selectionWasStale = priorSelection?.ok === false &&
         priorSelection.reason === DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale;
+      if (selectionWasStale) return bridgeOk("authoring", priorSelection);
       const staged = stageDesktopSceneEdit({
         documentData: status.data,
         contentHash: expectedContentHash,
@@ -1168,18 +1159,14 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       if (snapshot.phase !== "reviewing" || (snapshot.diagnostics?.length ?? 0) > 0) {
         return bridgeOk("authoring", withRarityProposalEvidence(snapshot));
       }
-      if (!selectionWasStale) selectedSceneInstanceIds = staged.selectedInstanceIds;
+      selectedSceneInstanceIds = staged.selectedInstanceIds;
       return bridgeOk(
         "authoring",
         Object.freeze({
           ...snapshot,
-          editableScene: selectionWasStale ? priorSelection : staged.inspection,
-          ...(selectionWasStale
-            ? {}
-            : {
-                selectedInstanceId: staged.selectedInstanceId,
-                selectedInstanceIds: staged.selectedInstanceIds,
-              }),
+          editableScene: staged.inspection,
+          selectedInstanceId: staged.selectedInstanceId,
+          selectedInstanceIds: staged.selectedInstanceIds,
           sceneEditOperation: staged.operation,
         }),
       );
@@ -1314,7 +1301,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         appliedDocumentPath !== null &&
         result.restoredPaths.includes(appliedDocumentPath)
       ) {
-        statusWithProperties(live, appliedDocumentPath, op === "redo" ? "namespace-replaced" : "undo");
+        statusWithEvidence(live, appliedDocumentPath, op === "redo" ? "namespace-replaced" : "undo");
       }
       rarityProposalEvidence = null;
       pendingAssetImport = null;
@@ -2043,17 +2030,21 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         return commandTransaction(validated.command.id, authoring({ op: "redo" }));
       case "scene-hierarchy-inspect": {
         const documentPath = input["documentPath"];
-        const inspected = authoring({ op: "status", documentPath });
-        if (!inspected.ok) return inspected;
-        const hierarchy = field(inspected.data, "editableScene");
-        if (field(hierarchy, "ok") !== true) {
-          return bridgeOk("command", hierarchy);
-        }
-        return bridgeOk("command", Object.freeze({
-          hierarchy: field(hierarchy, "hierarchy"),
-          selection: field(hierarchy, "selection"),
-          contentHash: field(hierarchy, "contentHash"),
-        }));
+        const read = readActiveDocument(
+          { documentPath },
+          SCENE_DOCUMENT_REFUSALS,
+        );
+        if (!read.ok) return bridgeRefuse(read.reason, read.message);
+        const inspected = inspectDesktopSceneProperties({
+          documentData: read.status.data,
+          contentHash: read.status.contentHash,
+          documentPath: String(documentPath),
+          ...(selectedSceneInstanceIds.length === 0
+            ? {}
+            : { selection: selectedSceneInstanceIds }),
+        });
+        if (inspected.ok) selectedSceneInstanceIds = inspected.selection.instanceIds;
+        return bridgeOk("command", inspected);
       }
       case "scene-selection-set": {
         const documentPath = input["documentPath"];
@@ -2108,6 +2099,9 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         });
         if (!staged.ok) return staged;
         if (field(staged.data, "ok") === false) {
+          if (field(staged.data, "reason") === DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale) {
+            return bridgeOk("command", staged.data);
+          }
           const diagnostics = field(staged.data, "diagnostics");
           const diagnostic = Array.isArray(diagnostics) ? diagnostics[0] : undefined;
           return bridgeRefuse(

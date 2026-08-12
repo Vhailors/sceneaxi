@@ -90,28 +90,28 @@ describe("desktop mounted control inventory", () => {
       data: {},
       contentHash: `sha256:${"3".repeat(64)}`,
       authoringSnapshot: snapshot,
-      editableScene: {
-        ok: true,
-        selection: { instanceIds: ["child-instance"], primaryInstanceId: "child-instance" },
-        entities: [
-          {
-            id: "root-instance",
-            label: "Root",
-            artifactId: "root-object",
-            parentInstanceId: null,
-            depth: 0,
-            properties,
-          },
-          {
-            id: "child-instance",
-            label: "Child",
-            artifactId: "child-object",
-            parentInstanceId: "root-instance",
-            depth: 1,
-            properties,
-          },
-        ],
-      },
+    };
+    const inspection = {
+      ok: true,
+      selection: { instanceIds: ["child-instance"], primaryInstanceId: "child-instance" },
+      entities: [
+        {
+          id: "root-instance",
+          label: "Root",
+          artifactId: "root-object",
+          parentInstanceId: null,
+          depth: 0,
+          properties,
+        },
+        {
+          id: "child-instance",
+          label: "Child",
+          artifactId: "child-object",
+          parentInstanceId: "root-instance",
+          depth: 1,
+          properties,
+        },
+      ],
     };
     const window = mount(undefined, {
       project: async () => ({
@@ -123,7 +123,9 @@ describe("desktop mounted control inventory", () => {
           },
         },
       }),
-      request: async () => ({ ok: true, data: status }),
+      request: async (request) => (request as { action?: string }).action === "command"
+        ? { ok: true, data: inspection }
+        : { ok: true, data: status },
     });
     await settle();
 
@@ -179,7 +181,24 @@ describe("desktop mounted control inventory", () => {
       }),
       request: async (request) => {
         requests.push(request);
-        if ((request as { action?: string }).action === "command") {
+        const commandId = (request as { action?: string; payload?: { commandId?: string } }).payload?.commandId;
+        if (commandId === "scene-hierarchy-inspect") {
+          return {
+            ok: true,
+            data: {
+              ok: false,
+              reason: "SCENE_HIERARCHY_SELECTION_STALE",
+              diagnostics: [{
+                code: "SCENE_HIERARCHY_SELECTION_STALE",
+                message: "The prior selection no longer exists.",
+              }],
+              contentHash: `sha256:${"4".repeat(64)}`,
+              entities,
+              hierarchy,
+            },
+          };
+        }
+        if (commandId === "scene-selection-set") {
           return {
             ok: true,
             data: {
@@ -210,17 +229,6 @@ describe("desktop mounted control inventory", () => {
               transactionId: "undo-1",
               diagnostics: null,
             },
-            editableScene: {
-              ok: false,
-              reason: "SCENE_HIERARCHY_SELECTION_STALE",
-              diagnostics: [{
-                code: "SCENE_HIERARCHY_SELECTION_STALE",
-                message: "The prior selection no longer exists.",
-              }],
-              contentHash: `sha256:${"4".repeat(64)}`,
-              entities,
-              hierarchy,
-            },
           },
         };
       },
@@ -243,7 +251,7 @@ describe("desktop mounted control inventory", () => {
     await settle();
 
     const commandRequest = requests.find((request) =>
-      (request as { action?: string }).action === "command"
+      (request as { action?: string; payload?: { commandId?: string } }).payload?.commandId === "scene-selection-set"
     ) as { payload?: { profile?: string; input?: { profile?: string; instanceIds?: string[] } } };
     expect(commandRequest).toMatchObject({
       payload: {
@@ -287,13 +295,13 @@ describe("desktop mounted control inventory", () => {
         transactionId: null,
         diagnostics: null,
       },
-      editableScene: {
-        ok: true,
-        contentHash: `sha256:${"5".repeat(64)}`,
-        entities,
-        hierarchy,
-        selection: { schemaVersion: 1, instanceIds: ["root"], primaryInstanceId: "root" },
-      },
+    };
+    const inspection = {
+      ok: true,
+      contentHash: `sha256:${"5".repeat(64)}`,
+      entities,
+      hierarchy,
+      selection: { schemaVersion: 1, instanceIds: ["root"], primaryInstanceId: "root" },
     };
     const selectionRequests: Array<{
       input: string[];
@@ -314,6 +322,9 @@ describe("desktop mounted control inventory", () => {
         const command = request as { action?: string; payload?: { commandId?: string; input?: { instanceIds?: string[] } } };
         if (command.action !== "command") return { ok: true, data: status };
         commandRequests.push(command);
+        if (command.payload?.commandId === "scene-hierarchy-inspect") {
+          return { ok: true, data: inspection };
+        }
         if (command.payload?.commandId !== "scene-selection-set") {
           return { ok: false, reason: "EXPECTED_STAGING_REFUSAL", message: "Request observed." };
         }

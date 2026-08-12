@@ -2404,6 +2404,27 @@ if (shell) {
     });
   };
 
+  const syncSceneHierarchy = async () => {
+    const response = await commandRequest('scene-hierarchy-inspect', {
+      documentPath: T.product.documentPath,
+      profile: shell.dataset.profile,
+    });
+    if (response?.ok && response.data && typeof response.data === 'object') {
+      return syncSceneProperties({ editableScene: response.data });
+    }
+    const diagnostic = responseDiagnostic(response) || {
+      code: T.product.refusals.authoringRefused,
+      message: T.product.refusals.authoringRefused,
+    };
+    return syncSceneProperties({
+      editableScene: {
+        ok: false,
+        reason: diagnostic.code,
+        diagnostics: [diagnostic],
+      },
+    });
+  };
+
   const restartProject = async (diagnostic) => {
     productStatus('recovering', T.product.documentPath + ' · ' + diagnostic + ' · re-opening fresh session…');
     const response = await runtimeRequest({
@@ -2460,7 +2481,7 @@ if (shell) {
           : { retired: 'session-restarted', evidence: restartedRarityEvidence },
       }));
     }
-    syncSceneProperties(status);
+    await syncSceneHierarchy();
     undoAvailability = status.undoAvailability === 'available' || status.undoAvailability === 'recovery-pending'
       ? status.undoAvailability
       : 'unavailable';
@@ -2517,7 +2538,7 @@ if (shell) {
     projectData = status.data;
     projectContentHash = status.contentHash;
     reconcileRarityEvidence(status);
-    syncSceneProperties(status);
+    await syncSceneHierarchy();
     undoAvailability = status.undoAvailability === 'available' || status.undoAvailability === 'recovery-pending'
       ? status.undoAvailability
       : 'unavailable';
@@ -2543,7 +2564,7 @@ if (shell) {
     projectData = status.data;
     projectContentHash = status.contentHash;
     reconcileRarityEvidence(status);
-    syncSceneProperties(status);
+    await syncSceneHierarchy();
     projectDirty = false;
     projectRecovering = false;
     undoAvailability = status.undoAvailability === 'available' || status.undoAvailability === 'recovery-pending'
@@ -2717,6 +2738,9 @@ if (shell) {
     if (diagnostic !== null || reviewProjection(snapshot) === null) {
       const code = diagnostic?.code || T.product.refusals.proposalNotReviewing;
       const detail = diagnostic?.message || T.product.refusals.proposalNotReviewing;
+      if (snapshot?.ok === false && snapshot.hierarchy && Array.isArray(snapshot.entities)) {
+        syncSceneProperties({ editableScene: snapshot });
+      }
       if (message) message.textContent = code + ' · ' + detail;
       productStatus('refused', 'Edit refused · ' + code + ' · ' + detail);
       if (code === 'content-hash-conflict') {

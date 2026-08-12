@@ -26,7 +26,7 @@ import { join, sep } from "node:path";
 import { BrowserWindow, app, dialog, ipcMain } from "electron";
 import { DESKTOP_MINIMUM_WINDOW } from "@sceneaxi/desktop-shell";
 import { inspectProjectModel } from "@sceneaxi/authoring-core";
-import { parseDeliveryHandoffText } from "@sceneaxi/schemas";
+import { createEditorCommandInvocation, parseDeliveryHandoffText } from "@sceneaxi/schemas";
 import { DESKTOP_BYO_CONFIGURATION_CHANNEL } from "../lib/byo-configuration-contract.js";
 import {
   DESKTOP_ACTIVE_DOCUMENT_PATH,
@@ -431,7 +431,15 @@ async function start(): Promise<void> {
   });
   if (!opened.ok) fail(`authoring status refused: ${opened.reason}`);
   const openedHash = payloadField(opened.data, "contentHash");
-  const editableScene = payloadField(opened.data, "editableScene");
+  const openedHierarchy = proofBridge.handle({
+    action: "command",
+    payload: createEditorCommandInvocation("scene-hierarchy-inspect", "desktop-control", {
+      documentPath: SAMPLE_DOCUMENT,
+      profile: "game",
+    }),
+  });
+  if (!openedHierarchy.ok) fail(`hierarchy inspection refused: ${openedHierarchy.reason}`);
+  const editableScene = openedHierarchy.data;
   const editableEntities = payloadField(editableScene, "entities");
   const editableEntity = Array.isArray(editableEntities)
     ? editableEntities.find(
@@ -594,7 +602,15 @@ async function start(): Promise<void> {
     payload: { op: "restart", documentPath: SAMPLE_DOCUMENT },
   });
   if (!reopened.ok) fail(`authoring reopen refused: ${reopened.reason}`);
-  const reopenedScene = payloadField(reopened.data, "editableScene");
+  const reopenedHierarchy = proofBridge.handle({
+    action: "command",
+    payload: createEditorCommandInvocation("scene-hierarchy-inspect", "desktop-control", {
+      documentPath: SAMPLE_DOCUMENT,
+      profile: "game",
+    }),
+  });
+  if (!reopenedHierarchy.ok) fail(`reopened hierarchy inspection refused: ${reopenedHierarchy.reason}`);
+  const reopenedScene = reopenedHierarchy.data;
   const reopenedEntities = payloadField(reopenedScene, "entities");
   const reopenedEntity = Array.isArray(reopenedEntities)
     ? reopenedEntities.find(
