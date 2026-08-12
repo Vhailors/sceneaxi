@@ -13,8 +13,10 @@ import { resolve } from "node:path";
 import {
   canonicalPath,
   contentHash,
+  applyRedoAvailability,
   applyUndoAvailability,
   parseDocumentText,
+  redoLastApply,
   resolveApplyTransaction,
   undoLastApply,
   type ApplyUndoAvailability,
@@ -54,6 +56,7 @@ export type DesktopDocumentStatus =
       readonly contentByteLength: number;
       readonly dataKeys: readonly string[];
       readonly undoAvailability: ApplyUndoAvailability;
+      readonly redoAvailability: ApplyUndoAvailability;
       /** Validated document data for project-loop proposals; never executable. */
       readonly data: Readonly<Record<string, unknown>>;
     }
@@ -64,8 +67,10 @@ export type DesktopDocumentStatus =
     };
 
 export type DesktopUndoResult =
-  | { readonly ok: true; readonly restoredPaths: readonly string[] }
+  | { readonly ok: true; readonly transactionId: string; readonly restoredPaths: readonly string[] }
   | { readonly ok: false; readonly diagnostics: readonly ApplyDiagnostic[] };
+
+export type DesktopRedoResult = DesktopUndoResult;
 
 export type DesktopSession = {
   /** Current review surface (diff, phase, diagnostics). */
@@ -82,13 +87,17 @@ export type DesktopSession = {
   status(documentPath: string): DesktopDocumentStatus;
   /** Undo the last completed apply. */
   undo(): DesktopUndoResult;
+  /** Redo the next durable entry without discarding a staged proposal. */
+  redo(): DesktopRedoResult;
 };
 
 export type DesktopSessionOperations = {
   readonly applyProposal: typeof shellApply;
   readonly applyUndoAvailability: typeof applyUndoAvailability;
+  readonly applyRedoAvailability: typeof applyRedoAvailability;
   readonly resolveTransaction: typeof resolveApplyTransaction;
   readonly undoLastApply: typeof undoLastApply;
+  readonly redoLastApply: typeof redoLastApply;
 };
 
 export type DesktopSessionOptions = {
@@ -133,9 +142,12 @@ export function createDesktopSession(
     applyProposal: options.operations?.applyProposal ?? shellApply,
     applyUndoAvailability:
       options.operations?.applyUndoAvailability ?? applyUndoAvailability,
+    applyRedoAvailability:
+      options.operations?.applyRedoAvailability ?? applyRedoAvailability,
     resolveTransaction:
       options.operations?.resolveTransaction ?? resolveApplyTransaction,
     undoLastApply: options.operations?.undoLastApply ?? undoLastApply,
+    redoLastApply: options.operations?.redoLastApply ?? redoLastApply,
   });
 
   let phase: DesktopPhase = "idle";
@@ -255,7 +267,7 @@ export function createDesktopSession(
       appliedCwdHistory.push(cwd ?? sessionCwd);
       sessionApplyHistoryStarted = true;
       journalRecoveryPending = result.journalRecoveryPending === true;
-      pendingTransactionId = result.transactionId ?? null;
+      pendingTransactionId = result.transactionId;
       diagnostics = null;
       // Keep renderedDiff so the surface can still show what was accepted.
       return snap();
@@ -377,11 +389,24 @@ export function createDesktopSession(
             ? "unavailable"
             : operations.applyUndoAvailability({ cwd: sessionCwd });
         })(),
+        redoAvailability: journalRecoveryPending
+          ? "recovery-pending"
+          : operations.applyRedoAvailability({ cwd: appliedCwdHistory.at(-1) ?? sessionCwd }),
         data: deepFreeze(structuredClone(validation.document.data)),
       };
     },
 
     undo(): DesktopUndoResult {
+      if (phase === "reviewing" && proposal !== null) {
+        return {
+          ok: false,
+          diagnostics: [{
+            code: "invalid-transaction-phase",
+            message: "Undo is refused while a proposal is explicitly staged for review.",
+            reReadHint: "Accept or reject the staged proposal before changing committed history.",
+          }],
+        };
+      }
       // Session-originated applies are undone LIFO by canonical root; once exhausted, this session never falls back to another root.
       const appliedCwd = appliedCwdHistory.at(-1);
       if (appliedCwd === undefined && sessionApplyHistoryStarted) {
@@ -403,7 +428,24 @@ export function createDesktopSession(
       }
       if (appliedCwd !== undefined) appliedCwdHistory.pop();
       clearProposal("idle");
-      return { ok: true, restoredPaths: result.documentPaths };
+      return { ok: true, transactionId: result.transactionId, restoredPaths: result.documentPaths };
+    },
+
+    redo(): DesktopRedoResult {
+      if (phase === "reviewing" && proposal !== null) {
+        return {
+          ok: false,
+          diagnostics: [{
+            code: "invalid-transaction-phase",
+            message: "Redo is refused while a proposal is explicitly staged for review.",
+            reReadHint: "Accept or reject the staged proposal before changing committed history.",
+          }],
+        };
+      }
+      const result = operations.redoLastApply({ cwd: sessionCwd });
+      if (!result.ok) return { ok: false, diagnostics: result.diagnostics };
+      clearProposal("idle");
+      return { ok: true, transactionId: result.transactionId, restoredPaths: result.documentPaths };
     },
   };
 }

@@ -36,6 +36,8 @@ export const EDITOR_COMMAND_REFUSALS = Object.freeze({
   permissionDenied: "EDITOR_COMMAND_PERMISSION_DENIED",
   capabilityDenied: "EDITOR_COMMAND_CAPABILITY_DENIED",
   kidsDenied: "EDITOR_COMMAND_KIDS_DENIED",
+  staleBase: "EDITOR_COMMAND_STALE_BASE_VERSION",
+  invalidPhase: "EDITOR_COMMAND_INVALID_PHASE",
   activeJobMismatch: "EDITOR_COMMAND_ACTIVE_JOB_MISMATCH",
 } as const);
 
@@ -52,6 +54,7 @@ export type EditorCommandId =
   | "project-save"
   | "ship-export-web"
   | "edit-undo"
+  | "edit-redo"
   | "run-play"
   | "change-review-accept"
   | "change-review-reject"
@@ -99,6 +102,7 @@ export type EditorCommandDefinition = Readonly<{
       | "project-migration-evidence"
       | "authoring-snapshot"
       | "undo-result"
+      | "redo-result"
       | "kernel-session"
       | "sculpt-artifact"
       | "rarity-proposal"
@@ -107,8 +111,8 @@ export type EditorCommandDefinition = Readonly<{
   }>;
   refusals: readonly string[];
   undo: Readonly<{
-    kind: "none" | "records-entry" | "consumes-entry";
-    commandId: "edit-undo" | null;
+    kind: "none" | "records-entry" | "consumes-entry" | "replays-entry";
+    commandId: "edit-undo" | "edit-redo" | null;
   }>;
   inputSchema: JsonObject;
   inputShape: "none" | "document" | "export" | "assistant" | "assistant-agent" | "job" | "migration-approval";
@@ -119,6 +123,7 @@ export type EditorCommandInvocation = Readonly<{
   commandId: EditorCommandId;
   client: EditorCommandClient;
   permission: EditorCommandPermission;
+  profile?: "game" | "web" | "kids";
   input: JsonObject;
 }>;
 
@@ -148,6 +153,20 @@ export type EditorCommandTerminalResult = Readonly<{
   progress: EditorCommandProgress;
   evidenceKind: EditorCommandDefinition["evidence"]["kind"];
   resultTarget: EditorCommandResultTarget;
+  refusal: string | null;
+}>;
+
+export type EditorCommandTransactionResult = Readonly<{
+  schemaVersion: typeof EDITOR_COMMAND_SCHEMA_VERSION;
+  commandId: EditorCommandId;
+  transactionId: string | null;
+  status: "completed" | "recovery-pending" | "refused";
+  progress: EditorCommandProgress;
+  evidence: Readonly<{
+    kind: EditorCommandDefinition["evidence"]["kind"];
+    target: EditorCommandResultTarget;
+    documentPaths: readonly string[];
+  }>;
   refusal: string | null;
 }>;
 
@@ -250,7 +269,7 @@ const evidence = (
 ) => Object.freeze({ kind, target });
 const undo = (
   kind: EditorCommandDefinition["undo"]["kind"],
-  commandId: "edit-undo" | null = null,
+  commandId: "edit-undo" | "edit-redo" | null = null,
 ) => Object.freeze({ kind, commandId });
 
 function definition(
@@ -379,7 +398,7 @@ const DEFINITIONS = [
     mutation: "commits-project",
     progress: immediate(),
     evidence: evidence("authoring-snapshot", "change-review"),
-    refusals: [...BASE_REFUSALS, "DESKTOP_PROPOSAL_NOT_REVIEWING"],
+    refusals: [...BASE_REFUSALS, EDITOR_COMMAND_REFUSALS.staleBase, "DESKTOP_PROPOSAL_NOT_REVIEWING"],
     undo: undo("records-entry", "edit-undo"),
     inputSchema: noInput,
     inputShape: "none",
@@ -394,8 +413,23 @@ const DEFINITIONS = [
     mutation: "reverts-project",
     progress: immediate(),
     evidence: evidence("undo-result", "project"),
-    refusals: [...BASE_REFUSALS, "DESKTOP_UNDO_UNAVAILABLE"],
-    undo: undo("consumes-entry"),
+    refusals: [...BASE_REFUSALS, EDITOR_COMMAND_REFUSALS.invalidPhase, "DESKTOP_UNDO_UNAVAILABLE"],
+    undo: undo("consumes-entry", "edit-redo"),
+    inputSchema: noInput,
+    inputShape: "none",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "edit-redo",
+    label: "Redo",
+    acceptedClients: CLIENTS,
+    permission: "project:write",
+    capability: capability("authoring.redo"),
+    mutation: "reverts-project",
+    progress: immediate(["validating", "restoring", "completed"]),
+    evidence: evidence("redo-result", "project"),
+    refusals: [...BASE_REFUSALS, EDITOR_COMMAND_REFUSALS.invalidPhase, "DESKTOP_REDO_UNAVAILABLE"],
+    undo: undo("replays-entry", "edit-undo"),
     inputSchema: noInput,
     inputShape: "none",
   }),
@@ -424,7 +458,7 @@ const DEFINITIONS = [
     mutation: "commits-project",
     progress: immediate(),
     evidence: evidence("authoring-snapshot", "change-review"),
-    refusals: [...BASE_REFUSALS, "DESKTOP_PROPOSAL_NOT_REVIEWING"],
+    refusals: [...BASE_REFUSALS, EDITOR_COMMAND_REFUSALS.staleBase, "DESKTOP_PROPOSAL_NOT_REVIEWING"],
     undo: undo("records-entry", "edit-undo"),
     inputSchema: noInput,
     inputShape: "none",
@@ -633,7 +667,7 @@ export function validateEditorCommandInvocation(
   if (!isCommandObject(value)) {
     return refusal(EDITOR_COMMAND_REFUSALS.inputInvalid, "A command invocation must be an object.");
   }
-  const invocationKeys = ["schemaVersion", "commandId", "client", "permission", "input"];
+  const invocationKeys = ["schemaVersion", "commandId", "client", "permission", "profile", "input"];
   if (Object.keys(value).some((key) => !invocationKeys.includes(key))) {
     return refusal(
       EDITOR_COMMAND_REFUSALS.inputInvalid,
@@ -665,6 +699,16 @@ export function validateEditorCommandInvocation(
       `${command.id} requires permission ${command.permission}.`,
     );
   }
+  const profile = value["profile"];
+  if (profile !== undefined && profile !== "game" && profile !== "web" && profile !== "kids") {
+    return refusal(EDITOR_COMMAND_REFUSALS.inputInvalid, "The editor command profile is invalid.");
+  }
+  if (profile === "kids") {
+    return refusal(
+      EDITOR_COMMAND_REFUSALS.kidsDenied,
+      `${command.id} is denied for Kids before execution.`,
+    );
+  }
   const input = value["input"];
   if (!validateEditorCommandInput(command, input)) {
     return refusal(
@@ -689,6 +733,7 @@ export function createEditorCommandInvocation(
   commandId: EditorCommandId,
   client: EditorCommandClient,
   input: JsonObject,
+  profile?: "game" | "web" | "kids",
 ): EditorCommandInvocation {
   const command = editorCommand(commandId);
   if (command === undefined) registryError(`invocation names unknown command ${commandId}`);
@@ -697,6 +742,7 @@ export function createEditorCommandInvocation(
     commandId,
     client,
     permission: command.permission,
+    ...(profile === undefined ? {} : { profile }),
     input,
   });
   const validated = validateEditorCommandInvocation(invocation);
@@ -734,6 +780,42 @@ export function editorCommandTerminalResult(input: Readonly<{
     }),
     evidenceKind: command.evidence.kind,
     resultTarget: command.evidence.target,
+    refusal: input.refusal ?? null,
+  });
+}
+
+export function editorCommandTransactionResult(input: Readonly<{
+  commandId: EditorCommandId;
+  transactionId?: string;
+  status: EditorCommandTransactionResult["status"];
+  phase: string;
+  percent: number;
+  message: string;
+  terminal: boolean;
+  documentPaths?: readonly string[];
+  refusal?: string;
+}>): EditorCommandTransactionResult {
+  const command = editorCommand(input.commandId);
+  if (command === undefined) registryError(`transaction result names unknown command ${input.commandId}`);
+  if (!Number.isFinite(input.percent) || input.percent < 0 || input.percent > 100) {
+    registryError(`transaction result for ${input.commandId} has unbounded progress`);
+  }
+  return Object.freeze({
+    schemaVersion: EDITOR_COMMAND_SCHEMA_VERSION,
+    commandId: input.commandId,
+    transactionId: input.transactionId ?? null,
+    status: input.status,
+    progress: Object.freeze({
+      phase: input.phase,
+      percent: input.percent,
+      message: input.message,
+      terminal: input.terminal,
+    }),
+    evidence: Object.freeze({
+      kind: command.evidence.kind,
+      target: command.evidence.target,
+      documentPaths: Object.freeze([...(input.documentPaths ?? [])]),
+    }),
     refusal: input.refusal ?? null,
   });
 }

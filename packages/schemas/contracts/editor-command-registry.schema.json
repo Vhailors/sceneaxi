@@ -25,6 +25,7 @@
             "project-open",
             "project-save",
             "edit-undo",
+            "edit-redo",
             "run-play",
             "change-review-accept",
             "change-review-reject",
@@ -64,7 +65,7 @@
           "additionalProperties": false,
           "required": ["kind", "target"],
           "properties": {
-            "kind": { "enum": ["none", "project-binding", "project-inspection", "project-migration-proposal", "project-migration-evidence", "authoring-snapshot", "undo-result", "kernel-session", "sculpt-artifact", "rarity-proposal", "command-progress"] },
+            "kind": { "enum": ["none", "project-binding", "project-inspection", "project-migration-proposal", "project-migration-evidence", "authoring-snapshot", "undo-result", "redo-result", "kernel-session", "sculpt-artifact", "rarity-proposal", "command-progress"] },
             "target": { "enum": ["none", "project", "change-review", "live-viewport"] }
           }
         },
@@ -74,8 +75,8 @@
           "additionalProperties": false,
           "required": ["kind", "commandId"],
           "properties": {
-            "kind": { "enum": ["none", "records-entry", "consumes-entry"] },
-            "commandId": { "enum": ["edit-undo", null] }
+            "kind": { "enum": ["none", "records-entry", "consumes-entry", "replays-entry"] },
+            "commandId": { "enum": ["edit-undo", "edit-redo", null] }
           }
         },
         "inputSchema": { "type": "object" },

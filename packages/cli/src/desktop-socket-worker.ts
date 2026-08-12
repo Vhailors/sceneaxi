@@ -76,12 +76,14 @@ function validResponse(value: unknown, id: string): boolean {
     return Object.keys(value).length === 4 && Object.hasOwn(value, "result");
   }
   const error = own(value, "error");
+  const transaction = own(error, "transaction");
   return Object.keys(value).length === 4 &&
     typeof error === "object" && error !== null && !Array.isArray(error) &&
-    Object.keys(error).length === 3 &&
+    [3, 4].includes(Object.keys(error).length) &&
     typeof own(error, "code") === "string" &&
     typeof own(error, "message") === "string" &&
-    (typeof own(error, "detail") === "string" || own(error, "detail") === null);
+    (typeof own(error, "detail") === "string" || own(error, "detail") === null) &&
+    (transaction === undefined || (typeof transaction === "object" && transaction !== null && !Array.isArray(transaction)));
 }
 
 function callFromStdin(): WorkerCall | null {

@@ -63,6 +63,9 @@ function invoke(
       details: {
         bridgeCode: result.response.error.code,
         bridgeDetail: result.response.error.detail,
+        ...(result.response.error.transaction === undefined
+          ? {}
+          : { transaction: result.response.error.transaction }),
       },
       help: [
         `The desktop bridge refused ${call.tool}`,

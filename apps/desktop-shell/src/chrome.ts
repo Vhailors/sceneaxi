@@ -1425,6 +1425,7 @@ function script(view: DesktopVisualView): string {
     paletteShortcut: DESKTOP_PALETTE_SHORTCUT,
     commandRefusals: {
       undoUnavailable: DESKTOP_VISUAL_REFUSALS.undoUnavailable,
+      redoUnavailable: DESKTOP_VISUAL_REFUSALS.redoUnavailable,
     },
     product: {
       documentPath: view.product.surface.project.activeFile,
@@ -1474,6 +1475,7 @@ if (shell) {
   let selectedSceneEntityId = null;
   let sceneRefusalText = null;
   let undoAvailability = 'unavailable';
+  let redoAvailability = 'unavailable';
   let shippedSourceDigest = null;
   // One product request at a time. Every live control reads \`projectData\` before
   // its first await, so two overlapping clicks would each build a proposal from
@@ -2279,6 +2281,7 @@ if (shell) {
     projectRecovering = false;
     clearSceneProperty();
     undoAvailability = 'unavailable';
+    redoAvailability = 'unavailable';
     syncReview(null);
     if (response.data.outcome === 'removed') {
       productStatus(activeProject === null ? 'closed' : 'open', 'Recent project removed · active project unchanged');
@@ -2341,6 +2344,7 @@ if (shell) {
         commandId,
         client: 'desktop-control',
         permission: command.permission,
+        profile: shell.dataset.profile,
         input,
       },
     });
@@ -2364,6 +2368,7 @@ if (shell) {
     projectDirty = false;
     projectRecovering = false;
     undoAvailability = 'unavailable';
+    redoAvailability = 'unavailable';
     let restartedRarityEvidence = null;
     if (rarityProposalStaged) {
       restartedRarityEvidence = activeRarityEvidence;
@@ -2404,6 +2409,9 @@ if (shell) {
     syncSceneProperties(status);
     undoAvailability = status.undoAvailability === 'available' || status.undoAvailability === 'recovery-pending'
       ? status.undoAvailability
+      : 'unavailable';
+    redoAvailability = status.redoAvailability === 'available' || status.redoAvailability === 'recovery-pending'
+      ? status.redoAvailability
       : 'unavailable';
     syncCommandAvailability();
     clearConflictOutcome();
@@ -2459,6 +2467,9 @@ if (shell) {
     undoAvailability = status.undoAvailability === 'available' || status.undoAvailability === 'recovery-pending'
       ? status.undoAvailability
       : 'unavailable';
+    redoAvailability = status.redoAvailability === 'available' || status.redoAvailability === 'recovery-pending'
+      ? status.redoAvailability
+      : 'unavailable';
     syncCommandAvailability();
     clearConflictOutcome();
     const snapshot = isSessionSnapshot(status.authoringSnapshot)
@@ -2483,6 +2494,9 @@ if (shell) {
     projectRecovering = false;
     undoAvailability = status.undoAvailability === 'available' || status.undoAvailability === 'recovery-pending'
       ? status.undoAvailability
+      : 'unavailable';
+    redoAvailability = status.redoAvailability === 'available' || status.redoAvailability === 'recovery-pending'
+      ? status.redoAvailability
       : 'unavailable';
     syncCommandAvailability();
     syncReview(authoringSnapshot);
@@ -2885,6 +2899,32 @@ if (shell) {
     if (reopened) {
       productStatus('open', 'Undid last Save · restored ' + result.restoredPaths.join(', '));
     }
+  };
+
+  const redoProject = async () => {
+    if (redoAvailability !== 'available') return;
+    if (projectDirty) {
+      const code = T.product.refusals.undoStagedProposal;
+      productStatus('refused', 'Redo refused · ' + code);
+      showOutcome('Redo refused', code, 'Accept or reject the staged proposal before changing committed history.');
+      return;
+    }
+    productStatus('redoing', T.product.documentPath + ' · redoing next Save…');
+    const response = await commandRequest('edit-redo', {});
+    const reason = responseReason(response);
+    const result = response?.ok ? response.data : null;
+    if (reason !== null || !result || result.ok !== true || !Array.isArray(result.restoredPaths)) {
+      const code = reason || T.commandRefusals.redoUnavailable;
+      productStatus('refused', 'Redo refused · ' + code);
+      showOutcome('Redo refused', code, 'The host did not restore the next durable Save.');
+      return;
+    }
+    projectData = null;
+    projectContentHash = null;
+    projectDirty = false;
+    projectRecovering = false;
+    const reopened = await openProject();
+    if (reopened) productStatus('open', 'Redid Save · restored ' + result.restoredPaths.join(', '));
   };
 
   // Every element that can start a product action, whichever surface it sits on:
@@ -3329,10 +3369,12 @@ if (shell) {
 
   const syncCommandAvailability = () => {
     q('[data-command]').forEach((el) => {
-      if (el.dataset.command !== 'edit-undo') return;
+      if (el.dataset.command !== 'edit-undo' && el.dataset.command !== 'edit-redo') return;
       applyControl(el);
       if (shell.dataset.profile !== 'kids') {
-        const available = !inFlight && undoAvailability === 'available';
+        const isRedo = el.dataset.command === 'edit-redo';
+        const availability = isRedo ? redoAvailability : undoAvailability;
+        const available = !inFlight && availability === 'available';
         el.dataset.kind = available ? 'live' : 'inert';
         setRefusal(
           el,
@@ -3340,9 +3382,9 @@ if (shell) {
             ? null
             : inFlight
               ? T.product.refusals.requestInFlight
-              : undoAvailability === 'recovery-pending'
+              : availability === 'recovery-pending'
               ? T.product.refusals.recoveryPending
-              : T.commandRefusals.undoUnavailable,
+              : isRedo ? T.commandRefusals.redoUnavailable : T.commandRefusals.undoUnavailable,
         );
       }
     });
@@ -3393,6 +3435,7 @@ if (shell) {
     'project-save': saveProject,
     'ship-export-web': exportWeb,
     'edit-undo': undoProject,
+    'edit-redo': redoProject,
     'run-play': playScene,
   });
 
@@ -3574,12 +3617,14 @@ if (shell) {
   // still the ancestor, but a restored or lost focus must not silently drop the
   // Escape key, and the trap has to see every Tab.
   document.addEventListener('keydown', (event) => {
-    // Shift is not part of any declared accelerator, so Ctrl+Shift+Z must not be
-    // Undo: the menus advertise exactly five chords and these are those five.
-    const modified = (event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey;
+    const modified = (event.ctrlKey || event.metaKey) && !event.altKey;
     if (modified) {
       const key = String(event.key).toLowerCase();
-      const command = key === T.paletteShortcut.key
+      const command = key === 'z' && event.shiftKey
+        ? T.commands.find((candidate) => candidate.id === 'edit-redo')
+        : event.shiftKey
+          ? null
+          : key === T.paletteShortcut.key
         ? T.paletteShortcut
         : T.commands.find((candidate) => candidate.key === key);
       if (command) {

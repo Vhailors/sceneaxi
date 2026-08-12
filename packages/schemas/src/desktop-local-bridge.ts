@@ -10,6 +10,7 @@ import { isJsonObject, isJsonValue, type JsonObject } from "./document.js";
 import {
   editorCommand,
   type EditorCommandId,
+  type EditorCommandTransactionResult,
 } from "./editor-command-registry.js";
 
 export const DESKTOP_LOCAL_BRIDGE_PROTOCOL_VERSION = 1 as const;
@@ -186,6 +187,12 @@ export const DESKTOP_LOCAL_BRIDGE_TOOLS = Object.freeze([
     providerRoute: "none",
   }),
   commandTool({
+    name: "sceneaxi.project.redo",
+    commandId: "edit-redo",
+    description: "Redo the next durable apply on the active history branch.",
+    providerRoute: "none",
+  }),
+  commandTool({
     name: "sceneaxi.run.play",
     commandId: "run-play",
     description: "Play the active composed scene through the existing closed kernel session.",
@@ -278,6 +285,7 @@ export type DesktopLocalBridgeFailure = Readonly<{
     code: DesktopLocalBridgeErrorCode | string;
     message: string;
     detail: string | null;
+    transaction?: EditorCommandTransactionResult;
   }>;
 }>;
 
@@ -342,6 +350,7 @@ export function validateDesktopLocalBridgeToolInput(
     case "sceneaxi.project.reject":
     case "sceneaxi.project.recover":
     case "sceneaxi.project.undo":
+    case "sceneaxi.project.redo":
     case "sceneaxi.project.inspect":
     case "sceneaxi.project.migration.propose":
     case "sceneaxi.project.migration.recover":

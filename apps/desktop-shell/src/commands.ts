@@ -10,6 +10,7 @@ export const DESKTOP_COMMANDS = Object.freeze({
   propose: "Propose a JSON Pointer edit and render the diff for review",
   apply: "Propose and accept an edit in one non-interactive step",
   undo: "Undo the last completed apply",
+  redo: "Redo the next undone apply",
   "open-path":
     "Report the shared open-path demo policy, or evaluate one demo operation against it (demo only; never a shipping claim)",
   chrome:

@@ -306,6 +306,7 @@ export {
   defineEditorCommandRegistry,
   editorCommand,
   editorCommandTerminalResult,
+  editorCommandTransactionResult,
   validateEditorCommandInput,
   validateEditorCommandInvocation,
 } from "./editor-command-registry.js";
@@ -320,6 +321,7 @@ export type {
   EditorCommandRefusal,
   EditorCommandResultTarget,
   EditorCommandTerminalResult,
+  EditorCommandTransactionResult,
   EditorCommandValidation,
 } from "./editor-command-registry.js";
 

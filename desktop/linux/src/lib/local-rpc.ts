@@ -38,6 +38,7 @@ import {
   type DesktopLocalBridgeRequest,
   type DesktopLocalBridgeResponse,
   type DesktopLocalBridgeToolName,
+  type EditorCommandTransactionResult,
   type JsonObject,
 } from "@sceneaxi/schemas";
 import type { DesktopBridgeResponse } from "./bridge-contract.js";
@@ -97,12 +98,18 @@ function failure(
   code: DesktopLocalBridgeErrorCode,
   message: string,
   detail: string | null = null,
+  transaction?: EditorCommandTransactionResult,
 ): DesktopLocalBridgeFailure {
   return {
     protocolVersion: DESKTOP_LOCAL_BRIDGE_PROTOCOL_VERSION,
     id,
     ok: false,
-    error: { code, message, detail },
+    error: {
+      code,
+      message,
+      detail,
+      ...(transaction === undefined ? {} : { transaction }),
+    },
   };
 }
 
@@ -182,6 +189,7 @@ function bridgeRequest(toolName: DesktopLocalBridgeToolName, input: JsonObject):
     case "sceneaxi.project.accept":
     case "sceneaxi.project.reject":
     case "sceneaxi.project.undo":
+    case "sceneaxi.project.redo":
     case "sceneaxi.project.inspect":
     case "sceneaxi.project.migration.propose":
     case "sceneaxi.project.migration.commit":
@@ -207,6 +215,7 @@ function responseFor(
       DESKTOP_LOCAL_BRIDGE_ERROR_CODES.upstreamRefused,
       bridgeResponse.message,
       bridgeResponse.reason,
+      bridgeResponse.transaction,
     );
   }
   const result = request.tool === "sceneaxi.bridge.handshake"

@@ -46,16 +46,9 @@ export type ShellRoundTripOk = {
   readonly unifiedDiff: string;
   readonly renderedDiff: string;
   readonly appliedPaths: readonly string[];
-} & (
-  | {
-      readonly journalRecoveryPending: true;
-      readonly transactionId: string;
-    }
-  | {
-      readonly journalRecoveryPending?: never;
-      readonly transactionId?: never;
-    }
-);
+  readonly transactionId: string;
+  readonly journalRecoveryPending?: true;
+};
 
 export type ShellRoundTripIndeterminate = {
   readonly ok: false;
@@ -163,10 +156,10 @@ export function shellProposeAndApply(
     unifiedDiff: proposed.unifiedDiff,
     renderedDiff: proposed.renderedDiff,
     appliedPaths: applied.appliedPaths,
+    transactionId: applied.transactionId,
     ...(applied.journalRecoveryPending === true
       ? {
           journalRecoveryPending: true,
-          transactionId: applied.transactionId,
         }
       : {}),
   };

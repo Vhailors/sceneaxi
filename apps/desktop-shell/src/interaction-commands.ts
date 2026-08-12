@@ -31,6 +31,7 @@ function interaction<
     | "project-save"
     | "ship-export-web"
     | "edit-undo"
+    | "edit-redo"
     | "run-play">,
   Row extends Readonly<{
     menu: DesktopMenuId;
@@ -81,6 +82,12 @@ export const DESKTOP_INTERACTION_COMMANDS = Object.freeze([
   interaction("edit-undo", {
     menu: "edit" as const,
     accelerator: "Ctrl/Cmd+Z",
+    key: "z",
+    allowInTextEntry: false,
+  }),
+  interaction("edit-redo", {
+    menu: "edit" as const,
+    accelerator: "Ctrl/Cmd+Shift+Z",
     key: "z",
     allowInTextEntry: false,
   }),

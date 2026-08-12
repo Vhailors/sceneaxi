@@ -66,7 +66,9 @@ import {
   RARITY_PROVIDER_REQUEST_MAX_CHARS,
   RARITY_REFUSE_CODES,
   digestRarityNamespace,
+  editorCommand,
   editorCommandTerminalResult,
+  editorCommandTransactionResult,
   validateEditorCommandInvocation,
   validateRarityNamespace,
   type EditorCommandId,
@@ -115,6 +117,9 @@ import {
 export type DesktopBridgeOptions = {
   /** Working directory the authoring session binds to. */
   readonly cwd: string;
+  /** Already-authorized context, checked before project or journal I/O. */
+  readonly commandProfile?: "game" | "web" | "kids";
+  readonly commandCapabilities?: readonly string[];
   /** Integer-millisecond clock for the orchestrator host. Injectable for goldens. */
   readonly nowMs?: () => number;
   /** Observer for renderer frame reports (the smoke path listens here). */
@@ -1212,10 +1217,10 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         ? bridgeOk("authoring", Object.freeze({ ...recovered, assetImport: pending.entry, assetCopies: copies }))
         : bridgeRefuse(copies.reason, copies.message);
     }
-    const result = live.undo();
+    const result = op === "redo" ? live.redo() : live.undo();
     if (result.ok) {
       if (rarityProposalEvidence !== null) {
-        retireRarityAssistantResult(rarityProposalEvidence, "undo");
+        retireRarityAssistantResult(rarityProposalEvidence, op === "redo" ? "namespace-replaced" : "undo");
       }
       const assistantResult = currentRarityAssistantResult();
       const appliedDocumentPath = containedDocumentPath(
@@ -1226,7 +1231,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         appliedDocumentPath !== null &&
         result.restoredPaths.includes(appliedDocumentPath)
       ) {
-        statusWithProperties(live, appliedDocumentPath, "undo");
+        statusWithProperties(live, appliedDocumentPath, op === "redo" ? "namespace-replaced" : "undo");
       }
       rarityProposalEvidence = null;
       pendingAssetImport = null;
@@ -1781,10 +1786,95 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     return bridgeOk("assistant", assistantSnapshot());
   };
 
+  const commandTransaction = (
+    commandId: EditorCommandId,
+    response: DesktopBridgeResponse,
+  ): DesktopBridgeResponse => {
+    if (!response.ok) {
+      return Object.freeze({
+        ...response,
+        transaction: editorCommandTransactionResult({
+          commandId,
+          status: "refused",
+          phase: "refused",
+          percent: 100,
+          message: response.message,
+          terminal: true,
+          refusal: response.reason,
+        }),
+      });
+    }
+    const data = response.data;
+    const transactionId = field(data, "transactionId");
+    const recoveryPending = field(data, "journalRecoveryPending") === true;
+    const diagnostics = field(data, "diagnostics");
+    const firstDiagnostic = Array.isArray(diagnostics) ? diagnostics[0] : undefined;
+    const diagnosticCode = field(firstDiagnostic, "code");
+    const refusal = diagnosticCode === "content-hash-conflict"
+      ? EDITOR_COMMAND_REFUSALS.staleBase
+      : diagnosticCode === "invalid-transaction-phase"
+        ? EDITOR_COMMAND_REFUSALS.invalidPhase
+        : diagnosticCode;
+    const refused = typeof refusal === "string";
+    const appliedPaths = field(data, "appliedPaths");
+    const restoredPaths = field(data, "restoredPaths");
+    const documentPaths = Array.isArray(appliedPaths)
+      ? appliedPaths.filter((value): value is string => typeof value === "string")
+      : Array.isArray(restoredPaths)
+        ? restoredPaths.filter((value): value is string => typeof value === "string")
+        : [];
+    const transaction = editorCommandTransactionResult({
+      commandId,
+      ...(typeof transactionId === "string" ? { transactionId } : {}),
+      status: refused ? "refused" : recoveryPending ? "recovery-pending" : "completed",
+      phase: refused ? "refused" : recoveryPending ? "recovering" : "completed",
+      percent: recoveryPending ? 75 : 100,
+      message: refused
+        ? String(field(firstDiagnostic, "message") ?? "The transaction was refused.")
+        : recoveryPending
+          ? "Canonical bytes are durable; journal finalization is pending."
+          : "The registered command transaction completed.",
+      terminal: !recoveryPending,
+      documentPaths,
+      ...(typeof refusal === "string" ? { refusal } : {}),
+    });
+    return bridgeOk("command", Object.freeze({
+      ...(typeof data === "object" && data !== null ? data : { value: data }),
+      transaction,
+    }));
+  };
+
   const command = (payload: unknown): DesktopBridgeResponse => {
     const validated = validateEditorCommandInvocation(payload);
     if (!validated.ok) {
-      return bridgeRefuse(validated.reason, validated.message);
+      const declared = editorCommand(field(payload, "commandId"));
+      const transaction = declared === undefined
+        ? undefined
+        : editorCommandTransactionResult({
+            commandId: declared.id,
+            status: "refused",
+            phase: "refused",
+            percent: 100,
+            message: validated.message,
+            terminal: true,
+            refusal: validated.reason,
+          });
+      return bridgeRefuse(validated.reason, validated.message, null, transaction);
+    }
+    if (options.commandProfile === "kids" || validated.invocation.profile === "kids") {
+      return commandTransaction(validated.command.id, bridgeRefuse(
+        EDITOR_COMMAND_REFUSALS.kidsDenied,
+        `${validated.command.id} is denied for Kids before execution.`,
+      ));
+    }
+    if (
+      options.commandCapabilities !== undefined &&
+      !options.commandCapabilities.includes(validated.command.capability.id)
+    ) {
+      return commandTransaction(validated.command.id, bridgeRefuse(
+        EDITOR_COMMAND_REFUSALS.capabilityDenied,
+        `${validated.command.id} requires missing capability ${validated.command.capability.id}.`,
+      ));
     }
     const input = validated.invocation.input;
     switch (validated.command.id) {
@@ -1830,11 +1920,13 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         });
       case "project-save":
       case "change-review-accept":
-        return authoring({ op: "accept" });
+        return commandTransaction(validated.command.id, authoring({ op: "accept" }));
       case "change-review-reject":
         return authoring({ op: "reject" });
       case "edit-undo":
-        return authoring({ op: "undo" });
+        return commandTransaction(validated.command.id, authoring({ op: "undo" }));
+      case "edit-redo":
+        return commandTransaction(validated.command.id, authoring({ op: "redo" }));
       case "run-play":
         return openPathExercise({ documentPath: input["documentPath"] });
       case "assistant-local-build":

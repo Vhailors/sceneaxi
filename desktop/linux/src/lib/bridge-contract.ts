@@ -22,6 +22,7 @@ import type {
   EditorCommandDefinition,
   EditorCommandId,
   EditorCommandTerminalResult,
+  EditorCommandTransactionResult,
 } from "@sceneaxi/schemas";
 import type { MountableScene } from "@sceneaxi/site-kit";
 import type { DesktopSnapshot } from "@sceneaxi/desktop-shell";
@@ -111,6 +112,7 @@ export type DesktopBridgeRefusal = {
   readonly message: string;
   /** Upstream detail when one exists; always present so callers never branch on shape. */
   readonly detail: string | null;
+  readonly transaction?: EditorCommandTransactionResult;
 };
 
 export type DesktopBridgeOk<T = unknown> = {
@@ -132,6 +134,7 @@ export const DESKTOP_BRIDGE_AUTHORING_OPS = Object.freeze([
   "recover",
   "restart",
   "undo",
+  "redo",
 ] as const);
 
 export type DesktopBridgeAuthoringOp = (typeof DESKTOP_BRIDGE_AUTHORING_OPS)[number];
@@ -252,8 +255,15 @@ export function bridgeRefuse(
   reason: DesktopBridgeRefusalReason,
   message: string,
   detail: string | null = null,
+  transaction?: EditorCommandTransactionResult,
 ): DesktopBridgeRefusal {
-  return Object.freeze({ ok: false as const, reason, message, detail });
+  return Object.freeze({
+    ok: false as const,
+    reason,
+    message,
+    detail,
+    ...(transaction === undefined ? {} : { transaction }),
+  });
 }
 
 export function bridgeOk<T>(action: DesktopBridgeAction, data: T): DesktopBridgeOk<T> {

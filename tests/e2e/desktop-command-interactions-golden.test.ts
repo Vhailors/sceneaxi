@@ -48,6 +48,7 @@ function engineResponse(
   request: Record<string, unknown>,
   state: {
     undoAvailability: "available" | "unavailable" | "recovery-pending";
+    redoAvailability: "available" | "unavailable" | "recovery-pending";
   },
 ) {
   const payload = request["payload"] as Record<string, unknown> | undefined;
@@ -62,6 +63,8 @@ function engineResponse(
         ? { action: "authoring", payload: { op: "reject" } }
         : commandId === "edit-undo"
           ? { action: "authoring", payload: { op: "undo" } }
+          : commandId === "edit-redo"
+            ? { action: "authoring", payload: { op: "redo" } }
           : commandId === "run-play"
             ? { action: "open-path", payload: input }
             : commandId === "ship-export-web"
@@ -80,6 +83,7 @@ function engineResponse(
         contentHash: CONTENT_HASH,
         dataKeys: ["entities"],
         undoAvailability: state.undoAvailability,
+        redoAvailability: state.redoAvailability,
         data: { entities: [] },
       },
     };
@@ -123,10 +127,20 @@ function engineResponse(
   }
   if (action === "authoring" && op === "undo") {
     state.undoAvailability = "unavailable";
+    state.redoAvailability = "available";
     return {
       ok: true,
       action,
       data: { ok: true, restoredPaths: ["scene.json"] },
+    };
+  }
+  if (action === "authoring" && op === "redo") {
+    state.undoAvailability = "available";
+    state.redoAvailability = "unavailable";
+    return {
+      ok: true,
+      action,
+      data: { ok: true, transactionId: "1700000000000-0123456789abcdef", restoredPaths: ["scene.json"] },
     };
   }
   if (action === "open-path") {
@@ -186,7 +200,13 @@ async function harness(
   const window = new HappyWindow({ width: 1200, height: 800 });
   windows.push(window);
   const calls: HostCall[] = [];
-  const state = { undoAvailability: initialUndoAvailability };
+  const state: {
+    undoAvailability: "available" | "unavailable" | "recovery-pending";
+    redoAvailability: "available" | "unavailable" | "recovery-pending";
+  } = {
+    undoAvailability: initialUndoAvailability,
+    redoAvailability: "unavailable",
+  };
   const clone = <T>(value: T): T => window.eval(`(${JSON.stringify(value)})`) as T;
   Object.defineProperty(window, "structuredClone", { value: clone });
   Object.defineProperty(window, "sceneaxiDesktopLinux", {
@@ -250,10 +270,11 @@ async function click(window: HappyWindow, selector: string) {
   await settle(window);
 }
 
-function shortcut(window: HappyWindow, key: string, target?: HappyHTMLElement) {
+function shortcut(window: HappyWindow, key: string, target?: HappyHTMLElement, shiftKey = false) {
   const event = new window.KeyboardEvent("keydown", {
     key,
     ctrlKey: true,
+    shiftKey,
     bubbles: true,
     cancelable: true,
   });
@@ -273,11 +294,15 @@ function tab(window: HappyWindow, target: HappyHTMLElement, shiftKey: boolean) {
 }
 
 async function prepare(command: DesktopInteractionCommand, window: HappyWindow) {
-  if (command.id === "project-save" || command.id === "edit-undo") {
+  if (command.id === "project-save" || command.id === "edit-undo" || command.id === "edit-redo") {
     await click(window, "#web-stage-html");
   }
   if (command.id === "edit-undo") {
     await click(window, '#project-save[data-command="project-save"]');
+  }
+  if (command.id === "edit-redo") {
+    await click(window, '#project-save[data-command="project-save"]');
+    await click(window, '#menu-command-edit-undo');
   }
 }
 
@@ -293,6 +318,8 @@ function expectedEffect(command: DesktopInteractionCommand) {
       return { plane: "engine", action: "command", op: "ship-export-web" } as const;
     case "edit-undo":
       return { plane: "engine", action: "command", op: "edit-undo" } as const;
+    case "edit-redo":
+      return { plane: "engine", action: "command", op: "edit-redo" } as const;
     case "run-play":
       return { plane: "engine", action: "command", op: "run-play" } as const;
   }
@@ -315,7 +342,7 @@ async function invoke(
     await click(window, `#palette-${command.id}`);
   } else {
     if (command.key === null) throw new Error(`${command.id} has no accelerator`);
-    const event = shortcut(window, command.key);
+    const event = shortcut(window, command.key, undefined, command.id === "edit-redo");
     expect(event.defaultPrevented).toBe(true);
     await settle(window);
   }
@@ -367,7 +394,7 @@ describe("desktop command menu, palette, and accelerator parity", () => {
         editable.append(inherited);
         shell.append(input, editable, plaintext);
         for (const target of [input, editable, plaintext, inherited]) {
-          const event = shortcut(window, command.key, target);
+          const event = shortcut(window, command.key, target, command.id === "edit-redo");
           await settle(window);
           expect(event.defaultPrevented).toBe(false);
           expect(calls).not.toContainEqual(expectedEffect(command));
@@ -673,7 +700,7 @@ describe("desktop command menu, palette, and accelerator parity", () => {
   it("ignores a Shift-modified chord that no menu advertises", async () => {
     const { window, calls } = await harness();
     const event = new window.KeyboardEvent("keydown", {
-      key: "z",
+      key: "o",
       ctrlKey: true,
       shiftKey: true,
       bubbles: true,

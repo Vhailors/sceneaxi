@@ -944,7 +944,7 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
 
     expect(bridge.handle({ action: "authoring", payload: { op: "undo" } })).toMatchObject({
       ok: true,
-      data: { ok: false, diagnostics: [{ code: "journal-not-found" }] },
+      data: { ok: false, diagnostics: [{ code: "invalid-transaction-phase" }] },
     });
     expect(bridge.handle({ action: "authoring", payload: { op: "reject" } })).toMatchObject({
       ok: true,
@@ -1045,7 +1045,7 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
     expect(await settledJob(bridge)).not.toHaveProperty("result.retirement");
   });
 
-  it("retires a reviewing Agent result when successful Undo clears its proposal", async () => {
+  it("preserves a reviewing Agent result when Undo refuses the staged phase", async () => {
     const root = projectRoot();
     const bridge = createDesktopBridge({
       cwd: root,
@@ -1069,15 +1069,15 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
 
     expect(bridge.handle({ action: "authoring", payload: { op: "undo" } })).toMatchObject({
       ok: true,
-      data: { ok: true },
+      data: { ok: false, diagnostics: [{ code: "invalid-transaction-phase" }] },
     });
     expect(await settledJob(bridge)).toMatchObject({
       result: {
         kind: "rarity-proposal",
         authoring: { phase: "reviewing" },
-        retirement: { reason: "undo" },
       },
     });
+    expect(await settledJob(bridge)).not.toHaveProperty("result.retirement");
   });
 
   it("retires applied Assistant evidence when status proves its namespace changed", async () => {
