@@ -2322,9 +2322,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       options.commandProfile !== hierarchyInputProfile
     ) {
       return commandTransaction(validated.command.id, bridgeRefuse(
-        options.commandProfile === "kids"
-          ? DESKTOP_SCENE_HIERARCHY_REFUSALS.kidsDenied
-          : DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+        DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
         `${validated.command.id} cannot override the active ${options.commandProfile} profile.`,
       ));
     }

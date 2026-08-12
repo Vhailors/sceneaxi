@@ -7,7 +7,11 @@
  * unsupported control must already carry an accessible refusal.
  */
 import { afterEach, describe, expect, it } from "vitest";
-import { Window as HappyWindow, type HTMLElement as HappyHTMLElement } from "happy-dom";
+import {
+  Window as HappyWindow,
+  type HTMLElement as HappyHTMLElement,
+  type HTMLSelectElement as HappyHTMLSelectElement,
+} from "happy-dom";
 import { DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS } from "@sceneaxi/schemas";
 import {
   DESKTOP_MODE_IDS,
@@ -246,10 +250,8 @@ describe("desktop mounted control inventory", () => {
     });
     await settle();
 
-    const select = element(window, '[data-action="scene-entity-select"]') as unknown as {
-      options: ArrayLike<{ selected: boolean; value: string }>;
-      dispatchEvent(event: Event): boolean;
-    };
+    const select = element(window, '[data-action="scene-entity-select"]') as unknown as
+      HappyHTMLSelectElement;
     expect(element(window, "[data-scene-entities]").hidden).toBe(false);
     expect(element(window, "[data-scene-entities-refusal]").textContent)
       .toContain("SCENE_HIERARCHY_SELECTION_STALE");
@@ -370,10 +372,8 @@ describe("desktop mounted control inventory", () => {
     });
     await settle();
 
-    const select = element(window, '[data-action="scene-entity-select"]') as unknown as {
-      options: ArrayLike<{ selected: boolean; value: string }>;
-      dispatchEvent(event: Event): boolean;
-    };
+    const select = element(window, '[data-action="scene-entity-select"]') as unknown as
+      HappyHTMLSelectElement;
     const choose = (id: string) => {
       Array.from(select.options).forEach((option) => {
         option.selected = option.value === id;

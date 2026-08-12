@@ -457,9 +457,6 @@ describe("full-editor hierarchy vertical", () => {
       if (!applied.ok) return applied;
       return {
         ok: false,
-        proposal: applied.proposal,
-        unifiedDiff: applied.unifiedDiff,
-        renderedDiff: applied.renderedDiff,
         applicationState: "indeterminate",
         journalRecoveryPending: true,
         transactionId: applied.transactionId,

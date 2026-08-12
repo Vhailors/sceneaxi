@@ -4,7 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { parseDocumentText } from "@sceneaxi/authoring-core";
-import { createEditorCommandInvocation } from "@sceneaxi/schemas";
+import {
+  DESKTOP_SCENE_HIERARCHY_REFUSALS,
+  createEditorCommandInvocation,
+} from "@sceneaxi/schemas";
 import { ExitCode, runCli } from "../../packages/cli/src/index.ts";
 import { shellProposeAndApply } from "../../apps/desktop-shell/src/index.ts";
 import {
@@ -34,6 +37,9 @@ function editableStatus(bridge: ReturnType<typeof createDesktopBridge>) {
     payload: { op: "status", documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
   });
   if (!response.ok) throw new Error(response.reason);
+  if (typeof response.data !== "object" || response.data === null || Array.isArray(response.data)) {
+    throw new Error("Desktop authoring status did not return an object.");
+  }
   const inspected = bridge.handle({
     action: "command",
     payload: createEditorCommandInvocation("scene-hierarchy-inspect", "desktop-control", {
@@ -119,16 +125,11 @@ describe("desktop typed Scene Document edit golden", () => {
     if (!proposed.ok) return;
     expect(proposed.data).toMatchObject({
       phase: "reviewing",
-      proposal: {
-        edits: [
-          {
-            documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
-            baseContentHash: opened.contentHash,
-            jsonPointer: "/data/composedScene",
-          },
-        ],
-      },
+      proposal: null,
+      unifiedDiff: null,
+      renderedDiff: null,
     });
+    expect(JSON.stringify(proposed.data)).not.toContain("composedScene");
     expect(proposed.data).not.toHaveProperty("editableScene");
     expect(readFileSync(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8")).toBe(before);
 
@@ -436,7 +437,13 @@ describe("desktop typed Scene Document edit golden", () => {
     expect(edit("game", { kind: "set-transform-component", instanceId: "bad", propertyId: "scale-x", value: 0 }))
       .toMatchObject({ ok: false, reason: "SCENE_HIERARCHY_INPUT_UNSUPPORTED" });
     expect(edit("game", { kind: "remove-instance", instanceId: "missing-instance" }))
-      .toMatchObject({ ok: true, data: { ok: false, diagnostics: [{ message: expect.stringContaining("stale") }] } });
+      .toMatchObject({
+        ok: true,
+        data: {
+          ok: false,
+          diagnostics: [{ code: DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale }],
+        },
+      });
     expect(edit("game", { kind: "add-instance", sourceInstanceId: "missing-instance" }))
       .toMatchObject({ ok: true, data: { ok: false, diagnostics: [{ message: expect.stringContaining("missing") }] } });
     expect(edit("kids", { kind: "remove-instance", instanceId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId }))
