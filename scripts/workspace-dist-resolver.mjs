@@ -53,6 +53,12 @@ const BUILT_ENTRYPOINTS = new Map(
  * are left to Node, which can already load them from the path the map names.
  */
 const BUILT_SUBPATHS = new Map();
+const BUILT_INTERNALS = new Map([
+  [
+    "@sceneaxi-internal/project-git-authority",
+    new URL("packages/authoring-core/dist/src/project-git.js", REPO_ROOT).href,
+  ],
+]);
 
 for (const [name, entry] of Object.entries(matrix.packages)) {
   let manifest;
@@ -76,7 +82,9 @@ for (const [name, entry] of Object.entries(matrix.packages)) {
 }
 
 export function resolve(specifier, context, nextResolve) {
-  const built = BUILT_ENTRYPOINTS.get(specifier) ?? BUILT_SUBPATHS.get(specifier);
+  const built = BUILT_ENTRYPOINTS.get(specifier) ??
+    BUILT_SUBPATHS.get(specifier) ??
+    BUILT_INTERNALS.get(specifier);
   if (built !== undefined) {
     return { url: built, shortCircuit: true };
   }

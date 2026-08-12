@@ -707,7 +707,7 @@ const UMBRELLA_AUTHORITY_IMPORTERS = new Map([
   ],
   ["sites/umbrella/src/index", new Set()],
 ]);
-const PROJECT_GIT_SESSION_AUTHORITY = "@sceneaxi/authoring-core/desktop-session-authority";
+const PROJECT_GIT_SESSION_AUTHORITY = "@sceneaxi-internal/project-git-authority";
 const PROJECT_GIT_SESSION_AUTHORITY_OWNER = "apps/desktop-shell/src/session";
 // Path-segment containment via relative(), never raw startsWith, so a sibling directory
 // whose name merely begins with "testing" is not treated as inside it.
@@ -725,6 +725,14 @@ for (const [name, { dir }] of manifests) {
     const fromModule = sourceModuleId(file);
     for (const spec of importSpecifiersOf(file)) {
       const resourcePath = resourceSpecifierPath(spec);
+      if (
+        resourcePath === PROJECT_GIT_SESSION_AUTHORITY &&
+        (name !== "@sceneaxi/desktop-shell" || fromModule !== PROJECT_GIT_SESSION_AUTHORITY_OWNER)
+      ) {
+        fail(
+          `${name}: ${relative(root, file)} imports the Git mutation authority outside its live DesktopSession owner`,
+        );
+      }
       if (resourcePath.startsWith("@sceneaxi/")) {
         const target = resourcePath.split("/").slice(0, 2).join("/");
         if (!allow.has(target)) {
@@ -739,20 +747,15 @@ for (const [name, { dir }] of manifests) {
         if (isTestingSubpath(resourcePath)) {
           fail(`${name}: ${relative(root, file)} imports test-only subpath ${spec} — production source may not reach a testing/ seam`);
         }
-        if (
-          resourcePath === PROJECT_GIT_SESSION_AUTHORITY &&
-          (name !== "@sceneaxi/desktop-shell" || fromModule !== PROJECT_GIT_SESSION_AUTHORITY_OWNER)
-        ) {
-          fail(
-            `${name}: ${relative(root, file)} imports the Git mutation authority outside its live DesktopSession owner`,
-          );
-        }
       } else {
         for (const resolved of resolvePackageLocalSpecifiers({ dir, file, spec: resourcePath })) {
           const targetModule = sourceModuleId(resolved);
           // Path-segment containment (not raw startsWith): "packages/cli-shadow" must not match "packages/cli"
           const rel = relative(dir, resolved);
-          if (rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel)) {
+          if (
+            (rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel)) &&
+            resourcePath !== PROJECT_GIT_SESSION_AUTHORITY
+          ) {
             fail(`${name}: ${relative(root, file)} escapes its package via relative import '${spec}'`);
           } else if (!fromTesting && contains(testingDir, resolved)) {
             fail(`${name}: ${relative(root, file)} imports test-only module '${spec}' — production source may not reach a testing/ seam`);

@@ -21,6 +21,8 @@ export const PROJECT_GIT_DIAGNOSTICS = Object.freeze({
   operationUnsupported: "PROJECT_GIT_OPERATION_UNSUPPORTED",
   evidenceTooLarge: "PROJECT_GIT_EVIDENCE_TOO_LARGE",
   commandFailed: "PROJECT_GIT_COMMAND_FAILED",
+  stageRolledBack: "PROJECT_GIT_STAGE_ROLLED_BACK",
+  stageRollbackFailed: "PROJECT_GIT_STAGE_ROLLBACK_FAILED",
 } as const);
 
 export type ProjectGitDiagnosticCode =

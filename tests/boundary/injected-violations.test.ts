@@ -178,7 +178,7 @@ describe("boundary check — injected violations", () => {
     appendTo(
       fx,
       "packages/cli/src/index.ts",
-      '\nimport "@sceneaxi/authoring-core/desktop-session-authority";\n',
+      '\nimport "@sceneaxi-internal/project-git-authority";\n',
     );
     const res = runCheck(fx, "check-boundaries.mjs");
     expect(res.status).toBe(1);

@@ -25,11 +25,16 @@ import {
   type Proposal,
 } from "@sceneaxi/authoring-core";
 import {
-  createProjectGitDesktopSessionBinding,
-  type ProjectGitDesktopSessionBinding,
-} from "@sceneaxi/authoring-core/desktop-session-authority";
+  createProjectGitAuthoringAuthority,
+  prepareProjectGitCommit,
+  stageProjectGitPaths,
+  type ProjectGitAuthoringAuthority,
+  type ProjectGitAuthoringState,
+} from "@sceneaxi-internal/project-git-authority";
 import {
   PROJECT_GIT_DIAGNOSTICS,
+  type ProjectGitCommitPreparationResult,
+  type ProjectGitStateResult,
 } from "@sceneaxi/schemas";
 import {
   shellApply,
@@ -113,12 +118,12 @@ export type DesktopSessionOptions = {
   readonly operations?: Partial<DesktopSessionOperations>;
 };
 
-const projectGitBindings = new WeakMap<object, ProjectGitDesktopSessionBinding>();
+const projectGitAuthorities = new WeakMap<object, ProjectGitAuthoringAuthority>();
 
-function desktopSessionProjectGitBinding(
+function desktopSessionProjectGitAuthority(
   session: DesktopSession,
-): ProjectGitDesktopSessionBinding | undefined {
-  return projectGitBindings.get(session);
+): ProjectGitAuthoringAuthority | undefined {
+  return projectGitAuthorities.get(session);
 }
 
 function unavailableProjectGitAuthority() {
@@ -136,11 +141,11 @@ export function stageDesktopSessionProjectGitPaths(
   session: DesktopSession,
   options: ProjectGitOptions,
   paths: readonly string[],
-) {
-  const binding = desktopSessionProjectGitBinding(session);
-  return binding === undefined
+): ProjectGitStateResult {
+  const authority = desktopSessionProjectGitAuthority(session);
+  return authority === undefined
     ? unavailableProjectGitAuthority()
-    : binding.stage(options, paths);
+    : stageProjectGitPaths({ ...options, authoring: authority }, paths);
 }
 
 export function prepareDesktopSessionProjectGitCommit(
@@ -148,11 +153,11 @@ export function prepareDesktopSessionProjectGitCommit(
   options: ProjectGitOptions,
   paths: readonly string[],
   message: string,
-) {
-  const binding = desktopSessionProjectGitBinding(session);
-  return binding === undefined
+): ProjectGitCommitPreparationResult {
+  const authority = desktopSessionProjectGitAuthority(session);
+  return authority === undefined
     ? unavailableProjectGitAuthority()
-    : binding.prepare(options, paths, message);
+    : prepareProjectGitCommit({ ...options, authoring: authority }, paths, message);
 }
 
 /**
@@ -241,7 +246,7 @@ export function createDesktopSession(
     return snap();
   };
 
-  const gitBinding = createProjectGitDesktopSessionBinding(sessionCwd, () => {
+  const gitAuthority = createProjectGitAuthoringAuthority(sessionCwd, (): ProjectGitAuthoringState => {
     const current = snap();
     return Object.freeze({
       reviewStaged: current.phase === "reviewing" && current.proposal !== null,
@@ -507,6 +512,6 @@ export function createDesktopSession(
       return { ok: true, transactionId: result.transactionId, restoredPaths: result.documentPaths };
     },
   };
-  projectGitBindings.set(session, gitBinding);
+  projectGitAuthorities.set(session, gitAuthority);
   return Object.freeze(session);
 }

@@ -8,9 +8,11 @@ import {
   renameSync,
   rmSync,
   symlinkSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { randomBytes } from "node:crypto";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
@@ -84,6 +86,9 @@ describe("contained project Git service", () => {
     expect(Object.hasOwn(authoringCoreSdk, "createProjectGitAuthoringAuthority")).toBe(false);
     expect(Object.hasOwn(authoringCoreSdk, "stageProjectGitPaths")).toBe(false);
     expect(Object.hasOwn(authoringCoreSdk, "prepareProjectGitCommit")).toBe(false);
+    const resolveFromTest = createRequire(import.meta.url).resolve;
+    expect(() => resolveFromTest("@sceneaxi/authoring-core/desktop-session-authority")).toThrow();
+    expect(() => resolveFromTest("@sceneaxi-internal/project-git-authority")).toThrow();
   });
 
   it("reports canonical and unrelated changes with stable diffs without changing either", () => {
@@ -154,9 +159,14 @@ describe("contained project Git service", () => {
     });
 
     writeFileSync(join(root, ":(top)**"), "literal pathspec name\n");
-    expect(stageProjectGitPaths(mutationOptions(root), [":(top)**"])).toMatchObject({ ok: true });
-    expect(git(root, "diff", "--cached", "--name-only").trim().split("\n").sort()).toEqual([
+    const unusualPaths = [":(top)**", " notes,2026.txt", "C:notes.txt", "notes\\draft.txt"];
+    for (const path of unusualPaths.slice(1)) writeFileSync(join(root, path), `${path}\n`);
+    expect(stageProjectGitPaths(mutationOptions(root), unusualPaths)).toMatchObject({ ok: true });
+    expect(git(root, "diff", "--cached", "--name-only", "-z").split("\0").filter(Boolean).sort()).toEqual([
+      " notes,2026.txt",
       ":(top)**",
+      "C:notes.txt",
+      "notes\\draft.txt",
       "scene.json",
     ]);
   });
@@ -347,7 +357,7 @@ describe("contained project Git service", () => {
     });
   });
 
-  it("restores the exact prior index when post-stage evidence is too large", () => {
+  it("reports an explicit rollback when prospective evidence is too large", () => {
     const { root } = repository("stage-rollback");
     const indexPath = join(root, ".git", "index");
     const beforeIndex = readFileSync(indexPath);
@@ -355,10 +365,28 @@ describe("contained project Git service", () => {
 
     expect(stageProjectGitPaths(mutationOptions(root), ["large-untracked.bin"])).toMatchObject({
       ok: false,
-      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.evidenceTooLarge },
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.stageRolledBack },
     });
     expect(readFileSync(indexPath)).toEqual(beforeIndex);
     expect(git(root, "diff", "--cached", "--name-only").trim()).toBe("");
+  });
+
+  it("uses the live index lock protocol and discards a blocked prospective index", () => {
+    const { root } = repository("stage-index-lock");
+    const indexPath = join(root, ".git", "index");
+    const lockPath = `${indexPath}.lock`;
+    const beforeIndex = readFileSync(indexPath);
+    writeFileSync(join(root, "notes.txt"), "blocked publish\n");
+    writeFileSync(lockPath, "concurrent writer\n");
+
+    expect(stageProjectGitPaths(mutationOptions(root), ["notes.txt"])).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.stageRolledBack },
+    });
+    expect(readFileSync(indexPath)).toEqual(beforeIndex);
+    expect(readFileSync(lockPath, "utf8")).toBe("concurrent writer\n");
+    expect(readdirSync(join(root, ".git")).some((name) => name.startsWith(".sceneaxi-index-"))).toBe(false);
+    unlinkSync(lockPath);
   });
 
   it("refuses special Git control nodes before reading them", () => {
@@ -370,6 +398,31 @@ describe("contained project Git service", () => {
     expect(inspectProjectGit({ root })).toMatchObject({
       ok: false,
       diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.repositoryEscape, path: "$git.config" },
+    });
+  });
+
+  it("refuses split indexes and merge-state indirection before Git", () => {
+    const split = repository("split-index");
+    writeFileSync(join(split.root, ".git", "sharedindex.invalid"), "not an index\n");
+    expect(inspectProjectGit({
+      root: split.root,
+      gitExecutable: "sceneaxi-git-must-not-run",
+    })).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.repositoryEscape, path: "$git.index" },
+    });
+
+    const merge = repository("merge-head-indirection");
+    const outside = mkdtempSync(join(tmpdir(), "sceneaxi-project-git-merge-head-outside-"));
+    roots.push(outside);
+    writeFileSync(join(outside, "MERGE_HEAD"), `${git(merge.root, "rev-parse", "HEAD").trim()}\n`);
+    symlinkSync(join(outside, "MERGE_HEAD"), join(merge.root, ".git", "MERGE_HEAD"));
+    expect(inspectProjectGit({
+      root: merge.root,
+      gitExecutable: "sceneaxi-git-must-not-run",
+    })).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.repositoryEscape, path: "$git.MERGE_HEAD" },
     });
   });
 

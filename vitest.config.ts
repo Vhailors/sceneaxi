@@ -4,6 +4,9 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   resolve: {
     alias: {
+      "@sceneaxi-internal/project-git-authority": fileURLToPath(
+        new URL("./packages/authoring-core/src/project-git.ts", import.meta.url),
+      ),
       // Subpath aliases MUST precede the root @sceneaxi/site-kit alias: matching is prefix-based, so alphabetizing this block breaks every subpath.
       "@sceneaxi/site-kit/catalog-identity": fileURLToPath(
         new URL("./packages/site-kit/src/catalog-identity.ts", import.meta.url),
