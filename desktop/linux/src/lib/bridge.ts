@@ -56,10 +56,16 @@ import {
 } from "@sceneaxi/importers";
 import { bootstrapOpenPath, resumeOpenPath } from "@sceneaxi/engine-orchestrator";
 import {
+  EDITOR_COMMAND_REFUSALS,
+  EDITOR_COMMAND_REGISTRY,
+  EDITOR_COMMAND_SCHEMA_VERSION,
   RARITY_PROVIDER_REQUEST_MAX_CHARS,
   RARITY_REFUSE_CODES,
   digestRarityNamespace,
+  editorCommandTerminalResult,
+  validateEditorCommandInvocation,
   validateRarityNamespace,
+  type EditorCommandId,
 } from "@sceneaxi/schemas";
 import {
   DESKTOP_ACTIVE_DOCUMENT_PATH,
@@ -285,6 +291,10 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
   let assistantSequence = 0;
   let assistantJob: {
     jobId: string;
+    commandId: Extract<EditorCommandId,
+      | "assistant-local-build"
+      | "assistant-byo-build"
+      | "assistant-local-agent">;
     route: "local" | "byo";
     status: "running" | "ready" | "refused";
     latestProgress: AssistantSculptProgress | null;
@@ -374,6 +384,8 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       runtime: "electron" as const,
       bridgeVersion: 1 as const,
       actions: DESKTOP_BRIDGE_ACTIONS,
+      commandSchemaVersion: EDITOR_COMMAND_SCHEMA_VERSION,
+      commands: EDITOR_COMMAND_REGISTRY,
     });
 
   const resolveRarityWithKernel = (input: RarityKernelResolutionInput) => {
@@ -1386,12 +1398,36 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
    */
   const assistantSnapshot = (): DesktopAssistantJobSnapshot | null => {
     if (assistantJob === null) return null;
+    const terminal = assistantJob.status === "running"
+      ? null
+      : editorCommandTerminalResult({
+          commandId: assistantJob.commandId,
+          jobId: assistantJob.jobId,
+          status: assistantJob.status === "ready"
+            ? "completed"
+            : assistantJob.refusal?.reason === DESKTOP_BRIDGE_REFUSALS.assistantAbandoned
+              ? "cancelled"
+              : "refused",
+          phase: assistantJob.status === "ready"
+            ? "ready"
+            : assistantJob.refusal?.reason === DESKTOP_BRIDGE_REFUSALS.assistantAbandoned
+              ? "cancelled"
+              : "refused",
+          message: assistantJob.status === "ready"
+            ? (assistantJob.latestProgress?.message ?? "The registered assistant command completed.")
+            : (assistantJob.refusal?.message ?? "The registered assistant command refused."),
+          ...(assistantJob.refusal === undefined
+            ? {}
+            : { refusal: assistantJob.refusal.reason }),
+        });
     return Object.freeze({
       jobId: assistantJob.jobId,
+      commandId: assistantJob.commandId,
       route: assistantJob.route,
       status: assistantJob.status,
       latestProgress: assistantJob.latestProgress,
       progressCount: assistantJob.progressCount,
+      terminal,
       ...(assistantJob.result === undefined ? {} : { result: assistantJob.result }),
       ...(assistantJob.refusal === undefined ? {} : { refusal: assistantJob.refusal }),
     });
@@ -1417,7 +1453,10 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         );
       }
       if (assistantJob?.jobId !== acknowledgedJobId) {
-        return bridgeOk("assistant", null);
+        return bridgeRefuse(
+          EDITOR_COMMAND_REFUSALS.activeJobMismatch,
+          "Cancel refused because the supplied jobId does not identify the exact active assistant command.",
+        );
       }
       const result = currentRarityAssistantResult();
       if (
@@ -1531,8 +1570,14 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     // ran, and the renderer only abandons from its own poll timeout.
     const previousJob = assistantJob;
     assistantSequence += 1;
+    const commandId = rarityMode
+      ? "assistant-local-agent"
+      : route === "byo"
+        ? "assistant-byo-build"
+        : "assistant-local-build";
     assistantJob = {
       jobId: `desktop-assistant-${String(assistantSequence)}`,
+      commandId,
       route,
       status: "running",
       latestProgress: null,
@@ -1732,6 +1777,47 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     return bridgeOk("assistant", assistantSnapshot());
   };
 
+  const command = (payload: unknown): DesktopBridgeResponse => {
+    const validated = validateEditorCommandInvocation(payload);
+    if (!validated.ok) {
+      return bridgeRefuse(validated.reason, validated.message);
+    }
+    const input = validated.invocation.input;
+    switch (validated.command.id) {
+      case "project-new":
+      case "project-open":
+        return bridgeRefuse(
+          EDITOR_COMMAND_REFUSALS.capabilityDenied,
+          `${validated.command.id} requires the native project lifecycle host rather than the engine bridge.`,
+        );
+      case "ship-export-web":
+        return ship({
+          op: "export-web",
+          documentPath: input["documentPath"],
+          expectedContentHash: input["expectedContentHash"],
+        });
+      case "project-save":
+      case "change-review-accept":
+        return authoring({ op: "accept" });
+      case "change-review-reject":
+        return authoring({ op: "reject" });
+      case "edit-undo":
+        return authoring({ op: "undo" });
+      case "run-play":
+        return openPathExercise({ documentPath: input["documentPath"] });
+      case "assistant-local-build":
+        return assistant({ op: "start", route: "local", mode: "build", ...input });
+      case "assistant-byo-build":
+        return assistant({ op: "start", route: "byo", mode: "build", ...input });
+      case "assistant-local-agent":
+        return assistant({ op: "start", route: "local", mode: "agent", ...input });
+      case "assistant-status":
+        return assistant({ op: "status" });
+      case "assistant-cancel":
+        return assistant({ op: "abandon", jobId: input["jobId"] });
+    }
+  };
+
   const handle = (request: unknown): DesktopBridgeResponse => {
     const action = field(request, "action");
     if (action === undefined) {
@@ -1751,6 +1837,8 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     switch (action) {
       case "handshake":
         return bridgeOk("handshake", handshake());
+      case "command":
+        return command(payload);
       case "scene": {
         const scene = activeScene(payload);
         if (!scene.ok) return bridgeRefuse(scene.reason, scene.message);

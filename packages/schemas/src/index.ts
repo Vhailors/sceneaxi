@@ -297,6 +297,33 @@ export {
 } from "./proposal.js";
 
 export {
+  EDITOR_COMMAND_CLIENTS,
+  EDITOR_COMMAND_PERMISSIONS,
+  EDITOR_COMMAND_REFUSALS,
+  EDITOR_COMMAND_REGISTRY,
+  EDITOR_COMMAND_SCHEMA_VERSION,
+  createEditorCommandInvocation,
+  defineEditorCommandRegistry,
+  editorCommand,
+  editorCommandTerminalResult,
+  validateEditorCommandInput,
+  validateEditorCommandInvocation,
+} from "./editor-command-registry.js";
+export type {
+  EditorCommandClient,
+  EditorCommandDefinition,
+  EditorCommandId,
+  EditorCommandInvocation,
+  EditorCommandMutation,
+  EditorCommandPermission,
+  EditorCommandProgress,
+  EditorCommandRefusal,
+  EditorCommandResultTarget,
+  EditorCommandTerminalResult,
+  EditorCommandValidation,
+} from "./editor-command-registry.js";
+
+export {
   DELIVERY_ARTIFACT_ROLES,
   DELIVERY_HANDOFF_KIND,
   DELIVERY_HANDOFF_SCHEMA_VERSION,
@@ -518,6 +545,7 @@ export const contracts = Object.freeze({
   deliveryHandoff: "contracts/delivery-handoff.schema.json",
   modelProviderPort: "contracts/model-provider-port.schema.json",
   desktopLocalBridge: "contracts/desktop-local-bridge.schema.json",
+  editorCommandRegistry: "contracts/editor-command-registry.schema.json",
   sculptIntake: "contracts/sculpt-intake.schema.json",
   objectSculptSpec: "contracts/object-sculpt-spec.schema.json",
   sculptArtifact: "contracts/sculpt-artifact.schema.json",

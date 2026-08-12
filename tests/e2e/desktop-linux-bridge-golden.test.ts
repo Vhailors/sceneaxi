@@ -34,6 +34,7 @@ import {
 } from "@sceneaxi/authoring-core";
 import {
   EDITOR_SHELL_ASSISTANT_MODE_IDS,
+  EDITOR_COMMAND_REFUSALS,
   PROPOSAL_KIND,
   PROPOSAL_SCHEMA_VERSION,
   RARITY_NAMESPACE_KIND,
@@ -42,6 +43,7 @@ import {
   RARITY_SCHEMA_VERSION,
   SCENE_COMPOSITION_INTAKE_KIND,
   SCENE_COMPOSITION_SCHEMA_VERSION,
+  createEditorCommandInvocation,
   type SceneCompositionIntake,
 } from "@sceneaxi/schemas";
 import {
@@ -382,12 +384,56 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
     const res = bridge.handle({ action: "handshake" });
     expect(res.ok).toBe(true);
     if (!res.ok) return;
-    expect(res.data).toEqual({
+    expect(res.data).toMatchObject({
       app: "@sceneaxi/desktop-linux",
       runtime: "electron",
       bridgeVersion: 1,
       actions: DESKTOP_BRIDGE_ACTIONS,
+      commandSchemaVersion: 1,
     });
+    expect((res.data as { commands: Array<{ id: string }> }).commands.map(
+      (command) => command.id,
+    )).toContain("assistant-local-build");
+  });
+
+  it("validates registered commands before dispatch and preserves independent Kids denial", () => {
+    const bridge = bridgeAt(authoringDir());
+    expect(bridge.handle({
+      action: "command",
+      payload: {
+        schemaVersion: 2,
+        commandId: "assistant-local-build",
+        client: "desktop-control",
+        permission: "assistant:run",
+        input: { prompt: "Build", profile: "@sceneaxi/profile-game" },
+      },
+    })).toMatchObject({
+      ok: false,
+      reason: EDITOR_COMMAND_REFUSALS.schemaUnsupported,
+    });
+    expect(bridge.handle({
+      action: "command",
+      payload: {
+        schemaVersion: 1,
+        commandId: "assistant-local-build",
+        client: "desktop-control",
+        permission: "assistant:read",
+        input: { prompt: "Build", profile: "@sceneaxi/profile-game" },
+      },
+    })).toMatchObject({
+      ok: false,
+      reason: EDITOR_COMMAND_REFUSALS.permissionDenied,
+    });
+    expect(bridge.handle({
+      action: "command",
+      payload: {
+        schemaVersion: 1,
+        commandId: "assistant-local-build",
+        client: "desktop-control",
+        permission: "assistant:run",
+        input: { prompt: "Build", profile: "@sceneaxi/profile-kids" },
+      },
+    })).toMatchObject({ ok: false, reason: EDITOR_COMMAND_REFUSALS.kidsDenied });
   });
 
   it("serves the composed MountableScene the renderer mounts", () => {
@@ -679,13 +725,12 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
         }),
     });
     const started = bridge.handle({
-      action: "assistant",
-      payload: {
-        op: "start",
-        route: "byo",
-        profile: "@sceneaxi/profile-game",
-        prompt: "Never finishes",
-      },
+      action: "command",
+      payload: createEditorCommandInvocation(
+        "assistant-byo-build",
+        "desktop-control",
+        { profile: "@sceneaxi/profile-game", prompt: "Never finishes" },
+      ),
     });
     expect(started.ok).toBe(true);
     if (!started.ok || started.data === null) return;
@@ -693,25 +738,51 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
     reportProgress?.({ phase: "waiting-provider", percent: 20, message: "Waiting" });
     expect(
       bridge.handle({
-        action: "assistant",
-        payload: { op: "abandon" },
+        action: "command",
+        payload: {
+          schemaVersion: 1,
+          commandId: "assistant-cancel",
+          client: "desktop-control",
+          permission: "assistant:run",
+          input: {},
+        },
       }),
     ).toMatchObject({
       ok: false,
-      reason: DESKTOP_BRIDGE_REFUSALS.requestMalformed,
+      reason: EDITOR_COMMAND_REFUSALS.inputInvalid,
     });
     expect(
       bridge.handle({ action: "assistant", payload: { op: "status" } }),
     ).toMatchObject({ ok: true, data: { jobId, status: "running" } });
+    expect(bridge.handle({
+      action: "command",
+      payload: createEditorCommandInvocation(
+        "assistant-cancel",
+        "desktop-control",
+        { jobId: "desktop-assistant-wrong" },
+      ),
+    })).toMatchObject({
+      ok: false,
+      reason: EDITOR_COMMAND_REFUSALS.activeJobMismatch,
+    });
     const abandoned = bridge.handle({
-      action: "assistant",
-      payload: { op: "abandon", jobId },
+      action: "command",
+      payload: createEditorCommandInvocation(
+        "assistant-cancel",
+        "desktop-control",
+        { jobId },
+      ),
     });
     expect(abandoned.ok).toBe(true);
     if (abandoned.ok) {
       expect(abandoned.data).toMatchObject({
         status: "refused",
         refusal: { reason: DESKTOP_BRIDGE_REFUSALS.assistantAbandoned },
+        terminal: {
+          jobId,
+          status: "cancelled",
+          progress: { percent: 100, terminal: true },
+        },
       });
     }
     reportProgress?.({
@@ -1342,6 +1413,26 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
     const dispatchedEvents: Array<{ readonly type: string; readonly detail?: unknown }> = [];
     const script = /<script>([\s\S]*?)<\/script>/.exec(desktopLinuxIndexHtml())?.[1];
     expect(script).toBeDefined();
+    const adaptedPort = port === undefined ? undefined : {
+      ...(port as Record<string, unknown>),
+      request: (request: unknown) => {
+        const typed = request as {
+          action?: unknown;
+          payload?: { commandId?: unknown; input?: Record<string, unknown> };
+        };
+        const commandId = typed.action === "command" ? typed.payload?.commandId : null;
+        const translated = commandId === "project-save" || commandId === "change-review-accept"
+          ? { action: "authoring", payload: { op: "accept" } }
+          : commandId === "change-review-reject"
+            ? { action: "authoring", payload: { op: "reject" } }
+            : commandId === "edit-undo"
+              ? { action: "authoring", payload: { op: "undo" } }
+              : commandId === "run-play"
+                ? { action: "open-path", payload: typed.payload?.input }
+                : request;
+        return (port as { request: (value: unknown) => unknown }).request(translated);
+      },
+    };
     runInNewContext(script ?? "", {
       document: {
         activeElement: null,
@@ -1373,7 +1464,7 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
       window: {
         matchMedia: () => ({ addEventListener: () => undefined, matches: false }),
       },
-      ...(port === undefined ? {} : { sceneaxiDesktop: port }),
+      ...(adaptedPort === undefined ? {} : { sceneaxiDesktop: adaptedPort }),
     });
     return {
       shell, accept, reject, reload, openRecent, removeRecent, recentSelect, play, undo,
@@ -2807,6 +2898,142 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
 
 describe("desktop renderer behavior", () => {
 
+  it("starts Sculpt object as the registered Local Build and mounts its registered result", async () => {
+    const generated = await runAssistantSculptAction({
+      route: "local",
+      prompt: "Sculpt object",
+      profile: "@sceneaxi/profile-game",
+    });
+    if (!generated.ok) throw new Error(generated.message);
+    const result = {
+      ok: true as const,
+      route: generated.route,
+      artifactBytes: generated.artifactBytes,
+      artifactDigest: generated.artifactDigest,
+      inspection: generated.inspection,
+      mountable: desktopAssistantScene(generated.artifact),
+    };
+    const window = new HappyWindow();
+    const backend = createThreeSculptPresentationBackend();
+    const mounts = createSculptMountApi(backend);
+    try {
+      window.document.body.innerHTML = `
+        <main class="shell" data-assistant-mode="ask" data-assistant-route="hosted" data-profile="game">
+          <textarea id="assistant-prompt"></textarea>
+          <button id="assistant-send" data-action="assistant-send"></button>
+          <button id="assistant-retry" data-action="assistant-send" hidden></button>
+          <button id="sculpt-start"></button>
+          <div data-sculpt-progress hidden>
+            <p class="sculpt-label"></p>
+            <div role="progressbar"><span class="sculpt-fill"></span></div>
+            <p class="sculpt-detail"></p>
+            <button id="sculpt-cancel" aria-disabled="true"></button>
+          </div>
+          <p data-assistant-status></p>
+          <pre data-assistant-result hidden></pre>
+          <section class="viewport">
+            <div data-assistant-manipulators hidden>
+              <button data-action="assistant-manipulator" data-value="move-x"></button>
+            </div>
+          </section>
+        </main>
+      `;
+      vi.stubGlobal("document", window.document);
+      const commandRequests: Array<Record<string, unknown>> = [];
+      let statusReads = 0;
+      const port = {
+        request: (request: unknown): Promise<DesktopBridgeResponse> => {
+          const typed = request as { action?: unknown; payload?: Record<string, unknown> };
+          if (typed.action !== "command") throw new Error("Sculpt bypassed the registry");
+          const payload = typed.payload ?? {};
+          if (payload["commandId"] === "assistant-status") {
+            statusReads += 1;
+            return Promise.resolve({ ok: true, action: "assistant", data: null });
+          }
+          commandRequests.push(payload);
+          return Promise.resolve({
+            ok: true,
+            action: "assistant",
+            data: {
+              jobId: "desktop-assistant-sculpt",
+              commandId: "assistant-local-build",
+              route: "local",
+              status: "running",
+              latestProgress: null,
+              progressCount: 0,
+              terminal: null,
+            },
+          });
+        },
+      };
+      const readyJob: DesktopAssistantJobSnapshot = {
+        jobId: "desktop-assistant-sculpt",
+        commandId: "assistant-local-build",
+        route: "local",
+        status: "ready",
+        latestProgress: {
+          phase: "ready",
+          percent: 100,
+          message: "Sculpt Artifact is ready.",
+        },
+        progressCount: 4,
+        terminal: {
+          commandId: "assistant-local-build",
+          jobId: "desktop-assistant-sculpt",
+          status: "completed",
+          progress: {
+            phase: "ready",
+            percent: 100,
+            message: "Sculpt Artifact is ready.",
+            terminal: true,
+          },
+          evidenceKind: "sculpt-artifact",
+          resultTarget: "live-viewport",
+          refusal: null,
+        },
+        result,
+      };
+      let settlePoll: ((outcome: Awaited<ReturnType<typeof pollAssistantJob>>) => void) | undefined;
+      const pollJob: typeof pollAssistantJob = () => new Promise((resolve) => {
+        settlePoll = resolve;
+      });
+      const stage = window.document.querySelector(".viewport");
+      if (stage === null) throw new Error("missing viewport fixture");
+      expect(installAssistantProductFlow(
+        stage as unknown as Element,
+        port,
+        mounts,
+        backend,
+        pollJob,
+      )).toBe(true);
+      await vi.waitFor(() => expect(statusReads).toBe(1));
+      await Promise.resolve();
+      window.document.querySelector("#sculpt-start")?.dispatchEvent(new window.Event("click"));
+      await vi.waitFor(() => expect(commandRequests).toHaveLength(1));
+      expect(commandRequests[0]).toMatchObject({
+        schemaVersion: 1,
+        commandId: "assistant-local-build",
+        client: "desktop-control",
+        permission: "assistant:run",
+        input: { prompt: "Sculpt object", profile: "@sceneaxi/profile-game" },
+      });
+      expect(window.document.querySelector("[data-sculpt-progress]")?.hasAttribute("hidden"))
+        .toBe(false);
+      expect(window.document.querySelector("#sculpt-cancel")?.getAttribute("aria-disabled"))
+        .toBeNull();
+      settlePoll?.({ ok: true, job: readyJob, result });
+      await vi.waitFor(() => {
+        expect(window.document.querySelector("[data-assistant-status]")?.textContent)
+          .toContain("Mounted in the live center viewport");
+      });
+      expect(mounts.render().instanceIds).toContain("assistant-live-output");
+    } finally {
+      mounts.dispose();
+      window.close();
+      vi.unstubAllGlobals();
+    }
+  });
+
   // The manipulator seam has two ends that have to agree: the emitted chrome
   // document — a generated public artifact this tier ships — declares the control
   // values, and the renderer's viewport controller is what has to answer them.
@@ -3165,9 +3392,12 @@ describe("desktop renderer behavior", () => {
       };
       const port = {
         request: (request: unknown): Promise<DesktopBridgeResponse> => {
-          const operation = (request as { payload?: { op?: string } }).payload?.op;
-          if (operation === "status") return Promise.resolve(retainedJob);
-          if (operation === "start") starts += 1;
+          const payload = (request as { payload?: { op?: string; commandId?: string } }).payload;
+          const operation = payload?.op ?? payload?.commandId;
+          if (operation === "status" || operation === "assistant-status") {
+            return Promise.resolve(retainedJob);
+          }
+          if (operation === "start" || operation === "assistant-local-build") starts += 1;
           return Promise.reject(new Error("unexpected assistant request"));
         },
       };
@@ -3236,15 +3466,16 @@ describe("desktop renderer behavior", () => {
       });
       const port = {
         request: (request: unknown): Promise<DesktopBridgeResponse> => {
-          const payload = (request as { payload?: { op?: string } }).payload;
-          if (payload?.op === "status") {
+          const payload = (request as { payload?: { op?: string; commandId?: string } }).payload;
+          const operation = payload?.op ?? payload?.commandId;
+          if (operation === "status" || operation === "assistant-status") {
             statusReads += 1;
             return Promise.resolve(
               statusReads === 1 ? { ok: true, action: "assistant", data: null } :
                 runningJob("desktop-assistant-retained"),
             );
           }
-          if (payload?.op !== "start") {
+          if (operation !== "start" && operation !== "assistant-local-build") {
             return Promise.reject(new Error("unexpected direct assistant request"));
           }
           starts += 1;

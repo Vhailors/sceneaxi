@@ -7,6 +7,10 @@
  * registry and the permissions granted by that host instance.
  */
 import { isJsonObject, isJsonValue, type JsonObject } from "./document.js";
+import {
+  editorCommand,
+  type EditorCommandId,
+} from "./editor-command-registry.js";
 
 export const DESKTOP_LOCAL_BRIDGE_PROTOCOL_VERSION = 1 as const;
 export const DESKTOP_LOCAL_BRIDGE_DISCOVERY_KIND =
@@ -26,6 +30,7 @@ export type DesktopLocalBridgePermission =
 
 export type DesktopLocalBridgeTool = Readonly<{
   name: string;
+  commandId: EditorCommandId | null;
   description: string;
   permission: DesktopLocalBridgePermission;
   mutatesProject: boolean;
@@ -49,39 +54,35 @@ const documentInput = Object.freeze({
   }),
 }) satisfies JsonObject;
 
-const assistantInput = Object.freeze({
-  type: "object",
-  additionalProperties: false,
-  required: Object.freeze(["prompt", "profile"]),
-  properties: Object.freeze({
-    prompt: Object.freeze({ type: "string", minLength: 1 }),
-    profile: Object.freeze({
-      type: "string",
-      enum: Object.freeze([
-        "@sceneaxi/profile-game",
-        "@sceneaxi/profile-web",
-      ]),
-    }),
-  }),
-}) satisfies JsonObject;
-
-const assistantJobInput = Object.freeze({
-  type: "object",
-  additionalProperties: false,
-  required: Object.freeze(["jobId"]),
-  properties: Object.freeze({
-    jobId: Object.freeze({ type: "string", minLength: 1 }),
-  }),
-}) satisfies JsonObject;
-
 const tool = (
   definition: DesktopLocalBridgeTool,
 ): DesktopLocalBridgeTool => Object.freeze(definition);
+
+const commandTool = (definition: Readonly<{
+  name: string;
+  commandId: EditorCommandId;
+  description: string;
+  providerRoute: "none" | "byo";
+}>): DesktopLocalBridgeTool => {
+  const command = editorCommand(definition.commandId);
+  if (command === undefined || !command.acceptedClients.includes("local-agent")) {
+    throw new Error(`Local bridge tool names unavailable editor command ${definition.commandId}`);
+  }
+  return tool({
+    ...definition,
+    permission: command.permission,
+    mutatesProject:
+      command.mutation === "commits-project" || command.mutation === "reverts-project",
+    creditRoute: "none",
+    inputSchema: command.inputSchema,
+  });
+};
 
 /** Closed first-release tool registry consumed by both the CLI and host. */
 export const DESKTOP_LOCAL_BRIDGE_TOOLS = Object.freeze([
   tool({
     name: "sceneaxi.bridge.handshake",
+    commandId: null,
     description: "Verify the discovered desktop instance and report its granted local permissions.",
     permission: "bridge:connect",
     mutatesProject: false,
@@ -91,6 +92,7 @@ export const DESKTOP_LOCAL_BRIDGE_TOOLS = Object.freeze([
   }),
   tool({
     name: "sceneaxi.project.status",
+    commandId: null,
     description: "Read the active desktop authoring status for one project-contained document.",
     permission: "project:read",
     mutatesProject: false,
@@ -100,6 +102,7 @@ export const DESKTOP_LOCAL_BRIDGE_TOOLS = Object.freeze([
   }),
   tool({
     name: "sceneaxi.project.propose",
+    commandId: null,
     description: "Open a reviewable JSON Pointer proposal without writing the document.",
     permission: "project:write",
     mutatesProject: false,
@@ -120,26 +123,21 @@ export const DESKTOP_LOCAL_BRIDGE_TOOLS = Object.freeze([
       }),
     }),
   }),
-  tool({
+  commandTool({
     name: "sceneaxi.project.accept",
+    commandId: "change-review-accept",
     description: "Accept and durably apply the active all-or-nothing proposal.",
-    permission: "project:write",
-    mutatesProject: true,
     providerRoute: "none",
-    creditRoute: "none",
-    inputSchema: noInput,
   }),
-  tool({
+  commandTool({
     name: "sceneaxi.project.reject",
+    commandId: "change-review-reject",
     description: "Reject the active proposal without writing the document.",
-    permission: "project:write",
-    mutatesProject: false,
     providerRoute: "none",
-    creditRoute: "none",
-    inputSchema: noInput,
   }),
   tool({
     name: "sceneaxi.project.recover",
+    commandId: null,
     description: "Resolve the shared authoring session's pending apply, rolling the prepared transaction forward or back on disk.",
     permission: "project:write",
     mutatesProject: true,
@@ -149,6 +147,7 @@ export const DESKTOP_LOCAL_BRIDGE_TOOLS = Object.freeze([
   }),
   tool({
     name: "sceneaxi.project.restart",
+    commandId: null,
     description: "Restart the desktop authoring session and read one contained document.",
     permission: "project:write",
     mutatesProject: false,
@@ -156,51 +155,48 @@ export const DESKTOP_LOCAL_BRIDGE_TOOLS = Object.freeze([
     creditRoute: "none",
     inputSchema: documentInput,
   }),
-  tool({
+  commandTool({
     name: "sceneaxi.project.undo",
+    commandId: "edit-undo",
     description: "Undo the last durable apply recorded by the shared authoring session.",
-    permission: "project:write",
-    mutatesProject: true,
     providerRoute: "none",
-    creditRoute: "none",
-    inputSchema: noInput,
   }),
-  tool({
+  commandTool({
+    name: "sceneaxi.run.play",
+    commandId: "run-play",
+    description: "Play the active composed scene through the existing closed kernel session.",
+    providerRoute: "none",
+  }),
+  commandTool({
     name: "sceneaxi.assistant.local.start",
+    commandId: "assistant-local-build",
     description: "Start the deterministic offline assistant compiler; no provider or credits are involved.",
-    permission: "assistant:run",
-    mutatesProject: false,
     providerRoute: "none",
-    creditRoute: "none",
-    inputSchema: assistantInput,
   }),
-  tool({
+  commandTool({
     name: "sceneaxi.assistant.byo.start",
+    commandId: "assistant-byo-build",
     description: "Start the explicitly injected BYOK provider runner; the credential never crosses this tool.",
-    permission: "assistant:run",
-    mutatesProject: false,
     providerRoute: "byo",
-    creditRoute: "none",
-    inputSchema: assistantInput,
   }),
-  tool({
-    name: "sceneaxi.assistant.status",
-    description: "Read the newest assistant job snapshot and bounded progress.",
-    permission: "assistant:read",
-    mutatesProject: false,
+  commandTool({
+    name: "sceneaxi.assistant.local.agent",
+    commandId: "assistant-local-agent",
+    description: "Start the bounded fixture-backed Local Agent and stage its registered proposal in Change Review.",
     providerRoute: "none",
-    creditRoute: "none",
-    inputSchema: noInput,
   }),
-  tool({
+  commandTool({
+    name: "sceneaxi.assistant.status",
+    commandId: "assistant-status",
+    description: "Read the newest assistant job snapshot and bounded progress.",
+    providerRoute: "none",
+  }),
+  commandTool({
     name: "sceneaxi.assistant.abandon",
+    commandId: "assistant-cancel",
     description:
       "Abandon the exact assistant job identified by its start response before a retry.",
-    permission: "assistant:run",
-    mutatesProject: false,
     providerRoute: "none",
-    creditRoute: "none",
-    inputSchema: assistantJobInput,
   }),
 ] as const);
 
@@ -285,7 +281,8 @@ function assistantStartInput(input: JsonObject): boolean {
   return exactKeys(input, ["prompt", "profile"]) &&
     typeof input["prompt"] === "string" && input["prompt"].trim().length > 0 &&
     (input["profile"] === "@sceneaxi/profile-game" ||
-      input["profile"] === "@sceneaxi/profile-web");
+      input["profile"] === "@sceneaxi/profile-web" ||
+      input["profile"] === "@sceneaxi/profile-kids");
 }
 
 /** Exact runtime validation for the checked-in tool schemas. */
@@ -324,12 +321,21 @@ export function validateDesktopLocalBridgeToolInput(
     case "sceneaxi.assistant.status":
     case "sceneaxi.bridge.handshake":
       return exactKeys(input, []);
+    case "sceneaxi.run.play":
+      return documentPathInput(input);
     case "sceneaxi.assistant.abandon":
       return exactKeys(input, ["jobId"]) &&
         typeof input["jobId"] === "string" && input["jobId"].length > 0;
     case "sceneaxi.assistant.local.start":
     case "sceneaxi.assistant.byo.start":
       return assistantStartInput(input);
+    case "sceneaxi.assistant.local.agent":
+      return exactKeys(input, ["prompt", "profile", "documentPath"]) &&
+        typeof input["prompt"] === "string" && input["prompt"].trim().length > 0 &&
+        (input["profile"] === "@sceneaxi/profile-game" ||
+          input["profile"] === "@sceneaxi/profile-web" ||
+          input["profile"] === "@sceneaxi/profile-kids") &&
+        typeof input["documentPath"] === "string" && input["documentPath"].length > 0;
   }
   return false;
 }

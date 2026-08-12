@@ -1,0 +1,655 @@
+/**
+ * Full-editor v1 command registry.
+ *
+ * This is product-command vocabulary, not a transport. Desktop IPC actions,
+ * local-agent tool names, and CLI verbs adapt these definitions rather than
+ * becoming competing sources of permission or result metadata.
+ */
+import type { JsonObject } from "./document.js";
+
+export const EDITOR_COMMAND_SCHEMA_VERSION = 1 as const;
+
+export const EDITOR_COMMAND_CLIENTS = Object.freeze([
+  "desktop-control",
+  "cli",
+  "local-agent",
+] as const);
+
+export type EditorCommandClient = (typeof EDITOR_COMMAND_CLIENTS)[number];
+
+export const EDITOR_COMMAND_PERMISSIONS = Object.freeze([
+  "project:read",
+  "project:write",
+  "assistant:read",
+  "assistant:run",
+] as const);
+
+export type EditorCommandPermission =
+  (typeof EDITOR_COMMAND_PERMISSIONS)[number];
+
+export const EDITOR_COMMAND_REFUSALS = Object.freeze({
+  registryInvalid: "EDITOR_COMMAND_REGISTRY_INVALID",
+  commandUnknown: "EDITOR_COMMAND_UNKNOWN",
+  clientDenied: "EDITOR_COMMAND_CLIENT_DENIED",
+  schemaUnsupported: "EDITOR_COMMAND_SCHEMA_UNSUPPORTED",
+  inputInvalid: "EDITOR_COMMAND_INPUT_INVALID",
+  permissionDenied: "EDITOR_COMMAND_PERMISSION_DENIED",
+  capabilityDenied: "EDITOR_COMMAND_CAPABILITY_DENIED",
+  kidsDenied: "EDITOR_COMMAND_KIDS_DENIED",
+  activeJobMismatch: "EDITOR_COMMAND_ACTIVE_JOB_MISMATCH",
+} as const);
+
+export type EditorCommandRefusal =
+  (typeof EDITOR_COMMAND_REFUSALS)[keyof typeof EDITOR_COMMAND_REFUSALS];
+
+export type EditorCommandId =
+  | "project-new"
+  | "project-open"
+  | "project-save"
+  | "ship-export-web"
+  | "edit-undo"
+  | "run-play"
+  | "change-review-accept"
+  | "change-review-reject"
+  | "assistant-local-build"
+  | "assistant-byo-build"
+  | "assistant-local-agent"
+  | "assistant-status"
+  | "assistant-cancel";
+
+export type EditorCommandMutation =
+  | "none"
+  | "stages-change"
+  | "commits-project"
+  | "reverts-project";
+
+export type EditorCommandResultTarget =
+  | "none"
+  | "project"
+  | "change-review"
+  | "live-viewport";
+
+export type EditorCommandDefinition = Readonly<{
+  schemaVersion: typeof EDITOR_COMMAND_SCHEMA_VERSION;
+  id: EditorCommandId;
+  label: string;
+  acceptedClients: readonly EditorCommandClient[];
+  permission: EditorCommandPermission;
+  capability: Readonly<{
+    id: string;
+    profiles: readonly ("game" | "web")[];
+  }>;
+  mutation: EditorCommandMutation;
+  progress: Readonly<{
+    kind: "immediate" | "bounded";
+    minimum: 0;
+    maximum: 100;
+    phases: readonly string[];
+  }>;
+  evidence: Readonly<{
+    kind:
+      | "none"
+      | "project-binding"
+      | "authoring-snapshot"
+      | "undo-result"
+      | "kernel-session"
+      | "sculpt-artifact"
+      | "rarity-proposal"
+      | "command-progress";
+    target: EditorCommandResultTarget;
+  }>;
+  refusals: readonly string[];
+  undo: Readonly<{
+    kind: "none" | "records-entry" | "consumes-entry";
+    commandId: "edit-undo" | null;
+  }>;
+  inputSchema: JsonObject;
+  inputShape: "none" | "document" | "export" | "assistant" | "assistant-agent" | "job";
+}>;
+
+export type EditorCommandInvocation = Readonly<{
+  schemaVersion: typeof EDITOR_COMMAND_SCHEMA_VERSION;
+  commandId: EditorCommandId;
+  client: EditorCommandClient;
+  permission: EditorCommandPermission;
+  input: JsonObject;
+}>;
+
+export type EditorCommandValidation =
+  | Readonly<{
+      ok: true;
+      invocation: EditorCommandInvocation;
+      command: EditorCommandDefinition;
+    }>
+  | Readonly<{
+      ok: false;
+      reason: EditorCommandRefusal;
+      message: string;
+    }>;
+
+export type EditorCommandProgress = Readonly<{
+  phase: string;
+  percent: number;
+  message: string;
+  terminal: boolean;
+}>;
+
+export type EditorCommandTerminalResult = Readonly<{
+  commandId: EditorCommandId;
+  jobId: string | null;
+  status: "completed" | "cancelled" | "refused";
+  progress: EditorCommandProgress;
+  evidenceKind: EditorCommandDefinition["evidence"]["kind"];
+  resultTarget: EditorCommandResultTarget;
+  refusal: string | null;
+}>;
+
+const noInput = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  properties: Object.freeze({}),
+}) satisfies JsonObject;
+
+const documentInput = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: Object.freeze(["documentPath"]),
+  properties: Object.freeze({
+    documentPath: Object.freeze({ type: "string", minLength: 1 }),
+  }),
+}) satisfies JsonObject;
+
+const assistantInput = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: Object.freeze(["prompt", "profile"]),
+  properties: Object.freeze({
+    prompt: Object.freeze({ type: "string", minLength: 1 }),
+    profile: Object.freeze({
+      type: "string",
+      enum: Object.freeze([
+        "@sceneaxi/profile-game",
+        "@sceneaxi/profile-web",
+        "@sceneaxi/profile-kids",
+      ]),
+    }),
+  }),
+}) satisfies JsonObject;
+
+const exportInput = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: Object.freeze(["documentPath", "expectedContentHash"]),
+  properties: Object.freeze({
+    documentPath: Object.freeze({ type: "string", minLength: 1 }),
+    expectedContentHash: Object.freeze({
+      type: "string",
+      pattern: "^sha256:[0-9a-f]{64}$",
+    }),
+  }),
+}) satisfies JsonObject;
+
+const assistantAgentInput = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: Object.freeze(["prompt", "profile", "documentPath"]),
+  properties: Object.freeze({
+    ...assistantInput.properties,
+    documentPath: Object.freeze({ type: "string", minLength: 1 }),
+  }),
+}) satisfies JsonObject;
+
+const jobInput = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: Object.freeze(["jobId"]),
+  properties: Object.freeze({
+    jobId: Object.freeze({ type: "string", minLength: 1 }),
+  }),
+}) satisfies JsonObject;
+
+const CLIENTS = Object.freeze([...EDITOR_COMMAND_CLIENTS]);
+const BASE_REFUSALS = Object.freeze([
+  EDITOR_COMMAND_REFUSALS.clientDenied,
+  EDITOR_COMMAND_REFUSALS.schemaUnsupported,
+  EDITOR_COMMAND_REFUSALS.inputInvalid,
+  EDITOR_COMMAND_REFUSALS.permissionDenied,
+  EDITOR_COMMAND_REFUSALS.capabilityDenied,
+  EDITOR_COMMAND_REFUSALS.kidsDenied,
+]);
+
+const immediate = (phases: readonly string[] = ["completed"]) =>
+  Object.freeze({ kind: "immediate" as const, minimum: 0 as const, maximum: 100 as const, phases });
+const bounded = (phases: readonly string[]) =>
+  Object.freeze({ kind: "bounded" as const, minimum: 0 as const, maximum: 100 as const, phases });
+const capability = (id: string) =>
+  Object.freeze({ id, profiles: Object.freeze(["game", "web"] as const) });
+const evidence = (
+  kind: EditorCommandDefinition["evidence"]["kind"],
+  target: EditorCommandResultTarget,
+) => Object.freeze({ kind, target });
+const undo = (
+  kind: EditorCommandDefinition["undo"]["kind"],
+  commandId: "edit-undo" | null = null,
+) => Object.freeze({ kind, commandId });
+
+function definition(
+  row: EditorCommandDefinition,
+): EditorCommandDefinition {
+  return Object.freeze({
+    ...row,
+    acceptedClients: Object.freeze([...row.acceptedClients]),
+    refusals: Object.freeze([...row.refusals]),
+  });
+}
+
+const DEFINITIONS = [
+  definition({
+    schemaVersion: 1,
+    id: "project-new",
+    label: "New Project",
+    acceptedClients: ["desktop-control"],
+    permission: "project:write",
+    capability: capability("project.lifecycle"),
+    mutation: "commits-project",
+    progress: immediate(),
+    evidence: evidence("project-binding", "project"),
+    refusals: [...BASE_REFUSALS, "DESKTOP_PROJECT_SELECTION_CANCELLED"],
+    undo: undo("none"),
+    inputSchema: noInput,
+    inputShape: "none",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "ship-export-web",
+    label: "Export Web",
+    acceptedClients: ["desktop-control"],
+    permission: "project:read",
+    capability: capability("delivery.export-web"),
+    mutation: "none",
+    progress: immediate(["validating", "writing", "verified"]),
+    evidence: evidence("project-binding", "project"),
+    refusals: [...BASE_REFUSALS, "DESKTOP_WEB_EXPORT_WRITE_FAILED"],
+    undo: undo("none"),
+    inputSchema: exportInput,
+    inputShape: "export",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "project-open",
+    label: "Open Project…",
+    acceptedClients: ["desktop-control"],
+    permission: "project:write",
+    capability: capability("project.lifecycle"),
+    mutation: "none",
+    progress: immediate(),
+    evidence: evidence("project-binding", "project"),
+    refusals: [...BASE_REFUSALS, "DESKTOP_PROJECT_SELECTION_CANCELLED"],
+    undo: undo("none"),
+    inputSchema: noInput,
+    inputShape: "none",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "project-save",
+    label: "Save",
+    acceptedClients: ["desktop-control"],
+    permission: "project:write",
+    capability: capability("authoring.change-review"),
+    mutation: "commits-project",
+    progress: immediate(),
+    evidence: evidence("authoring-snapshot", "change-review"),
+    refusals: [...BASE_REFUSALS, "DESKTOP_PROPOSAL_NOT_REVIEWING"],
+    undo: undo("records-entry", "edit-undo"),
+    inputSchema: noInput,
+    inputShape: "none",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "edit-undo",
+    label: "Undo",
+    acceptedClients: CLIENTS,
+    permission: "project:write",
+    capability: capability("authoring.undo"),
+    mutation: "reverts-project",
+    progress: immediate(),
+    evidence: evidence("undo-result", "project"),
+    refusals: [...BASE_REFUSALS, "DESKTOP_UNDO_UNAVAILABLE"],
+    undo: undo("consumes-entry"),
+    inputSchema: noInput,
+    inputShape: "none",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "run-play",
+    label: "Play",
+    acceptedClients: CLIENTS,
+    permission: "project:read",
+    capability: capability("runtime.play"),
+    mutation: "none",
+    progress: immediate(["opening", "advancing", "closed"]),
+    evidence: evidence("kernel-session", "live-viewport"),
+    refusals: [...BASE_REFUSALS, "DESKTOP_SCENE_NOT_COMPOSABLE"],
+    undo: undo("none"),
+    inputSchema: documentInput,
+    inputShape: "document",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "change-review-accept",
+    label: "Accept proposal",
+    acceptedClients: CLIENTS,
+    permission: "project:write",
+    capability: capability("authoring.change-review"),
+    mutation: "commits-project",
+    progress: immediate(),
+    evidence: evidence("authoring-snapshot", "change-review"),
+    refusals: [...BASE_REFUSALS, "DESKTOP_PROPOSAL_NOT_REVIEWING"],
+    undo: undo("records-entry", "edit-undo"),
+    inputSchema: noInput,
+    inputShape: "none",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "change-review-reject",
+    label: "Reject proposal",
+    acceptedClients: CLIENTS,
+    permission: "project:write",
+    capability: capability("authoring.change-review"),
+    mutation: "none",
+    progress: immediate(),
+    evidence: evidence("authoring-snapshot", "change-review"),
+    refusals: [...BASE_REFUSALS, "DESKTOP_PROPOSAL_NOT_REVIEWING"],
+    undo: undo("none"),
+    inputSchema: noInput,
+    inputShape: "none",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "assistant-local-build",
+    label: "Local Assistant Build",
+    acceptedClients: CLIENTS,
+    permission: "assistant:run",
+    capability: capability("assistant.build.local"),
+    mutation: "none",
+    progress: bounded(["accepted", "generating-local", "validating-artifact", "ready", "cancelled"]),
+    evidence: evidence("sculpt-artifact", "live-viewport"),
+    refusals: [...BASE_REFUSALS, "DESKTOP_ASSISTANT_BUSY", "ASSISTANT_SCULPT_PROMPT_INVALID"],
+    undo: undo("none"),
+    inputSchema: assistantInput,
+    inputShape: "assistant",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "assistant-byo-build",
+    label: "BYOK Assistant Build",
+    acceptedClients: CLIENTS,
+    permission: "assistant:run",
+    capability: capability("assistant.build.byo"),
+    mutation: "none",
+    progress: bounded(["accepted", "waiting-provider", "streaming-provider", "validating-artifact", "ready", "cancelled"]),
+    evidence: evidence("sculpt-artifact", "live-viewport"),
+    refusals: [...BASE_REFUSALS, "DESKTOP_ASSISTANT_BUSY", "DESKTOP_ASSISTANT_BYO_UNAVAILABLE"],
+    undo: undo("none"),
+    inputSchema: assistantInput,
+    inputShape: "assistant",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "assistant-local-agent",
+    label: "Bounded Local Agent",
+    acceptedClients: CLIENTS,
+    permission: "assistant:run",
+    capability: capability("assistant.agent.bounded"),
+    mutation: "stages-change",
+    progress: bounded(["accepted", "waiting-provider", "validating-artifact", "ready", "cancelled"]),
+    evidence: evidence("rarity-proposal", "change-review"),
+    refusals: [...BASE_REFUSALS, "DESKTOP_ASSISTANT_BUSY", "DESKTOP_RARITY_PROVIDER_UNAVAILABLE"],
+    undo: undo("none"),
+    inputSchema: assistantAgentInput,
+    inputShape: "assistant-agent",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "assistant-status",
+    label: "Assistant status",
+    acceptedClients: CLIENTS,
+    permission: "assistant:read",
+    capability: capability("assistant.progress"),
+    mutation: "none",
+    progress: bounded(["running", "completed", "cancelled", "refused"]),
+    evidence: evidence("command-progress", "none"),
+    refusals: [...BASE_REFUSALS, "DESKTOP_ASSISTANT_JOB_MISSING"],
+    undo: undo("none"),
+    inputSchema: noInput,
+    inputShape: "none",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "assistant-cancel",
+    label: "Cancel active command",
+    acceptedClients: CLIENTS,
+    permission: "assistant:run",
+    capability: capability("assistant.cancel"),
+    mutation: "none",
+    progress: bounded(["cancelling", "cancelled", "completed", "refused"]),
+    evidence: evidence("command-progress", "none"),
+    refusals: [...BASE_REFUSALS, EDITOR_COMMAND_REFUSALS.activeJobMismatch],
+    undo: undo("none"),
+    inputSchema: jobInput,
+    inputShape: "job",
+  }),
+] as const satisfies readonly EditorCommandDefinition[];
+
+function registryError(message: string): never {
+  throw new Error(`${EDITOR_COMMAND_REFUSALS.registryInvalid}: ${message}`);
+}
+
+/** Validate and freeze a registry. Exported so duplicate/drift failure is testable. */
+export function defineEditorCommandRegistry(
+  definitions: readonly EditorCommandDefinition[],
+): readonly EditorCommandDefinition[] {
+  const ids = new Set<string>();
+  for (const command of definitions) {
+    if (ids.has(command.id)) registryError(`duplicate command id ${command.id}`);
+    ids.add(command.id);
+    if (command.schemaVersion !== EDITOR_COMMAND_SCHEMA_VERSION) {
+      registryError(`${command.id} has incompatible schema version ${String(command.schemaVersion)}`);
+    }
+    if (command.acceptedClients.length === 0 ||
+      !command.acceptedClients.every((client) => EDITOR_COMMAND_CLIENTS.includes(client)) ||
+      new Set(command.acceptedClients).size !== command.acceptedClients.length) {
+      registryError(`${command.id} has invalid accepted clients`);
+    }
+    if (!EDITOR_COMMAND_PERMISSIONS.includes(command.permission)) {
+      registryError(`${command.id} has an invalid permission`);
+    }
+    if (command.capability.profiles.includes("kids" as never)) {
+      registryError(`${command.id} must not activate Kids`);
+    }
+    if (command.progress.minimum !== 0 || command.progress.maximum !== 100 ||
+      command.progress.phases.length === 0) {
+      registryError(`${command.id} has an invalid bounded progress declaration`);
+    }
+  }
+  return Object.freeze([...definitions]);
+}
+
+export const EDITOR_COMMAND_REGISTRY = defineEditorCommandRegistry(DEFINITIONS);
+
+export function editorCommand(
+  id: unknown,
+): EditorCommandDefinition | undefined {
+  return EDITOR_COMMAND_REGISTRY.find((command) => command.id === id);
+}
+
+function exactKeys(value: JsonObject, allowed: readonly string[]): boolean {
+  const keys = Object.keys(value);
+  return keys.length === allowed.length && allowed.every((key) => Object.hasOwn(value, key));
+}
+
+/**
+ * Command envelopes cross browser/host and local-socket structured-clone
+ * boundaries. Their plain-object prototype can therefore come from another
+ * realm; validate their own data properties instead of comparing prototypes.
+ */
+function isCommandObject(value: unknown): value is JsonObject {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+  return Reflect.ownKeys(value).every((key) => {
+    if (typeof key !== "string") return false;
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    return descriptor !== undefined && descriptor.enumerable && "value" in descriptor;
+  });
+}
+
+function profileInput(input: JsonObject): boolean {
+  return typeof input["prompt"] === "string" && input["prompt"].trim().length > 0 &&
+    (input["profile"] === "@sceneaxi/profile-game" ||
+      input["profile"] === "@sceneaxi/profile-web" ||
+      input["profile"] === "@sceneaxi/profile-kids");
+}
+
+export function validateEditorCommandInput(
+  command: EditorCommandDefinition,
+  input: unknown,
+): input is JsonObject {
+  if (!isCommandObject(input)) return false;
+  switch (command.inputShape) {
+    case "none":
+      return exactKeys(input, []);
+    case "document":
+      return exactKeys(input, ["documentPath"]) &&
+        typeof input["documentPath"] === "string" && input["documentPath"].length > 0;
+    case "export":
+      return exactKeys(input, ["documentPath", "expectedContentHash"]) &&
+        typeof input["documentPath"] === "string" && input["documentPath"].length > 0 &&
+        typeof input["expectedContentHash"] === "string" &&
+        /^sha256:[0-9a-f]{64}$/.test(input["expectedContentHash"]);
+    case "assistant":
+      return exactKeys(input, ["prompt", "profile"]) && profileInput(input);
+    case "assistant-agent":
+      return exactKeys(input, ["prompt", "profile", "documentPath"]) &&
+        profileInput(input) && typeof input["documentPath"] === "string" &&
+        input["documentPath"].length > 0;
+    case "job":
+      return exactKeys(input, ["jobId"]) &&
+        typeof input["jobId"] === "string" && input["jobId"].length > 0;
+  }
+}
+
+const refusal = (
+  reason: EditorCommandRefusal,
+  message: string,
+): EditorCommandValidation => Object.freeze({ ok: false as const, reason, message });
+
+/** Fail-closed validation performed before any command handler is selected. */
+export function validateEditorCommandInvocation(
+  value: unknown,
+): EditorCommandValidation {
+  if (!isCommandObject(value)) {
+    return refusal(EDITOR_COMMAND_REFUSALS.inputInvalid, "A command invocation must be an object.");
+  }
+  const invocationKeys = ["schemaVersion", "commandId", "client", "permission", "input"];
+  if (Object.keys(value).some((key) => !invocationKeys.includes(key))) {
+    return refusal(
+      EDITOR_COMMAND_REFUSALS.inputInvalid,
+      "A command invocation has unknown fields.",
+    );
+  }
+  const schemaVersion = value["schemaVersion"];
+  if (schemaVersion !== EDITOR_COMMAND_SCHEMA_VERSION) {
+    return refusal(
+      EDITOR_COMMAND_REFUSALS.schemaUnsupported,
+      `Editor command schema version ${String(schemaVersion)} is unsupported.`,
+    );
+  }
+  const command = editorCommand(value["commandId"]);
+  if (command === undefined) {
+    return refusal(EDITOR_COMMAND_REFUSALS.commandUnknown, "The editor command is not registered.");
+  }
+  const client = value["client"];
+  if (!EDITOR_COMMAND_CLIENTS.some((candidate) => candidate === client) ||
+    !command.acceptedClients.some((candidate) => candidate === client)) {
+    return refusal(
+      EDITOR_COMMAND_REFUSALS.clientDenied,
+      `${command.id} is not exposed to client ${String(client)}.`,
+    );
+  }
+  if (value["permission"] !== command.permission) {
+    return refusal(
+      EDITOR_COMMAND_REFUSALS.permissionDenied,
+      `${command.id} requires permission ${command.permission}.`,
+    );
+  }
+  const input = value["input"];
+  if (!validateEditorCommandInput(command, input)) {
+    return refusal(
+      EDITOR_COMMAND_REFUSALS.inputInvalid,
+      `Input does not match the registered schema for ${command.id}.`,
+    );
+  }
+  if (input["profile"] === "@sceneaxi/profile-kids") {
+    return refusal(
+      EDITOR_COMMAND_REFUSALS.kidsDenied,
+      `${command.id} is denied for @sceneaxi/profile-kids before execution.`,
+    );
+  }
+  return Object.freeze({
+    ok: true as const,
+    invocation: value as EditorCommandInvocation,
+    command,
+  });
+}
+
+export function createEditorCommandInvocation(
+  commandId: EditorCommandId,
+  client: EditorCommandClient,
+  input: JsonObject,
+): EditorCommandInvocation {
+  const command = editorCommand(commandId);
+  if (command === undefined) registryError(`invocation names unknown command ${commandId}`);
+  const invocation = Object.freeze({
+    schemaVersion: EDITOR_COMMAND_SCHEMA_VERSION,
+    commandId,
+    client,
+    permission: command.permission,
+    input,
+  });
+  const validated = validateEditorCommandInvocation(invocation);
+  if (!validated.ok) {
+    // Kids denial belongs to the execution boundary. Construction must still
+    // carry the valid invocation there so every client observes the same named
+    // refusal instead of translating it into an internal transport error.
+    if (validated.reason === EDITOR_COMMAND_REFUSALS.kidsDenied) {
+      return invocation;
+    }
+    registryError(validated.message);
+  }
+  return validated.invocation;
+}
+
+export function editorCommandTerminalResult(input: Readonly<{
+  commandId: EditorCommandId;
+  jobId?: string;
+  status: EditorCommandTerminalResult["status"];
+  phase: string;
+  message: string;
+  refusal?: string;
+}>): EditorCommandTerminalResult {
+  const command = editorCommand(input.commandId);
+  if (command === undefined) registryError(`terminal result names unknown command ${input.commandId}`);
+  return Object.freeze({
+    commandId: input.commandId,
+    jobId: input.jobId ?? null,
+    status: input.status,
+    progress: Object.freeze({
+      phase: input.phase,
+      percent: 100,
+      message: input.message,
+      terminal: true,
+    }),
+    evidenceKind: command.evidence.kind,
+    resultTarget: command.evidence.target,
+    refusal: input.refusal ?? null,
+  });
+}

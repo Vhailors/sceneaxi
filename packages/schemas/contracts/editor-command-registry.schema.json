@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sceneaxi.invalid/contracts/editor-command-registry/v1",
+  "title": "SceneAxi full-editor command registry v1",
+  "type": "array",
+  "minItems": 1,
+  "items": { "$ref": "#/$defs/command" },
+  "$defs": {
+    "client": { "enum": ["desktop-control", "cli", "local-agent"] },
+    "permission": { "enum": ["project:read", "project:write", "assistant:read", "assistant:run"] },
+    "command": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "id", "label", "acceptedClients", "permission", "capability", "mutation", "progress", "evidence", "refusals", "undo", "inputSchema", "inputShape"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "id": {
+          "enum": [
+            "project-new",
+            "ship-export-web",
+            "project-open",
+            "project-save",
+            "edit-undo",
+            "run-play",
+            "change-review-accept",
+            "change-review-reject",
+            "assistant-local-build",
+            "assistant-byo-build",
+            "assistant-local-agent",
+            "assistant-status",
+            "assistant-cancel"
+          ]
+        },
+        "label": { "type": "string", "minLength": 1 },
+        "acceptedClients": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/client" } },
+        "permission": { "$ref": "#/$defs/permission" },
+        "capability": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "profiles"],
+          "properties": {
+            "id": { "type": "string", "minLength": 1 },
+            "profiles": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["game", "web"] } }
+          }
+        },
+        "mutation": { "enum": ["none", "stages-change", "commits-project", "reverts-project"] },
+        "progress": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "minimum", "maximum", "phases"],
+          "properties": {
+            "kind": { "enum": ["immediate", "bounded"] },
+            "minimum": { "const": 0 },
+            "maximum": { "const": 100 },
+            "phases": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+          }
+        },
+        "evidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "target"],
+          "properties": {
+            "kind": { "enum": ["none", "project-binding", "authoring-snapshot", "undo-result", "kernel-session", "sculpt-artifact", "rarity-proposal", "command-progress"] },
+            "target": { "enum": ["none", "project", "change-review", "live-viewport"] }
+          }
+        },
+        "refusals": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "undo": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "commandId"],
+          "properties": {
+            "kind": { "enum": ["none", "records-entry", "consumes-entry"] },
+            "commandId": { "enum": ["edit-undo", null] }
+          }
+        },
+        "inputSchema": { "type": "object" },
+        "inputShape": { "enum": ["none", "document", "export", "assistant", "assistant-agent", "job"] }
+      }
+    }
+  }
+}

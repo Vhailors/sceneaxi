@@ -121,6 +121,30 @@ describe("CLI → local desktop bridge golden path", () => {
     );
     expect(accepted.status).toBe(0);
     expect(readFileSync(documentPath, "utf8")).not.toBe(before);
+
+    const played = await sceneaxi(
+      [
+        "desktop",
+        "bridge",
+        "call",
+        "--tool",
+        "sceneaxi.run.play",
+        "--allow",
+        "project:read",
+        "--input-json",
+        JSON.stringify({ documentPath: "scene.json" }),
+        ...common,
+      ],
+      projectRoot,
+    );
+    expect(played.status).toBe(0);
+    expect(JSON.parse(played.stdout)).toMatchObject({
+      ok: true,
+      result: {
+        tool: "sceneaxi.run.play",
+        response: { closed: true },
+      },
+    });
   });
 
   it("keeps local authoring unmetered and refuses absent BYOK or hosted routes by name", async () => {
@@ -156,7 +180,36 @@ describe("CLI → local desktop bridge golden path", () => {
     expect(local.status).toBe(0);
     expect(JSON.parse(local.stdout)).toMatchObject({
       ok: true,
-      result: { response: { route: "local" } },
+      result: {
+        response: {
+          commandId: "assistant-local-build",
+          route: "local",
+        },
+      },
+    });
+
+    const kids = await sceneaxi(
+      [
+        "desktop",
+        "bridge",
+        "call",
+        "--tool",
+        "sceneaxi.assistant.local.start",
+        "--allow",
+        "assistant:run",
+        "--input-json",
+        JSON.stringify({ prompt: "Build a toy", profile: "@sceneaxi/profile-kids" }),
+        ...common,
+      ],
+      projectRoot,
+    );
+    expect(kids.status).toBe(1);
+    expect(JSON.parse(kids.stdout)).toMatchObject({
+      ok: false,
+      error: {
+        code: "BRIDGE_REFUSED",
+        details: { bridgeDetail: "EDITOR_COMMAND_KIDS_DENIED" },
+      },
     });
 
     const byo = await sceneaxi(

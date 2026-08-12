@@ -762,7 +762,10 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
         action: "assistant",
         payload: { op: "abandon", jobId },
       }),
-    ).toMatchObject({ ok: true, data: null });
+    ).toMatchObject({
+      ok: false,
+      reason: "EDITOR_COMMAND_ACTIVE_JOB_MISMATCH",
+    });
     expect(bridge.handle({ action: "assistant", payload: { op: "status" } })).toMatchObject({
       ok: true,
       data: { status: "running" },

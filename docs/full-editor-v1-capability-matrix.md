@@ -6,7 +6,9 @@ implementation program starts. The parent specification is
 [sceneaxi#249](https://github.com/Vhailors/sceneaxi/issues/249); the product-scope
 parent remains [sceneaxi#1](https://github.com/Vhailors/sceneaxi/issues/1).
 
-The matrix reports current behavior. A `live` control in the visual model is not
+Issue #250 has since landed the first command-registry slice described below;
+the rows name that evidence without claiming any capability owned by #251 or
+later. The matrix reports current behavior. A `live` control in the visual model is not
 automatically **real** here: `live` means that a packaged host may bind it, while
 this inventory follows the request through the host and checks what happens.
 
@@ -41,11 +43,12 @@ and Remove key button. Their availability is decided by
 counted as shell controls, so the current packaged-window union is **90**.
 
 The CLI exposes **20 verbs** from `packages/cli/src/commands.ts`; the Electron
-bridge exposes **9 actions**, **9 authoring operations**, and **3 assistant
-operations** from `desktop/linux/src/lib/bridge-contract.ts`; the same-user local
-agent bridge exposes **12 tools** from
-`packages/schemas/src/desktop-local-bridge.ts`. Those sets are inventoried below
-rather than treated as one registry, because they are not one registry today.
+bridge exposes **10 actions**, **9 authoring operations**, and **3 legacy
+assistant transport operations** from `desktop/linux/src/lib/bridge-contract.ts`;
+the same-user local agent bridge exposes **14 tools** from
+`packages/schemas/src/desktop-local-bridge.ts`. Their transport names remain
+distinct, but first-slice product operations now derive from the one versioned
+registry in `packages/schemas/src/editor-command-registry.ts`.
 
 ## Desktop controls and states
 
@@ -55,7 +58,7 @@ id family expands only the suffixes printed in the Item(s) cell.
 | Item(s) | Count | Status | Current behavior and refusal | Evidence owner | Smallest dependency |
 |---|---:|---|---|---|---|
 | `change-review-accept`, `change-review-reject` | 2 | **real** | Accept commits the one active proposal through the shared session; Reject discards it without a write. Invalid states name `DESKTOP_PROPOSAL_NOT_REVIEWING` or the upstream authoring refusal. | `apps/desktop-shell/src/session.ts`; `tests/e2e/desktop-product-loop-golden.test.ts` | None for the current single-proposal behavior; [#252](https://github.com/Vhailors/sceneaxi/issues/252) adds full transaction history. |
-| `sculpt-start`, `sculpt-cancel` | 2 | **fake** | Both are visibly inert under `DESKTOP_NO_DOCUMENT_BOUND`. The five Build passes and progress bar are static design reference, not a running job. | `apps/desktop-shell/src/visual-model.ts`; `tests/e2e/desktop-control-inventory-golden.test.ts` | [#250](https://github.com/Vhailors/sceneaxi/issues/250) registers the existing Assistant Build path and exact-job cancellation. |
+| `sculpt-start`, `sculpt-cancel` | 2 | **real** | After the packaged viewport binds, Sculpt starts the registered deterministic Local Assistant Build and mounts its validated Sculpt Artifact at the registry's `live-viewport` target. Cancel becomes actionable only for the exact returned job id and reports a terminal bounded-progress result or `EDITOR_COMMAND_ACTIVE_JOB_MISMATCH`; it never changes presentation state by itself. | `packages/schemas/test/editor-command-registry.test.ts`; `tests/e2e/desktop-linux-bridge-golden.test.ts`; renderer typecheck | None for this bounded Local Build slice; broader Sculpt authoring remains under later capability tickets. |
 | `assistant-toggle`, `assistant-close` | 2 | **real** | Open/close the assistant column or responsive drawer. Kids makes both inert under `DESKTOP_KIDS_ASSISTANT_DENIED`. | `apps/desktop-shell/src/visual-model.ts`; control inventory golden | None. |
 | `assistant-prompt`, `assistant-send`, `assistant-retry` | 3 | **partial** | The standalone shell keeps them inert under `DESKTOP_NO_PRESENTATION_RUNTIME`. Linux promotes them only after the bridge, viewport, and handlers bind. Local Build and bounded Agent work; Ask, Hosted, and unavailable BYOK refuse after Send. Retry resumes or abandons the exact retained job. | `desktop/linux/src/renderer/{viewport,assistant-poll,assistant-start}.ts`; `tests/e2e/assistant-panel-golden.test.ts`; provider-host golden | [#250](https://github.com/Vhailors/sceneaxi/issues/250) supplies the registry; [#261](https://github.com/Vhailors/sceneaxi/issues/261) completes inspect/propose/approve/apply. |
 | `assistant-route-local` | 1 | **real** | Selects the deterministic free Local route; Build compiles a typed Sculpt Artifact without provider or credits. | `desktop/linux/src/lib/bridge.ts`; desktop Linux bridge golden | None for the current bounded build. |
@@ -76,8 +79,8 @@ id family expands only the suffixes printed in the Item(s) cell.
 | `web-stage-html` | 1 | **partial** | Web profile stages one bounded starter HTML value as inert data. It is not a site canvas or general HTML editor; Game and Kids name `DESKTOP_WEB_CAPABILITY_REQUIRED`. | `apps/desktop-shell/src/product-loop.ts`; desktop product-loop tests | [#250](https://github.com/Vhailors/sceneaxi/issues/250) registers it; no broader site builder is authorized by full-editor v1. |
 | `web-inject-asset` | 1 | **real** | On packaged Linux, opens a native picker and stages the contained GLB/glTF importer through Change Review. Game and Kids name `DESKTOP_WEB_CAPABILITY_REQUIRED`. | `docs/asset-ingestion.md`; asset ingestion and picker tests | [#256](https://github.com/Vhailors/sceneaxi/issues/256) adds the remaining first-class asset families and hot reload. |
 | `drawer-left`, `drawer-inspector` | 2 | **real** | Open the responsive Panels and Inspector drawers; Kids centrally demotes them. | control accounting and recorded viewport evidence in `docs/engine-desktop-surface.md` | [#265](https://github.com/Vhailors/sceneaxi/issues/265) adds user-arranged persistent workspaces. |
-| `menu-file`, `menu-edit`, `menu-run` | 3 | **real** | Open accessible application menus with focus, arrow, Escape, outside-click, and focus-leave behavior. | `apps/desktop-shell/src/interaction-commands.ts`; command interaction golden | [#250](https://github.com/Vhailors/sceneaxi/issues/250) makes the command definitions shared rather than desktop-only. |
-| `menu-command-{project-new,project-open,project-save,ship-export-web,edit-undo,run-play}` | 6 | **real** | Each invokes the same current handler as its palette row and accelerator. Undo is visibly inert until the journal reports availability or while recovery is pending. | command interaction golden | [#250](https://github.com/Vhailors/sceneaxi/issues/250) removes the separate registry. |
+| `menu-file`, `menu-edit`, `menu-run` | 3 | **real** | Open accessible application menus with focus, arrow, Escape, outside-click, and focus-leave behavior. Their command rows derive label, schema version, and permission from the shared registry. | `apps/desktop-shell/src/interaction-commands.ts`; command interaction golden | None for the registered first-slice commands. |
+| `menu-command-{project-new,project-open,project-save,ship-export-web,edit-undo,run-play}` | 6 | **real** | Each invokes the same current handler as its palette row and accelerator through the registered desktop-control contract; native New/Open keep the lifecycle port while the other engine-host operations cross the validated `command` action. Undo is visibly inert until the journal reports availability or while recovery is pending. | command interaction golden; desktop bridge golden | None for this slice. |
 | `mode-build` | 1 | **partial** | Opens the only room with selected-instance property authoring. It lacks hierarchy, multi-select, gizmos, snapping, reusable content, and the full inspector. | engine desktop surface doc and scene-property goldens | [#253](https://github.com/Vhailors/sceneaxi/issues/253), [#254](https://github.com/Vhailors/sceneaxi/issues/254), [#255](https://github.com/Vhailors/sceneaxi/issues/255). |
 | `mode-sculpt` | 1 | **fake** | Changes presentation only; its room says standalone Sculpt authoring is unavailable and its actions are inert. | visual model and mounted control inventory | [#250](https://github.com/Vhailors/sceneaxi/issues/250). |
 | `mode-compose` | 1 | **fake** | Changes presentation only; the room has no bound composition editor. The narrow instance operations live in Build. | `apps/desktop-shell/src/chrome.ts`; mounted control inventory | [#253](https://github.com/Vhailors/sceneaxi/issues/253). |
@@ -92,7 +95,7 @@ id family expands only the suffixes printed in the Item(s) cell.
 | `dock-evidence` | 1 | **partial** | Shows accepted/staged rarity evidence and honest empty copy; general command and capture evidence is not projected. | rarity desktop golden and chrome | [#250](https://github.com/Vhailors/sceneaxi/issues/250), with final enforcement in [#270](https://github.com/Vhailors/sceneaxi/issues/270). |
 | `dock-timeline` | 1 | **fake** | The Animate-only tab works as presentation but contains no tracks or commands. | editor-shell schema and chrome | [#259](https://github.com/Vhailors/sceneaxi/issues/259). |
 | `overlay-open-palette`, `status-refusal-help`, `status-overlay-palette`, `overlay-close-outcome-dismiss` | 4 | **real** | Open/close the command palette, refusal disclosure, and outcome dialog with focus containment. These seven outside-refusal controls (including profiles) are the only live Kids controls. | control accounting and command interaction golden | [#265](https://github.com/Vhailors/sceneaxi/issues/265) rechecks the final workspace control set. |
-| `palette-{project-new,project-open,project-save,ship-export-web,edit-undo,run-play}` | 6 | **real** | Invoke the same current handlers as menu rows; unavailable commands preserve focus and name the refusal. | command interaction golden | [#250](https://github.com/Vhailors/sceneaxi/issues/250). |
+| `palette-{project-new,project-open,project-save,ship-export-web,edit-undo,run-play}` | 6 | **real** | Invoke the same registered commands as menu rows; unavailable commands preserve focus and name the refusal. | command interaction golden | None for this slice. |
 | `viewport-source-scene`, `viewport-source-game`, `viewport-source-sculpt-preview` | 3 | **fake** | All three stay visibly inert under `DESKTOP_NO_PRESENTATION_RUNTIME`, including in the packaged chrome; the renderer replaces center content in response to other actions rather than these tabs. | visual model; mounted control inventory | [#258](https://github.com/Vhailors/sceneaxi/issues/258). |
 | `assistant-manipulator-{move-x,move-y,rotate-y,scale-up}` | 4 | **partial** | Linux promotes them after an assistant artifact mounts. They apply four fixed Mount API operations only, outside saved scene authoring. | `desktop/linux/src/lib/assistant-viewport.ts`; Linux bridge golden | [#254](https://github.com/Vhailors/sceneaxi/issues/254). |
 
@@ -119,14 +122,14 @@ click or focus behavior.
 | CLI | `asset import`, `asset list` | **partial** | Import covers the fixed contained GLB/glTF profile; list reports package refs from catalog items. | asset ingestion golden; [#256](https://github.com/Vhailors/sceneaxi/issues/256). |
 | CLI | `profile list`, `profile open-path` | **real** | Read-only registry and shared demo policy, including non-zero Kids refusal. | profile/open-path tests. |
 | CLI | `catalog list`, `evidence list` | **real** | Read-only bounded listings; catalog commerce remains inert. | registry verb tests. |
-| CLI | `desktop bridge call`, `status`, `tools` | **real** | Discovers and authenticates the same-user Unix socket; validates exact tool, permission, and input. | CLI bridge and local RPC goldens; registry convergence [#250](https://github.com/Vhailors/sceneaxi/issues/250). |
+| CLI | `desktop bridge call`, `status`, `tools` | **real** | Discovers and authenticates the same-user Unix socket; validates exact tool, permission, and input. `tools` exposes the same command schema version and definitions, and registered calls including Play dispatch through the host command gate. | CLI bridge, local RPC, and CLI→local bridge goldens. |
 | CLI | `demo gated` | **fake** | Intentionally synthetic held-key fixture command; no product capability uses it. It fails closed by default. | held-key regression suites; keep outside the full-editor registry. |
 | CLI | `protocol version`, `protocol inspect` | **real** | Reports the CLI envelope and exit-code contract. | CLI protocol tests. |
-| Desktop interaction table | New, Open, Save, Export Web, Undo, Play | **partial** | All six execute, but the table contains UI labels and accelerators only and is separate from CLI, bridge, and agent definitions. | command interaction golden; [#250](https://github.com/Vhailors/sceneaxi/issues/250). |
-| Electron bridge actions | `handshake`, `scene`, `project-browser-open`, `open-path`, `asset-import`, `ship`, `assistant`, `authoring`, `frame-report` | **real** | All have real bounded handlers and unknown/malformed fail-closed behavior. This is transport vocabulary, not the shared product command registry. | `tests/e2e/desktop-linux-bridge-golden.test.ts`; [#250](https://github.com/Vhailors/sceneaxi/issues/250). |
+| Desktop interaction table | New, Open, Save, Export Web, Undo, Play | **real** | All six retain their behavior while their identity, label, schema version, and permission derive from the shared registry; menu, palette, button, and accelerator parity remains executable. | `apps/desktop-shell/src/interaction-commands.ts`; command interaction golden. |
+| Electron bridge actions | `handshake`, `command`, `scene`, `project-browser-open`, `open-path`, `asset-import`, `ship`, `assistant`, `authoring`, `frame-report` | **real** | `command` validates schema version, declared client, exact input, permission, and Kids denial before adapting to the existing handlers. Legacy transport actions remain for unchanged bounded behavior. | registry unit tests; desktop Linux bridge golden. |
 | Authoring operations | `status`, `propose`, `edit-scene`, `edit-property`, `accept`, `reject`, `recover`, `restart`, `undo` | **partial** | Real single-session behaviors; no redo, general hierarchy, animation, physics, package, or Git operations. | desktop session/scene tests; [#252](https://github.com/Vhailors/sceneaxi/issues/252) onward. |
 | Assistant operations | `start`, `status`, `abandon` | **partial** | Real retained-job lifecycle for Build and bounded Agent. Ask is excluded by type; Hosted is excluded by route. | assistant poll/start tests; [#261](https://github.com/Vhailors/sceneaxi/issues/261). |
-| Local-agent tools | handshake; project status/propose/accept/reject/recover/restart/undo; assistant Local start/BYOK start/status/abandon | **partial** | Twelve real permission-bound tools. No renderer-only scene/open-path/frame action, provider credential, Hosted route, redo, or full-editor commands. | desktop local bridge contract/tests; [#250](https://github.com/Vhailors/sceneaxi/issues/250), then capability tickets. |
+| Local-agent tools | handshake; project status/propose/accept/reject/recover/restart/undo; Play; assistant Local start/BYOK start/bounded Agent/status/abandon | **partial** | Fourteen real permission-bound tools. First-slice product tools derive command id, input, permission, mutation, evidence, progress, refusal, and undo metadata from the shared registry; the transport still excludes credentials, Hosted, renderer-only frame actions, redo, and later full-editor commands. | desktop local bridge contract/tests; CLI→local bridge golden; later capability tickets own expansion. |
 
 `packages/cli/src/held-keys/shipped.ts` is a fail-closed map for captain-held CLI
 verbs, not the full-editor command registry. Likewise,
@@ -152,7 +155,7 @@ product-command definitions.
 
 | Capability required by #249 | Current classification | Current owner or evidence | Implementation issue |
 |---|---|---|---|
-| Shared typed command registry across UI, CLI, assistant | **partial** | Four separate command/tool vocabularies listed above | [#250](https://github.com/Vhailors/sceneaxi/issues/250) |
+| Shared typed command registry across UI, CLI, assistant | **partial** | The versioned first-slice registry drives existing File/Save/Undo/Play/Change Review/bounded Assistant metadata and dispatch across desktop-control, CLI, and local-agent boundaries. Later full-editor commands are deliberately absent. | [#251](https://github.com/Vhailors/sceneaxi/issues/251) onward add only their own vertical slices. |
 | Versioned native project manifest, deterministic ids, migrations, capabilities | **partial** | Contained `scene.json`, recents, manifest assets, and stable rarity starter identity | [#251](https://github.com/Vhailors/sceneaxi/issues/251) |
 | Atomic conflict-aware recovery with multi-level undo/redo, progress, evidence | **partial** | One proposal, durable apply recovery, and undo; no redo | [#252](https://github.com/Vhailors/sceneaxi/issues/252) |
 | Hierarchy, multi-select, parent/child | **partial** | Flat composed-instance selector and bounded add/remove | [#253](https://github.com/Vhailors/sceneaxi/issues/253) |
@@ -210,14 +213,15 @@ inventory lane implements none of those tickets.
 ## First implementation slice
 
 [#250](https://github.com/Vhailors/sceneaxi/issues/250) removes the most visible
-dead interaction without asking a first worker to build a new editor subsystem.
-It introduces the versioned command registry over commands that already work,
-migrates current clients without changing their behavior, then binds
+dead interaction without adding a parallel editor subsystem. The landed slice
+introduces the versioned command registry over commands that already work,
+migrates current clients without changing their behavior, and binds
 `sculpt-start` to the existing Local Assistant Build command and
 `sculpt-cancel` to exact-job cancellation. Acceptance requires registry schema
 validation, permission/refusal parity, bounded progress/evidence, real Change
 Review or viewport output, CLI/local-agent/desktop parity, and independent Kids
-denial. It is blocked by nothing in this graph.
+denial; those proofs now live in the registry, desktop bridge, local RPC, CLI,
+emitted-interaction, and golden suites named above.
 
 ## Inventory decisions
 
@@ -228,4 +232,3 @@ claim Stage 6 ran, does not widen the Web editor, and does not authorize a Kids
 editor. No new ADR is needed: Electron ownership, Three presentation ownership,
 plugin capabilities, and platform packaging already have owners in ADRs 0017,
 0024, and 0004–0005.
-

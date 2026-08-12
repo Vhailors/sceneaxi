@@ -15,6 +15,7 @@ import {
   renderDesktopChrome,
   type DesktopVisualState,
 } from "@sceneaxi/desktop-shell";
+import { EDITOR_COMMAND_REGISTRY } from "@sceneaxi/schemas";
 
 /**
  * The emitted Engine Desktop document (sceneaxi#158).
@@ -55,6 +56,13 @@ describe("engine desktop chrome — document shape", () => {
     expect(html).toContain('<html lang="en"');
     expect(html).toContain('name="color-scheme" content="dark"');
     expect(html).toContain('content="@sceneaxi/desktop-shell chrome"');
+  });
+
+  it("emits the shared versioned registry without a desktop-only command copy", () => {
+    const match = /const T = (\{.*\});\nconst shell =/s.exec(render());
+    expect(match?.[1]).toBeDefined();
+    const tables = JSON.parse(match?.[1] ?? "{}") as { editorCommands?: unknown };
+    expect(tables.editorCommands).toEqual(EDITOR_COMMAND_REGISTRY);
   });
 
   it("requests nothing over the network from any state", () => {
@@ -467,7 +475,7 @@ describe("engine desktop chrome — accessibility", () => {
     expect(html).not.toContain(`onclick="steal()"`);
   });
 
-  it("renders static sculpt progress with a named refusal for cancellation", () => {
+  it("renders Sculpt commands with versioned registry metadata and exact-job cancellation", () => {
     const running = render(
       createDesktopVisualState({ mode: "sculpt", sculpt: "running" }),
     );
@@ -475,7 +483,18 @@ describe("engine desktop chrome — accessibility", () => {
       /<div class="sculpt-progress" role="status" data-sculpt-progress>/,
     );
     expect(running).toContain(
-      `id="sculpt-cancel" data-kind="inert" aria-disabled="true" data-refusal="${DESKTOP_VISUAL_REFUSALS.noDocumentBound}"`,
+      `id="sculpt-cancel" data-kind="inert" aria-disabled="true" data-refusal="${DESKTOP_VISUAL_REFUSALS.noPresentationRuntime}"`,
+    );
+    expect(running).toContain('data-editor-command="assistant-cancel"');
+    const mounted = render(createDesktopVisualState({
+      mode: "sculpt",
+      assistantRuntime: "local",
+    }));
+    expect(mounted).toContain(
+      'id="sculpt-start" data-kind="live" data-editor-command="assistant-local-build" data-command-schema-version="1"',
+    );
+    expect(mounted).toContain(
+      `id="sculpt-cancel" data-kind="inert" aria-disabled="true" data-refusal="${DESKTOP_VISUAL_REFUSALS.noActiveCommand}"`,
     );
     expect(running).toContain("Cancel after this pass");
     const idle = render(createDesktopVisualState({ mode: "sculpt" }));

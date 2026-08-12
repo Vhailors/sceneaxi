@@ -53,6 +53,22 @@ function engineResponse(
   const payload = request["payload"] as Record<string, unknown> | undefined;
   const action = request["action"];
   const op = payload?.["op"];
+  if (action === "command") {
+    const commandId = payload?.["commandId"];
+    const input = payload?.["input"] as Record<string, unknown> | undefined;
+    const translated = commandId === "project-save" || commandId === "change-review-accept"
+      ? { action: "authoring", payload: { op: "accept" } }
+      : commandId === "change-review-reject"
+        ? { action: "authoring", payload: { op: "reject" } }
+        : commandId === "edit-undo"
+          ? { action: "authoring", payload: { op: "undo" } }
+          : commandId === "run-play"
+            ? { action: "open-path", payload: input }
+            : commandId === "ship-export-web"
+              ? { action: "ship", payload: { op: "export-web", ...input } }
+              : null;
+    if (translated !== null) return engineResponse(translated, state);
+  }
   if (action === "authoring" && op === "status") {
     return {
       ok: true,
@@ -197,7 +213,9 @@ async function harness(
         calls.push({
           plane: "engine",
           action: String(typed["action"]),
-          op: typeof payload?.["op"] === "string" ? payload["op"] : null,
+          op: typeof payload?.["commandId"] === "string"
+            ? payload["commandId"]
+            : typeof payload?.["op"] === "string" ? payload["op"] : null,
         });
         return clone(engineResponse(typed, state));
       },
@@ -270,13 +288,13 @@ function expectedEffect(command: DesktopInteractionCommand) {
     case "project-open":
       return { plane: "project", action: "choose-open", op: null } as const;
     case "project-save":
-      return { plane: "engine", action: "authoring", op: "accept" } as const;
+      return { plane: "engine", action: "command", op: "project-save" } as const;
     case "ship-export-web":
-      return { plane: "engine", action: "ship", op: "export-web" } as const;
+      return { plane: "engine", action: "command", op: "ship-export-web" } as const;
     case "edit-undo":
-      return { plane: "engine", action: "authoring", op: "undo" } as const;
+      return { plane: "engine", action: "command", op: "edit-undo" } as const;
     case "run-play":
-      return { plane: "engine", action: "open-path", op: null } as const;
+      return { plane: "engine", action: "command", op: "run-play" } as const;
   }
 }
 
@@ -481,8 +499,10 @@ describe("desktop command menu, palette, and accelerator parity", () => {
       value: {
         project: host.project,
         request: async (request: unknown) => {
-          const action = (request as Record<string, unknown>)["action"];
-          if (action === "open-path") return new Promise(() => {});
+          const typed = request as { action?: unknown; payload?: { commandId?: unknown } };
+          if (typed.action === "command" && typed.payload?.commandId === "run-play") {
+            return new Promise(() => {});
+          }
           return host.request(request);
         },
       },
@@ -522,7 +542,7 @@ describe("desktop command menu, palette, and accelerator parity", () => {
     // The staged proposal survives: saving it still reaches the host's accept.
     await click(window, "#overlay-close-outcome-dismiss");
     await click(window, '#project-save[data-command="project-save"]');
-    expect(calls).toContainEqual({ plane: "engine", action: "authoring", op: "accept" });
+    expect(calls).toContainEqual({ plane: "engine", action: "command", op: "project-save" });
   });
 
   it("closes an open menu when focus leaves it by keyboard", async () => {
@@ -591,8 +611,8 @@ describe("desktop command menu, palette, and accelerator parity", () => {
     expect(event.defaultPrevented).toBe(true);
     expect(calls).toContainEqual({
       plane: "engine",
-      action: "authoring",
-      op: "undo",
+      action: "command",
+      op: "edit-undo",
     });
     expect(undo.getAttribute("aria-disabled")).toBe("true");
   });

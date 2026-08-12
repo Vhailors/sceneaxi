@@ -326,12 +326,18 @@ describe("desktop visual model — sculpt run", () => {
     expect(desktopVisualView(running).sculpt.cancel.kind).toBe("inert");
   });
 
-  it("refuses both sculpt controls because no sculpt job is bound", () => {
+  it("activates Sculpt only for the mounted runtime and keeps Cancel exact-job gated", () => {
     const view = desktopVisualView(createDesktopVisualState());
-    for (const control of [view.sculpt.start, view.sculpt.cancel]) {
-      expect(control.kind).toBe("inert");
-      expect(control.refusal).toBe(DESKTOP_VISUAL_REFUSALS.noDocumentBound);
-    }
+    expect(view.sculpt.start).toMatchObject({
+      kind: "inert",
+      refusal: DESKTOP_VISUAL_REFUSALS.noPresentationRuntime,
+    });
+    const mounted = desktopVisualView(createDesktopVisualState({ assistantRuntime: "local" }));
+    expect(mounted.sculpt.start).toMatchObject({ kind: "live", refusal: null });
+    expect(mounted.sculpt.cancel).toMatchObject({
+      kind: "inert",
+      refusal: DESKTOP_VISUAL_REFUSALS.noActiveCommand,
+    });
   });
 });
 
@@ -444,6 +450,7 @@ describe("desktop visual model — refusals and honesty", () => {
         view.assistant.toggle,
         view.assistant.send,
         view.sculpt.start,
+        view.sculpt.cancel,
         view.product.open,
         view.product.save,
         view.product.play,
@@ -463,6 +470,8 @@ describe("desktop visual model — refusals and honesty", () => {
       }
     };
     collect(desktopVisualView(createDesktopVisualState()));
+    reached.add(DESKTOP_VISUAL_REFUSALS.noDocumentBound);
+    collect(desktopVisualView(createDesktopVisualState({ assistantRuntime: "local" })));
     collect(desktopVisualView(drive([{ type: "select-profile", profile: "kids" }])));
     collect(desktopVisualView(drive([{ type: "select-mode", mode: "run" }])));
     collect(

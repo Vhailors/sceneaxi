@@ -29,7 +29,11 @@
  */
 
 import { formatSafeRarityEvidence } from "@sceneaxi/authoring-core/rarity-evidence";
-import { DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS } from "@sceneaxi/schemas";
+import {
+  DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS,
+  EDITOR_COMMAND_REGISTRY,
+  type EditorCommandId,
+} from "@sceneaxi/schemas";
 import {
   DESKTOP_ASSISTANT_RUNTIME_EVENT,
   DESKTOP_DOCK_TAB_IDS,
@@ -219,6 +223,12 @@ function button(
     extra,
     `>${content}</button>`,
   ].join("");
+}
+
+function editorCommandAttributes(id: EditorCommandId): string {
+  const command = EDITOR_COMMAND_REGISTRY.find((candidate) => candidate.id === id);
+  if (command === undefined) throw new Error(`Missing emitted editor command ${id}`);
+  return ` data-editor-command="${escapeHtml(id)}" data-command-schema-version="${String(command.schemaVersion)}" data-command-permission="${escapeHtml(command.permission)}"`;
 }
 
 /** Render the one modelled prompt field through the same refusal contract. */
@@ -608,7 +618,7 @@ function viewport(view: DesktopVisualView): string {
         <span class="sculpt-sweep" aria-hidden="true"></span>
       </div>
       <p class="sculpt-detail">pass ${view.sculpt.passIndex + 1} of ${view.sculpt.passCount}</p>
-      ${button(view.sculpt.cancel, escapeHtml(view.sculpt.cancel.label), "ghost-button", ` data-action="sculpt-cancel"`)}
+      ${button(view.sculpt.cancel, escapeHtml(view.sculpt.cancel.label), "ghost-button", ` data-action="sculpt-cancel"${editorCommandAttributes("assistant-cancel")}`)}
     </div>
   </div>
 </section>`;
@@ -637,8 +647,8 @@ function dock(view: DesktopVisualView): string {
         <pre class="change-diff" data-change-rarity-evidence hidden tabindex="0" role="region" aria-label="Safe rarity provenance"></pre>
         <pre class="change-diff" data-change-diff tabindex="0" role="region" aria-label="Rendered proposal diff"></pre>
         <div class="change-actions">
-          ${button(view.changeReview.reject, "Reject", "ghost-button", ` data-product-action data-action="change-reject"`)}
-          ${button(view.changeReview.accept, "Accept", "primary-button", ` data-product-action data-action="change-accept"`)}
+          ${button(view.changeReview.reject, "Reject", "ghost-button", ` data-product-action data-action="change-reject"${editorCommandAttributes("change-review-reject")}`)}
+          ${button(view.changeReview.accept, "Accept", "primary-button", ` data-product-action data-action="change-accept"${editorCommandAttributes("change-review-accept")}`)}
         </div>
       </article>
       <p class="change-empty" data-change-empty>Nothing waiting for review. Generated edits land here before they touch the scene.</p>
@@ -725,7 +735,7 @@ function inspector(view: DesktopVisualView): string {
   <section class="inspector-panel inspector-sculpt" data-mode-panel="sculpt" aria-label="Build passes"${active === "sculpt" ? "" : " hidden"}>
     <h2 class="panel-head"><span>BUILD PASSES</span></h2>
     <ol class="pass-list">${passes}</ol>
-    ${button(view.sculpt.start, "Sculpt object", "primary-button block-button")}
+    ${button(view.sculpt.start, "Sculpt object", "primary-button block-button", editorCommandAttributes("assistant-local-build"))}
   </section>
 </aside>`;
 }
@@ -1411,6 +1421,7 @@ function script(view: DesktopVisualView): string {
     /** The tier boundary the stylesheet undocks the assistant at. */
     assistantDrawerQuery: belowTier("regular"),
     commands: DESKTOP_INTERACTION_COMMANDS,
+    editorCommands: EDITOR_COMMAND_REGISTRY,
     paletteShortcut: DESKTOP_PALETTE_SHORTCUT,
     commandRefusals: {
       undoUnavailable: DESKTOP_VISUAL_REFUSALS.undoUnavailable,
@@ -2314,6 +2325,26 @@ if (shell) {
   };
   const responseReason = (response) => responseDiagnostic(response)?.code ?? null;
   const isRarityRefusal = (code) => typeof code === 'string' && code.startsWith('RARITY_');
+  const commandRequest = (commandId, input) => {
+    const command = T.editorCommands.find((candidate) => candidate.id === commandId);
+    if (!command || !command.acceptedClients.includes('desktop-control')) {
+      return Promise.resolve({
+        ok: false,
+        reason: 'EDITOR_COMMAND_CLIENT_DENIED',
+        message: 'The emitted desktop client does not accept ' + commandId + '.',
+      });
+    }
+    return runtimeRequest({
+      action: 'command',
+      payload: {
+        schemaVersion: command.schemaVersion,
+        commandId,
+        client: 'desktop-control',
+        permission: command.permission,
+        input,
+      },
+    });
+  };
 
   const restartProject = async (diagnostic) => {
     productStatus('recovering', T.product.documentPath + ' · ' + diagnostic + ' · re-opening fresh session…');
@@ -2726,14 +2757,16 @@ if (shell) {
     return false;
   };
 
-  const saveProject = async () => {
+  const saveProject = async (commandId = 'project-save') => {
     if (!projectDirty && !projectRecovering) {
       productStatus(projectData === null ? 'closed' : 'open', T.product.documentPath + ' · no staged changes');
       return;
     }
     const recovering = projectRecovering;
     productStatus(recovering ? 'recovering' : 'saving', T.product.documentPath + (recovering ? ' · refreshing recovery…' : ' · saving…'));
-    const response = await runtimeRequest({ action: 'authoring', payload: { op: recovering ? 'recover' : 'accept' } });
+    const response = recovering
+      ? await runtimeRequest({ action: 'authoring', payload: { op: 'recover' } })
+      : await commandRequest(commandId, {});
     const snapshot = response?.ok ? response.data : null;
     const reason = responseReason(response);
     if (recovering && reason === 'journal-not-found') {
@@ -2786,7 +2819,7 @@ if (shell) {
   // own path, which is why the gate lives here and not in \`saveProject\`.
   const acceptProposal = async () => {
     if (!requireActiveReview()) return false;
-    await saveProject();
+    await saveProject('change-review-accept');
     return true;
   };
 
@@ -2795,7 +2828,7 @@ if (shell) {
   // the bytes on disk rather than a queue it decided locally.
   const rejectProposal = async (outcome = 'rejected') => {
     if (!requireActiveReview()) return false;
-    const response = await runtimeRequest({ action: 'authoring', payload: { op: 'reject' } });
+    const response = await commandRequest('change-review-reject', {});
     const reason = responseReason(response);
     const snapshot = response?.ok ? response.data : null;
     if (reason !== null || !isSessionSnapshot(snapshot) || snapshot.phase !== 'rejected') {
@@ -2828,7 +2861,7 @@ if (shell) {
       return;
     }
     productStatus('undoing', T.product.documentPath + ' · undoing last completed Save…');
-    const response = await runtimeRequest({ action: 'authoring', payload: { op: 'undo' } });
+    const response = await commandRequest('edit-undo', {});
     const reason = responseReason(response);
     const result = response?.ok ? response.data : null;
     if (reason !== null || !result || result.ok !== true || !Array.isArray(result.restoredPaths)) {
@@ -2899,10 +2932,7 @@ if (shell) {
   const playScene = async () => {
     if (projectData === null && !(await openProject())) return;
     runStatus('Opening composed scene…');
-    const response = await runtimeRequest({
-      action: 'open-path',
-      payload: { documentPath: T.product.documentPath },
-    });
+    const response = await commandRequest('run-play', { documentPath: T.product.documentPath });
     if (response === null || !response.ok) {
       runRefusal(
         response === null
@@ -2978,13 +3008,9 @@ if (shell) {
     }
     clearShipEvidence();
     shipStatus('Writing deterministic local Web bundle…');
-    const response = await runtimeRequest({
-      action: 'ship',
-      payload: {
-        op: 'export-web',
-        documentPath: T.product.documentPath,
-        expectedContentHash: projectContentHash,
-      },
+    const response = await commandRequest('ship-export-web', {
+      documentPath: T.product.documentPath,
+      expectedContentHash: projectContentHash,
     });
     if (response === null || !response.ok) {
       const code = response === null
@@ -3374,6 +3400,14 @@ if (shell) {
     closeMenus();
     if (id === T.paletteShortcut.id) {
       setOverlay('palette');
+      return;
+    }
+    const registryCommand = T.editorCommands.find((candidate) => candidate.id === id);
+    const exposedCommand = T.commands.find((candidate) => candidate.id === id);
+    if (!registryCommand || !registryCommand.acceptedClients.includes('desktop-control') ||
+        exposedCommand?.schemaVersion !== registryCommand.schemaVersion ||
+        exposedCommand?.permission !== registryCommand.permission) {
+      commandRefusal('EDITOR_COMMAND_REGISTRY_INVALID');
       return;
     }
     const handler = commandHandlers[id];

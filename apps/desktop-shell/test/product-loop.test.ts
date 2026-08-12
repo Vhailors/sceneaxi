@@ -190,13 +190,14 @@ describe("desktop product loop", () => {
     expect(kids).toContain("No editor on the Kids profile");
 
     expect(game).toContain("sceneaxiDesktopLinux");
-    expect(game).toContain("action: 'open-path'");
-    expect(game).toContain("payload: { documentPath: T.product.documentPath }");
+    expect(game).toContain("action: 'command'");
+    expect(game).toContain("commandId,\n        client: 'desktop-control'");
     expect(game).toContain("data-run-session-report");
     expect(game).toContain("data-run-live-report");
     expect(game).toContain("op: 'status'");
     expect(game).toContain("op: 'reject'");
-    expect(game).toContain("op: recovering ? 'recover' : 'accept'");
+    expect(game).toContain("await commandRequest(commandId, {})");
+    expect(game).toContain("op: 'recover'");
     expect(game).toContain("op: 'restart'");
     expect(game).toContain(DESKTOP_VIEWPORT_PLAY_EVENT);
   });

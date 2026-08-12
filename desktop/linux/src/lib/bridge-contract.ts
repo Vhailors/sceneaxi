@@ -18,6 +18,11 @@ import type {
   SafeRarityEvidence,
 } from "@sceneaxi/authoring-core";
 import { EDITOR_SHELL_ASSISTANT_MODE_IDS } from "@sceneaxi/schemas";
+import type {
+  EditorCommandDefinition,
+  EditorCommandId,
+  EditorCommandTerminalResult,
+} from "@sceneaxi/schemas";
 import type { MountableScene } from "@sceneaxi/site-kit";
 import type { DesktopSnapshot } from "@sceneaxi/desktop-shell";
 
@@ -44,6 +49,7 @@ export const DESKTOP_BRIDGE_GLOBAL = "sceneaxiDesktopLinux";
 
 export const DESKTOP_BRIDGE_ACTIONS = Object.freeze([
   "handshake",
+  "command",
   "scene",
   "project-browser-open",
   "open-path",
@@ -70,6 +76,7 @@ export const DESKTOP_BRIDGE_REFUSALS = Object.freeze({
   assistantAbandoned: "DESKTOP_ASSISTANT_ABANDONED",
   assistantBuildModeRequired: "DESKTOP_ASSISTANT_BUILD_MODE_REQUIRED",
   assistantJobMissing: "DESKTOP_ASSISTANT_JOB_MISSING",
+  assistantJobMismatch: "EDITOR_COMMAND_ACTIVE_JOB_MISMATCH",
   assistantStatusTimeout: "DESKTOP_ASSISTANT_STATUS_TIMEOUT",
   assistantRuntimeFailed: "DESKTOP_ASSISTANT_RUNTIME_FAILED",
   assistantByoUnavailable: "DESKTOP_ASSISTANT_BYO_UNAVAILABLE",
@@ -192,6 +199,10 @@ export type DesktopAssistantResult =
 
 export type DesktopAssistantJobSnapshot = Readonly<{
   jobId: string;
+  commandId: Extract<EditorCommandId,
+    | "assistant-local-build"
+    | "assistant-byo-build"
+    | "assistant-local-agent">;
   route: "local" | "byo";
   status: "running" | "ready" | "refused";
   /**
@@ -204,6 +215,8 @@ export type DesktopAssistantJobSnapshot = Readonly<{
   latestProgress: AssistantSculptProgress | null;
   /** How many progress entries the job has observed so far. */
   progressCount: number;
+  /** Registered terminal command result; null while this exact job is running. */
+  terminal: EditorCommandTerminalResult | null;
   result?: DesktopAssistantResult;
   refusal?: Readonly<{
     ok: false;
@@ -220,6 +233,8 @@ export type DesktopBridgeHandshake = {
   readonly runtime: "electron";
   readonly bridgeVersion: 1;
   readonly actions: readonly DesktopBridgeAction[];
+  readonly commandSchemaVersion: 1;
+  readonly commands: readonly EditorCommandDefinition[];
 };
 
 /** A real presentation frame report as forwarded by the renderer process. */
