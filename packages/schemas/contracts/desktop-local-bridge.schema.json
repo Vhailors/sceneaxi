@@ -15,6 +15,10 @@
     "editorCommandId": {
       "enum": [
         "project-new",
+        "project-inspect",
+        "project-migration-propose",
+        "project-migration-commit",
+        "project-migration-recover",
         "ship-export-web",
         "project-open",
         "project-save",
@@ -33,6 +37,10 @@
       "enum": [
         "sceneaxi.bridge.handshake",
         "sceneaxi.project.status",
+        "sceneaxi.project.inspect",
+        "sceneaxi.project.migration.propose",
+        "sceneaxi.project.migration.commit",
+        "sceneaxi.project.migration.recover",
         "sceneaxi.project.propose",
         "sceneaxi.project.accept",
         "sceneaxi.project.reject",

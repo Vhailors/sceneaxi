@@ -339,7 +339,7 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
     expect(readFileSync(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8")).toBe(before);
   });
 
-  it("migrates a legacy seeded project without replacing its existing data", () => {
+  it("preserves a legacy project until its registered migration is reviewed and committed", () => {
     const dir = mkdtempSync(join(tmpdir(), "sceneaxi-desktop-legacy-"));
     tmpDirs.push(dir);
     const legacy = createDocument({
@@ -354,7 +354,9 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
       throw new Error(written.diagnostics.map((entry) => entry.message).join("; "));
     }
 
-    expect(seedDesktopProject(dir)).toEqual({ ok: true, migrated: true });
+    const before = readFileSync(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8");
+    expect(seedDesktopProject(dir)).toEqual({ ok: true, migrated: false });
+    expect(readFileSync(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8")).toBe(before);
     const bridge = bridgeAt(dir);
     const status = bridge.handle({
       action: "authoring",
@@ -369,14 +371,28 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
         material: { roughness: 0.8 },
       },
     });
-    const scene = bridge.handle({
-      action: "scene",
-      payload: { documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
+    const inspected = bridge.handle({
+      action: "command",
+      payload: createEditorCommandInvocation("project-inspect", "desktop-control", {}),
     });
-    expect(scene.ok).toBe(true);
-    const migratedBytes = readFileSync(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8");
+    expect(inspected).toMatchObject({ ok: true, data: { state: "legacy" } });
+    const proposed = bridge.handle({
+      action: "command",
+      payload: createEditorCommandInvocation("project-migration-propose", "desktop-control", {}),
+    });
+    expect(proposed).toMatchObject({ ok: true, data: { proposal: { proposalDigest: expect.any(String) } } });
+    if (!proposed.ok) throw new Error(proposed.reason);
+    const proposalDigest = (proposed.data as { proposal: { proposalDigest: string } }).proposal.proposalDigest;
+    expect(bridge.handle({
+      action: "command",
+      payload: createEditorCommandInvocation("project-migration-commit", "desktop-control", {
+        approved: true,
+        proposalDigest,
+      }),
+    })).toMatchObject({ ok: true, data: { inspection: { state: "native" } } });
+    expect(readFileSync(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8")).toBe(before);
     expect(seedDesktopProject(dir)).toEqual({ ok: true, migrated: false });
-    expect(readFileSync(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8")).toBe(migratedBytes);
+    expect(readFileSync(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8")).toBe(before);
   });
 
   it("handshakes with its identity and the closed action set", () => {

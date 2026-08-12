@@ -1,9 +1,15 @@
 import { spawn } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
+import { serializeDocument } from "@sceneaxi/authoring-core";
+import {
+  PROJECT_MANIFEST_PATH,
+  createDocument,
+  createEditorCommandInvocation,
+} from "@sceneaxi/schemas";
 import {
   createDesktopBridge,
   seedDesktopProject,
@@ -254,5 +260,72 @@ describe("CLI → local desktop bridge golden path", () => {
       ok: false,
       error: { code: "VALIDATION" },
     });
+  });
+
+  it("returns one project inspection to UI, CLI, and local-assistant clients before explicit migration", async () => {
+    const root = mkdtempSync(join(tmpdir(), "sceneaxi-cli-project-model-"));
+    roots.push(root);
+    const projectRoot = join(root, "project");
+    // The directory is deliberately legacy: opening and inspecting it may not
+    // synthesize the native manifest.
+    const documentBytes = serializeDocument(createDocument({ id: "portable-project" }));
+    mkdirSync(projectRoot);
+    writeFileSync(join(projectRoot, "scene.json"), documentBytes, "utf8");
+    const bridge = createDesktopBridge({ cwd: projectRoot });
+    const ui = bridge.handle({
+      action: "command",
+      payload: createEditorCommandInvocation("project-inspect", "desktop-control", {}),
+    });
+    expect(ui).toMatchObject({ ok: true, data: { state: "legacy" } });
+    expect(existsSync(join(projectRoot, PROJECT_MANIFEST_PATH))).toBe(false);
+
+    const discoveryPath = join(root, "config", "desktop-bridge-v1.json");
+    const server = await startDesktopLocalBridgeServer({
+      bridge,
+      projectRoot,
+      socketPath: join(root, "runtime", "desktop-v1.sock"),
+      discoveryPath,
+    });
+    servers.push(server);
+    const common = ["--descriptor", discoveryPath, "--json"];
+    const cliInspection = await sceneaxi([
+      "desktop", "bridge", "call",
+      "--tool", "sceneaxi.project.inspect",
+      "--allow", "project:read",
+      ...common,
+    ], projectRoot);
+    expect(cliInspection.status).toBe(0);
+    const cliPayload = JSON.parse(cliInspection.stdout) as {
+      result: { response: unknown };
+    };
+    expect(cliPayload.result.response).toEqual(ui.ok ? ui.data : null);
+
+    const proposed = await sceneaxi([
+      "desktop", "bridge", "call",
+      "--tool", "sceneaxi.project.migration.propose",
+      "--allow", "project:write",
+      ...common,
+    ], projectRoot);
+    expect(proposed.status).toBe(0);
+    expect(readFileSync(join(projectRoot, "scene.json"), "utf8")).toBe(documentBytes);
+    const proposalPayload = JSON.parse(proposed.stdout) as {
+      result: { response: { proposal: { proposalDigest: string } } };
+    };
+    const committed = await sceneaxi([
+      "desktop", "bridge", "call",
+      "--tool", "sceneaxi.project.migration.commit",
+      "--allow", "project:write",
+      "--input-json", JSON.stringify({
+        approved: true,
+        proposalDigest: proposalPayload.result.response.proposal.proposalDigest,
+      }),
+      ...common,
+    ], projectRoot);
+    expect(committed.status).toBe(0);
+    expect(JSON.parse(committed.stdout)).toMatchObject({
+      ok: true,
+      result: { response: { inspection: { state: "native" } } },
+    });
+    expect(readFileSync(join(projectRoot, "scene.json"), "utf8")).toBe(documentBytes);
   });
 });

@@ -1,5 +1,9 @@
 /** Browser-safe contract for the desktop project's privileged lifecycle host. */
-import { OPEN_PATH_REFUSE_CODES } from "@sceneaxi/schemas";
+import {
+  OPEN_PATH_REFUSE_CODES,
+  type ProjectManifestDiagnosticCode,
+  type ProjectVersionCapabilityResult,
+} from "@sceneaxi/schemas";
 
 export const DESKTOP_PROJECT_CHANNEL = "sceneaxi:desktop-project";
 export const DESKTOP_PROJECT_STATE_SCHEMA_VERSION = 1;
@@ -34,7 +38,8 @@ export const DESKTOP_PROJECT_REFUSALS = Object.freeze({
 } as const);
 
 export type DesktopProjectRefusalReason =
-  (typeof DESKTOP_PROJECT_REFUSALS)[keyof typeof DESKTOP_PROJECT_REFUSALS];
+  | (typeof DESKTOP_PROJECT_REFUSALS)[keyof typeof DESKTOP_PROJECT_REFUSALS]
+  | ProjectManifestDiagnosticCode;
 
 export type DesktopProjectSource = "new" | "opened" | "recent" | "restored";
 
@@ -43,6 +48,7 @@ export type DesktopProjectSummary = Readonly<{
   root: string;
   documentPath: "scene.json";
   source: DesktopProjectSource;
+  inspection: ProjectVersionCapabilityResult;
 }>;
 
 export type DesktopProjectRecovery = Readonly<{

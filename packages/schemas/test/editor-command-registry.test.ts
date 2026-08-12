@@ -23,6 +23,10 @@ describe("full-editor command registry", () => {
     expect(schema.type).toBe("array");
     expect(EDITOR_COMMAND_REGISTRY.map((command) => command.id)).toEqual([
       "project-new",
+      "project-inspect",
+      "project-migration-propose",
+      "project-migration-commit",
+      "project-migration-recover",
       "ship-export-web",
       "project-open",
       "project-save",

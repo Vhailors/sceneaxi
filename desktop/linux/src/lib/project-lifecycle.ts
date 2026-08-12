@@ -15,7 +15,11 @@ import {
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, isAbsolute, join } from "node:path";
-import { parseDocumentText } from "@sceneaxi/authoring-core";
+import { inspectProjectModel, parseDocumentText } from "@sceneaxi/authoring-core";
+import {
+  PROJECT_MANIFEST_PATH,
+  type ProjectVersionCapabilityResult,
+} from "@sceneaxi/schemas";
 import { DESKTOP_ACTIVE_DOCUMENT_PATH } from "./bridge-contract.js";
 import {
   DESKTOP_PROJECT_REFUSALS,
@@ -45,6 +49,12 @@ type StoredStateV1 = Readonly<{
 type ValidProject = Readonly<{
   root: string;
   name: string;
+  inspection: ProjectVersionCapabilityResult;
+}>;
+
+type CanonicalProject = Readonly<{
+  root: string;
+  name: string;
 }>;
 
 type ProjectValidation =
@@ -55,6 +65,10 @@ type ProjectValidation =
       message: string;
       root: string | null;
     }>;
+
+type RootValidation =
+  | Readonly<{ ok: true; project: CanonicalProject }>
+  | Extract<ProjectValidation, { ok: false }>;
 
 export type DesktopProjectLifecycleOptions = Readonly<{
   stateDirectory: string;
@@ -92,7 +106,7 @@ function hasTraversal(path: string): boolean {
   return path.split(/[\\/]+/).includes("..");
 }
 
-function canonicalRoot(selected: string, writable: boolean): ProjectValidation {
+function canonicalRoot(selected: string, writable: boolean): RootValidation {
   if (!isAbsolute(selected)) {
     return refusal(
       DESKTOP_PROJECT_REFUSALS.rootNotAbsolute,
@@ -175,12 +189,21 @@ function validateProject(selected: string): ProjectValidation {
         root.project.root,
       );
     }
+    const inspected = inspectProjectModel(root.project.root);
+    if (!inspected.ok) {
+      return refusal(
+        inspected.diagnostic.code,
+        inspected.diagnostic.message,
+        root.project.root,
+      );
+    }
     const title = parsed.document.title?.trim();
     return Object.freeze({
       ok: true as const,
       project: Object.freeze({
         root: root.project.root,
         name: title === undefined || title.length === 0 ? root.project.name : title,
+        inspection: inspected.inspection,
       }),
     });
   } catch {
@@ -220,6 +243,7 @@ function summary(project: ValidProject, source: DesktopProjectSource): DesktopPr
     root: project.root,
     documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
     source,
+    inspection: project.inspection,
   });
 }
 
@@ -503,12 +527,20 @@ export function createDesktopProjectLifecycle(
       const root = canonicalRoot(selected, true);
       if (!root.ok) return refuseValidation(root);
       const documentFile = join(root.project.root, DESKTOP_ACTIVE_DOCUMENT_PATH);
+      const manifestFile = join(root.project.root, PROJECT_MANIFEST_PATH);
       if (existsSync(documentFile)) {
         const existing = validateProject(root.project.root);
         if (!existing.ok) return refuseValidation(existing);
         return projectRefuse(
           DESKTOP_PROJECT_REFUSALS.documentExists,
           `New Project refuses to replace the existing ${DESKTOP_ACTIVE_DOCUMENT_PATH}.`,
+          root.project.root,
+        );
+      }
+      if (existsSync(manifestFile)) {
+        return projectRefuse(
+          DESKTOP_PROJECT_REFUSALS.documentExists,
+          `New Project refuses to replace the existing ${PROJECT_MANIFEST_PATH}.`,
           root.project.root,
         );
       }

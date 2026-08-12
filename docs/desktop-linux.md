@@ -417,12 +417,17 @@ Future builds must be downloaded and checksum-verified manually.
 First launch binds no root and writes no project. The shared Project / Files
 surface offers **New Project** and **Open Project** through a typed preload method
 whose Electron adapter owns the native directory dialogs. New Project creates the
-existing starter `scene.json` only after the operator selects a directory; it
-refuses an existing document rather than overwriting it. Open Project performs no
-project write: it canonicalizes the selected directory and validates the active
-document first. Relative roots, `..` segments, missing/inaccessible or non-directory
-roots, invalid documents, and a `scene.json` symlink resolving outside the root all
-refuse by name.
+starter `scene.json` and `sceneaxi.project.json` v1 atomically only after the
+operator selects a directory; it refuses either existing target rather than
+overwriting it. The native manifest owns deterministic project, Scene Document,
+and admitted-asset identities plus explicit versioned capability grants. Open
+Project performs no project write: it canonicalizes the selected directory,
+validates the active document and any native manifest, and reports the shared
+version/capability inspection. Relative roots, `..` segments,
+missing/inaccessible or non-directory roots, invalid documents, unknown manifest
+major versions, invalid migration chains, duplicate identities, undeclared
+capabilities, traversal, and a document/manifest/asset path resolving outside the
+canonical root all refuse by stable typed diagnostics.
 
 Successful roots are stored as canonical path strings only in versioned
 `recent-projects.json` under Electron user data. The store contains no document
@@ -488,10 +493,16 @@ transaction. They therefore end in
 `DESKTOP_PROJECT_BROWSER_OPERATION_NOT_PERMITTED`; this slice does not invent a
 second mutation protocol.
 
-The legacy starter migration remains part of the explicit New Project seed helper:
-a valid document lacking composed-scene data can be migrated by that helper while
-retaining its id, title, entities, material, and other data; existing composed data
-is never rewritten. Normal Open Project never invokes the seed helper.
+The seed helper never migrates an existing valid document. Such a project inspects
+as legacy v0 and stays byte-identical on Open, startup, and repeated seed calls.
+Migration to the native v1 manifest is a registered product command shared by
+desktop-control, CLI, and local-agent clients: `project-migration-propose` writes a
+deterministic proposal for review, and commit requires `approved: true` plus the
+exact proposal digest. A prepared deterministic journal recovers forward into the
+same manifest and path-free evidence bytes after interruption; a changed source,
+mismatched approval, corrupt recovery record, or occupied target refuses before
+the existing Scene Document changes. The migration adds the manifest only; it does
+not synthesize composed-scene or rarity data.
 
 Rarity v1 authoring is **new-project-only** in this release. The New Project
 starter owns the stable `productId` and project seed required by Agent rarity;

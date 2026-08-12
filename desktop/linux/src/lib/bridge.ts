@@ -34,6 +34,10 @@ import { realpathSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, resolve, sep } from "node:path";
 import {
   ASSISTANT_SCULPT_REFUSALS,
+  commitProjectMigration,
+  inspectProjectModel,
+  proposeProjectMigration,
+  recoverProjectMigration,
   runAssistantSculptAction,
   safeRarityEvidenceFromNamespace,
   stageRarityProviderProposal,
@@ -1790,6 +1794,34 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           EDITOR_COMMAND_REFUSALS.capabilityDenied,
           `${validated.command.id} requires the native project lifecycle host rather than the engine bridge.`,
         );
+      case "project-inspect": {
+        const inspected = inspectProjectModel(options.cwd);
+        return inspected.ok
+          ? bridgeOk("command", inspected.inspection)
+          : bridgeRefuse(inspected.diagnostic.code, inspected.diagnostic.message, inspected.diagnostic.path);
+      }
+      case "project-migration-propose": {
+        const proposed = proposeProjectMigration(options.cwd);
+        return proposed.ok
+          ? bridgeOk("command", proposed)
+          : bridgeRefuse(proposed.diagnostic.code, proposed.diagnostic.message, proposed.diagnostic.path);
+      }
+      case "project-migration-commit": {
+        const committed = commitProjectMigration({
+          root: options.cwd,
+          approved: input["approved"] === true,
+          proposalDigest: String(input["proposalDigest"]),
+        });
+        return committed.ok
+          ? bridgeOk("command", committed)
+          : bridgeRefuse(committed.diagnostic.code, committed.diagnostic.message, committed.diagnostic.path);
+      }
+      case "project-migration-recover": {
+        const recovered = recoverProjectMigration(options.cwd);
+        return recovered.ok
+          ? bridgeOk("command", recovered)
+          : bridgeRefuse(recovered.diagnostic.code, recovered.diagnostic.message, recovered.diagnostic.path);
+      }
       case "ship-export-web":
         return ship({
           op: "export-web",

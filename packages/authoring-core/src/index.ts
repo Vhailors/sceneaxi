@@ -52,6 +52,23 @@ export {
 } from "./atomic-write.js";
 
 export {
+  PROJECT_MIGRATION_EVIDENCE_PATH,
+  PROJECT_MIGRATION_JOURNAL_PATH,
+  PROJECT_MIGRATION_PROPOSAL_PATH,
+  commitProjectMigration,
+  inspectProjectModel,
+  proposeProjectMigration,
+  recoverProjectMigration,
+  writeNativeProjectSeed,
+  type ProjectInspectionResult,
+  type ProjectMigrationCommitResult,
+  type ProjectMigrationEvidence,
+  type ProjectMigrationProposal,
+  type ProjectMigrationProposalResult,
+  type ProjectModelFailure,
+} from "./project-model.js";
+
+export {
   getAtPointer,
   pointerTokens,
   setAtPointer,
