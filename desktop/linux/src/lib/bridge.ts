@@ -343,6 +343,10 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
   }> | null = null;
   let selectedSceneInstanceIds: readonly string[] = Object.freeze([]);
   let sceneSelectionStale = false;
+  let pendingSceneSelection: Readonly<{
+    documentPath: string;
+    instanceIds: readonly string[];
+  }> | null = null;
 
   const authoringSession = (): DesktopSession => {
     session ??= options.createAuthoringSession?.() ?? createDesktopSession({ cwd: options.cwd });
@@ -379,7 +383,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
       diagnostics: Object.freeze([
         Object.freeze({
-          code: "invalid-proposal" as const,
+          code: DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
           message: "The retained scene selection is stale and requires an explicit replacement.",
           documentPath,
         }),
@@ -388,6 +392,39 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       entities: recovery.entities,
       hierarchy: recovery.hierarchy,
     });
+  };
+
+  const latchInvalidSceneSelection = (
+    documentPath: string,
+    status: DesktopDocumentStatus,
+  ) => {
+    if (sceneSelectionStale || selectedSceneInstanceIds.length === 0 || !status.ok) return;
+    const inspected = inspectDesktopSceneProperties({
+      documentData: status.data,
+      contentHash: status.contentHash,
+      documentPath,
+      selection: selectedSceneInstanceIds,
+    });
+    if (
+      !inspected.ok &&
+      inspected.reason === DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale
+    ) {
+      sceneSelectionStale = true;
+    }
+  };
+
+  const settlePendingSceneSelection = (snapshot: DesktopSnapshot) => {
+    if (
+      pendingSceneSelection !== null &&
+      snapshot.phase === "applied" &&
+      snapshot.appliedPaths?.includes(pendingSceneSelection.documentPath) === true &&
+      !snapshot.journalRecoveryPending &&
+      (snapshot.diagnostics?.length ?? 0) === 0
+    ) {
+      selectedSceneInstanceIds = pendingSceneSelection.instanceIds;
+      pendingSceneSelection = null;
+    }
+    return snapshot;
   };
 
   const withRarityProposalEvidence = (snapshot: DesktopSnapshot) =>
@@ -1256,7 +1293,10 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       const restartedEvidence = rarityProposalEvidence;
       rarityProposalEvidence = null;
       pendingAssetImport = null;
-      const restarted = statusWithEvidence(session, documentPath);
+      pendingSceneSelection = null;
+      const restartedPrivate = session.status(documentPath);
+      latchInvalidSceneSelection(documentPath, restartedPrivate);
+      const restarted = statusWithEvidence(session, documentPath, undefined, restartedPrivate);
       if (restartedEvidence !== null) {
         if (
           restarted.ok &&
@@ -1332,11 +1372,15 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       if (!staged.ok) return authoringOk(staged);
       const snapshot = live.proposeEdit(staged.edit);
       if (snapshot.phase !== "reviewing" || (snapshot.diagnostics?.length ?? 0) > 0) {
+        if (snapshot.phase !== "reviewing") pendingSceneSelection = null;
         return authoringOk(hierarchyCommandResponse
           ? withRarityProposalEvidence(snapshot)
           : genericAuthoringSnapshot(snapshot));
       }
-      selectedSceneInstanceIds = staged.selectedInstanceIds;
+      pendingSceneSelection = Object.freeze({
+        documentPath,
+        instanceIds: staged.selectedInstanceIds,
+      });
       return authoringOk(hierarchyCommandResponse
         ? Object.freeze({
             ...snapshot,
@@ -1384,11 +1428,15 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       if (!staged.ok) return authoringOk(staged);
       const snapshot = reconcilePendingAssetImport(live.proposeEdit(staged.edit));
       if (snapshot.phase !== "reviewing" || (snapshot.diagnostics?.length ?? 0) > 0) {
+        if (snapshot.phase !== "reviewing") pendingSceneSelection = null;
         return authoringOk(hierarchyCommandResponse
           ? withRarityProposalEvidence(snapshot)
           : genericAuthoringSnapshot(snapshot));
       }
-      selectedSceneInstanceIds = staged.inspection.selection.instanceIds;
+      pendingSceneSelection = Object.freeze({
+        documentPath,
+        instanceIds: staged.inspection.selection.instanceIds,
+      });
       return authoringOk(hierarchyCommandResponse
         ? Object.freeze({ ...snapshot, editableScene: staged.inspection })
         : genericAuthoringSnapshot(snapshot));
@@ -1429,9 +1477,9 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       return authoringOk(snapshot);
     }
     if (op === "accept") {
-      const accepted = reconcilePendingAssetImport(
+      const accepted = settlePendingSceneSelection(reconcilePendingAssetImport(
         settleRarityProposalEvidence(live.accept()),
-      );
+      ));
       if (
         pendingAssetImport === null ||
         accepted.phase !== "applied" ||
@@ -1451,12 +1499,13 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       const rejected = reconcilePendingAssetImport(
         settleRarityProposalEvidence(live.reject()),
       );
+      if (rejected.phase === "rejected") pendingSceneSelection = null;
       return authoringOk(rejected);
     }
     if (op === "recover") {
-      const recovered = reconcilePendingAssetImport(
+      const recovered = settlePendingSceneSelection(reconcilePendingAssetImport(
         settleRarityProposalEvidence(live.refreshRecovery()),
-      );
+      ));
       if (
         pendingAssetImport === null ||
         recovered.phase !== "applied" ||
@@ -1490,6 +1539,15 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       }
       rarityProposalEvidence = null;
       pendingAssetImport = null;
+      pendingSceneSelection = null;
+      if (op === "undo") {
+        for (const documentPath of result.restoredPaths) {
+          const containedPath = containedDocumentPath(documentPath);
+          if (containedPath !== null) {
+            latchInvalidSceneSelection(containedPath, live.status(containedPath));
+          }
+        }
+      }
     }
     return authoringOk(result);
   };
@@ -1517,6 +1575,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
 
     const live = authoringSession();
     const privateStatus = live.status(browserStatus.activeDocumentPath);
+    latchInvalidSceneSelection(browserStatus.activeDocumentPath, privateStatus);
     const authoringResponse = authoring({
       op: "status",
       documentPath: browserStatus.activeDocumentPath,

@@ -15,7 +15,11 @@ import {
   type HTMLElement as HappyHTMLElement,
 } from "happy-dom";
 import { createDocument, writeDocumentFile } from "@sceneaxi/authoring-core";
-import { EDITOR_COMMAND_REGISTRY, type JsonValue } from "@sceneaxi/schemas";
+import {
+  DESKTOP_SCENE_HIERARCHY_REFUSALS,
+  EDITOR_COMMAND_REGISTRY,
+  type JsonValue,
+} from "@sceneaxi/schemas";
 import {
   DESKTOP_PRODUCT_REFUSALS,
   DESKTOP_VIEWPORT_PLAY_EVENT,
@@ -1360,6 +1364,37 @@ describe("desktop first-release product loop", () => {
       .toBe(true);
     expect(query(window, "[data-project-status]")?.textContent)
       .toContain("viewport frame 44");
+  });
+
+  it("keeps staged create review visible through dirty browser Open", async () => {
+    const dir = projectDir();
+    const { window, start } = mountChrome(dir);
+    start();
+    await click(window, "#project-open");
+    await click(window, "#scene-entity-desktop-crate-beside");
+    await click(window, "#scene-instance-add");
+
+    const proposal = query(window, "[data-change-proposal]");
+    const diff = query(window, "[data-change-diff]")?.textContent;
+    expect(proposal?.hidden).toBe(false);
+    expect(diff).toContain("desktop-crate-beside-copy-1");
+
+    await click(window, "#project-browser-open");
+    expect(query(window, "[data-change-proposal]")?.hidden).toBe(false);
+    expect(query(window, "[data-change-diff]")?.textContent).toBe(diff);
+
+    await click(window, "#change-review-accept");
+    expect(query(window, "[data-change-proposal]")?.hidden).toBe(true);
+    expect(query(window, "[data-project-status]")?.textContent)
+      .not.toContain(DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale);
+    const hierarchy = query(window, "#scene-entity-desktop-crate-beside") as
+      | (HappyHTMLElement & {
+          options: ArrayLike<HappyHTMLElement & { value: string }>;
+        })
+      | null;
+    expect(Array.from(hierarchy?.options ?? []).some(
+      (option) => option.value === "desktop-crate-beside-copy-1",
+    )).toBe(true);
   });
 
   it("keeps click and keyboard multi-selection in canonical hierarchy order", async () => {

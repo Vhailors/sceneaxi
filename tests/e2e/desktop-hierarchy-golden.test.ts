@@ -673,43 +673,7 @@ describe("full-editor hierarchy vertical", () => {
     })).toMatchObject({ ok: true, data: { selectedInstanceIds: ["desktop-crate-beside-copy-1"] } });
     expect(command(bridge, "change-review-accept", "desktop-control", {})).toMatchObject({ ok: true });
     expect(command(bridge, "edit-undo", "desktop-control", {})).toMatchObject({ ok: true });
-    expect(command(bridge, "scene-hierarchy-inspect", "desktop-control", {
-      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
-      profile: "game",
-    })).toMatchObject({
-      ok: true,
-      data: {
-        ok: false,
-        reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
-        hierarchy: { rootInstanceId: "desktop-crate-root" },
-        entities: expect.arrayContaining([
-          expect.objectContaining({ id: "desktop-crate-beside" }),
-        ]),
-      },
-    });
     expect(command(bridge, "edit-redo", "desktop-control", {})).toMatchObject({ ok: true });
-    expect(command(bridge, "scene-hierarchy-inspect", "desktop-control", {
-      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
-      profile: "game",
-    })).toMatchObject({
-      ok: true,
-      data: {
-        ok: false,
-        reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
-        hierarchy: { rootInstanceId: "desktop-crate-root" },
-        entities: expect.arrayContaining([
-          expect.objectContaining({ id: "desktop-crate-beside-copy-1" }),
-        ]),
-      },
-    });
-    expect(command(bridge, "scene-selection-set", "desktop-control", {
-      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
-      profile: "game",
-      instanceIds: ["missing-instance"],
-    })).toMatchObject({
-      ok: false,
-      reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
-    });
     const bytesBeforeRefusal = readFileSync(join(root, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8");
     const statusBeforeRefusal = bridge.handle({
       action: "authoring",
@@ -728,6 +692,7 @@ describe("full-editor hierarchy vertical", () => {
       data: {
         ok: false,
         reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+        diagnostics: [{ code: DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale }],
         transaction: {
           commandId: "scene-object-reparent",
           status: "refused",
@@ -738,6 +703,51 @@ describe("full-editor hierarchy vertical", () => {
           expect.objectContaining({ id: "desktop-crate-beside" }),
         ]),
       },
+    });
+    for (const client of ["cli", "local-agent"] as const) {
+      expect(command(bridge, "scene-object-reparent", client, {
+        documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+        expectedContentHash: contentHash(bridge),
+        profile: "game",
+        instanceId: "desktop-crate-beside",
+        parentInstanceId: "desktop-crate-stacked",
+        transformPolicy: "preserve-local",
+      })).toMatchObject({
+        ok: true,
+        data: {
+          ok: false,
+          reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+          diagnostics: [{ code: DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale }],
+          transaction: {
+            commandId: "scene-object-reparent",
+            status: "refused",
+            refusal: DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+          },
+        },
+      });
+    }
+    expect(command(bridge, "scene-hierarchy-inspect", "desktop-control", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      profile: "game",
+    })).toMatchObject({
+      ok: true,
+      data: {
+        ok: false,
+        reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+        diagnostics: [{ code: DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale }],
+        hierarchy: { rootInstanceId: "desktop-crate-root" },
+        entities: expect.arrayContaining([
+          expect.objectContaining({ id: "desktop-crate-beside-copy-1" }),
+        ]),
+      },
+    });
+    expect(command(bridge, "scene-selection-set", "desktop-control", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      profile: "game",
+      instanceIds: ["missing-instance"],
+    })).toMatchObject({
+      ok: false,
+      reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
     });
     expect(readFileSync(join(root, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8")).toBe(bytesBeforeRefusal);
     expect(bridge.handle({
@@ -783,6 +793,53 @@ describe("full-editor hierarchy vertical", () => {
     })).toMatchObject({
       ok: true,
       data: { selection: { instanceIds: ["desktop-crate-beside"] } },
+    });
+  });
+
+  it("defers created-object selection until review acceptance", () => {
+    const root = fixture();
+    const bridge = hierarchyBridge(root);
+    expect(command(bridge, "scene-selection-set", "desktop-control", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      profile: "game",
+      instanceIds: ["desktop-crate-beside"],
+    })).toMatchObject({ ok: true });
+
+    expect(command(bridge, "scene-object-create", "desktop-control", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      expectedContentHash: contentHash(bridge),
+      profile: "game",
+      sourceInstanceId: "desktop-crate-beside",
+      parentInstanceId: "desktop-crate-root",
+    })).toMatchObject({
+      ok: true,
+      data: {
+        phase: "reviewing",
+        selectedInstanceIds: ["desktop-crate-beside-copy-1"],
+      },
+    });
+    expect(command(bridge, "scene-hierarchy-inspect", "desktop-control", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      profile: "game",
+    })).toMatchObject({
+      ok: true,
+      data: {
+        ok: true,
+        selection: { instanceIds: ["desktop-crate-beside"] },
+        authoringSnapshot: { phase: "reviewing" },
+      },
+    });
+    expect(command(bridge, "change-review-accept", "desktop-control", {}))
+      .toMatchObject({ ok: true, data: { phase: "applied" } });
+    expect(command(bridge, "scene-hierarchy-inspect", "desktop-control", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      profile: "game",
+    })).toMatchObject({
+      ok: true,
+      data: {
+        ok: true,
+        selection: { instanceIds: ["desktop-crate-beside-copy-1"] },
+      },
     });
   });
 
