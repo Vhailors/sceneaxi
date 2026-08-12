@@ -553,9 +553,9 @@ describe("desktop first-release product loop", () => {
       query(window, "[data-project-status]")?.textContent ?? "";
     expect(shell?.dataset.tier).toBe("narrow");
     expect(shell?.dataset.profile).toBe("game");
-    expect(window.document.querySelectorAll("button")).toHaveLength(74);
+    expect(window.document.querySelectorAll("button")).toHaveLength(75);
     expect(window.document.querySelectorAll('button:not([tabindex="-1"])')).toHaveLength(
-      69,
+      70,
     );
 
     const refusalHelp = query(window, "#status-refusal-help");
@@ -1310,7 +1310,10 @@ describe("desktop first-release product loop", () => {
     await settleTransform("#scene-property-scale-x", "1.25");
 
     await click(window, "#scene-instance-add");
-    expect(query(window, "[data-change-proposal]")?.hidden).toBe(false);
+    expect(
+      query(window, "[data-change-proposal]")?.hidden,
+      query(window, "[data-project-status]")?.textContent ?? "missing product status",
+    ).toBe(false);
     selection.value = "desktop-crate-stacked-copy-1";
     selection.dispatchEvent(new window.Event("change", { bubbles: true }));
     expect(query(window, "[data-scene-property-entity-id]")?.textContent)
@@ -1340,6 +1343,34 @@ describe("desktop first-release product loop", () => {
       .toBe(true);
     expect(query(window, "[data-project-status]")?.textContent)
       .toContain("viewport frame 44");
+  });
+
+  it("keeps click and keyboard multi-selection in canonical hierarchy order", async () => {
+    const { window, start } = mountChrome(projectDir());
+    start();
+    await click(window, "#project-open");
+
+    const selection = query(window, "#scene-entity-desktop-crate-beside") as
+      | (HappyHTMLElement & {
+          multiple: boolean;
+          options: ArrayLike<HappyHTMLElement & { selected: boolean; value: string }>;
+          dataset: Record<string, string | undefined>;
+        })
+      | null;
+    if (selection === null) throw new Error("hierarchy multi-selector missing");
+    expect(selection.multiple).toBe(true);
+    for (const option of Array.from(selection.options)) {
+      option.selected = option.value === "desktop-crate-stacked" ||
+        option.value === "desktop-crate-beside";
+    }
+    selection.dispatchEvent(new window.Event("change", { bubbles: true }));
+
+    expect(selection.dataset.value).toBe(
+      "desktop-crate-beside,desktop-crate-stacked",
+    );
+    expect(query(window, "[data-scene-property-entity-id]")?.textContent).toBe(
+      "desktop-crate-beside",
+    );
   });
 
   it("names the diagnostic the conflict dialog is actually reporting", async () => {

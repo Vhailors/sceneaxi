@@ -6,9 +6,9 @@ implementation program starts. The parent specification is
 [sceneaxi#249](https://github.com/Vhailors/sceneaxi/issues/249); the product-scope
 parent remains [sceneaxi#1](https://github.com/Vhailors/sceneaxi/issues/1).
 
-Issues #250 and #251 now supply the command-registry and native-project slices
-described below; the rows name only their evidence and do not claim capabilities
-owned by #252 or later. The matrix reports current behavior. A `live` control in the visual model is not
+Issues #250 through #253 now supply the command-registry, native-project,
+transaction-history, and hierarchy slices described below; the rows name only
+their evidence and do not claim capabilities owned by #254 or later. The matrix reports current behavior. A `live` control in the visual model is not
 automatically **real** here: `live` means that a packaged host may bind it, while
 this inventory follows the request through the host and checks what happens.
 
@@ -26,8 +26,8 @@ panel remains fake or partial until a real command can populate it.
 
 ## Inventory accounting
 
-The shared shell model owns **86 unique control ids** across all modes and runtime
-projections. A default Game or Web render contains 85 because `dock-timeline`
+The shared shell model owns **89 unique control ids** across all modes and runtime
+projections. A default Game or Web render contains 88 because `dock-timeline`
 exists only in Animate while other dock tabs are mode-dependent. The union below
 comes from `desktopVisualView()` and is enforced model-to-document and
 document-to-model by
@@ -40,12 +40,12 @@ model: the OpenRouter provider select, password input, Save/Replace key button,
 and Remove key button. Their availability is decided by
 `desktop/linux/src/lib/byo-configuration-view.ts` and tested in
 `tests/desktop/desktop-byo-secure-storage.test.ts`. They are deliberately not
-counted as shell controls, so the current packaged-window union is **90**.
+counted as shell controls, so the current packaged-window union is **93**.
 
 The CLI exposes **20 verbs** from `packages/cli/src/commands.ts`; the Electron
 bridge exposes **10 actions**, **9 authoring operations**, and **3 legacy
 assistant transport operations** from `desktop/linux/src/lib/bridge-contract.ts`;
-the same-user local agent bridge exposes **18 tools** from
+the same-user local agent bridge exposes **24 tools** from
 `packages/schemas/src/desktop-local-bridge.ts`. Their transport names remain
 distinct, but first-slice product operations now derive from the one versioned
 registry in `packages/schemas/src/editor-command-registry.ts`.
@@ -67,23 +67,23 @@ id family expands only the suffixes printed in the Item(s) cell.
 | `assistant-mode-ask` | 1 | **fake** | Selectable, but execution refuses `DESKTOP_ASSISTANT_BUILD_MODE_REQUIRED`; the contract says Ask is not implemented. | `desktop/linux/src/lib/bridge-contract.ts`; `desktop/linux/src/renderer/assistant-start.ts` | [#261](https://github.com/Vhailors/sceneaxi/issues/261). |
 | `assistant-mode-build` | 1 | **partial** | Local Build is real and mounts its result. BYOK depends on a provider session; Hosted refuses. | `packages/authoring-core/src/assistant-sculpt.ts`; Linux bridge/provider-host goldens | [#261](https://github.com/Vhailors/sceneaxi/issues/261). |
 | `assistant-mode-agent` | 1 | **partial** | Runs one no-network rarity fixture through the Model Provider Port and stages a canonical proposal. The UI identifies that the prompt is advisory and the fixture answer is fixed. It is not a general agent. | `docs/rarity-engine.md`; `tests/e2e/rarity-provider-desktop-golden.test.ts` | [#261](https://github.com/Vhailors/sceneaxi/issues/261). |
-| `scene-entity-desktop-crate-beside` | 1 | **partial** | Selects one validated composed instance. It has no multi-select or general hierarchy. | `desktop/linux/src/lib/desktop-scene.ts`; scene-property goldens | [#253](https://github.com/Vhailors/sceneaxi/issues/253). |
-| `scene-property-{translation,rotation,scale}-{x,y,z}` | 9 | **partial** | Edits bounded numeric transforms for one selected composed instance and stages no write until Stage. No viewport gizmo, snapping, local/world choice, or multi-select exists. | `packages/schemas/src/desktop-scene-edit.ts`; `tests/e2e/desktop-scene-property-golden.test.ts` | [#254](https://github.com/Vhailors/sceneaxi/issues/254). |
+| `scene-entity-desktop-crate-beside` | 1 | **real** | The multi-select tree renders stable object ids, depth, and parent ids from the validated project composition. Click and keyboard changes use one ordered-selection command and stale ids refuse by name. | `desktop/linux/src/lib/desktop-scene.ts`; `tests/e2e/desktop-hierarchy-golden.test.ts`; product-loop golden | None for hierarchy selection; [#257](https://github.com/Vhailors/sceneaxi/issues/257) owns unified rebindable input. |
+| `scene-property-{translation,rotation,scale}-{x,y,z}` | 9 | **partial** | Edits bounded numeric transforms for the primary selected object and stages no write until Stage. No viewport gizmo or snapping exists; hierarchy reparenting owns the explicit local/world preservation choice. | `packages/schemas/src/desktop-scene-edit.ts`; `tests/e2e/desktop-scene-property-golden.test.ts` | [#254](https://github.com/Vhailors/sceneaxi/issues/254). |
 | `scene-property-stage` | 1 | **partial** | Builds one `/data/composedScene` proposal against the observed content hash. | Same as transform fields | [#252](https://github.com/Vhailors/sceneaxi/issues/252), then [#254](https://github.com/Vhailors/sceneaxi/issues/254). |
 | `project-new-root`, `project-open-root`, `project-recent-select`, `project-open-recent`, `project-remove-recent`, `project-open`, `project-save` | 7 | **real** | New creates `scene.json` and the native v1 manifest atomically; status/Open report the shared version/capability inspection, while a valid legacy project stays byte-identical until its exact migration proposal is approved and committed. Standalone chrome refuses `DESKTOP_RUNTIME_UNAVAILABLE`; Kids refuses before dialog or project reads. | `packages/schemas/src/project-manifest.ts`; `packages/authoring-core/src/project-model.ts`; `desktop/linux/src/lib/{project-lifecycle,project-host}.ts`; project-model, lifecycle, bridge, and CLI/local-agent goldens | None for the v1 project-model slice; [#252](https://github.com/Vhailors/sceneaxi/issues/252) owns general command transactions and redo. |
 | `project-browser-file-select`, `project-browser-open` | 2 | **real** | Lists only `scene.json` and admitted manifest assets, persists validated selection, and opens document or exact digest-bound asset without changing the authoring target. | `desktop/linux/src/lib/project-browser.ts`; project-browser tests and golden | None for the admitted current subset. |
 | `project-browser-rename`, `project-browser-delete` | 2 | **fake** | Both open confirmation UI and then refuse current canonical rows under `DESKTOP_PROJECT_BROWSER_OPERATION_NOT_PERMITTED`. They look actionable before the refusal. Native project identities now exist, but these operations remain deliberately unimplemented. | `desktop/linux/src/lib/project-browser-contract.ts`; project-browser golden | [#256](https://github.com/Vhailors/sceneaxi/issues/256) owns manifest-backed asset mutation; until then render them disabled with the existing refusal. |
 | `scene-play` | 1 | **partial** | Runs the saved composition through `bootstrapOpenPath()`, advances, observes, closes, redraws, and requires viewport acknowledgement. It is a one-shot closed session, not an isolated Play/Stop/reset lifecycle. | `desktop/linux/src/lib/bridge.ts`; product-loop and packaged smoke evidence | [#258](https://github.com/Vhailors/sceneaxi/issues/258). |
 | `ship-export-web` | 1 | **real** | Produces the contained content-addressed static Web viewer and Delivery Handoff on Linux. It never deploys. macOS and Windows refuse `DESKTOP_WEB_EXPORT_PLATFORM_UNSUPPORTED`. | `desktop/linux/src/lib/web-export.ts`; desktop Web export golden | [#266](https://github.com/Vhailors/sceneaxi/issues/266) owns project build/export, which is separate from this real Web export. |
-| `scene-instance-add`, `scene-instance-remove` | 2 | **partial** | Add copies one already-validated local artifact; Remove permits a non-root leaf while preserving the two-instance minimum. No general hierarchy or parenting exists. | desktop scene edit contract and goldens | [#253](https://github.com/Vhailors/sceneaxi/issues/253). |
+| `scene-instance-add`, `scene-instance-remove`, `scene-instance-reparent`, `scene-instance-parent`, `scene-instance-policy` | 5 | **real** | Create copies only an already-validated local artifact under an explicit parent; ordered multi-remove preserves the protected root and refuses orphans; reparent requires preserve-world or preserve-local and stages one canonical review transaction. | desktop scene edit contract; hierarchy and product-loop goldens | None for the #253 hierarchy slice; [#255](https://github.com/Vhailors/sceneaxi/issues/255) owns reusable content. |
 | `web-stage-html` | 1 | **partial** | Web profile stages one bounded starter HTML value as inert data. It is not a site canvas or general HTML editor; Game and Kids name `DESKTOP_WEB_CAPABILITY_REQUIRED`. | `apps/desktop-shell/src/product-loop.ts`; desktop product-loop tests | [#250](https://github.com/Vhailors/sceneaxi/issues/250) registers it; no broader site builder is authorized by full-editor v1. |
 | `web-inject-asset` | 1 | **real** | On packaged Linux, opens a native picker and stages the contained GLB/glTF importer through Change Review. Game and Kids name `DESKTOP_WEB_CAPABILITY_REQUIRED`. | `docs/asset-ingestion.md`; asset ingestion and picker tests | [#256](https://github.com/Vhailors/sceneaxi/issues/256) adds the remaining first-class asset families and hot reload. |
 | `drawer-left`, `drawer-inspector` | 2 | **real** | Open the responsive Panels and Inspector drawers; Kids centrally demotes them. | control accounting and recorded viewport evidence in `docs/engine-desktop-surface.md` | [#265](https://github.com/Vhailors/sceneaxi/issues/265) adds user-arranged persistent workspaces. |
 | `menu-file`, `menu-edit`, `menu-run` | 3 | **real** | Open accessible application menus with focus, arrow, Escape, outside-click, and focus-leave behavior. Their command rows derive label, schema version, and permission from the shared registry. | `apps/desktop-shell/src/interaction-commands.ts`; command interaction golden | None for the registered first-slice commands. |
 | `menu-command-{project-new,project-open,project-save,ship-export-web,edit-undo,edit-redo,run-play}` | 7 | **real** | Each invokes the same current handler as its palette row and accelerator through the registered desktop-control contract; native New/Open keep the lifecycle port while the other engine-host operations cross the validated `command` action. Undo and redo are visibly inert until durable history reports availability or while recovery is pending. | command interaction golden; full-editor transaction golden; desktop bridge golden | None for this slice. |
-| `mode-build` | 1 | **partial** | Opens the only room with selected-instance property authoring. It lacks hierarchy, multi-select, gizmos, snapping, reusable content, and the full inspector. | engine desktop surface doc and scene-property goldens | [#253](https://github.com/Vhailors/sceneaxi/issues/253), [#254](https://github.com/Vhailors/sceneaxi/issues/254), [#255](https://github.com/Vhailors/sceneaxi/issues/255). |
+| `mode-build` | 1 | **partial** | Opens the room with the project-backed hierarchy, ordered multi-select, parenting, and selected-object numeric authoring. It still lacks gizmos, snapping, reusable content, and the full inspector. | engine desktop surface doc; hierarchy and scene-property goldens | [#254](https://github.com/Vhailors/sceneaxi/issues/254), [#255](https://github.com/Vhailors/sceneaxi/issues/255). |
 | `mode-sculpt` | 1 | **fake** | Changes presentation only; its room says standalone Sculpt authoring is unavailable and its actions are inert. | visual model and mounted control inventory | [#250](https://github.com/Vhailors/sceneaxi/issues/250). |
-| `mode-compose` | 1 | **fake** | Changes presentation only; the room has no bound composition editor. The narrow instance operations live in Build. | `apps/desktop-shell/src/chrome.ts`; mounted control inventory | [#253](https://github.com/Vhailors/sceneaxi/issues/253). |
+| `mode-compose` | 1 | **fake** | Changes presentation only; the room has no separately bound editor. Hierarchy and parenting deliberately use the one Build authoring surface instead of creating a second document model. | `apps/desktop-shell/src/chrome.ts`; mounted control inventory | No #253 gap; later work may either bind registered commands here or keep one authoring room. |
 | `mode-animate` | 1 | **fake** | Changes presentation only; the room and Timeline contain no authoring operation. | chrome mode panel; mounted control inventory | [#259](https://github.com/Vhailors/sceneaxi/issues/259). |
 | `mode-run` | 1 | **partial** | The room receives real one-shot Play evidence, but has no long-lived clone, Stop, reset, source switch, or profiling. | product-loop golden and Linux smoke | [#258](https://github.com/Vhailors/sceneaxi/issues/258), then [#264](https://github.com/Vhailors/sceneaxi/issues/264). |
 | `mode-ship` | 1 | **partial** | Shows real static Web export evidence. It has no project build targets for Linux, macOS, or Windows. | Web export golden | [#266](https://github.com/Vhailors/sceneaxi/issues/266), [#267](https://github.com/Vhailors/sceneaxi/issues/267), [#268](https://github.com/Vhailors/sceneaxi/issues/268). |
@@ -118,18 +118,18 @@ click or focus behavior.
 | Surface | Item(s) | Status | Current behavior / gap | Evidence and next dependency |
 |---|---|---|---|---|
 | CLI | `project new`, `dev`, `test`, `capture`, `report`, `propose`, `apply` | **real** | Versioned envelope, strict flags, text-canonical E1 authoring and evidence. No full-editor command vocabulary. | CLI golden, proposal/apply and lifecycle tests; migrate through [#250](https://github.com/Vhailors/sceneaxi/issues/250). |
-| CLI | `scene compose` | **real** | Deterministic offline scene composition with named refusal matrix. | scene composition golden; hierarchy expansion [#253](https://github.com/Vhailors/sceneaxi/issues/253). |
+| CLI | `scene compose` | **real** | Deterministic offline scene composition with named refusal matrix; the desktop bridge CLI adds hierarchy inspect/select/create/remove/reparent over the active project rather than widening this offline verb. | scene composition golden; hierarchy and CLI→local bridge goldens. |
 | CLI | `asset import`, `asset list` | **partial** | Import covers the fixed contained GLB/glTF profile; list reports package refs from catalog items. | asset ingestion golden; [#256](https://github.com/Vhailors/sceneaxi/issues/256). |
 | CLI | `profile list`, `profile open-path` | **real** | Read-only registry and shared demo policy, including non-zero Kids refusal. | profile/open-path tests. |
 | CLI | `catalog list`, `evidence list` | **real** | Read-only bounded listings; catalog commerce remains inert. | registry verb tests. |
-| CLI | `desktop bridge call`, `status`, `tools` | **real** | Discovers and authenticates the same-user Unix socket; validates exact tool, permission, and input. `tools` exposes the same command schema version and definitions; registered calls include shared project inspection plus migration propose/commit/recover without a second CLI result model. | CLI bridge, local RPC, and CLI→local bridge goldens. |
+| CLI | `desktop bridge call`, `status`, `tools` | **real** | Discovers and authenticates the same-user Unix socket; validates exact tool, permission, and input. `tools` exposes the same command schema version and definitions; registered calls include project migration and hierarchy inspect/select/create/remove/reparent without a second CLI result model. | CLI bridge, local RPC, hierarchy, and CLI→local bridge goldens. |
 | CLI | `demo gated` | **fake** | Intentionally synthetic held-key fixture command; no product capability uses it. It fails closed by default. | held-key regression suites; keep outside the full-editor registry. |
 | CLI | `protocol version`, `protocol inspect` | **real** | Reports the CLI envelope and exit-code contract. | CLI protocol tests. |
 | Desktop interaction table | New, Open, Save, Export Web, Undo, Play | **real** | All six retain their behavior while their identity, label, schema version, and permission derive from the shared registry; menu, palette, button, and accelerator parity remains executable. | `apps/desktop-shell/src/interaction-commands.ts`; command interaction golden. |
 | Electron bridge actions | `handshake`, `command`, `scene`, `project-browser-open`, `open-path`, `asset-import`, `ship`, `assistant`, `authoring`, `frame-report` | **real** | `command` validates schema version, declared client, exact input, permission, and Kids denial before adapting to the existing handlers. Legacy transport actions remain for unchanged bounded behavior. | registry unit tests; desktop Linux bridge golden. |
-| Authoring operations | `status`, `propose`, `edit-scene`, `edit-property`, `accept`, `reject`, `recover`, `restart`, `undo`, `redo` | **partial** | Real staged review plus base-versioned atomic commit and restart-durable multi-level history; general hierarchy, animation, physics, package, and Git operations remain later slices. | transaction-history and full-editor transaction goldens; desktop session/scene tests; [#253](https://github.com/Vhailors/sceneaxi/issues/253) onward. |
+| Authoring operations | `status`, `propose`, `edit-scene`, `edit-property`, `accept`, `reject`, `recover`, `restart`, `undo`, `redo` | **partial** | Real staged review plus base-versioned atomic commit and restart-durable multi-level history. `edit-scene` now carries the shared hierarchy operations; animation, physics, package, and Git operations remain later slices. | transaction-history, full-editor transaction, and hierarchy goldens; desktop session/scene tests; [#254](https://github.com/Vhailors/sceneaxi/issues/254) onward. |
 | Assistant operations | `start`, `status`, `abandon` | **partial** | Real retained-job lifecycle for Build and bounded Agent. Ask is excluded by type; Hosted is excluded by route. | assistant poll/start tests; [#261](https://github.com/Vhailors/sceneaxi/issues/261). |
-| Local-agent tools | handshake; project status/inspect/propose/accept/reject/recover/restart/undo/redo and migration propose/commit/recover; Play; assistant Local start/BYOK start/bounded Agent/status/abandon | **partial** | Nineteen real permission-bound tools. Transactional mutations derive command id, progress, evidence, refusal, and history behavior from the shared registry; UI (`desktop-control`), CLI, and local-agent paths receive the same transaction result. The transport still excludes credentials, Hosted, renderer-only frame actions, and later full-editor commands. | registry and desktop local bridge contracts; full-editor transaction golden; CLI→local bridge golden; later capability tickets own expansion. |
+| Local-agent tools | handshake; project status/inspect/propose/accept/reject/recover/restart/undo/redo and migration propose/commit/recover; hierarchy inspect/select/create/remove/reparent; Play; assistant Local start/BYOK start/bounded Agent/status/abandon | **partial** | Twenty-four real permission-bound tools. Hierarchy inspection gives assistants stable project ids and parentage; every transactional mutation derives command id, progress, evidence, refusal, and history behavior from the shared registry. UI (`desktop-control`), CLI, and local-agent paths receive the same result. The transport still excludes credentials, Hosted, renderer-only frame actions, and later full-editor commands. | registry and desktop local bridge contracts; full-editor transaction and hierarchy goldens; CLI→local bridge golden; later capability tickets own expansion. |
 
 `packages/cli/src/held-keys/shipped.ts` is a fail-closed map for captain-held CLI
 verbs, not the full-editor command registry. Likewise,
@@ -158,7 +158,7 @@ product-command definitions.
 | Shared typed command registry across UI, CLI, assistant | **partial** | The versioned registry drives existing File/Save/Undo/Play/Change Review/bounded Assistant metadata plus project inspect and migration commands across desktop-control, CLI, and local-agent boundaries. Later full-editor commands are deliberately absent. | [#252](https://github.com/Vhailors/sceneaxi/issues/252) onward add only their own vertical slices. |
 | Versioned native project manifest, deterministic ids, migrations, capabilities | **real** | `project-manifest.schema.json` and the public validator own v1; New writes document + manifest atomically; object/asset identities derive only from persisted project/source identity; inspection refuses unknown major, invalid chain, duplicates, undeclared grants, traversal, and canonical escapes; migration proposal/approval/commit/recovery and evidence replay byte-identically across roots. | `packages/schemas/test/project-manifest.test.ts`; `packages/authoring-core/test/project-model.test.ts`; `tests/desktop/desktop-project-lifecycle.test.ts`; desktop bridge and CLI→local bridge goldens; [#252](https://github.com/Vhailors/sceneaxi/issues/252) owns broader transactions, not this manifest flow. |
 | Atomic conflict-aware recovery with multi-level undo/redo, progress, evidence | **real** | Explicit base hashes refuse stale writes before journal creation; prepared/undoing/redoing phases recover deterministically; exact canonical before/after bytes and ordered history survive restart; a new commit alone invalidates the superseded redo suffix; every client receives one bounded transaction result. | `packages/authoring-core/test/transaction-history.test.ts`; `tests/e2e/full-editor-transactions-golden.test.ts`; journal recovery suite |
-| Hierarchy, multi-select, parent/child | **partial** | Flat composed-instance selector and bounded add/remove | [#253](https://github.com/Vhailors/sceneaxi/issues/253) |
+| Hierarchy, multi-select, parent/child | **real** | Versioned composition projection, canonical ordered selection, bounded create/multi-remove, explicit-policy reparenting, review/undo/redo/reopen/Play, CLI and assistant inspection | `tests/e2e/desktop-hierarchy-golden.test.ts` |
 | Gizmos, snapping, full transform inspector | **partial** | Nine numeric properties plus four transient assistant nudges | [#254](https://github.com/Vhailors/sceneaxi/issues/254) |
 | Prefab-like reusable content | **fake** | No definition/instance/override contract | [#255](https://github.com/Vhailors/sceneaxi/issues/255) |
 | First-class assets, previews, manifests, hot reload | **partial** | SceneAxi artifacts and contained GLB/glTF paths exist; remaining families and hot reload do not | [#256](https://github.com/Vhailors/sceneaxi/issues/256) |
@@ -235,6 +235,36 @@ validation is browser-safe in `@sceneaxi/schemas`; filesystem containment and
 canonical-path checks stay in `@sceneaxi/authoring-core`. This slice adds no
 hierarchy, asset-family expansion, provider,
 deployment, publication, or Kids activation behavior.
+
+## Transaction and hierarchy slices
+
+[#252](https://github.com/Vhailors/sceneaxi/issues/252) makes the existing
+authoring session the one command transaction authority, including durable
+multi-level undo and redo. [#253](https://github.com/Vhailors/sceneaxi/issues/253)
+builds on that authority rather than adding a hierarchy document or journal.
+The validated `ComposedScene` already persists stable instance ids,
+`rootInstanceId`, parent ids, local transforms, world transforms, artifact bytes,
+and digest evidence. The desktop projects it as
+`sceneaxi.desktop-scene-hierarchy` schema version 1, orders every client
+selection by the composition's canonical depth/id traversal, and stages
+create/remove/reparent as the existing single `/data/composedScene` edit.
+
+Reparenting requires `preserve-world` or `preserve-local`; both policies produce
+canonical bytes for the axis-aligned v1 transform contract. The shared command
+boundary denies Kids or an absent `scene.compose` capability before project I/O.
+The operation boundary then names cycles, a missing parent, the protected root,
+a stale selection, an invalid policy, and unsupported input before proposal or
+write. The hierarchy golden proves review, Save, fresh-session reopen, Play,
+Undo, Redo, desktop/CLI/local-agent parity, and local validated-artifact
+create/multi-remove.
+
+Compatibility is a projection, not an artifact migration: existing valid
+composed-scene fixtures are read through `composedSceneFromDocumentData()` and
+projected into hierarchy v1 without changing their document or Sculpt Artifact
+bytes. A valid legacy project therefore stays byte-identical until its separately
+reviewed native-project migration is approved; hierarchy inspection itself never
+migrates it. New projects receive the native v1 `scene.compose` grant from the
+existing manifest seed.
 
 ## Inventory decisions
 

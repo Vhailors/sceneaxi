@@ -60,6 +60,7 @@ import {
 } from "@sceneaxi/importers";
 import { bootstrapOpenPath, resumeOpenPath } from "@sceneaxi/engine-orchestrator";
 import {
+  DESKTOP_SCENE_HIERARCHY_REFUSALS,
   EDITOR_COMMAND_REFUSALS,
   EDITOR_COMMAND_REGISTRY,
   EDITOR_COMMAND_SCHEMA_VERSION,
@@ -98,7 +99,6 @@ import {
   DESKTOP_SCENE_NOT_COMPOSABLE,
   desktopAssistantScene,
   desktopSceneFromDocumentData,
-  desktopScenePropertyInspection,
   inspectDesktopSceneProperties,
   stageDesktopSceneEdit,
   stageDesktopScenePropertyEdit,
@@ -321,6 +321,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     contentHash: string;
     contentByteLength: number;
   }> | null = null;
+  let selectedSceneInstanceIds: readonly string[] = Object.freeze([]);
 
   const authoringSession = (): DesktopSession => {
     session ??= options.createAuthoringSession?.() ?? createDesktopSession({ cwd: options.cwd });
@@ -959,15 +960,27 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         reconcileRarityAssistantDocument(refused, retirementReason);
         return refused;
       }
+      let editableScene = inspectDesktopSceneProperties({
+        documentData: status.data,
+        contentHash: status.contentHash,
+        documentPath,
+        ...(selectedSceneInstanceIds.length === 0
+          ? {}
+          : { selection: selectedSceneInstanceIds }),
+      });
+      if (!editableScene.ok && editableScene.reason === DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale) {
+        editableScene = inspectDesktopSceneProperties({
+          documentData: status.data,
+          contentHash: status.contentHash,
+          documentPath,
+        });
+      }
+      if (editableScene.ok) selectedSceneInstanceIds = editableScene.selection.instanceIds;
       const enriched = Object.freeze({
         ...status,
         ...rarity.value,
         authoringSnapshot: withRarityProposalEvidence(live.snapshot()),
-        editableScene: inspectDesktopSceneProperties({
-          documentData: status.data,
-          contentHash: status.contentHash,
-          documentPath,
-        }),
+        editableScene,
       });
       reconcileRarityAssistantDocument(enriched, retirementReason);
       return enriched;
@@ -1003,6 +1016,9 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           documentData: status.data,
           contentHash: status.contentHash,
           documentPath,
+          ...(selectedSceneInstanceIds.length === 0
+            ? {}
+            : { selection: selectedSceneInstanceIds }),
         }),
       });
     };
@@ -1094,6 +1110,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         operation: field(payload, "operation"),
       });
       if (!staged.ok) return bridgeOk("authoring", staged);
+      selectedSceneInstanceIds = staged.selectedInstanceIds;
       const snapshot = live.proposeEdit(staged.edit);
       if (snapshot.phase !== "reviewing" || (snapshot.diagnostics?.length ?? 0) > 0) {
         return bridgeOk("authoring", withRarityProposalEvidence(snapshot));
@@ -1104,6 +1121,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           ...snapshot,
           editableScene: staged.inspection,
           selectedInstanceId: staged.selectedInstanceId,
+          selectedInstanceIds: staged.selectedInstanceIds,
           sceneEditOperation: staged.operation,
         }),
       );
@@ -1132,6 +1150,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         newValue: field(payload, "newValue"),
       });
       if (!staged.ok) return bridgeOk("authoring", staged);
+      selectedSceneInstanceIds = staged.inspection.selection.instanceIds;
       const snapshot = reconcilePendingAssetImport(live.proposeEdit(staged.edit));
       if (snapshot.phase !== "reviewing" || (snapshot.diagnostics?.length ?? 0) > 0) {
         return bridgeOk("authoring", withRarityProposalEvidence(snapshot));
@@ -1140,10 +1159,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         "authoring",
         Object.freeze({
           ...snapshot,
-          editableScene: desktopScenePropertyInspection(
-            expectedContentHash,
-            staged.entity,
-          ),
+          editableScene: staged.inspection,
         }),
       );
     }
@@ -1848,6 +1864,16 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     const validated = validateEditorCommandInvocation(payload);
     if (!validated.ok) {
       const declared = editorCommand(field(payload, "commandId"));
+      const hierarchyCommand = declared?.id.startsWith("scene-") === true;
+      const rawInput = field(payload, "input");
+      const rawPolicy = field(rawInput, "transformPolicy");
+      const mappedReason = hierarchyCommand && validated.reason === EDITOR_COMMAND_REFUSALS.kidsDenied
+        ? DESKTOP_SCENE_HIERARCHY_REFUSALS.kidsDenied
+        : declared?.id === "scene-object-reparent" && rawPolicy !== "preserve-world" && rawPolicy !== "preserve-local"
+          ? DESKTOP_SCENE_HIERARCHY_REFUSALS.policyInvalid
+          : hierarchyCommand && validated.reason === EDITOR_COMMAND_REFUSALS.inputInvalid
+            ? DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported
+            : validated.reason;
       const transaction = declared === undefined
         ? undefined
         : editorCommandTransactionResult({
@@ -1857,13 +1883,16 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
             percent: 100,
             message: validated.message,
             terminal: true,
-            refusal: validated.reason,
+            refusal: mappedReason,
           });
-      return bridgeRefuse(validated.reason, validated.message, null, transaction);
+      return bridgeRefuse(mappedReason, validated.message, null, transaction);
     }
     if (options.commandProfile === "kids" || validated.invocation.profile === "kids") {
+      const reason = validated.command.id.startsWith("scene-")
+        ? DESKTOP_SCENE_HIERARCHY_REFUSALS.kidsDenied
+        : EDITOR_COMMAND_REFUSALS.kidsDenied;
       return commandTransaction(validated.command.id, bridgeRefuse(
-        EDITOR_COMMAND_REFUSALS.kidsDenied,
+        reason,
         `${validated.command.id} is denied for Kids before execution.`,
       ));
     }
@@ -1871,8 +1900,11 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       options.commandCapabilities !== undefined &&
       !options.commandCapabilities.includes(validated.command.capability.id)
     ) {
+      const reason = validated.command.id.startsWith("scene-")
+        ? DESKTOP_SCENE_HIERARCHY_REFUSALS.capabilityMissing
+        : EDITOR_COMMAND_REFUSALS.capabilityDenied;
       return commandTransaction(validated.command.id, bridgeRefuse(
-        EDITOR_COMMAND_REFUSALS.capabilityDenied,
+        reason,
         `${validated.command.id} requires missing capability ${validated.command.capability.id}.`,
       ));
     }
@@ -1927,6 +1959,89 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         return commandTransaction(validated.command.id, authoring({ op: "undo" }));
       case "edit-redo":
         return commandTransaction(validated.command.id, authoring({ op: "redo" }));
+      case "scene-hierarchy-inspect": {
+        const documentPath = input["documentPath"];
+        const inspected = authoring({ op: "status", documentPath });
+        if (!inspected.ok) return inspected;
+        const hierarchy = field(inspected.data, "editableScene");
+        if (field(hierarchy, "ok") !== true) {
+          const hierarchyDiagnostics = field(hierarchy, "diagnostics");
+          const diagnostic = Array.isArray(hierarchyDiagnostics)
+            ? hierarchyDiagnostics[0]
+            : undefined;
+          return bridgeRefuse(
+            String(field(hierarchy, "reason") ?? field(diagnostic, "code") ?? DESKTOP_SCENE_NOT_COMPOSABLE),
+            String(field(diagnostic, "message") ?? "The project hierarchy could not be inspected."),
+          );
+        }
+        return bridgeOk("command", Object.freeze({
+          hierarchy: field(hierarchy, "hierarchy"),
+          selection: field(hierarchy, "selection"),
+          contentHash: field(hierarchy, "contentHash"),
+        }));
+      }
+      case "scene-selection-set": {
+        const documentPath = input["documentPath"];
+        const read = readActiveDocument(
+          { documentPath },
+          SCENE_DOCUMENT_REFUSALS,
+        );
+        if (!read.ok) return bridgeRefuse(read.reason, read.message);
+        const inspected = inspectDesktopSceneProperties({
+          documentData: read.status.data,
+          contentHash: read.status.contentHash,
+          documentPath: String(documentPath),
+          selection: input["instanceIds"],
+        });
+        if (!inspected.ok) {
+          const diagnostic = inspected.diagnostics[0];
+          return bridgeRefuse(
+            inspected.reason ?? diagnostic?.code ?? DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+            diagnostic?.message ?? "The ordered scene selection was refused.",
+          );
+        }
+        selectedSceneInstanceIds = inspected.selection.instanceIds;
+        return bridgeOk("command", Object.freeze({
+          hierarchy: inspected.hierarchy,
+          selection: inspected.selection,
+          contentHash: inspected.contentHash,
+        }));
+      }
+      case "scene-object-create":
+      case "scene-object-remove":
+      case "scene-object-reparent": {
+        const operation = validated.command.id === "scene-object-create"
+          ? {
+              kind: "create-object",
+              sourceInstanceId: input["sourceInstanceId"],
+              parentInstanceId: input["parentInstanceId"],
+            }
+          : validated.command.id === "scene-object-remove"
+            ? { kind: "remove-objects", instanceIds: input["instanceIds"] }
+            : {
+                kind: "reparent-object",
+                instanceId: input["instanceId"],
+                parentInstanceId: input["parentInstanceId"],
+                transformPolicy: input["transformPolicy"],
+              };
+        const staged = authoring({
+          op: "edit-scene",
+          documentPath: input["documentPath"],
+          expectedContentHash: input["expectedContentHash"],
+          profile: input["profile"],
+          operation,
+        });
+        if (!staged.ok) return staged;
+        if (field(staged.data, "ok") === false) {
+          const diagnostics = field(staged.data, "diagnostics");
+          const diagnostic = Array.isArray(diagnostics) ? diagnostics[0] : undefined;
+          return bridgeRefuse(
+            String(field(staged.data, "reason") ?? field(diagnostic, "code") ?? DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported),
+            String(field(diagnostic, "message") ?? "The hierarchy command was refused before review."),
+          );
+        }
+        return bridgeOk("command", staged.data);
+      }
       case "run-play":
         return openPathExercise({ documentPath: input["documentPath"] });
       case "assistant-local-build":

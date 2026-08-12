@@ -32,6 +32,11 @@ describe("full-editor command registry", () => {
       "project-save",
       "edit-undo",
       "edit-redo",
+      "scene-hierarchy-inspect",
+      "scene-selection-set",
+      "scene-object-create",
+      "scene-object-remove",
+      "scene-object-reparent",
       "run-play",
       "change-review-accept",
       "change-review-reject",
@@ -52,6 +57,36 @@ describe("full-editor command registry", () => {
       expect(command.refusals.length).toBeGreaterThan(0);
       expect(command.evidence.kind).toBeTruthy();
     }
+  });
+
+  it("registers hierarchy inputs once for desktop, CLI, and assistant clients", () => {
+    for (const id of [
+      "scene-hierarchy-inspect",
+      "scene-selection-set",
+      "scene-object-create",
+      "scene-object-remove",
+      "scene-object-reparent",
+    ] as const) {
+      expect(editorCommand(id)).toMatchObject({
+        acceptedClients: ["desktop-control", "cli", "local-agent"],
+        capability: { id: "scene.compose" },
+        evidence: { kind: "scene-hierarchy" },
+      });
+    }
+    expect(validateEditorCommandInvocation({
+      schemaVersion: 1,
+      commandId: "scene-object-reparent",
+      client: "cli",
+      permission: "project:write",
+      input: {
+        documentPath: "scene.json",
+        expectedContentHash: `sha256:${"a".repeat(64)}`,
+        profile: "game",
+        instanceId: "child",
+        parentInstanceId: "parent",
+        transformPolicy: "preserve-world",
+      },
+    }).ok).toBe(true);
   });
 
   it("rejects duplicate ids and invalid registry declarations", () => {

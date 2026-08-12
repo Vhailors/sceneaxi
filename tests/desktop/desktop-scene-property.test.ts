@@ -8,6 +8,7 @@ import {
   reconstructSculpt,
 } from "@sceneaxi/authoring-core";
 import {
+  DESKTOP_SCENE_HIERARCHY_REFUSALS,
   SCENE_COMPOSITION_INTAKE_KIND,
   SCENE_COMPOSITION_SCHEMA_VERSION,
   composedSceneFromDocumentData,
@@ -161,6 +162,113 @@ describe("desktop selected composed-instance edit — public seam", () => {
       ok: true,
       selectedInstanceId: "desktop-crate-root",
       inspection: { entities: [{}, {}, {}] },
+    });
+  });
+
+  it("reparents with explicit preserve-world or preserve-local deterministic transforms", () => {
+    const fixture = starter();
+    const contentHash = `sha256:${"7".repeat(64)}`;
+    const reparent = (transformPolicy: "preserve-world" | "preserve-local") =>
+      stageDesktopSceneEdit({
+        documentData: fixture.data,
+        contentHash,
+        profile: "game",
+        operation: {
+          kind: "reparent-object",
+          instanceId: "desktop-crate-beside",
+          parentInstanceId: "desktop-crate-stacked",
+          transformPolicy,
+        },
+      });
+
+    const world = reparent("preserve-world");
+    expect(world).toMatchObject({
+      ok: true,
+      operation: { transformPolicy: "preserve-world" },
+      selectedInstanceIds: ["desktop-crate-beside"],
+      inspection: {
+        hierarchy: {
+          schemaVersion: 1,
+          kind: "sceneaxi.desktop-scene-hierarchy",
+          objects: expect.arrayContaining([
+            expect.objectContaining({
+              id: "desktop-crate-beside",
+              parentId: "desktop-crate-stacked",
+              localTransform: expect.objectContaining({ translation: [-4.4, -2.3, 0] }),
+              worldTransform: expect.objectContaining({ translation: [-4.4, 0, 0] }),
+            }),
+          ]),
+        },
+      },
+    });
+    const local = reparent("preserve-local");
+    expect(local).toMatchObject({
+      ok: true,
+      inspection: {
+        hierarchy: {
+          objects: expect.arrayContaining([
+            expect.objectContaining({
+              id: "desktop-crate-beside",
+              parentId: "desktop-crate-stacked",
+              localTransform: expect.objectContaining({ translation: [-4.4, 0, 0] }),
+              worldTransform: expect.objectContaining({ translation: [-4.4, 2.3, 0] }),
+            }),
+          ]),
+        },
+      },
+    });
+    expect(world.ok && local.ok && JSON.stringify(world.edit.newValue))
+      .not.toBe(local.ok && JSON.stringify(local.edit.newValue));
+    expect(readFileSync(join(fixture.dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8"))
+      .toBe(fixture.bytes);
+  });
+
+  it("refuses hierarchy cycles, missing parents, protected roots, stale selections, and invalid policy by name", () => {
+    const fixture = starter();
+    const contentHash = `sha256:${"8".repeat(64)}`;
+    const request = (operation: unknown, data: unknown = fixture.data) =>
+      stageDesktopSceneEdit({ documentData: data, contentHash, profile: "game", operation });
+
+    expect(request({
+      kind: "reparent-object",
+      instanceId: "desktop-crate-root",
+      parentInstanceId: "desktop-crate-beside",
+      transformPolicy: "preserve-local",
+    })).toMatchObject({ ok: false, reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.protectedRoot });
+    expect(request({
+      kind: "reparent-object",
+      instanceId: "desktop-crate-beside",
+      parentInstanceId: "missing-parent",
+      transformPolicy: "preserve-local",
+    })).toMatchObject({ ok: false, reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.parentMissing });
+    expect(request({
+      kind: "reparent-object",
+      instanceId: "missing-child",
+      parentInstanceId: "desktop-crate-root",
+      transformPolicy: "preserve-local",
+    })).toMatchObject({ ok: false, reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale });
+    expect(request({
+      kind: "reparent-object",
+      instanceId: "desktop-crate-beside",
+      parentInstanceId: "desktop-crate-root",
+      transformPolicy: "implicit",
+    })).toMatchObject({ ok: false, reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.policyInvalid });
+
+    const first = request({
+      kind: "reparent-object",
+      instanceId: "desktop-crate-stacked",
+      parentInstanceId: "desktop-crate-beside",
+      transformPolicy: "preserve-local",
+    });
+    if (!first.ok) throw new Error(first.diagnostics[0]?.message);
+    expect(request({
+      kind: "reparent-object",
+      instanceId: "desktop-crate-beside",
+      parentInstanceId: "desktop-crate-stacked",
+      transformPolicy: "preserve-local",
+    }, { ...(fixture.data as object), composedScene: first.edit.newValue })).toMatchObject({
+      ok: false,
+      reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.cycle,
     });
   });
 

@@ -833,14 +833,24 @@ export {
 
 export {
   DESKTOP_SCENE_EDIT_PROFILES,
+  DESKTOP_SCENE_HIERARCHY_KIND,
+  DESKTOP_SCENE_HIERARCHY_REFUSALS,
+  DESKTOP_SCENE_HIERARCHY_SCHEMA_VERSION,
+  DESKTOP_SCENE_REPARENT_POLICIES,
   DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS,
   desktopSceneTransformProperty,
   isDesktopSceneEditOperation,
   isDesktopSceneEditProfile,
+  isDesktopSceneReparentPolicy,
+  resolveDesktopSceneSelection,
 } from "./desktop-scene-edit.js";
 export type {
   DesktopSceneEditOperation,
   DesktopSceneEditProfile,
+  DesktopSceneHierarchyRefusal,
+  DesktopSceneReparentPolicy,
+  DesktopSceneSelection,
+  DesktopSceneSelectionResult,
   DesktopSceneTransformPropertyDefinition,
   DesktopSceneTransformPropertyId,
 } from "./desktop-scene-edit.js";

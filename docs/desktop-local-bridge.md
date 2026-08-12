@@ -65,8 +65,8 @@ declared by the checked-in tool definition.
 | Permission | Tools |
 |---|---|
 | `bridge:connect` | `sceneaxi.bridge.handshake` |
-| `project:read` | `sceneaxi.project.status` |
-| `project:write` | `sceneaxi.project.propose`, `accept`, `reject`, `recover`, `restart`, `undo` |
+| `project:read` | `sceneaxi.project.status`, `sceneaxi.project.inspect`, `sceneaxi.scene.hierarchy.inspect`, `sceneaxi.scene.selection.set` |
+| `project:write` | `sceneaxi.project.propose`, `accept`, `reject`, `recover`, `restart`, `undo`, `redo`, migration propose/commit/recover, and `sceneaxi.scene.object.create`, `remove`, `reparent` |
 | `assistant:read` | `sceneaxi.assistant.status` |
 | `assistant:run` | `sceneaxi.assistant.local.start`, `sceneaxi.assistant.byo.start`, `sceneaxi.assistant.abandon` |
 
@@ -112,6 +112,18 @@ pnpm sceneaxi desktop bridge call \
 pnpm sceneaxi desktop bridge call \
   --tool sceneaxi.project.accept \
   --allow project:write \
+  --json
+
+pnpm sceneaxi desktop bridge call \
+  --tool sceneaxi.scene.hierarchy.inspect \
+  --allow project:read \
+  --input-json '{"documentPath":"scene.json"}' \
+  --json
+
+pnpm sceneaxi desktop bridge call \
+  --tool sceneaxi.scene.object.reparent \
+  --allow project:write \
+  --input-json '{"documentPath":"scene.json","expectedContentHash":"sha256:<64 lowercase hex>","profile":"game","instanceId":"child-id","parentInstanceId":"parent-id","transformPolicy":"preserve-world"}' \
   --json
 ```
 

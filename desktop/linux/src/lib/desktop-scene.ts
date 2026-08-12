@@ -12,6 +12,9 @@
 import { composeScene, type ApplyDiagnostic } from "@sceneaxi/authoring-core";
 import {
   COMPOSED_SCENE_DOCUMENT_DATA_KEY,
+  DESKTOP_SCENE_HIERARCHY_KIND,
+  DESKTOP_SCENE_HIERARCHY_REFUSALS,
+  DESKTOP_SCENE_HIERARCHY_SCHEMA_VERSION,
   DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS,
   SCENE_COMPOSITION_INTAKE_KIND,
   SCENE_COMPOSITION_SCHEMA_VERSION,
@@ -22,11 +25,15 @@ import {
   identitySculptTransform,
   isDesktopSceneEditOperation,
   isDesktopSceneEditProfile,
+  isDesktopSceneReparentPolicy,
   isJsonObject,
+  resolveDesktopSceneSelection,
   type ComposedScene,
   type ComposedSceneInstance,
   type DesktopSceneEditOperation,
   type DesktopSceneEditProfile,
+  type DesktopSceneHierarchyRefusal,
+  type DesktopSceneSelection,
   type DesktopSceneTransformPropertyId,
   type SceneCompositionIntake,
   type SculptArtifact,
@@ -74,13 +81,41 @@ export type DesktopSceneEditableEntity = Readonly<{
   label: string;
   artifactId: string;
   parentInstanceId: string | null;
+  depth: number;
+  localTransform: SculptTransform;
+  worldTransform: SculptTransform;
   canRemove: boolean;
   properties: readonly DesktopSceneEditableProperty[];
 }>;
 
+export type DesktopSceneHierarchySnapshot = Readonly<{
+  schemaVersion: typeof DESKTOP_SCENE_HIERARCHY_SCHEMA_VERSION;
+  kind: typeof DESKTOP_SCENE_HIERARCHY_KIND;
+  sceneId: string;
+  rootInstanceId: string;
+  objects: readonly Readonly<{
+    id: string;
+    artifactId: string;
+    parentId: string | null;
+    depth: number;
+    localTransform: SculptTransform;
+    worldTransform: SculptTransform;
+  }>[];
+}>;
+
 export type DesktopScenePropertyInspection =
-  | Readonly<{ ok: true; contentHash: string; entities: readonly DesktopSceneEditableEntity[] }>
-  | Readonly<{ ok: false; diagnostics: readonly ApplyDiagnostic[] }>;
+  | Readonly<{
+      ok: true;
+      contentHash: string;
+      entities: readonly DesktopSceneEditableEntity[];
+      hierarchy: DesktopSceneHierarchySnapshot;
+      selection: DesktopSceneSelection;
+    }>
+  | Readonly<{
+      ok: false;
+      reason?: DesktopSceneHierarchyRefusal;
+      diagnostics: readonly ApplyDiagnostic[];
+    }>;
 
 export type DesktopScenePropertyProposalInput = Readonly<{
   documentPath: string;
@@ -94,9 +129,14 @@ export type DesktopScenePropertyStageResult =
       ok: true;
       edit: DesktopScenePropertyProposalInput;
       entity: DesktopSceneEditableEntity;
+      inspection: Extract<DesktopScenePropertyInspection, { readonly ok: true }>;
       sceneDigest: string;
     }>
-  | Readonly<{ ok: false; diagnostics: readonly ApplyDiagnostic[] }>;
+  | Readonly<{
+      ok: false;
+      reason?: DesktopSceneHierarchyRefusal;
+      diagnostics: readonly ApplyDiagnostic[];
+    }>;
 
 export type DesktopSceneEditStageResult =
   | Readonly<{
@@ -105,9 +145,14 @@ export type DesktopSceneEditStageResult =
       edit: DesktopScenePropertyProposalInput;
       inspection: DesktopScenePropertyInspection;
       selectedInstanceId: string;
+      selectedInstanceIds: readonly string[];
       sceneDigest: string;
     }>
-  | Readonly<{ ok: false; diagnostics: readonly ApplyDiagnostic[] }>;
+  | Readonly<{
+      ok: false;
+      reason?: DesktopSceneHierarchyRefusal;
+      diagnostics: readonly ApplyDiagnostic[];
+    }>;
 
 const propertyDiagnostic = (
   message: string,
@@ -133,6 +178,15 @@ const propertyDiagnostic = (
  */
 const propertyRequestDiagnostic = (message: string, documentPath: string) =>
   propertyDiagnostic(message, documentPath, "invalid-proposal");
+
+const hierarchyDiagnostic = (
+  reason: DesktopSceneHierarchyRefusal,
+  message: string,
+  documentPath: string,
+) => Object.freeze({
+  ...propertyRequestDiagnostic(message, documentPath),
+  reason,
+});
 
 /** Refusal passed through when the committed starter artifact fails reconstruction. */
 export type DesktopSceneResult =
@@ -271,7 +325,23 @@ function composeStoredPlacements(
     if (!placedArtifactIds.has(instance.artifactId)) continue;
     artifacts.set(instance.artifactId, instance.artifact);
   }
-  return composeScene(intake, [...artifacts.values()]);
+  const composed = composeScene(intake, [...artifacts.values()]);
+  if (!composed.ok) return composed;
+  // The composition evidence binds intake order. Persist the same depth/id
+  // traversal the accepted scene exposes so save/reopen recomputes identical
+  // canonical bytes even when reparenting changes depths.
+  return composeScene(
+    {
+      ...intake,
+      placements: composed.scene.instances.map((instance) => ({
+        instanceId: instance.instanceId,
+        artifactId: instance.artifactId,
+        parentInstanceId: instance.parentInstanceId,
+        transform: instance.localTransform,
+      })),
+    },
+    [...artifacts.values()],
+  );
 }
 
 function recomposeStoredScene(
@@ -411,6 +481,9 @@ function editableEntityOf(
     label: knownLabel ?? `Local ${instance.artifactId}`,
     artifactId: instance.artifactId,
     parentInstanceId: instance.parentInstanceId,
+    depth: instance.depth,
+    localTransform: instance.localTransform,
+    worldTransform: instance.worldTransform,
     canRemove:
       instance.instanceId !== stored.rootInstanceId &&
       stored.instances.length > SCENE_MINIMUM_INSTANCES &&
@@ -430,6 +503,25 @@ function editableEntityOf(
   });
 }
 
+export function desktopSceneHierarchySnapshot(
+  stored: ComposedScene,
+): DesktopSceneHierarchySnapshot {
+  return Object.freeze({
+    schemaVersion: DESKTOP_SCENE_HIERARCHY_SCHEMA_VERSION,
+    kind: DESKTOP_SCENE_HIERARCHY_KIND,
+    sceneId: stored.sceneId,
+    rootInstanceId: stored.rootInstanceId,
+    objects: Object.freeze(stored.instances.map((instance) => Object.freeze({
+      id: instance.instanceId,
+      artifactId: instance.artifactId,
+      parentId: instance.parentInstanceId,
+      depth: instance.depth,
+      localTransform: instance.localTransform,
+      worldTransform: instance.worldTransform,
+    }))),
+  });
+}
+
 /**
  * The inspection shape both the read path and the staged-edit path answer with.
  *
@@ -439,12 +531,28 @@ function editableEntityOf(
  */
 export function desktopScenePropertyInspection(
   contentHash: string,
-  entities: DesktopSceneEditableEntity | readonly DesktopSceneEditableEntity[],
+  stored: ComposedScene,
+  requestedSelection?: unknown,
 ): DesktopScenePropertyInspection {
+  const hierarchy = desktopSceneHierarchySnapshot(stored);
+  const defaultSelection = stored.instances.find(
+    (instance) => instance.instanceId !== stored.rootInstanceId,
+  )?.instanceId ?? stored.rootInstanceId;
+  const selected = resolveDesktopSceneSelection(
+    requestedSelection ?? [defaultSelection],
+    hierarchy.objects.map((object) => object.id),
+  );
+  if (!selected.ok) {
+    return hierarchyDiagnostic(selected.reason, selected.message, DESKTOP_ACTIVE_DOCUMENT_PATH);
+  }
   return Object.freeze({
     ok: true as const,
     contentHash,
-    entities: Object.freeze(Array.isArray(entities) ? [...entities] : [entities]),
+    entities: Object.freeze(
+      stored.instances.map((instance) => editableEntityOf(stored, instance)),
+    ),
+    hierarchy,
+    selection: selected.selection,
   });
 }
 
@@ -459,6 +567,7 @@ export function inspectDesktopSceneProperties(input: Readonly<{
   documentData: unknown;
   contentHash: string;
   documentPath?: string;
+  selection?: unknown;
 }>): DesktopScenePropertyInspection {
   const read = readEditableComposition(
     input.documentData,
@@ -468,7 +577,8 @@ export function inspectDesktopSceneProperties(input: Readonly<{
   if (!read.ok) return read;
   return desktopScenePropertyInspection(
     input.contentHash,
-    read.stored.instances.map((instance) => editableEntityOf(read.stored, instance)),
+    read.stored,
+    input.selection,
   );
 }
 
@@ -503,6 +613,19 @@ export function stageDesktopSceneEdit(input: Readonly<{
       documentPath,
     );
   }
+  if (
+    typeof input.operation === "object" && input.operation !== null &&
+    Object.getOwnPropertyDescriptor(input.operation, "kind")?.value === "reparent-object" &&
+    !isDesktopSceneReparentPolicy(
+      Object.getOwnPropertyDescriptor(input.operation, "transformPolicy")?.value,
+    )
+  ) {
+    return hierarchyDiagnostic(
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.policyInvalid,
+      "Reparenting requires transformPolicy preserve-world or preserve-local.",
+      documentPath,
+    );
+  }
   if (!isDesktopSceneEditOperation(input.operation)) {
     return propertyRequestDiagnostic(
       "The selected-instance edit operation is malformed or outside its numeric range.",
@@ -513,6 +636,7 @@ export function stageDesktopSceneEdit(input: Readonly<{
   if (!read.ok) return read;
   const operation = Object.freeze({ ...input.operation }) as DesktopSceneEditOperation;
   let selectedInstanceId: string;
+  let selectedInstanceIds: readonly string[];
   let composed;
 
   if (operation.kind === "set-transform-component") {
@@ -536,6 +660,7 @@ export function stageDesktopSceneEdit(input: Readonly<{
       };
     });
     selectedInstanceId = selected.instanceId;
+    selectedInstanceIds = Object.freeze([selected.instanceId]);
   } else if (operation.kind === "add-instance") {
     const source = read.stored.instances.find(
       (instance) => instance.instanceId === operation.sourceInstanceId,
@@ -587,7 +712,8 @@ export function stageDesktopSceneEdit(input: Readonly<{
       })),
     );
     selectedInstanceId = addedInstanceId;
-  } else {
+    selectedInstanceIds = Object.freeze([addedInstanceId]);
+  } else if (operation.kind === "remove-instance") {
     const selected = read.stored.instances.find(
       (instance) => instance.instanceId === operation.instanceId,
     );
@@ -621,14 +747,188 @@ export function stageDesktopSceneEdit(input: Readonly<{
         })),
     );
     selectedInstanceId = selected.parentInstanceId ?? read.stored.rootInstanceId;
+    selectedInstanceIds = Object.freeze([selectedInstanceId]);
+  } else if (operation.kind === "create-object") {
+    const source = read.stored.instances.find(
+      (instance) => instance.instanceId === operation.sourceInstanceId,
+    );
+    if (source === undefined) {
+      return hierarchyDiagnostic(
+        DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+        `The selected local artifact source is stale: ${operation.sourceInstanceId}.`,
+        documentPath,
+      );
+    }
+    const parent = read.stored.instances.find(
+      (instance) => instance.instanceId === operation.parentInstanceId,
+    );
+    if (parent === undefined) {
+      return hierarchyDiagnostic(
+        DESKTOP_SCENE_HIERARCHY_REFUSALS.parentMissing,
+        `The requested parent is missing: ${operation.parentInstanceId}.`,
+        documentPath,
+      );
+    }
+    const addedInstanceId = nextCopyInstanceId(read.stored, source.instanceId);
+    if (addedInstanceId === null) {
+      return hierarchyDiagnostic(
+        DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+        "No canonical object identifier is available for the selected local artifact.",
+        documentPath,
+      );
+    }
+    composed = composeStoredPlacements(read.stored, [
+      ...read.stored.instances.map((instance) => ({
+        instanceId: instance.instanceId,
+        artifactId: instance.artifactId,
+        parentInstanceId: instance.parentInstanceId,
+        transform: instance.localTransform,
+      })),
+      {
+        instanceId: addedInstanceId,
+        artifactId: source.artifactId,
+        parentInstanceId: parent.instanceId,
+        transform: identitySculptTransform(),
+      },
+    ]);
+    selectedInstanceId = addedInstanceId;
+    selectedInstanceIds = Object.freeze([addedInstanceId]);
+  } else if (operation.kind === "remove-objects") {
+    const selection = resolveDesktopSceneSelection(
+      operation.instanceIds,
+      read.stored.instances.map((instance) => instance.instanceId),
+    );
+    if (!selection.ok) {
+      return hierarchyDiagnostic(selection.reason, selection.message, documentPath);
+    }
+    const removed = new Set(selection.selection.instanceIds);
+    if (removed.has(read.stored.rootInstanceId)) {
+      return hierarchyDiagnostic(
+        DESKTOP_SCENE_HIERARCHY_REFUSALS.protectedRoot,
+        "The project hierarchy root is protected and cannot be removed.",
+        documentPath,
+      );
+    }
+    if (read.stored.instances.length - removed.size < SCENE_MINIMUM_INSTANCES) {
+      return hierarchyDiagnostic(
+        DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+        "Object removal must leave at least two composed instances.",
+        documentPath,
+      );
+    }
+    const orphan = read.stored.instances.find(
+      (instance) => instance.parentInstanceId !== null &&
+        removed.has(instance.parentInstanceId) && !removed.has(instance.instanceId),
+    );
+    if (orphan !== undefined) {
+      return hierarchyDiagnostic(
+        DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+        `Removing the selection would orphan ${orphan.instanceId}; select its descendants too.`,
+        documentPath,
+      );
+    }
+    composed = composeStoredPlacements(
+      read.stored,
+      read.stored.instances.filter((instance) => !removed.has(instance.instanceId)).map(
+        (instance) => ({
+          instanceId: instance.instanceId,
+          artifactId: instance.artifactId,
+          parentInstanceId: instance.parentInstanceId,
+          transform: instance.localTransform,
+        }),
+      ),
+    );
+    selectedInstanceId = read.stored.rootInstanceId;
+    selectedInstanceIds = Object.freeze([selectedInstanceId]);
+  } else {
+    const child = read.stored.instances.find(
+      (instance) => instance.instanceId === operation.instanceId,
+    );
+    if (child === undefined) {
+      return hierarchyDiagnostic(
+        DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+        `The selected child is stale: ${operation.instanceId}.`,
+        documentPath,
+      );
+    }
+    if (child.instanceId === read.stored.rootInstanceId) {
+      return hierarchyDiagnostic(
+        DESKTOP_SCENE_HIERARCHY_REFUSALS.protectedRoot,
+        "The project hierarchy root is protected and cannot be reparented.",
+        documentPath,
+      );
+    }
+    const parent = read.stored.instances.find(
+      (instance) => instance.instanceId === operation.parentInstanceId,
+    );
+    if (parent === undefined) {
+      return hierarchyDiagnostic(
+        DESKTOP_SCENE_HIERARCHY_REFUSALS.parentMissing,
+        `The requested parent is missing: ${operation.parentInstanceId}.`,
+        documentPath,
+      );
+    }
+    let ancestor: ComposedSceneInstance | undefined = parent;
+    while (ancestor !== undefined) {
+      if (ancestor.instanceId === child.instanceId) {
+        return hierarchyDiagnostic(
+          DESKTOP_SCENE_HIERARCHY_REFUSALS.cycle,
+          `Reparenting ${child.instanceId} below ${parent.instanceId} would create a cycle.`,
+          documentPath,
+        );
+      }
+      ancestor = ancestor.parentInstanceId === null
+        ? undefined
+        : read.stored.instances.find(
+            (instance) => instance.instanceId === ancestor?.parentInstanceId,
+          );
+    }
+    const axes = [0, 1, 2] as const;
+    const localTransform = operation.transformPolicy === "preserve-local"
+      ? child.localTransform
+      : Object.freeze({
+          translation: Object.freeze(axes.map((axis) =>
+            Math.round(((child.worldTransform.translation[axis] - parent.worldTransform.translation[axis]) /
+              parent.worldTransform.scale[axis]) * 1_000_000) / 1_000_000,
+          ) as unknown as Vector3),
+          rotationEulerDegrees: Object.freeze(axes.map((axis) =>
+            Math.round((child.worldTransform.rotationEulerDegrees[axis] -
+              parent.worldTransform.rotationEulerDegrees[axis]) * 1_000_000) / 1_000_000,
+          ) as unknown as Vector3),
+          scale: Object.freeze(axes.map((axis) =>
+            Math.round((child.worldTransform.scale[axis] / parent.worldTransform.scale[axis]) *
+              1_000_000) / 1_000_000,
+          ) as unknown as Vector3),
+        });
+    composed = composeStoredPlacements(
+      read.stored,
+      read.stored.instances.map((instance) => ({
+        instanceId: instance.instanceId,
+        artifactId: instance.artifactId,
+        parentInstanceId: instance.instanceId === child.instanceId
+          ? parent.instanceId
+          : instance.parentInstanceId,
+        transform: instance.instanceId === child.instanceId
+          ? localTransform
+          : instance.localTransform,
+      })),
+    );
+    selectedInstanceId = child.instanceId;
+    selectedInstanceIds = Object.freeze([child.instanceId]);
   }
 
   if (!composed.ok) {
-    return propertyDiagnostic(`${composed.path}: ${composed.message}`, documentPath);
+    return operation.kind === "reparent-object"
+      ? hierarchyDiagnostic(
+          DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+          `${composed.path}: ${composed.message}`,
+          documentPath,
+        )
+      : propertyDiagnostic(`${composed.path}: ${composed.message}`, documentPath);
   }
   const edited = readEditableComposition(composed.document.data, input.contentHash, documentPath);
   if (!edited.ok) return edited;
-  if (operation.kind === "add-instance") {
+  if (operation.kind === "add-instance" || operation.kind === "create-object") {
     const sourceArtifact = read.stored.instances.find(
       (instance) => instance.instanceId === operation.sourceInstanceId,
     )?.artifact;
@@ -648,7 +948,8 @@ export function stageDesktopSceneEdit(input: Readonly<{
   }
   const inspection = desktopScenePropertyInspection(
     input.contentHash,
-    edited.stored.instances.map((instance) => editableEntityOf(edited.stored, instance)),
+    edited.stored,
+    selectedInstanceIds,
   );
   return Object.freeze({
     ok: true as const,
@@ -661,6 +962,7 @@ export function stageDesktopSceneEdit(input: Readonly<{
     }),
     inspection,
     selectedInstanceId,
+    selectedInstanceIds,
     sceneDigest: composed.sceneDigest,
   });
 }
@@ -705,6 +1007,7 @@ export function stageDesktopScenePropertyEdit(input: Readonly<{
     ok: true as const,
     edit: staged.edit,
     entity,
+    inspection: staged.inspection,
     sceneDigest: staged.sceneDigest,
   });
 }

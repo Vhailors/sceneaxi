@@ -281,7 +281,17 @@ function sceneEntitySelect(ctrl: DesktopControl): string {
       ? ` aria-disabled="true" data-refusal="${escapeHtml(ctrl.refusal ?? "")}"`
       : "",
     described,
-    ` aria-label="${escapeHtml(ctrl.label)}"><option value="">No validated composition opened</option></select>`,
+    ` aria-label="${escapeHtml(ctrl.label)}" multiple size="6"><option value="">No validated hierarchy opened</option></select>`,
+  ].join("");
+}
+
+function selectControlAttributes(ctrl: DesktopControl): string {
+  const inert = ctrl.kind === "inert";
+  return [
+    `id="${escapeHtml(ctrl.id)}" data-kind="${ctrl.kind}"`,
+    inert
+      ? ` aria-disabled="true" data-refusal="${escapeHtml(ctrl.refusal ?? "")}" aria-describedby="refusal-${escapeHtml(ctrl.refusal ?? "")}"`
+      : "",
   ].join("");
 }
 
@@ -519,7 +529,7 @@ function leftDock(view: DesktopVisualView): string {
       </div>
     </section>
     <div class="scene-entities" data-scene-entities hidden>
-      <p class="scene-entities-label">COMPOSED INSTANCE</p>
+      <p class="scene-entities-label">PROJECT HIERARCHY · ORDERED MULTI-SELECT</p>
       ${sceneEntitySelect(view.product.selectSceneEntity)}
     </div>
     <p class="scene-entities-refusal" data-scene-entities-refusal aria-live="polite" hidden></p>
@@ -704,7 +714,12 @@ function inspector(view: DesktopVisualView): string {
     )}
     <div class="scene-instance-actions">
       ${button(view.product.addSceneInstance, "Add local copy", "ghost-button", ` data-product-action data-action="scene-instance-add"`)}
-      ${button(view.product.removeSceneInstance, "Remove selected", "ghost-button", ` data-product-action data-action="scene-instance-remove"`)}
+      ${button(view.product.removeSceneInstance, "Remove selection", "ghost-button", ` data-product-action data-action="scene-instance-remove"`)}
+    </div>
+    <div class="scene-parenting">
+      <label for="${escapeHtml(view.product.reparentSceneParent.id)}"><span>New parent</span><select ${selectControlAttributes(view.product.reparentSceneParent)} data-scene-parent aria-label="New parent"></select></label>
+      <label for="${escapeHtml(view.product.reparentScenePolicy.id)}"><span>Transform policy</span><select ${selectControlAttributes(view.product.reparentScenePolicy)} data-scene-policy aria-label="Transform policy"><option value="preserve-world">Preserve world</option><option value="preserve-local">Preserve local</option></select></label>
+      ${button(view.product.reparentSceneInstance, "Stage reparent", "ghost-button block-button", ` data-product-action data-action="scene-instance-reparent"`)}
     </div>
     <p class="scene-property-diagnostic" data-scene-property-diagnostic aria-live="polite">Select this entity to edit its saved composition.</p>
     <pre class="scene-property-review" data-scene-property-review hidden></pre>
@@ -1089,7 +1104,7 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .asset-browser-card span{margin-top:4px;font-family:var(--mono);font-size:8px;line-height:1.45;color:var(--dim)}
 .scene-entities{padding:0 7px 9px}
 .scene-entities-label{margin:0 3px 5px;font-family:var(--mono);font-size:8px;letter-spacing:.12em;color:var(--faint)}
-.scene-entities select{width:100%;min-width:0;height:30px;padding:0 7px;border:1px solid var(--line-card);border-radius:4px;background:var(--raised);color:var(--text);font-family:var(--mono);font-size:9px}
+.scene-entities select{width:100%;min-width:0;height:112px;padding:4px 7px;border:1px solid var(--line-card);border-radius:4px;background:var(--raised);color:var(--text);font-family:var(--mono);font-size:9px}
 .scene-entity{width:100%;min-width:0;padding:8px 9px;border:1px solid var(--line-card);border-radius:4px;background:var(--raised);color:var(--dim);text-align:left}
 .scene-entity span,.scene-entity code{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .scene-entity span{font-size:10px;color:var(--text)}.scene-entity code{margin-top:3px;font-size:8px;color:var(--dim)}
@@ -1105,6 +1120,7 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .scene-transform-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
 .scene-instance-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px}
 .scene-instance-actions button{min-width:0;padding-inline:6px}
+.scene-parenting{display:grid;gap:7px;padding-top:2px}.scene-parenting label{display:grid;gap:4px}.scene-parenting select{width:100%;min-width:0;height:28px;border:1px solid var(--line-control);border-radius:4px;background:var(--raised);color:var(--text);font-family:var(--mono);font-size:9px}
 .scene-property-input{width:100%;min-width:0;height:28px;padding:0 8px;border:1px solid var(--line-control);border-radius:4px;background:var(--raised);color:var(--text);font-family:var(--mono);font-size:11px}
 .scene-property-input:focus{outline:1px solid var(--accent);outline-offset:1px}.scene-property-input.is-inert{color:var(--inert)}
 .scene-property-diagnostic{margin:0;font-size:9px;line-height:1.45;color:var(--dim);overflow-wrap:anywhere}
@@ -1473,6 +1489,8 @@ if (shell) {
   let projectBrowserStatus = null;
   let editableScene = null;
   let selectedSceneEntityId = null;
+  let selectedSceneEntityIds = [];
+  let sceneSelectionPending = Promise.resolve();
   let sceneRefusalText = null;
   let undoAvailability = 'unavailable';
   let redoAvailability = 'unavailable';
@@ -1523,6 +1541,7 @@ if (shell) {
   const clearSceneProperty = () => {
     editableScene = null;
     selectedSceneEntityId = null;
+    selectedSceneEntityIds = [];
     const entities = shell.querySelector('[data-scene-entities]');
     const editor = shell.querySelector('[data-scene-property-editor]');
     const review = shell.querySelector('[data-scene-property-review]');
@@ -1549,10 +1568,13 @@ if (shell) {
     if (!entity || properties.length !== 9 || properties.some((property) =>
       !property || typeof property.id !== 'string' || typeof property.value !== 'number')) return false;
     selectedSceneEntityId = entity.id;
+    if (!selectedSceneEntityIds.includes(entity.id)) selectedSceneEntityIds = [entity.id];
     q('[data-action="scene-entity-select"]').forEach((el) => {
       if (el.tagName === 'SELECT') {
-        el.value = entity.id;
-        el.dataset.value = entity.id;
+        Array.from(el.options).forEach((option) => {
+          option.selected = selectedSceneEntityIds.includes(option.value);
+        });
+        el.dataset.value = selectedSceneEntityIds.join(',');
       } else {
         el.setAttribute('aria-pressed', String(el.dataset.value === entity.id));
       }
@@ -1580,9 +1602,14 @@ if (shell) {
   // refreshed, so dropping the selection here is what made a stale value
   // survivable in the first place.
   const syncSceneProperties = (status) => {
-    const previousSelection = status && typeof status.selectedInstanceId === 'string'
-      ? status.selectedInstanceId
-      : selectedSceneEntityId;
+    const inspectedSelection = status?.editableScene?.selection;
+    const stagedSelection = status && Array.isArray(status.selectedInstanceIds)
+      ? status.selectedInstanceIds
+      : null;
+    const previousSelection = stagedSelection ||
+      (inspectedSelection && Array.isArray(inspectedSelection.instanceIds)
+        ? inspectedSelection.instanceIds
+        : selectedSceneEntityIds);
     clearSceneProperty();
     const inspected = status && status.editableScene;
     const entitiesList = inspected && inspected.ok === true && Array.isArray(inspected.entities)
@@ -1591,7 +1618,8 @@ if (shell) {
     const expectedPropertyIds = ${JSON.stringify(DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.map((definition) => definition.id))};
     const validEntities = entitiesList.length >= 2 && entitiesList.every((entity) =>
       entity && typeof entity.id === 'string' && typeof entity.label === 'string' &&
-      typeof entity.artifactId === 'string' && Array.isArray(entity.properties) &&
+      typeof entity.artifactId === 'string' && typeof entity.depth === 'number' &&
+      (entity.parentInstanceId === null || typeof entity.parentInstanceId === 'string') && Array.isArray(entity.properties) &&
       entity.properties.length === expectedPropertyIds.length &&
       expectedPropertyIds.every((id) => entity.properties.some((property) =>
         property && property.id === id && typeof property.value === 'number')));
@@ -1616,17 +1644,30 @@ if (shell) {
       entitiesList.forEach((entity) => {
         const option = document.createElement('option');
         option.value = entity.id;
-        option.textContent = entity.label + ' · ' + entity.id;
+        option.textContent = '  '.repeat(entity.depth) + entity.label + ' · ' + entity.id +
+          (entity.parentInstanceId === null ? ' · root' : ' ← ' + entity.parentInstanceId);
         el.appendChild(option);
       });
       const fallback = entitiesList.find((entity) => entity.id === 'desktop-crate-beside')?.id || entitiesList[0]?.id || '';
-      const chosen = entitiesList.some((entity) => entity.id === previousSelection)
-        ? previousSelection
-        : fallback;
-      el.value = chosen;
-      el.dataset.value = chosen;
+      const chosen = previousSelection.filter((id) => entitiesList.some((entity) => entity.id === id));
+      selectedSceneEntityIds = chosen.length > 0 ? chosen : [fallback];
+      Array.from(el.options).forEach((option) => {
+        option.selected = selectedSceneEntityIds.includes(option.value);
+      });
+      el.dataset.value = selectedSceneEntityIds.join(',');
     });
-    if (previousSelection !== null && showSceneProperty(previousSelection)) return true;
+    const parent = shell.querySelector('[data-scene-parent]');
+    if (parent && parent.tagName === 'SELECT') {
+      parent.replaceChildren();
+      entitiesList.forEach((entity) => {
+        const option = document.createElement('option');
+        option.value = entity.id;
+        option.textContent = entity.label + ' · ' + entity.id;
+        parent.appendChild(option);
+      });
+      parent.value = entitiesList[0]?.id || '';
+    }
+    if (selectedSceneEntityIds[0] && showSceneProperty(selectedSceneEntityIds[0])) return true;
     return true;
   };
 
@@ -2636,6 +2677,7 @@ if (shell) {
   };
 
   const stageSceneOperation = async (operation, label) => {
+    await sceneSelectionPending;
     if (projectRecovering) {
       reportRecoveryRefusal('Edit');
       return false;
@@ -2730,12 +2772,87 @@ if (shell) {
       productStatus('refused', 'Edit refused · select a composed instance first');
       return;
     }
-    await stageSceneOperation(
-      kind === 'add-instance'
-        ? { kind, sourceInstanceId: selectedSceneEntityId }
-        : { kind, instanceId: selectedSceneEntityId },
-      kind === 'add-instance' ? 'local instance add' : 'instance removal',
-    );
+    const base = {
+      documentPath: T.product.documentPath,
+      expectedContentHash: projectContentHash,
+      profile: shell.dataset.profile,
+    };
+    const parent = shell.querySelector('[data-scene-parent]');
+    const commandId = kind === 'add-instance' ? 'scene-object-create' : 'scene-object-remove';
+    const input = kind === 'add-instance'
+      ? { ...base, sourceInstanceId: selectedSceneEntityId, parentInstanceId: parent?.value || editableScene.hierarchy.rootInstanceId }
+      : { ...base, instanceIds: selectedSceneEntityIds };
+    await stageSceneCommand(commandId, input, kind === 'add-instance' ? 'object create' : 'object removal');
+  };
+
+  const stageSceneCommand = async (commandId, input, label) => {
+    await sceneSelectionPending;
+    if (projectRecovering) {
+      reportRecoveryRefusal('Edit');
+      return false;
+    }
+    if (projectDirty) {
+      productStatus('refused', 'Edit refused · ' + T.product.refusals.profileSwitchDirty);
+      return false;
+    }
+    if ((projectData === null || projectContentHash === null) && !(await openProject())) return false;
+    const response = await commandRequest(commandId, {
+      ...input,
+      expectedContentHash: projectContentHash,
+      profile: shell.dataset.profile,
+    });
+    const diagnostic = responseDiagnostic(response);
+    const snapshot = response?.ok ? response.data : null;
+    if (isSessionSnapshot(snapshot)) syncReview(snapshot);
+    if (diagnostic !== null || reviewProjection(snapshot) === null) {
+      const code = diagnostic?.code || T.product.refusals.proposalNotReviewing;
+      const detail = diagnostic?.message || T.product.refusals.proposalNotReviewing;
+      productStatus('refused', 'Edit refused · ' + code + ' · ' + detail);
+      return false;
+    }
+    const edit = snapshot.proposal?.edits?.[0];
+    if (edit?.jsonPointer === '/data/composedScene' && projectData && typeof projectData === 'object') {
+      projectData = { ...projectData, composedScene: edit.newValue };
+    }
+    syncSceneProperties(snapshot);
+    projectDirty = true;
+    projectRecovering = false;
+    productStatus('dirty', T.product.documentPath + ' · ' + label + ' staged · review before Save');
+    return true;
+  };
+
+  const stageSceneReparent = async () => {
+    const parent = shell.querySelector('[data-scene-parent]');
+    const policy = shell.querySelector('[data-scene-policy]');
+    if (selectedSceneEntityId === null || parent?.tagName !== 'SELECT' || policy?.tagName !== 'SELECT') return;
+    await stageSceneCommand('scene-object-reparent', {
+      documentPath: T.product.documentPath,
+      expectedContentHash: projectContentHash,
+      profile: shell.dataset.profile,
+      instanceId: selectedSceneEntityId,
+      parentInstanceId: parent.value,
+      transformPolicy: policy.value,
+    }, 'reparent ' + policy.value);
+  };
+
+  const setSceneSelection = async (select) => {
+    const instanceIds = Array.from(select.selectedOptions).map((option) => option.value).filter(Boolean);
+    const response = await commandRequest('scene-selection-set', {
+      documentPath: T.product.documentPath,
+      instanceIds,
+    });
+    const diagnostic = responseDiagnostic(response);
+    if (diagnostic !== null) {
+      syncSceneProperties({ editableScene });
+      productStatus('refused', 'Selection refused · ' + diagnostic.code + ' · ' + diagnostic.message);
+      return;
+    }
+    const selection = response.data?.selection;
+    if (!selection || !Array.isArray(selection.instanceIds)) return;
+    selectedSceneEntityIds = selection.instanceIds;
+    if (selection.primaryInstanceId && showSceneProperty(selection.primaryInstanceId) && shell.dataset.mode !== 'build') {
+      showModePanels('build');
+    }
   };
 
   const applySaveSnapshot = (snapshot) => {
@@ -3516,11 +3633,13 @@ if (shell) {
     else if (action === 'change-accept') void productAction(acceptProposal);
     else if (action === 'change-reject') void productAction(() => rejectProposal('rejected'));
     else if (action === 'scene-entity-select' && value) {
-      if (showSceneProperty(value) && shell.dataset.mode !== 'build') showModePanels('build');
+      const primary = el.tagName === 'SELECT' ? el.value : value;
+      if (primary && showSceneProperty(primary) && shell.dataset.mode !== 'build') showModePanels('build');
     }
     else if (action === 'scene-property-stage') void productAction(stageSceneProperty);
     else if (action === 'scene-instance-add') void productAction(() => stageSceneInstance('add-instance'));
     else if (action === 'scene-instance-remove') void productAction(() => stageSceneInstance('remove-instance'));
+    else if (action === 'scene-instance-reparent') void productAction(stageSceneReparent);
     else if (action === 'web-stage-html') void productAction(() => stageWebEdit('html'));
     else if (action === 'web-inject-asset') void productAction(stageAssetImport);
     else if (action === 'mode' && value) showModePanels(value);
@@ -3569,9 +3688,16 @@ if (shell) {
     }
     const el = event.target instanceof Element ? event.target.closest('[data-action="scene-entity-select"]') : null;
     if (!el || el.tagName !== 'SELECT' || el.getAttribute('aria-disabled') === 'true') return;
-    const value = el.value;
-    el.dataset.value = value;
-    if (value && showSceneProperty(value) && shell.dataset.mode !== 'build') showModePanels('build');
+    selectedSceneEntityIds = Array.from(el.selectedOptions).map((option) => option.value).filter(Boolean);
+    if (selectedSceneEntityIds[0]) {
+      showSceneProperty(selectedSceneEntityIds[0]);
+      if (shell.dataset.mode !== 'build') showModePanels('build');
+    }
+    // Selection is non-mutating, so it does not occupy the mutation lane. The
+    // next hierarchy/property mutation still awaits this exact request: a
+    // keyboard selection followed immediately by Stage cannot be dropped or
+    // race a stale host selection response over the staged snapshot.
+    sceneSelectionPending = setSceneSelection(el);
   });
 
   // Tab is deliberately not captured inside a menu — every item keeps its plain

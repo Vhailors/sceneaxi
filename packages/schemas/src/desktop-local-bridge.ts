@@ -9,6 +9,7 @@
 import { isJsonObject, isJsonValue, type JsonObject } from "./document.js";
 import {
   editorCommand,
+  validateEditorCommandInput,
   type EditorCommandId,
   type EditorCommandTransactionResult,
 } from "./editor-command-registry.js";
@@ -123,6 +124,36 @@ export const DESKTOP_LOCAL_BRIDGE_TOOLS = Object.freeze([
     name: "sceneaxi.project.migration.recover",
     commandId: "project-migration-recover",
     description: "Deterministically recover the one prepared project migration transaction.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.scene.hierarchy.inspect",
+    commandId: "scene-hierarchy-inspect",
+    description: "Inspect the versioned project hierarchy and current ordered selection for assistant or CLI use.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.scene.selection.set",
+    commandId: "scene-selection-set",
+    description: "Set a deterministic ordered multi-selection through the shared hierarchy command.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.scene.object.create",
+    commandId: "scene-object-create",
+    description: "Stage creation of one object from an already validated local artifact instance.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.scene.object.remove",
+    commandId: "scene-object-remove",
+    description: "Stage bounded removal of the exact ordered object selection.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.scene.object.reparent",
+    commandId: "scene-object-reparent",
+    description: "Stage one reparent with an explicit preserve-world or preserve-local transform policy.",
     providerRoute: "none",
   }),
   tool({
@@ -323,6 +354,11 @@ export function validateDesktopLocalBridgeToolInput(
   input: unknown,
 ): input is JsonObject {
   if (!isJsonObject(input)) return false;
+  const registered = desktopLocalBridgeTool(toolName);
+  if (registered?.commandId !== null && registered?.commandId !== undefined) {
+    const command = editorCommand(registered.commandId);
+    return command !== undefined && validateEditorCommandInput(command, input);
+  }
   switch (toolName) {
     case "sceneaxi.project.status":
     case "sceneaxi.project.restart":
