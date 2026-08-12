@@ -586,13 +586,9 @@ async function start(): Promise<void> {
       },
     },
   });
-  const malformedDiagnostics = malformed.ok
-    ? payloadField(malformed.data, "diagnostics")
-    : undefined;
   if (
-    !malformed.ok ||
-    !Array.isArray(malformedDiagnostics) ||
-    payloadField(malformedDiagnostics[0], "code") !== "invalid-proposal"
+    malformed.ok ||
+    malformed.reason !== "SCENE_HIERARCHY_INPUT_UNSUPPORTED"
   ) {
     fail("out-of-range selected-instance input did not refuse by name");
   }

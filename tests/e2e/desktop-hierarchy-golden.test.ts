@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   DESKTOP_SCENE_HIERARCHY_REFUSALS,
+  EDITOR_COMMAND_REFUSALS,
   createEditorCommandInvocation,
   type EditorCommandClient,
   type JsonObject,
@@ -122,14 +123,31 @@ describe("full-editor hierarchy vertical", () => {
     }
 
     const reviewingBridge = hierarchyBridge(root);
-    expect(command(reviewingBridge, "scene-object-reparent", "desktop-control", {
-      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
-      expectedContentHash: contentHash(reviewingBridge),
-      profile: "game",
-      instanceId: "desktop-crate-beside",
-      parentInstanceId: "desktop-crate-stacked",
-      transformPolicy: "preserve-local",
-    })).toMatchObject({ ok: true, data: { phase: "reviewing" } });
+    const staged = reviewingBridge.handle({
+      action: "authoring",
+      payload: {
+        op: "edit-scene",
+        documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+        expectedContentHash: contentHash(reviewingBridge),
+        profile: "game",
+        operation: {
+          kind: "reparent-object",
+          instanceId: "desktop-crate-beside",
+          parentInstanceId: "desktop-crate-stacked",
+          transformPolicy: "preserve-local",
+        },
+      },
+    });
+    expect(staged).toMatchObject({
+      ok: true,
+      data: {
+        phase: "reviewing",
+        unifiedDiff: null,
+        renderedDiff: null,
+        proposal: null,
+      },
+    });
+    expect(JSON.stringify(staged)).not.toContain("composedScene");
     const reviewingStatus = reviewingBridge.handle({
       action: "authoring",
       payload: { op: "status", documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
@@ -160,6 +178,21 @@ describe("full-editor hierarchy vertical", () => {
         },
       },
     });
+    const recovered = reviewingBridge.handle({
+      action: "authoring",
+      payload: { op: "recover" },
+    });
+    expect(recovered).toMatchObject({
+      ok: true,
+      data: { unifiedDiff: null, renderedDiff: null, proposal: null },
+    });
+    expect(JSON.stringify(recovered)).not.toContain("composedScene");
+    const accepted = reviewingBridge.handle({
+      action: "authoring",
+      payload: { op: "accept" },
+    });
+    expect(accepted).toMatchObject({ ok: true, data: { phase: "applied" } });
+    expect(JSON.stringify(accepted)).not.toContain("composedScene");
   });
 
   it("normalizes desktop, CLI, and assistant selections and inspections identically", () => {
@@ -365,6 +398,7 @@ describe("full-editor hierarchy vertical", () => {
         commandId: "scene-object-reparent",
         client: "cli",
         permission: "project:write",
+        profile: "game",
         input: {
           documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
           expectedContentHash: contentHash(bridge),
@@ -375,6 +409,46 @@ describe("full-editor hierarchy vertical", () => {
         },
       },
     })).toMatchObject({ ok: false, reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.policyInvalid });
+
+    const invalidPolicyInput = {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      expectedContentHash: contentHash(bridge),
+      profile: "game",
+      instanceId: "desktop-crate-beside",
+      parentInstanceId: "desktop-crate-root",
+      transformPolicy: "implicit",
+    };
+    for (const [payload, reason] of [
+      [{
+        schemaVersion: 2,
+        commandId: "scene-object-reparent",
+        client: "cli",
+        permission: "project:write",
+        profile: "game",
+        input: invalidPolicyInput,
+      }, EDITOR_COMMAND_REFUSALS.schemaUnsupported],
+      [{
+        schemaVersion: 1,
+        commandId: "scene-object-reparent",
+        client: "unknown",
+        permission: "project:write",
+        profile: "game",
+        input: invalidPolicyInput,
+      }, EDITOR_COMMAND_REFUSALS.clientDenied],
+      [{
+        schemaVersion: 1,
+        commandId: "scene-object-reparent",
+        client: "cli",
+        permission: "project:read",
+        profile: "game",
+        input: invalidPolicyInput,
+      }, EDITOR_COMMAND_REFUSALS.permissionDenied],
+    ] as const) {
+      expect(bridge.handle({ action: "command", payload })).toMatchObject({
+        ok: false,
+        reason,
+      });
+    }
     expect(readFileSync(path, "utf8")).toBe(before);
   });
 
@@ -463,7 +537,7 @@ describe("full-editor hierarchy vertical", () => {
         payload: {
           op: "propose",
           documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
-          jsonPointer: "/data/composedScene",
+          jsonPointer: "",
           newValue: {},
         },
       }),
@@ -473,7 +547,25 @@ describe("full-editor hierarchy vertical", () => {
           op: "propose",
           documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
           jsonPointer: "/data",
-          newValue: { composedScene: {} },
+          newValue: {},
+        },
+      }),
+      authorized.handle({
+        action: "authoring",
+        payload: {
+          op: "propose",
+          documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+          jsonPointer: "/data/composedScene",
+          newValue: {},
+        },
+      }),
+      authorized.handle({
+        action: "authoring",
+        payload: {
+          op: "propose",
+          documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+          jsonPointer: "/data/composedScene/instances/1/localTransform/translation/0",
+          newValue: 4,
         },
       }),
     ]) {

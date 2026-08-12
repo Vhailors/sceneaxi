@@ -266,6 +266,17 @@ function hasExactFields(value: unknown, fields: readonly string[]): boolean {
   return keys.length === fields.length && fields.every((name) => Object.hasOwn(value, name));
 }
 
+const SCENE_HIERARCHY_POINTER = "/data/composedScene";
+
+function touchesSceneHierarchy(pointer: unknown): pointer is string {
+  return typeof pointer === "string" && (
+    pointer === "" ||
+    pointer === SCENE_HIERARCHY_POINTER ||
+    pointer.startsWith(`${SCENE_HIERARCHY_POINTER}/`) ||
+    SCENE_HIERARCHY_POINTER.startsWith(`${pointer}/`)
+  );
+}
+
 function frameReportOf(payload: unknown): DesktopFrameReport | null {
   const backend = field(payload, "backend");
   const label = field(payload, "label");
@@ -342,16 +353,98 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       ? snapshot
       : Object.freeze({ ...snapshot, rarityEvidence: rarityProposalEvidence });
 
+  const withoutSceneHierarchy = (pointer: string, value: unknown): unknown => {
+    if (typeof value !== "object" || value === null || Array.isArray(value)) return value;
+    if (pointer === "/data") {
+      return Object.freeze(Object.fromEntries(
+        Object.entries(value).filter(([key]) => key !== "composedScene"),
+      ));
+    }
+    if (pointer === "") {
+      const data = field(value, "data");
+      if (typeof data !== "object" || data === null || Array.isArray(data)) return value;
+      return Object.freeze({
+        ...value,
+        data: Object.freeze(Object.fromEntries(
+          Object.entries(data).filter(([key]) => key !== "composedScene"),
+        )),
+      });
+    }
+    return value;
+  };
+
   const genericAuthoringSnapshot = (snapshot: DesktopSnapshot) => {
     const decorated = withRarityProposalEvidence(snapshot);
-    if (!decorated.proposal?.edits.some((edit) => edit.jsonPointer === "/data/composedScene")) {
+    const hierarchyEdits = decorated.proposal?.edits.filter((edit) =>
+      touchesSceneHierarchy(edit.jsonPointer)
+    ) ?? [];
+    if (hierarchyEdits.length === 0) {
       return decorated;
     }
+    if (hierarchyEdits.some((edit) =>
+      edit.jsonPointer === SCENE_HIERARCHY_POINTER ||
+      edit.jsonPointer.startsWith(`${SCENE_HIERARCHY_POINTER}/`)
+    )) {
+      return Object.freeze({
+        ...decorated,
+        unifiedDiff: null,
+        renderedDiff: null,
+        proposal: null,
+      });
+    }
+    const proposal = decorated.proposal;
+    if (proposal === null) return decorated;
+    const edits = Object.freeze(proposal.edits.map((edit) => Object.freeze({
+      ...edit,
+      oldValue: withoutSceneHierarchy(edit.jsonPointer, edit.oldValue),
+      newValue: withoutSceneHierarchy(edit.jsonPointer, edit.newValue),
+    })));
+    const renderedDiff = [
+      "=== SceneAxi inspector — proposed change (review before accept) ===",
+      ...edits.flatMap((edit) => [
+        `--- a/${edit.documentPath}`,
+        `+++ b/${edit.documentPath}`,
+        `- ${JSON.stringify(edit.oldValue, null, 2)}`,
+        `+ ${JSON.stringify(edit.newValue, null, 2)}`,
+      ]),
+      "=== end proposed change ===",
+    ].join("\n");
     return Object.freeze({
       ...decorated,
       unifiedDiff: null,
-      renderedDiff: null,
-      proposal: null,
+      renderedDiff,
+      proposal: Object.freeze({ ...proposal, edits }),
+    });
+  };
+
+  const genericAuthoringData = (value: unknown): unknown => {
+    if (typeof value !== "object" || value === null || Array.isArray(value)) return value;
+    let sanitized = value as Readonly<Record<string, unknown>>;
+    if (typeof field(value, "phase") === "string" && Object.hasOwn(value, "proposal")) {
+      sanitized = genericAuthoringSnapshot(value as DesktopSnapshot);
+    }
+    const documentData = field(sanitized, "data");
+    const authoringSnapshot = field(sanitized, "authoringSnapshot");
+    if (
+      typeof documentData !== "object" &&
+      (typeof authoringSnapshot !== "object" || authoringSnapshot === null)
+    ) return sanitized;
+    const dataKeys = field(sanitized, "dataKeys");
+    return Object.freeze({
+      ...sanitized,
+      ...(typeof documentData === "object" && documentData !== null && !Array.isArray(documentData)
+        ? {
+            data: Object.freeze(Object.fromEntries(
+              Object.entries(documentData).filter(([key]) => key !== "composedScene"),
+            )),
+            ...(Array.isArray(dataKeys)
+              ? { dataKeys: Object.freeze(dataKeys.filter((key) => key !== "composedScene")) }
+              : {}),
+          }
+        : {}),
+      ...(typeof authoringSnapshot === "object" && authoringSnapshot !== null
+        ? { authoringSnapshot: genericAuthoringSnapshot(authoringSnapshot as DesktopSnapshot) }
+        : {}),
     });
   };
 
@@ -854,8 +947,13 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
   const authoring = (
     payload: unknown,
     hierarchyCommandResponse = false,
+    preloadedStatus?: DesktopDocumentStatus,
   ): DesktopBridgeResponse => {
     const op = field(payload, "op");
+    const authoringOk = (data: unknown) => bridgeOk(
+      "authoring",
+      hierarchyCommandResponse ? data : genericAuthoringData(data),
+    );
     let hierarchyDocumentPath: string | null = null;
     if (!isAuthoringOp(op)) {
       return bridgeRefuse(
@@ -865,15 +963,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     }
     if (op === "propose") {
       const jsonPointer = field(payload, "jsonPointer");
-      const newValue = field(payload, "newValue");
-      if (
-        jsonPointer === "/data/composedScene" ||
-        (jsonPointer === "/data" &&
-          typeof newValue === "object" &&
-          newValue !== null &&
-          !Array.isArray(newValue) &&
-          Object.hasOwn(newValue, "composedScene"))
-      ) {
+      if (touchesSceneHierarchy(jsonPointer)) {
         return bridgeRefuse(
           DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
           "Generic authoring proposals cannot supply or target scene hierarchy data.",
@@ -1061,8 +1151,9 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       live: DesktopSession,
       documentPath: string,
       retirementReason?: DesktopRarityRetirementReason,
+      privateStatus?: DesktopDocumentStatus,
     ) => {
-      const status = live.status(documentPath);
+      const status = privateStatus ?? live.status(documentPath);
       if (!status.ok) {
         documentStatusIdentity = null;
         reconcileRarityAssistantDocument(status, retirementReason);
@@ -1078,7 +1169,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         const refused = Object.freeze({
           ok: false as const,
           documentPath,
-          authoringSnapshot: genericAuthoringSnapshot(live.snapshot()),
+          authoringSnapshot: withRarityProposalEvidence(live.snapshot()),
           diagnostics: Object.freeze([
             Object.freeze({
               code: rarity.reason,
@@ -1092,12 +1183,8 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       }
       const enriched = Object.freeze({
         ...status,
-        dataKeys: Object.freeze(status.dataKeys.filter((key) => key !== "composedScene")),
-        data: Object.freeze(Object.fromEntries(
-          Object.entries(status.data).filter(([key]) => key !== "composedScene"),
-        )),
         ...rarity.value,
-        authoringSnapshot: genericAuthoringSnapshot(live.snapshot()),
+        authoringSnapshot: withRarityProposalEvidence(live.snapshot()),
       });
       reconcileRarityAssistantDocument(enriched, retirementReason);
       return enriched;
@@ -1167,7 +1254,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           retireRarityAssistantResult(restartedEvidence, "session-restarted");
         }
       }
-      return bridgeOk("authoring", restarted);
+      return authoringOk(restarted);
     }
     const live = authoringSession();
     if (op === "status") {
@@ -1178,7 +1265,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           "authoring status requires a documentPath string inside the project directory.",
         );
       }
-      return bridgeOk("authoring", statusWithEvidence(live, documentPath));
+      return authoringOk(statusWithEvidence(live, documentPath, undefined, preloadedStatus));
     }
     if (op === "edit-scene") {
       const documentPath = hierarchyDocumentPath;
@@ -1190,7 +1277,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         );
       }
       const status = live.status(documentPath);
-      if (!status.ok) return bridgeOk("authoring", status);
+      if (!status.ok) return authoringOk(status);
       const priorSelection = currentSceneSelection(
         status.data,
         status.contentHash,
@@ -1200,7 +1287,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         priorSelection.reason === DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale;
       if (selectionWasStale) {
         return hierarchyCommandResponse
-          ? bridgeOk("authoring", priorSelection)
+          ? authoringOk(priorSelection)
           : bridgeRefuse(
               DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
               priorSelection.diagnostics[0]?.message ?? "The retained scene selection is stale.",
@@ -1213,13 +1300,15 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         profile: field(payload, "profile"),
         operation: field(payload, "operation"),
       });
-      if (!staged.ok) return bridgeOk("authoring", staged);
+      if (!staged.ok) return authoringOk(staged);
       const snapshot = live.proposeEdit(staged.edit);
       if (snapshot.phase !== "reviewing" || (snapshot.diagnostics?.length ?? 0) > 0) {
-        return bridgeOk("authoring", withRarityProposalEvidence(snapshot));
+        return authoringOk(hierarchyCommandResponse
+          ? withRarityProposalEvidence(snapshot)
+          : genericAuthoringSnapshot(snapshot));
       }
       selectedSceneInstanceIds = staged.selectedInstanceIds;
-      return bridgeOk("authoring", hierarchyCommandResponse
+      return authoringOk(hierarchyCommandResponse
         ? Object.freeze({
             ...snapshot,
             editableScene: staged.inspection,
@@ -1227,7 +1316,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
             selectedInstanceIds: staged.selectedInstanceIds,
             sceneEditOperation: staged.operation,
           })
-        : snapshot);
+        : genericAuthoringSnapshot(snapshot));
     }
     if (op === "edit-property") {
       const documentPath = hierarchyDocumentPath;
@@ -1239,7 +1328,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         );
       }
       const status = live.status(documentPath);
-      if (!status.ok) return bridgeOk("authoring", status);
+      if (!status.ok) return authoringOk(status);
       const priorSelection = currentSceneSelection(
         status.data,
         status.contentHash,
@@ -1249,7 +1338,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         priorSelection.reason === DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale;
       if (selectionWasStale) {
         return hierarchyCommandResponse
-          ? bridgeOk("authoring", priorSelection)
+          ? authoringOk(priorSelection)
           : bridgeRefuse(
               DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
               priorSelection.diagnostics[0]?.message ?? "The retained scene selection is stale.",
@@ -1263,15 +1352,17 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         propertyId: field(payload, "propertyId"),
         newValue: field(payload, "newValue"),
       });
-      if (!staged.ok) return bridgeOk("authoring", staged);
+      if (!staged.ok) return authoringOk(staged);
       const snapshot = reconcilePendingAssetImport(live.proposeEdit(staged.edit));
       if (snapshot.phase !== "reviewing" || (snapshot.diagnostics?.length ?? 0) > 0) {
-        return bridgeOk("authoring", withRarityProposalEvidence(snapshot));
+        return authoringOk(hierarchyCommandResponse
+          ? withRarityProposalEvidence(snapshot)
+          : genericAuthoringSnapshot(snapshot));
       }
       selectedSceneInstanceIds = staged.inspection.selection.instanceIds;
-      return bridgeOk("authoring", hierarchyCommandResponse
+      return authoringOk(hierarchyCommandResponse
         ? Object.freeze({ ...snapshot, editableScene: staged.inspection })
-        : snapshot);
+        : genericAuthoringSnapshot(snapshot));
     }
     if (op === "propose") {
       const documentPath = containedDocumentPath(field(payload, "documentPath"));
@@ -1289,29 +1380,24 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           "authoring propose requires a jsonPointer string, an optional SHA-256 expectedContentHash, and a documentPath inside the project directory.",
         );
       }
-      const suppliedValue = field(payload, "newValue");
-      let proposedValue = suppliedValue;
-      if (
-        jsonPointer === "/data" &&
-        typeof suppliedValue === "object" &&
-        suppliedValue !== null &&
-        !Array.isArray(suppliedValue)
-      ) {
+      let proposalPointer = jsonPointer;
+      let proposalValue = field(payload, "newValue");
+      if (jsonPointer === "/data/webExperience") {
         const privateStatus = live.status(documentPath);
-        if (privateStatus.ok && Object.hasOwn(privateStatus.data, "composedScene")) {
-          proposedValue = Object.freeze({
-            ...suppliedValue,
-            composedScene: privateStatus.data.composedScene,
-          });
-        }
+        if (!privateStatus.ok) return authoringOk(privateStatus);
+        proposalPointer = "/data";
+        proposalValue = Object.freeze({
+          ...privateStatus.data,
+          webExperience: proposalValue,
+        });
       }
       const snapshot: DesktopSnapshot = reconcilePendingAssetImport(live.proposeEdit({
         documentPath,
-        jsonPointer,
-        newValue: proposedValue,
+        jsonPointer: proposalPointer,
+        newValue: proposalValue,
         ...(expectedContentHash !== undefined ? { expectedContentHash } : {}),
       }));
-      return bridgeOk("authoring", withRarityProposalEvidence(snapshot));
+      return authoringOk(snapshot);
     }
     if (op === "accept") {
       const accepted = reconcilePendingAssetImport(
@@ -1323,20 +1409,20 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         accepted.journalRecoveryPending ||
         (accepted.diagnostics?.length ?? 0) > 0
       ) {
-        return bridgeOk("authoring", accepted);
+        return authoringOk(accepted);
       }
       const pending = pendingAssetImport;
       pendingAssetImport = null;
       const copies = recoverAssetCopies(pending.documentPath);
       return copies.ok
-        ? bridgeOk("authoring", Object.freeze({ ...accepted, assetImport: pending.entry, assetCopies: copies }))
+        ? authoringOk(Object.freeze({ ...accepted, assetImport: pending.entry, assetCopies: copies }))
         : bridgeRefuse(copies.reason, copies.message);
     }
     if (op === "reject") {
       const rejected = reconcilePendingAssetImport(
         settleRarityProposalEvidence(live.reject()),
       );
-      return bridgeOk("authoring", rejected);
+      return authoringOk(rejected);
     }
     if (op === "recover") {
       const recovered = reconcilePendingAssetImport(
@@ -1348,13 +1434,13 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         recovered.journalRecoveryPending ||
         (recovered.diagnostics?.length ?? 0) > 0
       ) {
-        return bridgeOk("authoring", recovered);
+        return authoringOk(recovered);
       }
       const pending = pendingAssetImport;
       pendingAssetImport = null;
       const copies = recoverAssetCopies(pending.documentPath);
       return copies.ok
-        ? bridgeOk("authoring", Object.freeze({ ...recovered, assetImport: pending.entry, assetCopies: copies }))
+        ? authoringOk(Object.freeze({ ...recovered, assetImport: pending.entry, assetCopies: copies }))
         : bridgeRefuse(copies.reason, copies.message);
     }
     const result = op === "redo" ? live.redo() : live.undo();
@@ -1376,7 +1462,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       rarityProposalEvidence = null;
       pendingAssetImport = null;
     }
-    return bridgeOk("authoring", result);
+    return authoringOk(result);
   };
 
   const projectBrowserOpen = (payload: unknown): DesktopBridgeResponse => {
@@ -1400,10 +1486,12 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       );
     }
 
+    const live = authoringSession();
+    const privateStatus = live.status(browserStatus.activeDocumentPath);
     const authoringResponse = authoring({
       op: "status",
       documentPath: browserStatus.activeDocumentPath,
-    });
+    }, false, privateStatus);
     if (!authoringResponse.ok) return authoringResponse;
     const authoringStatus = authoringResponse.data;
     if (field(authoringStatus, "ok") !== true) {
@@ -1449,7 +1537,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         authoringStatus,
       }));
     }
-    const scene = desktopSceneFromDocumentData(field(authoringStatus, "data"));
+    const scene = desktopSceneFromDocumentData(privateStatus.ok ? privateStatus.data : undefined);
     if (!scene.ok) return bridgeRefuse(scene.reason, scene.message);
     const asset = Object.freeze({ instanceId: file.instanceId, digest: file.digest });
     if (!(scene.mountable.importedAssets ?? []).some((candidate) =>
@@ -1991,9 +2079,39 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       const hierarchyCommand = declared?.id.startsWith("scene-") === true;
       const rawInput = field(payload, "input");
       const rawPolicy = field(rawInput, "transformPolicy");
+      const policyProbe = declared?.id === "scene-object-reparent" &&
+          hasExactFields(payload, ["schemaVersion", "commandId", "client", "permission", "profile", "input"]) &&
+          hasExactFields(rawInput, [
+            "documentPath",
+            "expectedContentHash",
+            "profile",
+            "instanceId",
+            "parentInstanceId",
+            "transformPolicy",
+          ])
+        ? validateEditorCommandInvocation({
+            schemaVersion: field(payload, "schemaVersion"),
+            commandId: field(payload, "commandId"),
+            client: field(payload, "client"),
+            permission: field(payload, "permission"),
+            profile: field(payload, "profile"),
+            input: {
+              documentPath: field(rawInput, "documentPath"),
+              expectedContentHash: field(rawInput, "expectedContentHash"),
+              profile: field(rawInput, "profile"),
+              instanceId: field(rawInput, "instanceId"),
+              parentInstanceId: field(rawInput, "parentInstanceId"),
+              transformPolicy: "preserve-local",
+            },
+          })
+        : null;
+      const policyOnlyInvalid =
+        validated.reason === DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported &&
+        policyProbe?.ok === true &&
+        !isDesktopSceneReparentPolicy(rawPolicy);
       const mappedReason = hierarchyCommand && validated.reason === EDITOR_COMMAND_REFUSALS.kidsDenied
         ? DESKTOP_SCENE_HIERARCHY_REFUSALS.kidsDenied
-        : declared?.id === "scene-object-reparent" && rawPolicy !== "preserve-world" && rawPolicy !== "preserve-local"
+        : policyOnlyInvalid
           ? DESKTOP_SCENE_HIERARCHY_REFUSALS.policyInvalid
           : hierarchyCommand && validated.reason === EDITOR_COMMAND_REFUSALS.inputInvalid
             ? DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported

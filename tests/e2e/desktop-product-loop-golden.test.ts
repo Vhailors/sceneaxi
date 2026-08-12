@@ -197,11 +197,9 @@ describe("desktop first-release product loop", () => {
     expect(
       accepted.requests.find((request) => request.payload?.op === "propose")?.payload
         ?.newValue,
-    ).toMatchObject({
-      webExperience: {
-        html: '<main id="sceneaxi-mount"></main>',
-        assets: ["assets/models/hero-1.glb"],
-      },
+    ).toEqual({
+      html: '<main id="sceneaxi-mount"></main>',
+      assets: ["assets/models/hero-1.glb"],
     });
 
     for (const webExperience of [
@@ -1390,6 +1388,49 @@ describe("desktop first-release product loop", () => {
     expect(query(window, "[data-scene-property-entity-id]")?.textContent).toBe(
       "desktop-crate-beside",
     );
+  });
+
+  it("renders object identity and current parentage after reparent and reopen", async () => {
+    const { window, start } = mountChrome(projectDir());
+    start();
+    await click(window, "#project-open");
+
+    const hierarchy = query(window, "#scene-entity-desktop-crate-beside") as
+      | (HappyHTMLElement & {
+          value: string;
+          options: ArrayLike<HappyHTMLElement & { value: string }>;
+        })
+      | null;
+    if (hierarchy === null) throw new Error("hierarchy selector missing");
+    const optionText = (instanceId: string) =>
+      Array.from(hierarchy.options).find((option) => option.value === instanceId)?.textContent;
+    const initialText = optionText("desktop-crate-beside");
+    expect(initialText).toContain(
+      " · instance desktop-crate-beside · parent desktop-crate-root",
+    );
+    expect(initialText).not.toContain("Placed beside the root");
+    const objectIdentity = initialText?.split(" · instance ")[0];
+    expect(objectIdentity).toMatch(/^\s*Object [a-z0-9-]+$/);
+
+    hierarchy.value = "desktop-crate-beside";
+    hierarchy.dispatchEvent(new window.Event("change", { bubbles: true }));
+    const parent = query(window, "#scene-instance-parent") as
+      | (HappyHTMLElement & { value: string })
+      | null;
+    const policy = query(window, "#scene-instance-policy") as
+      | (HappyHTMLElement & { value: string })
+      | null;
+    if (parent === null || policy === null) throw new Error("reparent controls missing");
+    parent.value = "desktop-crate-stacked";
+    policy.value = "preserve-local";
+    await click(window, "#scene-instance-reparent");
+    await click(window, "#change-review-accept");
+    await click(window, "#project-open");
+
+    expect(optionText("desktop-crate-beside")).toContain(
+      `${objectIdentity} · instance desktop-crate-beside · parent desktop-crate-stacked`,
+    );
+    expect(optionText("desktop-crate-beside")).not.toContain("Placed beside the root");
   });
 
   it("names the diagnostic the conflict dialog is actually reporting", async () => {

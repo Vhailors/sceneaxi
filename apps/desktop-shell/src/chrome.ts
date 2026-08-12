@@ -1655,8 +1655,8 @@ if (shell) {
       entitiesList.forEach((entity) => {
         const option = document.createElement('option');
         option.value = entity.id;
-        option.textContent = '  '.repeat(entity.depth) + entity.label +
-          ' · instance ' + entity.id + ' · object ' + entity.artifactId +
+        option.textContent = '  '.repeat(entity.depth) + 'Object ' + entity.artifactId +
+          ' · instance ' + entity.id +
           (entity.parentInstanceId === null ? ' · root' : ' · parent ' + entity.parentInstanceId);
         el.appendChild(option);
       });
@@ -1674,7 +1674,7 @@ if (shell) {
       entitiesList.forEach((entity) => {
         const option = document.createElement('option');
         option.value = entity.id;
-        option.textContent = entity.label + ' · ' + entity.id;
+        option.textContent = 'Object ' + entity.artifactId + ' · instance ' + entity.id;
         parent.appendChild(option);
       });
       parent.value = entitiesList[0]?.id || '';
