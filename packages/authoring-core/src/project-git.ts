@@ -530,6 +530,7 @@ type Context = Readonly<{
   executable: string;
   indexPath: string;
   objectDirectory: string;
+  objectIdLength: 40 | 64;
   projectId: string;
   canonicalFiles: readonly string[];
   excludedPaths: ReadonlySet<string>;
@@ -928,6 +929,7 @@ function context(
     "--git-common-dir",
     "--git-path", "objects",
     "--git-path", "index",
+    "--show-object-format",
   ]);
   if (repository.timedOut) {
     return failure(
@@ -951,12 +953,20 @@ function context(
     );
   }
   let repositoryPaths: readonly string[];
+  let objectIdLength: 40 | 64;
   try {
     const reported = repository.stdout.trim().split("\n");
-    if (reported.length !== 5 || reported.some((path) => !isAbsolute(path))) {
+    if (reported.length !== 6 || reported.slice(0, 5).some((path) => !isAbsolute(path))) {
       throw new Error("incomplete repository paths");
     }
-    repositoryPaths = reported.map((path) => canonicalPath(path));
+    repositoryPaths = reported.slice(0, 5).map((path) => canonicalPath(path));
+    if (reported[5] === "sha1") {
+      objectIdLength = 40;
+    } else if (reported[5] === "sha256") {
+      objectIdLength = 64;
+    } else {
+      throw new Error("unsupported object format");
+    }
   } catch {
     return failure(
       PROJECT_GIT_DIAGNOSTICS.repositoryUnavailable,
@@ -1087,6 +1097,7 @@ function context(
     executable,
     indexPath,
     objectDirectory,
+    objectIdLength,
     projectId: manifest.projectId,
     canonicalFiles,
     excludedPaths: projectGitDesktopOwnerPaths.get(root) ?? new Set(),
@@ -1168,7 +1179,7 @@ function syncDirectory(path: string): void {
 
 function publishGitObjects(ctx: Context, temporary: TemporaryGitIndex): boolean {
   const looseDirectoryPattern = /^[0-9a-f]{2}$/u;
-  const looseObjectPattern = /^[0-9a-f]{38}$/u;
+  const looseObjectPattern = new RegExp(`^[0-9a-f]{${ctx.objectIdLength - 2}}$`, "u");
   try {
     if (
       !lstatSync(ctx.objectDirectory).isDirectory() ||
@@ -1368,7 +1379,10 @@ function prospectiveSelectionFailure(
     const header = tab < 0 ? "" : fields[0]?.subarray(0, tab).toString("ascii") ?? "";
     const objectId = header.split(" ")[1];
     const listedPath = tab < 0 ? null : decodeGitPath(fields[0]?.subarray(tab + 1) ?? Buffer.alloc(0));
-    if (objectId === undefined || !/^[0-9a-f]{40,64}$/u.test(objectId) || listedPath !== path) {
+    if (
+      objectId === undefined || objectId.length !== ctx.objectIdLength ||
+      !/^[0-9a-f]+$/u.test(objectId) || listedPath !== path
+    ) {
       return failure(
         PROJECT_GIT_DIAGNOSTICS.selectionMismatch,
         path,

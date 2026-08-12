@@ -66,7 +66,7 @@ function git(root: string, ...args: string[]) {
   return execFileSync("git", args, { cwd: root, encoding: "utf8" });
 }
 
-function repository(label: string) {
+function repository(label: string, objectFormat?: "sha256") {
   const root = mkdtempSync(join(tmpdir(), `sceneaxi-project-git-${label}-`));
   roots.push(root);
   const document = createDocument({ id: "contained-world", title: "Contained", data: { value: 1 } });
@@ -76,7 +76,13 @@ function repository(label: string) {
     documentBytes: serializeDocument(document),
   });
   if (!seeded.ok) throw new Error(seeded.diagnostic.message);
-  git(root, "init", "-b", "main");
+  git(
+    root,
+    "init",
+    ...(objectFormat === undefined ? [] : [`--object-format=${objectFormat}`]),
+    "-b",
+    "main",
+  );
   git(root, "config", "user.name", "SceneAxi Test");
   git(root, "config", "user.email", "sceneaxi@example.invalid");
   git(root, "add", "--", "scene.json", PROJECT_MANIFEST_PATH);
@@ -172,6 +178,18 @@ describe("contained project Git service", () => {
       "notes\\draft.txt",
       "scene.json",
     ]);
+  });
+
+  it("publishes validated objects in SHA-256 repositories", () => {
+    const { root } = repository("sha256", "sha256");
+    writeFileSync(join(root, "notes.txt"), "sha256 object\n");
+
+    expect(stageProjectGitPaths(mutationOptions(root), ["notes.txt"])).toMatchObject({ ok: true });
+    expect(git(root, "rev-parse", "--show-object-format").trim()).toBe("sha256");
+    expect(git(root, "diff", "--cached", "--name-only").trim()).toBe("notes.txt");
+    const objectId = git(root, "rev-parse", ":notes.txt").trim();
+    expect(objectId).toHaveLength(64);
+    expect(git(root, "cat-file", "blob", objectId)).toBe("sha256 object\n");
   });
 
   it("refuses directory selections and leaves no operation-lock residue", () => {
