@@ -116,6 +116,9 @@ export type DesktopScenePropertyInspection =
       ok: false;
       reason?: DesktopSceneHierarchyRefusal;
       diagnostics: readonly ApplyDiagnostic[];
+      contentHash?: string;
+      entities?: readonly DesktopSceneEditableEntity[];
+      hierarchy?: DesktopSceneHierarchySnapshot;
     }>;
 
 export type DesktopScenePropertyProposalInput = Readonly<{
@@ -544,7 +547,18 @@ export function desktopScenePropertyInspection(
     hierarchy.objects.map((object) => object.id),
   );
   if (!selected.ok) {
-    return hierarchyDiagnostic(selected.reason, selected.message, DESKTOP_ACTIVE_DOCUMENT_PATH);
+    return Object.freeze({
+      ...hierarchyDiagnostic(
+        selected.reason,
+        selected.message,
+        DESKTOP_ACTIVE_DOCUMENT_PATH,
+      ),
+      contentHash,
+      entities: Object.freeze(
+        stored.instances.map((instance) => editableEntityOf(stored, instance)),
+      ),
+      hierarchy,
+    });
   }
   return Object.freeze({
     ok: true as const,

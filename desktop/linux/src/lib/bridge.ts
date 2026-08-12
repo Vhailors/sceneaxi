@@ -842,6 +842,12 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           "Scene hierarchy editing is denied for Kids before project access.",
         );
       }
+      if (options.commandProfile !== undefined && options.commandProfile !== profile) {
+        return bridgeRefuse(
+          DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+          `Scene hierarchy editing cannot override the active ${options.commandProfile} profile.`,
+        );
+      }
       if (
         field(operation, "kind") === "reparent-object" &&
         !isDesktopSceneReparentPolicy(transformPolicy)
@@ -1925,6 +1931,19 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       ));
     }
     const hierarchyCommand = validated.command.id.startsWith("scene-");
+    const hierarchyInputProfile = field(validated.invocation.input, "profile");
+    if (
+      hierarchyCommand &&
+      options.commandProfile !== undefined &&
+      options.commandProfile !== hierarchyInputProfile
+    ) {
+      return commandTransaction(validated.command.id, bridgeRefuse(
+        options.commandProfile === "kids"
+          ? DESKTOP_SCENE_HIERARCHY_REFUSALS.kidsDenied
+          : DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+        `${validated.command.id} cannot override the active ${options.commandProfile} profile.`,
+      ));
+    }
     const capabilityMissing = hierarchyCommand
       ? options.commandCapabilities?.includes(validated.command.capability.id) !== true
       : options.commandCapabilities !== undefined &&
@@ -1995,14 +2014,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         if (!inspected.ok) return inspected;
         const hierarchy = field(inspected.data, "editableScene");
         if (field(hierarchy, "ok") !== true) {
-          const hierarchyDiagnostics = field(hierarchy, "diagnostics");
-          const diagnostic = Array.isArray(hierarchyDiagnostics)
-            ? hierarchyDiagnostics[0]
-            : undefined;
-          return bridgeRefuse(
-            String(field(hierarchy, "reason") ?? field(diagnostic, "code") ?? DESKTOP_SCENE_NOT_COMPOSABLE),
-            String(field(diagnostic, "message") ?? "The project hierarchy could not be inspected."),
-          );
+          return bridgeOk("command", hierarchy);
         }
         return bridgeOk("command", Object.freeze({
           hierarchy: field(hierarchy, "hierarchy"),

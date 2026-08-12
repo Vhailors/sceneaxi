@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   DESKTOP_LOCAL_BRIDGE_PROTOCOL_VERSION,
   EDITOR_COMMAND_REGISTRY,
@@ -176,6 +176,56 @@ describe("desktop same-user local RPC bridge", () => {
       ok: true,
       result: { documentPath: "scene.json" },
     });
+  });
+
+  it("requires a non-Kids hierarchy profile before local-agent project access", async () => {
+    const root = mkdtempSync(join(tmpdir(), "sceneaxi-local-rpc-hierarchy-"));
+    roots.push(root);
+    const projectRoot = join(root, "project");
+    expect(seedDesktopProject(projectRoot).ok).toBe(true);
+    const socketPath = join(root, "runtime", "desktop-v1.sock");
+    const createAuthoringSession = vi.fn(() => {
+      throw new Error("must not reach project authority");
+    });
+    const server = await startDesktopLocalBridgeServer({
+      bridge: createDesktopBridge({
+        cwd: projectRoot,
+        commandCapabilities: ["scene.compose"],
+        createAuthoringSession,
+      }),
+      projectRoot,
+      socketPath,
+      discoveryPath: join(root, "config", "desktop-bridge-v1.json"),
+      capability: CAPABILITY,
+    });
+    servers.push(server);
+
+    expect(await request(socketPath, {
+      protocolVersion: 1,
+      id: "hierarchy-missing-profile",
+      capability: CAPABILITY,
+      permission: "project:read",
+      tool: "sceneaxi.scene.hierarchy.inspect",
+      input: { documentPath: "scene.json" },
+    } as DesktopLocalBridgeRequest)).toMatchObject({
+      ok: false,
+      error: { code: "LOCAL_BRIDGE_INPUT_INVALID" },
+    });
+    expect(await request(socketPath, {
+      protocolVersion: 1,
+      id: "hierarchy-kids-profile",
+      capability: CAPABILITY,
+      permission: "project:read",
+      tool: "sceneaxi.scene.hierarchy.inspect",
+      input: { documentPath: "scene.json", profile: "kids" },
+    })).toMatchObject({
+      ok: false,
+      error: {
+        code: "LOCAL_BRIDGE_UPSTREAM_REFUSED",
+        detail: "SCENE_HIERARCHY_KIDS_DENIED",
+      },
+    });
+    expect(createAuthoringSession).not.toHaveBeenCalled();
   });
 
   it("abandons only the assistant job identified by its start response", async () => {

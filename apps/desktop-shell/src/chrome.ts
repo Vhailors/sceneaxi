@@ -1612,7 +1612,10 @@ if (shell) {
         : selectedSceneEntityIds);
     clearSceneProperty();
     const inspected = status && status.editableScene;
-    const entitiesList = inspected && inspected.ok === true && Array.isArray(inspected.entities)
+    const staleRecovery = inspected && inspected.ok === false &&
+      inspected.reason === 'SCENE_HIERARCHY_SELECTION_STALE' &&
+      inspected.hierarchy && Array.isArray(inspected.entities);
+    const entitiesList = inspected && (inspected.ok === true || staleRecovery) && Array.isArray(inspected.entities)
       ? inspected.entities
       : [];
     const expectedPropertyIds = ${JSON.stringify(DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.map((definition) => definition.id))};
@@ -1635,6 +1638,14 @@ if (shell) {
       }
       return false;
     }
+    if (staleRecovery) {
+      const refusal = Array.isArray(inspected.diagnostics) ? inspected.diagnostics[0] : null;
+      sceneEntitiesRefusal(
+        'Scene selection stale · ' + inspected.reason +
+        (typeof refusal?.message === 'string' && refusal.message ? ' · ' + refusal.message : '') +
+        ' · choose a current object to recover',
+      );
+    }
     editableScene = inspected;
     const entities = shell.querySelector('[data-scene-entities]');
     if (entities) entities.hidden = false;
@@ -1651,7 +1662,7 @@ if (shell) {
       });
       const fallback = entitiesList.find((entity) => entity.id === 'desktop-crate-beside')?.id || entitiesList[0]?.id || '';
       const chosen = previousSelection.filter((id) => entitiesList.some((entity) => entity.id === id));
-      selectedSceneEntityIds = chosen.length > 0 ? chosen : [fallback];
+      selectedSceneEntityIds = staleRecovery ? [] : chosen.length > 0 ? chosen : [fallback];
       Array.from(el.options).forEach((option) => {
         option.selected = selectedSceneEntityIds.includes(option.value);
       });
@@ -1668,6 +1679,7 @@ if (shell) {
       });
       parent.value = entitiesList[0]?.id || '';
     }
+    if (staleRecovery) return true;
     if (selectedSceneEntityIds[0] && showSceneProperty(selectedSceneEntityIds[0])) return true;
     return true;
   };
@@ -2829,6 +2841,7 @@ if (shell) {
     const instanceIds = Array.from(select.selectedOptions).map((option) => option.value).filter(Boolean);
     const response = await commandRequest('scene-selection-set', {
       documentPath: T.product.documentPath,
+      profile: shell.dataset.profile,
       instanceIds,
     });
     const diagnostic = responseDiagnostic(response);
@@ -2839,6 +2852,17 @@ if (shell) {
     }
     const selection = response.data?.selection;
     if (!selection || !Array.isArray(selection.instanceIds)) return;
+    const recovered = editableScene && editableScene.ok === false &&
+      Array.isArray(editableScene.entities) && response.data?.hierarchy
+      ? {
+          ok: true,
+          contentHash: response.data.contentHash,
+          entities: editableScene.entities,
+          hierarchy: response.data.hierarchy,
+          selection,
+        }
+      : null;
+    if (recovered) syncSceneProperties({ editableScene: recovered, selectedInstanceIds: selection.instanceIds });
     selectedSceneEntityIds = selection.instanceIds;
     if (selection.primaryInstanceId && showSceneProperty(selection.primaryInstanceId) && shell.dataset.mode !== 'build') {
       showModePanels('build');

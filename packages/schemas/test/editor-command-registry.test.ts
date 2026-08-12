@@ -78,6 +78,7 @@ describe("full-editor command registry", () => {
       commandId: "scene-object-reparent",
       client: "cli",
       permission: "project:write",
+      profile: "game",
       input: {
         documentPath: "scene.json",
         expectedContentHash: `sha256:${"a".repeat(64)}`,
@@ -87,6 +88,21 @@ describe("full-editor command registry", () => {
         transformPolicy: "preserve-world",
       },
     }).ok).toBe(true);
+    expect(validateEditorCommandInvocation({
+      schemaVersion: 1,
+      commandId: "scene-hierarchy-inspect",
+      client: "local-agent",
+      permission: "project:read",
+      input: { documentPath: "scene.json" },
+    })).toMatchObject({ ok: false, reason: EDITOR_COMMAND_REFUSALS.inputInvalid });
+    expect(validateEditorCommandInvocation({
+      schemaVersion: 1,
+      commandId: "scene-selection-set",
+      client: "local-agent",
+      permission: "project:read",
+      profile: "kids",
+      input: { documentPath: "scene.json", profile: "kids", instanceIds: ["root"] },
+    })).toMatchObject({ ok: false, reason: EDITOR_COMMAND_REFUSALS.kidsDenied });
   });
 
   it("rejects duplicate ids and invalid registry declarations", () => {

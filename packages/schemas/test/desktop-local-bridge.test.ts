@@ -144,6 +144,25 @@ describe("desktop local bridge contract", () => {
     }
 
     expect(
+      validateDesktopLocalBridgeToolInput("sceneaxi.scene.hierarchy.inspect", {
+        documentPath: "scene.json",
+        profile: "game",
+      }),
+    ).toBe(true);
+    expect(
+      validateDesktopLocalBridgeToolInput("sceneaxi.scene.hierarchy.inspect", {
+        documentPath: "scene.json",
+      }),
+    ).toBe(false);
+    expect(
+      validateDesktopLocalBridgeToolInput("sceneaxi.scene.selection.set", {
+        documentPath: "scene.json",
+        profile: "kids",
+        instanceIds: ["root"],
+      }),
+    ).toBe(true);
+
+    expect(
       validateDesktopLocalBridgeToolInput("sceneaxi.assistant.byo.start", {
         prompt: "Build a blue crate",
         profile: "@sceneaxi/profile-game",

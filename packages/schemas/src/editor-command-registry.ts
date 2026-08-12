@@ -130,6 +130,7 @@ export type EditorCommandDefinition = Readonly<{
     | "assistant-agent"
     | "job"
     | "migration-approval"
+    | "scene-document"
     | "scene-selection"
     | "scene-create"
     | "scene-remove"
@@ -283,12 +284,23 @@ const sceneProfile = Object.freeze({
   enum: Object.freeze(["game", "web", "kids"]),
 }) satisfies JsonObject;
 
+const sceneDocumentInput = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: Object.freeze(["documentPath", "profile"]),
+  properties: Object.freeze({
+    documentPath: documentInput.properties.documentPath,
+    profile: sceneProfile,
+  }),
+}) satisfies JsonObject;
+
 const sceneSelectionInput = Object.freeze({
   type: "object",
   additionalProperties: false,
-  required: Object.freeze(["documentPath", "instanceIds"]),
+  required: Object.freeze(["documentPath", "profile", "instanceIds"]),
   properties: Object.freeze({
     documentPath: documentInput.properties.documentPath,
+    profile: sceneProfile,
     instanceIds: sceneIds,
   }),
 }) satisfies JsonObject;
@@ -534,8 +546,8 @@ const DEFINITIONS = [
       "DESKTOP_SCENE_NOT_COMPOSABLE",
     ],
     undo: undo("none"),
-    inputSchema: documentInput,
-    inputShape: "document",
+    inputSchema: sceneDocumentInput,
+    inputShape: "scene-document",
   }),
   definition({
     schemaVersion: 1,
@@ -815,6 +827,10 @@ function sceneDocumentFields(input: JsonObject): boolean {
   return typeof input["documentPath"] === "string" && input["documentPath"].length > 0;
 }
 
+function sceneProfileField(input: JsonObject): boolean {
+  return input["profile"] === "game" || input["profile"] === "web" || input["profile"] === "kids";
+}
+
 function sceneInstanceIds(value: unknown): value is readonly string[] {
   return Array.isArray(value) && value.length > 0 && value.length <= 32 &&
     value.every((id) => typeof id === "string" && SCENE_ID_RE.test(id)) &&
@@ -857,9 +873,13 @@ export function validateEditorCommandInput(
       return exactKeys(input, ["approved", "proposalDigest"]) &&
         input["approved"] === true && typeof input["proposalDigest"] === "string" &&
         /^sha256:[0-9a-f]{64}$/.test(input["proposalDigest"]);
+    case "scene-document":
+      return exactKeys(input, ["documentPath", "profile"]) &&
+        sceneDocumentFields(input) && sceneProfileField(input);
     case "scene-selection":
-      return exactKeys(input, ["documentPath", "instanceIds"]) &&
-        sceneDocumentFields(input) && sceneInstanceIds(input["instanceIds"]);
+      return exactKeys(input, ["documentPath", "profile", "instanceIds"]) &&
+        sceneDocumentFields(input) && sceneProfileField(input) &&
+        sceneInstanceIds(input["instanceIds"]);
     case "scene-create":
       return exactKeys(input, ["documentPath", "expectedContentHash", "profile", "sourceInstanceId", "parentInstanceId"]) &&
         sceneMutationFields(input) && typeof input["sourceInstanceId"] === "string" &&
@@ -950,6 +970,12 @@ export function validateEditorCommandInvocation(
       `${command.id} is denied for Kids before execution.`,
     );
   }
+  if (command.id.startsWith("scene-") && profile !== input["profile"]) {
+    return refusal(
+      EDITOR_COMMAND_REFUSALS.inputInvalid,
+      `${command.id} requires one matching explicit invocation and input profile.`,
+    );
+  }
   return Object.freeze({
     ok: true as const,
     invocation: value as EditorCommandInvocation,
@@ -965,12 +991,17 @@ export function createEditorCommandInvocation(
 ): EditorCommandInvocation {
   const command = editorCommand(commandId);
   if (command === undefined) registryError(`invocation names unknown command ${commandId}`);
+  const inputProfile = input["profile"];
+  const carriedProfile = profile ?? (command.id.startsWith("scene-") &&
+    (inputProfile === "game" || inputProfile === "web" || inputProfile === "kids")
+    ? inputProfile
+    : undefined);
   const invocation = Object.freeze({
     schemaVersion: EDITOR_COMMAND_SCHEMA_VERSION,
     commandId,
     client,
     permission: command.permission,
-    ...(profile === undefined ? {} : { profile }),
+    ...(carriedProfile === undefined ? {} : { profile: carriedProfile }),
     input,
   });
   const validated = validateEditorCommandInvocation(invocation);

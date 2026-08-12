@@ -85,7 +85,7 @@
           }
         },
         "inputSchema": { "type": "object" },
-        "inputShape": { "enum": ["none", "document", "export", "assistant", "assistant-agent", "job", "migration-approval", "scene-selection", "scene-create", "scene-remove", "scene-reparent"] }
+        "inputShape": { "enum": ["none", "document", "export", "assistant", "assistant-agent", "job", "migration-approval", "scene-document", "scene-selection", "scene-create", "scene-remove", "scene-reparent"] }
       }
     }
   }

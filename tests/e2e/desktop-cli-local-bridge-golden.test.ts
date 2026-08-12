@@ -103,6 +103,7 @@ describe("CLI → local desktop bridge golden path", () => {
         "--input-json",
         JSON.stringify({
           documentPath: "scene.json",
+          profile: "game",
           instanceIds: ["desktop-crate-stacked", "desktop-crate-beside"],
         }),
         ...common,
@@ -132,7 +133,7 @@ describe("CLI → local desktop bridge golden path", () => {
         "--allow",
         "project:read",
         "--input-json",
-        JSON.stringify({ documentPath: "scene.json" }),
+        JSON.stringify({ documentPath: "scene.json", profile: "game" }),
         ...common,
       ],
       projectRoot,

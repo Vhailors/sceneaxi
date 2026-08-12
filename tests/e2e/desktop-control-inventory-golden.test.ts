@@ -136,6 +136,125 @@ describe("desktop mounted control inventory", () => {
     ]);
   });
 
+  it("renders stale hierarchy recovery until an explicit selection succeeds", async () => {
+    const properties = DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.map((definition) => ({
+      id: definition.id,
+      value: definition.id.startsWith("scale-") ? 1 : 0,
+    }));
+    const entities = [
+      {
+        id: "root-instance",
+        label: "Root",
+        artifactId: "root-object",
+        parentInstanceId: null,
+        depth: 0,
+        properties,
+      },
+      {
+        id: "current-instance",
+        label: "Current",
+        artifactId: "current-object",
+        parentInstanceId: "root-instance",
+        depth: 1,
+        properties,
+      },
+    ];
+    const hierarchy = {
+      rootInstanceId: "root-instance",
+      objects: [
+        { id: "root-instance", parentId: null },
+        { id: "current-instance", parentId: "root-instance" },
+      ],
+    };
+    const requests: unknown[] = [];
+    const window = mount(undefined, {
+      project: async () => ({
+        ok: true,
+        data: {
+          status: {
+            active: { name: "Recovery", root: "/project", documentPath: "scene.json" },
+            recents: [],
+          },
+        },
+      }),
+      request: async (request) => {
+        requests.push(request);
+        if ((request as { action?: string }).action === "command") {
+          return {
+            ok: true,
+            data: {
+              contentHash: `sha256:${"4".repeat(64)}`,
+              hierarchy,
+              selection: {
+                schemaVersion: 1,
+                instanceIds: ["current-instance"],
+                primaryInstanceId: "current-instance",
+              },
+            },
+          };
+        }
+        return {
+          ok: true,
+          data: {
+            ok: true,
+            documentId: "scene",
+            data: {},
+            contentHash: `sha256:${"4".repeat(64)}`,
+            authoringSnapshot: {
+              phase: "applied",
+              unifiedDiff: null,
+              renderedDiff: null,
+              proposal: null,
+              appliedPaths: ["scene.json"],
+              journalRecoveryPending: false,
+              transactionId: "undo-1",
+              diagnostics: null,
+            },
+            editableScene: {
+              ok: false,
+              reason: "SCENE_HIERARCHY_SELECTION_STALE",
+              diagnostics: [{
+                code: "SCENE_HIERARCHY_SELECTION_STALE",
+                message: "The prior selection no longer exists.",
+              }],
+              contentHash: `sha256:${"4".repeat(64)}`,
+              entities,
+              hierarchy,
+            },
+          },
+        };
+      },
+    });
+    await settle();
+
+    const select = element(window, '[data-action="scene-entity-select"]') as unknown as {
+      options: ArrayLike<{ selected: boolean; value: string }>;
+      dispatchEvent(event: Event): boolean;
+    };
+    expect(element(window, "[data-scene-entities]").hidden).toBe(false);
+    expect(element(window, "[data-scene-entities-refusal]").textContent)
+      .toContain("SCENE_HIERARCHY_SELECTION_STALE");
+    expect(Array.from(select.options).every((option) => option.selected === false)).toBe(true);
+
+    Array.from(select.options).forEach((option) => {
+      option.selected = option.value === "current-instance";
+    });
+    select.dispatchEvent(new window.Event("change", { bubbles: true }));
+    await settle();
+
+    const commandRequest = requests.find((request) =>
+      (request as { action?: string }).action === "command"
+    ) as { payload?: { profile?: string; input?: { profile?: string; instanceIds?: string[] } } };
+    expect(commandRequest).toMatchObject({
+      payload: {
+        profile: "game",
+        input: { profile: "game", instanceIds: ["current-instance"] },
+      },
+    });
+    expect(element(window, "[data-scene-entities-refusal]").hidden).toBe(true);
+    expect(element(window, "[data-scene-property-editor]").hidden).toBe(false);
+  });
+
   it("makes every presentation control produce an observable state change", async () => {
     const window = mount();
     const shell = element(window, ".shell");

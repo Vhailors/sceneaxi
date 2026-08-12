@@ -92,10 +92,12 @@ describe("full-editor hierarchy vertical", () => {
       const bridge = hierarchyBridge(root);
       const selected = command(bridge, "scene-selection-set", client, {
         documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+        profile: "game",
         instanceIds: ["desktop-crate-stacked", "desktop-crate-beside"],
       });
       const inspected = command(bridge, "scene-hierarchy-inspect", client, {
         documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+        profile: "game",
       });
       return { selected, inspected };
     });
@@ -173,6 +175,7 @@ describe("full-editor hierarchy vertical", () => {
     const reopened = hierarchyBridge(root);
     expect(command(reopened, "scene-hierarchy-inspect", "local-agent", {
       documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      profile: "game",
     })).toMatchObject({
       ok: true,
       data: {
@@ -263,16 +266,19 @@ describe("full-editor hierarchy vertical", () => {
     const kids = hierarchyBridge(root, { commandProfile: "kids", createAuthoringSession });
     expect(command(kids, "scene-hierarchy-inspect", "desktop-control", {
       documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      profile: "game",
     })).toMatchObject({ ok: false, reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.kidsDenied });
     const missing = createDesktopBridge({ cwd: root, createAuthoringSession });
     expect(command(missing, "scene-hierarchy-inspect", "cli", {
       documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      profile: "game",
     })).toMatchObject({ ok: false, reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.capabilityMissing });
     expect(createAuthoringSession).not.toHaveBeenCalled();
 
     const bridge = hierarchyBridge(root);
     expect(command(bridge, "scene-selection-set", "local-agent", {
       documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      profile: "game",
       instanceIds: ["missing-object"],
     })).toMatchObject({ ok: false, reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale });
     expect(bridge.handle({
@@ -321,6 +327,8 @@ describe("full-editor hierarchy vertical", () => {
       .toMatchObject({ ok: false, reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.capabilityMissing });
     expect(raw(hierarchyBridge(root, { commandProfile: "kids", createAuthoringSession }), "game", operation))
       .toMatchObject({ ok: false, reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.kidsDenied });
+    expect(raw(hierarchyBridge(root, { commandProfile: "game", createAuthoringSession }), "web", operation))
+      .toMatchObject({ ok: false, reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported });
     expect(raw(hierarchyBridge(root, { createAuthoringSession }), "game", { kind: "unknown" }))
       .toMatchObject({ ok: false, reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported });
     expect(raw(hierarchyBridge(root, { createAuthoringSession }), "profile-game", operation))
@@ -331,10 +339,16 @@ describe("full-editor hierarchy vertical", () => {
       parentInstanceId: "desktop-crate-root",
       transformPolicy: "implicit",
     })).toMatchObject({ ok: false, reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.policyInvalid });
+    expect(command(
+      hierarchyBridge(root, { commandProfile: "game", createAuthoringSession }),
+      "scene-hierarchy-inspect",
+      "desktop-control",
+      { documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH, profile: "web" },
+    )).toMatchObject({ ok: false, reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported });
     expect(createAuthoringSession).not.toHaveBeenCalled();
   });
 
-  it("preserves stale selection refusal after undo removes the selected copy", () => {
+  it("preserves stale refusal until an explicit current selection recovers it", () => {
     const root = fixture();
     const bridge = hierarchyBridge(root);
     expect(command(bridge, "scene-object-create", "desktop-control", {
@@ -348,9 +362,32 @@ describe("full-editor hierarchy vertical", () => {
     expect(command(bridge, "edit-undo", "desktop-control", {})).toMatchObject({ ok: true });
     expect(command(bridge, "scene-hierarchy-inspect", "desktop-control", {
       documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      profile: "game",
     })).toMatchObject({
-      ok: false,
-      reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+      ok: true,
+      data: {
+        ok: false,
+        reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+        hierarchy: { rootInstanceId: "desktop-crate-root" },
+        entities: expect.arrayContaining([
+          expect.objectContaining({ id: "desktop-crate-beside" }),
+        ]),
+      },
+    });
+    expect(command(bridge, "scene-selection-set", "desktop-control", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      profile: "game",
+      instanceIds: ["desktop-crate-beside"],
+    })).toMatchObject({
+      ok: true,
+      data: { selection: { instanceIds: ["desktop-crate-beside"] } },
+    });
+    expect(command(bridge, "scene-hierarchy-inspect", "desktop-control", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      profile: "game",
+    })).toMatchObject({
+      ok: true,
+      data: { selection: { instanceIds: ["desktop-crate-beside"] } },
     });
   });
 
