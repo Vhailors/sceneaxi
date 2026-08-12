@@ -31,6 +31,10 @@ describe("desktop local bridge contract", () => {
     expect(DESKTOP_LOCAL_BRIDGE_TOOLS.map((tool) => tool.name)).toEqual([
       "sceneaxi.bridge.handshake",
       "sceneaxi.project.status",
+      "sceneaxi.project.inspect",
+      "sceneaxi.project.migration.propose",
+      "sceneaxi.project.migration.commit",
+      "sceneaxi.project.migration.recover",
       "sceneaxi.project.propose",
       "sceneaxi.project.accept",
       "sceneaxi.project.reject",
@@ -59,6 +63,10 @@ describe("desktop local bridge contract", () => {
     ).toEqual([
       { name: "sceneaxi.bridge.handshake", permission: "bridge:connect", mutatesProject: false },
       { name: "sceneaxi.project.status", permission: "project:read", mutatesProject: false },
+      { name: "sceneaxi.project.inspect", permission: "project:read", mutatesProject: false },
+      { name: "sceneaxi.project.migration.propose", permission: "project:write", mutatesProject: false },
+      { name: "sceneaxi.project.migration.commit", permission: "project:write", mutatesProject: true },
+      { name: "sceneaxi.project.migration.recover", permission: "project:write", mutatesProject: true },
       { name: "sceneaxi.project.propose", permission: "project:write", mutatesProject: false },
       { name: "sceneaxi.project.accept", permission: "project:write", mutatesProject: true },
       { name: "sceneaxi.project.reject", permission: "project:write", mutatesProject: false },

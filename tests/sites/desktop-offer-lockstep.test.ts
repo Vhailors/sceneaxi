@@ -132,8 +132,10 @@ describe("desktop offer ↔ recorded build lockstep", () => {
     // available only through New Project, while Open Project validates without
     // writing and invalid bytes remain the operator's bytes.
     expect(doc).toContain("First launch binds no root and writes no project");
-    expect(doc).toContain("New Project creates the\nexisting starter `scene.json`");
-    expect(doc).toContain("Open Project performs no\nproject write");
+    expect(doc).toContain(
+      "New Project creates the\nstarter `scene.json` and `sceneaxi.project.json` v1 atomically",
+    );
+    expect(doc).toContain("Open\nProject performs no project write");
     expect(doc).toContain("Invalid `scene.json` bytes are never replaced");
     expect(doc).toContain("**Game**");
     expect(doc).toContain("**Website (Web)**");
