@@ -133,13 +133,14 @@ manifest assets; the exact listing, selection, Open, and immutable mutation
 contract is owned by
 [`docs/desktop-linux.md`](../../docs/desktop-linux.md#first-launch-and-product-tabs).
 Reload validates and reads the active document through the long-lived authoring
-session. An opened project selects
-among the validated composed instances the host reports. The Build inspector
-exposes bounded X/Y/Z translation, rotation, and scale plus separate local-copy
-Add and leaf Remove controls. Each asks the host for one canonical E1 proposal,
-and the panel is re-read from the host's inspection rather than from a value the
-chrome keeps. This adds no arbitrary JSON editor, external asset intake, or
-general E2. Web Experience can stage
+session. An opened project shows the host's versioned hierarchy, including
+separate artifact and instance ids, parentage, depth, and ordered multi-selection.
+The primary selection fills the bounded X/Y/Z translation, rotation, and scale
+fields; local-copy Create, ordered Remove, and explicit-policy Reparent use the
+same Change Review. Each staging action asks the host for one canonical E1
+proposal, and the panel is re-read from the host's inspection rather than from a
+value the chrome keeps. This adds no arbitrary JSON editor, external asset intake,
+or general E2. Web Experience can stage
 stored HTML or the normalized `assets/hero.glb` reference as one `/data`
 proposal; Save accepts that proposal atomically. The chrome never executes the
 stored HTML. Stored markup is capped at 100,000 characters; asset paths are

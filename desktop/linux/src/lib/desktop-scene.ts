@@ -609,7 +609,8 @@ export function desktopScenePropertyInspection(
 }
 
 /**
- * Inspect the selected-instance transform surface this vertical supports.
+ * Inspect the hierarchy and primary-selection transform surface this vertical
+ * supports.
  *
  * Values come from the validated, digest-bound composition rather than the
  * legacy sample fields beside it. Play therefore mounts the values shown after
@@ -644,12 +645,12 @@ function nextCopyInstanceId(stored: ComposedScene, sourceInstanceId: string) {
 }
 
 /**
- * Stage one canonical selected-instance operation as an ordinary E1 edit.
+ * Stage one canonical hierarchy operation as an ordinary E1 edit.
  *
- * Add copies only the selected instance's already-validated local artifact and
- * uses an identity placement under the existing root. Remove is deliberately
- * smaller than general composition authoring: only a non-root leaf may be
- * removed, and the scene must remain above the composition minimum.
+ * Create copies only an already-validated local artifact under an explicit
+ * parent. Ordered removal protects the root, refuses orphaned children, and
+ * preserves the composition minimum. Reparenting requires an explicit transform
+ * policy. The legacy add/remove forms remain for compatible callers.
  */
 export function stageDesktopSceneEdit(input: Readonly<{
   documentData: unknown;

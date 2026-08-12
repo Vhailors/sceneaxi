@@ -1,11 +1,12 @@
 /**
- * Canonical selected-instance edit vocabulary shared by desktop presentation
- * and the privileged authoring host.
+ * Canonical hierarchy-edit vocabulary shared by desktop presentation and the
+ * privileged authoring host.
  *
  * The operation describes intent only. It never carries a Sculpt Artifact:
- * add-instance may therefore select only an artifact already validated inside
- * the open ComposedScene, and every operation is projected into an ordinary E1
- * proposal before any document bytes can change.
+ * create-object and the compatible add-instance form may therefore select only
+ * an artifact already validated inside the open ComposedScene, and every
+ * operation is projected into an ordinary E1 proposal before document bytes can
+ * change.
  */
 import {
   SCENE_MAXIMUM_COMPONENT_MAGNITUDE,
