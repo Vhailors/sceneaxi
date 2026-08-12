@@ -13,6 +13,7 @@
   "packages/authoring-core/src/json-pointer.ts",
   "packages/authoring-core/src/minimum-e2.ts",
   "packages/authoring-core/src/model-provider-port.ts",
+  "packages/authoring-core/src/project-model.ts",
   "packages/authoring-core/src/propose-apply.ts",
   "packages/authoring-core/src/rarity-authoring.ts",
   "packages/authoring-core/src/rarity-evidence.ts",
