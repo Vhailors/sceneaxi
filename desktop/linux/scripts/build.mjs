@@ -32,6 +32,10 @@ const common = {
   logLevel: "info",
   absWorkingDir: appRoot,
   alias: {
+    "@sceneaxi-internal/desktop-session-project-git": resolve(
+      appRoot,
+      "../../apps/desktop-shell/src/session.ts",
+    ),
     "@sceneaxi-internal/project-git-authority": resolve(
       appRoot,
       "../../packages/authoring-core/src/project-git.ts",

@@ -7,6 +7,7 @@
     "moduleResolution": "bundler",
     "baseUrl": "../..",
     "paths": {
+      "@sceneaxi-internal/desktop-session-project-git": ["apps/desktop-shell/src/session.ts"],
       "@sceneaxi-internal/project-git-authority": ["packages/authoring-core/src/project-git.ts"]
     },
     "noEmit": true,

@@ -552,6 +552,8 @@ function containedGitDirectory(root: string): string | ProjectGitFailure {
     ["objects", "directory", true],
     ["objects/info", "directory", false],
     ["objects/info/alternates", "file", false],
+    ["objects/info/commit-graph", "file", false],
+    ["objects/info/commit-graphs", "directory", false],
     ["objects/info/http-alternates", "file", false],
     ["objects/pack", "directory", false],
     ["info", "directory", false],
@@ -607,6 +609,12 @@ function containedGitDirectory(root: string): string | ProjectGitFailure {
     "$git.objects.pack",
   );
   if (invalidPacks !== null) return invalidPacks;
+  const invalidCommitGraphs = validateGitFileDirectory(
+    root,
+    resolve(gitDirectory, "objects", "info", "commit-graphs"),
+    "$git.objects.info.commit-graphs",
+  );
+  if (invalidCommitGraphs !== null) return invalidCommitGraphs;
   let config: string;
   try {
     config = readFileSync(resolve(gitDirectory, "config"), "utf8");
@@ -1263,8 +1271,8 @@ export function stageProjectGitPaths(
                   `Prospective staging was refused by ${prospective.diagnostic.code}; the live index was not changed.`,
                 );
               } else if (prospectiveBytes === undefined) {
-                result = stageRollbackFailed(
-                  "Contained Git could not read the prospective index before publishing it.",
+                result = stageRolledBack(
+                  "The prospective index disappeared before publication; the live index was not changed.",
                 );
               } else {
                 const published = publishGitIndex(prepared, captured, prospectiveBytes);

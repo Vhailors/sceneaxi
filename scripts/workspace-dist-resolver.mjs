@@ -55,6 +55,10 @@ const BUILT_ENTRYPOINTS = new Map(
 const BUILT_SUBPATHS = new Map();
 const BUILT_INTERNALS = new Map([
   [
+    "@sceneaxi-internal/desktop-session-project-git",
+    new URL("apps/desktop-shell/dist/src/session.js", REPO_ROOT).href,
+  ],
+  [
     "@sceneaxi-internal/project-git-authority",
     new URL("packages/authoring-core/dist/src/project-git.js", REPO_ROOT).href,
   ],

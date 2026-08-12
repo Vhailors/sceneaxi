@@ -31,8 +31,6 @@ export {
 
 export {
   createDesktopSession,
-  prepareDesktopSessionProjectGitCommit,
-  stageDesktopSessionProjectGitPaths,
   type DesktopDocumentStatus,
   type DesktopPhase,
   type DesktopSession,

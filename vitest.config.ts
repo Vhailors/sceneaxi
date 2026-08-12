@@ -4,6 +4,9 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   resolve: {
     alias: {
+      "@sceneaxi-internal/desktop-session-project-git": fileURLToPath(
+        new URL("./apps/desktop-shell/src/session.ts", import.meta.url),
+      ),
       "@sceneaxi-internal/project-git-authority": fileURLToPath(
         new URL("./packages/authoring-core/src/project-git.ts", import.meta.url),
       ),

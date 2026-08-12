@@ -389,6 +389,35 @@ describe("contained project Git service", () => {
     unlinkSync(lockPath);
   });
 
+  it("reports a disappeared prospective index as rolled back", () => {
+    const { root } = repository("stage-temp-disappears");
+    const indexPath = join(root, ".git", "index");
+    const beforeIndex = readFileSync(indexPath);
+    const wrapper = join(root, "git-removes-temp-index.sh");
+    writeFileSync(wrapper, [
+      "#!/bin/sh",
+      'git "$@"',
+      "status=$?",
+      'case "$GIT_INDEX_FILE" in',
+      '  */.sceneaxi-index-*/index) rm -f -- "$GIT_INDEX_FILE" ;;',
+      "esac",
+      "exit $status",
+      "",
+    ].join("\n"));
+    chmodSync(wrapper, 0o700);
+    writeFileSync(join(root, "notes.txt"), "temporary index disappears\n");
+
+    expect(stageProjectGitPaths(
+      { ...mutationOptions(root), gitExecutable: wrapper },
+      ["notes.txt"],
+    )).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.stageRolledBack },
+    });
+    expect(readFileSync(indexPath)).toEqual(beforeIndex);
+    expect(readdirSync(join(root, ".git")).some((name) => name.startsWith(".sceneaxi-index-"))).toBe(false);
+  });
+
   it("refuses special Git control nodes before reading them", () => {
     const { root } = repository("special-control-node");
     const configPath = join(root, ".git", "config");
@@ -423,6 +452,44 @@ describe("contained project Git service", () => {
     })).toMatchObject({
       ok: false,
       diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.repositoryEscape, path: "$git.MERGE_HEAD" },
+    });
+  });
+
+  it("refuses commit-graph metadata indirection before Git", () => {
+    const single = repository("commit-graph-indirection");
+    const outside = mkdtempSync(join(tmpdir(), "sceneaxi-project-git-commit-graph-outside-"));
+    roots.push(outside);
+    writeFileSync(join(outside, "commit-graph"), "outside graph\n");
+    symlinkSync(
+      join(outside, "commit-graph"),
+      join(single.root, ".git", "objects", "info", "commit-graph"),
+    );
+    expect(inspectProjectGit({
+      root: single.root,
+      gitExecutable: "sceneaxi-git-must-not-run",
+    })).toMatchObject({
+      ok: false,
+      diagnostic: {
+        code: PROJECT_GIT_DIAGNOSTICS.repositoryEscape,
+        path: "$git.objects.info.commit-graph",
+      },
+    });
+
+    const chain = repository("commit-graph-chain-indirection");
+    mkdirSync(join(chain.root, ".git", "objects", "info", "commit-graphs"));
+    symlinkSync(
+      join(outside, "commit-graph"),
+      join(chain.root, ".git", "objects", "info", "commit-graphs", "graph-test.graph"),
+    );
+    expect(inspectProjectGit({
+      root: chain.root,
+      gitExecutable: "sceneaxi-git-must-not-run",
+    })).toMatchObject({
+      ok: false,
+      diagnostic: {
+        code: PROJECT_GIT_DIAGNOSTICS.repositoryEscape,
+        path: "$git.objects.info.commit-graphs",
+      },
     });
   });
 

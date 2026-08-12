@@ -709,6 +709,8 @@ const UMBRELLA_AUTHORITY_IMPORTERS = new Map([
 ]);
 const PROJECT_GIT_SESSION_AUTHORITY = "@sceneaxi-internal/project-git-authority";
 const PROJECT_GIT_SESSION_AUTHORITY_OWNER = "apps/desktop-shell/src/session";
+const DESKTOP_SESSION_PROJECT_GIT = "@sceneaxi-internal/desktop-session-project-git";
+const DESKTOP_SESSION_PROJECT_GIT_OWNER = "desktop/linux/src/lib/bridge";
 // Path-segment containment via relative(), never raw startsWith, so a sibling directory
 // whose name merely begins with "testing" is not treated as inside it.
 const contains = (parent, candidate) => {
@@ -733,6 +735,14 @@ for (const [name, { dir }] of manifests) {
           `${name}: ${relative(root, file)} imports the Git mutation authority outside its live DesktopSession owner`,
         );
       }
+      if (
+        resourcePath === DESKTOP_SESSION_PROJECT_GIT &&
+        (name !== "@sceneaxi/desktop-linux" || fromModule !== DESKTOP_SESSION_PROJECT_GIT_OWNER)
+      ) {
+        fail(
+          `${name}: ${relative(root, file)} imports the bridge-owned Git mutation helper outside its owning bridge`,
+        );
+      }
       if (resourcePath.startsWith("@sceneaxi/")) {
         const target = resourcePath.split("/").slice(0, 2).join("/");
         if (!allow.has(target)) {
@@ -754,7 +764,8 @@ for (const [name, { dir }] of manifests) {
           const rel = relative(dir, resolved);
           if (
             (rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel)) &&
-            resourcePath !== PROJECT_GIT_SESSION_AUTHORITY
+            resourcePath !== PROJECT_GIT_SESSION_AUTHORITY &&
+            resourcePath !== DESKTOP_SESSION_PROJECT_GIT
           ) {
             fail(`${name}: ${relative(root, file)} escapes its package via relative import '${spec}'`);
           } else if (!fromTesting && contains(testingDir, resolved)) {

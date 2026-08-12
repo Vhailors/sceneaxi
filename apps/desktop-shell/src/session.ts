@@ -21,7 +21,6 @@ import {
   undoLastApply,
   type ApplyUndoAvailability,
   type ApplyDiagnostic,
-  type ProjectGitOptions,
   type Proposal,
 } from "@sceneaxi/authoring-core";
 import {
@@ -118,12 +117,111 @@ export type DesktopSessionOptions = {
   readonly operations?: Partial<DesktopSessionOperations>;
 };
 
-const projectGitAuthorities = new WeakMap<object, ProjectGitAuthoringAuthority>();
+type DesktopProjectGitProfile = "game" | "web" | "kids";
+type RootProjectGitAuthority = {
+  readonly root: string;
+  readonly authority: ProjectGitAuthoringAuthority;
+  readonly sessions: Set<WeakRef<DesktopSession>>;
+};
+type DesktopProjectGitBinding = Readonly<{
+  rootAuthority: RootProjectGitAuthority;
+  readProfile: () => DesktopProjectGitProfile;
+  sessionRef: WeakRef<DesktopSession>;
+}>;
 
-function desktopSessionProjectGitAuthority(
+const projectGitBindings = new WeakMap<object, DesktopProjectGitBinding>();
+const rootProjectGitAuthorities = new Map<string, RootProjectGitAuthority>();
+
+function liveRootBindings(rootAuthority: RootProjectGitAuthority): readonly DesktopProjectGitBinding[] {
+  const live: DesktopProjectGitBinding[] = [];
+  for (const sessionRef of rootAuthority.sessions) {
+    const session = sessionRef.deref();
+    if (session === undefined) {
+      rootAuthority.sessions.delete(sessionRef);
+      continue;
+    }
+    const binding = projectGitBindings.get(session);
+    if (binding?.rootAuthority === rootAuthority) live.push(binding);
+  }
+  return live;
+}
+
+function aggregateProjectGitState(rootAuthority: RootProjectGitAuthority): ProjectGitAuthoringState {
+  let reviewStaged = false;
+  let recoveryPending = false;
+  let transactionDirty = false;
+  const profiles = new Set<DesktopProjectGitProfile>();
+  for (const binding of liveRootBindings(rootAuthority)) {
+    const session = binding.sessionRef.deref();
+    if (session === undefined) continue;
+    const current = session.snapshot();
+    reviewStaged ||= current.phase === "reviewing" && current.proposal !== null;
+    recoveryPending ||= current.journalRecoveryPending;
+    transactionDirty ||= current.phase === "pending";
+    try {
+      profiles.add(binding.readProfile());
+    } catch {
+      transactionDirty = true;
+    }
+  }
+  transactionDirty ||= profiles.size > 1 && !profiles.has("kids");
+  return Object.freeze({ reviewStaged, recoveryPending, transactionDirty });
+}
+
+function aggregateProjectGitProfile(
+  rootAuthority: RootProjectGitAuthority,
+): DesktopProjectGitProfile | undefined {
+  const profiles = new Set<DesktopProjectGitProfile>();
+  try {
+    for (const binding of liveRootBindings(rootAuthority)) profiles.add(binding.readProfile());
+  } catch {
+    return undefined;
+  }
+  if (profiles.has("kids")) return "kids";
+  return profiles.size === 1 ? [...profiles][0] : undefined;
+}
+
+function rootProjectGitAuthority(root: string): RootProjectGitAuthority {
+  const canonicalRoot = canonicalPath(root);
+  const existing = rootProjectGitAuthorities.get(canonicalRoot);
+  if (existing !== undefined) return existing;
+  const sessions = new Set<WeakRef<DesktopSession>>();
+  let rootAuthority: RootProjectGitAuthority;
+  const authority = createProjectGitAuthoringAuthority(
+    canonicalRoot,
+    () => aggregateProjectGitState(rootAuthority),
+  );
+  rootAuthority = { root: canonicalRoot, authority, sessions };
+  rootProjectGitAuthorities.set(canonicalRoot, rootAuthority);
+  return rootAuthority;
+}
+
+export function bindDesktopSessionProjectGitAuthority(
   session: DesktopSession,
-): ProjectGitAuthoringAuthority | undefined {
-  return projectGitAuthorities.get(session);
+  root: string,
+  readProfile: () => DesktopProjectGitProfile,
+): void {
+  releaseDesktopSessionProjectGitAuthority(session);
+  const rootAuthority = rootProjectGitAuthority(root);
+  const sessionRef = new WeakRef(session);
+  rootAuthority.sessions.add(sessionRef);
+  projectGitBindings.set(session, Object.freeze({ rootAuthority, readProfile, sessionRef }));
+}
+
+export function releaseDesktopSessionProjectGitAuthority(session: DesktopSession): void {
+  const binding = projectGitBindings.get(session);
+  if (binding === undefined) return;
+  binding.rootAuthority.sessions.delete(binding.sessionRef);
+  projectGitBindings.delete(session);
+  if (liveRootBindings(binding.rootAuthority).length === 0) {
+    rootProjectGitAuthorities.delete(binding.rootAuthority.root);
+  }
+}
+
+function desktopSessionProjectGitBinding(
+  session: DesktopSession,
+): DesktopProjectGitBinding | undefined {
+  return projectGitBindings.get(session);
 }
 
 function unavailableProjectGitAuthority() {
@@ -139,25 +237,33 @@ function unavailableProjectGitAuthority() {
 
 export function stageDesktopSessionProjectGitPaths(
   session: DesktopSession,
-  options: ProjectGitOptions,
   paths: readonly string[],
 ): ProjectGitStateResult {
-  const authority = desktopSessionProjectGitAuthority(session);
-  return authority === undefined
-    ? unavailableProjectGitAuthority()
-    : stageProjectGitPaths({ ...options, authoring: authority }, paths);
+  const binding = desktopSessionProjectGitBinding(session);
+  if (binding === undefined) return unavailableProjectGitAuthority();
+  const profile = aggregateProjectGitProfile(binding.rootAuthority);
+  if (profile === undefined) return unavailableProjectGitAuthority();
+  return stageProjectGitPaths({
+    root: binding.rootAuthority.root,
+    profile,
+    authoring: binding.rootAuthority.authority,
+  }, paths);
 }
 
 export function prepareDesktopSessionProjectGitCommit(
   session: DesktopSession,
-  options: ProjectGitOptions,
   paths: readonly string[],
   message: string,
 ): ProjectGitCommitPreparationResult {
-  const authority = desktopSessionProjectGitAuthority(session);
-  return authority === undefined
-    ? unavailableProjectGitAuthority()
-    : prepareProjectGitCommit({ ...options, authoring: authority }, paths, message);
+  const binding = desktopSessionProjectGitBinding(session);
+  if (binding === undefined) return unavailableProjectGitAuthority();
+  const profile = aggregateProjectGitProfile(binding.rootAuthority);
+  if (profile === undefined) return unavailableProjectGitAuthority();
+  return prepareProjectGitCommit({
+    root: binding.rootAuthority.root,
+    profile,
+    authoring: binding.rootAuthority.authority,
+  }, paths, message);
 }
 
 /**
@@ -245,15 +351,6 @@ export function createDesktopSession(
     diagnostics = PENDING_DIAGNOSTICS;
     return snap();
   };
-
-  const gitAuthority = createProjectGitAuthoringAuthority(sessionCwd, (): ProjectGitAuthoringState => {
-    const current = snap();
-    return Object.freeze({
-      reviewStaged: current.phase === "reviewing" && current.proposal !== null,
-      recoveryPending: current.journalRecoveryPending,
-      transactionDirty: current.phase === "pending",
-    });
-  });
 
   const session: DesktopSession = {
     snapshot: snap,
@@ -512,6 +609,5 @@ export function createDesktopSession(
       return { ok: true, transactionId: result.transactionId, restoredPaths: result.documentPaths };
     },
   };
-  projectGitAuthorities.set(session, gitAuthority);
   return Object.freeze(session);
 }

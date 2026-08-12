@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { seam } from "@sceneaxi/desktop-shell";
+import * as desktopShell from "@sceneaxi/desktop-shell";
+
+const { seam } = desktopShell;
 
 const manifest = JSON.parse(
   readFileSync(new URL("../package.json", import.meta.url), "utf8"),
@@ -15,5 +17,11 @@ describe("@sceneaxi/desktop-shell public seam", () => {
   it("is immutable", () => {
     expect(typeof seam).toBe("object");
     expect(Object.isFrozen(seam)).toBe(true);
+  });
+
+  it("does not expose Git mutation authority helpers", () => {
+    expect(Object.hasOwn(desktopShell, "bindDesktopSessionProjectGitAuthority")).toBe(false);
+    expect(Object.hasOwn(desktopShell, "stageDesktopSessionProjectGitPaths")).toBe(false);
+    expect(Object.hasOwn(desktopShell, "prepareDesktopSessionProjectGitCommit")).toBe(false);
   });
 });

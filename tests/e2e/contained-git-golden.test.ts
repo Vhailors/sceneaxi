@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -10,6 +10,7 @@ import {
 import {
   createDocument,
   createEditorCommandInvocation,
+  PROJECT_GIT_DIAGNOSTICS,
   type EditorCommandClient,
   type JsonObject,
   type ProjectGitCommitPreparation,
@@ -97,5 +98,41 @@ describe("contained Git client parity", () => {
     if (desktop.ok && prepared.ok) {
       expect((prepared.data as ProjectGitCommitPreparation).state).toEqual(desktop.data);
     }
+  });
+
+  it("shares review and Kids authority across live bridges for one root", () => {
+    const root = project();
+    const rootAlias = `${root}-alias`;
+    symlinkSync(root, rootAlias);
+    roots.push(rootAlias);
+    writeFileSync(join(root, "notes.txt"), "shared authority\n");
+    const reviewing = createDesktopBridge({ cwd: root });
+    const idle = createDesktopBridge({ cwd: rootAlias });
+
+    expect(reviewing.handle({
+      action: "authoring",
+      payload: {
+        op: "propose",
+        documentPath: "scene.json",
+        jsonPointer: "/data/entities",
+        newValue: [{ id: "pending" }],
+      },
+    })).toMatchObject({ ok: true, data: { phase: "reviewing" } });
+    expect(command(idle, "project-git-stage", "local-agent", { paths: ["notes.txt"] })).toMatchObject({
+      ok: false,
+      reason: PROJECT_GIT_DIAGNOSTICS.reviewStaged,
+    });
+
+    expect(reviewing.handle({ action: "authoring", payload: { op: "reject" } })).toMatchObject({
+      ok: true,
+    });
+    expect(reviewing.handle({ action: "profile", payload: { profile: "kids" } })).toMatchObject({
+      ok: true,
+    });
+    expect(command(idle, "project-git-stage", "desktop-control", { paths: ["notes.txt"] })).toMatchObject({
+      ok: false,
+      reason: PROJECT_GIT_DIAGNOSTICS.kidsDenied,
+    });
+    expect(git(root, "diff", "--cached", "--name-only").trim()).toBe("");
   });
 });

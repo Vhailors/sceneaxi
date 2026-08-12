@@ -50,12 +50,16 @@ import {
 import {
   createDesktopSession,
   DESKTOP_PRODUCT_REFUSALS,
-  prepareDesktopSessionProjectGitCommit,
-  stageDesktopSessionProjectGitPaths,
   type DesktopDocumentStatus,
   type DesktopSession,
   type DesktopSnapshot,
 } from "@sceneaxi/desktop-shell";
+import {
+  bindDesktopSessionProjectGitAuthority,
+  prepareDesktopSessionProjectGitCommit,
+  releaseDesktopSessionProjectGitAuthority,
+  stageDesktopSessionProjectGitPaths,
+} from "@sceneaxi-internal/desktop-session-project-git";
 import {
   materializeProjectAssetCopies,
   proposeContainedGltfAssetImport,
@@ -328,8 +332,14 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     contentByteLength: number;
   }> | null = null;
 
+  const createBoundAuthoringSession = (): DesktopSession => {
+    const created = options.createAuthoringSession?.() ?? createDesktopSession({ cwd: options.cwd });
+    bindDesktopSessionProjectGitAuthority(created, options.cwd, () => activeCommandProfile);
+    return created;
+  };
+
   const authoringSession = (): DesktopSession => {
-    session ??= options.createAuthoringSession?.() ?? createDesktopSession({ cwd: options.cwd });
+    session ??= createBoundAuthoringSession();
     return session;
   };
 
@@ -1033,7 +1043,8 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           "authoring restart requires a documentPath string inside the project directory.",
         );
       }
-      session = options.createAuthoringSession?.() ?? createDesktopSession({ cwd: options.cwd });
+      if (session !== null) releaseDesktopSessionProjectGitAuthority(session);
+      session = createBoundAuthoringSession();
       const restartedEvidence = rarityProposalEvidence;
       rarityProposalEvidence = null;
       pendingAssetImport = null;
@@ -1929,19 +1940,20 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           : bridgeRefuse(inspected.diagnostic.code, inspected.diagnostic.message, inspected.diagnostic.path);
       }
       case "project-git-stage": {
-        const staged = stageDesktopSessionProjectGitPaths(authoringSession(), {
-          root: options.cwd,
-          profile: activeCommandProfile,
-        }, input["paths"] as readonly string[]);
+        const staged = stageDesktopSessionProjectGitPaths(
+          authoringSession(),
+          input["paths"] as readonly string[],
+        );
         return staged.ok
           ? bridgeOk("command", staged.state)
           : bridgeRefuse(staged.diagnostic.code, staged.diagnostic.message, staged.diagnostic.path);
       }
       case "project-git-commit-prepare": {
-        const prepared = prepareDesktopSessionProjectGitCommit(authoringSession(), {
-          root: options.cwd,
-          profile: activeCommandProfile,
-        }, input["paths"] as readonly string[], String(input["message"]));
+        const prepared = prepareDesktopSessionProjectGitCommit(
+          authoringSession(),
+          input["paths"] as readonly string[],
+          String(input["message"]),
+        );
         return prepared.ok
           ? bridgeOk("command", prepared.preparation)
           : bridgeRefuse(prepared.diagnostic.code, prepared.diagnostic.message, prepared.diagnostic.path);
