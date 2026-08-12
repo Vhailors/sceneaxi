@@ -78,6 +78,7 @@ export {
   type ProjectGitAuthoringState,
   type ProjectGitOperation,
   type ProjectGitOptions,
+  type ProjectGitMutationOptions,
   type ProjectGitUnsupportedOperation,
 } from "./project-git.js";
 

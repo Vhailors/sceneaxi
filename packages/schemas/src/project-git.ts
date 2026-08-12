@@ -1,6 +1,7 @@
 /** Browser-safe result vocabulary for the contained project Git workflow. */
 
 export const PROJECT_GIT_SCHEMA_VERSION = 1 as const;
+export const PROJECT_GIT_EVIDENCE_MAX_BYTES = 1024 * 1024 - 4096;
 
 export const PROJECT_GIT_DIAGNOSTICS = Object.freeze({
   missingGit: "PROJECT_GIT_MISSING",

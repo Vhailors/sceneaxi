@@ -40,6 +40,7 @@ describe("desktop-linux seam", () => {
     expect(Object.isFrozen(DESKTOP_BRIDGE_ACTIONS)).toBe(true);
     expect(DESKTOP_BRIDGE_ACTIONS).toEqual([
       "handshake",
+      "profile",
       "command",
       "scene",
       "project-browser-open",

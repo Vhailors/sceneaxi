@@ -70,8 +70,9 @@ function engineResponse(
             ? { action: "open-path", payload: input }
             : commandId === "ship-export-web"
               ? { action: "ship", payload: { op: "export-web", ...input } }
-              : commandId === "project-git-status" || commandId === "project-git-diff"
-                ? { action: "project-git", payload: { op: commandId } }
+              : commandId === "project-git-status" || commandId === "project-git-diff" ||
+                  commandId === "project-git-stage" || commandId === "project-git-commit-prepare"
+                ? { action: "project-git", payload: { op: commandId, input } }
               : null;
     if (translated !== null) return engineResponse(translated, state);
   }
@@ -180,27 +181,43 @@ function engineResponse(
     if (state.projectGitResponse !== undefined) {
       return { ok: true, action: "command", data: state.projectGitResponse };
     }
+    const repositoryState = {
+      schemaVersion: 1,
+      kind: "sceneaxi.project-git-state",
+      projectId: "project-command-test",
+      branch: "main",
+      head: "a".repeat(40),
+      detached: false,
+      canonicalFiles: ["scene.json", "sceneaxi.project.json"],
+      entries: [],
+      canonicalChanges: [],
+      unrelatedChanges: [],
+      conflicts: [],
+      workingTreeDiff: "",
+      stagedDiff: "",
+      clean: true,
+      undoScope: "sceneaxi-document-only",
+    };
     return {
       ok: true,
       action: "command",
-      data: {
-        schemaVersion: 1,
-        kind: "sceneaxi.project-git-state",
-        projectId: "project-command-test",
-        branch: "main",
-        head: "a".repeat(40),
-        detached: false,
-        canonicalFiles: ["scene.json", "sceneaxi.project.json"],
-        entries: [],
-        canonicalChanges: [],
-        unrelatedChanges: [],
-        conflicts: [],
-        workingTreeDiff: "",
-        stagedDiff: "",
-        clean: true,
-        undoScope: "sceneaxi-document-only",
-      },
+      data: op === "project-git-commit-prepare"
+        ? {
+            schemaVersion: 1,
+            kind: "sceneaxi.project-git-commit-preparation",
+            message: "feat: prepare",
+            selectedPaths: ["scene.json"],
+            stagedDiff: "",
+            state: repositoryState,
+            commitCreated: false,
+            hooksBypassed: false,
+            undoScope: "sceneaxi-document-only",
+          }
+        : repositoryState,
     };
+  }
+  if (action === "profile") {
+    return { ok: true, action, data: payload };
   }
   return {
     ok: false,
@@ -336,6 +353,14 @@ async function prepare(command: DesktopInteractionCommand, window: HappyWindow) 
     await click(window, '#project-save[data-command="project-save"]');
     await click(window, '#menu-command-edit-undo');
   }
+  if (command.id === "project-git-stage" || command.id === "project-git-commit-prepare") {
+    const paths = element(window, "[data-project-git-paths]") as HTMLInputElement;
+    paths.value = "scene.json";
+  }
+  if (command.id === "project-git-commit-prepare") {
+    const message = element(window, "[data-project-git-message]") as HTMLInputElement;
+    message.value = "feat: prepare";
+  }
 }
 
 function expectedEffect(command: DesktopInteractionCommand) {
@@ -350,6 +375,10 @@ function expectedEffect(command: DesktopInteractionCommand) {
       return { plane: "engine", action: "command", op: "project-git-status" } as const;
     case "project-git-diff":
       return { plane: "engine", action: "command", op: "project-git-diff" } as const;
+    case "project-git-stage":
+      return { plane: "engine", action: "command", op: "project-git-stage" } as const;
+    case "project-git-commit-prepare":
+      return { plane: "engine", action: "command", op: "project-git-commit-prepare" } as const;
     case "ship-export-web":
       return { plane: "engine", action: "command", op: "ship-export-web" } as const;
     case "edit-undo":
@@ -399,7 +428,10 @@ async function invoke(
       `sha256:${"c".repeat(64)}`,
     );
   }
-  if (command.id === "project-git-status" || command.id === "project-git-diff") {
+  if (
+    command.id === "project-git-status" || command.id === "project-git-diff" ||
+    command.id === "project-git-stage" || command.id === "project-git-commit-prepare"
+  ) {
     expect(element(window, ".shell").dataset.mode).toBe("ship");
     expect(element(window, "[data-project-git-evidence]").textContent).toContain(
       '"kind": "sceneaxi.project-git-state"',

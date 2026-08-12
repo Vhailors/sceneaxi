@@ -80,7 +80,7 @@ export function resolveDesktopLocalBridgePaths(
 }
 
 export type StartDesktopLocalBridgeServerOptions = Readonly<{
-  bridge: Pick<DesktopBridge, "handle">;
+  bridge: Pick<DesktopBridge, "handle" | "activeProfile">;
   projectRoot: string;
   socketPath?: string;
   discoveryPath?: string;
@@ -163,7 +163,11 @@ function capabilityMatches(actual: string, expected: string): boolean {
   return actualBytes.length === expectedBytes.length && timingSafeEqual(actualBytes, expectedBytes);
 }
 
-function bridgeRequest(toolName: DesktopLocalBridgeToolName, input: JsonObject): unknown {
+function bridgeRequest(
+  toolName: DesktopLocalBridgeToolName,
+  input: JsonObject,
+  profile: "game" | "web" | "kids",
+): unknown {
   const registered = desktopLocalBridgeTool(toolName);
   if (registered?.commandId !== null && registered?.commandId !== undefined) {
     return {
@@ -172,6 +176,7 @@ function bridgeRequest(toolName: DesktopLocalBridgeToolName, input: JsonObject):
         registered.commandId,
         "local-agent",
         input,
+        profile,
       ),
     };
   }
@@ -462,7 +467,11 @@ export async function startDesktopLocalBridgeServer(
         return;
       }
       try {
-        answer(responseFor(valid, options.bridge.handle(bridgeRequest(valid.tool, valid.input)), discovery));
+        answer(responseFor(
+          valid,
+          options.bridge.handle(bridgeRequest(valid.tool, valid.input, options.bridge.activeProfile())),
+          discovery,
+        ));
       } catch {
         answer(failure(valid.id, DESKTOP_LOCAL_BRIDGE_ERROR_CODES.internal, "The desktop local bridge could not complete the request."));
       }

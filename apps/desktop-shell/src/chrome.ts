@@ -718,6 +718,14 @@ function inspector(view: DesktopVisualView): string {
       <div><dt>Source project</dt><dd><code data-ship-source-digest></code></dd></div>
       <div><dt>Handoff</dt><dd><code data-ship-handoff-path></code></dd></div>
     </dl>
+    <div class="project-git-controls">
+      <label>Selected files<input type="text" data-project-git-paths placeholder="scene.json, assets/model.glb" autocomplete="off"></label>
+      <label>Commit message<input type="text" data-project-git-message maxlength="4096" placeholder="Describe the contained change" autocomplete="off"></label>
+      <div class="scene-instance-actions">
+        <button type="button" class="ghost-button" data-command="project-git-stage">Stage selected files</button>
+        <button type="button" class="ghost-button" data-command="project-git-commit-prepare">Prepare commit</button>
+      </div>
+    </div>
     <pre class="change-diff" data-project-git-evidence hidden role="region" aria-label="Contained Git repository evidence"></pre>
   </div>`
         : ""
@@ -1674,6 +1682,14 @@ if (shell) {
     Array.isArray(state.conflicts) && state.conflicts.every((path) => typeof path === 'string') &&
     typeof state.workingTreeDiff === 'string' && typeof state.stagedDiff === 'string' &&
     typeof state.clean === 'boolean' && state.undoScope === 'sceneaxi-document-only';
+
+  const isProjectGitPreparation = (preparation) => preparation !== null && typeof preparation === 'object' &&
+    preparation.schemaVersion === 1 && preparation.kind === 'sceneaxi.project-git-commit-preparation' &&
+    typeof preparation.message === 'string' &&
+    Array.isArray(preparation.selectedPaths) && preparation.selectedPaths.every((path) => typeof path === 'string') &&
+    typeof preparation.stagedDiff === 'string' && isProjectGitState(preparation.state) &&
+    preparation.commitCreated === false && preparation.hooksBypassed === false &&
+    preparation.undoScope === 'sceneaxi-document-only';
 
   const reviewProjection = (snapshot) => {
     if (!isSessionSnapshot(snapshot)) return null;
@@ -3136,6 +3152,47 @@ if (shell) {
     productStatus('open', 'Repository ' + label + ' · ' + state.entries.length + ' working-tree change(s) · ' + state.conflicts.length + ' conflict(s)');
   };
 
+  const projectGitPaths = () => {
+    const value = shell.querySelector('[data-project-git-paths]')?.value || '';
+    return value.split(/[\\n,]+/).map((path) => path.trim()).filter((path) => path.length > 0);
+  };
+
+  const renderProjectGitEvidence = (evidence, label) => {
+    showModePanels('ship');
+    q('[data-project-git-evidence]').forEach((el) => {
+      el.textContent = JSON.stringify(evidence, null, 2);
+      el.hidden = false;
+    });
+    const state = isProjectGitState(evidence) ? evidence : evidence.state;
+    productStatus('open', label + ' · ' + state.entries.length + ' working-tree change(s) · ' + state.conflicts.length + ' conflict(s)');
+  };
+
+  const mutateProjectRepository = async (commandId) => {
+    const paths = projectGitPaths();
+    const input = commandId === 'project-git-stage'
+      ? { paths }
+      : { paths, message: shell.querySelector('[data-project-git-message]')?.value || '' };
+    const response = await commandRequest(commandId, input);
+    if (response === null || !response.ok) {
+      const code = response?.reason || T.product.refusals.runtimeUnavailable;
+      const message = response?.message || 'The packaged host refused contained Git preparation.';
+      productStatus('refused', 'Repository preparation refused · ' + code);
+      showOutcome('Repository preparation refused', code, message);
+      return;
+    }
+    if (commandId === 'project-git-stage' && isProjectGitState(response.data)) {
+      renderProjectGitEvidence(response.data, 'Staged selected files');
+      return;
+    }
+    if (commandId === 'project-git-commit-prepare' && isProjectGitPreparation(response.data)) {
+      renderProjectGitEvidence(response.data, 'Prepared commit evidence');
+      return;
+    }
+    const code = T.product.refusals.runtimeRequestRefused;
+    productStatus('refused', 'Repository preparation refused · ' + code);
+    showOutcome('Repository preparation refused', code, 'The host returned no complete repository evidence.');
+  };
+
   const switchProfile = async (value) => {
     if (shell.dataset.profile === value) return;
     if (projectRecovering) {
@@ -3144,6 +3201,12 @@ if (shell) {
     }
     if (projectDirty) {
       productStatus('refused', 'Profile switch refused · ' + T.product.refusals.profileSwitchDirty);
+      return;
+    }
+    const response = await runtimeRequest({ action: 'profile', payload: { profile: value } });
+    if (response === null || !response.ok) {
+      const code = response?.reason || T.product.refusals.runtimeUnavailable;
+      productStatus('refused', 'Profile switch refused · ' + code);
       return;
     }
     shell.dataset.profile = value;
@@ -3481,6 +3544,8 @@ if (shell) {
     'project-save': saveProject,
     'project-git-status': () => inspectProjectRepository('project-git-status'),
     'project-git-diff': () => inspectProjectRepository('project-git-diff'),
+    'project-git-stage': () => mutateProjectRepository('project-git-stage'),
+    'project-git-commit-prepare': () => mutateProjectRepository('project-git-commit-prepare'),
     'ship-export-web': exportWeb,
     'edit-undo': undoProject,
     'edit-redo': redoProject,

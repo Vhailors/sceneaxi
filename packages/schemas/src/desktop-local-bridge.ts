@@ -75,7 +75,7 @@ const commandTool = (definition: Readonly<{
     mutatesProject:
       command.mutation === "commits-project" ||
       command.mutation === "reverts-project" ||
-      command.mutation === "stages-change",
+      command.id === "project-git-stage",
     creditRoute: "none",
     inputSchema: command.inputSchema,
   });

@@ -1,4 +1,6 @@
 import {
+  chmodSync,
+  existsSync,
   mkdtempSync,
   mkdirSync,
   readFileSync,
@@ -33,6 +35,15 @@ import {
 } from "@sceneaxi/schemas";
 
 const roots: string[] = [];
+const authoringReady = Object.freeze({
+  reviewStaged: false,
+  recoveryPending: false,
+  transactionDirty: false,
+});
+
+function mutationOptions(root: string) {
+  return { root, authoring: authoringReady };
+}
 
 afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
@@ -94,7 +105,7 @@ describe("contained project Git service", () => {
     writeFileSync(join(root, "notes.txt"), "leave unstaged\n", "utf8");
     const head = git(root, "rev-parse", "HEAD").trim();
 
-    const staged = stageProjectGitPaths({ root }, ["scene.json"]);
+    const staged = stageProjectGitPaths(mutationOptions(root), ["scene.json"]);
     expect(staged).toMatchObject({
       ok: true,
       state: {
@@ -107,7 +118,7 @@ describe("contained project Git service", () => {
     expect(git(root, "diff", "--cached", "--name-only").trim()).toBe("scene.json");
     expect(git(root, "diff", "--name-only").trim()).toBe("");
 
-    const prepared = prepareProjectGitCommit({ root }, ["scene.json"], "feat: save contained change");
+    const prepared = prepareProjectGitCommit(mutationOptions(root), ["scene.json"], "feat: save contained change");
     expect(prepared).toMatchObject({
       ok: true,
       preparation: {
@@ -119,21 +130,36 @@ describe("contained project Git service", () => {
       },
     });
     expect(git(root, "rev-parse", "HEAD").trim()).toBe(head);
-    expect(prepareProjectGitCommit({ root }, ["scene.json", "notes.txt"], "mismatch")).toMatchObject({
+    expect(prepareProjectGitCommit(mutationOptions(root), ["scene.json", "notes.txt"], "mismatch")).toMatchObject({
       ok: false,
       diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.selectionMismatch },
     });
-    expect(prepareProjectGitCommit({ root }, ["scene.json"], "   ")).toMatchObject({
+    expect(prepareProjectGitCommit(mutationOptions(root), ["scene.json"], "   ")).toMatchObject({
       ok: false,
       diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.commitMessageInvalid },
     });
 
     writeFileSync(join(root, ":(top)**"), "literal pathspec name\n");
-    expect(stageProjectGitPaths({ root }, [":(top)**"])).toMatchObject({ ok: true });
+    expect(stageProjectGitPaths(mutationOptions(root), [":(top)**"])).toMatchObject({ ok: true });
     expect(git(root, "diff", "--cached", "--name-only").trim().split("\n").sort()).toEqual([
       ":(top)**",
       "scene.json",
     ]);
+  });
+
+  it("refuses directory selections and leaves no operation-lock residue", () => {
+    const { root } = repository("exact-files");
+    mkdirSync(join(root, "assets"));
+    writeFileSync(join(root, "assets", "one.txt"), "one\n");
+    writeFileSync(join(root, "assets", "two.txt"), "two\n");
+
+    expect(stageProjectGitPaths(mutationOptions(root), ["assets"])).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.selectionMismatch },
+    });
+    expect(git(root, "diff", "--cached", "--name-only").trim()).toBe("");
+    expect(readdirSync(root).filter((name) => name.startsWith(".sceneaxi-lock-"))).toEqual([]);
+    expect(existsSync(join(root, ".sceneaxi"))).toBe(false);
   });
 
   it("contains Git repository overrides inside the selected project", () => {
@@ -145,7 +171,7 @@ describe("contained project Git service", () => {
     const previousIndex = process.env["GIT_INDEX_FILE"];
     process.env["GIT_INDEX_FILE"] = outsideIndex;
     try {
-      expect(stageProjectGitPaths({ root }, ["scene.json"])).toMatchObject({ ok: true });
+      expect(stageProjectGitPaths(mutationOptions(root), ["scene.json"])).toMatchObject({ ok: true });
     } finally {
       if (previousIndex === undefined) delete process.env["GIT_INDEX_FILE"];
       else process.env["GIT_INDEX_FILE"] = previousIndex;
@@ -154,13 +180,30 @@ describe("contained project Git service", () => {
     expect(git(root, "diff", "--cached", "--name-only").trim()).toBe("scene.json");
   });
 
+  it("disables lazy fetching at the shared Git process boundary", () => {
+    const { root } = repository("no-lazy-fetch");
+    const wrapper = join(root, "git-wrapper.sh");
+    const sentinel = join(root, "lazy-fetch-enabled");
+    writeFileSync(wrapper, `#!/bin/sh\nif [ "$GIT_NO_LAZY_FETCH" != "1" ]; then printf enabled > "${sentinel}"; fi\nexec git "$@"\n`);
+    chmodSync(wrapper, 0o700);
+    const previous = process.env["GIT_NO_LAZY_FETCH"];
+    process.env["GIT_NO_LAZY_FETCH"] = "0";
+    try {
+      expect(inspectProjectGit({ root, gitExecutable: wrapper })).toMatchObject({ ok: true });
+    } finally {
+      if (previous === undefined) delete process.env["GIT_NO_LAZY_FETCH"];
+      else process.env["GIT_NO_LAZY_FETCH"] = previous;
+    }
+    expect(existsSync(sentinel)).toBe(false);
+  });
+
   it("refuses escaped repository and journal storage before mutation", () => {
     const journalRepository = repository("journal-escape");
     writeFileSync(join(journalRepository.root, "scene.json"), readFileSync(join(journalRepository.root, "scene.json"), "utf8").replace("Contained", "Escaped journal"));
     const outsideJournal = mkdtempSync(join(tmpdir(), "sceneaxi-project-git-journal-outside-"));
     roots.push(outsideJournal);
     symlinkSync(outsideJournal, join(journalRepository.root, ".sceneaxi"));
-    expect(stageProjectGitPaths({ root: journalRepository.root }, ["scene.json"])).toMatchObject({
+    expect(stageProjectGitPaths(mutationOptions(journalRepository.root), ["scene.json"])).toMatchObject({
       ok: false,
       diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.pathEscape },
     });
@@ -193,6 +236,38 @@ describe("contained project Git service", () => {
     });
   });
 
+  it("preserves path-escape diagnostics for an escaped project manifest", () => {
+    const { root } = repository("manifest-escape");
+    const outside = mkdtempSync(join(tmpdir(), "sceneaxi-project-git-manifest-outside-"));
+    roots.push(outside);
+    renameSync(join(root, PROJECT_MANIFEST_PATH), join(outside, PROJECT_MANIFEST_PATH));
+    symlinkSync(join(outside, PROJECT_MANIFEST_PATH), join(root, PROJECT_MANIFEST_PATH));
+    expect(inspectProjectGit({ root })).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.pathEscape, path: PROJECT_MANIFEST_PATH },
+    });
+  });
+
+  it("refuses Git control-file indirections and gitlinks before inspection", () => {
+    const linkedConfig = repository("linked-config");
+    const outside = mkdtempSync(join(tmpdir(), "sceneaxi-project-git-config-outside-"));
+    roots.push(outside);
+    renameSync(join(linkedConfig.root, ".git", "config"), join(outside, "config"));
+    symlinkSync(join(outside, "config"), join(linkedConfig.root, ".git", "config"));
+    expect(inspectProjectGit({ root: linkedConfig.root })).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.repositoryEscape },
+    });
+
+    const gitlink = repository("gitlink");
+    const head = git(gitlink.root, "rev-parse", "HEAD").trim();
+    git(gitlink.root, "update-index", "--add", "--cacheinfo", `160000,${head},nested`);
+    expect(inspectProjectGit({ root: gitlink.root })).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.repositoryEscape, path: "$git.index" },
+    });
+  });
+
   it("preserves both sides when a canonical file is renamed", () => {
     const { root } = repository("rename");
     git(root, "config", "status.renames", "true");
@@ -219,7 +294,7 @@ describe("contained project Git service", () => {
     writeFileSync(join(root, ".gitattributes"), "scene.json filter=escape\n");
     git(root, "config", "filter.escape.clean", `touch ${sentinel} && cat`);
     writeFileSync(join(root, "scene.json"), readFileSync(join(root, "scene.json"), "utf8").replace("Contained", "Filtered"));
-    expect(stageProjectGitPaths({ root }, ["scene.json"])).toMatchObject({
+    expect(stageProjectGitPaths(mutationOptions(root), ["scene.json"])).toMatchObject({
       ok: false,
       diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.commandFailed },
     });
@@ -227,7 +302,7 @@ describe("contained project Git service", () => {
     expect(git(root, "diff", "--cached", "--name-only").trim()).toBe("");
   });
 
-  it("reports diffs larger than the former response limit", () => {
+  it("refuses evidence that cannot cross every local client transport", () => {
     const { root } = repository("large-diff");
     const largePath = join(root, "large.bin");
     writeFileSync(largePath, randomBytes(17 * 1024 * 1024));
@@ -235,9 +310,23 @@ describe("contained project Git service", () => {
     git(root, "commit", "-m", "large fixture");
     writeFileSync(largePath, randomBytes(17 * 1024 * 1024));
     const result = inspectProjectGit({ root }, "diff");
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.state.workingTreeDiff.length).toBeGreaterThan(16 * 1024 * 1024);
+    expect(result).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.evidenceTooLarge },
+    });
+  });
+
+  it("returns a stable refusal for malformed journal storage without leaking a lock", () => {
+    const { root } = repository("journal-storage-failure");
+    writeFileSync(join(root, "scene.json"), readFileSync(join(root, "scene.json"), "utf8").replace("Contained", "Changed"));
+    writeFileSync(join(root, ".sceneaxi"), "not a directory\n");
+    expect(stageProjectGitPaths(mutationOptions(root), ["scene.json"])).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.recoveryPending },
+    });
+    rmSync(join(root, ".sceneaxi"));
+    expect(stageProjectGitPaths(mutationOptions(root), ["scene.json"])).toMatchObject({ ok: true });
+    expect(readdirSync(root).filter((name) => name.startsWith(".sceneaxi-lock-"))).toEqual([]);
   });
 
   it("distinguishes completed, recoverable, and active authoring journal state", () => {
@@ -252,25 +341,25 @@ describe("contained project Git service", () => {
     if (!proposed.ok) return;
     expect(apply({ cwd: root, proposal: proposed.proposal })).toMatchObject({ ok: true });
     expect(readFileSync(join(root, ".sceneaxi", "journal", ".active"), "utf8").trim()).toBe("null");
-    expect(stageProjectGitPaths({ root }, ["scene.json"])).toMatchObject({ ok: true });
+    expect(stageProjectGitPaths(mutationOptions(root), ["scene.json"])).toMatchObject({ ok: true });
 
     const journalDirectory = join(root, ".sceneaxi", "journal");
     const journalName = readdirSync(journalDirectory).find((name) => name.endsWith(".json"));
     expect(journalName).toBeDefined();
     if (journalName === undefined) return;
     const completed = JSON.parse(readFileSync(join(journalDirectory, journalName), "utf8")) as Record<string, unknown>;
-    const prepared = { ...completed, state: "prepared" };
+    const prepared: Record<string, unknown> = { ...completed, state: "prepared" };
     delete prepared["completedAt"];
     writeFileSync(join(journalDirectory, ".active"), `${JSON.stringify(prepared, null, 2)}\n`);
-    expect(stageProjectGitPaths({ root }, ["scene.json"])).toMatchObject({
+    expect(stageProjectGitPaths(mutationOptions(root), ["scene.json"])).toMatchObject({
       ok: false,
       diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.recoveryPending },
     });
 
     writeFileSync(join(journalDirectory, ".active"), "null\n");
-    const lockSet = acquireAtomicWriteLocks([join(journalDirectory, ".operation")]);
+    const lockSet = acquireAtomicWriteLocks([join(root, ".sceneaxi-authoring-operation")]);
     try {
-      expect(stageProjectGitPaths({ root }, ["scene.json"])).toMatchObject({
+      expect(stageProjectGitPaths(mutationOptions(root), ["scene.json"])).toMatchObject({
         ok: false,
         diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.transactionDirty },
       });
@@ -280,13 +369,13 @@ describe("contained project Git service", () => {
 
     rmSync(join(journalDirectory, ".active"));
     mkdirSync(join(journalDirectory, ".active"));
-    expect(stageProjectGitPaths({ root }, ["scene.json"])).toMatchObject({
+    expect(stageProjectGitPaths(mutationOptions(root), ["scene.json"])).toMatchObject({
       ok: false,
       diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.recoveryPending },
     });
     rmSync(join(journalDirectory, ".active"), { recursive: true });
     writeFileSync(join(journalDirectory, ".active"), "null\n");
-    expect(stageProjectGitPaths({ root }, ["scene.json"])).toMatchObject({ ok: true });
+    expect(stageProjectGitPaths(mutationOptions(root), ["scene.json"])).toMatchObject({ ok: true });
   });
 
   it("reports conflicts read-only and refuses every unsafe mutation state before index changes", () => {
@@ -305,7 +394,7 @@ describe("contained project Git service", () => {
       ok: true,
       state: { conflicts: ["scene.json"] },
     });
-    expect(stageProjectGitPaths({ root }, ["scene.json"])).toMatchObject({
+    expect(stageProjectGitPaths(mutationOptions(root), ["scene.json"])).toMatchObject({
       ok: false,
       diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.mergeConflict },
     });
@@ -313,6 +402,13 @@ describe("contained project Git service", () => {
 
     writeFileSync(join(root, "notes.txt"), "unchanged guard\n", "utf8");
     const before = git(root, "status", "--porcelain=v1", "-z", "--untracked-files=all");
+    expect(stageProjectGitPaths(
+      { root } as Parameters<typeof stageProjectGitPaths>[0],
+      ["notes.txt"],
+    )).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.transactionDirty, path: "$authoring" },
+    });
     const guarded = [
       { reviewStaged: true, recoveryPending: false, transactionDirty: false, code: PROJECT_GIT_DIAGNOSTICS.reviewStaged },
       { reviewStaged: false, recoveryPending: true, transactionDirty: false, code: PROJECT_GIT_DIAGNOSTICS.recoveryPending },
@@ -327,7 +423,7 @@ describe("contained project Git service", () => {
     }
 
     git(root, "checkout", "--detach");
-    expect(stageProjectGitPaths({ root }, ["notes.txt"])).toMatchObject({
+    expect(stageProjectGitPaths(mutationOptions(root), ["notes.txt"])).toMatchObject({
       ok: false,
       diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.detachedWorktree },
     });
@@ -348,7 +444,7 @@ describe("contained project Git service", () => {
     roots.push(outside);
     writeFileSync(join(outside, "secret.txt"), "outside\n");
     symlinkSync(outside, join(root, "escape"));
-    expect(stageProjectGitPaths({ root }, ["escape/secret.txt"])).toMatchObject({
+    expect(stageProjectGitPaths(mutationOptions(root), ["escape/secret.txt"])).toMatchObject({
       ok: false,
       diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.pathEscape },
     });
@@ -362,7 +458,7 @@ describe("contained project Git service", () => {
       diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.capabilityMissing },
     });
 
-    for (const operation of ["push", "fetch", "history-rewrite", "branch-delete"] as const) {
+    for (const operation of ["push", "fetch", "credential", "history-rewrite", "branch-delete", "hook-bypass"] as const) {
       expect(refuseUnsupportedProjectGitOperation(operation)).toMatchObject({
         ok: false,
         diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.operationUnsupported },

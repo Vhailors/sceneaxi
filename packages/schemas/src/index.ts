@@ -349,6 +349,7 @@ export {
 
 export {
   PROJECT_GIT_DIAGNOSTICS,
+  PROJECT_GIT_EVIDENCE_MAX_BYTES,
   PROJECT_GIT_SCHEMA_VERSION,
 } from "./project-git.js";
 export type {

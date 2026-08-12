@@ -396,5 +396,19 @@ describe("CLI → local desktop bridge golden path", () => {
       },
     });
     expect(git("log", "-1", "--pretty=%s").trim()).toBe("seed");
+
+    expect(bridge.handle({ action: "profile", payload: { profile: "kids" } })).toMatchObject({
+      ok: true,
+      data: { profile: "kids" },
+    });
+    const kidsStage = await call("sceneaxi.project.git.stage", "project:write", { paths: ["notes.txt"] });
+    expect(kidsStage.status).toBe(1);
+    expect(JSON.parse(kidsStage.stdout)).toMatchObject({
+      ok: false,
+      error: {
+        code: "BRIDGE_REFUSED",
+        details: { bridgeDetail: "EDITOR_COMMAND_KIDS_DENIED" },
+      },
+    });
   });
 });

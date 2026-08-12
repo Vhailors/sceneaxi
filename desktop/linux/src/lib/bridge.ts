@@ -168,6 +168,7 @@ export type DesktopRarityProviderRunRequest = Readonly<{
 
 export type DesktopBridge = {
   handle(request: unknown): DesktopBridgeResponse;
+  activeProfile(): "game" | "web" | "kids";
   /** The most recent renderer frame report, or null before the first one. */
   lastFrameReport(): DesktopFrameReport | null;
 };
@@ -291,6 +292,7 @@ function frameReportOf(payload: unknown): DesktopFrameReport | null {
 
 export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridge {
   const nowMs = options.nowMs ?? ((): number => Date.now());
+  let activeCommandProfile: "game" | "web" | "kids" = options.commandProfile ?? "game";
   const rarityRefusalReason = (detail: unknown): string | null => {
     if (typeof detail !== "string") return null;
     return Object.values(RARITY_REFUSE_CODES).find(
@@ -1864,7 +1866,14 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           });
       return bridgeRefuse(validated.reason, validated.message, null, transaction);
     }
-    if (options.commandProfile === "kids" || validated.invocation.profile === "kids") {
+    if (
+      options.commandProfile === undefined &&
+      validated.invocation.client === "desktop-control" &&
+      validated.invocation.profile !== undefined
+    ) {
+      activeCommandProfile = validated.invocation.profile;
+    }
+    if (activeCommandProfile === "kids" || validated.invocation.profile === "kids") {
       return commandTransaction(validated.command.id, bridgeRefuse(
         EDITOR_COMMAND_REFUSALS.kidsDenied,
         `${validated.command.id} is denied for Kids before execution.`,
@@ -1918,7 +1927,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       case "project-git-status":
       case "project-git-diff": {
         const inspected = inspectProjectGit(
-          { root: options.cwd, ...(options.commandProfile === undefined ? {} : { profile: options.commandProfile }) },
+          { root: options.cwd, profile: activeCommandProfile },
           validated.command.id === "project-git-diff" ? "diff" : "status",
         );
         return inspected.ok
@@ -1929,7 +1938,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         const snapshot = authoringSession().snapshot();
         const staged = stageProjectGitPaths({
           root: options.cwd,
-          ...(options.commandProfile === undefined ? {} : { profile: options.commandProfile }),
+          profile: activeCommandProfile,
           authoring: {
             reviewStaged: snapshot.phase === "reviewing" && snapshot.proposal !== null,
             recoveryPending: snapshot.journalRecoveryPending,
@@ -1944,7 +1953,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         const snapshot = authoringSession().snapshot();
         const prepared = prepareProjectGitCommit({
           root: options.cwd,
-          ...(options.commandProfile === undefined ? {} : { profile: options.commandProfile }),
+          profile: activeCommandProfile,
           authoring: {
             reviewStaged: snapshot.phase === "reviewing" && snapshot.proposal !== null,
             recoveryPending: snapshot.journalRecoveryPending,
@@ -2004,6 +2013,23 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     switch (action) {
       case "handshake":
         return bridgeOk("handshake", handshake());
+      case "profile": {
+        const profile = field(payload, "profile");
+        if (profile !== "game" && profile !== "web" && profile !== "kids") {
+          return bridgeRefuse(
+            DESKTOP_BRIDGE_REFUSALS.requestMalformed,
+            "profile requires game, web, or kids.",
+          );
+        }
+        if (options.commandProfile !== undefined && profile !== options.commandProfile) {
+          return bridgeRefuse(
+            EDITOR_COMMAND_REFUSALS.capabilityDenied,
+            "The desktop host profile is fixed for this bridge.",
+          );
+        }
+        activeCommandProfile = profile;
+        return bridgeOk("profile", { profile });
+      }
       case "command":
         return command(payload);
       case "scene": {
@@ -2040,6 +2066,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
 
   return Object.freeze({
     handle,
+    activeProfile: (): "game" | "web" | "kids" => activeCommandProfile,
     lastFrameReport: (): DesktopFrameReport | null => lastReport,
   });
 }
