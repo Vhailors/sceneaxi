@@ -30,6 +30,7 @@
 
 import { formatSafeRarityEvidence } from "@sceneaxi/authoring-core/rarity-evidence";
 import {
+  DESKTOP_SCENE_HIERARCHY_REFUSALS,
   DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS,
   EDITOR_COMMAND_REGISTRY,
   type EditorCommandId,
@@ -281,7 +282,17 @@ function sceneEntitySelect(ctrl: DesktopControl): string {
       ? ` aria-disabled="true" data-refusal="${escapeHtml(ctrl.refusal ?? "")}"`
       : "",
     described,
-    ` aria-label="${escapeHtml(ctrl.label)}"><option value="">No validated composition opened</option></select>`,
+    ` aria-label="${escapeHtml(ctrl.label)}" multiple size="6"><option value="">No validated hierarchy opened</option></select>`,
+  ].join("");
+}
+
+function selectControlAttributes(ctrl: DesktopControl): string {
+  const inert = ctrl.kind === "inert";
+  return [
+    `id="${escapeHtml(ctrl.id)}" data-kind="${ctrl.kind}"`,
+    inert
+      ? ` aria-disabled="true" data-refusal="${escapeHtml(ctrl.refusal ?? "")}" aria-describedby="refusal-${escapeHtml(ctrl.refusal ?? "")}"`
+      : "",
   ].join("");
 }
 
@@ -519,8 +530,9 @@ function leftDock(view: DesktopVisualView): string {
       </div>
     </section>
     <div class="scene-entities" data-scene-entities hidden>
-      <p class="scene-entities-label">COMPOSED INSTANCE</p>
+      <p class="scene-entities-label">PROJECT HIERARCHY · ORDERED MULTI-SELECT</p>
       ${sceneEntitySelect(view.product.selectSceneEntity)}
+      <ol class="scene-entity-identities" data-scene-identities aria-label="Hierarchy object identities and parentage"></ol>
     </div>
     <p class="scene-entities-refusal" data-scene-entities-refusal aria-live="polite" hidden></p>
     <p class="project-root" data-project-root></p>
@@ -704,7 +716,12 @@ function inspector(view: DesktopVisualView): string {
     )}
     <div class="scene-instance-actions">
       ${button(view.product.addSceneInstance, "Add local copy", "ghost-button", ` data-product-action data-action="scene-instance-add"`)}
-      ${button(view.product.removeSceneInstance, "Remove selected", "ghost-button", ` data-product-action data-action="scene-instance-remove"`)}
+      ${button(view.product.removeSceneInstance, "Remove selection", "ghost-button", ` data-product-action data-action="scene-instance-remove"`)}
+    </div>
+    <div class="scene-parenting">
+      <label for="${escapeHtml(view.product.reparentSceneParent.id)}"><span>New parent</span><select ${selectControlAttributes(view.product.reparentSceneParent)} data-scene-parent aria-label="New parent"></select></label>
+      <label for="${escapeHtml(view.product.reparentScenePolicy.id)}"><span>Transform policy</span><select ${selectControlAttributes(view.product.reparentScenePolicy)} data-scene-policy aria-label="Transform policy"><option value="preserve-world">Preserve world</option><option value="preserve-local">Preserve local</option></select></label>
+      ${button(view.product.reparentSceneInstance, "Stage reparent", "ghost-button block-button", ` data-product-action data-action="scene-instance-reparent"`)}
     </div>
     <p class="scene-property-diagnostic" data-scene-property-diagnostic aria-live="polite">Select this entity to edit its saved composition.</p>
     <pre class="scene-property-review" data-scene-property-review hidden></pre>
@@ -1089,7 +1106,15 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .asset-browser-card span{margin-top:4px;font-family:var(--mono);font-size:8px;line-height:1.45;color:var(--dim)}
 .scene-entities{padding:0 7px 9px}
 .scene-entities-label{margin:0 3px 5px;font-family:var(--mono);font-size:8px;letter-spacing:.12em;color:var(--faint)}
-.scene-entities select{width:100%;min-width:0;height:30px;padding:0 7px;border:1px solid var(--line-card);border-radius:4px;background:var(--raised);color:var(--text);font-family:var(--mono);font-size:9px}
+.scene-entities select{width:100%;min-width:0;height:112px;padding:4px 7px;border:1px solid var(--line-card);border-radius:4px;background:var(--raised);color:var(--text);font-family:var(--mono);font-size:9px}
+.scene-entity-identities{display:grid;gap:5px;min-width:0;margin:6px 0 0;padding:0;list-style:none}
+.scene-entity-identity{min-width:0;margin-left:calc(var(--scene-depth,0) * 7px);padding:6px 7px;border:1px solid var(--line-card);border-left:2px solid var(--accent);border-radius:4px;background:var(--well)}
+.scene-entity-identity>span{display:block;margin-bottom:4px;font-size:9px;color:var(--text)}
+.scene-entity-identity dl{display:grid;gap:3px;margin:0}
+.scene-entity-identity dl div{display:grid;grid-template-columns:42px minmax(0,1fr);gap:5px;min-width:0}
+.scene-entity-identity dt{font-family:var(--mono);font-size:7px;line-height:1.45;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
+.scene-entity-identity dd{min-width:0;margin:0}
+.scene-entity-identity code{display:block;min-width:0;font-size:8px;line-height:1.45;color:var(--dim);white-space:normal;overflow-wrap:anywhere}
 .scene-entity{width:100%;min-width:0;padding:8px 9px;border:1px solid var(--line-card);border-radius:4px;background:var(--raised);color:var(--dim);text-align:left}
 .scene-entity span,.scene-entity code{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .scene-entity span{font-size:10px;color:var(--text)}.scene-entity code{margin-top:3px;font-size:8px;color:var(--dim)}
@@ -1105,6 +1130,7 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .scene-transform-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
 .scene-instance-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px}
 .scene-instance-actions button{min-width:0;padding-inline:6px}
+.scene-parenting{display:grid;gap:7px;padding-top:2px}.scene-parenting label{display:grid;gap:4px}.scene-parenting select{width:100%;min-width:0;height:28px;border:1px solid var(--line-control);border-radius:4px;background:var(--raised);color:var(--text);font-family:var(--mono);font-size:9px}
 .scene-property-input{width:100%;min-width:0;height:28px;padding:0 8px;border:1px solid var(--line-control);border-radius:4px;background:var(--raised);color:var(--text);font-family:var(--mono);font-size:11px}
 .scene-property-input:focus{outline:1px solid var(--accent);outline-offset:1px}.scene-property-input.is-inert{color:var(--inert)}
 .scene-property-diagnostic{margin:0;font-size:9px;line-height:1.45;color:var(--dim);overflow-wrap:anywhere}
@@ -1422,6 +1448,7 @@ function script(view: DesktopVisualView): string {
     assistantDrawerQuery: belowTier("regular"),
     commands: DESKTOP_INTERACTION_COMMANDS,
     editorCommands: EDITOR_COMMAND_REGISTRY,
+    hierarchyRefusals: DESKTOP_SCENE_HIERARCHY_REFUSALS,
     paletteShortcut: DESKTOP_PALETTE_SHORTCUT,
     commandRefusals: {
       undoUnavailable: DESKTOP_VISUAL_REFUSALS.undoUnavailable,
@@ -1473,6 +1500,9 @@ if (shell) {
   let projectBrowserStatus = null;
   let editableScene = null;
   let selectedSceneEntityId = null;
+  let selectedSceneEntityIds = [];
+  let sceneSelectionPending = Promise.resolve();
+  let sceneSelectionGeneration = 0;
   let sceneRefusalText = null;
   let undoAvailability = 'unavailable';
   let redoAvailability = 'unavailable';
@@ -1482,6 +1512,11 @@ if (shell) {
   // the same pre-edit document and the second would replace the first in the
   // host's single-proposal session — both reporting success, one edit gone.
   let inFlight = false;
+
+  const beginSceneLifecycleTransition = async () => {
+    await sceneSelectionPending;
+    sceneSelectionGeneration += 1;
+  };
 
   const clearShipEvidence = () => {
     shippedSourceDigest = null;
@@ -1523,10 +1558,13 @@ if (shell) {
   const clearSceneProperty = () => {
     editableScene = null;
     selectedSceneEntityId = null;
+    selectedSceneEntityIds = [];
     const entities = shell.querySelector('[data-scene-entities]');
+    const identities = shell.querySelector('[data-scene-identities]');
     const editor = shell.querySelector('[data-scene-property-editor]');
     const review = shell.querySelector('[data-scene-property-review]');
     if (entities) entities.hidden = true;
+    if (identities) identities.replaceChildren();
     if (editor) editor.hidden = true;
     if (review) { review.hidden = true; review.textContent = ''; }
     sceneEntitiesRefusal('');
@@ -1549,10 +1587,13 @@ if (shell) {
     if (!entity || properties.length !== 9 || properties.some((property) =>
       !property || typeof property.id !== 'string' || typeof property.value !== 'number')) return false;
     selectedSceneEntityId = entity.id;
+    if (!selectedSceneEntityIds.includes(entity.id)) selectedSceneEntityIds = [entity.id];
     q('[data-action="scene-entity-select"]').forEach((el) => {
       if (el.tagName === 'SELECT') {
-        el.value = entity.id;
-        el.dataset.value = entity.id;
+        Array.from(el.options).forEach((option) => {
+          option.selected = selectedSceneEntityIds.includes(option.value);
+        });
+        el.dataset.value = selectedSceneEntityIds.join(',');
       } else {
         el.setAttribute('aria-pressed', String(el.dataset.value === entity.id));
       }
@@ -1580,18 +1621,27 @@ if (shell) {
   // refreshed, so dropping the selection here is what made a stale value
   // survivable in the first place.
   const syncSceneProperties = (status) => {
-    const previousSelection = status && typeof status.selectedInstanceId === 'string'
-      ? status.selectedInstanceId
-      : selectedSceneEntityId;
+    const inspectedSelection = status?.editableScene?.selection;
+    const stagedSelection = status && Array.isArray(status.selectedInstanceIds)
+      ? status.selectedInstanceIds
+      : null;
+    const previousSelection = stagedSelection ||
+      (inspectedSelection && Array.isArray(inspectedSelection.instanceIds)
+        ? inspectedSelection.instanceIds
+        : selectedSceneEntityIds);
     clearSceneProperty();
     const inspected = status && status.editableScene;
-    const entitiesList = inspected && inspected.ok === true && Array.isArray(inspected.entities)
+    const staleRecovery = inspected && inspected.ok === false &&
+      inspected.reason === T.hierarchyRefusals.selectionStale &&
+      inspected.hierarchy && Array.isArray(inspected.entities);
+    const entitiesList = inspected && (inspected.ok === true || staleRecovery) && Array.isArray(inspected.entities)
       ? inspected.entities
       : [];
     const expectedPropertyIds = ${JSON.stringify(DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.map((definition) => definition.id))};
     const validEntities = entitiesList.length >= 2 && entitiesList.every((entity) =>
       entity && typeof entity.id === 'string' && typeof entity.label === 'string' &&
-      typeof entity.artifactId === 'string' && Array.isArray(entity.properties) &&
+      typeof entity.artifactId === 'string' && typeof entity.depth === 'number' &&
+      (entity.parentInstanceId === null || typeof entity.parentInstanceId === 'string') && Array.isArray(entity.properties) &&
       entity.properties.length === expectedPropertyIds.length &&
       expectedPropertyIds.every((id) => entity.properties.some((property) =>
         property && property.id === id && typeof property.value === 'number')));
@@ -1607,26 +1657,81 @@ if (shell) {
       }
       return false;
     }
+    if (staleRecovery) {
+      const refusal = Array.isArray(inspected.diagnostics) ? inspected.diagnostics[0] : null;
+      sceneEntitiesRefusal(
+        'Scene selection stale · ' + inspected.reason +
+        (typeof refusal?.message === 'string' && refusal.message ? ' · ' + refusal.message : '') +
+        ' · choose a current object to recover',
+      );
+    }
     editableScene = inspected;
     const entities = shell.querySelector('[data-scene-entities]');
     if (entities) entities.hidden = false;
+    const identities = shell.querySelector('[data-scene-identities]');
+    if (identities) {
+      identities.replaceChildren();
+      entitiesList.forEach((entity) => {
+        const item = document.createElement('li');
+        item.className = 'scene-entity-identity';
+        item.dataset.sceneIdentity = entity.id;
+        item.style.setProperty('--scene-depth', String(entity.depth));
+        const kind = document.createElement('span');
+        kind.textContent = entity.parentInstanceId === null ? 'Object · hierarchy root' : 'Object · hierarchy child';
+        item.appendChild(kind);
+        const fields = document.createElement('dl');
+        [
+          ['Artifact', entity.artifactId, 'artifact'],
+          ['Instance', entity.id, 'instance'],
+          ['Parent', entity.parentInstanceId === null ? 'root' : entity.parentInstanceId, 'parent'],
+        ].forEach(([label, value, field]) => {
+          const row = document.createElement('div');
+          const term = document.createElement('dt');
+          const description = document.createElement('dd');
+          const code = document.createElement('code');
+          term.textContent = label;
+          code.textContent = value;
+          code.setAttribute('data-scene-identity-' + field, '');
+          description.appendChild(code);
+          row.append(term, description);
+          fields.appendChild(row);
+        });
+        item.appendChild(fields);
+        identities.appendChild(item);
+      });
+    }
     q('[data-action="scene-entity-select"]').forEach((el) => {
       if (el.tagName !== 'SELECT') return;
       el.replaceChildren();
       entitiesList.forEach((entity) => {
         const option = document.createElement('option');
         option.value = entity.id;
-        option.textContent = entity.label + ' · ' + entity.id;
+        option.textContent = '  '.repeat(entity.depth) + 'Object ' + entity.artifactId +
+          ' · instance ' + entity.id +
+          (entity.parentInstanceId === null ? ' · root' : ' · parent ' + entity.parentInstanceId);
         el.appendChild(option);
       });
       const fallback = entitiesList.find((entity) => entity.id === 'desktop-crate-beside')?.id || entitiesList[0]?.id || '';
-      const chosen = entitiesList.some((entity) => entity.id === previousSelection)
-        ? previousSelection
-        : fallback;
-      el.value = chosen;
-      el.dataset.value = chosen;
+      const chosen = previousSelection.filter((id) => entitiesList.some((entity) => entity.id === id));
+      selectedSceneEntityIds = staleRecovery ? [] : chosen.length > 0 ? chosen : [fallback];
+      Array.from(el.options).forEach((option) => {
+        option.selected = selectedSceneEntityIds.includes(option.value);
+      });
+      el.dataset.value = selectedSceneEntityIds.join(',');
     });
-    if (previousSelection !== null && showSceneProperty(previousSelection)) return true;
+    const parent = shell.querySelector('[data-scene-parent]');
+    if (parent && parent.tagName === 'SELECT') {
+      parent.replaceChildren();
+      entitiesList.forEach((entity) => {
+        const option = document.createElement('option');
+        option.value = entity.id;
+        option.textContent = 'Object ' + entity.artifactId + ' · instance ' + entity.id;
+        parent.appendChild(option);
+      });
+      parent.value = entitiesList[0]?.id || '';
+    }
+    if (staleRecovery) return true;
+    if (selectedSceneEntityIds[0] && showSceneProperty(selectedSceneEntityIds[0])) return true;
     return true;
   };
 
@@ -2107,7 +2212,13 @@ if (shell) {
         });
         const status = authoritative?.ok ? authoritative.data : null;
         if (status && isSessionSnapshot(status.authoringSnapshot)) {
-          syncReview(status.authoringSnapshot);
+          const hierarchyReviewRedacted = status.authoringSnapshot.phase === 'reviewing' &&
+            reviewProjection(status.authoringSnapshot) === null;
+          if (hierarchyReviewRedacted) {
+            await syncSceneHierarchy(true);
+          } else {
+            syncReview(status.authoringSnapshot);
+          }
         }
       }
       productStatus('refused', 'Project browser refused · ' + code);
@@ -2183,7 +2294,10 @@ if (shell) {
       typeof candidate.root === 'string' && candidate.documentPath === T.product.documentPath
       ? candidate
       : null;
-    if ((activeProject?.root ?? null) !== previousRoot) clearProjectBrowser();
+    if ((activeProject?.root ?? null) !== previousRoot) {
+      sceneSelectionGeneration += 1;
+      clearProjectBrowser();
+    }
     const launcher = shell.querySelector('[data-project-launcher]');
     const bound = shell.querySelector('[data-project-bound]');
     if (launcher) launcher.hidden = activeProject !== null;
@@ -2254,6 +2368,7 @@ if (shell) {
       showOutcome('Recent project refused', T.product.refusals.runtimeRequestRefused, 'Choose a validated recent project first.');
       return;
     }
+    await beginSceneLifecycleTransition();
     productStatus('opening', action === 'choose-new' ? 'Choose a directory for the explicit starter project…' : 'Choose a project directory…');
     const response = await projectRequest({
       action,
@@ -2350,7 +2465,35 @@ if (shell) {
     });
   };
 
+  const syncSceneHierarchy = async (restoreReview = false) => {
+    const response = await commandRequest('scene-hierarchy-inspect', {
+      documentPath: T.product.documentPath,
+      profile: shell.dataset.profile,
+    });
+    if (response?.ok && response.data && typeof response.data === 'object') {
+      let reviewRestored = !restoreReview;
+      if (restoreReview && isSessionSnapshot(response.data.authoringSnapshot) &&
+          reviewProjection(response.data.authoringSnapshot) !== null) {
+        reviewRestored = syncReview(response.data.authoringSnapshot);
+      }
+      const propertiesSynced = syncSceneProperties({ editableScene: response.data });
+      return propertiesSynced && reviewRestored;
+    }
+    const diagnostic = responseDiagnostic(response) || {
+      code: T.product.refusals.authoringRefused,
+      message: T.product.refusals.authoringRefused,
+    };
+    return syncSceneProperties({
+      editableScene: {
+        ok: false,
+        reason: diagnostic.code,
+        diagnostics: [diagnostic],
+      },
+    });
+  };
+
   const restartProject = async (diagnostic) => {
+    await beginSceneLifecycleTransition();
     productStatus('recovering', T.product.documentPath + ' · ' + diagnostic + ' · re-opening fresh session…');
     const response = await runtimeRequest({
       action: 'authoring',
@@ -2406,7 +2549,7 @@ if (shell) {
           : { retired: 'session-restarted', evidence: restartedRarityEvidence },
       }));
     }
-    syncSceneProperties(status);
+    await syncSceneHierarchy();
     undoAvailability = status.undoAvailability === 'available' || status.undoAvailability === 'recovery-pending'
       ? status.undoAvailability
       : 'unavailable';
@@ -2448,8 +2591,13 @@ if (shell) {
     });
     const reason = responseReason(response);
     const status = response?.ok ? response.data : null;
-    if (status && isSessionSnapshot(status.authoringSnapshot)) {
-      syncReview(status.authoringSnapshot);
+    const statusSnapshot = status && isSessionSnapshot(status.authoringSnapshot)
+      ? status.authoringSnapshot
+      : null;
+    const hierarchyReviewRedacted = statusSnapshot?.phase === 'reviewing' &&
+      reviewProjection(statusSnapshot) === null;
+    if (statusSnapshot !== null && !hierarchyReviewRedacted) {
+      syncReview(statusSnapshot);
     }
     if (reason !== null || !status || status.ok !== true || typeof status.data !== 'object' ||
         status.data === null || typeof status.contentHash !== 'string') {
@@ -2463,7 +2611,7 @@ if (shell) {
     projectData = status.data;
     projectContentHash = status.contentHash;
     reconcileRarityEvidence(status);
-    syncSceneProperties(status);
+    await syncSceneHierarchy(hierarchyReviewRedacted);
     undoAvailability = status.undoAvailability === 'available' || status.undoAvailability === 'recovery-pending'
       ? status.undoAvailability
       : 'unavailable';
@@ -2472,10 +2620,7 @@ if (shell) {
       : 'unavailable';
     syncCommandAvailability();
     clearConflictOutcome();
-    const snapshot = isSessionSnapshot(status.authoringSnapshot)
-      ? status.authoringSnapshot
-      : null;
-    const reviewing = reviewProjection(snapshot) !== null;
+    const reviewing = reviewCount() > 0;
     productStatus(
       reviewing ? 'dirty' : (projectRecovering ? 'recovering' : 'open'),
       reviewing
@@ -2486,12 +2631,14 @@ if (shell) {
   };
 
   const applyOpenedProjectStatus = async (status, authoringSnapshot, synchronizeBrowser) => {
+    const hierarchyReviewRedacted = authoringSnapshot?.phase === 'reviewing' &&
+      reviewProjection(authoringSnapshot) === null;
     projectData = status.data;
     projectContentHash = status.contentHash;
     reconcileRarityEvidence(status);
-    syncSceneProperties(status);
     projectDirty = false;
     projectRecovering = false;
+    await syncSceneHierarchy(hierarchyReviewRedacted);
     undoAvailability = status.undoAvailability === 'available' || status.undoAvailability === 'recovery-pending'
       ? status.undoAvailability
       : 'unavailable';
@@ -2499,14 +2646,20 @@ if (shell) {
       ? status.redoAvailability
       : 'unavailable';
     syncCommandAvailability();
-    syncReview(authoringSnapshot);
+    if (!hierarchyReviewRedacted) syncReview(authoringSnapshot);
     clearConflictOutcome();
-    productStatus('open', withSceneRefusal(T.product.documentPath + ' · open · ' + status.documentId));
+    const reviewing = reviewCount() > 0;
+    productStatus(
+      reviewing ? 'dirty' : 'open',
+      withSceneRefusal(T.product.documentPath +
+        (reviewing ? ' · current proposal restored · review before Save' : ' · open · ' + status.documentId)),
+    );
     if (synchronizeBrowser) await syncProjectBrowser();
     return true;
   };
 
   const openProject = async (refuseDirty = false) => {
+    await beginSceneLifecycleTransition();
     if (activeProject === null && projectPort() !== null) {
       productStatus('refused', 'Open refused · no project root selected');
       showOutcome('Open refused', T.product.refusals.runtimeRequestRefused, 'Choose New Project or Open Project first.');
@@ -2524,8 +2677,10 @@ if (shell) {
     const authoringSnapshot = status && isSessionSnapshot(status.authoringSnapshot)
       ? status.authoringSnapshot
       : null;
-    if (authoringSnapshot !== null) syncReview(authoringSnapshot);
-    if (refuseDirty && (authoringSnapshot === null ||
+    const hierarchyReviewRedacted = authoringSnapshot?.phase === 'reviewing' &&
+      reviewProjection(authoringSnapshot) === null;
+    if (authoringSnapshot !== null && !hierarchyReviewRedacted) syncReview(authoringSnapshot);
+    if (refuseDirty && (authoringSnapshot === null || authoringSnapshot.phase === 'reviewing' ||
         reviewProjection(authoringSnapshot) !== null || authoringSnapshot.phase === 'pending' ||
           authoringSnapshot.journalRecoveryPending === true)) {
       const code = T.product.refusals.projectBrowserDirty;
@@ -2635,7 +2790,8 @@ if (shell) {
     productStatus('dirty', name + ' · import staged · review before Save');
   };
 
-  const stageSceneOperation = async (operation, label) => {
+  const stageSceneChange = async ({ label, request, requiresSelection, propertyFeedback }) => {
+    await sceneSelectionPending;
     if (projectRecovering) {
       reportRecoveryRefusal('Edit');
       return false;
@@ -2645,23 +2801,16 @@ if (shell) {
       return false;
     }
     if ((projectData === null || projectContentHash === null) && !(await openProject())) return false;
-    if (selectedSceneEntityId === null || editableScene === null) {
+    if (requiresSelection && (selectedSceneEntityId === null || editableScene === null)) {
       productStatus('refused', 'Edit refused · select a composed instance first');
       return false;
     }
-    const response = await runtimeRequest({
-      action: 'authoring',
-      payload: {
-        op: 'edit-scene',
-        documentPath: T.product.documentPath,
-        expectedContentHash: projectContentHash,
-        profile: shell.dataset.profile,
-        operation,
-      },
-    });
+    const response = await request(projectContentHash);
     const diagnostic = responseDiagnostic(response);
     const snapshot = response?.ok ? response.data : null;
-    const message = shell.querySelector('[data-scene-property-diagnostic]');
+    const message = propertyFeedback
+      ? shell.querySelector('[data-scene-property-diagnostic]')
+      : null;
     // The typed edit parks the same E1 proposal every other staging path does,
     // so Change Review is driven by the returned snapshot here too — and the
     // decidable projection, not the phase alone, is what says it may be shown.
@@ -2669,6 +2818,9 @@ if (shell) {
     if (diagnostic !== null || reviewProjection(snapshot) === null) {
       const code = diagnostic?.code || T.product.refusals.proposalNotReviewing;
       const detail = diagnostic?.message || T.product.refusals.proposalNotReviewing;
+      if (snapshot?.ok === false && snapshot.hierarchy && Array.isArray(snapshot.entities)) {
+        syncSceneProperties({ editableScene: snapshot });
+      }
       if (message) message.textContent = code + ' · ' + detail;
       productStatus('refused', 'Edit refused · ' + code + ' · ' + detail);
       if (code === 'content-hash-conflict') {
@@ -2681,15 +2833,20 @@ if (shell) {
       projectData = { ...projectData, composedScene: edit.newValue };
     }
     syncSceneProperties(snapshot);
-    const review = shell.querySelector('[data-scene-property-review]');
+    const review = propertyFeedback
+      ? shell.querySelector('[data-scene-property-review]')
+      : null;
     if (review) {
       review.textContent = String(snapshot.renderedDiff || snapshot.unifiedDiff || 'Proposal staged for review.');
       review.hidden = false;
     }
-    if (message) message.textContent = 'Proposal staged with base ' + projectContentHash + ' · Save applies atomically.';
+    if (message) {
+      message.textContent = 'Proposal staged with base ' + projectContentHash + ' · Save applies atomically.';
+    }
     projectDirty = true;
     projectRecovering = false;
-    productStatus('dirty', withSceneRefusal(T.product.documentPath + ' · ' + label + ' staged · review before Save'));
+    const status = T.product.documentPath + ' · ' + label + ' staged · review before Save';
+    productStatus('dirty', propertyFeedback ? withSceneRefusal(status) : status);
     return true;
   };
 
@@ -2717,12 +2874,19 @@ if (shell) {
       propertyId: 'translation-x',
       value: entity.properties.find((property) => property.id === 'translation-x')?.value,
     };
-    await stageSceneOperation({
-      kind: 'set-transform-component',
-      instanceId: selectedSceneEntityId,
-      propertyId: component.propertyId,
-      value: component.value,
-    }, 'property');
+    await stageSceneChange({
+      label: 'property',
+      requiresSelection: true,
+      propertyFeedback: true,
+      request: (expectedContentHash) => commandRequest('scene-property-set', {
+        documentPath: T.product.documentPath,
+        expectedContentHash,
+        profile: shell.dataset.profile,
+        instanceId: selectedSceneEntityId,
+        propertyId: component.propertyId,
+        newValue: component.value,
+      }),
+    });
   };
 
   const stageSceneInstance = async (kind) => {
@@ -2730,15 +2894,82 @@ if (shell) {
       productStatus('refused', 'Edit refused · select a composed instance first');
       return;
     }
-    await stageSceneOperation(
-      kind === 'add-instance'
-        ? { kind, sourceInstanceId: selectedSceneEntityId }
-        : { kind, instanceId: selectedSceneEntityId },
-      kind === 'add-instance' ? 'local instance add' : 'instance removal',
-    );
+    const base = {
+      documentPath: T.product.documentPath,
+      expectedContentHash: projectContentHash,
+      profile: shell.dataset.profile,
+    };
+    const parent = shell.querySelector('[data-scene-parent]');
+    const commandId = kind === 'add-instance' ? 'scene-object-create' : 'scene-object-remove';
+    const input = kind === 'add-instance'
+      ? { ...base, sourceInstanceId: selectedSceneEntityId, parentInstanceId: parent?.value || editableScene.hierarchy.rootInstanceId }
+      : { ...base, instanceIds: selectedSceneEntityIds };
+    await stageSceneCommand(commandId, input, kind === 'add-instance' ? 'object create' : 'object removal');
   };
 
-  const applySaveSnapshot = (snapshot) => {
+  const stageSceneCommand = async (commandId, input, label) => stageSceneChange({
+    label,
+    requiresSelection: false,
+    propertyFeedback: false,
+    request: (expectedContentHash) => commandRequest(commandId, {
+      ...input,
+      expectedContentHash,
+      profile: shell.dataset.profile,
+    }),
+  });
+
+  const stageSceneReparent = async () => {
+    const parent = shell.querySelector('[data-scene-parent]');
+    const policy = shell.querySelector('[data-scene-policy]');
+    if (selectedSceneEntityId === null || parent?.tagName !== 'SELECT' || policy?.tagName !== 'SELECT') return;
+    await stageSceneCommand('scene-object-reparent', {
+      documentPath: T.product.documentPath,
+      expectedContentHash: projectContentHash,
+      profile: shell.dataset.profile,
+      instanceId: selectedSceneEntityId,
+      parentInstanceId: parent.value,
+      transformPolicy: policy.value,
+    }, 'reparent ' + policy.value);
+  };
+
+  const setSceneSelection = async (instanceIds, generation) => {
+    if (generation !== sceneSelectionGeneration) return;
+    const response = await commandRequest('scene-selection-set', {
+      documentPath: T.product.documentPath,
+      profile: shell.dataset.profile,
+      instanceIds,
+    });
+    if (generation !== sceneSelectionGeneration) return;
+    const diagnostic = responseDiagnostic(response);
+    if (diagnostic !== null) {
+      syncSceneProperties({ editableScene });
+      productStatus('refused', 'Selection refused · ' + diagnostic.code + ' · ' + diagnostic.message);
+      return;
+    }
+    const selection = response.data?.selection;
+    if (!selection || !Array.isArray(selection.instanceIds)) return;
+    if (
+      response.data?.ok !== true ||
+      !Array.isArray(response.data.entities) ||
+      !response.data.hierarchy ||
+      typeof response.data.contentHash !== 'string' ||
+      !/^sha256:[0-9a-f]{64}$/.test(response.data.contentHash)
+    ) {
+      productStatus('refused', 'Selection refused · ' + T.product.refusals.authoringRefused);
+      return;
+    }
+    if (!syncSceneProperties({ editableScene: response.data, selectedInstanceIds: selection.instanceIds })) {
+      productStatus('refused', 'Selection refused · ' + T.product.refusals.authoringRefused);
+      return;
+    }
+    projectContentHash = response.data.contentHash;
+    selectedSceneEntityIds = selection.instanceIds;
+    if (selection.primaryInstanceId && showSceneProperty(selection.primaryInstanceId) && shell.dataset.mode !== 'build') {
+      showModePanels('build');
+    }
+  };
+
+  const applySaveSnapshot = async (snapshot) => {
     if (!isSessionSnapshot(snapshot)) return false;
     syncReview(snapshot);
     const diagnostics = Array.isArray(snapshot.diagnostics) ? snapshot.diagnostics : [];
@@ -2764,7 +2995,7 @@ if (shell) {
       // The written document, not the diff of how it got there: the applied
       // proposal is spent, so the review panel goes with it while the panel
       // keeps showing the value the next Play will mount.
-      syncSceneProperties(snapshot);
+      await syncSceneHierarchy();
       productStatus('saved', withSceneRefusal(T.product.documentPath + ' · saved'));
       return true;
     }
@@ -2787,7 +3018,7 @@ if (shell) {
       await restartProject('journal-not-found');
       return;
     }
-    if (applySaveSnapshot(snapshot)) {
+    if (await applySaveSnapshot(snapshot)) {
       await syncProjectBrowser();
       return;
     }
@@ -3100,6 +3331,7 @@ if (shell) {
       productStatus('refused', 'Profile switch refused · ' + T.product.refusals.profileSwitchDirty);
       return;
     }
+    await beginSceneLifecycleTransition();
     shell.dataset.profile = value;
     q('.profile-chip').forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.value === value)));
     setProfile(value);
@@ -3516,11 +3748,13 @@ if (shell) {
     else if (action === 'change-accept') void productAction(acceptProposal);
     else if (action === 'change-reject') void productAction(() => rejectProposal('rejected'));
     else if (action === 'scene-entity-select' && value) {
-      if (showSceneProperty(value) && shell.dataset.mode !== 'build') showModePanels('build');
+      const primary = el.tagName === 'SELECT' ? el.value : value;
+      if (primary && showSceneProperty(primary) && shell.dataset.mode !== 'build') showModePanels('build');
     }
     else if (action === 'scene-property-stage') void productAction(stageSceneProperty);
     else if (action === 'scene-instance-add') void productAction(() => stageSceneInstance('add-instance'));
     else if (action === 'scene-instance-remove') void productAction(() => stageSceneInstance('remove-instance'));
+    else if (action === 'scene-instance-reparent') void productAction(stageSceneReparent);
     else if (action === 'web-stage-html') void productAction(() => stageWebEdit('html'));
     else if (action === 'web-inject-asset') void productAction(stageAssetImport);
     else if (action === 'mode' && value) showModePanels(value);
@@ -3569,9 +3803,17 @@ if (shell) {
     }
     const el = event.target instanceof Element ? event.target.closest('[data-action="scene-entity-select"]') : null;
     if (!el || el.tagName !== 'SELECT' || el.getAttribute('aria-disabled') === 'true') return;
-    const value = el.value;
-    el.dataset.value = value;
-    if (value && showSceneProperty(value) && shell.dataset.mode !== 'build') showModePanels('build');
+    selectedSceneEntityIds = Array.from(el.selectedOptions).map((option) => option.value).filter(Boolean);
+    if (selectedSceneEntityIds[0]) {
+      showSceneProperty(selectedSceneEntityIds[0]);
+      if (shell.dataset.mode !== 'build') showModePanels('build');
+    }
+    const instanceIds = [...selectedSceneEntityIds];
+    const generation = sceneSelectionGeneration;
+    sceneSelectionPending = sceneSelectionPending.then(
+      () => setSceneSelection(instanceIds, generation),
+      () => setSceneSelection(instanceIds, generation),
+    );
   });
 
   // Tab is deliberately not captured inside a menu — every item keeps its plain

@@ -187,6 +187,10 @@ type TransformCompositionResult =
       readonly message: string;
     };
 
+export type CanonicalLocalSculptTransformResult =
+  | { readonly ok: true; readonly value: SculptTransform }
+  | { readonly ok: false; readonly message: string };
+
 function tryComposeSculptTransforms(
   parent: SculptTransform,
   local: SculptTransform,
@@ -242,6 +246,37 @@ function tryComposeSculptTransforms(
       scale: vector(scale),
     }),
   };
+}
+
+export function deriveCanonicalLocalSculptTransform(
+  parent: SculptTransform,
+  world: SculptTransform,
+): CanonicalLocalSculptTransformResult {
+  const axes = [0, 1, 2] as const;
+  const local = Object.freeze({
+    translation: vector(axes.map((axis) => round6(
+      (world.translation[axis] - parent.translation[axis]) / parent.scale[axis],
+    )) as [number, number, number]),
+    rotationEulerDegrees: vector(axes.map((axis) => round6(
+      world.rotationEulerDegrees[axis] - parent.rotationEulerDegrees[axis],
+    )) as [number, number, number]),
+    scale: vector(axes.map((axis) => round6(
+      world.scale[axis] / parent.scale[axis],
+    )) as [number, number, number]),
+  });
+  if (!isSculptTransform(local)) {
+    return { ok: false, message: "The canonical local transform is outside the scene numeric domain." };
+  }
+  const recomposed = tryComposeSculptTransforms(parent, local);
+  if (!recomposed.ok) return { ok: false, message: recomposed.message };
+  const exact = axes.every((axis) =>
+    recomposed.value.translation[axis] === world.translation[axis] &&
+    recomposed.value.rotationEulerDegrees[axis] === world.rotationEulerDegrees[axis] &&
+    recomposed.value.scale[axis] === world.scale[axis]
+  );
+  return exact
+    ? { ok: true, value: local }
+    : { ok: false, message: "No canonical local transform reproduces the exact world transform." };
 }
 
 const IDENTITY_TRANSFORM: SculptTransform = Object.freeze({

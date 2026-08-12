@@ -95,43 +95,74 @@ artifact, and bundle digests and exercises the required refusal paths. The
 packaged smoke performs the same bridge request and verifies the output files,
 source bytes, and handoff digest before printing its proof line.
 
-### Selected composed-instance edit
+### Project hierarchy and selected-object edit
 
 After a Game or Website project binds and opens, the Project / Files panel exposes
-the validated instances in the stored composition. The executable selector fills
-nine bounded numeric fields: X/Y/Z translation, Euler rotation, and scale. Values
-come from the digest-bound `composedScene` in `scene.json`, never the legacy sample
-`entities` object beside it.
+the validated instances in the stored composition as hierarchy schema v1. Each
+row renders the stable artifact id and distinct instance/object id alongside its
+depth and parent id, all from project state in canonical depth/id order. The
+primary object fills nine bounded numeric fields: X/Y/Z translation, Euler
+rotation, and scale. Values and relationships come from the digest-bound
+`composedScene` in `scene.json`, never the legacy sample `entities` object beside
+it or a UI fixture.
 
-The canonical `edit-scene` operation is one of `set-transform-component`,
-`add-instance`, or `remove-instance`. Add may copy only an artifact already
-validated in the open composition and preserves its exact artifact digest; Remove
-is limited to a non-root leaf while the two-instance scene minimum remains. Each
-operation rebuilds the composition and its evidence through `composeScene()`,
-then hands `/data/composedScene` to the existing `DesktopSession.proposeEdit()`
-path with the content hash returned by status. Nothing writes during staging.
+The canonical `edit-scene` operation includes the compatible transform/add/remove
+forms plus `create-object`, `remove-objects`, and `reparent-object`. Create may
+copy only an artifact already validated in the open composition and preserves its
+exact artifact digest. Multi-remove is ordered, protects the root, refuses an
+orphan, and retains the two-instance minimum. Reparent protects the root and
+requires an explicit `preserve-world` or `preserve-local` transform policy. Each
+operation rebuilds the composition and its evidence through `composeScene()`, then
+hands `/data/composedScene` to the existing `DesktopSession.proposeEdit()` path
+with the content hash returned by status. Nothing writes during staging.
+
+The versioned command registry exposes hierarchy inspect, selection set, object
+create/remove, and reparent to desktop controls, the same-user CLI, and the local
+assistant tool surface. Every selection is canonicalized against the current
+hierarchy. Missing `scene.compose` capability and Kids refuse before project I/O;
+cycles, missing parents, the protected root, stale selections, invalid policy,
+unsupported input, and an inconsistent imported-asset manifest have stable
+`SCENE_HIERARCHY_*` diagnostics before proposal, copy recovery, or write.
+
+A stale retained selection stays latched through Undo, Redo, restart, and reopen;
+only a successful explicit `scene-selection-set` clears it. The chrome serializes
+selection requests and rejects queued or in-flight answers from an older project
+lifecycle generation. A staged post-edit selection remains bound to the exact
+proposal, base hash, and transaction id, so only its matching successful Accept
+or recovery can publish it. Generic authoring status/proposal responses redact
+hierarchy data, and generic proposals may not target `composedScene`; hierarchy
+access stays on the profile- and capability-checked registered commands.
+
 The inspector shows the shared rendered diff. Reject discards it without a write;
-Save uses the existing atomic accept and recovery path, and Undo restores the last
-completed Save. Reload re-reads through the long-lived session; the `restart`
-recovery seam and fresh-session proof reopen identical canonical bytes. Play mounts
-the composition the active session re-read. Malformed or out-of-range operations,
-stale selections, missing local artifact sources, invalid removals, and unsupported
-profiles return `invalid-proposal`. A composition that fails validation returns
+Save uses the existing atomic accept and recovery path, and Undo/Redo traverse the
+existing durable transaction history. Reload re-reads through the long-lived
+session; the `restart` recovery seam and fresh-session proof reopen identical
+canonical bytes. Play mounts the composition the active session re-read. A
+composition that fails validation returns
 `validation-failed`; a stale status hash returns `content-hash-conflict`, matching
 the CLI refusal code, while document containment refuses
 `DESKTOP_BRIDGE_REQUEST_MALFORMED` at the bridge boundary.
 
 This is a narrow E1/Minimum-E2 projection over the one active `scene.json`.
 There are no tabs, arbitrary JSON editing, asset imports, evidence-byte rewrites,
-or general composition editor. Add cannot introduce an external or unvalidated
-artifact, and the Kids profile refuses before the authoring host is reached.
+or second composition editor. Existing composed-scene fixtures require no rewrite:
+their persisted parent ids and transforms project directly into hierarchy v1, and
+their Sculpt Artifact bytes remain exact. Legacy project migration stays the
+separate reviewed native-project transaction. Create cannot introduce an external
+or unvalidated artifact, and the Kids profile refuses before the authoring host is
+reached.
 
 The public helpers and bridge behavior are covered by
 `tests/desktop/desktop-scene-property.test.ts` and
-`tests/e2e/desktop-scene-property-golden.test.ts`. For representative transform
-and add operations, the latter projects the canonical operation into an E1 edit,
-applies it through the protocol client and `sceneaxi project propose|apply`, then
-compares all three document byte streams. The emitted-chrome interaction test in
+`tests/e2e/desktop-scene-property-golden.test.ts`, plus the hierarchy's public
+contract in `tests/e2e/desktop-hierarchy-golden.test.ts`. That hierarchy golden
+proves ordered desktop/CLI/assistant selection and inspection; both reparent
+policies; canonical review bytes; Save/reopen/Play/Undo/Redo; bounded local create
+and multi-remove; and every hierarchy refusal before write. For representative
+transform and add operations, the latter projects the canonical operation into
+an E1 edit, applies it through the protocol client and
+`sceneaxi project propose|apply`, then compares all three document byte streams.
+The emitted-chrome interaction test in
 `tests/e2e/desktop-product-loop-golden.test.ts` clicks selection, both review
 decisions, representative transforms, add/remove, Save, Undo, reopen, Play, and
 redraw, including conflict and recovery handling. The spawned Linux smoke repeats
@@ -567,9 +598,9 @@ describe — one more reason the record above must be re-taken from a fresh succ
 main-branch run. It also predates the contained project lifecycle in sceneaxi#224;
 the hard-bound seed observations below are historical and superseded by the
 first-launch contract above. It predates the typed scene-property edit in
-sceneaxi#225 and the current composed-instance breadth the same way: the
-`authoring:` bullet below records the propose → accept → undo round trip the
-smoke asserted then. The current smoke proof is the one described under
+sceneaxi#225 and the hierarchy/multi-select/parenting breadth in sceneaxi#253 the
+same way: the `authoring:` bullet below records the propose → accept → undo round
+trip the smoke asserted then. The current smoke proof is the one described under
 "Package and verify", so that bullet remains a historical observation.
 These lines never describe the offered bytes. All three launch modes
 printed the same proof (`pnpm smoke`, `pnpm smoke --packaged`, and the AppImage itself

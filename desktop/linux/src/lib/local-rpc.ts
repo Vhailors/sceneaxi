@@ -172,6 +172,9 @@ function bridgeRequest(toolName: DesktopLocalBridgeToolName, input: JsonObject):
         registered.commandId,
         "local-agent",
         input,
+        input["profile"] === "game" || input["profile"] === "web" || input["profile"] === "kids"
+          ? input["profile"]
+          : undefined,
       ),
     };
   }

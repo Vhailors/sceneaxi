@@ -15,7 +15,11 @@ import {
   type HTMLElement as HappyHTMLElement,
 } from "happy-dom";
 import { createDocument, writeDocumentFile } from "@sceneaxi/authoring-core";
-import type { JsonValue } from "@sceneaxi/schemas";
+import {
+  DESKTOP_SCENE_HIERARCHY_REFUSALS,
+  EDITOR_COMMAND_REGISTRY,
+  type JsonValue,
+} from "@sceneaxi/schemas";
 import {
   DESKTOP_PRODUCT_REFUSALS,
   DESKTOP_VIEWPORT_PLAY_EVENT,
@@ -69,7 +73,7 @@ async function click(window: HappyWindow, selector: string) {
   const element = query(window, selector);
   if (element === null) throw new Error(`missing product-loop control ${selector}`);
   element.click();
-  for (let turn = 0; turn < 20; turn += 1) {
+  for (let turn = 0; turn < 60; turn += 1) {
     await Promise.resolve();
     if (window.document.querySelector("[data-busy]") === null) return;
   }
@@ -101,7 +105,7 @@ function requestOperation(request: unknown): string | null {
     case "run-play":
       return "open-path";
     default:
-      return null;
+      return typeof typed.payload?.commandId === "string" ? typed.payload.commandId : null;
   }
 }
 
@@ -117,7 +121,13 @@ function mountChrome(
   dir: string,
   intercept?: (port: ChromeHarnessPort) => (request: unknown) => Promise<unknown>,
 ) {
-  const bridge = createDesktopBridge({ cwd: dir, nowMs: () => 1_753_920_000_000 });
+  const bridge = createDesktopBridge({
+    cwd: dir,
+    nowMs: () => 1_753_920_000_000,
+    commandCapabilities: [...new Set(
+      EDITOR_COMMAND_REGISTRY.map((command) => command.capability.id),
+    )],
+  });
   const window = new HappyWindow({ width: 1000, height: 700 });
   windows.push(window);
   const ipcClone = <T>(value: T): T => window.eval(`(${JSON.stringify(value)})`) as T;
@@ -191,11 +201,9 @@ describe("desktop first-release product loop", () => {
     expect(
       accepted.requests.find((request) => request.payload?.op === "propose")?.payload
         ?.newValue,
-    ).toMatchObject({
-      webExperience: {
-        html: '<main id="sceneaxi-mount"></main>',
-        assets: ["assets/models/hero-1.glb"],
-      },
+    ).toEqual({
+      html: '<main id="sceneaxi-mount"></main>',
+      assets: ["assets/models/hero-1.glb"],
     });
 
     for (const webExperience of [
@@ -447,29 +455,35 @@ describe("desktop first-release product loop", () => {
     expect(requests).toHaveLength(stageConflictRequests);
     // Re-reading the document is that resolution.
     await click(window, "#project-open");
-    expect(requests).toHaveLength(stageConflictRequests + 1);
+    expect(requests).toHaveLength(stageConflictRequests + 2);
     await click(window, "#change-review-reject");
     expect(status()).toContain("nothing under review · DESKTOP_PROPOSAL_NOT_REVIEWING");
-    expect(requests).toHaveLength(stageConflictRequests + 1);
+    expect(requests).toHaveLength(stageConflictRequests + 2);
 
     expect(requests.map((request) => requestOperation(request) ?? request.action)).toEqual([
       "status",
+      "scene-hierarchy-inspect",
       "propose",
       "propose",
       "reject",
       "reject",
       "status",
+      "scene-hierarchy-inspect",
       "propose",
       "accept",
+      "scene-hierarchy-inspect",
       "status",
+      "scene-hierarchy-inspect",
       "propose",
       "accept",
       "reject",
       "reject",
       "status",
+      "scene-hierarchy-inspect",
       "propose",
       "propose",
       "status",
+      "scene-hierarchy-inspect",
     ]);
   });
 
@@ -553,9 +567,9 @@ describe("desktop first-release product loop", () => {
       query(window, "[data-project-status]")?.textContent ?? "";
     expect(shell?.dataset.tier).toBe("narrow");
     expect(shell?.dataset.profile).toBe("game");
-    expect(window.document.querySelectorAll("button")).toHaveLength(74);
+    expect(window.document.querySelectorAll("button")).toHaveLength(75);
     expect(window.document.querySelectorAll('button:not([tabindex="-1"])')).toHaveLength(
-      69,
+      70,
     );
 
     const refusalHelp = query(window, "#status-refusal-help");
@@ -744,20 +758,27 @@ describe("desktop first-release product loop", () => {
 
     expect(requests.map((request) => requestOperation(request) ?? request.action)).toEqual([
       "status",
+      "scene-hierarchy-inspect",
       "propose",
       "status",
+      "scene-hierarchy-inspect",
       "propose",
       "reject",
       "status",
+      "scene-hierarchy-inspect",
       "status",
+      "scene-hierarchy-inspect",
       "propose",
       "accept",
       "restart",
+      "scene-hierarchy-inspect",
       "status",
+      "scene-hierarchy-inspect",
       "propose",
       "accept",
       "recover",
       "restart",
+      "scene-hierarchy-inspect",
       "open-path",
       "open-path",
     ]);
@@ -1310,7 +1331,10 @@ describe("desktop first-release product loop", () => {
     await settleTransform("#scene-property-scale-x", "1.25");
 
     await click(window, "#scene-instance-add");
-    expect(query(window, "[data-change-proposal]")?.hidden).toBe(false);
+    expect(
+      query(window, "[data-change-proposal]")?.hidden,
+      query(window, "[data-project-status]")?.textContent ?? "missing product status",
+    ).toBe(false);
     selection.value = "desktop-crate-stacked-copy-1";
     selection.dispatchEvent(new window.Event("change", { bubbles: true }));
     expect(query(window, "[data-scene-property-entity-id]")?.textContent)
@@ -1340,6 +1364,190 @@ describe("desktop first-release product loop", () => {
       .toBe(true);
     expect(query(window, "[data-project-status]")?.textContent)
       .toContain("viewport frame 44");
+  });
+
+  it("keeps staged create review visible through dirty browser Open", async () => {
+    const dir = projectDir();
+    const { window, start } = mountChrome(dir);
+    start();
+    await click(window, "#project-open");
+    await click(window, "#scene-entity-desktop-crate-beside");
+    await click(window, "#scene-instance-add");
+
+    const proposal = query(window, "[data-change-proposal]");
+    const diff = query(window, "[data-change-diff]")?.textContent;
+    expect(proposal?.hidden).toBe(false);
+    expect(diff).toContain("desktop-crate-beside-copy-1");
+
+    await click(window, "#project-browser-open");
+    expect(query(window, "[data-change-proposal]")?.hidden).toBe(false);
+    expect(query(window, "[data-change-diff]")?.textContent).toBe(diff);
+
+    await click(window, "#change-review-accept");
+    expect(query(window, "[data-change-proposal]")?.hidden).toBe(true);
+    expect(query(window, "[data-project-status]")?.textContent)
+      .not.toContain(DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale);
+    const hierarchy = query(window, "#scene-entity-desktop-crate-beside") as
+      | (HappyHTMLElement & {
+          options: ArrayLike<HappyHTMLElement & { value: string }>;
+        })
+      | null;
+    expect(Array.from(hierarchy?.options ?? []).some(
+      (option) => option.value === "desktop-crate-beside-copy-1",
+    )).toBe(true);
+  });
+
+  it("keeps click and keyboard multi-selection in canonical hierarchy order", async () => {
+    const { window, start } = mountChrome(projectDir());
+    start();
+    await click(window, "#project-open");
+
+    const selection = query(window, "#scene-entity-desktop-crate-beside") as
+      | (HappyHTMLElement & {
+          multiple: boolean;
+          options: ArrayLike<HappyHTMLElement & { selected: boolean; value: string }>;
+          dataset: Record<string, string | undefined>;
+        })
+      | null;
+    if (selection === null) throw new Error("hierarchy multi-selector missing");
+    expect(selection.multiple).toBe(true);
+    for (const option of Array.from(selection.options)) {
+      option.selected = option.value === "desktop-crate-stacked" ||
+        option.value === "desktop-crate-beside";
+    }
+    selection.dispatchEvent(new window.Event("change", { bubbles: true }));
+
+    expect(selection.dataset.value).toBe(
+      "desktop-crate-beside,desktop-crate-stacked",
+    );
+    expect(query(window, "[data-scene-property-entity-id]")?.textContent).toBe(
+      "desktop-crate-beside",
+    );
+  });
+
+  it("settles queued and in-flight selection before profile change", async () => {
+    let releaseSelection = () => {};
+    const selectionGate = new Promise<void>((resolve) => {
+      releaseSelection = resolve;
+    });
+    let markSelectionResponded = () => {};
+    const selectionResponded = new Promise<void>((resolve) => {
+      markSelectionResponded = resolve;
+    });
+    let markSelectionStarted = () => {};
+    const selectionStarted = new Promise<void>((resolve) => {
+      markSelectionStarted = resolve;
+    });
+    let selectionRequests = 0;
+    const { window, start } = mountChrome(projectDir(), ({ bridge, ipcClone }) =>
+      async (request) => {
+        const typed = ipcClone(request) as {
+          action?: unknown;
+          payload?: { commandId?: unknown; input?: Record<string, unknown> };
+        };
+        if (typed.action === "command" && typed.payload?.commandId === "scene-selection-set") {
+          selectionRequests += 1;
+          markSelectionStarted();
+          await selectionGate;
+          const input = typed.payload.input ?? {};
+          const response = ipcClone(bridge.handle({
+            ...typed,
+            payload: {
+              ...typed.payload,
+              input: { ...input, instanceIds: ["desktop-crate-root"] },
+            },
+          }));
+          markSelectionResponded();
+          return response;
+        }
+        return ipcClone(bridge.handle(typed));
+      });
+    start();
+    await click(window, "#project-open");
+    const selection = query(window, "#scene-entity-desktop-crate-beside") as
+      | (HappyHTMLElement & { value: string })
+      | null;
+    if (selection === null) throw new Error("hierarchy multi-selector missing");
+    selection.value = "desktop-crate-stacked";
+    selection.dispatchEvent(new window.Event("change", { bubbles: true }));
+    await selectionStarted;
+    selection.value = "desktop-crate-beside";
+    selection.dispatchEvent(new window.Event("change", { bubbles: true }));
+    query(window, "#profile-web")?.click();
+    for (let turn = 0; turn < 5; turn += 1) await Promise.resolve();
+    expect(selectionRequests).toBe(1);
+    expect(query(window, ".shell")?.dataset.profile).toBe("game");
+    releaseSelection();
+    await selectionResponded;
+    for (let turn = 0; turn < 60; turn += 1) {
+      await Promise.resolve();
+      if (query(window, ".shell")?.dataset.profile === "web") break;
+    }
+    expect(selectionRequests).toBe(2);
+    expect(query(window, ".shell")?.dataset.profile).toBe("web");
+    expect(query(window, "[data-scene-property-entity-id]")?.textContent)
+      .toBe("desktop-crate-root");
+  });
+
+  it("renders object identity and current parentage after reparent and reopen", async () => {
+    const { window, start } = mountChrome(projectDir());
+    start();
+    await click(window, "#project-open");
+
+    const identityText = (instanceId: string, field: "artifact" | "instance" | "parent") =>
+      query(
+        window,
+        `[data-scene-identity="${instanceId}"] [data-scene-identity-${field}]`,
+      )?.textContent;
+    expect(identityText("desktop-crate-beside", "artifact"))
+      .toBe("starter-service-crate-artifact");
+    expect(identityText("desktop-crate-beside", "instance"))
+      .toBe("desktop-crate-beside");
+    expect(identityText("desktop-crate-beside", "parent"))
+      .toBe("desktop-crate-root");
+
+    const hierarchy = query(window, "#scene-entity-desktop-crate-beside") as
+      | (HappyHTMLElement & {
+          value: string;
+          options: ArrayLike<HappyHTMLElement & { value: string }>;
+        })
+      | null;
+    if (hierarchy === null) throw new Error("hierarchy selector missing");
+    const optionText = (instanceId: string) =>
+      Array.from(hierarchy.options).find((option) => option.value === instanceId)?.textContent;
+    const initialText = optionText("desktop-crate-beside");
+    expect(initialText).toContain(
+      " · instance desktop-crate-beside · parent desktop-crate-root",
+    );
+    expect(initialText).not.toContain("Placed beside the root");
+    const objectIdentity = initialText?.split(" · instance ")[0];
+    expect(objectIdentity).toMatch(/^\s*Object [a-z0-9-]+$/);
+
+    hierarchy.value = "desktop-crate-beside";
+    hierarchy.dispatchEvent(new window.Event("change", { bubbles: true }));
+    const parent = query(window, "#scene-instance-parent") as
+      | (HappyHTMLElement & { value: string })
+      | null;
+    const policy = query(window, "#scene-instance-policy") as
+      | (HappyHTMLElement & { value: string })
+      | null;
+    if (parent === null || policy === null) throw new Error("reparent controls missing");
+    parent.value = "desktop-crate-stacked";
+    policy.value = "preserve-local";
+    await click(window, "#scene-instance-reparent");
+    await click(window, "#change-review-accept");
+    await click(window, "#project-open");
+
+    expect(optionText("desktop-crate-beside")).toContain(
+      `${objectIdentity} · instance desktop-crate-beside · parent desktop-crate-stacked`,
+    );
+    expect(optionText("desktop-crate-beside")).not.toContain("Placed beside the root");
+    expect(identityText("desktop-crate-beside", "artifact"))
+      .toBe("starter-service-crate-artifact");
+    expect(identityText("desktop-crate-beside", "instance"))
+      .toBe("desktop-crate-beside");
+    expect(identityText("desktop-crate-beside", "parent"))
+      .toBe("desktop-crate-stacked");
   });
 
   it("names the diagnostic the conflict dialog is actually reporting", async () => {

@@ -66,15 +66,11 @@ describe("desktop product loop", () => {
         payload: {
           op: "propose",
           documentPath: "scene.json",
-          jsonPointer: "/data",
+          jsonPointer: "/data/webExperience",
           expectedContentHash: CONTENT_HASH,
           newValue: {
-            title: "Landing",
-            entities: [{ id: "hero" }],
-            webExperience: {
-              html: "<main id=\"sceneaxi-mount\"></main>",
-              assets: ["assets/hero.glb"],
-            },
+            html: "<main id=\"sceneaxi-mount\"></main>",
+            assets: ["assets/hero.glb"],
           },
         },
       },
@@ -120,14 +116,11 @@ describe("desktop product loop", () => {
         payload: {
           op: "propose",
           documentPath: "scene.json",
-          jsonPointer: "/data",
+          jsonPointer: "/data/webExperience",
           expectedContentHash: CONTENT_HASH,
           newValue: {
-            title: "Landing",
-            webExperience: {
-              html: '<main id="sceneaxi-mount"><h1>Launch</h1></main>',
-              assets: ["assets/hero.glb"],
-            },
+            html: '<main id="sceneaxi-mount"><h1>Launch</h1></main>',
+            assets: ["assets/hero.glb"],
           },
         },
       },

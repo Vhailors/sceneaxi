@@ -1,11 +1,12 @@
 /**
- * Canonical selected-instance edit vocabulary shared by desktop presentation
- * and the privileged authoring host.
+ * Canonical hierarchy-edit vocabulary shared by desktop presentation and the
+ * privileged authoring host.
  *
  * The operation describes intent only. It never carries a Sculpt Artifact:
- * add-instance may therefore select only an artifact already validated inside
- * the open ComposedScene, and every operation is projected into an ordinary E1
- * proposal before any document bytes can change.
+ * create-object and the compatible add-instance form may therefore select only
+ * an artifact already validated inside the open ComposedScene, and every
+ * operation is projected into an ordinary E1 proposal before document bytes can
+ * change.
  */
 import {
   SCENE_MAXIMUM_COMPONENT_MAGNITUDE,
@@ -15,6 +16,32 @@ import { isSculptIdentifier } from "./sculpt.js";
 
 export const DESKTOP_SCENE_EDIT_PROFILES = Object.freeze(["game", "web"] as const);
 export type DesktopSceneEditProfile = (typeof DESKTOP_SCENE_EDIT_PROFILES)[number];
+
+export const DESKTOP_SCENE_HIERARCHY_SCHEMA_VERSION = 1 as const;
+export const DESKTOP_SCENE_HIERARCHY_KIND = "sceneaxi.desktop-scene-hierarchy" as const;
+
+export const DESKTOP_SCENE_REPARENT_POLICIES = Object.freeze([
+  "preserve-world",
+  "preserve-local",
+] as const);
+export type DesktopSceneReparentPolicy =
+  (typeof DESKTOP_SCENE_REPARENT_POLICIES)[number];
+
+/** Stable refusals shared by desktop controls, CLI, and assistant tools. */
+export const DESKTOP_SCENE_HIERARCHY_REFUSALS = Object.freeze({
+  cycle: "SCENE_HIERARCHY_CYCLE",
+  parentMissing: "SCENE_HIERARCHY_PARENT_MISSING",
+  protectedRoot: "SCENE_HIERARCHY_PROTECTED_ROOT",
+  selectionStale: "SCENE_HIERARCHY_SELECTION_STALE",
+  policyInvalid: "SCENE_HIERARCHY_POLICY_INVALID",
+  capabilityMissing: "SCENE_HIERARCHY_CAPABILITY_MISSING",
+  kidsDenied: "SCENE_HIERARCHY_KIDS_DENIED",
+  manifestInconsistent: "SCENE_HIERARCHY_MANIFEST_INCONSISTENT",
+  inputUnsupported: "SCENE_HIERARCHY_INPUT_UNSUPPORTED",
+} as const);
+
+export type DesktopSceneHierarchyRefusal =
+  (typeof DESKTOP_SCENE_HIERARCHY_REFUSALS)[keyof typeof DESKTOP_SCENE_HIERARCHY_REFUSALS];
 
 export const DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS = Object.freeze([
   Object.freeze({ id: "translation-x", label: "Translation X", field: "translation", axis: 0, step: 0.1, min: -SCENE_MAXIMUM_COMPONENT_MAGNITUDE, max: SCENE_MAXIMUM_COMPONENT_MAGNITUDE }),
@@ -47,6 +74,36 @@ export type DesktopSceneEditOperation =
   | Readonly<{
       kind: "remove-instance";
       instanceId: string;
+    }>
+  | Readonly<{
+      kind: "create-object";
+      sourceInstanceId: string;
+      parentInstanceId: string;
+    }>
+  | Readonly<{
+      kind: "remove-objects";
+      instanceIds: readonly string[];
+    }>
+  | Readonly<{
+      kind: "reparent-object";
+      instanceId: string;
+      parentInstanceId: string;
+      transformPolicy: DesktopSceneReparentPolicy;
+    }>;
+
+export type DesktopSceneSelection = Readonly<{
+  schemaVersion: typeof DESKTOP_SCENE_HIERARCHY_SCHEMA_VERSION;
+  instanceIds: readonly string[];
+  primaryInstanceId: string;
+}>;
+
+export type DesktopSceneSelectionResult =
+  | Readonly<{ ok: true; selection: DesktopSceneSelection }>
+  | Readonly<{
+      ok: false;
+      reason: typeof DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale |
+        typeof DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported;
+      message: string;
     }>;
 
 export function desktopSceneTransformProperty(
@@ -61,6 +118,53 @@ export function isDesktopSceneEditProfile(
   value: unknown,
 ): value is DesktopSceneEditProfile {
   return DESKTOP_SCENE_EDIT_PROFILES.some((profile) => profile === value);
+}
+
+export function isDesktopSceneReparentPolicy(
+  value: unknown,
+): value is DesktopSceneReparentPolicy {
+  return DESKTOP_SCENE_REPARENT_POLICIES.some((policy) => policy === value);
+}
+
+export function isDesktopSceneSelectionInput(
+  value: unknown,
+): value is readonly string[] {
+  return Array.isArray(value) &&
+    value.length > 0 &&
+    value.length <= 32 &&
+    value.every((id) => isSculptIdentifier(id)) &&
+    new Set(value).size === value.length;
+}
+
+/** Canonicalize every client selection to the hierarchy's stable traversal order. */
+export function resolveDesktopSceneSelection(
+  value: unknown,
+  hierarchyOrder: readonly string[],
+): DesktopSceneSelectionResult {
+  if (!isDesktopSceneSelectionInput(value)) {
+    return Object.freeze({
+      ok: false as const,
+      reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+      message: "A selection must contain one to 32 unique canonical instance identifiers.",
+    });
+  }
+  const requested = new Set(value);
+  const canonical = hierarchyOrder.filter((id) => requested.has(id));
+  if (canonical.length !== value.length) {
+    return Object.freeze({
+      ok: false as const,
+      reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+      message: "The ordered selection names an instance absent from the current project hierarchy.",
+    });
+  }
+  return Object.freeze({
+    ok: true as const,
+    selection: Object.freeze({
+      schemaVersion: DESKTOP_SCENE_HIERARCHY_SCHEMA_VERSION,
+      instanceIds: Object.freeze(canonical),
+      primaryInstanceId: canonical[0] as string,
+    }),
+  });
 }
 
 /** Exact, side-effect-free validation at every transport boundary. */
@@ -89,6 +193,21 @@ export function isDesktopSceneEditOperation(
   }
   if (record["kind"] === "remove-instance") {
     return keys === "instanceId,kind" && isSculptIdentifier(record["instanceId"]);
+  }
+  if (record["kind"] === "create-object") {
+    return keys === "kind,parentInstanceId,sourceInstanceId" &&
+      isSculptIdentifier(record["sourceInstanceId"]) &&
+      isSculptIdentifier(record["parentInstanceId"]);
+  }
+  if (record["kind"] === "remove-objects") {
+    return keys === "instanceIds,kind" &&
+      isDesktopSceneSelectionInput(record["instanceIds"]);
+  }
+  if (record["kind"] === "reparent-object") {
+    return keys === "instanceId,kind,parentInstanceId,transformPolicy" &&
+      isSculptIdentifier(record["instanceId"]) &&
+      isSculptIdentifier(record["parentInstanceId"]) &&
+      isDesktopSceneReparentPolicy(record["transformPolicy"]);
   }
   return false;
 }

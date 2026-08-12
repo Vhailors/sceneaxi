@@ -1109,6 +1109,9 @@ export type DesktopVisualView = Readonly<{
     stageTranslationX: DesktopControl;
     addSceneInstance: DesktopControl;
     removeSceneInstance: DesktopControl;
+    reparentSceneInstance: DesktopControl;
+    reparentSceneParent: DesktopControl;
+    reparentScenePolicy: DesktopControl;
     stageHtml: DesktopControl;
     injectAsset: DesktopControl;
   }>;
@@ -1285,7 +1288,7 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
   const productSurface = desktopProductSurface(state.profile);
   const selectSceneEntity = control(
     "scene-entity-desktop-crate-beside",
-    "Selected composed instance",
+    "Ordered scene object selection",
     "view",
   );
   const transformProperties = Object.freeze(
@@ -1322,6 +1325,9 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
     stageTranslationX: stageSceneEdit,
     addSceneInstance: control("scene-instance-add", "Add local instance", "live"),
     removeSceneInstance: control("scene-instance-remove", "Remove selected instance", "live"),
+    reparentSceneInstance: control("scene-instance-reparent", "Reparent primary selection", "live"),
+    reparentSceneParent: control("scene-instance-parent", "New parent", "live"),
+    reparentScenePolicy: control("scene-instance-policy", "Transform policy", "live"),
     stageHtml:
       state.profile === "web"
         ? control("web-stage-html", "Stage starter HTML", "live")

@@ -119,7 +119,7 @@ asserted rather than remembered.
 |---|---|
 | Colours, typography, metrics, contrast deviations, archive provenance | `apps/desktop-shell/src/visual-tokens.ts` |
 | Shared chrome vocabulary — the seven modes, rail labels, dock-tab derivation, assistant modes, window-tier thresholds, structural metrics | `packages/schemas/src/editor-shell.ts` (sceneaxi#184); this model **derives** its tables from it, and the umbrella web editor projects the same rows — parity is a data identity in `tests/parity/editor-shell-parity.test.ts`, and the web surface's own record is [`web-editor-shell.md`](web-editor-shell.md) |
-| First-release project/file and per-profile product loop, including host-projected New/Open/Recent lifecycle, selected composed-instance transforms and local add/remove, Web stored-HTML, the portable project-relative asset fixture, and the packaged host's contained-asset invocation | `apps/desktop-shell/src/product-loop.ts` + emitted adapter in `chrome.ts` (sceneaxi#196/#224/#225); root validation, scene-edit/import validation and staging, and persistence remain host-owned, with the contained profile owned by [`asset-ingestion.md`](asset-ingestion.md) |
+| First-release project/file and per-profile product loop, including host-projected New/Open/Recent lifecycle, hierarchy and ordered multi-selection, explicit-policy parenting, selected-object transforms and bounded local create/remove, Web stored-HTML, the portable project-relative asset fixture, and the packaged host's contained-asset invocation | `apps/desktop-shell/src/product-loop.ts` + emitted adapter in `chrome.ts` (sceneaxi#196/#224/#225/#253); root validation, hierarchy/scene-edit/import validation and staging, and persistence remain host-owned, with the contained profile owned by [`asset-ingestion.md`](asset-ingestion.md) |
 | Mode/profile/dock/assistant/overlay/sculpt state, refusals, window tiers, control kinds, and Change Review's static controls/empty state | `apps/desktop-shell/src/visual-model.ts` |
 | The emitted document (markup, stylesheet, behaviour script), including validated host-snapshot projection and the active Change Review decision flow | `apps/desktop-shell/src/chrome.ts` |
 | The `chrome` command and its flags | `apps/desktop-shell/src/app.ts` |
@@ -182,8 +182,8 @@ always has a refusal and a non-inert one never does.
 
 | Kind | Meaning | Examples |
 |---|---|---|
-| `view` | changes visual state; genuinely works | mode rail, dock tabs, profile switch, assistant open/close, its Ask/Build/Agent modes and its three route chips, menu openers, the palette openers, the outcome dismissal, drawer toggles, the composed-instance selector |
-| `live` | delegates a product action to an injected desktop-host seam; refuses visibly when that host is absent | File New/Open/Save and Export Web, the Ship panel's Export Web action, Edit Undo when the active project's authoring journal reports a completed Save, Run Play, their palette rows and accelerators where assigned, Change Review's Accept and Reject, the nine selected-instance transform fields, Stage, local-copy Add and leaf Remove, stage Web HTML, and the **Import GLB/glTF…** control; and — only once the packaged Linux runtime binds them — the assistant prompt, Send, Retry, and the artifact manipulators |
+| `view` | changes visual state; genuinely works | mode rail, dock tabs, profile switch, assistant open/close, its Ask/Build/Agent modes and its three route chips, menu openers, the palette openers, the outcome dismissal, drawer toggles, and the hierarchy multi-select |
+| `live` | delegates a product action to an injected desktop-host seam; refuses visibly when that host is absent | File New/Open/Save and Export Web, the Ship panel's Export Web action, Edit Undo/Redo when durable history permits them, Run Play, their palette rows and accelerators where assigned, Change Review's Accept and Reject, the nine primary-object transform fields, Stage, local-artifact Create, ordered Remove, parent/policy selectors, Reparent, stage Web HTML, and the **Import GLB/glTF…** control; and — only once the packaged Linux runtime binds them — the assistant prompt, Send, Retry, and the artifact manipulators |
 | `inert` | renders, keeps its focus stop, refuses by name | Undo when the active project's authoring journal has no completed Save or has recovery pending, Sculpt object and its static progress cancellation, standalone-shell assistant prompt/Send/Retry and the four artifact manipulators, the three viewport-source tabs, and — on the refuse-only profile — every control except the seven named below |
 
 The chrome imports no engine, profile, site, billing, or host package, and
@@ -229,15 +229,17 @@ control still calls the host's authoring `status` operation and retains its
 validated inert `data`; it re-reads the bound project and never selects one, and
 under a host with no bound root it refuses instead of opening.
 
-Once a bound project has been opened, the same panel selects among the validated
-composed instances the host reported (a `view` control) and fills the Build
-inspector with nine bounded translation/rotation/scale fields, Stage, local-copy
-Add, and leaf Remove, all `live`. The chrome derives no value of its own — it re-reads the panel from
-the host's inspection after every open, stage, save, and recovery, and keeps the
-operator's selection across that read. Staging asks the host for one proposal and
-displays the rendered diff and any diagnostic message; Save is the existing
-accept. The operations, their refusals, and byte-level CLI parity are owned by
-`docs/desktop-linux.md`.
+Once a bound project has been opened, the same panel renders the host's versioned
+hierarchy in a multiple selector (a `view` control), with separate artifact and
+instance ids, parentage, depth, and ordered selection. Its primary object fills
+the Build inspector's nine bounded translation/rotation/scale fields. Stage,
+local-artifact Create, ordered Remove, the parent/policy selectors, and Reparent
+are all `live`. The chrome derives no value of its own: it re-reads the panel from
+the host's inspection after every open, stage, save, and recovery, retaining the
+operator's selection under the host's stale-selection rules. Staging asks the host
+for one proposal and displays the rendered diff and any diagnostic message; Save
+is the existing accept. The operations, their refusals, and byte-level CLI parity
+are owned by `docs/desktop-linux.md`.
 
 Web Experience stages starter HTML through the shared shell decision. Its second
 control is **Import GLB/glTF…**: when the packaged Linux host exposes the native
@@ -547,7 +549,7 @@ Two rules keep this honest:
   `section`, every one labelled.
 - **Real controls**: button actions use `<button type="button">`. The other
   controls are the modelled assistant `<textarea>`, the recent-project and
-  composed-instance `<select>` elements, and nine numeric transform `<input>`
+  hierarchy `<select>` elements, and nine numeric transform `<input>`
   elements. The static `--sculpt running` preview has no bound job, so its
   cancellation control is inert with `DESKTOP_NO_DOCUMENT_BOUND` rather than
   hiding progress locally. Keyboard order is DOM order, and no click handler sits
@@ -564,7 +566,7 @@ Two rules keep this honest:
   uses the parallel `promptInput(control)` helper so it carries the same
   `data-kind`, refusal reference, and profile-switch demotion; when inert it is
   `readonly` rather than removed from the focus order. The recent-project and
-  composed-instance choosers use the same parallel treatment, as do the transform
+  hierarchy choosers use the same parallel treatment, as do the transform
   inputs; when inert, each retains its refusal reference and focus stop. Thus a
   control cannot reach the document without its
   kind, and a control the model builds cannot fail to reach the document. That is
@@ -660,7 +662,7 @@ against.
 | Panel inventory | fixture object trees, digests, byte sizes, fps, triangle counts, run timings, evidence rows | real structure with honest empty and inert states | the chrome mounts no renderer itself and reports only results returned by the packaged host, so it has no authority to invent fps, a triangle count, or a `14.2 MB` artifact. Rendering the archive's fixtures would be inventing file sizes and hashes. Change Review was the one fixture queue kept, and sceneaxi#227 retired that exception too: the panel is populated only by the active `DesktopSession` proposal — its real document path, base content hash, and rendered diff — with an honest empty state when none exists. It is therefore the one panel here that **does** write: Accept applies the whole proposal through the shared authoring session (`writesDocuments: true`), Reject discards it without writing, and there is no per-row or partial acceptance to have. |
 | Project lifecycle and contained browser (sceneaxi#224 plus the contained browser slice) | a Project / Files panel drawn with fixture files already present, plus a fixture Assets inventory; no project selection, recents, unbound state, validation detail, or file operation is recorded | an unbound launcher with New Project, Open Project, a recent chooser, Open Recent, and Remove; after binding, one canonical file selector, a metadata detail card, Open selected, Rename, Delete, and an Assets dock populated only from the host response | **product decision, not a visual one.** First launch must not silently choose a project root, and a bound panel must not preserve the archive's invented inventory. The lifecycle chooser is `view`; its four actions and the browser's selector and three actions are `live`, so standalone chrome refuses them without a host and Kids demotes them through the central mint before a dialog, state read, or project read. The detail and Assets regions start empty and receive no fabricated digest, provenance, or status. No archive colour or geometry is claimed for the added regions, and their rendered contrast has not been swept in a browser; see the caveat below. |
 | Ship Web export | a Ship room that names a Delivery Handoff but explicitly exposes no export action | one `Export Web` action shared by the File menu, palette, and Ship inspector, followed by only the returned output path, bundle digest, source digest, and handoff path | **product decision, not a visual one.** The accepted vertical makes Ship a real offline product job while retaining the archive's room. The new control is modelled `live`, goes inert through the central Kids refusal, and refuses by name without a clean bound project. Evidence fields start empty and appear only from the packaged host's validated response; no fabricated hash, size, deployment, or release state is drawn. No new colour, token, or geometry is claimed from the archive, and the added controls retain the recorded browser-sweep caveat below. |
-| Selected composed-instance edit (sceneaxi#225 plus this narrow breadth vertical) | nothing recorded: the archive draws no composed-instance selector or property editor in the Build inspector | one composed-instance `<select>` under the bound project; a Build-inspector editor carrying the selected identity; bounded X/Y/Z translation, Euler rotation, and scale fields; Stage, local-copy Add, and leaf Remove; the staged proposal's own diff; and the host's named inspection refusal | **product decision, not a visual one.** The operation stays on the existing E1/Minimum-E2 seam: selection is `view`; the nine fields and three actions are `live`; all go inert through the central mint on Kids before a session or document is reached. Add names no external artifact and can only copy already-validated local bytes; Remove is a non-root leaf operation, not a general hierarchy editor. No colour, size, or geometry is claimed from the archive, and the added controls have not received a new browser contrast sweep; the recorded-sweep caveat below remains explicit. |
+| Project hierarchy and selected-object edit (sceneaxi#225/#253) | nothing recorded: the archive draws no hierarchy, multi-select, parenting, or property editor in the Build inspector | one multiple `<select>` under the bound project rendering stable object id, depth, and parent id; a Build-inspector editor carrying the primary identity; bounded X/Y/Z translation, Euler rotation, and scale fields; Stage, local-artifact Create, ordered Remove, parent and preserve-world/local selectors, Reparent; the staged proposal's own diff; and the host's named inspection/refusal output | **product decision, not a visual one.** The operation stays on the existing E1/Minimum-E2 and transaction seams: selection and inspection are `view`; the numeric and hierarchy actions are `live`; all go inert through the central mint on Kids before project I/O. Create names no external artifact and copies only validated local bytes; Remove protects the root and refuses orphans; Reparent requires an explicit transform policy. Existing composed-scene and artifact bytes are projected, never migrated or rewritten by inspection. No colour, size, or geometry is claimed from the archive, and the added controls have not received a new browser contrast sweep; the recorded-sweep caveat below remains explicit. |
 | Assistant product flow (sceneaxi#192) | nothing recorded: this document has never carried an assistant composer inventory from the archive, and the archive is a design input for visual values, not for product flow | a real prompt `<textarea>`, three provider-route chips (`local`, `byo`, `hosted`), progress and result regions that report actual work, a `Retry` action, and a viewport manipulator bar (`Move +X`, `Move +Y`, `Rotate Y`, `Scale +`) | **product decision, not a visual one.** sceneaxi#192 turns the assistant from a drawn panel into a flow that a runtime performs, so the surface needs controls for the states that flow really has. They ship as modelled controls under the rules already on this page: each declares its kind, all of them are `inert` with a named refusal in the standalone CLI render and become `live` only when the packaged Linux runtime binds them, and all of them are denied on Kids. No colour, size, or geometry is claimed for them from the archive, which is why there is no `DEVIATIONS` row: there is no archive value to compare against. Their rendered contrast has not been swept in a browser — see the caveat on the recorded sweep below. |
 | Application menus (sceneaxi#226) | eight menu-bar headings — `File`, `Edit`, `Scene`, `Object`, `Sculpt`, `Run`, `Window`, `Help` | three — `File`, `Edit`, `Run` | **removing fiction, not trimming a design.** The eight shipped as inert buttons naming `DESKTOP_VERB_NOT_ON_THIS_SURFACE`, which was honest only while none of them did anything. Once a menu opens real commands, a heading is a promise: `Scene`, `Object`, `Sculpt`, `Window`, and `Help` have no command this shell can execute, and the issue forbids inventing one. An empty menu that opens onto nothing is worse than no menu, so they are absent rather than inert — the same rule the palette rows follow. The three that remain are exactly the menus whose commands exist, and `DESKTOP_VERB_NOT_ON_THIS_SURFACE` was retired with them. |
 | Menu dropdown geometry (sceneaxi#226) | none: the archive draws a menu bar and never opens one, so it records no panel fill, width, offset, or elevation | an absolutely-positioned `.menu-panel` — 220px min-width, 25px top offset, `--raised` fill, `0 18px 45px -16px` shadow, `z-index:45` — with `.menu-command` rows and a `--dim` accelerator `kbd` at `font-size:9px` | **no archive value to compare against**, which is why there is no `DEVIATIONS` row. The panel is drawn from Foundations v2 members already on this page (`--raised`, `--line-raised`, `--hover`, `--dim`) rather than from new values, and its elevation follows the refusal-legend panel that already floats over the status bar. Its rendered contrast has not been swept in a browser — see the caveat on the recorded sweep below, which names this chrome explicitly. |
@@ -794,19 +796,22 @@ sentence can return by review slip.
 
   **This record predates the contained project lifecycle (sceneaxi#224), the
   contained project/asset browser, the typed scene-property edit (sceneaxi#225),
-  and the current composed-instance breadth, and has not been re-run for them.**
+  and the hierarchy/multi-select/parenting breadth (sceneaxi#253), and has not
+  been re-run for them.**
   It observed the left dock already showing the active
   `scene.json` and a title-bar control labelled `Open`; today that panel starts
   as the unbound launcher, the title-bar control reads `Reload`, reaching the
   authoring loop takes a New/Open/Recent choice first, and an opened project adds
   the canonical file selector, detail card, three file actions, admitted Assets
-  cards, the composed-instance selector, nine transform fields, Stage,
-  local-copy Add, and leaf Remove, none of which this run saw. The refusal, profile, and
+  cards, the hierarchy selector, nine transform fields, Stage, local-artifact
+  Create/Remove, parent/policy selectors, and Reparent, none of which this run
+  saw. The refusal, profile, and
   overflow readings above stand for the document as it was on 2026-08-05; the
   lifecycle's own behaviour is gate evidence in
   `tests/e2e/desktop-project-lifecycle-golden.test.ts`, the browser's in
   `tests/e2e/desktop-project-browser-golden.test.ts`, and the scene edits' in
-  `tests/e2e/desktop-scene-property-golden.test.ts` and
+  `tests/e2e/desktop-scene-property-golden.test.ts`,
+  `tests/e2e/desktop-hierarchy-golden.test.ts`, and
   `tests/e2e/desktop-product-loop-golden.test.ts`, not a browser record.
 
 - **Real browser, re-recorded 2026-07-28 against this branch's final HEAD.**
@@ -840,10 +845,12 @@ sentence can return by review slip.
   manipulators — plus the modelled prompt `<textarea>`; sceneaxi#224 then added
   the four project-lifecycle buttons and the recent-project `<select>` to every
   document, along with the unbound launcher this sweep never saw; sceneaxi#225
-  then added scene selection, Stage, and Translation X. This breadth vertical
-  replaces that selection button with one composed-instance `<select>`, expands
-  the field to nine transform `<input>` elements, and adds local-copy Add and
-  leaf Remove; every document emits the Build inspector that carries them. sceneaxi#227
+  then added scene selection, Stage, and Translation X. The following breadth
+  vertical replaced that selection button with one composed-instance `<select>`,
+  expanded the field to nine transform `<input>` elements, and added local-copy
+  Add and leaf Remove. sceneaxi#253 later turned that chooser into the current
+  hierarchy multi-select and added parent/policy selectors plus Reparent; every
+  document emits the Build inspector that carries them. sceneaxi#227
   then replaced the fixture Change Review queue with the active proposal,
   removing its three rows and the bulk accept/reject pair and adding a focusable
   diff region. The contained browser slice later added one file `<select>`, three
@@ -917,10 +924,11 @@ sentence can return by review slip.
   inert count, since the refuse-only profile demotes all five — were taken before
   the four project-lifecycle buttons and the recent-project `<select>` existed,
   so each of those figures is low and none of those controls was measured. It
-  predates sceneaxi#225 and this breadth vertical identically: the composed-instance
-  selector, Stage, Add, Remove, and nine transform inputs — all demoted on `kids`
-  by the central mint — came after it, so the same figures are low
-  again and none of those controls was measured either. The contained browser's
+  predates sceneaxi#225 and the later hierarchy breadth identically: the hierarchy
+  selector, Stage, Create, Remove, parent/policy selectors, Reparent, and nine
+  transform inputs — all demoted on `kids` by the central mint — came after it,
+  so the same figures are low again and none of those controls was measured
+  either. The contained browser's
   file selector, three file action buttons, detail region, and Assets cards also
   postdate the addendum, so none of their text or control states was measured.
 

@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   DESKTOP_LOCAL_BRIDGE_PROTOCOL_VERSION,
   EDITOR_COMMAND_REGISTRY,
@@ -175,6 +175,122 @@ describe("desktop same-user local RPC bridge", () => {
     expect(status).toMatchObject({
       ok: true,
       result: { documentPath: "scene.json" },
+    });
+    if (!status.ok) return;
+    const genericStatus = status.result as {
+      data?: Readonly<Record<string, unknown>>;
+      dataKeys?: readonly string[];
+    };
+    expect(genericStatus.data).not.toHaveProperty("composedScene");
+    expect(genericStatus.dataKeys).not.toContain("composedScene");
+  });
+
+  it("requires a non-Kids hierarchy profile before local-agent project access", async () => {
+    const root = mkdtempSync(join(tmpdir(), "sceneaxi-local-rpc-hierarchy-"));
+    roots.push(root);
+    const projectRoot = join(root, "project");
+    expect(seedDesktopProject(projectRoot).ok).toBe(true);
+    const socketPath = join(root, "runtime", "desktop-v1.sock");
+    const createAuthoringSession = vi.fn(() => {
+      throw new Error("must not reach project authority");
+    });
+    const server = await startDesktopLocalBridgeServer({
+      bridge: createDesktopBridge({
+        cwd: projectRoot,
+        commandCapabilities: ["scene.compose"],
+        createAuthoringSession,
+      }),
+      projectRoot,
+      socketPath,
+      discoveryPath: join(root, "config", "desktop-bridge-v1.json"),
+      capability: CAPABILITY,
+    });
+    servers.push(server);
+
+    expect(await request(socketPath, {
+      protocolVersion: 1,
+      id: "hierarchy-missing-profile",
+      capability: CAPABILITY,
+      permission: "project:read",
+      tool: "sceneaxi.scene.hierarchy.inspect",
+      input: { documentPath: "scene.json" },
+    } as DesktopLocalBridgeRequest)).toMatchObject({
+      ok: false,
+      error: { code: "LOCAL_BRIDGE_INPUT_INVALID" },
+    });
+    expect(await request(socketPath, {
+      protocolVersion: 1,
+      id: "hierarchy-kids-profile",
+      capability: CAPABILITY,
+      permission: "project:read",
+      tool: "sceneaxi.scene.hierarchy.inspect",
+      input: { documentPath: "scene.json", profile: "kids" },
+    })).toMatchObject({
+      ok: false,
+      error: {
+        code: "LOCAL_BRIDGE_UPSTREAM_REFUSED",
+        detail: "SCENE_HIERARCHY_KIDS_DENIED",
+      },
+    });
+    expect(createAuthoringSession).not.toHaveBeenCalled();
+  });
+
+  it("stages scene properties through the local-agent reviewing result", async () => {
+    const root = mkdtempSync(join(tmpdir(), "sceneaxi-local-rpc-property-"));
+    roots.push(root);
+    const projectRoot = join(root, "project");
+    expect(seedDesktopProject(projectRoot).ok).toBe(true);
+    const socketPath = join(root, "runtime", "desktop-v1.sock");
+    const server = await startDesktopLocalBridgeServer({
+      bridge: createDesktopBridge({
+        cwd: projectRoot,
+        commandCapabilities: ["scene.compose"],
+      }),
+      projectRoot,
+      socketPath,
+      discoveryPath: join(root, "config", "desktop-bridge-v1.json"),
+      capability: CAPABILITY,
+    });
+    servers.push(server);
+
+    const status = await request(socketPath, {
+      protocolVersion: 1,
+      id: "property-status",
+      capability: CAPABILITY,
+      permission: "project:read",
+      tool: "sceneaxi.project.status",
+      input: { documentPath: "scene.json" },
+    });
+    if (!status.ok) throw new Error("property fixture status refused");
+    const contentHash = (status.result as { contentHash?: unknown }).contentHash;
+    if (typeof contentHash !== "string") throw new Error("property fixture hash missing");
+
+    expect(await request(socketPath, {
+      protocolVersion: 1,
+      id: "property-stage",
+      capability: CAPABILITY,
+      permission: "project:write",
+      tool: "sceneaxi.scene.property.set",
+      input: {
+        documentPath: "scene.json",
+        expectedContentHash: contentHash,
+        profile: "game",
+        instanceId: "desktop-crate-beside",
+        propertyId: "translation-x",
+        newValue: -3.25,
+      },
+    })).toMatchObject({
+      ok: true,
+      result: {
+        phase: "reviewing",
+        transaction: {
+          commandId: "scene-property-set",
+          status: "reviewing",
+          evidence: { kind: "scene-hierarchy", target: "change-review" },
+          refusal: null,
+          undo: { kind: "none", commandId: null },
+        },
+      },
     });
   });
 

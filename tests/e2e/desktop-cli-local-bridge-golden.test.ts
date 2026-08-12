@@ -62,7 +62,10 @@ describe("CLI → local desktop bridge golden path", () => {
     expect(seedDesktopProject(projectRoot).ok).toBe(true);
     const discoveryPath = join(root, "config", "desktop-bridge-v1.json");
     const server = await startDesktopLocalBridgeServer({
-      bridge: createDesktopBridge({ cwd: projectRoot }),
+      bridge: createDesktopBridge({
+        cwd: projectRoot,
+        commandCapabilities: ["scene.compose", "authoring.change-review", "runtime.play"],
+      }),
       projectRoot,
       socketPath: join(root, "runtime", "desktop-v1.sock"),
       discoveryPath,
@@ -84,6 +87,72 @@ describe("CLI → local desktop bridge golden path", () => {
           app: "@sceneaxi/desktop-linux",
           localProtocolVersion: 1,
           creditRoute: "none",
+        },
+      },
+    });
+
+    const selected = await sceneaxi(
+      [
+        "desktop",
+        "bridge",
+        "call",
+        "--tool",
+        "sceneaxi.scene.selection.set",
+        "--allow",
+        "project:read",
+        "--input-json",
+        JSON.stringify({
+          documentPath: "scene.json",
+          profile: "game",
+          instanceIds: ["desktop-crate-stacked", "desktop-crate-beside"],
+        }),
+        ...common,
+      ],
+      projectRoot,
+    );
+    expect(selected).toMatchObject({ status: 0, stderr: "" });
+    expect(JSON.parse(selected.stdout)).toMatchObject({
+      ok: true,
+      result: {
+        response: {
+          selection: {
+            instanceIds: ["desktop-crate-beside", "desktop-crate-stacked"],
+            primaryInstanceId: "desktop-crate-beside",
+          },
+        },
+      },
+    });
+
+    const hierarchy = await sceneaxi(
+      [
+        "desktop",
+        "bridge",
+        "call",
+        "--tool",
+        "sceneaxi.scene.hierarchy.inspect",
+        "--allow",
+        "project:read",
+        "--input-json",
+        JSON.stringify({ documentPath: "scene.json", profile: "game" }),
+        ...common,
+      ],
+      projectRoot,
+    );
+    expect(hierarchy).toMatchObject({ status: 0, stderr: "" });
+    expect(JSON.parse(hierarchy.stdout)).toMatchObject({
+      ok: true,
+      result: {
+        response: {
+          hierarchy: {
+            schemaVersion: 1,
+            rootInstanceId: "desktop-crate-root",
+            objects: expect.arrayContaining([
+              expect.objectContaining({
+                id: "desktop-crate-stacked",
+                parentId: "desktop-crate-root",
+              }),
+            ]),
+          },
         },
       },
     });

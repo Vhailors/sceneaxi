@@ -62,13 +62,18 @@ calling the desktop bridge: the capability is valid, the named
 permission is granted by this desktop instance, and it is the exact permission
 declared by the checked-in tool definition.
 
-| Permission | Tools |
+| Permission | Authority |
 |---|---|
-| `bridge:connect` | `sceneaxi.bridge.handshake` |
-| `project:read` | `sceneaxi.project.status` |
-| `project:write` | `sceneaxi.project.propose`, `accept`, `reject`, `recover`, `restart`, `undo` |
-| `assistant:read` | `sceneaxi.assistant.status` |
-| `assistant:run` | `sceneaxi.assistant.local.start`, `sceneaxi.assistant.byo.start`, `sceneaxi.assistant.abandon` |
+| `bridge:connect` | Authenticate the discovered desktop instance and read its granted permissions. |
+| `project:read` | Read project/native-model state, inspect hierarchy, or replace the ordered selection without changing project bytes. |
+| `project:write` | Stage or settle project changes, run recovery/history commands, and commit an approved native-project migration. |
+| `assistant:read` | Read the retained assistant job state. |
+| `assistant:run` | Start or abandon one bounded assistant job. |
+
+The closed tool registry and `desktop bridge tools --json` output are the
+authoritative name-to-permission map; this document does not keep a second tool
+list. The hierarchy selection, transaction-binding, and refusal rules live in
+[`desktop-linux.md`](desktop-linux.md#project-hierarchy-and-selected-object-edit).
 
 `sceneaxi.assistant.abandon` requires the exact `jobId` returned by its matching
 start call, so a delayed timeout or agent request cannot abandon newer work.
@@ -112,6 +117,18 @@ pnpm sceneaxi desktop bridge call \
 pnpm sceneaxi desktop bridge call \
   --tool sceneaxi.project.accept \
   --allow project:write \
+  --json
+
+pnpm sceneaxi desktop bridge call \
+  --tool sceneaxi.scene.hierarchy.inspect \
+  --allow project:read \
+  --input-json '{"documentPath":"scene.json","profile":"game"}' \
+  --json
+
+pnpm sceneaxi desktop bridge call \
+  --tool sceneaxi.scene.object.reparent \
+  --allow project:write \
+  --input-json '{"documentPath":"scene.json","expectedContentHash":"sha256:<64 lowercase hex>","profile":"game","instanceId":"child-id","parentInstanceId":"parent-id","transformPolicy":"preserve-world"}' \
   --json
 ```
 

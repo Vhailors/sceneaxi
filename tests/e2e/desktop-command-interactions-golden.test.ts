@@ -184,7 +184,18 @@ function engineResponse(
 async function settle(window: HappyWindow) {
   for (let turn = 0; turn < 40; turn += 1) {
     await Promise.resolve();
-    if (turn >= 10 && window.document.querySelector("[data-busy]") === null) return;
+    const projectState = window.document.querySelector("[data-project-state]")
+      ?.getAttribute("data-project-state");
+    const projectTransitionPending =
+      projectState === "opening" ||
+      projectState === "recovering" ||
+      projectState === "undoing" ||
+      projectState === "redoing";
+    if (
+      turn >= 10 &&
+      window.document.querySelector("[data-busy]") === null &&
+      !projectTransitionPending
+    ) return;
   }
   throw new Error("desktop command did not settle");
 }

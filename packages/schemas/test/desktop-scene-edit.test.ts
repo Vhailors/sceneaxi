@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  DESKTOP_SCENE_HIERARCHY_REFUSALS,
   DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS,
   desktopSceneTransformProperty,
   isDesktopSceneEditOperation,
   isDesktopSceneEditProfile,
+  resolveDesktopSceneSelection,
 } from "@sceneaxi/schemas";
 
 describe("canonical desktop selected-instance operation", () => {
@@ -36,6 +38,21 @@ describe("canonical desktop selected-instance operation", () => {
       instanceId: "crate-one",
     })).toBe(true);
     expect(isDesktopSceneEditOperation({
+      kind: "create-object",
+      sourceInstanceId: "crate-one",
+      parentInstanceId: "root",
+    })).toBe(true);
+    expect(isDesktopSceneEditOperation({
+      kind: "remove-objects",
+      instanceIds: ["crate-one", "crate-two"],
+    })).toBe(true);
+    expect(isDesktopSceneEditOperation({
+      kind: "reparent-object",
+      instanceId: "crate-one",
+      parentInstanceId: "crate-two",
+      transformPolicy: "preserve-world",
+    })).toBe(true);
+    expect(isDesktopSceneEditOperation({
       kind: "set-transform-component",
       instanceId: "crate-one",
       propertyId: "scale-y",
@@ -49,5 +66,26 @@ describe("canonical desktop selected-instance operation", () => {
     expect(isDesktopSceneEditProfile("game")).toBe(true);
     expect(isDesktopSceneEditProfile("web")).toBe(true);
     expect(isDesktopSceneEditProfile("kids")).toBe(false);
+  });
+
+  it("canonicalizes every client selection to stable hierarchy order", () => {
+    expect(resolveDesktopSceneSelection(
+      ["child-b", "root", "child-a"],
+      ["root", "child-a", "child-b"],
+    )).toEqual({
+      ok: true,
+      selection: {
+        schemaVersion: 1,
+        instanceIds: ["root", "child-a", "child-b"],
+        primaryInstanceId: "root",
+      },
+    });
+    expect(resolveDesktopSceneSelection(
+      ["missing"],
+      ["root"],
+    )).toMatchObject({
+      ok: false,
+      reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+    });
   });
 });

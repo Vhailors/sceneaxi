@@ -53,6 +53,16 @@ mutation refusals, a static Web export whose source bytes and Delivery Handoff
 digests are verified, and the renderer's real presentation frame report
 (`backend three`, `surface webgl-canvas` where a drawing buffer exists).
 
+The bound Build inspector also projects the accepted composition as versioned
+hierarchy v1: distinct stable artifact and object ids, parent/child depth,
+ordered multi-selection, bounded local-artifact create/remove, and explicit
+preserve-world or preserve-local reparenting. These commands use the same Change
+Review, transaction history, reopen, and Play paths; the CLI and local assistant
+inspect the same hierarchy through the permission-bound desktop bridge. The
+focused end-to-end proof is `tests/e2e/desktop-hierarchy-golden.test.ts`; the
+Electron smoke above remains the packaged-host proof and does not claim the later
+#254 gizmo or #258 Play-lifecycle work.
+
 On Web Experience, **Import GLB/glTF…** opens a native file dialog and stages the
 selected contained asset through that same Change Review. Save owns the accepted
 manifest/copy; Reject owns no bytes; reopen and Play recover and redraw its real

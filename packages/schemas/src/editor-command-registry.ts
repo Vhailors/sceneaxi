@@ -6,6 +6,13 @@
  * becoming competing sources of permission or result metadata.
  */
 import type { JsonObject } from "./document.js";
+import {
+  DESKTOP_SCENE_HIERARCHY_REFUSALS,
+  isDesktopSceneEditOperation,
+  isDesktopSceneEditProfile,
+  isDesktopSceneSelectionInput,
+  type DesktopSceneHierarchyRefusal,
+} from "./desktop-scene-edit.js";
 
 export const EDITOR_COMMAND_SCHEMA_VERSION = 1 as const;
 
@@ -55,6 +62,12 @@ export type EditorCommandId =
   | "ship-export-web"
   | "edit-undo"
   | "edit-redo"
+  | "scene-hierarchy-inspect"
+  | "scene-selection-set"
+  | "scene-property-set"
+  | "scene-object-create"
+  | "scene-object-remove"
+  | "scene-object-reparent"
   | "run-play"
   | "change-review-accept"
   | "change-review-reject"
@@ -103,6 +116,7 @@ export type EditorCommandDefinition = Readonly<{
       | "authoring-snapshot"
       | "undo-result"
       | "redo-result"
+      | "scene-hierarchy"
       | "kernel-session"
       | "sculpt-artifact"
       | "rarity-proposal"
@@ -115,7 +129,20 @@ export type EditorCommandDefinition = Readonly<{
     commandId: "edit-undo" | "edit-redo" | null;
   }>;
   inputSchema: JsonObject;
-  inputShape: "none" | "document" | "export" | "assistant" | "assistant-agent" | "job" | "migration-approval";
+  inputShape:
+    | "none"
+    | "document"
+    | "export"
+    | "assistant"
+    | "assistant-agent"
+    | "job"
+    | "migration-approval"
+    | "scene-document"
+    | "scene-selection"
+    | "scene-property"
+    | "scene-create"
+    | "scene-remove"
+    | "scene-reparent";
 }>;
 
 export type EditorCommandInvocation = Readonly<{
@@ -135,7 +162,7 @@ export type EditorCommandValidation =
     }>
   | Readonly<{
       ok: false;
-      reason: EditorCommandRefusal;
+      reason: EditorCommandRefusal | DesktopSceneHierarchyRefusal;
       message: string;
     }>;
 
@@ -160,7 +187,7 @@ export type EditorCommandTransactionResult = Readonly<{
   schemaVersion: typeof EDITOR_COMMAND_SCHEMA_VERSION;
   commandId: EditorCommandId;
   transactionId: string | null;
-  status: "completed" | "recovery-pending" | "refused";
+  status: "reviewing" | "completed" | "recovery-pending" | "refused";
   progress: EditorCommandProgress;
   evidence: Readonly<{
     kind: EditorCommandDefinition["evidence"]["kind"];
@@ -168,6 +195,7 @@ export type EditorCommandTransactionResult = Readonly<{
     documentPaths: readonly string[];
   }>;
   refusal: string | null;
+  undo: EditorCommandDefinition["undo"];
 }>;
 
 const noInput = Object.freeze({
@@ -247,6 +275,99 @@ const migrationApprovalInput = Object.freeze({
   }),
 }) satisfies JsonObject;
 
+const sceneId = Object.freeze({
+  type: "string",
+  pattern: "^[a-z0-9][a-z0-9-]*$",
+}) satisfies JsonObject;
+
+const sceneIds = Object.freeze({
+  type: "array",
+  minItems: 1,
+  maxItems: 32,
+  uniqueItems: true,
+  items: sceneId,
+}) satisfies JsonObject;
+
+const sceneProfile = Object.freeze({
+  type: "string",
+  enum: Object.freeze(["game", "web", "kids"]),
+}) satisfies JsonObject;
+
+const sceneDocumentInput = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: Object.freeze(["documentPath", "profile"]),
+  properties: Object.freeze({
+    documentPath: documentInput.properties.documentPath,
+    profile: sceneProfile,
+  }),
+}) satisfies JsonObject;
+
+const sceneSelectionInput = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: Object.freeze(["documentPath", "profile", "instanceIds"]),
+  properties: Object.freeze({
+    documentPath: documentInput.properties.documentPath,
+    profile: sceneProfile,
+    instanceIds: sceneIds,
+  }),
+}) satisfies JsonObject;
+
+const sceneMutationProperties = Object.freeze({
+  documentPath: documentInput.properties.documentPath,
+  expectedContentHash: Object.freeze({ type: "string", pattern: "^sha256:[0-9a-f]{64}$" }),
+  profile: sceneProfile,
+});
+
+const scenePropertyInput = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: Object.freeze(["documentPath", "expectedContentHash", "profile", "instanceId", "propertyId", "newValue"]),
+  properties: Object.freeze({
+    ...sceneMutationProperties,
+    instanceId: sceneId,
+    propertyId: Object.freeze({
+      type: "string",
+      pattern: "^(translation|rotation|scale)-[xyz]$",
+    }),
+    newValue: Object.freeze({ type: "number" }),
+  }),
+}) satisfies JsonObject;
+
+const sceneCreateInput = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: Object.freeze(["documentPath", "expectedContentHash", "profile", "sourceInstanceId", "parentInstanceId"]),
+  properties: Object.freeze({
+    ...sceneMutationProperties,
+    sourceInstanceId: sceneId,
+    parentInstanceId: sceneId,
+  }),
+}) satisfies JsonObject;
+
+const sceneRemoveInput = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: Object.freeze(["documentPath", "expectedContentHash", "profile", "instanceIds"]),
+  properties: Object.freeze({ ...sceneMutationProperties, instanceIds: sceneIds }),
+}) satisfies JsonObject;
+
+const sceneReparentInput = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: Object.freeze(["documentPath", "expectedContentHash", "profile", "instanceId", "parentInstanceId", "transformPolicy"]),
+  properties: Object.freeze({
+    ...sceneMutationProperties,
+    instanceId: sceneId,
+    parentInstanceId: sceneId,
+    transformPolicy: Object.freeze({
+      type: "string",
+      enum: Object.freeze(["preserve-world", "preserve-local"]),
+    }),
+  }),
+}) satisfies JsonObject;
+
 const CLIENTS = Object.freeze([...EDITOR_COMMAND_CLIENTS]);
 const BASE_REFUSALS = Object.freeze([
   EDITOR_COMMAND_REFUSALS.clientDenied,
@@ -255,6 +376,15 @@ const BASE_REFUSALS = Object.freeze([
   EDITOR_COMMAND_REFUSALS.permissionDenied,
   EDITOR_COMMAND_REFUSALS.capabilityDenied,
   EDITOR_COMMAND_REFUSALS.kidsDenied,
+]);
+const HIERARCHY_BASE_REFUSALS = Object.freeze([
+  EDITOR_COMMAND_REFUSALS.clientDenied,
+  EDITOR_COMMAND_REFUSALS.schemaUnsupported,
+  DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+  EDITOR_COMMAND_REFUSALS.permissionDenied,
+  DESKTOP_SCENE_HIERARCHY_REFUSALS.capabilityMissing,
+  DESKTOP_SCENE_HIERARCHY_REFUSALS.kidsDenied,
+  DESKTOP_SCENE_HIERARCHY_REFUSALS.manifestInconsistent,
 ]);
 
 const immediate = (phases: readonly string[] = ["completed"]) =>
@@ -435,6 +565,121 @@ const DEFINITIONS = [
   }),
   definition({
     schemaVersion: 1,
+    id: "scene-hierarchy-inspect",
+    label: "Inspect Scene Hierarchy",
+    acceptedClients: CLIENTS,
+    permission: "project:read",
+    capability: capability("scene.compose"),
+    mutation: "none",
+    progress: immediate(["inspecting", "completed"]),
+    evidence: evidence("scene-hierarchy", "project"),
+    refusals: [
+      ...HIERARCHY_BASE_REFUSALS,
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+      "DESKTOP_SCENE_NOT_COMPOSABLE",
+    ],
+    undo: undo("none"),
+    inputSchema: sceneDocumentInput,
+    inputShape: "scene-document",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "scene-selection-set",
+    label: "Set Ordered Scene Selection",
+    acceptedClients: CLIENTS,
+    permission: "project:read",
+    capability: capability("scene.compose"),
+    mutation: "none",
+    progress: immediate(),
+    evidence: evidence("scene-hierarchy", "project"),
+    refusals: [
+      ...HIERARCHY_BASE_REFUSALS,
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+    ],
+    undo: undo("none"),
+    inputSchema: sceneSelectionInput,
+    inputShape: "scene-selection",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "scene-property-set",
+    label: "Set Scene Object Property",
+    acceptedClients: CLIENTS,
+    permission: "project:write",
+    capability: capability("scene.compose"),
+    mutation: "stages-change",
+    progress: immediate(["validating", "reviewing"]),
+    evidence: evidence("scene-hierarchy", "change-review"),
+    refusals: [
+      ...HIERARCHY_BASE_REFUSALS,
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+    ],
+    undo: undo("none"),
+    inputSchema: scenePropertyInput,
+    inputShape: "scene-property",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "scene-object-create",
+    label: "Create Scene Object",
+    acceptedClients: CLIENTS,
+    permission: "project:write",
+    capability: capability("scene.compose"),
+    mutation: "stages-change",
+    progress: immediate(["validating", "reviewing"]),
+    evidence: evidence("scene-hierarchy", "change-review"),
+    refusals: [
+      ...HIERARCHY_BASE_REFUSALS,
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.parentMissing,
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+    ],
+    undo: undo("none"),
+    inputSchema: sceneCreateInput,
+    inputShape: "scene-create",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "scene-object-remove",
+    label: "Remove Scene Objects",
+    acceptedClients: CLIENTS,
+    permission: "project:write",
+    capability: capability("scene.compose"),
+    mutation: "stages-change",
+    progress: immediate(["validating", "reviewing"]),
+    evidence: evidence("scene-hierarchy", "change-review"),
+    refusals: [
+      ...HIERARCHY_BASE_REFUSALS,
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.protectedRoot,
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+    ],
+    undo: undo("none"),
+    inputSchema: sceneRemoveInput,
+    inputShape: "scene-remove",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "scene-object-reparent",
+    label: "Reparent Scene Object",
+    acceptedClients: CLIENTS,
+    permission: "project:write",
+    capability: capability("scene.compose"),
+    mutation: "stages-change",
+    progress: immediate(["validating", "reviewing"]),
+    evidence: evidence("scene-hierarchy", "change-review"),
+    refusals: [
+      ...HIERARCHY_BASE_REFUSALS,
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.cycle,
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.parentMissing,
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.protectedRoot,
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.policyInvalid,
+    ],
+    undo: undo("none"),
+    inputSchema: sceneReparentInput,
+    inputShape: "scene-reparent",
+  }),
+  definition({
+    schemaVersion: 1,
     id: "run-play",
     label: "Play",
     acceptedClients: CLIENTS,
@@ -443,7 +688,11 @@ const DEFINITIONS = [
     mutation: "none",
     progress: immediate(["opening", "advancing", "closed"]),
     evidence: evidence("kernel-session", "live-viewport"),
-    refusals: [...BASE_REFUSALS, "DESKTOP_SCENE_NOT_COMPOSABLE"],
+    refusals: [
+      ...BASE_REFUSALS,
+      "DESKTOP_SCENE_NOT_COMPOSABLE",
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.manifestInconsistent,
+    ],
     undo: undo("none"),
     inputSchema: documentInput,
     inputShape: "document",
@@ -623,6 +872,21 @@ function profileInput(input: JsonObject): boolean {
       input["profile"] === "@sceneaxi/profile-kids");
 }
 
+function sceneDocumentFields(input: JsonObject): boolean {
+  return typeof input["documentPath"] === "string" && input["documentPath"].length > 0;
+}
+
+function sceneProfileField(input: JsonObject): boolean {
+  return input["profile"] === "kids" || isDesktopSceneEditProfile(input["profile"]);
+}
+
+function sceneMutationFields(input: JsonObject): boolean {
+  return sceneDocumentFields(input) &&
+    typeof input["expectedContentHash"] === "string" &&
+    /^sha256:[0-9a-f]{64}$/.test(input["expectedContentHash"]) &&
+    sceneProfileField(input);
+}
+
 export function validateEditorCommandInput(
   command: EditorCommandDefinition,
   input: unknown,
@@ -652,11 +916,47 @@ export function validateEditorCommandInput(
       return exactKeys(input, ["approved", "proposalDigest"]) &&
         input["approved"] === true && typeof input["proposalDigest"] === "string" &&
         /^sha256:[0-9a-f]{64}$/.test(input["proposalDigest"]);
+    case "scene-document":
+      return exactKeys(input, ["documentPath", "profile"]) &&
+        sceneDocumentFields(input) && sceneProfileField(input);
+    case "scene-selection":
+      return exactKeys(input, ["documentPath", "profile", "instanceIds"]) &&
+        sceneDocumentFields(input) && sceneProfileField(input) &&
+        isDesktopSceneSelectionInput(input["instanceIds"]);
+    case "scene-property":
+      return exactKeys(input, ["documentPath", "expectedContentHash", "profile", "instanceId", "propertyId", "newValue"]) &&
+        sceneMutationFields(input) && isDesktopSceneEditOperation({
+          kind: "set-transform-component",
+          instanceId: input["instanceId"],
+          propertyId: input["propertyId"],
+          value: input["newValue"],
+        });
+    case "scene-create":
+      return exactKeys(input, ["documentPath", "expectedContentHash", "profile", "sourceInstanceId", "parentInstanceId"]) &&
+        sceneMutationFields(input) && isDesktopSceneEditOperation({
+          kind: "create-object",
+          sourceInstanceId: input["sourceInstanceId"],
+          parentInstanceId: input["parentInstanceId"],
+        });
+    case "scene-remove":
+      return exactKeys(input, ["documentPath", "expectedContentHash", "profile", "instanceIds"]) &&
+        sceneMutationFields(input) && isDesktopSceneEditOperation({
+          kind: "remove-objects",
+          instanceIds: input["instanceIds"],
+        });
+    case "scene-reparent":
+      return exactKeys(input, ["documentPath", "expectedContentHash", "profile", "instanceId", "parentInstanceId", "transformPolicy"]) &&
+        sceneMutationFields(input) && isDesktopSceneEditOperation({
+          kind: "reparent-object",
+          instanceId: input["instanceId"],
+          parentInstanceId: input["parentInstanceId"],
+          transformPolicy: input["transformPolicy"],
+        });
   }
 }
 
 const refusal = (
-  reason: EditorCommandRefusal,
+  reason: EditorCommandRefusal | DesktopSceneHierarchyRefusal,
   message: string,
 ): EditorCommandValidation => Object.freeze({ ok: false as const, reason, message });
 
@@ -667,10 +967,14 @@ export function validateEditorCommandInvocation(
   if (!isCommandObject(value)) {
     return refusal(EDITOR_COMMAND_REFUSALS.inputInvalid, "A command invocation must be an object.");
   }
+  const requestedCommand = editorCommand(value["commandId"]);
+  const requestedHierarchyCommand = requestedCommand?.id.startsWith("scene-") === true;
   const invocationKeys = ["schemaVersion", "commandId", "client", "permission", "profile", "input"];
   if (Object.keys(value).some((key) => !invocationKeys.includes(key))) {
     return refusal(
-      EDITOR_COMMAND_REFUSALS.inputInvalid,
+      requestedHierarchyCommand
+        ? DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported
+        : EDITOR_COMMAND_REFUSALS.inputInvalid,
       "A command invocation has unknown fields.",
     );
   }
@@ -681,10 +985,11 @@ export function validateEditorCommandInvocation(
       `Editor command schema version ${String(schemaVersion)} is unsupported.`,
     );
   }
-  const command = editorCommand(value["commandId"]);
+  const command = requestedCommand;
   if (command === undefined) {
     return refusal(EDITOR_COMMAND_REFUSALS.commandUnknown, "The editor command is not registered.");
   }
+  const hierarchyCommand = command.id.startsWith("scene-");
   const client = value["client"];
   if (!EDITOR_COMMAND_CLIENTS.some((candidate) => candidate === client) ||
     !command.acceptedClients.some((candidate) => candidate === client)) {
@@ -701,18 +1006,27 @@ export function validateEditorCommandInvocation(
   }
   const profile = value["profile"];
   if (profile !== undefined && profile !== "game" && profile !== "web" && profile !== "kids") {
-    return refusal(EDITOR_COMMAND_REFUSALS.inputInvalid, "The editor command profile is invalid.");
+    return refusal(
+      hierarchyCommand
+        ? DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported
+        : EDITOR_COMMAND_REFUSALS.inputInvalid,
+      "The editor command profile is invalid.",
+    );
   }
   if (profile === "kids") {
     return refusal(
-      EDITOR_COMMAND_REFUSALS.kidsDenied,
+      hierarchyCommand
+        ? DESKTOP_SCENE_HIERARCHY_REFUSALS.kidsDenied
+        : EDITOR_COMMAND_REFUSALS.kidsDenied,
       `${command.id} is denied for Kids before execution.`,
     );
   }
   const input = value["input"];
   if (!validateEditorCommandInput(command, input)) {
     return refusal(
-      EDITOR_COMMAND_REFUSALS.inputInvalid,
+      hierarchyCommand
+        ? DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported
+        : EDITOR_COMMAND_REFUSALS.inputInvalid,
       `Input does not match the registered schema for ${command.id}.`,
     );
   }
@@ -720,6 +1034,20 @@ export function validateEditorCommandInvocation(
     return refusal(
       EDITOR_COMMAND_REFUSALS.kidsDenied,
       `${command.id} is denied for @sceneaxi/profile-kids before execution.`,
+    );
+  }
+  if (input["profile"] === "kids") {
+    return refusal(
+      hierarchyCommand
+        ? DESKTOP_SCENE_HIERARCHY_REFUSALS.kidsDenied
+        : EDITOR_COMMAND_REFUSALS.kidsDenied,
+      `${command.id} is denied for Kids before execution.`,
+    );
+  }
+  if (hierarchyCommand && profile !== input["profile"]) {
+    return refusal(
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+      `${command.id} requires one matching explicit invocation and input profile.`,
     );
   }
   return Object.freeze({
@@ -737,12 +1065,17 @@ export function createEditorCommandInvocation(
 ): EditorCommandInvocation {
   const command = editorCommand(commandId);
   if (command === undefined) registryError(`invocation names unknown command ${commandId}`);
+  const inputProfile = input["profile"];
+  const carriedProfile = profile ?? (command.id.startsWith("scene-") &&
+    (inputProfile === "game" || inputProfile === "web" || inputProfile === "kids")
+    ? inputProfile
+    : undefined);
   const invocation = Object.freeze({
     schemaVersion: EDITOR_COMMAND_SCHEMA_VERSION,
     commandId,
     client,
     permission: command.permission,
-    ...(profile === undefined ? {} : { profile }),
+    ...(carriedProfile === undefined ? {} : { profile: carriedProfile }),
     input,
   });
   const validated = validateEditorCommandInvocation(invocation);
@@ -750,7 +1083,10 @@ export function createEditorCommandInvocation(
     // Kids denial belongs to the execution boundary. Construction must still
     // carry the valid invocation there so every client observes the same named
     // refusal instead of translating it into an internal transport error.
-    if (validated.reason === EDITOR_COMMAND_REFUSALS.kidsDenied) {
+    if (
+      validated.reason === EDITOR_COMMAND_REFUSALS.kidsDenied ||
+      validated.reason === DESKTOP_SCENE_HIERARCHY_REFUSALS.kidsDenied
+    ) {
       return invocation;
     }
     registryError(validated.message);
@@ -817,5 +1153,6 @@ export function editorCommandTransactionResult(input: Readonly<{
       documentPaths: Object.freeze([...(input.documentPaths ?? [])]),
     }),
     refusal: input.refusal ?? null,
+    undo: command.undo,
   });
 }

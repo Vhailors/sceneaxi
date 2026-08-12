@@ -7,7 +7,12 @@
  * unsupported control must already carry an accessible refusal.
  */
 import { afterEach, describe, expect, it } from "vitest";
-import { Window as HappyWindow, type HTMLElement as HappyHTMLElement } from "happy-dom";
+import {
+  Window as HappyWindow,
+  type HTMLElement as HappyHTMLElement,
+  type HTMLSelectElement as HappyHTMLSelectElement,
+} from "happy-dom";
+import { DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS } from "@sceneaxi/schemas";
 import {
   DESKTOP_MODE_IDS,
   DESKTOP_PRODUCT_REFUSALS,
@@ -27,9 +32,16 @@ function mount(
   state = createDesktopVisualState({
     window: { width: 1000, height: 700 },
   }),
+  runtime?: Readonly<{
+    request(request: unknown): Promise<unknown>;
+    project(request: unknown): Promise<unknown>;
+  }>,
 ) {
   const window = new HappyWindow({ width: 1000, height: 700 });
   windows.push(window);
+  if (runtime !== undefined) {
+    Object.assign(window, { sceneaxiDesktop: runtime });
+  }
   const html = renderDesktopChrome(desktopVisualView(state));
   const match = /<script>([\s\S]*?)<\/script>/.exec(html);
   if (match?.[1] === undefined) throw new Error("desktop chrome script missing");
@@ -45,7 +57,7 @@ function element(window: HappyWindow, selector: string) {
 }
 
 async function settle() {
-  for (let turn = 0; turn < 12; turn += 1) await Promise.resolve();
+  for (let turn = 0; turn < 60; turn += 1) await Promise.resolve();
 }
 
 async function click(window: HappyWindow, selector: string) {
@@ -61,6 +73,353 @@ async function escape(window: HappyWindow) {
 }
 
 describe("desktop mounted control inventory", () => {
+  it("renders project-backed instance, object, and parent identities", async () => {
+    const properties = DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.map((definition) => ({
+      id: definition.id,
+      value: definition.id.startsWith("scale-") ? 1 : 0,
+    }));
+    const snapshot = {
+      phase: "idle",
+      unifiedDiff: null,
+      renderedDiff: null,
+      proposal: null,
+      appliedPaths: null,
+      journalRecoveryPending: false,
+      transactionId: null,
+      diagnostics: null,
+    };
+    const status = {
+      ok: true,
+      documentId: "scene",
+      data: {},
+      contentHash: `sha256:${"3".repeat(64)}`,
+      authoringSnapshot: snapshot,
+    };
+    const inspection = {
+      ok: true,
+      selection: { instanceIds: ["child-instance"], primaryInstanceId: "child-instance" },
+      entities: [
+        {
+          id: "root-instance",
+          label: "Root",
+          artifactId: "root-object",
+          parentInstanceId: null,
+          depth: 0,
+          properties,
+        },
+        {
+          id: "child-instance",
+          label: "Child",
+          artifactId: "child-object",
+          parentInstanceId: "root-instance",
+          depth: 1,
+          properties,
+        },
+      ],
+    };
+    const window = mount(undefined, {
+      project: async () => ({
+        ok: true,
+        data: {
+          status: {
+            active: { name: "Hierarchy", root: "/project", documentPath: "scene.json" },
+            recents: [],
+          },
+        },
+      }),
+      request: async (request) => (request as { action?: string }).action === "command"
+        ? { ok: true, data: inspection }
+        : { ok: true, data: status },
+    });
+    await settle();
+
+    const select = element(window, '[data-action="scene-entity-select"]') as unknown as {
+      options: ArrayLike<{ textContent: string | null }>;
+    };
+    expect(Array.from(select.options, (option) => option.textContent)).toEqual([
+      "Object root-object · instance root-instance · root",
+      "  Object child-object · instance child-instance · parent root-instance",
+    ]);
+  });
+
+  it("renders stale hierarchy recovery until an explicit selection succeeds", async () => {
+    const properties = DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.map((definition) => ({
+      id: definition.id,
+      value: definition.id.startsWith("scale-") ? 1 : 0,
+    }));
+    const entities = [
+      {
+        id: "root-instance",
+        label: "Root",
+        artifactId: "root-object",
+        parentInstanceId: null,
+        depth: 0,
+        properties,
+      },
+      {
+        id: "current-instance",
+        label: "Current",
+        artifactId: "current-object",
+        parentInstanceId: "root-instance",
+        depth: 1,
+        properties,
+      },
+    ];
+    const hierarchy = {
+      rootInstanceId: "root-instance",
+      objects: [
+        { id: "root-instance", parentId: null },
+        { id: "current-instance", parentId: "root-instance" },
+      ],
+    };
+    const recoveredEntities = entities.map((entity) => entity.id === "current-instance"
+      ? {
+          ...entity,
+          label: "Fresh Current",
+          properties: entity.properties.map((property) => property.id === "translation-x"
+            ? { ...property, value: 7 }
+            : property),
+        }
+      : entity);
+    const requests: unknown[] = [];
+    const window = mount(undefined, {
+      project: async () => ({
+        ok: true,
+        data: {
+          status: {
+            active: { name: "Recovery", root: "/project", documentPath: "scene.json" },
+            recents: [],
+          },
+        },
+      }),
+      request: async (request) => {
+        requests.push(request);
+        const commandId = (request as { action?: string; payload?: { commandId?: string } }).payload?.commandId;
+        if (commandId === "scene-hierarchy-inspect") {
+          return {
+            ok: true,
+            data: {
+              ok: false,
+              reason: "SCENE_HIERARCHY_SELECTION_STALE",
+              diagnostics: [{
+                code: "SCENE_HIERARCHY_SELECTION_STALE",
+                message: "The prior selection no longer exists.",
+              }],
+              contentHash: `sha256:${"4".repeat(64)}`,
+              entities,
+              hierarchy,
+            },
+          };
+        }
+        if (commandId === "scene-selection-set") {
+          return {
+            ok: true,
+            data: {
+              ok: true,
+              contentHash: `sha256:${"5".repeat(64)}`,
+              entities: recoveredEntities,
+              hierarchy,
+              selection: {
+                schemaVersion: 1,
+                instanceIds: ["current-instance"],
+                primaryInstanceId: "current-instance",
+              },
+            },
+          };
+        }
+        return {
+          ok: true,
+          data: {
+            ok: true,
+            documentId: "scene",
+            data: {},
+            contentHash: `sha256:${"4".repeat(64)}`,
+            authoringSnapshot: {
+              phase: "applied",
+              unifiedDiff: null,
+              renderedDiff: null,
+              proposal: null,
+              appliedPaths: ["scene.json"],
+              journalRecoveryPending: false,
+              transactionId: "undo-1",
+              diagnostics: null,
+            },
+          },
+        };
+      },
+    });
+    await settle();
+
+    const select = element(window, '[data-action="scene-entity-select"]') as unknown as
+      HappyHTMLSelectElement;
+    expect(element(window, "[data-scene-entities]").hidden).toBe(false);
+    expect(element(window, "[data-scene-entities-refusal]").textContent)
+      .toContain("SCENE_HIERARCHY_SELECTION_STALE");
+    expect(Array.from(select.options).every((option) => option.selected === false)).toBe(true);
+
+    Array.from(select.options).forEach((option) => {
+      option.selected = option.value === "current-instance";
+    });
+    select.dispatchEvent(new window.Event("change", { bubbles: true }));
+    await settle();
+
+    const commandRequest = requests.find((request) =>
+      (request as { action?: string; payload?: { commandId?: string } }).payload?.commandId === "scene-selection-set"
+    ) as { payload?: { profile?: string; input?: { profile?: string; instanceIds?: string[] } } };
+    expect(commandRequest).toMatchObject({
+      payload: {
+        profile: "game",
+        input: { profile: "game", instanceIds: ["current-instance"] },
+      },
+    });
+    expect(element(window, "[data-scene-entities-refusal]").hidden).toBe(true);
+    expect(element(window, "[data-scene-property-editor]").hidden).toBe(false);
+    expect(Array.from(select.options, (option) => option.textContent)).toContain(
+      "  Object current-object · instance current-instance · parent root-instance",
+    );
+    const translation = element(window, "#scene-property-translation-x") as unknown as {
+      value: string;
+    };
+    expect(translation.value).toBe("7");
+    translation.value = "8";
+    element(window, "#scene-property-stage").click();
+    await settle();
+    expect(requests.find((request) =>
+      (request as { payload?: { commandId?: string } }).payload?.commandId === "scene-property-set"
+    )).toMatchObject({
+      payload: {
+        input: {
+          expectedContentHash: `sha256:${"5".repeat(64)}`,
+          instanceId: "current-instance",
+          newValue: 8,
+        },
+      },
+    });
+  });
+
+  it("serializes rapid hierarchy selections before staging from the latest one", async () => {
+    const properties = DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.map((definition) => ({
+      id: definition.id,
+      value: definition.id.startsWith("scale-") ? 1 : 0,
+    }));
+    const entities = ["root", "first", "second"].map((id, index) => ({
+      id,
+      label: id,
+      artifactId: `${id}-object`,
+      parentInstanceId: index === 0 ? null : "root",
+      depth: index === 0 ? 0 : 1,
+      properties,
+    }));
+    const hierarchy = {
+      rootInstanceId: "root",
+      objects: entities.map((entity) => ({ id: entity.id, parentId: entity.parentInstanceId })),
+    };
+    const status = {
+      ok: true,
+      documentId: "scene",
+      data: {},
+      contentHash: `sha256:${"5".repeat(64)}`,
+      authoringSnapshot: {
+        phase: "idle",
+        unifiedDiff: null,
+        renderedDiff: null,
+        proposal: null,
+        appliedPaths: null,
+        journalRecoveryPending: false,
+        transactionId: null,
+        diagnostics: null,
+      },
+    };
+    const inspection = {
+      ok: true,
+      contentHash: `sha256:${"5".repeat(64)}`,
+      entities,
+      hierarchy,
+      selection: { schemaVersion: 1, instanceIds: ["root"], primaryInstanceId: "root" },
+    };
+    const selectionRequests: Array<{
+      input: string[];
+      resolve(response: unknown): void;
+    }> = [];
+    const commandRequests: Array<{ payload?: { commandId?: string; input?: Record<string, unknown> } }> = [];
+    const window = mount(undefined, {
+      project: async () => ({
+        ok: true,
+        data: {
+          status: {
+            active: { name: "Selection queue", root: "/project", documentPath: "scene.json" },
+            recents: [],
+          },
+        },
+      }),
+      request: async (request) => {
+        const command = request as { action?: string; payload?: { commandId?: string; input?: { instanceIds?: string[] } } };
+        if (command.action !== "command") return { ok: true, data: status };
+        commandRequests.push(command);
+        if (command.payload?.commandId === "scene-hierarchy-inspect") {
+          return { ok: true, data: inspection };
+        }
+        if (command.payload?.commandId !== "scene-selection-set") {
+          return { ok: false, reason: "EXPECTED_STAGING_REFUSAL", message: "Request observed." };
+        }
+        return await new Promise((resolve) => {
+          selectionRequests.push({
+            input: [...(command.payload?.input?.instanceIds ?? [])],
+            resolve,
+          });
+        });
+      },
+    });
+    await settle();
+
+    const select = element(window, '[data-action="scene-entity-select"]') as unknown as
+      HappyHTMLSelectElement;
+    const choose = (id: string) => {
+      Array.from(select.options).forEach((option) => {
+        option.selected = option.value === id;
+      });
+      select.dispatchEvent(new window.Event("change", { bubbles: true }));
+    };
+    choose("first");
+    await settle();
+    expect(selectionRequests.map((request) => request.input)).toEqual([["first"]]);
+
+    choose("second");
+    element(window, '[data-action="scene-instance-add"]').click();
+    await settle();
+    expect(selectionRequests.map((request) => request.input)).toEqual([["first"]]);
+    expect(commandRequests.some((request) => request.payload?.commandId === "scene-object-create")).toBe(false);
+
+    selectionRequests[0]?.resolve({
+      ok: true,
+      data: {
+        ok: true,
+        contentHash: status.contentHash,
+        entities,
+        hierarchy,
+        selection: { schemaVersion: 1, instanceIds: ["first"], primaryInstanceId: "first" },
+      },
+    });
+    await settle();
+    expect(selectionRequests.map((request) => request.input)).toEqual([["first"], ["second"]]);
+    expect(commandRequests.some((request) => request.payload?.commandId === "scene-object-create")).toBe(false);
+
+    selectionRequests[1]?.resolve({
+      ok: true,
+      data: {
+        ok: true,
+        contentHash: status.contentHash,
+        entities,
+        hierarchy,
+        selection: { schemaVersion: 1, instanceIds: ["second"], primaryInstanceId: "second" },
+      },
+    });
+    await settle();
+    expect(commandRequests.find((request) => request.payload?.commandId === "scene-object-create"))
+      .toMatchObject({ payload: { input: { sourceInstanceId: "second" } } });
+    expect(Array.from(select.options).find((option) => option.value === "second")?.selected).toBe(true);
+  });
+
   it("makes every presentation control produce an observable state change", async () => {
     const window = mount();
     const shell = element(window, ".shell");

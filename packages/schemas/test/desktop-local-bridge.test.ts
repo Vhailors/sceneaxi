@@ -17,6 +17,22 @@ describe("desktop local bridge contract", () => {
     ) as {
       $id: string;
       $defs: Record<string, unknown> & {
+        editorCommandId: { enum: string[] };
+        permission: { enum: string[] };
+        tool: {
+          additionalProperties: false;
+          required: string[];
+          properties: {
+            name: { $ref: string };
+            commandId: { oneOf: [{ $ref: string }, { type: "null" }] };
+            description: { type: "string"; minLength: number };
+            permission: { $ref: string };
+            mutatesProject: { type: "boolean" };
+            providerRoute: { enum: string[] };
+            creditRoute: { const: string };
+            inputSchema: { type: "object" };
+          };
+        };
         toolName: { enum: string[] };
       };
     };
@@ -35,6 +51,12 @@ describe("desktop local bridge contract", () => {
       "sceneaxi.project.migration.propose",
       "sceneaxi.project.migration.commit",
       "sceneaxi.project.migration.recover",
+      "sceneaxi.scene.hierarchy.inspect",
+      "sceneaxi.scene.selection.set",
+      "sceneaxi.scene.property.set",
+      "sceneaxi.scene.object.create",
+      "sceneaxi.scene.object.remove",
+      "sceneaxi.scene.object.reparent",
       "sceneaxi.project.propose",
       "sceneaxi.project.accept",
       "sceneaxi.project.reject",
@@ -52,6 +74,27 @@ describe("desktop local bridge contract", () => {
     expect(schema.$defs.toolName.enum).toEqual(
       DESKTOP_LOCAL_BRIDGE_TOOLS.map((tool) => tool.name),
     );
+
+    const toolContract = schema.$defs.tool;
+    const requiredKeys = [...toolContract.required].sort();
+    for (const tool of DESKTOP_LOCAL_BRIDGE_TOOLS) {
+      expect(Object.keys(tool).sort()).toEqual(requiredKeys);
+      expect(schema.$defs.toolName.enum).toContain(tool.name);
+      if (tool.commandId !== null) {
+        expect(schema.$defs.editorCommandId.enum).toContain(tool.commandId);
+      }
+      expect(typeof tool.description).toBe(toolContract.properties.description.type);
+      expect(tool.description.length).toBeGreaterThanOrEqual(
+        toolContract.properties.description.minLength,
+      );
+      expect(schema.$defs.permission.enum).toContain(tool.permission);
+      expect(typeof tool.mutatesProject).toBe(
+        toolContract.properties.mutatesProject.type,
+      );
+      expect(toolContract.properties.providerRoute.enum).toContain(tool.providerRoute);
+      expect(tool.creditRoute).toBe(toolContract.properties.creditRoute.const);
+      expect(typeof tool.inputSchema).toBe(toolContract.properties.inputSchema.type);
+    }
   });
 
   it("never declares a project-mutating tool behind a read permission", () => {
@@ -68,6 +111,12 @@ describe("desktop local bridge contract", () => {
       { name: "sceneaxi.project.migration.propose", permission: "project:write", mutatesProject: false },
       { name: "sceneaxi.project.migration.commit", permission: "project:write", mutatesProject: true },
       { name: "sceneaxi.project.migration.recover", permission: "project:write", mutatesProject: true },
+      { name: "sceneaxi.scene.hierarchy.inspect", permission: "project:read", mutatesProject: false },
+      { name: "sceneaxi.scene.selection.set", permission: "project:read", mutatesProject: false },
+      { name: "sceneaxi.scene.property.set", permission: "project:write", mutatesProject: false },
+      { name: "sceneaxi.scene.object.create", permission: "project:write", mutatesProject: false },
+      { name: "sceneaxi.scene.object.remove", permission: "project:write", mutatesProject: false },
+      { name: "sceneaxi.scene.object.reparent", permission: "project:write", mutatesProject: false },
       { name: "sceneaxi.project.propose", permission: "project:write", mutatesProject: false },
       { name: "sceneaxi.project.accept", permission: "project:write", mutatesProject: true },
       { name: "sceneaxi.project.reject", permission: "project:write", mutatesProject: false },
@@ -95,6 +144,35 @@ describe("desktop local bridge contract", () => {
       expect(encoded).not.toMatch(/credential|api.?key|secret|token|hosted|credit/);
       expect(tool.creditRoute).toBe("none");
     }
+
+    expect(
+      validateDesktopLocalBridgeToolInput("sceneaxi.scene.hierarchy.inspect", {
+        documentPath: "scene.json",
+        profile: "game",
+      }),
+    ).toBe(true);
+    expect(
+      validateDesktopLocalBridgeToolInput("sceneaxi.scene.hierarchy.inspect", {
+        documentPath: "scene.json",
+      }),
+    ).toBe(false);
+    expect(
+      validateDesktopLocalBridgeToolInput("sceneaxi.scene.selection.set", {
+        documentPath: "scene.json",
+        profile: "kids",
+        instanceIds: ["root"],
+      }),
+    ).toBe(true);
+    expect(
+      validateDesktopLocalBridgeToolInput("sceneaxi.scene.property.set", {
+        documentPath: "scene.json",
+        expectedContentHash: `sha256:${"0".repeat(64)}`,
+        profile: "game",
+        instanceId: "root",
+        propertyId: "translation-x",
+        newValue: 2,
+      }),
+    ).toBe(true);
 
     expect(
       validateDesktopLocalBridgeToolInput("sceneaxi.assistant.byo.start", {

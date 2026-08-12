@@ -472,9 +472,9 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
       expected.mountable.instances.map((i) => i.instanceId),
     );
     expect(scene.instances.map((instance) => instance.label)).toEqual([
-      "Root instance",
-      "Placed beside the root",
-      "Stacked on the root",
+      "desktop-crate-root",
+      "desktop-crate-beside",
+      "desktop-crate-stacked",
     ]);
   });
 
@@ -1437,6 +1437,13 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
           payload?: { commandId?: unknown; input?: Record<string, unknown> };
         };
         const commandId = typed.action === "command" ? typed.payload?.commandId : null;
+        if (commandId === "scene-hierarchy-inspect") {
+          return Promise.resolve({
+            ok: false,
+            reason: "SCENE_HIERARCHY_CAPABILITY_MISSING",
+            message: "The rarity-only harness has no scene hierarchy authority.",
+          });
+        }
         const translated = commandId === "project-save" || commandId === "change-review-accept"
           ? { action: "authoring", payload: { op: "accept" } }
           : commandId === "change-review-reject"

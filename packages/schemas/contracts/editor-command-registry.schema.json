@@ -26,6 +26,12 @@
             "project-save",
             "edit-undo",
             "edit-redo",
+            "scene-hierarchy-inspect",
+            "scene-selection-set",
+            "scene-property-set",
+            "scene-object-create",
+            "scene-object-remove",
+            "scene-object-reparent",
             "run-play",
             "change-review-accept",
             "change-review-reject",
@@ -65,7 +71,7 @@
           "additionalProperties": false,
           "required": ["kind", "target"],
           "properties": {
-            "kind": { "enum": ["none", "project-binding", "project-inspection", "project-migration-proposal", "project-migration-evidence", "authoring-snapshot", "undo-result", "redo-result", "kernel-session", "sculpt-artifact", "rarity-proposal", "command-progress"] },
+            "kind": { "enum": ["none", "project-binding", "project-inspection", "project-migration-proposal", "project-migration-evidence", "authoring-snapshot", "undo-result", "redo-result", "scene-hierarchy", "kernel-session", "sculpt-artifact", "rarity-proposal", "command-progress"] },
             "target": { "enum": ["none", "project", "change-review", "live-viewport"] }
           }
         },
@@ -80,7 +86,7 @@
           }
         },
         "inputSchema": { "type": "object" },
-        "inputShape": { "enum": ["none", "document", "export", "assistant", "assistant-agent", "job", "migration-approval"] }
+        "inputShape": { "enum": ["none", "document", "export", "assistant", "assistant-agent", "job", "migration-approval", "scene-document", "scene-selection", "scene-property", "scene-create", "scene-remove", "scene-reparent"] }
       }
     }
   }

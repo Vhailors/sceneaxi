@@ -197,7 +197,7 @@ export type DesktopAuthoringRequest = Readonly<{
   payload: Readonly<{
     op: "propose";
     documentPath: typeof DESKTOP_PROJECT.activeFile;
-    jsonPointer: "/data";
+    jsonPointer: "/data/webExperience";
     expectedContentHash: string;
     newValue: JsonObject;
   }>;
@@ -366,19 +366,7 @@ export function desktopWebStageDecision(
     }
   }
 
-  let carried: Record<string, unknown>;
-  try {
-    carried = structuredClone(record);
-  } catch {
-    return refuse(
-      config.refusals.documentDataInvalid,
-      "The open Scene Document data holds a value that cannot be carried into a proposal.",
-    );
-  }
-  const newValue = {
-    ...carried,
-    webExperience: { html, assets },
-  } as JsonObject;
+  const newValue = { html, assets } as JsonObject;
 
   return Object.freeze({
     ok: true as const,
@@ -387,7 +375,7 @@ export function desktopWebStageDecision(
       payload: Object.freeze({
         op: "propose" as const,
         documentPath: config.documentPath,
-        jsonPointer: "/data" as const,
+        jsonPointer: "/data/webExperience" as const,
         expectedContentHash: operation.contentHash,
         newValue,
       }),

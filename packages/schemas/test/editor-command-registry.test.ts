@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+  DESKTOP_SCENE_HIERARCHY_REFUSALS,
   EDITOR_COMMAND_REFUSALS,
   EDITOR_COMMAND_REGISTRY,
   contracts,
@@ -32,6 +33,12 @@ describe("full-editor command registry", () => {
       "project-save",
       "edit-undo",
       "edit-redo",
+      "scene-hierarchy-inspect",
+      "scene-selection-set",
+      "scene-property-set",
+      "scene-object-create",
+      "scene-object-remove",
+      "scene-object-reparent",
       "run-play",
       "change-review-accept",
       "change-review-reject",
@@ -51,6 +58,128 @@ describe("full-editor command registry", () => {
       expect(command.acceptedClients.length).toBeGreaterThan(0);
       expect(command.refusals.length).toBeGreaterThan(0);
       expect(command.evidence.kind).toBeTruthy();
+    }
+  });
+
+  it("registers hierarchy inputs once for desktop, CLI, and assistant clients", () => {
+    const hierarchyBaseRefusals = [
+      EDITOR_COMMAND_REFUSALS.clientDenied,
+      EDITOR_COMMAND_REFUSALS.schemaUnsupported,
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+      EDITOR_COMMAND_REFUSALS.permissionDenied,
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.capabilityMissing,
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.kidsDenied,
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.manifestInconsistent,
+    ];
+    for (const id of [
+      "scene-hierarchy-inspect",
+      "scene-selection-set",
+      "scene-property-set",
+      "scene-object-create",
+      "scene-object-remove",
+      "scene-object-reparent",
+    ] as const) {
+      const command = editorCommand(id);
+      expect(command).toMatchObject({
+        acceptedClients: ["desktop-control", "cli", "local-agent"],
+        capability: { id: "scene.compose" },
+        evidence: { kind: "scene-hierarchy" },
+      });
+      expect(command?.refusals).toEqual(expect.arrayContaining(hierarchyBaseRefusals));
+      expect(command?.refusals).not.toContain(EDITOR_COMMAND_REFUSALS.inputInvalid);
+      expect(command?.refusals).not.toContain(EDITOR_COMMAND_REFUSALS.capabilityDenied);
+      expect(command?.refusals).not.toContain(EDITOR_COMMAND_REFUSALS.kidsDenied);
+      expect(new Set(command?.refusals).size).toBe(command?.refusals.length);
+    }
+    expect(editorCommand("scene-property-set")).toMatchObject({
+      acceptedClients: ["desktop-control", "cli", "local-agent"],
+      capability: { id: "scene.compose" },
+      mutation: "stages-change",
+      undo: { kind: "none", commandId: null },
+    });
+    expect(validateEditorCommandInvocation({
+      schemaVersion: 1,
+      commandId: "scene-property-set",
+      client: "desktop-control",
+      permission: "project:write",
+      profile: "game",
+      input: {
+        documentPath: "scene.json",
+        expectedContentHash: `sha256:${"a".repeat(64)}`,
+        profile: "game",
+        instanceId: "child",
+        propertyId: "translation-x",
+        newValue: 2.5,
+      },
+    }).ok).toBe(true);
+    expect(validateEditorCommandInvocation({
+      schemaVersion: 1,
+      commandId: "scene-object-reparent",
+      client: "cli",
+      permission: "project:write",
+      profile: "game",
+      input: {
+        documentPath: "scene.json",
+        expectedContentHash: `sha256:${"a".repeat(64)}`,
+        profile: "game",
+        instanceId: "child",
+        parentInstanceId: "parent",
+        transformPolicy: "preserve-world",
+      },
+    }).ok).toBe(true);
+    expect(validateEditorCommandInvocation({
+      schemaVersion: 1,
+      commandId: "scene-property-set",
+      client: "desktop-control",
+      permission: "project:write",
+      profile: "game",
+      input: {
+        documentPath: "scene.json",
+        expectedContentHash: `sha256:${"a".repeat(64)}`,
+        profile: "game",
+        instanceId: "child",
+        propertyId: "scale-x",
+        newValue: 0,
+      },
+    })).toMatchObject({
+      ok: false,
+      reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+    });
+    expect(validateEditorCommandInvocation({
+      schemaVersion: 1,
+      commandId: "scene-hierarchy-inspect",
+      client: "local-agent",
+      permission: "project:read",
+      input: { documentPath: "scene.json" },
+    })).toMatchObject({
+      ok: false,
+      reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+    });
+    expect(validateEditorCommandInvocation({
+      schemaVersion: 1,
+      commandId: "scene-selection-set",
+      client: "local-agent",
+      permission: "project:read",
+      profile: "kids",
+      input: { documentPath: "scene.json", profile: "kids", instanceIds: ["root"] },
+    })).toMatchObject({
+      ok: false,
+      reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.kidsDenied,
+    });
+    expect(validateEditorCommandInvocation({
+      schemaVersion: 1,
+      commandId: "scene-hierarchy-inspect",
+      client: "cli",
+      permission: "project:read",
+      profile: "game",
+      input: { documentPath: "scene.json", profile: "game" },
+      extra: true,
+    })).toMatchObject({
+      ok: false,
+      reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+    });
+    for (const id of ["scene-object-create", "scene-object-remove", "scene-object-reparent"] as const) {
+      expect(editorCommand(id)?.undo).toEqual({ kind: "none", commandId: null });
     }
   });
 

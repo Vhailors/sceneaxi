@@ -4,6 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { parseDocumentText } from "@sceneaxi/authoring-core";
+import {
+  DESKTOP_SCENE_HIERARCHY_REFUSALS,
+  createEditorCommandInvocation,
+} from "@sceneaxi/schemas";
 import { ExitCode, runCli } from "../../packages/cli/src/index.ts";
 import { shellProposeAndApply } from "../../apps/desktop-shell/src/index.ts";
 import {
@@ -33,7 +37,21 @@ function editableStatus(bridge: ReturnType<typeof createDesktopBridge>) {
     payload: { op: "status", documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
   });
   if (!response.ok) throw new Error(response.reason);
-  return response.data as {
+  if (typeof response.data !== "object" || response.data === null || Array.isArray(response.data)) {
+    throw new Error("Desktop authoring status did not return an object.");
+  }
+  const inspected = bridge.handle({
+    action: "command",
+    payload: createEditorCommandInvocation("scene-hierarchy-inspect", "desktop-control", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      profile: "game",
+    }),
+  });
+  if (!inspected.ok) throw new Error(inspected.reason);
+  return {
+    ...response.data,
+    editableScene: inspected.data,
+  } as {
     ok: true;
     contentHash: string;
     data: Record<string, unknown>;
@@ -45,9 +63,43 @@ function editableStatus(bridge: ReturnType<typeof createDesktopBridge>) {
 }
 
 describe("desktop typed Scene Document edit golden", () => {
+  it("stages desktop properties through registered hierarchy authority", () => {
+    const dir = seed("registered-authority");
+    const bridge = createDesktopBridge({ cwd: dir, commandCapabilities: ["scene.compose"] });
+    const opened = editableStatus(bridge);
+    const staged = bridge.handle({
+      action: "command",
+      payload: createEditorCommandInvocation("scene-property-set", "desktop-control", {
+        documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+        expectedContentHash: opened.contentHash,
+        profile: "game",
+        instanceId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
+        propertyId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.id,
+        newValue: -3.25,
+      }),
+    });
+    expect(staged).toMatchObject({
+      ok: true,
+      data: {
+        phase: "reviewing",
+        editableScene: {
+          ok: true,
+          contentHash: opened.contentHash,
+          entities: expect.arrayContaining([
+            expect.objectContaining({ id: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId }),
+          ]),
+        },
+      },
+    });
+  });
+
   it("reviews without writing, saves atomically, reopens persisted bytes, and plays the saved transform", () => {
     const dir = seed("loop");
-    const bridge = createDesktopBridge({ cwd: dir, nowMs: () => 1_753_920_000_000 });
+    const bridge = createDesktopBridge({
+      cwd: dir,
+      nowMs: () => 1_753_920_000_000,
+      commandCapabilities: ["scene.compose"],
+    });
     const before = readFileSync(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8");
     const opened = editableStatus(bridge);
     const openedBeside = opened.editableScene.entities.find(
@@ -63,6 +115,7 @@ describe("desktop typed Scene Document edit golden", () => {
         op: "edit-property",
         documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
         expectedContentHash: opened.contentHash,
+        profile: "game",
         entityId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
         propertyId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.id,
         newValue: -3.25,
@@ -72,22 +125,19 @@ describe("desktop typed Scene Document edit golden", () => {
     if (!proposed.ok) return;
     expect(proposed.data).toMatchObject({
       phase: "reviewing",
-      proposal: {
-        edits: [
-          {
-            documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
-            baseContentHash: opened.contentHash,
-            jsonPointer: "/data/composedScene",
-          },
-        ],
-      },
+      proposal: null,
+      unifiedDiff: null,
+      renderedDiff: null,
     });
+    expect(JSON.stringify(proposed.data)).not.toContain("composedScene");
+    expect(proposed.data).not.toHaveProperty("editableScene");
     expect(readFileSync(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8")).toBe(before);
 
     const saved = bridge.handle({ action: "authoring", payload: { op: "accept" } });
     expect(saved.ok).toBe(true);
     if (!saved.ok) return;
     expect(saved.data).toMatchObject({ phase: "applied", diagnostics: null });
+    expect(saved.data).not.toHaveProperty("editableScene");
     const persisted = readFileSync(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8");
     expect(persisted).not.toBe(before);
 
@@ -97,11 +147,9 @@ describe("desktop typed Scene Document edit golden", () => {
     });
     expect(reopened.ok).toBe(true);
     if (!reopened.ok) return;
-    expect(reopened.data).toMatchObject({
-      ok: true,
-      editableScene: { ok: true },
-    });
-    const reopenedData = reopened.data as {
+    expect(reopened.data).toMatchObject({ ok: true });
+    expect(reopened.data).not.toHaveProperty("editableScene");
+    const reopenedData = editableStatus(bridge) as {
       editableScene: { entities: Array<{ id: string; properties: Array<{ id: string; value: number }> }> };
     };
     expect(reopenedData.editableScene.entities.find(
@@ -122,9 +170,9 @@ describe("desktop typed Scene Document edit golden", () => {
     expect(beside?.worldTransform.translation[0]).toBe(-3.25);
   });
 
-  it("returns the shared validation diagnostic and the CLI conflict reason", () => {
+  it("returns the hierarchy input refusal and the CLI conflict reason", () => {
     const dir = seed("refusals");
-    const bridge = createDesktopBridge({ cwd: dir });
+    const bridge = createDesktopBridge({ cwd: dir, commandCapabilities: ["scene.compose"] });
     const opened = editableStatus(bridge);
     const invalid = bridge.handle({
       action: "authoring",
@@ -132,22 +180,15 @@ describe("desktop typed Scene Document edit golden", () => {
         op: "edit-property",
         documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
         expectedContentHash: opened.contentHash,
+        profile: "game",
         entityId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
         propertyId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.id,
         newValue: "left",
       },
     });
-    expect(invalid.ok).toBe(true);
-    if (!invalid.ok) return;
-    expect(invalid.data).toEqual({
+    expect(invalid).toMatchObject({
       ok: false,
-      diagnostics: [
-        {
-          code: "validation-failed",
-          message: "$.placements[1].transform: Placement transform is invalid.",
-          documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
-        },
-      ],
+      reason: "SCENE_HIERARCHY_INPUT_UNSUPPORTED",
     });
 
     const current = readFileSync(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8");
@@ -158,6 +199,7 @@ describe("desktop typed Scene Document edit golden", () => {
         op: "edit-property",
         documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
         expectedContentHash: opened.contentHash,
+        profile: "game",
         entityId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
         propertyId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.id,
         newValue: -3.25,
@@ -181,7 +223,7 @@ describe("desktop typed Scene Document edit golden", () => {
     const parsed = parseDocumentText(initial);
     if (!parsed.ok) throw new Error(parsed.message);
 
-    const bridge = createDesktopBridge({ cwd: desktopDir });
+    const bridge = createDesktopBridge({ cwd: desktopDir, commandCapabilities: ["scene.compose"] });
     const status = editableStatus(bridge);
     const desktop = bridge.handle({
       action: "authoring",
@@ -189,6 +231,7 @@ describe("desktop typed Scene Document edit golden", () => {
         op: "edit-property",
         documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
         expectedContentHash: status.contentHash,
+        profile: "game",
         entityId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
         propertyId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.id,
         newValue: -2.75,
@@ -238,7 +281,11 @@ describe("desktop typed Scene Document edit golden", () => {
 
   it("settles selected transforms and add/remove through review, persistence, undo, and Play", () => {
     const dir = seed("breadth-loop");
-    const bridge = createDesktopBridge({ cwd: dir, nowMs: () => 1_753_920_000_000 });
+    const bridge = createDesktopBridge({
+      cwd: dir,
+      nowMs: () => 1_753_920_000_000,
+      commandCapabilities: ["scene.compose"],
+    });
     const documentFile = join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH);
     const initialBytes = readFileSync(documentFile, "utf8");
     const selected = DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId;
@@ -278,12 +325,16 @@ describe("desktop typed Scene Document edit golden", () => {
     }
 
     const added = stage({ kind: "add-instance", sourceInstanceId: selected });
-    expect(added).toMatchObject({
-      ok: true,
-      data: { selectedInstanceId: "desktop-crate-beside-copy-1" },
-    });
+    expect(added).toMatchObject({ ok: true, data: { phase: "reviewing" } });
+    if (added.ok) {
+      expect(added.data).not.toHaveProperty("editableScene");
+      expect(added.data).not.toHaveProperty("selectedInstanceId");
+    }
     accept();
     const afterAdd = readFileSync(documentFile, "utf8");
+    expect(status().editableScene.entities.some(
+      (entity) => entity.id === "desktop-crate-beside-copy-1",
+    )).toBe(true);
     const reopened = bridge.handle({
       action: "authoring",
       payload: { op: "restart", documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
@@ -330,7 +381,10 @@ describe("desktop typed Scene Document edit golden", () => {
       cpSync(join(desktopDir, DESKTOP_ACTIVE_DOCUMENT_PATH), join(cliDir, DESKTOP_ACTIVE_DOCUMENT_PATH));
       const parsed = parseDocumentText(initial);
       if (!parsed.ok) throw new Error(parsed.message);
-      const bridge = createDesktopBridge({ cwd: desktopDir });
+      const bridge = createDesktopBridge({
+        cwd: desktopDir,
+        commandCapabilities: ["scene.compose"],
+      });
       const opened = editableStatus(bridge);
       expect(bridge.handle({
         action: "authoring",
@@ -373,7 +427,7 @@ describe("desktop typed Scene Document edit golden", () => {
 
   it("refuses malformed, stale, missing-asset, Kids, and escaping edit-scene requests", () => {
     const dir = seed("breadth-refusals");
-    const bridge = createDesktopBridge({ cwd: dir });
+    const bridge = createDesktopBridge({ cwd: dir, commandCapabilities: ["scene.compose"] });
     const contentHash = editableStatus(bridge).contentHash;
     const edit = (profile: unknown, operation: unknown, documentPath = DESKTOP_ACTIVE_DOCUMENT_PATH) =>
       bridge.handle({
@@ -381,14 +435,20 @@ describe("desktop typed Scene Document edit golden", () => {
         payload: { op: "edit-scene", documentPath, expectedContentHash: contentHash, profile, operation },
       });
     expect(edit("game", { kind: "set-transform-component", instanceId: "bad", propertyId: "scale-x", value: 0 }))
-      .toMatchObject({ ok: true, data: { ok: false, diagnostics: [{ code: "invalid-proposal" }] } });
+      .toMatchObject({ ok: false, reason: "SCENE_HIERARCHY_INPUT_UNSUPPORTED" });
     expect(edit("game", { kind: "remove-instance", instanceId: "missing-instance" }))
-      .toMatchObject({ ok: true, data: { ok: false, diagnostics: [{ message: expect.stringContaining("stale") }] } });
+      .toMatchObject({
+        ok: true,
+        data: {
+          ok: false,
+          diagnostics: [{ code: DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale }],
+        },
+      });
     expect(edit("game", { kind: "add-instance", sourceInstanceId: "missing-instance" }))
       .toMatchObject({ ok: true, data: { ok: false, diagnostics: [{ message: expect.stringContaining("missing") }] } });
     expect(edit("kids", { kind: "remove-instance", instanceId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId }))
-      .toMatchObject({ ok: true, data: { ok: false, diagnostics: [{ message: expect.stringContaining("Game and Web") }] } });
+      .toMatchObject({ ok: false, reason: "SCENE_HIERARCHY_KIDS_DENIED" });
     expect(edit("game", { kind: "remove-instance", instanceId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId }, "../scene.json"))
-      .toMatchObject({ ok: false, reason: "DESKTOP_BRIDGE_REQUEST_MALFORMED" });
+      .toMatchObject({ ok: false, reason: "SCENE_HIERARCHY_INPUT_UNSUPPORTED" });
   });
 });

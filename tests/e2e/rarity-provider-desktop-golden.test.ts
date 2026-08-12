@@ -804,7 +804,11 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
     const deferred = new Promise<RarityProviderContributionResult>((resolve) => {
       release = resolve;
     });
-    const bridge = createDesktopBridge({ cwd: root, runRarityProvider: () => deferred });
+    const bridge = createDesktopBridge({
+      cwd: root,
+      commandCapabilities: ["scene.compose"],
+      runRarityProvider: () => deferred,
+    });
     startRarity(bridge);
     const current = bridge.handle({
       action: "authoring",
@@ -819,6 +823,7 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
           op: "edit-property",
           documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
           expectedContentHash: contentHash,
+          profile: "game",
           entityId: "desktop-crate-beside",
           propertyId: "translation-x",
           newValue: 3,
@@ -871,6 +876,7 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
     });
     const bridge = createDesktopBridge({
       cwd: root,
+      commandCapabilities: ["scene.compose"],
       runRarityProvider: createDesktopRarityFixtureProvider(),
       createAuthoringSession: () =>
         createDesktopSession({
@@ -898,6 +904,7 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
         diagnostics: [{ code: "journal-conflict" }],
       },
     });
+    if (recovered.ok) expect(recovered.data).not.toHaveProperty("editableScene");
     const rejected = bridge.handle({ action: "authoring", payload: { op: "reject" } });
     expect(rejected).toMatchObject({
       ok: true,
@@ -915,6 +922,7 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
         op: "edit-property",
         documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
         expectedContentHash: (current.data as { contentHash: string }).contentHash,
+        profile: "game",
         entityId: "desktop-crate-beside",
         propertyId: "translation-x",
         newValue: 4,
@@ -1143,6 +1151,7 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
     // does not catch this case.
     const withOpenReview = createDesktopBridge({
       cwd: root,
+      commandCapabilities: ["scene.compose"],
       runRarityProvider: createDesktopRarityFixtureProvider(),
     });
     const current = withOpenReview.handle({
@@ -1157,6 +1166,7 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
         op: "edit-property",
         documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
         expectedContentHash: inspected.contentHash,
+        profile: "game",
         entityId: "desktop-crate-beside",
         propertyId: "translation-x",
         newValue: 3,
