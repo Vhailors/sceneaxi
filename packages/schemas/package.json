@@ -32,7 +32,8 @@
     "./contracts/plugin-manifest.schema.json": "./contracts/plugin-manifest.schema.json",
     "./contracts/plugin-manifest.inert.example.json": "./contracts/plugin-manifest.inert.example.json",
     "./contracts/plugin-capability-registry.schema.json": "./contracts/plugin-capability-registry.schema.json",
-    "./contracts/plugin-capability-registry.1.0.0.json": "./contracts/plugin-capability-registry.1.0.0.json"
+    "./contracts/plugin-capability-registry.1.0.0.json": "./contracts/plugin-capability-registry.1.0.0.json",
+    "./contracts/input-action-map.schema.json": "./contracts/input-action-map.schema.json"
   },
   "files": ["src", "contracts"],
   "sceneaxi": { "releaseGroup": "contracts" },

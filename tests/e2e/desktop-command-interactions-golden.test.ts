@@ -1,6 +1,11 @@
 /** Semantic interaction coverage for the truthful desktop command registry. */
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  DEFAULT_INPUT_ACTION_MAP,
+  reviewInputActionRebind,
+  type InputActionMap,
+} from "@sceneaxi/schemas";
+import {
   Window as HappyWindow,
   type HTMLElement as HappyHTMLElement,
 } from "happy-dom";
@@ -254,6 +259,7 @@ async function harness(
     | "recovery-pending" = "unavailable",
   hasActiveProject = true,
   projectGitResponse?: unknown,
+  inputActionMap?: InputActionMap,
 ) {
   const window = new HappyWindow({ width: 1200, height: 800 });
   windows.push(window);
@@ -273,6 +279,9 @@ async function harness(
   Object.defineProperty(window, "sceneaxiDesktopLinux", {
     configurable: true,
     value: {
+      ...(inputActionMap === undefined
+        ? {}
+        : { inputActions: async () => clone({ ok: true, data: { map: inputActionMap } }) }),
       project: async (request: unknown) => {
         const typed = clone(request) as Record<string, unknown>;
         const action = String(typed["action"]);
@@ -469,6 +478,8 @@ describe("desktop command menu, palette, and accelerator parity", () => {
       });
 
       it(`does not invoke ${command.id} from text entry`, async () => {
+        const commandKey = command.key;
+        if (commandKey === null) throw new Error(`${command.id} has no accelerator`);
         const { window, calls } = await harness();
         await prepare(command, window);
         calls.splice(0);
@@ -482,7 +493,7 @@ describe("desktop command menu, palette, and accelerator parity", () => {
         editable.append(inherited);
         shell.append(input, editable, plaintext);
         for (const target of [input, editable, plaintext, inherited]) {
-          const event = shortcut(window, command.key, target, command.id === "edit-redo");
+          const event = shortcut(window, commandKey, target, command.id === "edit-redo");
           await settle(window);
           expect(event.defaultPrevented).toBe(false);
           expect(calls).not.toContainEqual(expectedEffect(command));
@@ -498,6 +509,27 @@ describe("desktop command menu, palette, and accelerator parity", () => {
     const event = shortcut(window, DESKTOP_PALETTE_SHORTCUT.key, input);
     expect(event.defaultPrevented).toBe(true);
     expect(element(window, '.overlay[data-overlay="palette"]').hidden).toBe(false);
+  });
+
+  it("restores a rebind into the emitted accelerator resolver and labels", async () => {
+    const reviewed = reviewInputActionRebind(
+      DEFAULT_INPUT_ACTION_MAP,
+      "editor.project.save",
+      { device: "keyboard", code: "KeyB", modifiers: ["primary"] },
+    );
+    if (!reviewed.ok || !("map" in reviewed)) throw new Error("rebind fixture refused");
+    const { window, calls } = await harness("web", "unavailable", true, reviewed.map);
+    await click(window, "#web-stage-html");
+    calls.splice(0);
+    const oldEvent = shortcut(window, "s");
+    await settle(window);
+    expect(oldEvent.defaultPrevented).toBe(false);
+    expect(calls).toHaveLength(0);
+    const reboundEvent = shortcut(window, "b");
+    await settle(window);
+    expect(reboundEvent.defaultPrevented).toBe(true);
+    expect(calls).toContainEqual({ plane: "engine", action: "command", op: "project-save" });
+    expect(element(window, "#menu-command-project-save kbd").textContent).toBe("Ctrl/Cmd+B");
   });
 
   it("keeps command accelerators active from the recent-project chooser", async () => {

@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sceneaxi.invalid/contracts/input-action-map/v1",
+  "title": "SceneAxi input-action map v1",
+  "oneOf": [
+    { "$ref": "#/$defs/map" },
+    { "$ref": "#/$defs/overrides" }
+  ],
+  "$defs": {
+    "actionId": {
+      "enum": [
+        "editor.palette.open",
+        "editor.project.open",
+        "editor.project.save",
+        "editor.edit.undo",
+        "editor.edit.redo",
+        "editor.run.play",
+        "editor.focus.next",
+        "editor.overlay.dismiss",
+        "viewport.orbit",
+        "viewport.zoom",
+        "play.primary"
+      ]
+    },
+    "binding": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["device", "code", "modifiers"],
+          "properties": {
+            "device": { "const": "keyboard" },
+            "code": { "type": "string", "minLength": 1 },
+            "modifiers": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": { "enum": ["alt", "control", "meta", "primary", "shift"] }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["device", "button", "gesture"],
+          "properties": {
+            "device": { "const": "pointer" },
+            "button": { "type": "integer", "minimum": 0, "maximum": 4 },
+            "gesture": { "enum": ["click", "drag"] }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["device", "axis", "direction"],
+          "properties": {
+            "device": { "const": "wheel" },
+            "axis": { "enum": ["x", "y"] },
+            "direction": { "enum": ["any", "negative", "positive"] }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["device", "controller", "input", "control", "direction"],
+          "properties": {
+            "device": { "const": "controller" },
+            "controller": { "type": "integer", "minimum": 0, "maximum": 3 },
+            "input": { "enum": ["axis", "button"] },
+            "control": { "type": "integer", "minimum": 0, "maximum": 31 },
+            "direction": { "enum": ["any", "negative", "positive"] }
+          }
+        }
+      ]
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actionId", "binding"],
+      "properties": {
+        "actionId": { "$ref": "#/$defs/actionId" },
+        "binding": { "$ref": "#/$defs/binding" }
+      }
+    },
+    "map": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "kind", "bindings"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "kind": { "const": "sceneaxi.input-action-map" },
+        "bindings": {
+          "type": "array",
+          "minItems": 11,
+          "maxItems": 11,
+          "items": { "$ref": "#/$defs/entry" }
+        }
+      }
+    },
+    "overrides": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "kind", "scope", "bindings"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "kind": { "const": "sceneaxi.input-action-overrides" },
+        "scope": { "enum": ["workspace", "project"] },
+        "bindings": {
+          "type": "array",
+          "maxItems": 11,
+          "items": { "$ref": "#/$defs/entry" }
+        }
+      }
+    }
+  }
+}

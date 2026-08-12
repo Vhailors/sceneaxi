@@ -11,6 +11,9 @@
 import {
   EDITOR_COMMAND_SCHEMA_VERSION,
   editorCommand,
+  inputAction,
+  inputActionForCommand,
+  type InputActionBinding,
   type EditorCommandId,
 } from "@sceneaxi/schemas";
 
@@ -39,9 +42,6 @@ function interaction<
     | "run-play">,
   Row extends Readonly<{
     menu: DesktopMenuId;
-    accelerator: string;
-    key: string | null;
-    allowInTextEntry: boolean;
   }>,
 >(
   id: Id,
@@ -49,33 +49,52 @@ function interaction<
 ) {
   const command = editorCommand(id);
   if (command === undefined) throw new Error(`Missing editor command ${id}`);
+  const action = inputActionForCommand(id);
+  const binding = action?.defaultBinding;
   return Object.freeze({
     id,
     label: command.label,
     schemaVersion: EDITOR_COMMAND_SCHEMA_VERSION,
     permission: command.permission,
+    actionId: action?.id ?? null,
+    binding: binding ?? null,
+    accelerator: binding === undefined ? "" : formatInputBinding(binding),
+    key: binding?.device === "keyboard" && binding.code.startsWith("Key")
+      ? binding.code.slice(3).toLowerCase()
+      : null,
+    allowInTextEntry: action?.allowInTextEntry ?? false,
     ...row,
   });
+}
+
+export function formatInputBinding(binding: InputActionBinding): string {
+  if (binding.device === "keyboard") {
+    const parts = binding.modifiers.map((modifier) => ({
+      primary: "Ctrl/Cmd",
+      control: "Ctrl",
+      meta: "Cmd",
+      alt: "Alt",
+      shift: "Shift",
+    })[modifier]);
+    const key = binding.code.startsWith("Key") ? binding.code.slice(3)
+      : binding.code.startsWith("Digit") ? binding.code.slice(5)
+      : binding.code;
+    return [...parts, key].join("+");
+  }
+  if (binding.device === "pointer") return `Pointer ${binding.button} ${binding.gesture}`;
+  if (binding.device === "wheel") return `Wheel ${binding.axis.toUpperCase()}`;
+  return `Controller ${binding.controller + 1} ${binding.input} ${binding.control}`;
 }
 
 export const DESKTOP_INTERACTION_COMMANDS = Object.freeze([
   interaction("project-new", {
     menu: "file" as const,
-    accelerator: "",
-    key: null,
-    allowInTextEntry: false,
   }),
   interaction("project-open", {
     menu: "file" as const,
-    accelerator: "Ctrl/Cmd+O",
-    key: "o",
-    allowInTextEntry: false,
   }),
   interaction("project-save", {
     menu: "file" as const,
-    accelerator: "Ctrl/Cmd+S",
-    key: "s",
-    allowInTextEntry: false,
   }),
   interaction("project-git-status", {
     menu: "file" as const,
@@ -103,27 +122,15 @@ export const DESKTOP_INTERACTION_COMMANDS = Object.freeze([
   }),
   interaction("ship-export-web", {
     menu: "file" as const,
-    accelerator: "",
-    key: null,
-    allowInTextEntry: false,
   }),
   interaction("edit-undo", {
     menu: "edit" as const,
-    accelerator: "Ctrl/Cmd+Z",
-    key: "z",
-    allowInTextEntry: false,
   }),
   interaction("edit-redo", {
     menu: "edit" as const,
-    accelerator: "Ctrl/Cmd+Shift+Z",
-    key: "z",
-    allowInTextEntry: false,
   }),
   interaction("run-play", {
     menu: "run" as const,
-    accelerator: "Ctrl/Cmd+P",
-    key: "p",
-    allowInTextEntry: false,
   }),
 ] as const);
 
@@ -131,10 +138,18 @@ export type DesktopInteractionCommand =
   (typeof DESKTOP_INTERACTION_COMMANDS)[number];
 export type DesktopInteractionCommandId = DesktopInteractionCommand["id"];
 
+const paletteAction = inputAction("editor.palette.open");
+if (paletteAction === undefined || paletteAction.defaultBinding.device !== "keyboard") {
+  throw new Error("Missing keyboard input action editor.palette.open");
+}
 export const DESKTOP_PALETTE_SHORTCUT = Object.freeze({
   id: "palette-open",
-  label: "Commands",
-  accelerator: "Ctrl/Cmd+K",
-  key: "k",
-  allowInTextEntry: true,
+  actionId: paletteAction.id,
+  label: paletteAction.label,
+  binding: paletteAction.defaultBinding,
+  accelerator: formatInputBinding(paletteAction.defaultBinding),
+  key: paletteAction.defaultBinding.code.startsWith("Key")
+    ? paletteAction.defaultBinding.code.slice(3).toLowerCase()
+    : paletteAction.defaultBinding.code.toLowerCase(),
+  allowInTextEntry: paletteAction.allowInTextEntry,
 });

@@ -15,6 +15,9 @@
     "editorCommandId": {
       "enum": [
         "project-new",
+        "input-actions-inspect",
+        "input-action-rebind",
+        "input-actions-reset",
         "project-inspect",
         "project-migration-propose",
         "project-migration-commit",
@@ -64,6 +67,9 @@
         "sceneaxi.scene.object.create",
         "sceneaxi.scene.object.remove",
         "sceneaxi.scene.object.reparent",
+        "sceneaxi.input-actions.inspect",
+        "sceneaxi.input-actions.rebind",
+        "sceneaxi.input-actions.reset",
         "sceneaxi.project.propose",
         "sceneaxi.project.accept",
         "sceneaxi.project.reject",

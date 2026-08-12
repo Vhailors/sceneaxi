@@ -76,6 +76,7 @@ const commandTool = (definition: Readonly<{
     mutatesProject:
       command.mutation === "commits-project" ||
       command.mutation === "reverts-project" ||
+      command.mutation === "commits-settings" ||
       command.id === "project-git-stage",
     creditRoute: "none",
     inputSchema: command.inputSchema,
@@ -192,6 +193,24 @@ export const DESKTOP_LOCAL_BRIDGE_TOOLS = Object.freeze([
     name: "sceneaxi.scene.object.reparent",
     commandId: "scene-object-reparent",
     description: "Stage one reparent with an explicit preserve-world or preserve-local transform policy.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.input-actions.inspect",
+    commandId: "input-actions-inspect",
+    description: "Inspect the effective editor and Play action map plus project/workspace bases.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.input-actions.rebind",
+    commandId: "input-action-rebind",
+    description: "Review or commit one conflict-checked project/workspace input-action rebind.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.input-actions.reset",
+    commandId: "input-actions-reset",
+    description: "Review or commit an explicit reset of one input-action override scope.",
     providerRoute: "none",
   }),
   tool({

@@ -12,6 +12,7 @@ import {
 } from "../lib/bridge-contract.js";
 import { DESKTOP_PROJECT_CHANNEL } from "../lib/project-lifecycle-contract.js";
 import { DESKTOP_PROJECT_BROWSER_CHANNEL } from "../lib/project-browser-contract.js";
+import { DESKTOP_INPUT_ACTIONS_CHANNEL } from "../lib/input-action-host.js";
 
 contextBridge.exposeInMainWorld(DESKTOP_BRIDGE_GLOBAL, {
   request: (request: unknown) => ipcRenderer.invoke(DESKTOP_BRIDGE_CHANNEL, request),
@@ -19,6 +20,7 @@ contextBridge.exposeInMainWorld(DESKTOP_BRIDGE_GLOBAL, {
   project: (request: unknown) => ipcRenderer.invoke(DESKTOP_PROJECT_CHANNEL, request),
   browseProject: (request: unknown) =>
     ipcRenderer.invoke(DESKTOP_PROJECT_BROWSER_CHANNEL, request),
+  inputActions: () => ipcRenderer.invoke(DESKTOP_INPUT_ACTIONS_CHANNEL),
   configureByo: (request: unknown) =>
     ipcRenderer.invoke(DESKTOP_BYO_CONFIGURATION_CHANNEL, request),
 });

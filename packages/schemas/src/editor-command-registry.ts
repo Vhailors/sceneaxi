@@ -75,6 +75,9 @@ export type EditorCommandId =
   | "scene-object-create"
   | "scene-object-remove"
   | "scene-object-reparent"
+  | "input-actions-inspect"
+  | "input-action-rebind"
+  | "input-actions-reset"
   | "run-play"
   | "change-review-accept"
   | "change-review-reject"
@@ -88,13 +91,15 @@ export type EditorCommandMutation =
   | "none"
   | "stages-change"
   | "commits-project"
-  | "reverts-project";
+  | "reverts-project"
+  | "commits-settings";
 
 export type EditorCommandResultTarget =
   | "none"
   | "project"
   | "change-review"
-  | "live-viewport";
+  | "live-viewport"
+  | "input-settings";
 
 export type EditorCommandDefinition = Readonly<{
   schemaVersion: typeof EDITOR_COMMAND_SCHEMA_VERSION;
@@ -126,6 +131,7 @@ export type EditorCommandDefinition = Readonly<{
       | "undo-result"
       | "redo-result"
       | "scene-hierarchy"
+      | "input-action-map"
       | "kernel-session"
       | "sculpt-artifact"
       | "rarity-proposal"
@@ -154,7 +160,9 @@ export type EditorCommandDefinition = Readonly<{
     | "scene-transform"
     | "scene-create"
     | "scene-remove"
-    | "scene-reparent";
+    | "scene-reparent"
+    | "input-rebind"
+    | "input-reset";
 }>;
 
 export type EditorCommandInvocation = Readonly<{
@@ -441,6 +449,34 @@ const gitCommitInput = Object.freeze({
   }),
 }) satisfies JsonObject;
 
+const inputRebind = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: Object.freeze([
+    "scope", "expectedBaseVersion", "actionId", "binding", "approved", "reviewDigest",
+  ]),
+  properties: Object.freeze({
+    scope: Object.freeze({ type: "string", enum: Object.freeze(["workspace", "project"]) }),
+    expectedBaseVersion: Object.freeze({ type: "string", pattern: "^sha256:[0-9a-f]{64}$" }),
+    actionId: Object.freeze({ type: "string", minLength: 1 }),
+    binding: Object.freeze({ type: "object" }),
+    approved: Object.freeze({ type: "boolean" }),
+    reviewDigest: Object.freeze({ type: Object.freeze(["string", "null"]), pattern: "^sha256:[0-9a-f]{64}$" }),
+  }),
+}) satisfies JsonObject;
+
+const inputReset = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: Object.freeze(["scope", "expectedBaseVersion", "approved", "reviewDigest"]),
+  properties: Object.freeze({
+    scope: Object.freeze({ type: "string", enum: Object.freeze(["workspace", "project"]) }),
+    expectedBaseVersion: Object.freeze({ type: "string", pattern: "^sha256:[0-9a-f]{64}$" }),
+    approved: Object.freeze({ type: "boolean" }),
+    reviewDigest: Object.freeze({ type: Object.freeze(["string", "null"]), pattern: "^sha256:[0-9a-f]{64}$" }),
+  }),
+}) satisfies JsonObject;
+
 const CLIENTS = Object.freeze([...EDITOR_COMMAND_CLIENTS]);
 const BASE_REFUSALS = Object.freeze([
   EDITOR_COMMAND_REFUSALS.clientDenied,
@@ -500,6 +536,68 @@ const DEFINITIONS = [
     undo: undo("none"),
     inputSchema: noInput,
     inputShape: "none",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "input-actions-inspect",
+    label: "Inspect Input Actions",
+    acceptedClients: CLIENTS,
+    permission: "project:read",
+    capability: capability("input.actions"),
+    mutation: "none",
+    progress: immediate(),
+    evidence: evidence("input-action-map", "input-settings"),
+    refusals: BASE_REFUSALS,
+    undo: undo("none"),
+    inputSchema: noInput,
+    inputShape: "none",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "input-action-rebind",
+    label: "Rebind Input Action",
+    acceptedClients: CLIENTS,
+    permission: "project:write",
+    capability: capability("input.actions"),
+    mutation: "commits-settings",
+    progress: immediate(),
+    evidence: evidence("input-action-map", "input-settings"),
+    refusals: Object.freeze([
+      ...BASE_REFUSALS,
+      "INPUT_ACTION_UNKNOWN",
+      "INPUT_ACTION_BINDING_DUPLICATE",
+      "INPUT_ACTION_BINDING_CONFLICT",
+      "INPUT_ACTION_RESERVED",
+      "INPUT_ACTION_DEVICE_INPUT_INVALID",
+      "INPUT_ACTION_STALE_BASE_VERSION",
+      "INPUT_ACTION_REVIEW_MISMATCH",
+      "INPUT_ACTION_PERSISTED_STATE_INVALID",
+      "INPUT_ACTION_WRITE_FAILED",
+    ]),
+    undo: undo("none"),
+    inputSchema: inputRebind,
+    inputShape: "input-rebind",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "input-actions-reset",
+    label: "Reset Input Actions",
+    acceptedClients: CLIENTS,
+    permission: "project:write",
+    capability: capability("input.actions"),
+    mutation: "commits-settings",
+    progress: immediate(),
+    evidence: evidence("input-action-map", "input-settings"),
+    refusals: Object.freeze([
+      ...BASE_REFUSALS,
+      "INPUT_ACTION_STALE_BASE_VERSION",
+      "INPUT_ACTION_REVIEW_MISMATCH",
+      "INPUT_ACTION_PERSISTED_STATE_INVALID",
+      "INPUT_ACTION_WRITE_FAILED",
+    ]),
+    undo: undo("none"),
+    inputSchema: inputReset,
+    inputShape: "input-reset",
   }),
   definition({
     schemaVersion: 1,
@@ -1144,6 +1242,23 @@ export function validateEditorCommandInput(
           parentInstanceId: input["parentInstanceId"],
           transformPolicy: input["transformPolicy"],
         });
+    case "input-rebind":
+      return exactKeys(input, ["scope", "expectedBaseVersion", "actionId", "binding", "approved", "reviewDigest"]) &&
+        (input["scope"] === "workspace" || input["scope"] === "project") &&
+        typeof input["expectedBaseVersion"] === "string" &&
+        /^sha256:[0-9a-f]{64}$/.test(input["expectedBaseVersion"]) &&
+        typeof input["actionId"] === "string" && input["actionId"].length > 0 &&
+        isCommandObject(input["binding"]) && typeof input["approved"] === "boolean" &&
+        (input["reviewDigest"] === null ||
+          (typeof input["reviewDigest"] === "string" && /^sha256:[0-9a-f]{64}$/.test(input["reviewDigest"])));
+    case "input-reset":
+      return exactKeys(input, ["scope", "expectedBaseVersion", "approved", "reviewDigest"]) &&
+        (input["scope"] === "workspace" || input["scope"] === "project") &&
+        typeof input["expectedBaseVersion"] === "string" &&
+        /^sha256:[0-9a-f]{64}$/.test(input["expectedBaseVersion"]) &&
+        typeof input["approved"] === "boolean" &&
+        (input["reviewDigest"] === null ||
+          (typeof input["reviewDigest"] === "string" && /^sha256:[0-9a-f]{64}$/.test(input["reviewDigest"])));
   }
 }
 

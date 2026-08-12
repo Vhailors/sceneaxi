@@ -206,6 +206,9 @@ function bridgeRequest(
     case "sceneaxi.project.git.stage":
     case "sceneaxi.project.git.commit.prepare":
     case "sceneaxi.scene.transform.apply":
+    case "sceneaxi.input-actions.inspect":
+    case "sceneaxi.input-actions.rebind":
+    case "sceneaxi.input-actions.reset":
     case "sceneaxi.run.play":
     case "sceneaxi.assistant.local.start":
     case "sceneaxi.assistant.byo.start":
