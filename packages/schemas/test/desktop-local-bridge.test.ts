@@ -17,6 +17,22 @@ describe("desktop local bridge contract", () => {
     ) as {
       $id: string;
       $defs: Record<string, unknown> & {
+        editorCommandId: { enum: string[] };
+        permission: { enum: string[] };
+        tool: {
+          additionalProperties: false;
+          required: string[];
+          properties: {
+            name: { $ref: string };
+            commandId: { oneOf: [{ $ref: string }, { type: "null" }] };
+            description: { type: "string"; minLength: number };
+            permission: { $ref: string };
+            mutatesProject: { type: "boolean" };
+            providerRoute: { enum: string[] };
+            creditRoute: { const: string };
+            inputSchema: { type: "object" };
+          };
+        };
         toolName: { enum: string[] };
       };
     };
@@ -57,6 +73,27 @@ describe("desktop local bridge contract", () => {
     expect(schema.$defs.toolName.enum).toEqual(
       DESKTOP_LOCAL_BRIDGE_TOOLS.map((tool) => tool.name),
     );
+
+    const toolContract = schema.$defs.tool;
+    const requiredKeys = [...toolContract.required].sort();
+    for (const tool of DESKTOP_LOCAL_BRIDGE_TOOLS) {
+      expect(Object.keys(tool).sort()).toEqual(requiredKeys);
+      expect(schema.$defs.toolName.enum).toContain(tool.name);
+      if (tool.commandId !== null) {
+        expect(schema.$defs.editorCommandId.enum).toContain(tool.commandId);
+      }
+      expect(typeof tool.description).toBe(toolContract.properties.description.type);
+      expect(tool.description.length).toBeGreaterThanOrEqual(
+        toolContract.properties.description.minLength,
+      );
+      expect(schema.$defs.permission.enum).toContain(tool.permission);
+      expect(typeof tool.mutatesProject).toBe(
+        toolContract.properties.mutatesProject.type,
+      );
+      expect(toolContract.properties.providerRoute.enum).toContain(tool.providerRoute);
+      expect(tool.creditRoute).toBe(toolContract.properties.creditRoute.const);
+      expect(typeof tool.inputSchema).toBe(toolContract.properties.inputSchema.type);
+    }
   });
 
   it("never declares a project-mutating tool behind a read permission", () => {
