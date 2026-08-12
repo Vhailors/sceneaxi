@@ -18,6 +18,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   apply,
   acquireAtomicWriteLocks,
+  createProjectGitAuthoringAuthority,
   inspectProjectGit,
   prepareProjectGitCommit,
   propose,
@@ -42,7 +43,7 @@ const authoringReady = Object.freeze({
 });
 
 function mutationOptions(root: string) {
-  return { root, authoring: authoringReady };
+  return { root, authoring: createProjectGitAuthoringAuthority(() => authoringReady) };
 }
 
 afterEach(() => {
@@ -284,6 +285,51 @@ describe("contained project Git service", () => {
         }],
       },
     });
+    expect(stageProjectGitPaths(mutationOptions(root), ["moved.json", "scene.json"])).toMatchObject({
+      ok: true,
+    });
+    expect(prepareProjectGitCommit(
+      mutationOptions(root),
+      ["moved.json", "scene.json"],
+      "feat: rename scene",
+    )).toMatchObject({
+      ok: true,
+      preparation: { selectedPaths: ["moved.json", "scene.json"] },
+    });
+    expect(prepareProjectGitCommit(
+      mutationOptions(root),
+      ["moved.json"],
+      "feat: incomplete rename",
+    )).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.selectionMismatch },
+    });
+  });
+
+  it("restores the exact prior index when post-stage evidence is too large", () => {
+    const { root } = repository("stage-rollback");
+    const indexPath = join(root, ".git", "index");
+    const beforeIndex = readFileSync(indexPath);
+    writeFileSync(join(root, "large-untracked.bin"), randomBytes(900 * 1024));
+
+    expect(stageProjectGitPaths(mutationOptions(root), ["large-untracked.bin"])).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.evidenceTooLarge },
+    });
+    expect(readFileSync(indexPath)).toEqual(beforeIndex);
+    expect(git(root, "diff", "--cached", "--name-only").trim()).toBe("");
+  });
+
+  it("refuses special Git control nodes before reading them", () => {
+    const { root } = repository("special-control-node");
+    const configPath = join(root, ".git", "config");
+    rmSync(configPath);
+    execFileSync("mkfifo", [configPath]);
+
+    expect(inspectProjectGit({ root })).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.repositoryEscape, path: "$git.config" },
+    });
   });
 
   it("refuses clean filters without executing them", () => {
@@ -415,7 +461,10 @@ describe("contained project Git service", () => {
       { reviewStaged: false, recoveryPending: false, transactionDirty: true, code: PROJECT_GIT_DIAGNOSTICS.transactionDirty },
     ] as const;
     for (const state of guarded) {
-      expect(stageProjectGitPaths({ root, authoring: state }, ["notes.txt"])).toMatchObject({
+      expect(stageProjectGitPaths({
+        root,
+        authoring: createProjectGitAuthoringAuthority(() => state),
+      }, ["notes.txt"])).toMatchObject({
         ok: false,
         diagnostic: { code: state.code },
       });
@@ -427,6 +476,33 @@ describe("contained project Git service", () => {
       ok: false,
       diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.detachedWorktree },
     });
+  });
+
+  it("rejects a hand-built authoring authority", () => {
+    const { root } = repository("forged-authority");
+    writeFileSync(join(root, "notes.txt"), "not authorized\n");
+    expect(stageProjectGitPaths({
+      root,
+      authoring: Object.freeze({}) as Parameters<typeof stageProjectGitPaths>[0]["authoring"],
+    }, ["notes.txt"])).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.transactionDirty, path: "$authoring" },
+    });
+    expect(git(root, "diff", "--cached", "--name-only").trim()).toBe("");
+  });
+
+  it("reads authoring state live from one opaque authority", () => {
+    const { root } = repository("live-authority");
+    writeFileSync(join(root, "notes.txt"), "live state\n");
+    let state = authoringReady;
+    const authority = createProjectGitAuthoringAuthority(() => state);
+    state = Object.freeze({ ...authoringReady, reviewStaged: true });
+    expect(stageProjectGitPaths({ root, authoring: authority }, ["notes.txt"])).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.reviewStaged },
+    });
+    state = authoringReady;
+    expect(stageProjectGitPaths({ root, authoring: authority }, ["notes.txt"])).toMatchObject({ ok: true });
   });
 
   it("refuses missing Git, capability, Kids, path escape, and unsupported history operations by name", () => {

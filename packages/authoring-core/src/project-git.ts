@@ -1,6 +1,14 @@
 /** Contained local Git inspection and preparation for one selected native project. */
 import { spawnSync } from "node:child_process";
-import { lstatSync, readFileSync, readdirSync, realpathSync } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  readFileSync,
+  readdirSync,
+  realpathSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { devNull } from "node:os";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import {
@@ -27,7 +35,7 @@ import {
   applyJournalRecoveryPending,
   applyJournalOperationResource,
   beginApplyJournalTransaction,
-  endApplyJournalTransaction,
+  endApplyJournalTransactionChecked,
 } from "./apply-journal.js";
 
 export const PROJECT_GIT_OPERATIONS = Object.freeze([
@@ -56,16 +64,30 @@ export type ProjectGitAuthoringState = Readonly<{
   transactionDirty: boolean;
 }>;
 
+declare const projectGitAuthoringAuthorityBrand: unique symbol;
+export type ProjectGitAuthoringAuthority = Readonly<{
+  [projectGitAuthoringAuthorityBrand]: true;
+}>;
+
+const projectGitAuthoringAuthorities = new WeakMap<object, () => ProjectGitAuthoringState>();
+
+export function createProjectGitAuthoringAuthority(
+  readState: () => ProjectGitAuthoringState,
+): ProjectGitAuthoringAuthority {
+  const authority = Object.freeze({}) as ProjectGitAuthoringAuthority;
+  projectGitAuthoringAuthorities.set(authority, readState);
+  return authority;
+}
+
 export type ProjectGitOptions = Readonly<{
   root: string;
   profile?: "game" | "web" | "kids";
-  authoring?: ProjectGitAuthoringState;
   /** Injectable only for deterministic missing-host tests. */
   gitExecutable?: string;
 }>;
 
-export type ProjectGitMutationOptions = Omit<ProjectGitOptions, "authoring"> & Readonly<{
-  authoring: ProjectGitAuthoringState;
+export type ProjectGitMutationOptions = ProjectGitOptions & Readonly<{
+  authoring: ProjectGitAuthoringAuthority;
 }>;
 
 type GitResult = Readonly<{
@@ -193,30 +215,39 @@ function transactionDirtyFailure(): ProjectGitFailure {
 
 function mutationGuard(
   root: string,
-  authoring: ProjectGitAuthoringState | undefined,
+  authoring: ProjectGitAuthoringAuthority | undefined,
 ): ProjectGitFailure | MutationGuard {
-  if (authoring === undefined) {
+  const readAuthoring = authoring === undefined
+    ? undefined
+    : projectGitAuthoringAuthorities.get(authoring);
+  if (readAuthoring === undefined) {
     return failure(
       PROJECT_GIT_DIAGNOSTICS.transactionDirty,
       "$authoring",
       "Authoritative SceneAxi review and recovery state is required before changing the Git index.",
     );
   }
-  if (authoring.reviewStaged) {
+  let authoringState: ProjectGitAuthoringState;
+  try {
+    authoringState = readAuthoring();
+  } catch {
+    return transactionDirtyFailure();
+  }
+  if (authoringState.reviewStaged) {
     return failure(
       PROJECT_GIT_DIAGNOSTICS.reviewStaged,
       "scene.json",
       "A SceneAxi proposal is staged for review; accept or reject it before changing the Git index.",
     );
   }
-  if (authoring.recoveryPending) {
+  if (authoringState.recoveryPending) {
     return failure(
       PROJECT_GIT_DIAGNOSTICS.recoveryPending,
       ".sceneaxi/journal/.active",
       "SceneAxi authoring recovery is pending; resolve it before changing the Git index.",
     );
   }
-  if (authoring.transactionDirty) {
+  if (authoringState.transactionDirty) {
     return transactionDirtyFailure();
   }
   const operationPath = canonicalPath(applyJournalOperationResource(root));
@@ -264,7 +295,8 @@ function mutationGuard(
     return transactionDirtyFailure();
   }
   if (applyJournalRecoveryPending(root)) {
-    endApplyJournalTransaction(lockSet);
+    const releaseFailures = endApplyJournalTransactionChecked(lockSet);
+    if (releaseFailures.length > 0) return transactionDirtyFailure();
     return failure(
       PROJECT_GIT_DIAGNOSTICS.recoveryPending,
       ".sceneaxi/journal/.active",
@@ -317,12 +349,107 @@ function parseStatus(
 type Context = Readonly<{
   root: string;
   executable: string;
+  indexPath: string;
   projectId: string;
   canonicalFiles: readonly string[];
 }>;
 
 function repositoryEscape(path: string, message: string): ProjectGitFailure {
   return failure(PROJECT_GIT_DIAGNOSTICS.repositoryEscape, path, message);
+}
+
+function validateGitNode(
+  root: string,
+  path: string,
+  diagnosticPath: string,
+  kind: "file" | "directory",
+  required = false,
+): ProjectGitFailure | null {
+  try {
+    const stat = lstatSync(path);
+    const expected = kind === "file" ? stat.isFile() : stat.isDirectory();
+    if (stat.isSymbolicLink() || !expected || !within(root, canonicalPath(path))) {
+      return repositoryEscape(
+        diagnosticPath,
+        "Contained Git refuses repository control nodes with an unsafe type or indirection.",
+      );
+    }
+    return null;
+  } catch (error) {
+    const code = error instanceof Error && "code" in error
+      ? (error as NodeJS.ErrnoException).code
+      : undefined;
+    if (code === "ENOENT" && !required) return null;
+    return failure(
+      PROJECT_GIT_DIAGNOSTICS.repositoryUnavailable,
+      diagnosticPath,
+      "Contained Git could not verify a repository control node.",
+    );
+  }
+}
+
+function validateGitRefTree(
+  root: string,
+  directory: string,
+): ProjectGitFailure | null {
+  const pending = [directory];
+  try {
+    while (pending.length > 0) {
+      const current = pending.pop();
+      if (current === undefined) continue;
+      for (const entry of readdirSync(current, { withFileTypes: true })) {
+        const path = resolve(current, entry.name);
+        if (
+          entry.isSymbolicLink() ||
+          (!entry.isDirectory() && !entry.isFile()) ||
+          !within(root, canonicalPath(path))
+        ) {
+          return repositoryEscape(
+            "$git.refs",
+            "Contained Git refuses repository reference nodes with an unsafe type or indirection.",
+          );
+        }
+        if (entry.isDirectory()) pending.push(path);
+      }
+    }
+    return null;
+  } catch {
+    return failure(
+      PROJECT_GIT_DIAGNOSTICS.repositoryUnavailable,
+      "$git.refs",
+      "Contained Git could not verify repository references.",
+    );
+  }
+}
+
+function validateGitFileDirectory(
+  root: string,
+  directory: string,
+  diagnosticPath: string,
+): ProjectGitFailure | null {
+  try {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const path = resolve(directory, entry.name);
+      if (entry.isSymbolicLink() || !entry.isFile() || !within(root, canonicalPath(path))) {
+        return repositoryEscape(
+          diagnosticPath,
+          "Contained Git refuses repository metadata files with an unsafe type or indirection.",
+        );
+      }
+    }
+    return null;
+  } catch (error) {
+    const code = error instanceof Error && "code" in error
+      ? (error as NodeJS.ErrnoException).code
+      : undefined;
+    return code === "ENOENT"
+      ? null
+      : failure(
+          PROJECT_GIT_DIAGNOSTICS.repositoryUnavailable,
+          diagnosticPath,
+          "Contained Git could not verify repository metadata files.",
+        );
+  }
 }
 
 function containedGitDirectory(root: string): string | ProjectGitFailure {
@@ -350,29 +477,6 @@ function containedGitDirectory(root: string): string | ProjectGitFailure {
       "The selected repository metadata resolves outside the project root.",
     );
   }
-  const pending = [gitDirectory];
-  try {
-    while (pending.length > 0) {
-      const directory = pending.pop();
-      if (directory === undefined) continue;
-      for (const entry of readdirSync(directory, { withFileTypes: true })) {
-        const path = resolve(directory, entry.name);
-        if (entry.isSymbolicLink() || !within(root, canonicalPath(path))) {
-          return repositoryEscape(
-            "$git.metadata",
-            "Contained Git refuses repository metadata indirections.",
-          );
-        }
-        if (entry.isDirectory()) pending.push(path);
-      }
-    }
-  } catch {
-    return failure(
-      PROJECT_GIT_DIAGNOSTICS.repositoryUnavailable,
-      "$git.metadata",
-      "Contained Git could not verify repository metadata.",
-    );
-  }
   for (const pointer of ["commondir", "gitdir", "config.worktree"] as const) {
     try {
       lstatSync(resolve(gitDirectory, pointer));
@@ -393,30 +497,37 @@ function containedGitDirectory(root: string): string | ProjectGitFailure {
       }
     }
   }
-  for (const name of ["config", "HEAD", "index", "objects", "refs"] as const) {
-    const path = resolve(gitDirectory, name);
-    try {
-      const stat = lstatSync(path);
-      const canonical = canonicalPath(path);
-      if (stat.isSymbolicLink() || !within(root, canonical)) {
-        return repositoryEscape(
-          `$git.${name}`,
-          "Contained Git refuses repository control-file indirections.",
-        );
-      }
-    } catch (error) {
-      const code = error instanceof Error && "code" in error
-        ? (error as NodeJS.ErrnoException).code
-        : undefined;
-      if (code !== "ENOENT") {
-        return failure(
-          PROJECT_GIT_DIAGNOSTICS.repositoryUnavailable,
-          `$git.${name}`,
-          "Contained Git could not verify repository control files.",
-        );
-      }
-    }
+  const controlNodes = [
+    ["config", "file", true],
+    ["HEAD", "file", true],
+    ["index", "file", false],
+    ["packed-refs", "file", false],
+    ["shallow", "file", false],
+    ["objects", "directory", true],
+    ["objects/info", "directory", false],
+    ["objects/info/alternates", "file", false],
+    ["objects/info/http-alternates", "file", false],
+    ["objects/pack", "directory", false],
+    ["refs", "directory", true],
+  ] as const;
+  for (const [name, kind, required] of controlNodes) {
+    const invalid = validateGitNode(
+      root,
+      resolve(gitDirectory, ...name.split("/")),
+      `$git.${name.replaceAll("/", ".")}`,
+      kind,
+      required,
+    );
+    if (invalid !== null) return invalid;
   }
+  const invalidRefs = validateGitRefTree(root, resolve(gitDirectory, "refs"));
+  if (invalidRefs !== null) return invalidRefs;
+  const invalidPacks = validateGitFileDirectory(
+    root,
+    resolve(gitDirectory, "objects", "pack"),
+    "$git.objects.pack",
+  );
+  if (invalidPacks !== null) return invalidPacks;
   let config: string;
   try {
     config = readFileSync(resolve(gitDirectory, "config"), "utf8");
@@ -487,7 +598,23 @@ function context(
   }
   let manifestPath: string;
   try {
-    manifestPath = canonicalPath(resolve(root, PROJECT_MANIFEST_PATH));
+    const unresolvedManifestPath = resolve(root, PROJECT_MANIFEST_PATH);
+    const manifestStat = lstatSync(unresolvedManifestPath);
+    manifestPath = canonicalPath(unresolvedManifestPath);
+    if (!within(root, manifestPath)) {
+      return failure(
+        PROJECT_GIT_DIAGNOSTICS.pathEscape,
+        PROJECT_MANIFEST_PATH,
+        "The native project manifest resolves outside the selected project root.",
+      );
+    }
+    if (manifestStat.isSymbolicLink() || !manifestStat.isFile()) {
+      return failure(
+        PROJECT_GIT_DIAGNOSTICS.pathEscape,
+        PROJECT_MANIFEST_PATH,
+        "Contained Git requires a regular native project manifest with an explicit capability grant.",
+      );
+    }
   } catch {
     return failure(
       PROJECT_GIT_DIAGNOSTICS.capabilityMissing,
@@ -603,6 +730,14 @@ function context(
       "The selected repository resolves alternate object storage outside the project root.",
     );
   }
+  const httpAlternatesPath = resolve(objectDirectory, "info", "http-alternates");
+  if (existsSync(httpAlternatesPath)) {
+    return failure(
+      PROJECT_GIT_DIAGNOSTICS.repositoryEscape,
+      "$git.objects.http-alternates",
+      "Contained Git refuses repositories that use HTTP alternate object storage.",
+    );
+  }
   try {
     if (readFileSync(alternatesPath, "utf8").trim().length > 0) {
       return failure(
@@ -668,9 +803,59 @@ function context(
   return Object.freeze({
     root,
     executable,
+    indexPath,
     projectId: manifest.projectId,
     canonicalFiles,
   });
+}
+
+function entryPaths(entry: ProjectGitEntry): readonly string[] {
+  return entry.sourcePath === undefined
+    ? Object.freeze([entry.path])
+    : Object.freeze([entry.path, entry.sourcePath].sort());
+}
+
+type GitIndexSnapshot = Readonly<{
+  existed: boolean;
+  bytes: Buffer | null;
+}>;
+
+function captureGitIndex(ctx: Context): GitIndexSnapshot | ProjectGitFailure {
+  try {
+    if (!existsSync(ctx.indexPath)) return Object.freeze({ existed: false, bytes: null });
+    if (!lstatSync(ctx.indexPath).isFile()) {
+      return repositoryEscape("$git.index", "Contained Git requires the repository index to be a regular file.");
+    }
+    return Object.freeze({ existed: true, bytes: readFileSync(ctx.indexPath) });
+  } catch {
+    return failure(
+      PROJECT_GIT_DIAGNOSTICS.repositoryUnavailable,
+      "$git.index",
+      "Contained Git could not snapshot the repository index before staging.",
+    );
+  }
+}
+
+function restoreGitIndex(ctx: Context, snapshot: GitIndexSnapshot): boolean {
+  try {
+    if (snapshot.existed) {
+      if (snapshot.bytes === null) return false;
+      writeFileSync(ctx.indexPath, snapshot.bytes);
+    } else if (existsSync(ctx.indexPath)) {
+      unlinkSync(ctx.indexPath);
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function releaseMutationGuard(guard: MutationGuard): readonly string[] {
+  try {
+    return endApplyJournalTransactionChecked(guard.lockSet);
+  } catch {
+    return Object.freeze(["$authoring.lock"]);
+  }
 }
 
 function repositoryState(
@@ -755,31 +940,74 @@ export function stageProjectGitPaths(
   if ("diagnostic" in selection) return selection;
   const guard = mutationGuard(prepared.root, options.authoring);
   if ("diagnostic" in guard) return guard;
-  try {
-    const before = repositoryState(prepared, guard.excludedPaths);
-    if (!before.ok) return before;
-    if (before.state.detached) {
-      return failure(PROJECT_GIT_DIAGNOSTICS.detachedWorktree, "$git.HEAD", "Git staging is refused on a detached worktree.");
-    }
-    if (before.state.conflicts.length > 0) {
-      return failure(PROJECT_GIT_DIAGNOSTICS.mergeConflict, before.state.conflicts[0] ?? "$git.index", "Resolve the reported merge conflict before staging project paths.");
-    }
-    const changedPaths = new Set(before.state.entries.map((entry) => entry.path));
-    if (selection.some((path) => !changedPaths.has(path))) {
-      return failure(
+  let result: ProjectGitStateResult;
+  let indexSnapshot: GitIndexSnapshot | undefined;
+  let indexMayHaveChanged = false;
+  const before = repositoryState(prepared, guard.excludedPaths);
+  if (!before.ok) {
+    result = before;
+  } else if (before.state.detached) {
+    result = failure(PROJECT_GIT_DIAGNOSTICS.detachedWorktree, "$git.HEAD", "Git staging is refused on a detached worktree.");
+  } else if (before.state.conflicts.length > 0) {
+    result = failure(PROJECT_GIT_DIAGNOSTICS.mergeConflict, before.state.conflicts[0] ?? "$git.index", "Resolve the reported merge conflict before staging project paths.");
+  } else {
+    const changedPaths = new Set(before.state.entries.flatMap(entryPaths));
+    const selectedSet = new Set(selection);
+    const incompleteRename = before.state.entries.some((entry) => {
+      if (entry.sourcePath === undefined) return false;
+      const destinationSelected = selectedSet.has(entry.path);
+      const sourceSelected = selectedSet.has(entry.sourcePath);
+      return destinationSelected !== sourceSelected;
+    });
+    if (selection.some((path) => !changedPaths.has(path)) || incompleteRename) {
+      result = failure(
         PROJECT_GIT_DIAGNOSTICS.selectionMismatch,
         "$input.paths",
-        "Every selected path must exactly name a concrete file in the shared repository evidence.",
+        "Every selected path must exactly name a concrete file in the shared repository evidence, including both sides of a rename or copy.",
+      );
+    } else {
+      const pathsToStage = [...new Set(
+        before.state.entries
+          .filter((entry) => entry.worktree !== " " && entryPaths(entry).some((path) => selectedSet.has(path)))
+          .flatMap(entryPaths),
+      )].sort();
+      if (pathsToStage.length === 0) {
+        result = before;
+      } else {
+        const captured = captureGitIndex(prepared);
+        if ("diagnostic" in captured) {
+          result = captured;
+        } else {
+          indexSnapshot = captured;
+          indexMayHaveChanged = true;
+          const staged = runGit(prepared.executable, prepared.root, ["--literal-pathspecs", "add", "-A", "--", ...pathsToStage]);
+          result = staged.ok
+            ? repositoryState(prepared, guard.excludedPaths)
+            : failure(PROJECT_GIT_DIAGNOSTICS.commandFailed, "$input.paths", "Git refused the explicit selected-path staging operation.");
+        }
+      }
+    }
+  }
+  const releaseFailures = releaseMutationGuard(guard);
+  if ((!result.ok || releaseFailures.length > 0) && indexMayHaveChanged && indexSnapshot !== undefined) {
+    if (!restoreGitIndex(prepared, indexSnapshot)) {
+      return failure(
+        PROJECT_GIT_DIAGNOSTICS.commandFailed,
+        "$git.index",
+        "Contained Git could not restore the exact prior index after staging failed; the index may remain changed.",
       );
     }
-    const staged = runGit(prepared.executable, prepared.root, ["--literal-pathspecs", "add", "--", ...selection]);
-    if (!staged.ok) {
-      return failure(PROJECT_GIT_DIAGNOSTICS.commandFailed, "$input.paths", "Git refused the explicit selected-path staging operation.");
-    }
-    return repositoryState(prepared, guard.excludedPaths);
-  } finally {
-    endApplyJournalTransaction(guard.lockSet);
   }
+  if (releaseFailures.length > 0) {
+    return failure(
+      PROJECT_GIT_DIAGNOSTICS.transactionDirty,
+      ".sceneaxi-authoring-operation",
+      indexMayHaveChanged
+        ? "The authoring operation lock could not be released; the exact prior Git index was restored."
+        : "The authoring operation lock could not be released.",
+    );
+  }
+  return result;
 }
 
 /** Validate an exact staged selection and return commit evidence without creating a commit. */
@@ -801,51 +1029,55 @@ export function prepareProjectGitCommit(
   if ("diagnostic" in selection) return selection;
   const guard = mutationGuard(prepared.root, options.authoring);
   if ("diagnostic" in guard) return guard;
-  try {
-    const stateResult = repositoryState(prepared, guard.excludedPaths);
-    if (!stateResult.ok) return stateResult;
-    if (stateResult.state.detached) {
-      return failure(PROJECT_GIT_DIAGNOSTICS.detachedWorktree, "$git.HEAD", "Commit preparation is refused on a detached worktree.");
-    }
-    if (stateResult.state.conflicts.length > 0) {
-      return failure(PROJECT_GIT_DIAGNOSTICS.mergeConflict, stateResult.state.conflicts[0] ?? "$git.index", "Resolve the reported merge conflict before preparing a commit.");
-    }
-    const stagedPaths = stateResult.state.entries
-      .filter((entry) => entry.index !== " " && entry.index !== "?")
-      .map((entry) => entry.path)
-      .sort();
+  let result: ProjectGitCommitPreparationResult;
+  const stateResult = repositoryState(prepared, guard.excludedPaths);
+  if (!stateResult.ok) {
+    result = stateResult;
+  } else if (stateResult.state.detached) {
+    result = failure(PROJECT_GIT_DIAGNOSTICS.detachedWorktree, "$git.HEAD", "Commit preparation is refused on a detached worktree.");
+  } else if (stateResult.state.conflicts.length > 0) {
+    result = failure(PROJECT_GIT_DIAGNOSTICS.mergeConflict, stateResult.state.conflicts[0] ?? "$git.index", "Resolve the reported merge conflict before preparing a commit.");
+  } else {
+    const stagedPaths = [...new Set(
+      stateResult.state.entries
+        .filter((entry) => entry.index !== " " && entry.index !== "?")
+        .flatMap(entryPaths),
+    )].sort();
     if (selection.length !== stagedPaths.length || selection.some((path, index) => stagedPaths[index] !== path)) {
-      return failure(
+      result = failure(
         PROJECT_GIT_DIAGNOSTICS.selectionMismatch,
         "$input.paths",
         "Commit preparation requires the explicit selection to equal the complete staged path set; unrelated staged paths remain visible and untouched.",
       );
+    } else {
+      const preparation = Object.freeze({
+        schemaVersion: PROJECT_GIT_SCHEMA_VERSION,
+        kind: "sceneaxi.project-git-commit-preparation" as const,
+        message: message.trim(),
+        selectedPaths: selection,
+        stagedDiff: stateResult.state.stagedDiff,
+        state: stateResult.state,
+        commitCreated: false as const,
+        hooksBypassed: false as const,
+        undoScope: "sceneaxi-document-only" as const,
+      });
+      result = Buffer.byteLength(JSON.stringify(preparation), "utf8") > PROJECT_GIT_EVIDENCE_MAX_BYTES
+        ? failure(
+            PROJECT_GIT_DIAGNOSTICS.evidenceTooLarge,
+            "$root",
+            "Git commit-preparation evidence exceeds the shared local-client response limit.",
+          )
+        : Object.freeze({ ok: true as const, preparation });
     }
-    const preparation = Object.freeze({
-      schemaVersion: PROJECT_GIT_SCHEMA_VERSION,
-      kind: "sceneaxi.project-git-commit-preparation" as const,
-      message: message.trim(),
-      selectedPaths: selection,
-      stagedDiff: stateResult.state.stagedDiff,
-      state: stateResult.state,
-      commitCreated: false as const,
-      hooksBypassed: false as const,
-      undoScope: "sceneaxi-document-only" as const,
-    });
-    if (Buffer.byteLength(JSON.stringify(preparation), "utf8") > PROJECT_GIT_EVIDENCE_MAX_BYTES) {
-      return failure(
-        PROJECT_GIT_DIAGNOSTICS.evidenceTooLarge,
-        "$root",
-        "Git commit-preparation evidence exceeds the shared local-client response limit.",
-      );
-    }
-    return Object.freeze({
-      ok: true as const,
-      preparation,
-    });
-  } finally {
-    endApplyJournalTransaction(guard.lockSet);
   }
+  const releaseFailures = releaseMutationGuard(guard);
+  return releaseFailures.length === 0
+    ? result
+    : failure(
+        PROJECT_GIT_DIAGNOSTICS.transactionDirty,
+        ".sceneaxi-authoring-operation",
+        "The authoring operation lock could not be released after commit preparation.",
+      );
 }
 
 /** Dangerous or history-facing operations are outside the contained v1 surface. */

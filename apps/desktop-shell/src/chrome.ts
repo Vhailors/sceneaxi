@@ -719,7 +719,10 @@ function inspector(view: DesktopVisualView): string {
       <div><dt>Handoff</dt><dd><code data-ship-handoff-path></code></dd></div>
     </dl>
     <div class="project-git-controls">
-      <label>Selected files<input type="text" data-project-git-paths placeholder="scene.json, assets/model.glb" autocomplete="off"></label>
+      <fieldset data-project-git-selection>
+        <legend>Selected files</legend>
+        <div data-project-git-path-list><p>Inspect repository status to select exact changed files.</p></div>
+      </fieldset>
       <label>Commit message<input type="text" data-project-git-message maxlength="4096" placeholder="Describe the contained change" autocomplete="off"></label>
       <div class="scene-instance-actions">
         <button type="button" class="ghost-button" data-command="project-git-stage">Stage selected files</button>
@@ -3148,13 +3151,43 @@ if (shell) {
       el.textContent = JSON.stringify(state, null, 2);
       el.hidden = false;
     });
+    renderProjectGitPathSelection(state);
     const label = commandId === 'project-git-diff' ? 'diff' : 'status';
     productStatus('open', 'Repository ' + label + ' · ' + state.entries.length + ' working-tree change(s) · ' + state.conflicts.length + ' conflict(s)');
   };
 
+  const renderProjectGitPathSelection = (state) => {
+    const paths = [];
+    state.entries.forEach((entry) => {
+      [entry.path, entry.sourcePath].forEach((path) => {
+        if (typeof path === 'string' && !paths.includes(path)) paths.push(path);
+      });
+    });
+    paths.sort();
+    q('[data-project-git-path-list]').forEach((container) => {
+      container.replaceChildren();
+      if (paths.length === 0) {
+        const empty = document.createElement('p');
+        empty.textContent = 'No changed files are available for selection.';
+        container.append(empty);
+        return;
+      }
+      paths.forEach((path) => {
+        const label = document.createElement('label');
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.value = path;
+        input.setAttribute('data-project-git-path', '');
+        const text = document.createElement('span');
+        text.textContent = path;
+        label.append(input, text);
+        container.append(label);
+      });
+    });
+  };
+
   const projectGitPaths = () => {
-    const value = shell.querySelector('[data-project-git-paths]')?.value || '';
-    return value.split(/[\\n,]+/).map((path) => path.trim()).filter((path) => path.length > 0);
+    return Array.from(shell.querySelectorAll('[data-project-git-path]:checked')).map((input) => input.value);
   };
 
   const renderProjectGitEvidence = (evidence, label) => {
@@ -3164,6 +3197,7 @@ if (shell) {
       el.hidden = false;
     });
     const state = isProjectGitState(evidence) ? evidence : evidence.state;
+    renderProjectGitPathSelection(state);
     productStatus('open', label + ' · ' + state.entries.length + ' working-tree change(s) · ' + state.conflicts.length + ' conflict(s)');
   };
 

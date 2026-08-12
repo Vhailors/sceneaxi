@@ -51,6 +51,7 @@ import {
 } from "@sceneaxi/authoring-core";
 import {
   createDesktopSession,
+  desktopSessionProjectGitAuthoringAuthority,
   DESKTOP_PRODUCT_REFUSALS,
   type DesktopDocumentStatus,
   type DesktopSession,
@@ -66,6 +67,7 @@ import {
   EDITOR_COMMAND_REFUSALS,
   EDITOR_COMMAND_REGISTRY,
   EDITOR_COMMAND_SCHEMA_VERSION,
+  PROJECT_GIT_DIAGNOSTICS,
   RARITY_PROVIDER_REQUEST_MAX_CHARS,
   RARITY_REFUSE_CODES,
   digestRarityNamespace,
@@ -1866,13 +1868,6 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           });
       return bridgeRefuse(validated.reason, validated.message, null, transaction);
     }
-    if (
-      options.commandProfile === undefined &&
-      validated.invocation.client === "desktop-control" &&
-      validated.invocation.profile !== undefined
-    ) {
-      activeCommandProfile = validated.invocation.profile;
-    }
     if (activeCommandProfile === "kids" || validated.invocation.profile === "kids") {
       return commandTransaction(validated.command.id, bridgeRefuse(
         EDITOR_COMMAND_REFUSALS.kidsDenied,
@@ -1935,30 +1930,36 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           : bridgeRefuse(inspected.diagnostic.code, inspected.diagnostic.message, inspected.diagnostic.path);
       }
       case "project-git-stage": {
-        const snapshot = authoringSession().snapshot();
+        const authority = desktopSessionProjectGitAuthoringAuthority(authoringSession());
+        if (authority === undefined) {
+          return bridgeRefuse(
+            PROJECT_GIT_DIAGNOSTICS.transactionDirty,
+            "Authoritative SceneAxi review and recovery state is unavailable.",
+            "$authoring",
+          );
+        }
         const staged = stageProjectGitPaths({
           root: options.cwd,
           profile: activeCommandProfile,
-          authoring: {
-            reviewStaged: snapshot.phase === "reviewing" && snapshot.proposal !== null,
-            recoveryPending: snapshot.journalRecoveryPending,
-            transactionDirty: snapshot.phase === "pending",
-          },
+          authoring: authority,
         }, input["paths"] as readonly string[]);
         return staged.ok
           ? bridgeOk("command", staged.state)
           : bridgeRefuse(staged.diagnostic.code, staged.diagnostic.message, staged.diagnostic.path);
       }
       case "project-git-commit-prepare": {
-        const snapshot = authoringSession().snapshot();
+        const authority = desktopSessionProjectGitAuthoringAuthority(authoringSession());
+        if (authority === undefined) {
+          return bridgeRefuse(
+            PROJECT_GIT_DIAGNOSTICS.transactionDirty,
+            "Authoritative SceneAxi review and recovery state is unavailable.",
+            "$authoring",
+          );
+        }
         const prepared = prepareProjectGitCommit({
           root: options.cwd,
           profile: activeCommandProfile,
-          authoring: {
-            reviewStaged: snapshot.phase === "reviewing" && snapshot.proposal !== null,
-            recoveryPending: snapshot.journalRecoveryPending,
-            transactionDirty: snapshot.phase === "pending",
-          },
+          authoring: authority,
         }, input["paths"] as readonly string[], String(input["message"]));
         return prepared.ok
           ? bridgeOk("command", prepared.preparation)

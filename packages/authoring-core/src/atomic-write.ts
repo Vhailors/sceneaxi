@@ -566,6 +566,17 @@ export function releaseAtomicWriteLocks(lockSet: AtomicWriteLockSet): void {
   releaseLocks(state.held);
 }
 
+export function releaseAtomicWriteLocksChecked(
+  lockSet: AtomicWriteLockSet,
+): readonly string[] {
+  const state = lockSetStates.get(lockSet);
+  if (state === undefined || !state.active) {
+    throw new AtomicWriteLockError("lock capability");
+  }
+  state.active = false;
+  return releaseLocks(state.held);
+}
+
 export function atomicWriteLockArtifactPaths(
   lockSet: AtomicWriteLockSet,
 ): readonly string[] {
@@ -576,8 +587,9 @@ export function atomicWriteLockArtifactPaths(
   return Object.freeze(state.held.map((lock) => lock.path));
 }
 
-function releaseLocks(held: readonly HeldLock[]): void {
+function releaseLocks(held: readonly HeldLock[]): readonly string[] {
   const syncedDirectories = new Set<string>();
+  const failures = new Set<string>();
   for (const lock of [...held].reverse()) {
     try {
       const owner = JSON.parse(readFileSync(lock.path, "utf8")) as {
@@ -586,12 +598,15 @@ function releaseLocks(held: readonly HeldLock[]): void {
       if (owner.token === lock.token) {
         unlinkSync(lock.path);
         syncedDirectories.add(dirname(lock.path));
+      } else {
+        failures.add(lock.path);
       }
     } catch {
       try {
         unlinkSync(lock.path);
         syncedDirectories.add(dirname(lock.path));
       } catch {
+        failures.add(lock.path);
         continue;
       }
     }
@@ -600,9 +615,11 @@ function releaseLocks(held: readonly HeldLock[]): void {
     try {
       syncDirectory(directory);
     } catch {
+      failures.add(directory);
       continue;
     }
   }
+  return Object.freeze([...failures].sort());
 }
 
 function currentHash(path: string): string | null {

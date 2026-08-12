@@ -24,6 +24,7 @@ import {
   canonicalPath,
   fileExists,
   releaseAtomicWriteLocks,
+  releaseAtomicWriteLocksChecked,
   verifyAtomicWritePreconditions,
   type AtomicWriteLockSet,
 } from "./atomic-write.js";
@@ -178,6 +179,12 @@ export function beginApplyJournalTransaction(
 
 export function endApplyJournalTransaction(lockSet: AtomicWriteLockSet): void {
   releaseAtomicWriteLocks(lockSet);
+}
+
+export function endApplyJournalTransactionChecked(
+  lockSet: AtomicWriteLockSet,
+): readonly string[] {
+  return releaseAtomicWriteLocksChecked(lockSet);
 }
 
 function serializeJournal(entry: ApplyJournalEntry): string {

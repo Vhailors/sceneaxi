@@ -189,13 +189,13 @@ function engineResponse(
       head: "a".repeat(40),
       detached: false,
       canonicalFiles: ["scene.json", "sceneaxi.project.json"],
-      entries: [],
-      canonicalChanges: [],
+      entries: [{ path: "scene.json", index: " ", worktree: "M", canonical: true, conflict: false }],
+      canonicalChanges: [{ path: "scene.json", index: " ", worktree: "M", canonical: true, conflict: false }],
       unrelatedChanges: [],
       conflicts: [],
       workingTreeDiff: "",
       stagedDiff: "",
-      clean: true,
+      clean: false,
       undoScope: "sceneaxi-document-only",
     };
     return {
@@ -247,6 +247,7 @@ async function harness(
   const window = new HappyWindow({ width: 1200, height: 800 });
   windows.push(window);
   const calls: HostCall[] = [];
+  const requests: Record<string, unknown>[] = [];
   const state: {
     undoAvailability: "available" | "unavailable" | "recovery-pending";
     redoAvailability: "available" | "unavailable" | "recovery-pending";
@@ -278,6 +279,7 @@ async function harness(
       },
       request: async (request: unknown) => {
         const typed = clone(request) as Record<string, unknown>;
+        requests.push(typed);
         const payload = typed["payload"] as Record<string, unknown> | undefined;
         calls.push({
           plane: "engine",
@@ -305,7 +307,7 @@ async function harness(
   window.eval(match[1]);
   await settle(window);
   calls.splice(0);
-  return { window, calls };
+  return { window, calls, requests };
 }
 
 function element(window: HappyWindow, selector: string) {
@@ -354,8 +356,9 @@ async function prepare(command: DesktopInteractionCommand, window: HappyWindow) 
     await click(window, '#menu-command-edit-undo');
   }
   if (command.id === "project-git-stage" || command.id === "project-git-commit-prepare") {
-    const paths = element(window, "[data-project-git-paths]") as HTMLInputElement;
-    paths.value = "scene.json";
+    await click(window, '#menu-command-project-git-status');
+    const path = element(window, '[data-project-git-path][value="scene.json"]') as HTMLInputElement;
+    path.checked = true;
   }
   if (command.id === "project-git-commit-prepare") {
     const message = element(window, "[data-project-git-message]") as HTMLInputElement;
@@ -534,6 +537,42 @@ describe("desktop command menu, palette, and accelerator parity", () => {
       DESKTOP_PRODUCT_REFUSALS.runtimeRequestRefused,
     );
     expect(element(window, "[data-project-git-evidence]").hidden).toBe(true);
+  });
+
+  it("stages exact evidence paths without lossy text parsing", async () => {
+    const exactPath = " notes,2026.txt";
+    const repositoryState = {
+      schemaVersion: 1,
+      kind: "sceneaxi.project-git-state",
+      projectId: "project-command-test",
+      branch: "main",
+      head: "a".repeat(40),
+      detached: false,
+      canonicalFiles: ["scene.json", "sceneaxi.project.json"],
+      entries: [{ path: exactPath, index: "?", worktree: "?", canonical: false, conflict: false }],
+      canonicalChanges: [],
+      unrelatedChanges: [{ path: exactPath, index: "?", worktree: "?", canonical: false, conflict: false }],
+      conflicts: [],
+      workingTreeDiff: "",
+      stagedDiff: "",
+      clean: false,
+      undoScope: "sceneaxi-document-only",
+    };
+    const { window, requests } = await harness("web", "unavailable", true, repositoryState);
+    await click(window, '#menu-command-project-git-status');
+    const path = [...window.document.querySelectorAll('[data-project-git-path]')]
+      .find((candidate) => (candidate as HTMLInputElement).value === exactPath) as HTMLInputElement | undefined;
+    expect(path).toBeDefined();
+    if (path === undefined) return;
+    path.checked = true;
+    await click(window, '#menu-command-project-git-stage');
+    const invocation = requests.find((request) => {
+      const payload = request["payload"] as Record<string, unknown> | undefined;
+      return payload?.["commandId"] === "project-git-stage";
+    });
+    expect(invocation).toMatchObject({
+      payload: { input: { paths: [exactPath] } },
+    });
   });
 
   it("retires Ship evidence when the project becomes dirty", async () => {

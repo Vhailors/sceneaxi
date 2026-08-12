@@ -71,11 +71,13 @@ export {
 export {
   PROJECT_GIT_OPERATIONS,
   PROJECT_GIT_UNSUPPORTED_OPERATIONS,
+  createProjectGitAuthoringAuthority,
   inspectProjectGit,
   prepareProjectGitCommit,
   refuseUnsupportedProjectGitOperation,
   stageProjectGitPaths,
   type ProjectGitAuthoringState,
+  type ProjectGitAuthoringAuthority,
   type ProjectGitOperation,
   type ProjectGitOptions,
   type ProjectGitMutationOptions,

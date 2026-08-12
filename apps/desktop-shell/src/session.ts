@@ -13,6 +13,7 @@ import { resolve } from "node:path";
 import {
   canonicalPath,
   contentHash,
+  createProjectGitAuthoringAuthority,
   applyRedoAvailability,
   applyUndoAvailability,
   parseDocumentText,
@@ -21,6 +22,7 @@ import {
   undoLastApply,
   type ApplyUndoAvailability,
   type ApplyDiagnostic,
+  type ProjectGitAuthoringAuthority,
   type Proposal,
 } from "@sceneaxi/authoring-core";
 import {
@@ -104,6 +106,14 @@ export type DesktopSessionOptions = {
   readonly cwd?: string;
   readonly operations?: Partial<DesktopSessionOperations>;
 };
+
+const projectGitAuthorities = new WeakMap<object, ProjectGitAuthoringAuthority>();
+
+export function desktopSessionProjectGitAuthoringAuthority(
+  session: DesktopSession,
+): ProjectGitAuthoringAuthority | undefined {
+  return projectGitAuthorities.get(session);
+}
 
 /**
  * Freeze a validated JSON value all the way down.
@@ -191,7 +201,16 @@ export function createDesktopSession(
     return snap();
   };
 
-  return {
+  const authority = createProjectGitAuthoringAuthority(() => {
+    const current = snap();
+    return Object.freeze({
+      reviewStaged: current.phase === "reviewing" && current.proposal !== null,
+      recoveryPending: current.journalRecoveryPending,
+      transactionDirty: current.phase === "pending",
+    });
+  });
+
+  const session: DesktopSession = {
     snapshot: snap,
 
     proposeEdit(input: ShellEditInput): DesktopSnapshot {
@@ -448,4 +467,6 @@ export function createDesktopSession(
       return { ok: true, transactionId: result.transactionId, restoredPaths: result.documentPaths };
     },
   };
+  projectGitAuthorities.set(session, authority);
+  return Object.freeze(session);
 }
