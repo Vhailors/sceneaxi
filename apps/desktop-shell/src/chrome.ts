@@ -2676,7 +2676,7 @@ if (shell) {
     productStatus('dirty', name + ' · import staged · review before Save');
   };
 
-  const stageSceneOperation = async (operation, label) => {
+  const stageSceneChange = async ({ label, request, requiresSelection, propertyFeedback }) => {
     await sceneSelectionPending;
     if (projectRecovering) {
       reportRecoveryRefusal('Edit');
@@ -2687,23 +2687,16 @@ if (shell) {
       return false;
     }
     if ((projectData === null || projectContentHash === null) && !(await openProject())) return false;
-    if (selectedSceneEntityId === null || editableScene === null) {
+    if (requiresSelection && (selectedSceneEntityId === null || editableScene === null)) {
       productStatus('refused', 'Edit refused · select a composed instance first');
       return false;
     }
-    const response = await runtimeRequest({
-      action: 'authoring',
-      payload: {
-        op: 'edit-scene',
-        documentPath: T.product.documentPath,
-        expectedContentHash: projectContentHash,
-        profile: shell.dataset.profile,
-        operation,
-      },
-    });
+    const response = await request(projectContentHash);
     const diagnostic = responseDiagnostic(response);
     const snapshot = response?.ok ? response.data : null;
-    const message = shell.querySelector('[data-scene-property-diagnostic]');
+    const message = propertyFeedback
+      ? shell.querySelector('[data-scene-property-diagnostic]')
+      : null;
     // The typed edit parks the same E1 proposal every other staging path does,
     // so Change Review is driven by the returned snapshot here too — and the
     // decidable projection, not the phase alone, is what says it may be shown.
@@ -2723,17 +2716,38 @@ if (shell) {
       projectData = { ...projectData, composedScene: edit.newValue };
     }
     syncSceneProperties(snapshot);
-    const review = shell.querySelector('[data-scene-property-review]');
+    const review = propertyFeedback
+      ? shell.querySelector('[data-scene-property-review]')
+      : null;
     if (review) {
       review.textContent = String(snapshot.renderedDiff || snapshot.unifiedDiff || 'Proposal staged for review.');
       review.hidden = false;
     }
-    if (message) message.textContent = 'Proposal staged with base ' + projectContentHash + ' · Save applies atomically.';
+    if (message) {
+      message.textContent = 'Proposal staged with base ' + projectContentHash + ' · Save applies atomically.';
+    }
     projectDirty = true;
     projectRecovering = false;
-    productStatus('dirty', withSceneRefusal(T.product.documentPath + ' · ' + label + ' staged · review before Save'));
+    const status = T.product.documentPath + ' · ' + label + ' staged · review before Save';
+    productStatus('dirty', propertyFeedback ? withSceneRefusal(status) : status);
     return true;
   };
+
+  const stageSceneOperation = async (operation, label) => stageSceneChange({
+    label,
+    requiresSelection: true,
+    propertyFeedback: true,
+    request: (expectedContentHash) => runtimeRequest({
+      action: 'authoring',
+      payload: {
+        op: 'edit-scene',
+        documentPath: T.product.documentPath,
+        expectedContentHash,
+        profile: shell.dataset.profile,
+        operation,
+      },
+    }),
+  });
 
   const stageSceneProperty = async () => {
     if (selectedSceneEntityId === null || editableScene === null) {
@@ -2785,41 +2799,16 @@ if (shell) {
     await stageSceneCommand(commandId, input, kind === 'add-instance' ? 'object create' : 'object removal');
   };
 
-  const stageSceneCommand = async (commandId, input, label) => {
-    await sceneSelectionPending;
-    if (projectRecovering) {
-      reportRecoveryRefusal('Edit');
-      return false;
-    }
-    if (projectDirty) {
-      productStatus('refused', 'Edit refused · ' + T.product.refusals.profileSwitchDirty);
-      return false;
-    }
-    if ((projectData === null || projectContentHash === null) && !(await openProject())) return false;
-    const response = await commandRequest(commandId, {
+  const stageSceneCommand = async (commandId, input, label) => stageSceneChange({
+    label,
+    requiresSelection: false,
+    propertyFeedback: false,
+    request: (expectedContentHash) => commandRequest(commandId, {
       ...input,
-      expectedContentHash: projectContentHash,
+      expectedContentHash,
       profile: shell.dataset.profile,
-    });
-    const diagnostic = responseDiagnostic(response);
-    const snapshot = response?.ok ? response.data : null;
-    if (isSessionSnapshot(snapshot)) syncReview(snapshot);
-    if (diagnostic !== null || reviewProjection(snapshot) === null) {
-      const code = diagnostic?.code || T.product.refusals.proposalNotReviewing;
-      const detail = diagnostic?.message || T.product.refusals.proposalNotReviewing;
-      productStatus('refused', 'Edit refused · ' + code + ' · ' + detail);
-      return false;
-    }
-    const edit = snapshot.proposal?.edits?.[0];
-    if (edit?.jsonPointer === '/data/composedScene' && projectData && typeof projectData === 'object') {
-      projectData = { ...projectData, composedScene: edit.newValue };
-    }
-    syncSceneProperties(snapshot);
-    projectDirty = true;
-    projectRecovering = false;
-    productStatus('dirty', T.product.documentPath + ' · ' + label + ' staged · review before Save');
-    return true;
-  };
+    }),
+  });
 
   const stageSceneReparent = async () => {
     const parent = shell.querySelector('[data-scene-parent]');

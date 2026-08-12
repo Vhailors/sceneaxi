@@ -6,6 +6,7 @@
  * becoming competing sources of permission or result metadata.
  */
 import type { JsonObject } from "./document.js";
+import { DESKTOP_SCENE_HIERARCHY_REFUSALS } from "./desktop-scene-edit.js";
 
 export const EDITOR_COMMAND_SCHEMA_VERSION = 1 as const;
 
@@ -527,7 +528,11 @@ const DEFINITIONS = [
     mutation: "none",
     progress: immediate(["inspecting", "completed"]),
     evidence: evidence("scene-hierarchy", "project"),
-    refusals: [...BASE_REFUSALS, "SCENE_HIERARCHY_SELECTION_STALE", "DESKTOP_SCENE_NOT_COMPOSABLE"],
+    refusals: [
+      ...BASE_REFUSALS,
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+      "DESKTOP_SCENE_NOT_COMPOSABLE",
+    ],
     undo: undo("none"),
     inputSchema: documentInput,
     inputShape: "document",
@@ -542,7 +547,11 @@ const DEFINITIONS = [
     mutation: "none",
     progress: immediate(),
     evidence: evidence("scene-hierarchy", "project"),
-    refusals: [...BASE_REFUSALS, "SCENE_HIERARCHY_SELECTION_STALE", "SCENE_HIERARCHY_INPUT_UNSUPPORTED"],
+    refusals: [
+      ...BASE_REFUSALS,
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+    ],
     undo: undo("none"),
     inputSchema: sceneSelectionInput,
     inputShape: "scene-selection",
@@ -557,7 +566,12 @@ const DEFINITIONS = [
     mutation: "stages-change",
     progress: immediate(["validating", "reviewing"]),
     evidence: evidence("scene-hierarchy", "change-review"),
-    refusals: [...BASE_REFUSALS, "SCENE_HIERARCHY_PARENT_MISSING", "SCENE_HIERARCHY_SELECTION_STALE", "SCENE_HIERARCHY_INPUT_UNSUPPORTED"],
+    refusals: [
+      ...BASE_REFUSALS,
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.parentMissing,
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+    ],
     undo: undo("records-entry", "edit-undo"),
     inputSchema: sceneCreateInput,
     inputShape: "scene-create",
@@ -572,7 +586,12 @@ const DEFINITIONS = [
     mutation: "stages-change",
     progress: immediate(["validating", "reviewing"]),
     evidence: evidence("scene-hierarchy", "change-review"),
-    refusals: [...BASE_REFUSALS, "SCENE_HIERARCHY_PROTECTED_ROOT", "SCENE_HIERARCHY_SELECTION_STALE", "SCENE_HIERARCHY_INPUT_UNSUPPORTED"],
+    refusals: [
+      ...BASE_REFUSALS,
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.protectedRoot,
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+    ],
     undo: undo("records-entry", "edit-undo"),
     inputSchema: sceneRemoveInput,
     inputShape: "scene-remove",
@@ -589,12 +608,12 @@ const DEFINITIONS = [
     evidence: evidence("scene-hierarchy", "change-review"),
     refusals: [
       ...BASE_REFUSALS,
-      "SCENE_HIERARCHY_CYCLE",
-      "SCENE_HIERARCHY_PARENT_MISSING",
-      "SCENE_HIERARCHY_PROTECTED_ROOT",
-      "SCENE_HIERARCHY_SELECTION_STALE",
-      "SCENE_HIERARCHY_POLICY_INVALID",
-      "SCENE_HIERARCHY_INPUT_UNSUPPORTED",
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.cycle,
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.parentMissing,
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.protectedRoot,
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.policyInvalid,
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
     ],
     undo: undo("records-entry", "edit-undo"),
     inputSchema: sceneReparentInput,
