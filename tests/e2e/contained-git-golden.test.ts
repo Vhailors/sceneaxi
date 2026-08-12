@@ -142,7 +142,7 @@ describe("contained Git client parity", () => {
     const root = project();
     writeFileSync(join(root, "notes.txt"), "cross-process authority\n");
     const externalOwner = acquireAtomicWriteLocks([
-      join(root, ".sceneaxi-desktop-mutation-owner"),
+      join(root, ".git", ".sceneaxi-desktop-mutation-owner"),
     ]);
     try {
       const refused = createDesktopBridge({ cwd: root });

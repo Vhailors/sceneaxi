@@ -363,7 +363,17 @@ export function acquireProjectGitDesktopOwner(
   root: string,
 ): ProjectGitDesktopOwner | ProjectGitFailure {
   const canonicalRoot = canonicalPath(root);
-  const resource = canonicalPath(resolve(canonicalRoot, ".sceneaxi-desktop-mutation-owner"));
+  try {
+    const gitDirectory = lstatSync(resolve(canonicalRoot, ".git"));
+    if (!gitDirectory.isDirectory() || gitDirectory.isSymbolicLink()) throw new Error("invalid Git directory");
+  } catch {
+    return failure(
+      PROJECT_GIT_DIAGNOSTICS.repositoryUnavailable,
+      "$git.directory",
+      "Desktop Git mutation authority requires contained regular repository metadata.",
+    );
+  }
+  const resource = canonicalPath(resolve(canonicalRoot, ".git", ".sceneaxi-desktop-mutation-owner"));
   if (!within(canonicalRoot, resource)) {
     return failure(
       PROJECT_GIT_DIAGNOSTICS.pathEscape,
@@ -630,10 +640,6 @@ function parseNameStatus(output: Buffer): readonly GitNameStatusChange[] | Proje
   return Object.freeze(changes);
 }
 
-function internalEvidencePath(path: string): boolean {
-  return /^\.sceneaxi-(?:lock|tmp|bak)-/u.test(path);
-}
-
 function evidenceEntries(
   stagedOutput: Buffer,
   workingOutput: Buffer,
@@ -677,8 +683,8 @@ function evidenceEntries(
   }
   return Object.freeze([...records.values()]
     .filter((entry) =>
-      !internalEvidencePath(entry.path) && !excludedPaths.has(entry.path) &&
-      (entry.sourcePath === undefined || (!internalEvidencePath(entry.sourcePath) && !excludedPaths.has(entry.sourcePath)))
+      !excludedPaths.has(entry.path) &&
+      (entry.sourcePath === undefined || !excludedPaths.has(entry.sourcePath))
     )
     .map((entry) => Object.freeze({
       path: entry.path,
@@ -718,11 +724,21 @@ function pairExactWorktreeRenames(
   }
   const pairedSources = new Set<string>();
   const replacements = new Map<string, ProjectGitEntry>();
+  let capturedBytes = 0;
   for (const entry of entries.filter((candidate) => candidate.index === "?" && candidate.worktree === "?")) {
+    const snapshot = selectedPathSnapshot(
+      resolve(ctx.root, ...entry.path.split("/")),
+      entry.path,
+      PROJECT_GIT_EVIDENCE_MAX_BYTES - capturedBytes,
+    );
+    if ("diagnostic" in snapshot) return snapshot;
+    if (snapshot.bytes === null) {
+      return failure(PROJECT_GIT_DIAGNOSTICS.selectionMismatch, entry.path, "Rename evidence must remain one exact concrete path.");
+    }
+    capturedBytes += snapshot.bytes.byteLength;
     const hashed = runGit(ctx.executable, ctx.root, [
-      "--literal-pathspecs",
-      "hash-object", "--no-filters", "--", entry.path,
-    ], processState);
+      "hash-object", "--no-filters", "--stdin",
+    ], { ...processState, input: snapshot.bytes });
     if (hashed.timedOut) {
       return failure(PROJECT_GIT_DIAGNOSTICS.repositoryUnavailable, entry.path, "Contained Git timed out while pairing exact worktree rename evidence.");
     }
@@ -761,6 +777,7 @@ type Context = Readonly<{
   projectId: string;
   canonicalFiles: readonly string[];
   excludedPaths: ReadonlySet<string>;
+  indexSnapshot: GitIndexSnapshot;
 }>;
 
 function repositoryEscape(path: string, message: string): ProjectGitFailure {
@@ -1065,8 +1082,28 @@ function containedGitDirectory(root: string): string | ProjectGitFailure {
 function refuseGitlinks(
   executable: string,
   root: string,
+  indexPath: string,
+  snapshot: GitIndexSnapshot,
 ): ProjectGitFailure | null {
-  const index = runGit(executable, root, ["ls-files", "--stage", "-z"]);
+  let directory: string | undefined;
+  let index: GitResult;
+  try {
+    directory = mkdtempSync(resolve(dirname(indexPath), ".sceneaxi-index-evidence-"));
+    const evidenceIndex = resolve(directory, "index");
+    if (snapshot.existed) {
+      if (snapshot.bytes === null) throw new Error("missing index bytes");
+      writeFileSync(evidenceIndex, snapshot.bytes, { mode: snapshot.mode });
+    }
+    index = runGit(executable, root, ["ls-files", "--stage", "-z"], { indexPath: evidenceIndex });
+  } catch {
+    return failure(
+      PROJECT_GIT_DIAGNOSTICS.repositoryUnavailable,
+      "$git.index",
+      "Contained Git could not create a stable index evidence view.",
+    );
+  } finally {
+    if (directory !== undefined) rmSync(directory, { recursive: true, force: true });
+  }
   if (index.timedOut) {
     return failure(
       PROJECT_GIT_DIAGNOSTICS.repositoryUnavailable,
@@ -1359,7 +1396,9 @@ function context(
       );
     }
   }
-  const gitlinkFailure = refuseGitlinks(executable, root);
+  const indexSnapshot = readGitIndexSnapshot(indexPath);
+  if ("diagnostic" in indexSnapshot) return indexSnapshot;
+  const gitlinkFailure = refuseGitlinks(executable, root, indexPath, indexSnapshot);
   if (gitlinkFailure !== null) return gitlinkFailure;
   const canonicalFiles = Object.freeze([
     PROJECT_MANIFEST_PATH,
@@ -1386,6 +1425,7 @@ function context(
     projectId: manifest.projectId,
     canonicalFiles,
     excludedPaths: projectGitDesktopOwnerPaths.get(root) ?? new Set(),
+    indexSnapshot,
   });
 }
 
@@ -1401,27 +1441,52 @@ type GitIndexSnapshot = Readonly<{
   mode: number;
 }>;
 
-function captureGitIndex(ctx: Context): GitIndexSnapshot | ProjectGitFailure {
+function readGitIndexSnapshot(path: string): GitIndexSnapshot | ProjectGitFailure {
+  let descriptor: number | undefined;
   try {
-    if (!existsSync(ctx.indexPath)) {
-      return Object.freeze({ existed: false, bytes: null, mode: 0o666 });
-    }
-    const stat = lstatSync(ctx.indexPath);
-    if (!stat.isFile()) {
+    descriptor = openSync(path, constants.O_RDONLY | constants.O_NONBLOCK | constants.O_NOFOLLOW);
+    const initial = fstatSync(descriptor);
+    if (!initial.isFile()) {
       return repositoryEscape("$git.index", "Contained Git requires the repository index to be a regular file.");
     }
+    if (initial.size > PROJECT_GIT_EVIDENCE_MAX_BYTES) {
+      return failure(PROJECT_GIT_DIAGNOSTICS.evidenceTooLarge, "$git.index", "The Git index exceeds the contained evidence limit.");
+    }
+    const bytes = Buffer.alloc(initial.size);
+    let offset = 0;
+    while (offset < bytes.length) {
+      const count = readSync(descriptor, bytes, offset, bytes.length - offset, offset);
+      if (count === 0) throw new Error("index changed while reading");
+      offset += count;
+    }
+    const final = fstatSync(descriptor);
+    const current = lstatSync(path);
+    if (
+      !current.isFile() || current.isSymbolicLink() || !sameSelectedFileStat(initial, final) ||
+      final.dev !== current.dev || final.ino !== current.ino
+    ) throw new Error("index changed while reading");
     return Object.freeze({
       existed: true,
-      bytes: readFileSync(ctx.indexPath),
-      mode: stat.mode & 0o777,
+      bytes,
+      mode: initial.mode & 0o777,
     });
-  } catch {
-    return failure(
-      PROJECT_GIT_DIAGNOSTICS.repositoryUnavailable,
-      "$git.index",
-      "Contained Git could not snapshot the repository index before staging.",
-    );
+  } catch (error) {
+    const code = error instanceof Error && "code" in error
+      ? (error as NodeJS.ErrnoException).code
+      : undefined;
+    if (code === "ENOENT" && descriptor === undefined) {
+      return Object.freeze({ existed: false, bytes: null, mode: 0o666 });
+    }
+    return code === "ELOOP"
+      ? repositoryEscape("$git.index", "Contained Git refuses symbolic-link index metadata.")
+      : failure(PROJECT_GIT_DIAGNOSTICS.repositoryUnavailable, "$git.index", "Contained Git could not capture one stable index snapshot.");
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor);
   }
+}
+
+function captureGitIndex(ctx: Context): GitIndexSnapshot | ProjectGitFailure {
+  return ctx.indexSnapshot;
 }
 
 type TemporaryGitIndex = Readonly<{
@@ -1462,31 +1527,58 @@ function syncDirectory(path: string): void {
   }
 }
 
+function existingObjectMatches(source: string, target: string): boolean {
+  let descriptor: number | undefined;
+  try {
+    const sourceStat = lstatSync(source);
+    const targetStat = lstatSync(target);
+    if (
+      !sourceStat.isFile() || !targetStat.isFile() || targetStat.isSymbolicLink() ||
+      sourceStat.size !== targetStat.size || sourceStat.size > PROJECT_GIT_EVIDENCE_MAX_BYTES
+    ) return false;
+    descriptor = openSync(target, constants.O_RDONLY | constants.O_NONBLOCK | constants.O_NOFOLLOW);
+    const opened = fstatSync(descriptor);
+    if (
+      !opened.isFile() || opened.dev !== targetStat.dev || opened.ino !== targetStat.ino ||
+      opened.size !== sourceStat.size
+    ) return false;
+    const targetBytes = Buffer.alloc(opened.size);
+    let offset = 0;
+    while (offset < targetBytes.length) {
+      const count = readSync(descriptor, targetBytes, offset, targetBytes.length - offset, offset);
+      if (count === 0) return false;
+      offset += count;
+    }
+    const final = fstatSync(descriptor);
+    return sameSelectedFileStat(opened, final) && readFileSync(source).equals(targetBytes);
+  } catch {
+    return false;
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor);
+  }
+}
+
 function publishGitObjects(ctx: Context, temporary: TemporaryGitIndex): boolean {
   const looseDirectoryPattern = /^[0-9a-f]{2}$/u;
   const looseObjectPattern = new RegExp(`^[0-9a-f]{${ctx.objectIdLength - 2}}$`, "u");
-  let rootDescriptor: number | undefined;
+  let objectDescriptor: number | undefined;
   try {
     if (
       !lstatSync(ctx.objectDirectory).isDirectory() ||
       canonicalPath(ctx.objectDirectory) !== ctx.objectDirectory ||
       !within(ctx.root, ctx.objectDirectory)
     ) return false;
-    rootDescriptor = openSync(
-      ctx.root,
+    objectDescriptor = openSync(
+      ctx.objectDirectory,
       constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW,
     );
-    const rootStat = fstatSync(rootDescriptor);
-    const expectedRoot = lstatSync(ctx.root);
-    if (rootStat.dev !== expectedRoot.dev || rootStat.ino !== expectedRoot.ino) return false;
-    const objectRelative = relative(ctx.root, ctx.objectDirectory);
-    if (objectRelative === "" || objectRelative.startsWith(`..${sep}`) || isAbsolute(objectRelative)) {
-      return false;
-    }
-    const anchoredObjectDirectory = resolve(
-      `/proc/self/fd/${rootDescriptor}`,
-      ...objectRelative.split(sep),
-    );
+    const objectStat = fstatSync(objectDescriptor);
+    const expectedObject = lstatSync(ctx.objectDirectory);
+    if (
+      !objectStat.isDirectory() || expectedObject.isSymbolicLink() ||
+      objectStat.dev !== expectedObject.dev || objectStat.ino !== expectedObject.ino
+    ) return false;
+    const anchoredObjectDirectory = `/proc/self/fd/${objectDescriptor}`;
     if (realpathSync(anchoredObjectDirectory) !== ctx.objectDirectory) return false;
     for (const directoryEntry of readdirSync(temporary.objectDirectory, { withFileTypes: true })) {
       if (!directoryEntry.isDirectory() || !looseDirectoryPattern.test(directoryEntry.name)) {
@@ -1494,12 +1586,26 @@ function publishGitObjects(ctx: Context, temporary: TemporaryGitIndex): boolean 
       }
       const sourceDirectory = resolve(temporary.objectDirectory, directoryEntry.name);
       const targetDirectory = resolve(anchoredObjectDirectory, directoryEntry.name);
-      if (!existsSync(targetDirectory)) mkdirSync(targetDirectory);
+      if (!existsSync(targetDirectory)) {
+        renameSync(sourceDirectory, targetDirectory);
+        const created = lstatSync(targetDirectory);
+        if (!created.isDirectory() || created.isSymbolicLink()) return false;
+        const createdDescriptor = openSync(
+          targetDirectory,
+          constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW,
+        );
+        try {
+          fsyncSync(createdDescriptor);
+        } finally {
+          closeSync(createdDescriptor);
+        }
+        fsyncSync(objectDescriptor);
+        continue;
+      }
       const descriptor = openSync(
         targetDirectory,
         constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW,
       );
-      const created: string[] = [];
       try {
         const opened = fstatSync(descriptor);
         const expected = lstatSync(targetDirectory);
@@ -1508,54 +1614,45 @@ function publishGitObjects(ctx: Context, temporary: TemporaryGitIndex): boolean 
           realpathSync(anchoredObjectDirectory) !== ctx.objectDirectory ||
           realpathSync(targetDirectory) !== resolve(ctx.objectDirectory, directoryEntry.name)
         ) throw new Error("object fanout escaped containment");
-        const descriptorDirectory = `/proc/self/fd/${descriptor}`;
         for (const objectEntry of readdirSync(sourceDirectory, { withFileTypes: true })) {
           if (!objectEntry.isFile() || !looseObjectPattern.test(objectEntry.name)) {
             throw new Error("invalid loose object");
           }
           const source = resolve(sourceDirectory, objectEntry.name);
-          const target = resolve(descriptorDirectory, objectEntry.name);
+          const target = resolve(anchoredObjectDirectory, directoryEntry.name, objectEntry.name);
           try {
             linkSync(source, target);
-            created.push(target);
           } catch (error) {
             const code = error instanceof Error && "code" in error
               ? (error as NodeJS.ErrnoException).code
               : undefined;
-            if (code !== "EEXIST" || !readFileSync(source).equals(readFileSync(target))) {
+            if (code !== "EEXIST" || !existingObjectMatches(source, target)) {
               throw error;
             }
           }
           if (
             realpathSync(anchoredObjectDirectory) !== ctx.objectDirectory ||
-            realpathSync(descriptorDirectory) !== resolve(ctx.objectDirectory, directoryEntry.name)
+            realpathSync(targetDirectory) !== resolve(ctx.objectDirectory, directoryEntry.name) ||
+            fstatSync(descriptor).dev !== opened.dev || fstatSync(descriptor).ino !== opened.ino
           ) throw new Error("object fanout moved during publication");
         }
         fsyncSync(descriptor);
         if (
           realpathSync(anchoredObjectDirectory) !== ctx.objectDirectory ||
-          realpathSync(descriptorDirectory) !== resolve(ctx.objectDirectory, directoryEntry.name)
+          realpathSync(targetDirectory) !== resolve(ctx.objectDirectory, directoryEntry.name)
         ) throw new Error("object fanout moved during publication");
-      } catch (error) {
-        for (const target of created.reverse()) {
-          try {
-            unlinkSync(target);
-          } catch {
-            return false;
-          }
-        }
-        throw error;
       } finally {
         closeSync(descriptor);
       }
+      fsyncSync(objectDescriptor);
     }
     if (realpathSync(anchoredObjectDirectory) !== ctx.objectDirectory) return false;
-    fsyncSync(rootDescriptor);
+    fsyncSync(objectDescriptor);
     return true;
   } catch {
     return false;
   } finally {
-    if (rootDescriptor !== undefined) closeSync(rootDescriptor);
+    if (objectDescriptor !== undefined) closeSync(objectDescriptor);
   }
 }
 
@@ -1687,14 +1784,50 @@ function selectedPathSnapshots(
   return snapshots;
 }
 
-function indexEvidence(entries: readonly ProjectGitEntry[]): ReadonlyMap<string, string> {
-  const evidence = new Map<string, string>();
-  for (const entry of entries) {
-    const signature = `${entry.index}\0${entry.path}\0${entry.sourcePath ?? ""}`;
-    evidence.set(entry.path, signature);
-    if (entry.sourcePath !== undefined) evidence.set(entry.sourcePath, signature);
+type GitIndexEntryRecord = Readonly<{
+  path: string;
+  mode: string;
+  objectId: string;
+  stage: string;
+}>;
+
+function gitIndexEntryMap(
+  ctx: Context,
+  processState: GitProcessState,
+): ReadonlyMap<string, GitIndexEntryRecord> | ProjectGitFailure {
+  const listed = runGit(ctx.executable, ctx.root, [
+    "-c", "core.quotepath=false", "ls-files", "--stage", "-z",
+  ], processState);
+  if (listed.timedOut) {
+    return failure(PROJECT_GIT_DIAGNOSTICS.repositoryUnavailable, "$git.index", "Contained Git timed out while capturing complete index semantics.");
   }
-  return evidence;
+  if (listed.overflow) {
+    return failure(PROJECT_GIT_DIAGNOSTICS.evidenceTooLarge, "$git.index", "Complete Git index semantics exceed the contained evidence limit.");
+  }
+  if (!listed.ok) {
+    return failure(PROJECT_GIT_DIAGNOSTICS.repositoryUnavailable, "$git.index", "Contained Git could not capture complete index semantics.");
+  }
+  const entries = new Map<string, GitIndexEntryRecord>();
+  for (const field of nulFields(listed.stdoutBytes)) {
+    const tab = field.indexOf(9);
+    const header = tab < 0 ? [] : field.subarray(0, tab).toString("ascii").split(" ");
+    const path = tab < 0 ? null : decodeGitPath(field.subarray(tab + 1));
+    const [mode, objectId, stage] = header;
+    if (
+      path === null || mode === undefined || objectId === undefined || stage === undefined ||
+      !/^(?:100644|100755|120000|160000)$/u.test(mode) ||
+      objectId.length !== ctx.objectIdLength || !/^[0-9a-f]+$/u.test(objectId) ||
+      !/^[0-3]$/u.test(stage)
+    ) {
+      return failure(PROJECT_GIT_DIAGNOSTICS.repositoryUnavailable, "$git.index", "Contained Git could not parse complete index semantics.");
+    }
+    const key = `${path}\0${stage}`;
+    if (entries.has(key)) {
+      return failure(PROJECT_GIT_DIAGNOSTICS.repositoryUnavailable, path, "Contained Git found duplicate index semantics for one path stage.");
+    }
+    entries.set(key, Object.freeze({ path, mode, objectId, stage }));
+  }
+  return entries;
 }
 
 type CapturedStageResult = Readonly<{
@@ -1746,17 +1879,26 @@ function prospectiveSelectionFailure(
   snapshots: ReadonlyMap<string, SelectedPathSnapshot>,
   before: ProjectGitRepositoryState,
   prospective: ProjectGitRepositoryState,
+  beforeIndexEntries: ReadonlyMap<string, GitIndexEntryRecord>,
 ): ProjectGitFailure | null {
   const selected = new Set(selection);
-  const beforeIndex = indexEvidence(before.entries);
-  const nextIndex = indexEvidence(prospective.entries);
-  const allPaths = new Set([...beforeIndex.keys(), ...nextIndex.keys()]);
-  for (const path of allPaths) {
-    if (!selected.has(path) && beforeIndex.get(path) !== nextIndex.get(path)) {
+  const nextIndexEntries = gitIndexEntryMap(ctx, processState);
+  if ("diagnostic" in nextIndexEntries) return nextIndexEntries;
+  const allEntryKeys = new Set([...beforeIndexEntries.keys(), ...nextIndexEntries.keys()]);
+  for (const key of allEntryKeys) {
+    const previous = beforeIndexEntries.get(key);
+    const next = nextIndexEntries.get(key);
+    const path = previous?.path ?? next?.path;
+    if (
+      path !== undefined && !selected.has(path) &&
+      (previous === undefined || next === undefined ||
+        previous.mode !== next.mode || previous.objectId !== next.objectId ||
+        previous.stage !== next.stage || previous.path !== next.path)
+    ) {
       return failure(
         PROJECT_GIT_DIAGNOSTICS.selectionMismatch,
         path,
-        "Prospective staging changed an index path outside the exact selected evidence.",
+        "Prospective staging changed complete index semantics outside the exact selected evidence.",
       );
     }
   }
@@ -1888,11 +2030,11 @@ function removeTemporaryGitIndex(temporary: TemporaryGitIndex): boolean {
 }
 
 function currentIndexMatches(ctx: Context, snapshot: GitIndexSnapshot): boolean {
-  if (!existsSync(ctx.indexPath)) return !snapshot.existed;
-  if (!snapshot.existed || snapshot.bytes === null || !lstatSync(ctx.indexPath).isFile()) {
-    return false;
-  }
-  return readFileSync(ctx.indexPath).equals(snapshot.bytes);
+  const current = readGitIndexSnapshot(ctx.indexPath);
+  if ("diagnostic" in current) return false;
+  if (!current.existed) return !snapshot.existed;
+  return snapshot.existed && snapshot.bytes !== null && current.bytes !== null &&
+    current.mode === snapshot.mode && current.bytes.equals(snapshot.bytes);
 }
 
 function syncIndexDirectory(ctx: Context): void {
@@ -2146,12 +2288,13 @@ function repositoryState(
     );
     const sourceIndex = processState.indexPath ?? ctx.indexPath;
     const evidenceIndex = resolve(directory, "index");
-    if (existsSync(sourceIndex)) {
-      const indexStat = lstatSync(sourceIndex);
-      if (!indexStat.isFile() || indexStat.size > PROJECT_GIT_EVIDENCE_MAX_BYTES) {
-        return failure(PROJECT_GIT_DIAGNOSTICS.evidenceTooLarge, "$git.index", "The Git index exceeds the contained evidence limit.");
-      }
-      writeFileSync(evidenceIndex, readFileSync(sourceIndex), { mode: indexStat.mode & 0o777 });
+    const indexSnapshot = processState.indexPath === undefined
+      ? ctx.indexSnapshot
+      : readGitIndexSnapshot(sourceIndex);
+    if ("diagnostic" in indexSnapshot) return indexSnapshot;
+    if (indexSnapshot.existed) {
+      if (indexSnapshot.bytes === null) throw new Error("missing index snapshot");
+      writeFileSync(evidenceIndex, indexSnapshot.bytes, { mode: indexSnapshot.mode });
     }
     const evidenceProcessState = Object.freeze({
       ...processState,
@@ -2226,6 +2369,12 @@ export function stageProjectGitPaths(
     const before = inspectSharedProjectGit(options, "status");
     if (!before.ok) {
       result = before;
+    } else if (!currentIndexMatches(prepared, prepared.indexSnapshot)) {
+      result = failure(
+        PROJECT_GIT_DIAGNOSTICS.selectionMismatch,
+        "$git.index",
+        "The live index changed after the shared repository evidence was captured.",
+      );
     } else if (before.state.detached) {
       result = failure(PROJECT_GIT_DIAGNOSTICS.detachedWorktree, "$git.HEAD", "Git staging is refused on a detached worktree.");
     } else if (before.state.conflicts.length > 0) {
@@ -2273,14 +2422,19 @@ export function stageProjectGitPaths(
                   objectDirectory: temporary.objectDirectory,
                   alternateObjectDirectories: Object.freeze([prepared.objectDirectory]),
                 });
-                const staged = stageCapturedPaths(
-                  prepared,
-                  temporaryProcess,
-                  pathsToStage,
-                  pathSnapshots,
-                );
-                if (!staged.ok) {
-                  result = stageRolledBack(staged.timedOut
+                const beforeIndexEntries = gitIndexEntryMap(prepared, temporaryProcess);
+                const staged = "diagnostic" in beforeIndexEntries
+                  ? undefined
+                  : stageCapturedPaths(
+                      prepared,
+                      temporaryProcess,
+                      pathsToStage,
+                      pathSnapshots,
+                    );
+                if ("diagnostic" in beforeIndexEntries) {
+                  result = beforeIndexEntries;
+                } else if (staged === undefined || !staged.ok) {
+                  result = stageRolledBack(staged?.timedOut === true
                     ? "Captured-file staging timed out without changing live repository state."
                     : "Git refused captured-file staging without changing live repository state.");
                 } else {
@@ -2289,17 +2443,22 @@ export function stageProjectGitPaths(
                     guard.excludedPaths,
                     temporaryProcess,
                   );
-                  let prospectiveBytes: Buffer | undefined;
-                  try {
-                    prospectiveBytes = readFileSync(temporary.path);
-                  } catch {
-                    prospectiveBytes = undefined;
-                  }
+                  const prospectiveSnapshot = readGitIndexSnapshot(temporary.path);
+                  const prospectiveBytes = "diagnostic" in prospectiveSnapshot ||
+                    !prospectiveSnapshot.existed || prospectiveSnapshot.bytes === null
+                    ? undefined
+                    : prospectiveSnapshot.bytes;
                   if (!prospective.ok) {
                     result = prospective.diagnostic.code === PROJECT_GIT_DIAGNOSTICS.evidenceTooLarge
                       ? prospective
                       : stageRolledBack(
                           `Prospective staging was refused by ${prospective.diagnostic.code}; live repository state was unchanged.`,
+                        );
+                  } else if ("diagnostic" in prospectiveSnapshot) {
+                    result = prospectiveSnapshot.diagnostic.code === PROJECT_GIT_DIAGNOSTICS.evidenceTooLarge
+                      ? prospectiveSnapshot
+                      : stageRolledBack(
+                          `The prospective index became unsafe (${prospectiveSnapshot.diagnostic.code}); live repository state was unchanged.`,
                         );
                   } else if (prospectiveBytes === undefined) {
                     result = stageRolledBack(
@@ -2313,6 +2472,7 @@ export function stageProjectGitPaths(
                       pathSnapshots,
                       before.state,
                       prospective.state,
+                      beforeIndexEntries,
                     );
                     if (selectionFailure !== null) {
                       result = selectionFailure;
@@ -2341,15 +2501,22 @@ export function stageProjectGitPaths(
                       } else {
                         publishedIndex = Object.freeze({ original: captured, bytes: prospectiveBytes });
                         const shared = inspectSharedProjectGit(options, "status");
-                        if (shared.ok) {
+                        const headStable = shared.ok && !shared.state.detached &&
+                          shared.state.branch === before.state.branch &&
+                          shared.state.head === before.state.head;
+                        if (headStable) {
                           result = shared;
                         } else {
                           result = rollbackPublishedGitIndex(prepared, captured, prospectiveBytes)
                             ? stageRolledBack(
-                                `Published staging could not reproduce shared evidence (${shared.diagnostic.code}); the exact prior index was restored.`,
+                                shared.ok
+                                  ? "Published staging observed changed HEAD or branch identity; the exact prior index was restored."
+                                  : `Published staging could not reproduce shared evidence (${shared.diagnostic.code}); the exact prior index was restored.`,
                               )
                             : stageRollbackFailed(
-                                `Published staging could not reproduce shared evidence (${shared.diagnostic.code}) and the exact prior index could not be restored.`,
+                                shared.ok
+                                  ? "Published staging observed changed HEAD or branch identity and the exact prior index could not be restored."
+                                  : `Published staging could not reproduce shared evidence (${shared.diagnostic.code}) and the exact prior index could not be restored.`,
                               );
                           publishedIndex = undefined;
                         }

@@ -8,6 +8,7 @@ import {
   renameSync,
   rmSync,
   symlinkSync,
+  truncateSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -146,6 +147,22 @@ describe("contained project Git service", () => {
     }
   });
 
+  it("reports user paths that resemble internal artifact prefixes", () => {
+    const { root } = repository("artifact-prefix-user-path");
+    writeFileSync(join(root, ".sceneaxi-lock-user-notes"), "user-owned\n");
+    writeFileSync(join(root, ".sceneaxi-tmp-user-notes"), "user-owned\n");
+
+    expect(inspectProjectGit({ root })).toMatchObject({
+      ok: true,
+      state: {
+        unrelatedChanges: [
+          { path: ".sceneaxi-lock-user-notes" },
+          { path: ".sceneaxi-tmp-user-notes" },
+        ],
+      },
+    });
+  });
+
   it("stages only explicit paths and prepares but never creates a commit", () => {
     const { root } = repository("prepare");
     writeFileSync(join(root, "scene.json"), readFileSync(join(root, "scene.json"), "utf8").replace("Contained", "Prepared"));
@@ -209,6 +226,99 @@ describe("contained project Git service", () => {
     const objectId = git(root, "rev-parse", ":notes.txt").trim();
     expect(objectId).toHaveLength(64);
     expect(git(root, "cat-file", "blob", objectId)).toBe("sha256 object\n");
+  });
+
+  it("never follows an object target introduced during publication", () => {
+    const { root } = repository("object-target-race");
+    writeFileSync(join(root, "notes.txt"), randomBytes(64));
+    const wrapper = join(root, "git-links-object-target.sh");
+    writeFileSync(wrapper, [
+      "#!/bin/sh",
+      "hash=0",
+      "write=0",
+      "for arg in \"$@\"; do",
+      "  if [ \"$arg\" = \"hash-object\" ]; then hash=1; fi",
+      "  if [ \"$arg\" = \"-w\" ]; then write=1; fi",
+      "done",
+      "if [ \"$hash\" = \"1\" ] && [ \"$write\" = \"1\" ] && [ -n \"$GIT_OBJECT_DIRECTORY\" ]; then",
+      "  oid=$(git \"$@\")",
+      "  status=$?",
+      "  if [ \"$status\" = \"0\" ]; then",
+      "    fanout=$(printf '%s' \"$oid\" | cut -c1-2)",
+      "    suffix=$(printf '%s' \"$oid\" | cut -c3-)",
+      "    mkdir -p -- .git/objects/\"$fanout\"",
+      "    ln -s -- \"$GIT_OBJECT_DIRECTORY/$fanout/$suffix\" .git/objects/\"$fanout/$suffix\"",
+      "  fi",
+      "  printf '%s\n' \"$oid\"",
+      "  exit $status",
+      "fi",
+      "exec git \"$@\"",
+      "",
+    ].join("\n"));
+    chmodSync(wrapper, 0o700);
+
+    expect(stageProjectGitPaths(
+      { ...mutationOptions(root), gitExecutable: wrapper },
+      ["notes.txt"],
+    )).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.stageRollbackFailed },
+    });
+    expect(git(root, "ls-files", "notes.txt")).toBe("");
+  });
+
+  it("never publishes through a fanout moved outside the object store", () => {
+    const { root } = repository("object-fanout-race");
+    const outside = mkdtempSync(join(tmpdir(), "sceneaxi-project-git-fanout-outside-"));
+    roots.push(outside);
+    let selectedBytes = randomBytes(64);
+    let selectedObjectId = execFileSync("git", ["hash-object", "--stdin"], {
+      cwd: root,
+      input: selectedBytes,
+      encoding: "utf8",
+    }).trim();
+    while (existsSync(join(root, ".git", "objects", selectedObjectId.slice(0, 2)))) {
+      selectedBytes = randomBytes(64);
+      selectedObjectId = execFileSync("git", ["hash-object", "--stdin"], {
+        cwd: root,
+        input: selectedBytes,
+        encoding: "utf8",
+      }).trim();
+    }
+    writeFileSync(join(root, "notes.txt"), selectedBytes);
+    const wrapper = join(root, "git-links-object-fanout.sh");
+    writeFileSync(wrapper, [
+      "#!/bin/sh",
+      "hash=0",
+      "write=0",
+      "for arg in \"$@\"; do",
+      "  if [ \"$arg\" = \"hash-object\" ]; then hash=1; fi",
+      "  if [ \"$arg\" = \"-w\" ]; then write=1; fi",
+      "done",
+      "if [ \"$hash\" = \"1\" ] && [ \"$write\" = \"1\" ] && [ -n \"$GIT_OBJECT_DIRECTORY\" ]; then",
+      "  oid=$(git \"$@\")",
+      "  status=$?",
+      "  if [ \"$status\" = \"0\" ]; then",
+      "    fanout=$(printf '%s' \"$oid\" | cut -c1-2)",
+      `    ln -s -- ${JSON.stringify(outside)} .git/objects/"$fanout"`,
+      "  fi",
+      "  printf '%s\n' \"$oid\"",
+      "  exit $status",
+      "fi",
+      "exec git \"$@\"",
+      "",
+    ].join("\n"));
+    chmodSync(wrapper, 0o700);
+
+    expect(stageProjectGitPaths(
+      { ...mutationOptions(root), gitExecutable: wrapper },
+      ["notes.txt"],
+    )).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.stageRollbackFailed },
+    });
+    expect(readdirSync(outside)).toEqual([]);
+    expect(git(root, "ls-files", "notes.txt")).toBe("");
   });
 
   it("refuses directory selections and leaves no operation-lock residue", () => {
@@ -444,6 +554,18 @@ describe("contained project Git service", () => {
     });
   });
 
+  it("bounds untracked rename candidates before Git reads their paths", () => {
+    const { root } = repository("rename-candidate-bound");
+    unlinkSync(join(root, "scene.json"));
+    writeFileSync(join(root, "large-candidate.bin"), "");
+    truncateSync(join(root, "large-candidate.bin"), 32 * 1024 * 1024);
+
+    expect(inspectProjectGit({ root })).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.evidenceTooLarge, path: "large-candidate.bin" },
+    });
+  });
+
   it("reports an explicit rollback when prospective evidence is too large", () => {
     const { root } = repository("stage-rollback");
     const indexPath = join(root, ".git", "index");
@@ -613,6 +735,105 @@ describe("contained project Git service", () => {
     expect(readFileSync(lockPath, "utf8")).toBe("concurrent writer\n");
     expect(readdirSync(join(root, ".git")).some((name) => name.startsWith(".sceneaxi-index-"))).toBe(false);
     unlinkSync(lockPath);
+  });
+
+  it("refuses a special index introduced before its descriptor snapshot", () => {
+    const { root } = repository("index-reopen-race");
+    const wrapper = join(root, "git-replaces-index.sh");
+    const marker = join(root, ".index-replaced");
+    writeFileSync(wrapper, [
+      "#!/bin/sh",
+      "trigger=0",
+      "for arg in \"$@\"; do",
+      "  if [ \"$arg\" = \"--git-path\" ]; then trigger=1; fi",
+      "done",
+      `if [ "$trigger" = "1" ] && [ ! -e ${JSON.stringify(marker)} ]; then`,
+      "  git \"$@\"",
+      "  status=$?",
+      "  mv .git/index .git/index.saved",
+      "  mkfifo .git/index",
+      `  printf replaced > ${JSON.stringify(marker)}`,
+      "  exit $status",
+      "fi",
+      "exec git \"$@\"",
+      "",
+    ].join("\n"));
+    chmodSync(wrapper, 0o700);
+
+    expect(inspectProjectGit({ root, gitExecutable: wrapper })).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.repositoryEscape, path: "$git.index" },
+    });
+  });
+
+  it("refuses changes to complete unselected index semantics", () => {
+    const { root } = repository("unselected-index-semantics");
+    writeFileSync(join(root, "other.txt"), "original staged bytes\n");
+    git(root, "add", "other.txt");
+    writeFileSync(join(root, "notes.txt"), "selected bytes\n");
+    const wrapper = join(root, "git-mutates-unselected-index.sh");
+    writeFileSync(wrapper, [
+      "#!/bin/sh",
+      "git \"$@\"",
+      "status=$?",
+      "selected=0",
+      "for arg in \"$@\"; do",
+      "  if [ \"$arg\" = \"update-index\" ]; then selected=1; fi",
+      "done",
+      "case \"$GIT_INDEX_FILE\" in",
+      "  */.sceneaxi-index-*/index)",
+      "    if [ \"$selected\" = \"1\" ]; then",
+      "      oid=$(printf 'altered unrelated bytes\n' | git hash-object -w --stdin --no-filters)",
+      "      git update-index --cacheinfo 100644 \"$oid\" other.txt",
+      "    fi",
+      "    ;;",
+      "esac",
+      "exit $status",
+      "",
+    ].join("\n"));
+    chmodSync(wrapper, 0o700);
+
+    expect(stageProjectGitPaths(
+      { ...mutationOptions(root), gitExecutable: wrapper },
+      ["notes.txt"],
+    )).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.selectionMismatch, path: "other.txt" },
+    });
+    expect(git(root, "show", ":other.txt")).toBe("original staged bytes\n");
+    expect(git(root, "ls-files", "notes.txt")).toBe("");
+  });
+
+  it("rolls back if HEAD becomes detached during final publication validation", () => {
+    const { root } = repository("detached-publication-race");
+    writeFileSync(join(root, "notes.txt"), "selected bytes\n");
+    const wrapper = join(root, "git-detaches-before-final-evidence.sh");
+    const count = join(root, ".context-count");
+    writeFileSync(wrapper, [
+      "#!/bin/sh",
+      "trigger=0",
+      "for arg in \"$@\"; do",
+      "  if [ \"$arg\" = \"--path-format=absolute\" ]; then trigger=1; fi",
+      "done",
+      `if [ "$trigger" = "1" ]; then`,
+      `  current=$(cat ${JSON.stringify(count)} 2>/dev/null || printf 0)`,
+      "  current=$((current + 1))",
+      `  printf '%s' "$current" > ${JSON.stringify(count)}`,
+      "  if [ \"$current\" = \"3\" ]; then head=$(git rev-parse HEAD) && printf '%s\\n' \"$head\" > .git/HEAD; fi",
+      "fi",
+      "exec git \"$@\"",
+      "",
+    ].join("\n"));
+    chmodSync(wrapper, 0o700);
+
+    expect(stageProjectGitPaths(
+      { ...mutationOptions(root), gitExecutable: wrapper },
+      ["notes.txt"],
+    )).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.stageRolledBack },
+    });
+    expect(git(root, "ls-files", "notes.txt")).toBe("");
   });
 
   it("reports a disappeared prospective index as rolled back", () => {

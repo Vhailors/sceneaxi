@@ -1,5 +1,6 @@
 /** Contained local Git inspection and preparation for one selected native project. */
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   closeSync,
   constants,
@@ -10,15 +11,17 @@ import {
   mkdirSync,
   openSync,
   readFileSync,
+  readlinkSync,
   readdirSync,
   readSync,
   realpathSync,
   rmSync,
   writeFileSync,
+  type Stats,
 } from "node:fs";
 import { devNull } from "node:os";
 import { TextDecoder } from "node:util";
-import { delimiter, dirname, isAbsolute, relative, resolve, sep } from "node:path";
+import { basename, delimiter, dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import {
   PROJECT_GIT_DIAGNOSTICS,
   PROJECT_GIT_EVIDENCE_MAX_BYTES,
@@ -340,10 +343,6 @@ function parseNameStatus(output: Buffer): readonly GitNameStatusChange[] | Proje
   return Object.freeze(changes);
 }
 
-function internalEvidencePath(path: string): boolean {
-  return /^\.sceneaxi-(?:lock|tmp|bak)-/u.test(path);
-}
-
 function evidenceEntries(
   stagedOutput: Buffer,
   workingOutput: Buffer,
@@ -387,8 +386,8 @@ function evidenceEntries(
   }
   return Object.freeze([...records.values()]
     .filter((entry) =>
-      !internalEvidencePath(entry.path) && !excludedPaths.has(entry.path) &&
-      (entry.sourcePath === undefined || (!internalEvidencePath(entry.sourcePath) && !excludedPaths.has(entry.sourcePath)))
+      !excludedPaths.has(entry.path) &&
+      (entry.sourcePath === undefined || !excludedPaths.has(entry.sourcePath))
     )
     .map((entry) => Object.freeze({
       path: entry.path,
@@ -400,6 +399,65 @@ function evidenceEntries(
       conflict: entry.conflict,
     }))
     .sort((left, right) => left.path < right.path ? -1 : left.path > right.path ? 1 : 0));
+}
+
+type PathByteSnapshot = Readonly<{ bytes: Buffer }>;
+
+function samePathStat(left: Stats, right: Stats): boolean {
+  return left.dev === right.dev && left.ino === right.ino && left.mode === right.mode &&
+    left.size === right.size && left.mtimeMs === right.mtimeMs && left.ctimeMs === right.ctimeMs;
+}
+
+function capturePathBytes(
+  candidate: string,
+  path: string,
+  byteLimit: number,
+): PathByteSnapshot | ProjectGitFailure {
+  let descriptor: number | undefined;
+  try {
+    const initial = lstatSync(candidate);
+    if (initial.size > byteLimit) {
+      return failure(PROJECT_GIT_DIAGNOSTICS.evidenceTooLarge, path, "The exact rename-candidate evidence exceeds its bounded limit.");
+    }
+    if (initial.isSymbolicLink()) {
+      const bytes = readlinkSync(candidate, { encoding: "buffer" });
+      const final = lstatSync(candidate);
+      if (bytes.byteLength > byteLimit) {
+        return failure(PROJECT_GIT_DIAGNOSTICS.evidenceTooLarge, path, "The exact rename-candidate evidence exceeds its bounded limit.");
+      }
+      if (!samePathStat(initial, final)) {
+        return failure(PROJECT_GIT_DIAGNOSTICS.selectionMismatch, path, "The rename candidate changed while its evidence was captured.");
+      }
+      return Object.freeze({ bytes });
+    }
+    if (!initial.isFile()) {
+      return failure(PROJECT_GIT_DIAGNOSTICS.pathEscape, path, "Rename evidence must be a contained regular file or symbolic link.");
+    }
+    descriptor = openSync(candidate, constants.O_RDONLY | constants.O_NONBLOCK | constants.O_NOFOLLOW);
+    const opened = fstatSync(descriptor);
+    if (!opened.isFile() || opened.size > byteLimit || !samePathStat(initial, opened)) {
+      return opened.size > byteLimit
+        ? failure(PROJECT_GIT_DIAGNOSTICS.evidenceTooLarge, path, "The exact rename-candidate evidence exceeds its bounded limit.")
+        : failure(PROJECT_GIT_DIAGNOSTICS.selectionMismatch, path, "The rename candidate changed while its evidence was captured.");
+    }
+    const bytes = Buffer.alloc(opened.size);
+    let offset = 0;
+    while (offset < bytes.length) {
+      const count = readSync(descriptor, bytes, offset, bytes.length - offset, offset);
+      if (count === 0) {
+        return failure(PROJECT_GIT_DIAGNOSTICS.selectionMismatch, path, "The rename candidate changed while its evidence was captured.");
+      }
+      offset += count;
+    }
+    if (!samePathStat(opened, fstatSync(descriptor))) {
+      return failure(PROJECT_GIT_DIAGNOSTICS.selectionMismatch, path, "The rename candidate changed while its evidence was captured.");
+    }
+    return Object.freeze({ bytes });
+  } catch {
+    return failure(PROJECT_GIT_DIAGNOSTICS.selectionMismatch, path, "The rename candidate changed or became unreadable while its evidence was captured.");
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor);
+  }
 }
 
 function pairExactWorktreeRenames(
@@ -428,11 +486,18 @@ function pairExactWorktreeRenames(
   }
   const pairedSources = new Set<string>();
   const replacements = new Map<string, ProjectGitEntry>();
+  let capturedBytes = 0;
   for (const entry of entries.filter((candidate) => candidate.index === "?" && candidate.worktree === "?")) {
+    const snapshot = capturePathBytes(
+      resolve(ctx.root, ...entry.path.split("/")),
+      entry.path,
+      PROJECT_GIT_EVIDENCE_MAX_BYTES - capturedBytes,
+    );
+    if ("diagnostic" in snapshot) return snapshot;
+    capturedBytes += snapshot.bytes.byteLength;
     const hashed = runGit(ctx.executable, ctx.root, [
-      "--literal-pathspecs",
-      "hash-object", "--no-filters", "--", entry.path,
-    ], processState);
+      "hash-object", "--no-filters", "--stdin",
+    ], { ...processState, input: snapshot.bytes });
     if (hashed.timedOut) {
       return failure(PROJECT_GIT_DIAGNOSTICS.repositoryUnavailable, entry.path, "Contained Git timed out while pairing exact worktree rename evidence.");
     }
@@ -471,7 +536,61 @@ type Context = Readonly<{
   projectId: string;
   canonicalFiles: readonly string[];
   excludedPaths: ReadonlySet<string>;
+  indexSnapshot: GitIndexSnapshot;
 }>;
+
+type GitIndexSnapshot = Readonly<{
+  existed: boolean;
+  bytes: Buffer | null;
+  mode: number;
+}>;
+
+function readGitIndexSnapshot(path: string): GitIndexSnapshot | ProjectGitFailure {
+  let descriptor: number | undefined;
+  try {
+    descriptor = openSync(path, constants.O_RDONLY | constants.O_NONBLOCK | constants.O_NOFOLLOW);
+    const initial = fstatSync(descriptor);
+    if (!initial.isFile()) {
+      return repositoryEscape("$git.index", "Contained Git requires the repository index to be a regular file.");
+    }
+    if (initial.size > PROJECT_GIT_EVIDENCE_MAX_BYTES) {
+      return failure(PROJECT_GIT_DIAGNOSTICS.evidenceTooLarge, "$git.index", "The Git index exceeds the contained evidence limit.");
+    }
+    const bytes = Buffer.alloc(initial.size);
+    let offset = 0;
+    while (offset < bytes.length) {
+      const count = readSync(descriptor, bytes, offset, bytes.length - offset, offset);
+      if (count === 0) throw new Error("index changed while reading");
+      offset += count;
+    }
+    const final = fstatSync(descriptor);
+    const current = lstatSync(path);
+    if (
+      !current.isFile() || current.isSymbolicLink() || !samePathStat(initial, final) ||
+      final.dev !== current.dev || final.ino !== current.ino
+    ) throw new Error("index changed while reading");
+    return Object.freeze({ existed: true, bytes, mode: initial.mode & 0o777 });
+  } catch (error) {
+    const code = error instanceof Error && "code" in error
+      ? (error as NodeJS.ErrnoException).code
+      : undefined;
+    if (code === "ENOENT" && descriptor === undefined) {
+      return Object.freeze({ existed: false, bytes: null, mode: 0o666 });
+    }
+    return code === "ELOOP"
+      ? repositoryEscape("$git.index", "Contained Git refuses symbolic-link index metadata.")
+      : failure(PROJECT_GIT_DIAGNOSTICS.repositoryUnavailable, "$git.index", "Contained Git could not capture one stable index snapshot.");
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor);
+  }
+}
+
+function operationLockEvidencePath(root: string): string | null {
+  const resource = canonicalPath(resolve(root, ".sceneaxi-authoring-operation"));
+  const stem = createHash("sha256").update(resource, "utf8").digest("hex").slice(0, 32);
+  const path = resolve(dirname(resource), `.sceneaxi-lock-${stem}`);
+  return existsSync(path) ? basename(path) : null;
+}
 
 function repositoryEscape(path: string, message: string): ProjectGitFailure {
   return failure(PROJECT_GIT_DIAGNOSTICS.repositoryEscape, path, message);
@@ -775,8 +894,28 @@ function containedGitDirectory(root: string): string | ProjectGitFailure {
 function refuseGitlinks(
   executable: string,
   root: string,
+  indexPath: string,
+  snapshot: GitIndexSnapshot,
 ): ProjectGitFailure | null {
-  const index = runGit(executable, root, ["ls-files", "--stage", "-z"]);
+  let directory: string | undefined;
+  let index: GitResult;
+  try {
+    directory = mkdtempSync(resolve(dirname(indexPath), ".sceneaxi-index-evidence-"));
+    const evidenceIndex = resolve(directory, "index");
+    if (snapshot.existed) {
+      if (snapshot.bytes === null) throw new Error("missing index bytes");
+      writeFileSync(evidenceIndex, snapshot.bytes, { mode: snapshot.mode });
+    }
+    index = runGit(executable, root, ["ls-files", "--stage", "-z"], { indexPath: evidenceIndex });
+  } catch {
+    return failure(
+      PROJECT_GIT_DIAGNOSTICS.repositoryUnavailable,
+      "$git.index",
+      "Contained Git could not create a stable index evidence view.",
+    );
+  } finally {
+    if (directory !== undefined) rmSync(directory, { recursive: true, force: true });
+  }
   if (index.timedOut) {
     return failure(
       PROJECT_GIT_DIAGNOSTICS.repositoryUnavailable,
@@ -1069,7 +1208,9 @@ function context(
       );
     }
   }
-  const gitlinkFailure = refuseGitlinks(executable, root);
+  const indexSnapshot = readGitIndexSnapshot(indexPath);
+  if ("diagnostic" in indexSnapshot) return indexSnapshot;
+  const gitlinkFailure = refuseGitlinks(executable, root, indexPath, indexSnapshot);
   if (gitlinkFailure !== null) return gitlinkFailure;
   const canonicalFiles = Object.freeze([
     PROJECT_MANIFEST_PATH,
@@ -1086,6 +1227,7 @@ function context(
       );
     }
   }
+  const operationLockPath = operationLockEvidencePath(root);
   return Object.freeze({
     root,
     executable,
@@ -1095,7 +1237,8 @@ function context(
     attributeSource: head.stdout.trim(),
     projectId: manifest.projectId,
     canonicalFiles,
-    excludedPaths: new Set<string>(),
+    excludedPaths: new Set<string>(operationLockPath === null ? [] : [operationLockPath]),
+    indexSnapshot,
   });
 }
 
@@ -1226,12 +1369,13 @@ function repositoryState(
     );
     const sourceIndex = processState.indexPath ?? ctx.indexPath;
     const evidenceIndex = resolve(directory, "index");
-    if (existsSync(sourceIndex)) {
-      const indexStat = lstatSync(sourceIndex);
-      if (!indexStat.isFile() || indexStat.size > PROJECT_GIT_EVIDENCE_MAX_BYTES) {
-        return failure(PROJECT_GIT_DIAGNOSTICS.evidenceTooLarge, "$git.index", "The Git index exceeds the contained evidence limit.");
-      }
-      writeFileSync(evidenceIndex, readFileSync(sourceIndex), { mode: indexStat.mode & 0o777 });
+    const indexSnapshot = processState.indexPath === undefined
+      ? ctx.indexSnapshot
+      : readGitIndexSnapshot(sourceIndex);
+    if ("diagnostic" in indexSnapshot) return indexSnapshot;
+    if (indexSnapshot.existed) {
+      if (indexSnapshot.bytes === null) throw new Error("missing index snapshot");
+      writeFileSync(evidenceIndex, indexSnapshot.bytes, { mode: indexSnapshot.mode });
     }
     const evidenceProcessState = Object.freeze({
       ...processState,
