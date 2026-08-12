@@ -1,6 +1,6 @@
 /** Node host for the SceneAxi-native versioned project manifest. */
 import { existsSync, lstatSync, readFileSync, realpathSync } from "node:fs";
-import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { isAbsolute, join, relative, sep } from "node:path";
 import {
   PROJECT_MANIFEST_DIAGNOSTICS,
   PROJECT_MANIFEST_PATH,
