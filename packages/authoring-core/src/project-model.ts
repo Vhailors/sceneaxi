@@ -101,6 +101,11 @@ type MigrationJournal = Readonly<{
   proposal: ProjectMigrationProposal;
 }>;
 
+type MigrationJournalRead =
+  | Readonly<{ kind: "absent"; path: string }>
+  | Readonly<{ kind: "invalid"; path: string }>
+  | Readonly<{ kind: "valid"; path: string; journal: MigrationJournal }>;
+
 function failure(
   code: ProjectManifestDiagnosticCode,
   path: string,
@@ -354,47 +359,89 @@ function parseJournal(value: unknown): MigrationJournal | null {
   });
 }
 
-export function projectMigrationRecoveryPending(root: string): boolean {
-  const canonicalRoot = rootPath(root);
-  if (typeof canonicalRoot !== "string") return true;
-  const candidate = join(canonicalRoot, ...PROJECT_MIGRATION_JOURNAL_PATH.split("/"));
+function readMigrationJournal(canonicalRoot: string): MigrationJournalRead {
+  const path = join(canonicalRoot, ...PROJECT_MIGRATION_JOURNAL_PATH.split("/"));
+  const directoryPath = join(canonicalRoot, ".sceneaxi");
+  let directoryDescriptor: number | undefined;
   let descriptor: number | undefined;
   try {
+    directoryDescriptor = openSync(
+      directoryPath,
+      constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW,
+    );
+    const initialDirectory = fstatSync(directoryDescriptor);
+    const currentDirectory = lstatSync(directoryPath);
+    if (
+      !initialDirectory.isDirectory() || currentDirectory.isSymbolicLink() ||
+      initialDirectory.dev !== currentDirectory.dev || initialDirectory.ino !== currentDirectory.ino ||
+      realpathSync(`/proc/self/fd/${directoryDescriptor}`) !== directoryPath
+    ) return Object.freeze({ kind: "invalid", path });
     descriptor = openSync(
-      candidate,
+      `/proc/self/fd/${directoryDescriptor}/project-migration-journal.json`,
       constants.O_RDONLY | constants.O_NONBLOCK | constants.O_NOFOLLOW,
     );
     const initial = fstatSync(descriptor);
-    if (!initial.isFile() || initial.size > 1024 * 1024) return true;
+    if (!initial.isFile() || initial.size > 1024 * 1024) {
+      return Object.freeze({ kind: "invalid", path });
+    }
     const bytes = Buffer.alloc(initial.size);
     let offset = 0;
     while (offset < bytes.length) {
       const count = readSync(descriptor, bytes, offset, bytes.length - offset, offset);
-      if (count === 0) return true;
+      if (count === 0) return Object.freeze({ kind: "invalid", path });
       offset += count;
     }
     const final = fstatSync(descriptor);
+    const current = lstatSync(path);
     if (
+      !current.isFile() || current.isSymbolicLink() ||
       initial.dev !== final.dev || initial.ino !== final.ino || initial.mode !== final.mode ||
       initial.size !== final.size || initial.mtimeMs !== final.mtimeMs ||
-      initial.ctimeMs !== final.ctimeMs
-    ) return true;
+      initial.ctimeMs !== final.ctimeMs || final.dev !== current.dev || final.ino !== current.ino ||
+      realpathSync(`/proc/self/fd/${directoryDescriptor}`) !== directoryPath
+    ) return Object.freeze({ kind: "invalid", path });
     let parsed: unknown;
     try {
       parsed = JSON.parse(bytes.toString("utf8"));
     } catch {
-      return true;
+      return Object.freeze({ kind: "invalid", path });
     }
     const journal = parseJournal(parsed);
-    return journal === null || journal.state !== "completed";
+    return journal === null
+      ? Object.freeze({ kind: "invalid", path })
+      : Object.freeze({ kind: "valid", path, journal });
   } catch (error) {
     const code = error instanceof Error && "code" in error
       ? (error as NodeJS.ErrnoException).code
       : undefined;
-    return code !== "ENOENT";
+    if (code === "ENOENT" && descriptor === undefined) {
+      if (directoryDescriptor === undefined) {
+        return Object.freeze({ kind: "absent", path });
+      }
+      try {
+        const openedDirectory = fstatSync(directoryDescriptor);
+        const currentDirectory = lstatSync(directoryPath);
+        if (
+          currentDirectory.isDirectory() && !currentDirectory.isSymbolicLink() &&
+          openedDirectory.dev === currentDirectory.dev && openedDirectory.ino === currentDirectory.ino &&
+          realpathSync(`/proc/self/fd/${directoryDescriptor}`) === directoryPath
+        ) return Object.freeze({ kind: "absent", path });
+      } catch {
+        return Object.freeze({ kind: "invalid", path });
+      }
+    }
+    return Object.freeze({ kind: "invalid", path });
   } finally {
     if (descriptor !== undefined) closeSync(descriptor);
+    if (directoryDescriptor !== undefined) closeSync(directoryDescriptor);
   }
+}
+
+export function projectMigrationRecoveryPending(root: string): boolean {
+  const canonicalRoot = rootPath(root);
+  if (typeof canonicalRoot !== "string") return true;
+  const read = readMigrationJournal(canonicalRoot);
+  return read.kind !== "absent" && (read.kind !== "valid" || read.journal.state !== "completed");
 }
 
 const pendingMigrationOperationCleanups = new Map<string, AtomicWriteLockSet>();
@@ -464,14 +511,14 @@ function recoverLocked(
   canonicalRoot: string,
   expectedProposalDigest?: string,
 ): ProjectMigrationCommitResult {
-  const journalPath = containedPath(canonicalRoot, PROJECT_MIGRATION_JOURNAL_PATH, true);
-  if (typeof journalPath !== "string") {
+  const journalRead = readMigrationJournal(canonicalRoot);
+  if (journalRead.kind === "absent") {
     return failure(PROJECT_MANIFEST_DIAGNOSTICS.proposalRequired, PROJECT_MIGRATION_JOURNAL_PATH, "No prepared project migration exists.");
   }
-  const journal = parseJournal(readJson(journalPath));
-  if (journal === null) {
+  if (journalRead.kind === "invalid") {
     return failure(PROJECT_MANIFEST_DIAGNOSTICS.recoveryInvalid, PROJECT_MIGRATION_JOURNAL_PATH, "The project migration journal is invalid.");
   }
+  const { journal, path: journalPath } = journalRead;
   if (expectedProposalDigest !== undefined && journal.proposal.proposalDigest !== expectedProposalDigest) {
     return failure(PROJECT_MANIFEST_DIAGNOSTICS.approvalMismatch, PROJECT_MIGRATION_JOURNAL_PATH, "The prepared migration does not match the approved proposal digest.");
   }

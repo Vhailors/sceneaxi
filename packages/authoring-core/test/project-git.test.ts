@@ -30,15 +30,19 @@ import {
   inspectProjectGit,
   propose,
   proposeProjectMigration,
+  recoverProjectMigration,
   releaseAtomicWriteLocks,
   refuseUnsupportedProjectGitOperation,
   serializeDocument,
   writeNativeProjectSeed,
 } from "@sceneaxi/authoring-core";
 import {
+  acquireProjectGitDesktopOwner,
   createProjectGitAuthoringAuthority,
   prepareProjectGitCommit,
+  releaseProjectGitDesktopOwner,
   stageProjectGitPaths,
+  type ProjectGitAuthoringState,
 } from "../internal/project-git-authority.js";
 import {
   PROJECT_GIT_DIAGNOSTICS,
@@ -125,6 +129,21 @@ describe("contained project Git service", () => {
     expect(result.state.workingTreeDiff).toContain("Changed");
     expect(result.state.workingTreeDiff).not.toContain("operator notes");
     expect(git(root, "status", "--porcelain=v1", "-z", "--untracked-files=all")).toBe(before);
+  });
+
+  it("shares owner-aware evidence across public reads and mutations", () => {
+    const { root } = repository("owner-aware-evidence");
+    const owner = acquireProjectGitDesktopOwner(root);
+    expect("diagnostic" in owner).toBe(false);
+    if ("diagnostic" in owner) return;
+    try {
+      expect(inspectProjectGit({ root })).toMatchObject({
+        ok: true,
+        state: { clean: true, entries: [] },
+      });
+    } finally {
+      expect(releaseProjectGitDesktopOwner(owner)).toBe(true);
+    }
   });
 
   it("stages only explicit paths and prepares but never creates a commit", () => {
@@ -262,7 +281,7 @@ describe("contained project Git service", () => {
     symlinkSync(outsideJournal, join(journalRepository.root, ".sceneaxi"));
     expect(stageProjectGitPaths(mutationOptions(journalRepository.root), ["scene.json"])).toMatchObject({
       ok: false,
-      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.pathEscape },
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.recoveryPending },
     });
     expect(readdirSync(outsideJournal)).toEqual([]);
 
@@ -300,6 +319,17 @@ describe("contained project Git service", () => {
     renameSync(join(root, PROJECT_MANIFEST_PATH), join(outside, PROJECT_MANIFEST_PATH));
     symlinkSync(join(outside, PROJECT_MANIFEST_PATH), join(root, PROJECT_MANIFEST_PATH));
     expect(inspectProjectGit({ root })).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.pathEscape, path: PROJECT_MANIFEST_PATH },
+    });
+
+    const special = repository("manifest-special-node");
+    unlinkSync(join(special.root, PROJECT_MANIFEST_PATH));
+    execFileSync("mkfifo", [join(special.root, PROJECT_MANIFEST_PATH)]);
+    expect(inspectProjectGit({
+      root: special.root,
+      gitExecutable: "sceneaxi-git-must-not-run",
+    })).toMatchObject({
       ok: false,
       diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.pathEscape, path: PROJECT_MANIFEST_PATH },
     });
@@ -382,7 +412,6 @@ describe("contained project Git service", () => {
   it("preserves both sides when a canonical file is renamed", () => {
     const { root } = repository("rename");
     renameSync(join(root, "scene.json"), join(root, "moved.json"));
-    git(root, "add", "-A");
     const result = inspectProjectGit({ root });
     expect(result).toMatchObject({
       ok: true,
@@ -718,13 +747,15 @@ describe("contained project Git service", () => {
       "#!/bin/sh",
       "trigger=0",
       "for arg in \"$@\"; do",
-      "  if [ \"$arg\" = \"status\" ] || [ \"$arg\" = \"diff\" ] || [ \"$arg\" = \"add\" ] || [ \"$arg\" = \"hash-object\" ]; then trigger=1; fi",
+      "  if [ \"$arg\" = \"diff-files\" ] || [ \"$arg\" = \"diff-index\" ] || [ \"$arg\" = \"hash-object\" ]; then trigger=1; fi",
       "done",
       "if [ \"$trigger\" = \"1\" ]; then",
-      `  git config --local filter.escape.clean ${JSON.stringify(`touch ${sentinel} && cat`)}`,
+      `  git --git-dir=.git config --local filter.escape.clean ${JSON.stringify(`touch ${sentinel} && cat`)}`,
+      "  printf 'notes.txt filter=escape\\n' > .git/info/attributes",
       "  git \"$@\"",
       "  status=$?",
-      "  git config --local --unset-all filter.escape.clean",
+      "  rm -f .git/info/attributes",
+      "  git --git-dir=.git config --local --unset-all filter.escape.clean",
       "  exit $status",
       "fi",
       "exec git \"$@\"",
@@ -882,6 +913,36 @@ describe("contained project Git service", () => {
       ok: false,
       diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.recoveryPending },
     });
+    expect(recoverProjectMigration(root)).toMatchObject({
+      ok: false,
+      diagnostic: { code: "PROJECT_MIGRATION_RECOVERY_INVALID" },
+    });
+  });
+
+  it("releases commit-preparation authority after evidence failure", () => {
+    const { root } = repository("prepare-cleanup");
+    writeFileSync(join(root, "notes.txt"), "cleanup remains retryable\n");
+    expect(stageProjectGitPaths(mutationOptions(root), ["notes.txt"])).toMatchObject({ ok: true });
+    const wrapper = join(root, "git-refuses-evidence.sh");
+    writeFileSync(wrapper, [
+      "#!/bin/sh",
+      "for arg in \"$@\"; do",
+      "  if [ \"$arg\" = \"diff-index\" ]; then exit 9; fi",
+      "done",
+      "exec git \"$@\"",
+      "",
+    ].join("\n"));
+    chmodSync(wrapper, 0o700);
+    expect(prepareProjectGitCommit(
+      { ...mutationOptions(root), gitExecutable: wrapper },
+      ["notes.txt"],
+      "test cleanup",
+    )).toMatchObject({ ok: false });
+    expect(prepareProjectGitCommit(
+      mutationOptions(root),
+      ["notes.txt"],
+      "test cleanup retry",
+    )).toMatchObject({ ok: true });
   });
 
   it("reports conflicts read-only and refuses every unsafe mutation state before index changes", () => {
@@ -954,7 +1015,7 @@ describe("contained project Git service", () => {
   it("reads authoring state live from one opaque authority", () => {
     const { root } = repository("live-authority");
     writeFileSync(join(root, "notes.txt"), "live state\n");
-    let state = authoringReady;
+    let state: ProjectGitAuthoringState = authoringReady;
     const authority = createProjectGitAuthoringAuthority(root, () => state);
     state = Object.freeze({ ...authoringReady, reviewStaged: true });
     expect(stageProjectGitPaths({ root, authoring: authority }, ["notes.txt"])).toMatchObject({
