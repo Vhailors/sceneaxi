@@ -61,7 +61,8 @@ describe("desktop app offer", () => {
     expect(offer.artifactRetentionDays).toBe(90);
     expect(offer.artifactExpiresBy).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(offer.artifactExpiresBy > offer.verifiedOn).toBe(true);
-    expect(offer.retentionNote).toContain("upper bound");
+    expect(offer.retentionNote).toContain("workflow artifact");
+    expect(offer.retentionNote).toContain("90-day retention window");
     expect(offer.retentionNote).not.toMatch(/\d{4}-\d{2}-\d{2}/);
   });
 
