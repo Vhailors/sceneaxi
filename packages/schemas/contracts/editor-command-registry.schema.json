@@ -17,6 +17,9 @@
         "id": {
           "enum": [
             "project-new",
+            "input-actions-inspect",
+            "input-action-rebind",
+            "input-actions-reset",
             "project-inspect",
             "project-migration-propose",
             "project-migration-commit",
@@ -48,7 +51,7 @@
             "profiles": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["game", "web"] } }
           }
         },
-        "mutation": { "enum": ["none", "stages-change", "commits-project", "reverts-project"] },
+        "mutation": { "enum": ["none", "stages-change", "commits-project", "reverts-project", "commits-settings"] },
         "progress": {
           "type": "object",
           "additionalProperties": false,
@@ -65,8 +68,8 @@
           "additionalProperties": false,
           "required": ["kind", "target"],
           "properties": {
-            "kind": { "enum": ["none", "project-binding", "project-inspection", "project-migration-proposal", "project-migration-evidence", "authoring-snapshot", "undo-result", "redo-result", "kernel-session", "sculpt-artifact", "rarity-proposal", "command-progress"] },
-            "target": { "enum": ["none", "project", "change-review", "live-viewport"] }
+            "kind": { "enum": ["none", "project-binding", "project-inspection", "project-migration-proposal", "project-migration-evidence", "authoring-snapshot", "undo-result", "redo-result", "input-action-map", "kernel-session", "sculpt-artifact", "rarity-proposal", "command-progress"] },
+            "target": { "enum": ["none", "project", "change-review", "live-viewport", "input-settings"] }
           }
         },
         "refusals": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
@@ -80,7 +83,7 @@
           }
         },
         "inputSchema": { "type": "object" },
-        "inputShape": { "enum": ["none", "document", "export", "assistant", "assistant-agent", "job", "migration-approval"] }
+        "inputShape": { "enum": ["none", "document", "export", "assistant", "assistant-agent", "job", "migration-approval", "input-rebind", "input-reset"] }
       }
     }
   }

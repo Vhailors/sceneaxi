@@ -113,6 +113,7 @@ import {
   DESKTOP_PROJECT_BROWSER_REFUSALS,
   type DesktopProjectBrowserResponse,
 } from "./project-browser-contract.js";
+import type { DesktopInputActionHost } from "./input-action-host.js";
 
 export type DesktopBridgeOptions = {
   /** Working directory the authoring session binds to. */
@@ -138,6 +139,8 @@ export type DesktopBridgeOptions = {
   readonly projectBrowser?: Readonly<{
     handle(request: unknown): DesktopProjectBrowserResponse;
   }>;
+  /** Separate settings transaction authority; never part of document history. */
+  readonly inputActions?: DesktopInputActionHost;
 };
 
 export type DesktopAssistantProfile =
@@ -1911,6 +1914,54 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         return recovered.ok
           ? bridgeOk("command", recovered)
           : bridgeRefuse(recovered.diagnostic.code, recovered.diagnostic.message, recovered.diagnostic.path);
+      }
+      case "input-actions-inspect": {
+        const inspected = options.inputActions?.inspect();
+        if (inspected === undefined) {
+          return bridgeRefuse(
+            EDITOR_COMMAND_REFUSALS.capabilityDenied,
+            "The input-action settings host is unavailable.",
+          );
+        }
+        return inspected.ok
+          ? bridgeOk("command", inspected.data)
+          : bridgeRefuse(inspected.reason, inspected.message, inspected.detail);
+      }
+      case "input-action-rebind": {
+        const rebound = options.inputActions?.rebind({
+          scope: input["scope"] as "workspace" | "project",
+          expectedBaseVersion: String(input["expectedBaseVersion"]),
+          actionId: input["actionId"],
+          binding: input["binding"],
+          approved: input["approved"] === true,
+          reviewDigest: typeof input["reviewDigest"] === "string" ? input["reviewDigest"] : null,
+        });
+        if (rebound === undefined) {
+          return bridgeRefuse(
+            EDITOR_COMMAND_REFUSALS.capabilityDenied,
+            "The input-action settings host is unavailable.",
+          );
+        }
+        return rebound.ok
+          ? bridgeOk("command", rebound.data)
+          : bridgeRefuse(rebound.reason, rebound.message, rebound.detail);
+      }
+      case "input-actions-reset": {
+        const reset = options.inputActions?.reset({
+          scope: input["scope"] as "workspace" | "project",
+          expectedBaseVersion: String(input["expectedBaseVersion"]),
+          approved: input["approved"] === true,
+          reviewDigest: typeof input["reviewDigest"] === "string" ? input["reviewDigest"] : null,
+        });
+        if (reset === undefined) {
+          return bridgeRefuse(
+            EDITOR_COMMAND_REFUSALS.capabilityDenied,
+            "The input-action settings host is unavailable.",
+          );
+        }
+        return reset.ok
+          ? bridgeOk("command", reset.data)
+          : bridgeRefuse(reset.reason, reset.message, reset.detail);
       }
       case "ship-export-web":
         return ship({

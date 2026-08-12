@@ -26,9 +26,21 @@ describe("CLI desktop local bridge tools", () => {
         mutation: "none",
         evidence: { kind: "sculpt-artifact", target: "live-viewport" },
       });
+    expect(commands.find((command) => command["id"] === "input-action-rebind"))
+      .toMatchObject({
+        permission: "project:write",
+        mutation: "commits-settings",
+        undo: { kind: "none", commandId: null },
+        evidence: { kind: "input-action-map", target: "input-settings" },
+      });
     const tools = result.envelope.result["tools"] as Array<Record<string, unknown>>;
     expect(tools.map((tool) => tool["name"])).toContain("sceneaxi.project.propose");
     expect(tools.map((tool) => tool["name"])).toContain("sceneaxi.assistant.byo.start");
+    expect(tools.map((tool) => tool["name"])).toEqual(expect.arrayContaining([
+      "sceneaxi.input-actions.inspect",
+      "sceneaxi.input-actions.rebind",
+      "sceneaxi.input-actions.reset",
+    ]));
     expect(
       JSON.stringify(tools.map((tool) => tool["inputSchema"])).toLowerCase(),
     ).not.toMatch(/api.?key|credential|secret/);
@@ -79,6 +91,43 @@ describe("CLI desktop local bridge tools", () => {
         connected: true,
         tool: "sceneaxi.bridge.handshake",
         response: { localProtocolVersion: 1, creditRoute: "none" },
+      },
+    });
+  });
+
+  it("inspects the shared editor and Play input map through the agent-facing CLI", () => {
+    let observed: DesktopLocalBridgeClientCall | undefined;
+    const result = runCli([
+      "desktop", "bridge", "call",
+      "--tool", "sceneaxi.input-actions.inspect",
+      "--allow", "project:read",
+      "--json",
+    ], {
+      desktopBridge: (call) => {
+        observed = call;
+        return {
+          ok: true,
+          response: {
+            protocolVersion: 1,
+            id: call.id,
+            ok: true,
+            result: { kind: "sceneaxi.input-action-inspection", schemaVersion: 1 },
+          },
+        };
+      },
+    });
+    expect(result.exitCode).toBe(0);
+    expect(observed).toEqual({
+      id: "sceneaxi-cli-1",
+      permission: "project:read",
+      tool: "sceneaxi.input-actions.inspect",
+      input: {},
+    });
+    expect(result.envelope).toMatchObject({
+      ok: true,
+      result: {
+        tool: "sceneaxi.input-actions.inspect",
+        response: { kind: "sceneaxi.input-action-inspection", schemaVersion: 1 },
       },
     });
   });

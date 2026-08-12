@@ -30,10 +30,11 @@ IPC channel and the local socket adapter are two transports over that one
 | `src/lib/project-lifecycle-contract.ts` + `project-lifecycle.ts` + `project-host.ts` | everywhere / main process | typed New/Open/Recent lifecycle, canonical-root validation, and the versioned atomic recent-root registry |
 | `src/lib/bridge.ts` — `createDesktopBridge()` | main process | synchronous `handle()` over the real engine; `ipcMain.handle` adapts it in one line |
 | `src/lib/local-rpc.ts` | main process | protocol-v1 same-user Unix-socket adapter over the closed project/assistant agent-tool registry; private discovery and explicit permissions |
+| `src/lib/input-action-host.ts` | main process | atomic project/workspace override persistence plus explicit inspect/review/commit/reset; settings carry their own stale bases and never enter document undo or layout state |
 | `src/lib/provider-key-store.ts` + `byo-configuration.ts` | main process | typed OS-secure credential store, redacted configuration controller, and per-session key lease for injected BYOK runners |
 | `src/electron/provider-key-store.ts` | privileged Electron process | `safeStorage` adapter; refuses locked, unsupported, basic-text, and failed backends and persists ciphertext only |
 | `src/electron/provider-runtime.ts` | privileged Electron process | composes the existing OpenRouter adapter, Model Provider Port, profile policies, exact model pin, secure key lease, and desktop runner over an injected transport session; it also owns the no-network rarity fixture provider used by the packaged Agent path and its acceptance tests |
-| `src/electron/preload.ts` | preload | exposes one frozen global: the existing engine request, typed project lifecycle method, native asset-picker method, and separate BYOK configuration method on their bounded IPC channels |
+| `src/electron/preload.ts` | preload | exposes one frozen global: the existing engine request, typed project lifecycle method, native asset-picker method, read-only effective input-map restore, and separate BYOK configuration method on their bounded IPC channels |
 | `src/renderer/viewport.ts` | the window | the desktop tier's **one renderer-owning module** (see below) |
 
 Bridge actions and what each reaches — only through public seams:
@@ -49,6 +50,18 @@ Bridge actions and what each reaches — only through public seams:
 | `assistant` | Build uses `runAssistantSculptAction()` in `@sceneaxi/authoring-core`: deterministic local compilation by default, or an explicitly injected BYOK runner. Agent uses the privileged no-network rarity fixture through the same Model Provider Port and stages its result in the existing DesktopSession review. Hosted refuses here because this tier has no identity/credit authority |
 | `authoring` | `createDesktopSession()` from `@sceneaxi/desktop-shell` — the same propose/accept protocol as the CLI and web-shell. A `documentPath` arrives from the renderer over IPC — here, and on `scene` and `open-path` alike — and the authoring core resolves it against `cwd` without a containment check of its own, so the bridge owns that constraint for every action that takes one: an absolute path, one escaping the project directory, or one whose **canonical** path leaves it through a symlink refuses `DESKTOP_BRIDGE_REQUEST_MALFORMED`. Containment is judged after symlink resolution because that is where the bytes land; a missing leaf still resolves, so this is containment and not an existence check |
 | `frame-report` | nothing: it *accepts* the renderer's real presentation frame so main and the smoke can see what was claimed |
+
+Input-action commands use the bridge's registered `command` action. `inspect`
+returns both scope bases and the effective project-over-workspace map. `rebind`
+and `reset` first return a review when `approved:false`; an exact replay with
+the same scope base and `approved:true` commits through the existing atomic-write
+authority. Duplicate/conflicting bindings, reserved focus actions, malformed
+device controls, context leakage, Kids, missing capability, stale base, invalid
+persisted bytes, and write failure refuse by stable name before mutation. The
+files are `.sceneaxi/input-actions.v1.json` for a project and
+`input-actions/input-actions.v1.json` under Electron user data for the workspace.
+They are intentionally separate from document history and from the later layout
+state owned by #265.
 
 ### Ship → Export Web
 

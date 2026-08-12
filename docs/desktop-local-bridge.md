@@ -65,8 +65,8 @@ declared by the checked-in tool definition.
 | Permission | Tools |
 |---|---|
 | `bridge:connect` | `sceneaxi.bridge.handshake` |
-| `project:read` | `sceneaxi.project.status` |
-| `project:write` | `sceneaxi.project.propose`, `accept`, `reject`, `recover`, `restart`, `undo` |
+| `project:read` | `sceneaxi.project.status`, `project.inspect`, `input-actions.inspect` |
+| `project:write` | `sceneaxi.project.propose`, `accept`, `reject`, `recover`, `restart`, `undo`, `redo`, migration propose/commit/recover, `input-actions.rebind`, `input-actions.reset` |
 | `assistant:read` | `sceneaxi.assistant.status` |
 | `assistant:run` | `sceneaxi.assistant.local.start`, `sceneaxi.assistant.byo.start`, `sceneaxi.assistant.abandon` |
 

@@ -1070,6 +1070,7 @@ export type DesktopVisualView = Readonly<{
       items: ReadonlyArray<
         Readonly<{
           commandId: DesktopInteractionCommandId;
+          actionId: string | null;
           label: string;
           accelerator: string;
           control: DesktopControl;
@@ -1374,6 +1375,7 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
               (command) =>
                 Object.freeze({
                   commandId: command.id,
+                  actionId: command.actionId,
                   label: command.label,
                   accelerator: command.accelerator,
                   control:

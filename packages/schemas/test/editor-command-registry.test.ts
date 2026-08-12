@@ -23,6 +23,9 @@ describe("full-editor command registry", () => {
     expect(schema.type).toBe("array");
     expect(EDITOR_COMMAND_REGISTRY.map((command) => command.id)).toEqual([
       "project-new",
+      "input-actions-inspect",
+      "input-action-rebind",
+      "input-actions-reset",
       "project-inspect",
       "project-migration-propose",
       "project-migration-commit",

@@ -24,7 +24,13 @@ import {
   type ThreePresentationCoreOptions,
 } from "@sceneaxi/engine-presentation";
 import { formatSafeRarityEvidence } from "@sceneaxi/authoring-core/rarity-evidence";
-import { createEditorCommandInvocation } from "@sceneaxi/schemas";
+import {
+  DEFAULT_INPUT_ACTION_MAP,
+  createEditorCommandInvocation,
+  resolveInputAction,
+  type InputActionContext,
+  type InputActionMap,
+} from "@sceneaxi/schemas";
 import { createDesktopAssistantViewportController } from "../lib/assistant-viewport.js";
 import type { DesktopAssistantProfile } from "../lib/bridge.js";
 import { desktopAssistantRuntimeSignal } from "./assistant-runtime.js";
@@ -74,10 +80,67 @@ import { installDesktopByoConfigurationSurface } from "./byo-configuration.js";
 
 type BridgeGlobal = {
   request(request: unknown): Promise<DesktopBridgeResponse>;
+  inputActions?(): Promise<unknown>;
   configureByo?: (
     request: DesktopByoConfigurationRequest,
   ) => Promise<DesktopByoConfigurationResponse>;
 };
+
+export function attachDesktopViewportInputActions(
+  canvas: HTMLCanvasElement,
+  camera: Readonly<{
+    dragOrbit(deltaX: number, deltaY: number): unknown;
+    wheelZoom(deltaY: number): unknown;
+  }>,
+  map: InputActionMap,
+  context: () => InputActionContext,
+): () => void {
+  let dragging = false;
+  let lastX = 0;
+  let lastY = 0;
+  const pointerBinding = (button: number) => ({
+    device: "pointer" as const,
+    button,
+    gesture: "drag" as const,
+  });
+  const onPointerDown = (event: PointerEvent) => {
+    const resolved = resolveInputAction(map, context(), pointerBinding(event.button));
+    if (!resolved.ok || resolved.action.id !== "viewport.orbit") return;
+    dragging = true;
+    lastX = event.clientX;
+    lastY = event.clientY;
+  };
+  const onPointerMove = (event: PointerEvent) => {
+    if (!dragging) return;
+    camera.dragOrbit(event.clientX - lastX, event.clientY - lastY);
+    lastX = event.clientX;
+    lastY = event.clientY;
+  };
+  const stopDragging = () => { dragging = false; };
+  const onWheel = (event: WheelEvent) => {
+    const resolved = resolveInputAction(map, context(), {
+      device: "wheel",
+      axis: "y",
+      direction: event.deltaY < 0 ? "negative" : event.deltaY > 0 ? "positive" : "any",
+    });
+    if (!resolved.ok || resolved.action.id !== "viewport.zoom") return;
+    camera.wheelZoom(event.deltaY);
+  };
+  canvas.addEventListener("pointerdown", onPointerDown);
+  canvas.addEventListener("pointermove", onPointerMove);
+  canvas.addEventListener("pointerup", stopDragging);
+  canvas.addEventListener("pointercancel", stopDragging);
+  canvas.addEventListener("pointerleave", stopDragging);
+  canvas.addEventListener("wheel", onWheel, { passive: true });
+  return () => {
+    canvas.removeEventListener("pointerdown", onPointerDown);
+    canvas.removeEventListener("pointermove", onPointerMove);
+    canvas.removeEventListener("pointerup", stopDragging);
+    canvas.removeEventListener("pointercancel", stopDragging);
+    canvas.removeEventListener("pointerleave", stopDragging);
+    canvas.removeEventListener("wheel", onWheel);
+  };
+}
 
 // A rejected bridge call is worth retrying — the next frame is milliseconds away —
 // but a structural rejection (no handler on the channel, a payload that cannot be
@@ -664,6 +727,19 @@ async function mountLiveViewport(): Promise<void> {
     refuseLiveViewport(stage, "the desktop bridge is not exposed.");
     return;
   }
+  let inputActionMap = DEFAULT_INPUT_ACTION_MAP;
+  if (port.inputActions !== undefined) {
+    const inspection = await port.inputActions();
+    if (typeof inspection !== "object" || inspection === null ||
+      !("ok" in inspection) || inspection.ok !== true || !("data" in inspection) ||
+      typeof inspection.data !== "object" || inspection.data === null ||
+      !("map" in inspection.data)) {
+      refuseLiveViewport(stage, "the persisted input-action map was refused.");
+      return;
+    }
+    inputActionMap = inspection.data.map as InputActionMap;
+  }
+  let viewportInputContext: InputActionContext = "editor";
   const byoConfigurationBound = installDesktopByoConfigurationSurface(port);
   if (!byoConfigurationBound) {
     openPathLine(
@@ -726,7 +802,12 @@ async function mountLiveViewport(): Promise<void> {
   try {
     mountDesktopScene(mounts, scene, backend);
     backend.frameMountedContent();
-    backend.camera.attach(canvas);
+    attachDesktopViewportInputActions(
+      canvas,
+      backend.camera,
+      inputActionMap,
+      () => viewportInputContext,
+    );
   } catch (error) {
     mounts.dispose();
     canvas.remove();
@@ -815,6 +896,7 @@ async function mountLiveViewport(): Promise<void> {
     } | null;
     const playable = playableExercise(event.detail);
     if (detail === null || playable === null) return;
+    viewportInputContext = "play";
     const exercise = playable as PlayableExercise & RarityReportable;
     const synchronized = synchronizeViewportScene({
       mounts,

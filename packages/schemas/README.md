@@ -2,6 +2,15 @@
 
 Shared contracts home for SceneAxi. Zero internal dependencies by rule.
 
+## Unified input actions (sceneaxi#257)
+
+`contracts/input-action-map.schema.json` and `src/input-action-registry.ts` own
+the versioned editor/Play action vocabulary, advertised defaults, device input
+validation, context isolation, deterministic project/workspace composition,
+conflict detection, and stable refusals. Desktop persistence and command
+adaptation live in `desktop/linux`; schemas remains browser-safe and performs no
+I/O.
+
 ## Deterministic rarity (sceneaxi#240)
 
 `contracts/rarity.schema.json` and `src/rarity.ts` own the versioned policy,

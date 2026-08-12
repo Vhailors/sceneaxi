@@ -45,6 +45,11 @@ import {
 } from "../lib/local-rpc.js";
 import { seedDesktopProject } from "../lib/project-seed.js";
 import {
+  DESKTOP_INPUT_ACTIONS_CHANNEL,
+  createDesktopInputActionHost,
+  type DesktopInputActionHost,
+} from "../lib/input-action-host.js";
+import {
   createDesktopProjectHost,
   desktopProjectReloadRequired,
 } from "../lib/project-host.js";
@@ -178,12 +183,14 @@ async function start(): Promise<void> {
       : join(__dirname, "sceneaxi-publish-no-replace");
   }
   let bridge: DesktopBridge | null = null;
+  let inputActions: DesktopInputActionHost | null = null;
   let projectBrowser: DesktopProjectBrowser | null = null;
   let activeRoot: string | null = null;
 
   const activateProject = async (root: string): Promise<DesktopBridge> => {
     if (bridge !== null && activeRoot === root) return bridge;
     bridge = null;
+    inputActions = null;
     projectBrowser = null;
     activeRoot = null;
     await localBridgeServer?.close();
@@ -210,9 +217,14 @@ async function start(): Promise<void> {
     const commandCapabilities = inspectedProject.ok && inspectedProject.inspection.state === "native"
       ? inspectedProject.inspection.capabilities.map((grant) => grant.id)
       : undefined;
+    const nextInputActions = createDesktopInputActionHost({
+      projectRoot: root,
+      workspaceDirectory: join(app.getPath("userData"), "input-actions"),
+    });
     const next = createDesktopBridge({
       cwd: root,
       ...(commandCapabilities === undefined ? {} : { commandCapabilities }),
+      inputActions: nextInputActions,
       projectBrowser: nextProjectBrowser,
       onFrameReport: (report) => frameReported?.(report),
       ...(byoRuntime.runByoAssistant === undefined
@@ -256,6 +268,7 @@ async function start(): Promise<void> {
       );
     }
     bridge = next;
+    inputActions = nextInputActions;
     projectBrowser = nextProjectBrowser;
     activeRoot = root;
     return next;
@@ -307,6 +320,14 @@ async function start(): Promise<void> {
         DESKTOP_PROJECT_REFUSALS.projectRequired,
         "Choose New Project, Open Project, or a validated recent project before using the engine bridge.",
       ),
+  );
+  ipcMain.handle(DESKTOP_INPUT_ACTIONS_CHANNEL, () =>
+    inputActions?.inspect() ?? {
+      ok: false,
+      reason: DESKTOP_PROJECT_REFUSALS.projectRequired,
+      message: "Choose a validated project before reading input actions.",
+      detail: null,
+    },
   );
   ipcMain.handle(DESKTOP_ASSET_IMPORT_CHANNEL, async (_event, request: unknown) => {
     if (bridge === null || activeRoot === null) {

@@ -30,8 +30,11 @@
 
 import { formatSafeRarityEvidence } from "@sceneaxi/authoring-core/rarity-evidence";
 import {
+  DEFAULT_INPUT_ACTION_MAP,
   DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS,
   EDITOR_COMMAND_REGISTRY,
+  INPUT_ACTION_REFUSALS,
+  INPUT_ACTION_REGISTRY,
   type EditorCommandId,
 } from "@sceneaxi/schemas";
 import {
@@ -413,7 +416,7 @@ function titleBar(view: DesktopVisualView): string {
         .map((item) =>
           button(
             item.control,
-            `<span>${escapeHtml(item.label)}</span>${item.accelerator === "" ? "" : `<kbd>${escapeHtml(item.accelerator)}</kbd>`}`,
+            `<span>${escapeHtml(item.label)}</span>${item.accelerator === "" ? "" : `<kbd data-input-binding-label="${escapeHtml(item.actionId ?? "")}">${escapeHtml(item.accelerator)}</kbd>`}`,
             "menu-command",
             ` role="menuitem" data-command="${escapeHtml(item.commandId)}"`,
           ),
@@ -436,7 +439,7 @@ function titleBar(view: DesktopVisualView): string {
     ${drawers}
     ${button(
       view.overlay.search,
-      `${escapeHtml(view.overlay.search.label)} <kbd>${escapeHtml(DESKTOP_PALETTE_SHORTCUT.accelerator)}</kbd>`,
+      `${escapeHtml(view.overlay.search.label)} <kbd data-input-binding-label="${escapeHtml(DESKTOP_PALETTE_SHORTCUT.actionId)}">${escapeHtml(DESKTOP_PALETTE_SHORTCUT.accelerator)}</kbd>`,
       "ghost-button",
       ` data-command="${escapeHtml(DESKTOP_PALETTE_SHORTCUT.id)}"`,
     )}
@@ -879,7 +882,7 @@ function overlays(view: DesktopVisualView): string {
           (item) =>
             `<li>${button(
               item.control,
-              `<span class="palette-name">${escapeHtml(item.name)}</span>${item.shortcut === "" ? "" : `<kbd>${escapeHtml(item.shortcut)}</kbd>`}`,
+              `<span class="palette-name">${escapeHtml(item.name)}</span>${item.shortcut === "" ? "" : `<kbd data-input-binding-label="${escapeHtml(DESKTOP_INTERACTION_COMMANDS.find((command) => command.id === item.commandId)?.actionId ?? "")}">${escapeHtml(item.shortcut)}</kbd>`}`,
               "palette-item",
               ` data-command="${escapeHtml(item.commandId)}"`,
             )}</li>`,
@@ -1422,6 +1425,9 @@ function script(view: DesktopVisualView): string {
     assistantDrawerQuery: belowTier("regular"),
     commands: DESKTOP_INTERACTION_COMMANDS,
     editorCommands: EDITOR_COMMAND_REGISTRY,
+    inputActions: INPUT_ACTION_REGISTRY,
+    defaultInputActionMap: DEFAULT_INPUT_ACTION_MAP,
+    inputActionRefusals: INPUT_ACTION_REFUSALS,
     paletteShortcut: DESKTOP_PALETTE_SHORTCUT,
     commandRefusals: {
       undoUnavailable: DESKTOP_VISUAL_REFUSALS.undoUnavailable,
@@ -1482,6 +1488,52 @@ if (shell) {
   // the same pre-edit document and the second would replace the first in the
   // host's single-proposal session — both reporting success, one edit gone.
   let inFlight = false;
+  let activeInputActionMap = T.defaultInputActionMap;
+
+  const bindingLabel = (binding) => {
+    if (binding.device === 'keyboard') {
+      const names = { primary: 'Ctrl/Cmd', control: 'Ctrl', meta: 'Cmd', alt: 'Alt', shift: 'Shift' };
+      const key = binding.code.startsWith('Key') ? binding.code.slice(3)
+        : binding.code.startsWith('Digit') ? binding.code.slice(5) : binding.code;
+      return binding.modifiers.map((modifier) => names[modifier]).concat(key).join('+');
+    }
+    if (binding.device === 'pointer') return 'Pointer ' + binding.button + ' ' + binding.gesture;
+    if (binding.device === 'wheel') return 'Wheel ' + binding.axis.toUpperCase();
+    return 'Controller ' + (binding.controller + 1) + ' ' + binding.input + ' ' + binding.control;
+  };
+
+  const refreshInputBindingLabels = () => {
+    q('[data-input-binding-label]').forEach((el) => {
+      const row = activeInputActionMap.bindings.find((candidate) =>
+        candidate.actionId === el.dataset.inputBindingLabel);
+      if (row) el.textContent = bindingLabel(row.binding);
+    });
+  };
+
+  const keyboardBindingMatches = (binding, event) => {
+    if (!binding || binding.device !== 'keyboard') return false;
+    const fallback = String(event.key).length === 1
+      ? 'Key' + String(event.key).toUpperCase()
+      : String(event.key);
+    if (binding.code !== (event.code || fallback)) return false;
+    const modifiers = binding.modifiers;
+    const primary = event.ctrlKey || event.metaKey;
+    if (modifiers.includes('primary') !== primary) return false;
+    if (!modifiers.includes('primary')) {
+      if (modifiers.includes('control') !== Boolean(event.ctrlKey)) return false;
+      if (modifiers.includes('meta') !== Boolean(event.metaKey)) return false;
+    }
+    return modifiers.includes('alt') === Boolean(event.altKey) &&
+      modifiers.includes('shift') === Boolean(event.shiftKey);
+  };
+
+  const resolveKeyboardAction = (event) => {
+    const row = activeInputActionMap.bindings.find((candidate) =>
+      keyboardBindingMatches(candidate.binding, event));
+    if (!row) return null;
+    const definition = T.inputActions.find((candidate) => candidate.id === row.actionId);
+    return definition && definition.contexts.includes('editor') ? definition : null;
+  };
 
   const clearShipEvidence = () => {
     shippedSourceDigest = null;
@@ -1899,6 +1951,31 @@ if (shell) {
     const linux = globalThis.sceneaxiDesktopLinux;
     const candidate = portable || linux;
     return candidate && typeof candidate.project === 'function' ? candidate : null;
+  };
+
+  const inputActionPort = () => {
+    const portable = globalThis.sceneaxiDesktop;
+    const linux = globalThis.sceneaxiDesktopLinux;
+    const candidate = portable || linux;
+    return candidate && typeof candidate.inputActions === 'function' ? candidate : null;
+  };
+
+  const hydrateInputActions = async () => {
+    const port = inputActionPort();
+    if (port === null || activeProject === null) return;
+    try {
+      const response = await port.inputActions();
+      const map = response && response.ok === true && response.data && response.data.map;
+      if (!map || map.schemaVersion !== 1 || map.kind !== 'sceneaxi.input-action-map' ||
+          !Array.isArray(map.bindings) || map.bindings.length !== T.inputActions.length) {
+        commandRefusal(response?.reason || T.inputActionRefusals.persistedStateInvalid);
+        return;
+      }
+      activeInputActionMap = map;
+      refreshInputBindingLabels();
+    } catch {
+      commandRefusal(T.inputActionRefusals.persistedStateInvalid);
+    }
   };
 
   const assetImportPort = () => {
@@ -3617,23 +3694,14 @@ if (shell) {
   // still the ancestor, but a restored or lost focus must not silently drop the
   // Escape key, and the trap has to see every Tab.
   document.addEventListener('keydown', (event) => {
-    const modified = (event.ctrlKey || event.metaKey) && !event.altKey;
-    if (modified) {
-      const key = String(event.key).toLowerCase();
-      const command = key === 'z' && event.shiftKey
-        ? T.commands.find((candidate) => candidate.id === 'edit-redo')
-        : event.shiftKey
-          ? null
-          : key === T.paletteShortcut.key
-        ? T.paletteShortcut
-        : T.commands.find((candidate) => candidate.key === key);
-      if (command) {
-        const textEntry = isTextEntryTarget(event.target);
-        if (!textEntry || command.allowInTextEntry) {
-          event.preventDefault();
-          executeCommand(command.id);
-          return;
-        }
+    const action = resolveKeyboardAction(event);
+    if (action && (action.id === T.paletteShortcut.actionId || action.commandId)) {
+      const textEntry = isTextEntryTarget(event.target);
+      if (!textEntry || action.allowInTextEntry) {
+        event.preventDefault();
+        if (action.id === T.paletteShortcut.actionId) executeCommand(T.paletteShortcut.id);
+        else if (action.commandId) executeCommand(action.commandId);
+        return;
       }
     }
     if (shell.dataset.overlay === 'none') {
@@ -3691,7 +3759,7 @@ if (shell) {
   syncReview(null);
   syncAssistantTier();
   syncCommandAvailability();
-  void syncProjectLifecycle();
+  void syncProjectLifecycle().then(hydrateInputActions);
 }
 `;
 }

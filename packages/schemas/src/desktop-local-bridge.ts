@@ -9,6 +9,7 @@
 import { isJsonObject, isJsonValue, type JsonObject } from "./document.js";
 import {
   editorCommand,
+  validateEditorCommandInput,
   type EditorCommandId,
   type EditorCommandTransactionResult,
 } from "./editor-command-registry.js";
@@ -73,7 +74,8 @@ const commandTool = (definition: Readonly<{
     ...definition,
     permission: command.permission,
     mutatesProject:
-      command.mutation === "commits-project" || command.mutation === "reverts-project",
+      command.mutation === "commits-project" || command.mutation === "reverts-project" ||
+      command.mutation === "commits-settings",
     creditRoute: "none",
     inputSchema: command.inputSchema,
   });
@@ -123,6 +125,24 @@ export const DESKTOP_LOCAL_BRIDGE_TOOLS = Object.freeze([
     name: "sceneaxi.project.migration.recover",
     commandId: "project-migration-recover",
     description: "Deterministically recover the one prepared project migration transaction.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.input-actions.inspect",
+    commandId: "input-actions-inspect",
+    description: "Inspect the effective editor and Play action map plus project/workspace bases.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.input-actions.rebind",
+    commandId: "input-action-rebind",
+    description: "Review or commit one conflict-checked project/workspace input-action rebind.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.input-actions.reset",
+    commandId: "input-actions-reset",
+    description: "Review or commit an explicit reset of one input-action override scope.",
     providerRoute: "none",
   }),
   tool({
@@ -323,6 +343,11 @@ export function validateDesktopLocalBridgeToolInput(
   input: unknown,
 ): input is JsonObject {
   if (!isJsonObject(input)) return false;
+  const registered = desktopLocalBridgeTool(toolName);
+  if (registered?.commandId !== null && registered?.commandId !== undefined) {
+    const command = editorCommand(registered.commandId);
+    return command !== undefined && validateEditorCommandInput(command, input);
+  }
   switch (toolName) {
     case "sceneaxi.project.status":
     case "sceneaxi.project.restart":
