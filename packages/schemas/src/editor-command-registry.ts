@@ -184,7 +184,7 @@ export type EditorCommandTransactionResult = Readonly<{
   schemaVersion: typeof EDITOR_COMMAND_SCHEMA_VERSION;
   commandId: EditorCommandId;
   transactionId: string | null;
-  status: "completed" | "recovery-pending" | "refused";
+  status: "reviewing" | "completed" | "recovery-pending" | "refused";
   progress: EditorCommandProgress;
   evidence: Readonly<{
     kind: EditorCommandDefinition["evidence"]["kind"];
@@ -192,6 +192,7 @@ export type EditorCommandTransactionResult = Readonly<{
     documentPaths: readonly string[];
   }>;
   refusal: string | null;
+  undo: EditorCommandDefinition["undo"];
 }>;
 
 const noInput = Object.freeze({
@@ -1143,5 +1144,6 @@ export function editorCommandTransactionResult(input: Readonly<{
       documentPaths: Object.freeze([...(input.documentPaths ?? [])]),
     }),
     refusal: input.refusal ?? null,
+    undo: command.undo,
   });
 }

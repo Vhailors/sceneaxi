@@ -274,7 +274,7 @@ export const DESKTOP_SCENE_TRANSLATION_X_PROPERTY = Object.freeze({
   id: "translation-x" as const,
   label: "Translation X",
   entityId: DESKTOP_OPEN_PLACEMENTS[1].instanceId,
-  entityLabel: DESKTOP_OPEN_PLACEMENTS[1].label,
+  entityLabel: DESKTOP_OPEN_PLACEMENTS[1].instanceId,
   jsonPointer: "/data/composedScene" as const,
   step: 0.1,
 });
@@ -290,12 +290,6 @@ function artifactIdOf(value: unknown): string {
   return descriptor !== undefined && "value" in descriptor && typeof descriptor.value === "string"
     ? descriptor.value
     : "";
-}
-
-function desktopPlacementLabels(): ReadonlyMap<string, string> {
-  return new Map(
-    DESKTOP_OPEN_PLACEMENTS.map((placement) => [placement.instanceId, placement.label]),
-  );
 }
 
 /**
@@ -403,7 +397,7 @@ export function desktopOpenScene(): DesktopSceneResult {
     });
   }
 
-  return withImportedAssets({}, composed, mountableScene(composed, desktopPlacementLabels()));
+  return withImportedAssets({}, composed, mountableScene(composed));
 }
 
 export function desktopSceneFromDocumentData(data: unknown): DesktopSceneResult {
@@ -435,7 +429,7 @@ export function desktopSceneFromDocumentData(data: unknown): DesktopSceneResult 
       message: "The active Scene Document composition could not be reproduced.",
     });
   }
-  return withImportedAssets(data, composed, mountableScene(composed, desktopPlacementLabels()));
+  return withImportedAssets(data, composed, mountableScene(composed));
 }
 
 type DesktopEditableCompositionRead =
@@ -480,10 +474,9 @@ function editableEntityOf(
   stored: ComposedScene,
   instance: ComposedSceneInstance,
 ): DesktopSceneEditableEntity {
-  const knownLabel = desktopPlacementLabels().get(instance.instanceId);
   return Object.freeze({
     id: instance.instanceId,
-    label: knownLabel ?? `Local ${instance.artifactId}`,
+    label: `Object ${instance.artifactId} · Instance ${instance.instanceId}`,
     artifactId: instance.artifactId,
     parentInstanceId: instance.parentInstanceId,
     depth: instance.depth,

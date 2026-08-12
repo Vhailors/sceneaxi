@@ -342,10 +342,52 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     contentByteLength: number;
   }> | null = null;
   let selectedSceneInstanceIds: readonly string[] = Object.freeze([]);
+  let sceneSelectionStale = false;
 
   const authoringSession = (): DesktopSession => {
     session ??= options.createAuthoringSession?.() ?? createDesktopSession({ cwd: options.cwd });
     return session;
+  };
+
+  const currentSceneSelection = (
+    documentData: Readonly<Record<string, unknown>>,
+    contentHash: string,
+    documentPath: string,
+  ) => {
+    if (selectedSceneInstanceIds.length === 0) return null;
+    const inspected = inspectDesktopSceneProperties({
+      documentData,
+      contentHash,
+      documentPath,
+      selection: selectedSceneInstanceIds,
+    });
+    if (
+      !inspected.ok &&
+      inspected.reason === DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale
+    ) {
+      sceneSelectionStale = true;
+    }
+    if (!sceneSelectionStale) return inspected;
+    const recovery = inspectDesktopSceneProperties({
+      documentData,
+      contentHash,
+      documentPath,
+    });
+    if (!recovery.ok) return recovery;
+    return Object.freeze({
+      ok: false as const,
+      reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+      diagnostics: Object.freeze([
+        Object.freeze({
+          code: "invalid-proposal" as const,
+          message: "The retained scene selection is stale and requires an explicit replacement.",
+          documentPath,
+        }),
+      ]),
+      contentHash: recovery.contentHash,
+      entities: recovery.entities,
+      hierarchy: recovery.hierarchy,
+    });
   };
 
   const withRarityProposalEvidence = (snapshot: DesktopSnapshot) =>
@@ -1189,19 +1231,6 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       reconcileRarityAssistantDocument(enriched, retirementReason);
       return enriched;
     };
-    const currentSceneSelection = (
-      documentData: Readonly<Record<string, unknown>>,
-      contentHash: string,
-      documentPath: string,
-    ) => {
-      if (selectedSceneInstanceIds.length === 0) return null;
-      return inspectDesktopSceneProperties({
-        documentData,
-        contentHash,
-        documentPath,
-        selection: selectedSceneInstanceIds,
-      });
-    };
     const settleRarityProposalEvidence = (snapshot: DesktopSnapshot) => {
       const decorated = withRarityProposalEvidence(snapshot);
       if (
@@ -2038,31 +2067,56 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     const diagnostics = field(data, "diagnostics");
     const firstDiagnostic = Array.isArray(diagnostics) ? diagnostics[0] : undefined;
     const diagnosticCode = field(firstDiagnostic, "code");
-    const refusal = diagnosticCode === "content-hash-conflict"
-      ? EDITOR_COMMAND_REFUSALS.staleBase
-      : diagnosticCode === "invalid-transaction-phase"
-        ? EDITOR_COMMAND_REFUSALS.invalidPhase
-        : diagnosticCode;
+    const responseReason = field(data, "reason");
+    const refusal = typeof responseReason === "string"
+      ? responseReason
+      : diagnosticCode === "content-hash-conflict"
+        ? EDITOR_COMMAND_REFUSALS.staleBase
+        : diagnosticCode === "invalid-transaction-phase"
+          ? EDITOR_COMMAND_REFUSALS.invalidPhase
+          : diagnosticCode;
     const refused = typeof refusal === "string";
+    const phase = field(data, "phase");
+    const reviewing = !refused && phase === "reviewing";
     const appliedPaths = field(data, "appliedPaths");
     const restoredPaths = field(data, "restoredPaths");
+    const proposal = field(data, "proposal");
+    const proposalEdits = field(proposal, "edits");
     const documentPaths = Array.isArray(appliedPaths)
       ? appliedPaths.filter((value): value is string => typeof value === "string")
       : Array.isArray(restoredPaths)
         ? restoredPaths.filter((value): value is string => typeof value === "string")
-        : [];
+        : Array.isArray(proposalEdits)
+          ? proposalEdits
+              .map((edit) => field(edit, "documentPath"))
+              .filter((value): value is string => typeof value === "string")
+          : [];
     const transaction = editorCommandTransactionResult({
       commandId,
       ...(typeof transactionId === "string" ? { transactionId } : {}),
-      status: refused ? "refused" : recoveryPending ? "recovery-pending" : "completed",
-      phase: refused ? "refused" : recoveryPending ? "recovering" : "completed",
-      percent: recoveryPending ? 75 : 100,
+      status: refused
+        ? "refused"
+        : reviewing
+          ? "reviewing"
+          : recoveryPending
+            ? "recovery-pending"
+            : "completed",
+      phase: refused
+        ? "refused"
+        : reviewing
+          ? "reviewing"
+          : recoveryPending
+            ? "recovering"
+            : "completed",
+      percent: reviewing ? 50 : recoveryPending ? 75 : 100,
       message: refused
         ? String(field(firstDiagnostic, "message") ?? "The transaction was refused.")
-        : recoveryPending
-          ? "Canonical bytes are durable; journal finalization is pending."
-          : "The registered command transaction completed.",
-      terminal: !recoveryPending,
+        : reviewing
+          ? "The registered command staged a reviewable hierarchy transaction."
+          : recoveryPending
+            ? "Canonical bytes are durable; journal finalization is pending."
+            : "The registered command transaction completed.",
+      terminal: !reviewing && !recoveryPending,
       documentPaths,
       ...(typeof refusal === "string" ? { refusal } : {}),
     });
@@ -2223,15 +2277,26 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           SCENE_DOCUMENT_REFUSALS,
         );
         if (!read.ok) return bridgeRefuse(read.reason, read.message);
-        const inspected = inspectDesktopSceneProperties({
-          documentData: read.status.data,
-          contentHash: read.status.contentHash,
-          documentPath: String(documentPath),
-          ...(selectedSceneInstanceIds.length === 0
-            ? {}
-            : { selection: selectedSceneInstanceIds }),
-        });
-        if (inspected.ok) selectedSceneInstanceIds = inspected.selection.instanceIds;
+        const inspected = selectedSceneInstanceIds.length === 0
+          ? inspectDesktopSceneProperties({
+              documentData: read.status.data,
+              contentHash: read.status.contentHash,
+              documentPath: String(documentPath),
+            })
+          : currentSceneSelection(
+              read.status.data,
+              read.status.contentHash,
+              String(documentPath),
+            );
+        if (inspected === null) {
+          return bridgeRefuse(
+            DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+            "The scene hierarchy inspection could not resolve a current selection.",
+          );
+        }
+        if (inspected.ok && !sceneSelectionStale) {
+          selectedSceneInstanceIds = inspected.selection.instanceIds;
+        }
         return bridgeOk("command", Object.freeze({
           ...inspected,
           authoringSnapshot: withRarityProposalEvidence(authoringSession().snapshot()),
@@ -2258,6 +2323,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           );
         }
         selectedSceneInstanceIds = inspected.selection.instanceIds;
+        sceneSelectionStale = false;
         return bridgeOk("command", inspected);
       }
       case "scene-property-set": {
@@ -2308,19 +2374,28 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           profile: input["profile"],
           operation,
         }, true);
-        if (!staged.ok) return staged;
+        if (!staged.ok) return commandTransaction(validated.command.id, staged);
         if (field(staged.data, "ok") === false) {
           if (field(staged.data, "reason") === DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale) {
-            return bridgeOk("command", staged.data);
+            return commandTransaction(
+              validated.command.id,
+              bridgeOk("command", staged.data),
+            );
           }
           const diagnostics = field(staged.data, "diagnostics");
           const diagnostic = Array.isArray(diagnostics) ? diagnostics[0] : undefined;
-          return bridgeRefuse(
-            String(field(staged.data, "reason") ?? field(diagnostic, "code") ?? DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported),
-            String(field(diagnostic, "message") ?? "The hierarchy command was refused before review."),
+          return commandTransaction(
+            validated.command.id,
+            bridgeRefuse(
+              String(field(staged.data, "reason") ?? field(diagnostic, "code") ?? DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported),
+              String(field(diagnostic, "message") ?? "The hierarchy command was refused before review."),
+            ),
           );
         }
-        return bridgeOk("command", staged.data);
+        return commandTransaction(
+          validated.command.id,
+          bridgeOk("command", staged.data),
+        );
       }
       case "run-play":
         return openPathExercise({ documentPath: input["documentPath"] });

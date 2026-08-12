@@ -258,8 +258,28 @@ describe("full-editor hierarchy vertical", () => {
       ok: true,
       data: {
         phase: "reviewing",
+        transaction: {
+          schemaVersion: 1,
+          commandId: "scene-object-reparent",
+          transactionId: null,
+          status: "reviewing",
+          progress: { phase: "reviewing", percent: 50, terminal: false },
+          evidence: {
+            kind: "scene-hierarchy",
+            target: "change-review",
+            documentPaths: [DESKTOP_ACTIVE_DOCUMENT_PATH],
+          },
+          refusal: null,
+          undo: { kind: "none", commandId: null },
+        },
         sceneEditOperation: { kind: "reparent-object", transformPolicy: "preserve-world" },
         editableScene: {
+          entities: expect.arrayContaining([
+            expect.objectContaining({
+              id: "desktop-crate-beside",
+              label: expect.stringContaining("Instance desktop-crate-beside"),
+            }),
+          ]),
           hierarchy: {
             objects: expect.arrayContaining([
               expect.objectContaining({
@@ -272,6 +292,8 @@ describe("full-editor hierarchy vertical", () => {
         },
       },
     });
+    expect(JSON.stringify(staged)).not.toContain("Placed beside the root");
+    expect(JSON.stringify(staged)).not.toContain("Stacked on the root");
     expect(readFileSync(path, "utf8")).toBe(before);
 
     const accepted = command(bridge, "change-review-accept", "desktop-control", {});
@@ -283,12 +305,20 @@ describe("full-editor hierarchy vertical", () => {
     expect(after).not.toBe(before);
 
     const reopened = hierarchyBridge(root);
-    expect(command(reopened, "scene-hierarchy-inspect", "local-agent", {
+    const reopenedInspection = command(reopened, "scene-hierarchy-inspect", "local-agent", {
       documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
       profile: "game",
-    })).toMatchObject({
+    });
+    expect(reopenedInspection).toMatchObject({
       ok: true,
       data: {
+        entities: expect.arrayContaining([
+          expect.objectContaining({
+            id: "desktop-crate-beside",
+            label: expect.stringContaining("Instance desktop-crate-beside"),
+            parentInstanceId: "desktop-crate-stacked",
+          }),
+        ]),
         hierarchy: {
           objects: expect.arrayContaining([
             expect.objectContaining({ id: "desktop-crate-beside", parentId: "desktop-crate-stacked" }),
@@ -296,11 +326,28 @@ describe("full-editor hierarchy vertical", () => {
         },
       },
     });
+    expect(JSON.stringify(reopenedInspection)).not.toContain("Placed beside the root");
+    expect(JSON.stringify(reopenedInspection)).not.toContain("Stacked on the root");
     const played = command(reopened, "run-play", "cli", {
       documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
     });
     if (!played.ok) throw new Error(JSON.stringify(played));
-    expect(played).toMatchObject({ ok: true });
+    expect(played).toMatchObject({
+      ok: true,
+      data: {
+        mountable: {
+          instances: expect.arrayContaining([
+            expect.objectContaining({
+              instanceId: "desktop-crate-beside",
+              label: "desktop-crate-beside",
+              parentInstanceId: "desktop-crate-stacked",
+            }),
+          ]),
+        },
+      },
+    });
+    expect(JSON.stringify(played)).not.toContain("Placed beside the root");
+    expect(JSON.stringify(played)).not.toContain("Stacked on the root");
 
     expect(command(reopened, "edit-undo", "cli", {})).toMatchObject({ ok: true });
     expect(readFileSync(path, "utf8")).toBe(before);
@@ -320,7 +367,19 @@ describe("full-editor hierarchy vertical", () => {
         parentInstanceId: "desktop-crate-stacked",
         transformPolicy: "preserve-local",
       });
-      expect(staged).toMatchObject({ ok: true, data: { phase: "reviewing" } });
+      expect(staged).toMatchObject({
+        ok: true,
+        data: {
+          phase: "reviewing",
+          transaction: {
+            commandId: "scene-object-reparent",
+            status: "reviewing",
+            evidence: { kind: "scene-hierarchy", target: "change-review" },
+            refusal: null,
+            undo: { kind: "none", commandId: null },
+          },
+        },
+      });
       expect(command(bridge, "change-review-accept", client, {})).toMatchObject({ ok: true });
       return readFileSync(join(root, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8");
     });
@@ -340,7 +399,18 @@ describe("full-editor hierarchy vertical", () => {
     });
     expect(create).toMatchObject({
       ok: true,
-      data: { phase: "reviewing", selectedInstanceIds: ["desktop-crate-beside-copy-1"] },
+      data: {
+        phase: "reviewing",
+        selectedInstanceIds: ["desktop-crate-beside-copy-1"],
+        transaction: {
+          commandId: "scene-object-create",
+          status: "reviewing",
+          progress: { phase: "reviewing", terminal: false },
+          evidence: { kind: "scene-hierarchy", target: "change-review" },
+          refusal: null,
+          undo: { kind: "none", commandId: null },
+        },
+      },
     });
     expect(command(bridge, "change-review-accept", "cli", {})).toMatchObject({ ok: true });
 
@@ -354,6 +424,14 @@ describe("full-editor hierarchy vertical", () => {
       ok: true,
       data: {
         phase: "reviewing",
+        transaction: {
+          commandId: "scene-object-remove",
+          status: "reviewing",
+          progress: { phase: "reviewing", terminal: false },
+          evidence: { kind: "scene-hierarchy", target: "change-review" },
+          refusal: null,
+          undo: { kind: "none", commandId: null },
+        },
         editableScene: {
           hierarchy: {
             objects: [
@@ -609,6 +687,29 @@ describe("full-editor hierarchy vertical", () => {
         ]),
       },
     });
+    expect(command(bridge, "edit-redo", "desktop-control", {})).toMatchObject({ ok: true });
+    expect(command(bridge, "scene-hierarchy-inspect", "desktop-control", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      profile: "game",
+    })).toMatchObject({
+      ok: true,
+      data: {
+        ok: false,
+        reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+        hierarchy: { rootInstanceId: "desktop-crate-root" },
+        entities: expect.arrayContaining([
+          expect.objectContaining({ id: "desktop-crate-beside-copy-1" }),
+        ]),
+      },
+    });
+    expect(command(bridge, "scene-selection-set", "desktop-control", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      profile: "game",
+      instanceIds: ["missing-instance"],
+    })).toMatchObject({
+      ok: false,
+      reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+    });
     const bytesBeforeRefusal = readFileSync(join(root, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8");
     const statusBeforeRefusal = bridge.handle({
       action: "authoring",
@@ -627,6 +728,11 @@ describe("full-editor hierarchy vertical", () => {
       data: {
         ok: false,
         reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+        transaction: {
+          commandId: "scene-object-reparent",
+          status: "refused",
+          refusal: DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+        },
         hierarchy: { rootInstanceId: "desktop-crate-root" },
         entities: expect.arrayContaining([
           expect.objectContaining({ id: "desktop-crate-beside" }),

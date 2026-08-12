@@ -472,9 +472,9 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
       expected.mountable.instances.map((i) => i.instanceId),
     );
     expect(scene.instances.map((instance) => instance.label)).toEqual([
-      "Root instance",
-      "Placed beside the root",
-      "Stacked on the root",
+      "desktop-crate-root",
+      "desktop-crate-beside",
+      "desktop-crate-stacked",
     ]);
   });
 
