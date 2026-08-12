@@ -21,6 +21,7 @@
  */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { parse } from "yaml";
 import { DESKTOP_LINUX_APP_OFFER } from "@sceneaxi/site-kit";
 import {
   DOWNLOAD_PLATFORMS,
@@ -31,10 +32,14 @@ const doc = readFileSync(new URL("../../docs/desktop-linux.md", import.meta.url)
 const desktopManifest = JSON.parse(
   readFileSync(new URL("../../desktop/linux/package.json", import.meta.url), "utf8"),
 ) as { name: string; version: string };
-const desktopBuilder = readFileSync(
-  new URL("../../desktop/linux/electron-builder.yml", import.meta.url),
-  "utf8",
-);
+const desktopBuilderConfig = parse(
+  readFileSync(new URL("../../desktop/linux/electron-builder.yml", import.meta.url), "utf8"),
+) as Record<string, unknown>;
+const desktopBuilderIdentity = {
+  productName: desktopBuilderConfig.productName,
+  appId: desktopBuilderConfig.appId,
+  executableName: desktopBuilderConfig.executableName,
+};
 
 function documentedArtifacts(): ReadonlyArray<{
   kind: string;
@@ -103,9 +108,11 @@ describe("desktop offer ↔ recorded build lockstep", () => {
     expect(desktopManifest.name).toBe("@sceneaxi/desktop-linux");
     expect(DESKTOP_LINUX_APP_OFFER.version).toBe(desktopManifest.version);
     expect(DESKTOP_LINUX_APP_OFFER.productName).toBe("SceneAxi Engine Desktop");
-    expect(desktopBuilder).toContain(`productName: ${DESKTOP_LINUX_APP_OFFER.productName}`);
-    expect(desktopBuilder).toContain("appId: com.sceneaxi.engine-desktop");
-    expect(desktopBuilder).toContain("executableName: sceneaxi-engine-desktop");
+    expect(desktopBuilderIdentity).toEqual({
+      productName: DESKTOP_LINUX_APP_OFFER.productName,
+      appId: "com.sceneaxi.engine-desktop",
+      executableName: "sceneaxi-engine-desktop",
+    });
     for (const artifact of DESKTOP_LINUX_APP_OFFER.artifacts) {
       expect(artifact.fileName).toContain(`-${desktopManifest.version}-`);
     }

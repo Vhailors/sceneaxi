@@ -9,11 +9,11 @@
  *
  * A workflow artifact is not permanent, so the record states its own expiry:
  * `artifactRetentionDays` mirrors the retention the upload step declares, and
- * `artifactExpiresBy` is the last day the download can still exist — an upper bound,
- * since a run predating that declaration inherited the repository default instead. Nothing here reads
- * a clock — a page must render the same record for every visitor, and no code in this
- * repository can observe GitHub deleting the artifact — so the honest move is to print
- * the date and keep the record re-recordable, which `retentionNote` says out loud.
+ * `artifactExpiresBy` is the last day this recorded run's download can still exist
+ * under that declared retention window. Nothing here reads a clock — a page must
+ * render the same record for every visitor, and no code in this repository can
+ * observe GitHub deleting the artifact — so the honest move is to print the date
+ * and keep the record re-recordable, which `retentionNote` says out loud.
  *
  * `resolveDesktopAppOffer()` is the fail-closed edge, and it validates every field a
  * page may print — not only the link. A missing record, a link that does not name the
@@ -68,8 +68,7 @@ export type DesktopAppOffer = {
   readonly reproducibilityNote: string;
   /**
    * The retention window `.github/workflows/desktop-linux.yml` declares on the upload.
-   * A run that predates that declaration inherited the repository default instead, which
-   * this bounds rather than states — see `retentionNote`.
+   * The recorded workflow run applied this declaration — see `retentionNote`.
    */
   readonly artifactRetentionDays: number;
   /** `verifiedOn` plus the retention window: the last day the download can still exist. */
