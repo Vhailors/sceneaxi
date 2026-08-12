@@ -30,6 +30,7 @@
 
 import { formatSafeRarityEvidence } from "@sceneaxi/authoring-core/rarity-evidence";
 import {
+  DESKTOP_SCENE_HIERARCHY_REFUSALS,
   DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS,
   EDITOR_COMMAND_REGISTRY,
   type EditorCommandId,
@@ -1438,6 +1439,7 @@ function script(view: DesktopVisualView): string {
     assistantDrawerQuery: belowTier("regular"),
     commands: DESKTOP_INTERACTION_COMMANDS,
     editorCommands: EDITOR_COMMAND_REGISTRY,
+    hierarchyRefusals: DESKTOP_SCENE_HIERARCHY_REFUSALS,
     paletteShortcut: DESKTOP_PALETTE_SHORTCUT,
     commandRefusals: {
       undoUnavailable: DESKTOP_VISUAL_REFUSALS.undoUnavailable,
@@ -1619,7 +1621,7 @@ if (shell) {
     clearSceneProperty();
     const inspected = status && status.editableScene;
     const staleRecovery = inspected && inspected.ok === false &&
-      inspected.reason === 'SCENE_HIERARCHY_SELECTION_STALE' &&
+      inspected.reason === T.hierarchyRefusals.selectionStale &&
       inspected.hierarchy && Array.isArray(inspected.entities);
     const entitiesList = inspected && (inspected.ok === true || staleRecovery) && Array.isArray(inspected.entities)
       ? inspected.entities

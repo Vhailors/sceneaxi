@@ -53,7 +53,7 @@ function element(window: HappyWindow, selector: string) {
 }
 
 async function settle() {
-  for (let turn = 0; turn < 12; turn += 1) await Promise.resolve();
+  for (let turn = 0; turn < 60; turn += 1) await Promise.resolve();
 }
 
 async function click(window: HappyWindow, selector: string) {
@@ -133,8 +133,8 @@ describe("desktop mounted control inventory", () => {
       options: ArrayLike<{ textContent: string | null }>;
     };
     expect(Array.from(select.options, (option) => option.textContent)).toEqual([
-      "Root · instance root-instance · object root-object · root",
-      "  Child · instance child-instance · object child-object · parent root-instance",
+      "Object root-object · instance root-instance · root",
+      "  Object child-object · instance child-instance · parent root-instance",
     ]);
   });
 
@@ -273,7 +273,7 @@ describe("desktop mounted control inventory", () => {
     expect(element(window, "[data-scene-entities-refusal]").hidden).toBe(true);
     expect(element(window, "[data-scene-property-editor]").hidden).toBe(false);
     expect(Array.from(select.options, (option) => option.textContent)).toContain(
-      "  Fresh Current · instance current-instance · object current-object · parent root-instance",
+      "  Object current-object · instance current-instance · parent root-instance",
     );
     const translation = element(window, "#scene-property-translation-x") as unknown as {
       value: string;

@@ -8,6 +8,9 @@
 import type { JsonObject } from "./document.js";
 import {
   DESKTOP_SCENE_HIERARCHY_REFUSALS,
+  isDesktopSceneEditOperation,
+  isDesktopSceneEditProfile,
+  isDesktopSceneSelectionInput,
   type DesktopSceneHierarchyRefusal,
 } from "./desktop-scene-edit.js";
 
@@ -869,27 +872,19 @@ function profileInput(input: JsonObject): boolean {
       input["profile"] === "@sceneaxi/profile-kids");
 }
 
-const SCENE_ID_RE = /^[a-z0-9][a-z0-9-]*$/;
-
 function sceneDocumentFields(input: JsonObject): boolean {
   return typeof input["documentPath"] === "string" && input["documentPath"].length > 0;
 }
 
 function sceneProfileField(input: JsonObject): boolean {
-  return input["profile"] === "game" || input["profile"] === "web" || input["profile"] === "kids";
-}
-
-function sceneInstanceIds(value: unknown): value is readonly string[] {
-  return Array.isArray(value) && value.length > 0 && value.length <= 32 &&
-    value.every((id) => typeof id === "string" && SCENE_ID_RE.test(id)) &&
-    new Set(value).size === value.length;
+  return input["profile"] === "kids" || isDesktopSceneEditProfile(input["profile"]);
 }
 
 function sceneMutationFields(input: JsonObject): boolean {
   return sceneDocumentFields(input) &&
     typeof input["expectedContentHash"] === "string" &&
     /^sha256:[0-9a-f]{64}$/.test(input["expectedContentHash"]) &&
-    (input["profile"] === "game" || input["profile"] === "web" || input["profile"] === "kids");
+    sceneProfileField(input);
 }
 
 export function validateEditorCommandInput(
@@ -927,27 +922,36 @@ export function validateEditorCommandInput(
     case "scene-selection":
       return exactKeys(input, ["documentPath", "profile", "instanceIds"]) &&
         sceneDocumentFields(input) && sceneProfileField(input) &&
-        sceneInstanceIds(input["instanceIds"]);
+        isDesktopSceneSelectionInput(input["instanceIds"]);
     case "scene-property":
       return exactKeys(input, ["documentPath", "expectedContentHash", "profile", "instanceId", "propertyId", "newValue"]) &&
-        sceneMutationFields(input) && typeof input["instanceId"] === "string" &&
-        SCENE_ID_RE.test(input["instanceId"]) && typeof input["propertyId"] === "string" &&
-        /^(translation|rotation|scale)-[xyz]$/.test(input["propertyId"]) &&
-        typeof input["newValue"] === "number" && Number.isFinite(input["newValue"]);
+        sceneMutationFields(input) && isDesktopSceneEditOperation({
+          kind: "set-transform-component",
+          instanceId: input["instanceId"],
+          propertyId: input["propertyId"],
+          value: input["newValue"],
+        });
     case "scene-create":
       return exactKeys(input, ["documentPath", "expectedContentHash", "profile", "sourceInstanceId", "parentInstanceId"]) &&
-        sceneMutationFields(input) && typeof input["sourceInstanceId"] === "string" &&
-        SCENE_ID_RE.test(input["sourceInstanceId"]) && typeof input["parentInstanceId"] === "string" &&
-        SCENE_ID_RE.test(input["parentInstanceId"]);
+        sceneMutationFields(input) && isDesktopSceneEditOperation({
+          kind: "create-object",
+          sourceInstanceId: input["sourceInstanceId"],
+          parentInstanceId: input["parentInstanceId"],
+        });
     case "scene-remove":
       return exactKeys(input, ["documentPath", "expectedContentHash", "profile", "instanceIds"]) &&
-        sceneMutationFields(input) && sceneInstanceIds(input["instanceIds"]);
+        sceneMutationFields(input) && isDesktopSceneEditOperation({
+          kind: "remove-objects",
+          instanceIds: input["instanceIds"],
+        });
     case "scene-reparent":
       return exactKeys(input, ["documentPath", "expectedContentHash", "profile", "instanceId", "parentInstanceId", "transformPolicy"]) &&
-        sceneMutationFields(input) && typeof input["instanceId"] === "string" &&
-        SCENE_ID_RE.test(input["instanceId"]) && typeof input["parentInstanceId"] === "string" &&
-        SCENE_ID_RE.test(input["parentInstanceId"]) &&
-        (input["transformPolicy"] === "preserve-world" || input["transformPolicy"] === "preserve-local");
+        sceneMutationFields(input) && isDesktopSceneEditOperation({
+          kind: "reparent-object",
+          instanceId: input["instanceId"],
+          parentInstanceId: input["parentInstanceId"],
+          transformPolicy: input["transformPolicy"],
+        });
   }
 }
 

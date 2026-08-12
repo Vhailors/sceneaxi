@@ -125,7 +125,9 @@ export function isDesktopSceneReparentPolicy(
   return DESKTOP_SCENE_REPARENT_POLICIES.some((policy) => policy === value);
 }
 
-function isIdentifierArray(value: unknown): value is readonly string[] {
+export function isDesktopSceneSelectionInput(
+  value: unknown,
+): value is readonly string[] {
   return Array.isArray(value) &&
     value.length > 0 &&
     value.length <= 32 &&
@@ -138,7 +140,7 @@ export function resolveDesktopSceneSelection(
   value: unknown,
   hierarchyOrder: readonly string[],
 ): DesktopSceneSelectionResult {
-  if (!isIdentifierArray(value)) {
+  if (!isDesktopSceneSelectionInput(value)) {
     return Object.freeze({
       ok: false as const,
       reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
@@ -197,7 +199,8 @@ export function isDesktopSceneEditOperation(
       isSculptIdentifier(record["parentInstanceId"]);
   }
   if (record["kind"] === "remove-objects") {
-    return keys === "instanceIds,kind" && isIdentifierArray(record["instanceIds"]);
+    return keys === "instanceIds,kind" &&
+      isDesktopSceneSelectionInput(record["instanceIds"]);
   }
   if (record["kind"] === "reparent-object") {
     return keys === "instanceId,kind,parentInstanceId,transformPolicy" &&

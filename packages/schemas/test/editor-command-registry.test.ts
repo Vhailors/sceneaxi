@@ -129,6 +129,24 @@ describe("full-editor command registry", () => {
     }).ok).toBe(true);
     expect(validateEditorCommandInvocation({
       schemaVersion: 1,
+      commandId: "scene-property-set",
+      client: "desktop-control",
+      permission: "project:write",
+      profile: "game",
+      input: {
+        documentPath: "scene.json",
+        expectedContentHash: `sha256:${"a".repeat(64)}`,
+        profile: "game",
+        instanceId: "child",
+        propertyId: "scale-x",
+        newValue: 0,
+      },
+    })).toMatchObject({
+      ok: false,
+      reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+    });
+    expect(validateEditorCommandInvocation({
+      schemaVersion: 1,
       commandId: "scene-hierarchy-inspect",
       client: "local-agent",
       permission: "project:read",
