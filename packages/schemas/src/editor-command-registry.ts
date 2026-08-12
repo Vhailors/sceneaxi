@@ -381,6 +381,7 @@ const HIERARCHY_BASE_REFUSALS = Object.freeze([
   EDITOR_COMMAND_REFUSALS.permissionDenied,
   DESKTOP_SCENE_HIERARCHY_REFUSALS.capabilityMissing,
   DESKTOP_SCENE_HIERARCHY_REFUSALS.kidsDenied,
+  DESKTOP_SCENE_HIERARCHY_REFUSALS.manifestInconsistent,
 ]);
 
 const immediate = (phases: readonly string[] = ["completed"]) =>
@@ -684,7 +685,11 @@ const DEFINITIONS = [
     mutation: "none",
     progress: immediate(["opening", "advancing", "closed"]),
     evidence: evidence("kernel-session", "live-viewport"),
-    refusals: [...BASE_REFUSALS, "DESKTOP_SCENE_NOT_COMPOSABLE"],
+    refusals: [
+      ...BASE_REFUSALS,
+      "DESKTOP_SCENE_NOT_COMPOSABLE",
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.manifestInconsistent,
+    ],
     undo: undo("none"),
     inputSchema: documentInput,
     inputShape: "document",

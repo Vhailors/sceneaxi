@@ -49,9 +49,11 @@ import {
   type MountableScene,
 } from "@sceneaxi/site-kit";
 import {
+  PROJECT_ASSET_MANIFEST_KEY,
   projectAssetManifestEntry,
   projectAssetManifestFromDocumentData,
   type ImportedAssetRenderMesh,
+  type ProjectAssetManifestEntry,
 } from "@sceneaxi/importers";
 import { DESKTOP_ACTIVE_DOCUMENT_PATH } from "./bridge-contract.js";
 
@@ -208,25 +210,54 @@ export type DesktopMountableScene = MountableScene & Readonly<{
   importedAssets?: readonly DesktopImportedAsset[];
 }>;
 
+function consistentProjectAssetManifest(
+  data: unknown,
+  stored: ComposedScene,
+):
+  | Readonly<{
+      ok: true;
+      assets: readonly ProjectAssetManifestEntry[];
+      instanceIds: ReadonlySet<string>;
+    }>
+  | Readonly<{ ok: false; reason: DesktopSceneHierarchyRefusal; message: string }> {
+  const manifest = projectAssetManifestFromDocumentData(data);
+  if (!manifest.ok) {
+    return Object.freeze({
+      ok: false as const,
+      reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.manifestInconsistent,
+      message: manifest.message,
+    });
+  }
+  for (const entry of manifest.value.assets) {
+    const instance = stored.instances.find(
+      (candidate) => candidate.instanceId === entry.instanceId,
+    );
+    if (instance?.artifactId !== entry.artifactId) {
+      return Object.freeze({
+        ok: false as const,
+        reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.manifestInconsistent,
+        message: `Asset manifest instance "${entry.instanceId}" does not match the accepted composition.`,
+      });
+    }
+  }
+  return Object.freeze({
+    ok: true as const,
+    assets: manifest.value.assets,
+    instanceIds: new Set(manifest.value.assets.map((entry) => entry.instanceId)),
+  });
+}
+
 function withImportedAssets(
   data: unknown,
   composed: ComposedSceneOk,
   mountable: MountableScene,
 ): DesktopSceneResult {
-  const manifest = projectAssetManifestFromDocumentData(data);
+  const manifest = consistentProjectAssetManifest(data, composed.scene);
   if (!manifest.ok) {
     return Object.freeze({ ok: false as const, reason: manifest.reason, message: manifest.message });
   }
   const importedAssets: DesktopImportedAsset[] = [];
-  for (const entry of manifest.value.assets) {
-    const instance = composed.scene.instances.find((candidate) => candidate.instanceId === entry.instanceId);
-    if (instance?.artifactId !== entry.artifactId) {
-      return Object.freeze({
-        ok: false as const,
-        reason: DESKTOP_SCENE_NOT_COMPOSABLE,
-        message: `Asset manifest instance "${entry.instanceId}" is absent from the accepted composition.`,
-      });
-    }
+  for (const entry of manifest.assets) {
     const projected = projectAssetManifestEntry(entry);
     if (!projected.ok) return Object.freeze({ ok: false as const, reason: projected.reason, message: projected.message });
     importedAssets.push(Object.freeze({
@@ -433,7 +464,11 @@ export function desktopSceneFromDocumentData(data: unknown): DesktopSceneResult 
 }
 
 type DesktopEditableCompositionRead =
-  | Readonly<{ ok: true; stored: ComposedScene }>
+  | Readonly<{
+      ok: true;
+      stored: ComposedScene;
+      manifestInstanceIds: ReadonlySet<string>;
+    }>
   | Readonly<{ ok: false; diagnostics: readonly ApplyDiagnostic[] }>;
 
 /**
@@ -467,7 +502,15 @@ function readEditableComposition(
       documentPath,
     );
   }
-  return Object.freeze({ ok: true as const, stored: stored.value });
+  const manifest = consistentProjectAssetManifest(documentData, stored.value);
+  if (!manifest.ok) {
+    return hierarchyDiagnostic(manifest.reason, manifest.message, documentPath);
+  }
+  return Object.freeze({
+    ok: true as const,
+    stored: stored.value,
+    manifestInstanceIds: manifest.instanceIds,
+  });
 }
 
 function editableEntityOf(
@@ -644,22 +687,7 @@ export function stageDesktopSceneEdit(input: Readonly<{
   const operation = Object.freeze({ ...input.operation }) as DesktopSceneEditOperation;
   const read = readEditableComposition(input.documentData, input.contentHash, documentPath);
   if (!read.ok) return read;
-  const manifest = operation.kind === "add-instance" ||
-      operation.kind === "remove-instance" ||
-      operation.kind === "create-object" ||
-      operation.kind === "remove-objects"
-    ? projectAssetManifestFromDocumentData(input.documentData)
-    : null;
-  if (manifest !== null && !manifest.ok) {
-    return hierarchyDiagnostic(
-      DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
-      manifest.message,
-      documentPath,
-    );
-  }
-  const manifestInstanceIds = new Set(
-    manifest?.ok === true ? manifest.value.assets.map((entry) => entry.instanceId) : [],
-  );
+  const manifestInstanceIds = read.manifestInstanceIds;
   let selectedInstanceId: string;
   let selectedInstanceIds: readonly string[];
   let composed;
@@ -669,9 +697,16 @@ export function stageDesktopSceneEdit(input: Readonly<{
       (instance) => instance.instanceId === operation.instanceId,
     );
     const definition = desktopSceneTransformProperty(operation.propertyId);
-    if (selected === undefined || definition === null) {
+    if (selected === undefined) {
+      return hierarchyDiagnostic(
+        DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+        `The selected instance is stale: ${operation.instanceId}.`,
+        documentPath,
+      );
+    }
+    if (definition === null) {
       return propertyRequestDiagnostic(
-        `The selected instance or transform property is stale: ${operation.instanceId}.${operation.propertyId}.`,
+        `The selected transform property is unsupported: ${operation.instanceId}.${operation.propertyId}.`,
         documentPath,
       );
     }
@@ -1006,7 +1041,14 @@ export function stageDesktopSceneEdit(input: Readonly<{
         )
       : propertyDiagnostic(`${composed.path}: ${composed.message}`, documentPath);
   }
-  const edited = readEditableComposition(composed.document.data, input.contentHash, documentPath);
+  const editedDocumentData = isJsonObject(input.documentData) &&
+      Object.hasOwn(input.documentData, PROJECT_ASSET_MANIFEST_KEY)
+    ? Object.freeze({
+        ...composed.document.data,
+        [PROJECT_ASSET_MANIFEST_KEY]: input.documentData[PROJECT_ASSET_MANIFEST_KEY],
+      })
+    : composed.document.data;
+  const edited = readEditableComposition(editedDocumentData, input.contentHash, documentPath);
   if (!edited.ok) return edited;
   if (operation.kind === "add-instance" || operation.kind === "create-object") {
     const sourceArtifact = read.stored.instances.find(

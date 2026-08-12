@@ -35,6 +35,7 @@ export const DESKTOP_SCENE_HIERARCHY_REFUSALS = Object.freeze({
   policyInvalid: "SCENE_HIERARCHY_POLICY_INVALID",
   capabilityMissing: "SCENE_HIERARCHY_CAPABILITY_MISSING",
   kidsDenied: "SCENE_HIERARCHY_KIDS_DENIED",
+  manifestInconsistent: "SCENE_HIERARCHY_MANIFEST_INCONSISTENT",
   inputUnsupported: "SCENE_HIERARCHY_INPUT_UNSUPPORTED",
 } as const);
 

@@ -530,7 +530,11 @@ describe("desktop selected composed-instance edit — public seam", () => {
       instanceId: "missing-instance",
       propertyId: "translation-x",
       value: 1,
-    })).toMatchObject({ ok: false, diagnostics: [{ code: "invalid-proposal", message: expect.stringContaining("stale") }] });
+    })).toMatchObject({
+      ok: false,
+      reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+      diagnostics: [{ code: "invalid-proposal", message: expect.stringContaining("stale") }],
+    });
     expect(request("game", { kind: "add-instance", sourceInstanceId: "missing-instance" }))
       .toMatchObject({ ok: false, diagnostics: [{ code: "invalid-proposal", message: expect.stringContaining("missing") }] });
     expect(request("game", { kind: "remove-instance", instanceId: "desktop-crate-root" }))

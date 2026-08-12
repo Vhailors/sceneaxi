@@ -1425,7 +1425,7 @@ describe("desktop first-release product loop", () => {
     );
   });
 
-  it("does not dispatch queued selection after profile change", async () => {
+  it("settles queued and in-flight selection before profile change", async () => {
     let releaseSelection = () => {};
     const selectionGate = new Promise<void>((resolve) => {
       releaseSelection = resolve;
@@ -1473,14 +1473,20 @@ describe("desktop first-release product loop", () => {
     await selectionStarted;
     selection.value = "desktop-crate-beside";
     selection.dispatchEvent(new window.Event("change", { bubbles: true }));
-    await click(window, "#profile-web");
-    releaseSelection();
-    await selectionResponded;
+    query(window, "#profile-web")?.click();
     for (let turn = 0; turn < 5; turn += 1) await Promise.resolve();
     expect(selectionRequests).toBe(1);
+    expect(query(window, ".shell")?.dataset.profile).toBe("game");
+    releaseSelection();
+    await selectionResponded;
+    for (let turn = 0; turn < 60; turn += 1) {
+      await Promise.resolve();
+      if (query(window, ".shell")?.dataset.profile === "web") break;
+    }
+    expect(selectionRequests).toBe(2);
     expect(query(window, ".shell")?.dataset.profile).toBe("web");
     expect(query(window, "[data-scene-property-entity-id]")?.textContent)
-      .toBe("desktop-crate-beside");
+      .toBe("desktop-crate-root");
   });
 
   it("renders object identity and current parentage after reparent and reopen", async () => {

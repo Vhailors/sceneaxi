@@ -69,10 +69,12 @@ describe("full-editor command registry", () => {
       EDITOR_COMMAND_REFUSALS.permissionDenied,
       DESKTOP_SCENE_HIERARCHY_REFUSALS.capabilityMissing,
       DESKTOP_SCENE_HIERARCHY_REFUSALS.kidsDenied,
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.manifestInconsistent,
     ];
     for (const id of [
       "scene-hierarchy-inspect",
       "scene-selection-set",
+      "scene-property-set",
       "scene-object-create",
       "scene-object-remove",
       "scene-object-reparent",

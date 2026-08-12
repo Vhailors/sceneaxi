@@ -1,10 +1,14 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { composeScene } from "@sceneaxi/authoring-core";
 import {
   DESKTOP_SCENE_HIERARCHY_REFUSALS,
   EDITOR_COMMAND_REFUSALS,
+  SCENE_COMPOSITION_INTAKE_KIND,
+  SCENE_COMPOSITION_SCHEMA_VERSION,
+  composedSceneFromDocumentData,
   createEditorCommandInvocation,
   type EditorCommandClient,
   type JsonObject,
@@ -665,6 +669,21 @@ describe("full-editor hierarchy vertical", () => {
       profile: "game",
       instanceIds: ["missing-object"],
     })).toMatchObject({ ok: false, reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale });
+    expect(command(bridge, "scene-property-set", "cli", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      expectedContentHash: contentHash(bridge),
+      profile: "game",
+      instanceId: "missing-object",
+      propertyId: "translation-x",
+      newValue: 1,
+    })).toMatchObject({
+      ok: true,
+      data: {
+        ok: false,
+        reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+        transaction: { refusal: DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale },
+      },
+    });
     expect(bridge.handle({
       action: "command",
       payload: {
@@ -1137,5 +1156,103 @@ describe("full-editor hierarchy vertical", () => {
       action: "authoring",
       payload: { op: "status", documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
     })).toEqual(acceptedStatus);
+  });
+
+  it("refuses inconsistent asset manifests across hierarchy and Play before copy recovery", () => {
+    const root = fixture();
+    const sourceRoot = mkdtempSync(
+      join(tmpdir(), "sceneaxi-hierarchy-inconsistent-source-"),
+    );
+    dirs.push(sourceRoot);
+    const source = join(sourceRoot, "triangle.gltf");
+    writeFileSync(source, containedTriangle());
+    const bridge = hierarchyBridge(root);
+    expect(bridge.handle({
+      action: "asset-import",
+      payload: { profile: "web", documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH, sourcePath: source },
+    })).toMatchObject({ ok: true, data: { outcome: "reviewing" } });
+    expect(bridge.handle({ action: "authoring", payload: { op: "accept" } }))
+      .toMatchObject({ ok: true, data: { phase: "applied" } });
+
+    const documentPath = join(root, DESKTOP_ACTIVE_DOCUMENT_PATH);
+    const document = JSON.parse(readFileSync(documentPath, "utf8")) as {
+      data: {
+        assetManifest: { assets: Array<{ instanceId: string; relativePath: string }> };
+        composedScene: unknown;
+      };
+    };
+    const manifestEntry = document.data.assetManifest.assets[0];
+    if (manifestEntry === undefined) throw new Error("accepted asset manifest is empty");
+    const stored = composedSceneFromDocumentData(document.data as JsonObject);
+    if (!stored.ok) throw new Error("accepted composition is invalid");
+    const remaining = stored.value.instances.filter(
+      (instance) => instance.instanceId !== manifestEntry.instanceId,
+    );
+    const artifacts = new Map(remaining.map((instance) => [instance.artifactId, instance.artifact]));
+    const recomposed = composeScene({
+      schemaVersion: SCENE_COMPOSITION_SCHEMA_VERSION,
+      kind: SCENE_COMPOSITION_INTAKE_KIND,
+      sceneId: stored.value.sceneId,
+      rootInstanceId: stored.value.rootInstanceId,
+      placements: remaining.map((instance) => ({
+        instanceId: instance.instanceId,
+        artifactId: instance.artifactId,
+        parentInstanceId: instance.parentInstanceId,
+        transform: instance.localTransform,
+      })),
+    }, [...artifacts.values()]);
+    if (!recomposed.ok) throw new Error("inconsistent-manifest fixture could not recompose");
+    document.data.composedScene = recomposed.document.data.composedScene;
+    writeFileSync(documentPath, `${JSON.stringify(document, null, 2)}\n`);
+    const assetPath = join(root, manifestEntry.relativePath);
+    unlinkSync(assetPath);
+    const inconsistentBytes = readFileSync(documentPath, "utf8");
+    const reopened = hierarchyBridge(root);
+
+    expect(command(reopened, "scene-hierarchy-inspect", "desktop-control", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      profile: "game",
+    })).toMatchObject({
+      ok: true,
+      data: { ok: false, reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.manifestInconsistent },
+    });
+    expect(command(reopened, "scene-selection-set", "cli", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      profile: "game",
+      instanceIds: ["desktop-crate-root"],
+    })).toMatchObject({
+      ok: false,
+      reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.manifestInconsistent,
+    });
+    expect(command(reopened, "scene-property-set", "local-agent", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      expectedContentHash: contentHash(reopened),
+      profile: "web",
+      instanceId: "desktop-crate-beside",
+      propertyId: "translation-x",
+      newValue: -3,
+    })).toMatchObject({
+      ok: true,
+      data: { ok: false, reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.manifestInconsistent },
+    });
+    expect(command(reopened, "scene-object-reparent", "cli", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      expectedContentHash: contentHash(reopened),
+      profile: "game",
+      instanceId: "desktop-crate-beside",
+      parentInstanceId: "desktop-crate-stacked",
+      transformPolicy: "preserve-local",
+    })).toMatchObject({
+      ok: false,
+      reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.manifestInconsistent,
+    });
+    expect(command(reopened, "run-play", "desktop-control", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+    })).toMatchObject({
+      ok: false,
+      reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.manifestInconsistent,
+    });
+    expect(() => readFileSync(assetPath)).toThrow();
+    expect(readFileSync(documentPath, "utf8")).toBe(inconsistentBytes);
   });
 });

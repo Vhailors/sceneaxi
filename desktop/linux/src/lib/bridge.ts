@@ -833,16 +833,16 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
   };
 
   const openPathExercise = (payload: unknown): DesktopBridgeResponse => {
-    const recoveryDocumentPath = containedDocumentPath(field(payload, "documentPath"));
-    if (recoveryDocumentPath !== null) {
-      const recovered = materializeProjectAssetCopies({ projectRoot: options.cwd, documentPath: recoveryDocumentPath });
-      if (!recovered.ok) return bridgeRefuse(recovered.reason, recovered.message);
-    }
     const read = readActiveDocument(payload, SCENE_DOCUMENT_REFUSALS);
     if (!read.ok) return bridgeRefuse(read.reason, read.message);
     const status = read.status;
     const scene = desktopSceneFromDocumentData(status.data);
     if (!scene.ok) return bridgeRefuse(scene.reason, scene.message);
+    const recoveryDocumentPath = containedDocumentPath(field(payload, "documentPath"));
+    if (recoveryDocumentPath !== null) {
+      const recovered = materializeProjectAssetCopies({ projectRoot: options.cwd, documentPath: recoveryDocumentPath });
+      if (!recovered.ok) return bridgeRefuse(recovered.reason, recovered.message);
+    }
 
     let raritySession: OpenPathRaritySession | undefined;
     let rarityEvidence: DesktopRarityEvidence | undefined;
@@ -976,14 +976,16 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
   });
 
   const activeScene = (payload: unknown): DesktopSceneResult => {
+    const read = readActiveDocument(payload, SCENE_DOCUMENT_REFUSALS);
+    if (!read.ok) return { ok: false, reason: read.reason, message: read.message };
+    const scene = desktopSceneFromDocumentData(read.status.data);
+    if (!scene.ok) return scene;
     const documentPath = containedDocumentPath(field(payload, "documentPath"));
     if (documentPath !== null) {
       const recovered = materializeProjectAssetCopies({ projectRoot: options.cwd, documentPath });
       if (!recovered.ok) return { ok: false, reason: recovered.reason, message: recovered.message };
     }
-    const read = readActiveDocument(payload, SCENE_DOCUMENT_REFUSALS);
-    if (!read.ok) return { ok: false, reason: read.reason, message: read.message };
-    return desktopSceneFromDocumentData(read.status.data);
+    return scene;
   };
 
   const recoverAssetCopies = (documentPath: string) =>
@@ -2459,7 +2461,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         }, true);
         if (!staged.ok) return commandTransaction(validated.command.id, staged);
         if (field(staged.data, "ok") === false) {
-          if (field(staged.data, "reason") === DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale) {
+          if (typeof field(staged.data, "reason") === "string") {
             return commandTransaction(
               validated.command.id,
               bridgeOk("command", staged.data),

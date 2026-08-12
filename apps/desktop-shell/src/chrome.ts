@@ -1502,6 +1502,11 @@ if (shell) {
   // host's single-proposal session — both reporting success, one edit gone.
   let inFlight = false;
 
+  const beginSceneLifecycleTransition = async () => {
+    await sceneSelectionPending;
+    sceneSelectionGeneration += 1;
+  };
+
   const clearShipEvidence = () => {
     shippedSourceDigest = null;
     q('[data-ship-export-evidence]').forEach((el) => { el.hidden = true; });
@@ -2318,7 +2323,7 @@ if (shell) {
       showOutcome('Recent project refused', T.product.refusals.runtimeRequestRefused, 'Choose a validated recent project first.');
       return;
     }
-    sceneSelectionGeneration += 1;
+    await beginSceneLifecycleTransition();
     productStatus('opening', action === 'choose-new' ? 'Choose a directory for the explicit starter project…' : 'Choose a project directory…');
     const response = await projectRequest({
       action,
@@ -2443,7 +2448,7 @@ if (shell) {
   };
 
   const restartProject = async (diagnostic) => {
-    sceneSelectionGeneration += 1;
+    await beginSceneLifecycleTransition();
     productStatus('recovering', T.product.documentPath + ' · ' + diagnostic + ' · re-opening fresh session…');
     const response = await runtimeRequest({
       action: 'authoring',
@@ -2609,7 +2614,7 @@ if (shell) {
   };
 
   const openProject = async (refuseDirty = false) => {
-    sceneSelectionGeneration += 1;
+    await beginSceneLifecycleTransition();
     if (activeProject === null && projectPort() !== null) {
       productStatus('refused', 'Open refused · no project root selected');
       showOutcome('Open refused', T.product.refusals.runtimeRequestRefused, 'Choose New Project or Open Project first.');
@@ -3281,7 +3286,7 @@ if (shell) {
       productStatus('refused', 'Profile switch refused · ' + T.product.refusals.profileSwitchDirty);
       return;
     }
-    sceneSelectionGeneration += 1;
+    await beginSceneLifecycleTransition();
     shell.dataset.profile = value;
     q('.profile-chip').forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.value === value)));
     setProfile(value);

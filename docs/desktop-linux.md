@@ -120,8 +120,8 @@ create/remove, and reparent to desktop controls, the same-user CLI, and the loca
 assistant tool surface. Every selection is canonicalized against the current
 hierarchy. Missing `scene.compose` capability and Kids refuse before project I/O;
 cycles, missing parents, the protected root, stale selections, invalid policy,
-and unsupported input have stable `SCENE_HIERARCHY_*` diagnostics before proposal
-or write.
+unsupported input, and an inconsistent imported-asset manifest have stable
+`SCENE_HIERARCHY_*` diagnostics before proposal, copy recovery, or write.
 
 The inspector shows the shared rendered diff. Reject discards it without a write;
 Save uses the existing atomic accept and recovery path, and Undo/Redo traverse the
