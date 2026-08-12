@@ -139,6 +139,12 @@ export const DESKTOP_LOCAL_BRIDGE_TOOLS = Object.freeze([
     providerRoute: "none",
   }),
   commandTool({
+    name: "sceneaxi.scene.property.set",
+    commandId: "scene-property-set",
+    description: "Stage one validated property change through the shared hierarchy transaction.",
+    providerRoute: "none",
+  }),
+  commandTool({
     name: "sceneaxi.scene.object.create",
     commandId: "scene-object-create",
     description: "Stage creation of one object from an already validated local artifact instance.",

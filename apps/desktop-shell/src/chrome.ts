@@ -2883,6 +2883,7 @@ if (shell) {
   };
 
   const setSceneSelection = async (instanceIds, generation) => {
+    if (generation !== sceneSelectionGeneration) return;
     const response = await commandRequest('scene-selection-set', {
       documentPath: T.product.documentPath,
       profile: shell.dataset.profile,

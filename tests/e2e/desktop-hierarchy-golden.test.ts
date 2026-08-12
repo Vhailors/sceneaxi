@@ -9,6 +9,7 @@ import {
   type EditorCommandClient,
   type JsonObject,
 } from "@sceneaxi/schemas";
+import { createDesktopSession, shellApply } from "@sceneaxi/desktop-shell";
 import {
   DESKTOP_ACTIVE_DOCUMENT_PATH,
   createDesktopBridge,
@@ -442,6 +443,59 @@ describe("full-editor hierarchy vertical", () => {
     })).toMatchObject({
       ok: true,
       data: { selection: { instanceIds: ["desktop-crate-stacked"] } },
+    });
+  });
+
+  it("settles the matching staged selection after completed recovery", () => {
+    const root = fixture();
+    const applyProposal: typeof shellApply = (input) => {
+      const applied = shellApply(input);
+      if (!applied.ok) return applied;
+      return {
+        ok: false,
+        proposal: applied.proposal,
+        unifiedDiff: applied.unifiedDiff,
+        renderedDiff: applied.renderedDiff,
+        applicationState: "indeterminate",
+        journalRecoveryPending: true,
+        transactionId: applied.transactionId,
+        diagnostics: [{ code: "apply-in-progress", message: "Apply recovery is pending." }],
+      };
+    };
+    const bridge = hierarchyBridge(root, {
+      createAuthoringSession: () => createDesktopSession({
+        cwd: root,
+        operations: { applyProposal },
+      }),
+    });
+
+    expect(command(bridge, "scene-object-create", "desktop-control", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      expectedContentHash: contentHash(bridge),
+      profile: "game",
+      sourceInstanceId: "desktop-crate-beside",
+      parentInstanceId: "desktop-crate-root",
+    })).toMatchObject({
+      ok: true,
+      data: { phase: "reviewing", selectedInstanceIds: ["desktop-crate-beside-copy-1"] },
+    });
+    expect(command(bridge, "change-review-accept", "desktop-control", {})).toMatchObject({
+      ok: true,
+      data: { phase: "pending", journalRecoveryPending: true },
+    });
+    expect(bridge.handle({ action: "authoring", payload: { op: "recover" } })).toMatchObject({
+      ok: true,
+      data: { phase: "applied", journalRecoveryPending: false },
+    });
+    expect(command(bridge, "scene-hierarchy-inspect", "desktop-control", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      profile: "game",
+    })).toMatchObject({
+      ok: true,
+      data: {
+        ok: true,
+        selection: { instanceIds: ["desktop-crate-beside-copy-1"] },
+      },
     });
   });
 

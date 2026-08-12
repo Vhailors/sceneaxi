@@ -53,6 +53,7 @@ describe("desktop local bridge contract", () => {
       "sceneaxi.project.migration.recover",
       "sceneaxi.scene.hierarchy.inspect",
       "sceneaxi.scene.selection.set",
+      "sceneaxi.scene.property.set",
       "sceneaxi.scene.object.create",
       "sceneaxi.scene.object.remove",
       "sceneaxi.scene.object.reparent",
@@ -112,6 +113,7 @@ describe("desktop local bridge contract", () => {
       { name: "sceneaxi.project.migration.recover", permission: "project:write", mutatesProject: true },
       { name: "sceneaxi.scene.hierarchy.inspect", permission: "project:read", mutatesProject: false },
       { name: "sceneaxi.scene.selection.set", permission: "project:read", mutatesProject: false },
+      { name: "sceneaxi.scene.property.set", permission: "project:write", mutatesProject: false },
       { name: "sceneaxi.scene.object.create", permission: "project:write", mutatesProject: false },
       { name: "sceneaxi.scene.object.remove", permission: "project:write", mutatesProject: false },
       { name: "sceneaxi.scene.object.reparent", permission: "project:write", mutatesProject: false },
@@ -159,6 +161,16 @@ describe("desktop local bridge contract", () => {
         documentPath: "scene.json",
         profile: "kids",
         instanceIds: ["root"],
+      }),
+    ).toBe(true);
+    expect(
+      validateDesktopLocalBridgeToolInput("sceneaxi.scene.property.set", {
+        documentPath: "scene.json",
+        expectedContentHash: `sha256:${"0".repeat(64)}`,
+        profile: "game",
+        instanceId: "root",
+        propertyId: "translation-x",
+        newValue: 2,
       }),
     ).toBe(true);
 

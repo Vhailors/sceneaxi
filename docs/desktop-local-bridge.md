@@ -66,7 +66,7 @@ declared by the checked-in tool definition.
 |---|---|
 | `bridge:connect` | `sceneaxi.bridge.handshake` |
 | `project:read` | `sceneaxi.project.status`, `sceneaxi.project.inspect`, `sceneaxi.scene.hierarchy.inspect`, `sceneaxi.scene.selection.set` |
-| `project:write` | `sceneaxi.project.propose`, `accept`, `reject`, `recover`, `restart`, `undo`, `redo`, migration propose/commit/recover, and `sceneaxi.scene.object.create`, `remove`, `reparent` |
+| `project:write` | `sceneaxi.project.propose`, `accept`, `reject`, `recover`, `restart`, `undo`, `redo`, migration propose/commit/recover, and `sceneaxi.scene.property.set`, `sceneaxi.scene.object.create`, `sceneaxi.scene.object.remove`, `sceneaxi.scene.object.reparent` |
 | `assistant:read` | `sceneaxi.assistant.status` |
 | `assistant:run` | `sceneaxi.assistant.local.start`, `sceneaxi.assistant.byo.start`, `sceneaxi.assistant.abandon` |
 

@@ -138,6 +138,72 @@ describe("CLI desktop local bridge tools", () => {
     ]);
   });
 
+  it("routes scene property staging through the shared reviewing result", () => {
+    let observed: DesktopLocalBridgeClientCall | undefined;
+    const client: DesktopLocalBridgeClient = (call) => {
+      observed = call;
+      return {
+        ok: true,
+        response: {
+          protocolVersion: 1,
+          id: call.id,
+          ok: true,
+          result: {
+            phase: "reviewing",
+            transaction: {
+              commandId: "scene-property-set",
+              status: "reviewing",
+              progress: { phase: "reviewing", percent: 50, terminal: false },
+              evidence: { kind: "scene-hierarchy", target: "change-review" },
+              refusal: null,
+              undo: { kind: "none", commandId: null },
+            },
+          },
+        },
+      };
+    };
+    const input = {
+      documentPath: "scene.json",
+      expectedContentHash: `sha256:${"0".repeat(64)}`,
+      profile: "game",
+      instanceId: "desktop-crate-beside",
+      propertyId: "translation-x",
+      newValue: -3.25,
+    };
+    const result = runCli([
+      "desktop",
+      "bridge",
+      "call",
+      "--tool",
+      "sceneaxi.scene.property.set",
+      "--allow",
+      "project:write",
+      "--input-json",
+      JSON.stringify(input),
+      "--json",
+    ], { desktopBridge: client });
+
+    expect(result.exitCode).toBe(0);
+    expect(observed).toEqual({
+      id: "sceneaxi-cli-1",
+      permission: "project:write",
+      tool: "sceneaxi.scene.property.set",
+      input,
+    });
+    expect(result.envelope).toMatchObject({
+      ok: true,
+      result: {
+        response: {
+          phase: "reviewing",
+          transaction: {
+            commandId: "scene-property-set",
+            status: "reviewing",
+          },
+        },
+      },
+    });
+  });
+
   it("maps transport and host refusals into stable CLI envelope classes", () => {
     const unavailable = runCli(["desktop", "bridge", "status"], {
       desktopBridge: () => ({

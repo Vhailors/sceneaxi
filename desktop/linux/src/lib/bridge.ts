@@ -416,7 +416,10 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     }
   };
 
-  const settlePendingSceneSelection = (snapshot: DesktopSnapshot) => {
+  const settlePendingSceneSelection = (
+    snapshot: DesktopSnapshot,
+    completedTransactionId: string | null = snapshot.transactionId,
+  ) => {
     const pending = pendingSceneSelection;
     if (pending === null) return snapshot;
     const proposalMatches = snapshot.proposal === pending.proposal &&
@@ -436,7 +439,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       return snapshot;
     }
     const transactionMatches = pending.transactionId === null ||
-      snapshot.transactionId === pending.transactionId;
+      completedTransactionId === pending.transactionId;
     if (
       snapshot.phase === "applied" &&
       proposalMatches &&
@@ -1560,9 +1563,10 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       return authoringOk(rejected);
     }
     if (op === "recover") {
+      const recoveryTransactionId = live.snapshot().transactionId;
       const recovered = settlePendingSceneSelection(reconcilePendingAssetImport(
         settleRarityProposalEvidence(live.refreshRecovery()),
-      ));
+      ), recoveryTransactionId);
       if (
         pendingAssetImport === null ||
         recovered.phase !== "applied" ||

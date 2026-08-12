@@ -1425,7 +1425,7 @@ describe("desktop first-release product loop", () => {
     );
   });
 
-  it("discards a delayed selection response after profile change", async () => {
+  it("does not dispatch queued selection after profile change", async () => {
     let releaseSelection = () => {};
     const selectionGate = new Promise<void>((resolve) => {
       releaseSelection = resolve;
@@ -1434,6 +1434,11 @@ describe("desktop first-release product loop", () => {
     const selectionResponded = new Promise<void>((resolve) => {
       markSelectionResponded = resolve;
     });
+    let markSelectionStarted = () => {};
+    const selectionStarted = new Promise<void>((resolve) => {
+      markSelectionStarted = resolve;
+    });
+    let selectionRequests = 0;
     const { window, start } = mountChrome(projectDir(), ({ bridge, ipcClone }) =>
       async (request) => {
         const typed = ipcClone(request) as {
@@ -1441,6 +1446,8 @@ describe("desktop first-release product loop", () => {
           payload?: { commandId?: unknown; input?: Record<string, unknown> };
         };
         if (typed.action === "command" && typed.payload?.commandId === "scene-selection-set") {
+          selectionRequests += 1;
+          markSelectionStarted();
           await selectionGate;
           const input = typed.payload.input ?? {};
           const response = ipcClone(bridge.handle({
@@ -1463,13 +1470,17 @@ describe("desktop first-release product loop", () => {
     if (selection === null) throw new Error("hierarchy multi-selector missing");
     selection.value = "desktop-crate-stacked";
     selection.dispatchEvent(new window.Event("change", { bubbles: true }));
+    await selectionStarted;
+    selection.value = "desktop-crate-beside";
+    selection.dispatchEvent(new window.Event("change", { bubbles: true }));
     await click(window, "#profile-web");
     releaseSelection();
     await selectionResponded;
     for (let turn = 0; turn < 5; turn += 1) await Promise.resolve();
+    expect(selectionRequests).toBe(1);
     expect(query(window, ".shell")?.dataset.profile).toBe("web");
     expect(query(window, "[data-scene-property-entity-id]")?.textContent)
-      .toBe("desktop-crate-stacked");
+      .toBe("desktop-crate-beside");
   });
 
   it("renders object identity and current parentage after reparent and reopen", async () => {
