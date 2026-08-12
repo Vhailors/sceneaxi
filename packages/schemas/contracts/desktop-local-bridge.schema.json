@@ -12,6 +12,23 @@
     "permission": {
       "enum": ["bridge:connect", "project:read", "project:write", "assistant:read", "assistant:run"]
     },
+    "editorCommandId": {
+      "enum": [
+        "project-new",
+        "ship-export-web",
+        "project-open",
+        "project-save",
+        "edit-undo",
+        "run-play",
+        "change-review-accept",
+        "change-review-reject",
+        "assistant-local-build",
+        "assistant-byo-build",
+        "assistant-local-agent",
+        "assistant-status",
+        "assistant-cancel"
+      ]
+    },
     "toolName": {
       "enum": [
         "sceneaxi.bridge.handshake",
@@ -22,8 +39,10 @@
         "sceneaxi.project.recover",
         "sceneaxi.project.restart",
         "sceneaxi.project.undo",
+        "sceneaxi.run.play",
         "sceneaxi.assistant.local.start",
         "sceneaxi.assistant.byo.start",
+        "sceneaxi.assistant.local.agent",
         "sceneaxi.assistant.status",
         "sceneaxi.assistant.abandon"
       ]
@@ -101,9 +120,15 @@
     "tool": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "description", "permission", "mutatesProject", "providerRoute", "creditRoute", "inputSchema"],
+      "required": ["name", "commandId", "description", "permission", "mutatesProject", "providerRoute", "creditRoute", "inputSchema"],
       "properties": {
         "name": { "$ref": "#/$defs/toolName" },
+        "commandId": {
+          "oneOf": [
+            { "$ref": "#/$defs/editorCommandId" },
+            { "type": "null" }
+          ]
+        },
         "description": { "type": "string", "minLength": 1 },
         "permission": { "$ref": "#/$defs/permission" },
         "mutatesProject": { "type": "boolean" },

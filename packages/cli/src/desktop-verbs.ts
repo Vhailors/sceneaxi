@@ -3,6 +3,8 @@ import {
   DESKTOP_LOCAL_BRIDGE_PROTOCOL_VERSION,
   DESKTOP_LOCAL_BRIDGE_TOOLS,
   DESKTOP_LOCAL_BRIDGE_TRANSPORT,
+  EDITOR_COMMAND_REGISTRY,
+  EDITOR_COMMAND_SCHEMA_VERSION,
   desktopLocalBridgeTool,
   validateDesktopLocalBridgeToolInput,
   type DesktopLocalBridgePermission,
@@ -19,6 +21,8 @@ export function runDesktopBridgeTools(): ResultPayload {
     protocolVersion: DESKTOP_LOCAL_BRIDGE_PROTOCOL_VERSION,
     transport: DESKTOP_LOCAL_BRIDGE_TRANSPORT,
     creditRoute: "none",
+    commandSchemaVersion: EDITOR_COMMAND_SCHEMA_VERSION,
+    commands: EDITOR_COMMAND_REGISTRY,
     tools: DESKTOP_LOCAL_BRIDGE_TOOLS,
   });
 }

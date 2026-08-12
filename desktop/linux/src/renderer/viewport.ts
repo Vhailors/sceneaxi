@@ -24,6 +24,7 @@ import {
   type ThreePresentationCoreOptions,
 } from "@sceneaxi/engine-presentation";
 import { formatSafeRarityEvidence } from "@sceneaxi/authoring-core/rarity-evidence";
+import { createEditorCommandInvocation } from "@sceneaxi/schemas";
 import { createDesktopAssistantViewportController } from "../lib/assistant-viewport.js";
 import type { DesktopAssistantProfile } from "../lib/bridge.js";
 import { desktopAssistantRuntimeSignal } from "./assistant-runtime.js";
@@ -249,6 +250,13 @@ export function installAssistantProductFlow(
   const status = document.querySelector<HTMLElement>("[data-assistant-status]");
   const resultView = document.querySelector<HTMLElement>("[data-assistant-result]");
   const retry = document.querySelector<HTMLButtonElement>("#assistant-retry");
+  const sculptStart = document.querySelector<HTMLButtonElement>("#sculpt-start");
+  const sculptCancel = document.querySelector<HTMLButtonElement>("#sculpt-cancel");
+  const sculptProgress = document.querySelector<HTMLElement>("[data-sculpt-progress]");
+  const sculptProgressBar = sculptProgress?.querySelector<HTMLElement>("[role='progressbar']") ?? null;
+  const sculptProgressFill = sculptProgress?.querySelector<HTMLElement>(".sculpt-fill") ?? null;
+  const sculptProgressLabel = sculptProgress?.querySelector<HTMLElement>(".sculpt-label") ?? null;
+  const sculptProgressDetail = sculptProgress?.querySelector<HTMLElement>(".sculpt-detail") ?? null;
   const manipulatorBar = stage.querySelector<HTMLElement>("[data-assistant-manipulators]");
   const sendControls = Array.from(
     document.querySelectorAll<HTMLElement>("[data-action='assistant-send']"),
@@ -276,9 +284,31 @@ export function installAssistantProductFlow(
   let running = false;
   let assistantRunVersion = 0;
   let recoveryJobId: string | null = null;
+  let activeJobId: string | null = null;
   let activeRarityProposalDigest: string | null = null;
   let displayedRarityResultDigest: string | null = null;
   const assistantViewport = createDesktopAssistantViewportController(mounts);
+  const setSculptCancelActive = (active: boolean): void => {
+    if (sculptCancel === null) return;
+    if (active) {
+      sculptProgress?.removeAttribute("hidden");
+      sculptCancel.dataset.kind = "live";
+      sculptCancel.removeAttribute("aria-disabled");
+      sculptCancel.removeAttribute("aria-describedby");
+      sculptCancel.removeAttribute("data-refusal");
+      sculptCancel.classList.remove("is-inert");
+      return;
+    }
+    sculptProgress?.setAttribute("hidden", "");
+    sculptCancel.dataset.kind = "inert";
+    sculptCancel.setAttribute("aria-disabled", "true");
+    sculptCancel.dataset.refusal = DESKTOP_BRIDGE_REFUSALS.assistantJobMismatch;
+    sculptCancel.setAttribute(
+      "aria-describedby",
+      `refusal-${DESKTOP_BRIDGE_REFUSALS.assistantJobMismatch}`,
+    );
+    sculptCancel.classList.add("is-inert");
+  };
 
   document.addEventListener(DESKTOP_RARITY_PROPOSAL_EVENT, (event: Event) => {
     const invalidation = assistantRarityInvalidation(
@@ -329,21 +359,57 @@ export function installAssistantProductFlow(
     retry?.removeAttribute("hidden");
   };
 
+  const registeredRequest = (request: unknown): Promise<DesktopBridgeResponse> => {
+    const payload = typeof request === "object" && request !== null && "payload" in request
+      ? (request as { payload?: { op?: unknown; jobId?: unknown } }).payload
+      : undefined;
+    if (payload?.op === "status") {
+      return port.request({
+        action: "command",
+        payload: createEditorCommandInvocation("assistant-status", "desktop-control", {}),
+      });
+    }
+    if (payload?.op === "abandon" && typeof payload.jobId === "string") {
+      return port.request({
+        action: "command",
+        payload: createEditorCommandInvocation(
+          "assistant-cancel",
+          "desktop-control",
+          { jobId: payload.jobId },
+        ),
+      });
+    }
+    return port.request(request);
+  };
+
   const poll = async (jobId: string): Promise<void> => {
     const outcome = await pollJob({
-      request: (request) => port.request(request),
+      request: registeredRequest,
       jobId,
       onSnapshot: (job) => {
         const latest = job.latestProgress;
-        if (latest !== null) status.textContent = `${latest.percent}% · ${latest.message}`;
+        if (latest !== null) {
+          status.textContent = `${latest.percent}% · ${latest.message}`;
+          if (job.commandId !== "assistant-local-agent") {
+            sculptProgress?.removeAttribute("hidden");
+            sculptProgressBar?.setAttribute("aria-valuenow", String(latest.percent));
+            if (sculptProgressFill !== null) sculptProgressFill.style.width = `${latest.percent}%`;
+            if (sculptProgressLabel !== null) sculptProgressLabel.textContent = latest.message;
+            if (sculptProgressDetail !== null) sculptProgressDetail.textContent = latest.phase;
+          }
+        }
       },
     });
     if (!outcome.ok) {
       recoveryJobId = outcome.retryJobId ?? null;
       refused(outcome.reason, outcome.message);
+      activeJobId = null;
+      setSculptCancelActive(false);
       return;
     }
     recoveryJobId = null;
+    activeJobId = null;
+    setSculptCancelActive(false);
     const job = outcome.job;
     const result = outcome.result;
     activeRarityProposalDigest = assistantRarityResultDigest(result);
@@ -418,12 +484,14 @@ export function installAssistantProductFlow(
     status.textContent =
       "Mounted in the live center viewport · translate/rotate/scale manipulators active · drag to orbit, wheel to zoom.";
     running = false;
+    activeJobId = null;
+    setSculptCancelActive(false);
   };
 
   const recoverCurrentJob = async (): Promise<boolean> => {
     let response: Awaited<ReturnType<BridgeGlobal["request"]>>;
     try {
-      response = await port.request({ action: "assistant", payload: { op: "status" } });
+      response = await registeredRequest({ action: "assistant", payload: { op: "status" } });
     } catch {
       return false;
     }
@@ -440,6 +508,10 @@ export function installAssistantProductFlow(
     }
     assistantRunVersion += 1;
     recoveryJobId = current.jobId;
+    activeJobId = current.jobId;
+    setSculptCancelActive(
+      "commandId" in current && current.commandId !== "assistant-local-agent",
+    );
     activeRarityProposalDigest = null;
     displayedRarityResultDigest = null;
     running = true;
@@ -449,7 +521,7 @@ export function installAssistantProductFlow(
     return true;
   };
 
-  const start = async (): Promise<void> => {
+  const start = async (forceLocalBuild = false): Promise<void> => {
     if (running) return;
     if (recoveryJobId !== null) {
       const jobId = recoveryJobId;
@@ -460,10 +532,12 @@ export function installAssistantProductFlow(
       return;
     }
     const decision = decideAssistantStart({
-      mode: shell.dataset.assistantMode,
-      route: shell.dataset.assistantRoute,
+      mode: forceLocalBuild ? "build" : shell.dataset.assistantMode,
+      route: forceLocalBuild ? "local" : shell.dataset.assistantRoute,
       profile: assistantProfile(shell),
-      prompt: prompt.value,
+      prompt: forceLocalBuild && prompt.value.trim().length === 0
+        ? "Sculpt object"
+        : prompt.value,
     });
     if (!decision.ok) {
       refused(decision.reason, decision.message);
@@ -473,9 +547,21 @@ export function installAssistantProductFlow(
     retry?.setAttribute("hidden", "");
     resultView.setAttribute("hidden", "");
     status.textContent = "Starting assistant action…";
+    const commandId = decision.payload.mode === "agent"
+      ? "assistant-local-agent"
+      : decision.payload.route === "byo"
+        ? "assistant-byo-build"
+        : "assistant-local-build";
+    const input = commandId === "assistant-local-agent"
+      ? {
+          prompt: decision.payload.prompt,
+          profile: decision.payload.profile,
+          documentPath: decision.payload.documentPath ?? DESKTOP_ACTIVE_DOCUMENT_PATH,
+        }
+      : { prompt: decision.payload.prompt, profile: decision.payload.profile };
     const response = await port.request({
-      action: "assistant",
-      payload: decision.payload,
+      action: "command",
+      payload: createEditorCommandInvocation(commandId, "desktop-control", input),
     });
     if (!response.ok) {
       if (
@@ -501,6 +587,8 @@ export function installAssistantProductFlow(
       return;
     }
     assistantRunVersion += 1;
+    activeJobId = startedJob.jobId;
+    setSculptCancelActive(commandId !== "assistant-local-agent");
     activeRarityProposalDigest = assistantRarityResultDigest(null);
     displayedRarityResultDigest = null;
     await poll(startedJob.jobId);
@@ -513,6 +601,45 @@ export function installAssistantProductFlow(
         refused(DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed, refusalText(error)),
       );
     });
+  });
+  sculptStart?.addEventListener("click", () => {
+    if (sculptStart.getAttribute("aria-disabled") === "true") return;
+    void start(true).catch((error: unknown) =>
+      refused(DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed, refusalText(error)),
+    );
+  });
+  sculptCancel?.addEventListener("click", () => {
+    if (activeJobId === null) {
+      refused(
+        DESKTOP_BRIDGE_REFUSALS.assistantJobMismatch,
+        "Cancel refused because no exact active Sculpt command is retained.",
+      );
+      return;
+    }
+    const jobId = activeJobId;
+    void registeredRequest({
+      action: "assistant",
+      payload: { op: "abandon", jobId },
+    }).then((response) => {
+      if (!response.ok) {
+        refused(response.reason, response.message);
+        return;
+      }
+      const snapshot = response.data as DesktopAssistantJobSnapshot;
+      if (snapshot.jobId !== jobId || snapshot.terminal === null) {
+        refused(
+          DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed,
+          "Cancel returned no terminal result for the exact active Sculpt command.",
+        );
+        return;
+      }
+      activeJobId = null;
+      setSculptCancelActive(false);
+      running = false;
+      status.textContent = `${snapshot.terminal.progress.percent}% · ${snapshot.terminal.progress.message}`;
+    }).catch((error: unknown) =>
+      refused(DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed, refusalText(error)),
+    );
   });
   running = true;
   void recoverCurrentJob()

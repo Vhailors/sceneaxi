@@ -248,6 +248,8 @@ export const DESKTOP_VISUAL_REFUSALS = Object.freeze({
   noKernelSession: "DESKTOP_NO_KERNEL_SESSION",
   /** The chrome is not bound to a document, so nothing may be authored. */
   noDocumentBound: "DESKTOP_NO_DOCUMENT_BOUND",
+  /** A cancellation must identify a retained running command, never presentation state. */
+  noActiveCommand: "EDITOR_COMMAND_ACTIVE_JOB_MISMATCH",
   /** Undo requires a completed Save in the active project's authoring journal. */
   undoUnavailable: "DESKTOP_UNDO_UNAVAILABLE",
   /** The window is smaller than the editor chrome's declared minimum. */
@@ -277,6 +279,8 @@ export const DESKTOP_REFUSAL_MESSAGES: Readonly<
     "Without a packaged-host Play response, this shell has no kernel session to report.",
   [DESKTOP_VISUAL_REFUSALS.noDocumentBound]:
     "This control has no bound authoring operation, so it writes nothing.",
+  [DESKTOP_VISUAL_REFUSALS.noActiveCommand]:
+    "Cancel requires the exact active command job returned by the registered start operation.",
   [DESKTOP_VISUAL_REFUSALS.undoUnavailable]:
     "Undo becomes available when the active project authoring journal reports a completed Save.",
   [DESKTOP_VISUAL_REFUSALS.windowBelowMinimum]:
@@ -1241,17 +1245,21 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
     passCount: SCULPT_PASSES.length,
     percent: Math.round(state.sculptPassFraction * 100),
     label: passLabel,
-    start: control(
-      "sculpt-start",
-      "Sculpt object",
-      "inert",
-      DESKTOP_VISUAL_REFUSALS.noDocumentBound,
-    ),
+    start: state.assistantRuntime === "local"
+      ? control("sculpt-start", "Sculpt object", "live")
+      : control(
+          "sculpt-start",
+          "Sculpt object",
+          "inert",
+          DESKTOP_VISUAL_REFUSALS.noPresentationRuntime,
+        ),
     cancel: control(
       "sculpt-cancel",
       "Cancel after this pass",
       "inert",
-      DESKTOP_VISUAL_REFUSALS.noDocumentBound,
+      state.assistantRuntime === "local"
+        ? DESKTOP_VISUAL_REFUSALS.noActiveCommand
+        : DESKTOP_VISUAL_REFUSALS.noPresentationRuntime,
     ),
   });
 

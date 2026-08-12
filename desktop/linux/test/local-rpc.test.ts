@@ -13,6 +13,7 @@ import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   DESKTOP_LOCAL_BRIDGE_PROTOCOL_VERSION,
+  EDITOR_COMMAND_REGISTRY,
   parseDesktopLocalBridgeDiscovery,
   type DesktopLocalBridgeRequest,
   type DesktopLocalBridgeResponse,
@@ -102,6 +103,10 @@ describe("desktop same-user local RPC bridge", () => {
         creditRoute: "none",
       },
     });
+    if (!response.ok) return;
+    expect((response.result as { commands: unknown }).commands).toEqual(
+      EDITOR_COMMAND_REGISTRY,
+    );
   });
 
   it("refuses invalid capabilities and permissions before sharing the desktop authoring session", async () => {
@@ -214,6 +219,22 @@ describe("desktop same-user local RPC bridge", () => {
       error: { code: "LOCAL_BRIDGE_INPUT_INVALID" },
     });
 
+    const wrongJob = await request(socketPath, {
+      protocolVersion: 1,
+      id: "assistant-abandon-wrong-job",
+      capability: CAPABILITY,
+      permission: "assistant:run",
+      tool: "sceneaxi.assistant.abandon",
+      input: { jobId: "desktop-assistant-wrong" },
+    });
+    expect(wrongJob).toMatchObject({
+      ok: false,
+      error: {
+        code: "LOCAL_BRIDGE_UPSTREAM_REFUSED",
+        detail: "EDITOR_COMMAND_ACTIVE_JOB_MISMATCH",
+      },
+    });
+
     const abandoned = await request(socketPath, {
       protocolVersion: 1,
       id: "assistant-abandon-targeted",
@@ -224,7 +245,41 @@ describe("desktop same-user local RPC bridge", () => {
     });
     expect(abandoned).toMatchObject({
       ok: true,
-      result: { jobId: "desktop-assistant-1" },
+      result: {
+        jobId: "desktop-assistant-1",
+        terminal: { progress: { percent: 100, terminal: true } },
+      },
+    });
+  });
+
+  it("returns the shared command-registry Kids denial before Local Build", async () => {
+    const root = mkdtempSync(join(tmpdir(), "sceneaxi-local-rpc-"));
+    roots.push(root);
+    const projectRoot = join(root, "project");
+    expect(seedDesktopProject(projectRoot).ok).toBe(true);
+    const socketPath = join(root, "runtime", "desktop-v1.sock");
+    const server = await startDesktopLocalBridgeServer({
+      bridge: createDesktopBridge({ cwd: projectRoot }),
+      projectRoot,
+      socketPath,
+      discoveryPath: join(root, "config", "desktop-bridge-v1.json"),
+      capability: CAPABILITY,
+    });
+    servers.push(server);
+
+    expect(await request(socketPath, {
+      protocolVersion: 1,
+      id: "assistant-kids-denied",
+      capability: CAPABILITY,
+      permission: "assistant:run",
+      tool: "sceneaxi.assistant.local.start",
+      input: { prompt: "Build a toy", profile: "@sceneaxi/profile-kids" },
+    })).toMatchObject({
+      ok: false,
+      error: {
+        code: "LOCAL_BRIDGE_UPSTREAM_REFUSED",
+        detail: "EDITOR_COMMAND_KIDS_DENIED",
+      },
     });
   });
 

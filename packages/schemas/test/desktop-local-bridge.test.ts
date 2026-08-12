@@ -37,8 +37,10 @@ describe("desktop local bridge contract", () => {
       "sceneaxi.project.recover",
       "sceneaxi.project.restart",
       "sceneaxi.project.undo",
+      "sceneaxi.run.play",
       "sceneaxi.assistant.local.start",
       "sceneaxi.assistant.byo.start",
+      "sceneaxi.assistant.local.agent",
       "sceneaxi.assistant.status",
       "sceneaxi.assistant.abandon",
     ]);
@@ -63,8 +65,10 @@ describe("desktop local bridge contract", () => {
       { name: "sceneaxi.project.recover", permission: "project:write", mutatesProject: true },
       { name: "sceneaxi.project.restart", permission: "project:write", mutatesProject: false },
       { name: "sceneaxi.project.undo", permission: "project:write", mutatesProject: true },
+      { name: "sceneaxi.run.play", permission: "project:read", mutatesProject: false },
       { name: "sceneaxi.assistant.local.start", permission: "assistant:run", mutatesProject: false },
       { name: "sceneaxi.assistant.byo.start", permission: "assistant:run", mutatesProject: false },
+      { name: "sceneaxi.assistant.local.agent", permission: "assistant:run", mutatesProject: false },
       { name: "sceneaxi.assistant.status", permission: "assistant:read", mutatesProject: false },
       { name: "sceneaxi.assistant.abandon", permission: "assistant:run", mutatesProject: false },
     ]);

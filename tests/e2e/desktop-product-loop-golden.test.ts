@@ -81,6 +81,30 @@ type ChromeHarnessPort = {
   readonly ipcClone: <T>(value: T) => T;
 };
 
+function requestOperation(request: unknown): string | null {
+  const typed = request as {
+    action?: unknown;
+    payload?: { op?: unknown; commandId?: unknown };
+  };
+  if (typed.action === "authoring" && typeof typed.payload?.op === "string") {
+    return typed.payload.op;
+  }
+  if (typed.action !== "command") return null;
+  switch (typed.payload?.commandId) {
+    case "project-save":
+    case "change-review-accept":
+      return "accept";
+    case "change-review-reject":
+      return "reject";
+    case "edit-undo":
+      return "undo";
+    case "run-play":
+      return "open-path";
+    default:
+      return null;
+  }
+}
+
 /**
  * Mount the emitted chrome over a real bridge the way the packaged app does:
  * the renderer only ever sees structured-cloned values, so every request and
@@ -209,9 +233,8 @@ describe("desktop first-release product loop", () => {
           };
           requests.push(typed);
           if (
-            typed.action === "authoring" &&
-            typeof typed.payload?.op === "string" &&
-            refuseNextAuthoring.delete(typed.payload.op)
+            requestOperation(typed) !== null &&
+            refuseNextAuthoring.delete(requestOperation(typed) as string)
           ) {
             return ipcClone({
               ok: false,
@@ -429,7 +452,7 @@ describe("desktop first-release product loop", () => {
     expect(status()).toContain("nothing under review · DESKTOP_PROPOSAL_NOT_REVIEWING");
     expect(requests).toHaveLength(stageConflictRequests + 1);
 
-    expect(requests.map((request) => request.payload?.op ?? request.action)).toEqual([
+    expect(requests.map((request) => requestOperation(request) ?? request.action)).toEqual([
       "status",
       "propose",
       "propose",
@@ -462,7 +485,7 @@ describe("desktop first-release product loop", () => {
         payload?: { op?: unknown };
       };
       requests.push(typed);
-      if (refuseNextPlay && typed.action === "open-path") {
+      if (refuseNextPlay && requestOperation(typed) === "open-path") {
         refuseNextPlay = false;
         return ipcClone({
           ok: false,
@@ -474,8 +497,7 @@ describe("desktop first-release product loop", () => {
       const response = bridge.handle(typed);
       if (
         deferredAcceptedSaves > 0 &&
-        typed.action === "authoring" &&
-        typed.payload?.op === "accept" &&
+        requestOperation(typed) === "accept" &&
         response.ok
       ) {
         deferredAcceptedSaves -= 1;
@@ -491,8 +513,7 @@ describe("desktop first-release product loop", () => {
       }
       if (
         reportMissingRecovery &&
-        typed.action === "authoring" &&
-        typed.payload?.op === "recover" &&
+        requestOperation(typed) === "recover" &&
         response.ok
       ) {
         reportMissingRecovery = false;
@@ -721,7 +742,7 @@ describe("desktop first-release product loop", () => {
     expect(shell?.dataset.profile).toBe("kids");
     expect(shell?.dataset.mode).toBe("run");
 
-    expect(requests.map((request) => request.payload?.op ?? request.action)).toEqual([
+    expect(requests.map((request) => requestOperation(request) ?? request.action)).toEqual([
       "status",
       "propose",
       "status",
@@ -1058,8 +1079,7 @@ describe("desktop first-release product loop", () => {
       const response = bridge.handle(typed);
       if (
         deferNextAccept &&
-        typed.action === "authoring" &&
-        typed.payload?.op === "accept" &&
+        requestOperation(typed) === "accept" &&
         response.ok
       ) {
         deferNextAccept = false;
@@ -1340,9 +1360,9 @@ describe("desktop first-release product loop", () => {
             payload?: { op?: unknown };
           };
           const response = bridge.handle(typed);
-          if (!response.ok || typed.action !== "authoring") return ipcClone(response);
+          if (!response.ok || requestOperation(typed) === null) return ipcClone(response);
           const data = response.data as Record<string, unknown>;
-          if (deferAcceptedSave && typed.payload?.op === "accept") {
+          if (deferAcceptedSave && requestOperation(typed) === "accept") {
             deferAcceptedSave = false;
             return ipcClone({
               ...response,
@@ -1356,7 +1376,7 @@ describe("desktop first-release product loop", () => {
           }
           // The one recovery outcome that is a real authoring diagnostic but not
           // a moved content hash: the durable transaction resolved stale.
-          if (reportStaleRecovery && typed.payload?.op === "recover") {
+          if (reportStaleRecovery && requestOperation(typed) === "recover") {
             reportStaleRecovery = false;
             return ipcClone({
               ...response,

@@ -26,6 +26,7 @@ import {
   DESKTOP_LOCAL_BRIDGE_PROTOCOL_VERSION,
   DESKTOP_LOCAL_BRIDGE_TOOLS,
   DESKTOP_LOCAL_BRIDGE_TRANSPORT,
+  createEditorCommandInvocation,
   desktopLocalBridgeTool,
   isDesktopLocalBridgePermission,
   parseDesktopLocalBridgeDiscovery,
@@ -37,6 +38,7 @@ import {
   type DesktopLocalBridgeRequest,
   type DesktopLocalBridgeResponse,
   type DesktopLocalBridgeToolName,
+  type JsonObject,
 } from "@sceneaxi/schemas";
 import type { DesktopBridgeResponse } from "./bridge-contract.js";
 import type { DesktopBridge } from "./bridge.js";
@@ -154,7 +156,18 @@ function capabilityMatches(actual: string, expected: string): boolean {
   return actualBytes.length === expectedBytes.length && timingSafeEqual(actualBytes, expectedBytes);
 }
 
-function bridgeRequest(toolName: DesktopLocalBridgeToolName, input: Record<string, unknown>): unknown {
+function bridgeRequest(toolName: DesktopLocalBridgeToolName, input: JsonObject): unknown {
+  const registered = desktopLocalBridgeTool(toolName);
+  if (registered?.commandId !== null && registered?.commandId !== undefined) {
+    return {
+      action: "command",
+      payload: createEditorCommandInvocation(
+        registered.commandId,
+        "local-agent",
+        input,
+      ),
+    };
+  }
   switch (toolName) {
     case "sceneaxi.bridge.handshake":
       return { action: "handshake" };
@@ -162,24 +175,20 @@ function bridgeRequest(toolName: DesktopLocalBridgeToolName, input: Record<strin
       return { action: "authoring", payload: { op: "status", ...input } };
     case "sceneaxi.project.propose":
       return { action: "authoring", payload: { op: "propose", ...input } };
-    case "sceneaxi.project.accept":
-      return { action: "authoring", payload: { op: "accept" } };
-    case "sceneaxi.project.reject":
-      return { action: "authoring", payload: { op: "reject" } };
     case "sceneaxi.project.recover":
       return { action: "authoring", payload: { op: "recover" } };
     case "sceneaxi.project.restart":
       return { action: "authoring", payload: { op: "restart", ...input } };
+    case "sceneaxi.project.accept":
+    case "sceneaxi.project.reject":
     case "sceneaxi.project.undo":
-      return { action: "authoring", payload: { op: "undo" } };
+    case "sceneaxi.run.play":
     case "sceneaxi.assistant.local.start":
-      return { action: "assistant", payload: { op: "start", route: "local", ...input } };
     case "sceneaxi.assistant.byo.start":
-      return { action: "assistant", payload: { op: "start", route: "byo", ...input } };
+    case "sceneaxi.assistant.local.agent":
     case "sceneaxi.assistant.status":
-      return { action: "assistant", payload: { op: "status" } };
     case "sceneaxi.assistant.abandon":
-      return { action: "assistant", payload: { op: "abandon", ...input } };
+      throw new Error(`Registered editor command ${toolName} was not adapted.`);
   }
 }
 

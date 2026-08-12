@@ -4,6 +4,7 @@ import {
   type DesktopLocalBridgeClient,
   type DesktopLocalBridgeClientCall,
 } from "@sceneaxi/cli";
+import { EDITOR_COMMAND_REGISTRY } from "@sceneaxi/schemas";
 
 describe("CLI desktop local bridge tools", () => {
   it("publishes the shared agent tool schemas without a desktop connection", () => {
@@ -15,7 +16,16 @@ describe("CLI desktop local bridge tools", () => {
       protocolVersion: 1,
       transport: "unix-ndjson",
       creditRoute: "none",
+      commandSchemaVersion: 1,
     });
+    const commands = result.envelope.result["commands"] as Array<Record<string, unknown>>;
+    expect(commands).toEqual(EDITOR_COMMAND_REGISTRY);
+    expect(commands.find((command) => command["id"] === "assistant-local-build"))
+      .toMatchObject({
+        permission: "assistant:run",
+        mutation: "none",
+        evidence: { kind: "sculpt-artifact", target: "live-viewport" },
+      });
     const tools = result.envelope.result["tools"] as Array<Record<string, unknown>>;
     expect(tools.map((tool) => tool["name"])).toContain("sceneaxi.project.propose");
     expect(tools.map((tool) => tool["name"])).toContain("sceneaxi.assistant.byo.start");
