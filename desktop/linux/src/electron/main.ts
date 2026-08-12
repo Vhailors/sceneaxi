@@ -465,6 +465,7 @@ async function start(): Promise<void> {
       op: "edit-property",
       documentPath: SAMPLE_DOCUMENT,
       expectedContentHash: openedHash,
+      profile: "game",
       entityId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
       propertyId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.id,
       newValue: -3.25,

@@ -338,6 +338,21 @@ describe("full-editor hierarchy vertical", () => {
           operation: value,
         },
       });
+    const rawProperty = (
+      bridge: ReturnType<typeof createDesktopBridge>,
+      profile: unknown,
+    ) => bridge.handle({
+      action: "authoring",
+      payload: {
+        op: "edit-property",
+        documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+        expectedContentHash: `sha256:${"1".repeat(64)}`,
+        profile,
+        entityId: "desktop-crate-beside",
+        propertyId: "translation-x",
+        newValue: 2,
+      },
+    });
 
     expect(raw(createDesktopBridge({ cwd: root, createAuthoringSession }), "game", operation))
       .toMatchObject({ ok: false, reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.capabilityMissing });
@@ -348,6 +363,14 @@ describe("full-editor hierarchy vertical", () => {
     expect(raw(hierarchyBridge(root, { createAuthoringSession }), "game", { kind: "unknown" }))
       .toMatchObject({ ok: false, reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported });
     expect(raw(hierarchyBridge(root, { createAuthoringSession }), "profile-game", operation))
+      .toMatchObject({ ok: false, reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported });
+    expect(rawProperty(createDesktopBridge({ cwd: root, createAuthoringSession }), "game"))
+      .toMatchObject({ ok: false, reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.capabilityMissing });
+    expect(rawProperty(
+      hierarchyBridge(root, { commandProfile: "kids", createAuthoringSession }),
+      "game",
+    )).toMatchObject({ ok: false, reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.kidsDenied });
+    expect(rawProperty(hierarchyBridge(root, { createAuthoringSession }), undefined))
       .toMatchObject({ ok: false, reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported });
     expect(raw(hierarchyBridge(root, { createAuthoringSession }), "game", {
       kind: "reparent-object",
@@ -432,7 +455,15 @@ describe("full-editor hierarchy vertical", () => {
       instanceIds: ["desktop-crate-beside"],
     })).toMatchObject({
       ok: true,
-      data: { selection: { instanceIds: ["desktop-crate-beside"] } },
+      data: {
+        ok: true,
+        contentHash: expect.stringMatching(/^sha256:[0-9a-f]{64}$/),
+        hierarchy: { rootInstanceId: "desktop-crate-root" },
+        entities: expect.arrayContaining([
+          expect.objectContaining({ id: "desktop-crate-beside" }),
+        ]),
+        selection: { instanceIds: ["desktop-crate-beside"] },
+      },
     });
     expect(command(bridge, "scene-object-reparent", "desktop-control", {
       documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,

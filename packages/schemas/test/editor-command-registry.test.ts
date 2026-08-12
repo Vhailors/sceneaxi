@@ -35,6 +35,7 @@ describe("full-editor command registry", () => {
       "edit-redo",
       "scene-hierarchy-inspect",
       "scene-selection-set",
+      "scene-property-set",
       "scene-object-create",
       "scene-object-remove",
       "scene-object-reparent",
@@ -88,6 +89,27 @@ describe("full-editor command registry", () => {
       expect(command?.refusals).not.toContain(EDITOR_COMMAND_REFUSALS.kidsDenied);
       expect(new Set(command?.refusals).size).toBe(command?.refusals.length);
     }
+    expect(editorCommand("scene-property-set")).toMatchObject({
+      acceptedClients: ["desktop-control"],
+      capability: { id: "scene.compose" },
+      mutation: "stages-change",
+      undo: { kind: "none", commandId: null },
+    });
+    expect(validateEditorCommandInvocation({
+      schemaVersion: 1,
+      commandId: "scene-property-set",
+      client: "desktop-control",
+      permission: "project:write",
+      profile: "game",
+      input: {
+        documentPath: "scene.json",
+        expectedContentHash: `sha256:${"a".repeat(64)}`,
+        profile: "game",
+        instanceId: "child",
+        propertyId: "translation-x",
+        newValue: 2.5,
+      },
+    }).ok).toBe(true);
     expect(validateEditorCommandInvocation({
       schemaVersion: 1,
       commandId: "scene-object-reparent",

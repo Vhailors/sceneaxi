@@ -57,6 +57,36 @@ function editableStatus(bridge: ReturnType<typeof createDesktopBridge>) {
 }
 
 describe("desktop typed Scene Document edit golden", () => {
+  it("stages desktop properties through registered hierarchy authority", () => {
+    const dir = seed("registered-authority");
+    const bridge = createDesktopBridge({ cwd: dir, commandCapabilities: ["scene.compose"] });
+    const opened = editableStatus(bridge);
+    const staged = bridge.handle({
+      action: "command",
+      payload: createEditorCommandInvocation("scene-property-set", "desktop-control", {
+        documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+        expectedContentHash: opened.contentHash,
+        profile: "game",
+        instanceId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
+        propertyId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.id,
+        newValue: -3.25,
+      }),
+    });
+    expect(staged).toMatchObject({
+      ok: true,
+      data: {
+        phase: "reviewing",
+        editableScene: {
+          ok: true,
+          contentHash: opened.contentHash,
+          entities: expect.arrayContaining([
+            expect.objectContaining({ id: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId }),
+          ]),
+        },
+      },
+    });
+  });
+
   it("reviews without writing, saves atomically, reopens persisted bytes, and plays the saved transform", () => {
     const dir = seed("loop");
     const bridge = createDesktopBridge({
@@ -79,6 +109,7 @@ describe("desktop typed Scene Document edit golden", () => {
         op: "edit-property",
         documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
         expectedContentHash: opened.contentHash,
+        profile: "game",
         entityId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
         propertyId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.id,
         newValue: -3.25,
@@ -98,12 +129,14 @@ describe("desktop typed Scene Document edit golden", () => {
         ],
       },
     });
+    expect(proposed.data).not.toHaveProperty("editableScene");
     expect(readFileSync(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8")).toBe(before);
 
     const saved = bridge.handle({ action: "authoring", payload: { op: "accept" } });
     expect(saved.ok).toBe(true);
     if (!saved.ok) return;
     expect(saved.data).toMatchObject({ phase: "applied", diagnostics: null });
+    expect(saved.data).not.toHaveProperty("editableScene");
     const persisted = readFileSync(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8");
     expect(persisted).not.toBe(before);
 
@@ -146,6 +179,7 @@ describe("desktop typed Scene Document edit golden", () => {
         op: "edit-property",
         documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
         expectedContentHash: opened.contentHash,
+        profile: "game",
         entityId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
         propertyId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.id,
         newValue: "left",
@@ -172,6 +206,7 @@ describe("desktop typed Scene Document edit golden", () => {
         op: "edit-property",
         documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
         expectedContentHash: opened.contentHash,
+        profile: "game",
         entityId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
         propertyId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.id,
         newValue: -3.25,
@@ -203,6 +238,7 @@ describe("desktop typed Scene Document edit golden", () => {
         op: "edit-property",
         documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
         expectedContentHash: status.contentHash,
+        profile: "game",
         entityId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
         propertyId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.id,
         newValue: -2.75,
@@ -296,12 +332,16 @@ describe("desktop typed Scene Document edit golden", () => {
     }
 
     const added = stage({ kind: "add-instance", sourceInstanceId: selected });
-    expect(added).toMatchObject({
-      ok: true,
-      data: { selectedInstanceId: "desktop-crate-beside-copy-1" },
-    });
+    expect(added).toMatchObject({ ok: true, data: { phase: "reviewing" } });
+    if (added.ok) {
+      expect(added.data).not.toHaveProperty("editableScene");
+      expect(added.data).not.toHaveProperty("selectedInstanceId");
+    }
     accept();
     const afterAdd = readFileSync(documentFile, "utf8");
+    expect(status().editableScene.entities.some(
+      (entity) => entity.id === "desktop-crate-beside-copy-1",
+    )).toBe(true);
     const reopened = bridge.handle({
       action: "authoring",
       payload: { op: "restart", documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },

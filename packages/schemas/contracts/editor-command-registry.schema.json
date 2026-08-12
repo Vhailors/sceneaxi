@@ -28,6 +28,7 @@
             "edit-redo",
             "scene-hierarchy-inspect",
             "scene-selection-set",
+            "scene-property-set",
             "scene-object-create",
             "scene-object-remove",
             "scene-object-reparent",
@@ -85,7 +86,7 @@
           }
         },
         "inputSchema": { "type": "object" },
-        "inputShape": { "enum": ["none", "document", "export", "assistant", "assistant-agent", "job", "migration-approval", "scene-document", "scene-selection", "scene-create", "scene-remove", "scene-reparent"] }
+        "inputShape": { "enum": ["none", "document", "export", "assistant", "assistant-agent", "job", "migration-approval", "scene-document", "scene-selection", "scene-property", "scene-create", "scene-remove", "scene-reparent"] }
       }
     }
   }

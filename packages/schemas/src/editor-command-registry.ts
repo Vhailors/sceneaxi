@@ -61,6 +61,7 @@ export type EditorCommandId =
   | "edit-redo"
   | "scene-hierarchy-inspect"
   | "scene-selection-set"
+  | "scene-property-set"
   | "scene-object-create"
   | "scene-object-remove"
   | "scene-object-reparent"
@@ -135,6 +136,7 @@ export type EditorCommandDefinition = Readonly<{
     | "migration-approval"
     | "scene-document"
     | "scene-selection"
+    | "scene-property"
     | "scene-create"
     | "scene-remove"
     | "scene-reparent";
@@ -313,6 +315,21 @@ const sceneMutationProperties = Object.freeze({
   expectedContentHash: Object.freeze({ type: "string", pattern: "^sha256:[0-9a-f]{64}$" }),
   profile: sceneProfile,
 });
+
+const scenePropertyInput = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: Object.freeze(["documentPath", "expectedContentHash", "profile", "instanceId", "propertyId", "newValue"]),
+  properties: Object.freeze({
+    ...sceneMutationProperties,
+    instanceId: sceneId,
+    propertyId: Object.freeze({
+      type: "string",
+      pattern: "^(translation|rotation|scale)-[xyz]$",
+    }),
+    newValue: Object.freeze({ type: "number" }),
+  }),
+}) satisfies JsonObject;
 
 const sceneCreateInput = Object.freeze({
   type: "object",
@@ -577,6 +594,24 @@ const DEFINITIONS = [
     undo: undo("none"),
     inputSchema: sceneSelectionInput,
     inputShape: "scene-selection",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "scene-property-set",
+    label: "Set Scene Object Property",
+    acceptedClients: ["desktop-control"],
+    permission: "project:write",
+    capability: capability("scene.compose"),
+    mutation: "stages-change",
+    progress: immediate(["validating", "reviewing"]),
+    evidence: evidence("scene-hierarchy", "change-review"),
+    refusals: [
+      ...HIERARCHY_BASE_REFUSALS,
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+    ],
+    undo: undo("none"),
+    inputSchema: scenePropertyInput,
+    inputShape: "scene-property",
   }),
   definition({
     schemaVersion: 1,
@@ -887,6 +922,12 @@ export function validateEditorCommandInput(
       return exactKeys(input, ["documentPath", "profile", "instanceIds"]) &&
         sceneDocumentFields(input) && sceneProfileField(input) &&
         sceneInstanceIds(input["instanceIds"]);
+    case "scene-property":
+      return exactKeys(input, ["documentPath", "expectedContentHash", "profile", "instanceId", "propertyId", "newValue"]) &&
+        sceneMutationFields(input) && typeof input["instanceId"] === "string" &&
+        SCENE_ID_RE.test(input["instanceId"]) && typeof input["propertyId"] === "string" &&
+        /^(translation|rotation|scale)-[xyz]$/.test(input["propertyId"]) &&
+        typeof input["newValue"] === "number" && Number.isFinite(input["newValue"]);
     case "scene-create":
       return exactKeys(input, ["documentPath", "expectedContentHash", "profile", "sourceInstanceId", "parentInstanceId"]) &&
         sceneMutationFields(input) && typeof input["sourceInstanceId"] === "string" &&

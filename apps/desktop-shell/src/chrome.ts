@@ -2770,22 +2770,6 @@ if (shell) {
     return true;
   };
 
-  const stageSceneOperation = async (operation, label) => stageSceneChange({
-    label,
-    requiresSelection: true,
-    propertyFeedback: true,
-    request: (expectedContentHash) => runtimeRequest({
-      action: 'authoring',
-      payload: {
-        op: 'edit-scene',
-        documentPath: T.product.documentPath,
-        expectedContentHash,
-        profile: shell.dataset.profile,
-        operation,
-      },
-    }),
-  });
-
   const stageSceneProperty = async () => {
     if (selectedSceneEntityId === null || editableScene === null) {
       productStatus('refused', 'Edit refused · select a composed instance first');
@@ -2810,12 +2794,19 @@ if (shell) {
       propertyId: 'translation-x',
       value: entity.properties.find((property) => property.id === 'translation-x')?.value,
     };
-    await stageSceneOperation({
-      kind: 'set-transform-component',
-      instanceId: selectedSceneEntityId,
-      propertyId: component.propertyId,
-      value: component.value,
-    }, 'property');
+    await stageSceneChange({
+      label: 'property',
+      requiresSelection: true,
+      propertyFeedback: true,
+      request: (expectedContentHash) => commandRequest('scene-property-set', {
+        documentPath: T.product.documentPath,
+        expectedContentHash,
+        profile: shell.dataset.profile,
+        instanceId: selectedSceneEntityId,
+        propertyId: component.propertyId,
+        newValue: component.value,
+      }),
+    });
   };
 
   const stageSceneInstance = async (kind) => {
@@ -2875,24 +2866,28 @@ if (shell) {
     }
     const selection = response.data?.selection;
     if (!selection || !Array.isArray(selection.instanceIds)) return;
-    const recovered = editableScene && editableScene.ok === false &&
-      Array.isArray(editableScene.entities) && response.data?.hierarchy
-      ? {
-          ok: true,
-          contentHash: response.data.contentHash,
-          entities: editableScene.entities,
-          hierarchy: response.data.hierarchy,
-          selection,
-        }
-      : null;
-    if (recovered) syncSceneProperties({ editableScene: recovered, selectedInstanceIds: selection.instanceIds });
+    if (
+      response.data?.ok !== true ||
+      !Array.isArray(response.data.entities) ||
+      !response.data.hierarchy ||
+      typeof response.data.contentHash !== 'string' ||
+      !/^sha256:[0-9a-f]{64}$/.test(response.data.contentHash)
+    ) {
+      productStatus('refused', 'Selection refused · ' + T.product.refusals.authoringRefused);
+      return;
+    }
+    if (!syncSceneProperties({ editableScene: response.data, selectedInstanceIds: selection.instanceIds })) {
+      productStatus('refused', 'Selection refused · ' + T.product.refusals.authoringRefused);
+      return;
+    }
+    projectContentHash = response.data.contentHash;
     selectedSceneEntityIds = selection.instanceIds;
     if (selection.primaryInstanceId && showSceneProperty(selection.primaryInstanceId) && shell.dataset.mode !== 'build') {
       showModePanels('build');
     }
   };
 
-  const applySaveSnapshot = (snapshot) => {
+  const applySaveSnapshot = async (snapshot) => {
     if (!isSessionSnapshot(snapshot)) return false;
     syncReview(snapshot);
     const diagnostics = Array.isArray(snapshot.diagnostics) ? snapshot.diagnostics : [];
@@ -2918,7 +2913,7 @@ if (shell) {
       // The written document, not the diff of how it got there: the applied
       // proposal is spent, so the review panel goes with it while the panel
       // keeps showing the value the next Play will mount.
-      syncSceneProperties(snapshot);
+      await syncSceneHierarchy();
       productStatus('saved', withSceneRefusal(T.product.documentPath + ' · saved'));
       return true;
     }
@@ -2941,7 +2936,7 @@ if (shell) {
       await restartProject('journal-not-found');
       return;
     }
-    if (applySaveSnapshot(snapshot)) {
+    if (await applySaveSnapshot(snapshot)) {
       await syncProjectBrowser();
       return;
     }

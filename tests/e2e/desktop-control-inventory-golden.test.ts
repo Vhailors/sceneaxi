@@ -168,6 +168,15 @@ describe("desktop mounted control inventory", () => {
         { id: "current-instance", parentId: "root-instance" },
       ],
     };
+    const recoveredEntities = entities.map((entity) => entity.id === "current-instance"
+      ? {
+          ...entity,
+          label: "Fresh Current",
+          properties: entity.properties.map((property) => property.id === "translation-x"
+            ? { ...property, value: 7 }
+            : property),
+        }
+      : entity);
     const requests: unknown[] = [];
     const window = mount(undefined, {
       project: async () => ({
@@ -202,7 +211,9 @@ describe("desktop mounted control inventory", () => {
           return {
             ok: true,
             data: {
-              contentHash: `sha256:${"4".repeat(64)}`,
+              ok: true,
+              contentHash: `sha256:${"5".repeat(64)}`,
+              entities: recoveredEntities,
               hierarchy,
               selection: {
                 schemaVersion: 1,
@@ -261,6 +272,27 @@ describe("desktop mounted control inventory", () => {
     });
     expect(element(window, "[data-scene-entities-refusal]").hidden).toBe(true);
     expect(element(window, "[data-scene-property-editor]").hidden).toBe(false);
+    expect(Array.from(select.options, (option) => option.textContent)).toContain(
+      "  Fresh Current · instance current-instance · object current-object · parent root-instance",
+    );
+    const translation = element(window, "#scene-property-translation-x") as unknown as {
+      value: string;
+    };
+    expect(translation.value).toBe("7");
+    translation.value = "8";
+    element(window, "#scene-property-stage").click();
+    await settle();
+    expect(requests.find((request) =>
+      (request as { payload?: { commandId?: string } }).payload?.commandId === "scene-property-set"
+    )).toMatchObject({
+      payload: {
+        input: {
+          expectedContentHash: `sha256:${"5".repeat(64)}`,
+          instanceId: "current-instance",
+          newValue: 8,
+        },
+      },
+    });
   });
 
   it("serializes rapid hierarchy selections before staging from the latest one", async () => {
@@ -361,7 +393,9 @@ describe("desktop mounted control inventory", () => {
     selectionRequests[0]?.resolve({
       ok: true,
       data: {
+        ok: true,
         contentHash: status.contentHash,
+        entities,
         hierarchy,
         selection: { schemaVersion: 1, instanceIds: ["first"], primaryInstanceId: "first" },
       },
@@ -373,7 +407,9 @@ describe("desktop mounted control inventory", () => {
     selectionRequests[1]?.resolve({
       ok: true,
       data: {
+        ok: true,
         contentHash: status.contentHash,
+        entities,
         hierarchy,
         selection: { schemaVersion: 1, instanceIds: ["second"], primaryInstanceId: "second" },
       },
