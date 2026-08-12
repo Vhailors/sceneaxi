@@ -1,8 +1,7 @@
 # Full desktop editor v1 capability matrix
 
 This is the canonical inventory and todo index for SceneAxi full desktop editor
-v1. It records the repository at `482ccc0` (2026-08-11) before the full-editor
-implementation program starts. The parent specification is
+v1. Its first-class asset rows include the #256 implementation evidence. The parent specification is
 [sceneaxi#249](https://github.com/Vhailors/sceneaxi/issues/249); the product-scope
 parent remains [sceneaxi#1](https://github.com/Vhailors/sceneaxi/issues/1).
 
@@ -42,7 +41,7 @@ and Remove key button. Their availability is decided by
 `tests/desktop/desktop-byo-secure-storage.test.ts`. They are deliberately not
 counted as shell controls, so the current packaged-window union is **90**.
 
-The CLI exposes **20 verbs** from `packages/cli/src/commands.ts`; the Electron
+The CLI exposes **21 verbs** from `packages/cli/src/commands.ts`; the Electron
 bridge exposes **10 actions**, **9 authoring operations**, and **3 legacy
 assistant transport operations** from `desktop/linux/src/lib/bridge-contract.ts`;
 the same-user local agent bridge exposes **18 tools** from
@@ -77,7 +76,7 @@ id family expands only the suffixes printed in the Item(s) cell.
 | `ship-export-web` | 1 | **real** | Produces the contained content-addressed static Web viewer and Delivery Handoff on Linux. It never deploys. macOS and Windows refuse `DESKTOP_WEB_EXPORT_PLATFORM_UNSUPPORTED`. | `desktop/linux/src/lib/web-export.ts`; desktop Web export golden | [#266](https://github.com/Vhailors/sceneaxi/issues/266) owns project build/export, which is separate from this real Web export. |
 | `scene-instance-add`, `scene-instance-remove` | 2 | **partial** | Add copies one already-validated local artifact; Remove permits a non-root leaf while preserving the two-instance minimum. No general hierarchy or parenting exists. | desktop scene edit contract and goldens | [#253](https://github.com/Vhailors/sceneaxi/issues/253). |
 | `web-stage-html` | 1 | **partial** | Web profile stages one bounded starter HTML value as inert data. It is not a site canvas or general HTML editor; Game and Kids name `DESKTOP_WEB_CAPABILITY_REQUIRED`. | `apps/desktop-shell/src/product-loop.ts`; desktop product-loop tests | [#250](https://github.com/Vhailors/sceneaxi/issues/250) registers it; no broader site builder is authorized by full-editor v1. |
-| `web-inject-asset` | 1 | **real** | On packaged Linux, opens a native picker and stages the contained GLB/glTF importer through Change Review. Game and Kids name `DESKTOP_WEB_CAPABILITY_REQUIRED`. | `docs/asset-ingestion.md`; asset ingestion and picker tests | [#256](https://github.com/Vhailors/sceneaxi/issues/256) adds the remaining first-class asset families and hot reload. |
+| `web-inject-asset` | 1 | **real** | On packaged Linux, opens the Game/Web native picker and stages the shared SceneAxi/model/image/audio/font/animation-data pipeline through Change Review. Kids refuses before reads. | `docs/asset-ingestion.md`; asset-pipeline, asset-ingestion, and picker tests | None for the bounded v2 profiles; later animation authoring remains #259. |
 | `drawer-left`, `drawer-inspector` | 2 | **real** | Open the responsive Panels and Inspector drawers; Kids centrally demotes them. | control accounting and recorded viewport evidence in `docs/engine-desktop-surface.md` | [#265](https://github.com/Vhailors/sceneaxi/issues/265) adds user-arranged persistent workspaces. |
 | `menu-file`, `menu-edit`, `menu-run` | 3 | **real** | Open accessible application menus with focus, arrow, Escape, outside-click, and focus-leave behavior. Their command rows derive label, schema version, and permission from the shared registry. | `apps/desktop-shell/src/interaction-commands.ts`; command interaction golden | None for the registered first-slice commands. |
 | `menu-command-{project-new,project-open,project-save,ship-export-web,edit-undo,edit-redo,run-play}` | 7 | **real** | Each invokes the same current handler as its palette row and accelerator through the registered desktop-control contract; native New/Open keep the lifecycle port while the other engine-host operations cross the validated `command` action. Undo and redo are visibly inert until durable history reports availability or while recovery is pending. | command interaction golden; full-editor transaction golden; desktop bridge golden | None for this slice. |
@@ -90,7 +89,7 @@ id family expands only the suffixes printed in the Item(s) cell.
 | `mode-plugins` | 1 | **fake** | Changes presentation only; the room says no plugin host runs on this surface and exposes no operation. | chrome mode panel; plugin ADRs 0004–0005 | [#262](https://github.com/Vhailors/sceneaxi/issues/262). |
 | `profile-game`, `profile-web`, `profile-kids` | 3 | **real** | Switch the shell projection. Kids replaces the editor with `OPEN_PATH_KIDS_REFUSED`, independently denies the assistant, and leaves only the escape/profile and disclosure controls live. | shared open-path policy, parity test, mounted control inventory | None. Full-editor work must preserve it. |
 | `dock-changes` | 1 | **real** | Shows the active proposal diff and decisions. | product-loop golden | [#252](https://github.com/Vhailors/sceneaxi/issues/252) adds command history beyond one proposal. |
-| `dock-assets` | 1 | **partial** | Shows admitted manifest assets from the project-browser response. No complete asset families, previews, or hot reload. | project-browser golden | [#256](https://github.com/Vhailors/sceneaxi/issues/256). |
+| `dock-assets` | 1 | **real** | Shows admitted assets with family, stable identity, byte-derived preview metadata, provenance, and validation from the same manifest entry used by Play and packaging. Explicit reload stages through CLI/bridge Change Review rather than mutating from the dock. | asset-pipeline and project-browser goldens | None for the bounded v2 profiles. |
 | `dock-console` | 1 | **fake** | The tab works as presentation, but it always says no session is running and owns no log stream. | `apps/desktop-shell/src/chrome.ts` | [#250](https://github.com/Vhailors/sceneaxi/issues/250) supplies command progress/result events; [#258](https://github.com/Vhailors/sceneaxi/issues/258) supplies a runtime session. |
 | `dock-evidence` | 1 | **partial** | Shows accepted/staged rarity evidence and honest empty copy; general command and capture evidence is not projected. | rarity desktop golden and chrome | [#250](https://github.com/Vhailors/sceneaxi/issues/250), with final enforcement in [#270](https://github.com/Vhailors/sceneaxi/issues/270). |
 | `dock-timeline` | 1 | **fake** | The Animate-only tab works as presentation but contains no tracks or commands. | editor-shell schema and chrome | [#259](https://github.com/Vhailors/sceneaxi/issues/259). |
@@ -119,7 +118,7 @@ click or focus behavior.
 |---|---|---|---|---|
 | CLI | `project new`, `dev`, `test`, `capture`, `report`, `propose`, `apply` | **real** | Versioned envelope, strict flags, text-canonical E1 authoring and evidence. No full-editor command vocabulary. | CLI golden, proposal/apply and lifecycle tests; migrate through [#250](https://github.com/Vhailors/sceneaxi/issues/250). |
 | CLI | `scene compose` | **real** | Deterministic offline scene composition with named refusal matrix. | scene composition golden; hierarchy expansion [#253](https://github.com/Vhailors/sceneaxi/issues/253). |
-| CLI | `asset import`, `asset list` | **partial** | Import covers the fixed contained GLB/glTF profile; list reports package refs from catalog items. | asset ingestion golden; [#256](https://github.com/Vhailors/sceneaxi/issues/256). |
+| CLI | `asset import`, `asset reload`, `asset list` | **real** | Import and stable-id reload cover all bounded v2 manifest families; reload leaves accepted bytes untouched until `project apply`. `list` continues to report catalog Asset Package refs and is not an ambient project scanner. | asset-pipeline and asset-ingestion goldens. |
 | CLI | `profile list`, `profile open-path` | **real** | Read-only registry and shared demo policy, including non-zero Kids refusal. | profile/open-path tests. |
 | CLI | `catalog list`, `evidence list` | **real** | Read-only bounded listings; catalog commerce remains inert. | registry verb tests. |
 | CLI | `desktop bridge call`, `status`, `tools` | **real** | Discovers and authenticates the same-user Unix socket; validates exact tool, permission, and input. `tools` exposes the same command schema version and definitions; registered calls include shared project inspection plus migration propose/commit/recover without a second CLI result model. | CLI bridge, local RPC, and CLI→local bridge goldens. |
@@ -161,7 +160,7 @@ product-command definitions.
 | Hierarchy, multi-select, parent/child | **partial** | Flat composed-instance selector and bounded add/remove | [#253](https://github.com/Vhailors/sceneaxi/issues/253) |
 | Gizmos, snapping, full transform inspector | **partial** | Nine numeric properties plus four transient assistant nudges | [#254](https://github.com/Vhailors/sceneaxi/issues/254) |
 | Prefab-like reusable content | **fake** | No definition/instance/override contract | [#255](https://github.com/Vhailors/sceneaxi/issues/255) |
-| First-class assets, previews, manifests, hot reload | **partial** | SceneAxi artifacts and contained GLB/glTF paths exist; remaining families and hot reload do not | [#256](https://github.com/Vhailors/sceneaxi/issues/256) |
+| First-class assets, previews, manifests, hot reload | **real** | Manifest v2 admits bounded SceneAxi artifacts, contained GLB/glTF, PNG/JPEG/WebP, WAV/Ogg/MP3, WOFF2/WOFF/TTF/OTF, and animation-data metadata with stable ids, byte-derived previews, exact provenance, contained materialization, and review-only digest reload. Browser, assistant inspection, applicable Play loading, CLI, and Web export consume the same entry. | `packages/schemas/contracts/project-asset-manifest.schema.json`; importer tests; asset-pipeline and asset-ingestion goldens |
 | Unified rebindable keyboard/mouse/controller input | **partial** | Six hand-written desktop accelerators, pointer handlers, and presentation orbit controls | [#257](https://github.com/Vhailors/sceneaxi/issues/257) |
 | Isolated Play clone and viewport-source lifecycle | **partial** | One-shot closed open path; source tabs disabled | [#258](https://github.com/Vhailors/sceneaxi/issues/258) |
 | Animation authoring and deterministic replay | **fake** | Artifact socket/toy runtime support only; empty Animate room | [#259](https://github.com/Vhailors/sceneaxi/issues/259) |

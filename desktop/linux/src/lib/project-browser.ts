@@ -393,12 +393,16 @@ export function createDesktopProjectBrowser(
     const assets: DesktopProjectAssetFile[] = manifest.value.assets.map((entry) => {
       const checked = assetValidation(root, entry.relativePath, entry);
       cachedAssetFingerprints.set(entry.relativePath, checked.fingerprint);
+      const fileType: DesktopProjectAssetFile["fileType"] = entry.family === "model"
+        ? entry.mediaType === "model/gltf-binary" ? "contained-glb" : "contained-gltf"
+        : entry.family === "sceneaxi" ? "sceneaxi-artifact"
+        : entry.family === "animation" ? "animation-data"
+        : entry.family;
       return Object.freeze({
         kind: "asset" as const,
         path: entry.relativePath,
-        fileType: entry.mediaType === "model/gltf-binary"
-          ? "contained-glb" as const
-          : "contained-gltf" as const,
+        fileType,
+        family: entry.family,
         mediaType: entry.mediaType,
         byteLength: entry.byteLength,
         digest: entry.digest,
@@ -407,6 +411,9 @@ export function createDesktopProjectBrowser(
         artifactId: entry.artifactId,
         instanceId: entry.instanceId,
         copyPolicy: entry.copyPolicy,
+        profile: entry.profile,
+        supportedProfiles: entry.supportedProfiles,
+        preview: entry.preview,
         provenance: entry.provenance,
         validation: checked.validation,
         mutable: false as const,

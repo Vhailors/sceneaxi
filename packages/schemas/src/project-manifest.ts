@@ -30,6 +30,7 @@ export const PROJECT_CAPABILITIES = Object.freeze([
   "assistant.cancel",
   "scene.compose",
   "asset.contained-gltf",
+  "asset.pipeline",
 ] as const);
 
 export type ProjectCapability = (typeof PROJECT_CAPABILITIES)[number];
@@ -75,7 +76,7 @@ export type ProjectAssetIdentity = Readonly<{
   path: string;
   mediaType: string;
   digest: string;
-  capability: "asset.contained-gltf";
+  capability: "asset.contained-gltf" | "asset.pipeline";
 }>;
 
 export type ProjectMigrationRecord = Readonly<{
@@ -211,7 +212,7 @@ export function createProjectManifest(input: Readonly<{
       path: asset.path,
       mediaType: asset.mediaType,
       digest: asset.digest,
-      capability: "asset.contained-gltf" as const,
+      capability: "asset.pipeline" as const,
     })).sort((left, right) => left.id < right.id ? -1 : left.id > right.id ? 1 : 0)),
     migrations: Object.freeze(input.migrationSourceDigest === undefined ? [] : [Object.freeze({
       id: PROJECT_MIGRATION_ID,
@@ -310,7 +311,7 @@ export function validateProjectManifest(value: unknown): ProjectManifestValidati
       typeof asset["id"] !== "string" || asset["id"] !== deterministicProjectAssetId(projectId, asset["sourceId"]) ||
       typeof asset["path"] !== "string" || typeof asset["mediaType"] !== "string" || asset["mediaType"].length === 0 ||
       typeof asset["digest"] !== "string" || !DIGEST_RE.test(asset["digest"]) ||
-      asset["capability"] !== "asset.contained-gltf") {
+      asset["capability"] !== "asset.contained-gltf" && asset["capability"] !== "asset.pipeline") {
       return diagnostic(PROJECT_MANIFEST_DIAGNOSTICS.malformed, `$.assets[${index}]`, "Project asset identity is invalid or non-deterministic.");
     }
     if (!isCanonicalProjectPath(asset["path"])) {

@@ -57,7 +57,7 @@ Command-first shape: `pnpm sceneaxi <group> <verb> [flags]`.
 |---|---|
 | `project` | `new`, `dev`, `test`, `capture`, `report`, `propose`, `apply` |
 | `scene` | `compose` (deterministic multi-object composition) |
-| `asset` | `list`, `import` (contained GLB/glTF copy via E1) |
+| `asset` | `list`, `import`, `reload` (bounded manifest assets via E1) |
 | `profile` | `list`, `open-path` |
 | `catalog` | `list` |
 | `evidence` | `list` |
@@ -77,18 +77,22 @@ pnpm sceneaxi project report --evidence run.evidence.json
 pnpm sceneaxi evidence list --dir .
 ```
 
-A contained offline asset import uses the same proposal/apply review boundary:
+A contained first-class asset import or digest hot reload uses the same
+proposal/apply review boundary:
 
 ```bash
 pnpm sceneaxi asset import --source /path/to/model.glb --document scene.json --cwd /path/to/project --out asset-import.json
 pnpm sceneaxi project apply --proposal asset-import.json --cwd /path/to/project
+pnpm sceneaxi asset reload --source /path/to/changed-model.glb --asset-id model --document scene.json --cwd /path/to/project --out asset-reload.json
+pnpm sceneaxi project apply --proposal asset-reload.json --cwd /path/to/project
 ```
 
 The accepted profile and absence boundaries are in
 [`docs/asset-ingestion.md`](../../docs/asset-ingestion.md).
 `project apply` then attempts project-copy materialization for every applied
 document and reports each result under `assetCopies`; accepted manifest bytes are
-the recovery authority if a copy is absent later.
+the recovery authority if a copy is absent later. Reload replaces only the exact
+accepted predecessor digest after approval.
 
 Composing several Sculpt Artifacts into one openable scene (`--artifact` repeats):
 

@@ -317,10 +317,13 @@ async function start(): Promise<void> {
     }
     const picker = createDesktopAssetPickerHost({
       chooseFile: () => dialog.showOpenDialog(window, {
-        title: "Import contained GLB/glTF asset",
+        title: "Import validated project asset",
         buttonLabel: "Stage Import",
         properties: ["openFile"],
-        filters: [{ name: "Contained glTF 2.0", extensions: ["glb", "gltf"] }],
+        filters: [{
+          name: "SceneAxi project assets",
+          extensions: ["glb", "gltf", "json", "png", "jpg", "jpeg", "webp", "wav", "ogg", "mp3", "woff2", "woff", "ttf", "otf"],
+        }],
       }),
       stage: (selection) => bridge?.handle(selection) ?? bridgeRefuse(
         DESKTOP_PROJECT_REFUSALS.projectRequired,

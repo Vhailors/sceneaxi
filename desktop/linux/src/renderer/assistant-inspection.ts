@@ -10,6 +10,7 @@
 import type { DesktopAssistantJobSnapshot } from "../lib/bridge-contract.js";
 import type { DesktopRarityProposalResult } from "../lib/bridge-contract.js";
 import { formatSafeRarityEvidence } from "@sceneaxi/authoring-core/rarity-evidence";
+import type { ProjectAssetManifestEntry } from "@sceneaxi/importers";
 
 export type AssistantRaritySettlement = Readonly<{
   activeNamespaceDigest: null;
@@ -203,5 +204,23 @@ export function assistantInspectionText(job: DesktopAssistantJobSnapshot): strin
     "SETTINGS (read-only)",
     `${settings.moduleId} · ${settings.exportName}`,
     inspection.settings.edit.refusal,
+  ].join("\n");
+}
+
+/**
+ * Read-only asset context for bounded assistant inspection. It consumes the
+ * exact validated manifest entry used by the browser, Play, and packaging and
+ * deliberately omits canonical bytes. Renderers must place this text through
+ * textContent; no asset markup or code is interpreted here.
+ */
+export function assistantAssetInspectionText(
+  entries: readonly ProjectAssetManifestEntry[],
+): string {
+  if (entries.length === 0) return "ASSETS (read-only)\nnone";
+  return [
+    "ASSETS (read-only)",
+    ...entries.map((entry) =>
+      `${entry.assetId} · ${entry.family} · ${entry.preview.label} · ${entry.digest}`,
+    ),
   ].join("\n");
 }

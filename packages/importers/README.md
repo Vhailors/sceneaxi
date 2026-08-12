@@ -10,10 +10,12 @@ The adapter fails closed on parse/schema mismatch and multi-document input. It
 preserves the target's local identity and has no direct engine access, binary
 asset compiler, CMS, or multi-format registry.
 
-The second adapter is the deliberately narrow offline profile
-`sceneaxi.gltf-contained-triangles-v1`: contained GLB or embedded-buffer glTF 2.0
-triangles only. It validates before writes, creates a digest/provenance manifest
-with canonical bytes, and proposes `/data` through the same E1 service. Accepted
-copies are materialized under the selected project's `assets/` directory and can
-be recovered from that manifest. The exact profile, refusal boundaries, and
+The project-asset adapter admits bounded SceneAxi JSON artifacts, contained
+GLB/glTF, common raster images, audio, fonts, and animation-data metadata into
+one v2 digest/provenance/preview manifest. It validates before writes and stages
+`/data` through the same E1 service. Accepted copies materialize under the
+selected project's `assets/` directory; explicit hot reload stages a digest
+replacement against the stable asset identity and writes no saved byte before
+approval. The original `sceneaxi.gltf-contained-triangles-v1` geometry and
+canonical-byte behavior remain the model profile. Exact formats, refusals, and
 evidence are in [`docs/asset-ingestion.md`](../../docs/asset-ingestion.md).

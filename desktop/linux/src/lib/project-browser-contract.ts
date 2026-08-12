@@ -64,20 +64,28 @@ export type DesktopProjectDocumentFile = Readonly<{
 export type DesktopProjectAssetFile = Readonly<{
   kind: "asset";
   path: string;
-  fileType: "contained-glb" | "contained-gltf";
-  mediaType: "model/gltf-binary" | "model/gltf+json";
+  fileType: "contained-glb" | "contained-gltf" | "sceneaxi-artifact" | "image" | "audio" | "font" | "animation-data";
+  family: "sceneaxi" | "model" | "image" | "audio" | "font" | "animation";
+  mediaType: string;
   byteLength: number;
   digest: string;
   assetId: string;
   sourceName: string;
-  artifactId: string;
-  instanceId: string;
+  artifactId: string | null;
+  instanceId: string | null;
   copyPolicy: "copy";
+  profile: string;
+  supportedProfiles: readonly ["game", "web"];
+  preview: Readonly<{
+    kind: "metadata";
+    label: string;
+    properties: Readonly<Record<string, string | number | boolean>>;
+  }>;
   provenance: Readonly<{
     importer: "@sceneaxi/importers";
-    importerVersion: 1;
+    importerVersion: 2;
     sourceDigest: string;
-    formatVersion: "2.0";
+    formatVersion: string;
     contained: true;
   }>;
   validation: DesktopProjectBrowserValidation;

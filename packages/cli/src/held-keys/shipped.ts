@@ -36,6 +36,7 @@ export const SHIPPED_COMMAND_MAP: CliCommandMap = Object.freeze({
     { command: "scene compose", heldKeys: [] },
     { command: "asset list", heldKeys: [] },
     { command: "asset import", heldKeys: [] },
+    { command: "asset reload", heldKeys: [] },
     { command: "profile list", heldKeys: [] },
     { command: "profile open-path", heldKeys: [] },
     { command: "catalog list", heldKeys: [] },

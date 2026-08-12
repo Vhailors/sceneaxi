@@ -29,7 +29,7 @@
               "authoring.change-review", "authoring.undo", "runtime.play",
               "delivery.export-web", "assistant.build.local", "assistant.build.byo",
               "assistant.agent.bounded", "assistant.progress", "assistant.cancel",
-              "scene.compose", "asset.contained-gltf"
+              "scene.compose", "asset.contained-gltf", "asset.pipeline"
             ]
           },
           "version": { "const": 1 }
@@ -64,7 +64,7 @@
           "path": { "$ref": "#/$defs/path" },
           "mediaType": { "type": "string", "minLength": 1 },
           "digest": { "$ref": "#/$defs/digest" },
-          "capability": { "const": "asset.contained-gltf" }
+          "capability": { "enum": ["asset.contained-gltf", "asset.pipeline"] }
         }
       }
     },

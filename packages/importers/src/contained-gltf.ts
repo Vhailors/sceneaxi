@@ -17,6 +17,7 @@ import {
   openSync,
   readFileSync,
   realpathSync,
+  renameSync,
   statSync,
   unlinkSync,
   writeFileSync,
@@ -42,15 +43,23 @@ import {
 } from "@sceneaxi/authoring-core";
 import {
   COMPOSED_SCENE_DOCUMENT_DATA_KEY,
+  COMPOSED_SCENE_KIND,
+  DOCUMENT_KIND,
   OBJECT_SCULPT_SPEC_KIND,
   SCENE_COMPOSITION_INTAKE_KIND,
   SCENE_COMPOSITION_SCHEMA_VERSION,
   SCENE_MAXIMUM_INSTANCES,
+  SCULPT_ARTIFACT_KIND,
+  SCULPT_INTAKE_KIND,
   SCULPT_SCHEMA_VERSION,
   composedSceneFromDocumentData,
   identitySculptTransform,
   isJsonObject,
   parseUnambiguousJson,
+  validateComposedScene,
+  validateDocument,
+  validateSculptArtifact,
+  validateSculptIntake,
   type ComposedScene,
   type SculptArtifact,
   type SculptTransform,
@@ -61,11 +70,25 @@ export const CONTAINED_GLTF_PROFILE_ID =
 export const PROJECT_ASSET_MANIFEST_KEY = "assetManifest" as const;
 export const PROJECT_ASSET_MANIFEST_KIND =
   "sceneaxi.project-asset-manifest" as const;
-export const PROJECT_ASSET_MANIFEST_SCHEMA_VERSION = 1 as const;
+export const PROJECT_ASSET_MANIFEST_SCHEMA_VERSION = 2 as const;
+export const LEGACY_PROJECT_ASSET_MANIFEST_SCHEMA_VERSION = 1 as const;
 export const PROJECT_ASSET_COPY_POLICY = "copy" as const;
 export const PROJECT_ASSET_MAX_BYTES = 8 * 1024 * 1024;
 export const PROJECT_ASSET_MAX_COUNT = 16;
 export const PROJECT_ASSET_DIRECTORY = "assets" as const;
+export const PROJECT_ASSET_SUPPORTED_PROFILES = Object.freeze(["game", "web"] as const);
+
+export const PROJECT_ASSET_PROFILES = Object.freeze({
+  sceneaxi: "sceneaxi.artifact-json-v1",
+  model: CONTAINED_GLTF_PROFILE_ID,
+  image: "sceneaxi.image-raster-v1",
+  audio: "sceneaxi.audio-contained-v1",
+  font: "sceneaxi.font-contained-v1",
+  animation: "sceneaxi.animation-data-json-v1",
+} as const);
+
+export type ProjectAssetFamily = keyof typeof PROJECT_ASSET_PROFILES;
+export type ProjectAssetProfile = (typeof PROJECT_ASSET_PROFILES)[ProjectAssetFamily];
 
 export const CONTAINED_GLTF_REFUSALS = Object.freeze({
   requestMalformed: "ASSET_IMPORT_REQUEST_MALFORMED",
@@ -90,6 +113,9 @@ export const CONTAINED_GLTF_REFUSALS = Object.freeze({
   destinationConflict: "ASSET_IMPORT_DESTINATION_CONFLICT",
   proposalRefused: "ASSET_IMPORT_PROPOSAL_REFUSED",
   copyFailed: "ASSET_IMPORT_COPY_FAILED",
+  sourceUnchanged: "ASSET_HOT_RELOAD_SOURCE_UNCHANGED",
+  familyChanged: "ASSET_HOT_RELOAD_FAMILY_CHANGED",
+  projectCopyChanged: "ASSET_HOT_RELOAD_PROJECT_COPY_CHANGED",
 } as const);
 
 export type ContainedGltfRefusal =
@@ -106,23 +132,37 @@ export type ImportedAssetRenderMesh = Readonly<{
   roughness: number;
 }>;
 
+export type ProjectAssetPreview = Readonly<{
+  kind: "metadata";
+  label: string;
+  properties: Readonly<Record<string, string | number | boolean>>;
+}>;
+
 export type ProjectAssetManifestEntry = Readonly<{
   assetId: string;
   sourceName: string;
   relativePath: string;
-  mediaType: "model/gltf-binary" | "model/gltf+json";
+  family: ProjectAssetFamily;
+  mediaType: string;
   byteLength: number;
   digest: string;
   canonicalBytesBase64: string;
   copyPolicy: typeof PROJECT_ASSET_COPY_POLICY;
-  profile: typeof CONTAINED_GLTF_PROFILE_ID;
-  artifactId: string;
-  instanceId: string;
+  profile: ProjectAssetProfile;
+  supportedProfiles: typeof PROJECT_ASSET_SUPPORTED_PROFILES;
+  artifactId: string | null;
+  instanceId: string | null;
+  validation: Readonly<{
+    status: "validated";
+    validator: ProjectAssetProfile;
+    replacesDigest: string | null;
+  }>;
+  preview: ProjectAssetPreview;
   provenance: Readonly<{
     importer: "@sceneaxi/importers";
-    importerVersion: 1;
+    importerVersion: 2;
     sourceDigest: string;
-    formatVersion: "2.0";
+    formatVersion: string;
     contained: true;
   }>;
 }>;
@@ -134,13 +174,23 @@ export type ProjectAssetManifest = Readonly<{
 }>;
 
 export type ContainedGltfProjection = Readonly<{
-  entry: ProjectAssetManifestEntry;
+  entry: ProjectAssetManifestEntry & Readonly<{
+    family: "model";
+    mediaType: "model/gltf-binary" | "model/gltf+json";
+    profile: typeof CONTAINED_GLTF_PROFILE_ID;
+    artifactId: string;
+    instanceId: string;
+  }>;
   meshes: readonly ImportedAssetRenderMesh[];
   bounds: Readonly<{
     minimum: readonly [number, number, number];
     maximum: readonly [number, number, number];
   }>;
 }>;
+
+export type ProjectAssetProjection =
+  | ContainedGltfProjection
+  | Readonly<{ entry: ProjectAssetManifestEntry; preview: ProjectAssetPreview }>;
 
 export type ContainedGltfStageResult =
   | Readonly<{
@@ -161,12 +211,40 @@ export type ContainedGltfStageResult =
       message: string;
     }>;
 
+export type ProjectAssetStageResult =
+  | Readonly<{
+      ok: true;
+      replayed: boolean;
+      hotReload: boolean;
+      entry: ProjectAssetManifestEntry;
+      projection: ProjectAssetProjection;
+      edit: Readonly<{
+        documentPath: string;
+        jsonPointer: "/data";
+        expectedContentHash: string;
+        newValue: JsonObject;
+      }> | null;
+    }>
+  | Readonly<{ ok: false; reason: ContainedGltfRefusal; message: string }>;
+
 export type ContainedGltfProposalResult =
   | Readonly<{
       ok: true;
       replayed: boolean;
       entry: ProjectAssetManifestEntry;
       projection: ContainedGltfProjection;
+      proposal: Proposal | null;
+      unifiedDiff: string;
+    }>
+  | Extract<ContainedGltfStageResult, { readonly ok: false }>;
+
+export type ProjectAssetProposalResult =
+  | Readonly<{
+      ok: true;
+      replayed: boolean;
+      hotReload: boolean;
+      entry: ProjectAssetManifestEntry;
+      projection: ProjectAssetProjection;
       proposal: Proposal | null;
       unifiedDiff: string;
     }>
@@ -185,9 +263,19 @@ export type MaterializeAssetCopiesResult =
     }>;
 
 type ParsedGltf = Readonly<{
-  mediaType: ProjectAssetManifestEntry["mediaType"];
+  mediaType: "model/gltf-binary" | "model/gltf+json";
   meshes: readonly ImportedAssetRenderMesh[];
   bounds: ContainedGltfProjection["bounds"];
+}>;
+
+type ParsedAsset = Readonly<{
+  family: ProjectAssetFamily;
+  mediaType: string;
+  profile: ProjectAssetProfile;
+  formatVersion: string;
+  extension: string;
+  preview: ProjectAssetPreview;
+  gltf: ParsedGltf | null;
 }>;
 
 type Refusal = Extract<ContainedGltfStageResult, { readonly ok: false }>;
@@ -210,15 +298,23 @@ const PROJECT_ASSET_MANIFEST_ENTRY_KEYS = Object.freeze([
   "assetId",
   "sourceName",
   "relativePath",
+  "family",
   "mediaType",
   "byteLength",
   "digest",
   "canonicalBytesBase64",
   "copyPolicy",
   "profile",
+  "supportedProfiles",
   "artifactId",
   "instanceId",
+  "validation",
+  "preview",
   "provenance",
+]);
+const LEGACY_PROJECT_ASSET_MANIFEST_ENTRY_KEYS = Object.freeze([
+  "assetId", "sourceName", "relativePath", "mediaType", "byteLength", "digest",
+  "canonicalBytesBase64", "copyPolicy", "profile", "artifactId", "instanceId", "provenance",
 ]);
 const PROJECT_ASSET_PROVENANCE_KEYS = Object.freeze([
   "importer",
@@ -227,6 +323,8 @@ const PROJECT_ASSET_PROVENANCE_KEYS = Object.freeze([
   "formatVersion",
   "contained",
 ]);
+const PROJECT_ASSET_VALIDATION_KEYS = Object.freeze(["status", "validator", "replacesDigest"]);
+const PROJECT_ASSET_PREVIEW_KEYS = Object.freeze(["kind", "label", "properties"]);
 
 function refuse(reason: ContainedGltfRefusal, message: string): Refusal {
   return Object.freeze({ ok: false as const, reason, message });
@@ -351,13 +449,226 @@ function parseJsonBytes(bytes: Uint8Array): Record<string, unknown> | null {
     : null;
 }
 
+function metadataPreview(
+  label: string,
+  properties: Readonly<Record<string, string | number | boolean>>,
+): ProjectAssetPreview {
+  return Object.freeze({ kind: "metadata" as const, label, properties: Object.freeze(properties) });
+}
+
+function uint32Big(bytes: Uint8Array, offset: number): number {
+  return new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint32(offset, false);
+}
+
+function uint32Little(bytes: Uint8Array, offset: number): number {
+  return new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint32(offset, true);
+}
+
+function ascii(bytes: Uint8Array, offset: number, length: number): string {
+  return String.fromCharCode(...bytes.subarray(offset, offset + length));
+}
+
+function parseImage(bytes: Uint8Array, extension: string): ParsedAsset | Refusal {
+  let mediaType: string;
+  let width = 0;
+  let height = 0;
+  if (extension === ".png") {
+    const signature = [137, 80, 78, 71, 13, 10, 26, 10];
+    if (
+      bytes.byteLength < 45 ||
+      !signature.every((value, index) => bytes[index] === value) ||
+      uint32Big(bytes, 8) !== 13 || ascii(bytes, 12, 4) !== "IHDR" ||
+      ascii(bytes, bytes.byteLength - 8, 4) !== "IEND"
+    ) return refuse(CONTAINED_GLTF_REFUSALS.malformed, "The PNG signature, IHDR, or terminal IEND chunk is invalid.");
+    width = uint32Big(bytes, 16);
+    height = uint32Big(bytes, 20);
+    mediaType = "image/png";
+  } else if (extension === ".jpg" || extension === ".jpeg") {
+    if (bytes.byteLength < 12 || bytes[0] !== 0xff || bytes[1] !== 0xd8 || bytes.at(-2) !== 0xff || bytes.at(-1) !== 0xd9) {
+      return refuse(CONTAINED_GLTF_REFUSALS.malformed, "The JPEG start or end marker is invalid.");
+    }
+    let offset = 2;
+    while (offset + 9 < bytes.byteLength - 2) {
+      if (bytes[offset] !== 0xff) return refuse(CONTAINED_GLTF_REFUSALS.malformed, "The JPEG marker stream is invalid.");
+      const marker = bytes[offset + 1] ?? 0;
+      if (marker === 0xda) break;
+      const length = ((bytes[offset + 2] ?? 0) << 8) | (bytes[offset + 3] ?? 0);
+      if (length < 2 || offset + 2 + length > bytes.byteLength) return refuse(CONTAINED_GLTF_REFUSALS.malformed, "A JPEG segment has invalid bounds.");
+      if ([0xc0, 0xc1, 0xc2].includes(marker) && length >= 7) {
+        height = ((bytes[offset + 5] ?? 0) << 8) | (bytes[offset + 6] ?? 0);
+        width = ((bytes[offset + 7] ?? 0) << 8) | (bytes[offset + 8] ?? 0);
+        break;
+      }
+      offset += 2 + length;
+    }
+    mediaType = "image/jpeg";
+  } else if (extension === ".webp") {
+    if (bytes.byteLength < 30 || ascii(bytes, 0, 4) !== "RIFF" || uint32Little(bytes, 4) + 8 !== bytes.byteLength || ascii(bytes, 8, 4) !== "WEBP" || ascii(bytes, 12, 4) !== "VP8X") {
+      return refuse(CONTAINED_GLTF_REFUSALS.malformed, "The bounded WebP profile requires one valid RIFF/WEBP VP8X header.");
+    }
+    width = 1 + (bytes[24] ?? 0) + ((bytes[25] ?? 0) << 8) + ((bytes[26] ?? 0) << 16);
+    height = 1 + (bytes[27] ?? 0) + ((bytes[28] ?? 0) << 8) + ((bytes[29] ?? 0) << 16);
+    mediaType = "image/webp";
+  } else {
+    return refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, "Supported raster images are PNG, JPEG, and WebP; stored SVG/markup is not admitted.");
+  }
+  if (width <= 0 || height <= 0 || width > 16_384 || height > 16_384) {
+    return refuse(CONTAINED_GLTF_REFUSALS.malformed, "The image dimensions are absent or outside the bounded 16384×16384 profile.");
+  }
+  return Object.freeze({
+    family: "image" as const,
+    mediaType,
+    profile: PROJECT_ASSET_PROFILES.image,
+    formatVersion: "raster-v1",
+    extension: extension === ".jpeg" ? "jpg" : extension.slice(1),
+    preview: metadataPreview(`${String(width)} × ${String(height)}`, { width, height }),
+    gltf: null,
+  });
+}
+
+function parseAudio(bytes: Uint8Array, extension: string): ParsedAsset | Refusal {
+  let mediaType: string;
+  let label: string;
+  const properties: Record<string, string | number | boolean> = {};
+  if (extension === ".wav") {
+    if (bytes.byteLength < 44 || ascii(bytes, 0, 4) !== "RIFF" || uint32Little(bytes, 4) + 8 !== bytes.byteLength || ascii(bytes, 8, 4) !== "WAVE") {
+      return refuse(CONTAINED_GLTF_REFUSALS.malformed, "The WAV RIFF header or declared length is invalid.");
+    }
+    let offset = 12;
+    let dataBytes = -1;
+    let channels = 0;
+    let sampleRate = 0;
+    let byteRate = 0;
+    while (offset + 8 <= bytes.byteLength) {
+      const kind = ascii(bytes, offset, 4);
+      const length = uint32Little(bytes, offset + 4);
+      const end = offset + 8 + length;
+      if (end > bytes.byteLength) return refuse(CONTAINED_GLTF_REFUSALS.malformed, "A WAV chunk has invalid bounds.");
+      if (kind === "fmt " && length >= 16) {
+        const view = new DataView(bytes.buffer, bytes.byteOffset + offset + 8, length);
+        channels = view.getUint16(2, true);
+        sampleRate = view.getUint32(4, true);
+        byteRate = view.getUint32(8, true);
+      }
+      if (kind === "data") dataBytes = length;
+      offset = end + (length % 2);
+    }
+    if (channels < 1 || channels > 8 || sampleRate < 8_000 || sampleRate > 192_000 || byteRate <= 0 || dataBytes < 0) {
+      return refuse(CONTAINED_GLTF_REFUSALS.malformed, "The WAV format/data chunks are absent or outside the bounded audio profile.");
+    }
+    const durationMs = Math.floor((dataBytes / byteRate) * 1000);
+    Object.assign(properties, { channels, sampleRate, durationMs });
+    label = `${String(channels)} ch · ${String(sampleRate)} Hz · ${String(durationMs)} ms`;
+    mediaType = "audio/wav";
+  } else if (extension === ".ogg") {
+    if (bytes.byteLength < 27 || ascii(bytes, 0, 4) !== "OggS" || bytes[4] !== 0 || 27 + (bytes[26] ?? 0) > bytes.byteLength) {
+      return refuse(CONTAINED_GLTF_REFUSALS.malformed, "The Ogg page header or segment table is invalid.");
+    }
+    mediaType = "audio/ogg";
+    label = "Validated Ogg container";
+    properties.container = "ogg";
+  } else if (extension === ".mp3") {
+    const id3 = bytes.byteLength >= 10 && ascii(bytes, 0, 3) === "ID3";
+    const frame = bytes.byteLength >= 4 && bytes[0] === 0xff && ((bytes[1] ?? 0) & 0xe0) === 0xe0;
+    if (!id3 && !frame) return refuse(CONTAINED_GLTF_REFUSALS.malformed, "The MP3 has neither a valid ID3 header nor MPEG audio frame sync.");
+    mediaType = "audio/mpeg";
+    label = "Validated MPEG audio";
+    properties.container = "mpeg-audio";
+  } else {
+    return refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, "Supported audio formats are WAV, Ogg, and MP3.");
+  }
+  return Object.freeze({ family: "audio" as const, mediaType, profile: PROJECT_ASSET_PROFILES.audio, formatVersion: "audio-v1", extension: extension.slice(1), preview: metadataPreview(label, properties), gltf: null });
+}
+
+function parseFont(bytes: Uint8Array, extension: string): ParsedAsset | Refusal {
+  const tag = bytes.byteLength >= 4 ? ascii(bytes, 0, 4) : "";
+  let mediaType: string;
+  let flavor: string;
+  let tables = 0;
+  if (extension === ".woff2") {
+    if (bytes.byteLength < 48 || tag !== "wOF2" || uint32Big(bytes, 8) !== bytes.byteLength) return refuse(CONTAINED_GLTF_REFUSALS.malformed, "The WOFF2 header or declared length is invalid.");
+    tables = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint16(12, false);
+    mediaType = "font/woff2";
+    flavor = "woff2";
+  } else if (extension === ".woff") {
+    if (bytes.byteLength < 44 || tag !== "wOFF" || uint32Big(bytes, 8) !== bytes.byteLength) return refuse(CONTAINED_GLTF_REFUSALS.malformed, "The WOFF header or declared length is invalid.");
+    tables = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint16(12, false);
+    mediaType = "font/woff";
+    flavor = "woff";
+  } else if (extension === ".ttf" || extension === ".otf") {
+    const scalar = uint32Big(bytes, 0);
+    if (bytes.byteLength < 12 || (scalar !== 0x00010000 && tag !== "OTTO" && tag !== "true")) return refuse(CONTAINED_GLTF_REFUSALS.malformed, "The OpenType/TrueType sfnt header is invalid.");
+    tables = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint16(4, false);
+    if (12 + tables * 16 > bytes.byteLength) return refuse(CONTAINED_GLTF_REFUSALS.malformed, "The font table directory exceeds the admitted bytes.");
+    mediaType = extension === ".otf" ? "font/otf" : "font/ttf";
+    flavor = extension.slice(1);
+  } else {
+    return refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, "Supported fonts are WOFF2, WOFF, TTF, and OTF.");
+  }
+  if (tables <= 0 || tables > 4096) return refuse(CONTAINED_GLTF_REFUSALS.malformed, "The font table count is absent or outside the bounded profile.");
+  return Object.freeze({ family: "font" as const, mediaType, profile: PROJECT_ASSET_PROFILES.font, formatVersion: "font-v1", extension: extension.slice(1), preview: metadataPreview(`${flavor.toUpperCase()} · ${String(tables)} tables`, { flavor, tables }), gltf: null });
+}
+
+function parseJsonAsset(bytes: Uint8Array, sourceName: string): ParsedAsset | Refusal {
+  const value = parseJsonBytes(bytes);
+  if (value === null) return refuse(CONTAINED_GLTF_REFUSALS.malformed, "The JSON asset is not unambiguous bounded UTF-8 JSON.");
+  const kind = value["kind"];
+  if (kind === "sceneaxi.animation-data") {
+    const clips = value["clips"];
+    if (value["schemaVersion"] !== 1 || !Array.isArray(clips) || clips.length > 256 || !clips.every((clip) => plainRecord(clip) && typeof clip["id"] === "string" && ID_RE.test(clip["id"]) && finiteNumber(clip["durationMs"]) && clip["durationMs"] >= 0 && Array.isArray(clip["tracks"]))) {
+      return refuse(CONTAINED_GLTF_REFUSALS.malformed, "Animation data must be schema v1 with bounded id, durationMs, and tracks metadata.");
+    }
+    return Object.freeze({ family: "animation" as const, mediaType: "application/vnd.sceneaxi.animation+json", profile: PROJECT_ASSET_PROFILES.animation, formatVersion: "1", extension: "anim.json", preview: metadataPreview(`${String(clips.length)} animation clips`, { clipCount: clips.length }), gltf: null });
+  }
+  let valid = false;
+  let identity = "SceneAxi artifact";
+  if (kind === DOCUMENT_KIND) {
+    const checked = validateDocument(value);
+    valid = checked.ok;
+    identity = checked.ok ? checked.document.id : identity;
+  } else if (kind === SCULPT_ARTIFACT_KIND) {
+    const checked = validateSculptArtifact(value);
+    valid = checked.ok;
+    identity = checked.ok ? checked.value.artifactId : identity;
+  } else if (kind === SCULPT_INTAKE_KIND) {
+    const checked = validateSculptIntake(value);
+    valid = checked.ok;
+    identity = checked.ok ? checked.value.intakeId : identity;
+  } else if (kind === COMPOSED_SCENE_KIND) {
+    const checked = validateComposedScene(value);
+    valid = checked.ok;
+    identity = checked.ok ? checked.value.sceneId : identity;
+  }
+  if (!valid || typeof kind !== "string") {
+    return refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, `JSON asset ${JSON.stringify(sourceName)} is not one of the admitted SceneAxi document, sculpt, or composed-scene artifacts, or animation-data v1.`);
+  }
+  return Object.freeze({ family: "sceneaxi" as const, mediaType: "application/vnd.sceneaxi.artifact+json", profile: PROJECT_ASSET_PROFILES.sceneaxi, formatVersion: "1", extension: "sceneaxi.json", preview: metadataPreview(`${kind} · ${identity}`, { artifactKind: kind, identity }), gltf: null });
+}
+
+function parseAsset(bytes: Uint8Array, sourceName: string): ParsedAsset | Refusal {
+  if (bytes.byteLength === 0 || bytes.byteLength > PROJECT_ASSET_MAX_BYTES) {
+    return refuse(bytes.byteLength > PROJECT_ASSET_MAX_BYTES ? CONTAINED_GLTF_REFUSALS.oversize : CONTAINED_GLTF_REFUSALS.malformed, bytes.byteLength > PROJECT_ASSET_MAX_BYTES ? `Asset bytes exceed the ${String(PROJECT_ASSET_MAX_BYTES)} byte v1 limit.` : "An empty asset is not admitted.");
+  }
+  const extension = extname(sourceName).toLowerCase();
+  if (extension === ".glb" || extension === ".gltf") {
+    const gltf = parseGltf(bytes, sourceName);
+    if ("ok" in gltf) return gltf;
+    return Object.freeze({ family: "model" as const, mediaType: gltf.mediaType, profile: PROJECT_ASSET_PROFILES.model, formatVersion: "2.0", extension: extension.slice(1), preview: metadataPreview(`${String(gltf.meshes.length)} meshes`, { meshCount: gltf.meshes.length, minimum: gltf.bounds.minimum.join(","), maximum: gltf.bounds.maximum.join(",") }), gltf });
+  }
+  if ([".png", ".jpg", ".jpeg", ".webp", ".svg"].includes(extension)) return parseImage(bytes, extension);
+  if ([".wav", ".ogg", ".mp3", ".flac"].includes(extension)) return parseAudio(bytes, extension);
+  if ([".woff2", ".woff", ".ttf", ".otf", ".eot"].includes(extension)) return parseFont(bytes, extension);
+  if (extension === ".json" || sourceName.toLowerCase().endsWith(".anim.json") || sourceName.toLowerCase().endsWith(".sceneaxi.json")) return parseJsonAsset(bytes, sourceName);
+  return refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, "The asset format is unsupported; admitted families are SceneAxi JSON, contained glTF/GLB, PNG/JPEG/WebP, WAV/Ogg/MP3, WOFF2/WOFF/TTF/OTF, and animation-data JSON.");
+}
+
 function parseContainer(
   bytes: Uint8Array,
   sourceName: string,
 ):
   | Readonly<{
       ok: true;
-      mediaType: ProjectAssetManifestEntry["mediaType"];
+      mediaType: "model/gltf-binary" | "model/gltf+json";
       json: Record<string, unknown>;
       binaryChunk: Uint8Array | null;
     }>
@@ -805,7 +1116,8 @@ function manifestFrom(value: unknown): ProjectAssetManifest | Refusal {
     return refuse(CONTAINED_GLTF_REFUSALS.manifestInvalid, "The project asset manifest must be an object.");
   }
   if (
-    value["schemaVersion"] !== PROJECT_ASSET_MANIFEST_SCHEMA_VERSION ||
+    (value["schemaVersion"] !== PROJECT_ASSET_MANIFEST_SCHEMA_VERSION &&
+      value["schemaVersion"] !== LEGACY_PROJECT_ASSET_MANIFEST_SCHEMA_VERSION) ||
     value["kind"] !== PROJECT_ASSET_MANIFEST_KIND ||
     !Array.isArray(value["assets"]) ||
     value["assets"].length > PROJECT_ASSET_MAX_COUNT ||
@@ -817,31 +1129,96 @@ function manifestFrom(value: unknown): ProjectAssetManifest | Refusal {
   const ids = new Set<string>();
   const digests = new Set<string>();
   const relativePaths = new Set<string>();
+  const artifactIds = new Set<string>();
+  const instanceIds = new Set<string>();
+  const legacy = value["schemaVersion"] === LEGACY_PROJECT_ASSET_MANIFEST_SCHEMA_VERSION;
   for (const entry of value["assets"]) {
     if (!plainRecord(entry)) {
       return refuse(CONTAINED_GLTF_REFUSALS.manifestInvalid, "Every project asset manifest entry must be an object.");
     }
     const provenance = entry["provenance"];
+    if (legacy) {
+      if (
+        !hasExactKeys(entry, LEGACY_PROJECT_ASSET_MANIFEST_ENTRY_KEYS) ||
+        !plainRecord(provenance) || !hasExactKeys(provenance, PROJECT_ASSET_PROVENANCE_KEYS) ||
+        provenance["importer"] !== "@sceneaxi/importers" || provenance["importerVersion"] !== 1 ||
+        provenance["formatVersion"] !== "2.0" || provenance["contained"] !== true ||
+        typeof entry["sourceName"] !== "string" || basename(entry["sourceName"]) !== entry["sourceName"] ||
+        typeof entry["canonicalBytesBase64"] !== "string" || entry["copyPolicy"] !== PROJECT_ASSET_COPY_POLICY ||
+        entry["profile"] !== CONTAINED_GLTF_PROFILE_ID
+      ) return refuse(CONTAINED_GLTF_REFUSALS.manifestInvalid, "A legacy project asset manifest entry failed its exact v1 contract.");
+      const decoded = decodeBase64(entry["canonicalBytesBase64"]);
+      const gltf = decoded === null ? null : parseGltf(decoded, entry["sourceName"]);
+      const legacyExtension = extname(entry["sourceName"]).toLowerCase();
+      const legacyMediaType = legacyExtension === ".glb"
+        ? "model/gltf-binary"
+        : legacyExtension === ".gltf" ? "model/gltf+json" : null;
+      if (
+        decoded === null || "ok" in (gltf ?? { ok: false }) ||
+        typeof entry["assetId"] !== "string" || !ID_RE.test(entry["assetId"]) ||
+        typeof entry["digest"] !== "string" || sha256(decoded) !== entry["digest"] ||
+        entry["byteLength"] !== decoded.byteLength || provenance["sourceDigest"] !== entry["digest"] ||
+        typeof entry["artifactId"] !== "string" || entry["artifactId"] !== `${entry["assetId"]}-asset-artifact` ||
+        typeof entry["instanceId"] !== "string" || entry["instanceId"] !== `${entry["assetId"]}-instance` ||
+        entry["mediaType"] !== legacyMediaType ||
+        entry["relativePath"] !== `${PROJECT_ASSET_DIRECTORY}/${entry["assetId"]}.${legacyMediaType === "model/gltf-binary" ? "glb" : "gltf"}`
+      ) return refuse(CONTAINED_GLTF_REFUSALS.manifestInvalid, "A legacy project asset manifest entry does not reproduce its canonical glTF bytes.");
+      const parsed = gltf as ParsedGltf;
+      const normalized: ProjectAssetManifestEntry = Object.freeze({
+        assetId: entry["assetId"],
+        sourceName: entry["sourceName"],
+        relativePath: String(entry["relativePath"]),
+        family: "model" as const,
+        mediaType: parsed.mediaType,
+        byteLength: decoded.byteLength,
+        digest: entry["digest"],
+        canonicalBytesBase64: entry["canonicalBytesBase64"],
+        copyPolicy: PROJECT_ASSET_COPY_POLICY,
+        profile: CONTAINED_GLTF_PROFILE_ID,
+        supportedProfiles: PROJECT_ASSET_SUPPORTED_PROFILES,
+        artifactId: entry["artifactId"],
+        instanceId: entry["instanceId"],
+        validation: Object.freeze({ status: "validated" as const, validator: CONTAINED_GLTF_PROFILE_ID, replacesDigest: null }),
+        preview: metadataPreview(`${String(parsed.meshes.length)} meshes`, { meshCount: parsed.meshes.length, minimum: parsed.bounds.minimum.join(","), maximum: parsed.bounds.maximum.join(",") }),
+        provenance: Object.freeze({ importer: "@sceneaxi/importers" as const, importerVersion: 2 as const, sourceDigest: entry["digest"], formatVersion: "2.0", contained: true as const }),
+      });
+      const normalizedArtifactId = normalized.artifactId;
+      const normalizedInstanceId = normalized.instanceId;
+      if (normalizedArtifactId === null || normalizedInstanceId === null) {
+        return refuse(CONTAINED_GLTF_REFUSALS.manifestInvalid, "A legacy model entry lost its composition identities.");
+      }
+      if (ids.has(normalized.assetId) || digests.has(normalized.digest) || relativePaths.has(normalized.relativePath) || artifactIds.has(normalizedArtifactId) || instanceIds.has(normalizedInstanceId)) {
+        return refuse(CONTAINED_GLTF_REFUSALS.manifestInvalid, "Legacy project asset manifest identities, paths, and digests must be unique.");
+      }
+      ids.add(normalized.assetId); digests.add(normalized.digest); relativePaths.add(normalized.relativePath); artifactIds.add(normalizedArtifactId); instanceIds.add(normalizedInstanceId);
+      entries.push(normalized);
+      continue;
+    }
+    const validation = entry["validation"];
+    const preview = entry["preview"];
     if (
       !ID_RE.test(String(entry["assetId"])) ||
       typeof entry["sourceName"] !== "string" || basename(entry["sourceName"]) !== entry["sourceName"] ||
       typeof entry["relativePath"] !== "string" ||
-      !/^assets\/[a-z0-9][a-z0-9-]{0,63}\.(?:glb|gltf)$/.test(entry["relativePath"]) ||
-      (entry["mediaType"] !== "model/gltf-binary" && entry["mediaType"] !== "model/gltf+json") ||
+      typeof entry["family"] !== "string" || !(entry["family"] in PROJECT_ASSET_PROFILES) ||
+      typeof entry["mediaType"] !== "string" ||
       !nonNegativeInteger(entry["byteLength"]) || entry["byteLength"] === 0 || entry["byteLength"] > PROJECT_ASSET_MAX_BYTES ||
       typeof entry["digest"] !== "string" || !DIGEST_RE.test(entry["digest"]) ||
       typeof entry["canonicalBytesBase64"] !== "string" ||
       entry["copyPolicy"] !== PROJECT_ASSET_COPY_POLICY ||
-      entry["profile"] !== CONTAINED_GLTF_PROFILE_ID ||
-      typeof entry["artifactId"] !== "string" || !ID_RE.test(entry["artifactId"]) ||
-      typeof entry["instanceId"] !== "string" || !ID_RE.test(entry["instanceId"]) ||
+      typeof entry["profile"] !== "string" ||
+      !Array.isArray(entry["supportedProfiles"]) || entry["supportedProfiles"].length !== 2 || entry["supportedProfiles"][0] !== "game" || entry["supportedProfiles"][1] !== "web" ||
       !hasExactKeys(entry, PROJECT_ASSET_MANIFEST_ENTRY_KEYS) ||
+      !plainRecord(validation) || !hasExactKeys(validation, PROJECT_ASSET_VALIDATION_KEYS) ||
+      validation["status"] !== "validated" || validation["validator"] !== entry["profile"] ||
+      (validation["replacesDigest"] !== null && (typeof validation["replacesDigest"] !== "string" || !DIGEST_RE.test(validation["replacesDigest"]))) ||
+      !plainRecord(preview) || !hasExactKeys(preview, PROJECT_ASSET_PREVIEW_KEYS) || preview["kind"] !== "metadata" || typeof preview["label"] !== "string" || !plainRecord(preview["properties"]) ||
       !plainRecord(provenance) ||
       !hasExactKeys(provenance, PROJECT_ASSET_PROVENANCE_KEYS) ||
       provenance["importer"] !== "@sceneaxi/importers" ||
-      provenance["importerVersion"] !== 1 ||
+      provenance["importerVersion"] !== 2 ||
       provenance["sourceDigest"] !== entry["digest"] ||
-      provenance["formatVersion"] !== "2.0" ||
+      typeof provenance["formatVersion"] !== "string" || provenance["formatVersion"].length === 0 ||
       provenance["contained"] !== true
     ) {
       return refuse(CONTAINED_GLTF_REFUSALS.manifestInvalid, "A project asset manifest entry failed its typed copy/provenance contract.");
@@ -863,37 +1240,46 @@ function manifestFrom(value: unknown): ProjectAssetManifest | Refusal {
         `Project asset manifest path "${entryPath}" is owned by more than one asset identity.`,
       );
     }
-    const extension = entryMediaType === "model/gltf-binary" ? "glb" : "gltf";
+    const decoded = decodeBase64(entry["canonicalBytesBase64"]);
+    const reparsed = decoded === null ? null : parseAsset(decoded, entry["sourceName"]);
+    if (decoded === null || reparsed === null || "ok" in reparsed) {
+      return refuse(CONTAINED_GLTF_REFUSALS.manifestInvalid, "A project asset manifest entry does not reproduce supported canonical bytes.");
+    }
+    const extension = reparsed.extension;
+    const isModel = reparsed.family === "model";
     if (
       entryPath !== `${PROJECT_ASSET_DIRECTORY}/${entryId}.${extension}` ||
-      entry["artifactId"] !== `${entryId}-asset-artifact` ||
-      entry["instanceId"] !== `${entryId}-instance`
+      entry["family"] !== reparsed.family || entryMediaType !== reparsed.mediaType ||
+      entry["profile"] !== reparsed.profile || provenance["formatVersion"] !== reparsed.formatVersion ||
+      JSON.stringify(preview) !== JSON.stringify(reparsed.preview) ||
+      (isModel
+        ? entry["artifactId"] !== `${entryId}-asset-artifact` || entry["instanceId"] !== `${entryId}-instance`
+        : entry["artifactId"] !== null || entry["instanceId"] !== null)
     ) {
       return refuse(
         CONTAINED_GLTF_REFUSALS.manifestInvalid,
         "A project asset manifest entry does not own its canonical path and composition identities.",
       );
     }
-    const decoded = decodeBase64(entry["canonicalBytesBase64"]);
-    const reparsed = decoded === null
-      ? null
-      : parseGltf(decoded, entry["sourceName"]);
     if (
-      decoded === null ||
       decoded.byteLength !== entry["byteLength"] ||
       sha256(decoded) !== entryDigest ||
-      reparsed === null ||
-      "ok" in reparsed ||
-      reparsed.mediaType !== entry["mediaType"]
+      (validation["replacesDigest"] !== null && validation["replacesDigest"] === entryDigest)
     ) {
       return refuse(CONTAINED_GLTF_REFUSALS.manifestInvalid, "A project asset manifest entry does not reproduce its canonical bytes.");
     }
-    if (ids.has(entryId) || digests.has(entryDigest)) {
+    const artifactId = entry["artifactId"];
+    const instanceId = entry["instanceId"];
+    if (ids.has(entryId) || digests.has(entryDigest) ||
+      typeof artifactId === "string" && artifactIds.has(artifactId) ||
+      typeof instanceId === "string" && instanceIds.has(instanceId)) {
       return refuse(CONTAINED_GLTF_REFUSALS.manifestInvalid, "Project asset manifest identities and digests must be unique.");
     }
     ids.add(entryId);
     digests.add(entryDigest);
     relativePaths.add(entryPath);
+    if (typeof artifactId === "string") artifactIds.add(artifactId);
+    if (typeof instanceId === "string") instanceIds.add(instanceId);
     entries.push(Object.freeze(entry as unknown as ProjectAssetManifestEntry));
   }
   return Object.freeze({
@@ -987,14 +1373,46 @@ function sceneWithAsset(
     : refuse(CONTAINED_GLTF_REFUSALS.sceneInvalid, `The existing composition refused the imported asset: ${composed.code}.`);
 }
 
-export function stageContainedGltfAssetImport(input: Readonly<{
+function sceneWithReloadedAsset(
+  stored: ComposedScene,
+  artifact: SculptArtifact,
+  instanceId: string,
+): ComposedScene | Refusal {
+  const existing = stored.instances.find((instance) => instance.instanceId === instanceId);
+  if (existing === undefined || existing.artifactId !== artifact.artifactId) {
+    return refuse(CONTAINED_GLTF_REFUSALS.identityConflict, "The model hot reload identity is absent from the accepted composition.");
+  }
+  const intake = {
+    schemaVersion: SCENE_COMPOSITION_SCHEMA_VERSION,
+    kind: SCENE_COMPOSITION_INTAKE_KIND,
+    sceneId: stored.sceneId,
+    rootInstanceId: stored.rootInstanceId,
+    placements: stored.instances.map((instance) => ({
+      instanceId: instance.instanceId,
+      artifactId: instance.artifactId,
+      parentInstanceId: instance.parentInstanceId,
+      transform: instance.localTransform,
+    })),
+  };
+  const artifacts = new Map<string, SculptArtifact>();
+  for (const instance of stored.instances) {
+    artifacts.set(instance.artifactId, instance.artifactId === artifact.artifactId ? artifact : instance.artifact);
+  }
+  const composed = composeScene(intake, [...artifacts.values()]);
+  return composed.ok
+    ? composed.scene
+    : refuse(CONTAINED_GLTF_REFUSALS.sceneInvalid, `The existing composition refused the reloaded model: ${composed.code}.`);
+}
+
+export function stageProjectAssetImport(input: Readonly<{
   sourceName: string;
   sourceBytes: Uint8Array;
   documentPath: string;
   expectedContentHash: string;
   documentData: unknown;
   assetId?: string;
-}>): ContainedGltfStageResult {
+  hotReload?: boolean;
+}>): ProjectAssetStageResult {
   if (
     typeof input.sourceName !== "string" || basename(input.sourceName) !== input.sourceName ||
     !(input.sourceBytes instanceof Uint8Array) ||
@@ -1003,7 +1421,7 @@ export function stageContainedGltfAssetImport(input: Readonly<{
   ) {
     return refuse(CONTAINED_GLTF_REFUSALS.requestMalformed, "Asset import requires a basename, bytes, contained document path, and SHA-256 base hash.");
   }
-  const parsed = parseGltf(input.sourceBytes, input.sourceName);
+  const parsed = parseAsset(input.sourceBytes, input.sourceName);
   if ("ok" in parsed) return parsed;
   if (!isJsonObject(input.documentData)) {
     return refuse(CONTAINED_GLTF_REFUSALS.sceneInvalid, "The active Scene Document data must be a JSON object.");
@@ -1022,72 +1440,110 @@ export function stageContainedGltfAssetImport(input: Readonly<{
   const sameIdentity = manifest.assets.find((entry) => entry.assetId === id);
   const sameDigest = manifest.assets.find((entry) => entry.digest === digest);
   if (sameIdentity !== undefined) {
-    if (sameIdentity.digest !== digest) {
+    if (sameIdentity.digest === digest) {
+      if (input.hotReload === true) {
+        return refuse(CONTAINED_GLTF_REFUSALS.sourceUnchanged, `Asset identity "${id}" still has its accepted digest.`);
+      }
+      const projection = projectAssetManifestEntry(sameIdentity);
+      return projection.ok
+        ? Object.freeze({ ok: true as const, replayed: true, hotReload: false, entry: sameIdentity, projection: projection.value, edit: null })
+        : projection;
+    }
+    if (input.hotReload !== true) {
       return refuse(CONTAINED_GLTF_REFUSALS.identityConflict, `Asset identity "${id}" already names different canonical bytes.`);
     }
-    const projection = projectAssetManifestEntry(sameIdentity);
-    return projection.ok
-      ? Object.freeze({ ok: true as const, replayed: true, entry: sameIdentity, projection: projection.value, edit: null })
-      : projection;
+    if (sameIdentity.family !== parsed.family) {
+      return refuse(CONTAINED_GLTF_REFUSALS.familyChanged, `Asset identity "${id}" cannot hot reload from ${sameIdentity.family} to ${parsed.family}.`);
+    }
+    if (sameIdentity.mediaType !== parsed.mediaType || sameIdentity.profile !== parsed.profile) {
+      return refuse(CONTAINED_GLTF_REFUSALS.familyChanged, `Asset identity "${id}" cannot change its admitted media profile during hot reload.`);
+    }
   }
   if (sameDigest !== undefined) {
     return refuse(CONTAINED_GLTF_REFUSALS.duplicateContent, `The same canonical bytes already belong to asset identity "${sameDigest.assetId}".`);
   }
-  if (manifest.assets.length >= PROJECT_ASSET_MAX_COUNT) {
+  if (sameIdentity === undefined && manifest.assets.length >= PROJECT_ASSET_MAX_COUNT) {
     return refuse(CONTAINED_GLTF_REFUSALS.assetLimit, "The project asset manifest reached its v1 asset count limit.");
   }
-  const artifactId = `${id}-asset`;
-  const instanceId = `${id}-instance`;
-  if (!ID_RE.test(artifactId) || !ID_RE.test(instanceId)) {
+  const artifactId = parsed.family === "model" ? `${id}-asset` : null;
+  const instanceId = parsed.family === "model" ? `${id}-instance` : null;
+  if (artifactId !== null && instanceId !== null && (!ID_RE.test(artifactId) || !ID_RE.test(instanceId))) {
     return refuse(CONTAINED_GLTF_REFUSALS.requestMalformed, "The asset identity is too long for derived composition identities.");
   }
-  const proxy = proxyArtifact(
-    artifactId,
-    parsed.bounds,
-    parsed.meshes[0]?.baseColor ?? "#b8c4d8",
-  );
-  if ("ok" in proxy) return proxy;
-  const composed = sceneWithAsset(stored.value, proxy, instanceId);
-  if ("ok" in composed) return composed;
-  const extension = parsed.mediaType === "model/gltf-binary" ? "glb" : "gltf";
+  let composed = stored.value;
+  let storedArtifactId: string | null = sameIdentity?.artifactId ?? null;
+  let storedInstanceId: string | null = sameIdentity?.instanceId ?? null;
+  if (parsed.gltf !== null && sameIdentity === undefined && artifactId !== null && instanceId !== null) {
+    const proxy = proxyArtifact(artifactId, parsed.gltf.bounds, parsed.gltf.meshes[0]?.baseColor ?? "#b8c4d8");
+    if ("ok" in proxy) return proxy;
+    const nextComposition = sceneWithAsset(stored.value, proxy, instanceId);
+    if ("ok" in nextComposition) return nextComposition;
+    composed = nextComposition;
+    storedArtifactId = proxy.artifactId;
+    storedInstanceId = instanceId;
+  } else if (
+    parsed.gltf !== null && sameIdentity !== undefined &&
+    sameIdentity.artifactId !== null && sameIdentity.instanceId !== null
+  ) {
+    const proxyBaseId = sameIdentity.artifactId.endsWith("-artifact")
+      ? sameIdentity.artifactId.slice(0, -"-artifact".length)
+      : `${id}-asset`;
+    const proxy = proxyArtifact(proxyBaseId, parsed.gltf.bounds, parsed.gltf.meshes[0]?.baseColor ?? "#b8c4d8");
+    if ("ok" in proxy) return proxy;
+    if (proxy.artifactId !== sameIdentity.artifactId) {
+      return refuse(CONTAINED_GLTF_REFUSALS.identityConflict, "Model hot reload could not preserve the accepted artifact identity.");
+    }
+    const nextComposition = sceneWithReloadedAsset(stored.value, proxy, sameIdentity.instanceId);
+    if ("ok" in nextComposition) return nextComposition;
+    composed = nextComposition;
+  }
   const entry: ProjectAssetManifestEntry = Object.freeze({
     assetId: id,
     sourceName: input.sourceName,
-    relativePath: `${PROJECT_ASSET_DIRECTORY}/${id}.${extension}`,
+    relativePath: sameIdentity?.relativePath ?? `${PROJECT_ASSET_DIRECTORY}/${id}.${parsed.extension}`,
+    family: parsed.family,
     mediaType: parsed.mediaType,
     byteLength: input.sourceBytes.byteLength,
     digest,
     canonicalBytesBase64: Buffer.from(input.sourceBytes).toString("base64"),
     copyPolicy: PROJECT_ASSET_COPY_POLICY,
-    profile: CONTAINED_GLTF_PROFILE_ID,
-    artifactId: proxy.artifactId,
-    instanceId,
+    profile: parsed.profile,
+    supportedProfiles: PROJECT_ASSET_SUPPORTED_PROFILES,
+    artifactId: storedArtifactId,
+    instanceId: storedInstanceId,
+    validation: Object.freeze({
+      status: "validated" as const,
+      validator: parsed.profile,
+      replacesDigest: sameIdentity?.digest ?? null,
+    }),
+    preview: parsed.preview,
     provenance: Object.freeze({
       importer: "@sceneaxi/importers" as const,
-      importerVersion: 1 as const,
+      importerVersion: 2 as const,
       sourceDigest: digest,
-      formatVersion: "2.0" as const,
+      formatVersion: parsed.formatVersion,
       contained: true as const,
     }),
   });
   const nextManifest: ProjectAssetManifest = Object.freeze({
     schemaVersion: PROJECT_ASSET_MANIFEST_SCHEMA_VERSION,
     kind: PROJECT_ASSET_MANIFEST_KIND,
-    assets: Object.freeze([...manifest.assets, entry]),
+    assets: Object.freeze(sameIdentity === undefined
+      ? [...manifest.assets, entry]
+      : manifest.assets.map((candidate) => candidate.assetId === id ? entry : candidate)),
   });
   const newValue = Object.freeze({
     ...structuredClone(input.documentData),
     [COMPOSED_SCENE_DOCUMENT_DATA_KEY]: composed,
     [PROJECT_ASSET_MANIFEST_KEY]: nextManifest,
   }) as JsonObject;
-  const projection: ContainedGltfProjection = Object.freeze({
-    entry,
-    meshes: parsed.meshes,
-    bounds: parsed.bounds,
-  });
+  const projection: ProjectAssetProjection = parsed.gltf === null
+    ? Object.freeze({ entry, preview: parsed.preview })
+    : Object.freeze({ entry: entry as ContainedGltfProjection["entry"], meshes: parsed.gltf.meshes, bounds: parsed.gltf.bounds });
   return Object.freeze({
     ok: true as const,
     replayed: false,
+    hotReload: sameIdentity !== undefined,
     entry,
     projection,
     edit: Object.freeze({
@@ -1097,6 +1553,28 @@ export function stageContainedGltfAssetImport(input: Readonly<{
       newValue,
     }),
   });
+}
+
+export function stageContainedGltfAssetImport(input: Readonly<{
+  sourceName: string;
+  sourceBytes: Uint8Array;
+  documentPath: string;
+  expectedContentHash: string;
+  documentData: unknown;
+  assetId?: string;
+}>): ContainedGltfStageResult {
+  const result = stageProjectAssetImport(input);
+  if (!result.ok) return result;
+  if (result.entry.family !== "model" || !("meshes" in result.projection)) {
+    return refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, "The contained glTF entry point accepts only GLB or glTF model assets.");
+  }
+  return Object.freeze({
+    ok: true as const,
+    replayed: result.replayed,
+    entry: result.entry,
+    projection: result.projection,
+    edit: result.edit,
+  }) as ContainedGltfStageResult;
 }
 
 function validateImportPaths(projectRoot: string, documentPath: string, sourcePath: string):
@@ -1153,12 +1631,13 @@ function destinationFor(root: string, relativePath: string): string | Refusal {
   return target;
 }
 
-export function proposeContainedGltfAssetImport(input: Readonly<{
+export function proposeProjectAssetImport(input: Readonly<{
   projectRoot: string;
   documentPath: string;
   sourcePath: string;
   assetId?: string;
-}>): ContainedGltfProposalResult {
+  hotReload?: boolean;
+}>): ProjectAssetProposalResult {
   const paths = validateImportPaths(input.projectRoot, input.documentPath, input.sourcePath);
   if (!paths.ok) return paths;
   let sourceBytes: Uint8Array;
@@ -1177,21 +1656,32 @@ export function proposeContainedGltfAssetImport(input: Readonly<{
   if (!document.ok) {
     return refuse(CONTAINED_GLTF_REFUSALS.sceneInvalid, "The active Scene Document is invalid.");
   }
-  const staged = stageContainedGltfAssetImport({
+  const staged = stageProjectAssetImport({
     sourceName: basename(paths.source),
     sourceBytes,
     documentPath: input.documentPath,
     expectedContentHash: contentHash(documentBytes),
     documentData: document.document.data,
     ...(input.assetId === undefined ? {} : { assetId: input.assetId }),
+    ...(input.hotReload === undefined ? {} : { hotReload: input.hotReload }),
   });
   if (!staged.ok) return staged;
   const destination = destinationFor(paths.root, staged.entry.relativePath);
   if (typeof destination !== "string") return destination;
+  if (staged.hotReload && !existsSync(destination)) {
+    return refuse(CONTAINED_GLTF_REFUSALS.projectCopyChanged, "Hot reload refuses because the accepted project copy is missing.");
+  }
   if (existsSync(destination)) {
     try {
-      if (sha256(readFileSync(destination)) !== staged.entry.digest) {
-        return refuse(CONTAINED_GLTF_REFUSALS.destinationConflict, "The project asset destination already contains different bytes.");
+      const destinationDigest = sha256(readFileSync(destination));
+      const allowedPrevious = staged.entry.validation.replacesDigest;
+      if (destinationDigest !== staged.entry.digest && destinationDigest !== allowedPrevious) {
+        return refuse(
+          staged.hotReload ? CONTAINED_GLTF_REFUSALS.projectCopyChanged : CONTAINED_GLTF_REFUSALS.destinationConflict,
+          staged.hotReload
+            ? "Hot reload refuses because the project copy no longer matches the accepted manifest digest."
+            : "The project asset destination already contains different bytes.",
+        );
       }
     } catch {
       return refuse(CONTAINED_GLTF_REFUSALS.destinationConflict, "The project asset destination cannot be verified.");
@@ -1201,6 +1691,7 @@ export function proposeContainedGltfAssetImport(input: Readonly<{
     return Object.freeze({
       ok: true as const,
       replayed: true,
+      hotReload: false,
       entry: staged.entry,
       projection: staged.projection,
       proposal: null,
@@ -1222,6 +1713,7 @@ export function proposeContainedGltfAssetImport(input: Readonly<{
   return Object.freeze({
     ok: true as const,
     replayed: false,
+    hotReload: staged.hotReload,
     entry: staged.entry,
     projection: staged.projection,
     proposal: proposed.proposal,
@@ -1229,24 +1721,47 @@ export function proposeContainedGltfAssetImport(input: Readonly<{
   });
 }
 
+export function proposeContainedGltfAssetImport(input: Readonly<{
+  projectRoot: string;
+  documentPath: string;
+  sourcePath: string;
+  assetId?: string;
+}>): ContainedGltfProposalResult {
+  const result = proposeProjectAssetImport(input);
+  if (!result.ok) return result;
+  if (result.entry.family !== "model" || !("meshes" in result.projection)) {
+    return refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, "The contained glTF entry point accepts only GLB or glTF model assets.");
+  }
+  return Object.freeze({
+    ok: true as const,
+    replayed: result.replayed,
+    entry: result.entry,
+    projection: result.projection,
+    proposal: result.proposal,
+    unifiedDiff: result.unifiedDiff,
+  }) as ContainedGltfProposalResult;
+}
+
 export function projectAssetManifestEntry(
   entry: ProjectAssetManifestEntry,
 ):
-  | Readonly<{ ok: true; value: ContainedGltfProjection }>
+  | Readonly<{ ok: true; value: ProjectAssetProjection }>
   | Refusal {
   const bytes = decodeBase64(entry.canonicalBytesBase64);
   if (bytes === null || bytes.byteLength !== entry.byteLength || sha256(bytes) !== entry.digest) {
     return refuse(CONTAINED_GLTF_REFUSALS.manifestInvalid, "The asset manifest canonical bytes do not match their digest and length.");
   }
-  const parsed = parseGltf(bytes, entry.sourceName);
+  const parsed = parseAsset(bytes, entry.sourceName);
   if ("ok" in parsed) return parsed;
-  if (parsed.mediaType !== entry.mediaType) {
+  if (parsed.mediaType !== entry.mediaType || parsed.family !== entry.family || parsed.profile !== entry.profile) {
     return refuse(CONTAINED_GLTF_REFUSALS.manifestInvalid, "The asset manifest media type does not match its canonical bytes.");
   }
-  return Object.freeze({
-    ok: true as const,
-    value: Object.freeze({ entry, meshes: parsed.meshes, bounds: parsed.bounds }),
-  });
+  return parsed.gltf === null
+    ? Object.freeze({ ok: true as const, value: Object.freeze({ entry, preview: parsed.preview }) })
+    : Object.freeze({
+        ok: true as const,
+        value: Object.freeze({ entry: entry as ContainedGltfProjection["entry"], meshes: parsed.gltf.meshes, bounds: parsed.gltf.bounds }),
+      });
 }
 
 export function projectAssetManifestFromDocumentData(
@@ -1279,9 +1794,11 @@ function copyEntry(root: string, entry: ProjectAssetManifestEntry):
   if (typeof target !== "string") return target;
   if (existsSync(target)) {
     try {
-      return sha256(readFileSync(target)) === entry.digest
-        ? Object.freeze({ copied: false, path: entry.relativePath })
-        : refuse(CONTAINED_GLTF_REFUSALS.destinationConflict, `Project asset ${entry.relativePath} contains bytes that conflict with the accepted manifest.`);
+      const currentDigest = sha256(readFileSync(target));
+      if (currentDigest === entry.digest) return Object.freeze({ copied: false, path: entry.relativePath });
+      if (entry.validation.replacesDigest !== currentDigest) {
+        return refuse(CONTAINED_GLTF_REFUSALS.destinationConflict, `Project asset ${entry.relativePath} contains bytes that conflict with the accepted manifest.`);
+      }
     } catch {
       return refuse(CONTAINED_GLTF_REFUSALS.destinationConflict, `Project asset ${entry.relativePath} cannot be verified.`);
     }
@@ -1304,8 +1821,11 @@ function copyEntry(root: string, entry: ProjectAssetManifestEntry):
     fsyncSync(descriptor);
     closeSync(descriptor);
     descriptor = null;
-    linkSync(temporary, target);
-    unlinkSync(temporary);
+    if (existsSync(target)) renameSync(temporary, target);
+    else {
+      linkSync(temporary, target);
+      unlinkSync(temporary);
+    }
     syncDirectory(directory);
     return Object.freeze({ copied: true, path: entry.relativePath });
   } catch (error) {
