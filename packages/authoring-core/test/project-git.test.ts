@@ -221,6 +221,18 @@ describe("contained project Git service", () => {
     expect(existsSync(sentinel)).toBe(false);
   });
 
+  it("terminates blocking Git subprocesses with a stable diagnostic", () => {
+    const { root } = repository("process-timeout");
+    const wrapper = join(root, "git-blocks-forever.js");
+    writeFileSync(wrapper, "#!/usr/bin/env node\nwhile (true) {}\n");
+    chmodSync(wrapper, 0o700);
+
+    expect(inspectProjectGit({ root, gitExecutable: wrapper })).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_GIT_DIAGNOSTICS.repositoryUnavailable },
+    });
+  });
+
   it("refuses escaped repository and journal storage before mutation", () => {
     const journalRepository = repository("journal-escape");
     writeFileSync(join(journalRepository.root, "scene.json"), readFileSync(join(journalRepository.root, "scene.json"), "utf8").replace("Contained", "Escaped journal"));

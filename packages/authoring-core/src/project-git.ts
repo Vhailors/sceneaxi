@@ -109,9 +109,11 @@ type GitResult = Readonly<{
   stderr: string;
   missing: boolean;
   overflow: boolean;
+  timedOut: boolean;
 }>;
 
 const PROJECT_GIT_OUTPUT_LIMIT = PROJECT_GIT_EVIDENCE_MAX_BYTES;
+const PROJECT_GIT_PROCESS_TIMEOUT_MS = 10_000;
 
 const REQUIRED_CAPABILITY: Readonly<Record<ProjectGitOperation, ProjectCapability>> =
   Object.freeze({
@@ -161,6 +163,7 @@ function runGit(
       LC_ALL: "C",
     },
     maxBuffer: PROJECT_GIT_OUTPUT_LIMIT,
+    timeout: PROJECT_GIT_PROCESS_TIMEOUT_MS,
   });
   const errorCode = result.error !== undefined && "code" in result.error
     ? result.error.code
@@ -172,6 +175,7 @@ function runGit(
     stderr: result.stderr ?? "",
     missing: errorCode === "ENOENT",
     overflow: errorCode === "ENOBUFS",
+    timedOut: errorCode === "ETIMEDOUT",
   });
 }
 
@@ -646,6 +650,13 @@ function refuseGitlinks(
   root: string,
 ): ProjectGitFailure | null {
   const index = runGit(executable, root, ["ls-files", "--stage", "-z"]);
+  if (index.timedOut) {
+    return failure(
+      PROJECT_GIT_DIAGNOSTICS.repositoryUnavailable,
+      "$git.index",
+      "Contained Git timed out while verifying repository index entries.",
+    );
+  }
   if (index.overflow) {
     return failure(
       PROJECT_GIT_DIAGNOSTICS.evidenceTooLarge,
@@ -762,6 +773,13 @@ function context(
     "--git-path", "objects",
     "--git-path", "index",
   ]);
+  if (repository.timedOut) {
+    return failure(
+      PROJECT_GIT_DIAGNOSTICS.repositoryUnavailable,
+      "$root",
+      "Contained Git timed out while verifying the selected repository.",
+    );
+  }
   if (repository.missing) {
     return failure(
       PROJECT_GIT_DIAGNOSTICS.missingGit,
@@ -856,6 +874,13 @@ function context(
     "config", "--local", "--get-regexp",
     "^filter\\..*\\.(clean|process)$",
   ]);
+  if (configuredFilters.timedOut) {
+    return failure(
+      PROJECT_GIT_DIAGNOSTICS.repositoryUnavailable,
+      "$git.config",
+      "Contained Git timed out while verifying repository filter configuration.",
+    );
+  }
   if (configuredFilters.overflow) {
     return failure(
       PROJECT_GIT_DIAGNOSTICS.evidenceTooLarge,
@@ -1127,6 +1152,13 @@ function repositoryState(
     "-c", "core.quotepath=false",
     "diff", "--cached", "--no-ext-diff", "--no-textconv", "--no-renames", "--full-index", "--no-color", "--binary", "--src-prefix=a/", "--dst-prefix=b/", "--", ".",
   ], indexPath);
+  if (status.timedOut || working.timedOut || staged.timedOut) {
+    return failure(
+      PROJECT_GIT_DIAGNOSTICS.repositoryUnavailable,
+      "$root",
+      "Contained Git timed out while producing project status and diff evidence.",
+    );
+  }
   if (status.overflow || working.overflow || staged.overflow) {
     return failure(
       PROJECT_GIT_DIAGNOSTICS.evidenceTooLarge,
@@ -1143,6 +1175,13 @@ function repositoryState(
   }
   const branchResult = runGit(ctx.executable, ctx.root, ["symbolic-ref", "--quiet", "--short", "HEAD"], indexPath);
   const headResult = runGit(ctx.executable, ctx.root, ["rev-parse", "--verify", "HEAD"], indexPath);
+  if (branchResult.timedOut || headResult.timedOut) {
+    return failure(
+      PROJECT_GIT_DIAGNOSTICS.repositoryUnavailable,
+      "$git.HEAD",
+      "Contained Git timed out while verifying the repository branch and head.",
+    );
+  }
   const canonical = new Set(ctx.canonicalFiles);
   const entries = parseStatus(status.stdout, canonical, excludedPaths);
   const conflicts = Object.freeze(entries.filter((entry) => entry.conflict).map((entry) => entry.path));
@@ -1247,7 +1286,9 @@ export function stageProjectGitPaths(
             );
             if (!staged.ok) {
               result = removeTemporaryGitIndex(temporary)
-                ? stageRolledBack("Git refused the selected-path staging operation; the live index was not changed.")
+                ? stageRolledBack(staged.timedOut
+                    ? "Git staging timed out; the temporary index was removed and the live index was not changed."
+                    : "Git refused the selected-path staging operation; the live index was not changed.")
                 : stageRollbackFailed("Git refused staging and the temporary index could not be removed.");
             } else {
               const prospective = repositoryState(
