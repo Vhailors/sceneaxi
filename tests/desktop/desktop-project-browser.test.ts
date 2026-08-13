@@ -126,7 +126,7 @@ describe("contained desktop project and asset browser", () => {
           byteLength: sourceBytes.byteLength,
           provenance: {
             importer: "@sceneaxi/importers",
-            importerVersion: 1,
+            importerVersion: 2,
             formatVersion: "2.0",
             contained: true,
           },

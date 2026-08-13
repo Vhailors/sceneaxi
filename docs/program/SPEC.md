@@ -119,7 +119,7 @@ From the user's perspective:
 | L2 | `authoring-core` | The ONE agent-native runtime/authoring core: document model, propose/apply application service, session orchestration, evidence hooks, **Model Provider Port** |
 | L3 | `profile-game`, `profile-web`, `profile-kids` | Build-time versioned profiles; each pins a core range; Kids policy compiled in |
 | L3 | `cli` | Agent-native CLI — thin protocol adapter (verbs + envelope) over `authoring-core` and the contained importer seam; **denied direct engine access by the matrix** |
-| L3 | `importers` | Text-canonical external SceneAxi document adapter plus the fixed contained GLB/glTF copy profile owned by [`docs/asset-ingestion.md`](../asset-ingestion.md) |
+| L3 | `importers` | Text-canonical external SceneAxi document adapter plus the bounded first-class manifest profiles and preserved contained GLB/glTF projection owned by [`docs/asset-ingestion.md`](../asset-ingestion.md) |
 | L3 | `provider-openrouter` | Fixture-tested, injected-transport OpenRouter adapter behind the Model Provider Port; no credentials or production-readiness claim |
 | L3 (delayed) | `provider-<name>` | Additional LLM provider adapters behind the Model Provider Port; ordinary ticketed work only, with DeepSeek under its conditional terms |
 | L4 | `web-shell`, `desktop-shell` | Human authoring surfaces — protocol clients of `authoring-core` |

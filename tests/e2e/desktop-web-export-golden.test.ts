@@ -372,6 +372,18 @@ function containedTriangle() {
   );
 }
 
+function containedPng() {
+  const bytes = Buffer.alloc(45);
+  Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]).copy(bytes);
+  bytes.writeUInt32BE(13, 8);
+  bytes.write("IHDR", 12, "ascii");
+  bytes.writeUInt32BE(1, 16);
+  bytes.writeUInt32BE(1, 20);
+  bytes.set([8, 6, 0, 0, 0], 24);
+  bytes.write("IEND", 37, "ascii");
+  return bytes;
+}
+
 function seedWithAsset(root: string, source: string) {
   expect(seedDesktopProject(root)).toEqual({ ok: true, migrated: false });
   const bridge = createDesktopBridge({ cwd: root, nowMs: () => 1_753_920_000_000 });
@@ -470,6 +482,17 @@ function fileMap(root: string, at = root): Map<string, Buffer> {
 }
 
 describe("desktop static Web export", () => {
+  it("packages a non-model asset from the same validated manifest entry", () => {
+    const sourceRoot = temporary("sceneaxi-export-image-source-");
+    const source = join(sourceRoot, "pixel.png");
+    writeFileSync(source, containedPng());
+    const root = temporary("sceneaxi-export-image-");
+    seedWithAsset(root, source);
+    const result = ship(root);
+    expect(fileMap(result.outputDirectory).get("assets/pixel.png")).toEqual(containedPng());
+    expect(result.handoff.artifacts["assets/pixel.png"]).toMatchObject({ contentType: "image/png" });
+  });
+
   it("exports identical projects into byte-identical contained bundles and replays safely", () => {
     const sourceRoot = temporary("sceneaxi-export-source-");
     const source = join(sourceRoot, "triangle.gltf");
