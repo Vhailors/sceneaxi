@@ -105,6 +105,7 @@
   "packages/schemas/src/delivery-handoff.ts",
   "packages/schemas/src/desktop-local-bridge.ts",
   "packages/schemas/src/desktop-scene-edit.ts",
+  "packages/schemas/src/desktop-scene-transform.ts",
   "packages/schemas/src/document.ts",
   "packages/schemas/src/editor-command-registry.ts",
   "packages/schemas/src/editor-shell.ts",
