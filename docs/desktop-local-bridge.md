@@ -65,8 +65,8 @@ declared by the checked-in tool definition.
 | Permission | Authority |
 |---|---|
 | `bridge:connect` | Authenticate the discovered desktop instance and read its granted permissions. |
-| `project:read` | Read project/native-model state, inspect hierarchy, or replace the ordered selection without changing project bytes. |
-| `project:write` | Stage or settle project changes, run recovery/history commands, and commit an approved native-project migration. |
+| `project:read` | Read project/native-model state, inspect hierarchy or contained Git status/diff, or replace the ordered selection without changing project bytes. |
+| `project:write` | Stage or settle project changes, run recovery/history commands, commit an approved native-project migration, and stage or prepare contained Git selections. |
 | `assistant:read` | Read the retained assistant job state. |
 | `assistant:run` | Start or abandon one bounded assistant job. |
 
@@ -85,6 +85,13 @@ prepared transaction forward or back on disk, so it carries `project:write` and
 durably do, not what it usually returns; the invariant that no
 `mutatesProject` tool may sit behind a read permission is asserted in
 `packages/schemas/test/desktop-local-bridge.test.ts`.
+
+The Git tools never carry a repository root: the desktop instance already owns
+the selected root. Status and diff return the same typed repository evidence the
+desktop renders. Stage changes only explicitly selected contained paths in the
+index; commit preparation requires that selection to equal the entire staged set
+and creates no commit. Push, fetch, credential access, history rewrite, branch
+deletion, and hook bypass are absent and refuse by name in the contained service.
 
 The CLI requires the operator/agent to repeat the exact permission with
 `--allow`; a missing, wider, narrower, or misspelled value refuses before the

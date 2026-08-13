@@ -4,6 +4,12 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   resolve: {
     alias: {
+      "@sceneaxi-internal/desktop-session-project-git": fileURLToPath(
+        new URL("./apps/desktop-shell/src/session.ts", import.meta.url),
+      ),
+      "@sceneaxi-internal/project-git-authority": fileURLToPath(
+        new URL("./packages/authoring-core/internal/project-git-authority.ts", import.meta.url),
+      ),
       // Subpath aliases MUST precede the root @sceneaxi/site-kit alias: matching is prefix-based, so alphabetizing this block breaks every subpath.
       "@sceneaxi/site-kit/catalog-identity": fileURLToPath(
         new URL("./packages/site-kit/src/catalog-identity.ts", import.meta.url),
@@ -32,6 +38,9 @@ export default defineConfig({
       // packages their pure `src/lib/` names are aliased here for the gate.
       "@sceneaxi/desktop-shell": fileURLToPath(
         new URL("./apps/desktop-shell/src/index.ts", import.meta.url),
+      ),
+      "@sceneaxi/importers": fileURLToPath(
+        new URL("./packages/importers/src/index.ts", import.meta.url),
       ),
       "@sceneaxi/desktop-macos": fileURLToPath(
         new URL("./desktop/macos/src/index.ts", import.meta.url),

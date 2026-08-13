@@ -157,6 +157,12 @@ These paths fail closed in runnable-surfaces v1:
 journal still needs finalization returns `journalRecoveryPending: true` plus a
 `transactionId`; subsequent authoring entrypoints recover before proceeding.
 
+The desktop bridge tool registry also exposes contained project Git status,
+canonical diff, explicit-path stage, and commit preparation. CLI receives the
+same repository state/evidence value as desktop-control and local-agent clients.
+Commit preparation creates no commit; push, fetch, credentials, history rewrite,
+branch deletion, and hook bypass are unsupported.
+
 Global flags: `--json`, `--help` / `-h`, `--version` / `-v` / `-V`.
 
 Unknown flags and unknown/incomplete paths **refuse** (fail-closed). There is

@@ -1,5 +1,15 @@
 /** Node host for the SceneAxi-native versioned project manifest. */
-import { existsSync, lstatSync, readFileSync, realpathSync } from "node:fs";
+import {
+  closeSync,
+  constants,
+  existsSync,
+  fstatSync,
+  lstatSync,
+  openSync,
+  readFileSync,
+  readSync,
+  realpathSync,
+} from "node:fs";
 import { isAbsolute, join, relative, sep } from "node:path";
 import {
   PROJECT_MANIFEST_DIAGNOSTICS,
@@ -17,7 +27,16 @@ import {
   type ProjectVersionCapabilityResult,
   type SceneDocument,
 } from "@sceneaxi/schemas";
-import { atomicWriteAll, atomicWriteFile, canonicalPath } from "./atomic-write.js";
+import {
+  atomicWriteAll,
+  atomicWriteFile,
+  canonicalPath,
+  type AtomicWriteLockSet,
+} from "./atomic-write.js";
+import {
+  beginApplyJournalTransaction,
+  endApplyJournalTransactionChecked,
+} from "./apply-journal.js";
 import { contentHash } from "./content-hash.js";
 
 export const PROJECT_MIGRATION_PROPOSAL_PATH =
@@ -81,6 +100,11 @@ type MigrationJournal = Readonly<{
   state: "prepared" | "completed";
   proposal: ProjectMigrationProposal;
 }>;
+
+type MigrationJournalRead =
+  | Readonly<{ kind: "absent"; path: string }>
+  | Readonly<{ kind: "invalid"; path: string }>
+  | Readonly<{ kind: "valid"; path: string; journal: MigrationJournal }>;
 
 function failure(
   code: ProjectManifestDiagnosticCode,
@@ -335,17 +359,166 @@ function parseJournal(value: unknown): MigrationJournal | null {
   });
 }
 
-function recover(root: string, expectedProposalDigest?: string): ProjectMigrationCommitResult {
+function readMigrationJournal(canonicalRoot: string): MigrationJournalRead {
+  const path = join(canonicalRoot, ...PROJECT_MIGRATION_JOURNAL_PATH.split("/"));
+  const directoryPath = join(canonicalRoot, ".sceneaxi");
+  let directoryDescriptor: number | undefined;
+  let descriptor: number | undefined;
+  try {
+    directoryDescriptor = openSync(
+      directoryPath,
+      constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW,
+    );
+    const initialDirectory = fstatSync(directoryDescriptor);
+    const currentDirectory = lstatSync(directoryPath);
+    if (
+      !initialDirectory.isDirectory() || currentDirectory.isSymbolicLink() ||
+      initialDirectory.dev !== currentDirectory.dev || initialDirectory.ino !== currentDirectory.ino ||
+      realpathSync(`/proc/self/fd/${directoryDescriptor}`) !== directoryPath
+    ) return Object.freeze({ kind: "invalid", path });
+    descriptor = openSync(
+      `/proc/self/fd/${directoryDescriptor}/project-migration-journal.json`,
+      constants.O_RDONLY | constants.O_NONBLOCK | constants.O_NOFOLLOW,
+    );
+    const initial = fstatSync(descriptor);
+    if (!initial.isFile() || initial.size > 1024 * 1024) {
+      return Object.freeze({ kind: "invalid", path });
+    }
+    const bytes = Buffer.alloc(initial.size);
+    let offset = 0;
+    while (offset < bytes.length) {
+      const count = readSync(descriptor, bytes, offset, bytes.length - offset, offset);
+      if (count === 0) return Object.freeze({ kind: "invalid", path });
+      offset += count;
+    }
+    const final = fstatSync(descriptor);
+    const current = lstatSync(path);
+    if (
+      !current.isFile() || current.isSymbolicLink() ||
+      initial.dev !== final.dev || initial.ino !== final.ino || initial.mode !== final.mode ||
+      initial.size !== final.size || initial.mtimeMs !== final.mtimeMs ||
+      initial.ctimeMs !== final.ctimeMs || final.dev !== current.dev || final.ino !== current.ino ||
+      realpathSync(`/proc/self/fd/${directoryDescriptor}`) !== directoryPath
+    ) return Object.freeze({ kind: "invalid", path });
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(bytes.toString("utf8"));
+    } catch {
+      return Object.freeze({ kind: "invalid", path });
+    }
+    const journal = parseJournal(parsed);
+    return journal === null
+      ? Object.freeze({ kind: "invalid", path })
+      : Object.freeze({ kind: "valid", path, journal });
+  } catch (error) {
+    const code = error instanceof Error && "code" in error
+      ? (error as NodeJS.ErrnoException).code
+      : undefined;
+    if (code === "ENOENT" && descriptor === undefined) {
+      if (directoryDescriptor === undefined) {
+        return Object.freeze({ kind: "absent", path });
+      }
+      try {
+        const openedDirectory = fstatSync(directoryDescriptor);
+        const currentDirectory = lstatSync(directoryPath);
+        if (
+          currentDirectory.isDirectory() && !currentDirectory.isSymbolicLink() &&
+          openedDirectory.dev === currentDirectory.dev && openedDirectory.ino === currentDirectory.ino &&
+          realpathSync(`/proc/self/fd/${directoryDescriptor}`) === directoryPath
+        ) return Object.freeze({ kind: "absent", path });
+      } catch {
+        return Object.freeze({ kind: "invalid", path });
+      }
+    }
+    return Object.freeze({ kind: "invalid", path });
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor);
+    if (directoryDescriptor !== undefined) closeSync(directoryDescriptor);
+  }
+}
+
+export function projectMigrationRecoveryPending(root: string): boolean {
   const canonicalRoot = rootPath(root);
-  if (typeof canonicalRoot !== "string") return canonicalRoot;
-  const journalPath = containedPath(canonicalRoot, PROJECT_MIGRATION_JOURNAL_PATH, true);
-  if (typeof journalPath !== "string") {
+  if (typeof canonicalRoot !== "string") return true;
+  const read = readMigrationJournal(canonicalRoot);
+  return read.kind !== "absent" && (read.kind !== "valid" || read.journal.state !== "completed");
+}
+
+const pendingMigrationOperationCleanups = new Map<string, AtomicWriteLockSet>();
+
+function withMigrationOperation(
+  root: string,
+  operation: () => ProjectMigrationCommitResult,
+): ProjectMigrationCommitResult {
+  const pendingCleanup = pendingMigrationOperationCleanups.get(root);
+  if (pendingCleanup !== undefined) {
+    try {
+      if (endApplyJournalTransactionChecked(pendingCleanup).length > 0) {
+        return failure(
+          PROJECT_MANIFEST_DIAGNOSTICS.mutationConflict,
+          ".sceneaxi-authoring-operation",
+          "The previous migration operation lock still requires cleanup.",
+        );
+      }
+      pendingMigrationOperationCleanups.delete(root);
+    } catch {
+      return failure(
+        PROJECT_MANIFEST_DIAGNOSTICS.mutationConflict,
+        ".sceneaxi-authoring-operation",
+        "The previous migration operation lock still requires cleanup.",
+      );
+    }
+  }
+  let lockSet: AtomicWriteLockSet;
+  try {
+    lockSet = beginApplyJournalTransaction(root, []);
+  } catch {
+    return failure(
+      PROJECT_MANIFEST_DIAGNOSTICS.mutationConflict,
+      ".sceneaxi-authoring-operation",
+      "Another authoring or migration operation owns the selected project root.",
+    );
+  }
+  let result: ProjectMigrationCommitResult;
+  try {
+    result = operation();
+  } catch (error) {
+    result = failure(
+      PROJECT_MANIFEST_DIAGNOSTICS.writeFailed,
+      PROJECT_MIGRATION_JOURNAL_PATH,
+      error instanceof Error ? error.message : String(error),
+    );
+  }
+  try {
+    if (endApplyJournalTransactionChecked(lockSet).length === 0) return result;
+    pendingMigrationOperationCleanups.set(root, lockSet);
+    return failure(
+      PROJECT_MANIFEST_DIAGNOSTICS.writeFailed,
+      ".sceneaxi-authoring-operation",
+      "The migration operation lock could not be released cleanly.",
+    );
+  } catch {
+    pendingMigrationOperationCleanups.set(root, lockSet);
+    return failure(
+      PROJECT_MANIFEST_DIAGNOSTICS.writeFailed,
+      ".sceneaxi-authoring-operation",
+      "The migration operation lock could not be released cleanly.",
+    );
+  }
+}
+
+function recoverLocked(
+  canonicalRoot: string,
+  expectedProposalDigest?: string,
+): ProjectMigrationCommitResult {
+  const journalRead = readMigrationJournal(canonicalRoot);
+  if (journalRead.kind === "absent") {
     return failure(PROJECT_MANIFEST_DIAGNOSTICS.proposalRequired, PROJECT_MIGRATION_JOURNAL_PATH, "No prepared project migration exists.");
   }
-  const journal = parseJournal(readJson(journalPath));
-  if (journal === null) {
+  if (journalRead.kind === "invalid") {
     return failure(PROJECT_MANIFEST_DIAGNOSTICS.recoveryInvalid, PROJECT_MIGRATION_JOURNAL_PATH, "The project migration journal is invalid.");
   }
+  const { journal, path: journalPath } = journalRead;
   if (expectedProposalDigest !== undefined && journal.proposal.proposalDigest !== expectedProposalDigest) {
     return failure(PROJECT_MANIFEST_DIAGNOSTICS.approvalMismatch, PROJECT_MIGRATION_JOURNAL_PATH, "The prepared migration does not match the approved proposal digest.");
   }
@@ -392,6 +565,16 @@ export function commitProjectMigration(input: Readonly<{
   }
   const canonicalRoot = rootPath(input.root);
   if (typeof canonicalRoot !== "string") return canonicalRoot;
+  return withMigrationOperation(canonicalRoot, () => commitProjectMigrationLocked(
+    canonicalRoot,
+    input.proposalDigest,
+  ));
+}
+
+function commitProjectMigrationLocked(
+  canonicalRoot: string,
+  proposalDigest: string,
+): ProjectMigrationCommitResult {
   const proposalPath = containedPath(canonicalRoot, PROJECT_MIGRATION_PROPOSAL_PATH, true);
   if (typeof proposalPath !== "string") {
     return failure(PROJECT_MANIFEST_DIAGNOSTICS.proposalRequired, PROJECT_MIGRATION_PROPOSAL_PATH, "A persisted migration proposal is required before commit.");
@@ -400,14 +583,14 @@ export function commitProjectMigration(input: Readonly<{
   if (proposal === null) {
     return failure(PROJECT_MANIFEST_DIAGNOSTICS.proposalRequired, PROJECT_MIGRATION_PROPOSAL_PATH, "The persisted migration proposal is invalid.");
   }
-  if (proposal.proposalDigest !== input.proposalDigest) {
+  if (proposal.proposalDigest !== proposalDigest) {
     return failure(PROJECT_MANIFEST_DIAGNOSTICS.approvalMismatch, PROJECT_MIGRATION_PROPOSAL_PATH, "Approval does not bind the reviewed proposal digest.");
   }
   const inspected = inspectProjectModel(canonicalRoot);
   if (!inspected.ok) return inspected;
   if (inspected.manifest !== null) {
     const journalPath = join(canonicalRoot, ...PROJECT_MIGRATION_JOURNAL_PATH.split("/"));
-    if (existsSync(journalPath)) return recover(canonicalRoot, input.proposalDigest);
+    if (existsSync(journalPath)) return recoverLocked(canonicalRoot, proposalDigest);
     return failure(PROJECT_MANIFEST_DIAGNOSTICS.mutationConflict, PROJECT_MANIFEST_PATH, "The project is already native and has no matching recovery journal.");
   }
   const rebuilt = buildProposal(inspected.document, inspected.documentBytes);
@@ -432,11 +615,13 @@ export function commitProjectMigration(input: Readonly<{
       return failure(PROJECT_MANIFEST_DIAGNOSTICS.writeFailed, PROJECT_MIGRATION_JOURNAL_PATH, error instanceof Error ? error.message : String(error));
     }
   }
-  return recover(canonicalRoot, input.proposalDigest);
+  return recoverLocked(canonicalRoot, proposalDigest);
 }
 
 export function recoverProjectMigration(root: string): ProjectMigrationCommitResult {
-  return recover(root);
+  const canonicalRoot = rootPath(root);
+  if (typeof canonicalRoot !== "string") return canonicalRoot;
+  return withMigrationOperation(canonicalRoot, () => recoverLocked(canonicalRoot));
 }
 
 export function writeNativeProjectSeed(input: Readonly<{

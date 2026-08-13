@@ -1304,6 +1304,13 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
           matches: false,
         }),
       },
+      sceneaxiDesktopLinux: {
+        request: async (request: { action?: unknown; payload?: unknown }) => ({
+          ok: request.action === "profile",
+          action: "profile",
+          data: request.payload,
+        }),
+      },
     });
 
     // The chrome serializes a profile switch with the project actions, so the
@@ -1316,8 +1323,7 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
         throw new Error(`profile switch harness missing ${profile}`);
       }
       shell.clickListener({ target: chip });
-      await Promise.resolve();
-      await Promise.resolve();
+      for (let turn = 0; turn < 8; turn += 1) await Promise.resolve();
     };
     const expectRefusal = (reason: string): void => {
       for (const control of controls) {

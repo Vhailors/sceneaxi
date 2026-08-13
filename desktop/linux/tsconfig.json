@@ -5,6 +5,11 @@
     "lib": ["es2023", "dom", "dom.iterable"],
     "module": "esnext",
     "moduleResolution": "bundler",
+    "baseUrl": ".",
+    "paths": {
+      "@sceneaxi-internal/desktop-session-project-git": ["../../apps/desktop-shell/src/session.ts"],
+      "@sceneaxi-internal/project-git-authority": ["../../packages/authoring-core/internal/project-git-authority.ts"]
+    },
     "noEmit": true,
     "allowJs": true,
     "esModuleInterop": true,

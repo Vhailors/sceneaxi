@@ -91,6 +91,20 @@ describe("full-editor transaction client parity", () => {
     expect(createAuthoringSession).not.toHaveBeenCalled();
   });
 
+  it("does not let a command invocation overwrite the active Kids profile", () => {
+    const bridge = createDesktopBridge({ cwd: "/does-not-exist" });
+    expect(bridge.handle({ action: "profile", payload: { profile: "kids" } })).toMatchObject({
+      ok: true,
+      data: { profile: "kids" },
+    });
+    const result = bridge.handle({
+      action: "command",
+      payload: createEditorCommandInvocation("project-git-status", "desktop-control", {}, "game"),
+    });
+    expect(result).toMatchObject({ ok: false, reason: "EDITOR_COMMAND_KIDS_DENIED" });
+    expect(bridge.activeProfile()).toBe("kids");
+  });
+
   it("keeps staged review explicit when undo or redo is invoked", () => {
     const cwd = mkdtempSync(join(tmpdir(), "sceneaxi-staged-history-"));
     const path = join(cwd, "scene.json");

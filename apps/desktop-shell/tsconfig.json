@@ -1,6 +1,12 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": { "outDir": "dist" },
+  "compilerOptions": {
+    "outDir": "dist",
+    "baseUrl": "../..",
+    "paths": {
+      "@sceneaxi-internal/project-git-authority": ["packages/authoring-core/internal/project-git-authority.ts"]
+    }
+  },
   "include": ["src", "test"],
   "references": [
     { "path": "../../packages/schemas" },

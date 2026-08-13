@@ -31,6 +31,16 @@ const common = {
   bundle: true,
   logLevel: "info",
   absWorkingDir: appRoot,
+  alias: {
+    "@sceneaxi-internal/desktop-session-project-git": resolve(
+      appRoot,
+      "../../apps/desktop-shell/src/session.ts",
+    ),
+    "@sceneaxi-internal/project-git-authority": resolve(
+      appRoot,
+      "../../packages/authoring-core/internal/project-git-authority.ts",
+    ),
+  },
 };
 
 // Main process: node platform, CJS entry, Electron itself stays external.
