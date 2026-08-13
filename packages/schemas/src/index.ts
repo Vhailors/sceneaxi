@@ -1006,6 +1006,20 @@ export {
   PROFILE_REFUSALS,
   captureProfileEvidence,
 } from "./desktop-profile-evidence.js";
+export {
+  WORKSPACE_LAYOUT_DEFAULT_ID,
+  WORKSPACE_LAYOUT_KIND,
+  WORKSPACE_LAYOUT_REFUSALS,
+  WORKSPACE_LAYOUT_SCHEMA_VERSION,
+  applyWorkspaceLayoutMutation,
+  defaultWorkspaceLayout,
+  inspectWorkspaceLayout,
+  parseWorkspaceLayout,
+} from "./desktop-workspace-layout.js";
+export type {
+  WorkspaceLayout,
+  WorkspaceLayoutRefusal,
+} from "./desktop-workspace-layout.js";
 export type {
   ProfileEvidence,
   ProfileMetric,

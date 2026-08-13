@@ -142,6 +142,11 @@ import {
 } from "./desktop-scene.js";
 import { DesktopByoRunnerRefusal } from "./byo-configuration.js";
 import {
+  applyDesktopWorkspaceLayout,
+  inspectDesktopWorkspaceLayout,
+  resetDesktopWorkspaceLayout,
+} from "./workspace-layout-host.js";
+import {
   DESKTOP_WEB_EXPORT_REFUSALS,
   exportDesktopWebProject,
 } from "./web-export.js";
@@ -3146,6 +3151,31 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         });
         if (!captured.ok) return bridgeRefuse(captured.reason, captured.message);
         return bridgeOk("command", captured.evidence);
+      }
+      case "workspace-layout-inspect": {
+        const inspected = inspectDesktopWorkspaceLayout(options.cwd);
+        if (!inspected.ok) return bridgeRefuse(inspected.reason, inspected.message);
+        return bridgeOk("command", inspected.inspection);
+      }
+      case "workspace-layout-apply": {
+        const applied = applyDesktopWorkspaceLayout({
+          cwd: options.cwd,
+          profile: input["profile"],
+          next: {
+            ...(typeof input["layoutId"] === "string" ? { layoutId: input["layoutId"] } : {}),
+            ...(typeof input["leftVisible"] === "boolean" ? { leftVisible: input["leftVisible"] } : {}),
+            ...(typeof input["inspectorVisible"] === "boolean" ? { inspectorVisible: input["inspectorVisible"] } : {}),
+            ...(typeof input["assistantVisible"] === "boolean" ? { assistantVisible: input["assistantVisible"] } : {}),
+            ...(typeof input["dockHeight"] === "number" ? { dockHeight: input["dockHeight"] } : {}),
+          },
+        });
+        if (!applied.ok) return commandTransaction(validated.command.id, bridgeRefuse(applied.reason, applied.message));
+        return commandTransaction(validated.command.id, bridgeOk("command", applied.inspection));
+      }
+      case "workspace-layout-reset": {
+        const reset = resetDesktopWorkspaceLayout({ cwd: options.cwd, profile: "game" });
+        if (!reset.ok) return commandTransaction(validated.command.id, bridgeRefuse(reset.reason, reset.message));
+        return commandTransaction(validated.command.id, bridgeOk("command", reset.inspection));
       }
       case "assistant-ask": {
         const documentPath = String(input["documentPath"]);

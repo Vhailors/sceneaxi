@@ -23,6 +23,7 @@ import { SCENE_PHYSICS_REFUSALS } from "./desktop-scene-physics.js";
 import { ASSISTANT_ASK_REFUSALS, ASSISTANT_ASK_SCOPES } from "./desktop-assistant-ask.js";
 import { SCENE_PACKAGE_REFUSALS } from "./desktop-scene-package.js";
 import { PROFILE_REFUSALS } from "./desktop-profile-evidence.js";
+import { WORKSPACE_LAYOUT_REFUSALS } from "./desktop-workspace-layout.js";
 
 export const EDITOR_COMMAND_SCHEMA_VERSION = 1 as const;
 
@@ -107,6 +108,9 @@ export type EditorCommandId =
   | "package-install"
   | "package-remove"
   | "profile-inspect"
+  | "workspace-layout-inspect"
+  | "workspace-layout-apply"
+  | "workspace-layout-reset"
   | "change-review-accept"
   | "change-review-reject"
   | "assistant-ask"
@@ -174,6 +178,7 @@ export type EditorCommandDefinition = Readonly<{
       | "scene-assistant-build-catalog"
       | "scene-package-catalog"
       | "profile-evidence"
+      | "workspace-layout"
       | "rarity-proposal"
       | "command-progress";
     target: EditorCommandResultTarget;
@@ -213,6 +218,7 @@ export type EditorCommandDefinition = Readonly<{
     | "assistant-ask"
     | "package-install"
     | "package-remove"
+    | "workspace-layout-apply"
     | "input-rebind"
     | "input-reset";
 }>;
@@ -671,6 +677,20 @@ const packageRemoveInput = Object.freeze({
   properties: Object.freeze({
     ...sceneMutationProperties,
     packageId: Object.freeze({ type: "string", minLength: 1 }),
+  }),
+}) satisfies JsonObject;
+
+const workspaceLayoutApplyInput = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: Object.freeze(["profile"]),
+  properties: Object.freeze({
+    profile: Object.freeze({ type: "string", enum: Object.freeze(["game", "web", "kids"]) }),
+    layoutId: Object.freeze({ type: "string", minLength: 1 }),
+    leftVisible: Object.freeze({ type: "boolean" }),
+    inspectorVisible: Object.freeze({ type: "boolean" }),
+    assistantVisible: Object.freeze({ type: "boolean" }),
+    dockHeight: Object.freeze({ type: "number" }),
   }),
 }) satisfies JsonObject;
 
@@ -1446,6 +1466,51 @@ const DEFINITIONS = [
   }),
   definition({
     schemaVersion: 1,
+    id: "workspace-layout-inspect",
+    label: "Inspect Workspace Layout",
+    acceptedClients: CLIENTS,
+    permission: "project:read",
+    capability: capability("scene.compose"),
+    mutation: "none",
+    progress: immediate(),
+    evidence: evidence("workspace-layout", "input-settings"),
+    refusals: [...BASE_REFUSALS, ...Object.values(WORKSPACE_LAYOUT_REFUSALS)],
+    undo: undo("none"),
+    inputSchema: noInput,
+    inputShape: "none",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "workspace-layout-apply",
+    label: "Apply Workspace Layout",
+    acceptedClients: CLIENTS,
+    permission: "project:write",
+    capability: capability("scene.compose"),
+    mutation: "commits-settings",
+    progress: immediate(),
+    evidence: evidence("workspace-layout", "input-settings"),
+    refusals: [...BASE_REFUSALS, ...Object.values(WORKSPACE_LAYOUT_REFUSALS)],
+    undo: undo("none"),
+    inputSchema: workspaceLayoutApplyInput,
+    inputShape: "workspace-layout-apply",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "workspace-layout-reset",
+    label: "Reset Workspace Layout",
+    acceptedClients: CLIENTS,
+    permission: "project:write",
+    capability: capability("scene.compose"),
+    mutation: "commits-settings",
+    progress: immediate(),
+    evidence: evidence("workspace-layout", "input-settings"),
+    refusals: [...BASE_REFUSALS, ...Object.values(WORKSPACE_LAYOUT_REFUSALS)],
+    undo: undo("none"),
+    inputSchema: noInput,
+    inputShape: "none",
+  }),
+  definition({
+    schemaVersion: 1,
     id: "change-review-accept",
     label: "Accept proposal",
     acceptedClients: CLIENTS,
@@ -1827,6 +1892,17 @@ export function validateEditorCommandInput(
       return exactKeys(input, ["documentPath", "expectedContentHash", "profile", "packageId"]) &&
         sceneMutationFields(input) &&
         typeof input["packageId"] === "string" && input["packageId"].length > 0;
+    case "workspace-layout-apply":
+      return Object.keys(input).includes("profile") &&
+        sceneProfileField(input) &&
+        Object.keys(input).every((key) =>
+          ["profile", "layoutId", "leftVisible", "inspectorVisible", "assistantVisible", "dockHeight"].includes(key),
+        ) &&
+        (input["layoutId"] === undefined || (typeof input["layoutId"] === "string" && input["layoutId"].length > 0)) &&
+        (input["leftVisible"] === undefined || typeof input["leftVisible"] === "boolean") &&
+        (input["inspectorVisible"] === undefined || typeof input["inspectorVisible"] === "boolean") &&
+        (input["assistantVisible"] === undefined || typeof input["assistantVisible"] === "boolean") &&
+        (input["dockHeight"] === undefined || (typeof input["dockHeight"] === "number" && Number.isFinite(input["dockHeight"])));
     case "input-rebind":
       return exactKeys(input, ["scope", "expectedBaseVersion", "actionId", "binding", "approved", "reviewDigest"]) &&
         (input["scope"] === "workspace" || input["scope"] === "project") &&
