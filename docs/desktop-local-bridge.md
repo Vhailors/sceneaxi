@@ -65,8 +65,8 @@ declared by the checked-in tool definition.
 | Permission | Authority |
 |---|---|
 | `bridge:connect` | Authenticate the discovered desktop instance and read its granted permissions. |
-| `project:read` | Read project/native-model state, inspect hierarchy or contained Git status/diff, or replace the ordered selection without changing project bytes. |
-| `project:write` | Stage or settle project changes, run recovery/history commands, commit an approved native-project migration, and stage or prepare contained Git selections. |
+| `project:read` | Read project/native-model state, inspect hierarchy or contained Git status/diff, inspect the effective input-action map, or replace the ordered selection without changing project bytes. |
+| `project:write` | Stage or settle project changes, run recovery/history commands, commit an approved native-project migration, stage or prepare contained Git selections, and review or commit input-action rebinds and resets. |
 | `assistant:read` | Read the retained assistant job state. |
 | `assistant:run` | Start or abandon one bounded assistant job. |
 

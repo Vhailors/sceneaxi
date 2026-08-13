@@ -24,6 +24,7 @@ export const PROJECT_CAPABILITIES = Object.freeze([
   "authoring.change-review",
   "authoring.undo",
   "authoring.redo",
+  "input.actions",
   "runtime.play",
   "delivery.export-web",
   "assistant.build.local",

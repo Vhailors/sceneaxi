@@ -478,9 +478,11 @@ the `sceneaxi-desktop` CLI's `DESKTOP_COMMANDS`. File, Edit, Run, the palette,
 and keyboard accelerators carry the same interaction command id and dispatch it
 through one handler table. Commands this desktop cannot execute are absent.
 
-Each accelerator is declared beside its command in that list rather than written
-into the key handler, so the chord a menu prints is the chord that fires; a
-command may declare none (New Project does). They are plain `Ctrl`/`Cmd` chords,
+Each accelerator resolves from the versioned default map in
+`packages/schemas/src/input-action-registry.ts`, and restored project/workspace
+overrides update the same emitted resolver and menu/palette labels. The key
+handler owns no chord table; a command may have no action binding (New Project
+does). Defaults remain plain `Ctrl`/`Cmd` chords,
 and a `Shift` or `Alt` modifier is not one of them, so `Ctrl+Shift+Z` is not
 Undo. A command whose declaration does not set `allowInTextEntry` does not fire
 while focus is in a text-entry context — only the palette opener does, so

@@ -27,7 +27,7 @@
             "enum": [
               "project.lifecycle", "project.inspect", "project.migrate",
               "project.git.read", "project.git.stage", "project.git.commit-prepare",
-              "authoring.change-review", "authoring.undo", "runtime.play",
+              "authoring.change-review", "authoring.undo", "authoring.redo", "input.actions", "runtime.play",
               "delivery.export-web", "assistant.build.local", "assistant.build.byo",
               "assistant.agent.bounded", "assistant.progress", "assistant.cancel",
               "scene.compose", "asset.contained-gltf", "asset.pipeline"
