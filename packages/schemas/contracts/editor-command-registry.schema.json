@@ -64,6 +64,8 @@
             "workspace-layout-inspect",
             "workspace-layout-apply",
             "workspace-layout-reset",
+            "extension-inspect",
+            "extension-start",
             "change-review-accept",
             "change-review-reject",
             "assistant-ask",
@@ -104,7 +106,7 @@
           "additionalProperties": false,
           "required": ["kind", "target"],
           "properties": {
-            "kind": { "enum": ["none", "project-binding", "project-inspection", "project-migration-proposal", "project-migration-evidence", "project-git-state", "project-git-commit-preparation", "authoring-snapshot", "undo-result", "redo-result", "scene-hierarchy", "scene-prefab-catalog", "input-action-map", "kernel-session", "play-session", "scene-animation-catalog", "scene-animation-evaluation", "scene-physics-catalog", "scene-physics-evaluation", "sculpt-artifact", "assistant-ask-answer", "scene-assistant-build-catalog", "scene-package-catalog", "profile-evidence", "workspace-layout", "rarity-proposal", "command-progress"] },
+            "kind": { "enum": ["none", "project-binding", "project-inspection", "project-migration-proposal", "project-migration-evidence", "project-git-state", "project-git-commit-preparation", "authoring-snapshot", "undo-result", "redo-result", "scene-hierarchy", "scene-prefab-catalog", "input-action-map", "kernel-session", "play-session", "scene-animation-catalog", "scene-animation-evaluation", "scene-physics-catalog", "scene-physics-evaluation", "sculpt-artifact", "assistant-ask-answer", "scene-assistant-build-catalog", "scene-package-catalog", "profile-evidence", "workspace-layout", "extension-seams", "rarity-proposal", "command-progress"] },
             "target": { "enum": ["none", "project", "change-review", "live-viewport", "input-settings"] }
           }
         },
@@ -119,7 +121,7 @@
           }
         },
         "inputSchema": { "type": "object" },
-        "inputShape": { "enum": ["none", "document", "export", "assistant", "assistant-ask", "assistant-agent", "job", "migration-approval", "git-paths", "git-commit", "scene-document", "scene-selection", "scene-property", "scene-transform", "scene-create", "scene-remove", "scene-reparent", "prefab-define", "prefab-instance", "prefab-override", "prefab-refresh", "viewport-source", "animation-apply", "animation-time", "physics-apply", "physics-evaluate", "package-install", "package-remove", "workspace-layout-apply", "input-rebind", "input-reset"] }
+        "inputShape": { "enum": ["none", "document", "export", "assistant", "assistant-ask", "assistant-agent", "job", "migration-approval", "git-paths", "git-commit", "scene-document", "scene-selection", "scene-property", "scene-transform", "scene-create", "scene-remove", "scene-reparent", "prefab-define", "prefab-instance", "prefab-override", "prefab-refresh", "viewport-source", "animation-apply", "animation-time", "physics-apply", "physics-evaluate", "package-install", "package-remove", "workspace-layout-apply", "extension-inspect", "extension-start", "input-rebind", "input-reset"] }
       }
     }
   }

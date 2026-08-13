@@ -425,6 +425,18 @@ export const DESKTOP_LOCAL_BRIDGE_TOOLS = Object.freeze([
     providerRoute: "none",
   }),
   commandTool({
+    name: "sceneaxi.extension.inspect",
+    commandId: "extension-inspect",
+    description: "Inspect declared networking, XR, marketplace, and collaboration seams without enabling them.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.extension.start",
+    commandId: "extension-start",
+    description: "Refuse starting a declared extension seam until a separately authorized adapter exists.",
+    providerRoute: "none",
+  }),
+  commandTool({
     name: "sceneaxi.assistant.ask",
     commandId: "assistant-ask",
     description: "Answer an Ask prompt from an explicit inspection scope without calling a provider.",

@@ -24,6 +24,7 @@ import { ASSISTANT_ASK_REFUSALS, ASSISTANT_ASK_SCOPES } from "./desktop-assistan
 import { SCENE_PACKAGE_REFUSALS } from "./desktop-scene-package.js";
 import { PROFILE_REFUSALS } from "./desktop-profile-evidence.js";
 import { WORKSPACE_LAYOUT_REFUSALS } from "./desktop-workspace-layout.js";
+import { EXTENSION_SEAM_IDS, EXTENSION_SEAM_REFUSALS } from "./desktop-extension-seams.js";
 
 export const EDITOR_COMMAND_SCHEMA_VERSION = 1 as const;
 
@@ -111,6 +112,8 @@ export type EditorCommandId =
   | "workspace-layout-inspect"
   | "workspace-layout-apply"
   | "workspace-layout-reset"
+  | "extension-inspect"
+  | "extension-start"
   | "change-review-accept"
   | "change-review-reject"
   | "assistant-ask"
@@ -179,6 +182,7 @@ export type EditorCommandDefinition = Readonly<{
       | "scene-package-catalog"
       | "profile-evidence"
       | "workspace-layout"
+      | "extension-seams"
       | "rarity-proposal"
       | "command-progress";
     target: EditorCommandResultTarget;
@@ -219,6 +223,8 @@ export type EditorCommandDefinition = Readonly<{
     | "package-install"
     | "package-remove"
     | "workspace-layout-apply"
+    | "extension-inspect"
+    | "extension-start"
     | "input-rebind"
     | "input-reset";
 }>;
@@ -691,6 +697,25 @@ const workspaceLayoutApplyInput = Object.freeze({
     inspectorVisible: Object.freeze({ type: "boolean" }),
     assistantVisible: Object.freeze({ type: "boolean" }),
     dockHeight: Object.freeze({ type: "number" }),
+  }),
+}) satisfies JsonObject;
+
+const extensionInspectInput = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: Object.freeze(["profile"]),
+  properties: Object.freeze({
+    profile: Object.freeze({ type: "string", enum: Object.freeze(["game", "web", "kids"]) }),
+  }),
+}) satisfies JsonObject;
+
+const extensionStartInput = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: Object.freeze(["profile", "seamId"]),
+  properties: Object.freeze({
+    profile: Object.freeze({ type: "string", enum: Object.freeze(["game", "web", "kids"]) }),
+    seamId: Object.freeze({ type: "string", enum: EXTENSION_SEAM_IDS }),
   }),
 }) satisfies JsonObject;
 
@@ -1511,6 +1536,36 @@ const DEFINITIONS = [
   }),
   definition({
     schemaVersion: 1,
+    id: "extension-inspect",
+    label: "Inspect Extension Seams",
+    acceptedClients: CLIENTS,
+    permission: "project:read",
+    capability: capability("scene.compose"),
+    mutation: "none",
+    progress: immediate(),
+    evidence: evidence("extension-seams", "none"),
+    refusals: [...BASE_REFUSALS, ...Object.values(EXTENSION_SEAM_REFUSALS)],
+    undo: undo("none"),
+    inputSchema: extensionInspectInput,
+    inputShape: "extension-inspect",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "extension-start",
+    label: "Start Extension Seam",
+    acceptedClients: CLIENTS,
+    permission: "project:read",
+    capability: capability("scene.compose"),
+    mutation: "none",
+    progress: immediate(),
+    evidence: evidence("extension-seams", "none"),
+    refusals: [...BASE_REFUSALS, ...Object.values(EXTENSION_SEAM_REFUSALS)],
+    undo: undo("none"),
+    inputSchema: extensionStartInput,
+    inputShape: "extension-start",
+  }),
+  definition({
+    schemaVersion: 1,
     id: "change-review-accept",
     label: "Accept proposal",
     acceptedClients: CLIENTS,
@@ -1903,6 +1958,11 @@ export function validateEditorCommandInput(
         (input["inspectorVisible"] === undefined || typeof input["inspectorVisible"] === "boolean") &&
         (input["assistantVisible"] === undefined || typeof input["assistantVisible"] === "boolean") &&
         (input["dockHeight"] === undefined || (typeof input["dockHeight"] === "number" && Number.isFinite(input["dockHeight"])));
+    case "extension-inspect":
+      return exactKeys(input, ["profile"]) && sceneProfileField(input);
+    case "extension-start":
+      return exactKeys(input, ["profile", "seamId"]) && sceneProfileField(input) &&
+        (EXTENSION_SEAM_IDS as readonly string[]).includes(String(input["seamId"]));
     case "input-rebind":
       return exactKeys(input, ["scope", "expectedBaseVersion", "actionId", "binding", "approved", "reviewDigest"]) &&
         (input["scope"] === "workspace" || input["scope"] === "project") &&

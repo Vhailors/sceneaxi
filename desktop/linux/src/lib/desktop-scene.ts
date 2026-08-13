@@ -64,6 +64,8 @@ import {
   SHIPPED_PLUGIN_CAPABILITY_IDS,
   applyScenePackageMutation,
   discoverScenePackage,
+  isDeclaredExtensionCapability,
+  refuseUndeclaredExtensionGrant,
   emptyScenePackageCatalog,
   inspectScenePackages,
   parseScenePackageCatalog,
@@ -1690,6 +1692,15 @@ export function discoverDesktopScenePackage(input: Readonly<{
   manifest: unknown;
   digest: string;
 }>) {
+  const capabilities = typeof input.manifest === "object" && input.manifest !== null && !Array.isArray(input.manifest)
+    ? (input.manifest as { capabilities?: unknown }).capabilities
+    : undefined;
+  if (Array.isArray(capabilities)) {
+    const undeclared = capabilities.find((capability): capability is string =>
+      typeof capability === "string" && isDeclaredExtensionCapability(capability),
+    );
+    if (undeclared !== undefined) return refuseUndeclaredExtensionGrant(undeclared);
+  }
   return discoverScenePackage({
     locator: input.locator,
     manifest: input.manifest,

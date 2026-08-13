@@ -93,7 +93,9 @@ import {
   type EditorCommandId,
   ASSISTANT_ASK_REFUSALS,
   captureProfileEvidence,
+  inspectExtensionSeams,
   isFixtureProviderDescriptor,
+  startExtensionSeam,
   isJsonObject,
   type SceneAssistantBuildEntry,
 } from "@sceneaxi/schemas";
@@ -3176,6 +3178,18 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         const reset = resetDesktopWorkspaceLayout({ cwd: options.cwd, profile: "game" });
         if (!reset.ok) return commandTransaction(validated.command.id, bridgeRefuse(reset.reason, reset.message));
         return commandTransaction(validated.command.id, bridgeOk("command", reset.inspection));
+      }
+      case "extension-inspect": {
+        const inspected = inspectExtensionSeams({ profile: input["profile"] });
+        if (!inspected.ok) return bridgeRefuse(inspected.reason, inspected.message);
+        return bridgeOk("command", inspected);
+      }
+      case "extension-start": {
+        const started = startExtensionSeam({
+          profile: input["profile"],
+          seamId: input["seamId"],
+        });
+        return commandTransaction(validated.command.id, bridgeRefuse(started.reason, started.message));
       }
       case "assistant-ask": {
         const documentPath = String(input["documentPath"]);
