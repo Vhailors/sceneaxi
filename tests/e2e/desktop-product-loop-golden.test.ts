@@ -461,6 +461,7 @@ describe("desktop first-release product loop", () => {
     expect(requests).toHaveLength(stageConflictRequests + 2);
 
     expect(requests.map((request) => requestOperation(request) ?? request.action)).toEqual([
+      "profile",
       "status",
       "scene-hierarchy-inspect",
       "propose",
@@ -567,9 +568,9 @@ describe("desktop first-release product loop", () => {
       query(window, "[data-project-status]")?.textContent ?? "";
     expect(shell?.dataset.tier).toBe("narrow");
     expect(shell?.dataset.profile).toBe("game");
-    expect(window.document.querySelectorAll("button")).toHaveLength(75);
+    expect(window.document.querySelectorAll("button")).toHaveLength(83);
     expect(window.document.querySelectorAll('button:not([tabindex="-1"])')).toHaveLength(
-      70,
+      78,
     );
 
     const refusalHelp = query(window, "#status-refusal-help");
@@ -757,6 +758,7 @@ describe("desktop first-release product loop", () => {
     expect(shell?.dataset.mode).toBe("run");
 
     expect(requests.map((request) => requestOperation(request) ?? request.action)).toEqual([
+      "profile",
       "status",
       "scene-hierarchy-inspect",
       "propose",
@@ -766,6 +768,8 @@ describe("desktop first-release product loop", () => {
       "reject",
       "status",
       "scene-hierarchy-inspect",
+      "profile",
+      "profile",
       "status",
       "scene-hierarchy-inspect",
       "propose",
@@ -781,6 +785,7 @@ describe("desktop first-release product loop", () => {
       "scene-hierarchy-inspect",
       "open-path",
       "open-path",
+      "profile",
     ]);
   });
 
