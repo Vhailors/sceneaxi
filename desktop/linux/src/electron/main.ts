@@ -881,9 +881,10 @@ async function start(): Promise<void> {
 
   await localBridgeServer?.close();
   localBridgeServer = null;
-  if (bridge !== null && !bridge.close()) {
+  if (!proofBridge.close()) {
     fail("The desktop mutation-owner lease could not be released after smoke verification.");
   }
+  bridge = null;
   rmSync(cwd, { recursive: true, force: true });
 
   console.log(

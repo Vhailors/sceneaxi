@@ -368,11 +368,11 @@ async function prepare(command: DesktopInteractionCommand, window: HappyWindow) 
   }
   if (command.id === "project-git-stage" || command.id === "project-git-commit-prepare") {
     await click(window, '#menu-command-project-git-status');
-    const path = element(window, '[data-project-git-path][value="scene.json"]') as HTMLInputElement;
+    const path = element(window, '[data-project-git-path][value="scene.json"]') as unknown as HTMLInputElement;
     path.checked = true;
   }
   if (command.id === "project-git-commit-prepare") {
-    const message = element(window, "[data-project-git-message]") as HTMLInputElement;
+    const message = element(window, "[data-project-git-message]") as unknown as HTMLInputElement;
     message.value = "feat: prepare";
   }
 }
@@ -572,7 +572,7 @@ describe("desktop command menu, palette, and accelerator parity", () => {
     const { window, requests } = await harness("web", "unavailable", true, repositoryState);
     await click(window, '#menu-command-project-git-status');
     const path = [...window.document.querySelectorAll('[data-project-git-path]')]
-      .find((candidate) => (candidate as HTMLInputElement).value === exactPath) as HTMLInputElement | undefined;
+      .find((candidate) => (candidate as unknown as HTMLInputElement).value === exactPath) as unknown as HTMLInputElement | undefined;
     expect(path).toBeDefined();
     if (path === undefined) return;
     path.checked = true;
