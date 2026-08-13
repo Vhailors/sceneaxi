@@ -53,6 +53,12 @@ import {
   evaluateScenePhysics,
   inspectScenePhysics,
   parseScenePhysicsCatalog,
+  ASSISTANT_ASK_REFUSALS,
+  SCENE_ASSISTANT_BUILD_CATALOG_KEY,
+  answerAssistantAsk,
+  applyAssistantBuildEntry,
+  parseSceneAssistantBuildCatalog,
+  type SceneAssistantBuildEntry,
   type ComposedScene,
   type ScenePhysicsCatalog,
   type ScenePhysicsMutation,
@@ -1535,6 +1541,87 @@ export function stageDesktopScenePhysics(input: Readonly<{
     documentData: Object.freeze({
       ...base,
       [SCENE_PHYSICS_CATALOG_KEY]: applied.catalog,
+    }),
+  });
+}
+
+export function collectDesktopAssistantAskState(input: Readonly<{
+  documentData: unknown;
+  playActive: boolean;
+}>) {
+  const stored = composedSceneFromDocumentData(input.documentData);
+  const animation = parseSceneAnimationCatalog(
+    isJsonObject(input.documentData) ? input.documentData[SCENE_ANIMATION_CATALOG_KEY] : undefined,
+  );
+  const physics = parseScenePhysicsCatalog(
+    isJsonObject(input.documentData) ? input.documentData[SCENE_PHYSICS_CATALOG_KEY] : undefined,
+  );
+  const assets = projectAssetManifestFromDocumentData(input.documentData);
+  const assetIds = assets.ok
+    ? assets.value.assets.map((entry) => entry.assetId)
+    : [];
+  return Object.freeze({
+    instanceIds: Object.freeze(stored.ok ? stored.value.instances.map((instance) => instance.instanceId) : []),
+    assetIds: Object.freeze(assetIds),
+    clipIds: Object.freeze(animation?.clips.map((clip) => clip.clipId) ?? []),
+    bodyIds: Object.freeze(physics?.bodies.map((body) => body.bodyId) ?? []),
+    playActive: input.playActive,
+  });
+}
+
+export function answerDesktopAssistantAsk(input: Readonly<{
+  documentData: unknown;
+  sourceContentHash: string;
+  profile: unknown;
+  prompt: string;
+  scope: unknown;
+  playActive: boolean;
+}>) {
+  return answerAssistantAsk({
+    prompt: input.prompt,
+    scope: input.scope,
+    sourceContentHash: input.sourceContentHash,
+    profile: input.profile,
+    state: collectDesktopAssistantAskState({
+      documentData: input.documentData,
+      playActive: input.playActive,
+    }),
+  });
+}
+
+export function stageDesktopAssistantBuild(input: Readonly<{
+  documentData: unknown;
+  contentHash: string;
+  documentPath?: string;
+  entry: SceneAssistantBuildEntry;
+}>) {
+  const documentPath = input.documentPath ?? DESKTOP_ACTIVE_DOCUMENT_PATH;
+  const read = readEditableComposition(input.documentData, input.contentHash, documentPath);
+  if (!read.ok) {
+    return Object.freeze({
+      ok: false as const,
+      reason: ASSISTANT_ASK_REFUSALS.staleVersion,
+      message: read.diagnostics[0]?.message ?? "The Scene Document could not be read.",
+    });
+  }
+  const catalog = parseSceneAssistantBuildCatalog(
+    isJsonObject(input.documentData) ? input.documentData[SCENE_ASSISTANT_BUILD_CATALOG_KEY] : undefined,
+  );
+  if (catalog === null) {
+    return Object.freeze({
+      ok: false as const,
+      reason: ASSISTANT_ASK_REFUSALS.inputUnsupported,
+      message: "The assistant Build catalog is not a valid versioned document.",
+    });
+  }
+  const next = applyAssistantBuildEntry({ catalog, entry: input.entry });
+  const base = isJsonObject(input.documentData) ? input.documentData : {};
+  return Object.freeze({
+    ok: true as const,
+    catalog: next,
+    documentData: Object.freeze({
+      ...base,
+      [SCENE_ASSISTANT_BUILD_CATALOG_KEY]: next,
     }),
   });
 }

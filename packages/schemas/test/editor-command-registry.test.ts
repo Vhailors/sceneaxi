@@ -66,6 +66,8 @@ describe("full-editor command registry", () => {
       "physics-evaluate",
       "change-review-accept",
       "change-review-reject",
+      "assistant-ask",
+      "assistant-apply-build",
       "assistant-local-build",
       "assistant-byo-build",
       "assistant-local-agent",

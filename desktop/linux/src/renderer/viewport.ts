@@ -42,6 +42,7 @@ import {
   assistantRarityResultEvent,
   assistantRarityResultSettlement,
   assistantInspectionText,
+  isAskAnswerResult,
   isRarityProposalResult,
   rarityInvalidationMatches,
 } from "./assistant-inspection.js";
@@ -476,6 +477,14 @@ export function installAssistantProductFlow(
     const job = outcome.job;
     const result = outcome.result;
     activeRarityProposalDigest = assistantRarityResultDigest(result);
+    if (isAskAnswerResult(result)) {
+      resultView.textContent = assistantInspectionText(job);
+      resultView.removeAttribute("hidden");
+      retry.removeAttribute("hidden");
+      status.textContent = "Ask answered from typed project state · no provider and no saved bytes.";
+      running = false;
+      return;
+    }
     if (isRarityProposalResult(result)) {
       displayedRarityResultDigest = result.evidence.namespaceDigest;
       const settlement = assistantRarityResultSettlement(result);
@@ -610,22 +619,32 @@ export function installAssistantProductFlow(
     retry?.setAttribute("hidden", "");
     resultView.setAttribute("hidden", "");
     status.textContent = "Starting assistant action…";
-    const commandId = decision.payload.mode === "agent"
-      ? "assistant-local-agent"
-      : decision.payload.route === "byo"
-        ? "assistant-byo-build"
-        : "assistant-local-build";
-    const input = commandId === "assistant-local-agent"
-      ? {
-          prompt: decision.payload.prompt,
-          profile: decision.payload.profile,
-          documentPath: decision.payload.documentPath ?? DESKTOP_ACTIVE_DOCUMENT_PATH,
-        }
-      : { prompt: decision.payload.prompt, profile: decision.payload.profile };
-    const response = await port.request({
-      action: "command",
-      payload: createEditorCommandInvocation(commandId, "desktop-control", input),
-    });
+    const commandId = decision.payload.mode === "ask"
+      ? "assistant-ask"
+      : decision.payload.mode === "agent"
+        ? "assistant-local-agent"
+        : decision.payload.route === "byo"
+          ? "assistant-byo-build"
+          : "assistant-local-build";
+    const response = commandId === "assistant-ask"
+      ? await port.request({
+          action: "assistant",
+          payload: decision.payload,
+        })
+      : await port.request({
+          action: "command",
+          payload: createEditorCommandInvocation(
+            commandId,
+            "desktop-control",
+            commandId === "assistant-local-agent"
+              ? {
+                  prompt: decision.payload.prompt,
+                  profile: decision.payload.profile,
+                  documentPath: decision.payload.documentPath ?? DESKTOP_ACTIVE_DOCUMENT_PATH,
+                }
+              : { prompt: decision.payload.prompt, profile: decision.payload.profile },
+          ),
+        });
     if (!response.ok) {
       if (
         response.reason === DESKTOP_BRIDGE_REFUSALS.assistantBusy &&

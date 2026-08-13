@@ -131,6 +131,12 @@ export function isRarityProposalResult(
   return "kind" in result && result.kind === "rarity-proposal";
 }
 
+export function isAskAnswerResult(
+  result: NonNullable<DesktopAssistantJobSnapshot["result"]>,
+): result is Extract<NonNullable<DesktopAssistantJobSnapshot["result"]>, { kind: "sceneaxi.assistant-ask-answer" }> {
+  return "kind" in result && result.kind === "sceneaxi.assistant-ask-answer";
+}
+
 export function assistantRarityResultDigest(
   result: DesktopAssistantJobSnapshot["result"] | null,
 ): string | null {
@@ -180,6 +186,13 @@ export function assistantRarityResultSettlement(
 export function assistantInspectionText(job: DesktopAssistantJobSnapshot): string {
   const result = job.result;
   if (result === undefined || isRarityProposalResult(result)) return "";
+  if (isAskAnswerResult(result)) {
+    return [
+      `ASK · ${result.scope}`,
+      result.answer,
+      `hash ${result.sourceContentHash}`,
+    ].join("\n");
+  }
   const inspection = result.inspection;
   if (inspection === undefined) return "";
   const materials = inspection.materials.values

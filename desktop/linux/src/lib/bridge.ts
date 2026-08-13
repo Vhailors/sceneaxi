@@ -90,6 +90,9 @@ import {
   type PlaySession,
   validateRarityNamespace,
   type EditorCommandId,
+  ASSISTANT_ASK_REFUSALS,
+  isFixtureProviderDescriptor,
+  type SceneAssistantBuildEntry,
 } from "@sceneaxi/schemas";
 import {
   DESKTOP_ACTIVE_DOCUMENT_PATH,
@@ -124,6 +127,8 @@ import {
   inspectDesktopSceneProperties,
   stageDesktopSceneAnimation,
   stageDesktopScenePhysics,
+  answerDesktopAssistantAsk,
+  stageDesktopAssistantBuild,
   stageDesktopSceneEdit,
   stageDesktopScenePrefab,
   stageDesktopScenePropertyEdit,
@@ -349,6 +354,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
   let assistantJob: {
     jobId: string;
     commandId: Extract<EditorCommandId,
+      | "assistant-ask"
       | "assistant-local-build"
       | "assistant-byo-build"
       | "assistant-local-agent">;
@@ -359,6 +365,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     result?: NonNullable<DesktopAssistantJobSnapshot["result"]>;
     refusal?: NonNullable<DesktopAssistantJobSnapshot["refusal"]>;
   } | null = null;
+  let lastReadyBuild: SceneAssistantBuildEntry | null = null;
   let pendingAssetImport: Readonly<{
     documentPath: string;
     entry: ProjectAssetManifestEntry;
@@ -1972,20 +1979,21 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         "The desktop assistant is denied for Kids before local generation, BYOK dispatch, or hosted routing.",
       );
     }
-    if (route === "hosted") {
+    if (route === "hosted" && startMode !== "ask") {
       return bridgeRefuse(
         DESKTOP_BRIDGE_REFUSALS.assistantHostedMeteringUnavailable,
         "Hosted AI is metered through the web-shell assistant panel; the desktop has no identity or credit plane and cannot bypass that gate.",
       );
     }
     const rarityMode = startMode === "agent";
+    const askMode = startMode === "ask";
     if (rarityMode && (route !== "local" || options.runRarityProvider === undefined)) {
       return bridgeRefuse(
         DESKTOP_BRIDGE_REFUSALS.rarityProviderUnavailable,
         "The checked-in rarity fixture provider is available only through the local privileged host path.",
       );
     }
-    if (!rarityMode && route === "byo" && options.runByoAssistant === undefined) {
+    if (!rarityMode && !askMode && route === "byo" && options.runByoAssistant === undefined) {
       return bridgeRefuse(
         DESKTOP_BRIDGE_REFUSALS.assistantByoUnavailable,
         "No BYOK Model Provider Port is configured for this desktop session. Local remains free and available.",
@@ -2033,11 +2041,13 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     // ran, and the renderer only abandons from its own poll timeout.
     const previousJob = assistantJob;
     assistantSequence += 1;
-    const commandId = rarityMode
-      ? "assistant-local-agent"
-      : route === "byo"
-        ? "assistant-byo-build"
-        : "assistant-local-build";
+    const commandId = askMode
+      ? "assistant-ask"
+      : rarityMode
+        ? "assistant-local-agent"
+        : route === "byo"
+          ? "assistant-byo-build"
+          : "assistant-local-build";
     assistantJob = {
       jobId: `desktop-assistant-${String(assistantSequence)}`,
       commandId,
@@ -2067,7 +2077,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     // not answer that — Agent mode dispatches a Model Provider Port under route
     // `local` — so this job's own work decides. The renderer and local bridge get
     // only the named, redacted refusal.
-    const detailIsOurs = route === "local" && !rarityMode;
+    const detailIsOurs = route === "local" && !rarityMode && !askMode;
     const settleRefusal = (refusal: Readonly<{
       reason: string;
       message: string;
@@ -2097,6 +2107,50 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         detail: error instanceof Error ? error.message : String(error),
       });
     };
+    if (askMode) {
+      const read = readActiveDocument(
+        { documentPath: field(payload, "documentPath") ?? DESKTOP_ACTIVE_DOCUMENT_PATH },
+        {
+          missingMessage: "Ask requires a documentPath inside the project directory.",
+          unreadableReason: ASSISTANT_ASK_REFUSALS.staleVersion,
+        },
+      );
+      if (!read.ok) {
+        settleRefusal({
+          reason: read.reason,
+          message: read.message,
+          recoverable: true,
+        });
+        return bridgeOk("assistant", assistantSnapshot());
+      }
+      const asked = answerDesktopAssistantAsk({
+        documentData: read.status.data,
+        sourceContentHash: read.status.contentHash,
+        profile,
+        prompt: trimmedPrompt,
+        scope: field(payload, "scope") ?? "document",
+        playActive: playSession !== null,
+      });
+      if (!asked.ok) {
+        settleRefusal({
+          reason: asked.reason,
+          message: asked.message,
+          recoverable: true,
+        });
+        return bridgeOk("assistant", assistantSnapshot());
+      }
+      onProgress(Object.freeze({
+        phase: "ready",
+        percent: 100,
+        message: "Ask answered from the explicit project inspection scope.",
+      }));
+      activeJob.status = "ready";
+      activeJob.result = Object.freeze({
+        ok: true as const,
+        ...asked.answer,
+      });
+      return bridgeOk("assistant", assistantSnapshot());
+    }
     if (rarityMode && rarityDocument !== undefined && options.runRarityProvider !== undefined) {
       onProgress(Object.freeze({
         phase: "waiting-provider",
@@ -2156,6 +2210,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
             ok: true as const,
             kind: "rarity-proposal" as const,
             replayed: true as const,
+            providerClass: "fixture" as const,
             evidence: staged.evidence,
           });
           return;
@@ -2181,6 +2236,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           ok: true as const,
           kind: "rarity-proposal" as const,
           replayed: false as const,
+          providerClass: "fixture" as const,
           evidence: staged.evidence,
           authoring: Object.freeze({ ...snapshot, rarityEvidence: staged.evidence }),
         });
@@ -2219,6 +2275,24 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       (result) => {
         if (assistantJob !== activeJob || activeJob.status !== "running") return;
         if (result.ok) {
+          if (isFixtureProviderDescriptor(result.providerEvidence?.model ?? {})) {
+            settleRefusal({
+              reason: ASSISTANT_ASK_REFUSALS.fixtureNotCloud,
+              message: "The checked-in rarity fixture cannot stand in for a configured cloud provider.",
+              recoverable: false,
+            });
+            return;
+          }
+          const providerModel = result.providerEvidence?.model;
+          lastReadyBuild = Object.freeze({
+            buildId: activeJob.jobId,
+            artifactDigest: result.artifactDigest,
+            providerClass: result.route === "byo" ? "configured" as const : "none" as const,
+            model: providerModel?.model ?? "sceneaxi-local-compiler",
+            provider: providerModel?.provider ?? "sceneaxi-local",
+            version: providerModel?.version ?? "local",
+            fallbackPolicy: "none" as const,
+          });
           activeJob.status = "ready";
           activeJob.result = Object.freeze({
             ok: true as const,
@@ -2227,6 +2301,8 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
             artifactDigest: result.artifactDigest,
             inspection: result.inspection,
             mountable: desktopAssistantScene(result.artifact),
+            providerClass: lastReadyBuild.providerClass,
+            fallbackPolicy: "none" as const,
             ...(result.providerEvidence === undefined
               ? {}
               : { providerEvidence: result.providerEvidence }),
@@ -2976,6 +3052,66 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         });
         if (!evaluated.ok) return bridgeRefuse(evaluated.reason, evaluated.message);
         return bridgeOk("command", evaluated.evaluation);
+      }
+      case "assistant-ask": {
+        const documentPath = String(input["documentPath"]);
+        const read = readActiveDocument({ documentPath }, {
+          missingMessage: "Ask requires a documentPath inside the project directory.",
+          unreadableReason: ASSISTANT_ASK_REFUSALS.staleVersion,
+        });
+        if (!read.ok) return bridgeRefuse(read.reason, read.message);
+        if (read.status.contentHash !== String(input["expectedContentHash"])) {
+          return bridgeRefuse(
+            ASSISTANT_ASK_REFUSALS.staleVersion,
+            "Ask names the exact project version being inspected.",
+          );
+        }
+        const asked = answerDesktopAssistantAsk({
+          documentData: read.status.data,
+          sourceContentHash: read.status.contentHash,
+          profile: input["profile"],
+          prompt: String(input["prompt"]),
+          scope: input["scope"],
+          playActive: playSession !== null,
+        });
+        if (!asked.ok) return commandTransaction(validated.command.id, bridgeRefuse(asked.reason, asked.message));
+        return bridgeOk("command", asked.answer);
+      }
+      case "assistant-apply-build": {
+        const documentPath = String(input["documentPath"]);
+        const read = readActiveDocument({ documentPath }, SCENE_DOCUMENT_REFUSALS);
+        if (!read.ok) return bridgeRefuse(read.reason, read.message);
+        if (lastReadyBuild === null) {
+          return commandTransaction(validated.command.id, bridgeRefuse(
+            DESKTOP_BRIDGE_REFUSALS.assistantJobMissing,
+            "Apply Build requires a validated assistant Build artifact from this session.",
+          ));
+        }
+        if (isFixtureProviderDescriptor(lastReadyBuild)) {
+          return commandTransaction(validated.command.id, bridgeRefuse(
+            ASSISTANT_ASK_REFUSALS.fixtureNotCloud,
+            "The checked-in rarity fixture cannot stand in for a configured cloud provider or a Build artifact.",
+          ));
+        }
+        const staged = stageDesktopAssistantBuild({
+          documentData: read.status.data,
+          contentHash: String(input["expectedContentHash"]),
+          documentPath,
+          entry: lastReadyBuild,
+        });
+        if (!staged.ok) {
+          return commandTransaction(validated.command.id, bridgeRefuse(staged.reason, staged.message));
+        }
+        const proposed = reconcilePendingAssetImport(authoringSession().proposeEdit({
+          documentPath,
+          jsonPointer: "/data",
+          expectedContentHash: String(input["expectedContentHash"]),
+          newValue: staged.documentData,
+        }));
+        return commandTransaction(validated.command.id, bridgeOk("command", {
+          catalog: staged.catalog,
+          authoringSnapshot: proposed,
+        }));
       }
       case "assistant-local-build":
         return assistant({ op: "start", route: "local", mode: "build", ...input });

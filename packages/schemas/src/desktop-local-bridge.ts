@@ -383,6 +383,18 @@ export const DESKTOP_LOCAL_BRIDGE_TOOLS = Object.freeze([
     providerRoute: "none",
   }),
   commandTool({
+    name: "sceneaxi.assistant.ask",
+    commandId: "assistant-ask",
+    description: "Answer an Ask prompt from an explicit inspection scope without calling a provider.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.assistant.apply-build",
+    commandId: "assistant-apply-build",
+    description: "Stage the last validated assistant Build artifact through Change Review.",
+    providerRoute: "none",
+  }),
+  commandTool({
     name: "sceneaxi.assistant.local.start",
     commandId: "assistant-local-build",
     description: "Start the deterministic offline assistant compiler; no provider or credits are involved.",

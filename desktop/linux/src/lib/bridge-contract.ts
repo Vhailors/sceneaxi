@@ -152,20 +152,13 @@ export const DESKTOP_BRIDGE_ASSISTANT_OPS = Object.freeze([
 export type DesktopBridgeAssistantOp =
   (typeof DESKTOP_BRIDGE_ASSISTANT_OPS)[number];
 
-const executableAssistantMode = (
-  mode: (typeof EDITOR_SHELL_ASSISTANT_MODE_IDS)[number],
-): mode is Exclude<(typeof EDITOR_SHELL_ASSISTANT_MODE_IDS)[number], "ask"> =>
-  mode !== "ask";
-
-export const DESKTOP_ASSISTANT_START_MODES = Object.freeze(
-  EDITOR_SHELL_ASSISTANT_MODE_IDS.filter(executableAssistantMode),
-);
+export const DESKTOP_ASSISTANT_START_MODES = EDITOR_SHELL_ASSISTANT_MODE_IDS;
 
 export type DesktopAssistantStartMode =
   (typeof DESKTOP_ASSISTANT_START_MODES)[number];
 
 export const DESKTOP_ASSISTANT_START_MODE_REFUSAL_MESSAGE =
-  "Choose Build for a Sculpt Artifact or Agent for a fixture-backed rarity proposal; Ask is not implemented.";
+  "Choose Ask to inspect typed project state, Build for a Sculpt Artifact, or Agent for a fixture-backed rarity proposal.";
 
 export function desktopAssistantStartMode(
   value: unknown,
@@ -174,7 +167,11 @@ export function desktopAssistantStartMode(
 }
 
 export type DesktopAssistantMountedResult = Omit<AssistantSculptSuccess, "artifact"> &
-  Readonly<{ mountable: MountableScene }>;
+  Readonly<{
+    mountable: MountableScene;
+    providerClass?: "none" | "configured";
+    fallbackPolicy?: "none";
+  }>;
 
 export type DesktopRarityRetirementReason =
   | "session-restarted"
@@ -192,18 +189,33 @@ export type DesktopRarityProposalResult = Readonly<{
   ok: true;
   kind: "rarity-proposal";
   replayed: boolean;
+  providerClass?: "fixture";
   evidence: DesktopRarityEvidence;
   authoring?: DesktopSnapshot & Readonly<{ rarityEvidence: DesktopRarityEvidence }>;
   retirement?: Readonly<{ reason: DesktopRarityRetirementReason }>;
 }>;
 
+export type DesktopAssistantAskResult = Readonly<{
+  ok: true;
+  kind: "sceneaxi.assistant-ask-answer";
+  sourceContentHash: string;
+  scope: string;
+  savedBytesWritten: false;
+  providerClass: "none";
+  answer: string;
+  evidence: unknown;
+  digest: string;
+}>;
+
 export type DesktopAssistantResult =
   | DesktopAssistantMountedResult
-  | DesktopRarityProposalResult;
+  | DesktopRarityProposalResult
+  | DesktopAssistantAskResult;
 
 export type DesktopAssistantJobSnapshot = Readonly<{
   jobId: string;
   commandId: Extract<EditorCommandId,
+    | "assistant-ask"
     | "assistant-local-build"
     | "assistant-byo-build"
     | "assistant-local-agent">;
