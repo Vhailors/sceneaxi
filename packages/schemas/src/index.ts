@@ -1016,6 +1016,22 @@ export {
   inspectWorkspaceLayout,
   parseWorkspaceLayout,
 } from "./desktop-workspace-layout.js";
+export {
+  EXTENSION_SEAM_CAPABILITY_IDS,
+  EXTENSION_SEAM_IDS,
+  EXTENSION_SEAM_KIND,
+  EXTENSION_SEAM_REFUSALS,
+  EXTENSION_SEAM_SCHEMA_VERSION,
+  inspectExtensionSeams,
+  isDeclaredExtensionCapability,
+  refuseUndeclaredExtensionGrant,
+  startExtensionSeam,
+} from "./desktop-extension-seams.js";
+export type {
+  ExtensionSeam,
+  ExtensionSeamId,
+  ExtensionSeamRefusal,
+} from "./desktop-extension-seams.js";
 export type {
   WorkspaceLayout,
   WorkspaceLayoutRefusal,

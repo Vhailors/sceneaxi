@@ -71,6 +71,8 @@ describe("full-editor command registry", () => {
       "workspace-layout-inspect",
       "workspace-layout-apply",
       "workspace-layout-reset",
+      "extension-inspect",
+      "extension-start",
       "change-review-accept",
       "change-review-reject",
       "assistant-ask",
