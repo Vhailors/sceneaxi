@@ -46,7 +46,16 @@ import {
   evaluateSceneAnimation,
   inspectSceneAnimation,
   parseSceneAnimationCatalog,
+  SCENE_PHYSICS_CATALOG_KEY,
+  SCENE_PHYSICS_REFUSALS,
+  applyScenePhysicsMutation,
+  emptyScenePhysicsCatalog,
+  evaluateScenePhysics,
+  inspectScenePhysics,
+  parseScenePhysicsCatalog,
   type ComposedScene,
+  type ScenePhysicsCatalog,
+  type ScenePhysicsMutation,
   type SceneAnimationCatalog,
   type SceneAnimationMutation,
   type ScenePrefabCatalog,
@@ -1447,6 +1456,85 @@ export function stageDesktopSceneAnimation(input: Readonly<{
     documentData: Object.freeze({
       ...base,
       [SCENE_ANIMATION_CATALOG_KEY]: applied.catalog,
+    }),
+  });
+}
+
+function physicsCatalogFromData(documentData: unknown): ScenePhysicsCatalog | null {
+  if (!isJsonObject(documentData)) return null;
+  return parseScenePhysicsCatalog(documentData[SCENE_PHYSICS_CATALOG_KEY]);
+}
+
+export function inspectDesktopScenePhysics(documentData: unknown) {
+  return inspectScenePhysics(physicsCatalogFromData(documentData) ?? emptyScenePhysicsCatalog());
+}
+
+export function evaluateDesktopScenePhysics(input: Readonly<{
+  documentData: unknown;
+  sourceContentHash: string;
+  steps: number;
+  animationOffsetY?: number;
+}>) {
+  const catalog = physicsCatalogFromData(input.documentData);
+  if (catalog === null) {
+    return Object.freeze({
+      ok: false as const,
+      reason: SCENE_PHYSICS_REFUSALS.catalogInvalid,
+      message: "The physics catalog is not a valid versioned document.",
+    });
+  }
+  return evaluateScenePhysics({
+    catalog,
+    sourceContentHash: input.sourceContentHash,
+    steps: input.steps,
+    ...(input.animationOffsetY === undefined ? {} : { animationOffsetY: input.animationOffsetY }),
+  });
+}
+
+export function stageDesktopScenePhysics(input: Readonly<{
+  documentData: unknown;
+  contentHash: string;
+  documentPath?: string;
+  mutation: unknown;
+}>) {
+  const documentPath = input.documentPath ?? DESKTOP_ACTIVE_DOCUMENT_PATH;
+  const read = readEditableComposition(input.documentData, input.contentHash, documentPath);
+  if (!read.ok) {
+    return Object.freeze({
+      ok: false as const,
+      reason: SCENE_PHYSICS_REFUSALS.staleVersion,
+      message: read.diagnostics[0]?.message ?? "The Scene Document could not be read.",
+    });
+  }
+  const catalog = physicsCatalogFromData(input.documentData);
+  if (catalog === null) {
+    return Object.freeze({
+      ok: false as const,
+      reason: SCENE_PHYSICS_REFUSALS.catalogInvalid,
+      message: "The physics catalog is not a valid versioned document.",
+    });
+  }
+  if (typeof input.mutation !== "object" || input.mutation === null || Array.isArray(input.mutation)) {
+    return Object.freeze({
+      ok: false as const,
+      reason: SCENE_PHYSICS_REFUSALS.inputUnsupported,
+      message: "A physics mutation must be an object.",
+    });
+  }
+  const applied = applyScenePhysicsMutation({
+    catalog,
+    instanceIds: read.stored.instances.map((instance) => instance.instanceId),
+    mutation: input.mutation as ScenePhysicsMutation,
+  });
+  if (!applied.ok) return applied;
+  const base = isJsonObject(input.documentData) ? input.documentData : {};
+  return Object.freeze({
+    ok: true as const,
+    catalog: applied.catalog,
+    inspection: inspectScenePhysics(applied.catalog),
+    documentData: Object.freeze({
+      ...base,
+      [SCENE_PHYSICS_CATALOG_KEY]: applied.catalog,
     }),
   });
 }
