@@ -30,7 +30,17 @@ import {
   isDesktopSceneReparentPolicy,
   isJsonObject,
   resolveDesktopSceneSelection,
+  defineScenePrefab,
+  emptyScenePrefabCatalog,
+  inspectScenePrefab,
+  instanceScenePrefab,
+  overrideScenePrefab,
+  parseScenePrefabCatalog,
+  refreshScenePrefab,
+  SCENE_PREFAB_CATALOG_KEY,
+  SCENE_PREFAB_REFUSALS,
   type ComposedScene,
+  type ScenePrefabCatalog,
   type ComposedSceneInstance,
   type DesktopSceneEditOperation,
   type DesktopSceneEditProfile,
@@ -1163,6 +1173,177 @@ export function stageDesktopSceneEdit(input: Readonly<{
     selectedInstanceIds,
     sceneDigest: composed.sceneDigest,
   });
+}
+
+export type DesktopScenePrefabStageResult =
+  | Readonly<{
+      ok: true;
+      catalog: ScenePrefabCatalog;
+      inspection: ReturnType<typeof inspectScenePrefab>;
+      documentData: Record<string, unknown>;
+    }>
+  | Readonly<{ ok: false; reason: string; message: string }>;
+
+function prefabSources(stored: ComposedScene) {
+  return stored.instances.map((instance) => Object.freeze({
+    instanceId: instance.instanceId,
+    artifactId: instance.artifactId,
+    parentInstanceId: instance.parentInstanceId,
+    localTransform: instance.localTransform,
+  }));
+}
+
+function catalogFromData(documentData: unknown): ScenePrefabCatalog | null {
+  if (!isJsonObject(documentData)) return null;
+  return parseScenePrefabCatalog(documentData[SCENE_PREFAB_CATALOG_KEY]);
+}
+
+function mergePrefabDocument(
+  documentData: unknown,
+  stored: ComposedScene,
+  catalog: ScenePrefabCatalog,
+  placements?: readonly Readonly<{
+    instanceId: string;
+    artifactId: string;
+    parentInstanceId: string | null;
+    localTransform: SculptTransform;
+  }>[],
+): DesktopScenePrefabStageResult {
+  const nextPlacements = placements === undefined
+    ? stored.instances.map((instance) => ({
+        instanceId: instance.instanceId,
+        artifactId: instance.artifactId,
+        parentInstanceId: instance.parentInstanceId,
+        transform: instance.localTransform,
+      }))
+    : [
+        ...stored.instances
+          .filter((instance) => !placements.some((placement) => placement.instanceId === instance.instanceId))
+          .map((instance) => ({
+            instanceId: instance.instanceId,
+            artifactId: instance.artifactId,
+            parentInstanceId: instance.parentInstanceId,
+            transform: instance.localTransform,
+          })),
+        ...placements.map((placement) => ({
+          instanceId: placement.instanceId,
+          artifactId: placement.artifactId,
+          parentInstanceId: placement.parentInstanceId,
+          transform: placement.localTransform,
+        })),
+      ];
+  const composed = composeStoredPlacements(stored, nextPlacements);
+  if (!composed.ok) {
+    return Object.freeze({
+      ok: false as const,
+      reason: SCENE_PREFAB_REFUSALS.inputUnsupported,
+      message: `${composed.path}: ${composed.message}`,
+    });
+  }
+  const base = isJsonObject(documentData) ? documentData : {};
+  const nextData = Object.freeze({
+    ...base,
+    [COMPOSED_SCENE_DOCUMENT_DATA_KEY]: composed.scene,
+    [SCENE_PREFAB_CATALOG_KEY]: catalog,
+  });
+  return Object.freeze({
+    ok: true as const,
+    catalog,
+    inspection: inspectScenePrefab(catalog),
+    documentData: nextData,
+  });
+}
+
+export function inspectDesktopScenePrefabs(documentData: unknown) {
+  const catalog = catalogFromData(documentData) ?? emptyScenePrefabCatalog();
+  return inspectScenePrefab(catalog);
+}
+
+export function stageDesktopScenePrefab(input: Readonly<{
+  documentData: unknown;
+  contentHash: string;
+  documentPath?: string;
+  operation:
+    | Readonly<{ kind: "define"; definitionId: string; instanceIds: readonly string[] }>
+    | Readonly<{ kind: "instance"; definitionId: string; parentInstanceId: string; instanceKey: string }>
+    | Readonly<{
+        kind: "override";
+        instanceId: string;
+        sourceInstanceId: string;
+        propertyId: string;
+        value: number;
+      }>
+    | Readonly<{ kind: "refresh"; definitionId: string }>;
+}>): DesktopScenePrefabStageResult {
+  const documentPath = input.documentPath ?? DESKTOP_ACTIVE_DOCUMENT_PATH;
+  const read = readEditableComposition(input.documentData, input.contentHash, documentPath);
+  if (!read.ok) {
+    return Object.freeze({
+      ok: false as const,
+      reason: SCENE_PREFAB_REFUSALS.catalogInvalid,
+      message: read.diagnostics[0]?.message ?? "The Scene Document could not be read.",
+    });
+  }
+  const catalog = catalogFromData(input.documentData);
+  if (catalog === null) {
+    return Object.freeze({
+      ok: false as const,
+      reason: SCENE_PREFAB_REFUSALS.catalogInvalid,
+      message: "The reusable-content catalog is not a valid versioned document.",
+    });
+  }
+  const sources = prefabSources(read.stored);
+  if (input.operation.kind === "define") {
+    const defined = defineScenePrefab({
+      catalog,
+      sources,
+      selectedIds: input.operation.instanceIds,
+      definitionId: input.operation.definitionId,
+    });
+    if (!defined.ok) return defined;
+    return mergePrefabDocument(input.documentData, read.stored, defined.catalog);
+  }
+  if (input.operation.kind === "instance") {
+    const instanced = instanceScenePrefab({
+      catalog,
+      occupiedInstanceIds: read.stored.instances.map((instance) => instance.instanceId),
+      definitionId: input.operation.definitionId,
+      parentInstanceId: input.operation.parentInstanceId,
+      instanceKey: input.operation.instanceKey,
+    });
+    if (!instanced.ok) return instanced;
+    return mergePrefabDocument(input.documentData, read.stored, instanced.catalog, instanced.placements);
+  }
+  if (input.operation.kind === "override") {
+    const overridden = overrideScenePrefab({
+      catalog,
+      instanceId: input.operation.instanceId,
+      sourceInstanceId: input.operation.sourceInstanceId,
+      propertyId: input.operation.propertyId,
+      value: input.operation.value,
+    });
+    if (!overridden.ok) return overridden;
+    const parent = read.stored.instances.find(
+      (instance) => instance.instanceId === input.operation.instanceId,
+    )?.parentInstanceId;
+    const resolved = inspectScenePrefab(
+      overridden.catalog,
+      parent === undefined ? {} : { [input.operation.instanceId]: parent },
+    ).resolved[0];
+    return mergePrefabDocument(
+      input.documentData,
+      read.stored,
+      overridden.catalog,
+      resolved?.placements,
+    );
+  }
+  const refreshed = refreshScenePrefab({
+    catalog,
+    sources,
+    definitionId: input.operation.definitionId,
+  });
+  if (!refreshed.ok) return refreshed;
+  return mergePrefabDocument(input.documentData, read.stored, refreshed.catalog);
 }
 
 /** Backward-compatible property facade over the canonical operation. */

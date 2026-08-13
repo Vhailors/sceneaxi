@@ -930,6 +930,33 @@ export type {
   DesktopSceneTransformValueKind,
   DesktopSceneTransformVector,
 } from "./desktop-scene-transform.js";
+export {
+  SCENE_PREFAB_CATALOG_KEY,
+  SCENE_PREFAB_CATALOG_KIND,
+  SCENE_PREFAB_REFUSALS,
+  SCENE_PREFAB_SCHEMA_VERSION,
+  defineScenePrefab,
+  emptyScenePrefabCatalog,
+  inspectScenePrefab,
+  instanceScenePrefab,
+  overrideScenePrefab,
+  parseScenePrefabCatalog,
+  refreshScenePrefab,
+  scenePrefabChildInstanceId,
+  scenePrefabDefinitionDigest,
+  scenePrefabRootInstanceId,
+} from "./desktop-scene-prefab.js";
+export type {
+  ScenePrefabCatalog,
+  ScenePrefabDefinition,
+  ScenePrefabInspection,
+  ScenePrefabInstanceLink,
+  ScenePrefabNode,
+  ScenePrefabOverride,
+  ScenePrefabPlacement,
+  ScenePrefabRefusal,
+  ScenePrefabSourceNode,
+} from "./desktop-scene-prefab.js";
 export type {
   DesktopSceneEditOperation,
   DesktopSceneEditProfile,

@@ -6,6 +6,7 @@
  * becoming competing sources of permission or result metadata.
  */
 import type { JsonObject } from "./document.js";
+import { isSculptIdentifier } from "./sculpt.js";
 import {
   DESKTOP_SCENE_HIERARCHY_REFUSALS,
   isDesktopSceneEditOperation,
@@ -15,6 +16,7 @@ import {
 } from "./desktop-scene-edit.js";
 import { PROJECT_GIT_DIAGNOSTICS } from "./project-git.js";
 import { DESKTOP_SCENE_TRANSFORM_REFUSALS } from "./desktop-scene-transform.js";
+import { SCENE_PREFAB_REFUSALS } from "./desktop-scene-prefab.js";
 
 export const EDITOR_COMMAND_SCHEMA_VERSION = 1 as const;
 
@@ -75,6 +77,11 @@ export type EditorCommandId =
   | "scene-object-create"
   | "scene-object-remove"
   | "scene-object-reparent"
+  | "scene-prefab-inspect"
+  | "scene-prefab-define"
+  | "scene-prefab-instance"
+  | "scene-prefab-override"
+  | "scene-prefab-refresh"
   | "input-actions-inspect"
   | "input-action-rebind"
   | "input-actions-reset"
@@ -131,6 +138,7 @@ export type EditorCommandDefinition = Readonly<{
       | "undo-result"
       | "redo-result"
       | "scene-hierarchy"
+      | "scene-prefab-catalog"
       | "input-action-map"
       | "kernel-session"
       | "sculpt-artifact"
@@ -161,6 +169,10 @@ export type EditorCommandDefinition = Readonly<{
     | "scene-create"
     | "scene-remove"
     | "scene-reparent"
+    | "prefab-define"
+    | "prefab-instance"
+    | "prefab-override"
+    | "prefab-refresh"
     | "input-rebind"
     | "input-reset";
 }>;
@@ -474,6 +486,55 @@ const inputReset = Object.freeze({
     expectedBaseVersion: Object.freeze({ type: "string", pattern: "^sha256:[0-9a-f]{64}$" }),
     approved: Object.freeze({ type: "boolean" }),
     reviewDigest: Object.freeze({ type: Object.freeze(["string", "null"]), pattern: "^sha256:[0-9a-f]{64}$" }),
+  }),
+}) satisfies JsonObject;
+
+const prefabDefineInput = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: Object.freeze(["documentPath", "expectedContentHash", "profile", "definitionId", "instanceIds"]),
+  properties: Object.freeze({
+    ...sceneMutationProperties,
+    definitionId: sceneId,
+    instanceIds: sceneIds,
+  }),
+}) satisfies JsonObject;
+
+const prefabInstanceInput = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: Object.freeze(["documentPath", "expectedContentHash", "profile", "definitionId", "parentInstanceId", "instanceKey"]),
+  properties: Object.freeze({
+    ...sceneMutationProperties,
+    definitionId: sceneId,
+    parentInstanceId: sceneId,
+    instanceKey: sceneId,
+  }),
+}) satisfies JsonObject;
+
+const prefabOverrideInput = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: Object.freeze(["documentPath", "expectedContentHash", "profile", "instanceId", "sourceInstanceId", "propertyId", "newValue"]),
+  properties: Object.freeze({
+    ...sceneMutationProperties,
+    instanceId: sceneId,
+    sourceInstanceId: sceneId,
+    propertyId: Object.freeze({
+      type: "string",
+      pattern: "^(translation|rotation|scale)-[xyz]$",
+    }),
+    newValue: Object.freeze({ type: "number" }),
+  }),
+}) satisfies JsonObject;
+
+const prefabRefreshInput = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: Object.freeze(["documentPath", "expectedContentHash", "profile", "definitionId"]),
+  properties: Object.freeze({
+    ...sceneMutationProperties,
+    definitionId: sceneId,
   }),
 }) satisfies JsonObject;
 
@@ -930,6 +991,81 @@ const DEFINITIONS = [
   }),
   definition({
     schemaVersion: 1,
+    id: "scene-prefab-inspect",
+    label: "Inspect Reusable Content",
+    acceptedClients: CLIENTS,
+    permission: "project:read",
+    capability: capability("scene.compose"),
+    mutation: "none",
+    progress: immediate(),
+    evidence: evidence("scene-prefab-catalog", "project"),
+    refusals: [...HIERARCHY_BASE_REFUSALS, ...Object.values(SCENE_PREFAB_REFUSALS)],
+    undo: undo("none"),
+    inputSchema: sceneDocumentInput,
+    inputShape: "scene-document",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "scene-prefab-define",
+    label: "Define Reusable Content",
+    acceptedClients: CLIENTS,
+    permission: "project:write",
+    capability: capability("scene.compose"),
+    mutation: "stages-change",
+    progress: immediate(["validating", "reviewing"]),
+    evidence: evidence("scene-prefab-catalog", "change-review"),
+    refusals: [...HIERARCHY_BASE_REFUSALS, ...Object.values(SCENE_PREFAB_REFUSALS)],
+    undo: undo("none"),
+    inputSchema: prefabDefineInput,
+    inputShape: "prefab-define",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "scene-prefab-instance",
+    label: "Instance Reusable Content",
+    acceptedClients: CLIENTS,
+    permission: "project:write",
+    capability: capability("scene.compose"),
+    mutation: "stages-change",
+    progress: immediate(["validating", "reviewing"]),
+    evidence: evidence("scene-prefab-catalog", "change-review"),
+    refusals: [...HIERARCHY_BASE_REFUSALS, ...Object.values(SCENE_PREFAB_REFUSALS)],
+    undo: undo("none"),
+    inputSchema: prefabInstanceInput,
+    inputShape: "prefab-instance",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "scene-prefab-override",
+    label: "Override Reusable Instance",
+    acceptedClients: CLIENTS,
+    permission: "project:write",
+    capability: capability("scene.compose"),
+    mutation: "stages-change",
+    progress: immediate(["validating", "reviewing"]),
+    evidence: evidence("scene-prefab-catalog", "change-review"),
+    refusals: [...HIERARCHY_BASE_REFUSALS, ...Object.values(SCENE_PREFAB_REFUSALS)],
+    undo: undo("none"),
+    inputSchema: prefabOverrideInput,
+    inputShape: "prefab-override",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "scene-prefab-refresh",
+    label: "Refresh Reusable Content",
+    acceptedClients: CLIENTS,
+    permission: "project:write",
+    capability: capability("scene.compose"),
+    mutation: "stages-change",
+    progress: immediate(["validating", "reviewing"]),
+    evidence: evidence("scene-prefab-catalog", "change-review"),
+    refusals: [...HIERARCHY_BASE_REFUSALS, ...Object.values(SCENE_PREFAB_REFUSALS)],
+    undo: undo("none"),
+    inputSchema: prefabRefreshInput,
+    inputShape: "prefab-refresh",
+  }),
+  definition({
+    schemaVersion: 1,
     id: "run-play",
     label: "Play",
     acceptedClients: CLIENTS,
@@ -1242,6 +1378,27 @@ export function validateEditorCommandInput(
           parentInstanceId: input["parentInstanceId"],
           transformPolicy: input["transformPolicy"],
         });
+    case "prefab-define":
+      return exactKeys(input, ["documentPath", "expectedContentHash", "profile", "definitionId", "instanceIds"]) &&
+        sceneMutationFields(input) && isSculptIdentifier(input["definitionId"]) &&
+        isDesktopSceneSelectionInput(input["instanceIds"]);
+    case "prefab-instance":
+      return exactKeys(input, ["documentPath", "expectedContentHash", "profile", "definitionId", "parentInstanceId", "instanceKey"]) &&
+        sceneMutationFields(input) && isSculptIdentifier(input["definitionId"]) &&
+        isSculptIdentifier(input["parentInstanceId"]) && isSculptIdentifier(input["instanceKey"]);
+    case "prefab-override":
+      return exactKeys(input, ["documentPath", "expectedContentHash", "profile", "instanceId", "sourceInstanceId", "propertyId", "newValue"]) &&
+        sceneMutationFields(input) && isSculptIdentifier(input["instanceId"]) &&
+        isSculptIdentifier(input["sourceInstanceId"]) &&
+        isDesktopSceneEditOperation({
+          kind: "set-transform-component",
+          instanceId: input["instanceId"],
+          propertyId: input["propertyId"],
+          value: input["newValue"],
+        });
+    case "prefab-refresh":
+      return exactKeys(input, ["documentPath", "expectedContentHash", "profile", "definitionId"]) &&
+        sceneMutationFields(input) && isSculptIdentifier(input["definitionId"]);
     case "input-rebind":
       return exactKeys(input, ["scope", "expectedBaseVersion", "actionId", "binding", "approved", "reviewDigest"]) &&
         (input["scope"] === "workspace" || input["scope"] === "project") &&
