@@ -22,6 +22,7 @@ import { SCENE_ANIMATION_REFUSALS } from "./desktop-scene-animation.js";
 import { SCENE_PHYSICS_REFUSALS } from "./desktop-scene-physics.js";
 import { ASSISTANT_ASK_REFUSALS, ASSISTANT_ASK_SCOPES } from "./desktop-assistant-ask.js";
 import { SCENE_PACKAGE_REFUSALS } from "./desktop-scene-package.js";
+import { PROFILE_REFUSALS } from "./desktop-profile-evidence.js";
 
 export const EDITOR_COMMAND_SCHEMA_VERSION = 1 as const;
 
@@ -105,6 +106,7 @@ export type EditorCommandId =
   | "package-inspect"
   | "package-install"
   | "package-remove"
+  | "profile-inspect"
   | "change-review-accept"
   | "change-review-reject"
   | "assistant-ask"
@@ -171,6 +173,7 @@ export type EditorCommandDefinition = Readonly<{
       | "assistant-ask-answer"
       | "scene-assistant-build-catalog"
       | "scene-package-catalog"
+      | "profile-evidence"
       | "rarity-proposal"
       | "command-progress";
     target: EditorCommandResultTarget;
@@ -1425,6 +1428,21 @@ const DEFINITIONS = [
     undo: undo("none"),
     inputSchema: packageRemoveInput,
     inputShape: "package-remove",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "profile-inspect",
+    label: "Inspect Play Profile",
+    acceptedClients: CLIENTS,
+    permission: "project:read",
+    capability: capability("runtime.play"),
+    mutation: "none",
+    progress: immediate(),
+    evidence: evidence("profile-evidence", "live-viewport"),
+    refusals: [...HIERARCHY_BASE_REFUSALS, ...Object.values(PROFILE_REFUSALS)],
+    undo: undo("none"),
+    inputSchema: sceneDocumentInput,
+    inputShape: "scene-document",
   }),
   definition({
     schemaVersion: 1,

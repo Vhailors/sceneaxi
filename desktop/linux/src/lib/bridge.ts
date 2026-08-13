@@ -62,6 +62,7 @@ import {
 } from "@sceneaxi-internal/desktop-session-project-git";
 import {
   materializeProjectAssetCopies,
+  projectAssetManifestFromDocumentData,
   proposeProjectAssetImport,
   type ProjectAssetManifestEntry,
 } from "@sceneaxi/importers";
@@ -91,7 +92,9 @@ import {
   validateRarityNamespace,
   type EditorCommandId,
   ASSISTANT_ASK_REFUSALS,
+  captureProfileEvidence,
   isFixtureProviderDescriptor,
+  isJsonObject,
   type SceneAssistantBuildEntry,
 } from "@sceneaxi/schemas";
 import {
@@ -3119,6 +3122,30 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           ...staged.inspection,
           authoringSnapshot: proposed,
         }));
+      }
+      case "profile-inspect": {
+        const documentPath = input["documentPath"];
+        const read = readActiveDocument({ documentPath }, SCENE_DOCUMENT_REFUSALS);
+        if (!read.ok) return bridgeRefuse(read.reason, read.message);
+        const assets = isJsonObject(read.status.data)
+          ? projectAssetManifestFromDocumentData(read.status.data)
+          : null;
+        const captured = captureProfileEvidence({
+          sourceContentHash: read.status.contentHash,
+          playSessionId: playSession?.sessionId ?? null,
+          cloneDigest: playSession?.cloneDigest ?? null,
+          profile: input["profile"],
+          ...(lastReport === null ? {} : {
+            frame: {
+              frame: lastReport.frame,
+              drawCalls: lastReport.drawCalls,
+              pixelsDrawn: lastReport.pixelsDrawn,
+            },
+          }),
+          ...(assets !== null && assets.ok ? { assetCount: assets.value.assets.length } : {}),
+        });
+        if (!captured.ok) return bridgeRefuse(captured.reason, captured.message);
+        return bridgeOk("command", captured.evidence);
       }
       case "assistant-ask": {
         const documentPath = String(input["documentPath"]);

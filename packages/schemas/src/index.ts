@@ -999,6 +999,19 @@ export {
   inspectScenePackages,
   parseScenePackageCatalog,
 } from "./desktop-scene-package.js";
+export {
+  PROFILE_EVIDENCE_KIND,
+  PROFILE_EVIDENCE_SCHEMA_VERSION,
+  PROFILE_METRIC_IDS,
+  PROFILE_REFUSALS,
+  captureProfileEvidence,
+} from "./desktop-profile-evidence.js";
+export type {
+  ProfileEvidence,
+  ProfileMetric,
+  ProfileMetricId,
+  ProfileRefusal,
+} from "./desktop-profile-evidence.js";
 export type {
   ScenePackageCatalog,
   ScenePackageDiscovery,
