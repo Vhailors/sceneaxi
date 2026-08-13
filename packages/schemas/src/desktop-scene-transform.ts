@@ -141,6 +141,10 @@ function snapValue(value: number, increment: number | null): number {
   return Math.round(value / increment) * increment;
 }
 
+function componentAt(vector: DesktopSceneTransformVector, axis: 0 | 1 | 2): number {
+  return vector[axis];
+}
+
 function clampComponent(
   mode: DesktopSceneTransformMode,
   value: number,
@@ -251,32 +255,35 @@ export function resolveDesktopSceneTransform(
   for (const instance of selected) {
     const currentLocal = instance.local[field];
     const next: [number, number, number] = [
-      currentLocal[0],
-      currentLocal[1],
-      currentLocal[2],
+      componentAt(currentLocal, 0),
+      componentAt(currentLocal, 1),
+      componentAt(currentLocal, 2),
     ];
-    for (let axis = 0; axis < 3; axis += 1) {
+    const axes = [0, 1, 2] as const;
+    for (const axis of axes) {
       if (!mask[axis]) continue;
-      const incoming = input.values[axis];
-      let candidate = input.valueKind === "absolute" ? incoming : currentLocal[axis] + incoming;
+      const incoming = componentAt(input.values, axis);
+      const local = componentAt(currentLocal, axis);
+      let candidate = input.valueKind === "absolute" ? incoming : local + incoming;
       if (input.space === "world" && input.mode === "translate") {
-        const world = instance.world.translation[axis];
+        const world = componentAt(instance.world.translation, axis);
         const nextWorld = input.valueKind === "absolute" ? incoming : world + incoming;
         const snappedWorld = snapValue(nextWorld, input.snapIncrement);
-        const parentWorld = world - currentLocal[axis];
+        const parentWorld = world - local;
         candidate = snappedWorld - parentWorld;
         if (pivotPoint !== null) {
-          const offset = world - pivotPoint[axis];
-          candidate = snapValue(pivotPoint[axis] + offset + (input.valueKind === "delta" ? incoming : incoming - world), input.snapIncrement) - parentWorld;
+          const offset = world - componentAt(pivotPoint, axis);
+          const pivoted = input.valueKind === "delta" ? incoming : incoming - world;
+          candidate = snapValue(componentAt(pivotPoint, axis) + offset + pivoted, input.snapIncrement) - parentWorld;
         }
       } else {
         candidate = snapValue(candidate, input.snapIncrement);
         if (pivotPoint !== null && input.mode === "translate") {
-          const world = instance.world.translation[axis];
-          const parentWorld = world - currentLocal[axis];
-          const offset = world - pivotPoint[axis];
+          const world = componentAt(instance.world.translation, axis);
+          const parentWorld = world - local;
+          const offset = world - componentAt(pivotPoint, axis);
           const nextWorld = input.valueKind === "delta"
-            ? pivotPoint[axis] + offset + incoming
+            ? componentAt(pivotPoint, axis) + offset + incoming
             : incoming + offset;
           candidate = snapValue(nextWorld, input.snapIncrement) - parentWorld;
         }
@@ -294,7 +301,7 @@ export function resolveDesktopSceneTransform(
     for (const definition of DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS) {
       if (definition.field !== field) continue;
       const value = next[definition.axis];
-      if (value === currentLocal[definition.axis]) continue;
+      if (value === undefined || value === componentAt(currentLocal, definition.axis)) continue;
       components.push(Object.freeze({
         instanceId: instance.instanceId,
         propertyId: definition.id,

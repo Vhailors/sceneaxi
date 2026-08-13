@@ -2616,7 +2616,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
             validated.command.id,
             bridgeRefuse(
               String(field(staged.data, "reason") ?? DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported),
-              String(field(diagnostic, "message") ?? resolved.message ?? "The transform command was refused before review."),
+              String(field(diagnostic, "message") ?? "The transform command was refused before review."),
             ),
           );
         }
