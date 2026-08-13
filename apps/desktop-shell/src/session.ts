@@ -203,12 +203,19 @@ function rootProjectGitAuthority(root: string): RootProjectGitAuthority {
   const owner = acquireProjectGitDesktopOwner(canonicalRoot);
   if ("diagnostic" in owner) throw new DesktopProjectMutationOwnerError(owner.diagnostic);
   const sessions = new Set<WeakRef<DesktopSession>>();
-  let rootAuthority: RootProjectGitAuthority;
+  const holder: { current: RootProjectGitAuthority | null } = { current: null };
   const authority = createProjectGitAuthoringAuthority(
     canonicalRoot,
-    () => aggregateProjectGitState(rootAuthority),
+    () => {
+      const current = holder.current;
+      if (current === null) {
+        return { reviewStaged: false, recoveryPending: false, transactionDirty: false };
+      }
+      return aggregateProjectGitState(current);
+    },
   );
-  rootAuthority = { root: canonicalRoot, authority, owner, sessions };
+  const rootAuthority = { root: canonicalRoot, authority, owner, sessions };
+  holder.current = rootAuthority;
   rootProjectGitAuthorities.set(canonicalRoot, rootAuthority);
   return rootAuthority;
 }

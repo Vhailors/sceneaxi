@@ -248,7 +248,7 @@ function readCapabilityManifest(root: string): string | ProjectGitFailure {
   }
 }
 
- function parseStatus(
+export function parseStatus(
   output: Buffer,
   canonicalFiles: ReadonlySet<string>,
   excludedPaths: ReadonlySet<string>,
@@ -480,8 +480,10 @@ function pairExactWorktreeRenames(
     }
     const objectId = header[1];
     if (header.length !== 3 || header[2] !== "0" || objectId === undefined || !deletedPaths.has(path)) continue;
+    const deleted = deletedPaths.get(path);
+    if (deleted === undefined) continue;
     const candidates = deletedByObject.get(objectId) ?? [];
-    candidates.push(deletedPaths.get(path)!);
+    candidates.push(deleted);
     deletedByObject.set(objectId, candidates);
   }
   const pairedSources = new Set<string>();

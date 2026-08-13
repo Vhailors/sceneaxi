@@ -545,7 +545,7 @@ function mutationGuard(
   return Object.freeze({ root, lockSet, excludedPaths });
 }
 
-function parseStatus(
+export function parseStatus(
   output: Buffer,
   canonicalFiles: ReadonlySet<string>,
   excludedPaths: ReadonlySet<string>,
@@ -718,8 +718,10 @@ function pairExactWorktreeRenames(
     }
     const objectId = header[1];
     if (header.length !== 3 || header[2] !== "0" || objectId === undefined || !deletedPaths.has(path)) continue;
+    const deleted = deletedPaths.get(path);
+    if (deleted === undefined) continue;
     const candidates = deletedByObject.get(objectId) ?? [];
-    candidates.push(deletedPaths.get(path)!);
+    candidates.push(deleted);
     deletedByObject.set(objectId, candidates);
   }
   const pairedSources = new Set<string>();
@@ -2354,11 +2356,7 @@ export function stageProjectGitPaths(
   if ("diagnostic" in selection) return selection;
   const guard = mutationGuard(prepared.root, options.authoring);
   if ("diagnostic" in guard) return guard;
-  let result: ProjectGitStateResult = failure(
-    PROJECT_GIT_DIAGNOSTICS.selectionMismatch,
-    "$input.paths",
-    "Selected path evidence changed during the staging operation.",
-  );
+  let result: ProjectGitStateResult | undefined;
   let mutationAttempted = false;
   let temporary: TemporaryGitIndex | undefined;
   let publishedIndex: Readonly<{
@@ -2574,7 +2572,11 @@ export function stageProjectGitPaths(
       }
     }
   }
-  return result;
+  return result ?? failure(
+    PROJECT_GIT_DIAGNOSTICS.selectionMismatch,
+    "$input.paths",
+    "Selected path evidence changed during the staging operation.",
+  );
 }
 
 /** Validate an exact staged selection and return commit evidence without creating a commit. */
@@ -2609,11 +2611,7 @@ export function prepareProjectGitCommit(
   if ("diagnostic" in selection) return selection;
   const guard = mutationGuard(prepared.root, options.authoring);
   if ("diagnostic" in guard) return guard;
-  let result: ProjectGitCommitPreparationResult = failure(
-    PROJECT_GIT_DIAGNOSTICS.transactionDirty,
-    ".sceneaxi-authoring-operation",
-    "Commit preparation did not complete before authoring cleanup.",
-  );
+  let result: ProjectGitCommitPreparationResult | undefined;
   try {
     const stateResult = inspectSharedProjectGit(options, "status");
     if (!stateResult.ok) {
@@ -2670,7 +2668,11 @@ export function prepareProjectGitCommit(
       );
     }
   }
-  return result;
+  return result ?? failure(
+    PROJECT_GIT_DIAGNOSTICS.transactionDirty,
+    ".sceneaxi-authoring-operation",
+    "Commit preparation did not complete before authoring cleanup.",
+  );
 }
 
 /** Dangerous or history-facing operations are outside the contained v1 surface. */
