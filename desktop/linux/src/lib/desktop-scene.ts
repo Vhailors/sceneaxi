@@ -1315,20 +1315,21 @@ export function stageDesktopScenePrefab(input: Readonly<{
     return mergePrefabDocument(input.documentData, read.stored, instanced.catalog, instanced.placements);
   }
   if (input.operation.kind === "override") {
+    const operation = input.operation;
     const overridden = overrideScenePrefab({
       catalog,
-      instanceId: input.operation.instanceId,
-      sourceInstanceId: input.operation.sourceInstanceId,
-      propertyId: input.operation.propertyId,
-      value: input.operation.value,
+      instanceId: operation.instanceId,
+      sourceInstanceId: operation.sourceInstanceId,
+      propertyId: operation.propertyId,
+      value: operation.value,
     });
     if (!overridden.ok) return overridden;
     const parent = read.stored.instances.find(
-      (instance) => instance.instanceId === input.operation.instanceId,
+      (instance) => instance.instanceId === operation.instanceId,
     )?.parentInstanceId;
     const resolved = inspectScenePrefab(
       overridden.catalog,
-      parent === undefined ? {} : { [input.operation.instanceId]: parent },
+      typeof parent === "string" ? { [operation.instanceId]: parent } : {},
     ).resolved[0];
     return mergePrefabDocument(
       input.documentData,
