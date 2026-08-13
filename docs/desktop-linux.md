@@ -223,6 +223,16 @@ injects no live provider transport or fallback behaviour, so its configuration
 surface reports the provider runtime unavailable even when an encrypted key is
 stored.
 
+The provider → authoring → engine golden
+(`tests/e2e/desktop-provider-authoring-engine-golden.test.ts`) continues that
+same injected fixture path through `assistant-apply-build` and the real Change
+Review used by CLI and local-agent clients. Accept persists the typed
+`sceneAssistantBuilds` catalog, reject writes nothing, a stale content hash
+stays in review with `content-hash-conflict`, and reopen plays the existing
+composed scene through `open-path`. Kids, Hosted, missing BYOK configuration,
+and Agent-on-BYOK still refuse by name before a credential is read. This is
+fixture-transport evidence, not a live provider or hosted-metering claim.
+
 On success the existing validated `SculptArtifact` becomes the shared
 `MountableScene` payload before it is mounted through `createSculptMountApi()` into
 the one live center viewport. That projection is direct rather than a
