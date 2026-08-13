@@ -25,6 +25,7 @@ import { SCENE_PACKAGE_REFUSALS } from "./desktop-scene-package.js";
 import { PROFILE_REFUSALS } from "./desktop-profile-evidence.js";
 import { WORKSPACE_LAYOUT_REFUSALS } from "./desktop-workspace-layout.js";
 import { EXTENSION_SEAM_IDS, EXTENSION_SEAM_REFUSALS } from "./desktop-extension-seams.js";
+import { PROJECT_BUILD_PLATFORMS, PROJECT_BUILD_REFUSALS } from "./desktop-project-build.js";
 
 export const EDITOR_COMMAND_SCHEMA_VERSION = 1 as const;
 
@@ -114,6 +115,7 @@ export type EditorCommandId =
   | "workspace-layout-reset"
   | "extension-inspect"
   | "extension-start"
+  | "project-build"
   | "change-review-accept"
   | "change-review-reject"
   | "assistant-ask"
@@ -183,6 +185,7 @@ export type EditorCommandDefinition = Readonly<{
       | "profile-evidence"
       | "workspace-layout"
       | "extension-seams"
+      | "project-build"
       | "rarity-proposal"
       | "command-progress";
     target: EditorCommandResultTarget;
@@ -225,6 +228,7 @@ export type EditorCommandDefinition = Readonly<{
     | "workspace-layout-apply"
     | "extension-inspect"
     | "extension-start"
+    | "project-build"
     | "input-rebind"
     | "input-reset";
 }>;
@@ -716,6 +720,16 @@ const extensionStartInput = Object.freeze({
   properties: Object.freeze({
     profile: Object.freeze({ type: "string", enum: Object.freeze(["game", "web", "kids"]) }),
     seamId: Object.freeze({ type: "string", enum: EXTENSION_SEAM_IDS }),
+  }),
+}) satisfies JsonObject;
+
+const projectBuildInput = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: Object.freeze(["profile", "target"]),
+  properties: Object.freeze({
+    profile: Object.freeze({ type: "string", enum: Object.freeze(["game", "web", "kids"]) }),
+    target: Object.freeze({ type: "string", enum: PROJECT_BUILD_PLATFORMS }),
   }),
 }) satisfies JsonObject;
 
@@ -1566,6 +1580,21 @@ const DEFINITIONS = [
   }),
   definition({
     schemaVersion: 1,
+    id: "project-build",
+    label: "Build Project Target",
+    acceptedClients: CLIENTS,
+    permission: "project:read",
+    capability: capability("scene.compose"),
+    mutation: "none",
+    progress: immediate(),
+    evidence: evidence("project-build", "none"),
+    refusals: [...BASE_REFUSALS, ...Object.values(PROJECT_BUILD_REFUSALS)],
+    undo: undo("none"),
+    inputSchema: projectBuildInput,
+    inputShape: "project-build",
+  }),
+  definition({
+    schemaVersion: 1,
     id: "change-review-accept",
     label: "Accept proposal",
     acceptedClients: CLIENTS,
@@ -1963,6 +1992,9 @@ export function validateEditorCommandInput(
     case "extension-start":
       return exactKeys(input, ["profile", "seamId"]) && sceneProfileField(input) &&
         (EXTENSION_SEAM_IDS as readonly string[]).includes(String(input["seamId"]));
+    case "project-build":
+      return exactKeys(input, ["profile", "target"]) && sceneProfileField(input) &&
+        (PROJECT_BUILD_PLATFORMS as readonly string[]).includes(String(input["target"]));
     case "input-rebind":
       return exactKeys(input, ["scope", "expectedBaseVersion", "actionId", "binding", "approved", "reviewDigest"]) &&
         (input["scope"] === "workspace" || input["scope"] === "project") &&

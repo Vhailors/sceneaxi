@@ -73,6 +73,7 @@ describe("full-editor command registry", () => {
       "workspace-layout-reset",
       "extension-inspect",
       "extension-start",
+      "project-build",
       "change-review-accept",
       "change-review-reject",
       "assistant-ask",

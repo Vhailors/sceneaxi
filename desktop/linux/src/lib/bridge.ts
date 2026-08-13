@@ -93,6 +93,8 @@ import {
   type EditorCommandId,
   ASSISTANT_ASK_REFUSALS,
   captureProfileEvidence,
+  detectProjectBuildHost,
+  evaluateProjectBuild,
   inspectExtensionSeams,
   isFixtureProviderDescriptor,
   startExtensionSeam,
@@ -3190,6 +3192,19 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           seamId: input["seamId"],
         });
         return commandTransaction(validated.command.id, bridgeRefuse(started.reason, started.message));
+      }
+      case "project-build": {
+        const evaluated = evaluateProjectBuild({
+          target: input["target"],
+          profile: input["profile"],
+          host: {
+            platform: detectProjectBuildHost(),
+            signingReady: false,
+            notarizationReady: false,
+            releaseAuthority: false,
+          },
+        });
+        return commandTransaction(validated.command.id, bridgeRefuse(evaluated.reason, evaluated.message));
       }
       case "assistant-ask": {
         const documentPath = String(input["documentPath"]);

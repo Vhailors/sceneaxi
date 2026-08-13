@@ -110,6 +110,7 @@
   "packages/schemas/src/desktop-assistant-ask.ts",
   "packages/schemas/src/desktop-profile-evidence.ts",
   "packages/schemas/src/desktop-extension-seams.ts",
+  "packages/schemas/src/desktop-project-build.ts",
   "packages/schemas/src/desktop-workspace-layout.ts",
   "packages/schemas/src/desktop-scene-animation.ts",
   "packages/schemas/src/desktop-scene-package.ts",

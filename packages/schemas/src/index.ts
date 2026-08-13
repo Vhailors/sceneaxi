@@ -1027,6 +1027,20 @@ export {
   refuseUndeclaredExtensionGrant,
   startExtensionSeam,
 } from "./desktop-extension-seams.js";
+export {
+  PROJECT_BUILD_KIND,
+  PROJECT_BUILD_PLATFORMS,
+  PROJECT_BUILD_REFUSALS,
+  PROJECT_BUILD_SCHEMA_VERSION,
+  detectProjectBuildHost,
+  evaluateProjectBuild,
+  isProjectBuildPlatform,
+} from "./desktop-project-build.js";
+export type {
+  ProjectBuildHost,
+  ProjectBuildPlatform,
+  ProjectBuildRefusal,
+} from "./desktop-project-build.js";
 export type {
   ExtensionSeam,
   ExtensionSeamId,
