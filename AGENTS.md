@@ -620,3 +620,38 @@ authoritative outcome.
 ## Maintaining this file
 
 Rewrite when durable project-wide knowledge changes; prefer pointers over copied process.
+
+## Cursor Cloud specific instructions
+
+The startup update script installs three roots: the hermetic root workspace, the
+`desktop/linux` install root, and `sites/umbrella` (all `pnpm install
+--frozen-lockfile`). The other separate install roots (`sites/catalog-game`,
+`sites/catalog-web`, `sites/kids`, `desktop/macos`, `desktop/windows`) are **not**
+installed by default — run `pnpm install` in that directory only when you work on
+one. Node 22/24 and pnpm 9.15 are already present.
+
+- **`desktop/linux` must be installed before the root build/test/gate**, even when
+  you are not touching the desktop tier. `tsconfig.tests.json` typechecks
+  `desktop/*/src/lib/**`, which resolves `@sceneaxi/importers` from that root's
+  `node_modules`; without it `pnpm build` (and therefore `pnpm test`/`pnpm gate`)
+  fails with `Cannot find module '@sceneaxi/importers'`. The update script handles
+  this, but re-run `pnpm --dir desktop/linux install` if you ever clear that tree.
+- **Run `pnpm build` before any workspace binary** (`sceneaxi`, `sceneaxi-desktop`,
+  `sceneaxi-web-shell`); launchers resolve compiled `dist/`, not source (see
+  Toolchain section above). Same-session dependency reinstalls are not picked up
+  until you rebuild.
+- **CLI `project` docs must live inside their `--cwd` project root**: pass a
+  relative `--document` path (e.g. `--cwd <root> --document scene.json`), or it
+  refuses with "Document path must be inside its authoritative project root."
+- **web-shell** (`pnpm sceneaxi-web-shell --cwd <project> --port 5180`) binds
+  loopback only and writes nothing until a proposal is accepted; it is the quickest
+  interactive authoring (propose → review → accept) surface.
+- **umbrella dev server**: `pnpm --dir sites/umbrella dev` (Next.js on port 3000);
+  `predev`/`prebuild` auto-generate the engine SDK into `public/engine-sdk`. `/open`
+  is the public WebGL live-open path and needs no identity; `/login`, `/account`,
+  and checkout refuse by name without a wired Neon/Better-Auth/Stripe deployment
+  (`docs/websites-deploy.md`), and `/editor` refuses unless identity is wired or
+  `SCENEAXI_SITE_EDITOR_PREVIEW=1` is set.
+- `docs/runnable-surfaces.md` is the authoritative inventory of what can actually be
+  started and how; most engine/profile paths are proven via `pnpm test:golden`
+  without starting a server.
