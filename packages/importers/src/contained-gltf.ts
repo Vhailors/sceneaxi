@@ -584,7 +584,7 @@ function parseFont(bytes: Uint8Array, extension: string): ParsedAsset | Refusal 
   const tag = bytes.byteLength >= 4 ? ascii(bytes, 0, 4) : "";
   let mediaType: string;
   let flavor: string;
-  let tables = 0;
+  let tables: number;
   if (extension === ".woff2") {
     if (bytes.byteLength < 48 || tag !== "wOF2" || uint32Big(bytes, 8) !== bytes.byteLength) return refuse(CONTAINED_GLTF_REFUSALS.malformed, "The WOFF2 header or declared length is invalid.");
     tables = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint16(12, false);

@@ -49,7 +49,6 @@ import {
 } from "@sceneaxi/authoring-core";
 import {
   createDesktopSession,
-  DESKTOP_PRODUCT_REFUSALS,
   type DesktopDocumentStatus,
   type DesktopSession,
   type DesktopSnapshot,

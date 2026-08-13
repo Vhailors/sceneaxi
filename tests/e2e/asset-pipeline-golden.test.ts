@@ -39,12 +39,14 @@ function project(prefix: string) {
 }
 
 function uint32(bytes: Buffer, offset: number, value: number, little = false) {
-  little ? bytes.writeUInt32LE(value, offset) : bytes.writeUInt32BE(value, offset);
+  if (little) bytes.writeUInt32LE(value, offset);
+  else bytes.writeUInt32BE(value, offset);
   return bytes;
 }
 
 function uint16(bytes: Buffer, offset: number, value: number, little = false) {
-  little ? bytes.writeUInt16LE(value, offset) : bytes.writeUInt16BE(value, offset);
+  if (little) bytes.writeUInt16LE(value, offset);
+  else bytes.writeUInt16BE(value, offset);
   return bytes;
 }
 
