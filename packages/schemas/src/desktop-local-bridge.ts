@@ -383,6 +383,24 @@ export const DESKTOP_LOCAL_BRIDGE_TOOLS = Object.freeze([
     providerRoute: "none",
   }),
   commandTool({
+    name: "sceneaxi.package.inspect",
+    commandId: "package-inspect",
+    description: "Inspect the project package lock and discovered contained metadata without executing packages.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.package.install",
+    commandId: "package-install",
+    description: "Stage a version-pinned contained package install through Change Review.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.package.remove",
+    commandId: "package-remove",
+    description: "Stage removal of a locked package through Change Review.",
+    providerRoute: "none",
+  }),
+  commandTool({
     name: "sceneaxi.assistant.ask",
     commandId: "assistant-ask",
     description: "Answer an Ask prompt from an explicit inspection scope without calling a provider.",

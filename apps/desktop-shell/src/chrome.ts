@@ -188,11 +188,11 @@ const MODE_PANELS: Readonly<
     noteTone: "accent" as const,
   }),
   plugins: Object.freeze({
-    leftTitle: "LOADED",
-    leftEmpty: "No plugin host runs on this surface.",
-    inspectorTitle: "PLUGIN",
-    inspectorEmpty: "Plugin inspection is unavailable without a loaded host.",
-    note: `${DESKTOP_VISUAL_REFUSALS.noDocumentBound} · no plugin operation is exposed here; registry work stays outside this surface.`,
+    leftTitle: "LOCKED",
+    leftEmpty: "No contained packages are locked in this project.",
+    inspectorTitle: "PACKAGE",
+    inspectorEmpty: "Inspect the project lock. Marketplace and network sources stay disabled.",
+    note: `${DESKTOP_VISUAL_REFUSALS.noDocumentBound} · inspect the project lock; marketplace and network stay disabled.`,
     noteTone: "accent" as const,
   }),
 });

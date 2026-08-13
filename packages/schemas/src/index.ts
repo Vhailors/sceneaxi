@@ -988,6 +988,25 @@ export {
   isFixtureProviderDescriptor,
   parseSceneAssistantBuildCatalog,
 } from "./desktop-assistant-ask.js";
+export {
+  SCENE_PACKAGE_CATALOG_KEY,
+  SCENE_PACKAGE_CATALOG_KIND,
+  SCENE_PACKAGE_REFUSALS,
+  SCENE_PACKAGE_SCHEMA_VERSION,
+  applyScenePackageMutation,
+  discoverScenePackage,
+  emptyScenePackageCatalog,
+  inspectScenePackages,
+  parseScenePackageCatalog,
+} from "./desktop-scene-package.js";
+export type {
+  ScenePackageCatalog,
+  ScenePackageDiscovery,
+  ScenePackageInspection,
+  ScenePackageLockEntry,
+  ScenePackageMutation,
+  ScenePackageRefusal,
+} from "./desktop-scene-package.js";
 export type {
   AssistantAskAnswer,
   AssistantAskRefusal,
