@@ -313,7 +313,31 @@ export const DESKTOP_LOCAL_BRIDGE_TOOLS = Object.freeze([
   commandTool({
     name: "sceneaxi.run.play",
     commandId: "run-play",
-    description: "Play the active composed scene through the existing closed kernel session.",
+    description: "Start an isolated Play clone from the explicit project version and open the kernel session.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.run.stop",
+    commandId: "run-stop",
+    description: "Stop the isolated Play clone and return the viewport to Scene.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.run.reset",
+    commandId: "run-reset",
+    description: "Replace the Play clone with a fresh clone of the same source version.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.play.inspect",
+    commandId: "play-inspect",
+    description: "Inspect Play lifecycle evidence without renderer-only frame-report authority.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.viewport.source.set",
+    commandId: "viewport-source-set",
+    description: "Switch the one live viewport owner among Scene, Game, and Sculpt preview.",
     providerRoute: "none",
   }),
   commandTool({

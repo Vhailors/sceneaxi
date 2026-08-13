@@ -46,6 +46,10 @@
             "scene-prefab-override",
             "scene-prefab-refresh",
             "run-play",
+            "run-stop",
+            "run-reset",
+            "play-inspect",
+            "viewport-source-set",
             "change-review-accept",
             "change-review-reject",
             "assistant-local-build",
@@ -84,7 +88,7 @@
           "additionalProperties": false,
           "required": ["kind", "target"],
           "properties": {
-            "kind": { "enum": ["none", "project-binding", "project-inspection", "project-migration-proposal", "project-migration-evidence", "project-git-state", "project-git-commit-preparation", "authoring-snapshot", "undo-result", "redo-result", "scene-hierarchy", "scene-prefab-catalog", "input-action-map", "kernel-session", "sculpt-artifact", "rarity-proposal", "command-progress"] },
+            "kind": { "enum": ["none", "project-binding", "project-inspection", "project-migration-proposal", "project-migration-evidence", "project-git-state", "project-git-commit-preparation", "authoring-snapshot", "undo-result", "redo-result", "scene-hierarchy", "scene-prefab-catalog", "input-action-map", "kernel-session", "play-session", "sculpt-artifact", "rarity-proposal", "command-progress"] },
             "target": { "enum": ["none", "project", "change-review", "live-viewport", "input-settings"] }
           }
         },
@@ -99,7 +103,7 @@
           }
         },
         "inputSchema": { "type": "object" },
-        "inputShape": { "enum": ["none", "document", "export", "assistant", "assistant-agent", "job", "migration-approval", "git-paths", "git-commit", "scene-document", "scene-selection", "scene-property", "scene-transform", "scene-create", "scene-remove", "scene-reparent", "prefab-define", "prefab-instance", "prefab-override", "prefab-refresh", "input-rebind", "input-reset"] }
+        "inputShape": { "enum": ["none", "document", "export", "assistant", "assistant-agent", "job", "migration-approval", "git-paths", "git-commit", "scene-document", "scene-selection", "scene-property", "scene-transform", "scene-create", "scene-remove", "scene-reparent", "prefab-define", "prefab-instance", "prefab-override", "prefab-refresh", "viewport-source", "input-rebind", "input-reset"] }
       }
     }
   }
