@@ -17,6 +17,7 @@ import {
 import { PROJECT_GIT_DIAGNOSTICS } from "./project-git.js";
 import { DESKTOP_SCENE_TRANSFORM_REFUSALS } from "./desktop-scene-transform.js";
 import { SCENE_PREFAB_REFUSALS } from "./desktop-scene-prefab.js";
+import { PLAY_SESSION_REFUSALS } from "./desktop-play-session.js";
 
 export const EDITOR_COMMAND_SCHEMA_VERSION = 1 as const;
 
@@ -86,6 +87,10 @@ export type EditorCommandId =
   | "input-action-rebind"
   | "input-actions-reset"
   | "run-play"
+  | "run-stop"
+  | "run-reset"
+  | "play-inspect"
+  | "viewport-source-set"
   | "change-review-accept"
   | "change-review-reject"
   | "assistant-local-build"
@@ -141,6 +146,7 @@ export type EditorCommandDefinition = Readonly<{
       | "scene-prefab-catalog"
       | "input-action-map"
       | "kernel-session"
+      | "play-session"
       | "sculpt-artifact"
       | "rarity-proposal"
       | "command-progress";
@@ -173,6 +179,7 @@ export type EditorCommandDefinition = Readonly<{
     | "prefab-instance"
     | "prefab-override"
     | "prefab-refresh"
+    | "viewport-source"
     | "input-rebind"
     | "input-reset";
 }>;
@@ -535,6 +542,15 @@ const prefabRefreshInput = Object.freeze({
   properties: Object.freeze({
     ...sceneMutationProperties,
     definitionId: sceneId,
+  }),
+}) satisfies JsonObject;
+
+const viewportSourceInput = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: Object.freeze(["source"]),
+  properties: Object.freeze({
+    source: Object.freeze({ type: "string", enum: Object.freeze(["scene", "game", "sculpt-preview"]) }),
   }),
 }) satisfies JsonObject;
 
@@ -1085,6 +1101,66 @@ const DEFINITIONS = [
   }),
   definition({
     schemaVersion: 1,
+    id: "run-stop",
+    label: "Stop Play",
+    acceptedClients: CLIENTS,
+    permission: "project:read",
+    capability: capability("runtime.play"),
+    mutation: "none",
+    progress: immediate(),
+    evidence: evidence("play-session", "live-viewport"),
+    refusals: [...BASE_REFUSALS, ...Object.values(PLAY_SESSION_REFUSALS)],
+    undo: undo("none"),
+    inputSchema: noInput,
+    inputShape: "none",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "run-reset",
+    label: "Reset Play",
+    acceptedClients: CLIENTS,
+    permission: "project:read",
+    capability: capability("runtime.play"),
+    mutation: "none",
+    progress: immediate(),
+    evidence: evidence("play-session", "live-viewport"),
+    refusals: [...BASE_REFUSALS, ...Object.values(PLAY_SESSION_REFUSALS)],
+    undo: undo("none"),
+    inputSchema: noInput,
+    inputShape: "none",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "play-inspect",
+    label: "Inspect Play Session",
+    acceptedClients: CLIENTS,
+    permission: "project:read",
+    capability: capability("runtime.play"),
+    mutation: "none",
+    progress: immediate(),
+    evidence: evidence("play-session", "none"),
+    refusals: [...BASE_REFUSALS, ...Object.values(PLAY_SESSION_REFUSALS)],
+    undo: undo("none"),
+    inputSchema: noInput,
+    inputShape: "none",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "viewport-source-set",
+    label: "Set Viewport Source",
+    acceptedClients: CLIENTS,
+    permission: "project:read",
+    capability: capability("runtime.play"),
+    mutation: "none",
+    progress: immediate(),
+    evidence: evidence("play-session", "live-viewport"),
+    refusals: [...BASE_REFUSALS, ...Object.values(PLAY_SESSION_REFUSALS)],
+    undo: undo("none"),
+    inputSchema: viewportSourceInput,
+    inputShape: "viewport-source",
+  }),
+  definition({
+    schemaVersion: 1,
     id: "change-review-accept",
     label: "Accept proposal",
     acceptedClients: CLIENTS,
@@ -1399,6 +1475,9 @@ export function validateEditorCommandInput(
     case "prefab-refresh":
       return exactKeys(input, ["documentPath", "expectedContentHash", "profile", "definitionId"]) &&
         sceneMutationFields(input) && isSculptIdentifier(input["definitionId"]);
+    case "viewport-source":
+      return exactKeys(input, ["source"]) &&
+        (input["source"] === "scene" || input["source"] === "game" || input["source"] === "sculpt-preview");
     case "input-rebind":
       return exactKeys(input, ["scope", "expectedBaseVersion", "actionId", "binding", "approved", "reviewDigest"]) &&
         (input["scope"] === "workspace" || input["scope"] === "project") &&

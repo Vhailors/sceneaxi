@@ -82,7 +82,12 @@ import {
   isDesktopSceneEditProfile,
   isDesktopSceneReparentPolicy,
   resolveDesktopSceneTransform,
+  resetPlaySession,
+  setPlayViewportSource,
+  startPlaySession,
+  stopPlaySession,
   validateEditorCommandInvocation,
+  type PlaySession,
   validateRarityNamespace,
   type EditorCommandId,
 } from "@sceneaxi/schemas";
@@ -359,6 +364,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     contentByteLength: number;
   }> | null = null;
   let selectedSceneInstanceIds: readonly string[] = Object.freeze([]);
+  let playSession: PlaySession | null = null;
   let sceneSelectionStale = false;
   let pendingSceneSelection: Readonly<{
     documentPath: string;
@@ -2812,8 +2818,63 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           bridgeOk("command", staged.data),
         );
       }
-      case "run-play":
-        return openPathExercise({ documentPath: input["documentPath"] });
+      case "run-play": {
+        const documentPath = String(input["documentPath"] ?? DESKTOP_ACTIVE_DOCUMENT_PATH);
+        const read = readActiveDocument({ documentPath }, SCENE_DOCUMENT_REFUSALS);
+        if (!read.ok) return bridgeRefuse(read.reason, read.message);
+        const started = startPlaySession({
+          sourceDocumentPath: documentPath,
+          sourceContentHash: read.status.contentHash,
+          document: read.status.data as never,
+        });
+        if (!started.ok) return bridgeRefuse(started.reason, started.message);
+        const exercised = openPathExercise({ documentPath });
+        if (!exercised.ok) return exercised;
+        playSession = started.session;
+        return bridgeOk("command", Object.freeze({
+          ...(typeof exercised.data === "object" && exercised.data !== null
+            ? exercised.data as object
+            : {}),
+          playSession: started.session,
+        }));
+      }
+      case "run-stop": {
+        const stopped = stopPlaySession(playSession);
+        if (!stopped.ok) return bridgeRefuse(stopped.reason, stopped.message);
+        playSession = stopped.session;
+        return bridgeOk("command", stopped.session);
+      }
+      case "run-reset": {
+        if (playSession === null) {
+          return bridgeRefuse("PLAY_SESSION_MISSING", "No Play session is active.");
+        }
+        const read = readActiveDocument(
+          { documentPath: playSession.sourceDocumentPath },
+          SCENE_DOCUMENT_REFUSALS,
+        );
+        if (!read.ok) return bridgeRefuse(read.reason, read.message);
+        if (read.status.contentHash !== playSession.sourceContentHash) {
+          return bridgeRefuse(
+            "PLAY_SESSION_SOURCE_HASH_MISMATCH",
+            "Reset uses the recorded source version; authoring bytes changed after Play started.",
+          );
+        }
+        const reset = resetPlaySession(playSession, read.status.data as never);
+        if (!reset.ok) return bridgeRefuse(reset.reason, reset.message);
+        playSession = reset.session;
+        return bridgeOk("command", reset.session);
+      }
+      case "play-inspect":
+        if (playSession === null) {
+          return bridgeRefuse("PLAY_SESSION_MISSING", "No Play session is active.");
+        }
+        return bridgeOk("command", playSession);
+      case "viewport-source-set": {
+        const switched = setPlayViewportSource(playSession, String(input["source"]));
+        if (!switched.ok) return bridgeRefuse(switched.reason, switched.message);
+        playSession = switched.session;
+        return bridgeOk("command", switched.session);
+      }
       case "assistant-local-build":
         return assistant({ op: "start", route: "local", mode: "build", ...input });
       case "assistant-byo-build":

@@ -946,6 +946,25 @@ export {
   scenePrefabDefinitionDigest,
   scenePrefabRootInstanceId,
 } from "./desktop-scene-prefab.js";
+export {
+  PLAY_SESSION_KIND,
+  PLAY_SESSION_REFUSALS,
+  PLAY_SESSION_SCHEMA_VERSION,
+  PLAY_SESSION_STATES,
+  PLAY_VIEWPORT_SOURCES,
+  disposePlaySession,
+  playCloneDigest,
+  resetPlaySession,
+  setPlayViewportSource,
+  startPlaySession,
+  stopPlaySession,
+} from "./desktop-play-session.js";
+export type {
+  PlaySession,
+  PlaySessionRefusal,
+  PlaySessionState,
+  PlayViewportSource,
+} from "./desktop-play-session.js";
 export type {
   ScenePrefabCatalog,
   ScenePrefabDefinition,
