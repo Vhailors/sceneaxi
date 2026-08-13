@@ -2832,8 +2832,10 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         if (!exercised.ok) return exercised;
         playSession = started.session;
         return bridgeOk("command", Object.freeze({
-          ...started.session,
-          exercise: exercised.data,
+          ...(typeof exercised.data === "object" && exercised.data !== null
+            ? exercised.data as object
+            : {}),
+          playSession: started.session,
         }));
       }
       case "run-stop": {

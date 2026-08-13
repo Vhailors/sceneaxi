@@ -55,11 +55,16 @@ describe("isolated Play mode golden", () => {
     });
     expect(played).toMatchObject({
       ok: true,
-      data: { kind: "sceneaxi.play-session", state: "playing", viewportSource: "game" },
+      data: {
+        playSession: { kind: "sceneaxi.play-session", state: "playing", viewportSource: "game" },
+      },
     });
     if (!played.ok) throw new Error("play refused");
-    const cloneDigest = (played.data as { cloneDigest: string }).cloneDigest;
-    const sourceHash = (played.data as { sourceContentHash: string }).sourceContentHash;
+    const playSession = (played.data as {
+      playSession: { cloneDigest: string; sourceContentHash: string };
+    }).playSession;
+    const cloneDigest = playSession.cloneDigest;
+    const sourceHash = playSession.sourceContentHash;
     expect(cloneDigest).not.toBe(sourceHash);
     const inspected = (["desktop-control", "cli", "local-agent"] as const).map((client) =>
       command(bridge, "play-inspect", client),
