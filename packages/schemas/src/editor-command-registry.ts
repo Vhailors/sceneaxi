@@ -21,6 +21,7 @@ import { PLAY_SESSION_REFUSALS } from "./desktop-play-session.js";
 import { SCENE_ANIMATION_REFUSALS } from "./desktop-scene-animation.js";
 import { SCENE_PHYSICS_REFUSALS } from "./desktop-scene-physics.js";
 import { ASSISTANT_ASK_REFUSALS, ASSISTANT_ASK_SCOPES } from "./desktop-assistant-ask.js";
+import { SCENE_PACKAGE_REFUSALS } from "./desktop-scene-package.js";
 
 export const EDITOR_COMMAND_SCHEMA_VERSION = 1 as const;
 
@@ -101,6 +102,9 @@ export type EditorCommandId =
   | "physics-inspect"
   | "physics-apply"
   | "physics-evaluate"
+  | "package-inspect"
+  | "package-install"
+  | "package-remove"
   | "change-review-accept"
   | "change-review-reject"
   | "assistant-ask"
@@ -166,6 +170,7 @@ export type EditorCommandDefinition = Readonly<{
       | "sculpt-artifact"
       | "assistant-ask-answer"
       | "scene-assistant-build-catalog"
+      | "scene-package-catalog"
       | "rarity-proposal"
       | "command-progress";
     target: EditorCommandResultTarget;
@@ -203,6 +208,8 @@ export type EditorCommandDefinition = Readonly<{
     | "physics-apply"
     | "physics-evaluate"
     | "assistant-ask"
+    | "package-install"
+    | "package-remove"
     | "input-rebind"
     | "input-reset";
 }>;
@@ -639,6 +646,28 @@ const physicsEvaluateInput = Object.freeze({
     ...sceneMutationProperties,
     steps: Object.freeze({ type: "integer", minimum: 1, maximum: 64 }),
     animationOffsetY: Object.freeze({ type: "number" }),
+  }),
+}) satisfies JsonObject;
+
+const packageInstallInput = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: Object.freeze(["documentPath", "expectedContentHash", "profile", "locator", "manifest", "digest"]),
+  properties: Object.freeze({
+    ...sceneMutationProperties,
+    locator: Object.freeze({ type: "string", minLength: 1 }),
+    manifest: Object.freeze({ type: "object" }),
+    digest: Object.freeze({ type: "string", pattern: "^sha256:[0-9a-f]{64}$" }),
+  }),
+}) satisfies JsonObject;
+
+const packageRemoveInput = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: Object.freeze(["documentPath", "expectedContentHash", "profile", "packageId"]),
+  properties: Object.freeze({
+    ...sceneMutationProperties,
+    packageId: Object.freeze({ type: "string", minLength: 1 }),
   }),
 }) satisfies JsonObject;
 
@@ -1354,6 +1383,51 @@ const DEFINITIONS = [
   }),
   definition({
     schemaVersion: 1,
+    id: "package-inspect",
+    label: "Inspect Packages",
+    acceptedClients: CLIENTS,
+    permission: "project:read",
+    capability: capability("scene.compose"),
+    mutation: "none",
+    progress: immediate(),
+    evidence: evidence("scene-package-catalog", "project"),
+    refusals: [...HIERARCHY_BASE_REFUSALS, ...Object.values(SCENE_PACKAGE_REFUSALS)],
+    undo: undo("none"),
+    inputSchema: sceneDocumentInput,
+    inputShape: "scene-document",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "package-install",
+    label: "Install Package",
+    acceptedClients: CLIENTS,
+    permission: "project:write",
+    capability: capability("scene.compose"),
+    mutation: "stages-change",
+    progress: immediate(["validating", "reviewing"]),
+    evidence: evidence("scene-package-catalog", "change-review"),
+    refusals: [...HIERARCHY_BASE_REFUSALS, ...Object.values(SCENE_PACKAGE_REFUSALS)],
+    undo: undo("none"),
+    inputSchema: packageInstallInput,
+    inputShape: "package-install",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "package-remove",
+    label: "Remove Package",
+    acceptedClients: CLIENTS,
+    permission: "project:write",
+    capability: capability("scene.compose"),
+    mutation: "stages-change",
+    progress: immediate(["validating", "reviewing"]),
+    evidence: evidence("scene-package-catalog", "change-review"),
+    refusals: [...HIERARCHY_BASE_REFUSALS, ...Object.values(SCENE_PACKAGE_REFUSALS)],
+    undo: undo("none"),
+    inputSchema: packageRemoveInput,
+    inputShape: "package-remove",
+  }),
+  definition({
+    schemaVersion: 1,
     id: "change-review-accept",
     label: "Accept proposal",
     acceptedClients: CLIENTS,
@@ -1725,6 +1799,16 @@ export function validateEditorCommandInput(
         exactKeys(input, ["documentPath", "expectedContentHash", "profile", "steps", "animationOffsetY"])) &&
         sceneMutationFields(input) && Number.isInteger(input["steps"]) &&
         (input["animationOffsetY"] === undefined || typeof input["animationOffsetY"] === "number");
+    case "package-install":
+      return exactKeys(input, ["documentPath", "expectedContentHash", "profile", "locator", "manifest", "digest"]) &&
+        sceneMutationFields(input) &&
+        typeof input["locator"] === "string" && input["locator"].length > 0 &&
+        isCommandObject(input["manifest"]) &&
+        typeof input["digest"] === "string" && /^sha256:[0-9a-f]{64}$/.test(input["digest"]);
+    case "package-remove":
+      return exactKeys(input, ["documentPath", "expectedContentHash", "profile", "packageId"]) &&
+        sceneMutationFields(input) &&
+        typeof input["packageId"] === "string" && input["packageId"].length > 0;
     case "input-rebind":
       return exactKeys(input, ["scope", "expectedBaseVersion", "actionId", "binding", "approved", "reviewDigest"]) &&
         (input["scope"] === "workspace" || input["scope"] === "project") &&

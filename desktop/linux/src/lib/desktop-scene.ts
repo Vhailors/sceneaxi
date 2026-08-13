@@ -59,6 +59,15 @@ import {
   applyAssistantBuildEntry,
   parseSceneAssistantBuildCatalog,
   type SceneAssistantBuildEntry,
+  SCENE_PACKAGE_CATALOG_KEY,
+  SCENE_PACKAGE_REFUSALS,
+  SHIPPED_PLUGIN_CAPABILITY_IDS,
+  applyScenePackageMutation,
+  discoverScenePackage,
+  emptyScenePackageCatalog,
+  inspectScenePackages,
+  parseScenePackageCatalog,
+  type ScenePackageMutation,
   type ComposedScene,
   type ScenePhysicsCatalog,
   type ScenePhysicsMutation,
@@ -1620,6 +1629,72 @@ export function stageDesktopAssistantBuild(input: Readonly<{
       ...base,
       [SCENE_ASSISTANT_BUILD_CATALOG_KEY]: next,
     }),
+  });
+}
+
+function packageCatalogFromData(documentData: unknown) {
+  if (!isJsonObject(documentData)) return null;
+  return parseScenePackageCatalog(documentData[SCENE_PACKAGE_CATALOG_KEY]);
+}
+
+export function inspectDesktopScenePackages(documentData: unknown) {
+  return inspectScenePackages({
+    catalog: packageCatalogFromData(documentData) ?? emptyScenePackageCatalog(),
+  });
+}
+
+export function stageDesktopScenePackage(input: Readonly<{
+  documentData: unknown;
+  contentHash: string;
+  documentPath?: string;
+  profile: unknown;
+  mutation: ScenePackageMutation;
+}>) {
+  const documentPath = input.documentPath ?? DESKTOP_ACTIVE_DOCUMENT_PATH;
+  const read = readEditableComposition(input.documentData, input.contentHash, documentPath);
+  if (!read.ok) {
+    return Object.freeze({
+      ok: false as const,
+      reason: SCENE_PACKAGE_REFUSALS.staleVersion,
+      message: read.diagnostics[0]?.message ?? "The Scene Document could not be read.",
+    });
+  }
+  const catalog = packageCatalogFromData(input.documentData);
+  if (catalog === null) {
+    return Object.freeze({
+      ok: false as const,
+      reason: SCENE_PACKAGE_REFUSALS.catalogInvalid,
+      message: "The package catalog is not a valid versioned document.",
+    });
+  }
+  const applied = applyScenePackageMutation({
+    catalog,
+    mutation: input.mutation,
+    profile: input.profile,
+  });
+  if (!applied.ok) return applied;
+  const base = isJsonObject(input.documentData) ? input.documentData : {};
+  return Object.freeze({
+    ok: true as const,
+    catalog: applied.catalog,
+    inspection: inspectScenePackages({ catalog: applied.catalog }),
+    documentData: Object.freeze({
+      ...base,
+      [SCENE_PACKAGE_CATALOG_KEY]: applied.catalog,
+    }),
+  });
+}
+
+export function discoverDesktopScenePackage(input: Readonly<{
+  locator: string;
+  manifest: unknown;
+  digest: string;
+}>) {
+  return discoverScenePackage({
+    locator: input.locator,
+    manifest: input.manifest,
+    digest: input.digest,
+    admittedCapabilities: SHIPPED_PLUGIN_CAPABILITY_IDS,
   });
 }
 

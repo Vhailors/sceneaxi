@@ -109,6 +109,7 @@
   "packages/schemas/src/desktop-play-session.ts",
   "packages/schemas/src/desktop-assistant-ask.ts",
   "packages/schemas/src/desktop-scene-animation.ts",
+  "packages/schemas/src/desktop-scene-package.ts",
   "packages/schemas/src/desktop-scene-physics.ts",
   "packages/schemas/src/desktop-scene-edit.ts",
   "packages/schemas/src/desktop-scene-prefab.ts",
