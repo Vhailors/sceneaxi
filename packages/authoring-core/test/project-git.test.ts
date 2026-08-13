@@ -460,7 +460,7 @@ describe("contained project Git service", () => {
     });
 
     const nested = repository("loose-object-entry-indirection");
-    mkdirSync(join(nested.root, ".git", "objects", "cd"));
+    mkdirSync(join(nested.root, ".git", "objects", "cd"), { recursive: true });
     symlinkSync(join(outside, "object"), join(nested.root, ".git", "objects", "cd", "0".repeat(38)));
     expect(inspectProjectGit({
       root: nested.root,
