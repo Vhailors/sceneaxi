@@ -39,7 +39,16 @@ import {
   refreshScenePrefab,
   SCENE_PREFAB_CATALOG_KEY,
   SCENE_PREFAB_REFUSALS,
+  SCENE_ANIMATION_CATALOG_KEY,
+  SCENE_ANIMATION_REFUSALS,
+  applySceneAnimationMutation,
+  emptySceneAnimationCatalog,
+  evaluateSceneAnimation,
+  inspectSceneAnimation,
+  parseSceneAnimationCatalog,
   type ComposedScene,
+  type SceneAnimationCatalog,
+  type SceneAnimationMutation,
   type ScenePrefabCatalog,
   type ComposedSceneInstance,
   type DesktopSceneEditOperation,
@@ -1345,6 +1354,101 @@ export function stageDesktopScenePrefab(input: Readonly<{
   });
   if (!refreshed.ok) return refreshed;
   return mergePrefabDocument(input.documentData, read.stored, refreshed.catalog);
+}
+
+export type DesktopSceneAnimationStageResult =
+  | Readonly<{
+      ok: true;
+      catalog: SceneAnimationCatalog;
+      inspection: ReturnType<typeof inspectSceneAnimation>;
+      documentData: Record<string, unknown>;
+    }>
+  | Readonly<{ ok: false; reason: string; message: string }>;
+
+function animationCatalogFromData(documentData: unknown): SceneAnimationCatalog | null {
+  if (!isJsonObject(documentData)) return null;
+  return parseSceneAnimationCatalog(documentData[SCENE_ANIMATION_CATALOG_KEY]);
+}
+
+export function inspectDesktopSceneAnimation(documentData: unknown) {
+  return inspectSceneAnimation(animationCatalogFromData(documentData) ?? emptySceneAnimationCatalog());
+}
+
+export function evaluateDesktopSceneAnimation(input: Readonly<{
+  documentData: unknown;
+  sourceContentHash: string;
+  timeMs: number;
+  requireBoundAsset?: boolean;
+}>) {
+  const catalog = animationCatalogFromData(input.documentData);
+  if (catalog === null) {
+    return Object.freeze({
+      ok: false as const,
+      reason: SCENE_ANIMATION_REFUSALS.catalogInvalid,
+      message: "The animation catalog is not a valid versioned document.",
+    });
+  }
+  return evaluateSceneAnimation({
+    catalog,
+    timeMs: input.timeMs,
+    sourceContentHash: input.sourceContentHash,
+    ...(input.requireBoundAsset === undefined ? {} : { requireBoundAsset: input.requireBoundAsset }),
+  });
+}
+
+export function stageDesktopSceneAnimation(input: Readonly<{
+  documentData: unknown;
+  contentHash: string;
+  documentPath?: string;
+  mutation: unknown;
+}>): DesktopSceneAnimationStageResult {
+  const documentPath = input.documentPath ?? DESKTOP_ACTIVE_DOCUMENT_PATH;
+  const read = readEditableComposition(input.documentData, input.contentHash, documentPath);
+  if (!read.ok) {
+    return Object.freeze({
+      ok: false as const,
+      reason: SCENE_ANIMATION_REFUSALS.staleVersion,
+      message: read.diagnostics[0]?.message ?? "The Scene Document could not be read.",
+    });
+  }
+  const catalog = animationCatalogFromData(input.documentData);
+  if (catalog === null) {
+    return Object.freeze({
+      ok: false as const,
+      reason: SCENE_ANIMATION_REFUSALS.catalogInvalid,
+      message: "The animation catalog is not a valid versioned document.",
+    });
+  }
+  if (typeof input.mutation !== "object" || input.mutation === null || Array.isArray(input.mutation)) {
+    return Object.freeze({
+      ok: false as const,
+      reason: SCENE_ANIMATION_REFUSALS.inputUnsupported,
+      message: "An animation mutation must be an object.",
+    });
+  }
+  const manifest = isJsonObject(input.documentData)
+    ? projectAssetManifestFromDocumentData(input.documentData)
+    : { ok: false as const };
+  const animationAssetIds = manifest.ok
+    ? manifest.value.assets.filter((asset) => asset.family === "animation").map((asset) => asset.assetId)
+    : [];
+  const applied = applySceneAnimationMutation({
+    catalog,
+    instanceIds: read.stored.instances.map((instance) => instance.instanceId),
+    animationAssetIds,
+    mutation: input.mutation as SceneAnimationMutation,
+  });
+  if (!applied.ok) return applied;
+  const base = isJsonObject(input.documentData) ? input.documentData : {};
+  return Object.freeze({
+    ok: true as const,
+    catalog: applied.catalog,
+    inspection: inspectSceneAnimation(applied.catalog),
+    documentData: Object.freeze({
+      ...base,
+      [SCENE_ANIMATION_CATALOG_KEY]: applied.catalog,
+    }),
+  });
 }
 
 /** Backward-compatible property facade over the canonical operation. */

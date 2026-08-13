@@ -341,6 +341,30 @@ export const DESKTOP_LOCAL_BRIDGE_TOOLS = Object.freeze([
     providerRoute: "none",
   }),
   commandTool({
+    name: "sceneaxi.animation.inspect",
+    commandId: "animation-inspect",
+    description: "Inspect authored animation clips, tracks, keyframes, and explicit asset binds.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.animation.apply",
+    commandId: "animation-apply",
+    description: "Stage one clip, track, keyframe, or imported-animation bind through Change Review.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.animation.scrub",
+    commandId: "animation-scrub",
+    description: "Preview sampled animation at one time without writing saved project bytes.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.animation.evaluate",
+    commandId: "animation-evaluate",
+    description: "Evaluate saved animation against an explicit project version for Play replay evidence.",
+    providerRoute: "none",
+  }),
+  commandTool({
     name: "sceneaxi.assistant.local.start",
     commandId: "assistant-local-build",
     description: "Start the deterministic offline assistant compiler; no provider or credits are involved.",

@@ -18,6 +18,7 @@ import { PROJECT_GIT_DIAGNOSTICS } from "./project-git.js";
 import { DESKTOP_SCENE_TRANSFORM_REFUSALS } from "./desktop-scene-transform.js";
 import { SCENE_PREFAB_REFUSALS } from "./desktop-scene-prefab.js";
 import { PLAY_SESSION_REFUSALS } from "./desktop-play-session.js";
+import { SCENE_ANIMATION_REFUSALS } from "./desktop-scene-animation.js";
 
 export const EDITOR_COMMAND_SCHEMA_VERSION = 1 as const;
 
@@ -91,6 +92,10 @@ export type EditorCommandId =
   | "run-reset"
   | "play-inspect"
   | "viewport-source-set"
+  | "animation-inspect"
+  | "animation-apply"
+  | "animation-scrub"
+  | "animation-evaluate"
   | "change-review-accept"
   | "change-review-reject"
   | "assistant-local-build"
@@ -147,6 +152,8 @@ export type EditorCommandDefinition = Readonly<{
       | "input-action-map"
       | "kernel-session"
       | "play-session"
+      | "scene-animation-catalog"
+      | "scene-animation-evaluation"
       | "sculpt-artifact"
       | "rarity-proposal"
       | "command-progress";
@@ -180,6 +187,8 @@ export type EditorCommandDefinition = Readonly<{
     | "prefab-override"
     | "prefab-refresh"
     | "viewport-source"
+    | "animation-apply"
+    | "animation-time"
     | "input-rebind"
     | "input-reset";
 }>;
@@ -551,6 +560,27 @@ const viewportSourceInput = Object.freeze({
   required: Object.freeze(["source"]),
   properties: Object.freeze({
     source: Object.freeze({ type: "string", enum: Object.freeze(["scene", "game", "sculpt-preview"]) }),
+  }),
+}) satisfies JsonObject;
+
+const animationApplyInput = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: Object.freeze(["documentPath", "expectedContentHash", "profile", "mutation"]),
+  properties: Object.freeze({
+    ...sceneMutationProperties,
+    mutation: Object.freeze({ type: "object" }),
+  }),
+}) satisfies JsonObject;
+
+const animationTimeInput = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: Object.freeze(["documentPath", "expectedContentHash", "profile", "timeMs"]),
+  properties: Object.freeze({
+    ...sceneMutationProperties,
+    timeMs: Object.freeze({ type: "number" }),
+    requireBoundAsset: Object.freeze({ type: "boolean" }),
   }),
 }) satisfies JsonObject;
 
@@ -1161,6 +1191,66 @@ const DEFINITIONS = [
   }),
   definition({
     schemaVersion: 1,
+    id: "animation-inspect",
+    label: "Inspect Animation",
+    acceptedClients: CLIENTS,
+    permission: "project:read",
+    capability: capability("scene.compose"),
+    mutation: "none",
+    progress: immediate(),
+    evidence: evidence("scene-animation-catalog", "project"),
+    refusals: [...HIERARCHY_BASE_REFUSALS, ...Object.values(SCENE_ANIMATION_REFUSALS)],
+    undo: undo("none"),
+    inputSchema: sceneDocumentInput,
+    inputShape: "scene-document",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "animation-apply",
+    label: "Apply Animation Edit",
+    acceptedClients: CLIENTS,
+    permission: "project:write",
+    capability: capability("scene.compose"),
+    mutation: "stages-change",
+    progress: immediate(["validating", "reviewing"]),
+    evidence: evidence("scene-animation-catalog", "change-review"),
+    refusals: [...HIERARCHY_BASE_REFUSALS, ...Object.values(SCENE_ANIMATION_REFUSALS)],
+    undo: undo("none"),
+    inputSchema: animationApplyInput,
+    inputShape: "animation-apply",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "animation-scrub",
+    label: "Scrub Animation Preview",
+    acceptedClients: CLIENTS,
+    permission: "project:read",
+    capability: capability("scene.compose"),
+    mutation: "none",
+    progress: immediate(),
+    evidence: evidence("scene-animation-evaluation", "none"),
+    refusals: [...HIERARCHY_BASE_REFUSALS, ...Object.values(SCENE_ANIMATION_REFUSALS)],
+    undo: undo("none"),
+    inputSchema: animationTimeInput,
+    inputShape: "animation-time",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "animation-evaluate",
+    label: "Evaluate Animation Replay",
+    acceptedClients: CLIENTS,
+    permission: "project:read",
+    capability: capability("runtime.play"),
+    mutation: "none",
+    progress: immediate(),
+    evidence: evidence("scene-animation-evaluation", "live-viewport"),
+    refusals: [...HIERARCHY_BASE_REFUSALS, ...Object.values(SCENE_ANIMATION_REFUSALS)],
+    undo: undo("none"),
+    inputSchema: animationTimeInput,
+    inputShape: "animation-time",
+  }),
+  definition({
+    schemaVersion: 1,
     id: "change-review-accept",
     label: "Accept proposal",
     acceptedClients: CLIENTS,
@@ -1478,6 +1568,14 @@ export function validateEditorCommandInput(
     case "viewport-source":
       return exactKeys(input, ["source"]) &&
         (input["source"] === "scene" || input["source"] === "game" || input["source"] === "sculpt-preview");
+    case "animation-apply":
+      return exactKeys(input, ["documentPath", "expectedContentHash", "profile", "mutation"]) &&
+        sceneMutationFields(input) && isCommandObject(input["mutation"]);
+    case "animation-time":
+      return (exactKeys(input, ["documentPath", "expectedContentHash", "profile", "timeMs"]) ||
+        exactKeys(input, ["documentPath", "expectedContentHash", "profile", "timeMs", "requireBoundAsset"])) &&
+        sceneMutationFields(input) && typeof input["timeMs"] === "number" && Number.isFinite(input["timeMs"]) &&
+        (input["requireBoundAsset"] === undefined || typeof input["requireBoundAsset"] === "boolean");
     case "input-rebind":
       return exactKeys(input, ["scope", "expectedBaseVersion", "actionId", "binding", "approved", "reviewDigest"]) &&
         (input["scope"] === "workspace" || input["scope"] === "project") &&

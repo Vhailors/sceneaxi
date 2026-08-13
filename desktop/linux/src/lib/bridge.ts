@@ -116,8 +116,11 @@ import {
   DESKTOP_SCENE_NOT_COMPOSABLE,
   desktopAssistantScene,
   desktopSceneFromDocumentData,
+  evaluateDesktopSceneAnimation,
+  inspectDesktopSceneAnimation,
   inspectDesktopScenePrefabs,
   inspectDesktopSceneProperties,
+  stageDesktopSceneAnimation,
   stageDesktopSceneEdit,
   stageDesktopScenePrefab,
   stageDesktopScenePropertyEdit,
@@ -2874,6 +2877,56 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         if (!switched.ok) return bridgeRefuse(switched.reason, switched.message);
         playSession = switched.session;
         return bridgeOk("command", switched.session);
+      }
+      case "animation-inspect": {
+        const documentPath = input["documentPath"];
+        const read = readActiveDocument({ documentPath }, SCENE_DOCUMENT_REFUSALS);
+        if (!read.ok) return bridgeRefuse(read.reason, read.message);
+        return bridgeOk("command", inspectDesktopSceneAnimation(read.status.data));
+      }
+      case "animation-apply": {
+        const documentPath = String(input["documentPath"]);
+        const read = readActiveDocument({ documentPath }, SCENE_DOCUMENT_REFUSALS);
+        if (!read.ok) return bridgeRefuse(read.reason, read.message);
+        const staged = stageDesktopSceneAnimation({
+          documentData: read.status.data,
+          contentHash: String(input["expectedContentHash"]),
+          documentPath,
+          mutation: input["mutation"],
+        });
+        if (!staged.ok) {
+          return commandTransaction(validated.command.id, bridgeRefuse(staged.reason, staged.message));
+        }
+        const proposed = reconcilePendingAssetImport(authoringSession().proposeEdit({
+          documentPath,
+          jsonPointer: "/data",
+          expectedContentHash: String(input["expectedContentHash"]),
+          newValue: staged.documentData,
+        }));
+        return commandTransaction(validated.command.id, bridgeOk("command", {
+          ...staged.inspection,
+          authoringSnapshot: proposed,
+        }));
+      }
+      case "animation-scrub":
+      case "animation-evaluate": {
+        const documentPath = String(input["documentPath"]);
+        const read = readActiveDocument({ documentPath }, SCENE_DOCUMENT_REFUSALS);
+        if (!read.ok) return bridgeRefuse(read.reason, read.message);
+        if (read.status.contentHash !== String(input["expectedContentHash"])) {
+          return bridgeRefuse(
+            "ANIMATION_STALE_VERSION",
+            "Scrub and Play evaluation name the exact project version being previewed.",
+          );
+        }
+        const evaluated = evaluateDesktopSceneAnimation({
+          documentData: read.status.data,
+          sourceContentHash: read.status.contentHash,
+          timeMs: Number(input["timeMs"]),
+          requireBoundAsset: validated.command.id === "animation-evaluate" && input["requireBoundAsset"] === true,
+        });
+        if (!evaluated.ok) return bridgeRefuse(evaluated.reason, evaluated.message);
+        return bridgeOk("command", evaluated.evaluation);
       }
       case "assistant-local-build":
         return assistant({ op: "start", route: "local", mode: "build", ...input });
