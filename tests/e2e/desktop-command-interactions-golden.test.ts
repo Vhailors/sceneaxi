@@ -518,7 +518,7 @@ describe("desktop command menu, palette, and accelerator parity", () => {
       { device: "keyboard", code: "KeyB", modifiers: ["primary"] },
     );
     if (!reviewed.ok || !("map" in reviewed)) throw new Error("rebind fixture refused");
-    const { window, calls } = await harness("web", "unavailable", true, reviewed.map);
+    const { window, calls } = await harness("web", "unavailable", true, undefined, reviewed.map);
     await click(window, "#web-stage-html");
     calls.splice(0);
     const oldEvent = shortcut(window, "s");
