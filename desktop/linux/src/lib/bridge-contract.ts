@@ -50,6 +50,7 @@ export const DESKTOP_BRIDGE_GLOBAL = "sceneaxiDesktopLinux";
 
 export const DESKTOP_BRIDGE_ACTIONS = Object.freeze([
   "handshake",
+  "profile",
   "command",
   "scene",
   "project-browser-open",

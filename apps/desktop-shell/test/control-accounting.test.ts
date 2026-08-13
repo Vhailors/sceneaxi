@@ -223,12 +223,13 @@ describe("engine desktop chrome — control accounting (document → model)", ()
       const html = render(state);
       expect(html, label).not.toMatch(/<(a|details|summary)\b/i);
       const inputs = html.match(/<input\b[^>]*>/g) ?? [];
-      expect(inputs, label).toHaveLength(DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.length);
-      expect(inputs.map((tag) => /\sid="([^"]+)"/.exec(tag)?.[1]), label).toEqual(
-        DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.map(
+      expect(inputs, label).toHaveLength(DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.length + 1);
+      expect(inputs.map((tag) => /\sid="([^"]+)"/.exec(tag)?.[1]), label).toEqual([
+        ...DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.map(
           (definition) => `scene-property-${definition.id}`,
         ),
-      );
+        "project-git-commit-message",
+      ]);
       for (const tag of inputs) {
         expect(tag, label).toMatch(/data-kind="(live|inert)"/);
       }

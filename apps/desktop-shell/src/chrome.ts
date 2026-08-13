@@ -271,6 +271,23 @@ function numericPropertyInput(
   ].join("");
 }
 
+function gitCommitMessageInput(ctrl: DesktopControl): string {
+  const inert = ctrl.kind === "inert";
+  const described = inert
+    ? ` aria-describedby="refusal-${escapeHtml(ctrl.refusal ?? "")}"`
+    : "";
+  return [
+    `<input id="${escapeHtml(ctrl.id)}" data-kind="${ctrl.kind}"`,
+    inert
+      ? ` aria-disabled="true" data-refusal="${escapeHtml(ctrl.refusal ?? "")}" readonly`
+      : "",
+    described,
+    ` type="text" data-project-git-message maxlength="4096"`,
+    ` placeholder="Describe the contained change" autocomplete="off"`,
+    ` aria-label="${escapeHtml(ctrl.label)}">`,
+  ].join("");
+}
+
 function sceneEntitySelect(ctrl: DesktopControl): string {
   const inert = ctrl.kind === "inert";
   const described = inert
@@ -735,6 +752,14 @@ function inspector(view: DesktopVisualView): string {
       <div><dt>Source project</dt><dd><code data-ship-source-digest></code></dd></div>
       <div><dt>Handoff</dt><dd><code data-ship-handoff-path></code></dd></div>
     </dl>
+    <div class="project-git-controls">
+      <fieldset data-project-git-selection>
+        <legend>Selected files</legend>
+        <div data-project-git-path-list><p>Inspect repository status to select exact changed files.</p></div>
+      </fieldset>
+      <label for="${escapeHtml(view.product.gitCommitMessage.id)}">Commit message${gitCommitMessageInput(view.product.gitCommitMessage)}</label>
+    </div>
+    <pre class="change-diff" data-project-git-evidence hidden role="region" aria-label="Contained Git repository evidence"></pre>
   </div>`
         : ""
   }
@@ -1744,6 +1769,34 @@ if (shell) {
   };
 
   const reviewCount = () => activeReviewSnapshot === null ? 0 : 1;
+
+  const isProjectGitEntry = (entry) => entry !== null && typeof entry === 'object' &&
+    typeof entry.path === 'string' && typeof entry.index === 'string' &&
+    (entry.sourcePath === undefined || typeof entry.sourcePath === 'string') &&
+    typeof entry.worktree === 'string' && typeof entry.canonical === 'boolean' &&
+    typeof entry.conflict === 'boolean';
+
+  const isProjectGitState = (state) => state !== null && typeof state === 'object' &&
+    state.schemaVersion === 1 && state.kind === 'sceneaxi.project-git-state' &&
+    typeof state.projectId === 'string' &&
+    (state.branch === null || typeof state.branch === 'string') &&
+    (state.head === null || typeof state.head === 'string') &&
+    typeof state.detached === 'boolean' &&
+    Array.isArray(state.canonicalFiles) && state.canonicalFiles.every((path) => typeof path === 'string') &&
+    Array.isArray(state.entries) && state.entries.every(isProjectGitEntry) &&
+    Array.isArray(state.canonicalChanges) && state.canonicalChanges.every(isProjectGitEntry) &&
+    Array.isArray(state.unrelatedChanges) && state.unrelatedChanges.every(isProjectGitEntry) &&
+    Array.isArray(state.conflicts) && state.conflicts.every((path) => typeof path === 'string') &&
+    typeof state.workingTreeDiff === 'string' && typeof state.stagedDiff === 'string' &&
+    typeof state.clean === 'boolean' && state.undoScope === 'sceneaxi-document-only';
+
+  const isProjectGitPreparation = (preparation) => preparation !== null && typeof preparation === 'object' &&
+    preparation.schemaVersion === 1 && preparation.kind === 'sceneaxi.project-git-commit-preparation' &&
+    typeof preparation.message === 'string' &&
+    Array.isArray(preparation.selectedPaths) && preparation.selectedPaths.every((path) => typeof path === 'string') &&
+    typeof preparation.stagedDiff === 'string' && isProjectGitState(preparation.state) &&
+    preparation.commitCreated === false && preparation.hooksBypassed === false &&
+    preparation.undoScope === 'sceneaxi-document-only';
 
   const isSessionSnapshot = (snapshot) => {
     const phases = ['idle', 'reviewing', 'applied', 'pending', 'rejected'];
@@ -3321,6 +3374,103 @@ if (shell) {
     productStatus('open', outcome + ' Web bundle · ' + result.bundleDigest);
   };
 
+  const inspectProjectRepository = async (commandId) => {
+    const response = await commandRequest(commandId, {});
+    if (response === null || !response.ok) {
+      const code = response?.reason || T.product.refusals.runtimeUnavailable;
+      const message = response?.message || 'The packaged host did not produce contained Git evidence.';
+      productStatus('refused', 'Repository inspection refused · ' + code);
+      showOutcome('Repository inspection refused', code, message);
+      return;
+    }
+    const state = response.data;
+    if (!isProjectGitState(state)) {
+      const code = T.product.refusals.runtimeRequestRefused;
+      productStatus('refused', 'Repository inspection refused · ' + code);
+      showOutcome('Repository inspection refused', code, 'The host returned no complete repository evidence.');
+      return;
+    }
+    showModePanels('ship');
+    q('[data-project-git-evidence]').forEach((el) => {
+      el.textContent = JSON.stringify(state, null, 2);
+      el.hidden = false;
+    });
+    renderProjectGitPathSelection(state);
+    const label = commandId === 'project-git-diff' ? 'diff' : 'status';
+    productStatus('open', 'Repository ' + label + ' · ' + state.entries.length + ' working-tree change(s) · ' + state.conflicts.length + ' conflict(s)');
+  };
+
+  const renderProjectGitPathSelection = (state) => {
+    const paths = [];
+    state.entries.forEach((entry) => {
+      [entry.path, entry.sourcePath].forEach((path) => {
+        if (typeof path === 'string' && !paths.includes(path)) paths.push(path);
+      });
+    });
+    paths.sort();
+    q('[data-project-git-path-list]').forEach((container) => {
+      container.replaceChildren();
+      if (paths.length === 0) {
+        const empty = document.createElement('p');
+        empty.textContent = 'No changed files are available for selection.';
+        container.append(empty);
+        return;
+      }
+      paths.forEach((path) => {
+        const label = document.createElement('label');
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.value = path;
+        input.setAttribute('data-project-git-path', '');
+        const text = document.createElement('span');
+        text.textContent = path;
+        label.append(input, text);
+        container.append(label);
+      });
+    });
+  };
+
+  const projectGitPaths = () => {
+    return Array.from(shell.querySelectorAll('[data-project-git-path]:checked')).map((input) => input.value);
+  };
+
+  const renderProjectGitEvidence = (evidence, label) => {
+    showModePanels('ship');
+    q('[data-project-git-evidence]').forEach((el) => {
+      el.textContent = JSON.stringify(evidence, null, 2);
+      el.hidden = false;
+    });
+    const state = isProjectGitState(evidence) ? evidence : evidence.state;
+    renderProjectGitPathSelection(state);
+    productStatus('open', label + ' · ' + state.entries.length + ' working-tree change(s) · ' + state.conflicts.length + ' conflict(s)');
+  };
+
+  const mutateProjectRepository = async (commandId) => {
+    const paths = projectGitPaths();
+    const input = commandId === 'project-git-stage'
+      ? { paths }
+      : { paths, message: shell.querySelector('[data-project-git-message]')?.value || '' };
+    const response = await commandRequest(commandId, input);
+    if (response === null || !response.ok) {
+      const code = response?.reason || T.product.refusals.runtimeUnavailable;
+      const message = response?.message || 'The packaged host refused contained Git preparation.';
+      productStatus('refused', 'Repository preparation refused · ' + code);
+      showOutcome('Repository preparation refused', code, message);
+      return;
+    }
+    if (commandId === 'project-git-stage' && isProjectGitState(response.data)) {
+      renderProjectGitEvidence(response.data, 'Staged selected files');
+      return;
+    }
+    if (commandId === 'project-git-commit-prepare' && isProjectGitPreparation(response.data)) {
+      renderProjectGitEvidence(response.data, 'Prepared commit evidence');
+      return;
+    }
+    const code = T.product.refusals.runtimeRequestRefused;
+    productStatus('refused', 'Repository preparation refused · ' + code);
+    showOutcome('Repository preparation refused', code, 'The host returned no complete repository evidence.');
+  };
+
   const switchProfile = async (value) => {
     if (shell.dataset.profile === value) return;
     if (projectRecovering) {
@@ -3329,6 +3479,12 @@ if (shell) {
     }
     if (projectDirty) {
       productStatus('refused', 'Profile switch refused · ' + T.product.refusals.profileSwitchDirty);
+      return;
+    }
+    const response = await runtimeRequest({ action: 'profile', payload: { profile: value } });
+    if (response !== null && !response.ok) {
+      const code = response.reason || T.product.refusals.runtimeUnavailable;
+      productStatus('refused', 'Profile switch refused · ' + code);
       return;
     }
     await beginSceneLifecycleTransition();
@@ -3665,6 +3821,10 @@ if (shell) {
     'project-new': () => chooseProject('choose-new'),
     'project-open': () => chooseProject('choose-open'),
     'project-save': saveProject,
+    'project-git-status': () => inspectProjectRepository('project-git-status'),
+    'project-git-diff': () => inspectProjectRepository('project-git-diff'),
+    'project-git-stage': () => mutateProjectRepository('project-git-stage'),
+    'project-git-commit-prepare': () => mutateProjectRepository('project-git-commit-prepare'),
     'ship-export-web': exportWeb,
     'edit-undo': undoProject,
     'edit-redo': redoProject,

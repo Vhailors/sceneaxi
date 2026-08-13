@@ -24,6 +24,7 @@ import {
   canonicalPath,
   fileExists,
   releaseAtomicWriteLocks,
+  releaseAtomicWriteLocksChecked,
   verifyAtomicWritePreconditions,
   type AtomicWriteLockSet,
 } from "./atomic-write.js";
@@ -138,8 +139,8 @@ function journalPath(cwd: string, transactionId: string): string {
   return join(journalDirectory(cwd), `${transactionId}.json`);
 }
 
-function journalOperationResource(cwd: string): string {
-  return join(journalDirectory(cwd), ".operation");
+export function applyJournalOperationResource(cwd: string): string {
+  return resolve(cwd, ".sceneaxi-authoring-operation");
 }
 
 function activeJournalPath(cwd: string): string {
@@ -171,13 +172,19 @@ export function beginApplyJournalTransaction(
   absoluteDocumentPaths: readonly string[],
 ): AtomicWriteLockSet {
   return acquireAtomicWriteLocks([
-    journalOperationResource(cwd),
+    applyJournalOperationResource(cwd),
     ...absoluteDocumentPaths,
   ]);
 }
 
 export function endApplyJournalTransaction(lockSet: AtomicWriteLockSet): void {
   releaseAtomicWriteLocks(lockSet);
+}
+
+export function endApplyJournalTransactionChecked(
+  lockSet: AtomicWriteLockSet,
+): readonly string[] {
+  return releaseAtomicWriteLocksChecked(lockSet);
 }
 
 function serializeJournal(entry: ApplyJournalEntry): string {
@@ -323,6 +330,15 @@ function readActiveJournal(
     };
   }
   return { ok: true, entry };
+}
+
+export function applyJournalRecoveryPending(cwd: string): boolean {
+  try {
+    const active = readActiveJournal(cwd);
+    return !active.ok || active.entry !== null;
+  } catch {
+    return true;
+  }
 }
 
 export function prepareApplyJournal(
@@ -854,7 +870,7 @@ export function resolveApplyTransaction(input: {
   }
   let operationLock: AtomicWriteLockSet;
   try {
-    operationLock = acquireAtomicWriteLocks([journalOperationResource(cwd)]);
+    operationLock = acquireAtomicWriteLocks([applyJournalOperationResource(cwd)]);
   } catch (error) {
     if (error instanceof AtomicWriteLockError) {
       return {
@@ -888,7 +904,7 @@ export function recoverIncompleteApplies(
   }
   let operationLock: AtomicWriteLockSet;
   try {
-    operationLock = acquireAtomicWriteLocks([journalOperationResource(cwd)]);
+    operationLock = acquireAtomicWriteLocks([applyJournalOperationResource(cwd)]);
   } catch (error) {
     if (error instanceof AtomicWriteLockError) {
       return {
@@ -923,7 +939,7 @@ export function writeCanonicalDocument(input: {
   let operationLock: AtomicWriteLockSet;
   try {
     operationLock = acquireAtomicWriteLocks([
-      journalOperationResource(input.cwd),
+      applyJournalOperationResource(input.cwd),
     ]);
   } catch (error) {
     if (error instanceof AtomicWriteLockError) {
@@ -1005,7 +1021,7 @@ export function undoLastApply(
   }
   let operationLock: AtomicWriteLockSet;
   try {
-    operationLock = acquireAtomicWriteLocks([journalOperationResource(cwd)]);
+    operationLock = acquireAtomicWriteLocks([applyJournalOperationResource(cwd)]);
   } catch (error) {
     if (error instanceof AtomicWriteLockError) {
       return {
@@ -1172,7 +1188,7 @@ export function redoLastApply(
   }
   let operationLock: AtomicWriteLockSet;
   try {
-    operationLock = acquireAtomicWriteLocks([journalOperationResource(cwd)]);
+    operationLock = acquireAtomicWriteLocks([applyJournalOperationResource(cwd)]);
   } catch (error) {
     if (error instanceof AtomicWriteLockError) {
       return {

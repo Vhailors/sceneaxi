@@ -9,6 +9,12 @@
     "allowImportingTsExtensions": true,
     "lib": ["es2023", "dom", "dom.iterable"],
     "paths": {
+      "@sceneaxi-internal/desktop-session-project-git": [
+        "./apps/desktop-shell/src/session.ts"
+      ],
+      "@sceneaxi-internal/project-git-authority": [
+        "./packages/authoring-core/internal/project-git-authority.ts"
+      ],
       "@sceneaxi/site-kit": [
         "./packages/site-kit/src/index.ts"
       ],

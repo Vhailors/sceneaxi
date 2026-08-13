@@ -26,6 +26,7 @@
           "id": {
             "enum": [
               "project.lifecycle", "project.inspect", "project.migrate",
+              "project.git.read", "project.git.stage", "project.git.commit-prepare",
               "authoring.change-review", "authoring.undo", "runtime.play",
               "delivery.export-web", "assistant.build.local", "assistant.build.byo",
               "assistant.agent.bounded", "assistant.progress", "assistant.cancel",

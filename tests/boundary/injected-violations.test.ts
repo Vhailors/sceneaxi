@@ -174,6 +174,34 @@ describe("boundary check — injected violations", () => {
     );
   });
 
+  it("fails when production source imports the DesktopSession Git authority", () => {
+    appendTo(
+      fx,
+      "packages/cli/src/index.ts",
+      '\nimport "@sceneaxi-internal/project-git-authority";\n',
+    );
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("boundary check FAILED");
+    expect(res.stderr).toContain(
+      "imports the Git mutation authority outside its live DesktopSession owner",
+    );
+  });
+
+  it("fails when production source imports the bridge-owned Git mutation helper", () => {
+    appendTo(
+      fx,
+      "packages/cli/src/index.ts",
+      '\nimport "@sceneaxi-internal/desktop-session-project-git";\n',
+    );
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("boundary check FAILED");
+    expect(res.stderr).toContain(
+      "imports the bridge-owned Git mutation helper outside its owning bridge",
+    );
+  });
+
   it("fails when a package's own production source reaches its src/testing seam relatively", () => {
     // Renaming the public specifier away is not an escape: the owning package is the one
     // place a relative path into `src/testing` resolves, so that form is refused too.

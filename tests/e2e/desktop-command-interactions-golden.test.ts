@@ -49,6 +49,7 @@ function engineResponse(
   state: {
     undoAvailability: "available" | "unavailable" | "recovery-pending";
     redoAvailability: "available" | "unavailable" | "recovery-pending";
+    projectGitResponse?: unknown;
   },
 ) {
   const payload = request["payload"] as Record<string, unknown> | undefined;
@@ -69,6 +70,9 @@ function engineResponse(
             ? { action: "open-path", payload: input }
             : commandId === "ship-export-web"
               ? { action: "ship", payload: { op: "export-web", ...input } }
+              : commandId === "project-git-status" || commandId === "project-git-diff" ||
+                  commandId === "project-git-stage" || commandId === "project-git-commit-prepare"
+                ? { action: "project-git", payload: { op: commandId, input } }
               : null;
     if (translated !== null) return engineResponse(translated, state);
   }
@@ -173,6 +177,48 @@ function engineResponse(
       },
     };
   }
+  if (action === "project-git") {
+    if (state.projectGitResponse !== undefined) {
+      return { ok: true, action: "command", data: state.projectGitResponse };
+    }
+    const repositoryState = {
+      schemaVersion: 1,
+      kind: "sceneaxi.project-git-state",
+      projectId: "project-command-test",
+      branch: "main",
+      head: "a".repeat(40),
+      detached: false,
+      canonicalFiles: ["scene.json", "sceneaxi.project.json"],
+      entries: [{ path: "scene.json", index: " ", worktree: "M", canonical: true, conflict: false }],
+      canonicalChanges: [{ path: "scene.json", index: " ", worktree: "M", canonical: true, conflict: false }],
+      unrelatedChanges: [],
+      conflicts: [],
+      workingTreeDiff: "",
+      stagedDiff: "",
+      clean: false,
+      undoScope: "sceneaxi-document-only",
+    };
+    return {
+      ok: true,
+      action: "command",
+      data: op === "project-git-commit-prepare"
+        ? {
+            schemaVersion: 1,
+            kind: "sceneaxi.project-git-commit-preparation",
+            message: "feat: prepare",
+            selectedPaths: ["scene.json"],
+            stagedDiff: "",
+            state: repositoryState,
+            commitCreated: false,
+            hooksBypassed: false,
+            undoScope: "sceneaxi-document-only",
+          }
+        : repositoryState,
+    };
+  }
+  if (action === "profile") {
+    return { ok: true, action, data: payload };
+  }
   return {
     ok: false,
     reason: "DESKTOP_COMMAND_TEST_UNEXPECTED",
@@ -207,16 +253,20 @@ async function harness(
     | "unavailable"
     | "recovery-pending" = "unavailable",
   hasActiveProject = true,
+  projectGitResponse?: unknown,
 ) {
   const window = new HappyWindow({ width: 1200, height: 800 });
   windows.push(window);
   const calls: HostCall[] = [];
+  const requests: Record<string, unknown>[] = [];
   const state: {
     undoAvailability: "available" | "unavailable" | "recovery-pending";
     redoAvailability: "available" | "unavailable" | "recovery-pending";
+    projectGitResponse?: unknown;
   } = {
     undoAvailability: initialUndoAvailability,
     redoAvailability: "unavailable",
+    ...(projectGitResponse === undefined ? {} : { projectGitResponse }),
   };
   const clone = <T>(value: T): T => window.eval(`(${JSON.stringify(value)})`) as T;
   Object.defineProperty(window, "structuredClone", { value: clone });
@@ -240,6 +290,7 @@ async function harness(
       },
       request: async (request: unknown) => {
         const typed = clone(request) as Record<string, unknown>;
+        requests.push(typed);
         const payload = typed["payload"] as Record<string, unknown> | undefined;
         calls.push({
           plane: "engine",
@@ -267,7 +318,7 @@ async function harness(
   window.eval(match[1]);
   await settle(window);
   calls.splice(0);
-  return { window, calls };
+  return { window, calls, requests };
 }
 
 function element(window: HappyWindow, selector: string) {
@@ -315,6 +366,15 @@ async function prepare(command: DesktopInteractionCommand, window: HappyWindow) 
     await click(window, '#project-save[data-command="project-save"]');
     await click(window, '#menu-command-edit-undo');
   }
+  if (command.id === "project-git-stage" || command.id === "project-git-commit-prepare") {
+    await click(window, '#menu-command-project-git-status');
+    const path = element(window, '[data-project-git-path][value="scene.json"]') as unknown as HTMLInputElement;
+    path.checked = true;
+  }
+  if (command.id === "project-git-commit-prepare") {
+    const message = element(window, "[data-project-git-message]") as unknown as HTMLInputElement;
+    message.value = "feat: prepare";
+  }
 }
 
 function expectedEffect(command: DesktopInteractionCommand) {
@@ -325,6 +385,14 @@ function expectedEffect(command: DesktopInteractionCommand) {
       return { plane: "project", action: "choose-open", op: null } as const;
     case "project-save":
       return { plane: "engine", action: "command", op: "project-save" } as const;
+    case "project-git-status":
+      return { plane: "engine", action: "command", op: "project-git-status" } as const;
+    case "project-git-diff":
+      return { plane: "engine", action: "command", op: "project-git-diff" } as const;
+    case "project-git-stage":
+      return { plane: "engine", action: "command", op: "project-git-stage" } as const;
+    case "project-git-commit-prepare":
+      return { plane: "engine", action: "command", op: "project-git-commit-prepare" } as const;
     case "ship-export-web":
       return { plane: "engine", action: "command", op: "ship-export-web" } as const;
     case "edit-undo":
@@ -372,6 +440,15 @@ async function invoke(
     );
     expect(element(window, "[data-ship-bundle-digest]").textContent).toBe(
       `sha256:${"c".repeat(64)}`,
+    );
+  }
+  if (
+    command.id === "project-git-status" || command.id === "project-git-diff" ||
+    command.id === "project-git-stage" || command.id === "project-git-commit-prepare"
+  ) {
+    expect(element(window, ".shell").dataset.mode).toBe("ship");
+    expect(element(window, "[data-project-git-evidence]").textContent).toContain(
+      '"kind": "sceneaxi.project-git-state"',
     );
   }
 }
@@ -443,6 +520,70 @@ describe("desktop command menu, palette, and accelerator parity", () => {
     expect(element(window, "[data-outcome-code]").textContent).toContain(
       DESKTOP_PRODUCT_REFUSALS.projectRequired,
     );
+  });
+
+  it("refuses incomplete contained Git evidence without rendering it", async () => {
+    const { window } = await harness("web", "unavailable", true, {
+      schemaVersion: 1,
+      kind: "sceneaxi.project-git-state",
+      projectId: "project-command-test",
+      branch: "main",
+      head: "a".repeat(40),
+      detached: false,
+      canonicalFiles: ["scene.json", "sceneaxi.project.json"],
+      entries: [],
+      canonicalChanges: [],
+      unrelatedChanges: [],
+      workingTreeDiff: "",
+      stagedDiff: "",
+      clean: true,
+      undoScope: "sceneaxi-document-only",
+    });
+    await click(window, '[data-menu-trigger="file"]');
+    await click(window, "#menu-command-project-git-status");
+    expect(element(window, "[data-project-status]").textContent).toContain(
+      DESKTOP_PRODUCT_REFUSALS.runtimeRequestRefused,
+    );
+    expect(element(window, "[data-outcome-code]").textContent).toBe(
+      DESKTOP_PRODUCT_REFUSALS.runtimeRequestRefused,
+    );
+    expect(element(window, "[data-project-git-evidence]").hidden).toBe(true);
+  });
+
+  it("stages exact evidence paths without lossy text parsing", async () => {
+    const exactPath = " notes,2026.txt";
+    const repositoryState = {
+      schemaVersion: 1,
+      kind: "sceneaxi.project-git-state",
+      projectId: "project-command-test",
+      branch: "main",
+      head: "a".repeat(40),
+      detached: false,
+      canonicalFiles: ["scene.json", "sceneaxi.project.json"],
+      entries: [{ path: exactPath, index: "?", worktree: "?", canonical: false, conflict: false }],
+      canonicalChanges: [],
+      unrelatedChanges: [{ path: exactPath, index: "?", worktree: "?", canonical: false, conflict: false }],
+      conflicts: [],
+      workingTreeDiff: "",
+      stagedDiff: "",
+      clean: false,
+      undoScope: "sceneaxi-document-only",
+    };
+    const { window, requests } = await harness("web", "unavailable", true, repositoryState);
+    await click(window, '#menu-command-project-git-status');
+    const path = [...window.document.querySelectorAll('[data-project-git-path]')]
+      .find((candidate) => (candidate as unknown as HTMLInputElement).value === exactPath) as unknown as HTMLInputElement | undefined;
+    expect(path).toBeDefined();
+    if (path === undefined) return;
+    path.checked = true;
+    await click(window, '#menu-command-project-git-stage');
+    const invocation = requests.find((request) => {
+      const payload = request["payload"] as Record<string, unknown> | undefined;
+      return payload?.["commandId"] === "project-git-stage";
+    });
+    expect(invocation).toMatchObject({
+      payload: { input: { paths: [exactPath] } },
+    });
   });
 
   it("retires Ship evidence when the project becomes dirty", async () => {

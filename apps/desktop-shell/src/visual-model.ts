@@ -1101,6 +1101,7 @@ export type DesktopVisualView = Readonly<{
     deleteBrowserFile: DesktopControl;
     play: DesktopControl;
     exportWeb: DesktopControl;
+    gitCommitMessage: DesktopControl;
     selectSceneEntity: DesktopControl;
     selectStarterEntity: DesktopControl;
     transformProperties: readonly DesktopControl[];
@@ -1317,6 +1318,7 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
     deleteBrowserFile: control("project-browser-delete", "Delete selected project file", "live"),
     play: control("scene-play", "Play composed scene", "live"),
     exportWeb: control("ship-export-web", "Export Web", "live"),
+    gitCommitMessage: control("project-git-commit-message", "Commit message", "live"),
     selectSceneEntity,
     selectStarterEntity: selectSceneEntity,
     transformProperties,

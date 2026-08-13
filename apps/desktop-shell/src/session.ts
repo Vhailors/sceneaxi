@@ -24,6 +24,22 @@ import {
   type Proposal,
 } from "@sceneaxi/authoring-core";
 import {
+  acquireProjectGitDesktopOwner,
+  createProjectGitAuthoringAuthority,
+  prepareProjectGitCommit,
+  releaseProjectGitDesktopOwner,
+  stageProjectGitPaths,
+  type ProjectGitAuthoringAuthority,
+  type ProjectGitAuthoringState,
+  type ProjectGitDesktopOwner,
+} from "@sceneaxi-internal/project-git-authority";
+import {
+  PROJECT_GIT_DIAGNOSTICS,
+  type ProjectGitCommitPreparationResult,
+  type ProjectGitFailure,
+  type ProjectGitStateResult,
+} from "@sceneaxi/schemas";
+import {
   shellApply,
   shellPropose,
   type ShellEditInput,
@@ -104,6 +120,183 @@ export type DesktopSessionOptions = {
   readonly cwd?: string;
   readonly operations?: Partial<DesktopSessionOperations>;
 };
+
+type DesktopProjectGitProfile = "game" | "web" | "kids";
+type RootProjectGitAuthority = {
+  readonly root: string;
+  readonly authority: ProjectGitAuthoringAuthority;
+  readonly owner: ProjectGitDesktopOwner;
+  readonly sessions: Set<WeakRef<DesktopSession>>;
+};
+type DesktopProjectGitBinding = Readonly<{
+  rootAuthority: RootProjectGitAuthority;
+  readProfile: () => DesktopProjectGitProfile;
+  sessionRef: WeakRef<DesktopSession>;
+}>;
+
+const projectGitBindings = new WeakMap<object, DesktopProjectGitBinding>();
+const rootProjectGitAuthorities = new Map<string, RootProjectGitAuthority>();
+
+export class DesktopProjectMutationOwnerError extends Error {
+  readonly diagnostic: ProjectGitFailure["diagnostic"];
+
+  constructor(diagnostic: ProjectGitFailure["diagnostic"]) {
+    super(diagnostic.message);
+    this.name = "DesktopProjectMutationOwnerError";
+    this.diagnostic = diagnostic;
+  }
+}
+
+function liveRootBindings(rootAuthority: RootProjectGitAuthority): readonly DesktopProjectGitBinding[] {
+  const live: DesktopProjectGitBinding[] = [];
+  for (const sessionRef of rootAuthority.sessions) {
+    const session = sessionRef.deref();
+    if (session === undefined) {
+      rootAuthority.sessions.delete(sessionRef);
+      continue;
+    }
+    const binding = projectGitBindings.get(session);
+    if (binding?.rootAuthority === rootAuthority) live.push(binding);
+  }
+  return live;
+}
+
+function aggregateProjectGitState(rootAuthority: RootProjectGitAuthority): ProjectGitAuthoringState {
+  let reviewStaged = false;
+  let recoveryPending = false;
+  let transactionDirty = false;
+  const profiles = new Set<DesktopProjectGitProfile>();
+  for (const binding of liveRootBindings(rootAuthority)) {
+    const session = binding.sessionRef.deref();
+    if (session === undefined) continue;
+    const current = session.snapshot();
+    reviewStaged ||= current.phase === "reviewing" && current.proposal !== null;
+    recoveryPending ||= current.journalRecoveryPending;
+    transactionDirty ||= current.phase === "pending";
+    try {
+      profiles.add(binding.readProfile());
+    } catch {
+      transactionDirty = true;
+    }
+  }
+  transactionDirty ||= profiles.size > 1 && !profiles.has("kids");
+  return Object.freeze({ reviewStaged, recoveryPending, transactionDirty });
+}
+
+function aggregateProjectGitProfile(
+  rootAuthority: RootProjectGitAuthority,
+): DesktopProjectGitProfile | undefined {
+  const profiles = new Set<DesktopProjectGitProfile>();
+  try {
+    for (const binding of liveRootBindings(rootAuthority)) profiles.add(binding.readProfile());
+  } catch {
+    return undefined;
+  }
+  if (profiles.has("kids")) return "kids";
+  return profiles.size === 1 ? [...profiles][0] : undefined;
+}
+
+function rootProjectGitAuthority(root: string): RootProjectGitAuthority {
+  const canonicalRoot = canonicalPath(root);
+  const existing = rootProjectGitAuthorities.get(canonicalRoot);
+  if (existing !== undefined) return existing;
+  const owner = acquireProjectGitDesktopOwner(canonicalRoot);
+  if ("diagnostic" in owner) throw new DesktopProjectMutationOwnerError(owner.diagnostic);
+  const sessions = new Set<WeakRef<DesktopSession>>();
+  const holder: { current: RootProjectGitAuthority | null } = { current: null };
+  const authority = createProjectGitAuthoringAuthority(
+    canonicalRoot,
+    () => {
+      const current = holder.current;
+      if (current === null) {
+        return { reviewStaged: false, recoveryPending: false, transactionDirty: false };
+      }
+      return aggregateProjectGitState(current);
+    },
+  );
+  const rootAuthority = { root: canonicalRoot, authority, owner, sessions };
+  holder.current = rootAuthority;
+  rootProjectGitAuthorities.set(canonicalRoot, rootAuthority);
+  return rootAuthority;
+}
+
+export function bindDesktopSessionProjectGitAuthority(
+  session: DesktopSession,
+  root: string,
+  readProfile: () => DesktopProjectGitProfile,
+): void {
+  if (!releaseDesktopSessionProjectGitAuthority(session)) {
+    throw new DesktopProjectMutationOwnerError(Object.freeze({
+      code: PROJECT_GIT_DIAGNOSTICS.transactionDirty,
+      path: ".sceneaxi-desktop-mutation-owner",
+      message: "The previous desktop mutation-owner lease could not be released cleanly.",
+    }));
+  }
+  const rootAuthority = rootProjectGitAuthority(root);
+  const sessionRef = new WeakRef(session);
+  rootAuthority.sessions.add(sessionRef);
+  projectGitBindings.set(session, Object.freeze({ rootAuthority, readProfile, sessionRef }));
+}
+
+export function releaseDesktopSessionProjectGitAuthority(session: DesktopSession): boolean {
+  const binding = projectGitBindings.get(session);
+  if (binding === undefined) return true;
+  if (liveRootBindings(binding.rootAuthority).length === 1) {
+    if (!releaseProjectGitDesktopOwner(binding.rootAuthority.owner)) return false;
+    rootProjectGitAuthorities.delete(binding.rootAuthority.root);
+  }
+  binding.rootAuthority.sessions.delete(binding.sessionRef);
+  projectGitBindings.delete(session);
+  return true;
+}
+
+function desktopSessionProjectGitBinding(
+  session: DesktopSession,
+): DesktopProjectGitBinding | undefined {
+  return projectGitBindings.get(session);
+}
+
+function unavailableProjectGitAuthority() {
+  return Object.freeze({
+    ok: false as const,
+    diagnostic: Object.freeze({
+      code: PROJECT_GIT_DIAGNOSTICS.transactionDirty,
+      path: "$authoring",
+      message: "Authoritative SceneAxi review and recovery state is unavailable.",
+    }),
+  });
+}
+
+export function stageDesktopSessionProjectGitPaths(
+  session: DesktopSession,
+  paths: readonly string[],
+): ProjectGitStateResult {
+  const binding = desktopSessionProjectGitBinding(session);
+  if (binding === undefined) return unavailableProjectGitAuthority();
+  const profile = aggregateProjectGitProfile(binding.rootAuthority);
+  if (profile === undefined) return unavailableProjectGitAuthority();
+  return stageProjectGitPaths({
+    root: binding.rootAuthority.root,
+    profile,
+    authoring: binding.rootAuthority.authority,
+  }, paths);
+}
+
+export function prepareDesktopSessionProjectGitCommit(
+  session: DesktopSession,
+  paths: readonly string[],
+  message: string,
+): ProjectGitCommitPreparationResult {
+  const binding = desktopSessionProjectGitBinding(session);
+  if (binding === undefined) return unavailableProjectGitAuthority();
+  const profile = aggregateProjectGitProfile(binding.rootAuthority);
+  if (profile === undefined) return unavailableProjectGitAuthority();
+  return prepareProjectGitCommit({
+    root: binding.rootAuthority.root,
+    profile,
+    authoring: binding.rootAuthority.authority,
+  }, paths, message);
+}
 
 /**
  * Freeze a validated JSON value all the way down.
@@ -191,7 +384,7 @@ export function createDesktopSession(
     return snap();
   };
 
-  return {
+  const session: DesktopSession = {
     snapshot: snap,
 
     proposeEdit(input: ShellEditInput): DesktopSnapshot {
@@ -448,4 +641,5 @@ export function createDesktopSession(
       return { ok: true, transactionId: result.transactionId, restoredPaths: result.documentPaths };
     },
   };
+  return Object.freeze(session);
 }

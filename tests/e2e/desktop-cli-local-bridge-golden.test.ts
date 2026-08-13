@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -396,5 +396,88 @@ describe("CLI → local desktop bridge golden path", () => {
       result: { response: { inspection: { state: "native" } } },
     });
     expect(readFileSync(join(projectRoot, "scene.json"), "utf8")).toBe(documentBytes);
+  });
+
+  it("returns and prepares the same contained Git evidence through the CLI tool adapter", async () => {
+    const root = mkdtempSync(join(tmpdir(), "sceneaxi-cli-contained-git-"));
+    roots.push(root);
+    const projectRoot = join(root, "project");
+    expect(seedDesktopProject(projectRoot).ok).toBe(true);
+    const git = (...args: string[]) => execFileSync("git", args, { cwd: projectRoot, encoding: "utf8" });
+    git("init", "-b", "main");
+    git("config", "user.name", "SceneAxi Test");
+    git("config", "user.email", "sceneaxi@example.invalid");
+    git("add", ".");
+    git("commit", "-m", "seed");
+    const scenePath = join(projectRoot, "scene.json");
+    const scene = JSON.parse(readFileSync(scenePath, "utf8")) as { data: Record<string, unknown> };
+    scene.data["gitPrepared"] = true;
+    writeFileSync(scenePath, `${JSON.stringify(scene, null, 2)}\n`);
+    writeFileSync(join(projectRoot, "notes.txt"), "unrelated\n");
+
+    const bridge = createDesktopBridge({ cwd: projectRoot });
+    const discoveryPath = join(root, "config", "desktop-bridge-v1.json");
+    const server = await startDesktopLocalBridgeServer({
+      bridge,
+      projectRoot,
+      socketPath: join(root, "runtime", "desktop-v1.sock"),
+      discoveryPath,
+    });
+    servers.push(server);
+    const common = ["--descriptor", discoveryPath, "--json"];
+    const call = (tool: string, permission: "project:read" | "project:write", input?: unknown) => sceneaxi([
+      "desktop", "bridge", "call",
+      "--tool", tool,
+      "--allow", permission,
+      ...(input === undefined ? [] : ["--input-json", JSON.stringify(input)]),
+      ...common,
+    ], projectRoot);
+
+    const status = await call("sceneaxi.project.git.status", "project:read");
+    expect(status.status).toBe(0);
+    const state = (JSON.parse(status.stdout) as { result: { response: unknown } }).result.response;
+    const ui = bridge.handle({
+      action: "command",
+      payload: createEditorCommandInvocation("project-git-status", "desktop-control", {}),
+    });
+    expect(state).toEqual(ui.ok ? ui.data : null);
+    expect(state).toMatchObject({
+      canonicalChanges: [{ path: "scene.json" }],
+      unrelatedChanges: [{ path: "notes.txt" }],
+    });
+
+    const staged = await call("sceneaxi.project.git.stage", "project:write", { paths: ["scene.json"] });
+    expect(staged.status).toBe(0);
+    expect(git("diff", "--cached", "--name-only").trim()).toBe("scene.json");
+    const prepared = await call("sceneaxi.project.git.commit.prepare", "project:write", {
+      paths: ["scene.json"],
+      message: "feat: exact contained selection",
+    });
+    expect(prepared.status).toBe(0);
+    expect(JSON.parse(prepared.stdout)).toMatchObject({
+      result: {
+        response: {
+          kind: "sceneaxi.project-git-commit-preparation",
+          commitCreated: false,
+          hooksBypassed: false,
+          selectedPaths: ["scene.json"],
+        },
+      },
+    });
+    expect(git("log", "-1", "--pretty=%s").trim()).toBe("seed");
+
+    expect(bridge.handle({ action: "profile", payload: { profile: "kids" } })).toMatchObject({
+      ok: true,
+      data: { profile: "kids" },
+    });
+    const kidsStage = await call("sceneaxi.project.git.stage", "project:write", { paths: ["notes.txt"] });
+    expect(kidsStage.status).toBe(1);
+    expect(JSON.parse(kidsStage.stdout)).toMatchObject({
+      ok: false,
+      error: {
+        code: "BRIDGE_REFUSED",
+        details: { bridgeDetail: "EDITOR_COMMAND_KIDS_DENIED" },
+      },
+    });
   });
 });

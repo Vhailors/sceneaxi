@@ -346,6 +346,21 @@ export {
   serializeProjectManifest,
   validateProjectManifest,
 } from "./project-manifest.js";
+
+export {
+  PROJECT_GIT_DIAGNOSTICS,
+  PROJECT_GIT_EVIDENCE_MAX_BYTES,
+  PROJECT_GIT_SCHEMA_VERSION,
+} from "./project-git.js";
+export type {
+  ProjectGitCommitPreparation,
+  ProjectGitCommitPreparationResult,
+  ProjectGitDiagnosticCode,
+  ProjectGitEntry,
+  ProjectGitFailure,
+  ProjectGitRepositoryState,
+  ProjectGitStateResult,
+} from "./project-git.js";
 export type {
   ProjectAssetIdentity,
   ProjectCapability,

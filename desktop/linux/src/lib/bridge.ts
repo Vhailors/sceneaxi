@@ -35,6 +35,7 @@ import { basename, dirname, isAbsolute, join, resolve, sep } from "node:path";
 import {
   ASSISTANT_SCULPT_REFUSALS,
   commitProjectMigration,
+  inspectProjectGit,
   inspectProjectModel,
   proposeProjectMigration,
   recoverProjectMigration,
@@ -54,6 +55,13 @@ import {
   type DesktopSnapshot,
 } from "@sceneaxi/desktop-shell";
 import {
+  DesktopProjectMutationOwnerError,
+  bindDesktopSessionProjectGitAuthority,
+  prepareDesktopSessionProjectGitCommit,
+  releaseDesktopSessionProjectGitAuthority,
+  stageDesktopSessionProjectGitPaths,
+} from "@sceneaxi-internal/desktop-session-project-git";
+import {
   materializeProjectAssetCopies,
   proposeContainedGltfAssetImport,
   type ProjectAssetManifestEntry,
@@ -64,6 +72,7 @@ import {
   EDITOR_COMMAND_REFUSALS,
   EDITOR_COMMAND_REGISTRY,
   EDITOR_COMMAND_SCHEMA_VERSION,
+  PROJECT_GIT_DIAGNOSTICS,
   RARITY_PROVIDER_REQUEST_MAX_CHARS,
   RARITY_REFUSE_CODES,
   digestRarityNamespace,
@@ -168,8 +177,10 @@ export type DesktopRarityProviderRunRequest = Readonly<{
 
 export type DesktopBridge = {
   handle(request: unknown): DesktopBridgeResponse;
+  activeProfile(): "game" | "web" | "kids";
   /** The most recent renderer frame report, or null before the first one. */
   lastFrameReport(): DesktopFrameReport | null;
+  close(): boolean;
 };
 
 /** Ticks the open-path exercise advances: enough to prove digests move. */
@@ -308,6 +319,7 @@ function frameReportOf(payload: unknown): DesktopFrameReport | null {
 
 export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridge {
   const nowMs = options.nowMs ?? ((): number => Date.now());
+  let activeCommandProfile: "game" | "web" | "kids" = options.commandProfile ?? "game";
   const rarityRefusalReason = (detail: unknown): string | null => {
     if (typeof detail !== "string") return null;
     return Object.values(RARITY_REFUSE_CODES).find(
@@ -351,8 +363,24 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     transactionId: string | null;
   }> | null = null;
 
+  const createBoundAuthoringSession = (): DesktopSession => {
+    const created = options.createAuthoringSession?.() ?? createDesktopSession({ cwd: options.cwd });
+    try {
+      bindDesktopSessionProjectGitAuthority(created, options.cwd, () => activeCommandProfile);
+    } catch (error) {
+      if (
+        error instanceof DesktopProjectMutationOwnerError &&
+        error.diagnostic.code === PROJECT_GIT_DIAGNOSTICS.repositoryUnavailable
+      ) {
+        return created;
+      }
+      throw error;
+    }
+    return created;
+  };
+
   const authoringSession = (): DesktopSession => {
-    session ??= options.createAuthoringSession?.() ?? createDesktopSession({ cwd: options.cwd });
+    session ??= createBoundAuthoringSession();
     return session;
   };
 
@@ -1324,7 +1352,14 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           "authoring restart requires a documentPath string inside the project directory.",
         );
       }
-      session = options.createAuthoringSession?.() ?? createDesktopSession({ cwd: options.cwd });
+      if (session !== null && !releaseDesktopSessionProjectGitAuthority(session)) {
+        return bridgeRefuse(
+          PROJECT_GIT_DIAGNOSTICS.transactionDirty,
+          "The desktop mutation-owner lease could not be released; retry restart after cleanup succeeds.",
+          ".sceneaxi-desktop-mutation-owner",
+        );
+      }
+      session = createBoundAuthoringSession();
       const restartedEvidence = rarityProposalEvidence;
       rarityProposalEvidence = null;
       pendingAssetImport = null;
@@ -2305,7 +2340,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           });
       return bridgeRefuse(mappedReason, validated.message, null, transaction);
     }
-    if (options.commandProfile === "kids" || validated.invocation.profile === "kids") {
+    if (activeCommandProfile === "kids" || validated.invocation.profile === "kids") {
       const reason = validated.command.id.startsWith("scene-")
         ? DESKTOP_SCENE_HIERARCHY_REFUSALS.kidsDenied
         : EDITOR_COMMAND_REFUSALS.kidsDenied;
@@ -2360,6 +2395,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           : bridgeRefuse(proposed.diagnostic.code, proposed.diagnostic.message, proposed.diagnostic.path);
       }
       case "project-migration-commit": {
+        authoringSession();
         const committed = commitProjectMigration({
           root: options.cwd,
           approved: input["approved"] === true,
@@ -2370,10 +2406,40 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           : bridgeRefuse(committed.diagnostic.code, committed.diagnostic.message, committed.diagnostic.path);
       }
       case "project-migration-recover": {
+        authoringSession();
         const recovered = recoverProjectMigration(options.cwd);
         return recovered.ok
           ? bridgeOk("command", recovered)
           : bridgeRefuse(recovered.diagnostic.code, recovered.diagnostic.message, recovered.diagnostic.path);
+      }
+      case "project-git-status":
+      case "project-git-diff": {
+        const inspected = inspectProjectGit(
+          { root: options.cwd, profile: activeCommandProfile },
+          validated.command.id === "project-git-diff" ? "diff" : "status",
+        );
+        return inspected.ok
+          ? bridgeOk("command", inspected.state)
+          : bridgeRefuse(inspected.diagnostic.code, inspected.diagnostic.message, inspected.diagnostic.path);
+      }
+      case "project-git-stage": {
+        const staged = stageDesktopSessionProjectGitPaths(
+          authoringSession(),
+          input["paths"] as readonly string[],
+        );
+        return staged.ok
+          ? bridgeOk("command", staged.state)
+          : bridgeRefuse(staged.diagnostic.code, staged.diagnostic.message, staged.diagnostic.path);
+      }
+      case "project-git-commit-prepare": {
+        const prepared = prepareDesktopSessionProjectGitCommit(
+          authoringSession(),
+          input["paths"] as readonly string[],
+          String(input["message"]),
+        );
+        return prepared.ok
+          ? bridgeOk("command", prepared.preparation)
+          : bridgeRefuse(prepared.diagnostic.code, prepared.diagnostic.message, prepared.diagnostic.path);
       }
       case "ship-export-web":
         return ship({
@@ -2543,24 +2609,42 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
   };
 
   const handle = (request: unknown): DesktopBridgeResponse => {
-    const action = field(request, "action");
-    if (action === undefined) {
-      return bridgeRefuse(
-        DESKTOP_BRIDGE_REFUSALS.requestMalformed,
-        "A bridge request is an object with an `action` string.",
-      );
-    }
-    if (!isAction(action)) {
-      return bridgeRefuse(
-        DESKTOP_BRIDGE_REFUSALS.actionUnknown,
-        `Unknown bridge action ${JSON.stringify(action)}. Known: ${DESKTOP_BRIDGE_ACTIONS.join(", ")}.`,
-      );
-    }
-    const payload = field(request, "payload");
+    try {
+      const action = field(request, "action");
+      if (action === undefined) {
+        return bridgeRefuse(
+          DESKTOP_BRIDGE_REFUSALS.requestMalformed,
+          "A bridge request is an object with an `action` string.",
+        );
+      }
+      if (!isAction(action)) {
+        return bridgeRefuse(
+          DESKTOP_BRIDGE_REFUSALS.actionUnknown,
+          `Unknown bridge action ${JSON.stringify(action)}. Known: ${DESKTOP_BRIDGE_ACTIONS.join(", ")}.`,
+        );
+      }
+      const payload = field(request, "payload");
 
-    switch (action) {
+      switch (action) {
       case "handshake":
         return bridgeOk("handshake", handshake());
+      case "profile": {
+        const profile = field(payload, "profile");
+        if (profile !== "game" && profile !== "web" && profile !== "kids") {
+          return bridgeRefuse(
+            DESKTOP_BRIDGE_REFUSALS.requestMalformed,
+            "profile requires game, web, or kids.",
+          );
+        }
+        if (options.commandProfile !== undefined && profile !== options.commandProfile) {
+          return bridgeRefuse(
+            EDITOR_COMMAND_REFUSALS.capabilityDenied,
+            "The desktop host profile is fixed for this bridge.",
+          );
+        }
+        activeCommandProfile = profile;
+        return bridgeOk("profile", { profile });
+      }
       case "command":
         return command(payload);
       case "scene": {
@@ -2592,11 +2676,30 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         options.onFrameReport?.(report);
         return bridgeOk("frame-report", { received: true });
       }
+      }
+    } catch (error) {
+      if (error instanceof DesktopProjectMutationOwnerError) {
+        return bridgeRefuse(
+          error.diagnostic.code,
+          error.diagnostic.message,
+          error.diagnostic.path,
+        );
+      }
+      throw error;
     }
+  };
+
+  const close = (): boolean => {
+    if (session === null) return true;
+    if (!releaseDesktopSessionProjectGitAuthority(session)) return false;
+    session = null;
+    return true;
   };
 
   return Object.freeze({
     handle,
+    activeProfile: (): "game" | "web" | "kids" => activeCommandProfile,
     lastFrameReport: (): DesktopFrameReport | null => lastReport,
+    close,
   });
 }

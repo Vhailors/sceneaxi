@@ -21,6 +21,10 @@
             "project-migration-propose",
             "project-migration-commit",
             "project-migration-recover",
+            "project-git-status",
+            "project-git-diff",
+            "project-git-stage",
+            "project-git-commit-prepare",
             "ship-export-web",
             "project-open",
             "project-save",
@@ -71,7 +75,7 @@
           "additionalProperties": false,
           "required": ["kind", "target"],
           "properties": {
-            "kind": { "enum": ["none", "project-binding", "project-inspection", "project-migration-proposal", "project-migration-evidence", "authoring-snapshot", "undo-result", "redo-result", "scene-hierarchy", "kernel-session", "sculpt-artifact", "rarity-proposal", "command-progress"] },
+            "kind": { "enum": ["none", "project-binding", "project-inspection", "project-migration-proposal", "project-migration-evidence", "project-git-state", "project-git-commit-preparation", "authoring-snapshot", "undo-result", "redo-result", "scene-hierarchy", "kernel-session", "sculpt-artifact", "rarity-proposal", "command-progress"] },
             "target": { "enum": ["none", "project", "change-review", "live-viewport"] }
           }
         },
@@ -86,7 +90,7 @@
           }
         },
         "inputSchema": { "type": "object" },
-        "inputShape": { "enum": ["none", "document", "export", "assistant", "assistant-agent", "job", "migration-approval", "scene-document", "scene-selection", "scene-property", "scene-create", "scene-remove", "scene-reparent"] }
+        "inputShape": { "enum": ["none", "document", "export", "assistant", "assistant-agent", "job", "migration-approval", "git-paths", "git-commit", "scene-document", "scene-selection", "scene-property", "scene-create", "scene-remove", "scene-reparent"] }
       }
     }
   }

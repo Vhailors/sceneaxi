@@ -539,7 +539,7 @@ function acquireLocks(paths: readonly string[]): readonly HeldLock[] {
     }
     return held;
   } catch (error) {
-    releaseLocks(held);
+    releaseLocks(held, false);
     throw error;
   }
 }
@@ -563,36 +563,89 @@ export function releaseAtomicWriteLocks(lockSet: AtomicWriteLockSet): void {
     throw new AtomicWriteLockError("lock capability");
   }
   state.active = false;
-  releaseLocks(state.held);
+  releaseLocks(state.held, false);
 }
 
-function releaseLocks(held: readonly HeldLock[]): void {
+export function releaseAtomicWriteLocksChecked(
+  lockSet: AtomicWriteLockSet,
+): readonly string[] {
+  const state = lockSetStates.get(lockSet);
+  if (state === undefined || !state.active) {
+    throw new AtomicWriteLockError("lock capability");
+  }
+  const failures = releaseLocks(state.held, true);
+  const remaining = state.held
+    .map((lock) => lock.path)
+    .filter((path) => existsSync(path));
+  if (failures.length === 0 && remaining.length === 0) {
+    state.active = false;
+    return Object.freeze([]);
+  }
+  return Object.freeze([...new Set([...failures, ...remaining])].sort());
+}
+
+export function atomicWriteLockArtifactPaths(
+  lockSet: AtomicWriteLockSet,
+): readonly string[] {
+  const state = lockSetStates.get(lockSet);
+  if (state === undefined || !state.active) {
+    throw new AtomicWriteLockError("lock capability");
+  }
+  return Object.freeze(state.held.map((lock) => lock.path));
+}
+
+function releaseLocks(
+  held: readonly HeldLock[],
+  verifyOwnership: boolean,
+): readonly string[] {
   const syncedDirectories = new Set<string>();
+  const failures = new Set<string>();
   for (const lock of [...held].reverse()) {
+    let owner: { token?: unknown };
     try {
-      const owner = JSON.parse(readFileSync(lock.path, "utf8")) as {
+      owner = JSON.parse(readFileSync(lock.path, "utf8")) as {
         token?: unknown;
       };
-      if (owner.token === lock.token) {
-        unlinkSync(lock.path);
-        syncedDirectories.add(dirname(lock.path));
+    } catch (error) {
+      const code = error instanceof Error && "code" in error
+        ? (error as NodeJS.ErrnoException).code
+        : undefined;
+      if (code === "ENOENT") syncedDirectories.add(dirname(lock.path));
+      else if (verifyOwnership) failures.add(lock.path);
+      else {
+        try {
+          unlinkSync(lock.path);
+          syncedDirectories.add(dirname(lock.path));
+        } catch {
+          failures.add(lock.path);
+        }
       }
-    } catch {
-      try {
-        unlinkSync(lock.path);
-        syncedDirectories.add(dirname(lock.path));
-      } catch {
-        continue;
-      }
+      continue;
+    }
+    if (owner.token !== lock.token) {
+      failures.add(lock.path);
+      continue;
+    }
+    try {
+      unlinkSync(lock.path);
+      syncedDirectories.add(dirname(lock.path));
+    } catch (error) {
+      const code = error instanceof Error && "code" in error
+        ? (error as NodeJS.ErrnoException).code
+        : undefined;
+      if (code === "ENOENT") syncedDirectories.add(dirname(lock.path));
+      else failures.add(lock.path);
     }
   }
   for (const directory of syncedDirectories) {
     try {
       syncDirectory(directory);
     } catch {
+      failures.add(directory);
       continue;
     }
   }
+  return Object.freeze([...failures].sort());
 }
 
 function currentHash(path: string): string | null {

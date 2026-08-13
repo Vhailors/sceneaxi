@@ -1,4 +1,5 @@
 import {
+  existsSync,
   linkSync,
   mkdtempSync,
   mkdirSync,
@@ -611,7 +612,9 @@ describe("E1 apply journal", () => {
     expect(readFileSync(absolutePath, "utf8")).toBe(before);
     const journalDir = join(cwd, ".sceneaxi", "journal");
     expect(
-      readdirSync(journalDir).filter((name) => name.endsWith(".json")),
+      existsSync(journalDir)
+        ? readdirSync(journalDir).filter((name) => name.endsWith(".json"))
+        : [],
     ).toEqual([]);
   });
 
