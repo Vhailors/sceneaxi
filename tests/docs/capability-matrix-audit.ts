@@ -311,7 +311,7 @@ export function auditMatrixDocument(
       });
     }
     const cited = [...row.body.matchAll(ISSUE_OR_PR)].map((match) => Number(match[1]));
-    if (cited.some((issue) => issue > 270 && issue !== 249)) {
+    if (cited.some((issue) => !KNOWN_EDITOR_ISSUES.has(issue))) {
       findings.push({
         code: "missing-issue-or-pr",
         message: `${row.label} cites an issue outside the editor graph.`,
