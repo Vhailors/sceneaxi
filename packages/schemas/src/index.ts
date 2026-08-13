@@ -973,6 +973,30 @@ export {
   inspectScenePhysics,
   parseScenePhysicsCatalog,
 } from "./desktop-scene-physics.js";
+export {
+  ASSISTANT_ASK_ANSWER_KIND,
+  ASSISTANT_ASK_REFUSALS,
+  ASSISTANT_ASK_SCHEMA_VERSION,
+  ASSISTANT_ASK_SCOPES,
+  ASSISTANT_PROVIDER_CLASSES,
+  SCENE_ASSISTANT_BUILD_CATALOG_KEY,
+  SCENE_ASSISTANT_BUILD_CATALOG_KIND,
+  answerAssistantAsk,
+  applyAssistantBuildEntry,
+  emptySceneAssistantBuildCatalog,
+  isAssistantAskScope,
+  isFixtureProviderDescriptor,
+  parseSceneAssistantBuildCatalog,
+} from "./desktop-assistant-ask.js";
+export type {
+  AssistantAskAnswer,
+  AssistantAskRefusal,
+  AssistantAskScope,
+  AssistantAskScopeState,
+  AssistantProviderClass,
+  SceneAssistantBuildCatalog,
+  SceneAssistantBuildEntry,
+} from "./desktop-assistant-ask.js";
 export type {
   ScenePhysicsBody,
   ScenePhysicsCatalog,

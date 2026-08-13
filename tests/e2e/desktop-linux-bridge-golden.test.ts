@@ -3695,9 +3695,7 @@ describe("desktop renderer behavior", () => {
 
   it("starts Build and Agent through the bridge and refuses every other composer mode", async () => {
     const profile = "@sceneaxi/profile-game" as const;
-    expect(DESKTOP_ASSISTANT_START_MODES).toEqual(
-      EDITOR_SHELL_ASSISTANT_MODE_IDS.filter((mode) => mode !== "ask"),
-    );
+    expect(DESKTOP_ASSISTANT_START_MODES).toEqual(EDITOR_SHELL_ASSISTANT_MODE_IDS);
     const agent = decideAssistantStart({
       mode: "agent",
       route: "local",
@@ -3736,12 +3734,29 @@ describe("desktop renderer behavior", () => {
       expect(build.payload.prompt).toBe(`a crate ${"x".repeat(RARITY_PROVIDER_REQUEST_MAX_CHARS)}`);
     }
 
-    for (const mode of [undefined, "", "ask", "Agent", "agent "]) {
+    const ask = decideAssistantStart({
+      mode: "ask",
+      route: "local",
+      profile,
+      prompt: "What instances are in the document?",
+    });
+    expect(ask).toEqual({
+      ok: true,
+      payload: {
+        op: "start",
+        route: "local",
+        profile,
+        prompt: "What instances are in the document?",
+        mode: "ask",
+        documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      },
+    });
+    for (const mode of [undefined, "", "Agent", "agent "]) {
       expect(decideAssistantStart({ mode, route: "local", profile, prompt: "a crate" })).toEqual({
         ok: false,
         reason: DESKTOP_BRIDGE_REFUSALS.assistantBuildModeRequired,
         message:
-          "Choose Build for a Sculpt Artifact or Agent for a fixture-backed rarity proposal; Ask is not implemented.",
+          "Choose Ask to inspect typed project state, Build for a Sculpt Artifact, or Agent for a fixture-backed rarity proposal.",
       });
     }
     expect(
@@ -3763,13 +3778,17 @@ describe("desktop renderer behavior", () => {
             op: "start",
             route: "local",
             profile,
-            prompt: "ask a question",
+            prompt: "What instances are in the document?",
             mode: "ask",
           },
         }),
       ).toMatchObject({
-        ok: false,
-        reason: DESKTOP_BRIDGE_REFUSALS.assistantBuildModeRequired,
+        ok: true,
+        data: {
+          commandId: "assistant-ask",
+          status: "ready",
+          result: { kind: "sceneaxi.assistant-ask-answer", savedBytesWritten: false, providerClass: "none" },
+        },
       });
       if (!agent.ok) throw new Error("agent start refused");
       expect(bridge.handle({ action: "assistant", payload: agent.payload })).toMatchObject({

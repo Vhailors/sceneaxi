@@ -20,6 +20,7 @@ import { SCENE_PREFAB_REFUSALS } from "./desktop-scene-prefab.js";
 import { PLAY_SESSION_REFUSALS } from "./desktop-play-session.js";
 import { SCENE_ANIMATION_REFUSALS } from "./desktop-scene-animation.js";
 import { SCENE_PHYSICS_REFUSALS } from "./desktop-scene-physics.js";
+import { ASSISTANT_ASK_REFUSALS, ASSISTANT_ASK_SCOPES } from "./desktop-assistant-ask.js";
 
 export const EDITOR_COMMAND_SCHEMA_VERSION = 1 as const;
 
@@ -102,6 +103,8 @@ export type EditorCommandId =
   | "physics-evaluate"
   | "change-review-accept"
   | "change-review-reject"
+  | "assistant-ask"
+  | "assistant-apply-build"
   | "assistant-local-build"
   | "assistant-byo-build"
   | "assistant-local-agent"
@@ -161,6 +164,8 @@ export type EditorCommandDefinition = Readonly<{
       | "scene-physics-catalog"
       | "scene-physics-evaluation"
       | "sculpt-artifact"
+      | "assistant-ask-answer"
+      | "scene-assistant-build-catalog"
       | "rarity-proposal"
       | "command-progress";
     target: EditorCommandResultTarget;
@@ -197,6 +202,7 @@ export type EditorCommandDefinition = Readonly<{
     | "animation-time"
     | "physics-apply"
     | "physics-evaluate"
+    | "assistant-ask"
     | "input-rebind"
     | "input-reset";
 }>;
@@ -306,6 +312,29 @@ const assistantAgentInput = Object.freeze({
   properties: Object.freeze({
     ...assistantInput.properties,
     documentPath: Object.freeze({ type: "string", minLength: 1 }),
+  }),
+}) satisfies JsonObject;
+
+const assistantAskInput = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: Object.freeze(["documentPath", "expectedContentHash", "profile", "prompt", "scope"]),
+  properties: Object.freeze({
+    documentPath: Object.freeze({ type: "string", minLength: 1 }),
+    expectedContentHash: Object.freeze({
+      type: "string",
+      pattern: "^sha256:[0-9a-f]{64}$",
+    }),
+    profile: Object.freeze({
+      type: "string",
+      enum: Object.freeze([
+        "@sceneaxi/profile-game",
+        "@sceneaxi/profile-web",
+        "@sceneaxi/profile-kids",
+      ]),
+    }),
+    prompt: Object.freeze({ type: "string", minLength: 1 }),
+    scope: Object.freeze({ type: "string", enum: ASSISTANT_ASK_SCOPES }),
   }),
 }) satisfies JsonObject;
 
@@ -1355,6 +1384,36 @@ const DEFINITIONS = [
   }),
   definition({
     schemaVersion: 1,
+    id: "assistant-ask",
+    label: "Ask Project State",
+    acceptedClients: CLIENTS,
+    permission: "assistant:read",
+    capability: capability("assistant.progress"),
+    mutation: "none",
+    progress: immediate(),
+    evidence: evidence("assistant-ask-answer", "project"),
+    refusals: [...BASE_REFUSALS, ...Object.values(ASSISTANT_ASK_REFUSALS)],
+    undo: undo("none"),
+    inputSchema: assistantAskInput,
+    inputShape: "assistant-ask",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "assistant-apply-build",
+    label: "Apply Assistant Build",
+    acceptedClients: CLIENTS,
+    permission: "assistant:run",
+    capability: capability("assistant.build.local"),
+    mutation: "stages-change",
+    progress: immediate(["validating", "reviewing"]),
+    evidence: evidence("scene-assistant-build-catalog", "change-review"),
+    refusals: [...BASE_REFUSALS, ...Object.values(ASSISTANT_ASK_REFUSALS), "DESKTOP_ASSISTANT_JOB_MISSING"],
+    undo: undo("none"),
+    inputSchema: exportInput,
+    inputShape: "export",
+  }),
+  definition({
+    schemaVersion: 1,
     id: "assistant-local-build",
     label: "Local Assistant Build",
     acceptedClients: CLIENTS,
@@ -1531,6 +1590,14 @@ export function validateEditorCommandInput(
         /^sha256:[0-9a-f]{64}$/.test(input["expectedContentHash"]);
     case "assistant":
       return exactKeys(input, ["prompt", "profile"]) && profileInput(input);
+    case "assistant-ask":
+      return exactKeys(input, ["documentPath", "expectedContentHash", "profile", "prompt", "scope"]) &&
+        typeof input["documentPath"] === "string" && input["documentPath"].length > 0 &&
+        typeof input["expectedContentHash"] === "string" &&
+        /^sha256:[0-9a-f]{64}$/.test(input["expectedContentHash"]) &&
+        profileInput(input) &&
+        typeof input["prompt"] === "string" && input["prompt"].trim().length > 0 &&
+        (ASSISTANT_ASK_SCOPES as readonly string[]).includes(String(input["scope"]));
     case "assistant-agent":
       return exactKeys(input, ["prompt", "profile", "documentPath"]) &&
         profileInput(input) && typeof input["documentPath"] === "string" &&

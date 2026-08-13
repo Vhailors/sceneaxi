@@ -66,7 +66,7 @@ export function decideAssistantStart(input: Readonly<{
       profile: input.profile,
       prompt,
       mode,
-      ...(mode === "agent" ? { documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH } : {}),
+      ...((mode === "agent" || mode === "ask") ? { documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH } : {}),
     }),
   });
 }
