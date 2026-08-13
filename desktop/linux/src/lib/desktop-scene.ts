@@ -1549,14 +1549,11 @@ export function collectDesktopAssistantAskState(input: Readonly<{
   documentData: unknown;
   playActive: boolean;
 }>) {
-  const stored = composedSceneFromDocumentData(input.documentData);
-  const animation = parseSceneAnimationCatalog(
-    isJsonObject(input.documentData) ? input.documentData[SCENE_ANIMATION_CATALOG_KEY] : undefined,
-  );
-  const physics = parseScenePhysicsCatalog(
-    isJsonObject(input.documentData) ? input.documentData[SCENE_PHYSICS_CATALOG_KEY] : undefined,
-  );
-  const assets = projectAssetManifestFromDocumentData(input.documentData);
+  const documentData = isJsonObject(input.documentData) ? input.documentData : {};
+  const stored = composedSceneFromDocumentData(documentData);
+  const animation = parseSceneAnimationCatalog(documentData[SCENE_ANIMATION_CATALOG_KEY]);
+  const physics = parseScenePhysicsCatalog(documentData[SCENE_PHYSICS_CATALOG_KEY]);
+  const assets = projectAssetManifestFromDocumentData(documentData);
   const assetIds = assets.ok
     ? assets.value.assets.map((entry) => entry.assetId)
     : [];

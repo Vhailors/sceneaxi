@@ -10,6 +10,7 @@ import {
   type DesktopAssistantJobSnapshot,
   type DesktopBridge,
 } from "../../desktop/linux/src/index.ts";
+import { isRarityProposalResult } from "../../desktop/linux/src/renderer/assistant-inspection.ts";
 import {
   DESKTOP_RARITY_FIXTURE_INPUT,
   DESKTOP_RARITY_FIXTURE_MODEL,
@@ -159,7 +160,7 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
       },
       authoring: { phase: "reviewing" },
     });
-    if (job.result === undefined || !("kind" in job.result)) throw new Error("missing rarity result");
+    if (job.result === undefined || !isRarityProposalResult(job.result)) throw new Error("missing rarity result");
     expect(DESKTOP_RARITY_FIXTURE_INPUT).toEqual({
       policy: acceptanceVector.policy,
       request: acceptanceVector.request,
@@ -623,7 +624,7 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
     ).toMatchObject({ ok: true });
     const job = await settledJob(bridge);
     expect(job.status).toBe("ready");
-    if (job.result === undefined || !("kind" in job.result)) throw new Error("missing rarity result");
+    if (job.result === undefined || !isRarityProposalResult(job.result)) throw new Error("missing rarity result");
 
     // The request reaches the port beside the bounded instruction, truncated so an
     // operator cannot put an unbounded transcript in the envelope.
@@ -1140,7 +1141,7 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
     // A replay staged nothing, so it hands back no authoring snapshot at all —
     // there is no proposal of its own to attach, and stamping this evidence onto
     // whatever review happened to be open would describe an unrelated diff.
-    if (replay.result === undefined || !("kind" in replay.result)) {
+    if (replay.result === undefined || !isRarityProposalResult(replay.result)) {
       throw new Error("missing rarity result");
     }
     expect(replay.result.authoring).toBeUndefined();
@@ -1179,7 +1180,7 @@ describe("fixture provider → authoring → kernel → desktop rarity acceptanc
       status: "ready",
       result: { kind: "rarity-proposal", replayed: true },
     });
-    if (borrowed.result === undefined || !("kind" in borrowed.result)) {
+    if (borrowed.result === undefined || !isRarityProposalResult(borrowed.result)) {
       throw new Error("missing rarity result");
     }
     expect(borrowed.result.authoring).toBeUndefined();

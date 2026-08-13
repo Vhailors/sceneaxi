@@ -2051,7 +2051,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     assistantJob = {
       jobId: `desktop-assistant-${String(assistantSequence)}`,
       commandId,
-      route,
+      route: route === "byo" && !askMode ? "byo" : "local",
       status: "running",
       latestProgress: null,
       progressCount: 0,
@@ -2301,7 +2301,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
             artifactDigest: result.artifactDigest,
             inspection: result.inspection,
             mountable: desktopAssistantScene(result.artifact),
-            providerClass: lastReadyBuild.providerClass,
+            providerClass: lastReadyBuild.providerClass === "configured" ? "configured" as const : "none" as const,
             fallbackPolicy: "none" as const,
             ...(result.providerEvidence === undefined
               ? {}
