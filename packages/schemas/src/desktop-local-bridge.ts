@@ -196,6 +196,36 @@ export const DESKTOP_LOCAL_BRIDGE_TOOLS = Object.freeze([
     providerRoute: "none",
   }),
   commandTool({
+    name: "sceneaxi.scene.prefab.inspect",
+    commandId: "scene-prefab-inspect",
+    description: "Inspect reusable-content definitions, instance links, and explicit overrides.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.scene.prefab.define",
+    commandId: "scene-prefab-define",
+    description: "Snapshot one connected selection as a reusable-content definition.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.scene.prefab.instance",
+    commandId: "scene-prefab-instance",
+    description: "Place a deterministic instance of a reusable-content definition.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.scene.prefab.override",
+    commandId: "scene-prefab-override",
+    description: "Stage one explicit transform override on a reusable instance member.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.scene.prefab.refresh",
+    commandId: "scene-prefab-refresh",
+    description: "Refresh a reusable definition and refuse if overrides would be silently erased.",
+    providerRoute: "none",
+  }),
+  commandTool({
     name: "sceneaxi.input-actions.inspect",
     commandId: "input-actions-inspect",
     description: "Inspect the effective editor and Play action map plus project/workspace bases.",

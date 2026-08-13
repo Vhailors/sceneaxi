@@ -111,8 +111,10 @@ import {
   DESKTOP_SCENE_NOT_COMPOSABLE,
   desktopAssistantScene,
   desktopSceneFromDocumentData,
+  inspectDesktopScenePrefabs,
   inspectDesktopSceneProperties,
   stageDesktopSceneEdit,
+  stageDesktopScenePrefab,
   stageDesktopScenePropertyEdit,
   type DesktopSceneResult,
 } from "./desktop-scene.js";
@@ -2701,6 +2703,67 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
             components: resolved.components,
           }),
         );
+      }
+      case "scene-prefab-inspect": {
+        const documentPath = input["documentPath"];
+        const read = readActiveDocument({ documentPath }, SCENE_DOCUMENT_REFUSALS);
+        if (!read.ok) return bridgeRefuse(read.reason, read.message);
+        return bridgeOk("command", inspectDesktopScenePrefabs(read.status.data));
+      }
+      case "scene-prefab-define":
+      case "scene-prefab-instance":
+      case "scene-prefab-override":
+      case "scene-prefab-refresh": {
+        const documentPath = String(input["documentPath"]);
+        const read = readActiveDocument({ documentPath }, SCENE_DOCUMENT_REFUSALS);
+        if (!read.ok) return bridgeRefuse(read.reason, read.message);
+        const operation = validated.command.id === "scene-prefab-define"
+          ? {
+              kind: "define" as const,
+              definitionId: String(input["definitionId"]),
+              instanceIds: input["instanceIds"] as readonly string[],
+            }
+          : validated.command.id === "scene-prefab-instance"
+            ? {
+                kind: "instance" as const,
+                definitionId: String(input["definitionId"]),
+                parentInstanceId: String(input["parentInstanceId"]),
+                instanceKey: String(input["instanceKey"]),
+              }
+            : validated.command.id === "scene-prefab-override"
+              ? {
+                  kind: "override" as const,
+                  instanceId: String(input["instanceId"]),
+                  sourceInstanceId: String(input["sourceInstanceId"]),
+                  propertyId: String(input["propertyId"]),
+                  value: Number(input["newValue"]),
+                }
+              : {
+                  kind: "refresh" as const,
+                  definitionId: String(input["definitionId"]),
+                };
+        const staged = stageDesktopScenePrefab({
+          documentData: read.status.data,
+          contentHash: String(input["expectedContentHash"]),
+          documentPath,
+          operation,
+        });
+        if (!staged.ok) {
+          return commandTransaction(
+            validated.command.id,
+            bridgeRefuse(staged.reason, staged.message),
+          );
+        }
+        const proposed = reconcilePendingAssetImport(authoringSession().proposeEdit({
+          documentPath,
+          jsonPointer: "/data",
+          expectedContentHash: String(input["expectedContentHash"]),
+          newValue: staged.documentData,
+        }));
+        return commandTransaction(validated.command.id, bridgeOk("command", {
+          ...staged.inspection,
+          authoringSnapshot: proposed,
+        }));
       }
       case "scene-object-create":
       case "scene-object-remove":
