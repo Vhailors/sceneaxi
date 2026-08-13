@@ -994,11 +994,12 @@ describe("contained project Git service", () => {
 
   it("refuses evidence that cannot cross every local client transport", () => {
     const { root } = repository("large-diff");
-    const largePath = join(root, "large.bin");
-    writeFileSync(largePath, randomBytes(17 * 1024 * 1024));
-    git(root, "add", "large.bin");
+    const largePath = join(root, "large.txt");
+    const text = (mark: string) => `${mark}${"a".repeat(72)}\n`.repeat(32_000);
+    writeFileSync(largePath, text("A"));
+    git(root, "add", "large.txt");
     git(root, "commit", "-m", "large fixture");
-    writeFileSync(largePath, randomBytes(17 * 1024 * 1024));
+    writeFileSync(largePath, text("B"));
     const result = inspectProjectGit({ root }, "diff");
     expect(result).toMatchObject({
       ok: false,

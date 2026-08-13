@@ -1,12 +1,12 @@
 {
-  "sourceProjectDigest": "sha256:4178fc028d52776012fd5ea60461cd7fd8ccf2eb6562e0747365d5afbb85d75a",
-  "bundleDigest": "sha256:f998607d2578bf78b8e728b1849860e877336d3c6803c509a2d2106e2ab57fc5",
+  "sourceProjectDigest": "sha256:90e16a6282b48b73d70ebf5f111f700ef5e672256d91cbd152b82551aaf83e22",
+  "bundleDigest": "sha256:a7a5592cdc8f5e3dcb6f11382ed1aa2de80f7eb8a5f6a78c17c87ab6c8ebab3d",
   "artifactDigests": {
     "assets/triangle.gltf": "sha256:04e21307bb0a360a3c3ce2100c0ccc4eda5c2e6bdd0d2def3f0e13277bd8c714",
-    "index.html": "sha256:513117a3b33e79fdaf9ea0d52f6f859172c2d668c6c4ad545e5766bce7896b7e",
+    "index.html": "sha256:f26df045fe35a170d73712ecd129d8738b7733e0ae71e530907b70d746c50e69",
     "sceneaxi-scene.js": "sha256:f410a578fa1317d6f27b1de9f91dee882838a2df9dfe4b9649b4ee470b7d3ee0",
     "sceneaxi-tool-version.txt": "sha256:4648cde725360b6e90efab7861744558fa11a440998ec5d6caf5addb2cdd1ef7",
     "sceneaxi-web.js": "sha256:a61fc0d422eaf2501424d09ef80ae60aafadf17db4b42309c80b2aef6da4218b",
-    "source/scene.json": "sha256:4178fc028d52776012fd5ea60461cd7fd8ccf2eb6562e0747365d5afbb85d75a"
+    "source/scene.json": "sha256:90e16a6282b48b73d70ebf5f111f700ef5e672256d91cbd152b82551aaf83e22"
   }
 }

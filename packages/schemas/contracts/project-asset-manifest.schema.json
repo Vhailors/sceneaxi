@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sceneaxi.dev/contracts/project-asset-manifest.schema.json",
+  "title": "SceneAxi project asset manifest v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "kind", "assets"],
+  "properties": {
+    "schemaVersion": { "const": 2 },
+    "kind": { "const": "sceneaxi.project-asset-manifest" },
+    "assets": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["assetId", "sourceName", "relativePath", "family", "mediaType", "byteLength", "digest", "canonicalBytesBase64", "copyPolicy", "profile", "supportedProfiles", "artifactId", "instanceId", "validation", "preview", "provenance"],
+        "properties": {
+          "assetId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+          "sourceName": { "type": "string", "minLength": 1 },
+          "relativePath": { "type": "string", "pattern": "^assets/[a-z0-9][a-z0-9-]{0,63}\\.[a-z0-9.]+$" },
+          "family": { "enum": ["sceneaxi", "model", "image", "audio", "font", "animation"] },
+          "mediaType": { "type": "string", "minLength": 1 },
+          "byteLength": { "type": "integer", "minimum": 1, "maximum": 8388608 },
+          "digest": { "$ref": "#/$defs/digest" },
+          "canonicalBytesBase64": { "type": "string", "contentEncoding": "base64" },
+          "copyPolicy": { "const": "copy" },
+          "profile": { "enum": ["sceneaxi.artifact-json-v1", "sceneaxi.gltf-contained-triangles-v1", "sceneaxi.image-raster-v1", "sceneaxi.audio-contained-v1", "sceneaxi.font-contained-v1", "sceneaxi.animation-data-json-v1"] },
+          "supportedProfiles": { "const": ["game", "web"] },
+          "artifactId": { "type": ["string", "null"] },
+          "instanceId": { "type": ["string", "null"] },
+          "validation": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["status", "validator", "replacesDigest"],
+            "properties": {
+              "status": { "const": "validated" },
+              "validator": { "type": "string", "minLength": 1 },
+              "replacesDigest": { "oneOf": [{ "$ref": "#/$defs/digest" }, { "type": "null" }] }
+            }
+          },
+          "preview": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "label", "properties"],
+            "properties": {
+              "kind": { "const": "metadata" },
+              "label": { "type": "string" },
+              "properties": {
+                "type": "object",
+                "additionalProperties": { "type": ["string", "number", "boolean"] }
+              }
+            }
+          },
+          "provenance": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["importer", "importerVersion", "sourceDigest", "formatVersion", "contained"],
+            "properties": {
+              "importer": { "const": "@sceneaxi/importers" },
+              "importerVersion": { "const": 2 },
+              "sourceDigest": { "$ref": "#/$defs/digest" },
+              "formatVersion": { "type": "string", "minLength": 1 },
+              "contained": { "const": true }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+  }
+}

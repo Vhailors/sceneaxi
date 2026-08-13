@@ -49,7 +49,6 @@ import {
 } from "@sceneaxi/authoring-core";
 import {
   createDesktopSession,
-  DESKTOP_PRODUCT_REFUSALS,
   type DesktopDocumentStatus,
   type DesktopSession,
   type DesktopSnapshot,
@@ -63,7 +62,7 @@ import {
 } from "@sceneaxi-internal/desktop-session-project-git";
 import {
   materializeProjectAssetCopies,
-  proposeContainedGltfAssetImport,
+  proposeProjectAssetImport,
   type ProjectAssetManifestEntry,
 } from "@sceneaxi/importers";
 import { bootstrapOpenPath, resumeOpenPath } from "@sceneaxi/engine-orchestrator";
@@ -1026,27 +1025,30 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     const sourcePath = field(payload, "sourcePath");
     const documentPath = containedDocumentPath(field(payload, "documentPath"));
     const requestedAssetId = field(payload, "assetId");
-    if (profile !== "web") {
+    const hotReload = field(payload, "hotReload");
+    if (profile !== "web" && profile !== "game") {
       return bridgeRefuse(
-        DESKTOP_PRODUCT_REFUSALS.webCapabilityRequired,
-        "Contained GLB/glTF import is available only on the Web Experience creator surface in this release.",
+        DESKTOP_PROJECT_BROWSER_REFUSALS.kidsDenied,
+        "The first-class asset pipeline supports Game and Web projects; Kids remains refuse-only.",
       );
     }
     if (
       typeof sourcePath !== "string" ||
       documentPath === null ||
-      (requestedAssetId !== undefined && typeof requestedAssetId !== "string")
+      (requestedAssetId !== undefined && typeof requestedAssetId !== "string") ||
+      (hotReload !== undefined && typeof hotReload !== "boolean")
     ) {
       return bridgeRefuse(
         DESKTOP_BRIDGE_REFUSALS.requestMalformed,
-        "asset-import requires a native absolute sourcePath and a documentPath inside the selected project.",
+        "asset-import requires a native absolute sourcePath, a documentPath inside the selected project, and an optional hotReload boolean.",
       );
     }
-    const proposed = proposeContainedGltfAssetImport({
+    const proposed = proposeProjectAssetImport({
       projectRoot: options.cwd,
       documentPath,
       sourcePath,
       ...(typeof requestedAssetId === "string" ? { assetId: requestedAssetId } : {}),
+      ...(hotReload === true ? { hotReload: true } : {}),
     });
     if (!proposed.ok) return bridgeRefuse(proposed.reason, proposed.message);
     if (proposed.replayed) {
@@ -1082,6 +1084,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     return bridgeOk("asset-import", Object.freeze({
       outcome: "reviewing" as const,
       entry: proposed.entry,
+      hotReload: proposed.hotReload,
       authoring,
       unifiedDiff: proposed.unifiedDiff,
     }));
@@ -1723,6 +1726,25 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         ...opened.data,
         authoringStatus,
       }));
+    }
+    if (file.family !== "model") {
+      return bridgeOk("project-browser-open", Object.freeze({
+        ...opened.data,
+        authoringStatus,
+        asset: Object.freeze({
+          assetId: file.assetId,
+          family: file.family,
+          digest: file.digest,
+          preview: file.preview,
+        }),
+      }));
+    }
+    if (file.instanceId === null) {
+      return bridgeRefuse(
+        DESKTOP_PROJECT_BROWSER_REFUSALS.fileInvalid,
+        "The validated model entry has no stable scene instance identity.",
+        file.path,
+      );
     }
     const scene = desktopSceneFromDocumentData(privateStatus.ok ? privateStatus.data : undefined);
     if (!scene.ok) return bridgeRefuse(scene.reason, scene.message);

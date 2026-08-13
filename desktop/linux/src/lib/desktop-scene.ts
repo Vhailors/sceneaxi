@@ -228,7 +228,9 @@ function consistentProjectAssetManifest(
       message: manifest.message,
     });
   }
+  const instanceIds = new Set<string>();
   for (const entry of manifest.value.assets) {
+    if (entry.instanceId === null && entry.artifactId === null) continue;
     const instance = stored.instances.find(
       (candidate) => candidate.instanceId === entry.instanceId,
     );
@@ -239,11 +241,12 @@ function consistentProjectAssetManifest(
         message: `Asset manifest instance "${entry.instanceId}" does not match the accepted composition.`,
       });
     }
+    if (entry.instanceId !== null) instanceIds.add(entry.instanceId);
   }
   return Object.freeze({
     ok: true as const,
     assets: manifest.value.assets,
-    instanceIds: new Set(manifest.value.assets.map((entry) => entry.instanceId)),
+    instanceIds,
   });
 }
 
@@ -258,8 +261,27 @@ function withImportedAssets(
   }
   const importedAssets: DesktopImportedAsset[] = [];
   for (const entry of manifest.assets) {
+    if (entry.family !== "model") continue;
+    if (entry.instanceId === null || entry.artifactId === null) {
+      return Object.freeze({
+        ok: false as const,
+        reason: DESKTOP_SCENE_NOT_COMPOSABLE,
+        message: `Model asset manifest entry "${entry.assetId}" has no stable composition identities.`,
+      });
+    }
+    const instance = composed.scene.instances.find((candidate) => candidate.instanceId === entry.instanceId);
+    if (instance?.artifactId !== entry.artifactId) {
+      return Object.freeze({
+        ok: false as const,
+        reason: DESKTOP_SCENE_NOT_COMPOSABLE,
+        message: `Asset manifest instance "${entry.instanceId}" is absent from the accepted composition.`,
+      });
+    }
     const projected = projectAssetManifestEntry(entry);
     if (!projected.ok) return Object.freeze({ ok: false as const, reason: projected.reason, message: projected.message });
+    if (!("meshes" in projected.value)) {
+      return Object.freeze({ ok: false as const, reason: DESKTOP_SCENE_NOT_COMPOSABLE, message: `Model asset "${entry.assetId}" produced no geometry projection.` });
+    }
     importedAssets.push(Object.freeze({
       instanceId: entry.instanceId,
       digest: entry.digest,
