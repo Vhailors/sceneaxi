@@ -947,6 +947,31 @@ export {
   scenePrefabRootInstanceId,
 } from "./desktop-scene-prefab.js";
 export {
+  SCENE_ANIMATION_CATALOG_KEY,
+  SCENE_ANIMATION_CATALOG_KIND,
+  SCENE_ANIMATION_INTERPOLATIONS,
+  SCENE_ANIMATION_REFUSALS,
+  SCENE_ANIMATION_SCHEMA_VERSION,
+  applySceneAnimationMutation,
+  emptySceneAnimationCatalog,
+  evaluateSceneAnimation,
+  inspectSceneAnimation,
+  parseSceneAnimationCatalog,
+  sceneAnimationCatalogDigest,
+} from "./desktop-scene-animation.js";
+export type {
+  SceneAnimationBinding,
+  SceneAnimationCatalog,
+  SceneAnimationClip,
+  SceneAnimationEvaluation,
+  SceneAnimationInterpolation,
+  SceneAnimationKeyframe,
+  SceneAnimationMutation,
+  SceneAnimationRefusal,
+  SceneAnimationSample,
+  SceneAnimationTrack,
+} from "./desktop-scene-animation.js";
+export {
   PLAY_SESSION_KIND,
   PLAY_SESSION_REFUSALS,
   PLAY_SESSION_SCHEMA_VERSION,

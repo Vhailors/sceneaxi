@@ -107,6 +107,7 @@
   "packages/schemas/src/delivery-handoff.ts",
   "packages/schemas/src/desktop-local-bridge.ts",
   "packages/schemas/src/desktop-play-session.ts",
+  "packages/schemas/src/desktop-scene-animation.ts",
   "packages/schemas/src/desktop-scene-edit.ts",
   "packages/schemas/src/desktop-scene-prefab.ts",
   "packages/schemas/src/desktop-scene-transform.ts",
