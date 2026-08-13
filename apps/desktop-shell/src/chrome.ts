@@ -192,7 +192,7 @@ const MODE_PANELS: Readonly<
     leftEmpty: "No contained packages are locked in this project.",
     inspectorTitle: "PACKAGE",
     inspectorEmpty: "Inspect the project lock. Marketplace and network sources stay disabled.",
-    note: "Install and removal are reviewable lock edits. Discovery reads declared metadata only.",
+    note: `${DESKTOP_VISUAL_REFUSALS.noDocumentBound} · inspect the project lock; marketplace and network stay disabled.`,
     noteTone: "accent" as const,
   }),
 });
