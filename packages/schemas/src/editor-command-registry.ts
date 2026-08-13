@@ -14,6 +14,7 @@ import {
   type DesktopSceneHierarchyRefusal,
 } from "./desktop-scene-edit.js";
 import { PROJECT_GIT_DIAGNOSTICS } from "./project-git.js";
+import { DESKTOP_SCENE_TRANSFORM_REFUSALS } from "./desktop-scene-transform.js";
 
 export const EDITOR_COMMAND_SCHEMA_VERSION = 1 as const;
 
@@ -70,6 +71,7 @@ export type EditorCommandId =
   | "scene-hierarchy-inspect"
   | "scene-selection-set"
   | "scene-property-set"
+  | "scene-transform-apply"
   | "scene-object-create"
   | "scene-object-remove"
   | "scene-object-reparent"
@@ -149,6 +151,7 @@ export type EditorCommandDefinition = Readonly<{
     | "scene-document"
     | "scene-selection"
     | "scene-property"
+    | "scene-transform"
     | "scene-create"
     | "scene-remove"
     | "scene-reparent";
@@ -341,6 +344,43 @@ const scenePropertyInput = Object.freeze({
       pattern: "^(translation|rotation|scale)-[xyz]$",
     }),
     newValue: Object.freeze({ type: "number" }),
+  }),
+}) satisfies JsonObject;
+
+const sceneTransformInput = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: Object.freeze([
+    "documentPath",
+    "expectedContentHash",
+    "profile",
+    "instanceIds",
+    "mode",
+    "space",
+    "pivot",
+    "axes",
+    "snapIncrement",
+    "valueKind",
+    "values",
+  ]),
+  properties: Object.freeze({
+    ...sceneMutationProperties,
+    instanceIds: sceneIds,
+    mode: Object.freeze({ type: "string", enum: Object.freeze(["translate", "rotate", "scale"]) }),
+    space: Object.freeze({ type: "string", enum: Object.freeze(["local", "world"]) }),
+    pivot: Object.freeze({ type: "string", enum: Object.freeze(["individual", "selection", "origin"]) }),
+    axes: Object.freeze({
+      type: "string",
+      enum: Object.freeze(["x", "y", "z", "xy", "xz", "yz", "xyz"]),
+    }),
+    snapIncrement: Object.freeze({ type: ["number", "null"] }),
+    valueKind: Object.freeze({ type: "string", enum: Object.freeze(["absolute", "delta"]) }),
+    values: Object.freeze({
+      type: "array",
+      minItems: 3,
+      maxItems: 3,
+      items: Object.freeze({ type: "number" }),
+    }),
   }),
 }) satisfies JsonObject;
 
@@ -713,6 +753,25 @@ const DEFINITIONS = [
   }),
   definition({
     schemaVersion: 1,
+    id: "scene-transform-apply",
+    label: "Apply Scene Transform",
+    acceptedClients: CLIENTS,
+    permission: "project:write",
+    capability: capability("scene.compose"),
+    mutation: "stages-change",
+    progress: immediate(["validating", "reviewing"]),
+    evidence: evidence("scene-hierarchy", "change-review"),
+    refusals: [
+      ...HIERARCHY_BASE_REFUSALS,
+      DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+      ...Object.values(DESKTOP_SCENE_TRANSFORM_REFUSALS),
+    ],
+    undo: undo("none"),
+    inputSchema: sceneTransformInput,
+    inputShape: "scene-transform",
+  }),
+  definition({
+    schemaVersion: 1,
     id: "scene-object-create",
     label: "Create Scene Object",
     acceptedClients: CLIENTS,
@@ -1037,6 +1096,33 @@ export function validateEditorCommandInput(
           propertyId: input["propertyId"],
           value: input["newValue"],
         });
+    case "scene-transform":
+      return exactKeys(input, [
+        "documentPath",
+        "expectedContentHash",
+        "profile",
+        "instanceIds",
+        "mode",
+        "space",
+        "pivot",
+        "axes",
+        "snapIncrement",
+        "valueKind",
+        "values",
+      ]) &&
+        sceneMutationFields(input) &&
+        isDesktopSceneSelectionInput(input["instanceIds"]) &&
+        (input["mode"] === "translate" || input["mode"] === "rotate" || input["mode"] === "scale") &&
+        (input["space"] === "local" || input["space"] === "world") &&
+        (input["pivot"] === "individual" || input["pivot"] === "selection" || input["pivot"] === "origin") &&
+        (input["axes"] === "x" || input["axes"] === "y" || input["axes"] === "z" ||
+          input["axes"] === "xy" || input["axes"] === "xz" || input["axes"] === "yz" ||
+          input["axes"] === "xyz") &&
+        (input["snapIncrement"] === null ||
+          (typeof input["snapIncrement"] === "number" && Number.isFinite(input["snapIncrement"]))) &&
+        (input["valueKind"] === "absolute" || input["valueKind"] === "delta") &&
+        Array.isArray(input["values"]) && input["values"].length === 3 &&
+        input["values"].every((value) => typeof value === "number" && Number.isFinite(value));
     case "scene-create":
       return exactKeys(input, ["documentPath", "expectedContentHash", "profile", "sourceInstanceId", "parentInstanceId"]) &&
         sceneMutationFields(input) && isDesktopSceneEditOperation({

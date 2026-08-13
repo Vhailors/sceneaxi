@@ -1102,6 +1102,18 @@ export type DesktopVisualView = Readonly<{
     play: DesktopControl;
     exportWeb: DesktopControl;
     gitCommitMessage: DesktopControl;
+    transformModeTranslate: DesktopControl;
+    transformModeRotate: DesktopControl;
+    transformModeScale: DesktopControl;
+    transformSpace: DesktopControl;
+    transformPivot: DesktopControl;
+    transformSnap: DesktopControl;
+    transformNudgeXPlus: DesktopControl;
+    transformNudgeXMinus: DesktopControl;
+    transformNudgeYPlus: DesktopControl;
+    transformNudgeYMinus: DesktopControl;
+    transformNudgeZPlus: DesktopControl;
+    transformNudgeZMinus: DesktopControl;
     selectSceneEntity: DesktopControl;
     selectStarterEntity: DesktopControl;
     transformProperties: readonly DesktopControl[];
@@ -1319,6 +1331,18 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
     play: control("scene-play", "Play composed scene", "live"),
     exportWeb: control("ship-export-web", "Export Web", "live"),
     gitCommitMessage: control("project-git-commit-message", "Commit message", "live"),
+    transformModeTranslate: control("scene-transform-mode-translate", "Move gizmo", "live"),
+    transformModeRotate: control("scene-transform-mode-rotate", "Rotate gizmo", "live"),
+    transformModeScale: control("scene-transform-mode-scale", "Scale gizmo", "live"),
+    transformSpace: control("scene-transform-space", "Transform space", "live"),
+    transformPivot: control("scene-transform-pivot", "Transform pivot", "live"),
+    transformSnap: control("scene-transform-snap", "Snap increment", "live"),
+    transformNudgeXPlus: control("scene-transform-nudge-x-plus", "Nudge +X", "live"),
+    transformNudgeXMinus: control("scene-transform-nudge-x-minus", "Nudge -X", "live"),
+    transformNudgeYPlus: control("scene-transform-nudge-y-plus", "Nudge +Y", "live"),
+    transformNudgeYMinus: control("scene-transform-nudge-y-minus", "Nudge -Y", "live"),
+    transformNudgeZPlus: control("scene-transform-nudge-z-plus", "Nudge +Z", "live"),
+    transformNudgeZMinus: control("scene-transform-nudge-z-minus", "Nudge -Z", "live"),
     selectSceneEntity,
     selectStarterEntity: selectSceneEntity,
     transformProperties,

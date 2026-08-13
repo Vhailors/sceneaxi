@@ -26,8 +26,8 @@ panel remains fake or partial until a real command can populate it.
 
 ## Inventory accounting
 
-The shared shell model owns **98 unique control ids** across all modes and runtime
-projections. A default Game or Web render contains 97 because `dock-timeline`
+The shared shell model owns **110 unique control ids** across all modes and runtime
+projections. A default Game or Web render contains 109 because `dock-timeline`
 exists only in Animate while other dock tabs are mode-dependent. The union below
 comes from `desktopVisualView()` and is enforced model-to-document and
 document-to-model by
@@ -40,12 +40,12 @@ model: the OpenRouter provider select, password input, Save/Replace key button,
 and Remove key button. Their availability is decided by
 `desktop/linux/src/lib/byo-configuration-view.ts` and tested in
 `tests/desktop/desktop-byo-secure-storage.test.ts`. They are deliberately not
-counted as shell controls, so the current packaged-window union is **102**.
+counted as shell controls, so the current packaged-window union is **114**.
 
 The CLI exposes **21 verbs** from `packages/cli/src/commands.ts`; the Electron
 bridge exposes **11 actions**, **10 authoring operations**, and **3 legacy
 assistant transport operations** from `desktop/linux/src/lib/bridge-contract.ts`;
-the same-user local agent bridge exposes **28 tools** from
+the same-user local agent bridge exposes **29 tools** from
 `packages/schemas/src/desktop-local-bridge.ts`. Their transport names remain
 distinct, but first-slice product operations now derive from the one versioned
 registry in `packages/schemas/src/editor-command-registry.ts`.
@@ -159,7 +159,7 @@ product-command definitions.
 | Versioned native project manifest, deterministic ids, migrations, capabilities | **real** | `project-manifest.schema.json` and the public validator own v1; New writes document + manifest atomically; object/asset identities derive only from persisted project/source identity; inspection refuses unknown major, invalid chain, duplicates, undeclared grants, traversal, and canonical escapes; migration proposal/approval/commit/recovery and evidence replay byte-identically across roots. | `packages/schemas/test/project-manifest.test.ts`; `packages/authoring-core/test/project-model.test.ts`; `tests/desktop/desktop-project-lifecycle.test.ts`; desktop bridge and CLI→local bridge goldens; [#252](https://github.com/Vhailors/sceneaxi/issues/252) owns broader transactions, not this manifest flow. |
 | Atomic conflict-aware recovery with multi-level undo/redo, progress, evidence | **real** | Explicit base hashes refuse stale writes before journal creation; prepared/undoing/redoing phases recover deterministically; exact canonical before/after bytes and ordered history survive restart; a new commit alone invalidates the superseded redo suffix; every client receives one bounded transaction result. | `packages/authoring-core/test/transaction-history.test.ts`; `tests/e2e/full-editor-transactions-golden.test.ts`; journal recovery suite |
 | Hierarchy, multi-select, parent/child | **real** | Versioned composition projection, canonical ordered selection, bounded create/multi-remove, explicit-policy reparenting, review/undo/redo/reopen/Play, CLI and assistant inspection | `tests/e2e/desktop-hierarchy-golden.test.ts` |
-| Gizmos, snapping, full transform inspector | **partial** | Nine numeric properties plus four transient assistant nudges | [#254](https://github.com/Vhailors/sceneaxi/issues/254) |
+| Gizmos, snapping, full transform inspector | **real** | `scene-transform-apply` is the one command for numeric entry and keyboard gizmo nudges. Local/world, pivot, axis constraints, and snap are explicit inputs with named refusals. Multi-selection reports every affected id; preview stays off saved bytes until accept. Headless command evidence is `tests/e2e/desktop-transform-golden.test.ts`; pixels remain a separate browser observation. | `packages/schemas/test/desktop-scene-transform.test.ts`; transform golden | None for #254. |
 | Prefab-like reusable content | **fake** | No definition/instance/override contract | [#255](https://github.com/Vhailors/sceneaxi/issues/255) |
 | First-class assets, previews, manifests, hot reload | **real** | Manifest v2 admits bounded SceneAxi artifacts, contained GLB/glTF, PNG/JPEG/WebP, WAV/Ogg/MP3, WOFF2/WOFF/TTF/OTF, and animation-data metadata with stable ids, byte-derived previews, exact provenance, contained materialization, and review-only digest reload. Browser, assistant inspection, applicable Play loading, CLI, and Web export consume the same entry. | `packages/schemas/contracts/project-asset-manifest.schema.json`; importer tests; asset-pipeline and asset-ingestion goldens |
 | Unified rebindable keyboard/mouse/controller input | **partial** | Six hand-written desktop accelerators, pointer handlers, and presentation orbit controls | [#257](https://github.com/Vhailors/sceneaxi/issues/257) |
