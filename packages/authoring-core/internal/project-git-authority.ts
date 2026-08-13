@@ -164,9 +164,10 @@ function runGit(
   args: readonly string[],
   state: GitProcessState = {},
 ): GitResult {
-  const environment = Object.fromEntries(
-    Object.entries(process.env).filter(([name]) => !name.startsWith("GIT_")),
-  );
+  const environment: NodeJS.ProcessEnv = { ...process.env };
+  for (const name of Object.keys(environment)) {
+    if (name.startsWith("GIT_")) delete environment[name];
+  }
   const result = spawnSync(executable, [
     "-c", "core.fsmonitor=false",
     "-c", "core.untrackedCache=false",
