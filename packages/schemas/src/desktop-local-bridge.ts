@@ -401,6 +401,12 @@ export const DESKTOP_LOCAL_BRIDGE_TOOLS = Object.freeze([
     providerRoute: "none",
   }),
   commandTool({
+    name: "sceneaxi.profile.inspect",
+    commandId: "profile-inspect",
+    description: "Inspect Play-backed profiling evidence without writing authoring bytes.",
+    providerRoute: "none",
+  }),
+  commandTool({
     name: "sceneaxi.assistant.ask",
     commandId: "assistant-ask",
     description: "Answer an Ask prompt from an explicit inspection scope without calling a provider.",

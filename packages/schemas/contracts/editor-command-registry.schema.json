@@ -60,6 +60,7 @@
             "package-inspect",
             "package-install",
             "package-remove",
+            "profile-inspect",
             "change-review-accept",
             "change-review-reject",
             "assistant-ask",
@@ -100,7 +101,7 @@
           "additionalProperties": false,
           "required": ["kind", "target"],
           "properties": {
-            "kind": { "enum": ["none", "project-binding", "project-inspection", "project-migration-proposal", "project-migration-evidence", "project-git-state", "project-git-commit-preparation", "authoring-snapshot", "undo-result", "redo-result", "scene-hierarchy", "scene-prefab-catalog", "input-action-map", "kernel-session", "play-session", "scene-animation-catalog", "scene-animation-evaluation", "scene-physics-catalog", "scene-physics-evaluation", "sculpt-artifact", "assistant-ask-answer", "scene-assistant-build-catalog", "scene-package-catalog", "rarity-proposal", "command-progress"] },
+            "kind": { "enum": ["none", "project-binding", "project-inspection", "project-migration-proposal", "project-migration-evidence", "project-git-state", "project-git-commit-preparation", "authoring-snapshot", "undo-result", "redo-result", "scene-hierarchy", "scene-prefab-catalog", "input-action-map", "kernel-session", "play-session", "scene-animation-catalog", "scene-animation-evaluation", "scene-physics-catalog", "scene-physics-evaluation", "sculpt-artifact", "assistant-ask-answer", "scene-assistant-build-catalog", "scene-package-catalog", "profile-evidence", "rarity-proposal", "command-progress"] },
             "target": { "enum": ["none", "project", "change-review", "live-viewport", "input-settings"] }
           }
         },

@@ -67,6 +67,7 @@ describe("full-editor command registry", () => {
       "package-inspect",
       "package-install",
       "package-remove",
+      "profile-inspect",
       "change-review-accept",
       "change-review-reject",
       "assistant-ask",
