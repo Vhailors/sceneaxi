@@ -437,6 +437,12 @@ export const DESKTOP_LOCAL_BRIDGE_TOOLS = Object.freeze([
     providerRoute: "none",
   }),
   commandTool({
+    name: "sceneaxi.project.build",
+    commandId: "project-build",
+    description: "Evaluate a linux, macos, or windows user-project build target without claiming a release.",
+    providerRoute: "none",
+  }),
+  commandTool({
     name: "sceneaxi.assistant.ask",
     commandId: "assistant-ask",
     description: "Answer an Ask prompt from an explicit inspection scope without calling a provider.",
