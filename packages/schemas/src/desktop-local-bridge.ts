@@ -407,6 +407,24 @@ export const DESKTOP_LOCAL_BRIDGE_TOOLS = Object.freeze([
     providerRoute: "none",
   }),
   commandTool({
+    name: "sceneaxi.workspace.layout.inspect",
+    commandId: "workspace-layout-inspect",
+    description: "Inspect the versioned workspace layout stored outside the Scene Document.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.workspace.layout.apply",
+    commandId: "workspace-layout-apply",
+    description: "Commit a workspace layout change without touching document undo.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.workspace.layout.reset",
+    commandId: "workspace-layout-reset",
+    description: "Restore the named default workspace layout without touching document undo.",
+    providerRoute: "none",
+  }),
+  commandTool({
     name: "sceneaxi.assistant.ask",
     commandId: "assistant-ask",
     description: "Answer an Ask prompt from an explicit inspection scope without calling a provider.",
