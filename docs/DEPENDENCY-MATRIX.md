@@ -3,6 +3,10 @@
 **Machine-readable truth:** `docs/dependency-matrix.json` (schemaVersion 1), enforced by
 `scripts/check-boundaries.mjs` (`pnpm check:boundaries`). This document explains the
 matrix; when the two disagree, the JSON + checker win and the disagreement is a defect.
+Module role, public seam, verification owner, and status for every matrix package —
+plus the provider → authoring → desktop → engine command sequence — live in
+[`module-coverage.md`](module-coverage.md) and are executed by
+`tests/docs/module-coverage.test.ts`.
 
 **Rule:** packages depend downward only. Allow lists are exhaustive — any internal
 (`@sceneaxi/*`) dependency declaration or source import not on a package's allow list
