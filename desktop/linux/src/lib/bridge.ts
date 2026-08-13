@@ -117,10 +117,13 @@ import {
   desktopAssistantScene,
   desktopSceneFromDocumentData,
   evaluateDesktopSceneAnimation,
+  evaluateDesktopScenePhysics,
   inspectDesktopSceneAnimation,
+  inspectDesktopScenePhysics,
   inspectDesktopScenePrefabs,
   inspectDesktopSceneProperties,
   stageDesktopSceneAnimation,
+  stageDesktopScenePhysics,
   stageDesktopSceneEdit,
   stageDesktopScenePrefab,
   stageDesktopScenePropertyEdit,
@@ -2924,6 +2927,52 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           sourceContentHash: read.status.contentHash,
           timeMs: Number(input["timeMs"]),
           requireBoundAsset: validated.command.id === "animation-evaluate" && input["requireBoundAsset"] === true,
+        });
+        if (!evaluated.ok) return bridgeRefuse(evaluated.reason, evaluated.message);
+        return bridgeOk("command", evaluated.evaluation);
+      }
+      case "physics-inspect": {
+        const documentPath = input["documentPath"];
+        const read = readActiveDocument({ documentPath }, SCENE_DOCUMENT_REFUSALS);
+        if (!read.ok) return bridgeRefuse(read.reason, read.message);
+        return bridgeOk("command", inspectDesktopScenePhysics(read.status.data));
+      }
+      case "physics-apply": {
+        const documentPath = String(input["documentPath"]);
+        const read = readActiveDocument({ documentPath }, SCENE_DOCUMENT_REFUSALS);
+        if (!read.ok) return bridgeRefuse(read.reason, read.message);
+        const staged = stageDesktopScenePhysics({
+          documentData: read.status.data,
+          contentHash: String(input["expectedContentHash"]),
+          documentPath,
+          mutation: input["mutation"],
+        });
+        if (!staged.ok) {
+          return commandTransaction(validated.command.id, bridgeRefuse(staged.reason, staged.message));
+        }
+        const proposed = reconcilePendingAssetImport(authoringSession().proposeEdit({
+          documentPath,
+          jsonPointer: "/data",
+          expectedContentHash: String(input["expectedContentHash"]),
+          newValue: staged.documentData,
+        }));
+        return commandTransaction(validated.command.id, bridgeOk("command", {
+          ...staged.inspection,
+          authoringSnapshot: proposed,
+        }));
+      }
+      case "physics-evaluate": {
+        const documentPath = String(input["documentPath"]);
+        const read = readActiveDocument({ documentPath }, SCENE_DOCUMENT_REFUSALS);
+        if (!read.ok) return bridgeRefuse(read.reason, read.message);
+        if (read.status.contentHash !== String(input["expectedContentHash"])) {
+          return bridgeRefuse("PHYSICS_STALE_VERSION", "Physics replay names the exact project version being evaluated.");
+        }
+        const evaluated = evaluateDesktopScenePhysics({
+          documentData: read.status.data,
+          sourceContentHash: read.status.contentHash,
+          steps: Number(input["steps"]),
+          ...(typeof input["animationOffsetY"] === "number" ? { animationOffsetY: input["animationOffsetY"] } : {}),
         });
         if (!evaluated.ok) return bridgeRefuse(evaluated.reason, evaluated.message);
         return bridgeOk("command", evaluated.evaluation);

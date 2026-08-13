@@ -959,6 +959,32 @@ export {
   parseSceneAnimationCatalog,
   sceneAnimationCatalogDigest,
 } from "./desktop-scene-animation.js";
+export {
+  SCENE_PHYSICS_BODY_KINDS,
+  SCENE_PHYSICS_CATALOG_KEY,
+  SCENE_PHYSICS_CATALOG_KIND,
+  SCENE_PHYSICS_CONSTRAINT_KINDS,
+  SCENE_PHYSICS_REFUSALS,
+  SCENE_PHYSICS_SCHEMA_VERSION,
+  SCENE_PHYSICS_SHAPE_KINDS,
+  applyScenePhysicsMutation,
+  emptyScenePhysicsCatalog,
+  evaluateScenePhysics,
+  inspectScenePhysics,
+  parseScenePhysicsCatalog,
+} from "./desktop-scene-physics.js";
+export type {
+  ScenePhysicsBody,
+  ScenePhysicsCatalog,
+  ScenePhysicsConstraint,
+  ScenePhysicsEvaluation,
+  ScenePhysicsMaterial,
+  ScenePhysicsMutation,
+  ScenePhysicsRefusal,
+  ScenePhysicsShape,
+  ScenePhysicsSnapshot,
+  ScenePhysicsWorld,
+} from "./desktop-scene-physics.js";
 export type {
   SceneAnimationBinding,
   SceneAnimationCatalog,

@@ -365,6 +365,24 @@ export const DESKTOP_LOCAL_BRIDGE_TOOLS = Object.freeze([
     providerRoute: "none",
   }),
   commandTool({
+    name: "sceneaxi.physics.inspect",
+    commandId: "physics-inspect",
+    description: "Inspect authored physics bodies, shapes, materials, constraints, and world settings.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.physics.apply",
+    commandId: "physics-apply",
+    description: "Stage one physics body, shape, material, constraint, or world edit through Change Review.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.physics.evaluate",
+    commandId: "physics-evaluate",
+    description: "Replay saved physics under a fixed seed and step without writing authoring bytes.",
+    providerRoute: "none",
+  }),
+  commandTool({
     name: "sceneaxi.assistant.local.start",
     commandId: "assistant-local-build",
     description: "Start the deterministic offline assistant compiler; no provider or credits are involved.",

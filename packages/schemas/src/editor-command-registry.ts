@@ -19,6 +19,7 @@ import { DESKTOP_SCENE_TRANSFORM_REFUSALS } from "./desktop-scene-transform.js";
 import { SCENE_PREFAB_REFUSALS } from "./desktop-scene-prefab.js";
 import { PLAY_SESSION_REFUSALS } from "./desktop-play-session.js";
 import { SCENE_ANIMATION_REFUSALS } from "./desktop-scene-animation.js";
+import { SCENE_PHYSICS_REFUSALS } from "./desktop-scene-physics.js";
 
 export const EDITOR_COMMAND_SCHEMA_VERSION = 1 as const;
 
@@ -96,6 +97,9 @@ export type EditorCommandId =
   | "animation-apply"
   | "animation-scrub"
   | "animation-evaluate"
+  | "physics-inspect"
+  | "physics-apply"
+  | "physics-evaluate"
   | "change-review-accept"
   | "change-review-reject"
   | "assistant-local-build"
@@ -154,6 +158,8 @@ export type EditorCommandDefinition = Readonly<{
       | "play-session"
       | "scene-animation-catalog"
       | "scene-animation-evaluation"
+      | "scene-physics-catalog"
+      | "scene-physics-evaluation"
       | "sculpt-artifact"
       | "rarity-proposal"
       | "command-progress";
@@ -189,6 +195,8 @@ export type EditorCommandDefinition = Readonly<{
     | "viewport-source"
     | "animation-apply"
     | "animation-time"
+    | "physics-apply"
+    | "physics-evaluate"
     | "input-rebind"
     | "input-reset";
 }>;
@@ -581,6 +589,27 @@ const animationTimeInput = Object.freeze({
     ...sceneMutationProperties,
     timeMs: Object.freeze({ type: "number" }),
     requireBoundAsset: Object.freeze({ type: "boolean" }),
+  }),
+}) satisfies JsonObject;
+
+const physicsApplyInput = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: Object.freeze(["documentPath", "expectedContentHash", "profile", "mutation"]),
+  properties: Object.freeze({
+    ...sceneMutationProperties,
+    mutation: Object.freeze({ type: "object" }),
+  }),
+}) satisfies JsonObject;
+
+const physicsEvaluateInput = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: Object.freeze(["documentPath", "expectedContentHash", "profile", "steps"]),
+  properties: Object.freeze({
+    ...sceneMutationProperties,
+    steps: Object.freeze({ type: "integer", minimum: 1, maximum: 64 }),
+    animationOffsetY: Object.freeze({ type: "number" }),
   }),
 }) satisfies JsonObject;
 
@@ -1251,6 +1280,51 @@ const DEFINITIONS = [
   }),
   definition({
     schemaVersion: 1,
+    id: "physics-inspect",
+    label: "Inspect Physics",
+    acceptedClients: CLIENTS,
+    permission: "project:read",
+    capability: capability("scene.compose"),
+    mutation: "none",
+    progress: immediate(),
+    evidence: evidence("scene-physics-catalog", "project"),
+    refusals: [...HIERARCHY_BASE_REFUSALS, ...Object.values(SCENE_PHYSICS_REFUSALS)],
+    undo: undo("none"),
+    inputSchema: sceneDocumentInput,
+    inputShape: "scene-document",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "physics-apply",
+    label: "Apply Physics Edit",
+    acceptedClients: CLIENTS,
+    permission: "project:write",
+    capability: capability("scene.compose"),
+    mutation: "stages-change",
+    progress: immediate(["validating", "reviewing"]),
+    evidence: evidence("scene-physics-catalog", "change-review"),
+    refusals: [...HIERARCHY_BASE_REFUSALS, ...Object.values(SCENE_PHYSICS_REFUSALS)],
+    undo: undo("none"),
+    inputSchema: physicsApplyInput,
+    inputShape: "physics-apply",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "physics-evaluate",
+    label: "Evaluate Physics Replay",
+    acceptedClients: CLIENTS,
+    permission: "project:read",
+    capability: capability("runtime.play"),
+    mutation: "none",
+    progress: immediate(),
+    evidence: evidence("scene-physics-evaluation", "live-viewport"),
+    refusals: [...HIERARCHY_BASE_REFUSALS, ...Object.values(SCENE_PHYSICS_REFUSALS)],
+    undo: undo("none"),
+    inputSchema: physicsEvaluateInput,
+    inputShape: "physics-evaluate",
+  }),
+  definition({
+    schemaVersion: 1,
     id: "change-review-accept",
     label: "Accept proposal",
     acceptedClients: CLIENTS,
@@ -1576,6 +1650,14 @@ export function validateEditorCommandInput(
         exactKeys(input, ["documentPath", "expectedContentHash", "profile", "timeMs", "requireBoundAsset"])) &&
         sceneMutationFields(input) && typeof input["timeMs"] === "number" && Number.isFinite(input["timeMs"]) &&
         (input["requireBoundAsset"] === undefined || typeof input["requireBoundAsset"] === "boolean");
+    case "physics-apply":
+      return exactKeys(input, ["documentPath", "expectedContentHash", "profile", "mutation"]) &&
+        sceneMutationFields(input) && isCommandObject(input["mutation"]);
+    case "physics-evaluate":
+      return (exactKeys(input, ["documentPath", "expectedContentHash", "profile", "steps"]) ||
+        exactKeys(input, ["documentPath", "expectedContentHash", "profile", "steps", "animationOffsetY"])) &&
+        sceneMutationFields(input) && Number.isInteger(input["steps"]) &&
+        (input["animationOffsetY"] === undefined || typeof input["animationOffsetY"] === "number");
     case "input-rebind":
       return exactKeys(input, ["scope", "expectedBaseVersion", "actionId", "binding", "approved", "reviewDigest"]) &&
         (input["scope"] === "workspace" || input["scope"] === "project") &&
