@@ -22,10 +22,10 @@ import {
   type InputActionRefusal,
   type InputActionScope,
 } from "@sceneaxi/schemas";
+export { DESKTOP_INPUT_ACTIONS_CHANNEL } from "./input-action-contract.js";
 
 export const PROJECT_INPUT_ACTIONS_PATH = ".sceneaxi/input-actions.v1.json" as const;
 export const WORKSPACE_INPUT_ACTIONS_FILE = "input-actions.v1.json" as const;
-export const DESKTOP_INPUT_ACTIONS_CHANNEL = "sceneaxi:desktop-input-actions" as const;
 
 export type InputActionInspection = Readonly<{
   schemaVersion: 1;

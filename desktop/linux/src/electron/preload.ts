@@ -12,7 +12,7 @@ import {
 } from "../lib/bridge-contract.js";
 import { DESKTOP_PROJECT_CHANNEL } from "../lib/project-lifecycle-contract.js";
 import { DESKTOP_PROJECT_BROWSER_CHANNEL } from "../lib/project-browser-contract.js";
-import { DESKTOP_INPUT_ACTIONS_CHANNEL } from "../lib/input-action-host.js";
+import { DESKTOP_INPUT_ACTIONS_CHANNEL } from "../lib/input-action-contract.js";
 
 contextBridge.exposeInMainWorld(DESKTOP_BRIDGE_GLOBAL, {
   request: (request: unknown) => ipcRenderer.invoke(DESKTOP_BRIDGE_CHANNEL, request),

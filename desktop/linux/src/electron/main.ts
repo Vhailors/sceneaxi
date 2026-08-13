@@ -44,8 +44,8 @@ import {
   type DesktopLocalBridgeServer,
 } from "../lib/local-rpc.js";
 import { seedDesktopProject } from "../lib/project-seed.js";
+import { DESKTOP_INPUT_ACTIONS_CHANNEL } from "../lib/input-action-contract.js";
 import {
-  DESKTOP_INPUT_ACTIONS_CHANNEL,
   createDesktopInputActionHost,
   type DesktopInputActionHost,
 } from "../lib/input-action-host.js";
