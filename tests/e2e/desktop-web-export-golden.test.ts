@@ -20,7 +20,7 @@ import { tmpdir } from "node:os";
 import { basename, dirname, join, relative, sep } from "node:path";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { contentHash } from "@sceneaxi/authoring-core";
-import { parseDeliveryHandoffText } from "@sceneaxi/schemas";
+import { parseDeliveryHandoffText, type DeliveryHandoff } from "@sceneaxi/schemas";
 import { PROJECT_ASSET_MAX_BYTES } from "../../packages/importers/src/index.ts";
 import {
   DESKTOP_WEB_EXPORT_ASSET_MAX_TOTAL_BYTES,
@@ -465,6 +465,7 @@ function ship(root: string) {
     sourceProject: { contentHash: string };
     bundleDigest: string;
     artifactPaths: readonly string[];
+    handoff: DeliveryHandoff;
   };
 }
 
