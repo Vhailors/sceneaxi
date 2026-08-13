@@ -82,6 +82,7 @@ import {
   isDesktopSceneEditOperation,
   isDesktopSceneEditProfile,
   isDesktopSceneReparentPolicy,
+  resolveDesktopSceneTransform,
   validateEditorCommandInvocation,
   validateRarityNamespace,
   type EditorCommandId,
@@ -2544,6 +2545,88 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         return commandTransaction(
           validated.command.id,
           bridgeOk("command", staged.data),
+        );
+      }
+      case "scene-transform-apply": {
+        const documentPath = input["documentPath"];
+        const read = readActiveDocument(
+          { documentPath },
+          SCENE_DOCUMENT_REFUSALS,
+        );
+        if (!read.ok) return commandTransaction(validated.command.id, bridgeRefuse(read.reason, read.message));
+        const inspected = inspectDesktopSceneProperties({
+          documentData: read.status.data,
+          contentHash: read.status.contentHash,
+          documentPath: String(documentPath),
+          selection: input["instanceIds"],
+        });
+        if (!inspected.ok) {
+          const diagnostic = inspected.diagnostics[0];
+          return commandTransaction(
+            validated.command.id,
+            bridgeRefuse(
+              inspected.reason ?? diagnostic?.code ?? DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+              diagnostic?.message ?? "The transform selection was refused.",
+            ),
+          );
+        }
+        const resolved = resolveDesktopSceneTransform({
+          instanceIds: inspected.selection.instanceIds,
+          instances: inspected.entities.map((entity) => Object.freeze({
+            instanceId: entity.id,
+            local: Object.freeze({
+              translation: entity.localTransform.translation,
+              rotationEulerDegrees: entity.localTransform.rotationEulerDegrees,
+              scale: entity.localTransform.scale,
+            }),
+            world: Object.freeze({
+              translation: entity.worldTransform.translation,
+            }),
+          })),
+          mode: input["mode"] as "translate" | "rotate" | "scale",
+          space: input["space"] as "local" | "world",
+          pivot: input["pivot"] as "individual" | "selection" | "origin",
+          axes: input["axes"] as "x" | "y" | "z" | "xy" | "xz" | "yz" | "xyz",
+          snapIncrement: input["snapIncrement"] as number | null,
+          valueKind: input["valueKind"] as "absolute" | "delta",
+          values: input["values"] as readonly [number, number, number],
+        });
+        if (!resolved.ok) {
+          return commandTransaction(
+            validated.command.id,
+            bridgeRefuse(resolved.reason, resolved.message),
+          );
+        }
+        const staged = authoring({
+          op: "edit-scene",
+          documentPath,
+          expectedContentHash: input["expectedContentHash"],
+          profile: input["profile"],
+          operation: {
+            kind: "apply-transform",
+            instanceIds: resolved.affectedIds,
+            components: resolved.components,
+          },
+        }, true);
+        if (!staged.ok) return commandTransaction(validated.command.id, staged);
+        if (field(staged.data, "ok") === false) {
+          const diagnostics = field(staged.data, "diagnostics");
+          const diagnostic = Array.isArray(diagnostics) ? diagnostics[0] : undefined;
+          return commandTransaction(
+            validated.command.id,
+            bridgeRefuse(
+              String(field(staged.data, "reason") ?? DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported),
+              String(field(diagnostic, "message") ?? resolved.message ?? "The transform command was refused before review."),
+            ),
+          );
+        }
+        return commandTransaction(
+          validated.command.id,
+          bridgeOk("command", {
+            ...((staged.data ?? {}) as object),
+            affectedIds: resolved.affectedIds,
+            components: resolved.components,
+          }),
         );
       }
       case "scene-object-create":

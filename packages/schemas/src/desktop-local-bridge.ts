@@ -171,6 +171,12 @@ export const DESKTOP_LOCAL_BRIDGE_TOOLS = Object.freeze([
     providerRoute: "none",
   }),
   commandTool({
+    name: "sceneaxi.scene.transform.apply",
+    commandId: "scene-transform-apply",
+    description: "Stage one gizmo or numeric transform through the shared preview/commit command.",
+    providerRoute: "none",
+  }),
+  commandTool({
     name: "sceneaxi.scene.object.create",
     commandId: "scene-object-create",
     description: "Stage creation of one object from an already validated local artifact instance.",

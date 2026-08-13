@@ -89,6 +89,15 @@ export type DesktopSceneEditOperation =
       instanceId: string;
       parentInstanceId: string;
       transformPolicy: DesktopSceneReparentPolicy;
+    }>
+  | Readonly<{
+      kind: "apply-transform";
+      instanceIds: readonly string[];
+      components: readonly Readonly<{
+        instanceId: string;
+        propertyId: DesktopSceneTransformPropertyId;
+        value: number;
+      }>[];
     }>;
 
 export type DesktopSceneSelection = Readonly<{
@@ -208,6 +217,27 @@ export function isDesktopSceneEditOperation(
       isSculptIdentifier(record["instanceId"]) &&
       isSculptIdentifier(record["parentInstanceId"]) &&
       isDesktopSceneReparentPolicy(record["transformPolicy"]);
+  }
+  if (record["kind"] === "apply-transform") {
+    const components = record["components"];
+    return keys === "components,instanceIds,kind" &&
+      isDesktopSceneSelectionInput(record["instanceIds"]) &&
+      Array.isArray(components) &&
+      components.length > 0 &&
+      components.every((component) => {
+        if (component === null || typeof component !== "object" || Array.isArray(component)) {
+          return false;
+        }
+        const row = component as Record<string, unknown>;
+        const definition = desktopSceneTransformProperty(row["propertyId"]);
+        return Object.keys(row).sort().join(",") === "instanceId,propertyId,value" &&
+          isSculptIdentifier(row["instanceId"]) &&
+          definition !== null &&
+          typeof row["value"] === "number" &&
+          Number.isFinite(row["value"]) &&
+          row["value"] >= definition.min &&
+          row["value"] <= definition.max;
+      });
   }
   return false;
 }

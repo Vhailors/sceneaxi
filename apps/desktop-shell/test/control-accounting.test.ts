@@ -223,22 +223,25 @@ describe("engine desktop chrome — control accounting (document → model)", ()
       const html = render(state);
       expect(html, label).not.toMatch(/<(a|details|summary)\b/i);
       const inputs = html.match(/<input\b[^>]*>/g) ?? [];
-      expect(inputs, label).toHaveLength(DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.length + 1);
+      expect(inputs, label).toHaveLength(DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.length + 2);
       expect(inputs.map((tag) => /\sid="([^"]+)"/.exec(tag)?.[1]), label).toEqual([
         ...DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.map(
           (definition) => `scene-property-${definition.id}`,
         ),
+        "scene-transform-snap",
         "project-git-commit-message",
       ]);
       for (const tag of inputs) {
         expect(tag, label).toMatch(/data-kind="(live|inert)"/);
       }
       const selects = html.match(/<select\b[^>]*>/g) ?? [];
-      expect(selects, label).toHaveLength(5);
+      expect(selects, label).toHaveLength(7);
       expect(selects.map((tag) => /\sid="([^"]+)"/.exec(tag)?.[1]), label).toEqual([
         "project-recent-select",
         "project-browser-file-select",
         "scene-entity-desktop-crate-beside",
+        "scene-transform-space",
+        "scene-transform-pivot",
         "scene-instance-parent",
         "scene-instance-policy",
       ]);
@@ -247,6 +250,8 @@ describe("engine desktop chrome — control accounting (document → model)", ()
       expect(selects[2], label).toMatch(/data-kind="(view|inert)"/);
       expect(selects[3], label).toMatch(/data-kind="(live|inert)"/);
       expect(selects[4], label).toMatch(/data-kind="(live|inert)"/);
+      expect(selects[5], label).toMatch(/data-kind="(live|inert)"/);
+      expect(selects[6], label).toMatch(/data-kind="(live|inert)"/);
       const textareas = html.match(/<textarea\b[^>]*>/g) ?? [];
       expect(textareas, label).toHaveLength(1);
       expect(textareas[0], label).toMatch(

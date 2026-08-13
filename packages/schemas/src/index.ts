@@ -862,6 +862,30 @@ export {
   isDesktopSceneReparentPolicy,
   resolveDesktopSceneSelection,
 } from "./desktop-scene-edit.js";
+export {
+  DESKTOP_SCENE_TRANSFORM_AXES,
+  DESKTOP_SCENE_TRANSFORM_MODES,
+  DESKTOP_SCENE_TRANSFORM_PIVOTS,
+  DESKTOP_SCENE_TRANSFORM_REFUSALS,
+  DESKTOP_SCENE_TRANSFORM_SCHEMA_VERSION,
+  DESKTOP_SCENE_TRANSFORM_SPACES,
+  DESKTOP_SCENE_TRANSFORM_VALUE_KINDS,
+  isDesktopSceneTransformRequest,
+  resolveDesktopSceneTransform,
+} from "./desktop-scene-transform.js";
+export type {
+  DesktopSceneTransformAxis,
+  DesktopSceneTransformComponent,
+  DesktopSceneTransformInstance,
+  DesktopSceneTransformMode,
+  DesktopSceneTransformPivot,
+  DesktopSceneTransformRefusal,
+  DesktopSceneTransformRequest,
+  DesktopSceneTransformResult,
+  DesktopSceneTransformSpace,
+  DesktopSceneTransformValueKind,
+  DesktopSceneTransformVector,
+} from "./desktop-scene-transform.js";
 export type {
   DesktopSceneEditOperation,
   DesktopSceneEditProfile,

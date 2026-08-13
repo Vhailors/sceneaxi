@@ -722,6 +722,59 @@ export function stageDesktopSceneEdit(input: Readonly<{
     });
     selectedInstanceId = selected.instanceId;
     selectedInstanceIds = Object.freeze([selected.instanceId]);
+  } else if (operation.kind === "apply-transform") {
+    const byId = new Map(operation.components.map((component) => {
+      const current = operation.components.filter(
+        (candidate) => candidate.instanceId === component.instanceId &&
+          candidate.propertyId === component.propertyId,
+      );
+      return [`${component.instanceId}:${component.propertyId}`, current[current.length - 1]];
+    }));
+    const values = new Map<string, Map<string, number>>();
+    for (const component of byId.values()) {
+      if (component === undefined) continue;
+      const selected = read.stored.instances.find(
+        (instance) => instance.instanceId === component.instanceId,
+      );
+      if (selected === undefined) {
+        return hierarchyDiagnostic(
+          DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+          `The selected instance is stale: ${component.instanceId}.`,
+          documentPath,
+        );
+      }
+      const definition = desktopSceneTransformProperty(component.propertyId);
+      if (definition === null) {
+        return propertyRequestDiagnostic(
+          `The selected transform property is unsupported: ${component.instanceId}.${component.propertyId}.`,
+          documentPath,
+        );
+      }
+      const instanceValues = values.get(component.instanceId) ?? new Map<string, number>();
+      instanceValues.set(component.propertyId, component.value);
+      values.set(component.instanceId, instanceValues);
+    }
+    composed = recomposeStoredScene(read.stored, (instance) => {
+      const instanceValues = values.get(instance.instanceId);
+      if (instanceValues === undefined) return instance.localTransform;
+      const next = {
+        translation: [...instance.localTransform.translation] as [number, number, number],
+        rotationEulerDegrees: [...instance.localTransform.rotationEulerDegrees] as [number, number, number],
+        scale: [...instance.localTransform.scale] as [number, number, number],
+      };
+      for (const definition of DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS) {
+        const value = instanceValues.get(definition.id);
+        if (value === undefined) continue;
+        next[definition.field][definition.axis] = value;
+      }
+      return Object.freeze({
+        translation: Object.freeze(next.translation),
+        rotationEulerDegrees: Object.freeze(next.rotationEulerDegrees),
+        scale: Object.freeze(next.scale),
+      });
+    });
+    selectedInstanceIds = Object.freeze([...operation.instanceIds]);
+    selectedInstanceId = selectedInstanceIds[0] ?? operation.components[0]?.instanceId ?? "";
   } else if (operation.kind === "add-instance") {
     const source = read.stored.instances.find(
       (instance) => instance.instanceId === operation.sourceInstanceId,

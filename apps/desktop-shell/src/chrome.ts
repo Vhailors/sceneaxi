@@ -288,6 +288,22 @@ function gitCommitMessageInput(ctrl: DesktopControl): string {
   ].join("");
 }
 
+function transformSnapInput(ctrl: DesktopControl): string {
+  const inert = ctrl.kind === "inert";
+  const described = inert
+    ? ` aria-describedby="refusal-${escapeHtml(ctrl.refusal ?? "")}"`
+    : "";
+  return [
+    `<input id="${escapeHtml(ctrl.id)}" data-kind="${ctrl.kind}"`,
+    inert
+      ? ` aria-disabled="true" data-refusal="${escapeHtml(ctrl.refusal ?? "")}" readonly`
+      : "",
+    described,
+    ` type="number" data-scene-transform-snap min="0" step="0.1"`,
+    ` aria-label="${escapeHtml(ctrl.label)}" placeholder="Off">`,
+  ].join("");
+}
+
 function sceneEntitySelect(ctrl: DesktopControl): string {
   const inert = ctrl.kind === "inert";
   const described = inert
@@ -725,6 +741,24 @@ function inspector(view: DesktopVisualView): string {
         ? ""
         : `<label for="${escapeHtml(control.id)}"><span>${escapeHtml(definition.label)}</span>${numericPropertyInput(control, definition)}</label>`;
     }).join("")}</div>
+    <div class="scene-transform-gizmo" role="group" aria-label="Viewport transform gizmo">
+      <div class="scene-instance-actions">
+        ${button(view.product.transformModeTranslate, "Move", "ghost-button", ` data-product-action data-action="scene-transform-mode" data-value="translate"`)}
+        ${button(view.product.transformModeRotate, "Rotate", "ghost-button", ` data-product-action data-action="scene-transform-mode" data-value="rotate"`)}
+        ${button(view.product.transformModeScale, "Scale", "ghost-button", ` data-product-action data-action="scene-transform-mode" data-value="scale"`)}
+      </div>
+      <label for="${escapeHtml(view.product.transformSpace.id)}"><span>Space</span><select ${selectControlAttributes(view.product.transformSpace)} data-scene-transform-space aria-label="Transform space"><option value="local">Local</option><option value="world">World</option></select></label>
+      <label for="${escapeHtml(view.product.transformPivot.id)}"><span>Pivot</span><select ${selectControlAttributes(view.product.transformPivot)} data-scene-transform-pivot aria-label="Transform pivot"><option value="individual">Individual</option><option value="selection">Selection</option><option value="origin">Origin</option></select></label>
+      <label for="${escapeHtml(view.product.transformSnap.id)}"><span>Snap</span>${transformSnapInput(view.product.transformSnap)}</label>
+      <div class="scene-instance-actions">
+        ${button(view.product.transformNudgeXMinus, "−X", "ghost-button", ` data-product-action data-action="scene-transform-nudge" data-axis="x" data-sign="-1"`)}
+        ${button(view.product.transformNudgeXPlus, "+X", "ghost-button", ` data-product-action data-action="scene-transform-nudge" data-axis="x" data-sign="1"`)}
+        ${button(view.product.transformNudgeYMinus, "−Y", "ghost-button", ` data-product-action data-action="scene-transform-nudge" data-axis="y" data-sign="-1"`)}
+        ${button(view.product.transformNudgeYPlus, "+Y", "ghost-button", ` data-product-action data-action="scene-transform-nudge" data-axis="y" data-sign="1"`)}
+        ${button(view.product.transformNudgeZMinus, "−Z", "ghost-button", ` data-product-action data-action="scene-transform-nudge" data-axis="z" data-sign="-1"`)}
+        ${button(view.product.transformNudgeZPlus, "+Z", "ghost-button", ` data-product-action data-action="scene-transform-nudge" data-axis="z" data-sign="1"`)}
+      </div>
+    </div>
     ${button(
       view.product.stageSceneEdit,
       "Stage transform for review",
@@ -2971,6 +3005,31 @@ if (shell) {
     }),
   });
 
+  const nudgeSceneTransform = async (axis, sign) => {
+    const ids = selectedSceneEntityIds.length > 0
+      ? selectedSceneEntityIds
+      : selectedSceneEntityId === null ? [] : [selectedSceneEntityId];
+    if (ids.length === 0) {
+      productStatus('refused', 'Edit refused · select a composed instance first');
+      return;
+    }
+    const snapRaw = shell.querySelector('[data-scene-transform-snap]')?.value;
+    const snapIncrement = snapRaw === '' || snapRaw === undefined ? null : Number(snapRaw);
+    const values = [0, 0, 0];
+    values[axis === 'x' ? 0 : axis === 'y' ? 1 : 2] = sign * (snapIncrement && snapIncrement > 0 ? snapIncrement : 0.1);
+    await stageSceneCommand('scene-transform-apply', {
+      documentPath: T.product.documentPath,
+      instanceIds: ids,
+      mode: shell.dataset.transformMode || 'translate',
+      space: shell.querySelector('[data-scene-transform-space]')?.value || 'local',
+      pivot: shell.querySelector('[data-scene-transform-pivot]')?.value || 'individual',
+      axes: axis,
+      snapIncrement: snapIncrement && snapIncrement > 0 ? snapIncrement : null,
+      valueKind: 'delta',
+      values,
+    }, 'transform');
+  };
+
   const stageSceneReparent = async () => {
     const parent = shell.querySelector('[data-scene-parent]');
     const policy = shell.querySelector('[data-scene-policy]');
@@ -3912,6 +3971,16 @@ if (shell) {
       if (primary && showSceneProperty(primary) && shell.dataset.mode !== 'build') showModePanels('build');
     }
     else if (action === 'scene-property-stage') void productAction(stageSceneProperty);
+    else if (action === 'scene-transform-mode' && value) {
+      shell.dataset.transformMode = value;
+    }
+    else if (action === 'scene-transform-nudge') {
+      const axis = el.dataset.axis;
+      const sign = Number(el.dataset.sign);
+      if (axis === 'x' || axis === 'y' || axis === 'z') {
+        void productAction(() => nudgeSceneTransform(axis, Number.isFinite(sign) ? sign : 1));
+      }
+    }
     else if (action === 'scene-instance-add') void productAction(() => stageSceneInstance('add-instance'));
     else if (action === 'scene-instance-remove') void productAction(() => stageSceneInstance('remove-instance'));
     else if (action === 'scene-instance-reparent') void productAction(stageSceneReparent);
