@@ -304,8 +304,10 @@ field looking load-bearing.
    copied into the project, or included in a status/refusal response.
 
 Saving, replacing, reading, and provider dispatch all require OS secure storage to
-be available and unlocked. Linux launches using Electron's `basic_text` password
-backend refuse as unsupported; SceneAxi does not downgrade to plaintext. Deleting
+be available and unlocked. The Linux host requests Chromium's `gnome-libsecret`
+backend so Cinnamon/GNOME sessions do not fall through to `basic_text`. Linux
+launches that still report `basic_text` or `unknown` refuse as unsupported;
+SceneAxi does not downgrade to plaintext. Deleting
 is deliberately not one of those operations: unlinking the envelope needs no
 cipher, so **Remove** stays offered when the backend is unavailable, locked, or
 unsupported, and that path never reads, decrypts, or returns the envelope.

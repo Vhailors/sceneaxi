@@ -81,6 +81,11 @@ declare const __dirname: string;
 const SMOKE = process.argv.includes("--smoke");
 const SMOKE_TIMEOUT_MS = 45_000;
 
+if (process.platform === "linux") {
+  // Cinnamon/GNOME otherwise select Chromium basic_text, which this host refuses.
+  app.commandLine.appendSwitch("password-store", "gnome-libsecret");
+}
+
 /** Active document name shared by explicit projects and the isolated smoke. */
 const SAMPLE_DOCUMENT = DESKTOP_ACTIVE_DOCUMENT_PATH;
 
