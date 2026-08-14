@@ -67,7 +67,7 @@ describe("desktop OpenCode DeepSeek transport", () => {
       fetchImpl: (async (_url, init) => {
         const signal = init?.signal;
         await new Promise<void>((_resolve, reject) => {
-          if (signal === undefined) {
+          if (signal == null) {
             reject(new Error("missing abort signal"));
             return;
           }
