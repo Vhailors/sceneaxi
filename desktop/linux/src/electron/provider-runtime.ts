@@ -192,7 +192,7 @@ export type CreatePrivilegedDesktopByoRuntimeOptions = Readonly<{
   createProviderSession?: CreateDesktopByoProviderSession;
   /**
    * Provider whose stored key the runner leases. Packaged Linux uses OpenCode
-   * (DeepSeek V4 Pro). Tests keep the OpenRouter fixture path by default.
+   * (DeepSeek V4 Flash). Tests keep the OpenRouter fixture path by default.
    */
   provider?: DesktopByoProvider;
 }>;
@@ -227,7 +227,7 @@ export function createPrivilegedDesktopByoRuntime(
 }
 
 /**
- * Privileged DeepSeek V4 Pro session over the named OpenCode US/EU path.
+ * Privileged DeepSeek V4 Flash session over the named OpenCode US/EU path.
  * Complete-only: the locked DeepSeek adoption decision keeps this out of
  * strict tool-calling lanes. Kids is denied before the key is leased.
  */

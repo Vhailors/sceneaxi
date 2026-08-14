@@ -241,7 +241,7 @@ job, the host performs this fixed sequence:
    authoring refusals before bridge status can carry them.
 
 The packaged Linux host calls that privileged composition module and injects
-the OpenCode DeepSeek V4 Pro complete-only transport. Secure storage still
+the OpenCode DeepSeek V4 Flash complete-only transport. Secure storage still
 owns the key; the PRC DeepSeek endpoint is refused by name; Kids is denied
 before the store is touched. Gate goldens keep injecting fixture transports
 and never open a network socket. A BYOK start with no stored OpenCode key

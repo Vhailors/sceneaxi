@@ -307,6 +307,7 @@ export function installAssistantProductFlow(
   mounts: ReturnType<typeof createSculptMountApi>,
   backend: ReturnType<typeof createThreeSculptPresentationBackend>,
   pollJob: typeof pollAssistantJob = pollAssistantJob,
+  persistReadyBuild?: () => Promise<string>,
 ): boolean {
   const shell = document.querySelector<HTMLElement>(".shell");
   const prompt = document.querySelector<HTMLTextAreaElement>("#assistant-prompt");
@@ -555,6 +556,13 @@ export function installAssistantProductFlow(
     retry?.setAttribute("hidden", "");
     status.textContent =
       "Mounted in the live center viewport · translate/rotate/scale manipulators active · drag to orbit, wheel to zoom.";
+    if (persistReadyBuild !== undefined) {
+      try {
+        status.textContent = await persistReadyBuild();
+      } catch (error: unknown) {
+        status.textContent = `Mounted · apply failed: ${refusalText(error)}`;
+      }
+    }
     running = false;
     activeJobId = null;
     setSculptCancelActive(false);
@@ -894,7 +902,65 @@ async function mountLiveViewport(): Promise<void> {
     },
   });
   loop.start();
-  const assistantBound = installAssistantProductFlow(stage, port, mounts, backend);
+  const persistReadyBuild = async (): Promise<string> => {
+    const status = await port.request({
+      action: "authoring",
+      payload: { op: "status", documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
+    });
+    if (!status.ok) return `Mounted · apply skipped: ${status.reason}`;
+    const contentHash = (status.data as { contentHash?: unknown }).contentHash;
+    if (typeof contentHash !== "string") return "Mounted · apply skipped: no content hash.";
+    const apply = await port.request({
+      action: "command",
+      payload: createEditorCommandInvocation(
+        "assistant-apply-build",
+        "desktop-control",
+        {
+          documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+          expectedContentHash: contentHash,
+        },
+        "game",
+      ),
+    });
+    if (!apply.ok) return `Mounted · apply refused: ${apply.reason}`;
+    const snapshot = (apply.data as { authoringSnapshot?: unknown }).authoringSnapshot;
+    document.dispatchEvent(new CustomEvent(DESKTOP_RARITY_PROPOSAL_EVENT, {
+      detail: { snapshot },
+    }));
+    const accept = await port.request({
+      action: "command",
+      payload: createEditorCommandInvocation(
+        "change-review-accept",
+        "desktop-control",
+        {},
+        "game",
+      ),
+    });
+    if (!accept.ok) return `Mounted and staged · Accept refused: ${accept.reason}`;
+    const nextScene = await port.request({
+      action: "scene",
+      payload: { documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
+    });
+    if (nextScene.ok) {
+      const synchronized = synchronizeViewportScene({
+        mounts,
+        frameMountedContent: () => backend.frameMountedContent(),
+        current: scene,
+        next: nextScene.data,
+        triangleBackend: backend,
+      });
+      if (synchronized.ok) scene = synchronized.scene;
+    }
+    return "Mounted and saved into the current scene. The assistant artifact is now part of the game.";
+  };
+  const assistantBound = installAssistantProductFlow(
+    stage,
+    port,
+    mounts,
+    backend,
+    pollAssistantJob,
+    persistReadyBuild,
+  );
   signalAssistantRuntime(
     desktopAssistantRuntimeSignal({ status: "mounted", controlsBound: assistantBound }),
   );

@@ -116,7 +116,7 @@ silently adding identity or running a migration.
 | Provider key store + configuration | `src/lib/{provider-key-store,byo-configuration}.ts` | privileged host; encrypted-at-rest store, redacted status/mutations, per-session key lease |
 | BYOK surface projection (which controls may be offered, and the copy) | `src/lib/byo-configuration-view.ts` | pure; gate-tested from `tests/desktop/` |
 | Electron secure-store adapter | `src/electron/provider-key-store.ts` | main process; OS-backed `safeStorage`, never basic-text fallback |
-| Privileged provider composition | `src/electron/provider-runtime.ts` | main process; OpenRouter fixture composition plus the packaged OpenCode DeepSeek V4 Pro live transport (complete-only, PRC endpoint refused) |
+| Privileged provider composition | `src/electron/provider-runtime.ts` | main process; OpenRouter fixture composition plus the packaged OpenCode DeepSeek V4 Flash live transport (complete-only, PRC endpoint refused) |
 | BYOK configuration UI | `src/renderer/byo-configuration.ts` | the window; provider/key status and save/replace/remove/unavailable states |
 | Scene composition (one pipeline, two consumers) | `src/lib/desktop-scene.ts` | main process; gate-tested |
 | Native contained asset picker | `src/lib/asset-picker-host.ts` + `src/electron/main.ts` | pure dialog adapter + privileged Electron dialog |
