@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { createEditorCommandInvocation } from "@sceneaxi/schemas";
+import { createEditorCommandInvocation, type JsonObject } from "@sceneaxi/schemas";
 import {
   DESKTOP_ACTIVE_DOCUMENT_PATH,
   DESKTOP_BRIDGE_REFUSALS,
@@ -50,7 +50,7 @@ function hash(bridge: ReturnType<typeof createDesktopBridge>) {
 function command(
   bridge: ReturnType<typeof createDesktopBridge>,
   id: Parameters<typeof createEditorCommandInvocation>[0],
-  input: Record<string, unknown>,
+  input: JsonObject,
 ) {
   return bridge.handle({
     action: "command",
