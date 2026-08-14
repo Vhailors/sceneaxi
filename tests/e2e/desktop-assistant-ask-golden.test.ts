@@ -148,7 +148,7 @@ describe("full-editor assistant inspect and apply", () => {
         op: "start",
         route: "local",
         profile: "@sceneaxi/profile-game",
-        prompt: "crate",
+        prompt: "Make an archer shooting to the tree",
         mode: "build",
       },
     })).toMatchObject({ ok: true });
@@ -163,6 +163,10 @@ describe("full-editor assistant inspect and apply", () => {
       expectedContentHash: hash(host),
     })).toMatchObject({ ok: true });
     expect(command(host, "change-review-accept", "desktop-control", {})).toMatchObject({ ok: true });
+    const accepted = readFileSync(join(root, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8");
+    expect(accepted).toContain("tree-trunk");
+    expect(accepted).toContain("archer-body");
+    expect(accepted).toContain("sceneAssistantBuilds");
     expect(command(host, "edit-undo", "desktop-control", {})).toMatchObject({ ok: true });
     expect(readFileSync(join(root, DESKTOP_ACTIVE_DOCUMENT_PATH))).toEqual(before);
     expect(command(host, "edit-redo", "desktop-control", {})).toMatchObject({ ok: true });

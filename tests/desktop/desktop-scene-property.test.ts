@@ -6,6 +6,7 @@ import {
   composeScene,
   parseDocumentText,
   reconstructSculpt,
+  runAssistantSculptAction,
 } from "@sceneaxi/authoring-core";
 import {
   DESKTOP_SCENE_HIERARCHY_REFUSALS,
@@ -19,6 +20,7 @@ import {
   DESKTOP_SCENE_TRANSLATION_X_PROPERTY,
   inspectDesktopSceneProperties,
   seedDesktopProject,
+  stageDesktopAssistantBuild,
   stageDesktopSceneEdit,
   stageDesktopScenePropertyEdit,
 } from "../../desktop/linux/src/index.ts";
@@ -552,5 +554,43 @@ describe("desktop selected composed-instance edit — public seam", () => {
       kind: "remove-instance",
       instanceId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
     })).toMatchObject({ ok: false, diagnostics: [{ code: "invalid-proposal", message: expect.stringContaining("Game and Web") }] });
+  });
+
+  it("places a directed local assistant Build into the composed scene", async () => {
+    const fixture = starter();
+    const built = await runAssistantSculptAction({
+      route: "local",
+      profile: "@sceneaxi/profile-game",
+      prompt: "Make an archer shooting to the tree",
+    });
+    expect(built.ok).toBe(true);
+    if (!built.ok) return;
+    const before = composedSceneFromDocumentData(fixture.data);
+    expect(before.ok).toBe(true);
+    if (!before.ok) return;
+    const staged = stageDesktopAssistantBuild({
+      documentData: fixture.data,
+      contentHash: `sha256:${"f".repeat(64)}`,
+      entry: {
+        buildId: "assistant-archer-tree",
+        artifactDigest: built.artifactDigest,
+        providerClass: "none",
+        model: "sceneaxi-local-compiler",
+        provider: "sceneaxi-local",
+        version: "local",
+        fallbackPolicy: "none",
+      },
+      artifact: built.artifact,
+    });
+    expect(staged.ok).toBe(true);
+    if (!staged.ok) return;
+    const after = composedSceneFromDocumentData(staged.documentData);
+    expect(after.ok).toBe(true);
+    if (!after.ok) return;
+    expect(after.value.instances.length).toBe(before.value.instances.length + 1);
+    expect(after.value.instances.some((instance) => instance.artifactId === built.artifact.artifactId)).toBe(true);
+    expect(JSON.stringify(staged.documentData)).toContain("tree-trunk");
+    expect(JSON.stringify(staged.documentData)).toContain("archer-body");
+    expect(JSON.stringify(staged.documentData)).toContain("sceneAssistantBuilds");
   });
 });

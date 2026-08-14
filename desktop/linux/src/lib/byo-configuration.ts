@@ -13,6 +13,7 @@ import {
 } from "./provider-key-store.js";
 import {
   DESKTOP_BYO_CONFIGURATION_REFUSALS,
+  DESKTOP_BYO_PROVIDER_LABELS,
   DESKTOP_BYO_PROVIDERS,
   PROVIDER_KEY_STORE_REFUSALS,
   type DesktopByoConfigurationAction,
@@ -74,7 +75,7 @@ export function createDesktopByoConfiguration(
       ok: true as const,
       action,
       provider,
-      providerLabel: "OpenRouter",
+      providerLabel: DESKTOP_BYO_PROVIDER_LABELS[provider],
       keyStatus,
       operation,
       storageStatus,

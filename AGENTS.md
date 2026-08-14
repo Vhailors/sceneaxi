@@ -346,12 +346,11 @@ the one bridge seam is `createDesktopBridge()` in `desktop/linux/src/lib/bridge.
 (synchronous `handle()`, mirrored on web-shell's inspector app), reaching
 `composeScene()`, `bootstrapOpenPath()`, `createDesktopSession()`, and the
 deterministic local or explicitly injected BYOK assistant runner in
-`authoring-core` — whose OpenRouter adapter, model pin, and credential lease stay
-in the privileged `src/electron/provider-runtime.ts`, which the checked-in build
-constructs with no provider session factory, so readiness and runner injection
-stay one decision and the provider runtime reports unavailable
-(sceneaxi#235; `docs/desktop-linux.md` owns that contract); hosted assistant work
-refuses because this tier owns no identity or credit plane. Which root that bridge is bound to is decided by the contained
+`authoring-core` — whose OpenRouter fixture composition, OpenCode DeepSeek V4 Pro
+live transport, model pin, and credential lease stay in the privileged
+`src/electron/provider-runtime.ts`, so readiness and runner injection stay one
+decision (sceneaxi#235; `docs/desktop-linux.md` owns that contract); hosted
+assistant work refuses because this tier owns no identity or credit plane. Which root that bridge is bound to is decided by the contained
 lifecycle seam (`src/lib/{project-lifecycle-contract,project-lifecycle,project-host}.ts`,
 sceneaxi#224) and never by a default: first launch binds no root and writes no
 project, a root reaches the host only from a native directory dialog or its own

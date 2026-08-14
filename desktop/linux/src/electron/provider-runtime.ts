@@ -42,9 +42,16 @@ import {
 } from "../lib/byo-configuration.js";
 import {
   DESKTOP_BYO_CONFIGURATION_REFUSALS,
+  DESKTOP_BYO_PROVIDERS,
   PROVIDER_KEY_STORE_REFUSALS,
+  type DesktopByoProvider,
 } from "../lib/byo-configuration-contract.js";
 import type { ProviderKeyStore } from "../lib/provider-key-store.js";
+import {
+  DESKTOP_DEEPSEEK_MODEL,
+  createDesktopOpenCodeLiveTransport,
+  desktopOpenCodeCompleteResponse,
+} from "./live-transport.js";
 
 export type DesktopOpenRouterTransportSession = Readonly<{
   transport: OpenRouterTransport;
@@ -183,12 +190,17 @@ export type PrivilegedDesktopByoRuntime = Readonly<{
 export type CreatePrivilegedDesktopByoRuntimeOptions = Readonly<{
   keyStore: ProviderKeyStore;
   createProviderSession?: CreateDesktopByoProviderSession;
+  /**
+   * Provider whose stored key the runner leases. Packaged Linux uses OpenCode
+   * (DeepSeek V4 Pro). Tests keep the OpenRouter fixture path by default.
+   */
+  provider?: DesktopByoProvider;
 }>;
 
 /**
  * Keep the renderer-visible readiness bit and the bridge runner on one host-owned
- * decision. The checked-in build supplies no session factory and stays unavailable;
- * tests and an authorized deployment can inject one without changing either IPC.
+ * decision. The packaged Linux host injects the OpenCode/DeepSeek session factory;
+ * tests may omit it or replace it with a fixture transport.
  */
 export function createPrivilegedDesktopByoRuntime(
   options: CreatePrivilegedDesktopByoRuntimeOptions,
@@ -200,14 +212,82 @@ export function createPrivilegedDesktopByoRuntime(
   if (options.createProviderSession === undefined) {
     return Object.freeze({ configuration });
   }
+  const provider = options.provider ??
+    (DESKTOP_BYO_PROVIDERS.includes(OPENROUTER_PROVIDER_ID)
+      ? OPENROUTER_PROVIDER_ID
+      : DESKTOP_BYO_PROVIDERS[0]);
   return Object.freeze({
     configuration,
     runByoAssistant: createSecureDesktopByoAssistantRunner({
       keyStore: options.keyStore,
-      provider: OPENROUTER_PROVIDER_ID,
+      provider,
       createProviderSession: options.createProviderSession,
     }),
   });
+}
+
+/**
+ * Privileged DeepSeek V4 Pro session over the named OpenCode US/EU path.
+ * Complete-only: the locked DeepSeek adoption decision keeps this out of
+ * strict tool-calling lanes. Kids is denied before the key is leased.
+ */
+export function createDesktopOpenCodeProviderSession(
+  options: Readonly<{
+    fetchImpl?: typeof fetch;
+    apiBase?: string;
+    model?: ModelDescriptor;
+  }> = {},
+): CreateDesktopByoProviderSession {
+  const model = Object.freeze({ ...(options.model ?? DESKTOP_DEEPSEEK_MODEL) });
+  return ({ provider, key }) => {
+    if (provider !== "opencode") {
+      throw new DesktopByoRunnerRefusal(
+        PROVIDER_KEY_STORE_REFUSALS.providerUnsupported,
+        "The privileged DeepSeek session received an unsupported provider.",
+      );
+    }
+    const transport = createDesktopOpenCodeLiveTransport({
+      credential: key,
+      ...(options.apiBase === undefined ? {} : { apiBase: options.apiBase }),
+      ...(options.fetchImpl === undefined ? {} : { fetchImpl: options.fetchImpl }),
+    });
+    const port = createModelProviderPort({
+      adapter: Object.freeze({
+        routeKind: "third-party" as const,
+        capabilities: Object.freeze({
+          schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+          operations: Object.freeze(["complete" as const]),
+        }),
+        complete: async (request) => {
+          const text = await transport.complete(request.prompt, model);
+          return Object.freeze({
+            response: desktopOpenCodeCompleteResponse(text),
+            executedModel: model,
+          });
+        },
+      }),
+      profilePolicies: Object.freeze({
+        "@sceneaxi/profile-game": () => Object.freeze({ ok: true as const }),
+        "@sceneaxi/profile-web": () => Object.freeze({ ok: true as const }),
+      }),
+    });
+    return Object.freeze({
+      async run(request: DesktopAssistantRunRequest) {
+        return rendererSafeResult(
+          await runAssistantSculptAction({
+            ...request,
+            route: "byo",
+            operation: "complete",
+            model,
+            port,
+          }),
+        );
+      },
+      async close() {
+        return;
+      },
+    });
+  };
 }
 
 /** Checked-in provider identity for the packaged no-network Agent path. */
