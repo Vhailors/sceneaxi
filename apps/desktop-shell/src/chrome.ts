@@ -1204,6 +1204,7 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .asset-browser-card strong,.asset-browser-card span{display:block;overflow-wrap:anywhere}
 .asset-browser-card strong{font-family:var(--mono);font-size:9px;color:var(--text)}
 .asset-browser-card span{margin-top:4px;font-family:var(--mono);font-size:8px;line-height:1.45;color:var(--dim)}
+.asset-browser-card .asset-browser-meta{display:none}
 .scene-entities{padding:0 7px 9px}
 .scene-entities-label{margin:0 3px 5px;font-size:10px;letter-spacing:.02em;color:var(--dim)}
 .scene-entities select{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
@@ -1956,7 +1957,9 @@ if (shell) {
       entitiesList.forEach((entity) => {
         const option = document.createElement('option');
         option.value = entity.id;
-        option.textContent = '  '.repeat(entity.depth) + entity.label;
+        option.textContent = '  '.repeat(entity.depth) + 'Object ' + entity.artifactId +
+          ' · instance ' + entity.id +
+          (entity.parentInstanceId === null ? ' · root' : ' · parent ' + entity.parentInstanceId);
         el.appendChild(option);
       });
       const fallback = entitiesList.find((entity) => entity.id === 'desktop-crate-beside')?.id || entitiesList[0]?.id || '';
@@ -2430,14 +2433,16 @@ if (shell) {
           const type = document.createElement('span');
           type.textContent = asset.fileType + ' · ' + asset.mediaType + ' · ' + asset.byteLength + ' bytes';
           const digest = document.createElement('span');
+          digest.className = 'asset-browser-meta';
           digest.textContent = asset.digest;
           const provenance = document.createElement('span');
+          provenance.className = 'asset-browser-meta';
           provenance.textContent = JSON.stringify(asset.provenance);
           const validation = document.createElement('span');
           validation.textContent = asset.validation.state +
             (asset.validation.reason ? ' · ' + asset.validation.reason : '') +
             ' · ' + asset.validation.message;
-          card.append(name, type, validation);
+          card.append(name, type, digest, provenance, validation);
           assetSurface.append(card);
         });
       }
@@ -3763,7 +3768,7 @@ if (shell) {
     await beginSceneLifecycleTransition();
     shell.dataset.profile = value;
     q('.profile-chip').forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.value === value)));
-    const promptField = document.getElementById('assistant-prompt');
+    const promptField = shell.querySelector('#assistant-prompt');
     if (promptField instanceof HTMLTextAreaElement) {
       promptField.placeholder = value === 'web'
         ? 'Ask Flash for a Three.js hero or a headline animation'
@@ -4224,11 +4229,11 @@ if (shell) {
     } else if (action === 'assistant-mode' && value) {
       shell.dataset.assistantMode = value;
       q('.assistant-mode').forEach((m) => m.setAttribute('aria-pressed', String(m.dataset.value === value)));
-      const promptField = document.getElementById('assistant-prompt');
+      const promptField = shell.querySelector('#assistant-prompt');
       if (promptField instanceof HTMLTextAreaElement && promptField.getAttribute('aria-disabled') !== 'true') {
         promptField.focus();
       }
-      const status = document.querySelector('[data-assistant-status]');
+      const status = shell.querySelector('[data-assistant-status]');
       if (status) {
         status.textContent = value === 'ask'
           ? 'Light · Flash will keep it simple. Type, then Send.'

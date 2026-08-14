@@ -430,7 +430,7 @@ export function installAssistantProductFlow(
   const refused = (reason: string, message: string): void => {
     running = false;
     setBusy(false);
-    status.textContent = reason.includes("KEY_MISSING") || reason.includes("KEY_INVALID")
+    const human = reason.includes("KEY_MISSING") || reason.includes("KEY_INVALID")
       ? "Paste your OpenCode key under the prompt, save it, then Send again."
       : reason.includes("KIDS") || message.toLowerCase().includes("kids")
         ? "Flash stays off on Kids. Switch to Game or Website, then Send."
@@ -439,6 +439,7 @@ export function installAssistantProductFlow(
           : reason.includes("STATUS_TIMEOUT") || message.toLowerCase().includes("did not finish in time")
             ? "That took too long, so it was stopped. Send again."
             : message;
+    status.textContent = human.includes(reason) ? human : `${human} · ${reason}`;
     retry?.removeAttribute("hidden");
   };
 
