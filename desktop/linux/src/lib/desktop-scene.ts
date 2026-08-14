@@ -53,6 +53,24 @@ import {
   evaluateScenePhysics,
   inspectScenePhysics,
   parseScenePhysicsCatalog,
+  SCENE_ENVIRONMENT_CATALOG_KEY,
+  SCENE_ENVIRONMENT_REFUSALS,
+  applySceneEnvironmentMutation,
+  emptySceneEnvironmentCatalog,
+  inspectSceneEnvironment,
+  parseSceneEnvironmentCatalog,
+  SCENE_MATERIALS_CATALOG_KEY,
+  SCENE_MATERIALS_REFUSALS,
+  applySceneMaterialsMutation,
+  emptySceneMaterialsCatalog,
+  inspectSceneMaterials,
+  parseSceneMaterialsCatalog,
+  SCENE_EFFECTS_CATALOG_KEY,
+  SCENE_EFFECTS_REFUSALS,
+  applySceneEffectsMutation,
+  emptySceneEffectsCatalog,
+  inspectSceneEffects,
+  parseSceneEffectsCatalog,
   ASSISTANT_ASK_REFUSALS,
   SCENE_ASSISTANT_BUILD_CATALOG_KEY,
   answerAssistantAsk,
@@ -73,6 +91,12 @@ import {
   type ComposedScene,
   type ScenePhysicsCatalog,
   type ScenePhysicsMutation,
+  type SceneEnvironmentCatalog,
+  type SceneEnvironmentMutation,
+  type SceneMaterialsCatalog,
+  type SceneMaterialsMutation,
+  type SceneEffectsCatalog,
+  type SceneEffectsMutation,
   type SceneAnimationCatalog,
   type SceneAnimationMutation,
   type ScenePrefabCatalog,
@@ -1557,6 +1581,157 @@ export function stageDesktopScenePhysics(input: Readonly<{
     documentData: Object.freeze({
       ...base,
       [SCENE_PHYSICS_CATALOG_KEY]: applied.catalog,
+    }),
+  });
+}
+
+function environmentCatalogFromData(documentData: unknown): SceneEnvironmentCatalog | null {
+  if (!isJsonObject(documentData)) return null;
+  return parseSceneEnvironmentCatalog(documentData[SCENE_ENVIRONMENT_CATALOG_KEY]);
+}
+
+export function inspectDesktopSceneEnvironment(documentData: unknown) {
+  return inspectSceneEnvironment(environmentCatalogFromData(documentData) ?? emptySceneEnvironmentCatalog());
+}
+
+export function stageDesktopSceneEnvironment(input: Readonly<{
+  documentData: unknown;
+  contentHash: string;
+  documentPath?: string;
+  mutation: unknown;
+}>) {
+  const catalog = environmentCatalogFromData(input.documentData);
+  if (catalog === null) {
+    return Object.freeze({
+      ok: false as const,
+      reason: SCENE_ENVIRONMENT_REFUSALS.catalogInvalid,
+      message: "The environment catalog is not a valid versioned document.",
+    });
+  }
+  if (typeof input.mutation !== "object" || input.mutation === null || Array.isArray(input.mutation)) {
+    return Object.freeze({
+      ok: false as const,
+      reason: SCENE_ENVIRONMENT_REFUSALS.inputUnsupported,
+      message: "An environment mutation must be an object.",
+    });
+  }
+  const applied = applySceneEnvironmentMutation({
+    catalog,
+    mutation: input.mutation as SceneEnvironmentMutation,
+  });
+  if (!applied.ok) return applied;
+  const base = isJsonObject(input.documentData) ? input.documentData : {};
+  return Object.freeze({
+    ok: true as const,
+    catalog: applied.catalog,
+    inspection: inspectSceneEnvironment(applied.catalog),
+    documentData: Object.freeze({
+      ...base,
+      [SCENE_ENVIRONMENT_CATALOG_KEY]: applied.catalog,
+    }),
+  });
+}
+
+function materialsCatalogFromData(documentData: unknown): SceneMaterialsCatalog | null {
+  if (!isJsonObject(documentData)) return null;
+  return parseSceneMaterialsCatalog(documentData[SCENE_MATERIALS_CATALOG_KEY]);
+}
+
+export function inspectDesktopSceneMaterials(documentData: unknown) {
+  return inspectSceneMaterials(materialsCatalogFromData(documentData) ?? emptySceneMaterialsCatalog());
+}
+
+export function stageDesktopSceneMaterials(input: Readonly<{
+  documentData: unknown;
+  contentHash: string;
+  documentPath?: string;
+  mutation: unknown;
+}>) {
+  const documentPath = input.documentPath ?? DESKTOP_ACTIVE_DOCUMENT_PATH;
+  const read = readEditableComposition(input.documentData, input.contentHash, documentPath);
+  if (!read.ok) {
+    return Object.freeze({
+      ok: false as const,
+      reason: SCENE_MATERIALS_REFUSALS.catalogInvalid,
+      message: read.diagnostics[0]?.message ?? "The Scene Document could not be read.",
+    });
+  }
+  const catalog = materialsCatalogFromData(input.documentData);
+  if (catalog === null) {
+    return Object.freeze({
+      ok: false as const,
+      reason: SCENE_MATERIALS_REFUSALS.catalogInvalid,
+      message: "The materials catalog is not a valid versioned document.",
+    });
+  }
+  if (typeof input.mutation !== "object" || input.mutation === null || Array.isArray(input.mutation)) {
+    return Object.freeze({
+      ok: false as const,
+      reason: SCENE_MATERIALS_REFUSALS.inputUnsupported,
+      message: "A material mutation must be an object.",
+    });
+  }
+  const applied = applySceneMaterialsMutation({
+    catalog,
+    instanceIds: read.stored.instances.map((instance) => instance.instanceId),
+    mutation: input.mutation as SceneMaterialsMutation,
+  });
+  if (!applied.ok) return applied;
+  const base = isJsonObject(input.documentData) ? input.documentData : {};
+  return Object.freeze({
+    ok: true as const,
+    catalog: applied.catalog,
+    inspection: inspectSceneMaterials(applied.catalog),
+    documentData: Object.freeze({
+      ...base,
+      [SCENE_MATERIALS_CATALOG_KEY]: applied.catalog,
+    }),
+  });
+}
+
+function effectsCatalogFromData(documentData: unknown): SceneEffectsCatalog | null {
+  if (!isJsonObject(documentData)) return null;
+  return parseSceneEffectsCatalog(documentData[SCENE_EFFECTS_CATALOG_KEY]);
+}
+
+export function inspectDesktopSceneEffects(documentData: unknown) {
+  return inspectSceneEffects(effectsCatalogFromData(documentData) ?? emptySceneEffectsCatalog());
+}
+
+export function stageDesktopSceneEffects(input: Readonly<{
+  documentData: unknown;
+  contentHash: string;
+  documentPath?: string;
+  mutation: unknown;
+}>) {
+  const catalog = effectsCatalogFromData(input.documentData);
+  if (catalog === null) {
+    return Object.freeze({
+      ok: false as const,
+      reason: SCENE_EFFECTS_REFUSALS.catalogInvalid,
+      message: "The effects catalog is not a valid versioned document.",
+    });
+  }
+  if (typeof input.mutation !== "object" || input.mutation === null || Array.isArray(input.mutation)) {
+    return Object.freeze({
+      ok: false as const,
+      reason: SCENE_EFFECTS_REFUSALS.inputUnsupported,
+      message: "An effect mutation must be an object.",
+    });
+  }
+  const applied = applySceneEffectsMutation({
+    catalog,
+    mutation: input.mutation as SceneEffectsMutation,
+  });
+  if (!applied.ok) return applied;
+  const base = isJsonObject(input.documentData) ? input.documentData : {};
+  return Object.freeze({
+    ok: true as const,
+    catalog: applied.catalog,
+    inspection: inspectSceneEffects(applied.catalog),
+    documentData: Object.freeze({
+      ...base,
+      [SCENE_EFFECTS_CATALOG_KEY]: applied.catalog,
     }),
   });
 }
