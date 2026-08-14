@@ -29,7 +29,7 @@ function installStyles(): void {
   const style = document.createElement("style");
   style.id = STYLE_ID;
   style.textContent = `
-.desktop-byo-config{display:flex;flex-direction:column;gap:8px;padding:9px;border:1px solid var(--line-control);border-radius:5px;background:var(--well);min-width:0}
+.desktop-byo-config{display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid var(--accent);border-radius:6px;background:var(--well);min-width:0}
 .desktop-byo-config[hidden]{display:none}
 .desktop-byo-config-head{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
 .desktop-byo-config-title{font-size:10px;font-weight:650;color:var(--text)}
@@ -74,7 +74,7 @@ export function installDesktopByoConfigurationSurface(
 
   const head = element("div", "desktop-byo-config-head");
   const title = element("strong", "desktop-byo-config-title");
-  title.textContent = "Provider key";
+  title.textContent = "OpenCode Flash key";
   const state = element("span", "desktop-byo-config-state");
   state.textContent = "Checking…";
   head.append(title, state);
@@ -84,12 +84,15 @@ export function installDesktopByoConfigurationSurface(
   providerLabel.textContent = "Provider";
   const provider = element("select");
   provider.setAttribute("aria-label", "BYOK provider");
+  provider.hidden = true;
+  providerField.hidden = true;
   for (const id of DESKTOP_BYO_PROVIDERS) {
     const option = element("option");
     option.value = id;
     option.textContent = DESKTOP_BYO_PROVIDER_LABELS[id];
     provider.append(option);
   }
+  provider.value = "opencode";
   providerField.append(providerLabel, provider);
 
   const keyField = element("label", "desktop-byo-config-field");
@@ -99,7 +102,7 @@ export function installDesktopByoConfigurationSurface(
   keyInput.type = "password";
   keyInput.autocomplete = "off";
   keyInput.spellcheck = false;
-  keyInput.placeholder = "Paste a provider key";
+  keyInput.placeholder = "Paste OpenCode key, then Save";
   keyInput.setAttribute("aria-describedby", `${SURFACE_ID}-message`);
   keyField.append(keyLabel, keyInput);
 
@@ -179,7 +182,11 @@ export function installDesktopByoConfigurationSurface(
 
   const synchronizeVisibility = (): void => {
     const kids = assistantProfile(shell) === "@sceneaxi/profile-kids";
-    const visible = !kids && shell.dataset.assistantRoute === "byo";
+    if (!kids && shell.dataset.assistantRoute !== "byo") {
+      shell.dataset.assistantRoute = "byo";
+      byoRoute.setAttribute("aria-pressed", "true");
+    }
+    const visible = !kids;
     surface.hidden = !visible;
     byoRoute.setAttribute("aria-expanded", String(visible));
     if (!visible) keyInput.value = "";

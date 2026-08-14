@@ -180,7 +180,7 @@ describe("desktop product loop", () => {
     expect(kids).toContain(
       'id="project-open" data-kind="inert" aria-disabled="true" data-refusal="OPEN_PATH_KIDS_REFUSED"',
     );
-    expect(kids).toContain("No editor on the Kids profile");
+    expect(kids).toContain("Kids studio");
 
     expect(game).toContain("sceneaxiDesktopLinux");
     expect(game).toContain("action: 'command'");

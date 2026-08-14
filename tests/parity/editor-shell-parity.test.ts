@@ -16,6 +16,8 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   EDITOR_SHELL_ASSISTANT_MODE_IDS,
+  EDITOR_SHELL_ASSISTANT_MODES,
+  editorShellAssistantModeLabel,
   EDITOR_SHELL_ASSISTANT_STATES,
   EDITOR_SHELL_METRICS,
   EDITOR_SHELL_MINIMUM_WINDOW,
@@ -115,10 +117,27 @@ describe("editor-shell vocabulary parity", () => {
 
   it("assistant modes are one list on both surfaces", () => {
     expect(DESKTOP_ASSISTANT_MODE_IDS).toEqual(EDITOR_SHELL_ASSISTANT_MODE_IDS);
+    expect(EDITOR_SHELL_ASSISTANT_MODES.map((mode) => mode.id)).toEqual([
+      ...EDITOR_SHELL_ASSISTANT_MODE_IDS,
+    ]);
+    expect(EDITOR_SHELL_ASSISTANT_MODES.map((mode) => mode.label)).toEqual([
+      "Light",
+      "Mid",
+      "Strong",
+    ]);
     const view = webShellView();
     expect(view.assistant.modes.map((control) => control.id)).toEqual(
       EDITOR_SHELL_ASSISTANT_MODE_IDS.map((mode) => `assistant-mode-${mode}`),
     );
+    expect(view.assistant.modes.map((control) => control.label)).toEqual(
+      EDITOR_SHELL_ASSISTANT_MODE_IDS.map((mode) => editorShellAssistantModeLabel(mode)),
+    );
+    const desktop = desktopVisualView(createDesktopVisualState());
+    expect(desktop.assistant.modes.map((mode) => mode.label)).toEqual([
+      "Light",
+      "Mid",
+      "Strong",
+    ]);
   });
 
   it("viewport sources are one table on both surfaces, ids and labels", () => {

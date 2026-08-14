@@ -34,6 +34,7 @@
 
 import {
   EDITOR_SHELL_ASSISTANT_MODE_IDS,
+  editorShellAssistantModeLabel,
   EDITOR_SHELL_DOCK_TAB_IDS,
   EDITOR_SHELL_MINIMUM_WINDOW,
   EDITOR_SHELL_MODE_IDS,
@@ -470,7 +471,7 @@ const INITIAL_STATE: DesktopVisualState = Object.freeze({
   assistantMode: "build",
   assistantThinking: false,
   assistantRuntime: "none",
-  assistantRoute: "local",
+  assistantRoute: "byo",
   sculpt: "idle",
   sculptPass: 2,
   sculptPassFraction: 0.64,
@@ -865,7 +866,7 @@ export type DesktopAssistantProjection = Readonly<{
       control: DesktopControl;
     }>
   >;
-  /** Ask / Build / Agent. Inert wherever the composer is denied. */
+  /** Light / Mid / Strong. Inert wherever the composer is denied. */
   modes: ReadonlyArray<
     Readonly<{ id: DesktopAssistantModeId; label: string; control: DesktopControl }>
   >;
@@ -925,7 +926,7 @@ function assistantProjection(
     modelLabel: refuseOnly
       ? ASSISTANT_MODEL_LABELS.denied
       : runtimeAvailable
-        ? "local · free / BYOK"
+        ? "OpenCode Flash"
         : ASSISTANT_MODEL_LABELS.noProvider,
     toggle: refuseOnly
       ? mint("assistant-toggle", "Assistant", "inert", denial.code)
@@ -953,7 +954,7 @@ function assistantProjection(
     ),
     modes: Object.freeze(
       DESKTOP_ASSISTANT_MODE_IDS.map((id) => {
-        const label = id.charAt(0).toUpperCase() + id.slice(1);
+        const label = editorShellAssistantModeLabel(id);
         return Object.freeze({
           id,
           label,
@@ -1196,7 +1197,7 @@ const DOCK_TAB_LABELS: Readonly<Record<DesktopDockTabId, string>> = Object.freez
 });
 
 const PROFILE_LABELS: Readonly<Record<DesktopProfileId, string>> = Object.freeze({
-  game: "Game",
+  game: "Engine",
   web: "Website",
   kids: "Kids",
 });

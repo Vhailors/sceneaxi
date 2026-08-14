@@ -233,7 +233,16 @@ export const EDITOR_SHELL_VIEWPORT_SOURCES = Object.freeze([
 export type EditorShellViewportSourceId =
   (typeof EDITOR_SHELL_VIEWPORT_SOURCES)[number]["id"];
 
-/** The assistant composer's three modes, in the archive's order. */
+/**
+ * The assistant composer's three headline strengths. Command IDs stay
+ * `ask` / `build` / `agent` so existing seams do not fork; the chrome prints
+ * Light / Mid / Strong and the packaged host picks the model.
+ */
+export const EDITOR_SHELL_ASSISTANT_MODES = Object.freeze([
+  Object.freeze({ id: "ask", label: "Light" } as const),
+  Object.freeze({ id: "build", label: "Mid" } as const),
+  Object.freeze({ id: "agent", label: "Strong" } as const),
+]);
 export const EDITOR_SHELL_ASSISTANT_MODE_IDS = Object.freeze([
   "ask",
   "build",
@@ -241,6 +250,13 @@ export const EDITOR_SHELL_ASSISTANT_MODE_IDS = Object.freeze([
 ] as const);
 export type EditorShellAssistantModeId =
   (typeof EDITOR_SHELL_ASSISTANT_MODE_IDS)[number];
+
+export function editorShellAssistantModeLabel(
+  id: EditorShellAssistantModeId,
+): string {
+  const row = EDITOR_SHELL_ASSISTANT_MODES.find((mode) => mode.id === id);
+  return row === undefined ? id : row.label;
+}
 
 /**
  * Assistant column states, one closed enumeration rather than a pair of

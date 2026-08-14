@@ -96,6 +96,7 @@ import {
 import {
   DESKTOP_ASSISTANT_START_MODES,
   decideAssistantStart,
+  withAssistantStrengthInstruction,
 } from "../../desktop/linux/src/renderer/assistant-start.ts";
 import { desktopAssistantRuntimeSignal } from "../../desktop/linux/src/renderer/assistant-runtime.ts";
 import {
@@ -3696,6 +3697,10 @@ describe("desktop renderer behavior", () => {
   it("starts Build and Agent through the bridge and refuses every other composer mode", async () => {
     const profile = "@sceneaxi/profile-game" as const;
     expect(DESKTOP_ASSISTANT_START_MODES).toEqual(EDITOR_SHELL_ASSISTANT_MODE_IDS);
+    expect(withAssistantStrengthInstruction("ask", "a crate")).toContain("Light pass");
+    expect(withAssistantStrengthInstruction("ask", "a crate")).toContain("a crate");
+    expect(withAssistantStrengthInstruction("build", "a crate")).toBe("a crate");
+    expect(withAssistantStrengthInstruction("agent", "a crate")).toContain("Strong pass");
     const agent = decideAssistantStart({
       mode: "agent",
       route: "local",

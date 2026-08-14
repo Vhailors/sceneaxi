@@ -142,8 +142,8 @@ const MODE_PANELS: Readonly<
   build: Object.freeze({
     leftTitle: "SCENE",
     leftEmpty: "The active Scene Document is listed above; Play sends its composed scene to the live viewport.",
-    inspectorTitle: "PROPERTIES",
-    inspectorEmpty: "Nothing is selected. Properties appear when a document is bound.",
+    inspectorTitle: "Object",
+    inspectorEmpty: "Select an object to move it.",
     note: "Generated edits arrive as proposals and land in Change Review before they touch a document.",
     noteTone: "info" as const,
   }),
@@ -249,7 +249,7 @@ function promptInput(ctrl: DesktopControl): string {
     described,
     ` class="assistant-prompt${inert ? " is-inert" : ""}"`,
     ` aria-label="${escapeHtml(ctrl.label)}" rows="3"`,
-    ` placeholder="Describe the object to build"></textarea>`,
+    ` placeholder="Tell Flash what to make"></textarea>`,
   ].join("");
 }
 
@@ -426,7 +426,7 @@ function titleBar(view: DesktopVisualView): string {
         [
           `<span class="dot" data-profile-dot="${escapeHtml(profile.id)}" aria-hidden="true"></span>`,
           `<span>${escapeHtml(profile.label)}</span>`,
-          profile.refuseOnly ? `<span class="chip-tag">refuse-only</span>` : "",
+          profile.refuseOnly ? `<span class="chip-tag">safe</span>` : "",
         ].join(""),
         "profile-chip",
         [
@@ -535,7 +535,7 @@ function leftDock(view: DesktopVisualView): string {
   }).join("");
   return `<aside class="left-dock" id="left-dock" aria-label="Project files and editor panels">
 <section class="project-panel" aria-labelledby="project-files-title">
-  <h2 class="panel-head" id="project-files-title"><span>PROJECT / FILES</span><span class="project-name" data-project-name>${escapeHtml(project.name)}</span></h2>
+  <h2 class="panel-head" id="project-files-title"><span data-files-title>Objects</span><span class="project-name" data-project-name>${escapeHtml(project.name)}</span></h2>
   <div class="project-launcher" data-project-launcher>
     <p>No project is selected. New Project creates the starter only after you choose its directory.</p>
     <div class="project-lifecycle-actions">
@@ -553,20 +553,22 @@ function leftDock(view: DesktopVisualView): string {
     <div class="project-files" data-project-files>${projectFileSelect(view.product.browseFile, project.files)}</div>
     <section class="project-browser-detail" data-project-browser-detail hidden aria-live="polite">
       <strong data-project-browser-path></strong>
-      <dl>
-        <div><dt>Type</dt><dd data-project-browser-type></dd></div>
-        <div><dt>Digest</dt><dd data-project-browser-digest></dd></div>
-        <div><dt>Provenance</dt><dd data-project-browser-provenance></dd></div>
-        <div><dt>Status</dt><dd data-project-browser-validation></dd></div>
-      </dl>
+      <p class="project-browser-status" data-project-browser-validation></p>
+      <div class="project-browser-advanced">
+        <dl>
+          <div><dt>Type</dt><dd data-project-browser-type></dd></div>
+          <div><dt>Digest</dt><dd data-project-browser-digest></dd></div>
+          <div><dt>Provenance</dt><dd data-project-browser-provenance></dd></div>
+        </dl>
+      </div>
       <div class="project-browser-actions">
-        ${button(view.product.openBrowserFile, "Open selected", "ghost-button", ` data-product-action data-action="project-browser-open"`)}
+        ${button(view.product.openBrowserFile, "Open", "ghost-button", ` data-product-action data-action="project-browser-open"`)}
         ${button(view.product.renameBrowserFile, "Rename…", "ghost-button", ` data-product-action data-action="project-browser-rename"`)}
         ${button(view.product.deleteBrowserFile, "Delete…", "ghost-button", ` data-product-action data-action="project-browser-delete"`)}
       </div>
     </section>
     <div class="scene-entities" data-scene-entities hidden>
-      <p class="scene-entities-label">PROJECT HIERARCHY · ORDERED MULTI-SELECT</p>
+      <p class="scene-entities-label">Objects · click to select</p>
       ${sceneEntitySelect(view.product.selectSceneEntity)}
       <ol class="scene-entity-identities" data-scene-identities aria-label="Hierarchy object identities and parentage"></ol>
     </div>
@@ -590,24 +592,24 @@ function profileSurfaces(view: DesktopVisualView): string {
       const webTools =
         surface.profile === "web"
           ? `<div class="web-authoring-tools">
-  <p>Stored HTML is data, never executed by this chrome.</p>
-  <code>&lt;main id=&quot;sceneaxi-mount&quot;&gt;&lt;/main&gt;</code>
+  <p>This is a website, not a game scene. Ask Flash for a Three.js hero, a headline motion, or a new section.</p>
+  <p class="web-authoring-note">Stored HTML is data, never executed by this chrome.</p>
   <div class="profile-actions">
-    ${button(view.product.stageHtml, "Stage HTML", "ghost-button", ` data-product-action data-action="web-stage-html"`)}
-    ${button(view.product.injectAsset, "Import GLB/glTF…", "ghost-button", ` data-product-action data-action="web-inject-asset"`)}
+    ${button(view.product.stageHtml, "Edit page", "primary-button", ` data-product-action data-action="web-stage-html"`)}
+    ${button(view.product.injectAsset, "Add hero scene", "ghost-button", ` data-product-action data-action="web-inject-asset"`)}
   </div>
 </div>`
-          : `<p class="game-runtime-note">FreeJS behavior stays project-local; play reaches the composed scene without a site or billing package.</p>`;
+          : `<p class="game-runtime-note">Play the scene in the middle. Ask Flash to make or change objects.</p>`;
       return `<section class="profile-surface" data-profile-surface="${escapeHtml(surface.profile)}" aria-label="${escapeHtml(surface.profile === "game" ? "Game product surface" : "Web Experience product surface")}">
-  <div><span class="profile-kicker">${surface.profile === "game" ? "GAME" : "WEB EXPERIENCE"}</span><strong>${surface.profile === "game" ? "Scene + runtime" : "HTML + site canvas"}</strong></div>
+  <div><strong>${surface.profile === "game" ? "Scene" : "Website studio"}</strong></div>
   <ul class="capability-list">${capabilities}</ul>
   ${webTools}
 </section>`;
     })
     .join("");
   return `<div class="profile-surfaces">${surfaces}<div class="profile-runtime-actions">
-  ${button(view.product.play, "▶ Play composed scene", "primary-button", ` data-product-action data-command="run-play"`)}
-  <p class="runtime-report" data-product-run-report aria-live="polite">Ready to run through the desktop host.</p>
+  ${button(view.product.play, "Play", "primary-button", ` data-product-action data-command="run-play"`)}
+  <p class="runtime-report" data-product-run-report aria-live="polite">Ready.</p>
 </div></div>`;
 }
 
@@ -641,9 +643,22 @@ function viewport(view: DesktopVisualView): string {
     <span class="spacer"></span>
     <span class="view-tools" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
   </div>
+  <div class="stage-host">
+  <div class="site-stage" aria-hidden="true">
+    <div class="site-browser-bar"><i></i><i></i><i></i><span>example.com</span></div>
+    <article class="site-page">
+      <div class="site-nav"><span>Home</span><span>Story</span><span>Contact</span></div>
+      <header class="site-hero-copy">
+        <p class="site-eyebrow">Your site</p>
+        <h3>Build a real page</h3>
+        <p>This is a website creator. Ask Flash for a Three.js hero, a headline motion, or a new section. Engine tools stay on Engine.</p>
+      </header>
+    </article>
+  </div>
   <div class="viewport">
     <div class="viewport-backdrop" role="img" aria-label="${escapeHtml(view.viewport.inertNote)}"></div>
     <p class="viewport-note viewport-note-inert">${escapeHtml(view.viewport.inertNote)}</p>
+    <p class="viewport-note viewport-note-web">Hero stage. This is the Three.js embed on the page.</p>
     <div class="axis-widget" aria-hidden="true">
       <i style="background:${AXIS.x}"></i><i style="background:${AXIS.y}"></i><i style="background:${AXIS.z}"></i>
     </div>
@@ -668,6 +683,12 @@ function viewport(view: DesktopVisualView): string {
       <p class="sculpt-detail">pass ${view.sculpt.passIndex + 1} of ${view.sculpt.passCount}</p>
       ${button(view.sculpt.cancel, escapeHtml(view.sculpt.cancel.label), "ghost-button", ` data-action="sculpt-cancel"${editorCommandAttributes("assistant-cancel")}`)}
     </div>
+  </div>
+  <div class="site-page-tail" aria-hidden="true">
+    <section class="site-band"><h4>Story</h4><p>Page copy lives here. Ask Flash to write this section.</p></section>
+    <section class="site-band"><h4>Hero motion</h4><p>The stage above is the Three.js embed. Later you customize it here.</p></section>
+    <footer class="site-foot">example.com · SceneAxi Website</footer>
+  </div>
   </div>
 </section>`;
 }
@@ -744,6 +765,14 @@ function inspector(view: DesktopVisualView): string {
         ? ""
         : `<label for="${escapeHtml(control.id)}"><span>${escapeHtml(definition.label)}</span>${numericPropertyInput(control, definition)}</label>`;
     }).join("")}</div>
+    ${button(
+      view.product.stageSceneEdit,
+      "Stage",
+      "primary-button block-button",
+      ` data-product-action data-action="scene-property-stage"`,
+    )}
+    <p class="scene-property-diagnostic" data-scene-property-diagnostic aria-live="polite">Select an object, change one value, then Stage.</p>
+    <div class="scene-advanced">
     <div class="scene-transform-gizmo" role="group" aria-label="Viewport transform gizmo">
       <div class="scene-instance-actions">
         ${button(view.product.transformModeTranslate, "Move", "ghost-button", ` data-product-action data-action="scene-transform-mode" data-value="translate"`)}
@@ -762,23 +791,19 @@ function inspector(view: DesktopVisualView): string {
         ${button(view.product.transformNudgeZPlus, "+Z", "ghost-button", ` data-product-action data-action="scene-transform-nudge" data-axis="z" data-sign="1"`)}
       </div>
     </div>
-    ${button(
-      view.product.stageSceneEdit,
-      "Stage transform for review",
-      "primary-button block-button",
-      ` data-product-action data-action="scene-property-stage"`,
-    )}
     <div class="scene-instance-actions">
-      ${button(view.product.addSceneInstance, "Add local copy", "ghost-button", ` data-product-action data-action="scene-instance-add"`)}
-      ${button(view.product.removeSceneInstance, "Remove selection", "ghost-button", ` data-product-action data-action="scene-instance-remove"`)}
+      ${button(view.product.addSceneInstance, "Duplicate", "ghost-button", ` data-product-action data-action="scene-instance-add"`)}
+      ${button(view.product.removeSceneInstance, "Remove", "ghost-button", ` data-product-action data-action="scene-instance-remove"`)}
     </div>
     <div class="scene-parenting">
       <label for="${escapeHtml(view.product.reparentSceneParent.id)}"><span>New parent</span><select ${selectControlAttributes(view.product.reparentSceneParent)} data-scene-parent aria-label="New parent"></select></label>
-      <label for="${escapeHtml(view.product.reparentScenePolicy.id)}"><span>Transform policy</span><select ${selectControlAttributes(view.product.reparentScenePolicy)} data-scene-policy aria-label="Transform policy"><option value="preserve-world">Preserve world</option><option value="preserve-local">Preserve local</option></select></label>
-      ${button(view.product.reparentSceneInstance, "Stage reparent", "ghost-button block-button", ` data-product-action data-action="scene-instance-reparent"`)}
+      <label for="${escapeHtml(view.product.reparentScenePolicy.id)}"><span>Keep</span><select ${selectControlAttributes(view.product.reparentScenePolicy)} data-scene-policy aria-label="Transform policy"><option value="preserve-world">World place</option><option value="preserve-local">Local place</option></select></label>
+      ${button(view.product.reparentSceneInstance, "Reparent", "ghost-button block-button", ` data-product-action data-action="scene-instance-reparent"`)}
     </div>
-    <p class="scene-property-diagnostic" data-scene-property-diagnostic aria-live="polite">Select this entity to edit its saved composition.</p>
-    <pre class="scene-property-review" data-scene-property-review hidden></pre>
+    </div>
+    <div class="scene-advanced scene-review-details">
+      <pre class="scene-property-review" data-scene-property-review hidden></pre>
+    </div>
   </div>`
       : mode === "ship"
         ? `<div class="ship-export-panel">
@@ -816,6 +841,14 @@ function inspector(view: DesktopVisualView): string {
     <ol class="pass-list">${passes}</ol>
     ${button(view.sculpt.start, "Sculpt object", "primary-button block-button", editorCommandAttributes("assistant-local-build"))}
   </section>
+  <section class="web-page-inspector" aria-label="Page sections">
+    <h2 class="panel-head"><span>Page</span></h2>
+    <ol class="web-page-sections">
+      <li><b>Hero</b><span>Three.js stage on the page</span></li>
+      <li><b>Headline</b><span>Ask Flash to animate this</span></li>
+      <li><b>Story</b><span>Page copy under the hero</span></li>
+    </ol>
+  </section>
 </aside>`;
 }
 
@@ -833,7 +866,7 @@ function assistant(view: DesktopVisualView): string {
   const denial = kidsAssistantDenial();
   const assistantStatus =
     view.state.assistantRuntime === "local"
-      ? "Ready for a local or BYOK prompt."
+      ? "Ready. Type, then Send."
       : `${DESKTOP_VISUAL_REFUSALS.noPresentationRuntime} — assistant actions are unavailable until a packaged host binds.`;
   return `
 <aside class="assistant" aria-label="Assistant">
@@ -844,17 +877,21 @@ function assistant(view: DesktopVisualView): string {
     ${button(view.assistant.close, "✕", "icon-button", ` data-action="assistant" aria-label="Close assistant"`)}
   </div>
   <div class="assistant-denied" role="note">
-    <p class="assistant-denied-title">The assistant is off on Kids</p>
-    <p>${escapeHtml(denial.message)}</p>
-    <p><code>${escapeHtml(denial.lockCode)}</code></p>
+    <p class="assistant-denied-title">Kids writes here, safely</p>
+    <p>This Kids space stays on a dedicated safe path. Engine and Website can use your OpenCode key.</p>
+    <p class="assistant-denied-detail">${escapeHtml(denial.message)}</p>
+    <p class="assistant-denied-code"><code>${escapeHtml(denial.lockCode)}</code></p>
   </div>
   <div class="assistant-body">
-    <p class="assistant-empty">Local runs on-device and is free. BYOK calls only a provider you configure and never touches credits. Hosted AI is metered and refuses here until its identity and credit seam is available.</p>
-    <p class="assistant-thinking" role="status" data-assistant-thinking${view.assistant.thinking ? "" : " hidden"}><span class="dot" aria-hidden="true"></span>Thinking…</p>
+    <p class="assistant-empty assistant-empty-game">Type what you want. Pick Light, Mid, or Strong. Press Send. Flash does the work.</p>
+    <p class="assistant-empty assistant-empty-web">Ask for a Three.js hero, a headline animation, or a new page section. This is a website, not a game level.</p>
+    <div class="assistant-live" aria-hidden="true"><i></i><i></i><i></i></div>
+    <p class="assistant-thinking" role="status" data-assistant-thinking${view.assistant.thinking ? "" : " hidden"}><span class="dot" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span>Flash is live</p>
     <p class="assistant-progress" data-assistant-status role="status">${escapeHtml(assistantStatus)}</p>
     <div class="assistant-result" data-assistant-result hidden></div>
     ${button(view.assistant.retry, "Retry", "ghost-button assistant-retry", ` data-action="assistant-send" hidden`)}
-    <p class="assistant-foot">Successful Build output is validated as a Sculpt Artifact, mounted in the center viewport, and remains transformable through the Mount API.</p>
+    <p class="assistant-foot assistant-foot-game">What Flash makes appears in the scene. Stage keeps it.</p>
+    <p class="assistant-foot assistant-foot-web">What Flash writes lands on the page. Stage keeps the HTML.</p>
   </div>
   <div class="assistant-composer">
     ${promptInput(view.assistant.prompt)}
@@ -871,7 +908,7 @@ function assistant(view: DesktopVisualView): string {
         .join("")}
     </div>
     <div class="composer-actions">
-      <div class="assistant-modes" role="group" aria-label="Assistant mode">
+      <div class="assistant-modes" role="group" aria-label="Assistant strength">
         ${view.assistant.modes
           .map((mode) =>
             button(
@@ -884,7 +921,7 @@ function assistant(view: DesktopVisualView): string {
           .join("")}
       </div>
       <span class="spacer"></span>
-      ${button(view.assistant.send, "↑", "primary-button icon-button", ` data-action="assistant-send" aria-label="Send"`)}
+      ${button(view.assistant.send, "Send", "primary-button", ` data-action="assistant-send" aria-label="Send"`)}
     </div>
   </div>
 </aside>`;
@@ -907,12 +944,12 @@ function profileRefusal(view: DesktopVisualView): string {
   return `
 <section class="profile-refusal" role="alert" aria-labelledby="kids-refusal-title">
   <div class="profile-refusal-card">
-    <span class="overlay-mark mark-scene" aria-hidden="true">✕</span>
-    <h2 id="kids-refusal-title">No editor on the Kids profile</h2>
-    <p>${escapeHtml(refusal.summary)}</p>
-    <p>${escapeHtml(refusal.message)}</p>
+    <span class="kids-studio-mark" aria-hidden="true">✦</span>
+    <h2 id="kids-refusal-title">Kids studio</h2>
+    <p>A cheerful, assistant-only place to write ideas. Engine and Website stay off here.</p>
+    <p>To make something with Flash, switch to Engine or Website, type, and press Send.</p>
     <p class="profile-refusal-code"><code>${escapeHtml(refusal.code)}</code> · <code>${escapeHtml(refusal.profile)}</code></p>
-    <p class="profile-refusal-foot">Switch back to Game or Website above to author.</p>
+    <p class="profile-refusal-foot">${escapeHtml(refusal.summary)}</p>
   </div>
 </section>`;
 }
@@ -1168,12 +1205,15 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .asset-browser-card strong{font-family:var(--mono);font-size:9px;color:var(--text)}
 .asset-browser-card span{margin-top:4px;font-family:var(--mono);font-size:8px;line-height:1.45;color:var(--dim)}
 .scene-entities{padding:0 7px 9px}
-.scene-entities-label{margin:0 3px 5px;font-family:var(--mono);font-size:8px;letter-spacing:.12em;color:var(--faint)}
-.scene-entities select{width:100%;min-width:0;height:112px;padding:4px 7px;border:1px solid var(--line-card);border-radius:4px;background:var(--raised);color:var(--text);font-family:var(--mono);font-size:9px}
+.scene-entities-label{margin:0 3px 5px;font-size:10px;letter-spacing:.02em;color:var(--dim)}
+.scene-entities select{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 .scene-entity-identities{display:grid;gap:5px;min-width:0;margin:6px 0 0;padding:0;list-style:none}
-.scene-entity-identity{min-width:0;margin-left:calc(var(--scene-depth,0) * 7px);padding:6px 7px;border:1px solid var(--line-card);border-left:2px solid var(--accent);border-radius:4px;background:var(--well)}
-.scene-entity-identity>span{display:block;margin-bottom:4px;font-size:9px;color:var(--text)}
-.scene-entity-identity dl{display:grid;gap:3px;margin:0}
+.scene-entity-identity{min-width:0;margin-left:calc(var(--scene-depth,0) * 7px);padding:8px 9px;border:1px solid var(--line-card);border-left:2px solid var(--accent);border-radius:6px;background:var(--well);cursor:pointer}
+.scene-entity-identity:hover{border-color:var(--line-hover)}
+.scene-entity-identity.is-selected{border-color:var(--accent);background:${ACCENT.surface}}
+.scene-entity-identity>span{display:block;margin-bottom:2px;font-size:11px;font-weight:600;color:var(--text)}
+.scene-entity-identity dl{display:none;gap:3px;margin:4px 0 0}
+.shell[data-details-open="true"] .scene-entity-identity dl{display:grid}
 .scene-entity-identity dl div{display:grid;grid-template-columns:42px minmax(0,1fr);gap:5px;min-width:0}
 .scene-entity-identity dt{font-family:var(--mono);font-size:7px;line-height:1.45;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
 .scene-entity-identity dd{min-width:0;margin:0}
@@ -1183,14 +1223,19 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .scene-entity span{font-size:10px;color:var(--text)}.scene-entity code{margin-top:3px;font-size:8px;color:var(--dim)}
 .scene-entity[aria-pressed="true"]{border-color:var(--accent);background:${ACCENT.surface}}
 .scene-entities-refusal{margin:0;padding:0 10px 9px;font-size:9px;line-height:1.45;color:var(--dim);overflow-wrap:anywhere}
-.project-file-state{margin:0;padding:0 10px 9px;font-family:var(--mono);font-size:9px;color:var(--faint)}
-.project-root{padding:0 10px 9px;font-family:var(--mono)}
-.scene-property-editor{display:grid;gap:8px;padding:10px 11px}
-.scene-property-entity{margin:0;padding-bottom:7px;border-bottom:1px solid var(--line);min-width:0}
+.project-file-state,.project-root,.scene-entities-refusal,.left-dock .panel-note{display:none}
+.ship-export-evidence,.project-git-controls{display:none}
+.shell[data-details-open="true"] .ship-export-evidence,
+.shell[data-details-open="true"] .project-git-controls{display:grid}
+.scene-property-editor{display:grid;gap:6px;padding:8px 10px}
+.scene-property-entity{margin:0;padding-bottom:5px;border-bottom:1px solid var(--line);min-width:0}
 .scene-property-entity b,.scene-property-entity code{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.scene-property-entity b{font-size:11px}.scene-property-entity code{margin-top:3px;font-size:8px;color:var(--dim)}
-.scene-property-editor label{display:grid;gap:5px;font-family:var(--mono);font-size:9px;color:var(--dim)}
-.scene-transform-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.scene-property-entity b{font-size:12px}.scene-property-entity code{display:none}
+.scene-property-editor label{display:grid;gap:3px;font-size:9px;color:var(--dim)}
+.scene-transform-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+.scene-advanced{display:none;min-width:0;border:1px solid var(--line-row);border-radius:5px;padding:8px}
+.shell[data-details-open="true"] .scene-advanced{display:grid;gap:7px}
+.scene-review-details .scene-property-review{margin-top:4px}
 .scene-instance-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px}
 .scene-instance-actions button{min-width:0;padding-inline:6px}
 .scene-parenting{display:grid;gap:7px;padding-top:2px}.scene-parenting label{display:grid;gap:4px}.scene-parenting select{width:100%;min-width:0;height:28px;border:1px solid var(--line-control);border-radius:4px;background:var(--raised);color:var(--text);font-family:var(--mono);font-size:9px}
@@ -1207,8 +1252,32 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 
 .viewport-column{display:flex;flex-direction:column;min-width:0;min-height:0}
 .viewport-region{display:flex;flex-direction:column;flex:1;min-width:0;min-height:0;background:var(--canvas)}
+.stage-host{flex:1;min-height:0;display:flex;flex-direction:column}
 .profile-surfaces{flex:none;background:var(--panel);border-bottom:1px solid var(--line);position:relative}
-.profile-surface{min-height:92px;padding:9px 12px;display:grid;grid-template-columns:146px minmax(0,1fr) minmax(220px,.8fr);gap:12px;align-items:center}
+.profile-surface{min-height:56px;padding:10px 14px;display:grid;grid-template-columns:120px minmax(0,1fr);gap:14px;align-items:center}
+.capability-list{display:none}
+.shell[data-profile="web"] .profile-surface[data-profile-surface="web"]{min-height:88px;grid-template-columns:140px minmax(0,1.4fr)}
+.shell[data-profile="web"] .mode-rail,
+.shell[data-profile="web"] .scene-entities,
+.shell[data-profile="web"] .scene-property-editor,
+.shell[data-profile="web"] .inspector-panel,
+.shell[data-profile="web"] .project-browser-detail,
+.shell[data-profile="web"] .view-tabs,
+.shell[data-profile="web"] .axis-widget,
+.shell[data-profile="web"] .assistant-manipulators,
+.shell[data-profile="web"] .sculpt-progress,
+.shell[data-profile="web"] .game-runtime-note,
+.shell[data-profile="game"] .site-page-tail,
+.shell[data-profile="game"] .assistant-empty-web,
+.shell[data-profile="game"] .assistant-foot-web,
+.shell[data-profile="web"] .assistant-empty-game,
+.shell[data-profile="web"] .assistant-foot-game,
+.shell[data-profile="kids"] .assistant-empty-web,
+.shell[data-profile="kids"] .assistant-foot-web{display:none}
+.shell[data-profile="web"] [data-files-title]{font-size:0}
+.shell[data-profile="web"] [data-files-title]::after{content:"Pages";font-size:11px;letter-spacing:.08em}
+.shell[data-profile="web"] .profile-runtime-actions .primary-button{font-size:0}
+.shell[data-profile="web"] .profile-runtime-actions .primary-button::after{content:"Preview";font-size:11px;font-weight:600}
 .profile-surface[data-profile-surface="web"]{display:none}
 .shell[data-profile="web"] .profile-surface[data-profile-surface="game"]{display:none}
 .shell[data-profile="web"] .profile-surface[data-profile-surface="web"]{display:grid}
@@ -1219,7 +1288,10 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .capability-list b,.capability-list span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .capability-list b{font-size:10px}.capability-list span{font-size:8.5px;color:var(--dim);margin-top:2px}
 .game-runtime-note,.web-authoring-tools p{margin:0;font-size:10px;line-height:1.45;color:var(--dim)}
-.web-authoring-tools{display:flex;flex-direction:column;gap:5px;min-width:0}
+.web-authoring-note{display:none}
+.shell[data-details-open="true"] .web-authoring-note{display:block}
+.web-authoring-tools{display:flex;flex-direction:column;gap:8px;min-width:0}
+.web-authoring-tools p{font-size:12px;color:var(--text-2)}
 .web-authoring-tools code{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${PROFILE_DOT.web}}
 .profile-actions{display:flex;gap:6px;align-items:center}
 .profile-runtime-actions{min-height:30px;padding:0 12px 7px;display:flex;align-items:center;justify-content:flex-end;gap:9px}
@@ -1235,6 +1307,35 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .view-tools i{width:10px;height:10px;border:1.4px solid var(--faint);border-radius:1px}
 .viewport{flex:1;position:relative;min-height:0;overflow:hidden;background:radial-gradient(130% 95% at 50% 0%, ${VIEWPORT_GRADIENT.inner} 0%, ${VIEWPORT_GRADIENT.mid} 48%, ${SURFACE.canvas} 100%);display:grid;place-items:center}
 .viewport-backdrop{position:absolute;inset:0;pointer-events:none}
+.site-stage{display:none}
+.shell[data-profile="web"] .stage-host{overflow:auto;background:${SIGNAL.infoSurface};padding:18px 20px 28px}
+.shell[data-profile="web"] .site-stage{display:block}
+.site-browser-bar{display:flex;align-items:center;gap:6px;height:32px;padding:0 12px;border:1px solid var(--line);border-bottom:0;border-radius:10px 10px 0 0;background:var(--header)}
+.site-browser-bar i{width:8px;height:8px;border-radius:50%;background:var(--line-hover)}
+.site-browser-bar span{margin-left:8px;font-size:11px;color:var(--dim)}
+.site-page{border:1px solid var(--line);border-bottom:0;background:var(--raised);padding:18px 24px 14px}
+.site-nav{display:flex;gap:16px;margin:0 0 18px;font-size:12px;color:var(--dim)}
+.site-eyebrow{margin:0 0 6px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+.site-hero-copy h3{margin:0 0 8px;font-size:32px;line-height:1.1;color:var(--text)}
+.site-hero-copy p{margin:0;max-width:44ch;font-size:14px;line-height:1.55;color:var(--text-2)}
+.site-page-tail{display:none;border:1px solid var(--line);border-top:0;border-radius:0 0 10px 10px;background:var(--panel);padding:8px 24px 20px}
+.shell[data-profile="web"] .site-page-tail{display:block}
+.site-band{margin:16px 0;padding:14px 0;border-top:1px solid var(--line-row)}
+.site-band h4{margin:0 0 6px;font-size:16px}
+.site-band p{margin:0;max-width:48ch;font-size:13px;line-height:1.55;color:var(--text-2)}
+.site-foot{margin:18px 0 0;font-size:11px;color:var(--dim)}
+.shell[data-profile="web"] .shell-body{grid-template-columns:var(--left) minmax(0,1fr) var(--inspector) var(--assistant-w)}
+.shell[data-profile="web"] .profile-surfaces{background:transparent;border:0}
+.shell[data-profile="web"] .viewport{flex:none;height:min(46vh,420px);min-height:220px;border:1px solid var(--line);border-top:0;border-radius:0 0 10px 10px}
+.shell[data-profile="web"] .viewport-note-inert,.shell[data-profile="game"] .viewport-note-web{display:none}
+.shell[data-profile="web"] .viewport-note-web{display:block;position:relative;z-index:2;max-width:36ch}
+.web-page-inspector{display:none;padding:0 0 16px}
+.shell[data-profile="web"] .web-page-inspector{display:block}
+.web-page-sections{list-style:none;margin:0;padding:8px 12px;display:grid;gap:8px}
+.web-page-sections li{padding:10px 11px;border:1px solid var(--line-card);border-radius:8px;background:var(--raised)}
+.web-page-sections b,.web-page-sections span{display:block}
+.web-page-sections b{font-size:12px}
+.web-page-sections span{margin-top:3px;font-size:11px;color:var(--dim)}
 .viewport-note{margin:0;font-size:11px;line-height:1.5;color:var(--dim);max-width:44ch;text-align:center}
 .axis-widget{position:absolute;right:12px;top:11px;display:flex;gap:4px}
 .axis-widget i{width:18px;height:2px;border-radius:1px;display:block}
@@ -1276,6 +1377,9 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .assistant-head h2{margin:0;font-size:12px;font-weight:600;flex:1}
 .assistant-mark{width:16px;height:16px;border-radius:4px;background:${ACCENT.surface};display:grid;place-items:center}
 .assistant-mark::before{content:"";width:6px;height:6px;border-radius:1px;background:var(--accent);transform:rotate(45deg)}
+.shell[data-assistant-busy="true"] .assistant-mark{box-shadow:0 0 0 4px ${ACCENT.surface};animation:assistant-breathe 1.1s ease-in-out infinite}
+.shell[data-assistant-busy="true"] .assistant-mark::before{animation:assistant-spin 1.6s linear infinite}
+.shell[data-assistant-busy="true"] .viewport::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(80% 70% at 50% 40%, ${ACCENT.surface} 0%, transparent 70%);animation:assistant-glow 1.4s ease-in-out infinite}
 .shell[data-assistant="denied"] .assistant-mark{background:${SIGNAL.sceneSurface}}
 .shell[data-assistant="denied"] .assistant-mark::before{background:var(--scene)}
 .assistant-model{font-family:var(--mono);font-size:9px;color:var(--dim);background:var(--header);border:1px solid var(--line-control);border-radius:3px;padding:2px 6px}
@@ -1286,20 +1390,30 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .primary-button.icon-button.is-inert{color:var(--inert-on-accent)}
 .assistant-body{flex:1;min-height:0;overflow-y:auto;padding:13px 12px}
 .assistant-empty{margin:0;font-size:11px;line-height:1.55;color:var(--dim)}
-.assistant-thinking{display:flex;align-items:center;gap:8px;margin:12px 0 0;font-size:11px;color:var(--dim)}
-.assistant-thinking .dot{background:var(--accent)}
-.assistant-progress{font-size:11px;line-height:1.5;color:var(--text-2);padding:9px;border:1px solid var(--line-control);border-radius:4px;background:var(--header)}
-.assistant-result{font-size:10px;line-height:1.55;color:var(--text-3);white-space:pre-wrap}
+.assistant-live{display:none;align-items:end;gap:4px;height:28px;margin:14px 0 0}
+.shell[data-assistant-busy="true"] .assistant-live{display:flex}
+.assistant-live i{width:5px;border-radius:99px;background:var(--accent);animation:assistant-bars 0.9s ease-in-out infinite}
+.assistant-live i:nth-child(1){height:8px;animation-delay:0s}
+.assistant-live i:nth-child(2){height:16px;animation-delay:.12s}
+.assistant-live i:nth-child(3){height:22px;animation-delay:.24s}
+.assistant-thinking{display:flex;align-items:center;gap:6px;margin:12px 0 0;font-size:12px;color:var(--accent)}
+.assistant-thinking .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:assistant-dot 1s ease-in-out infinite}
+.assistant-thinking .dot:nth-child(2){animation-delay:.15s}
+.assistant-thinking .dot:nth-child(3){animation-delay:.3s}
+.assistant-progress{font-size:11px;line-height:1.5;color:var(--text-2);padding:9px;border:1px solid var(--line-control);border-radius:4px;background:var(--header);transition:border-color .2s ease,color .2s ease}
+.shell[data-assistant-busy="true"] .assistant-progress{border-color:var(--accent);color:var(--text);animation:assistant-card 1.2s ease-in-out infinite}
+.assistant-result{font-size:10px;line-height:1.55;color:var(--text-3);white-space:pre-wrap;animation:rise .28s ease-out}
 .assistant-foot{font-size:10px;color:var(--dim);line-height:1.5;margin:12px 0 0}
 .assistant-composer{flex:none;border-top:1px solid var(--line);background:var(--panel);padding:9px 11px 11px;display:flex;flex-direction:column;gap:8px}
 .assistant-prompt{width:100%;min-height:58px;resize:vertical;border:1px solid var(--line-control);border-radius:4px;background:var(--well);color:var(--text);font:11px/1.5 var(--sans);padding:8px}
 .assistant-prompt.is-inert{color:var(--inert);cursor:not-allowed}
-.assistant-routes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px}
+.assistant-routes{display:none;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px}
+.shell[data-details-open="true"] .assistant-routes{display:grid}
 .assistant-route{min-width:0;padding:5px 3px;border:1px solid var(--line-control);border-radius:3px;color:var(--dim);font-size:9px;line-height:1.2}
 .assistant-route[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);background:${ACCENT.surface}}
 .composer-actions{display:flex;align-items:center;gap:7px}
 .assistant-modes{display:flex;background:var(--header);border:1px solid var(--line-control);border-radius:4px;padding:2px}
-.assistant-mode{height:21px;padding:0 9px;font-size:10px;color:var(--dim);border-radius:2px}
+.assistant-mode{height:24px;padding:0 11px;font-size:11px;color:var(--dim);border-radius:3px}
 .assistant-mode[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);font-weight:600}
 .assistant-mode.is-inert[aria-pressed="true"]{color:var(--inert-on-accent)}
 /* Both assistant bodies ship in every document and the state chooses between
@@ -1310,7 +1424,10 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .shell[data-assistant="denied"] .assistant-body,
 .shell[data-assistant="denied"] .assistant-composer{display:none}
 .assistant-denied p{margin:0;font-size:12px;color:var(--dim);line-height:1.6}
-.assistant-denied-title{font-size:14px;font-weight:600;color:var(--text)}
+.assistant-denied-title{font-size:16px;font-weight:700;color:var(--text)}
+.assistant-denied-detail,.assistant-denied-code{display:none}
+.shell[data-details-open="true"] .assistant-denied-detail,
+.shell[data-details-open="true"] .assistant-denied-code{display:block}
 .assistant-denied code{color:${SIGNAL.sceneText};border:1px solid ${SIGNAL.sceneLine};background:${SIGNAL.sceneSurface};border-radius:3px;padding:4px 8px;display:inline-block}
 
 /* Kids: one refusal region replaces the whole editor body, so the grid drops to
@@ -1319,14 +1436,21 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .shell[data-profile="kids"] .left-dock,
 .shell[data-profile="kids"] .viewport-column,
 .shell[data-profile="kids"] .inspector{display:none}
-.profile-refusal{display:none;place-items:center;padding:32px;background:var(--canvas);min-width:0}
+.profile-refusal{display:none;place-items:center;padding:32px;background:radial-gradient(120% 90% at 50% 0%, ${SIGNAL.sceneSurface} 0%, var(--canvas) 70%);min-width:0}
 .shell[data-profile="kids"] .profile-refusal{display:grid}
-.profile-refusal-card{max-width:46ch;text-align:center;background:${SIGNAL.sceneSurface};border:1px solid ${SIGNAL.sceneLine};border-radius:9px;padding:26px 28px}
-.profile-refusal-card h2{margin:12px 0;font-size:16px}
-.profile-refusal-card p{margin:0 0 10px;font-size:12px;line-height:1.65;color:${SIGNAL.sceneText}}
+.shell[data-profile="kids"]{--accent:${SIGNAL.scene};--on-accent:${SIGNAL.sceneSurface}}
+.profile-refusal-card{max-width:46ch;text-align:center;background:${SIGNAL.sceneSurface};border:1px solid ${SIGNAL.sceneLine};border-radius:18px;padding:28px 28px 24px;box-shadow:0 18px 40px -24px ${SIGNAL.scene}}
+.profile-refusal-card h2{margin:12px 0;font-size:22px;color:${SIGNAL.sceneText}}
+.profile-refusal-card p{margin:0 0 10px;font-size:13px;line-height:1.65;color:${SIGNAL.sceneText}}
+.kids-studio-mark{display:grid;place-items:center;width:42px;height:42px;margin:0 auto;border-radius:14px;background:${SIGNAL.scene};color:${SIGNAL.sceneSurface};font-size:20px}
+.profile-refusal-code{display:none}
+.shell[data-details-open="true"] .profile-refusal-code{display:block}
 .profile-refusal-code code{color:var(--scene)}
 .profile-refusal-foot{color:var(--dim) !important}
 .mark-scene{background:${SIGNAL.sceneSurface};border:1px solid ${SIGNAL.sceneLine};color:${SIGNAL.scene};margin:0 auto}
+.project-browser-status{margin:4px 0 0;font-size:10px;color:var(--dim)}
+.project-browser-advanced{display:none;margin-top:6px}
+.shell[data-details-open="true"] .project-browser-advanced{display:block}
 
 .status-bar{position:relative;background:var(--well);border-top:1px solid var(--line);display:flex;align-items:center;padding:0 12px;gap:13px}
 .status-text{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text-3)}
@@ -1368,6 +1492,12 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 
 @keyframes rise{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
 @keyframes sweep{0%{transform:translateX(-120%)}100%{transform:translateX(420%)}}
+@keyframes assistant-breathe{0%,100%{opacity:1}50%{opacity:.62}}
+@keyframes assistant-spin{to{transform:rotate(225deg)}}
+@keyframes assistant-bars{0%,100%{opacity:.4}50%{opacity:1}}
+@keyframes assistant-dot{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:1;transform:translateY(-2px)}}
+@keyframes assistant-card{0%,100%{box-shadow:0 0 0 0 ${ACCENT.surface}}50%{box-shadow:0 0 0 4px ${ACCENT.surface}}}
+@keyframes assistant-glow{0%,100%{opacity:.18}50%{opacity:.4}}
 
 /* Compact: the assistant leaves the grid and becomes an overlay drawer. Its
    existing toggle opens and closes it, so nothing becomes unreachable. */
@@ -1411,6 +1541,8 @@ code,kbd{font-family:var(--mono);font-size:.86em}
   .profile-surface .capability-list,.game-runtime-note{display:none}
   .runtime-report{display:none}
   .shell[data-assistant="denied"] .shell-body,.shell[data-profile="kids"][data-assistant="denied"] .shell-body{grid-template-columns:var(--rail) minmax(0,1fr) var(--assistant-w)}
+  .shell[data-profile="web"] .shell-body,.shell[data-profile="web"][data-assistant="closed"] .shell-body{grid-template-columns:minmax(0,1fr)}
+  .shell[data-profile="web"] .left-dock{left:0}
 }
 /* Below the declared minimum the chrome refuses instead of laying out. The
    breakpoints are interpolated from DESKTOP_MINIMUM_WINDOW, so the CSS and the
@@ -1422,7 +1554,7 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}
-  .sculpt-sweep{display:none}
+  .sculpt-sweep,.assistant-live{display:none}
 }
 `;
 }
@@ -1707,7 +1839,9 @@ if (shell) {
         });
         el.dataset.value = selectedSceneEntityIds.join(',');
       } else {
-        el.setAttribute('aria-pressed', String(el.dataset.value === entity.id));
+        const pressed = el.dataset.value === entity.id;
+        el.setAttribute('aria-pressed', String(pressed));
+        el.classList.toggle('is-selected', pressed);
       }
     });
     q('[data-scene-property-entity-label]').forEach((el) => { el.textContent = entity.label; });
@@ -1788,8 +1922,12 @@ if (shell) {
         item.className = 'scene-entity-identity';
         item.dataset.sceneIdentity = entity.id;
         item.style.setProperty('--scene-depth', String(entity.depth));
+        item.dataset.action = 'scene-entity-select';
+        item.dataset.value = entity.id;
+        item.setAttribute('aria-pressed', selectedSceneEntityIds.includes(entity.id) ? 'true' : 'false');
+        item.classList.toggle('is-selected', selectedSceneEntityIds.includes(entity.id));
         const kind = document.createElement('span');
-        kind.textContent = entity.parentInstanceId === null ? 'Object · hierarchy root' : 'Object · hierarchy child';
+        kind.textContent = entity.label;
         item.appendChild(kind);
         const fields = document.createElement('dl');
         [
@@ -1818,9 +1956,7 @@ if (shell) {
       entitiesList.forEach((entity) => {
         const option = document.createElement('option');
         option.value = entity.id;
-        option.textContent = '  '.repeat(entity.depth) + 'Object ' + entity.artifactId +
-          ' · instance ' + entity.id +
-          (entity.parentInstanceId === null ? ' · root' : ' · parent ' + entity.parentInstanceId);
+        option.textContent = '  '.repeat(entity.depth) + entity.label;
         el.appendChild(option);
       });
       const fallback = entitiesList.find((entity) => entity.id === 'desktop-crate-beside')?.id || entitiesList[0]?.id || '';
@@ -2301,7 +2437,7 @@ if (shell) {
           validation.textContent = asset.validation.state +
             (asset.validation.reason ? ' · ' + asset.validation.reason : '') +
             ' · ' + asset.validation.message;
-          card.append(name, type, digest, provenance, validation);
+          card.append(name, type, validation);
           assetSurface.append(card);
         });
       }
@@ -3006,7 +3142,7 @@ if (shell) {
       review.hidden = false;
     }
     if (message) {
-      message.textContent = 'Proposal staged with base ' + projectContentHash + ' · Save applies atomically.';
+      message.textContent = 'Staged · review it in Changes, then Save.';
     }
     projectDirty = true;
     projectRecovering = false;
@@ -3627,6 +3763,12 @@ if (shell) {
     await beginSceneLifecycleTransition();
     shell.dataset.profile = value;
     q('.profile-chip').forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.value === value)));
+    const promptField = document.getElementById('assistant-prompt');
+    if (promptField instanceof HTMLTextAreaElement) {
+      promptField.placeholder = value === 'web'
+        ? 'Ask Flash for a Three.js hero or a headline animation'
+        : 'Tell Flash what to make';
+    }
     setProfile(value);
   };
 
@@ -4082,6 +4224,18 @@ if (shell) {
     } else if (action === 'assistant-mode' && value) {
       shell.dataset.assistantMode = value;
       q('.assistant-mode').forEach((m) => m.setAttribute('aria-pressed', String(m.dataset.value === value)));
+      const promptField = document.getElementById('assistant-prompt');
+      if (promptField instanceof HTMLTextAreaElement && promptField.getAttribute('aria-disabled') !== 'true') {
+        promptField.focus();
+      }
+      const status = document.querySelector('[data-assistant-status]');
+      if (status) {
+        status.textContent = value === 'ask'
+          ? 'Light · Flash will keep it simple. Type, then Send.'
+          : value === 'agent'
+            ? 'Strong · Flash will go further. Type, then Send.'
+            : 'Mid · Flash will make the usual pass. Type, then Send.';
+      }
     } else if (action === 'assistant-route' && value) {
       shell.dataset.assistantRoute = value;
       q('.assistant-route').forEach((m) => m.setAttribute('aria-pressed', String(m.dataset.value === value)));
@@ -4282,7 +4436,7 @@ export function renderDesktopChrome(
   <p>${escapeHtml(refusal.message)}</p>
   <p>Minimum: <code>${escapeHtml(`${refusal.minimum.width}×${refusal.minimum.height}`)}</code> · refusal <code>${escapeHtml(refusal.code)}</code></p>
 </div>
-<div class="shell" data-mode="${escapeHtml(view.state.mode)}" data-profile="${escapeHtml(view.state.profile)}" data-assistant="${escapeHtml(view.assistant.state)}" data-assistant-mode="${escapeHtml(view.state.assistantMode)}" data-assistant-route="${escapeHtml(view.state.assistantRoute)}" data-assistant-runtime="${escapeHtml(view.state.assistantRuntime)}" data-assistant-runtime-event="${escapeHtml(DESKTOP_ASSISTANT_RUNTIME_EVENT)}" data-overlay="${escapeHtml(view.state.overlay ?? "none")}" data-tier="${escapeHtml(view.tier)}" data-drawer-left="closed" data-drawer-inspector="closed" data-drawer-assistant="closed">
+<div class="shell" data-mode="${escapeHtml(view.state.mode)}" data-profile="${escapeHtml(view.state.profile)}" data-assistant="${escapeHtml(view.assistant.state)}" data-assistant-mode="${escapeHtml(view.state.assistantMode)}" data-assistant-route="${escapeHtml(view.state.assistantRoute)}" data-assistant-runtime="${escapeHtml(view.state.assistantRuntime)}" data-assistant-runtime-event="${escapeHtml(DESKTOP_ASSISTANT_RUNTIME_EVENT)}" data-assistant-busy="false" data-overlay="${escapeHtml(view.state.overlay ?? "none")}" data-tier="${escapeHtml(view.tier)}" data-details-open="${view.state.detailsOpen ? "true" : "false"}" data-drawer-left="closed" data-drawer-inspector="closed" data-drawer-assistant="closed">
 ${titleBar(view)}
 <div class="shell-body">
 ${modeRail(view)}

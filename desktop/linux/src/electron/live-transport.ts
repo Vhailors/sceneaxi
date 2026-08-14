@@ -13,7 +13,8 @@ import { DesktopByoRunnerRefusal } from "../lib/byo-configuration.js";
 import { DESKTOP_BYO_CONFIGURATION_REFUSALS } from "../lib/byo-configuration-contract.js";
 import type { ProviderKeyAccess } from "../lib/byo-configuration.js";
 
-export const DESKTOP_OPENCODE_API_BASE = "https://opencode.ai/zen/go/v1";
+export const DESKTOP_OPENCODE_API_BASE = "https://opencode.ai/zen/v1";
+const COMPLETE_TIMEOUT_MS = 45_000;
 
 export const DESKTOP_DEEPSEEK_MODEL = Object.freeze({
   model: "deepseek-v4-flash",
@@ -58,11 +59,13 @@ export function createDesktopOpenCodeLiveTransport(input: Readonly<{
   credential: ProviderKeyAccess;
   apiBase?: string;
   fetchImpl?: typeof fetch;
+  timeoutMs?: number;
 }>): Readonly<{
   complete(prompt: string, model: ModelDescriptor): Promise<string>;
 }> {
   const apiBase = input.apiBase ?? DESKTOP_OPENCODE_API_BASE;
   const fetchImpl = input.fetchImpl ?? fetch;
+  const timeoutMs = input.timeoutMs ?? COMPLETE_TIMEOUT_MS;
   return Object.freeze({
     async complete(prompt: string, model: ModelDescriptor) {
       let url: URL;
@@ -86,20 +89,35 @@ export function createDesktopOpenCodeLiveTransport(input: Readonly<{
           "The privileged DeepSeek transport refused an unnamed host.",
         );
       }
-      const response = await fetchImpl(url, {
-        method: "POST",
-        headers: {
-          authorization: `Bearer ${input.credential.read()}`,
-          "content-type": "application/json",
-          accept: "application/json",
-          "user-agent": "SceneAxi-Desktop/0.0.0 (Linux; BYOK complete-only)",
-        },
-        body: JSON.stringify({
-          model: model.model,
-          temperature: 0,
-          messages: [{ role: "user", content: prompt }],
-        }),
-      });
+      let response: Response;
+      try {
+        response = await fetchImpl(url, {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${input.credential.read()}`,
+            "content-type": "application/json",
+            accept: "application/json",
+            "user-agent": "SceneAxi-Desktop/0.0.0 (Linux; BYOK complete-only)",
+          },
+          body: JSON.stringify({
+            model: model.model,
+            temperature: 0,
+            max_tokens: 2048,
+            messages: [{ role: "user", content: prompt }],
+          }),
+          signal: AbortSignal.timeout(timeoutMs),
+        });
+      } catch (error) {
+        const timedOut =
+          error instanceof Error &&
+          (error.name === "TimeoutError" || error.name === "AbortError");
+        throw new DesktopByoRunnerRefusal(
+          DESKTOP_BYO_CONFIGURATION_REFUSALS.providerSessionFailed,
+          timedOut
+            ? "Flash did not finish in time. Press Send again, or try a shorter prompt."
+            : "Flash could not be reached. Check the network and press Send again.",
+        );
+      }
       if (!response.ok) {
         throw new DesktopByoRunnerRefusal(
           DESKTOP_BYO_CONFIGURATION_REFUSALS.providerSessionFailed,

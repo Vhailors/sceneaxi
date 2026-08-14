@@ -139,7 +139,7 @@ export type RunAssistantSculptOptions =
 const KIDS_PROFILE = "@sceneaxi/profile-kids";
 
 const ASSISTANT_SCULPT_FORMAT_INSTRUCTION =
-  "Return only one JSON document matching the existing sceneaxi.sculpt-intake v1 contract. Do not wrap it in Markdown.";
+  "Return only one JSON document matching the existing sceneaxi.sculpt-intake v1 contract. Do not wrap it in Markdown. Example: {\"schemaVersion\":1,\"kind\":\"sceneaxi.sculpt-intake\",\"intakeId\":\"crate-1\",\"mode\":\"structured-spec\",\"structuredSpec\":{\"schemaVersion\":1,\"kind\":\"sceneaxi.object-sculpt-spec\",\"id\":\"crate-1-spec\",\"rootNodeId\":\"crate-1-root\",\"components\":[{\"id\":\"body\",\"primitive\":\"box\",\"dimensions\":[2,2,2],\"materialId\":\"wood\"}],\"materials\":[{\"id\":\"wood\",\"baseColor\":\"#8a5a2b\",\"metallic\":0.1,\"roughness\":0.7}],\"sockets\":[],\"hierarchy\":[{\"id\":\"crate-1-root\",\"parentId\":null,\"componentId\":\"body\",\"transform\":{\"translation\":[0,0,0],\"rotationEulerDegrees\":[0,0,0],\"scale\":[1,1,1]}}]}}";
 
 const INSPECTION_EDIT: AssistantSculptInspectionEdit = Object.freeze({
   supported: false as const,
@@ -499,8 +499,8 @@ export async function runAssistantSculptAction(
     percent: 20,
     message:
       options.operation === "stream"
-        ? "Waiting for the explicitly configured BYOK provider stream."
-        : "Waiting for the explicitly configured BYOK provider completion.",
+        ? "Flash is writing."
+        : "Flash is making the object. This can take up to a minute.",
   });
 
   try {

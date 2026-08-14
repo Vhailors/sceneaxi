@@ -86,6 +86,16 @@ if (process.platform === "linux") {
   app.commandLine.appendSwitch("password-store", "gnome-libsecret");
 }
 
+/**
+ * Unpackaged `electron dist/main.cjs` otherwise writes to ~/.config/Electron,
+ * so a key saved by the packaged app is invisible and Send looks dead.
+ * Pin the same userData the packaged productName already uses.
+ */
+if (!app.isPackaged) {
+  app.setName("sceneaxi-engine-desktop");
+  app.setPath("userData", join(app.getPath("appData"), "sceneaxi-engine-desktop"));
+}
+
 /** Active document name shared by explicit projects and the isolated smoke. */
 const SAMPLE_DOCUMENT = DESKTOP_ACTIVE_DOCUMENT_PATH;
 
