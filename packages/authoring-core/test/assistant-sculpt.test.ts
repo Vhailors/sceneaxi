@@ -47,6 +47,29 @@ describe("assistant sculpt action", () => {
     ]);
   });
 
+  it("compiles a directed archer-and-tree prompt into one multi-part artifact", async () => {
+    const result = await runAssistantSculptAction({
+      route: "local",
+      profile: "@sceneaxi/profile-game",
+      prompt: "Make an archer shooting to the tree",
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const ids = result.artifact.spec.components.map((component) => component.id);
+    expect(ids).toEqual([
+      "anchor",
+      "tree-trunk",
+      "tree-crown",
+      "archer-body",
+      "archer-head",
+      "bow",
+      "arrow",
+    ]);
+    expect(result.artifact.spec.hierarchy).toHaveLength(7);
+    expect(result.artifact.artifactId).toMatch(/^assistant-[0-9a-f]{12}-artifact$/);
+  });
+
   it("streams a BYOK completion and reconstructs only the validated typed intake", async () => {
     const deltas: string[] = [];
     const intake = JSON.stringify({

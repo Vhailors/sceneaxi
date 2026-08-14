@@ -100,6 +100,7 @@ import {
   startExtensionSeam,
   isJsonObject,
   type SceneAssistantBuildEntry,
+  type SculptArtifact,
 } from "@sceneaxi/schemas";
 import {
   DESKTOP_ACTIVE_DOCUMENT_PATH,
@@ -381,6 +382,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     refusal?: NonNullable<DesktopAssistantJobSnapshot["refusal"]>;
   } | null = null;
   let lastReadyBuild: SceneAssistantBuildEntry | null = null;
+  let lastReadyArtifact: SculptArtifact | null = null;
   let pendingAssetImport: Readonly<{
     documentPath: string;
     entry: ProjectAssetManifestEntry;
@@ -2308,6 +2310,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
             version: providerModel?.version ?? "local",
             fallbackPolicy: "none" as const,
           });
+          lastReadyArtifact = result.artifact;
           activeJob.status = "ready";
           activeJob.result = Object.freeze({
             ok: true as const,
@@ -3251,6 +3254,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           contentHash: String(input["expectedContentHash"]),
           documentPath,
           entry: lastReadyBuild,
+          ...(lastReadyArtifact === null ? {} : { artifact: lastReadyArtifact }),
         });
         if (!staged.ok) {
           return commandTransaction(validated.command.id, bridgeRefuse(staged.reason, staged.message));

@@ -70,6 +70,7 @@ import {
 import { DESKTOP_WEB_EXPORT_REFUSALS } from "../lib/web-export.js";
 import { createElectronProviderKeyStore } from "./provider-key-store.js";
 import {
+  createDesktopOpenCodeProviderSession,
   createDesktopRarityFixtureProvider,
   createPrivilegedDesktopByoRuntime,
 } from "./provider-runtime.js";
@@ -164,6 +165,8 @@ async function start(): Promise<void> {
   const providerKeyStore = createElectronProviderKeyStore(app.getPath("userData"));
   const byoRuntime = createPrivilegedDesktopByoRuntime({
     keyStore: providerKeyStore,
+    provider: "opencode",
+    createProviderSession: createDesktopOpenCodeProviderSession(),
   });
   const runRarityProvider = createDesktopRarityFixtureProvider();
   let webExportRuntime: Uint8Array | undefined;

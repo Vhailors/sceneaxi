@@ -1,5 +1,6 @@
 /** Renderer binding for the desktop-only BYOK configuration surface. */
 import {
+  DESKTOP_BYO_PROVIDER_LABELS,
   DESKTOP_BYO_PROVIDERS,
   DESKTOP_BYO_CONFIGURATION_REFUSALS,
   type DesktopByoConfigurationRefusalReason,
@@ -83,10 +84,12 @@ export function installDesktopByoConfigurationSurface(
   providerLabel.textContent = "Provider";
   const provider = element("select");
   provider.setAttribute("aria-label", "BYOK provider");
-  const option = element("option");
-  option.value = DESKTOP_BYO_PROVIDERS[0];
-  option.textContent = "OpenRouter";
-  provider.append(option);
+  for (const id of DESKTOP_BYO_PROVIDERS) {
+    const option = element("option");
+    option.value = id;
+    option.textContent = DESKTOP_BYO_PROVIDER_LABELS[id];
+    provider.append(option);
+  }
   providerField.append(providerLabel, provider);
 
   const keyField = element("label", "desktop-byo-config-field");
@@ -159,10 +162,19 @@ export function installDesktopByoConfigurationSurface(
     }
   };
 
+  const selectedProvider = (): (typeof DESKTOP_BYO_PROVIDERS)[number] =>
+    DESKTOP_BYO_PROVIDERS.includes(provider.value as (typeof DESKTOP_BYO_PROVIDERS)[number])
+      ? (provider.value as (typeof DESKTOP_BYO_PROVIDERS)[number])
+      : DESKTOP_BYO_PROVIDERS[0];
+
   const refresh = async (): Promise<void> => {
     const profile = assistantProfile(shell);
     if (profile === "@sceneaxi/profile-kids") return;
-    await request({ action: "status", profile, provider: DESKTOP_BYO_PROVIDERS[0] });
+    await request({
+      action: "status",
+      profile,
+      provider: selectedProvider(),
+    });
   };
 
   const synchronizeVisibility = (): void => {
@@ -189,7 +201,7 @@ export function installDesktopByoConfigurationSurface(
         await request({
           action: "save",
           profile,
-          provider: DESKTOP_BYO_PROVIDERS[0],
+          provider: selectedProvider(),
           key: submittedKey,
         });
       } finally {
@@ -204,8 +216,12 @@ export function installDesktopByoConfigurationSurface(
     void request({
       action: "remove",
       profile,
-      provider: DESKTOP_BYO_PROVIDERS[0],
+      provider: selectedProvider(),
     });
+  });
+
+  provider.addEventListener("change", () => {
+    void refresh();
   });
 
   document.addEventListener("click", (event) => {

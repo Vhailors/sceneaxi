@@ -408,6 +408,7 @@ type DesktopStoredPlacement = Readonly<{
 function composeStoredPlacements(
   stored: ComposedScene,
   placements: readonly DesktopStoredPlacement[],
+  extraArtifacts: readonly SculptArtifact[] = [],
 ) {
   const intake = {
     schemaVersion: SCENE_COMPOSITION_SCHEMA_VERSION,
@@ -421,6 +422,10 @@ function composeStoredPlacements(
   for (const instance of stored.instances) {
     if (!placedArtifactIds.has(instance.artifactId)) continue;
     artifacts.set(instance.artifactId, instance.artifact);
+  }
+  for (const artifact of extraArtifacts) {
+    const artifactId = artifactIdOf(artifact);
+    if (placedArtifactIds.has(artifactId)) artifacts.set(artifactId, artifact);
   }
   const composed = composeScene(intake, [...artifacts.values()]);
   if (!composed.ok) return composed;
@@ -1597,11 +1602,23 @@ export function answerDesktopAssistantAsk(input: Readonly<{
   });
 }
 
+function nextAssistantInstanceId(stored: ComposedScene, artifactId: string) {
+  const used = new Set(stored.instances.map((instance) => instance.instanceId));
+  const base = `assistant-${artifactId.replace(/[^a-z0-9-]+/gi, "").slice(0, 24) || "build"}`;
+  if (!used.has(base)) return base;
+  for (let sequence = 2; sequence <= stored.instances.length + 2; sequence += 1) {
+    const candidate = `${base}-${String(sequence)}`;
+    if (!used.has(candidate)) return candidate;
+  }
+  return null;
+}
+
 export function stageDesktopAssistantBuild(input: Readonly<{
   documentData: unknown;
   contentHash: string;
   documentPath?: string;
   entry: SceneAssistantBuildEntry;
+  artifact?: SculptArtifact;
 }>) {
   const documentPath = input.documentPath ?? DESKTOP_ACTIVE_DOCUMENT_PATH;
   const read = readEditableComposition(input.documentData, input.contentHash, documentPath);
@@ -1624,11 +1641,83 @@ export function stageDesktopAssistantBuild(input: Readonly<{
   }
   const next = applyAssistantBuildEntry({ catalog, entry: input.entry });
   const base = isJsonObject(input.documentData) ? input.documentData : {};
+  if (input.artifact === undefined) {
+    return Object.freeze({
+      ok: true as const,
+      catalog: next,
+      documentData: Object.freeze({
+        ...base,
+        [SCENE_ASSISTANT_BUILD_CATALOG_KEY]: next,
+      }),
+    });
+  }
+  const artifactId = artifactIdOf(input.artifact);
+  if (artifactId.length === 0) {
+    return Object.freeze({
+      ok: false as const,
+      reason: ASSISTANT_ASK_REFUSALS.inputUnsupported,
+      message: "The retained assistant Build artifact has no artifact identity.",
+    });
+  }
+  const alreadyPlaced = read.stored.instances.some(
+    (instance) => instance.artifactId === artifactId,
+  );
+  if (alreadyPlaced) {
+    return Object.freeze({
+      ok: true as const,
+      catalog: next,
+      documentData: Object.freeze({
+        ...base,
+        [SCENE_ASSISTANT_BUILD_CATALOG_KEY]: next,
+      }),
+    });
+  }
+  if (read.stored.instances.length >= SCENE_MAXIMUM_INSTANCES) {
+    return Object.freeze({
+      ok: false as const,
+      reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+      message: `Assistant apply cannot exceed the v1 maximum of ${String(SCENE_MAXIMUM_INSTANCES)} instances.`,
+    });
+  }
+  const addedInstanceId = nextAssistantInstanceId(read.stored, artifactId);
+  if (addedInstanceId === null) {
+    return Object.freeze({
+      ok: false as const,
+      reason: DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+      message: "No canonical object identifier is available for the assistant Build artifact.",
+    });
+  }
+  const composed = composeStoredPlacements(
+    read.stored,
+    [
+      ...read.stored.instances.map((instance) => ({
+        instanceId: instance.instanceId,
+        artifactId: instance.artifactId,
+        parentInstanceId: instance.parentInstanceId,
+        transform: instance.localTransform,
+      })),
+      {
+        instanceId: addedInstanceId,
+        artifactId,
+        parentInstanceId: read.stored.rootInstanceId,
+        transform: placementTransform([6, 0, 0]),
+      },
+    ],
+    [input.artifact],
+  );
+  if (!composed.ok) {
+    return Object.freeze({
+      ok: false as const,
+      reason: DESKTOP_SCENE_NOT_COMPOSABLE,
+      message: `${composed.path}: ${composed.message}`,
+    });
+  }
   return Object.freeze({
     ok: true as const,
     catalog: next,
     documentData: Object.freeze({
       ...base,
+      ...composed.document.data,
       [SCENE_ASSISTANT_BUILD_CATALOG_KEY]: next,
     }),
   });

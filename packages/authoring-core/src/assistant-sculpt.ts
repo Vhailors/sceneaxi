@@ -183,8 +183,24 @@ function promptDigest(prompt: string): string {
   return createHash("sha256").update(prompt).digest("hex");
 }
 
-function localIntake(prompt: string): SculptIntake {
-  const lower = prompt.toLocaleLowerCase("en-US");
+function identityTransform(
+  translation: readonly [number, number, number] = [0, 0, 0],
+) {
+  return {
+    translation,
+    rotationEulerDegrees: [0, 0, 0] as const,
+    scale: [1, 1, 1] as const,
+  };
+}
+
+function directedScenePrompt(lower: string): boolean {
+  const actor = /\b(archer|bowman|bowmen|hunter|ranger)\b/.test(lower);
+  const target = /\b(tree|oak|pine|forest|target)\b/.test(lower);
+  const action = /\b(shoot|shooting|arrow|aim(?:ing)?)\b/.test(lower);
+  return actor && (target || action);
+}
+
+function primitiveIntake(prompt: string, lower: string, id: string): ObjectSculptSpec {
   const primitive: SculptComponent["primitive"] = lower.includes("sphere")
     ? "sphere"
     : lower.includes("cylinder")
@@ -203,9 +219,8 @@ function localIntake(prompt: string): SculptIntake {
       : lower.includes("green")
         ? "#3b9966"
         : `#${promptDigest(prompt).slice(0, 6)}`;
-  const id = `assistant-${promptDigest(prompt).slice(0, 12)}`;
   const rootNodeId = `${id}-root`;
-  const legacy: ObjectSculptSpec = {
+  return {
     schemaVersion: SCULPT_SCHEMA_VERSION,
     kind: OBJECT_SCULPT_SPEC_KIND,
     id: `${id}-spec`,
@@ -232,14 +247,62 @@ function localIntake(prompt: string): SculptIntake {
         id: rootNodeId,
         parentId: null,
         componentId: "body",
-        transform: {
-          translation: [0, 0, 0] as const,
-          rotationEulerDegrees: [0, 0, 0] as const,
-          scale: [1, 1, 1] as const,
-        },
+        transform: identityTransform(),
       },
     ],
   };
+}
+
+/**
+ * One validated artifact whose internal hierarchy is a directed scene: a tree
+ * on the left, an archer on the right, and an arrow in flight between them.
+ * The compiler stays deterministic and keyword-bound; it does not invent a
+ * second authoring contract.
+ */
+function directedSceneIntake(id: string): ObjectSculptSpec {
+  const rootNodeId = `${id}-root`;
+  return {
+    schemaVersion: SCULPT_SCHEMA_VERSION,
+    kind: OBJECT_SCULPT_SPEC_KIND,
+    id: `${id}-spec`,
+    rootNodeId,
+    components: [
+      { id: "anchor", primitive: "box", dimensions: [0.2, 0.2, 0.2], materialId: "ground" },
+      { id: "tree-trunk", primitive: "cylinder", dimensions: [0.7, 3.2, 0.7], materialId: "bark" },
+      { id: "tree-crown", primitive: "sphere", dimensions: [2.2, 2.2, 2.2], materialId: "foliage" },
+      { id: "archer-body", primitive: "box", dimensions: [0.55, 1.4, 0.4], materialId: "cloth" },
+      { id: "archer-head", primitive: "sphere", dimensions: [0.42, 0.42, 0.42], materialId: "skin" },
+      { id: "bow", primitive: "box", dimensions: [0.1, 1.15, 0.1], materialId: "wood" },
+      { id: "arrow", primitive: "box", dimensions: [1.7, 0.08, 0.08], materialId: "iron" },
+    ],
+    materials: [
+      { id: "ground", baseColor: "#6b7280", metallic: 0.05, roughness: 0.9 },
+      { id: "bark", baseColor: "#5a3a22", metallic: 0.05, roughness: 0.85 },
+      { id: "foliage", baseColor: "#3b9966", metallic: 0.05, roughness: 0.7 },
+      { id: "cloth", baseColor: "#6b4a2b", metallic: 0.08, roughness: 0.75 },
+      { id: "skin", baseColor: "#d4a574", metallic: 0.04, roughness: 0.55 },
+      { id: "wood", baseColor: "#8a5a2b", metallic: 0.1, roughness: 0.65 },
+      { id: "iron", baseColor: "#4a4a4a", metallic: 0.55, roughness: 0.35 },
+    ],
+    sockets: [],
+    hierarchy: [
+      { id: rootNodeId, parentId: null, componentId: "anchor", transform: identityTransform() },
+      { id: `${id}-tree-trunk`, parentId: rootNodeId, componentId: "tree-trunk", transform: identityTransform([-2.4, 1.6, 0]) },
+      { id: `${id}-tree-crown`, parentId: rootNodeId, componentId: "tree-crown", transform: identityTransform([-2.4, 3.7, 0]) },
+      { id: `${id}-archer-body`, parentId: rootNodeId, componentId: "archer-body", transform: identityTransform([2.1, 0.9, 0]) },
+      { id: `${id}-archer-head`, parentId: rootNodeId, componentId: "archer-head", transform: identityTransform([2.1, 1.82, 0]) },
+      { id: `${id}-bow`, parentId: rootNodeId, componentId: "bow", transform: identityTransform([1.65, 1.15, 0.18]) },
+      { id: `${id}-arrow`, parentId: rootNodeId, componentId: "arrow", transform: identityTransform([0.2, 1.18, 0]) },
+    ],
+  };
+}
+
+function localIntake(prompt: string): SculptIntake {
+  const lower = prompt.toLocaleLowerCase("en-US");
+  const id = `assistant-${promptDigest(prompt).slice(0, 12)}`;
+  const legacy = directedScenePrompt(lower)
+    ? directedSceneIntake(id)
+    : primitiveIntake(prompt, lower, id);
   return Object.freeze({
     schemaVersion: SCULPT_SCHEMA_VERSION,
     kind: SCULPT_INTAKE_KIND,

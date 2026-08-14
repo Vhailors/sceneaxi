@@ -240,13 +240,13 @@ job, the host performs this fixed sequence:
    OpenRouter session also removes provider-authored detail from ordinary
    authoring refusals before bridge status can carry them.
 
-The checked-in packaged host calls that privileged composition module but does
-not inject a live transport or production credential configuration. Its provider
-runtime therefore reports unavailable while secure storage and the UI states
-remain real. An authorized deployment can supply the transport session without
-changing the renderer, CLI, Unix socket, or tool registry. Until then a BYOK
-assistant start refuses rather than borrowing the local route or crossing into
-hosted metering.
+The packaged Linux host calls that privileged composition module and injects
+the OpenCode DeepSeek V4 Pro complete-only transport. Secure storage still
+owns the key; the PRC DeepSeek endpoint is refused by name; Kids is denied
+before the store is touched. Gate goldens keep injecting fixture transports
+and never open a network socket. A BYOK start with no stored OpenCode key
+refuses rather than borrowing the local route or crossing into hosted
+metering.
 
 ### Named secure-storage refusals
 

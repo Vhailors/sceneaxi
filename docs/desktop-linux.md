@@ -194,9 +194,12 @@ stays `false` at build time; the renderer updates it only from a real frame's
 The renderer script progressively binds one desktop-only BYOK settings section
 beside the shell-owned route selector. It uses the chrome's existing controls and
 tokens and does not add an editor mode or action to the shell state machine.
-Selecting BYOK shows OpenRouter key presence and Save, Replace, Remove, locked,
-unsupported, corrupt, failure, or runtime-unavailable state; Remove stays offered
-whenever a stored envelope is still safely unlinkable. Switching to Kids
+Selecting BYOK shows the OpenCode · DeepSeek V4 Pro and OpenRouter provider
+rows, key presence, and Save, Replace, Remove, locked, unsupported, corrupt,
+failure, or runtime-unavailable state; Remove stays offered whenever a stored
+envelope is still safely unlinkable. The packaged runner leases the OpenCode
+key. Apply Build then catalogs the validated artifact and places it as a new
+instance in the current composed scene. Switching to Kids
 hides the section and clears its password field before any submission or secure
 store request can occur.
 
@@ -218,10 +221,12 @@ proved separately through web-shell's existing `createAssistantPanel()` seam.
 The desktop provider-host golden test drives the recorded OpenRouter fixture
 through the privileged composition, existing Model Provider Port, authoring
 action, bridge job, and MountableScene result. It also checks the exact executed
-model descriptor and no-fallback request. The packaged default deliberately
-injects no live provider transport or fallback behaviour, so its configuration
-surface reports the provider runtime unavailable even when an encrypted key is
-stored.
+model descriptor and no-fallback request. The packaged Linux host injects one live provider transport: OpenCode
+DeepSeek V4 Pro, complete-only, pinned, no fallbacks, never the PRC
+`api.deepseek.com` endpoint. OpenRouter remains a saveable provider for the
+existing fixture-tested composition, but the packaged runner leases the
+OpenCode key. Configuration still reports runtime unavailable when no
+session factory is injected, which is how the gate goldens stay offline.
 
 The provider → authoring → engine golden
 (`tests/e2e/desktop-provider-authoring-engine-golden.test.ts`) continues that
@@ -291,7 +296,8 @@ field looking load-bearing.
 ### Configure a BYOK key
 
 1. Open Assistant and select **BYOK · free** on Game or Website.
-2. Confirm the provider row says **OpenRouter** and inspect the key/runtime status.
+2. Confirm the provider row says **OpenCode · DeepSeek V4 Pro** (or OpenRouter
+   for the fixture-tested composition) and inspect the key/runtime status.
 3. Paste the key and choose **Save key**. Once configured, the same action reads
    **Replace key**; **Remove** deletes the encrypted envelope.
 4. The field clears immediately after submission. The stored value is never shown,
@@ -311,11 +317,12 @@ that only an unavailable-backend refusal may say the platform failed — is the
 shared contract owned by
 [`desktop-local-bridge.md`](desktop-local-bridge.md#byok-secure-storage-contract).
 
-The checked-in host intentionally supplies no live provider transport session,
-so it reports provider execution unavailable even when a key is securely stored.
-It does use the same privileged composition module as the fixture proof, which
-keeps readiness and runner injection on one decision without claiming production
-provider readiness.
+The packaged Linux host injects the OpenCode DeepSeek V4 Pro session factory
+into that same privileged composition module, so readiness and runner injection
+stay one decision. Saving a key still requires OS secure storage. A missing,
+locked, or unsupported keyring refuses before any network call. The PRC
+DeepSeek endpoint is refused by host name. Gate goldens continue to inject
+fixture transports and never open a network socket.
 
 The first-release manipulator is deliberately bounded: `Move +X` and `Move +Y`
 advance by 0.25 world units, `Rotate Y` advances by 15 degrees, and `Scale +`

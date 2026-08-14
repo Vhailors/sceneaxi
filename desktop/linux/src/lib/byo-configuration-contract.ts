@@ -1,8 +1,13 @@
 /** Browser-safe vocabulary for the desktop-only BYOK configuration channel. */
 import type { DesktopAssistantProfile } from "./bridge.js";
 
-export const DESKTOP_BYO_PROVIDERS = Object.freeze(["openrouter"] as const);
+export const DESKTOP_BYO_PROVIDERS = Object.freeze(["opencode", "openrouter"] as const);
 export type DesktopByoProvider = (typeof DESKTOP_BYO_PROVIDERS)[number];
+
+export const DESKTOP_BYO_PROVIDER_LABELS = Object.freeze({
+  opencode: "OpenCode · DeepSeek V4 Pro",
+  openrouter: "OpenRouter",
+} as const);
 
 export const PROVIDER_KEY_STORE_REFUSALS = Object.freeze({
   unavailable: "DESKTOP_PROVIDER_KEY_STORE_UNAVAILABLE",
