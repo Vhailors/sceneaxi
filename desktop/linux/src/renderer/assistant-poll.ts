@@ -16,7 +16,8 @@ import {
   type DesktopRarityProposalResult,
 } from "../lib/bridge-contract.js";
 
-export const ASSISTANT_POLL_MAX_ATTEMPTS = 200;
+/** 60s at 50ms. BYOK Flash often needs longer than a local sculpt. */
+export const ASSISTANT_POLL_MAX_ATTEMPTS = 1_200;
 export const ASSISTANT_POLL_INTERVAL_MS = 50;
 
 /**

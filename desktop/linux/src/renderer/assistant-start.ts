@@ -62,11 +62,21 @@ export function decideAssistantStart(input: Readonly<{
     ok: true as const,
     payload: Object.freeze({
       op: "start" as const,
-      route: input.route ?? "local",
+      route: input.route ?? "byo",
       profile: input.profile,
       prompt,
       mode,
       ...((mode === "agent" || mode === "ask") ? { documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH } : {}),
     }),
   });
+}
+
+/** Headline strength becomes a prompt prefix. The host still picks Flash. */
+export function withAssistantStrengthInstruction(
+  mode: DesktopAssistantStartMode,
+  prompt: string,
+): string {
+  if (mode === "ask") return `Light pass. Keep the result simple and small.\n\n${prompt}`;
+  if (mode === "agent") return `Strong pass. Make it complete and thorough.\n\n${prompt}`;
+  return prompt;
 }

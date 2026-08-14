@@ -20,6 +20,9 @@ import { SCENE_PREFAB_REFUSALS } from "./desktop-scene-prefab.js";
 import { PLAY_SESSION_REFUSALS } from "./desktop-play-session.js";
 import { SCENE_ANIMATION_REFUSALS } from "./desktop-scene-animation.js";
 import { SCENE_PHYSICS_REFUSALS } from "./desktop-scene-physics.js";
+import { SCENE_ENVIRONMENT_REFUSALS } from "./desktop-scene-environment.js";
+import { SCENE_MATERIALS_REFUSALS } from "./desktop-scene-materials.js";
+import { SCENE_EFFECTS_REFUSALS } from "./desktop-scene-effects.js";
 import { ASSISTANT_ASK_REFUSALS, ASSISTANT_ASK_SCOPES } from "./desktop-assistant-ask.js";
 import { SCENE_PACKAGE_REFUSALS } from "./desktop-scene-package.js";
 import { PROFILE_REFUSALS } from "./desktop-profile-evidence.js";
@@ -106,6 +109,12 @@ export type EditorCommandId =
   | "physics-inspect"
   | "physics-apply"
   | "physics-evaluate"
+  | "environment-inspect"
+  | "environment-apply"
+  | "material-inspect"
+  | "material-apply"
+  | "effect-inspect"
+  | "effect-apply"
   | "package-inspect"
   | "package-install"
   | "package-remove"
@@ -178,6 +187,9 @@ export type EditorCommandDefinition = Readonly<{
       | "scene-animation-evaluation"
       | "scene-physics-catalog"
       | "scene-physics-evaluation"
+      | "scene-environment-catalog"
+      | "scene-materials-catalog"
+      | "scene-effects-catalog"
       | "sculpt-artifact"
       | "assistant-ask-answer"
       | "scene-assistant-build-catalog"
@@ -222,6 +234,9 @@ export type EditorCommandDefinition = Readonly<{
     | "animation-time"
     | "physics-apply"
     | "physics-evaluate"
+    | "environment-apply"
+    | "material-apply"
+    | "effect-apply"
     | "assistant-ask"
     | "package-install"
     | "package-remove"
@@ -1445,6 +1460,96 @@ const DEFINITIONS = [
   }),
   definition({
     schemaVersion: 1,
+    id: "environment-inspect",
+    label: "Inspect Environment",
+    acceptedClients: CLIENTS,
+    permission: "project:read",
+    capability: capability("scene.compose"),
+    mutation: "none",
+    progress: immediate(),
+    evidence: evidence("scene-environment-catalog", "project"),
+    refusals: [...HIERARCHY_BASE_REFUSALS, ...Object.values(SCENE_ENVIRONMENT_REFUSALS)],
+    undo: undo("none"),
+    inputSchema: sceneDocumentInput,
+    inputShape: "scene-document",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "environment-apply",
+    label: "Apply Environment Edit",
+    acceptedClients: CLIENTS,
+    permission: "project:write",
+    capability: capability("scene.compose"),
+    mutation: "stages-change",
+    progress: immediate(["validating", "reviewing"]),
+    evidence: evidence("scene-environment-catalog", "change-review"),
+    refusals: [...HIERARCHY_BASE_REFUSALS, ...Object.values(SCENE_ENVIRONMENT_REFUSALS)],
+    undo: undo("none"),
+    inputSchema: physicsApplyInput,
+    inputShape: "environment-apply",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "material-inspect",
+    label: "Inspect Materials",
+    acceptedClients: CLIENTS,
+    permission: "project:read",
+    capability: capability("scene.compose"),
+    mutation: "none",
+    progress: immediate(),
+    evidence: evidence("scene-materials-catalog", "project"),
+    refusals: [...HIERARCHY_BASE_REFUSALS, ...Object.values(SCENE_MATERIALS_REFUSALS)],
+    undo: undo("none"),
+    inputSchema: sceneDocumentInput,
+    inputShape: "scene-document",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "material-apply",
+    label: "Apply Material Override",
+    acceptedClients: CLIENTS,
+    permission: "project:write",
+    capability: capability("scene.compose"),
+    mutation: "stages-change",
+    progress: immediate(["validating", "reviewing"]),
+    evidence: evidence("scene-materials-catalog", "change-review"),
+    refusals: [...HIERARCHY_BASE_REFUSALS, ...Object.values(SCENE_MATERIALS_REFUSALS)],
+    undo: undo("none"),
+    inputSchema: physicsApplyInput,
+    inputShape: "material-apply",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "effect-inspect",
+    label: "Inspect Effects",
+    acceptedClients: CLIENTS,
+    permission: "project:read",
+    capability: capability("scene.compose"),
+    mutation: "none",
+    progress: immediate(),
+    evidence: evidence("scene-effects-catalog", "project"),
+    refusals: [...HIERARCHY_BASE_REFUSALS, ...Object.values(SCENE_EFFECTS_REFUSALS)],
+    undo: undo("none"),
+    inputSchema: sceneDocumentInput,
+    inputShape: "scene-document",
+  }),
+  definition({
+    schemaVersion: 1,
+    id: "effect-apply",
+    label: "Apply Effect Edit",
+    acceptedClients: CLIENTS,
+    permission: "project:write",
+    capability: capability("scene.compose"),
+    mutation: "stages-change",
+    progress: immediate(["validating", "reviewing"]),
+    evidence: evidence("scene-effects-catalog", "change-review"),
+    refusals: [...HIERARCHY_BASE_REFUSALS, ...Object.values(SCENE_EFFECTS_REFUSALS)],
+    undo: undo("none"),
+    inputSchema: physicsApplyInput,
+    inputShape: "effect-apply",
+  }),
+  definition({
+    schemaVersion: 1,
     id: "package-inspect",
     label: "Inspect Packages",
     acceptedClients: CLIENTS,
@@ -1966,6 +2071,11 @@ export function validateEditorCommandInput(
         exactKeys(input, ["documentPath", "expectedContentHash", "profile", "steps", "animationOffsetY"])) &&
         sceneMutationFields(input) && Number.isInteger(input["steps"]) &&
         (input["animationOffsetY"] === undefined || typeof input["animationOffsetY"] === "number");
+    case "environment-apply":
+    case "material-apply":
+    case "effect-apply":
+      return exactKeys(input, ["documentPath", "expectedContentHash", "profile", "mutation"]) &&
+        sceneMutationFields(input) && isCommandObject(input["mutation"]);
     case "package-install":
       return exactKeys(input, ["documentPath", "expectedContentHash", "profile", "locator", "manifest", "digest"]) &&
         sceneMutationFields(input) &&

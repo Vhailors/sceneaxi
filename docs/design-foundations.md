@@ -25,6 +25,12 @@ Existing ADRs, schemas, refusal registries, and executable contracts win over
 contradictory mockup copy or behaviour. The archive wins on purely visual facts —
 a hex, a size, a radius, a rule about what a colour means.
 
+**Desktop-first fork (2026-08-14).** Foundations v2 remains the visual authority
+for `sites/`. The Engine Desktop now follows Cinematic Pro
+(`docs/engine-desktop-surface.md`) as its own desktop-first language. Sites do
+not adopt that language in this change. Captain D1's desktop-scope hex-equality
+is superseded; the token alignment table records semantic roles instead.
+
 Where the two disagree, this layer implements the contract and records the
 difference rather than inventing product behaviour. Three such points are open and
 recorded below.

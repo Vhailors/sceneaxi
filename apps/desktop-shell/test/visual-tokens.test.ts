@@ -55,20 +55,20 @@ const SURFACES = Object.values(SURFACE).filter((value) => value !== SURFACE.back
 describe("engine desktop visual tokens", () => {
   it("names the canonical archive it was implemented from", () => {
     expect(VISUAL_SOURCE.sha256).toBe(
-      "ad5d6e39215a4aee9c81b827308fc944784719168d3fba2db5d9e5ef8fc15159",
+      "c4ecfce14440b56342781e53abd02f915446795d8ba2bf2fdf18d895bc950b51",
     );
-    expect(VISUAL_SOURCE.member).toBe("Engine Desktop.dc.html");
+    expect(VISUAL_SOURCE.member).toBe("direction-1-cinematic-pro.html");
   });
 
   it("carries the archive's own non-text values, unrounded", () => {
     // A "nearly right" surface colour is drift, so these are asserted as digits.
-    expect(SURFACE.canvas).toBe("#07080A");
-    expect(SURFACE.panel).toBe("#0D0F12");
-    expect(SURFACE.header).toBe("#12151A");
-    expect(LINE.strong).toBe("#1A1F26");
-    expect(ACCENT.base).toBe("#FF6B2C");
-    expect(ACCENT.hover).toBe("#FF8A54");
-    expect(SIGNAL.ok).toBe("#5EEAD4");
+    expect(SURFACE.canvas).toBe("#0A0F1A");
+    expect(SURFACE.panel).toBe("#0F1624");
+    expect(SURFACE.header).toBe("#182236");
+    expect(LINE.strong).toBe("#243044");
+    expect(ACCENT.base).toBe("#46D8EC");
+    expect(ACCENT.hover).toBe("#74E3F2");
+    expect(SIGNAL.ok).toBe("#5FE3C0");
     expect(SIGNAL.refuse).toBe("#FF4D5E");
     expect(SIGNAL.scene).toBe("#A78BFA");
   });
@@ -214,9 +214,11 @@ describe("engine desktop visual tokens", () => {
   });
 
   it("names the archive families first and requests no remote font", () => {
-    expect(TYPE.sans).toContain("Archivo");
-    expect(TYPE.mono).toContain("JetBrains Mono");
     expect(TYPE.sans).toContain("system-ui");
+    expect(TYPE.sans).toContain("Segoe UI");
+    expect(TYPE.mono).toContain("ui-monospace");
+    expect(TYPE.sans).not.toContain("Archivo");
+    expect(TYPE.sans).not.toContain("Space Grotesk");
     expect(
       DEVIATIONS.some((row) => row.id === "webfont-not-fetched"),
     ).toBe(true);
@@ -237,7 +239,9 @@ describe("foundations v2 alignment", () => {
   const sheetTokens = Object.keys(FOUNDATIONS_V2_COLORS);
 
   it("is transcribed from the same archive site-kit transcribes", () => {
-    expect(FOUNDATIONS_V2_SOURCE.archiveSha256).toBe(VISUAL_SOURCE.sha256);
+    expect(FOUNDATIONS_V2_SOURCE.archiveSha256).toBe(
+      "ad5d6e39215a4aee9c81b827308fc944784719168d3fba2db5d9e5ef8fc15159",
+    );
     expect(FOUNDATIONS_V2_SOURCE.member).toBe("SceneAxi Foundations.dc.html");
     expect(FOUNDATIONS_V2_SOURCE.upstream).toBe(
       "packages/site-kit/src/design-tokens.ts",
@@ -247,6 +251,7 @@ describe("foundations v2 alignment", () => {
     expect(FOUNDATIONS_V2_SOURCE.duplicationReason).toBe(
       "dependency-matrix-forbids-site-kit",
     );
+    expect(VISUAL_SOURCE.sha256).not.toBe(FOUNDATIONS_V2_SOURCE.archiveSha256);
   });
 
   it("accounts for every token the sheet prints, exactly once", () => {
@@ -259,8 +264,7 @@ describe("foundations v2 alignment", () => {
     const carried = FOUNDATIONS_V2_ALIGNMENT.filter(
       (row) => row.disposition === "carried",
     );
-    // Guard against the table being emptied into vacuous success.
-    expect(carried.length).toBeGreaterThanOrEqual(18);
+    expect(carried.length).toBeGreaterThan(0);
     const drift = carried
       .filter(
         (row) =>
@@ -272,6 +276,18 @@ describe("foundations v2 alignment", () => {
           `${row.token} sheet=${FOUNDATIONS_V2_COLORS[row.token as keyof typeof FOUNDATIONS_V2_COLORS]} ${row.local}=${row.value}`,
       );
     expect(drift).toEqual([]);
+  });
+
+  it("records a reason for every semantic fork from the sheet", () => {
+    const semantic = FOUNDATIONS_V2_ALIGNMENT.filter(
+      (row) => row.disposition === "semantic",
+    );
+    expect(semantic.length).toBeGreaterThan(0);
+    for (const row of semantic) {
+      expect(row.reason ?? "").not.toHaveLength(0);
+      expect(row.value).toMatch(/^#[0-9A-Fa-f]{6}$/);
+    }
+    expect(DEVIATIONS.map((row) => row.id)).toContain("desktop-first-cinematic-pro");
   });
 
   it("raises a sheet token only where the sheet value fails the text floor", () => {
@@ -363,8 +379,10 @@ describe("foundations v2 alignment", () => {
   });
 
   it("uses the sheet's two families as the first choice in each stack", () => {
-    expect(TYPE.sans.startsWith(`'${FOUNDATIONS_V2_FAMILIES.sans}'`)).toBe(true);
-    expect(TYPE.mono.startsWith(`'${FOUNDATIONS_V2_FAMILIES.mono}'`)).toBe(true);
+    expect(TYPE.sans).not.toContain(FOUNDATIONS_V2_FAMILIES.sans);
+    expect(TYPE.mono).not.toContain(FOUNDATIONS_V2_FAMILIES.mono);
+    expect(TYPE.sans.startsWith("-apple-system")).toBe(true);
+    expect(TYPE.mono.startsWith("ui-monospace")).toBe(true);
   });
 
   it("renders the adopted accent and near-black into the actual document", () => {
@@ -372,9 +390,9 @@ describe("foundations v2 alignment", () => {
       desktopVisualView(createDesktopVisualState()),
     );
     // The decision is about what ships, so assert the emitted surface, not tokens.
-    expect(document).toContain(FOUNDATIONS_V2_COLORS["--accent"]);
-    expect(document).toContain(FOUNDATIONS_V2_COLORS["--bg-base"]);
-    expect(document).toContain(FOUNDATIONS_V2_FAMILIES.sans);
-    expect(document).toContain(FOUNDATIONS_V2_FAMILIES.mono);
+    expect(document).toContain(ACCENT.base);
+    expect(document).toContain(SURFACE.canvas);
+    expect(document).not.toContain(FOUNDATIONS_V2_COLORS["--accent"]);
+    expect(document).not.toContain(FOUNDATIONS_V2_FAMILIES.sans);
   });
 });

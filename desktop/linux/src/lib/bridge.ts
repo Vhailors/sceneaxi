@@ -130,10 +130,16 @@ import {
   evaluateDesktopSceneAnimation,
   evaluateDesktopScenePhysics,
   inspectDesktopSceneAnimation,
+  inspectDesktopSceneEffects,
+  inspectDesktopSceneEnvironment,
+  inspectDesktopSceneMaterials,
   inspectDesktopScenePhysics,
   inspectDesktopScenePrefabs,
   inspectDesktopSceneProperties,
   stageDesktopSceneAnimation,
+  stageDesktopSceneEffects,
+  stageDesktopSceneEnvironment,
+  stageDesktopSceneMaterials,
   stageDesktopScenePhysics,
   answerDesktopAssistantAsk,
   stageDesktopAssistantBuild,
@@ -3070,6 +3076,96 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         });
         if (!evaluated.ok) return bridgeRefuse(evaluated.reason, evaluated.message);
         return bridgeOk("command", evaluated.evaluation);
+      }
+      case "environment-inspect": {
+        const documentPath = input["documentPath"];
+        const read = readActiveDocument({ documentPath }, SCENE_DOCUMENT_REFUSALS);
+        if (!read.ok) return bridgeRefuse(read.reason, read.message);
+        return bridgeOk("command", inspectDesktopSceneEnvironment(read.status.data));
+      }
+      case "environment-apply": {
+        const documentPath = String(input["documentPath"]);
+        const read = readActiveDocument({ documentPath }, SCENE_DOCUMENT_REFUSALS);
+        if (!read.ok) return bridgeRefuse(read.reason, read.message);
+        const staged = stageDesktopSceneEnvironment({
+          documentData: read.status.data,
+          contentHash: String(input["expectedContentHash"]),
+          documentPath,
+          mutation: input["mutation"],
+        });
+        if (!staged.ok) {
+          return commandTransaction(validated.command.id, bridgeRefuse(staged.reason, staged.message));
+        }
+        const proposed = reconcilePendingAssetImport(authoringSession().proposeEdit({
+          documentPath,
+          jsonPointer: "/data",
+          expectedContentHash: String(input["expectedContentHash"]),
+          newValue: staged.documentData,
+        }));
+        return commandTransaction(validated.command.id, bridgeOk("command", {
+          ...staged.inspection,
+          authoringSnapshot: proposed,
+        }));
+      }
+      case "material-inspect": {
+        const documentPath = input["documentPath"];
+        const read = readActiveDocument({ documentPath }, SCENE_DOCUMENT_REFUSALS);
+        if (!read.ok) return bridgeRefuse(read.reason, read.message);
+        return bridgeOk("command", inspectDesktopSceneMaterials(read.status.data));
+      }
+      case "material-apply": {
+        const documentPath = String(input["documentPath"]);
+        const read = readActiveDocument({ documentPath }, SCENE_DOCUMENT_REFUSALS);
+        if (!read.ok) return bridgeRefuse(read.reason, read.message);
+        const staged = stageDesktopSceneMaterials({
+          documentData: read.status.data,
+          contentHash: String(input["expectedContentHash"]),
+          documentPath,
+          mutation: input["mutation"],
+        });
+        if (!staged.ok) {
+          return commandTransaction(validated.command.id, bridgeRefuse(staged.reason, staged.message));
+        }
+        const proposed = reconcilePendingAssetImport(authoringSession().proposeEdit({
+          documentPath,
+          jsonPointer: "/data",
+          expectedContentHash: String(input["expectedContentHash"]),
+          newValue: staged.documentData,
+        }));
+        return commandTransaction(validated.command.id, bridgeOk("command", {
+          ...staged.inspection,
+          authoringSnapshot: proposed,
+        }));
+      }
+      case "effect-inspect": {
+        const documentPath = input["documentPath"];
+        const read = readActiveDocument({ documentPath }, SCENE_DOCUMENT_REFUSALS);
+        if (!read.ok) return bridgeRefuse(read.reason, read.message);
+        return bridgeOk("command", inspectDesktopSceneEffects(read.status.data));
+      }
+      case "effect-apply": {
+        const documentPath = String(input["documentPath"]);
+        const read = readActiveDocument({ documentPath }, SCENE_DOCUMENT_REFUSALS);
+        if (!read.ok) return bridgeRefuse(read.reason, read.message);
+        const staged = stageDesktopSceneEffects({
+          documentData: read.status.data,
+          contentHash: String(input["expectedContentHash"]),
+          documentPath,
+          mutation: input["mutation"],
+        });
+        if (!staged.ok) {
+          return commandTransaction(validated.command.id, bridgeRefuse(staged.reason, staged.message));
+        }
+        const proposed = reconcilePendingAssetImport(authoringSession().proposeEdit({
+          documentPath,
+          jsonPointer: "/data",
+          expectedContentHash: String(input["expectedContentHash"]),
+          newValue: staged.documentData,
+        }));
+        return commandTransaction(validated.command.id, bridgeOk("command", {
+          ...staged.inspection,
+          authoringSnapshot: proposed,
+        }));
       }
       case "package-inspect": {
         const documentPath = input["documentPath"];

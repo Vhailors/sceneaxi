@@ -10,6 +10,7 @@ import {
   AmbientLight,
   Color,
   DirectionalLight,
+  Fog,
   Group,
   Mesh,
   Scene,
@@ -53,8 +54,25 @@ export type ThreePresentationCoreOptions = {
   readonly camera?: OrbitCameraOptions;
   /** CSS color for the scene background, or null for a transparent clear. */
   readonly background?: string | null;
+  /**
+   * Presentation-authored environment. Numbers and strings only — no Three
+   * type crosses this option (ADR 0002).
+   */
+  readonly environment?: ThreeSceneEnvironment;
   readonly antialias?: boolean;
   readonly preserveDrawingBuffer?: boolean;
+};
+
+export type ThreeSceneEnvironment = {
+  readonly background?: string | null;
+  readonly ambientIntensity?: number;
+  readonly ambientColor?: string;
+  readonly keyIntensity?: number;
+  readonly keyColor?: string;
+  readonly keyDirection?: readonly [number, number, number];
+  readonly fillIntensity?: number;
+  readonly fog?: Readonly<{ enabled: boolean; color: string; near: number; far: number }>;
+  readonly effects?: readonly string[];
 };
 
 export type ThreeDrawnFrame = {
@@ -62,6 +80,8 @@ export type ThreeDrawnFrame = {
   readonly drawCalls: number;
   readonly pixelsDrawn: boolean;
   readonly surface: ThreePresentationSurfaceKind;
+  readonly effects: readonly string[];
+  readonly environmentBackground: string | null;
 };
 
 export type ThreePresentationCore = {
@@ -72,6 +92,7 @@ export type ThreePresentationCore = {
   readonly content: Group;
   frames(): number;
   draw(): ThreeDrawnFrame;
+  setEnvironment(environment: ThreeSceneEnvironment): void;
   resize(width: number, height: number, pixelRatio?: number): void;
   capture(): Uint8Array | null;
   dispose(): void;
@@ -140,6 +161,39 @@ export function createThreePresentationCore(
   fill.position.set(-5, 2, -4);
   scene.add(ambient, key, fill);
 
+  let appliedEffects: readonly string[] = Object.freeze([]);
+  let environmentBackground: string | null =
+    background === undefined ? "#101318" : background;
+
+  function applyEnvironment(environment: ThreeSceneEnvironment): void {
+    if (environment.background !== undefined) {
+      environmentBackground = environment.background;
+      scene.background = environment.background === null ? null : new Color(environment.background);
+    }
+    if (environment.ambientIntensity !== undefined) ambient.intensity = environment.ambientIntensity;
+    if (environment.ambientColor !== undefined) ambient.color = new Color(environment.ambientColor);
+    if (environment.keyIntensity !== undefined) key.intensity = environment.keyIntensity;
+    if (environment.keyColor !== undefined) key.color = new Color(environment.keyColor);
+    if (environment.keyDirection !== undefined) {
+      key.position.set(
+        environment.keyDirection[0],
+        environment.keyDirection[1],
+        environment.keyDirection[2],
+      );
+    }
+    if (environment.fillIntensity !== undefined) fill.intensity = environment.fillIntensity;
+    if (environment.fog !== undefined) {
+      scene.fog = environment.fog.enabled
+        ? new Fog(environment.fog.color, environment.fog.near, environment.fog.far)
+        : null;
+    }
+    if (environment.effects !== undefined) {
+      appliedEffects = Object.freeze([...environment.effects]);
+    }
+  }
+
+  if (options.environment !== undefined) applyEnvironment(options.environment);
+
   const surface = resolveSurface(options);
   let frame = 0;
   let disposed = false;
@@ -183,7 +237,14 @@ export function createThreePresentationCore(
         drawCalls: result.drawCalls,
         pixelsDrawn: result.pixelsDrawn,
         surface: surface.kind,
+        effects: appliedEffects,
+        environmentBackground,
       });
+    },
+
+    setEnvironment(environment) {
+      requireLive();
+      applyEnvironment(environment);
     },
 
     resize(width, height, pixelRatio) {

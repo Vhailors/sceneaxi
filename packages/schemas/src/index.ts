@@ -494,28 +494,41 @@ export type {
 
 export {
   EDITOR_SHELL_ASSISTANT_MODE_IDS,
+  EDITOR_SHELL_ASSISTANT_MODES,
+  editorShellAssistantModeLabel,
   EDITOR_SHELL_ASSISTANT_STATES,
   EDITOR_SHELL_CONTROL_KINDS,
+  EDITOR_SHELL_DISCLOSURE,
+  EDITOR_SHELL_DOCK_TAB_GATES,
   EDITOR_SHELL_DOCK_TAB_IDS,
   EDITOR_SHELL_METRICS,
   EDITOR_SHELL_MINIMUM_WINDOW,
   EDITOR_SHELL_MODE_IDS,
   EDITOR_SHELL_MODES,
+  EDITOR_SHELL_PRIMARY_DOCK_TABS,
   EDITOR_SHELL_RETIRED_COPY,
   EDITOR_SHELL_SCHEMA_VERSION,
+  EDITOR_SHELL_SESSION_STATES,
   EDITOR_SHELL_SOURCE,
+  EDITOR_SHELL_SURFACES,
   EDITOR_SHELL_VIEWPORT_SOURCES,
   EDITOR_SHELL_WINDOW_TIERS,
   editorShellDockTabsFor,
   editorShellModeRow,
+  editorShellModeSurface,
+  editorShellPrimaryDockTabs,
 } from "./editor-shell.js";
 export type {
   EditorShellAssistantModeId,
   EditorShellAssistantState,
   EditorShellControlKind,
+  EditorShellDisclosure,
+  EditorShellDockTabGate,
   EditorShellDockTabId,
   EditorShellModeId,
   EditorShellModeRow,
+  EditorShellSessionState,
+  EditorShellSurface,
   EditorShellViewportSourceId,
   EditorShellWindowTierId,
 } from "./editor-shell.js";
@@ -964,6 +977,7 @@ export {
   SCENE_PHYSICS_CATALOG_KEY,
   SCENE_PHYSICS_CATALOG_KIND,
   SCENE_PHYSICS_CONSTRAINT_KINDS,
+  SCENE_PHYSICS_ENGINES,
   SCENE_PHYSICS_REFUSALS,
   SCENE_PHYSICS_SCHEMA_VERSION,
   SCENE_PHYSICS_SHAPE_KINDS,
@@ -1077,6 +1091,7 @@ export type {
   ScenePhysicsBody,
   ScenePhysicsCatalog,
   ScenePhysicsConstraint,
+  ScenePhysicsEngine,
   ScenePhysicsEvaluation,
   ScenePhysicsMaterial,
   ScenePhysicsMutation,
@@ -1085,6 +1100,73 @@ export type {
   ScenePhysicsSnapshot,
   ScenePhysicsWorld,
 } from "./desktop-scene-physics.js";
+export {
+  SCENE_ENVIRONMENT_CATALOG_KEY,
+  SCENE_ENVIRONMENT_CATALOG_KIND,
+  SCENE_ENVIRONMENT_EFFECTS,
+  SCENE_ENVIRONMENT_REFUSALS,
+  SCENE_ENVIRONMENT_SCHEMA_VERSION,
+  SCENE_ENVIRONMENT_TONE_MAPS,
+  applySceneEnvironmentMutation,
+  emptySceneEnvironmentCatalog,
+  inspectSceneEnvironment,
+  parseSceneEnvironmentCatalog,
+  sceneEnvironmentCatalogDigest,
+} from "./desktop-scene-environment.js";
+export type {
+  SceneEnvironmentCatalog,
+  SceneEnvironmentMutation,
+  SceneEnvironmentRefusal,
+} from "./desktop-scene-environment.js";
+export {
+  SCENE_MATERIALS_CATALOG_KEY,
+  SCENE_MATERIALS_CATALOG_KIND,
+  SCENE_MATERIALS_REFUSALS,
+  SCENE_MATERIALS_SCHEMA_VERSION,
+  SCENE_MATERIAL_PARAMETERS,
+  applySceneMaterialsMutation,
+  emptySceneMaterialsCatalog,
+  inspectSceneMaterials,
+  parseSceneMaterialsCatalog,
+  sceneMaterialsCatalogDigest,
+} from "./desktop-scene-materials.js";
+export type {
+  SceneMaterialOverride,
+  SceneMaterialsCatalog,
+  SceneMaterialsMutation,
+  SceneMaterialsRefusal,
+} from "./desktop-scene-materials.js";
+export {
+  SCENE_EFFECTS_CATALOG_KEY,
+  SCENE_EFFECTS_CATALOG_KIND,
+  SCENE_EFFECTS_REFUSALS,
+  SCENE_EFFECTS_SCHEMA_VERSION,
+  SCENE_EFFECT_EMITTER_KINDS,
+  applySceneEffectsMutation,
+  emptySceneEffectsCatalog,
+  inspectSceneEffects,
+  parseSceneEffectsCatalog,
+  sampleSceneEffects,
+} from "./desktop-scene-effects.js";
+export type {
+  SceneEffectEmitter,
+  SceneEffectSample,
+  SceneEffectsCatalog,
+  SceneEffectsEvaluation,
+  SceneEffectsMutation,
+  SceneEffectsRefusal,
+} from "./desktop-scene-effects.js";
+export {
+  PHYSICS_HOST_PROBE_STEPS,
+  PHYSICS_WORLD_HOST_KINDS,
+  PHYSICS_WORLD_HOST_REFUSALS,
+  createToyPhysicsWorldHost,
+} from "./physics-world-host.js";
+export type {
+  PhysicsWorldHandle,
+  PhysicsWorldHost,
+  PhysicsWorldHostKind,
+} from "./physics-world-host.js";
 export type {
   SceneAnimationBinding,
   SceneAnimationCatalog,

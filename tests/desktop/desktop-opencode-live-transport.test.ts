@@ -57,5 +57,34 @@ describe("desktop OpenCode DeepSeek transport", () => {
       model: DESKTOP_DEEPSEEK_MODEL.model,
       temperature: 0,
     });
+    expect(calls[0]?.url).toBe("https://opencode.ai/zen/v1/chat/completions");
+  });
+
+  it("refuses a hung completion instead of waiting forever", async () => {
+    const transport = createDesktopOpenCodeLiveTransport({
+      credential: { read: () => "synthetic-opencode-key" },
+      timeoutMs: 20,
+      fetchImpl: (async (_url, init) => {
+        const signal = init?.signal;
+        await new Promise<void>((_resolve, reject) => {
+          if (signal == null) {
+            reject(new Error("missing abort signal"));
+            return;
+          }
+          if (signal.aborted) {
+            reject(Object.assign(new Error("aborted"), { name: "AbortError" }));
+            return;
+          }
+          signal.addEventListener("abort", () => {
+            reject(Object.assign(new Error("aborted"), { name: "TimeoutError" }));
+          });
+        });
+        throw new Error("unreachable");
+      }) as typeof fetch,
+    });
+    await expect(transport.complete("a crate", DESKTOP_DEEPSEEK_MODEL)).rejects.toMatchObject({
+      reason: DESKTOP_BYO_CONFIGURATION_REFUSALS.providerSessionFailed,
+      message: expect.stringMatching(/did not finish in time/i),
+    });
   });
 });

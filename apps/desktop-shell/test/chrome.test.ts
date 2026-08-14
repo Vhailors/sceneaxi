@@ -85,7 +85,7 @@ describe("engine desktop chrome — document shape", () => {
   it("declares its archive provenance and that it drew nothing", () => {
     const html = render();
     expect(html).toContain(
-      "ad5d6e39215a4aee9c81b827308fc944784719168d3fba2db5d9e5ef8fc15159",
+      "c4ecfce14440b56342781e53abd02f915446795d8ba2bf2fdf18d895bc950b51",
     );
     expect(html).toContain('name="sceneaxi-pixels-drawn" content="false"');
   });
@@ -205,6 +205,9 @@ describe("engine desktop chrome — accessibility", () => {
     expect(html).toContain("Local · free");
     expect(html).toContain("BYOK · free");
     expect(html).toContain("Hosted · metered");
+    expect(html).toContain(">Light</");
+    expect(html).toContain(">Mid</");
+    expect(html).toContain(">Strong</");
     expect(html).toContain(
       'id="assistant-send" data-kind="live" data-action="assistant-send"',
     );
@@ -697,7 +700,7 @@ describe("engine desktop chrome — honesty", () => {
 
   it("replaces the whole editor body on the refuse-only profile", () => {
     const html = render(createDesktopVisualState({ profile: "kids" }));
-    expect(html).toContain("No editor on the Kids profile");
+    expect(html).toContain("Kids studio");
     expect(html).toContain(DESKTOP_VISUAL_REFUSALS.kidsRefuseOnly);
     expect(html).toContain("@sceneaxi/profile-kids");
     expect(html).toContain("THIRD_PARTY_LLM_DENIED_BY_DEFAULT");
@@ -764,7 +767,7 @@ describe("engine desktop chrome — honesty", () => {
 
   it("locks the assistant on Kids and can be reached by a client switch", () => {
     const kids = render(createDesktopVisualState({ profile: "kids" }));
-    expect(kids).toContain("The assistant is off on Kids");
+    expect(kids).toContain("Kids writes here, safely");
     expect(kids).toContain(
       `id="assistant-toggle" data-kind="inert" aria-disabled="true" data-refusal="${DESKTOP_VISUAL_REFUSALS.kidsAssistantDenied}"`,
     );

@@ -40,6 +40,7 @@
  */
 import {
   EDITOR_SHELL_ASSISTANT_MODE_IDS,
+  editorShellAssistantModeLabel,
   EDITOR_SHELL_MINIMUM_WINDOW,
   EDITOR_SHELL_MODES,
   EDITOR_SHELL_SOURCE,
@@ -1043,7 +1044,7 @@ export function buildEditorShellView(input: EditorShellInput): EditorShellView {
       EDITOR_SHELL_ASSISTANT_MODE_IDS.map((mode) =>
         mint({
           id: assistantModeControlId(mode),
-          label: mode.charAt(0).toUpperCase() + mode.slice(1),
+          label: editorShellAssistantModeLabel(mode),
           kind: "view",
         }),
       ),

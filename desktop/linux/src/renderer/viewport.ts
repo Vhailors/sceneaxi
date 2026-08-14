@@ -34,7 +34,7 @@ import {
 import { createDesktopAssistantViewportController } from "../lib/assistant-viewport.js";
 import type { DesktopAssistantProfile } from "../lib/bridge.js";
 import { desktopAssistantRuntimeSignal } from "./assistant-runtime.js";
-import { decideAssistantStart } from "./assistant-start.js";
+import { decideAssistantStart, withAssistantStrengthInstruction } from "./assistant-start.js";
 import {
   assistantRaritySettlement,
   assistantRarityInvalidation,
@@ -418,9 +418,28 @@ export function installAssistantProductFlow(
     });
   });
 
+  const setBusy = (busy: boolean): void => {
+    shell.dataset.assistantBusy = busy ? "true" : "false";
+    const thinking = document.querySelector<HTMLElement>("[data-assistant-thinking]");
+    if (thinking !== null) {
+      if (busy) thinking.removeAttribute("hidden");
+      else thinking.setAttribute("hidden", "");
+    }
+  };
+
   const refused = (reason: string, message: string): void => {
     running = false;
-    status.textContent = `${reason} — ${message}`;
+    setBusy(false);
+    const human = reason.includes("KEY_MISSING") || reason.includes("KEY_INVALID")
+      ? "Paste your OpenCode key under the prompt, save it, then Send again."
+      : reason.includes("KIDS") || message.toLowerCase().includes("kids")
+        ? "Flash stays off on Kids. Switch to Game or Website, then Send."
+        : reason.includes("OUTPUT_INVALID") || message.toLowerCase().includes("sculpt intake")
+          ? "Flash answered, but not with a usable object. Making one locally if you Send again."
+          : reason.includes("STATUS_TIMEOUT") || message.toLowerCase().includes("did not finish in time")
+            ? "That took too long, so it was stopped. Send again."
+            : message;
+    status.textContent = human.includes(reason) ? human : `${human} · ${reason}`;
     retry?.removeAttribute("hidden");
   };
 
@@ -447,7 +466,7 @@ export function installAssistantProductFlow(
     return port.request(request);
   };
 
-  const poll = async (jobId: string): Promise<void> => {
+  const poll = async (jobId: string): Promise<boolean> => {
     const outcome = await pollJob({
       request: registeredRequest,
       jobId,
@@ -470,7 +489,7 @@ export function installAssistantProductFlow(
       refused(outcome.reason, outcome.message);
       activeJobId = null;
       setSculptCancelActive(false);
-      return;
+      return false;
     }
     recoveryJobId = null;
     activeJobId = null;
@@ -484,7 +503,8 @@ export function installAssistantProductFlow(
       retry.removeAttribute("hidden");
       status.textContent = "Ask answered from typed project state · no provider and no saved bytes.";
       running = false;
-      return;
+      setBusy(false);
+      return true;
     }
     if (isRarityProposalResult(result)) {
       displayedRarityResultDigest = result.evidence.namespaceDigest;
@@ -509,7 +529,8 @@ export function installAssistantProductFlow(
         retry.removeAttribute("hidden");
         status.textContent = settlement.status;
         running = false;
-        return;
+        setBusy(false);
+        return true;
       }
       const replayed = result.replayed;
       resultView.textContent = formatSafeRarityEvidence(result.evidence) ?? "";
@@ -524,6 +545,7 @@ export function installAssistantProductFlow(
         ? "Identical rarity event replayed · project bytes unchanged, so nothing was staged for review."
         : "Rarity proposal staged · review the canonical diff before Accept or Reject.";
       running = false;
+      setBusy(false);
       if (!replayed) {
         const watchedVersion = assistantRunVersion;
         void watchAssistantRaritySettlement({
@@ -545,7 +567,7 @@ export function installAssistantProductFlow(
           });
         });
       }
-      return;
+      return true;
     }
     assistantViewport.replace(result.mountable);
     displayedRarityResultDigest = null;
@@ -564,8 +586,10 @@ export function installAssistantProductFlow(
       }
     }
     running = false;
+    setBusy(false);
     activeJobId = null;
     setSculptCancelActive(false);
+    return true;
   };
 
   const recoverCurrentJob = async (): Promise<boolean> => {
@@ -624,15 +648,16 @@ export function installAssistantProductFlow(
       return;
     }
     running = true;
+    setBusy(true);
     retry?.setAttribute("hidden", "");
     resultView.setAttribute("hidden", "");
     status.textContent = "Starting assistant action…";
-    const commandId = decision.payload.mode === "ask"
-      ? "assistant-ask"
-      : decision.payload.mode === "agent"
-        ? "assistant-local-agent"
-        : decision.payload.route === "byo"
-          ? "assistant-byo-build"
+    const commandId = decision.payload.route === "byo"
+      ? "assistant-byo-build"
+      : decision.payload.mode === "ask"
+        ? "assistant-ask"
+        : decision.payload.mode === "agent"
+          ? "assistant-local-agent"
           : "assistant-local-build";
     const response = commandId === "assistant-ask"
       ? await port.request({
@@ -650,7 +675,15 @@ export function installAssistantProductFlow(
                   profile: decision.payload.profile,
                   documentPath: decision.payload.documentPath ?? DESKTOP_ACTIVE_DOCUMENT_PATH,
                 }
-              : { prompt: decision.payload.prompt, profile: decision.payload.profile },
+              : {
+                  prompt: commandId === "assistant-byo-build"
+                    ? withAssistantStrengthInstruction(
+                        decision.payload.mode,
+                        decision.payload.prompt,
+                      )
+                    : decision.payload.prompt,
+                  profile: decision.payload.profile,
+                },
           ),
         });
     if (!response.ok) {
@@ -681,7 +714,11 @@ export function installAssistantProductFlow(
     setSculptCancelActive(commandId !== "assistant-local-agent");
     activeRarityProposalDigest = assistantRarityResultDigest(null);
     displayedRarityResultDigest = null;
-    await poll(startedJob.jobId);
+    const finished = await poll(startedJob.jobId);
+    if (!finished && commandId === "assistant-byo-build" && !forceLocalBuild) {
+      status.textContent = "Flash did not return a usable object. Making one locally…";
+      await start(true);
+    }
   };
 
   sendControls.forEach((control) => {

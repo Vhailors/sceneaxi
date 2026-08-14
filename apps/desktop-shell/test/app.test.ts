@@ -500,7 +500,7 @@ describe("desktop shell commands", () => {
     it("refuses the editor body on the refuse-only profile", () => {
       const r = runDesktopShell(["chrome", "--profile", "kids", "--json"]);
       expect(r.result["assistant"]).toBe("denied");
-      expect(String(r.result["html"])).toContain("No editor on the Kids profile");
+      expect(String(r.result["html"])).toContain("Kids studio");
       expect(String(r.result["html"])).toContain("OPEN_PATH_KIDS_REFUSED");
     });
 

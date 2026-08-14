@@ -16,16 +16,22 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   EDITOR_SHELL_ASSISTANT_MODE_IDS,
+  EDITOR_SHELL_ASSISTANT_MODES,
+  editorShellAssistantModeLabel,
   EDITOR_SHELL_ASSISTANT_STATES,
   EDITOR_SHELL_METRICS,
   EDITOR_SHELL_MINIMUM_WINDOW,
   EDITOR_SHELL_MODE_IDS,
   EDITOR_SHELL_MODES,
   EDITOR_SHELL_RETIRED_COPY,
+  EDITOR_SHELL_SESSION_STATES,
   EDITOR_SHELL_SOURCE,
+  EDITOR_SHELL_SURFACES,
   EDITOR_SHELL_VIEWPORT_SOURCES,
   EDITOR_SHELL_WINDOW_TIERS,
   editorShellDockTabsFor,
+  editorShellModeSurface,
+  editorShellPrimaryDockTabs,
 } from "../../packages/schemas/src/index.ts";
 import {
   DESKTOP_ASSISTANT_MODE_IDS,
@@ -79,6 +85,25 @@ describe("editor-shell vocabulary parity", () => {
     }
   });
 
+  it("the primary context derives session-gated console the same way on both surfaces", () => {
+    expect(editorShellPrimaryDockTabs({ sessionRunning: false })).toEqual([
+      "changes",
+      "assets",
+      "timeline",
+      "evidence",
+    ]);
+    expect(editorShellPrimaryDockTabs({ sessionRunning: true })).toContain("console");
+    expect(EDITOR_SHELL_SESSION_STATES).toEqual(["none", "running"]);
+    expect(editorShellModeSurface("compose")).toBe("details");
+    expect(editorShellModeSurface("plugins")).toBe("details");
+    expect(editorShellModeSurface("build")).toBe("primary");
+    expect(new Set(EDITOR_SHELL_MODES.map((mode) => mode.surface))).toEqual(
+      new Set(EDITOR_SHELL_SURFACES),
+    );
+    const desktop = desktopVisualView(createDesktopVisualState());
+    expect(desktop.primaryDockTabs).toEqual(editorShellPrimaryDockTabs({ sessionRunning: false }));
+  });
+
   it("the web shell renders the shared modes and dock tabs verbatim", () => {
     const view = webShellView();
     expect(view.modes.map((mode) => mode.id)).toEqual([...EDITOR_SHELL_MODE_IDS]);
@@ -92,10 +117,27 @@ describe("editor-shell vocabulary parity", () => {
 
   it("assistant modes are one list on both surfaces", () => {
     expect(DESKTOP_ASSISTANT_MODE_IDS).toEqual(EDITOR_SHELL_ASSISTANT_MODE_IDS);
+    expect(EDITOR_SHELL_ASSISTANT_MODES.map((mode) => mode.id)).toEqual([
+      ...EDITOR_SHELL_ASSISTANT_MODE_IDS,
+    ]);
+    expect(EDITOR_SHELL_ASSISTANT_MODES.map((mode) => mode.label)).toEqual([
+      "Light",
+      "Mid",
+      "Strong",
+    ]);
     const view = webShellView();
     expect(view.assistant.modes.map((control) => control.id)).toEqual(
       EDITOR_SHELL_ASSISTANT_MODE_IDS.map((mode) => `assistant-mode-${mode}`),
     );
+    expect(view.assistant.modes.map((control) => control.label)).toEqual(
+      EDITOR_SHELL_ASSISTANT_MODE_IDS.map((mode) => editorShellAssistantModeLabel(mode)),
+    );
+    const desktop = desktopVisualView(createDesktopVisualState());
+    expect(desktop.assistant.modes.map((mode) => mode.label)).toEqual([
+      "Light",
+      "Mid",
+      "Strong",
+    ]);
   });
 
   it("viewport sources are one table on both surfaces, ids and labels", () => {

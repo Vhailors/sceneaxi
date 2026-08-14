@@ -34,14 +34,18 @@
 
 import {
   EDITOR_SHELL_ASSISTANT_MODE_IDS,
+  editorShellAssistantModeLabel,
   EDITOR_SHELL_DOCK_TAB_IDS,
   EDITOR_SHELL_MINIMUM_WINDOW,
   EDITOR_SHELL_MODE_IDS,
+  EDITOR_SHELL_SESSION_STATES,
   EDITOR_SHELL_VIEWPORT_SOURCES,
   EDITOR_SHELL_WINDOW_TIERS,
   DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS,
   editorShellDockTabsFor,
   editorShellModeRow,
+  editorShellModeSurface,
+  editorShellPrimaryDockTabs,
   OPEN_PATH_REFUSE_CODES,
   OPEN_PATH_REFUSE_ONLY_PROFILE,
   openPathPolicyView,
@@ -414,11 +418,15 @@ export function resolveWindowTier(size: DesktopWindowSize): DesktopWindowTierId 
 /* State                                                                       */
 /* -------------------------------------------------------------------------- */
 
+export type DesktopSessionState = (typeof EDITOR_SHELL_SESSION_STATES)[number];
+
 export type DesktopVisualState = Readonly<{
   mode: DesktopModeId;
   profile: DesktopProfileId;
   dockTab: DesktopDockTabId;
   overlay: DesktopOverlayId | null;
+  session: DesktopSessionState;
+  detailsOpen: boolean;
   assistant: DesktopAssistantState;
   assistantMode: DesktopAssistantModeId;
   assistantThinking: boolean;
@@ -457,11 +465,13 @@ const INITIAL_STATE: DesktopVisualState = Object.freeze({
   profile: "game",
   dockTab: "changes",
   overlay: null,
+  session: "none",
+  detailsOpen: false,
   assistant: "open",
   assistantMode: "build",
   assistantThinking: false,
   assistantRuntime: "none",
-  assistantRoute: "local",
+  assistantRoute: "byo",
   sculpt: "idle",
   sculptPass: 2,
   sculptPassFraction: 0.64,
@@ -528,7 +538,10 @@ export type DesktopVisualAction =
   | Readonly<{ type: "cancel-sculpt" }>
   | Readonly<{ type: "advance-sculpt"; by: number }>
   | Readonly<{ type: "select-object"; name: string }>
-  | Readonly<{ type: "resize"; size: DesktopWindowSize }>;
+  | Readonly<{ type: "resize"; size: DesktopWindowSize }>
+  | Readonly<{ type: "toggle-details" }>
+  | Readonly<{ type: "session-start" }>
+  | Readonly<{ type: "session-end" }>;
 
 /**
  * Apply one action. Total and pure: an action that cannot apply (toggling a
@@ -598,6 +611,12 @@ export function applyDesktopVisualAction(
       return normalize({ ...state, selection: action.name });
     case "resize":
       return normalize({ ...state, window: action.size });
+    case "toggle-details":
+      return normalize({ ...state, detailsOpen: !state.detailsOpen });
+    case "session-start":
+      return normalize({ ...state, session: "running" });
+    case "session-end":
+      return normalize({ ...state, session: "none" });
   }
 }
 
@@ -847,7 +866,7 @@ export type DesktopAssistantProjection = Readonly<{
       control: DesktopControl;
     }>
   >;
-  /** Ask / Build / Agent. Inert wherever the composer is denied. */
+  /** Light / Mid / Strong. Inert wherever the composer is denied. */
   modes: ReadonlyArray<
     Readonly<{ id: DesktopAssistantModeId; label: string; control: DesktopControl }>
   >;
@@ -907,7 +926,7 @@ function assistantProjection(
     modelLabel: refuseOnly
       ? ASSISTANT_MODEL_LABELS.denied
       : runtimeAvailable
-        ? "local · free / BYOK"
+        ? "OpenCode Flash"
         : ASSISTANT_MODEL_LABELS.noProvider,
     toggle: refuseOnly
       ? mint("assistant-toggle", "Assistant", "inert", denial.code)
@@ -935,7 +954,7 @@ function assistantProjection(
     ),
     modes: Object.freeze(
       DESKTOP_ASSISTANT_MODE_IDS.map((id) => {
-        const label = id.charAt(0).toUpperCase() + id.slice(1);
+        const label = editorShellAssistantModeLabel(id);
         return Object.freeze({
           id,
           label,
@@ -1078,7 +1097,8 @@ export type DesktopVisualView = Readonly<{
       >;
     }>
   >;
-  modes: ReadonlyArray<Readonly<{ id: DesktopModeId; label: string; title: string; active: boolean; control: DesktopControl }>>;
+  modes: ReadonlyArray<Readonly<{ id: DesktopModeId; label: string; title: string; active: boolean; surface: "primary" | "details"; control: DesktopControl }>>;
+  primaryDockTabs: ReadonlyArray<DesktopDockTabId>;
   profiles: ReadonlyArray<DesktopProfileChip>;
   policy: OpenPathPolicyViewModel;
   dockTabs: ReadonlyArray<Readonly<{ id: DesktopDockTabId; label: string; active: boolean; badge: number; control: DesktopControl }>>;
@@ -1164,8 +1184,8 @@ export type DesktopVisualView = Readonly<{
 }>;
 
 const VISUAL_SOURCE_REF = Object.freeze({
-  member: "Engine Desktop.dc.html",
-  supersedes: "Engine Desktop v1.dc.html",
+  member: "direction-1-cinematic-pro.html",
+  supersedes: "Engine Desktop.dc.html",
 });
 
 const DOCK_TAB_LABELS: Readonly<Record<DesktopDockTabId, string>> = Object.freeze({
@@ -1177,7 +1197,7 @@ const DOCK_TAB_LABELS: Readonly<Record<DesktopDockTabId, string>> = Object.freez
 });
 
 const PROFILE_LABELS: Readonly<Record<DesktopProfileId, string>> = Object.freeze({
-  game: "Game",
+  game: "Engine",
   web: "Website",
   kids: "Kids",
 });
@@ -1439,10 +1459,14 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
           label: mode.label,
           title: mode.title,
           active: mode.id === state.mode,
+          surface: editorShellModeSurface(mode.id),
           control: control(`mode-${mode.id}`, mode.title, "view"),
         }),
       ),
     ),
+    primaryDockTabs: editorShellPrimaryDockTabs({
+      sessionRunning: state.session === "running",
+    }),
 
     profiles: Object.freeze(
       DESKTOP_PROFILE_IDS.map((id) => {

@@ -1,12 +1,13 @@
 /**
  * Engine Desktop visual tokens — the accepted archive surface, held as data.
  *
- * Provenance: `SceneAxi Design System.zip`
- * (sha256 `ad5d6e39215a4aee9c81b827308fc944784719168d3fba2db5d9e5ef8fc15159`),
- * member `Engine Desktop.dc.html`. `Engine Desktop v1.dc.html` in the same
- * archive is **superseded and reference-only**: its amber accent, Space Grotesk
- * / IBM Plex typography, 2064x1400 canvas, and project-launcher screen model do
- * not appear here and must not be reintroduced (see `SUPERSEDED_V1`).
+ * Provenance: `sceneaxi-desktop-redesign`
+ * (sha256 `c4ecfce14440b56342781e53abd02f915446795d8ba2bf2fdf18d895bc950b51`),
+ * member `direction-1-cinematic-pro.html`. `Engine Desktop v1.dc.html` remains
+ * **superseded and reference-only**: its amber accent, Space Grotesk / IBM Plex
+ * typography, 2064x1400 canvas, and project-launcher screen model do not appear
+ * here and must not be reintroduced (see `SUPERSEDED_V1`). Foundations orange
+ * is no longer the desktop accent.
  *
  * Two rules this module exists to keep:
  *
@@ -28,10 +29,10 @@
 
 /** The canonical archive this surface is implemented from. */
 export const VISUAL_SOURCE = Object.freeze({
-  archive: "SceneAxi Design System.zip",
-  sha256: "ad5d6e39215a4aee9c81b827308fc944784719168d3fba2db5d9e5ef8fc15159",
-  member: "Engine Desktop.dc.html",
-  syncedAt: "2026-07-25T12:40:00Z",
+  archive: "sceneaxi-desktop-redesign",
+  sha256: "c4ecfce14440b56342781e53abd02f915446795d8ba2bf2fdf18d895bc950b51",
+  member: "direction-1-cinematic-pro.html",
+  syncedAt: "2026-08-14T12:54:00Z",
 });
 
 /**
@@ -63,7 +64,8 @@ export const FOUNDATIONS_V2_SOURCE = Object.freeze({
   upstream: "packages/site-kit/src/design-tokens.ts",
   /** Why the upstream is copied instead of imported. Asserted, not prose. */
   duplicationReason: "dependency-matrix-forbids-site-kit",
-  decision: "D1 adopt Foundations v2 across all surfaces (2026-07-28)",
+  decision:
+    "D7 desktop-first Cinematic Pro (2026-08-14); sites remain Foundations v2",
 });
 
 /**
@@ -134,66 +136,60 @@ export const SUPERSEDED_V1 = Object.freeze({
  * Surfaces and lines, copied from the archive. Non-text: not contrast-gated.
  */
 export const SURFACE = Object.freeze({
-  /** Page behind the scaled stage. */
-  backdrop: "#050607",
+  /** Page behind the floating chrome. */
+  backdrop: "#05080E",
   /** Editor body and viewport base. */
-  canvas: "#07080A",
+  canvas: "#0A0F1A",
   /** Deepest inset wells (inputs, console, footers). */
-  well: "#08090B",
+  well: "#070B13",
   /** Assistant column. */
-  assistant: "#0A0C0E",
+  assistant: "#0F1624",
   /** Docked panels: left dock, inspector, bottom dock. */
-  panel: "#0D0F12",
+  panel: "#0F1624",
   /** Overlay dialogs and the command palette. */
-  overlay: "#0F1216",
+  overlay: "#131B2C",
   /** Raised rows and cards inside a panel. */
-  raised: "#101318",
+  raised: "#131B2C",
   /** Panel section headers and chrome chips. */
-  header: "#12151A",
+  header: "#182236",
   /** Hover / selected chrome. */
-  hover: "#191D23",
+  hover: "#182236",
 });
 
 export const LINE = Object.freeze({
   /** Structural borders between regions. */
-  strong: "#1A1F26",
+  strong: "#243044",
   /** Card and control borders. */
-  card: "#1C2129",
+  card: "#243044",
   /** Row separators inside a scrolling panel. */
-  row: "#14181E",
+  row: "#1A2436",
   /** Control borders and dividers. */
-  control: "#20262E",
+  control: "#2A3850",
   /** Emphasised control border. */
-  raised: "#262C34",
+  raised: "#334563",
   /** Hover border. */
-  hover: "#333A44",
+  hover: "#3D5274",
 });
 
-/** Signal orange — the accepted accent. v1's amber is retired. */
+/** Cyan-teal life-signal. Foundations orange is no longer the desktop accent. */
 export const ACCENT = Object.freeze({
-  base: "#FF6B2C",
-  hover: "#FF8A54",
+  base: "#46D8EC",
+  hover: "#74E3F2",
   /** Text/marks drawn *on* the accent. */
-  on: "#07080A",
+  on: "#05121A",
   /** Accent-tinted surface and line for notes and active chrome. */
-  surface: "#191207",
-  line: "#4A3820",
+  surface: "#10242C",
+  line: "#1E5A66",
   /** Accent-tinted note text (passes on every surface above). */
-  noteText: "#E5B98A",
+  noteText: "#74E3F2",
 });
 
 /** Semantic marks. All are used as text somewhere, so all are contrast-gated. */
 export const SIGNAL = Object.freeze({
-  ok: "#5EEAD4",
+  ok: "#5FE3C0",
   refuse: "#FF4D5E",
   refuseSurface: "#211316",
   refuseLine: "#5A2B32",
-  /**
-   * Foundations v2 `--info`. The archive member also carries a lighter #8FB7F5
-   * for the same note; the shared sheet canonicalises the informational blue to
-   * this value, it clears 4.5:1 on every `SURFACE`, and D1 makes the sheet
-   * binding — so the shared value is the one that ships.
-   */
   info: "#5B9CFF",
   infoSurface: "#131820",
   infoLine: "#223040",
@@ -203,8 +199,8 @@ export const SIGNAL = Object.freeze({
   sceneText: "#C3B0F0",
 });
 
-/** World axis colours, shared with the archive's gizmo and vector fields. */
-export const AXIS = Object.freeze({ x: "#E0564F", y: "#7BC44C", z: "#4C8BE0" });
+/** World axis colours from the Cinematic Pro brief. */
+export const AXIS = Object.freeze({ x: "#E4655F", y: "#7CC96B", z: "#5B9CFF" });
 
 /**
  * Profile-switch chip dots.
@@ -216,10 +212,10 @@ export const AXIS = Object.freeze({ x: "#E0564F", y: "#7BC44C", z: "#4C8BE0" });
  * their existing custom properties, so they are not restated.
  */
 export const PROFILE_DOT = Object.freeze({
-  /** Unselected chip. Archive value. */
-  idle: "#2A313A",
-  /** Website profile — Foundations v2 `--store-web`. */
-  web: "#3FB8C9",
+  /** Unselected chip. */
+  idle: "#2A3850",
+  /** Website profile — kept as a semantic role, not the storefront hex. */
+  web: "#5B9CFF",
 });
 
 /**
@@ -245,8 +241,8 @@ export const SCRIM = Object.freeze({
 
 /** The viewport's radial base gradient, from the archive. Non-text. */
 export const VIEWPORT_GRADIENT = Object.freeze({
-  inner: "#161A20",
-  mid: "#0B0D11",
+  inner: "#182236",
+  mid: "#0A0F1A",
 });
 
 /**
@@ -259,18 +255,12 @@ export const VIEWPORT_GRADIENT = Object.freeze({
  * carried by size, weight, and letter-spacing, which the chrome preserves.
  */
 export const TEXT = Object.freeze({
-  /** Primary copy. Archive #EDEFF2. */
-  primary: "#EDEFF2",
-  /** Emphasised secondary. Archive #C6CCD4 / #B7BEC7. */
-  secondary: "#C6CCD4",
-  /** Panel labels. Archive #A7AEB8. */
-  label: "#A7AEB8",
-  /** Body-weight secondary. Archive #8A929C / #8D949E / #969DA7. */
-  dim: "#8A929C",
-  /** Micro-labels. Archive #6E7681 / #565E68 / #3F464F / #333A42 (all failing). */
-  faint: "#7D8694",
-  /** On an accent fill. */
-  onAccent: "#07080A",
+  primary: "#EAF0F9",
+  secondary: "#ACB8CC",
+  label: "#ACB8CC",
+  dim: "#ACB8CC",
+  faint: "#95A2B8",
+  onAccent: "#05121A",
 });
 
 /**
@@ -293,7 +283,7 @@ export const INERT = Object.freeze({
   /** Inert label on any chrome surface. */
   text: TEXT.faint,
   /** Inert label on the accent fill: a primary button, a pressed assistant mode. */
-  onAccent: "#331A07",
+  onAccent: "#0A2A34",
   /** The rail glyph inside an inert mode. Decorative and `aria-hidden`, so not text. */
   glyph: LINE.hover,
 });
@@ -348,6 +338,13 @@ export const DEVIATIONS = Object.freeze([
     reason:
       "a scaled mockup canvas is not a windowing strategy; see WINDOW_TIERS",
   }),
+  Object.freeze({
+    id: "desktop-first-cinematic-pro",
+    archive: "Foundations v2 near-black + signal orange + Archivo",
+    shipped: "Cinematic Pro graphite + cyan + system neo-grotesque",
+    reason:
+      "captain D7/D12: desktop is its own visual authority; sites stay on Foundations v2",
+  }),
 ]);
 
 /**
@@ -365,25 +362,22 @@ export const DEVIATIONS = Object.freeze([
  *   with a reason rather than silently unused.
  */
 export const FOUNDATIONS_V2_ALIGNMENT = Object.freeze([
-  // Neutrals — the sheet's six fills are this surface's six chrome surfaces.
-  Object.freeze({ token: "--bg-base", disposition: "carried", local: "SURFACE.canvas", value: SURFACE.canvas }),
-  Object.freeze({ token: "--bg-panel", disposition: "carried", local: "SURFACE.panel", value: SURFACE.panel }),
-  Object.freeze({ token: "--bg-raised", disposition: "carried", local: "SURFACE.header", value: SURFACE.header }),
-  Object.freeze({ token: "--bg-control", disposition: "carried", local: "SURFACE.hover", value: SURFACE.hover }),
-  Object.freeze({ token: "--bg-field", disposition: "carried", local: "SURFACE.well", value: SURFACE.well }),
-  Object.freeze({ token: "--bg-row", disposition: "carried", local: "SURFACE.raised", value: SURFACE.raised }),
-  // Lines.
-  Object.freeze({ token: "--line-soft", disposition: "carried", local: "LINE.row", value: LINE.row }),
-  Object.freeze({ token: "--line", disposition: "carried", local: "LINE.card", value: LINE.card }),
+  Object.freeze({ token: "--bg-base", disposition: "semantic", local: "SURFACE.canvas", value: SURFACE.canvas, reason: "desktop-first Cinematic Pro stage, not Foundations near-black" }),
+  Object.freeze({ token: "--bg-panel", disposition: "semantic", local: "SURFACE.panel", value: SURFACE.panel, reason: "graphite panel, same role as --bg-panel" }),
+  Object.freeze({ token: "--bg-raised", disposition: "semantic", local: "SURFACE.header", value: SURFACE.header, reason: "graphite raised chrome" }),
+  Object.freeze({ token: "--bg-control", disposition: "semantic", local: "SURFACE.hover", value: SURFACE.hover, reason: "graphite control well" }),
+  Object.freeze({ token: "--bg-field", disposition: "semantic", local: "SURFACE.well", value: SURFACE.well, reason: "graphite inset well" }),
+  Object.freeze({ token: "--bg-row", disposition: "semantic", local: "SURFACE.raised", value: SURFACE.raised, reason: "graphite raised row" }),
+  Object.freeze({ token: "--line-soft", disposition: "semantic", local: "LINE.row", value: LINE.row, reason: "graphite row line" }),
+  Object.freeze({ token: "--line", disposition: "semantic", local: "LINE.card", value: LINE.card, reason: "graphite card line" }),
   Object.freeze({
     token: "--line-strong",
     disposition: "absent",
     reason:
-      "the sheet prints three line weights; the Engine Desktop member draws its own six-step line scale and does not use #2C323B anywhere. Adopting it would change borders the accepted surface specifies, so the member's scale wins for a member-specific value",
+      "the sheet prints three line weights; Cinematic Pro draws its own six-step graphite scale and does not use #2C323B",
   }),
-  // Text.
-  Object.freeze({ token: "--fg", disposition: "carried", local: "TEXT.primary", value: TEXT.primary }),
-  Object.freeze({ token: "--fg-2", disposition: "carried", local: "TEXT.dim", value: TEXT.dim }),
+  Object.freeze({ token: "--fg", disposition: "semantic", local: "TEXT.primary", value: TEXT.primary, reason: "cool paper ink" }),
+  Object.freeze({ token: "--fg-2", disposition: "semantic", local: "TEXT.dim", value: TEXT.dim, reason: "cool secondary ink" }),
   Object.freeze({
     token: "--fg-4",
     disposition: "raised",
@@ -391,10 +385,9 @@ export const FOUNDATIONS_V2_ALIGNMENT = Object.freeze([
     value: TEXT.faint,
     deviation: "text-contrast-3F464F",
   }),
-  // Accent and semantics.
-  Object.freeze({ token: "--accent", disposition: "carried", local: "ACCENT.base", value: ACCENT.base }),
-  Object.freeze({ token: "--accent-hi", disposition: "carried", local: "ACCENT.hover", value: ACCENT.hover }),
-  Object.freeze({ token: "--ok", disposition: "carried", local: "SIGNAL.ok", value: SIGNAL.ok }),
+  Object.freeze({ token: "--accent", disposition: "semantic", local: "ACCENT.base", value: ACCENT.base, reason: "cyan life-signal replaces Foundations orange on desktop" }),
+  Object.freeze({ token: "--accent-hi", disposition: "semantic", local: "ACCENT.hover", value: ACCENT.hover, reason: "cyan hover tint" }),
+  Object.freeze({ token: "--ok", disposition: "semantic", local: "SIGNAL.ok", value: SIGNAL.ok, reason: "mint ready mark" }),
   Object.freeze({ token: "--danger", disposition: "carried", local: "SIGNAL.refuse", value: SIGNAL.refuse }),
   Object.freeze({ token: "--info", disposition: "carried", local: "SIGNAL.info", value: SIGNAL.info }),
   Object.freeze({
@@ -403,10 +396,9 @@ export const FOUNDATIONS_V2_ALIGNMENT = Object.freeze([
     reason:
       "the active proposal review renders one unified diff and no struck-through fixture value, so this surface has no stale-text role",
   }),
-  // Axis and surface accents.
-  Object.freeze({ token: "--axis-x", disposition: "carried", local: "AXIS.x", value: AXIS.x }),
-  Object.freeze({ token: "--axis-y", disposition: "carried", local: "AXIS.y", value: AXIS.y }),
-  Object.freeze({ token: "--axis-z", disposition: "carried", local: "AXIS.z", value: AXIS.z }),
+  Object.freeze({ token: "--axis-x", disposition: "semantic", local: "AXIS.x", value: AXIS.x, reason: "Cinematic Pro axis" }),
+  Object.freeze({ token: "--axis-y", disposition: "semantic", local: "AXIS.y", value: AXIS.y, reason: "Cinematic Pro axis" }),
+  Object.freeze({ token: "--axis-z", disposition: "semantic", local: "AXIS.z", value: AXIS.z, reason: "Cinematic Pro axis" }),
   Object.freeze({ token: "--kids", disposition: "carried", local: "SIGNAL.scene", value: SIGNAL.scene }),
   Object.freeze({
     token: "--store-game",
@@ -414,14 +406,14 @@ export const FOUNDATIONS_V2_ALIGNMENT = Object.freeze([
     reason:
       "storefront accent; this app draws no storefront and no commerce, and the Game profile chip is drawn with the accent rather than this value",
   }),
-  Object.freeze({ token: "--store-web", disposition: "carried", local: "PROFILE_DOT.web", value: PROFILE_DOT.web }),
+  Object.freeze({ token: "--store-web", disposition: "semantic", local: "PROFILE_DOT.web", value: PROFILE_DOT.web, reason: "web chip uses info blue, not the storefront hex" }),
 ]);
 
-/** Typography. Archive families first; no remote font is ever requested. */
+/** Typography. System neo-grotesque; no remote font is ever requested. */
 export const TYPE = Object.freeze({
   sans:
-    "'Archivo', 'Archivo Variable', system-ui, -apple-system, 'Segoe UI', sans-serif",
-  mono: "'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, monospace",
+    '-apple-system, "SF Pro Display", "Segoe UI Variable Display", "Segoe UI", system-ui, "Helvetica Neue", Arial, sans-serif',
+  mono: 'ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace',
 });
 
 /**
