@@ -194,7 +194,7 @@ stays `false` at build time; the renderer updates it only from a real frame's
 The renderer script progressively binds one desktop-only BYOK settings section
 beside the shell-owned route selector. It uses the chrome's existing controls and
 tokens and does not add an editor mode or action to the shell state machine.
-Selecting BYOK shows the OpenCode · DeepSeek V4 Pro and OpenRouter provider
+Selecting BYOK shows the OpenCode · DeepSeek V4 Flash and OpenRouter provider
 rows, key presence, and Save, Replace, Remove, locked, unsupported, corrupt,
 failure, or runtime-unavailable state; Remove stays offered whenever a stored
 envelope is still safely unlinkable. The packaged runner leases the OpenCode
@@ -222,7 +222,7 @@ The desktop provider-host golden test drives the recorded OpenRouter fixture
 through the privileged composition, existing Model Provider Port, authoring
 action, bridge job, and MountableScene result. It also checks the exact executed
 model descriptor and no-fallback request. The packaged Linux host injects one live provider transport: OpenCode
-DeepSeek V4 Pro, complete-only, pinned, no fallbacks, never the PRC
+DeepSeek V4 Flash, complete-only, pinned, no fallbacks, never the PRC
 `api.deepseek.com` endpoint. OpenRouter remains a saveable provider for the
 existing fixture-tested composition, but the packaged runner leases the
 OpenCode key. Configuration still reports runtime unavailable when no
@@ -296,7 +296,7 @@ field looking load-bearing.
 ### Configure a BYOK key
 
 1. Open Assistant and select **BYOK · free** on Game or Website.
-2. Confirm the provider row says **OpenCode · DeepSeek V4 Pro** (or OpenRouter
+2. Confirm the provider row says **OpenCode · DeepSeek V4 Flash** (or OpenRouter
    for the fixture-tested composition) and inspect the key/runtime status.
 3. Paste the key and choose **Save key**. Once configured, the same action reads
    **Replace key**; **Remove** deletes the encrypted envelope.
@@ -319,7 +319,7 @@ that only an unavailable-backend refusal may say the platform failed — is the
 shared contract owned by
 [`desktop-local-bridge.md`](desktop-local-bridge.md#byok-secure-storage-contract).
 
-The packaged Linux host injects the OpenCode DeepSeek V4 Pro session factory
+The packaged Linux host injects the OpenCode DeepSeek V4 Flash session factory
 into that same privileged composition module, so readiness and runner injection
 stay one decision. Saving a key still requires OS secure storage. A missing,
 locked, or unsupported keyring refuses before any network call. The PRC

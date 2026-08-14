@@ -16,9 +16,9 @@ import type { ProviderKeyAccess } from "../lib/byo-configuration.js";
 export const DESKTOP_OPENCODE_API_BASE = "https://opencode.ai/zen/go/v1";
 
 export const DESKTOP_DEEPSEEK_MODEL = Object.freeze({
-  model: "deepseek-v4-pro",
+  model: "deepseek-v4-flash",
   provider: "opencode",
-  quantization: "v4-pro",
+  quantization: "v4-flash",
   version: "2026-08-14",
 }) satisfies ModelDescriptor;
 

@@ -346,7 +346,7 @@ the one bridge seam is `createDesktopBridge()` in `desktop/linux/src/lib/bridge.
 (synchronous `handle()`, mirrored on web-shell's inspector app), reaching
 `composeScene()`, `bootstrapOpenPath()`, `createDesktopSession()`, and the
 deterministic local or explicitly injected BYOK assistant runner in
-`authoring-core` — whose OpenRouter fixture composition, OpenCode DeepSeek V4 Pro
+`authoring-core` — whose OpenRouter fixture composition, OpenCode DeepSeek V4 Flash
 live transport, model pin, and credential lease stay in the privileged
 `src/electron/provider-runtime.ts`, so readiness and runner injection stay one
 decision (sceneaxi#235; `docs/desktop-linux.md` owns that contract); hosted

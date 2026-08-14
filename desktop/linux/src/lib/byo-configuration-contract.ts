@@ -5,7 +5,7 @@ export const DESKTOP_BYO_PROVIDERS = Object.freeze(["opencode", "openrouter"] as
 export type DesktopByoProvider = (typeof DESKTOP_BYO_PROVIDERS)[number];
 
 export const DESKTOP_BYO_PROVIDER_LABELS = Object.freeze({
-  opencode: "OpenCode · DeepSeek V4 Pro",
+  opencode: "OpenCode · DeepSeek V4 Flash",
   openrouter: "OpenRouter",
 } as const);
 
