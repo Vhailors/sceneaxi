@@ -39,7 +39,9 @@ export {
 export {
   THREE_HEADLESS_SURFACE_LABEL,
   THREE_PRESENTATION_CORE_LABEL,
+  createThreePresentationCore,
   type ThreePresentationCoreOptions,
+  type ThreeSceneEnvironment,
   type ThreeViewport,
 } from "./three-core.js";
 

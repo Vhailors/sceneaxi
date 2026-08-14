@@ -58,10 +58,14 @@ export type ScenePhysicsConstraint = Readonly<{
   bodyB: string;
 }>;
 
+export const SCENE_PHYSICS_ENGINES = Object.freeze(["toy", "rapier"] as const);
+export type ScenePhysicsEngine = (typeof SCENE_PHYSICS_ENGINES)[number];
+
 export type ScenePhysicsWorld = Readonly<{
   gravityY: number;
   stepMs: number;
   seed: number;
+  engine: ScenePhysicsEngine;
 }>;
 
 export type ScenePhysicsCatalog = Readonly<{
@@ -98,7 +102,7 @@ export function emptyScenePhysicsCatalog(): ScenePhysicsCatalog {
   return Object.freeze({
     schemaVersion: 1,
     kind: SCENE_PHYSICS_CATALOG_KIND,
-    world: Object.freeze({ gravityY: -9.81, stepMs: 16, seed: 1 }),
+    world: Object.freeze({ gravityY: -9.81, stepMs: 16, seed: 1, engine: "toy" }),
     bodies: Object.freeze([]),
     shapes: Object.freeze([]),
     materials: Object.freeze([]),
@@ -118,7 +122,14 @@ export function parseScenePhysicsCatalog(value: unknown): ScenePhysicsCatalog | 
   ) {
     return null;
   }
-  return value as ScenePhysicsCatalog;
+  const catalog = value as ScenePhysicsCatalog;
+  if (catalog.world.engine === undefined) {
+    return Object.freeze({
+      ...catalog,
+      world: Object.freeze({ ...catalog.world, engine: "toy" as const }),
+    });
+  }
+  return catalog;
 }
 
 export type ScenePhysicsMutation =
@@ -126,7 +137,7 @@ export type ScenePhysicsMutation =
   | Readonly<{ kind: "shape-upsert"; shapeId: string; bodyId: string; shapeKind: string; size: number }>
   | Readonly<{ kind: "material-upsert"; bodyId: string; friction: number; restitution: number }>
   | Readonly<{ kind: "constraint-upsert"; constraintId: string; constraintKind: string; bodyA: string; bodyB: string }>
-  | Readonly<{ kind: "world-set"; gravityY: number; stepMs: number; seed: number }>
+  | Readonly<{ kind: "world-set"; gravityY: number; stepMs: number; seed: number; engine?: string }>
   | Readonly<{ kind: "body-remove"; bodyId: string }>;
 
 export function applyScenePhysicsMutation(input: Readonly<{
@@ -144,11 +155,20 @@ export function applyScenePhysicsMutation(input: Readonly<{
     if (mutation.stepMs < 1 || mutation.stepMs > 32) {
       return fail(SCENE_PHYSICS_REFUSALS.stepUnstable, "Fixed step must be between 1ms and 32ms inclusive.");
     }
+    const engine = mutation.engine ?? input.catalog.world.engine ?? "toy";
+    if (!SCENE_PHYSICS_ENGINES.some((known) => known === engine)) {
+      return fail(SCENE_PHYSICS_REFUSALS.inputUnsupported, `Physics engine "${engine}" is unsupported.`);
+    }
     return Object.freeze({
       ok: true as const,
       catalog: Object.freeze({
         ...input.catalog,
-        world: Object.freeze({ gravityY: mutation.gravityY, stepMs: mutation.stepMs, seed: mutation.seed }),
+        world: Object.freeze({
+          gravityY: mutation.gravityY,
+          stepMs: mutation.stepMs,
+          seed: mutation.seed,
+          engine: engine as ScenePhysicsEngine,
+        }),
       }),
     });
   }

@@ -5,6 +5,7 @@ import {
   THREE_PRESENTATION_CORE_LABEL,
   ThreePresentationError,
   createSculptMountApi,
+  createThreePresentationCore,
   createThreePresentationRuntime,
   createThreeRenderLoop,
   createThreeSculptPresentationBackend,
@@ -205,6 +206,22 @@ describe("Three presentation core — sculpt backend", () => {
     expect(framed.distance).toBeLessThan(20);
 
     mounts.dispose();
+  });
+
+  it("echoes authored environment and effects on the headless surface", () => {
+    const core = createThreePresentationCore({
+      environment: {
+        background: "#0A0F1A",
+        effects: ["bloom", "vignette"],
+      },
+    });
+    const frame = core.draw();
+    expect(frame.pixelsDrawn).toBe(false);
+    expect(frame.environmentBackground).toBe("#0A0F1A");
+    expect(frame.effects).toEqual(["bloom", "vignette"]);
+    core.setEnvironment({ background: "#101318", effects: ["bloom"] });
+    expect(core.draw().effects).toEqual(["bloom"]);
+    core.dispose();
   });
 
   it("keeps the deterministic headless surface honest about pixels", () => {

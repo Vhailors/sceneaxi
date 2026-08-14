@@ -22,10 +22,14 @@ import {
   EDITOR_SHELL_MODE_IDS,
   EDITOR_SHELL_MODES,
   EDITOR_SHELL_RETIRED_COPY,
+  EDITOR_SHELL_SESSION_STATES,
   EDITOR_SHELL_SOURCE,
+  EDITOR_SHELL_SURFACES,
   EDITOR_SHELL_VIEWPORT_SOURCES,
   EDITOR_SHELL_WINDOW_TIERS,
   editorShellDockTabsFor,
+  editorShellModeSurface,
+  editorShellPrimaryDockTabs,
 } from "../../packages/schemas/src/index.ts";
 import {
   DESKTOP_ASSISTANT_MODE_IDS,
@@ -77,6 +81,25 @@ describe("editor-shell vocabulary parity", () => {
     for (const mode of EDITOR_SHELL_MODE_IDS) {
       expect(dockTabsFor(mode)).toEqual(editorShellDockTabsFor(mode));
     }
+  });
+
+  it("the primary context derives session-gated console the same way on both surfaces", () => {
+    expect(editorShellPrimaryDockTabs({ sessionRunning: false })).toEqual([
+      "changes",
+      "assets",
+      "timeline",
+      "evidence",
+    ]);
+    expect(editorShellPrimaryDockTabs({ sessionRunning: true })).toContain("console");
+    expect(EDITOR_SHELL_SESSION_STATES).toEqual(["none", "running"]);
+    expect(editorShellModeSurface("compose")).toBe("details");
+    expect(editorShellModeSurface("plugins")).toBe("details");
+    expect(editorShellModeSurface("build")).toBe("primary");
+    expect(new Set(EDITOR_SHELL_MODES.map((mode) => mode.surface))).toEqual(
+      new Set(EDITOR_SHELL_SURFACES),
+    );
+    const desktop = desktopVisualView(createDesktopVisualState());
+    expect(desktop.primaryDockTabs).toEqual(editorShellPrimaryDockTabs({ sessionRunning: false }));
   });
 
   it("the web shell renders the shared modes and dock tabs verbatim", () => {

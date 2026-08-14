@@ -152,7 +152,7 @@ const MODE_PANELS: Readonly<
     leftEmpty: "Sculpt authoring is not available on this surface; use packaged Assistant Build for a supported artifact path.",
     inspectorTitle: "SCULPT OBJECT",
     inspectorEmpty: "No bound Sculpt job. Build passes are shown only as a static reference.",
-    note: `${DESKTOP_VISUAL_REFUSALS.noDocumentBound} · standalone Sculpt authoring writes nothing.`,
+    note: `Standalone Sculpt authoring writes nothing on this surface. ${DESKTOP_VISUAL_REFUSALS.noDocumentBound}`,
     noteTone: "accent" as const,
   }),
   compose: Object.freeze({
@@ -160,7 +160,7 @@ const MODE_PANELS: Readonly<
     leftEmpty: "Scene composition is consumed by Run; no composition editor is bound here.",
     inspectorTitle: "INSTANCE",
     inspectorEmpty: "No bound composition editor; Run validates the stored composed scene.",
-    note: `${DESKTOP_VISUAL_REFUSALS.noDocumentBound} · this surface does not author placement transforms.`,
+    note: `This surface does not author placement transforms. ${DESKTOP_VISUAL_REFUSALS.noDocumentBound}`,
     noteTone: "scene" as const,
   }),
   animate: Object.freeze({
@@ -168,7 +168,7 @@ const MODE_PANELS: Readonly<
     leftEmpty: "Animation authoring is not available on this surface.",
     inspectorTitle: "KEY",
     inspectorEmpty: "No bound timeline authoring job.",
-    note: `${DESKTOP_VISUAL_REFUSALS.noDocumentBound} · no timeline edits are staged here.`,
+    note: `No timeline edits are staged here. ${DESKTOP_VISUAL_REFUSALS.noDocumentBound}`,
     noteTone: "info" as const,
   }),
   run: Object.freeze({
@@ -192,7 +192,7 @@ const MODE_PANELS: Readonly<
     leftEmpty: "No contained packages are locked in this project.",
     inspectorTitle: "PACKAGE",
     inspectorEmpty: "Inspect the project lock. Marketplace and network sources stay disabled.",
-    note: `${DESKTOP_VISUAL_REFUSALS.noDocumentBound} · inspect the project lock; marketplace and network stay disabled.`,
+    note: `Inspect the project lock; marketplace and network stay disabled. ${DESKTOP_VISUAL_REFUSALS.noDocumentBound}`,
     noteTone: "accent" as const,
   }),
 });
@@ -509,7 +509,7 @@ function modeRail(view: DesktopVisualView): string {
           `<span class="sr-only">${escapeHtml(mode.title)} mode</span>`,
         ].join(""),
         "rail-mode",
-        ` data-action="mode" data-value="${escapeHtml(mode.id)}" aria-pressed="${mode.active ? "true" : "false"}" title="${escapeHtml(mode.title)}"`,
+        ` data-action="mode" data-value="${escapeHtml(mode.id)}" aria-pressed="${mode.active ? "true" : "false"}" title="${escapeHtml(mode.title)}"${mode.surface === "details" && !view.state.detailsOpen ? " hidden" : ""}`,
       );
     })
     .join("");
@@ -679,7 +679,7 @@ function dock(view: DesktopVisualView): string {
         tab.control,
         `${escapeHtml(tab.label)}${tab.id === "changes" ? `<span class="badge" data-change-badge>${tab.badge}</span>` : ""}`,
         "dock-tab",
-        ` role="tab" data-action="dock-tab" data-value="${escapeHtml(tab.id)}" aria-selected="${tab.active ? "true" : "false"}" aria-controls="dock-panel-${escapeHtml(tab.id)}" tabindex="${tab.active ? "0" : "-1"}"`,
+        ` role="tab" data-action="dock-tab" data-value="${escapeHtml(tab.id)}" aria-selected="${tab.active ? "true" : "false"}" aria-controls="dock-panel-${escapeHtml(tab.id)}" tabindex="${tab.active ? "0" : "-1"}"${tab.id === "console" && view.state.session !== "running" && !view.state.detailsOpen ? " hidden" : ""}`,
       ),
     )
     .join("");
@@ -1031,6 +1031,7 @@ function styles(): string {
   --title-h:${METRICS.titleBarHeight}px;--tabs-h:${METRICS.viewTabsHeight}px;
   --status-h:${METRICS.statusBarHeight}px;
   --sans:${TYPE.sans};--mono:${TYPE.mono};
+  --r-panel:18px;--r-card:13px;--r-control:10px;
 }
 *{box-sizing:border-box}
 /* Every hidden region here is an explicit model or runtime decision. */
@@ -1038,7 +1039,7 @@ function styles(): string {
 html,body{margin:0;padding:0;height:100%;overflow:hidden}
 body{background:var(--backdrop);color:var(--text);font-family:var(--sans);font-size:13px;-webkit-font-smoothing:antialiased}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-control)}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 /* An inert control is dimmed by paint, never by element opacity: opacity
    composites the label toward whatever is behind it, and both the token gate and
@@ -1097,7 +1098,7 @@ code,kbd{font-family:var(--mono);font-size:.86em}
    which is the same dimmed-by-nothing state the paint rule above replaced. */
 .ghost-button.is-inert:hover{border-color:var(--line-control);color:var(--inert)}
 .ghost-button kbd{background:var(--well);border:1px solid var(--line-control);border-radius:2px;padding:1px 4px;color:var(--faint)}
-.primary-button{background:var(--accent);color:var(--on-accent);font-weight:600;font-size:11px;border-radius:3px;height:22px;padding:0 11px}
+.primary-button{background:var(--accent);color:var(--on-accent);font-weight:600;font-size:11px;border-radius:var(--r-control);height:22px;padding:0 11px}
 .primary-button:hover{background:var(--accent-hover)}
 /* The accent fill stays and only the mark on it is demoted: --inert on orange is
    1.29:1, and the fill is what says which control this is. --inert-on-accent is
@@ -1121,7 +1122,7 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .mode-rail{background:var(--well);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:9px 0;gap:2px}
 .brand{width:28px;height:28px;border-radius:7px;background:var(--accent);margin-bottom:9px;display:grid;place-items:center;box-shadow:0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent),0 5px 16px -5px color-mix(in srgb, var(--accent) 60%, transparent)}
 .brand::before{content:"";width:10px;height:10px;border:2px solid var(--on-accent);border-radius:1px;transform:rotate(45deg)}
-.rail-mode{width:44px;height:42px;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;position:relative;color:var(--faint)}
+.rail-mode{width:44px;height:42px;border-radius:var(--r-control);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;position:relative;color:var(--faint)}
 .rail-mode:hover{background:var(--header)}
 .rail-mode[aria-pressed="true"]{background:var(--header);color:var(--accent)}
 .rail-mode[aria-pressed="true"]::before{content:"";position:absolute;left:-9px;top:10px;bottom:10px;width:2px;border-radius:0 2px 2px 0;background:var(--accent)}

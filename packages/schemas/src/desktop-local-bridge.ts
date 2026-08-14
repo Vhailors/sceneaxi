@@ -383,6 +383,42 @@ export const DESKTOP_LOCAL_BRIDGE_TOOLS = Object.freeze([
     providerRoute: "none",
   }),
   commandTool({
+    name: "sceneaxi.environment.inspect",
+    commandId: "environment-inspect",
+    description: "Inspect the presentation-authored scene environment catalog.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.environment.apply",
+    commandId: "environment-apply",
+    description: "Stage a scene environment edit through Change Review.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.material.inspect",
+    commandId: "material-inspect",
+    description: "Inspect parametric material overrides for the bound scene.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.material.apply",
+    commandId: "material-apply",
+    description: "Stage a material override through Change Review without rewriting artifact bytes.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.effect.inspect",
+    commandId: "effect-inspect",
+    description: "Inspect decorative seeded particle emitters.",
+    providerRoute: "none",
+  }),
+  commandTool({
+    name: "sceneaxi.effect.apply",
+    commandId: "effect-apply",
+    description: "Stage a decorative emitter edit through Change Review.",
+    providerRoute: "none",
+  }),
+  commandTool({
     name: "sceneaxi.package.inspect",
     commandId: "package-inspect",
     description: "Inspect the project package lock and discovered contained metadata without executing packages.",

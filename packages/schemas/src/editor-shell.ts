@@ -54,12 +54,28 @@ export const EDITOR_SHELL_SCHEMA_VERSION = 1 as const;
  * records.
  */
 export const EDITOR_SHELL_SOURCE = Object.freeze({
-  archive: "SceneAxi Design System.zip",
+  archive: "sceneaxi-desktop-redesign",
   archiveSha256:
-    "ad5d6e39215a4aee9c81b827308fc944784719168d3fba2db5d9e5ef8fc15159",
-  member: "Engine Desktop.dc.html",
-  syncedAt: "2026-07-25T12:40:00Z",
+    "c4ecfce14440b56342781e53abd02f915446795d8ba2bf2fdf18d895bc950b51",
+  member: "direction-1-cinematic-pro.html",
+  syncedAt: "2026-08-14T12:54:00Z",
 } as const);
+
+/** Where a mode or control belongs in the compact primary surface. */
+export const EDITOR_SHELL_SURFACES = Object.freeze(["primary", "details"] as const);
+export type EditorShellSurface = (typeof EDITOR_SHELL_SURFACES)[number];
+
+/** Play/session state both chrome surfaces must agree on for the Console tab. */
+export const EDITOR_SHELL_SESSION_STATES = Object.freeze(["none", "running"] as const);
+export type EditorShellSessionState = (typeof EDITOR_SHELL_SESSION_STATES)[number];
+
+/** Progressive-disclosure level for copy and technical readouts. */
+export const EDITOR_SHELL_DISCLOSURE = Object.freeze(["headline", "details"] as const);
+export type EditorShellDisclosure = (typeof EDITOR_SHELL_DISCLOSURE)[number];
+
+/** How a dock tab is gated in the primary editing context. */
+export const EDITOR_SHELL_DOCK_TAB_GATES = Object.freeze(["always", "session"] as const);
+export type EditorShellDockTabGate = (typeof EDITOR_SHELL_DOCK_TAB_GATES)[number];
 
 /** The seven editor modes, in the archive's rail order. */
 export const EDITOR_SHELL_MODE_IDS = Object.freeze([
@@ -95,6 +111,12 @@ export type EditorShellModeRow = Readonly<{
    * `ship` opens on Evidence because a handoff is judged by its digests.
    */
   dockTabs: ReadonlyArray<EditorShellDockTabId>;
+  /**
+   * Present-but-hidden: `details` rooms stay in the model so refusal closure
+   * and control accounting survive; the default document only renders
+   * `primary`.
+   */
+  surface: EditorShellSurface;
 }>;
 
 /**
@@ -110,42 +132,49 @@ export const EDITOR_SHELL_MODES: ReadonlyArray<EditorShellModeRow> =
       id: "build",
       railLabel: "BUILD",
       title: "Build",
+      surface: "primary",
       dockTabs: Object.freeze(["changes", "assets", "console", "evidence"] as const),
     }),
     Object.freeze({
       id: "sculpt",
       railLabel: "SCULPT",
       title: "Sculpt",
+      surface: "primary",
       dockTabs: Object.freeze(["changes", "assets", "console", "evidence"] as const),
     }),
     Object.freeze({
       id: "compose",
       railLabel: "SCENE",
       title: "Scene composition",
+      surface: "details",
       dockTabs: Object.freeze(["changes", "assets", "console", "evidence"] as const),
     }),
     Object.freeze({
       id: "animate",
       railLabel: "ANIM",
       title: "Animate",
+      surface: "primary",
       dockTabs: Object.freeze(["timeline", "changes", "console"] as const),
     }),
     Object.freeze({
       id: "run",
       railLabel: "RUN",
       title: "Run",
+      surface: "primary",
       dockTabs: Object.freeze(["console", "evidence"] as const),
     }),
     Object.freeze({
       id: "ship",
       railLabel: "SHIP",
       title: "Ship",
+      surface: "primary",
       dockTabs: Object.freeze(["evidence", "console"] as const),
     }),
     Object.freeze({
       id: "plugins",
       railLabel: "PLUG",
       title: "Plugins",
+      surface: "details",
       dockTabs: Object.freeze(["changes", "assets", "console", "evidence"] as const),
     }),
   ]);
@@ -164,6 +193,31 @@ export function editorShellDockTabsFor(
   mode: EditorShellModeId,
 ): ReadonlyArray<EditorShellDockTabId> {
   return editorShellModeRow(mode).dockTabs;
+}
+
+/**
+ * Dock tabs of the compact primary editing context. Console is session-gated;
+ * Timeline is always present. Both surfaces must derive from this when they
+ * project the merged context.
+ */
+export const EDITOR_SHELL_PRIMARY_DOCK_TABS = Object.freeze([
+  Object.freeze({ id: "changes", gate: "always" } as const),
+  Object.freeze({ id: "assets", gate: "always" } as const),
+  Object.freeze({ id: "timeline", gate: "always" } as const),
+  Object.freeze({ id: "console", gate: "session" } as const),
+  Object.freeze({ id: "evidence", gate: "always" } as const),
+] as const);
+
+export function editorShellPrimaryDockTabs(ctx: {
+  readonly sessionRunning: boolean;
+}): ReadonlyArray<EditorShellDockTabId> {
+  return EDITOR_SHELL_PRIMARY_DOCK_TABS.filter(
+    (row) => row.gate === "always" || ctx.sessionRunning,
+  ).map((row) => row.id);
+}
+
+export function editorShellModeSurface(id: EditorShellModeId): EditorShellSurface {
+  return editorShellModeRow(id).surface;
 }
 
 /**
@@ -291,4 +345,5 @@ export const EDITOR_SHELL_RETIRED_COPY = Object.freeze([
   "Preview renderer is experimental — not the final choice",
   "Experimental Three preview",
   "non-decision",
+  "Hosted · metered",
 ] as const);

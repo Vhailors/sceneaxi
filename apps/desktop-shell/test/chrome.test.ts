@@ -85,7 +85,7 @@ describe("engine desktop chrome — document shape", () => {
   it("declares its archive provenance and that it drew nothing", () => {
     const html = render();
     expect(html).toContain(
-      "ad5d6e39215a4aee9c81b827308fc944784719168d3fba2db5d9e5ef8fc15159",
+      "c4ecfce14440b56342781e53abd02f915446795d8ba2bf2fdf18d895bc950b51",
     );
     expect(html).toContain('name="sceneaxi-pixels-drawn" content="false"');
   });

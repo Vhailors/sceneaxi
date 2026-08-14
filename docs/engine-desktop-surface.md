@@ -12,10 +12,10 @@ registry, or an executable gate, that owner wins.
 
 | | |
 |---|---|
-| Archive | `SceneAxi Design System.zip` |
-| SHA-256 | `ad5d6e39215a4aee9c81b827308fc944784719168d3fba2db5d9e5ef8fc15159` |
-| Member implemented | `Engine Desktop.dc.html` |
-| Archive sync date | 2026-07-25T12:40:00Z |
+| Archive | `sceneaxi-desktop-redesign` |
+| SHA-256 | `c4ecfce14440b56342781e53abd02f915446795d8ba2bf2fdf18d895bc950b51` |
+| Member implemented | `direction-1-cinematic-pro.html` |
+| Archive sync date | 2026-08-14T12:54:00Z |
 
 The archive is **not committed to this repository**. It is a design input, not a
 build input: nothing in `pnpm gate` reads it, and no generated file is derived
@@ -29,12 +29,12 @@ the named member of the named archive.
 The same archive contains an earlier pass. It is **reference-only** and must not
 be reintroduced. It differed in kind, not in degree:
 
-| | v1 (superseded) | Current (implemented) |
-|---|---|---|
-| Accent | amber `#F5A524` / `#FFC24D` | signal orange `#FF6B2C` / `#FF8A54` |
-| Typeface | Space Grotesk + IBM Plex Sans | Archivo + JetBrains Mono |
-| Canvas | 2064×1400 storyboard | 1680×1000 editor stage |
-| Model | a project-launcher storyboard: project list, profile cards, offline-capability panel. No mode rail, no assistant, no command palette, no profile switch. | one stateful editor: seven-mode rail, mode-dependent dock, profile switch, assistant, command palette, overlays |
+| | v1 (superseded) | Foundations desktop (superseded on this surface) | Current (implemented) |
+|---|---|---|---|
+| Accent | amber `#F5A524` / `#FFC24D` | signal orange `#FF6B2C` / `#FF8A54` | cyan `#46D8EC` / `#74E3F2` |
+| Typeface | Space Grotesk + IBM Plex Sans | Archivo + JetBrains Mono | system neo-grotesque |
+| Canvas | 2064×1400 storyboard | 1680×1000 editor stage | 1680×1000 floating graphite stage |
+| Model | a project-launcher storyboard | seven-mode rail as headline identity | one editing context; details rooms present-but-hidden |
 
 `SUPERSEDED_V1.retiredValues` holds the v1 values as a closed list, and
 `test/visual-tokens.test.ts` asserts that none of them appears in the token set

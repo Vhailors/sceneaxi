@@ -13,7 +13,13 @@
  * artifact, because an artifact's evidence binds its exact spec bytes.
  */
 import type { SceneCompositionResult } from "@sceneaxi/authoring-core";
-import type { SculptArtifact, SculptTransform } from "@sceneaxi/schemas";
+import type {
+  SceneEffectEmitter,
+  SceneEnvironmentCatalog,
+  SceneMaterialOverride,
+  SculptArtifact,
+  SculptTransform,
+} from "@sceneaxi/schemas";
 
 /** A composition the pipeline accepted; the only input a mountable scene is built from. */
 export type ComposedSceneOk = Extract<SceneCompositionResult, { readonly ok: true }>;
@@ -41,6 +47,12 @@ export type MountableScene = {
   readonly sceneDigest: string;
   readonly artifacts: Readonly<Record<string, SculptArtifact>>;
   readonly instances: readonly MountableSceneInstance[];
+  readonly environment?: SceneEnvironmentCatalog;
+  readonly environmentDigest?: string;
+  readonly materials?: readonly SceneMaterialOverride[];
+  readonly materialsDigest?: string;
+  readonly effects?: readonly SceneEffectEmitter[];
+  readonly effectsDigest?: string;
 };
 
 /**

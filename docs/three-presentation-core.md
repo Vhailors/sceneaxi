@@ -119,8 +119,9 @@ only, and presentation invents no state the kernel does not own.
 - **Node gates** (`pnpm gate`) cover mount/present/capture/dispose lifecycle and
   refusals, the frame path through an injected surface, orbit/zoom math and
   clamping, pointer/wheel input wiring, snapshot interpolation and non-mutation,
-  contained-triangle replacement on the same scene root, the render loop, and
-  that the canvas path really constructs a `WebGLRenderer`
+  contained-triangle replacement on the same scene root, the render loop,
+  presentation-authored environment echo (declared effects, never a pixel claim),
+  and that the canvas path really constructs a `WebGLRenderer`
   (which must fail in node, where no WebGL context exists).
 - **Real browser**, manually, since node has no WebGL. Verified 2026-07-25 in
   Chrome against a committed fixture artifact served through Vite:
