@@ -1,9 +1,11 @@
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { NextConfig } from "next";
+import pageExtensions from "./page-extensions.json";
 import securityPolicy from "./security-headers.json";
 
 const nextConfig: NextConfig = {
+  pageExtensions,
   outputFileTracingRoot: dirname(fileURLToPath(import.meta.url)),
   poweredByHeader: false,
   reactStrictMode: true,

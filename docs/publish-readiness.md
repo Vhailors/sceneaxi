@@ -129,9 +129,12 @@ claim a guarantee the gate does not enforce.
 | `scripts/build-engine-sdk.mjs` |
 | `scripts/engine-sdk-files.json` |
 | `docs/publish-readiness.md` |
+| `desktop/linux/electron-builder.yml` |
 | `desktop/linux/scripts/dist.mjs` |
+| `desktop/macos/electron-builder.yml` |
 | `desktop/macos/scripts/dist.mjs` |
 | `desktop/macos/scripts/release-provenance.mjs` |
+| `desktop/windows/electron-builder.yml` |
 | `desktop/windows/scripts/package-release.mjs` |
 | `desktop/windows/scripts/dist.mjs` |
 | `desktop/windows/scripts/release-preflight.mjs` |

@@ -81,14 +81,23 @@ function rejectDuplicates(values, label, errors) {
   }
 }
 
+function isGeneratedDirectory(root, path) {
+  const parts = displayPath(root, path).split("/");
+  const name = parts.at(-1);
+  if (name === "node_modules") return true;
+  if (![".next", "coverage", "dist", "playwright-report", "test-results"].includes(name)) return false;
+  if (parts.length === 1) return true;
+  return parts.length === 3 && ["apps", "desktop", "packages", "sites"].includes(parts[0]);
+}
+
 function walkFiles(root, directory, predicate) {
   const absolute = join(root, directory);
   if (!existsSync(absolute)) return [];
   const found = [];
   const visit = (current) => {
     for (const entry of readdirSync(current, { withFileTypes: true })) {
-      if (entry.name === "node_modules" || entry.name === "dist" || entry.name === "coverage") continue;
       const path = join(current, entry.name);
+      if (entry.isDirectory() && isGeneratedDirectory(root, path)) continue;
       if (entry.isDirectory()) visit(path);
       else if (predicate(path, entry.name)) found.push(displayPath(root, path));
     }
@@ -123,8 +132,8 @@ function walkPaths(root, directory) {
   const found = [];
   const visit = (current) => {
     for (const entry of readdirSync(current, { withFileTypes: true })) {
-      if (entry.name === "node_modules" || entry.name === "dist" || entry.name === "coverage") continue;
       const path = join(current, entry.name);
+      if (entry.isDirectory() && isGeneratedDirectory(root, path)) continue;
       found.push(displayPath(root, path));
       if (entry.isDirectory()) visit(path);
     }
@@ -140,6 +149,33 @@ function wildcardReferencePaths(root, reference) {
   const escaped = reference.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replaceAll("*", "[^/]*");
   const pattern = new RegExp(`^${escaped}$`);
   return walkPaths(root, parent).filter((path) => pattern.test(path));
+}
+
+function nextRouteFiles(root, errors) {
+  const sitesRoot = join(root, "sites");
+  if (!existsSync(sitesRoot)) return [];
+  const found = [];
+  for (const entry of readdirSync(sitesRoot, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const site = `sites/${entry.name}`;
+    const app = `${site}/src/app`;
+    if (!existsSync(join(root, app))) continue;
+    const extensions = loadJson(root, `${site}/page-extensions.json`, errors);
+    if (
+      !Array.isArray(extensions)
+      || extensions.length === 0
+      || extensions.some((extension) => typeof extension !== "string" || extension.length === 0 || extension.includes("/"))
+      || new Set(extensions).size !== extensions.length
+    ) {
+      errors.push(`[route-config] ${site}/page-extensions.json must declare unique Next page extensions`);
+      continue;
+    }
+    const routeFileNames = new Set(
+      ["page", "route"].flatMap((kind) => extensions.map((extension) => `${kind}.${extension}`)),
+    );
+    found.push(...walkFiles(root, app, (path, name) => routeFileNames.has(name)));
+  }
+  return found.sort();
 }
 
 function packageReferencePaths(root, reference) {
@@ -477,11 +513,7 @@ function checkInventorySurface(root, inventory, runtimeSurfaces, errors) {
   const toolNames = runtimeSurfaces?.localAgentTools ?? [];
   if (!arraysEqual(toolNames, inventory?.bridge?.localAgentTools ?? [])) errors.push("[surface-accounting] local-agent tool inventory is stale or incomplete");
 
-  const expectedRoutes = walkFiles(
-    root,
-    "sites",
-    (path, name) => /^(?:page\.(?:js|jsx|ts|tsx)|route\.(?:js|ts))$/.test(name),
-  ).filter((path) => path.includes("/src/app/"));
+  const expectedRoutes = nextRouteFiles(root, errors);
   const expectedMigrations = walkFiles(root, "db/migrations", (path, name) => name.endsWith(".sql"));
   const expectedWorkflows = walkFiles(root, ".github/workflows", (path, name) => name.endsWith(".yml") || name.endsWith(".yaml"));
   const expectedGoldens = walkFiles(root, "tests/e2e", (path, name) => name.endsWith("-golden.test.ts"));

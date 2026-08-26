@@ -288,7 +288,7 @@ describe("traceability check — injected violations", () => {
         );
       inventory.liveInventory.releaseArtifacts =
         inventory.liveInventory.releaseArtifacts.filter(
-          (entry) => entry !== "desktop/windows/scripts/dist.mjs",
+          (entry) => !entry.endsWith("/electron-builder.yml"),
         );
     });
     const result = runCheck(fixture, CHECK);
@@ -299,14 +299,17 @@ describe("traceability check — injected violations", () => {
     expect(result.stderr).toContain("[browser-evidence]");
     expect(result.stderr).toContain("docs/desktop-linux.md");
     expect(result.stderr).toContain("[release-owners]");
-    expect(result.stderr).toContain("desktop/windows/scripts/dist.mjs");
+    expect(result.stderr).toContain("desktop/linux/electron-builder.yml");
+    expect(result.stderr).toContain("desktop/macos/electron-builder.yml");
+    expect(result.stderr).toContain("desktop/windows/electron-builder.yml");
   });
 
-  it("fails when a site route is added without inventory coverage", () => {
-    writeTo(fixture, "sites/umbrella/src/app/injected-route/page.jsx", "export default function Page() { return null; }\n");
+  it("fails when an alternate-extension route appears under a reserved-looking segment", () => {
+    writeTo(fixture, "sites/umbrella/src/app/coverage/route.tsx", "export function GET() { return new Response(null); }\n");
     const result = runCheck(fixture, CHECK);
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("routes inventory");
+    expect(result.stderr).toContain("sites/umbrella/src/app/coverage/route.tsx");
   });
 
   it("fails when a route and its declared count are duplicated together", () => {

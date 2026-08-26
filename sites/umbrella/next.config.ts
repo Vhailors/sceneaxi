@@ -1,6 +1,7 @@
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { NextConfig } from "next";
+import pageExtensions from "./page-extensions.json";
 
 /**
  * SceneAxi packages export TypeScript source (`"." : "./src/index.ts"`) and, per the
@@ -9,6 +10,7 @@ import type { NextConfig } from "next";
  * `.js` specifier onto its TypeScript source.
  */
 const nextConfig: NextConfig = {
+  pageExtensions,
   // The site is its own install root, but its `link:` packages live two levels above
   // it. Vercel materializes serverless functions from Next's file traces, so the trace
   // root must contain both the app and those package sources; using the site directory
