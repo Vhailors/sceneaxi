@@ -1,0 +1,17 @@
+{
+  "propose": {
+    "status": 200,
+    "ok": true,
+    "phase": "reviewing",
+    "renderedDiff": true
+  },
+  "reviewBeforeAccept": {
+    "bytesUnchanged": true
+  },
+  "accept": {
+    "status": 200,
+    "ok": true,
+    "phase": "applied"
+  },
+  "finalContainsAcceptedValue": true
+}

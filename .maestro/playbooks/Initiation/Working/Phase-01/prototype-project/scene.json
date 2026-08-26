@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "kind": "sceneaxi.document",
+  "id": "scene",
+  "title": "Phase 01 Prototype",
+  "data": {
+    "entities": [
+      {
+        "x": 21
+      }
+    ]
+  }
+}
