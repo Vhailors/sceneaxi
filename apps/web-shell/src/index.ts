@@ -9,10 +9,17 @@
  * hosting, deployment, or CLI spawn (matrix-denied).
  */
 import type { PackageSeam } from "@sceneaxi/schemas";
+import { ACCOUNT_PANEL_REASONS } from "./account-panel.js";
+import { ASSISTANT_PANEL_REASONS } from "./assistant-panel.js";
 
 export const seam: PackageSeam = Object.freeze({
   name: "@sceneaxi/web-shell",
   releaseGroup: "apps",
+});
+
+export const SCENEAXI_REFUSAL_REGISTRY_CATALOG = Object.freeze({
+  ACCOUNT_PANEL_REASONS,
+  ASSISTANT_PANEL_REASONS,
 });
 
 export {

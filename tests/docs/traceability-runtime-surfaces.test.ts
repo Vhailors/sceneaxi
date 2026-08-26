@@ -5,6 +5,21 @@ import {
   WEB_EXPERIENCE_REFUSED_SCOPES,
   evaluateWebExperienceScope,
 } from "../../packages/profile-web/src/index.js";
+import {
+  PROJECT_GIT_UNSUPPORTED_OPERATIONS,
+  refuseUnsupportedProjectGitOperation,
+} from "../../packages/authoring-core/src/index.js";
+import {
+  PROJECT_GIT_DIAGNOSTICS,
+  PROJECT_MANIFEST_DIAGNOSTICS,
+  validateProjectManifest,
+} from "../../packages/schemas/src/index.js";
+import {
+  ACCOUNT_PANEL_REASONS,
+  ASSISTANT_PANEL_REASONS,
+  createAccountPanel,
+  createAssistantPanel,
+} from "../../apps/web-shell/src/index.js";
 import { repoRoot } from "../helpers/fixture.ts";
 import {
   traceabilityPublicModulePaths,
@@ -82,6 +97,41 @@ describe("traceability runtime surfaces", () => {
         ok: false,
         requestedScope: scope,
         reason: "OUTSIDE_WEB_EXPERIENCE_SCOPE",
+      });
+    }
+  });
+
+  it("catalogs atypically named registries with behavioral parity", () => {
+    const runtime = traceabilityRuntimeSurfaces();
+    for (const entry of [
+      { path: "apps/web-shell/src/index.ts", symbol: "ACCOUNT_PANEL_REASONS" },
+      { path: "apps/web-shell/src/index.ts", symbol: "ASSISTANT_PANEL_REASONS" },
+      { path: "packages/schemas/src/index.ts", symbol: "PROJECT_MANIFEST_DIAGNOSTICS" },
+      { path: "packages/schemas/src/index.ts", symbol: "PROJECT_GIT_DIAGNOSTICS" },
+      { path: "packages/authoring-core/src/index.ts", symbol: "PROJECT_GIT_UNSUPPORTED_OPERATIONS" },
+    ]) {
+      expect(runtime.refusalRegistries).toContainEqual(entry);
+    }
+
+    expect(createAccountPanel({} as never)).toMatchObject({
+      ok: false,
+      reason: ACCOUNT_PANEL_REASONS.surfaceInvalid,
+    });
+    expect(createAssistantPanel({} as never)).toMatchObject({
+      ok: false,
+      reason: ASSISTANT_PANEL_REASONS.surfaceInvalid,
+    });
+    expect(validateProjectManifest({})).toMatchObject({
+      ok: false,
+      diagnostic: { code: PROJECT_MANIFEST_DIAGNOSTICS.malformed },
+    });
+    for (const operation of PROJECT_GIT_UNSUPPORTED_OPERATIONS) {
+      expect(refuseUnsupportedProjectGitOperation(operation)).toMatchObject({
+        ok: false,
+        diagnostic: {
+          code: PROJECT_GIT_DIAGNOSTICS.operationUnsupported,
+          path: `$operation.${operation}`,
+        },
       });
     }
   });

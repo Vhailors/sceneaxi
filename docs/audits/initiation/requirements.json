@@ -7646,6 +7646,14 @@
       },
       {
         "path": "apps/web-shell/src/index.ts",
+        "symbol": "ACCOUNT_PANEL_REASONS"
+      },
+      {
+        "path": "apps/web-shell/src/index.ts",
+        "symbol": "ASSISTANT_PANEL_REASONS"
+      },
+      {
+        "path": "apps/web-shell/src/index.ts",
         "symbol": "WEB_SHELL_REFUSALS"
       },
       {
@@ -7691,6 +7699,10 @@
       {
         "path": "packages/authoring-core/src/index.ts",
         "symbol": "MODEL_PROVIDER_REFUSE_REASONS"
+      },
+      {
+        "path": "packages/authoring-core/src/index.ts",
+        "symbol": "PROJECT_GIT_UNSUPPORTED_OPERATIONS"
       },
       {
         "path": "packages/authoring-core/src/index.ts",
@@ -7799,6 +7811,14 @@
       {
         "path": "packages/schemas/src/index.ts",
         "symbol": "PROFILE_REFUSALS"
+      },
+      {
+        "path": "packages/schemas/src/index.ts",
+        "symbol": "PROJECT_GIT_DIAGNOSTICS"
+      },
+      {
+        "path": "packages/schemas/src/index.ts",
+        "symbol": "PROJECT_MANIFEST_DIAGNOSTICS"
       },
       {
         "path": "packages/schemas/src/index.ts",
