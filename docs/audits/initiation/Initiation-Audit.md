@@ -16,9 +16,9 @@ related:
 # SceneAxi Phase 02 Initiation Audit
 
 This document records the immutable source baseline for the Phase 02
-traceability audit. It establishes which source wins when records disagree and
-preserves the repository state captured by Phase 01. It does not inventory
-requirements or claim implementation coverage; those are later Phase 02 tasks.
+traceability audit and the cross-dimensional findings verified against that
+baseline. The machine-readable requirement inventory owns row-level coverage;
+this document records the audit evidence, rejected candidates, and handoff.
 
 ## Source precedence
 
@@ -142,15 +142,94 @@ Phase 02 playbook is the only playbook file this run is allowed to advance.
 | `scripts/check-contracts.mjs` and `scripts/check-contracts.test.mjs` | Contract/fixture lockstep checker and its checker-level tests. |
 | `scripts/check-sites.mjs` and `scripts/check-desktop.mjs` | Deployable-site and desktop-tier structural checker owners. |
 | `scripts/check-publish-ready.mjs` | Publish-readiness declaration checker; readiness is structural and not publication authority. |
-| `tests/docs/module-coverage.ts` and `tests/docs/capability-matrix-audit.ts` | Existing reusable scanners for module and capability evidence; their tests are process-level audit regressions. |
+| `tests/docs/module-coverage.ts` and `tests/docs/capability-matrix-audit.ts` | Existing reusable scanners for module and capability evidence; their tests are direct-call unit regressions, not process-level tests. |
 | `tests/contracts/`, `tests/boundary/`, `tests/publish/` | Existing injected-drift and boundary regression conventions to reuse in later checker work. |
 | `package.json` | Root quality sequence: syntax → boundaries → contracts → sites → desktop → publish-ready → build → tests → lint, via `pnpm gate`. No step is weakened or reordered by this baseline. |
 
+## Cross-dimensional audit
+
+Audited HEAD: `eecd6acade08a48b7599832bb1598b3e11bddf72` (`MAESTRO: target
+traceability proof refs`). The review covered correctness, security,
+performance, test depth, architecture, dependencies, developer workflow,
+documentation drift, and stated-but-undelivered direction. It read each cited
+source and owning decision, compared live declarations with their consumers,
+checked recent history/churn, and searched shipped source, tests, workflows,
+and scripts for unchecked casts, ignored errors, process/global leaks,
+unbounded work, path construction, and stale markers. Findings below are
+verified candidates for the later gap register; this section does not grant
+authority to implement held or delayed work.
+
+### Findings requiring later work
+
+| ID | Severity | Classification | Evidence and impact | Owner |
+|---|---|---|---|---|
+| `AUDIT-AUTHORING-ROOT-ESCAPE` | High | `gap` | `packages/authoring-core/src/propose-apply.ts:95-97` canonicalizes `resolve(cwd, documentPath)` without checking that the target remains inside the authoritative root. The helper feeds proposal targets and applied edits at `:250-252`, `:363-365`, `:650-653`, and `:787-790`; an absolute, traversal, or outside-resolving symlink target can therefore reach a journal and atomic rewrite. The direct-write path has the intended containment check at `:1097-1127`, but `transaction-history.test.ts:40-77` does not cover these escape forms. | Phase 03, authoring core |
+| `AUDIT-PACKAGE-CATALOG-SHAPE` | High | `gap` | `packages/schemas/src/desktop-scene-package.ts:73-80` accepts the top-level tag and casts the value without validating `lock` or its entries. Project-controlled catalogs then reach `desktop/linux/src/lib/desktop-scene.ts:1899-1941` and `desktop/linux/src/lib/bridge.ts:3170-3212`, where package operations call `.some`, `.filter`, iteration, and digest serialization. A malformed catalog can throw across the privileged command boundary instead of returning `PACKAGE_CATALOG_INVALID`; `packages/schemas/test/desktop-scene-package.test.ts:1-92` lacks malformed nested-catalog cases. | Phase 03, shared schemas/core |
+| `AUDIT-CONTRACT-REGRESSION-DISCOVERY` | High | `gap` | `scripts/check-contracts.test.mjs:105-478` declares process-level contract regressions and executes them at `:480-490`, but `vitest.config.ts:75-82` includes only TypeScript tests and `package.json:20-22` invokes only `check-contracts.mjs`. No root script or workflow runs the `.mjs` regression suite, leaving authoring-job, hostile-key, plugin-registry, and inert-example regressions outside `pnpm test` and `pnpm gate`. | Phase 02, checker and root workflow |
+| `AUDIT-CHECKOUT-BODY-ORDER` | Medium | `gap` | `sites/umbrella/src/app/api/checkout/route.ts:26-35` calls `request.formData()` and enumerates attacker-controlled fields before `resolveCheckoutRedirectOrigin` at `:50-53` and identity resolution at `:55-61`. This permits untrusted-origin body parsing/allocation before the fail-closed boundary; malformed multipart input also escapes without the caught-parser response used by `sites/umbrella/src/app/api/editor/catalog-intake/route.ts:44-60`. | Phase 05, web request boundary |
+| `AUDIT-PACKAGE-METADATA-INTEGRITY` | Medium | `partial` | `packages/schemas/src/desktop-scene-package.ts:83-131` accepts renderer/request-supplied `manifest`, locator, and syntactically shaped digest without binding the digest to inspected bytes; non-string capabilities are discarded and `pluginVersion` only needs to be non-empty. The fields cross the renderer/IPC edge in `desktop/linux/src/lib/bridge.ts:3176-3184`, while `docs/full-editor-v1-capability-matrix.md:177` describes a contained, capability-declared, digest-stamped lock. | Phase 03, package loading |
+| `AUDIT-GOLDEN-COMMAND-OMISSIONS` | Medium | `gap` | The hand-maintained `test:golden` command in `package.json:17` omits `contained-git-golden`, `desktop-assistant-scene-loop-golden`, `full-editor-transactions-golden`, and `hosted-ai-metering-golden`, although `requirements.json:7670-7710` declares them among the live golden tests. `pnpm test` still discovers them, but `docs/runnable-surfaces.md:55-56` overstates the dedicated command. | Phase 02, checker and root workflow |
+| `AUDIT-CI-TIMEOUT-BOUND` | Medium | `gap` | `.github/workflows/gate.yml:9-31`, `.github/workflows/desktop-linux.yml:10-67`, `.github/workflows/desktop-macos.yml:23-89`, and `.github/workflows/engine-sdk.yml` declare no `timeout-minutes`. Installs, the full gate, packaging, smoke, signing, and provider checks therefore lack a repository-owned duration bound. This is an operational resource risk, not a product-runtime failure. | Phase 03, verification workflow |
+| `AUDIT-WEB-BODY-BOUND` | Medium | `partial` | `sites/umbrella/src/app/api/stripe/webhook/route.ts:35-59` uses `await request.text()`, and `sites/umbrella/src/app/api/editor/catalog-intake/route.ts:45-66` materializes `formData()` before an application-owned byte/count ceiling. Host limits may bound the deployed paths, so the review does not call this proven unbounded; changing hosts would lose the invariant. | Phase 05, external request boundaries |
+| `AUDIT-TOOLS-COUNT-DRIFT` | Low | `documentation-drift` | `docs/full-editor-v1-capability-matrix.md:47-50` still says 61 local-agent tools, while the live registry and traceability map record 67 (`docs/audits/initiation/requirements.json:7740-7755`; `Requirements-Traceability.md:53`). | Phase 02, documentation reconciliation |
+| `AUDIT-SCANNER-TEST-CLASSIFICATION` | Low | `documentation-drift` | `Initiation-Audit.md` previously called the module/capability scanner tests process-level regressions, but `tests/docs/module-coverage.test.ts:1-76` and `tests/docs/capability-matrix-audit.test.ts:1-108` directly import scanner functions. They provide unit coverage; they do not spawn the owning process. | Phase 02, checker documentation |
+
+`AUTH-007` remains the only inventoried product-level gap: the E1
+`project dev --watch` loop is absent and its refusal is deliberate. It belongs
+to the authoring gap register, not to this audit's performance findings. The
+package metadata item is a partial integrity claim, not evidence of code
+execution: the package lock records `executed: false`, and networking and
+marketplace remain false.
+
+### Confirmed no-findings and intentional classifications
+
+No verified identity or authorization bypass appeared in auth principal
+issuance, provenance, role guards, or request-bound session resolution.
+Billing checkout grants and refunds use verified webhook provenance, committed
+catalog tuples, and append-or-replay persistence; no double-grant or replay
+defect was found. Held-key dispatch gates every executed CLI verb before its
+handler, and help does not execute a verb. Model-provider dispatch validates
+profile, route, capability, adapter output, and the non-overridable Kids deny.
+Kids' duplicated reducer is required by ADR 0018 and its dependency-empty
+matrix row; it is not accidental policy duplication.
+
+The review found no shipped `TODO`, `FIXME`, `HACK`, `@ts-ignore`,
+`@ts-expect-error`, `eslint-disable`, or `as any` markers in the searched live
+source, test, workflow, and script trees. Observed `as unknown as` boundaries
+and error catches were fail-closed handling or adversarial tests, except for
+the specifically documented package-catalog cast. Contained Git subprocesses,
+rename evidence, local RPC, desktop session maps, and assistant polling have
+explicit budgets or lifecycle release paths.
+
+Delayed engine/provider packages, dormant catalogs, Kids deployment, signing
+and publication, Stripe LIVE, hosted desktop metering, and Stage 1/6 proof
+remain held, delayed, dormant, or host-blocked by their owning records. The
+recent history shows concentrated churn in desktop presentation, bridge, and
+assistant paths (`9873ea3`, `cfb354a`, `b3ef2c3`, `98cf63e`); each reviewed
+hotspot has targeted tests or a named host limitation, so churn alone produced
+no additional finding.
+
+### Handoff order
+
+1. Phase 02 should add the executable traceability checker, wire the orphaned
+   contract regressions, account for the golden command registry, and correct
+   the two documentation labels.
+2. Phase 03 should close authoritative-root containment, validate persisted
+   package catalogs, decide how package discovery binds metadata to bytes, and
+   add bounded CI workflow durations.
+3. Phase 05 should move checkout origin screening ahead of body parsing and
+   define application-owned body and field limits for public request paths.
+4. The existing `AUTH-007` authoring gap remains after those verification
+   foundations; any watcher implementation needs explicit lifecycle and
+   backpressure rules rather than a silent product-scope expansion.
+
+No image was associated with this checkbox task; no image analysis was needed.
+
 ## Scope boundary for this run
 
-This initiation task establishes the hierarchy, records the Phase 01 receipt,
-and inventories the authoritative source families. It intentionally does not
-assign stable requirement IDs, classify implementation coverage, enumerate live
-exports/routes/controls, create the machine-readable requirement declaration,
-write the gap register, or add a checker. Those are separate unchecked tasks in
-`Phase-02-Executable-Spec-Traceability-Audit.md` and remain unchecked.
+This document establishes the source hierarchy, preserves the Phase 01 receipt,
+and records the verified cross-dimensional findings from the current checkout.
+Stable requirement IDs and live coverage remain in
+`Requirements-Traceability.md`; the gap register and executable checker remain
+separate unchecked Phase 02 tasks. This audit does not authorize implementation
+of held, delayed, dormant, or host-blocked work.

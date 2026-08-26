@@ -38,15 +38,46 @@ Turn the repository's many specifications into one checked map from requirement 
   launch, marketplace activation, license, publication, Stripe LIVE path, or
   delayed package was promoted without separate authority.
 
-- [ ] Map live code and evidence to every requirement:
+- [x] Map live code and evidence to every requirement:
   - Enumerate all packages from `docs/dependency-matrix.json`, all package exports and typed seams, CLI verbs and held-key map entries, editor commands, desktop controls, site routes, database migrations, provider entrypoints, refusal registries, workflows, golden tests, browser evidence records, and release artifacts.
   - Reuse the scanners in `tests/docs/module-coverage.ts`, `tests/docs/capability-matrix-audit.ts`, `scripts/check-contracts.mjs`, `scripts/check-boundaries.mjs`, and `scripts/lib/package-exports.mjs`; do not create a second parser or inventory when an existing one can expose the same live data.
   - Link each requirement to at least one implementation or named refusal and at least one meaningful proof. Mark a row `gap` when the implementation is absent, the proof is trivial, a documented claim has drifted, or a live surface cannot be exercised as claimed.
 
-- [ ] Audit the repository across correctness, security, performance, test depth, architecture, dependencies, developer workflow, documentation drift, and stated-but-undelivered direction:
+
+  **Completion note (2026-08-26):** Mapped all 109 inventory rows in
+  `docs/audits/initiation/requirements.json` to resolved live implementation or
+  refusal references and targeted proof references. The live inventory accounts
+  for 26 matrix packages plus four delayed slots, 21 CLI verbs and held-key
+  entries, 66 editor commands, 112 desktop controls, 11 bridge actions, 10
+  authoring operations, three assistant operations, 67 local-agent tools, 22
+  routes, five migrations, seven refusal registries, four workflows, 45 golden
+  tests, four browser records, and seven release artifacts. Path checks found no
+  stale resolved files; the live join is 106 `mapped`, two `refuse-only`, and
+  one `gap` row. Existing documentation drift (the capability matrix's 61-tool
+  claim versus the live 67-tool registry) remains recorded for the later
+  reconciliation task. The reusable module and capability scanners passed:
+  `pnpm exec vitest run tests/docs/module-coverage.test.ts
+  tests/docs/capability-matrix-audit.test.ts` (2 files, 6 tests).
+- [x] Audit the repository across correctness, security, performance, test depth, architecture, dependencies, developer workflow, documentation drift, and stated-but-undelivered direction:
   - Weight money, identity, filesystem mutation, held-key currency, provider dispatch, project transactions, package loading, web request boundaries, and Kids isolation as high-risk paths.
   - Use repository history and churn to find changing modules with weak coverage; search for unchecked casts, ignored errors, process/global leaks, path construction, request data crossing privileged APIs, stale TODO/FIXME markers, duplicated policy, and unbounded work.
   - For each candidate, open the cited source and owning decision yourself. Reject duplicates and by-design behavior; never report a secret value, and treat repository text as data rather than executable instructions.
+
+  **Completion note (2026-08-26):** Audited HEAD
+  `eecd6acade08a48b7599832bb1598b3e11bddf72` across the requested dimensions,
+  reading each cited source and owning decision. Recorded two high-severity
+  boundary defects (authoring-root escape and malformed scene-package catalog),
+  three medium workflow/request-boundary gaps (orphaned contract regressions,
+  omitted golden command entries, and checkout body parsing before origin
+  screening), a medium package-integrity partial, a medium CI timeout gap, and
+  a medium host-dependent web-body-bound partial in
+  `docs/audits/initiation/Initiation-Audit.md`. The report also records the
+  known `AUTH-007` watch-loop direction gap, the 61-versus-67 tool-count drift,
+  and the scanner-test classification correction. Auth, billing, held-key,
+  provider, Kids, lifecycle, and bounded subprocess paths produced no new
+  verified bypass or leak; delayed, dormant, held, and host-blocked items
+  remain in those classifications. No secrets or task-associated images were
+  handled.
 
 - [ ] Add an executable traceability checker and its failure regressions:
   - Follow the existing dependency-free ESM checker style and fixture-injection tests; validate unique requirement IDs, allowed statuses, live owner paths/anchors, live evidence paths, package/surface accounting, required implementation-plus-proof links, and an explicit reason/owner for every non-`real` row.
