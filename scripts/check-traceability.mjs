@@ -29,6 +29,8 @@ const RENDERED_PATH = "docs/audits/initiation/Requirements-Traceability.md";
 const AUTHORITY_PATH = "docs/audits/initiation/requirements-authority.json";
 const RUNTIME_SURFACES_PATH = "docs/audits/initiation/runtime-surfaces.json";
 const MATRIX_PATH = "docs/dependency-matrix.json";
+const BROWSER_EVIDENCE_CATALOG_PATH = "docs/runnable-surfaces.md";
+const RELEASE_OWNER_CATALOG_PATH = "docs/publish-readiness.md";
 const RUNTIME_TEST_PATH = "tests/docs/traceability-runtime-surfaces.test.ts";
 
 function displayPath(root, path) {
@@ -123,8 +125,8 @@ function walkPaths(root, directory) {
     for (const entry of readdirSync(current, { withFileTypes: true })) {
       if (entry.name === "node_modules" || entry.name === "dist" || entry.name === "coverage") continue;
       const path = join(current, entry.name);
+      found.push(displayPath(root, path));
       if (entry.isDirectory()) visit(path);
-      else found.push(displayPath(root, path));
     }
   };
   visit(absolute);
@@ -506,23 +508,32 @@ function checkInventorySurface(root, inventory, runtimeSurfaces, errors) {
   for (const [key, value] of Object.entries(countChecks)) if (counts[key] !== value) errors.push(`[surface-count] liveInventory.counts.${key} is ${counts[key]}, expected ${value}`);
 }
 
-function checkEvidenceAndRegistries(root, inventory, runtimeSurfaces, rendered, errors) {
+function checkEvidenceAndRegistries(root, inventory, runtimeSurfaces, browserCatalog, releaseCatalog, errors) {
   for (const [label, values] of [
     ["provider entrypoints", inventory?.providerEntrypoints],
+    ["installed provider entrypoints", inventory?.installedProviderEntrypoints],
     ["browser evidence", inventory?.browserEvidence],
     ["release artifacts", inventory?.releaseArtifacts],
     ["refusal registry paths", inventory?.refusalRegistryPaths],
   ]) rejectDuplicates(values, label, errors);
-  for (const entry of [...(inventory?.providerEntrypoints ?? []), ...(inventory?.browserEvidence ?? []), ...(inventory?.releaseArtifacts ?? [])]) {
+  for (const entry of [...(inventory?.providerEntrypoints ?? []), ...(inventory?.installedProviderEntrypoints ?? []), ...(inventory?.browserEvidence ?? []), ...(inventory?.releaseArtifacts ?? [])]) {
     if (!resolveReference(root, entry)) errors.push(`[evidence-path] stale evidence or provider path: ${entry}`);
   }
-  const browserEvidenceCatalog = parseMarkedPathCatalog(rendered, "browser-evidence", errors);
+  const browserEvidenceCatalog = parseMarkedPathCatalog(browserCatalog, "browser-evidence", errors);
   if (!arraysEqual(browserEvidenceCatalog, inventory?.browserEvidence ?? [])) {
     errors.push(`[browser-evidence] inventory differs from the marked catalog (missing: ${missing(browserEvidenceCatalog, inventory?.browserEvidence ?? []).join(", ") || "none"}; extra: ${extra(browserEvidenceCatalog, inventory?.browserEvidence ?? []).join(", ") || "none"})`);
+  }
+  const releaseOwnerCatalog = parseMarkedPathCatalog(releaseCatalog, "release-owners", errors);
+  if (!arraysEqual(releaseOwnerCatalog, inventory?.releaseArtifacts ?? [])) {
+    errors.push(`[release-owners] inventory differs from the marked catalog (missing: ${missing(releaseOwnerCatalog, inventory?.releaseArtifacts ?? []).join(", ") || "none"}; extra: ${extra(releaseOwnerCatalog, inventory?.releaseArtifacts ?? []).join(", ") || "none"})`);
   }
   const runtimeProviders = runtimeSurfaces?.providerEntrypoints ?? [];
   if (!arraysEqual(runtimeProviders, inventory?.providerEntrypoints ?? [])) {
     errors.push(`[provider-entrypoint] provider inventory differs from the executable catalog (missing: ${missing(runtimeProviders, inventory?.providerEntrypoints ?? []).join(", ") || "none"}; extra: ${extra(runtimeProviders, inventory?.providerEntrypoints ?? []).join(", ") || "none"})`);
+  }
+  const installedProviders = inventory?.installedProviderEntrypoints ?? [];
+  if (installedProviders.some((path) => (inventory?.providerEntrypoints ?? []).includes(path))) {
+    errors.push("[provider-entrypoint] installed provider entrypoints must not duplicate root-runtime entries");
   }
   const registries = inventory?.refusalRegistries ?? [];
   const seen = new Set();
@@ -545,12 +556,14 @@ export function checkTraceability(root = resolve(dirname(fileURLToPath(import.me
   const authority = loadJson(root, AUTHORITY_PATH, errors);
   const runtimeSurfaces = loadJson(root, RUNTIME_SURFACES_PATH, errors);
   const matrix = loadJson(root, MATRIX_PATH, errors);
+  const browserCatalog = loadText(root, BROWSER_EVIDENCE_CATALOG_PATH, errors);
+  const releaseCatalog = loadText(root, RELEASE_OWNER_CATALOG_PATH, errors);
   if (!declaration || !authority || !runtimeSurfaces || !matrix) return errors;
   if (!arraysEqual(declaration.statusVocabulary, TRACEABILITY_STATUSES)) errors.push("[declaration-vocabulary] status vocabulary must match the checker vocabulary");
   checkRequirements(root, declaration, rendered, authority, errors);
   checkPackages(root, declaration.liveInventory, matrix, errors);
   checkInventorySurface(root, declaration.liveInventory, runtimeSurfaces, errors);
-  checkEvidenceAndRegistries(root, declaration.liveInventory, runtimeSurfaces, rendered, errors);
+  checkEvidenceAndRegistries(root, declaration.liveInventory, runtimeSurfaces, browserCatalog, releaseCatalog, errors);
   return errors;
 }
 

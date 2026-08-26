@@ -46,22 +46,9 @@ The complete enumerations live under `liveInventory` in [`requirements.json`](re
 | Local-agent tools | 67 | `packages/schemas/src/desktop-local-bridge.ts` |
 | Site routes / API routes | 22 | `sites/*/src/app/**` |
 | Forward-only migrations | 5 | `db/migrations; tests/db/schema-lockstep.test.ts` |
-| Provider entrypoints / refusal registries | 9 / 68 | `provider entrypoints, provider-safe contracts, and public package seams` |
+| Provider entrypoints / refusal registries | 8 root + 1 installed / 68 | `provider entrypoints, provider-safe contracts, and public package seams` |
 | Workflows / golden tests | 4 / 45 | `.github/workflows; tests/e2e/*golden.test.ts` |
-| Browser / release evidence | 8 / 7 | `browser records and release owners` |
-
-<!-- traceability:browser-evidence:start -->
-| Browser evidence owner |
-|---|
-| `packages/engine-kernel/test/browser-open-play.test.ts` |
-| `sites/umbrella/test/first-release.visual.spec.ts` |
-| `sites/umbrella/VISUAL-EVIDENCE.md` |
-| `docs/design-foundations.md` |
-| `docs/kernel-browser-open.md` |
-| `docs/three-presentation-core.md` |
-| `docs/web-editor-shell.md` |
-| `docs/web-experience-editor.md` |
-<!-- traceability:browser-evidence:end -->
+| Browser / release evidence | 11 / 9 | `docs/runnable-surfaces.md; docs/publish-readiness.md` |
 
 The live registry currently contains **67 local-agent tools**. The older
 61-tool prose in [`docs/full-editor-v1-capability-matrix.md`](../../full-editor-v1-capability-matrix.md#inventory-accounting)

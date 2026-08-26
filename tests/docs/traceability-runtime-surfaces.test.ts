@@ -159,7 +159,6 @@ describe("traceability runtime surfaces", () => {
       "packages/authoring-core/src/model-provider-port.ts",
       "packages/provider-openrouter/src/index.ts",
       "sites/umbrella/src/lib/provider-adapters.ts",
-      "sites/umbrella/src/provider/better-auth-provider.ts",
     ]);
   });
 

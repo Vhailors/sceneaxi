@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { memoryAdapter, type MemoryDB } from "better-auth/adapters/memory";
 import { hashPassword, verifyPassword } from "better-auth/crypto";
 import type { Pool } from "pg";
@@ -14,6 +15,7 @@ import {
   BETTER_AUTH_PROVIDER_RATE_LIMIT,
   BETTER_AUTH_PROVIDER_REFUSALS,
   BETTER_AUTH_PROVIDER_RETENTION,
+  SCENEAXI_PROVIDER_ENTRYPOINT_CATALOG,
   BetterAuthProviderBootstrapDisagreement,
   createBetterAuthProviderHandler,
   createBetterAuthProviderRuntime,
@@ -153,6 +155,20 @@ async function signIn(handler: (request: Request) => Promise<Response>) {
 }
 
 describe("umbrella Better Auth provider", () => {
+  it("publishes the executable handler factory as its installed provider witness", async () => {
+    const inventory = JSON.parse(
+      readFileSync(new URL("../../../docs/audits/initiation/requirements.json", import.meta.url), "utf8"),
+    ) as { liveInventory: { installedProviderEntrypoints: string[] } };
+    expect(Object.keys(SCENEAXI_PROVIDER_ENTRYPOINT_CATALOG)).toEqual(
+      inventory.liveInventory.installedProviderEntrypoints,
+    );
+    expect(SCENEAXI_PROVIDER_ENTRYPOINT_CATALOG["sites/umbrella/src/provider/better-auth-provider.ts"])
+      .toBe(createBetterAuthProviderHandler);
+    const { handler } = await providerFixture();
+    const response = await handler(new Request(`${ORIGIN}/api/auth/unowned`));
+    expect(response.status).toBe(404);
+  });
+
   it("serves stock sign-in and resolves the persisted session by cookie or bearer", async () => {
     const { database, handler } = await providerFixture();
     const response = await signIn(handler);

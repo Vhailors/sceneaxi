@@ -123,6 +123,20 @@ claim a guarantee the gate does not enforce.
 
 ## What publish-readiness deliberately does not cover
 
+<!-- traceability:release-owners:start -->
+| Release artifact owner |
+|---|
+| `scripts/build-engine-sdk.mjs` |
+| `scripts/engine-sdk-files.json` |
+| `docs/publish-readiness.md` |
+| `desktop/linux/scripts/dist.mjs` |
+| `desktop/macos/scripts/dist.mjs` |
+| `desktop/macos/scripts/release-provenance.mjs` |
+| `desktop/windows/scripts/package-release.mjs` |
+| `desktop/windows/scripts/release-preflight.mjs` |
+| `desktop/windows/scripts/release.mjs` |
+<!-- traceability:release-owners:end -->
+
 - **Building a registry tarball.** `pnpm build:sdk` is the packaging path; there is no
   second one. Adding another is out of contract.
 - **`dist/` as a published artifact.** `dist` is a gate artifact only; exports stay

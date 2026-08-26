@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { editManifest, makeFixture, removeFixture, runCheck, writeTo } from "../helpers/fixture.ts";
@@ -28,6 +28,7 @@ type Inventory = {
       controls: string[];
     };
     providerEntrypoints: string[];
+    releaseArtifacts: string[];
     routes: string[];
     counts: {
       routes: number;
@@ -135,9 +136,11 @@ describe("traceability check — injected violations", () => {
       firstLink(requirement(inventory, "TOPO-001").liveImplementation).ref =
         "packages/schemas";
     });
+    renameSync(join(fixture, "packages/cli/bin"), join(fixture, "packages/cli/bin-renamed"));
     const result = runCheck(fixture, CHECK);
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("[implementation-resolution]");
+    expect(result.stderr).toContain("packages/*/bin");
   });
 
   it("fails when a real proof link loses its resolved path", () => {
@@ -278,6 +281,10 @@ describe("traceability check — injected violations", () => {
         inventory.liveInventory.browserEvidence.filter(
           (entry) => entry !== "sites/umbrella/VISUAL-EVIDENCE.md",
         );
+      inventory.liveInventory.releaseArtifacts =
+        inventory.liveInventory.releaseArtifacts.filter(
+          (entry) => entry !== "desktop/linux/scripts/dist.mjs",
+        );
     });
     const result = runCheck(fixture, CHECK);
     expect(result.status).toBe(1);
@@ -286,6 +293,8 @@ describe("traceability check — injected violations", () => {
     expect(result.stderr).toContain("desktop/linux/src/electron/live-transport.ts");
     expect(result.stderr).toContain("[browser-evidence]");
     expect(result.stderr).toContain("sites/umbrella/VISUAL-EVIDENCE.md");
+    expect(result.stderr).toContain("[release-owners]");
+    expect(result.stderr).toContain("desktop/linux/scripts/dist.mjs");
   });
 
   it("fails when a site route is added without inventory coverage", () => {

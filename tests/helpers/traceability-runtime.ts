@@ -92,7 +92,6 @@ const PROVIDER_MODULES = Object.freeze([
   authoringModelProvider,
   providerOpenrouter,
   siteProviderAdapters,
-  betterAuthProviderRefusals,
   desktopProviderRuntime,
   desktopElectronProviderKeyStore,
   desktopProviderKeyStore,

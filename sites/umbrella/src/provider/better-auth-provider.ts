@@ -616,3 +616,7 @@ export function createBetterAuthProviderHandler(
 }
 
 export const betterAuthProviderHandler = createBetterAuthProviderHandler();
+
+export const SCENEAXI_PROVIDER_ENTRYPOINT_CATALOG = Object.freeze({
+  "sites/umbrella/src/provider/better-auth-provider.ts": createBetterAuthProviderHandler,
+});

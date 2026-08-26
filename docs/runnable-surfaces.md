@@ -14,6 +14,22 @@ a marketing word.
 
 ## Surfaces
 
+<!-- traceability:browser-evidence:start -->
+| Browser evidence owner |
+|---|
+| `packages/engine-kernel/test/browser-open-play.test.ts` |
+| `sites/umbrella/test/first-release.visual.spec.ts` |
+| `sites/umbrella/VISUAL-EVIDENCE.md` |
+| `sites/catalog-game/README.md` |
+| `sites/catalog-web/README.md` |
+| `docs/design-foundations.md` |
+| `docs/engine-desktop-surface.md` |
+| `docs/kernel-browser-open.md` |
+| `docs/three-presentation-core.md` |
+| `docs/web-editor-shell.md` |
+| `docs/web-experience-editor.md` |
+<!-- traceability:browser-evidence:end -->
+
 | Surface | Level | How to run | Proof |
 |---|---|---|---|
 | `@sceneaxi/cli` | **R2** | `pnpm build && node packages/cli/bin/sceneaxi.mjs --help` | `packages/cli/test/bin-smoke.test.ts` + the rest of `packages/cli/test/` |

@@ -4180,13 +4180,18 @@
         {
           "ref": "packages/*/bin",
           "kind": "source",
-          "resolved": [],
+          "resolved": [
+            "packages/cli/bin"
+          ],
           "present": true
         },
         {
           "ref": "apps/*/bin",
           "kind": "source",
-          "resolved": [],
+          "resolved": [
+            "apps/desktop-shell/bin",
+            "apps/web-shell/bin"
+          ],
           "present": true
         }
       ],
@@ -7629,7 +7634,6 @@
       "db/migrations/0005_better_auth_provider.sql"
     ],
     "providerEntrypoints": [
-      "sites/umbrella/src/provider/better-auth-provider.ts",
       "sites/umbrella/src/lib/provider-adapters.ts",
       "packages/provider-openrouter/src/index.ts",
       "packages/auth/src/index.ts",
@@ -7638,6 +7642,9 @@
       "desktop/linux/src/electron/live-transport.ts",
       "desktop/linux/src/electron/provider-runtime.ts",
       "desktop/linux/src/lib/provider-key-store.ts"
+    ],
+    "installedProviderEntrypoints": [
+      "sites/umbrella/src/provider/better-auth-provider.ts"
     ],
     "refusalRegistries": [
       {
@@ -7970,7 +7977,10 @@
       "packages/engine-kernel/test/browser-open-play.test.ts",
       "sites/umbrella/test/first-release.visual.spec.ts",
       "sites/umbrella/VISUAL-EVIDENCE.md",
+      "sites/catalog-game/README.md",
+      "sites/catalog-web/README.md",
       "docs/design-foundations.md",
+      "docs/engine-desktop-surface.md",
       "docs/kernel-browser-open.md",
       "docs/three-presentation-core.md",
       "docs/web-editor-shell.md",
@@ -7980,6 +7990,8 @@
       "scripts/build-engine-sdk.mjs",
       "scripts/engine-sdk-files.json",
       "docs/publish-readiness.md",
+      "desktop/linux/scripts/dist.mjs",
+      "desktop/macos/scripts/dist.mjs",
       "desktop/macos/scripts/release-provenance.mjs",
       "desktop/windows/scripts/package-release.mjs",
       "desktop/windows/scripts/release-preflight.mjs",
