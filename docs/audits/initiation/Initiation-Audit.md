@@ -85,9 +85,11 @@ The checkout snapshot used for this reconciliation is:
 | Branch | `maestro/phase-02-requirement-inventory` |
 | Reconciliation-start HEAD SHA | `7c151dc033204903dc6f40052bb99f19e9ddc92f` |
 | Audited source snapshot SHA | `eecd6acade08a48b7599832bb1598b3e11bddf72` |
+| Verification HEAD SHA | `3e63361ffc47c064bee8cacfbe9d85a5c1fcf2fa` |
 
-The source findings were made against the audited snapshot SHA above. The
-reconciliation started from the later HEAD shown above; its audit report,
+The source findings were made against the audited source snapshot SHA above.
+The reconciliation started from the later HEAD shown above, and the complete
+verification run covered the verification HEAD shown above. The audit report,
 executable traceability checker, gate outcome, and playbook notes are
 verification artifacts rather than changes to the audited source findings. The
 Phase 01 receipt and the historical initiation snapshot remain unchanged
@@ -228,20 +230,90 @@ assistant paths (`9873ea3`, `cfb354a`, `b3ef2c3`, `98cf63e`); each reviewed
 hotspot has targeted tests or a named host limitation, so churn alone produced
 no additional finding.
 
-### Handoff order
+## Verification handoff
 
-1. Phase 02 should wire the orphaned contract regressions and account for the
-   four omitted golden command entries. The 61-versus-67 tool count is now
-   reconciled in the canonical capability matrix; the prior mismatch remains
-   resolved audit history alongside the corrected scanner-test classification.
-2. Phase 03 should close authoritative-root containment, validate persisted
-   package catalogs, decide how package discovery binds metadata to bytes, and
-   add bounded CI workflow durations.
-3. Phase 05 should move checkout origin screening ahead of body parsing and
-   define application-owned body and field limits for public request paths.
-4. The existing `AUTH-007` authoring gap remains after those verification
-   foundations; any watcher implementation needs explicit lifecycle and
-   backpressure rules rather than a silent product-scope expansion.
+Verification ran against HEAD
+`3e63361ffc47c064bee8cacfbe9d85a5c1fcf2fa` (`MAESTRO: reconcile stale audit
+claims`). Every command required by the Phase 02 checkbox completed successfully:
+
+| Command | Result |
+|---|---|
+| `pnpm exec vitest run tests/docs/traceability-check.test.ts tests/contracts/injected-traceability-violations.test.ts tests/docs/module-coverage.test.ts tests/docs/capability-matrix-audit.test.ts` | 4 files, 20 tests passed |
+| `pnpm check:contracts` | Passed; contract, fixture, bundled-module, and documentation lockstep held |
+| `pnpm check:boundaries` | Passed; 26 packages verified |
+| `pnpm test:golden` | 51 files, 448 tests passed |
+| `pnpm gate` | Passed every stage; 264 files, 3,930 tests passed |
+
+The gate also reported 335 source files parsed, 109 requirements accounted for,
+four deployable sites, three desktop applications, and 16 publish-readiness
+checks. It made no external request and did not publish, deploy, push, spend,
+create an account, run a proof stage, or alter a held decision.
+
+### Requirement coverage
+
+The inventory has 109 rows. Status counts come directly from
+`docs/audits/initiation/requirements.json`:
+
+| Classification | Rows |
+|---|---:|
+| `real` | 87 |
+| `partial` | 8 |
+| `held` | 5 |
+| `dormant` | 3 |
+| `delayed` | 2 |
+| `refuse-only` | 2 |
+| `host-blocked` | 1 |
+| `gap` | 1 |
+
+| Domain | Rows |
+|---|---:|
+| `topology` | 33 |
+| `core` | 18 |
+| `runnable-surfaces` | 14 |
+| `desktop` | 10 |
+| `authoring-protocol` | 7 |
+| `identity-billing` | 7 |
+| `release-and-authority` | 7 |
+| `profiles` | 6 |
+| `catalog` | 4 |
+| `held-keys` | 3 |
+
+The live join is 106 `mapped`, two `refuse-only`, and one `gap`. The mapped
+surface inventory covers 26 matrix packages, four delayed package slots, 21
+CLI verbs, 66 editor commands, 112 desktop controls, 11 bridge actions, ten
+authoring operations, three assistant operations, 67 local-agent tools, 22
+routes, five migrations, four workflows, and 45 golden tests.
+
+### Rejected and unaudited state
+
+The review rejected promotion of Stage 1/6 proof, Kids launch, marketplace
+activation, a license choice, live publication, Stripe LIVE, delayed package
+work, hosted desktop metering, and external provider or deployment setup. Their
+own authority records still control them; a passing local gate does not change
+that classification. Existing auth, billing, held-key, provider, Kids, lifecycle,
+and bounded subprocess paths produced no verified bypass or leak. `AUTH-007`
+remains a named product gap, not a license to invent a watcher.
+
+The external bodies of sceneaxi issue #1 and factories-helpers issue #41,
+captain decisions not copied into this checkout, provider accounts and
+credentials, deployed hosts and environment, CI runner behavior, package
+registries, Stripe, model-provider services, and signing infrastructure remain
+unaudited external state. This run relied on their in-tree pointers and owners;
+it did not treat repository evidence as authority for any external action.
+
+### Dependency order for later phases
+
+1. Phase 03 consumes the traceability and gate foundation, then closes
+   authoring-root containment, malformed package-catalog refusal, package
+   metadata binding, and CI timeout bounds.
+2. Phase 05 consumes the shared boundary findings after Phase 03, moving
+   checkout origin screening before body parsing and adding application-owned
+   body and field ceilings.
+3. The remaining `AUTH-007` authoring gap follows those verification fixes and
+   requires explicit watcher lifecycle and backpressure decisions.
+4. Held, delayed, dormant, and host-blocked items remain outside implementation
+   order until their separate owning authority changes.
+
 
 No image was associated with this checkbox task; no image analysis was needed.
 

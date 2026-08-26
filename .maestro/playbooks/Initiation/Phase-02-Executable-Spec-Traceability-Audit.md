@@ -137,7 +137,7 @@ Turn the repository's many specifications into one checked map from requirement 
   `pnpm check:contracts`, `pnpm check:traceability`, and the three focused docs
   audit suites passed. No machine-readable declaration changed, so no new
   injected-drift fixture was needed.
-- [ ] Verify the audit machinery and publish the execution handoff inside the repository:
-  - Run the new focused tests, all existing docs/module/capability audit tests, `pnpm check:contracts`, `pnpm check:boundaries`, `pnpm test:golden`, and `pnpm gate`.
-  - Update `Initiation-Audit.md` with the exact HEAD audited, command results, coverage counts by status and domain, rejected findings, unaudited external state, and the dependency order consumed by Phases 03 onward.
-  - Phase 02 is complete only when every authoritative requirement is accounted for, every public live surface is represented, the checker fails on injected drift, the gap register has no evidence-free entry, and the complete gate exits zero.
+- [x] Verify the audit machinery and publish the execution handoff inside the repository:
+  - Ran the focused traceability, injected-violation, module-coverage, and capability-matrix suites; `pnpm check:contracts`; `pnpm check:boundaries`; `pnpm test:golden`; and `pnpm gate`.
+  - Updated `docs/audits/initiation/Initiation-Audit.md` with verification HEAD `3e63361ffc47c064bee8cacfbe9d85a5c1fcf2fa`, exact results, status/domain counts, rejected and unaudited state, and the dependency order for later phases.
+  - **Completion note (2026-08-26):** All authoritative requirements and public live surfaces are accounted for; injected traceability drift fails in 14 process-level cases; the gap register has no evidence-free entry; and `pnpm gate` passed all stages with 264 files and 3,930 tests passing.
