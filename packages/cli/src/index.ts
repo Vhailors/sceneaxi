@@ -84,6 +84,7 @@ export {
 
 export {
   DEFAULT_FRESHNESS_BUDGET_MS,
+  HELD_KEY_REFUSAL_REASONS,
   defaultHeldKeyRuntime,
   evaluateHeldKeyGate,
   staticEpochAuthority,

@@ -59,17 +59,20 @@ export interface HeldKeyRuntime {
 }
 
 /** Machine-readable refusal-table rows (docs/held-key-enforcement.md). */
-export type HeldKeyRefusalReason =
-  | "command-map-invalid"
-  | "verb-undeclared"
-  | "currency-unavailable"
-  | "authoritative-epoch-mismatch"
-  | "snapshot-missing"
-  | "snapshot-invalid"
-  | "snapshot-stale"
-  | "map-snapshot-epoch-mismatch"
-  | "unknown-held-key"
-  | "open-held-key";
+export const HELD_KEY_REFUSAL_REASONS = Object.freeze([
+  "command-map-invalid",
+  "verb-undeclared",
+  "currency-unavailable",
+  "authoritative-epoch-mismatch",
+  "snapshot-missing",
+  "snapshot-invalid",
+  "snapshot-stale",
+  "map-snapshot-epoch-mismatch",
+  "unknown-held-key",
+  "open-held-key",
+] as const);
+
+export type HeldKeyRefusalReason = (typeof HELD_KEY_REFUSAL_REASONS)[number];
 
 export interface GateAllow {
   readonly allow: true;

@@ -93,6 +93,10 @@ export function createBetterAuthIdentityAdapter(
   });
 }
 
+export const SCENEAXI_PROVIDER_ENTRYPOINT_CATALOG = Object.freeze({
+  "packages/auth/src/index.ts": createBetterAuthIdentityAdapter,
+});
+
 const IDENTIFIER_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 
 function readExpiry(value: unknown): string | undefined {

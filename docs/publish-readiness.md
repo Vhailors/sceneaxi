@@ -123,6 +123,38 @@ claim a guarantee the gate does not enforce.
 
 ## What publish-readiness deliberately does not cover
 
+<!-- traceability:release-owners:start -->
+| Release artifact owner |
+|---|
+| `scripts/build-engine-sdk.mjs` |
+| `scripts/engine-sdk-files.json` |
+| `scripts/lib/zip.mjs` |
+| `docs/publish-readiness.md` |
+| `desktop/linux/electron-builder.yml` |
+| `desktop/linux/package.json` |
+| `desktop/linux/pnpm-lock.yaml` |
+| `desktop/linux/scripts/build.mjs` |
+| `desktop/linux/scripts/build-linux.mjs` |
+| `desktop/linux/scripts/dist.mjs` |
+| `desktop/linux/scripts/renderer-bundle.mjs` |
+| `desktop/linux/src/native/publish-no-replace.c` |
+| `desktop/macos/electron-builder.yml` |
+| `desktop/macos/package.json` |
+| `desktop/macos/pnpm-lock.yaml` |
+| `desktop/macos/entitlements.mac.plist` |
+| `desktop/macos/scripts/build.mjs` |
+| `desktop/macos/scripts/dist.mjs` |
+| `desktop/macos/scripts/release-provenance.mjs` |
+| `desktop/windows/electron-builder.yml` |
+| `desktop/windows/package.json` |
+| `desktop/windows/pnpm-lock.yaml` |
+| `desktop/windows/scripts/build.mjs` |
+| `desktop/windows/scripts/package-release.mjs` |
+| `desktop/windows/scripts/dist.mjs` |
+| `desktop/windows/scripts/release-preflight.mjs` |
+| `desktop/windows/scripts/release.mjs` |
+<!-- traceability:release-owners:end -->
+
 - **Building a registry tarball.** `pnpm build:sdk` is the packaging path; there is no
   second one. Adding another is out of contract.
 - **`dist/` as a published artifact.** `dist` is a gate artifact only; exports stay

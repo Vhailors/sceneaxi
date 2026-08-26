@@ -45,8 +45,10 @@ counted as shell controls, so the current packaged-window union is **116**.
 The CLI exposes **21 verbs** from `packages/cli/src/commands.ts`; the Electron
 bridge exposes **11 actions**, **10 authoring operations**, and **3 legacy
 assistant transport operations** from `desktop/linux/src/lib/bridge-contract.ts`;
-the same-user local agent bridge exposes **61 tools** from
-`packages/schemas/src/desktop-local-bridge.ts`. Their transport names remain
+the same-user local agent bridge exposes **67 tools** from
+`packages/schemas/src/desktop-local-bridge.ts`. The previous 61-tool statement
+was the 2026-08-26 audit observation and is retained in the Phase 02 audit
+record; this count follows the live registry. Their transport names remain
 distinct, but first-slice product operations now derive from the one versioned
 registry in `packages/schemas/src/editor-command-registry.ts`.
 

@@ -267,6 +267,12 @@ export function creditWebhookHttpStatus(reason: string): 400 | 503 {
   return SERVER_SIDE_REASONS.has(reason) ? 503 : 400;
 }
 
+export function creditWebhookOutcomeHttpStatus(
+  outcome: CreditWebhookOutcome,
+): 200 | 400 | 503 {
+  return outcome.ok ? 200 : creditWebhookHttpStatus(outcome.reason);
+}
+
 /** Which event the refusal was produced for. Acknowledgement is scoped to it. */
 type WebhookEventPath = "grant" | "refund";
 

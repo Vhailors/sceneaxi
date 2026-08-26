@@ -4,6 +4,14 @@
  * shipped under contracts/.
  */
 
+import { PROJECT_GIT_DIAGNOSTICS } from "./project-git.js";
+import { PROJECT_MANIFEST_DIAGNOSTICS } from "./project-manifest.js";
+
+export const SCENEAXI_REFUSAL_REGISTRY_CATALOG = Object.freeze({
+  PROJECT_GIT_DIAGNOSTICS,
+  PROJECT_MANIFEST_DIAGNOSTICS,
+});
+
 export {
   CATALOG_DATE_TIME_PATTERN,
   CATALOG_ITEM_SCHEMA_VERSION,

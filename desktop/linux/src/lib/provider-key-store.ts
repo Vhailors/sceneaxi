@@ -434,3 +434,7 @@ export function createProviderKeyStore(
 
   return Object.freeze({ status, read, save, remove, removable });
 }
+
+export const SCENEAXI_PROVIDER_ENTRYPOINT_CATALOG = Object.freeze({
+  "desktop/linux/src/lib/provider-key-store.ts": createProviderKeyStore,
+});

@@ -1230,3 +1230,7 @@ export function resolveNonEmptyEnv(
 export function providerFetch(): ProviderFetch | undefined {
   return typeof globalThis.fetch === "function" ? globalThis.fetch.bind(globalThis) : undefined;
 }
+
+export const SCENEAXI_PROVIDER_ENTRYPOINT_CATALOG = Object.freeze({
+  "sites/umbrella/src/lib/provider-adapters.ts": createStripeClient,
+});

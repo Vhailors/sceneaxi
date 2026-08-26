@@ -14,6 +14,26 @@ a marketing word.
 
 ## Surfaces
 
+<!-- traceability:browser-evidence:start -->
+| Browser evidence owner |
+|---|
+| `.maestro/playbooks/Initiation/Working/Phase-01/Baseline.md` |
+| `.maestro/playbooks/Initiation/Working/Phase-01/umbrella-open-desktop.png` |
+| `.maestro/playbooks/Initiation/Working/Phase-01/umbrella-open-mobile.png` |
+| `packages/engine-kernel/test/browser-open-play.test.ts` |
+| `sites/umbrella/test/first-release.visual.spec.ts` |
+| `sites/umbrella/VISUAL-EVIDENCE.md` |
+| `sites/catalog-game/README.md` |
+| `sites/catalog-web/README.md` |
+| `docs/design-foundations.md` |
+| `docs/desktop-linux.md` |
+| `docs/engine-desktop-surface.md` |
+| `docs/kernel-browser-open.md` |
+| `docs/three-presentation-core.md` |
+| `docs/web-editor-shell.md` |
+| `docs/web-experience-editor.md` |
+<!-- traceability:browser-evidence:end -->
+
 | Surface | Level | How to run | Proof |
 |---|---|---|---|
 | `@sceneaxi/cli` | **R2** | `pnpm build && node packages/cli/bin/sceneaxi.mjs --help` | `packages/cli/test/bin-smoke.test.ts` + the rest of `packages/cli/test/` |
@@ -50,10 +70,15 @@ profiles, the CLI, and both shells all read. The levels there use this table's
 vocabulary deliberately: `demo-driveable` is R1, `refuse-only` is R0, and neither
 is a shipping claim.
 
-`pnpm gate` runs everything above except the umbrella provider suite: `better-auth` and
-`pg` resolve only from that site's own install root, so it runs there instead
+`pnpm gate` runs everything above except the umbrella provider suite: `better-auth`
+and `pg` resolve only from that site's own install root, so it runs there instead
 (`sites/umbrella/README.md` owns the command) and CI runs it after the gate.
-`pnpm test:golden` runs just the golden e2e set.
+`pnpm test:golden` runs the explicitly listed golden e2e files plus the required
+bin-smoke, parity, and module-coverage checks; it currently omits
+`contained-git-golden`, `desktop-assistant-scene-loop-golden`,
+`full-editor-transactions-golden`, and `hosted-ai-metering-golden`. Those
+omissions remain a Phase 02 verification gap; the R1 rows above still name their
+individual proof files.
 The Game multi-object and Web Experience tests assert their replay digests against
 checked-in `golden-digests.json` evidence rather than values produced only within
 the same run.

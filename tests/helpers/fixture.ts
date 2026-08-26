@@ -6,6 +6,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -16,7 +17,7 @@ import { fileURLToPath } from "node:url";
 
 export const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
 
-const COPY_TOPS = ["docs", "packages", "apps", "sites", "desktop", "scripts", "tests", ".github"];
+const COPY_TOPS = ["docs", "packages", "apps", "sites", "desktop", "db", "scripts", "tests", ".github", ".maestro"];
 /**
  * Root files the gate scripts read: `check-sites` reads the manifest and workspace,
  * `check-publish-ready` reads the manifest scripts and the SDK-output ignores, and
@@ -30,14 +31,15 @@ const COPY_FILES = [
   ".gitignore",
   "tsconfig.json",
   "tsconfig.base.json",
+  "vitest.config.ts",
 ];
 // `release` and `dist-build` are desktop-tier packaging output (ADR 0024): heavy
 // binaries the checkers never read, so copying them would only slow every fixture.
-const SKIP_DIRS = new Set(["node_modules", "dist", "coverage", "test", "release", "dist-build"]);
+const SKIP_DIRS = new Set(["node_modules", "dist", "coverage", "release", "dist-build"]);
 
 /**
  * Copy the parts of the repo the gate scripts read (manifests, sources, matrix,
- * scripts, and the root `tests` tree whose files contracts name as evidence)
+ * scripts, and the root `tests` and `.maestro` trees whose files contracts name as evidence)
  * into a throwaway root, so violation injections never touch the real tree.
  * node_modules is linked, not copied, so scripts keep resolving deps.
  */
@@ -53,9 +55,14 @@ export function makeFixture(): string {
     cpSync(join(repoRoot, file), join(root, file));
   }
   symlinkSync(join(repoRoot, "node_modules"), join(root, "node_modules"), "dir");
-  const desktopModules = join(repoRoot, "desktop/linux/node_modules");
-  if (existsSync(desktopModules)) {
-    symlinkSync(desktopModules, join(root, "desktop/linux/node_modules"), "dir");
+  for (const top of ["packages", "apps", "sites", "desktop"]) {
+    for (const entry of readdirSync(join(repoRoot, top), { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const sourceModules = join(repoRoot, top, entry.name, "node_modules");
+      if (existsSync(sourceModules)) {
+        symlinkSync(sourceModules, join(root, top, entry.name, "node_modules"), "dir");
+      }
+    }
   }
   return root;
 }
@@ -100,7 +107,8 @@ export function runCheck(
     | "check-sites.mjs"
     | "check-desktop.mjs"
     | "check-contracts.mjs"
-    | "check-publish-ready.mjs",
+    | "check-publish-ready.mjs"
+    | "check-traceability.mjs",
 ): { status: number | null; stdout: string; stderr: string } {
   return spawnSync(process.execPath, [join(root, "scripts", script)], {
     encoding: "utf8",

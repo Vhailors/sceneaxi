@@ -973,3 +973,7 @@ export function createModelProviderPort(
     },
   });
 }
+
+export const SCENEAXI_PROVIDER_ENTRYPOINT_CATALOG = Object.freeze({
+  "packages/authoring-core/src/model-provider-port.ts": createModelProviderPort,
+});

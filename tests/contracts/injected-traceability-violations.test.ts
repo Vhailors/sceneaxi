@@ -1,0 +1,426 @@
+import { readFileSync, renameSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { editManifest, makeFixture, removeFixture, runCheck, writeTo } from "../helpers/fixture.ts";
+
+const CHECK = "check-traceability.mjs" as const;
+const INVENTORY = "docs/audits/initiation/requirements.json";
+const RENDERED = "docs/audits/initiation/Requirements-Traceability.md";
+const RUNTIME_SURFACES = "docs/audits/initiation/runtime-surfaces.json";
+const RELEASE_CATALOG = "docs/publish-readiness.md";
+
+type TraceLink = {
+  ref: string;
+  resolved: string[];
+};
+
+type Requirement = {
+  id: string;
+  classification: string;
+  liveImplementation: TraceLink[];
+  liveProofs: TraceLink[];
+};
+
+type Inventory = {
+  requirements: Requirement[];
+  liveInventory: {
+    browserEvidence: string[];
+    editor: {
+      controls: string[];
+    };
+    providerEntrypoints: string[];
+    releaseArtifacts: string[];
+    routes: string[];
+    goldenTests: string[];
+    counts: {
+      goldenTests: number;
+      routes: number;
+    };
+  };
+};
+
+type RuntimeSurfaces = {
+  cliVerbs: string[];
+  editorCommands: string[];
+  desktopControls: string[];
+  bridgeActions: string[];
+  localAgentTools: string[];
+  providerEntrypoints: string[];
+  refusalRegistries: Array<{ path: string; symbol: string }>;
+};
+
+function readInventory(root: string): Inventory {
+  return JSON.parse(readFileSync(join(root, INVENTORY), "utf8")) as Inventory;
+}
+
+function writeInventory(root: string, inventory: Inventory): void {
+  writeFileSync(join(root, INVENTORY), `${JSON.stringify(inventory, null, 2)}\n`);
+}
+
+function mutateInventory(root: string, mutate: (inventory: Inventory) => void): void {
+  const inventory = readInventory(root);
+  mutate(inventory);
+  writeInventory(root, inventory);
+}
+
+function mutateRuntimeSurfaces(
+  root: string,
+  mutate: (surfaces: RuntimeSurfaces) => void,
+): void {
+  const path = join(root, RUNTIME_SURFACES);
+  const surfaces = JSON.parse(readFileSync(path, "utf8")) as RuntimeSurfaces;
+  mutate(surfaces);
+  writeFileSync(path, `${JSON.stringify(surfaces, null, 2)}\n`);
+}
+
+function replaceRenderedClassification(
+  root: string,
+  id: string,
+  from: string,
+  to: string,
+): void {
+  const path = join(root, RENDERED);
+  const rendered = readFileSync(path, "utf8");
+  const original = `| ${id} | \`${from}\` |`;
+  const replacement = `| ${id} | \`${to}\` |`;
+  if (!rendered.includes(original)) throw new Error(`missing rendered row ${id}`);
+  writeFileSync(path, rendered.replace(original, replacement));
+}
+
+function requirement(inventory: Inventory, id: string): Requirement {
+  const row = inventory.requirements.find((candidate) => candidate.id === id);
+  if (row === undefined) throw new Error(`missing fixture requirement ${id}`);
+  return row;
+}
+function firstLink(links: TraceLink[]): TraceLink {
+  const link = links.at(0);
+  if (link === undefined) throw new Error("expected a traceability link");
+  return link;
+}
+
+describe("traceability check — injected violations", () => {
+  let fixture: string;
+
+  beforeEach(() => {
+    fixture = makeFixture();
+  });
+
+  afterEach(() => {
+    removeFixture(fixture);
+  });
+
+  it("control: the unmodified tree passes", () => {
+    const result = runCheck(fixture, CHECK);
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stderr).toBe("");
+    expect(result.stdout).toContain("traceability check OK");
+  });
+
+  it("fails when a requirement disappears from both generated audit artifacts", () => {
+    let removedId = "";
+    mutateInventory(fixture, (inventory) => {
+      const removed = inventory.requirements.pop();
+      if (removed === undefined) throw new Error("expected a requirement row");
+      removedId = removed.id;
+    });
+    const renderedPath = join(fixture, RENDERED);
+    const rendered = readFileSync(renderedPath, "utf8");
+    writeFileSync(
+      renderedPath,
+      rendered.split("\n").filter((line) => !line.startsWith(`| ${removedId} |`)).join("\n"),
+    );
+    const result = runCheck(fixture, CHECK);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("[requirements-authority]");
+  });
+
+  it("fails when an implementation reference disagrees with its resolved path", () => {
+    mutateInventory(fixture, (inventory) => {
+      firstLink(requirement(inventory, "TOPO-001").liveImplementation).ref =
+        "packages/schemas";
+    });
+    renameSync(join(fixture, "packages/cli/bin"), join(fixture, "packages/cli/bin-renamed"));
+    renameSync(
+      join(fixture, "packages/authoring-core/test/transaction-history.test.ts"),
+      join(fixture, "packages/authoring-core/test/transaction-history.renamed.ts"),
+    );
+    const result = runCheck(fixture, CHECK);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("[implementation-resolution]");
+    expect(result.stderr).toContain("packages/*/bin");
+    expect(result.stderr).toContain("packages/authoring-core/test/");
+  });
+
+  it("fails when a real proof link loses its resolved path", () => {
+    mutateInventory(fixture, (inventory) => {
+      firstLink(requirement(inventory, "TOPO-001").liveProofs).resolved = [];
+    });
+    const result = runCheck(fixture, CHECK);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("[proof-link]");
+  });
+
+  it("fails when a requirement uses an unknown classification", () => {
+    mutateInventory(fixture, (inventory) => {
+      requirement(inventory, "TOPO-001").classification = "future";
+    });
+    const result = runCheck(fixture, CHECK);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("[classification]");
+  });
+
+  it("fails when a resolved proof path goes stale", () => {
+    mutateInventory(fixture, (inventory) => {
+      firstLink(requirement(inventory, "TOPO-001").liveProofs).resolved[0] = "tests/e2e/missing-proof.test.ts";
+    });
+    const result = runCheck(fixture, CHECK);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("[proof-path]");
+  });
+
+  it("fails when a held requirement is promoted in both generated audit artifacts", () => {
+    mutateInventory(fixture, (inventory) => {
+      requirement(inventory, "IDENT-007").classification = "real";
+    });
+    replaceRenderedClassification(fixture, "IDENT-007", "held", "real");
+    const result = runCheck(fixture, CHECK);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("[authority-classification]");
+  });
+
+  it("fails when the executable CLI surface exposes an unaccounted verb", () => {
+    mutateRuntimeSurfaces(fixture, (surfaces) => {
+      surfaces.cliVerbs.push("protocol injected");
+    });
+    const result = runCheck(fixture, CHECK);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("CLI verb inventory");
+  });
+
+  it("fails when a valid public CLI verb is exposed only by live registries", () => {
+    const commandsPath = join(fixture, "packages/cli/src/commands.ts");
+    const commands = readFileSync(commandsPath, "utf8");
+    const commandMarker = "    protocol: protocolGroup,\n";
+    if (!commands.includes(commandMarker)) throw new Error("missing CLI command marker");
+    writeFileSync(
+      commandsPath,
+      commands.replace(
+        commandMarker,
+        `${commandMarker}    injected: group("injected", "Injected runtime group", {\n      live: verb("live", "Injected runtime verb", () => Object.freeze({ status: "injected" })),\n    }),\n`,
+      ),
+    );
+
+    const shippedPath = join(fixture, "packages/cli/src/held-keys/shipped.ts");
+    const shipped = readFileSync(shippedPath, "utf8");
+    const shippedMarker = '    { command: "protocol inspect", heldKeys: [] },\n';
+    if (!shipped.includes(shippedMarker)) throw new Error("missing shipped command marker");
+    writeFileSync(
+      shippedPath,
+      shipped.replace(
+        shippedMarker,
+        `${shippedMarker}    { command: "injected live", heldKeys: [] },\n`,
+      ),
+    );
+
+    const result = runCheck(fixture, CHECK);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("[runtime-surface]");
+  });
+
+  it("fails when the executable editor registry exposes an unaccounted command", () => {
+    mutateRuntimeSurfaces(fixture, (surfaces) => {
+      surfaces.editorCommands.push("injected-command");
+    });
+    const result = runCheck(fixture, CHECK);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("editor command inventory");
+  });
+
+  it("fails when the executable desktop projection exposes an unaccounted control", () => {
+    mutateRuntimeSurfaces(fixture, (surfaces) => {
+      surfaces.desktopControls.push("injected-control");
+    });
+    const result = runCheck(fixture, CHECK);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("desktop control inventory");
+  });
+
+  it("fails when the executable desktop bridge exposes an unaccounted action", () => {
+    mutateRuntimeSurfaces(fixture, (surfaces) => {
+      surfaces.bridgeActions.push("injected-action");
+    });
+    const result = runCheck(fixture, CHECK);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("desktop bridge operation inventory");
+  });
+
+  it("fails when the executable local bridge exposes an unaccounted tool", () => {
+    mutateRuntimeSurfaces(fixture, (surfaces) => {
+      surfaces.localAgentTools.push("sceneaxi.injected.tool");
+    });
+    const result = runCheck(fixture, CHECK);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("local-agent tool inventory");
+  });
+
+  it("fails when an executable refusal registry is missing from inventory", () => {
+    mutateRuntimeSurfaces(fixture, (surfaces) => {
+      surfaces.refusalRegistries.push({
+        path: "packages/auth/src/refusals.ts",
+        symbol: "INJECTED_REFUSALS",
+      });
+    });
+    const result = runCheck(fixture, CHECK);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("refusal registry inventory");
+  });
+
+  it("fails when production provider, browser-evidence, and release catalogs are omitted", () => {
+    mutateInventory(fixture, (inventory) => {
+      const omittedProviders = new Set([
+        "packages/auth/src/index.ts",
+        "desktop/linux/src/electron/live-transport.ts",
+      ]);
+      const omittedBrowserEvidence = new Set([
+        ".maestro/playbooks/Initiation/Working/Phase-01/Baseline.md",
+        ".maestro/playbooks/Initiation/Working/Phase-01/umbrella-open-desktop.png",
+        ".maestro/playbooks/Initiation/Working/Phase-01/umbrella-open-mobile.png",
+        "docs/desktop-linux.md",
+      ]);
+      const omittedReleaseOwners = new Set([
+        "desktop/linux/electron-builder.yml",
+        "desktop/linux/package.json",
+        "desktop/linux/pnpm-lock.yaml",
+        "desktop/linux/scripts/build.mjs",
+        "desktop/linux/scripts/build-linux.mjs",
+        "desktop/linux/scripts/renderer-bundle.mjs",
+        "desktop/linux/src/native/publish-no-replace.c",
+        "desktop/macos/electron-builder.yml",
+        "desktop/macos/entitlements.mac.plist",
+        "desktop/macos/package.json",
+        "desktop/macos/pnpm-lock.yaml",
+        "desktop/macos/scripts/build.mjs",
+        "desktop/windows/electron-builder.yml",
+        "desktop/windows/package.json",
+        "desktop/windows/pnpm-lock.yaml",
+        "desktop/windows/scripts/build.mjs",
+        "scripts/lib/zip.mjs",
+      ]);
+      inventory.liveInventory.providerEntrypoints =
+        inventory.liveInventory.providerEntrypoints.filter(
+          (entry) => !omittedProviders.has(entry),
+        );
+      inventory.liveInventory.browserEvidence =
+        inventory.liveInventory.browserEvidence.filter(
+          (entry) => !omittedBrowserEvidence.has(entry),
+        );
+      inventory.liveInventory.releaseArtifacts =
+        inventory.liveInventory.releaseArtifacts.filter(
+          (entry) => !omittedReleaseOwners.has(entry),
+        );
+    });
+    const result = runCheck(fixture, CHECK);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("[provider-entrypoint]");
+    expect(result.stderr).toContain("packages/auth/src/index.ts");
+    expect(result.stderr).toContain("desktop/linux/src/electron/live-transport.ts");
+    expect(result.stderr).toContain("[browser-evidence]");
+    expect(result.stderr).toContain(".maestro/playbooks/Initiation/Working/Phase-01/Baseline.md");
+    expect(result.stderr).toContain(".maestro/playbooks/Initiation/Working/Phase-01/umbrella-open-desktop.png");
+    expect(result.stderr).toContain(".maestro/playbooks/Initiation/Working/Phase-01/umbrella-open-mobile.png");
+    expect(result.stderr).toContain("docs/desktop-linux.md");
+    expect(result.stderr).toContain("[release-owners]");
+    expect(result.stderr).toContain("desktop/linux/electron-builder.yml");
+    expect(result.stderr).toContain("desktop/linux/package.json");
+    expect(result.stderr).toContain("desktop/linux/pnpm-lock.yaml");
+    expect(result.stderr).toContain("desktop/linux/scripts/build.mjs");
+    expect(result.stderr).toContain("desktop/linux/scripts/build-linux.mjs");
+    expect(result.stderr).toContain("desktop/linux/scripts/renderer-bundle.mjs");
+    expect(result.stderr).toContain("desktop/linux/src/native/publish-no-replace.c");
+    expect(result.stderr).toContain("desktop/macos/electron-builder.yml");
+    expect(result.stderr).toContain("desktop/macos/entitlements.mac.plist");
+    expect(result.stderr).toContain("desktop/macos/package.json");
+    expect(result.stderr).toContain("desktop/macos/pnpm-lock.yaml");
+    expect(result.stderr).toContain("desktop/macos/scripts/build.mjs");
+    expect(result.stderr).toContain("desktop/windows/electron-builder.yml");
+    expect(result.stderr).toContain("desktop/windows/package.json");
+    expect(result.stderr).toContain("desktop/windows/pnpm-lock.yaml");
+    expect(result.stderr).toContain("desktop/windows/scripts/build.mjs");
+    expect(result.stderr).toContain("scripts/lib/zip.mjs");
+  });
+
+  it("fails when an alternate-extension route appears under a reserved-looking segment", () => {
+    writeTo(fixture, "sites/umbrella/src/app/coverage/route.tsx", "export function GET() { return new Response(null); }\n");
+    writeTo(fixture, "sites/umbrella/app/page.tsx", "export default function Page() { return null; }\n");
+    const result = runCheck(fixture, CHECK);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("[route-root] sites/umbrella has unsupported alternate Next route roots: sites/umbrella/app");
+    expect(result.stderr).toContain("routes inventory");
+    expect(result.stderr).toContain("sites/umbrella/src/app/coverage/route.tsx");
+  });
+
+  it("fails when executable golden-path tests are omitted from inventory", () => {
+    const omitted = new Set([
+      "tests/e2e/cli-golden-path.test.ts",
+      "tests/e2e/profile-web-golden-path.test.ts",
+    ]);
+    mutateInventory(fixture, (inventory) => {
+      inventory.liveInventory.goldenTests = inventory.liveInventory.goldenTests.filter(
+        (entry) => !omitted.has(entry),
+      );
+      inventory.liveInventory.counts.goldenTests -= omitted.size;
+    });
+    const result = runCheck(fixture, CHECK);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("golden tests inventory is stale");
+    expect(result.stderr).toContain("tests/e2e/cli-golden-path.test.ts");
+    expect(result.stderr).toContain("tests/e2e/profile-web-golden-path.test.ts");
+  });
+
+  it("fails when executable release dependencies disappear from both catalogs", () => {
+    const omitted = new Set([
+      "scripts/lib/zip.mjs",
+      "desktop/linux/src/native/publish-no-replace.c",
+      "desktop/macos/entitlements.mac.plist",
+    ]);
+    mutateInventory(fixture, (inventory) => {
+      inventory.liveInventory.releaseArtifacts = inventory.liveInventory.releaseArtifacts.filter(
+        (entry) => !omitted.has(entry),
+      );
+    });
+    const catalogPath = join(fixture, RELEASE_CATALOG);
+    const catalog = readFileSync(catalogPath, "utf8");
+    writeFileSync(
+      catalogPath,
+      catalog.split("\n").filter((line) => ![...omitted].some((entry) => line.includes(`\`${entry}\``))).join("\n"),
+    );
+    const result = runCheck(fixture, CHECK);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("[release-graph]");
+    expect(result.stderr).toContain("scripts/lib/zip.mjs");
+    expect(result.stderr).toContain("desktop/linux/src/native/publish-no-replace.c");
+    expect(result.stderr).toContain("desktop/macos/entitlements.mac.plist");
+  });
+
+  it("fails when a route and its declared count are duplicated together", () => {
+    mutateInventory(fixture, (inventory) => {
+      const route = inventory.liveInventory.routes.at(0);
+      if (route === undefined) throw new Error("expected an inventoried route");
+      inventory.liveInventory.routes.push(route);
+      inventory.liveInventory.counts.routes += 1;
+    });
+    const result = runCheck(fixture, CHECK);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("[surface-duplicate] routes");
+  });
+
+  it("fails when a public package export is added without inventory coverage", () => {
+    writeTo(fixture, "packages/schemas/src/testing/injected.ts", "export const injected = true;\n");
+    editManifest(fixture, "packages/schemas/package.json", (manifest) => {
+      manifest.exports = { ...(manifest.exports as Record<string, string>), "./testing/injected": "./src/testing/injected.ts" };
+    });
+    const result = runCheck(fixture, CHECK);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("public export map");
+  });
+});

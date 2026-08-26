@@ -12,7 +12,7 @@
     "build": "next build",
     "postbuild": "node ../../scripts/check-vercel-package.mjs .",
     "start": "next start",
-    "test:provider": "vitest run --config vitest.config.ts test/better-auth-provider.test.ts",
+    "test:provider": "vitest run --config vitest.config.ts",
     "test:visual": "playwright test",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "build:sdk": "node ../../scripts/build-engine-sdk.mjs --out public/engine-sdk",

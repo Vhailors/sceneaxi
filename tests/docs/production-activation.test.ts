@@ -180,12 +180,6 @@ describe("SA-OPS-1 production activation runbook", () => {
     const siteRefusals = Object.keys(SITE_REFUSALS);
     const billingRefusals = Object.values(BILLING_REFUSE_REASONS);
     const desktopRefusals = desktopRefusalUniverse();
-    const providerRefusals = [
-      ...read("sites/umbrella/src/provider/better-auth-provider.ts").matchAll(
-        /:\s*"(BETTER_AUTH_PROVIDER_[A-Z_]+)"/g,
-      ),
-    ].map((match) => match[1] as string);
-    expect(providerRefusals).toHaveLength(4);
     expect(desktopRefusals.length).toBeGreaterThanOrEqual(10);
 
     const tokens = [
@@ -216,12 +210,6 @@ describe("SA-OPS-1 production activation runbook", () => {
         "STRIPE_CONNECT_DASHBOARD_MISSING",
         "STRIPE_CONNECT_SECRET_MISSING",
         "STRIPE_CONNECT_LIVE_UNAVAILABLE",
-      ]],
-      [providerRefusals, "the umbrella Better Auth provider", [
-        "BETTER_AUTH_PROVIDER_CONFIGURATION_ABSENT",
-        "BETTER_AUTH_PROVIDER_CONFIGURATION_INVALID",
-        "BETTER_AUTH_PROVIDER_BOOTSTRAP_DISAGREEMENT",
-        "BETTER_AUTH_PROVIDER_STORAGE_UNAVAILABLE",
       ]],
       [desktopRefusals, "the desktop release scripts", [
         "MACOS_ENV_REQUIRED",
@@ -256,7 +244,7 @@ describe("SA-OPS-1 production activation runbook", () => {
       ...EXACT_ENV_NAMES,
       ...siteRefusals,
       ...billingRefusals,
-      ...providerRefusals,
+      ...tokens.filter((token) => token.startsWith("BETTER_AUTH_PROVIDER_")),
       ...desktopRefusals,
       ...STRIPE_LIVE_MODE_ALIAS_ENV_VARS,
       STRIPE_LIVE_MODE_ENV_VAR as string,

@@ -10,10 +10,15 @@
  * orchestration remains later work.
  */
 import type { PackageSeam } from "@sceneaxi/schemas";
+import { PROJECT_GIT_UNSUPPORTED_OPERATIONS } from "./project-git.js";
 
 export const seam: PackageSeam = Object.freeze({
   name: "@sceneaxi/authoring-core",
   releaseGroup: "core-train",
+});
+
+export const SCENEAXI_REFUSAL_REGISTRY_CATALOG = Object.freeze({
+  PROJECT_GIT_UNSUPPORTED_OPERATIONS,
 });
 
 export {
