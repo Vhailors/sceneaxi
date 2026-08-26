@@ -97,8 +97,11 @@ Turn the repository's many specifications into one checked map from requirement 
   desktop control. Wired `check:traceability` after `check:contracts` in
   `package.json`, copied `db/` and package test evidence into process fixtures,
   and documented the checker in `Initiation-Audit.md`. `pnpm test:golden` passed
-  (51 files, 448 tests); the complete `pnpm gate` passed after the final
-  TypeScript declaration and lint cleanup.
+  (51 files, 448 tests); `pnpm gate` passed every structural stage,
+  reached build, and ran 264 test files with 3929/3930 tests passing. It
+  stopped on the unrelated existing `packages/authoring-core/test/project-git.test.ts:1004`
+  expectation for `PROJECT_GIT_EVIDENCE_TOO_LARGE`; all checker-specific
+  verification remains green.
 - [ ] Vet and prioritize every verified gap in `docs/audits/initiation/Gap-Register.md`:
   - Use YAML front matter (`type: report`, tags `[sceneaxi, gaps, implementation]`) and one row per gap with stable ID, requirement IDs, category, evidence paths and line anchors, concrete impact, effort `S/M/L`, fix risk, confidence, owning phase, dependencies, and status.
   - Keep direction options separate from defects. Record considered-and-rejected candidates with the reason so later runs do not rediscover them.
