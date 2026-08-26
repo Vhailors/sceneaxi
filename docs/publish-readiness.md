@@ -128,6 +128,7 @@ claim a guarantee the gate does not enforce.
 |---|
 | `scripts/build-engine-sdk.mjs` |
 | `scripts/engine-sdk-files.json` |
+| `scripts/lib/zip.mjs` |
 | `docs/publish-readiness.md` |
 | `desktop/linux/electron-builder.yml` |
 | `desktop/linux/package.json` |
@@ -136,9 +137,11 @@ claim a guarantee the gate does not enforce.
 | `desktop/linux/scripts/build-linux.mjs` |
 | `desktop/linux/scripts/dist.mjs` |
 | `desktop/linux/scripts/renderer-bundle.mjs` |
+| `desktop/linux/src/native/publish-no-replace.c` |
 | `desktop/macos/electron-builder.yml` |
 | `desktop/macos/package.json` |
 | `desktop/macos/pnpm-lock.yaml` |
+| `desktop/macos/entitlements.mac.plist` |
 | `desktop/macos/scripts/build.mjs` |
 | `desktop/macos/scripts/dist.mjs` |
 | `desktop/macos/scripts/release-provenance.mjs` |

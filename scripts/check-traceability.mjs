@@ -10,6 +10,8 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import ts from "typescript";
+import { parse as parseYaml } from "yaml";
 import { exportEntries } from "./lib/package-exports.mjs";
 
 export const TRACEABILITY_STATUSES = Object.freeze([
@@ -159,6 +161,11 @@ function nextRouteFiles(root, errors) {
     if (!entry.isDirectory()) continue;
     const site = `sites/${entry.name}`;
     const app = `${site}/src/app`;
+    const alternateRoots = [`${site}/app`, `${site}/pages`, `${site}/src/pages`]
+      .filter((path) => existsSync(join(root, path)));
+    if (alternateRoots.length > 0) {
+      errors.push(`[route-root] ${site} has unsupported alternate Next route roots: ${alternateRoots.join(", ")}`);
+    }
     if (!existsSync(join(root, app))) continue;
     const extensions = loadJson(root, `${site}/page-extensions.json`, errors);
     if (
@@ -176,6 +183,123 @@ function nextRouteFiles(root, errors) {
     found.push(...walkFiles(root, app, (path, name) => routeFileNames.has(name)));
   }
   return found.sort();
+}
+
+function goldenTestFiles(root, errors) {
+  const manifest = loadJson(root, "package.json", errors);
+  const command = manifest?.scripts?.["test:golden"];
+  if (typeof command !== "string") {
+    errors.push("[golden-command] package.json#scripts.test:golden is absent");
+    return [];
+  }
+  const tokens = command.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g)?.map((token) => token.replace(/^(?:"|')|(?:"|')$/g, "")) ?? [];
+  if (tokens[0] !== "vitest" || tokens[1] !== "run") {
+    errors.push("[golden-command] test:golden must invoke vitest run directly");
+    return [];
+  }
+  const files = tokens.filter((token) => /\.test\.[cm]?[jt]sx?$/.test(token));
+  rejectDuplicates(files, "test:golden command", errors);
+  for (const file of files) {
+    if (!existsSync(join(root, file))) errors.push(`[golden-command] test:golden names a stale test path: ${file}`);
+  }
+  return files.sort();
+}
+
+function releaseScriptEntrypoints(root, errors) {
+  const declarations = [
+    ["package.json", ["build:sdk"]],
+    ["desktop/linux/package.json", ["build", "dist"]],
+    ["desktop/macos/package.json", ["build", "dist"]],
+    ["desktop/windows/package.json", ["build", "dist", "draft:upload"]],
+  ];
+  const entries = [];
+  for (const [manifestPath, scriptNames] of declarations) {
+    const manifest = loadJson(root, manifestPath, errors);
+    const directory = dirname(manifestPath);
+    for (const scriptName of scriptNames) {
+      const command = manifest?.scripts?.[scriptName];
+      if (typeof command !== "string") {
+        errors.push(`[release-graph] ${manifestPath}#scripts.${scriptName} is absent`);
+        continue;
+      }
+      const script = command.split(/\s+/).find((token) => token.endsWith(".mjs"));
+      if (script === undefined) {
+        errors.push(`[release-graph] ${manifestPath}#scripts.${scriptName} has no executable module`);
+        continue;
+      }
+      entries.push(displayPath(root, resolve(root, directory, script)));
+    }
+  }
+  return unique(entries);
+}
+
+function releaseModuleDependencies(root, entrypoints, errors) {
+  const found = new Set();
+  const visit = (repositoryPath) => {
+    if (found.has(repositoryPath)) return;
+    found.add(repositoryPath);
+    let source;
+    try {
+      source = readFileSync(join(root, repositoryPath), "utf8");
+    } catch (error) {
+      errors.push(`[release-graph] cannot load ${repositoryPath}: ${error.message}`);
+      return;
+    }
+    const module = ts.createSourceFile(repositoryPath, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
+    const packageRoot = repositoryPath.startsWith("desktop/")
+      ? repositoryPath.split("/").slice(0, 2).join("/")
+      : ".";
+    const inspect = (node) => {
+      if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
+        const specifier = node.moduleSpecifier.text;
+        if (specifier.startsWith(".")) {
+          const dependency = displayPath(root, resolve(root, dirname(repositoryPath), specifier));
+          if (dependency.endsWith(".mjs") && existsSync(join(root, dependency))) visit(dependency);
+        }
+      }
+      if (ts.isStringLiteral(node) && /\.(?:c|mjs|plist)$/.test(node.text)) {
+        const dependency = displayPath(root, resolve(root, packageRoot, node.text));
+        if (existsSync(join(root, dependency))) found.add(dependency);
+      }
+      ts.forEachChild(node, inspect);
+    };
+    inspect(module);
+  };
+  for (const entrypoint of entrypoints) visit(entrypoint);
+  return [...found].sort();
+}
+
+function releaseConfigurationDependencies(root, errors) {
+  const found = [];
+  for (const platform of ["linux", "macos", "windows"]) {
+    const directory = `desktop/${platform}`;
+    for (const path of [`${directory}/electron-builder.yml`, `${directory}/package.json`, `${directory}/pnpm-lock.yaml`]) {
+      if (existsSync(join(root, path))) found.push(path);
+      else errors.push(`[release-graph] required release configuration is absent: ${path}`);
+    }
+    const configPath = `${directory}/electron-builder.yml`;
+    let config;
+    try {
+      config = parseYaml(readFileSync(join(root, configPath), "utf8"));
+    } catch (error) {
+      errors.push(`[release-graph] cannot parse ${configPath}: ${error.message}`);
+      continue;
+    }
+    for (const candidate of [config?.mac?.entitlements, config?.mac?.entitlementsInherit]) {
+      if (typeof candidate !== "string") continue;
+      const path = `${directory}/${candidate}`;
+      if (existsSync(join(root, path))) found.push(path);
+      else errors.push(`[release-graph] ${configPath} references stale input ${path}`);
+    }
+  }
+  return unique(found);
+}
+
+function releaseGraphPaths(root, errors) {
+  return unique([
+    ...releaseModuleDependencies(root, releaseScriptEntrypoints(root, errors), errors),
+    ...releaseConfigurationDependencies(root, errors),
+  ]);
 }
 
 function packageReferencePaths(root, reference) {
@@ -516,7 +640,7 @@ function checkInventorySurface(root, inventory, runtimeSurfaces, errors) {
   const expectedRoutes = nextRouteFiles(root, errors);
   const expectedMigrations = walkFiles(root, "db/migrations", (path, name) => name.endsWith(".sql"));
   const expectedWorkflows = walkFiles(root, ".github/workflows", (path, name) => name.endsWith(".yml") || name.endsWith(".yaml"));
-  const expectedGoldens = walkFiles(root, "tests/e2e", (path, name) => name.endsWith("-golden.test.ts"));
+  const expectedGoldens = goldenTestFiles(root, errors);
   for (const [label, expected, actual] of [
     ["routes", expectedRoutes, inventory?.routes ?? []],
     ["migrations", expectedMigrations, inventory?.migrations ?? []],
@@ -562,6 +686,11 @@ function checkEvidenceAndRegistries(root, inventory, runtimeSurfaces, browserCat
   const releaseOwnerCatalog = parseMarkedPathCatalog(releaseCatalog, "release-owners", errors);
   if (!arraysEqual(releaseOwnerCatalog, inventory?.releaseArtifacts ?? [])) {
     errors.push(`[release-owners] inventory differs from the marked catalog (missing: ${missing(releaseOwnerCatalog, inventory?.releaseArtifacts ?? []).join(", ") || "none"}; extra: ${extra(releaseOwnerCatalog, inventory?.releaseArtifacts ?? []).join(", ") || "none"})`);
+  }
+  const graphReleaseOwners = releaseGraphPaths(root, errors);
+  const missingGraphOwners = missing(graphReleaseOwners, releaseOwnerCatalog);
+  if (missingGraphOwners.length > 0) {
+    errors.push(`[release-graph] marked catalog omits executable build/config dependencies: ${missingGraphOwners.join(", ")}`);
   }
   const runtimeProviders = runtimeSurfaces?.providerEntrypoints ?? [];
   if (!arraysEqual(runtimeProviders, inventory?.providerEntrypoints ?? [])) {

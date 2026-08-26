@@ -47,8 +47,8 @@ The complete enumerations live under `liveInventory` in [`requirements.json`](re
 | Site routes / API routes | 22 | `sites/*/src/app/**` |
 | Forward-only migrations | 5 | `db/migrations; tests/db/schema-lockstep.test.ts` |
 | Provider entrypoints / refusal registries | 8 root + 1 installed / 68 | `provider entrypoints, provider-safe contracts, and public package seams` |
-| Workflows / golden tests | 4 / 45 | `.github/workflows; tests/e2e/*golden.test.ts` |
-| Browser / release evidence | 15 / 24 | `docs/runnable-surfaces.md; docs/publish-readiness.md` |
+| Workflows / golden tests | 4 / 51 | `.github/workflows; package.json#scripts.test:golden` |
+| Browser / release evidence | 15 / 27 | `docs/runnable-surfaces.md; docs/publish-readiness.md` |
 
 The live registry currently contains **67 local-agent tools**. The older
 61-tool prose in [`docs/full-editor-v1-capability-matrix.md`](../../full-editor-v1-capability-matrix.md#inventory-accounting)

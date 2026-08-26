@@ -7,6 +7,7 @@ const CHECK = "check-traceability.mjs" as const;
 const INVENTORY = "docs/audits/initiation/requirements.json";
 const RENDERED = "docs/audits/initiation/Requirements-Traceability.md";
 const RUNTIME_SURFACES = "docs/audits/initiation/runtime-surfaces.json";
+const RELEASE_CATALOG = "docs/publish-readiness.md";
 
 type TraceLink = {
   ref: string;
@@ -30,7 +31,9 @@ type Inventory = {
     providerEntrypoints: string[];
     releaseArtifacts: string[];
     routes: string[];
+    goldenTests: string[];
     counts: {
+      goldenTests: number;
       routes: number;
     };
   };
@@ -291,7 +294,9 @@ describe("traceability check — injected violations", () => {
         "desktop/linux/scripts/build.mjs",
         "desktop/linux/scripts/build-linux.mjs",
         "desktop/linux/scripts/renderer-bundle.mjs",
+        "desktop/linux/src/native/publish-no-replace.c",
         "desktop/macos/electron-builder.yml",
+        "desktop/macos/entitlements.mac.plist",
         "desktop/macos/package.json",
         "desktop/macos/pnpm-lock.yaml",
         "desktop/macos/scripts/build.mjs",
@@ -299,6 +304,7 @@ describe("traceability check — injected violations", () => {
         "desktop/windows/package.json",
         "desktop/windows/pnpm-lock.yaml",
         "desktop/windows/scripts/build.mjs",
+        "scripts/lib/zip.mjs",
       ]);
       inventory.liveInventory.providerEntrypoints =
         inventory.liveInventory.providerEntrypoints.filter(
@@ -330,7 +336,9 @@ describe("traceability check — injected violations", () => {
     expect(result.stderr).toContain("desktop/linux/scripts/build.mjs");
     expect(result.stderr).toContain("desktop/linux/scripts/build-linux.mjs");
     expect(result.stderr).toContain("desktop/linux/scripts/renderer-bundle.mjs");
+    expect(result.stderr).toContain("desktop/linux/src/native/publish-no-replace.c");
     expect(result.stderr).toContain("desktop/macos/electron-builder.yml");
+    expect(result.stderr).toContain("desktop/macos/entitlements.mac.plist");
     expect(result.stderr).toContain("desktop/macos/package.json");
     expect(result.stderr).toContain("desktop/macos/pnpm-lock.yaml");
     expect(result.stderr).toContain("desktop/macos/scripts/build.mjs");
@@ -338,14 +346,60 @@ describe("traceability check — injected violations", () => {
     expect(result.stderr).toContain("desktop/windows/package.json");
     expect(result.stderr).toContain("desktop/windows/pnpm-lock.yaml");
     expect(result.stderr).toContain("desktop/windows/scripts/build.mjs");
+    expect(result.stderr).toContain("scripts/lib/zip.mjs");
   });
 
   it("fails when an alternate-extension route appears under a reserved-looking segment", () => {
     writeTo(fixture, "sites/umbrella/src/app/coverage/route.tsx", "export function GET() { return new Response(null); }\n");
+    writeTo(fixture, "sites/umbrella/app/page.tsx", "export default function Page() { return null; }\n");
     const result = runCheck(fixture, CHECK);
     expect(result.status).toBe(1);
+    expect(result.stderr).toContain("[route-root] sites/umbrella has unsupported alternate Next route roots: sites/umbrella/app");
     expect(result.stderr).toContain("routes inventory");
     expect(result.stderr).toContain("sites/umbrella/src/app/coverage/route.tsx");
+  });
+
+  it("fails when executable golden-path tests are omitted from inventory", () => {
+    const omitted = new Set([
+      "tests/e2e/cli-golden-path.test.ts",
+      "tests/e2e/profile-web-golden-path.test.ts",
+    ]);
+    mutateInventory(fixture, (inventory) => {
+      inventory.liveInventory.goldenTests = inventory.liveInventory.goldenTests.filter(
+        (entry) => !omitted.has(entry),
+      );
+      inventory.liveInventory.counts.goldenTests -= omitted.size;
+    });
+    const result = runCheck(fixture, CHECK);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("golden tests inventory is stale");
+    expect(result.stderr).toContain("tests/e2e/cli-golden-path.test.ts");
+    expect(result.stderr).toContain("tests/e2e/profile-web-golden-path.test.ts");
+  });
+
+  it("fails when executable release dependencies disappear from both catalogs", () => {
+    const omitted = new Set([
+      "scripts/lib/zip.mjs",
+      "desktop/linux/src/native/publish-no-replace.c",
+      "desktop/macos/entitlements.mac.plist",
+    ]);
+    mutateInventory(fixture, (inventory) => {
+      inventory.liveInventory.releaseArtifacts = inventory.liveInventory.releaseArtifacts.filter(
+        (entry) => !omitted.has(entry),
+      );
+    });
+    const catalogPath = join(fixture, RELEASE_CATALOG);
+    const catalog = readFileSync(catalogPath, "utf8");
+    writeFileSync(
+      catalogPath,
+      catalog.split("\n").filter((line) => ![...omitted].some((entry) => line.includes(`\`${entry}\``))).join("\n"),
+    );
+    const result = runCheck(fixture, CHECK);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("[release-graph]");
+    expect(result.stderr).toContain("scripts/lib/zip.mjs");
+    expect(result.stderr).toContain("desktop/linux/src/native/publish-no-replace.c");
+    expect(result.stderr).toContain("desktop/macos/entitlements.mac.plist");
   });
 
   it("fails when a route and its declared count are duplicated together", () => {

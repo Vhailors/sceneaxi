@@ -17,7 +17,7 @@ import { fileURLToPath } from "node:url";
 
 export const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
 
-const COPY_TOPS = ["docs", "packages", "apps", "sites", "desktop", "db", "scripts", "tests", ".github"];
+const COPY_TOPS = ["docs", "packages", "apps", "sites", "desktop", "db", "scripts", "tests", ".github", ".maestro"];
 /**
  * Root files the gate scripts read: `check-sites` reads the manifest and workspace,
  * `check-publish-ready` reads the manifest scripts and the SDK-output ignores, and
@@ -39,7 +39,7 @@ const SKIP_DIRS = new Set(["node_modules", "dist", "coverage", "release", "dist-
 
 /**
  * Copy the parts of the repo the gate scripts read (manifests, sources, matrix,
- * scripts, and the root `tests` tree whose files contracts name as evidence)
+ * scripts, and the root `tests` and `.maestro` trees whose files contracts name as evidence)
  * into a throwaway root, so violation injections never touch the real tree.
  * node_modules is linked, not copied, so scripts keep resolving deps.
  */

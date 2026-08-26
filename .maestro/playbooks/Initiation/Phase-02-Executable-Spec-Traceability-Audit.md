@@ -51,7 +51,7 @@ Turn the repository's many specifications into one checked map from requirement 
   entries, 66 editor commands, 112 desktop controls, 11 bridge actions, 10
   authoring operations, three assistant operations, 67 local-agent tools, 22
   routes, five migrations, nine provider entrypoints, 68 refusal registries,
-  four workflows, 45 golden tests, 15 browser records, and 24 release
+  four workflows, 51 golden tests, 15 browser records, and 27 release
   artifacts. Path checks found no
   stale resolved files; the live join is 106 `mapped`, two `refuse-only`, and
   one `gap` row. Existing documentation drift (the capability matrix's 61-tool
@@ -93,8 +93,8 @@ Turn the repository's many specifications into one checked map from requirement 
   editor-command, desktop-control, bridge/tool, route, migration, workflow, and
   golden-test surface accounting, plus refusal-registry validation. Added
   `tests/docs/traceability-check.test.ts` and
-  `tests/contracts/injected-traceability-violations.test.ts` with 18 passing
-  cases: one live-tree control plus 17 independent injected-drift regressions.
+  `tests/contracts/injected-traceability-violations.test.ts` with 20 passing
+  cases: one live-tree control plus 19 independent injected-drift regressions.
   Wired `check:traceability` after `check:contracts` in
   `package.json`, copied `db/` and package test evidence into process fixtures,
   and documented the checker in `Initiation-Audit.md`. `pnpm test:golden` passed
@@ -141,4 +141,4 @@ Turn the repository's many specifications into one checked map from requirement 
 - [x] Verify the audit machinery and publish the execution handoff inside the repository:
   - Ran the focused traceability, injected-violation, module-coverage, and capability-matrix suites; `pnpm check:contracts`; `pnpm check:boundaries`; `pnpm test:golden`; and `pnpm gate`.
   - Updated `docs/audits/initiation/Initiation-Audit.md` with verification HEAD `3e63361ffc47c064bee8cacfbe9d85a5c1fcf2fa`, handoff commit `444732b618d11f367455efc0c1b877cb96f700ce`, exact results, status/domain counts, rejected and unaudited state, and the dependency order for later phases.
-  - **Completion note (2026-08-26):** Every authoritative requirement and public live surface has a declared row and checked classification: 106 mapped, two refuse-only, and one explicitly registered `gap` (`AUTH-007`). Injected traceability drift fails in 17 process-level cases, with one passing live-tree control (18 total); the gap register has no evidence-free entry; and `pnpm gate` passed all stages with 264 files and 3,930 tests passing.
+  - **Completion note (2026-08-26):** Every authoritative requirement and public live surface has a declared row and checked classification: 106 mapped, two refuse-only, and one explicitly registered `gap` (`AUTH-007`). Injected traceability drift fails in 19 process-level cases, with one passing live-tree control (20 total); the gap register has no evidence-free entry; and `pnpm gate` passed all stages with 264 files and 3,930 tests passing.

@@ -287,7 +287,7 @@ and in [[Gap-Register]]. The mapped surface inventory covers 26 matrix
 packages, four delayed package slots, 21 CLI verbs, 66 editor commands, 112
 desktop controls, 11 bridge actions, ten authoring operations, three assistant
 operations, 67 local-agent tools, 22 routes, five migrations, four workflows,
-and 45 golden tests.
+and 51 golden tests.
 
 ### Rejected and unaudited state
 
