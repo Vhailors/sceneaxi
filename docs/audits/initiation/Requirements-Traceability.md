@@ -50,7 +50,13 @@ The complete enumerations live under `liveInventory` in [`requirements.json`](re
 | Workflows / golden tests | 4 / 45 | `.github/workflows; tests/e2e/*golden.test.ts` |
 | Browser / release evidence | 4 / 7 | `browser records and release owners` |
 
-Notable live-data reconciliation: the registry currently contains **67 local-agent tools**, while the older prose in [`docs/full-editor-v1-capability-matrix.md`](../../full-editor-v1-capability-matrix.md#inventory-accounting) says 61. The map records this as documentation drift for the later reconciliation task; it does not silently alter a product requirement classification. The stale `packages/billing/src/stripe-checkout.ts` reference was corrected to the live `packages/billing/src/checkout.ts` owner, and three stale evidence citations were corrected to their current test owners.
+The live registry currently contains **67 local-agent tools**. The older
+61-tool prose in [`docs/full-editor-v1-capability-matrix.md`](../../full-editor-v1-capability-matrix.md#inventory-accounting)
+was corrected during the 2026-08-26 reconciliation; the audit retains that
+earlier mismatch as historical evidence. The stale
+`packages/billing/src/stripe-checkout.ts` reference was corrected to the live
+`packages/billing/src/checkout.ts` owner, and three stale evidence citations
+were corrected to their current test owners.
 
 ## Source precedence
 

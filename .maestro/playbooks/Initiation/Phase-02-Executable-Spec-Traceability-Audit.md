@@ -102,17 +102,41 @@ Turn the repository's many specifications into one checked map from requirement 
   stopped on the unrelated existing `packages/authoring-core/test/project-git.test.ts:1004`
   expectation for `PROJECT_GIT_EVIDENCE_TOO_LARGE`; all checker-specific
   verification remains green.
-- [ ] Vet and prioritize every verified gap in `docs/audits/initiation/Gap-Register.md`:
+- [x] Vet and prioritize every verified gap in `docs/audits/initiation/Gap-Register.md`:
   - Use YAML front matter (`type: report`, tags `[sceneaxi, gaps, implementation]`) and one row per gap with stable ID, requirement IDs, category, evidence paths and line anchors, concrete impact, effort `S/M/L`, fix risk, confidence, owning phase, dependencies, and status.
   - Keep direction options separate from defects. Record considered-and-rejected candidates with the reason so later runs do not rediscover them.
   - Order work by dependency and failure impact: verification foundations first, then shared schemas/core, clients and UI, external adapters, and release operations.
   - A row may close only with a code/refusal owner and executable evidence; prose alone never closes a behavior gap.
 
-- [ ] Reconcile stale program claims found during the audit:
+  **Completion note (2026-08-26):** Created
+  `docs/audits/initiation/Gap-Register.md` with YAML front matter, ten
+  prioritized findings plus one resolved scanner-taxonomy history row (11
+  total register rows). The prioritized set covers every actionable, partial,
+  documentation-drift, or direction-only finding with exact owner/evidence
+  anchors, requirement IDs, impact, effort, risk, confidence, owning phase,
+  dependencies, and status. It separates six open defects, two partial
+  web/package integrity findings, two direction-only items
+  (`AUDIT-PACKAGE-METADATA-INTEGRITY` and `AUTH-007`), and two
+  documentation-drift rows; the scanner row is explicitly `resolved`, not
+  actionable. Dependency order is Phase 02 verification/reconciliation, Phase
+  03 shared authoring/schema/workflow integrity, then Phase 05 web request
+  boundaries. Held, delayed, dormant, host-blocked, and externally authorized
+  candidates remain rejected from the gap queue with reasons recorded.
+
+- [x] Reconcile stale program claims found during the audit:
   - Update only the canonical owning document or its direct pointer when a path, SHA, surface level, known automated-coverage gap, or implementation status no longer matches live code.
   - Preserve historical records and dates; never rewrite a prior observation into a current one or let `docs/program/NEXT-STEP.md` become a competing source of truth.
   - Add contract/checker coverage for any machine-read declaration changed, including injected drift tests where the repository convention requires them.
 
+  **Completion note (2026-08-26):** Reconciled the live 67-tool registry count
+  in `docs/full-editor-v1-capability-matrix.md`, retaining the audited 61-tool
+  mismatch in the audit history and marking that register row resolved.
+  Clarified `pnpm test:golden`'s actual scope and its four omitted golden files
+  in `docs/runnable-surfaces.md` without claiming the verification gap closed.
+  Refreshed the audit's reconciliation-start SHA and cross-document anchors;
+  `pnpm check:contracts`, `pnpm check:traceability`, and the three focused docs
+  audit suites passed. No machine-readable declaration changed, so no new
+  injected-drift fixture was needed.
 - [ ] Verify the audit machinery and publish the execution handoff inside the repository:
   - Run the new focused tests, all existing docs/module/capability audit tests, `pnpm check:contracts`, `pnpm check:boundaries`, `pnpm test:golden`, and `pnpm gate`.
   - Update `Initiation-Audit.md` with the exact HEAD audited, command results, coverage counts by status and domain, rejected findings, unaudited external state, and the dependency order consumed by Phases 03 onward.

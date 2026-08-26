@@ -50,10 +50,15 @@ profiles, the CLI, and both shells all read. The levels there use this table's
 vocabulary deliberately: `demo-driveable` is R1, `refuse-only` is R0, and neither
 is a shipping claim.
 
-`pnpm gate` runs everything above except the umbrella provider suite: `better-auth` and
-`pg` resolve only from that site's own install root, so it runs there instead
+`pnpm gate` runs everything above except the umbrella provider suite: `better-auth`
+and `pg` resolve only from that site's own install root, so it runs there instead
 (`sites/umbrella/README.md` owns the command) and CI runs it after the gate.
-`pnpm test:golden` runs just the golden e2e set.
+`pnpm test:golden` runs the explicitly listed golden e2e files plus the required
+bin-smoke, parity, and module-coverage checks; it currently omits
+`contained-git-golden`, `desktop-assistant-scene-loop-golden`,
+`full-editor-transactions-golden`, and `hosted-ai-metering-golden`. Those
+omissions remain a Phase 02 verification gap; the R1 rows above still name their
+individual proof files.
 The Game multi-object and Web Experience tests assert their replay digests against
 checked-in `golden-digests.json` evidence rather than values produced only within
 the same run.

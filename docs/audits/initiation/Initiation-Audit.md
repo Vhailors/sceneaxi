@@ -78,16 +78,18 @@ was audited at:
 | Package manager | `pnpm@9.15.0` |
 | Node requirement | `^20.19.0 \|\| ^22.13.0 \|\| >=24` |
 
-The current checkout for this audit is:
+The checkout snapshot used for this reconciliation is:
 
 | Field | Value |
 |---|---|
 | Branch | `maestro/phase-02-requirement-inventory` |
-| Current HEAD SHA | `435d409b6640436084938417a7a3bb162903a73d` |
+| Reconciliation-start HEAD SHA | `7c151dc033204903dc6f40052bb99f19e9ddc92f` |
 | Audited source snapshot SHA | `eecd6acade08a48b7599832bb1598b3e11bddf72` |
 
-The source findings were made against the audited snapshot SHA above; the
-current HEAD contains this report and the playbook completion note. The
+The source findings were made against the audited snapshot SHA above. The
+reconciliation started from the later HEAD shown above; its audit report,
+executable traceability checker, gate outcome, and playbook notes are
+verification artifacts rather than changes to the audited source findings. The
 Phase 01 receipt and the historical initiation snapshot remain unchanged
 records.
 
@@ -173,10 +175,10 @@ source and owning decision, compared live declarations with their consumers,
 checked recent history/churn, and searched shipped source, tests, workflows,
 and scripts for unchecked casts, ignored errors, process/global leaks,
 unbounded work, path construction, and stale markers. Findings below are
-verified candidates for the later gap register; this section does not grant
-authority to implement held or delayed work.
+the evidence set reviewed and dispositioned in [[Gap-Register]]; this section
+does not grant authority to implement held or delayed work.
 
-### Findings requiring later work
+### Findings reviewed for the gap register
 
 | ID | Severity | Classification | Evidence and impact | Owner |
 |---|---|---|---|---|
@@ -185,11 +187,11 @@ authority to implement held or delayed work.
 | `AUDIT-CONTRACT-REGRESSION-DISCOVERY` | High | `gap` | `scripts/check-contracts.test.mjs:105-478` declares process-level contract regressions and executes them at `:480-490`, but `vitest.config.ts:75-82` includes only TypeScript tests and `package.json:20-22` invokes only `check-contracts.mjs`. No root script or workflow runs the `.mjs` regression suite, leaving authoring-job, hostile-key, plugin-registry, and inert-example regressions outside `pnpm test` and `pnpm gate`. | Phase 02, checker and root workflow |
 | `AUDIT-CHECKOUT-BODY-ORDER` | Medium | `gap` | `sites/umbrella/src/app/api/checkout/route.ts:26-35` calls `request.formData()` and enumerates attacker-controlled fields before `resolveCheckoutRedirectOrigin` at `:50-53` and identity resolution at `:55-61`. This permits untrusted-origin body parsing/allocation before the fail-closed boundary; malformed multipart input also escapes without the caught-parser response used by `sites/umbrella/src/app/api/editor/catalog-intake/route.ts:44-60`. | Phase 05, web request boundary |
 | `AUDIT-PACKAGE-METADATA-INTEGRITY` | Medium | `partial` | `packages/schemas/src/desktop-scene-package.ts:83-131` accepts renderer/request-supplied `manifest`, locator, and syntactically shaped digest without binding the digest to inspected bytes; non-string capabilities are discarded and `pluginVersion` only needs to be non-empty. The fields cross the renderer/IPC edge in `desktop/linux/src/lib/bridge.ts:3176-3184`, while `docs/full-editor-v1-capability-matrix.md:177` describes a contained, capability-declared, digest-stamped lock. | Phase 03, package loading |
-| `AUDIT-GOLDEN-COMMAND-OMISSIONS` | Medium | `gap` | The hand-maintained `test:golden` command in `package.json:17` omits `contained-git-golden`, `desktop-assistant-scene-loop-golden`, `full-editor-transactions-golden`, and `hosted-ai-metering-golden`, although `requirements.json:7670-7710` declares them among the live golden tests. `pnpm test` still discovers them, but `docs/runnable-surfaces.md:55-56` overstates the dedicated command. | Phase 02, checker and root workflow |
+| `AUDIT-GOLDEN-COMMAND-OMISSIONS` | Medium | `gap` | The hand-maintained `test:golden` command in `package.json:17` omits `contained-git-golden`, `desktop-assistant-scene-loop-golden`, `full-editor-transactions-golden`, and `hosted-ai-metering-golden`, although `requirements.json:7670-7710` declares them among the live golden tests. `pnpm test` still discovers them, but `docs/runnable-surfaces.md:56-61` now states the dedicated command's actual scope and names the omission. | Phase 02, checker and root workflow |
 | `AUDIT-CI-TIMEOUT-BOUND` | Medium | `gap` | `.github/workflows/gate.yml:9-31`, `.github/workflows/desktop-linux.yml:10-67`, `.github/workflows/desktop-macos.yml:23-89`, and `.github/workflows/engine-sdk.yml` declare no `timeout-minutes`. Installs, the full gate, packaging, smoke, signing, and provider checks therefore lack a repository-owned duration bound. This is an operational resource risk, not a product-runtime failure. | Phase 03, verification workflow |
 | `AUDIT-WEB-BODY-BOUND` | Medium | `partial` | `sites/umbrella/src/app/api/stripe/webhook/route.ts:35-59` uses `await request.text()`, and `sites/umbrella/src/app/api/editor/catalog-intake/route.ts:45-66` materializes `formData()` before an application-owned byte/count ceiling. Host limits may bound the deployed paths, so the review does not call this proven unbounded; changing hosts would lose the invariant. | Phase 05, external request boundaries |
-| `AUDIT-TOOLS-COUNT-DRIFT` | Low | `documentation-drift` | `docs/full-editor-v1-capability-matrix.md:47-50` still says 61 local-agent tools, while the live registry and traceability map record 67 (`docs/audits/initiation/requirements.json:7740-7755`; `Requirements-Traceability.md:53`). | Phase 02, documentation reconciliation |
-| `AUDIT-SCANNER-TEST-CLASSIFICATION` | Low | `documentation-drift` | `Initiation-Audit.md` previously called the module/capability scanner tests process-level regressions, but `tests/docs/module-coverage.test.ts:1-76` and `tests/docs/capability-matrix-audit.test.ts:1-108` directly import scanner functions. They provide unit coverage; they do not spawn the owning process. | Phase 02, checker documentation |
+| `AUDIT-TOOLS-COUNT-DRIFT` | Low | `documentation-drift` (resolved) | The audited snapshot's `docs/full-editor-v1-capability-matrix.md:47-50` said 61 local-agent tools, while the live registry and traceability map recorded 67 (`docs/audits/initiation/requirements.json:7740-7755`; `Requirements-Traceability.md:53`). The owner now records 67 and retains the prior mismatch as a dated audit observation. | Phase 02, documentation reconciliation |
+| `AUDIT-SCANNER-TEST-CLASSIFICATION` | Low | `documentation-drift` (resolved) | The audit wording is now corrected: `tests/docs/module-coverage.test.ts:1-76` and `tests/docs/capability-matrix-audit.test.ts:1-108` directly import scanner functions. They provide unit coverage; they do not spawn the owning process. | No later implementation |
 
 `AUTH-007` remains the only inventoried product-level gap: the E1
 `project dev --watch` loop is absent and its refusal is deliberate. It belongs
@@ -228,9 +230,10 @@ no additional finding.
 
 ### Handoff order
 
-1. Phase 02 should add the executable traceability checker, wire the orphaned
-   contract regressions, account for the golden command registry, and correct
-   the two documentation labels.
+1. Phase 02 should wire the orphaned contract regressions and account for the
+   four omitted golden command entries. The 61-versus-67 tool count is now
+   reconciled in the canonical capability matrix; the prior mismatch remains
+   resolved audit history alongside the corrected scanner-test classification.
 2. Phase 03 should close authoritative-root containment, validate persisted
    package catalogs, decide how package discovery binds metadata to bytes, and
    add bounded CI workflow durations.
@@ -247,6 +250,6 @@ No image was associated with this checkbox task; no image analysis was needed.
 This document establishes the source hierarchy, preserves the Phase 01 receipt,
 and records the verified cross-dimensional findings from the current checkout.
 Stable requirement IDs and live coverage remain in
-`Requirements-Traceability.md`; the gap register and executable checker remain
-separate unchecked Phase 02 tasks. This audit does not authorize implementation
-of held, delayed, dormant, or host-blocked work.
+`Requirements-Traceability.md`; the prioritized and direction-only findings
+are now registered in `Gap-Register.md`. This audit does not authorize
+implementation of held, delayed, dormant, or host-blocked work.
