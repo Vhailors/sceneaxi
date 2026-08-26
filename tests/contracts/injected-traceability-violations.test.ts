@@ -99,9 +99,9 @@ describe("traceability check — injected violations", () => {
 
   it("control: the unmodified tree passes", () => {
     const result = runCheck(fixture, CHECK);
+    expect(result.status, result.stderr).toBe(0);
     expect(result.stderr).toBe("");
     expect(result.stdout).toContain("traceability check OK");
-    expect(result.status).toBe(0);
   });
 
   it("fails when a requirement disappears from both generated audit artifacts", () => {
@@ -175,6 +175,36 @@ describe("traceability check — injected violations", () => {
     const result = runCheck(fixture, CHECK);
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("CLI verb inventory");
+  });
+
+  it("fails when a valid public CLI verb is exposed only by live registries", () => {
+    const commandsPath = join(fixture, "packages/cli/src/commands.ts");
+    const commands = readFileSync(commandsPath, "utf8");
+    const commandMarker = "    protocol: protocolGroup,\n";
+    if (!commands.includes(commandMarker)) throw new Error("missing CLI command marker");
+    writeFileSync(
+      commandsPath,
+      commands.replace(
+        commandMarker,
+        `${commandMarker}    injected: group("injected", "Injected runtime group", {\n      live: verb("live", "Injected runtime verb", () => Object.freeze({ status: "injected" })),\n    }),\n`,
+      ),
+    );
+
+    const shippedPath = join(fixture, "packages/cli/src/held-keys/shipped.ts");
+    const shipped = readFileSync(shippedPath, "utf8");
+    const shippedMarker = '    { command: "protocol inspect", heldKeys: [] },\n';
+    if (!shipped.includes(shippedMarker)) throw new Error("missing shipped command marker");
+    writeFileSync(
+      shippedPath,
+      shipped.replace(
+        shippedMarker,
+        `${shippedMarker}    { command: "injected live", heldKeys: [] },\n`,
+      ),
+    );
+
+    const result = runCheck(fixture, CHECK);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("[runtime-surface]");
   });
 
   it("fails when the executable editor registry exposes an unaccounted command", () => {

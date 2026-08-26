@@ -7,6 +7,7 @@
  * incomplete audit cannot report coverage as complete.
  */
 import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { exportEntries } from "./lib/package-exports.mjs";
@@ -28,6 +29,7 @@ const RENDERED_PATH = "docs/audits/initiation/Requirements-Traceability.md";
 const AUTHORITY_PATH = "docs/audits/initiation/requirements-authority.json";
 const RUNTIME_SURFACES_PATH = "docs/audits/initiation/runtime-surfaces.json";
 const MATRIX_PATH = "docs/dependency-matrix.json";
+const RUNTIME_TEST_PATH = "tests/docs/traceability-runtime-surfaces.test.ts";
 
 function displayPath(root, path) {
   return relative(root, path).replaceAll("\\", "/") || ".";
@@ -411,6 +413,8 @@ function checkEvidenceAndRegistries(root, inventory, runtimeSurfaces, errors) {
   }
   const runtimeRegistries = (runtimeSurfaces?.refusalRegistries ?? []).map((entry) => `${entry?.path}#${entry?.symbol}`);
   if (!arraysEqual([...seen], runtimeRegistries)) errors.push("[refusal-registry] refusal registry inventory differs from the executable runtime surface");
+  const registryPaths = registries.map((entry) => entry?.path).filter(Boolean);
+  if (!arraysEqual(registryPaths, inventory?.refusalRegistryPaths ?? [])) errors.push("[refusal-registry] refusal registry path catalog is stale or incomplete");
 }
 
 export function checkTraceability(root = resolve(dirname(fileURLToPath(import.meta.url)), "..")) {
@@ -429,9 +433,24 @@ export function checkTraceability(root = resolve(dirname(fileURLToPath(import.me
   return errors;
 }
 
+function checkLiveRuntimeSurfaces(root) {
+  const runner = join(root, "node_modules/vitest/vitest.mjs");
+  if (!existsSync(runner)) return "[runtime-surface] Vitest runner is unavailable";
+  const result = spawnSync(
+    process.execPath,
+    [runner, "run", RUNTIME_TEST_PATH, "--reporter=dot"],
+    { cwd: root, encoding: "utf8" },
+  );
+  if (result.status === 0) return undefined;
+  const detail = (result.stderr || result.stdout || "runtime validation failed").trim();
+  return `[runtime-surface] live registry validation failed\n${detail}`;
+}
+
 function main() {
   const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
   const errors = checkTraceability(root);
+  const runtimeError = checkLiveRuntimeSurfaces(root);
+  if (runtimeError !== undefined) errors.push(runtimeError);
   if (errors.length > 0) {
     console.error(`traceability check FAILED (${errors.length} error${errors.length === 1 ? "" : "s"})`);
     for (const error of errors) console.error(error);

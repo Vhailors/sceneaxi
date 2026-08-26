@@ -1,0 +1,69 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
+import { repoRoot } from "../helpers/fixture.ts";
+import {
+  traceabilityPublicModulePaths,
+  traceabilityRuntimeSurfaces,
+} from "../helpers/traceability-runtime.ts";
+
+function normalized(value: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(value).map(([key, entry]) => {
+      if (!Array.isArray(entry)) return [key, entry];
+      if (key === "heldKeyEntries") {
+        return [
+          key,
+          entry
+            .map((item) => {
+              const row = item as { command: string; heldKeys: string[] };
+              return { command: row.command, heldKeys: [...row.heldKeys].sort() };
+            })
+            .sort((left, right) => left.command.localeCompare(right.command)),
+        ];
+      }
+      if (key === "refusalRegistries") {
+        return [
+          key,
+          [...entry].sort((left, right) =>
+            JSON.stringify(left).localeCompare(JSON.stringify(right))),
+        ];
+      }
+      return [key, [...entry].sort()];
+    }),
+  );
+}
+
+describe("traceability runtime surfaces", () => {
+  it("matches every exported executable registry to the generated protocol", () => {
+    const generated = JSON.parse(
+      readFileSync(
+        join(repoRoot, "docs/audits/initiation/runtime-surfaces.json"),
+        "utf8",
+      ),
+    ) as Record<string, unknown>;
+    const runtime = traceabilityRuntimeSurfaces() as unknown as Record<string, unknown>;
+    const normalizedGenerated = normalized(generated);
+    const normalizedRuntime = normalized(runtime);
+    for (const key of Object.keys(normalizedRuntime)) {
+      expect(normalizedGenerated[key], key).toEqual(normalizedRuntime[key]);
+    }
+
+    const inventory = JSON.parse(
+      readFileSync(
+        join(repoRoot, "docs/audits/initiation/requirements.json"),
+        "utf8",
+      ),
+    ) as {
+      liveInventory: {
+        packages: Array<{ status?: string; seam: { path: string } | null }>;
+      };
+    };
+    const publicSeams = inventory.liveInventory.packages
+      .filter((entry) => entry.status !== "delayed")
+      .map((entry) => entry.seam?.path)
+      .filter((path): path is string => path !== undefined)
+      .sort();
+    expect(traceabilityPublicModulePaths()).toEqual(publicSeams);
+  });
+});

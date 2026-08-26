@@ -6,6 +6,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -30,6 +31,7 @@ const COPY_FILES = [
   ".gitignore",
   "tsconfig.json",
   "tsconfig.base.json",
+  "vitest.config.ts",
 ];
 // `release` and `dist-build` are desktop-tier packaging output (ADR 0024): heavy
 // binaries the checkers never read, so copying them would only slow every fixture.
@@ -53,9 +55,14 @@ export function makeFixture(): string {
     cpSync(join(repoRoot, file), join(root, file));
   }
   symlinkSync(join(repoRoot, "node_modules"), join(root, "node_modules"), "dir");
-  const desktopModules = join(repoRoot, "desktop/linux/node_modules");
-  if (existsSync(desktopModules)) {
-    symlinkSync(desktopModules, join(root, "desktop/linux/node_modules"), "dir");
+  for (const top of ["packages", "apps", "sites", "desktop"]) {
+    for (const entry of readdirSync(join(repoRoot, top), { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const sourceModules = join(repoRoot, top, entry.name, "node_modules");
+      if (existsSync(sourceModules)) {
+        symlinkSync(sourceModules, join(root, top, entry.name, "node_modules"), "dir");
+      }
+    }
   }
   return root;
 }
