@@ -287,12 +287,17 @@ describe("traceability check — injected violations", () => {
       const omittedReleaseOwners = new Set([
         "desktop/linux/electron-builder.yml",
         "desktop/linux/package.json",
+        "desktop/linux/pnpm-lock.yaml",
+        "desktop/linux/scripts/build.mjs",
         "desktop/linux/scripts/build-linux.mjs",
+        "desktop/linux/scripts/renderer-bundle.mjs",
         "desktop/macos/electron-builder.yml",
         "desktop/macos/package.json",
+        "desktop/macos/pnpm-lock.yaml",
         "desktop/macos/scripts/build.mjs",
         "desktop/windows/electron-builder.yml",
         "desktop/windows/package.json",
+        "desktop/windows/pnpm-lock.yaml",
         "desktop/windows/scripts/build.mjs",
       ]);
       inventory.liveInventory.providerEntrypoints =
@@ -321,12 +326,17 @@ describe("traceability check — injected violations", () => {
     expect(result.stderr).toContain("[release-owners]");
     expect(result.stderr).toContain("desktop/linux/electron-builder.yml");
     expect(result.stderr).toContain("desktop/linux/package.json");
+    expect(result.stderr).toContain("desktop/linux/pnpm-lock.yaml");
+    expect(result.stderr).toContain("desktop/linux/scripts/build.mjs");
     expect(result.stderr).toContain("desktop/linux/scripts/build-linux.mjs");
+    expect(result.stderr).toContain("desktop/linux/scripts/renderer-bundle.mjs");
     expect(result.stderr).toContain("desktop/macos/electron-builder.yml");
     expect(result.stderr).toContain("desktop/macos/package.json");
+    expect(result.stderr).toContain("desktop/macos/pnpm-lock.yaml");
     expect(result.stderr).toContain("desktop/macos/scripts/build.mjs");
     expect(result.stderr).toContain("desktop/windows/electron-builder.yml");
     expect(result.stderr).toContain("desktop/windows/package.json");
+    expect(result.stderr).toContain("desktop/windows/pnpm-lock.yaml");
     expect(result.stderr).toContain("desktop/windows/scripts/build.mjs");
   });
 

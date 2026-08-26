@@ -51,7 +51,7 @@ Turn the repository's many specifications into one checked map from requirement 
   entries, 66 editor commands, 112 desktop controls, 11 bridge actions, 10
   authoring operations, three assistant operations, 67 local-agent tools, 22
   routes, five migrations, nine provider entrypoints, 68 refusal registries,
-  four workflows, 45 golden tests, 15 browser records, and 19 release
+  four workflows, 45 golden tests, 15 browser records, and 24 release
   artifacts. Path checks found no
   stale resolved files; the live join is 106 `mapped`, two `refuse-only`, and
   one `gap` row. Existing documentation drift (the capability matrix's 61-tool
