@@ -25,6 +25,7 @@ import * as siteCatalogGame from "../../sites/catalog-game/src/index.js";
 import * as siteCatalogWeb from "../../sites/catalog-web/src/index.js";
 import * as siteKids from "../../sites/kids/src/index.js";
 import * as siteUmbrella from "../../sites/umbrella/src/index.js";
+import * as betterAuthProviderRefusals from "../../sites/umbrella/src/provider/better-auth-provider-refusals.js";
 
 export type TraceabilityRuntimeSurfaces = Readonly<{
   schemaVersion: 1;
@@ -66,6 +67,13 @@ const PUBLIC_MODULES = Object.freeze([
   { path: "desktop/linux/src/index.ts", exports: desktopLinux },
   { path: "desktop/windows/src/index.ts", exports: desktopWindows },
   { path: "desktop/macos/src/index.ts", exports: desktopMacos },
+] as const);
+
+const PROVIDER_SAFE_MODULES = Object.freeze([
+  {
+    path: "sites/umbrella/src/provider/better-auth-provider-refusals.ts",
+    exports: betterAuthProviderRefusals,
+  },
 ] as const);
 
 const REFUSAL_REGISTRY_NAME = /(?:_REFUSALS|_REFUSE_REASONS|_REFUSAL_REASONS|_REFUSE_CODES|_ERROR_CODES)$/;
@@ -118,7 +126,7 @@ function assertRegistry(value: unknown, symbol: string): void {
 }
 
 function refusalRegistries(): Array<{ path: string; symbol: string }> {
-  return PUBLIC_MODULES.flatMap((module) =>
+  return [...PUBLIC_MODULES, ...PROVIDER_SAFE_MODULES].flatMap((module) =>
     Object.entries(module.exports)
       .filter(([symbol]) => REFUSAL_REGISTRY_NAME.test(symbol))
       .map(([symbol, value]) => {

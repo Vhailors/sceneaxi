@@ -7867,6 +7867,10 @@
       {
         "path": "sites/kids/src/index.ts",
         "symbol": "KIDS_ACTIVITY_REFUSE_REASONS"
+      },
+      {
+        "path": "sites/umbrella/src/provider/better-auth-provider-refusals.ts",
+        "symbol": "BETTER_AUTH_PROVIDER_REFUSALS"
       }
     ],
     "workflows": [
@@ -7978,7 +7982,8 @@
       "packages/provider-openrouter/src/index.ts",
       "packages/schemas/src/index.ts",
       "packages/site-kit/src/index.ts",
-      "sites/kids/src/index.ts"
+      "sites/kids/src/index.ts",
+      "sites/umbrella/src/provider/better-auth-provider-refusals.ts"
     ]
   },
   "liveMapVersion": 1,

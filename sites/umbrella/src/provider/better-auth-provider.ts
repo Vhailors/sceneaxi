@@ -17,16 +17,15 @@ import { betterAuth, type BetterAuthOptions } from "better-auth";
 import { hashPassword, verifyPassword } from "better-auth/crypto";
 import { bearer } from "better-auth/plugins";
 import { Pool, types as pgTypes, type PoolClient } from "pg";
+import {
+  BETTER_AUTH_PROVIDER_REFUSALS,
+  type BetterAuthProviderRefusal,
+} from "./better-auth-provider-refusals.js";
 
-export const BETTER_AUTH_PROVIDER_REFUSALS = Object.freeze({
-  configurationAbsent: "BETTER_AUTH_PROVIDER_CONFIGURATION_ABSENT",
-  configurationInvalid: "BETTER_AUTH_PROVIDER_CONFIGURATION_INVALID",
-  bootstrapDisagreement: "BETTER_AUTH_PROVIDER_BOOTSTRAP_DISAGREEMENT",
-  storageUnavailable: "BETTER_AUTH_PROVIDER_STORAGE_UNAVAILABLE",
-} as const);
-
-export type BetterAuthProviderRefusal =
-  (typeof BETTER_AUTH_PROVIDER_REFUSALS)[keyof typeof BETTER_AUTH_PROVIDER_REFUSALS];
+export {
+  BETTER_AUTH_PROVIDER_REFUSALS,
+  type BetterAuthProviderRefusal,
+} from "./better-auth-provider-refusals.js";
 
 export type BetterAuthProviderConfig = Readonly<{
   databaseUrl: string;
