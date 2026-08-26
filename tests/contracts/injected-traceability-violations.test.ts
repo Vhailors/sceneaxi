@@ -25,6 +25,10 @@ type Inventory = {
     editor: {
       controls: string[];
     };
+    routes: string[];
+    counts: {
+      routes: number;
+    };
   };
 };
 
@@ -260,6 +264,18 @@ describe("traceability check — injected violations", () => {
     const result = runCheck(fixture, CHECK);
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("routes inventory");
+  });
+
+  it("fails when a route and its declared count are duplicated together", () => {
+    mutateInventory(fixture, (inventory) => {
+      const route = inventory.liveInventory.routes.at(0);
+      if (route === undefined) throw new Error("expected an inventoried route");
+      inventory.liveInventory.routes.push(route);
+      inventory.liveInventory.counts.routes += 1;
+    });
+    const result = runCheck(fixture, CHECK);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("[surface-duplicate] routes");
   });
 
   it("fails when a public package export is added without inventory coverage", () => {

@@ -7893,6 +7893,10 @@
         "symbol": "KIDS_ACTIVITY_REFUSE_REASONS"
       },
       {
+        "path": "sites/umbrella/src/index.ts",
+        "symbol": "CREDIT_WEBHOOK_REASONS"
+      },
+      {
         "path": "sites/umbrella/src/provider/better-auth-provider-refusals.ts",
         "symbol": "BETTER_AUTH_PROVIDER_REFUSALS"
       }
@@ -8008,6 +8012,7 @@
       "packages/schemas/src/index.ts",
       "packages/site-kit/src/index.ts",
       "sites/kids/src/index.ts",
+      "sites/umbrella/src/index.ts",
       "sites/umbrella/src/provider/better-auth-provider-refusals.ts"
     ]
   },

@@ -68,7 +68,15 @@ function extra(expected, actual) {
 }
 
 function arraysEqual(left, right) {
-  return JSON.stringify(unique(left)) === JSON.stringify(unique(right));
+  return JSON.stringify([...left].sort()) === JSON.stringify([...right].sort());
+}
+
+function rejectDuplicates(values, label, errors) {
+  if (!Array.isArray(values)) return;
+  const duplicates = values.filter((value, index) => values.indexOf(value) !== index);
+  if (duplicates.length > 0) {
+    errors.push(`[surface-duplicate] ${label} contains duplicate entries: ${unique(duplicates).join(", ")}`);
+  }
 }
 
 function walkFiles(root, directory, predicate) {
@@ -313,6 +321,7 @@ function checkPackages(root, inventory, matrix, errors) {
     return;
   }
   const actual = rows.map((row) => row?.name).filter(Boolean);
+  rejectDuplicates(actual, "packages", errors);
   if (!arraysEqual(expected, actual)) errors.push(`[package-accounting] package set differs (missing: ${missing(expected, actual).join(", ") || "none"}; extra: ${extra(expected, actual).join(", ") || "none"})`);
   for (const row of rows) {
     const delayed = matrix?.delayed?.[row.name] !== undefined;
@@ -344,18 +353,32 @@ function checkPackages(root, inventory, matrix, errors) {
 function checkInventorySurface(root, inventory, runtimeSurfaces, errors) {
   if (runtimeSurfaces?.schemaVersion !== 1) errors.push("[surface-accounting] unsupported runtime surface schema version");
   const declaredCli = inventory?.cli?.verbs ?? [];
+  const heldCommands = (inventory?.cli?.heldKeyEntries ?? []).map((entry) => entry?.command);
+  const editor = inventory?.editor;
+  for (const [label, values] of [
+    ["CLI verbs", declaredCli],
+    ["held-key commands", heldCommands],
+    ["editor commands", editor?.commands],
+    ["desktop controls", editor?.controls],
+    ["bridge actions", inventory?.bridge?.actions],
+    ["authoring operations", inventory?.bridge?.authoringOperations],
+    ["assistant operations", inventory?.bridge?.assistantOperations],
+    ["local-agent tools", inventory?.bridge?.localAgentTools],
+    ["routes", inventory?.routes],
+    ["migrations", inventory?.migrations],
+    ["workflows", inventory?.workflows],
+    ["golden tests", inventory?.goldenTests],
+  ]) rejectDuplicates(values, label, errors);
   const runtimeCli = runtimeSurfaces?.cliVerbs ?? [];
   if (runtimeCli.length !== inventory?.cli?.verbCount || !arraysEqual(runtimeCli, declaredCli)) errors.push("[surface-accounting] CLI verb inventory is stale or incomplete");
   const runtimeHeldCommands = (runtimeSurfaces?.heldKeyEntries ?? []).map((entry) => entry?.command);
   if (!arraysEqual(runtimeHeldCommands, declaredCli)) errors.push("[surface-accounting] held-key command map is stale or incomplete");
-  const heldCommands = (inventory?.cli?.heldKeyEntries ?? []).map((entry) => entry?.command);
   if (!arraysEqual(heldCommands, declaredCli)) errors.push("[surface-accounting] held-key entries do not cover every CLI verb");
   if (JSON.stringify(runtimeSurfaces?.heldKeyEntries ?? []) !== JSON.stringify(inventory?.cli?.heldKeyEntries ?? [])) errors.push("[surface-accounting] held-key entry semantics differ from the runtime surface");
 
   const editorIds = runtimeSurfaces?.editorCommands ?? [];
   if (editorIds.length !== inventory?.editor?.commandCount || !arraysEqual(editorIds, inventory?.editor?.commands ?? [])) errors.push("[surface-accounting] editor command inventory is stale or incomplete");
 
-  const editor = inventory?.editor;
   if (!Array.isArray(editor?.controls) || new Set(editor.controls).size !== editor.controls.length || editor.controls.length !== editor.controlCount || editor.controlCount !== inventory?.counts?.desktopControls) {
     errors.push("[surface-accounting] desktop control inventory is stale, duplicated, or incomplete");
   }
@@ -400,6 +423,12 @@ function checkInventorySurface(root, inventory, runtimeSurfaces, errors) {
 }
 
 function checkEvidenceAndRegistries(root, inventory, runtimeSurfaces, errors) {
+  for (const [label, values] of [
+    ["provider entrypoints", inventory?.providerEntrypoints],
+    ["browser evidence", inventory?.browserEvidence],
+    ["release artifacts", inventory?.releaseArtifacts],
+    ["refusal registry paths", inventory?.refusalRegistryPaths],
+  ]) rejectDuplicates(values, label, errors);
   for (const entry of [...(inventory?.providerEntrypoints ?? []), ...(inventory?.browserEvidence ?? []), ...(inventory?.releaseArtifacts ?? [])]) {
     if (!resolveReference(root, entry)) errors.push(`[evidence-path] stale evidence or provider path: ${entry}`);
   }
@@ -414,7 +443,7 @@ function checkEvidenceAndRegistries(root, inventory, runtimeSurfaces, errors) {
   const runtimeRegistries = (runtimeSurfaces?.refusalRegistries ?? []).map((entry) => `${entry?.path}#${entry?.symbol}`);
   if (!arraysEqual([...seen], runtimeRegistries)) errors.push("[refusal-registry] refusal registry inventory differs from the executable runtime surface");
   const registryPaths = registries.map((entry) => entry?.path).filter(Boolean);
-  if (!arraysEqual(registryPaths, inventory?.refusalRegistryPaths ?? [])) errors.push("[refusal-registry] refusal registry path catalog is stale or incomplete");
+  if (!arraysEqual(unique(registryPaths), inventory?.refusalRegistryPaths ?? [])) errors.push("[refusal-registry] refusal registry path catalog is stale or incomplete");
 }
 
 export function checkTraceability(root = resolve(dirname(fileURLToPath(import.meta.url)), "..")) {

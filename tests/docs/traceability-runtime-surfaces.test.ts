@@ -20,6 +20,10 @@ import {
   createAccountPanel,
   createAssistantPanel,
 } from "../../apps/web-shell/src/index.js";
+import {
+  CREDIT_WEBHOOK_REASONS,
+  creditWebhookHttpStatus,
+} from "../../sites/umbrella/src/index.js";
 import { repoRoot } from "../helpers/fixture.ts";
 import {
   traceabilityPublicModulePaths,
@@ -133,6 +137,20 @@ describe("traceability runtime surfaces", () => {
           path: `$operation.${operation}`,
         },
       });
+    }
+  });
+
+  it("catalogs webhook reasons with public status parity", () => {
+    const runtime = traceabilityRuntimeSurfaces();
+    expect(runtime.refusalRegistries).toContainEqual({
+      path: "sites/umbrella/src/index.ts",
+      symbol: "CREDIT_WEBHOOK_REASONS",
+    });
+    const requestReasons = new Set<string>([CREDIT_WEBHOOK_REASONS.eventUnrelated]);
+    for (const reason of Object.values(CREDIT_WEBHOOK_REASONS)) {
+      expect(creditWebhookHttpStatus(reason), reason).toBe(
+        requestReasons.has(reason) ? 400 : 503,
+      );
     }
   });
 });

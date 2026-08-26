@@ -12,10 +12,15 @@
  * packages need — Better Auth, Neon, the Stripe API — arrive when a deployment has them.
  */
 import type { PackageSeam } from "@sceneaxi/site-kit";
+import { CREDIT_WEBHOOK_REASONS } from "./lib/credit-webhook.js";
 
 export const seam: PackageSeam = Object.freeze({
   name: "@sceneaxi/site-umbrella",
   releaseGroup: "sites",
+});
+
+export const SCENEAXI_REFUSAL_REGISTRY_CATALOG = Object.freeze({
+  CREDIT_WEBHOOK_REASONS,
 });
 
 export {

@@ -46,7 +46,7 @@ The complete enumerations live under `liveInventory` in [`requirements.json`](re
 | Local-agent tools | 67 | `packages/schemas/src/desktop-local-bridge.ts` |
 | Site routes / API routes | 22 | `sites/*/src/app/**` |
 | Forward-only migrations | 5 | `db/migrations; tests/db/schema-lockstep.test.ts` |
-| Provider entrypoints / refusal registries | 5 / 66 | `provider entrypoints, provider-safe contracts, and public package seams` |
+| Provider entrypoints / refusal registries | 5 / 67 | `provider entrypoints, provider-safe contracts, and public package seams` |
 | Workflows / golden tests | 4 / 45 | `.github/workflows; tests/e2e/*golden.test.ts` |
 | Browser / release evidence | 4 / 7 | `browser records and release owners` |
 
