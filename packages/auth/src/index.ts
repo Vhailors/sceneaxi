@@ -66,6 +66,7 @@ export {
 } from "./store.js";
 
 export {
+  SCENEAXI_PROVIDER_ENTRYPOINT_CATALOG,
   createBetterAuthIdentityAdapter,
   mapBetterAuthAuthentication,
   type BetterAuthAuthentication,

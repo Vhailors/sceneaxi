@@ -133,6 +133,7 @@ claim a guarantee the gate does not enforce.
 | `desktop/macos/scripts/dist.mjs` |
 | `desktop/macos/scripts/release-provenance.mjs` |
 | `desktop/windows/scripts/package-release.mjs` |
+| `desktop/windows/scripts/dist.mjs` |
 | `desktop/windows/scripts/release-preflight.mjs` |
 | `desktop/windows/scripts/release.mjs` |
 <!-- traceability:release-owners:end -->

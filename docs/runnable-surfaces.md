@@ -23,6 +23,7 @@ a marketing word.
 | `sites/catalog-game/README.md` |
 | `sites/catalog-web/README.md` |
 | `docs/design-foundations.md` |
+| `docs/desktop-linux.md` |
 | `docs/engine-desktop-surface.md` |
 | `docs/kernel-browser-open.md` |
 | `docs/three-presentation-core.md` |

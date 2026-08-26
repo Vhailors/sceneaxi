@@ -1,5 +1,4 @@
 import * as auth from "../../packages/auth/src/index.js";
-import * as authBetterAuthAdapter from "../../packages/auth/src/better-auth-adapter.js";
 import * as authoringCore from "../../packages/authoring-core/src/index.js";
 import * as authoringModelProvider from "../../packages/authoring-core/src/model-provider-port.js";
 import * as billing from "../../packages/billing/src/index.js";
@@ -88,7 +87,7 @@ const REFUSAL_REGISTRY_CATALOG = "SCENEAXI_REFUSAL_REGISTRY_CATALOG";
 const PROVIDER_ENTRYPOINT_CATALOG = "SCENEAXI_PROVIDER_ENTRYPOINT_CATALOG";
 
 const PROVIDER_MODULES = Object.freeze([
-  authBetterAuthAdapter,
+  auth,
   authoringModelProvider,
   providerOpenrouter,
   siteProviderAdapters,
@@ -158,6 +157,12 @@ function providerEntrypoints(): string[] {
       if (paths.has(path)) throw new Error(`duplicate executable provider entrypoint ${path}`);
       paths.add(path);
     }
+  }
+  if (
+    auth.SCENEAXI_PROVIDER_ENTRYPOINT_CATALOG["packages/auth/src/index.ts"] !==
+    auth.createBetterAuthIdentityAdapter
+  ) {
+    throw new Error("packages/auth/src/index.ts provider witness is not its public root export");
   }
   return [...paths].sort();
 }

@@ -137,10 +137,15 @@ describe("traceability check — injected violations", () => {
         "packages/schemas";
     });
     renameSync(join(fixture, "packages/cli/bin"), join(fixture, "packages/cli/bin-renamed"));
+    renameSync(
+      join(fixture, "packages/authoring-core/test/transaction-history.test.ts"),
+      join(fixture, "packages/authoring-core/test/transaction-history.renamed.ts"),
+    );
     const result = runCheck(fixture, CHECK);
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("[implementation-resolution]");
     expect(result.stderr).toContain("packages/*/bin");
+    expect(result.stderr).toContain("packages/authoring-core/test/");
   });
 
   it("fails when a real proof link loses its resolved path", () => {
@@ -279,11 +284,11 @@ describe("traceability check — injected violations", () => {
         );
       inventory.liveInventory.browserEvidence =
         inventory.liveInventory.browserEvidence.filter(
-          (entry) => entry !== "sites/umbrella/VISUAL-EVIDENCE.md",
+          (entry) => entry !== "docs/desktop-linux.md",
         );
       inventory.liveInventory.releaseArtifacts =
         inventory.liveInventory.releaseArtifacts.filter(
-          (entry) => entry !== "desktop/linux/scripts/dist.mjs",
+          (entry) => entry !== "desktop/windows/scripts/dist.mjs",
         );
     });
     const result = runCheck(fixture, CHECK);
@@ -292,13 +297,13 @@ describe("traceability check — injected violations", () => {
     expect(result.stderr).toContain("packages/auth/src/index.ts");
     expect(result.stderr).toContain("desktop/linux/src/electron/live-transport.ts");
     expect(result.stderr).toContain("[browser-evidence]");
-    expect(result.stderr).toContain("sites/umbrella/VISUAL-EVIDENCE.md");
+    expect(result.stderr).toContain("docs/desktop-linux.md");
     expect(result.stderr).toContain("[release-owners]");
-    expect(result.stderr).toContain("desktop/linux/scripts/dist.mjs");
+    expect(result.stderr).toContain("desktop/windows/scripts/dist.mjs");
   });
 
   it("fails when a site route is added without inventory coverage", () => {
-    writeTo(fixture, "sites/umbrella/src/app/injected-route/page.tsx", "export default function Page() { return null; }\n");
+    writeTo(fixture, "sites/umbrella/src/app/injected-route/page.jsx", "export default function Page() { return null; }\n");
     const result = runCheck(fixture, CHECK);
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("routes inventory");

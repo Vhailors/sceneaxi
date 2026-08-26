@@ -175,7 +175,7 @@ function resolveDeclaredReference(root, reference) {
   }
   if (reference.startsWith("@sceneaxi/")) return packageReferencePaths(root, reference);
   if (reference.includes("*")) return wildcardReferencePaths(root, reference);
-  if (reference.endsWith("/")) return walkFiles(root, reference.slice(0, -1), () => true).slice(0, 8);
+  if (reference.endsWith("/")) return walkFiles(root, reference.slice(0, -1), () => true);
   return resolveReference(root, reference) ? [reference] : [];
 }
 
@@ -477,7 +477,11 @@ function checkInventorySurface(root, inventory, runtimeSurfaces, errors) {
   const toolNames = runtimeSurfaces?.localAgentTools ?? [];
   if (!arraysEqual(toolNames, inventory?.bridge?.localAgentTools ?? [])) errors.push("[surface-accounting] local-agent tool inventory is stale or incomplete");
 
-  const expectedRoutes = walkFiles(root, "sites", (path, name) => name === "page.tsx" || name === "route.ts").filter((path) => path.includes("/src/app/"));
+  const expectedRoutes = walkFiles(
+    root,
+    "sites",
+    (path, name) => /^(?:page\.(?:js|jsx|ts|tsx)|route\.(?:js|ts))$/.test(name),
+  ).filter((path) => path.includes("/src/app/"));
   const expectedMigrations = walkFiles(root, "db/migrations", (path, name) => name.endsWith(".sql"));
   const expectedWorkflows = walkFiles(root, ".github/workflows", (path, name) => name.endsWith(".yml") || name.endsWith(".yaml"));
   const expectedGoldens = walkFiles(root, "tests/e2e", (path, name) => name.endsWith("-golden.test.ts"));
