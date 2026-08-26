@@ -202,6 +202,10 @@ export const REFUSAL_CODES: readonly RefusalCode[] = Object.freeze([
   }),
 ]);
 
+export function docsRefusalCodes(): readonly RefusalCode[] {
+  return REFUSAL_CODES;
+}
+
 /** One durable fact about how credits behave on the account and checkout surfaces. */
 export interface CreditLedgerFact {
   readonly title: string;

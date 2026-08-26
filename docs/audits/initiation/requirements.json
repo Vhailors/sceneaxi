@@ -7626,6 +7626,7 @@
     ],
     "providerEntrypoints": [
       "sites/umbrella/src/provider/better-auth-provider.ts",
+      "sites/umbrella/src/lib/provider-adapters.ts",
       "packages/provider-openrouter/src/index.ts",
       "packages/authoring-core/src/model-provider-port.ts",
       "desktop/linux/src/electron/provider-runtime.ts",
@@ -7895,6 +7896,10 @@
       {
         "path": "sites/umbrella/src/index.ts",
         "symbol": "CREDIT_WEBHOOK_REASONS"
+      },
+      {
+        "path": "sites/umbrella/src/index.ts",
+        "symbol": "REFUSAL_CODES"
       },
       {
         "path": "sites/umbrella/src/provider/better-auth-provider-refusals.ts",

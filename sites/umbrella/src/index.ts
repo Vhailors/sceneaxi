@@ -13,6 +13,7 @@
  */
 import type { PackageSeam } from "@sceneaxi/site-kit";
 import { CREDIT_WEBHOOK_REASONS } from "./lib/credit-webhook.js";
+import { REFUSAL_CODES } from "./lib/site-content.js";
 
 export const seam: PackageSeam = Object.freeze({
   name: "@sceneaxi/site-umbrella",
@@ -21,6 +22,10 @@ export const seam: PackageSeam = Object.freeze({
 
 export const SCENEAXI_REFUSAL_REGISTRY_CATALOG = Object.freeze({
   CREDIT_WEBHOOK_REASONS,
+  REFUSAL_CODES: Object.freeze({
+    registry: REFUSAL_CODES,
+    values: Object.freeze(REFUSAL_CODES.map((entry) => entry.code)),
+  }),
 });
 
 export {
@@ -156,6 +161,13 @@ export {
   STRIPE_WEBHOOK_SECRET_ENV,
   applyCreditPackWebhook,
   creditWebhookHttpStatus,
+  creditWebhookOutcomeHttpStatus,
   type CheckoutEvidencePort,
   type CreditWebhookOutcome,
 } from "./lib/credit-webhook.js";
+
+export {
+  REFUSAL_CODES,
+  docsRefusalCodes,
+  type RefusalCode,
+} from "./lib/site-content.js";

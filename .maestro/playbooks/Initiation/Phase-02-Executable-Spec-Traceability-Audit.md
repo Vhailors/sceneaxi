@@ -50,8 +50,9 @@ Turn the repository's many specifications into one checked map from requirement 
   for 26 matrix packages plus four delayed slots, 21 CLI verbs and held-key
   entries, 66 editor commands, 112 desktop controls, 11 bridge actions, 10
   authoring operations, three assistant operations, 67 local-agent tools, 22
-  routes, five migrations, 67 refusal registries, four workflows, 45 golden
-  tests, four browser records, and seven release artifacts. Path checks found no
+  routes, five migrations, six provider entrypoints, 68 refusal registries,
+  four workflows, 45 golden tests, four browser records, and seven release
+  artifacts. Path checks found no
   stale resolved files; the live join is 106 `mapped`, two `refuse-only`, and
   one `gap` row. Existing documentation drift (the capability matrix's 61-tool
   claim versus the live 67-tool registry) remains recorded for the later
@@ -92,8 +93,8 @@ Turn the repository's many specifications into one checked map from requirement 
   editor-command, desktop-control, bridge/tool, route, migration, workflow, and
   golden-test surface accounting, plus refusal-registry validation. Added
   `tests/docs/traceability-check.test.ts` and
-  `tests/contracts/injected-traceability-violations.test.ts` with 17 passing
-  cases: one live-tree control plus 16 independent injected-drift regressions.
+  `tests/contracts/injected-traceability-violations.test.ts` with 18 passing
+  cases: one live-tree control plus 17 independent injected-drift regressions.
   Wired `check:traceability` after `check:contracts` in
   `package.json`, copied `db/` and package test evidence into process fixtures,
   and documented the checker in `Initiation-Audit.md`. `pnpm test:golden` passed

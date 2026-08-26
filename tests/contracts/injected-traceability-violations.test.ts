@@ -25,6 +25,7 @@ type Inventory = {
     editor: {
       controls: string[];
     };
+    providerEntrypoints: string[];
     routes: string[];
     counts: {
       routes: number;
@@ -38,6 +39,7 @@ type RuntimeSurfaces = {
   desktopControls: string[];
   bridgeActions: string[];
   localAgentTools: string[];
+  providerEntrypoints: string[];
   refusalRegistries: Array<{ path: string; symbol: string }>;
 };
 
@@ -257,6 +259,18 @@ describe("traceability check — injected violations", () => {
     const result = runCheck(fixture, CHECK);
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("refusal registry inventory");
+  });
+
+  it("fails when an executable provider entrypoint is missing from inventory", () => {
+    mutateInventory(fixture, (inventory) => {
+      inventory.liveInventory.providerEntrypoints =
+        inventory.liveInventory.providerEntrypoints.filter(
+          (entry) => entry !== "sites/umbrella/src/lib/provider-adapters.ts",
+        );
+    });
+    const result = runCheck(fixture, CHECK);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("[provider-entrypoint]");
   });
 
   it("fails when a site route is added without inventory coverage", () => {

@@ -1,5 +1,5 @@
 import { SITE_CATALOG_POLICY_CITES } from "@sceneaxi/site-kit";
-import { REFUSAL_CODES } from "../../lib/site-content.js";
+import { docsRefusalCodes } from "../../lib/site-content.js";
 
 /**
  * Documentation index, in the accepted three-column docs shell.
@@ -196,7 +196,7 @@ export default function DocsPage() {
           delivering an object that quietly missed the brief.
         </p>
         <dl className="code-defs">
-          {REFUSAL_CODES.map((refusal) => (
+            {docsRefusalCodes().map((refusal) => (
             <div className="contents" key={refusal.code}>
               <dt>{refusal.code}</dt>
               <dd>{refusal.what}</dd>

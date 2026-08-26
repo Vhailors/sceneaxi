@@ -29,6 +29,7 @@ import {
   CREDIT_WEBHOOK_REASONS,
   STRIPE_SIGNATURE_HEADER,
   creditWebhookHttpStatus,
+  creditWebhookOutcomeHttpStatus,
   type CreditWebhookOutcome,
 } from "./credit-webhook.js";
 
@@ -38,6 +39,7 @@ export {
   IDENTITY_PLANE_PENDING_NOTE,
   STRIPE_SIGNATURE_HEADER,
   creditWebhookHttpStatus,
+  creditWebhookOutcomeHttpStatus,
 };
 
 export type UmbrellaRequestEvidence = Readonly<{

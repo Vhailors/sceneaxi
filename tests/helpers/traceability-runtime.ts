@@ -19,6 +19,7 @@ import * as catalogWeb from "../../apps/catalog-web/src/index.js";
 import * as desktopShell from "../../apps/desktop-shell/src/index.js";
 import * as webShell from "../../apps/web-shell/src/index.js";
 import * as desktopLinux from "../../desktop/linux/src/index.js";
+import * as desktopProviderRuntime from "../../desktop/linux/src/electron/provider-runtime.js";
 import * as desktopMacos from "../../desktop/macos/src/index.js";
 import * as desktopWindows from "../../desktop/windows/src/index.js";
 import * as siteCatalogGame from "../../sites/catalog-game/src/index.js";
@@ -37,6 +38,7 @@ export type TraceabilityRuntimeSurfaces = Readonly<{
   authoringOperations: readonly string[];
   assistantOperations: readonly string[];
   localAgentTools: readonly string[];
+  providerEntrypoints: readonly string[];
   refusalRegistries: readonly Readonly<{ path: string; symbol: string }>[];
 }>;
 
@@ -78,6 +80,33 @@ const PROVIDER_SAFE_MODULES = Object.freeze([
 
 const REFUSAL_REGISTRY_NAME = /(?:_REFUSALS|_REFUSE_REASONS|_REFUSAL_REASONS|_REFUSE_CODES|_ERROR_CODES)$/;
 const REFUSAL_REGISTRY_CATALOG = "SCENEAXI_REFUSAL_REGISTRY_CATALOG";
+
+export const TRACEABILITY_PROVIDER_ENTRYPOINT_CATALOG = Object.freeze([
+  {
+    path: "sites/umbrella/src/provider/better-auth-provider.ts",
+    witness: betterAuthProviderRefusals.BETTER_AUTH_PROVIDER_REFUSALS,
+  },
+  {
+    path: "sites/umbrella/src/lib/provider-adapters.ts",
+    witness: siteUmbrella.createStripeClient,
+  },
+  {
+    path: "packages/provider-openrouter/src/index.ts",
+    witness: providerOpenrouter.createOpenRouterAdapter,
+  },
+  {
+    path: "packages/authoring-core/src/model-provider-port.ts",
+    witness: authoringCore.createModelProviderPort,
+  },
+  {
+    path: "desktop/linux/src/electron/provider-runtime.ts",
+    witness: desktopProviderRuntime.createPrivilegedDesktopByoRuntime,
+  },
+  {
+    path: "desktop/linux/src/lib/provider-key-store.ts",
+    witness: desktopLinux.createProviderKeyStore,
+  },
+] as const);
 
 export function traceabilityPublicModulePaths(): string[] {
   return PUBLIC_MODULES.map((module) => module.path).sort();
@@ -126,6 +155,32 @@ function assertRegistry(value: unknown, symbol: string): void {
   }
 }
 
+function providerEntrypoints(): string[] {
+  for (const entry of TRACEABILITY_PROVIDER_ENTRYPOINT_CATALOG) {
+    if (
+      typeof entry.witness !== "function" &&
+      (typeof entry.witness !== "object" || entry.witness === null)
+    ) {
+      throw new Error(`${entry.path} has no executable provider witness`);
+    }
+  }
+  return TRACEABILITY_PROVIDER_ENTRYPOINT_CATALOG.map((entry) => entry.path).sort();
+}
+
+function catalogRegistry(value: unknown):
+  | Readonly<{ registry: unknown; values: unknown }>
+  | undefined {
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    Array.isArray(value) ||
+    !Object.hasOwn(value, "registry") ||
+    !Object.hasOwn(value, "values")
+  ) return undefined;
+  const descriptor = value as Readonly<{ registry: unknown; values: unknown }>;
+  return descriptor;
+}
+
 function moduleRefusalRegistries(module: {
   path: string;
   exports: object;
@@ -134,20 +189,26 @@ function moduleRefusalRegistries(module: {
   const symbols = new Set(
     Object.keys(exported).filter((symbol) => REFUSAL_REGISTRY_NAME.test(symbol)),
   );
+  const catalogValues = new Map<string, unknown>();
   const catalog = exported[REFUSAL_REGISTRY_CATALOG];
   if (catalog !== undefined) {
     if (typeof catalog !== "object" || catalog === null || Array.isArray(catalog)) {
       throw new Error(`${module.path} has an invalid refusal registry catalog`);
     }
     for (const [symbol, value] of Object.entries(catalog)) {
-      if (exported[symbol] !== value) {
+      const descriptor = catalogRegistry(value);
+      const registry = descriptor?.registry ?? value;
+      const values = descriptor?.values ?? value;
+      if (exported[symbol] !== registry) {
         throw new Error(`${module.path} catalog entry ${symbol} is not its live public export`);
       }
+      assertRegistry(values, symbol);
+      catalogValues.set(symbol, values);
       symbols.add(symbol);
     }
   }
   return [...symbols].map((symbol) => {
-    assertRegistry(exported[symbol], symbol);
+    if (!catalogValues.has(symbol)) assertRegistry(exported[symbol], symbol);
     return { path: module.path, symbol };
   });
 }
@@ -174,6 +235,7 @@ export function traceabilityRuntimeSurfaces(): TraceabilityRuntimeSurfaces {
     authoringOperations: [...desktopLinux.DESKTOP_BRIDGE_AUTHORING_OPS],
     assistantOperations: [...desktopLinux.DESKTOP_BRIDGE_ASSISTANT_OPS],
     localAgentTools: schemas.DESKTOP_LOCAL_BRIDGE_TOOLS.map((tool) => tool.name),
+    providerEntrypoints: providerEntrypoints(),
     refusalRegistries: refusalRegistries(),
   };
 }

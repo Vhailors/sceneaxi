@@ -2,6 +2,11 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  BILLING_REFUSE_REASONS,
+  createInMemoryCreditStore,
+  signStripeWebhookPayload,
+} from "../../packages/billing/src/index.js";
+import {
   WEB_EXPERIENCE_REFUSED_SCOPES,
   evaluateWebExperienceScope,
 } from "../../packages/profile-web/src/index.js";
@@ -22,7 +27,11 @@ import {
 } from "../../apps/web-shell/src/index.js";
 import {
   CREDIT_WEBHOOK_REASONS,
+  REFUSAL_CODES,
+  applyCreditPackWebhook,
   creditWebhookHttpStatus,
+  creditWebhookOutcomeHttpStatus,
+  docsRefusalCodes,
 } from "../../sites/umbrella/src/index.js";
 import { repoRoot } from "../helpers/fixture.ts";
 import {
@@ -140,17 +149,87 @@ describe("traceability runtime surfaces", () => {
     }
   });
 
-  it("catalogs webhook reasons with public status parity", () => {
+  it("matches the executable provider entrypoint catalog", () => {
+    expect(traceabilityRuntimeSurfaces().providerEntrypoints).toEqual([
+      "desktop/linux/src/electron/provider-runtime.ts",
+      "desktop/linux/src/lib/provider-key-store.ts",
+      "packages/authoring-core/src/model-provider-port.ts",
+      "packages/provider-openrouter/src/index.ts",
+      "sites/umbrella/src/lib/provider-adapters.ts",
+      "sites/umbrella/src/provider/better-auth-provider.ts",
+    ]);
+  });
+
+  it("catalogs the structured docs refusal rows with public rendering parity", () => {
+    const runtime = traceabilityRuntimeSurfaces();
+    expect(runtime.refusalRegistries).toContainEqual({
+      path: "sites/umbrella/src/index.ts",
+      symbol: "REFUSAL_CODES",
+    });
+    expect(docsRefusalCodes()).toBe(REFUSAL_CODES);
+    expect(docsRefusalCodes().map((entry) => entry.code)).toEqual([
+      "invalid-intake",
+      "unsupported-intake-mode",
+      "quality-gate-refused",
+      "offline-agent-nondeterministic",
+      "artifact-invalid",
+    ]);
+    for (const row of docsRefusalCodes()) expect(row.what.length).toBeGreaterThan(0);
+  });
+
+  it("catalogs webhook reasons with public application and status parity", async () => {
     const runtime = traceabilityRuntimeSurfaces();
     expect(runtime.refusalRegistries).toContainEqual({
       path: "sites/umbrella/src/index.ts",
       symbol: "CREDIT_WEBHOOK_REASONS",
     });
-    const requestReasons = new Set<string>([CREDIT_WEBHOOK_REASONS.eventUnrelated]);
+
+    const now = Date.UTC(2026, 7, 26, 12, 0, 0);
+    const secret = "whsec_traceability_fixture";
+    const payload = JSON.stringify({
+      id: "evt_traceability_unrelated",
+      type: "checkout.session.completed",
+      created: Math.floor(now / 1_000),
+      livemode: false,
+      data: {
+        object: {
+          id: "cs_traceability_unrelated",
+          metadata: { anotherProduct: "true" },
+        },
+      },
+    });
+    const unreachable = Object.freeze({
+      findIntent(): never {
+        throw new Error("unrelated events must not read checkout evidence");
+      },
+      retrieveSettlement(): never {
+        throw new Error("unrelated events must not read settlement evidence");
+      },
+    });
+    const outcome = await applyCreditPackWebhook({
+      payload,
+      signatureHeader: signStripeWebhookPayload({
+        payload,
+        secret,
+        timestamp: Math.floor(now / 1_000),
+      }),
+      secret,
+      store: createInMemoryCreditStore({ accounts: [] }),
+      evidence: unreachable,
+      now,
+    });
+    expect(outcome).toMatchObject({
+      ok: true,
+      ignored: true,
+      reason: CREDIT_WEBHOOK_REASONS.eventUnrelated,
+    });
+    expect(creditWebhookOutcomeHttpStatus(outcome)).toBe(200);
+
     for (const reason of Object.values(CREDIT_WEBHOOK_REASONS)) {
-      expect(creditWebhookHttpStatus(reason), reason).toBe(
-        requestReasons.has(reason) ? 400 : 503,
-      );
+      if (reason !== CREDIT_WEBHOOK_REASONS.eventUnrelated) {
+        expect(creditWebhookHttpStatus(reason), reason).toBe(503);
+      }
     }
+    expect(creditWebhookHttpStatus(BILLING_REFUSE_REASONS.signatureMismatch)).toBe(400);
   });
 });

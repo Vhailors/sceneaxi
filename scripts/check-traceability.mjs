@@ -432,6 +432,10 @@ function checkEvidenceAndRegistries(root, inventory, runtimeSurfaces, errors) {
   for (const entry of [...(inventory?.providerEntrypoints ?? []), ...(inventory?.browserEvidence ?? []), ...(inventory?.releaseArtifacts ?? [])]) {
     if (!resolveReference(root, entry)) errors.push(`[evidence-path] stale evidence or provider path: ${entry}`);
   }
+  const runtimeProviders = runtimeSurfaces?.providerEntrypoints ?? [];
+  if (!arraysEqual(runtimeProviders, inventory?.providerEntrypoints ?? [])) {
+    errors.push(`[provider-entrypoint] provider inventory differs from the executable catalog (missing: ${missing(runtimeProviders, inventory?.providerEntrypoints ?? []).join(", ") || "none"}; extra: ${extra(runtimeProviders, inventory?.providerEntrypoints ?? []).join(", ") || "none"})`);
+  }
   const registries = inventory?.refusalRegistries ?? [];
   const seen = new Set();
   for (const entry of registries) {
