@@ -155,6 +155,22 @@ async function signIn(handler: (request: Request) => Promise<Response>) {
 }
 
 describe("umbrella Better Auth provider", () => {
+  it("keeps production activation refusal codes in lockstep with the provider registry", () => {
+    const runbook = readFileSync(
+      new URL("../../../docs/production-activation.md", import.meta.url),
+      "utf8",
+    );
+    const namedRefusals = [
+      ...new Set(
+        [...runbook.matchAll(/`(BETTER_AUTH_PROVIDER_[A-Z0-9_]+)`/g)].map(
+          (match) => match[1] as string,
+        ),
+      ),
+    ].sort();
+
+    expect(namedRefusals).toEqual([...Object.values(BETTER_AUTH_PROVIDER_REFUSALS)].sort());
+  });
+
   it("publishes the executable handler factory as its installed provider witness", async () => {
     const inventory = JSON.parse(
       readFileSync(new URL("../../../docs/audits/initiation/requirements.json", import.meta.url), "utf8"),
