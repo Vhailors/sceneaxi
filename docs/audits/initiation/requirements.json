@@ -7629,6 +7629,7 @@
       "sites/umbrella/src/lib/provider-adapters.ts",
       "packages/provider-openrouter/src/index.ts",
       "packages/authoring-core/src/model-provider-port.ts",
+      "desktop/linux/src/electron/provider-key-store.ts",
       "desktop/linux/src/electron/provider-runtime.ts",
       "desktop/linux/src/lib/provider-key-store.ts"
     ],

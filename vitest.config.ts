@@ -2,6 +2,11 @@ import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  oxc: {
+    jsx: {
+      runtime: "automatic",
+    },
+  },
   resolve: {
     alias: {
       "@sceneaxi-internal/desktop-session-project-git": fileURLToPath(
@@ -53,6 +58,9 @@ export default defineConfig({
       ),
       "@sceneaxi/engine-kernel": fileURLToPath(
         new URL("./packages/engine-kernel/src/index.ts", import.meta.url),
+      ),
+      electron: fileURLToPath(
+        new URL("./tests/helpers/electron-runtime-stub.ts", import.meta.url),
       ),
     },
   },

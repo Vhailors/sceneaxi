@@ -265,7 +265,7 @@ describe("traceability check — injected violations", () => {
     mutateInventory(fixture, (inventory) => {
       inventory.liveInventory.providerEntrypoints =
         inventory.liveInventory.providerEntrypoints.filter(
-          (entry) => entry !== "sites/umbrella/src/lib/provider-adapters.ts",
+          (entry) => entry !== "desktop/linux/src/electron/provider-key-store.ts",
         );
     });
     const result = runCheck(fixture, CHECK);

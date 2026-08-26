@@ -19,6 +19,7 @@ import * as catalogWeb from "../../apps/catalog-web/src/index.js";
 import * as desktopShell from "../../apps/desktop-shell/src/index.js";
 import * as webShell from "../../apps/web-shell/src/index.js";
 import * as desktopLinux from "../../desktop/linux/src/index.js";
+import * as desktopElectronProviderKeyStore from "../../desktop/linux/src/electron/provider-key-store.js";
 import * as desktopProviderRuntime from "../../desktop/linux/src/electron/provider-runtime.js";
 import * as desktopMacos from "../../desktop/macos/src/index.js";
 import * as desktopWindows from "../../desktop/windows/src/index.js";
@@ -101,6 +102,10 @@ export const TRACEABILITY_PROVIDER_ENTRYPOINT_CATALOG = Object.freeze([
   {
     path: "desktop/linux/src/electron/provider-runtime.ts",
     witness: desktopProviderRuntime.createPrivilegedDesktopByoRuntime,
+  },
+  {
+    path: "desktop/linux/src/electron/provider-key-store.ts",
+    witness: desktopElectronProviderKeyStore.createElectronProviderKeyStore,
   },
   {
     path: "desktop/linux/src/lib/provider-key-store.ts",

@@ -196,7 +196,7 @@ export default function DocsPage() {
           delivering an object that quietly missed the brief.
         </p>
         <dl className="code-defs">
-            {docsRefusalCodes().map((refusal) => (
+          {docsRefusalCodes().map((refusal) => (
             <div className="contents" key={refusal.code}>
               <dt>{refusal.code}</dt>
               <dd>{refusal.what}</dd>

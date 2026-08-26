@@ -50,7 +50,7 @@ Turn the repository's many specifications into one checked map from requirement 
   for 26 matrix packages plus four delayed slots, 21 CLI verbs and held-key
   entries, 66 editor commands, 112 desktop controls, 11 bridge actions, 10
   authoring operations, three assistant operations, 67 local-agent tools, 22
-  routes, five migrations, six provider entrypoints, 68 refusal registries,
+  routes, five migrations, seven provider entrypoints, 68 refusal registries,
   four workflows, 45 golden tests, four browser records, and seven release
   artifacts. Path checks found no
   stale resolved files; the live join is 106 `mapped`, two `refuse-only`, and

@@ -193,12 +193,24 @@ export const REFUSAL_CODES: readonly RefusalCode[] = Object.freeze([
     what: "A named gate failed — component budget, hierarchy depth, or physical extent.",
   }),
   Object.freeze({
-    code: "offline-agent-nondeterministic",
-    what: "Two runs of identical input produced different output, so the result was discarded.",
-  }),
-  Object.freeze({
     code: "artifact-invalid",
     what: "The finished artifact failed its own validator, including a recomputed emit digest.",
+  }),
+  Object.freeze({
+    code: "invalid-options",
+    what: "The requested reconstruction options are invalid, so no work was attempted.",
+  }),
+  Object.freeze({
+    code: "offline-agent-unavailable",
+    what: "Offline refinement was requested without an available injected agent.",
+  }),
+  Object.freeze({
+    code: "offline-agent-invalid",
+    what: "The offline agent returned a sculpt specification that failed validation.",
+  }),
+  Object.freeze({
+    code: "offline-agent-nondeterministic",
+    what: "Two runs of identical input produced different output, so the result was discarded.",
   }),
 ]);
 
