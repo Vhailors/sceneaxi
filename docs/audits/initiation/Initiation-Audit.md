@@ -67,7 +67,8 @@ outside the hermetic root test compiler's JSX/React contract, and the existing
 modified desktop chrome retains a reopen regression. Phase 02 preserves both
 conditions rather than rewriting or resetting them.
 
-The Phase 02 initiation snapshot was audited at:
+The historical Phase 02 initiation snapshot, captured before the branch work,
+was audited at:
 
 | Field | Value |
 |---|---|
@@ -76,6 +77,19 @@ The Phase 02 initiation snapshot was audited at:
 | Phase 01 starting SHA | `9873ea3bd5f012c4b84ceccca60739ec5111d9d1` |
 | Package manager | `pnpm@9.15.0` |
 | Node requirement | `^20.19.0 \|\| ^22.13.0 \|\| >=24` |
+
+The current checkout for this audit is:
+
+| Field | Value |
+|---|---|
+| Branch | `maestro/phase-02-requirement-inventory` |
+| Current HEAD SHA | `435d409b6640436084938417a7a3bb162903a73d` |
+| Audited source snapshot SHA | `eecd6acade08a48b7599832bb1598b3e11bddf72` |
+
+The source findings were made against the audited snapshot SHA above; the
+current HEAD contains this report and the playbook completion note. The
+Phase 01 receipt and the historical initiation snapshot remain unchanged
+records.
 
 The following paths were already modified or untracked before this artifact
 was created and remain outside its scope:
