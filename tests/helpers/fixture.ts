@@ -16,7 +16,7 @@ import { fileURLToPath } from "node:url";
 
 export const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
 
-const COPY_TOPS = ["docs", "packages", "apps", "sites", "desktop", "scripts", "tests", ".github"];
+const COPY_TOPS = ["docs", "packages", "apps", "sites", "desktop", "db", "scripts", "tests", ".github"];
 /**
  * Root files the gate scripts read: `check-sites` reads the manifest and workspace,
  * `check-publish-ready` reads the manifest scripts and the SDK-output ignores, and
@@ -33,7 +33,7 @@ const COPY_FILES = [
 ];
 // `release` and `dist-build` are desktop-tier packaging output (ADR 0024): heavy
 // binaries the checkers never read, so copying them would only slow every fixture.
-const SKIP_DIRS = new Set(["node_modules", "dist", "coverage", "test", "release", "dist-build"]);
+const SKIP_DIRS = new Set(["node_modules", "dist", "coverage", "release", "dist-build"]);
 
 /**
  * Copy the parts of the repo the gate scripts read (manifests, sources, matrix,
@@ -100,7 +100,8 @@ export function runCheck(
     | "check-sites.mjs"
     | "check-desktop.mjs"
     | "check-contracts.mjs"
-    | "check-publish-ready.mjs",
+    | "check-publish-ready.mjs"
+    | "check-traceability.mjs",
 ): { status: number | null; stdout: string; stderr: string } {
   return spawnSync(process.execPath, [join(root, "scripts", script)], {
     encoding: "utf8",

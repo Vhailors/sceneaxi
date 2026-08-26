@@ -154,11 +154,14 @@ Phase 02 playbook is the only playbook file this run is allowed to advance.
 | `scripts/check-syntax.mjs` | Source syntax checker owner. |
 | `scripts/check-boundaries.mjs` | Dependency-matrix boundary checker owner. |
 | `scripts/check-contracts.mjs` and `scripts/check-contracts.test.mjs` | Contract/fixture lockstep checker and its checker-level tests. |
+| `scripts/check-traceability.mjs` | Requirement declaration, rendered-map, owner-anchor, resolved-link, package/export, and live-surface accounting checker. It fails closed on drift and does not authorize held, delayed, dormant, or host-blocked work. |
+| `tests/docs/traceability-check.test.ts` | Focused direct-call unit regressions for the traceability checker. |
+| `tests/contracts/injected-traceability-violations.test.ts` | Process-level copied-tree regressions for missing requirements, missing implementation/proof, unknown status, stale evidence, held promotion, and unaccounted public surfaces. |
 | `scripts/check-sites.mjs` and `scripts/check-desktop.mjs` | Deployable-site and desktop-tier structural checker owners. |
 | `scripts/check-publish-ready.mjs` | Publish-readiness declaration checker; readiness is structural and not publication authority. |
 | `tests/docs/module-coverage.ts` and `tests/docs/capability-matrix-audit.ts` | Existing reusable scanners for module and capability evidence; their tests are direct-call unit regressions, not process-level tests. |
-| `tests/contracts/`, `tests/boundary/`, `tests/publish/` | Existing injected-drift and boundary regression conventions to reuse in later checker work. |
-| `package.json` | Root quality sequence: syntax → boundaries → contracts → sites → desktop → publish-ready → build → tests → lint, via `pnpm gate`. No step is weakened or reordered by this baseline. |
+| `tests/contracts/`, `tests/boundary/`, `tests/publish/` | Existing injected-drift and boundary regression conventions reused by the traceability process suite. |
+| `package.json` | Root quality sequence: syntax → boundaries → contracts → traceability → sites → desktop → publish-ready → build → tests → lint, via `pnpm gate`. No existing stage is weakened, skipped, or reordered. |
 
 ## Cross-dimensional audit
 

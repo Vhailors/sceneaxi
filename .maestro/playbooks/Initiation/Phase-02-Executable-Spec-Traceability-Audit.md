@@ -79,12 +79,26 @@ Turn the repository's many specifications into one checked map from requirement 
   remain in those classifications. No secrets or task-associated images were
   handled.
 
-- [ ] Add an executable traceability checker and its failure regressions:
+- [x] Add an executable traceability checker and its failure regressions:
   - Follow the existing dependency-free ESM checker style and fixture-injection tests; validate unique requirement IDs, allowed statuses, live owner paths/anchors, live evidence paths, package/surface accounting, required implementation-plus-proof links, and an explicit reason/owner for every non-`real` row.
   - Make the checker fail when a requirement disappears, a `real` claim loses code or proof, an unknown status appears, an evidence path goes stale, a held item is marked implemented, or a new public seam/verb/control/route is unaccounted.
   - Add focused unit tests plus a process-level injected-violation suite modeled on `tests/contracts/`, `tests/boundary/`, and `tests/publish/`; prove both the passing live tree and each independent failure mode.
   - Wire the check into the owning root command sequence without weakening, skipping, reordering away, or broadening any existing gate. Extend the documented checker inventory and regression fixtures in the same change.
 
+  **Completion note (2026-08-26):** Added
+  `scripts/check-traceability.mjs` with fixed status/result vocabularies,
+  rendered-map parity, Markdown/JSON owner-anchor validation, resolved
+  implementation/proof/evidence checks, package/export accounting, CLI/held-key,
+  editor-command, desktop-control, bridge/tool, route, migration, workflow, and
+  golden-test surface accounting, plus refusal-registry validation. Added
+  `tests/docs/traceability-check.test.ts` and
+  `tests/contracts/injected-traceability-violations.test.ts` with 14 passing
+  cases covering independent injected drift, including a source-level unaccounted
+  desktop control. Wired `check:traceability` after `check:contracts` in
+  `package.json`, copied `db/` and package test evidence into process fixtures,
+  and documented the checker in `Initiation-Audit.md`. `pnpm test:golden` passed
+  (51 files, 448 tests); the complete `pnpm gate` passed after the final
+  TypeScript declaration and lint cleanup.
 - [ ] Vet and prioritize every verified gap in `docs/audits/initiation/Gap-Register.md`:
   - Use YAML front matter (`type: report`, tags `[sceneaxi, gaps, implementation]`) and one row per gap with stable ID, requirement IDs, category, evidence paths and line anchors, concrete impact, effort `S/M/L`, fix risk, confidence, owning phase, dependencies, and status.
   - Keep direction options separate from defects. Record considered-and-rejected candidates with the reason so later runs do not rediscover them.
