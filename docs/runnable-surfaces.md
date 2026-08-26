@@ -17,6 +17,9 @@ a marketing word.
 <!-- traceability:browser-evidence:start -->
 | Browser evidence owner |
 |---|
+| `.maestro/playbooks/Initiation/Working/Phase-01/Baseline.md` |
+| `.maestro/playbooks/Initiation/Working/Phase-01/umbrella-open-desktop.png` |
+| `.maestro/playbooks/Initiation/Working/Phase-01/umbrella-open-mobile.png` |
 | `packages/engine-kernel/test/browser-open-play.test.ts` |
 | `sites/umbrella/test/first-release.visual.spec.ts` |
 | `sites/umbrella/VISUAL-EVIDENCE.md` |

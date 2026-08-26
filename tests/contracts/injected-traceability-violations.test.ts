@@ -272,11 +272,28 @@ describe("traceability check — injected violations", () => {
     expect(result.stderr).toContain("refusal registry inventory");
   });
 
-  it("fails when production provider and browser-evidence catalogs are omitted", () => {
+  it("fails when production provider, browser-evidence, and release catalogs are omitted", () => {
     mutateInventory(fixture, (inventory) => {
       const omittedProviders = new Set([
         "packages/auth/src/index.ts",
         "desktop/linux/src/electron/live-transport.ts",
+      ]);
+      const omittedBrowserEvidence = new Set([
+        ".maestro/playbooks/Initiation/Working/Phase-01/Baseline.md",
+        ".maestro/playbooks/Initiation/Working/Phase-01/umbrella-open-desktop.png",
+        ".maestro/playbooks/Initiation/Working/Phase-01/umbrella-open-mobile.png",
+        "docs/desktop-linux.md",
+      ]);
+      const omittedReleaseOwners = new Set([
+        "desktop/linux/electron-builder.yml",
+        "desktop/linux/package.json",
+        "desktop/linux/scripts/build-linux.mjs",
+        "desktop/macos/electron-builder.yml",
+        "desktop/macos/package.json",
+        "desktop/macos/scripts/build.mjs",
+        "desktop/windows/electron-builder.yml",
+        "desktop/windows/package.json",
+        "desktop/windows/scripts/build.mjs",
       ]);
       inventory.liveInventory.providerEntrypoints =
         inventory.liveInventory.providerEntrypoints.filter(
@@ -284,11 +301,11 @@ describe("traceability check — injected violations", () => {
         );
       inventory.liveInventory.browserEvidence =
         inventory.liveInventory.browserEvidence.filter(
-          (entry) => entry !== "docs/desktop-linux.md",
+          (entry) => !omittedBrowserEvidence.has(entry),
         );
       inventory.liveInventory.releaseArtifacts =
         inventory.liveInventory.releaseArtifacts.filter(
-          (entry) => !entry.endsWith("/electron-builder.yml"),
+          (entry) => !omittedReleaseOwners.has(entry),
         );
     });
     const result = runCheck(fixture, CHECK);
@@ -297,11 +314,20 @@ describe("traceability check — injected violations", () => {
     expect(result.stderr).toContain("packages/auth/src/index.ts");
     expect(result.stderr).toContain("desktop/linux/src/electron/live-transport.ts");
     expect(result.stderr).toContain("[browser-evidence]");
+    expect(result.stderr).toContain(".maestro/playbooks/Initiation/Working/Phase-01/Baseline.md");
+    expect(result.stderr).toContain(".maestro/playbooks/Initiation/Working/Phase-01/umbrella-open-desktop.png");
+    expect(result.stderr).toContain(".maestro/playbooks/Initiation/Working/Phase-01/umbrella-open-mobile.png");
     expect(result.stderr).toContain("docs/desktop-linux.md");
     expect(result.stderr).toContain("[release-owners]");
     expect(result.stderr).toContain("desktop/linux/electron-builder.yml");
+    expect(result.stderr).toContain("desktop/linux/package.json");
+    expect(result.stderr).toContain("desktop/linux/scripts/build-linux.mjs");
     expect(result.stderr).toContain("desktop/macos/electron-builder.yml");
+    expect(result.stderr).toContain("desktop/macos/package.json");
+    expect(result.stderr).toContain("desktop/macos/scripts/build.mjs");
     expect(result.stderr).toContain("desktop/windows/electron-builder.yml");
+    expect(result.stderr).toContain("desktop/windows/package.json");
+    expect(result.stderr).toContain("desktop/windows/scripts/build.mjs");
   });
 
   it("fails when an alternate-extension route appears under a reserved-looking segment", () => {
