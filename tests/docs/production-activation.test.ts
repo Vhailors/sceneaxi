@@ -6,6 +6,7 @@ import {
   STRIPE_LIVE_MODE_ENV_VAR,
 } from "@sceneaxi/billing";
 import { SITE_REFUSALS } from "@sceneaxi/site-kit";
+import { BETTER_AUTH_PROVIDER_REFUSALS } from "../../sites/umbrella/src/provider/better-auth-provider-refusals.js";
 
 const locate = (path: string) => new URL(`../../${path}`, import.meta.url);
 const read = (path: string) => readFileSync(locate(path), "utf8");
@@ -180,11 +181,7 @@ describe("SA-OPS-1 production activation runbook", () => {
     const siteRefusals = Object.keys(SITE_REFUSALS);
     const billingRefusals = Object.values(BILLING_REFUSE_REASONS);
     const desktopRefusals = desktopRefusalUniverse();
-    const providerRefusals = [
-      ...read("sites/umbrella/src/provider/better-auth-provider.ts").matchAll(
-        /:\s*"(BETTER_AUTH_PROVIDER_[A-Z_]+)"/g,
-      ),
-    ].map((match) => match[1] as string);
+    const providerRefusals = Object.values(BETTER_AUTH_PROVIDER_REFUSALS);
     expect(providerRefusals).toHaveLength(4);
     expect(desktopRefusals.length).toBeGreaterThanOrEqual(10);
 
