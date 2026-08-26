@@ -86,14 +86,15 @@ The checkout snapshot used for this reconciliation is:
 | Reconciliation-start HEAD SHA | `7c151dc033204903dc6f40052bb99f19e9ddc92f` |
 | Audited source snapshot SHA | `eecd6acade08a48b7599832bb1598b3e11bddf72` |
 | Verification HEAD SHA | `3e63361ffc47c064bee8cacfbe9d85a5c1fcf2fa` |
+| Initial handoff commit SHA | `444732b618d11f367455efc0c1b877cb96f700ce` |
 
 The source findings were made against the audited source snapshot SHA above.
 The reconciliation started from the later HEAD shown above, and the complete
-verification run covered the verification HEAD shown above. The audit report,
-executable traceability checker, gate outcome, and playbook notes are
-verification artifacts rather than changes to the audited source findings. The
-Phase 01 receipt and the historical initiation snapshot remain unchanged
-records.
+verification run covered the verification HEAD shown above. The working tree
+also carried the pre-existing Phase 01 dirty paths listed below; verification
+did not alter them. The initial handoff commit and its documentation-only
+follow-up contain only this audit and its playbook checkbox update. The Phase
+01 receipt and the historical initiation snapshot remain unchanged records.
 
 The following paths were already modified or untracked before this artifact
 was created and remain outside its scope:
@@ -278,11 +279,15 @@ The inventory has 109 rows. Status counts come directly from
 | `catalog` | 4 |
 | `held-keys` | 3 |
 
-The live join is 106 `mapped`, two `refuse-only`, and one `gap`. The mapped
-surface inventory covers 26 matrix packages, four delayed package slots, 21
-CLI verbs, 66 editor commands, 112 desktop controls, 11 bridge actions, ten
-authoring operations, three assistant operations, 67 local-agent tools, 22
-routes, five migrations, four workflows, and 45 golden tests.
+The live join is 106 `mapped`, two `refuse-only`, and one `gap`. Accounted
+means that every requirement and public surface has a declared row and a
+checked classification; it does not claim that every row has shipped code.
+The remaining `gap` is the deliberate `AUTH-007` watcher gap recorded above
+and in [[Gap-Register]]. The mapped surface inventory covers 26 matrix
+packages, four delayed package slots, 21 CLI verbs, 66 editor commands, 112
+desktop controls, 11 bridge actions, ten authoring operations, three assistant
+operations, 67 local-agent tools, 22 routes, five migrations, four workflows,
+and 45 golden tests.
 
 ### Rejected and unaudited state
 
