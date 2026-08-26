@@ -25,6 +25,8 @@ export const TRACEABILITY_RESULTS = Object.freeze(["mapped", "refuse-only", "gap
 
 const INVENTORY_PATH = "docs/audits/initiation/requirements.json";
 const RENDERED_PATH = "docs/audits/initiation/Requirements-Traceability.md";
+const AUTHORITY_PATH = "docs/audits/initiation/requirements-authority.json";
+const RUNTIME_SURFACES_PATH = "docs/audits/initiation/runtime-surfaces.json";
 const MATRIX_PATH = "docs/dependency-matrix.json";
 
 function displayPath(root, path) {
@@ -221,7 +223,7 @@ function parseRenderedRows(markdown) {
   return rows;
 }
 
-function checkRequirements(root, declaration, rendered, errors) {
+function checkRequirements(root, declaration, rendered, authority, errors) {
   const rows = declaration?.requirements;
   if (!Array.isArray(rows)) {
     errors.push("[requirements-shape] requirements must be an array");
@@ -230,6 +232,30 @@ function checkRequirements(root, declaration, rendered, errors) {
   const ids = rows.map((row) => row?.id);
   const duplicates = ids.filter((id, index) => ids.indexOf(id) !== index);
   if (duplicates.length > 0) errors.push(`[requirements-id] duplicate requirement ID(s): ${unique(duplicates).join(", ")}`);
+
+  const expectedIds = authority?.expectedRequirementIds;
+  if (authority?.schemaVersion !== 1) {
+    errors.push("[requirements-authority] unsupported authority baseline schema version");
+  }
+  if (!Array.isArray(expectedIds) || !expectedIds.every((id) => typeof id === "string")) {
+    errors.push("[requirements-authority] expectedRequirementIds must be an array of stable IDs");
+  } else if (new Set(expectedIds).size !== expectedIds.length) {
+    errors.push("[requirements-authority] expectedRequirementIds contains duplicates");
+  } else if (!arraysEqual(expectedIds, ids.filter(Boolean))) {
+    errors.push(`[requirements-authority] declaration differs from the reviewed authority baseline (missing: ${missing(expectedIds, ids).join(", ") || "none"}; extra: ${extra(expectedIds, ids).join(", ") || "none"})`);
+  }
+
+  const classifications = authority?.protectedClassifications;
+  if (classifications === null || typeof classifications !== "object" || Array.isArray(classifications)) {
+    errors.push("[requirements-authority] protectedClassifications must be an object");
+  } else {
+    const byId = new Map(rows.map((row) => [row?.id, row?.classification]));
+    for (const [id, classification] of Object.entries(classifications)) {
+      if (byId.get(id) !== classification) {
+        errors.push(`[authority-classification] ${id} must remain ${classification}; the declaration reports ${byId.get(id) ?? "missing"}`);
+      }
+    }
+  }
 
   const renderedRows = parseRenderedRows(rendered);
   const missingRendered = missing(unique(ids.filter(Boolean)), [...renderedRows.keys()]);
@@ -277,10 +303,6 @@ function checkRequirements(root, declaration, rendered, errors) {
   }
 }
 
-function sourceStrings(source, pattern) {
-  return [...source.matchAll(pattern)].map((match) => match[1]);
-}
-
 function checkPackages(root, inventory, matrix, errors) {
   const expected = Object.keys(matrix?.packages ?? {}).concat(Object.keys(matrix?.delayed ?? {})).sort();
   const rows = inventory?.packages;
@@ -317,48 +339,31 @@ function checkPackages(root, inventory, matrix, errors) {
   }
 }
 
-function checkInventorySurface(root, inventory, errors) {
-  const cliSource = loadText(root, "packages/cli/src/commands.ts", errors);
-  const cliNames = sourceStrings(cliSource, /\b(?:argVerb|verb)\(\s*["']([^"']+)["']/g);
-  const cliMap = sourceStrings(loadText(root, "packages/cli/src/held-keys/shipped.ts", errors), /\{\s*command:\s*["']([^"']+)["']/g);
+function checkInventorySurface(root, inventory, runtimeSurfaces, errors) {
+  if (runtimeSurfaces?.schemaVersion !== 1) errors.push("[surface-accounting] unsupported runtime surface schema version");
   const declaredCli = inventory?.cli?.verbs ?? [];
-  const declaredCliNames = declaredCli.map((command) => command.split(" ").at(-1));
-  if (cliNames.length !== inventory?.cli?.verbCount || !arraysEqual(cliNames, declaredCliNames)) errors.push("[surface-accounting] CLI verb inventory is stale or incomplete");
-  if (!arraysEqual(cliMap, declaredCli)) errors.push("[surface-accounting] held-key command map is stale or incomplete");
+  const runtimeCli = runtimeSurfaces?.cliVerbs ?? [];
+  if (runtimeCli.length !== inventory?.cli?.verbCount || !arraysEqual(runtimeCli, declaredCli)) errors.push("[surface-accounting] CLI verb inventory is stale or incomplete");
+  const runtimeHeldCommands = (runtimeSurfaces?.heldKeyEntries ?? []).map((entry) => entry?.command);
+  if (!arraysEqual(runtimeHeldCommands, declaredCli)) errors.push("[surface-accounting] held-key command map is stale or incomplete");
   const heldCommands = (inventory?.cli?.heldKeyEntries ?? []).map((entry) => entry?.command);
   if (!arraysEqual(heldCommands, declaredCli)) errors.push("[surface-accounting] held-key entries do not cover every CLI verb");
+  if (JSON.stringify(runtimeSurfaces?.heldKeyEntries ?? []) !== JSON.stringify(inventory?.cli?.heldKeyEntries ?? [])) errors.push("[surface-accounting] held-key entry semantics differ from the runtime surface");
 
-  const editorSource = loadText(root, "packages/schemas/src/editor-command-registry.ts", errors);
-  const definitionStart = editorSource.indexOf("const DEFINITIONS = [");
-  const definitionEnd = editorSource.indexOf("export const EDITOR_COMMAND_REGISTRY", definitionStart);
-  const editorIds = sourceStrings(editorSource.slice(definitionStart, definitionEnd), /\bid:\s*["']([^"']+)["']/g);
+  const editorIds = runtimeSurfaces?.editorCommands ?? [];
   if (editorIds.length !== inventory?.editor?.commandCount || !arraysEqual(editorIds, inventory?.editor?.commands ?? [])) errors.push("[surface-accounting] editor command inventory is stale or incomplete");
 
   const editor = inventory?.editor;
   if (!Array.isArray(editor?.controls) || new Set(editor.controls).size !== editor.controls.length || editor.controls.length !== editor.controlCount || editor.controlCount !== inventory?.counts?.desktopControls) {
     errors.push("[surface-accounting] desktop control inventory is stale, duplicated, or incomplete");
   }
-  const controlSource =
-    loadText(root, "apps/desktop-shell/src/visual-model.ts", errors) +
-    loadText(root, "apps/desktop-shell/src/chrome.ts", errors);
-  const literalControlIds = sourceStrings(
-    controlSource,
-    /(?:control|mint|liveControl|buildControl|runtimeControl)\(\s*["']([^"']+)["']/g,
-  );
-  const unaccountedLiteralControls = extra(editor?.controls ?? [], literalControlIds);
-  if (unaccountedLiteralControls.length > 0) {
-    errors.push(`[surface-accounting] desktop control source names unaccounted IDs: ${unaccountedLiteralControls.join(", ")}`);
-  }
+  if (!arraysEqual(runtimeSurfaces?.desktopControls ?? [], editor?.controls ?? [])) errors.push("[surface-accounting] desktop control inventory is stale or incomplete");
 
-  const bridgeSource = loadText(root, "desktop/linux/src/lib/bridge-contract.ts", errors);
-  const bridgeActions = sourceStrings(bridgeSource.slice(bridgeSource.indexOf("DESKTOP_BRIDGE_ACTIONS"), bridgeSource.indexOf("DESKTOP_BRIDGE_REFUSALS")), /["']([^"']+)["']/g);
-  const authoringOps = sourceStrings(bridgeSource.slice(bridgeSource.indexOf("DESKTOP_BRIDGE_AUTHORING_OPS"), bridgeSource.indexOf("DESKTOP_BRIDGE_ASSISTANT_OPS")), /["']([^"']+)["']/g);
-  const assistantOps = sourceStrings(bridgeSource.slice(bridgeSource.indexOf("DESKTOP_BRIDGE_ASSISTANT_OPS"), bridgeSource.indexOf("DESKTOP_ASSISTANT_START_MODES")), /["']([^"']+)["']/g);
+  const bridgeActions = runtimeSurfaces?.bridgeActions ?? [];
+  const authoringOps = runtimeSurfaces?.authoringOperations ?? [];
+  const assistantOps = runtimeSurfaces?.assistantOperations ?? [];
   if (!arraysEqual(bridgeActions, inventory?.bridge?.actions ?? []) || !arraysEqual(authoringOps, inventory?.bridge?.authoringOperations ?? []) || !arraysEqual(assistantOps, inventory?.bridge?.assistantOperations ?? [])) errors.push("[surface-accounting] desktop bridge operation inventory is stale or incomplete");
-  const toolsSource = loadText(root, "packages/schemas/src/desktop-local-bridge.ts", errors);
-  const toolStart = toolsSource.indexOf("DESKTOP_LOCAL_BRIDGE_TOOLS");
-  const toolEnd = toolsSource.indexOf("DESKTOP_LOCAL_BRIDGE_ERROR_CODES", toolStart);
-  const toolNames = sourceStrings(toolsSource.slice(toolStart, toolEnd), /name:\s*["']([^"']+)["']/g);
+  const toolNames = runtimeSurfaces?.localAgentTools ?? [];
   if (!arraysEqual(toolNames, inventory?.bridge?.localAgentTools ?? [])) errors.push("[surface-accounting] local-agent tool inventory is stale or incomplete");
 
   const expectedRoutes = walkFiles(root, "sites", (path, name) => name === "page.tsx" || name === "route.ts").filter((path) => path.includes("/src/app/"));
@@ -392,7 +397,7 @@ function checkInventorySurface(root, inventory, errors) {
   for (const [key, value] of Object.entries(countChecks)) if (counts[key] !== value) errors.push(`[surface-count] liveInventory.counts.${key} is ${counts[key]}, expected ${value}`);
 }
 
-function checkEvidenceAndRegistries(root, inventory, errors) {
+function checkEvidenceAndRegistries(root, inventory, runtimeSurfaces, errors) {
   for (const entry of [...(inventory?.providerEntrypoints ?? []), ...(inventory?.browserEvidence ?? []), ...(inventory?.releaseArtifacts ?? [])]) {
     if (!resolveReference(root, entry)) errors.push(`[evidence-path] stale evidence or provider path: ${entry}`);
   }
@@ -403,21 +408,24 @@ function checkEvidenceAndRegistries(root, inventory, errors) {
     if (seen.has(key)) errors.push(`[refusal-registry] duplicate refusal registry ${key}`);
     seen.add(key);
     if (!entry || !resolveReference(root, entry.path)) errors.push(`[refusal-registry] stale refusal registry path: ${entry?.path}`);
-    else if (!new RegExp(`\\b${entry.symbol}\\b`).test(loadText(root, entry.path, errors))) errors.push(`[refusal-registry] ${key} does not name its declared symbol`);
   }
+  const runtimeRegistries = (runtimeSurfaces?.refusalRegistries ?? []).map((entry) => `${entry?.path}#${entry?.symbol}`);
+  if (!arraysEqual([...seen], runtimeRegistries)) errors.push("[refusal-registry] refusal registry inventory differs from the executable runtime surface");
 }
 
 export function checkTraceability(root = resolve(dirname(fileURLToPath(import.meta.url)), "..")) {
   const errors = [];
   const declaration = loadJson(root, INVENTORY_PATH, errors);
   const rendered = loadText(root, RENDERED_PATH, errors);
+  const authority = loadJson(root, AUTHORITY_PATH, errors);
+  const runtimeSurfaces = loadJson(root, RUNTIME_SURFACES_PATH, errors);
   const matrix = loadJson(root, MATRIX_PATH, errors);
-  if (!declaration || !matrix) return errors;
+  if (!declaration || !authority || !runtimeSurfaces || !matrix) return errors;
   if (!arraysEqual(declaration.statusVocabulary, TRACEABILITY_STATUSES)) errors.push("[declaration-vocabulary] status vocabulary must match the checker vocabulary");
-  checkRequirements(root, declaration, rendered, errors);
+  checkRequirements(root, declaration, rendered, authority, errors);
   checkPackages(root, declaration.liveInventory, matrix, errors);
-  checkInventorySurface(root, declaration.liveInventory, errors);
-  checkEvidenceAndRegistries(root, declaration.liveInventory, errors);
+  checkInventorySurface(root, declaration.liveInventory, runtimeSurfaces, errors);
+  checkEvidenceAndRegistries(root, declaration.liveInventory, runtimeSurfaces, errors);
   return errors;
 }
 
