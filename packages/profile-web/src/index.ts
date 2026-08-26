@@ -47,6 +47,10 @@ export const WEB_EXPERIENCE_REFUSED_SCOPES = Object.freeze([
   "conventional-next-trpc-saas",
 ] as const);
 
+export const SCENEAXI_REFUSAL_REGISTRY_CATALOG = Object.freeze({
+  WEB_EXPERIENCE_REFUSED_SCOPES,
+});
+
 export type WebExperienceScope = (typeof WEB_EXPERIENCE_SCOPES)[number];
 export type WebExperienceRefusedScope =
   (typeof WEB_EXPERIENCE_REFUSED_SCOPES)[number];

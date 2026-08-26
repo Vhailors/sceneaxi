@@ -1,6 +1,10 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import {
+  WEB_EXPERIENCE_REFUSED_SCOPES,
+  evaluateWebExperienceScope,
+} from "../../packages/profile-web/src/index.js";
 import { repoRoot } from "../helpers/fixture.ts";
 import {
   traceabilityPublicModulePaths,
@@ -65,5 +69,20 @@ describe("traceability runtime surfaces", () => {
       .filter((path): path is string => path !== undefined)
       .sort();
     expect(traceabilityPublicModulePaths()).toEqual(publicSeams);
+  });
+
+  it("discovers the semantic Web Experience refusal registry", () => {
+    const runtime = traceabilityRuntimeSurfaces();
+    expect(runtime.refusalRegistries).toContainEqual({
+      path: "packages/profile-web/src/index.ts",
+      symbol: "WEB_EXPERIENCE_REFUSED_SCOPES",
+    });
+    for (const scope of WEB_EXPERIENCE_REFUSED_SCOPES) {
+      expect(evaluateWebExperienceScope(scope)).toMatchObject({
+        ok: false,
+        requestedScope: scope,
+        reason: "OUTSIDE_WEB_EXPERIENCE_SCOPE",
+      });
+    }
   });
 });

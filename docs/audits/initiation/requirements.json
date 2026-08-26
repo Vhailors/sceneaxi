@@ -7729,6 +7729,10 @@
         "symbol": "KIDS_REFUSE_REASONS"
       },
       {
+        "path": "packages/profile-web/src/index.ts",
+        "symbol": "WEB_EXPERIENCE_REFUSED_SCOPES"
+      },
+      {
         "path": "packages/provider-openrouter/src/index.ts",
         "symbol": "OPENROUTER_ADAPTER_ERROR_CODES"
       },
@@ -7979,6 +7983,7 @@
       "packages/engine-orchestrator/src/index.ts",
       "packages/importers/src/index.ts",
       "packages/profile-kids/src/index.ts",
+      "packages/profile-web/src/index.ts",
       "packages/provider-openrouter/src/index.ts",
       "packages/schemas/src/index.ts",
       "packages/site-kit/src/index.ts",

@@ -77,6 +77,7 @@ const PROVIDER_SAFE_MODULES = Object.freeze([
 ] as const);
 
 const REFUSAL_REGISTRY_NAME = /(?:_REFUSALS|_REFUSE_REASONS|_REFUSAL_REASONS|_REFUSE_CODES|_ERROR_CODES)$/;
+const REFUSAL_REGISTRY_CATALOG = "SCENEAXI_REFUSAL_REGISTRY_CATALOG";
 
 export function traceabilityPublicModulePaths(): string[] {
   return PUBLIC_MODULES.map((module) => module.path).sort();
@@ -125,14 +126,35 @@ function assertRegistry(value: unknown, symbol: string): void {
   }
 }
 
+function moduleRefusalRegistries(module: {
+  path: string;
+  exports: object;
+}): Array<{ path: string; symbol: string }> {
+  const exported = module.exports as Record<string, unknown>;
+  const symbols = new Set(
+    Object.keys(exported).filter((symbol) => REFUSAL_REGISTRY_NAME.test(symbol)),
+  );
+  const catalog = exported[REFUSAL_REGISTRY_CATALOG];
+  if (catalog !== undefined) {
+    if (typeof catalog !== "object" || catalog === null || Array.isArray(catalog)) {
+      throw new Error(`${module.path} has an invalid refusal registry catalog`);
+    }
+    for (const [symbol, value] of Object.entries(catalog)) {
+      if (exported[symbol] !== value) {
+        throw new Error(`${module.path} catalog entry ${symbol} is not its live public export`);
+      }
+      symbols.add(symbol);
+    }
+  }
+  return [...symbols].map((symbol) => {
+    assertRegistry(exported[symbol], symbol);
+    return { path: module.path, symbol };
+  });
+}
+
 function refusalRegistries(): Array<{ path: string; symbol: string }> {
-  return [...PUBLIC_MODULES, ...PROVIDER_SAFE_MODULES].flatMap((module) =>
-    Object.entries(module.exports)
-      .filter(([symbol]) => REFUSAL_REGISTRY_NAME.test(symbol))
-      .map(([symbol, value]) => {
-        assertRegistry(value, symbol);
-        return { path: module.path, symbol };
-      }),
+  return [...PUBLIC_MODULES, ...PROVIDER_SAFE_MODULES].flatMap(
+    moduleRefusalRegistries,
   ).sort((left, right) =>
     `${left.path}#${left.symbol}`.localeCompare(`${right.path}#${right.symbol}`),
   );
