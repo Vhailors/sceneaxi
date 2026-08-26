@@ -379,7 +379,10 @@
             "packages/plugin-host/package.json",
             "packages/profile-game/package.json",
             "packages/profile-kids/package.json",
-            "packages/profile-web/package.json"
+            "packages/profile-web/package.json",
+            "packages/provider-openrouter/package.json",
+            "packages/schemas/package.json",
+            "packages/site-kit/package.json"
           ],
           "present": true
         },
@@ -3908,6 +3911,7 @@
             "scripts/check-publish-ready.mjs",
             "scripts/check-sites.mjs",
             "scripts/check-syntax.mjs",
+            "scripts/check-traceability.mjs",
             "scripts/check-vercel-package.mjs"
           ],
           "present": true
@@ -4077,7 +4081,7 @@
             "tests/contracts/injected-entitlement-drift.test.ts",
             "tests/contracts/injected-listing-drift.test.ts",
             "tests/contracts/injected-open-path-drift.test.ts",
-            "tests/contracts/no-committed-secrets.test.ts"
+            "tests/contracts/injected-traceability-violations.test.ts"
           ],
           "present": true
         },
@@ -7628,8 +7632,10 @@
       "sites/umbrella/src/provider/better-auth-provider.ts",
       "sites/umbrella/src/lib/provider-adapters.ts",
       "packages/provider-openrouter/src/index.ts",
+      "packages/auth/src/index.ts",
       "packages/authoring-core/src/model-provider-port.ts",
       "desktop/linux/src/electron/provider-key-store.ts",
+      "desktop/linux/src/electron/live-transport.ts",
       "desktop/linux/src/electron/provider-runtime.ts",
       "desktop/linux/src/lib/provider-key-store.ts"
     ],
@@ -7963,8 +7969,12 @@
     "browserEvidence": [
       "packages/engine-kernel/test/browser-open-play.test.ts",
       "sites/umbrella/test/first-release.visual.spec.ts",
+      "sites/umbrella/VISUAL-EVIDENCE.md",
+      "docs/design-foundations.md",
       "docs/kernel-browser-open.md",
-      "docs/three-presentation-core.md"
+      "docs/three-presentation-core.md",
+      "docs/web-editor-shell.md",
+      "docs/web-experience-editor.md"
     ],
     "releaseArtifacts": [
       "scripts/build-engine-sdk.mjs",

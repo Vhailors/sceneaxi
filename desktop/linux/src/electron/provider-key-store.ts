@@ -46,3 +46,7 @@ export function createElectronProviderKeyStore(userDataDirectory: string): Provi
     platformStorage,
   });
 }
+
+export const SCENEAXI_PROVIDER_ENTRYPOINT_CATALOG = Object.freeze({
+  "desktop/linux/src/electron/provider-key-store.ts": createElectronProviderKeyStore,
+});

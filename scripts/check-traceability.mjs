@@ -115,6 +115,68 @@ function wildcardReferenceExists(root, reference) {
   );
 }
 
+function walkPaths(root, directory) {
+  const absolute = join(root, directory);
+  if (!existsSync(absolute)) return [];
+  const found = [];
+  const visit = (current) => {
+    for (const entry of readdirSync(current, { withFileTypes: true })) {
+      if (entry.name === "node_modules" || entry.name === "dist" || entry.name === "coverage") continue;
+      const path = join(current, entry.name);
+      if (entry.isDirectory()) visit(path);
+      else found.push(displayPath(root, path));
+    }
+  };
+  visit(absolute);
+  return found.sort();
+}
+
+function wildcardReferencePaths(root, reference) {
+  const firstStar = reference.indexOf("*");
+  const parentEnd = reference.lastIndexOf("/", firstStar);
+  const parent = parentEnd === -1 ? "." : reference.slice(0, parentEnd);
+  const escaped = reference.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replaceAll("*", "[^/]*");
+  const pattern = new RegExp(`^${escaped}$`);
+  return walkPaths(root, parent).filter((path) => pattern.test(path));
+}
+
+function packageReferencePaths(root, reference) {
+  for (const top of ["packages", "apps", "sites", "desktop"]) {
+    const absolute = join(root, top);
+    if (!existsSync(absolute)) continue;
+    for (const entry of readdirSync(absolute, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const directory = `${top}/${entry.name}`;
+      const manifestPath = `${directory}/package.json`;
+      if (!existsSync(join(root, manifestPath))) continue;
+      const manifest = loadJson(root, manifestPath, []);
+      if (manifest?.name !== reference) continue;
+      const target = typeof manifest.exports === "string"
+        ? manifest.exports
+        : manifest.exports?.["."];
+      if (typeof target === "string") {
+        return [`${directory}/${target.replace(/^\.\//, "")}`];
+      }
+      return existsSync(join(root, directory, "src/index.ts"))
+        ? [`${directory}/src/index.ts`]
+        : [];
+    }
+  }
+  return [];
+}
+
+function resolveDeclaredReference(root, reference) {
+  if (typeof reference !== "string" || reference.length === 0) return [];
+  if (reference.startsWith("pnpm ")) {
+    const script = reference.slice("pnpm ".length).trim();
+    return resolveReference(root, reference) ? [`package.json#scripts.${script}`] : [];
+  }
+  if (reference.startsWith("@sceneaxi/")) return packageReferencePaths(root, reference);
+  if (reference.includes("*")) return wildcardReferencePaths(root, reference);
+  if (reference.endsWith("/")) return walkFiles(root, reference.slice(0, -1), () => true).slice(0, 8);
+  return resolveReference(root, reference) ? [reference] : [];
+}
+
 function resolveReference(root, reference) {
   if (typeof reference !== "string" || reference.length === 0) return false;
   if (reference.includes("*")) return wildcardReferenceExists(root, reference);
@@ -211,6 +273,11 @@ function validateReferenceEntries(root, entries, label, errors) {
       errors.push(`[${label}-link] ${entry.ref} has no resolved path list`);
       continue;
     }
+    rejectDuplicates(entry.resolved, `${label} resolution for ${entry.ref}`, errors);
+    const independentlyResolved = resolveDeclaredReference(root, entry.ref);
+    if (!arraysEqual(independentlyResolved, entry.resolved)) {
+      errors.push(`[${label}-resolution] ${entry.ref} resolution differs (declared: ${entry.resolved.join(", ") || "none"}; actual: ${independentlyResolved.join(", ") || "none"})`);
+    }
     if (entry.resolved.length === 0 && !entry.ref.includes("*")) {
       errors.push(`[${label}-link] ${entry.ref} has no resolved path`);
       continue;
@@ -231,6 +298,23 @@ function parseRenderedRows(markdown) {
     if (match) rows.set(match[1], match[2]);
   }
   return rows;
+}
+
+function parseMarkedPathCatalog(markdown, name, errors) {
+  const start = `<!-- traceability:${name}:start -->`;
+  const end = `<!-- traceability:${name}:end -->`;
+  const startIndex = markdown.indexOf(start);
+  const endIndex = markdown.indexOf(end);
+  if (startIndex === -1 || endIndex <= startIndex) {
+    errors.push(`[${name}] missing marked catalog`);
+    return [];
+  }
+  return markdown
+    .slice(startIndex + start.length, endIndex)
+    .split("\n")
+    .map((line) => /^\|\s*`([^`]+)`\s*\|$/.exec(line)?.[1])
+    .filter(Boolean)
+    .sort();
 }
 
 function checkRequirements(root, declaration, rendered, authority, errors) {
@@ -422,7 +506,7 @@ function checkInventorySurface(root, inventory, runtimeSurfaces, errors) {
   for (const [key, value] of Object.entries(countChecks)) if (counts[key] !== value) errors.push(`[surface-count] liveInventory.counts.${key} is ${counts[key]}, expected ${value}`);
 }
 
-function checkEvidenceAndRegistries(root, inventory, runtimeSurfaces, errors) {
+function checkEvidenceAndRegistries(root, inventory, runtimeSurfaces, rendered, errors) {
   for (const [label, values] of [
     ["provider entrypoints", inventory?.providerEntrypoints],
     ["browser evidence", inventory?.browserEvidence],
@@ -431,6 +515,10 @@ function checkEvidenceAndRegistries(root, inventory, runtimeSurfaces, errors) {
   ]) rejectDuplicates(values, label, errors);
   for (const entry of [...(inventory?.providerEntrypoints ?? []), ...(inventory?.browserEvidence ?? []), ...(inventory?.releaseArtifacts ?? [])]) {
     if (!resolveReference(root, entry)) errors.push(`[evidence-path] stale evidence or provider path: ${entry}`);
+  }
+  const browserEvidenceCatalog = parseMarkedPathCatalog(rendered, "browser-evidence", errors);
+  if (!arraysEqual(browserEvidenceCatalog, inventory?.browserEvidence ?? [])) {
+    errors.push(`[browser-evidence] inventory differs from the marked catalog (missing: ${missing(browserEvidenceCatalog, inventory?.browserEvidence ?? []).join(", ") || "none"}; extra: ${extra(browserEvidenceCatalog, inventory?.browserEvidence ?? []).join(", ") || "none"})`);
   }
   const runtimeProviders = runtimeSurfaces?.providerEntrypoints ?? [];
   if (!arraysEqual(runtimeProviders, inventory?.providerEntrypoints ?? [])) {
@@ -462,7 +550,7 @@ export function checkTraceability(root = resolve(dirname(fileURLToPath(import.me
   checkRequirements(root, declaration, rendered, authority, errors);
   checkPackages(root, declaration.liveInventory, matrix, errors);
   checkInventorySurface(root, declaration.liveInventory, runtimeSurfaces, errors);
-  checkEvidenceAndRegistries(root, declaration.liveInventory, runtimeSurfaces, errors);
+  checkEvidenceAndRegistries(root, declaration.liveInventory, runtimeSurfaces, rendered, errors);
   return errors;
 }
 

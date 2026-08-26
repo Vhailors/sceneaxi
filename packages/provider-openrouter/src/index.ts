@@ -438,3 +438,7 @@ export function createOpenRouterAdapter(
     },
   });
 }
+
+export const SCENEAXI_PROVIDER_ENTRYPOINT_CATALOG = Object.freeze({
+  "packages/provider-openrouter/src/index.ts": createOpenRouterAdapter,
+});

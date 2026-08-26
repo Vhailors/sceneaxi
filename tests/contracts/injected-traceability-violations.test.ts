@@ -9,6 +9,7 @@ const RENDERED = "docs/audits/initiation/Requirements-Traceability.md";
 const RUNTIME_SURFACES = "docs/audits/initiation/runtime-surfaces.json";
 
 type TraceLink = {
+  ref: string;
   resolved: string[];
 };
 
@@ -22,6 +23,7 @@ type Requirement = {
 type Inventory = {
   requirements: Requirement[];
   liveInventory: {
+    browserEvidence: string[];
     editor: {
       controls: string[];
     };
@@ -128,13 +130,14 @@ describe("traceability check — injected violations", () => {
     expect(result.stderr).toContain("[requirements-authority]");
   });
 
-  it("fails when a real implementation link loses its resolved path", () => {
+  it("fails when an implementation reference disagrees with its resolved path", () => {
     mutateInventory(fixture, (inventory) => {
-      firstLink(requirement(inventory, "TOPO-001").liveImplementation).resolved = [];
+      firstLink(requirement(inventory, "TOPO-001").liveImplementation).ref =
+        "packages/schemas";
     });
     const result = runCheck(fixture, CHECK);
     expect(result.status).toBe(1);
-    expect(result.stderr).toContain("[implementation-link]");
+    expect(result.stderr).toContain("[implementation-resolution]");
   });
 
   it("fails when a real proof link loses its resolved path", () => {
@@ -261,16 +264,28 @@ describe("traceability check — injected violations", () => {
     expect(result.stderr).toContain("refusal registry inventory");
   });
 
-  it("fails when an executable provider entrypoint is missing from inventory", () => {
+  it("fails when production provider and browser-evidence catalogs are omitted", () => {
     mutateInventory(fixture, (inventory) => {
+      const omittedProviders = new Set([
+        "packages/auth/src/index.ts",
+        "desktop/linux/src/electron/live-transport.ts",
+      ]);
       inventory.liveInventory.providerEntrypoints =
         inventory.liveInventory.providerEntrypoints.filter(
-          (entry) => entry !== "desktop/linux/src/electron/provider-key-store.ts",
+          (entry) => !omittedProviders.has(entry),
+        );
+      inventory.liveInventory.browserEvidence =
+        inventory.liveInventory.browserEvidence.filter(
+          (entry) => entry !== "sites/umbrella/VISUAL-EVIDENCE.md",
         );
     });
     const result = runCheck(fixture, CHECK);
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("[provider-entrypoint]");
+    expect(result.stderr).toContain("packages/auth/src/index.ts");
+    expect(result.stderr).toContain("desktop/linux/src/electron/live-transport.ts");
+    expect(result.stderr).toContain("[browser-evidence]");
+    expect(result.stderr).toContain("sites/umbrella/VISUAL-EVIDENCE.md");
   });
 
   it("fails when a site route is added without inventory coverage", () => {

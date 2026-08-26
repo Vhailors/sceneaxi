@@ -1,5 +1,7 @@
 import * as auth from "../../packages/auth/src/index.js";
+import * as authBetterAuthAdapter from "../../packages/auth/src/better-auth-adapter.js";
 import * as authoringCore from "../../packages/authoring-core/src/index.js";
+import * as authoringModelProvider from "../../packages/authoring-core/src/model-provider-port.js";
 import * as billing from "../../packages/billing/src/index.js";
 import * as cli from "../../packages/cli/src/index.js";
 import type { CommandNode } from "../../packages/cli/src/commands.js";
@@ -21,12 +23,14 @@ import * as webShell from "../../apps/web-shell/src/index.js";
 import * as desktopLinux from "../../desktop/linux/src/index.js";
 import * as desktopElectronProviderKeyStore from "../../desktop/linux/src/electron/provider-key-store.js";
 import * as desktopProviderRuntime from "../../desktop/linux/src/electron/provider-runtime.js";
+import * as desktopProviderKeyStore from "../../desktop/linux/src/lib/provider-key-store.js";
 import * as desktopMacos from "../../desktop/macos/src/index.js";
 import * as desktopWindows from "../../desktop/windows/src/index.js";
 import * as siteCatalogGame from "../../sites/catalog-game/src/index.js";
 import * as siteCatalogWeb from "../../sites/catalog-web/src/index.js";
 import * as siteKids from "../../sites/kids/src/index.js";
 import * as siteUmbrella from "../../sites/umbrella/src/index.js";
+import * as siteProviderAdapters from "../../sites/umbrella/src/lib/provider-adapters.js";
 import * as betterAuthProviderRefusals from "../../sites/umbrella/src/provider/better-auth-provider-refusals.js";
 
 export type TraceabilityRuntimeSurfaces = Readonly<{
@@ -81,36 +85,17 @@ const PROVIDER_SAFE_MODULES = Object.freeze([
 
 const REFUSAL_REGISTRY_NAME = /(?:_REFUSALS|_REFUSE_REASONS|_REFUSAL_REASONS|_REFUSE_CODES|_ERROR_CODES)$/;
 const REFUSAL_REGISTRY_CATALOG = "SCENEAXI_REFUSAL_REGISTRY_CATALOG";
+const PROVIDER_ENTRYPOINT_CATALOG = "SCENEAXI_PROVIDER_ENTRYPOINT_CATALOG";
 
-export const TRACEABILITY_PROVIDER_ENTRYPOINT_CATALOG = Object.freeze([
-  {
-    path: "sites/umbrella/src/provider/better-auth-provider.ts",
-    witness: betterAuthProviderRefusals.BETTER_AUTH_PROVIDER_REFUSALS,
-  },
-  {
-    path: "sites/umbrella/src/lib/provider-adapters.ts",
-    witness: siteUmbrella.createStripeClient,
-  },
-  {
-    path: "packages/provider-openrouter/src/index.ts",
-    witness: providerOpenrouter.createOpenRouterAdapter,
-  },
-  {
-    path: "packages/authoring-core/src/model-provider-port.ts",
-    witness: authoringCore.createModelProviderPort,
-  },
-  {
-    path: "desktop/linux/src/electron/provider-runtime.ts",
-    witness: desktopProviderRuntime.createPrivilegedDesktopByoRuntime,
-  },
-  {
-    path: "desktop/linux/src/electron/provider-key-store.ts",
-    witness: desktopElectronProviderKeyStore.createElectronProviderKeyStore,
-  },
-  {
-    path: "desktop/linux/src/lib/provider-key-store.ts",
-    witness: desktopLinux.createProviderKeyStore,
-  },
+const PROVIDER_MODULES = Object.freeze([
+  authBetterAuthAdapter,
+  authoringModelProvider,
+  providerOpenrouter,
+  siteProviderAdapters,
+  betterAuthProviderRefusals,
+  desktopProviderRuntime,
+  desktopElectronProviderKeyStore,
+  desktopProviderKeyStore,
 ] as const);
 
 export function traceabilityPublicModulePaths(): string[] {
@@ -161,15 +146,21 @@ function assertRegistry(value: unknown, symbol: string): void {
 }
 
 function providerEntrypoints(): string[] {
-  for (const entry of TRACEABILITY_PROVIDER_ENTRYPOINT_CATALOG) {
-    if (
-      typeof entry.witness !== "function" &&
-      (typeof entry.witness !== "object" || entry.witness === null)
-    ) {
-      throw new Error(`${entry.path} has no executable provider witness`);
+  const paths = new Set<string>();
+  for (const module of PROVIDER_MODULES) {
+    const catalog = (module as Record<string, unknown>)[PROVIDER_ENTRYPOINT_CATALOG];
+    if (typeof catalog !== "object" || catalog === null || Array.isArray(catalog)) {
+      throw new Error("provider module has no executable entrypoint catalog");
+    }
+    for (const [path, witness] of Object.entries(catalog)) {
+      if (typeof witness !== "function" && (typeof witness !== "object" || witness === null)) {
+        throw new Error(`${path} has no executable provider witness`);
+      }
+      if (paths.has(path)) throw new Error(`duplicate executable provider entrypoint ${path}`);
+      paths.add(path);
     }
   }
-  return TRACEABILITY_PROVIDER_ENTRYPOINT_CATALOG.map((entry) => entry.path).sort();
+  return [...paths].sort();
 }
 
 function catalogRegistry(value: unknown):

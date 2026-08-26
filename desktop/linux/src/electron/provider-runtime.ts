@@ -382,3 +382,8 @@ export function createDesktopRarityFixtureProvider(
       prompt: request.prompt,
     });
 }
+
+export const SCENEAXI_PROVIDER_ENTRYPOINT_CATALOG = Object.freeze({
+  "desktop/linux/src/electron/provider-runtime.ts": createPrivilegedDesktopByoRuntime,
+  "desktop/linux/src/electron/live-transport.ts": createDesktopOpenCodeLiveTransport,
+});
