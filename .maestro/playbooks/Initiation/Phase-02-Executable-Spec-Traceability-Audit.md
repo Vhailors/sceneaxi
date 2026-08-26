@@ -19,11 +19,24 @@ Turn the repository's many specifications into one checked map from requirement 
   paths and the Phase 01 build/gate blockers were preserved; no later
   traceability or checker task was started.
 
-- [ ] Build a requirement inventory from authoritative statements rather than headings alone:
+- [x] Build a requirement inventory from authoritative statements rather than headings alone:
   - Assign stable IDs to every normative product behavior, package boundary, protocol rule, refusal rule, user story, runnable claim, release condition, safety invariant, and accepted visual fact.
   - Record each requirement's exact owner path and anchor, domain, authority status, expected implementation surface, expected evidence layer, and current classification: `real`, `partial`, `refuse-only`, `dormant`, `delayed`, `held`, `host-blocked`, or `gap`.
   - Put the inventory in a machine-readable declaration under `docs/audits/initiation/` and render `Requirements-Traceability.md` with YAML front matter (`type: reference`, tags `[sceneaxi, requirements, traceability]`), wiki-links to domain reports, and tables that stay small enough to review.
   - Never convert a Stage 1/6 proof, Kids launch, marketplace activation, license choice, live publication, Stripe LIVE path, or delayed package into implementation work unless its exact separate authority exists in the owning record.
+
+  **Completion note (2026-08-26):** Created
+  `docs/audits/initiation/requirements.json` and rendered
+  `docs/audits/initiation/Requirements-Traceability.md`. The inventory contains
+  109 unique stable IDs: 69 product/protocol/core/authority rows, one row for
+  each of the 26 dependency-matrix packages, and 14 runnable-surface rows. Each
+  row records its owner path and anchor, domain, authority status, expected
+  implementation and evidence surfaces, and one of the eight allowed current
+  classifications. Owner paths and Markdown anchors were checked; the
+  declaration parses with unique IDs. Held, delayed, dormant, and host-blocked
+  rows remain non-implementation classifications, and no Stage 1/6 proof, Kids
+  launch, marketplace activation, license, publication, Stripe LIVE path, or
+  delayed package was promoted without separate authority.
 
 - [ ] Map live code and evidence to every requirement:
   - Enumerate all packages from `docs/dependency-matrix.json`, all package exports and typed seams, CLI verbs and held-key map entries, editor commands, desktop controls, site routes, database migrations, provider entrypoints, refusal registries, workflows, golden tests, browser evidence records, and release artifacts.
