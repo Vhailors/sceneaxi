@@ -14,7 +14,7 @@ related:
 
 # SceneAxi Requirements Traceability
 
-This document is the human review of the machine-readable [`requirements.json`](requirements.json) declaration. The declaration now joins each stable requirement to live implementation/refusal references, meaningful proof references, and a coverage result. The join reuses the repository's existing module, capability, export, boundary, contract, route, migration, and evidence owners; it is not a second policy source.
+This document is the human review of the machine-readable [`requirements.json`](requirements.json) declaration. The declaration joins each stable requirement to live implementation/refusal references, targeted proof references, and a coverage result. The join reuses the repository's existing module, capability, export, boundary, contract, route, migration, and evidence owners; it is not a second policy source.
 
 ## Inventory scope and status
 
@@ -68,14 +68,14 @@ The map does not authorize Stage 1/6 proof, Kids launch, marketplace activation,
 
 ## Requirement live mapping
 
-Each row has at least one live implementation/refusal reference and one proof reference. The JSON retains every reference and resolved path; this table shows the first reference for compact review. `+N` means additional references remain in the machine declaration.
+Each row has at least one live implementation/refusal reference and one targeted proof reference. The JSON retains every reference and resolved path; this table shows the first reference for compact review. `+N` means additional references remain in the machine declaration.
 
 ### Authoring Protocol
 
-| ID | Class | Live implementation / refusal | Meaningful proof | Result |
+| ID | Class | Live implementation / refusal | Targeted proof | Result |
 |---|---|---|---|---|
 | AUTH-001 | `real` | `packages/cli/src` (+1) | `packages/cli/test/` (+1) | `mapped` |
-| AUTH-002 | `real` | `packages/authoring-core` (+1) | `packages/authoring-core/test/` (+2) | `mapped` |
+| AUTH-002 | `real` | `packages/authoring-core` (+1) | `packages/authoring-core/test/project-model.test.ts` (+2) | `mapped` |
 | AUTH-003 | `real` | `packages/cli` (+1) | `packages/cli/test/bin-smoke.test.ts` (+1) | `mapped` |
 | AUTH-004 | `real` | `packages/authoring-core` (+2) | `packages/authoring-core/test/` (+2) | `mapped` |
 | AUTH-005 | `real` | `packages/cli` (+2) | `packages/cli/test/` (+1) | `mapped` |
@@ -84,7 +84,7 @@ Each row has at least one live implementation/refusal reference and one proof re
 
 ### Catalog
 
-| ID | Class | Live implementation / refusal | Meaningful proof | Result |
+| ID | Class | Live implementation / refusal | Targeted proof | Result |
 |---|---|---|---|---|
 | CAT-001 | `real` | `sites/catalog-game` (+2) | `tests/sites/catalog-storefronts.test.ts` (+1) | `mapped` |
 | CAT-002 | `partial` | `packages/site-kit/src/catalog-pipeline.ts` (+1) | `tests/e2e/catalog-fixture-commerce-golden.test.ts` (+1) | `mapped` |
@@ -93,7 +93,7 @@ Each row has at least one live implementation/refusal reference and one proof re
 
 ### Core
 
-| ID | Class | Live implementation / refusal | Meaningful proof | Result |
+| ID | Class | Live implementation / refusal | Targeted proof | Result |
 |---|---|---|---|---|
 | CORE-001 | `real` | `packages/engine-kernel/src/index.ts` | `packages/engine-kernel/test/scene-session.test.ts` (+1) | `mapped` |
 | CORE-002 | `real` | `packages/engine-orchestrator/src/index.ts` | `packages/engine-orchestrator/test/golden-path-orchestrated.test.ts` (+1) | `mapped` |
@@ -116,7 +116,7 @@ Each row has at least one live implementation/refusal reference and one proof re
 
 ### Desktop
 
-| ID | Class | Live implementation / refusal | Meaningful proof | Result |
+| ID | Class | Live implementation / refusal | Targeted proof | Result |
 |---|---|---|---|---|
 | DESK-001 | `real` | `packages/schemas/src/editor-shell.ts` (+2) | `apps/desktop-shell/test/control-accounting.test.ts` (+1) | `mapped` |
 | DESK-002 | `refuse-only` | `apps/desktop-shell/src/chrome.ts` (+1) | `apps/desktop-shell/test/chrome.test.ts` (+1) | `refuse-only` |
@@ -131,15 +131,15 @@ Each row has at least one live implementation/refusal reference and one proof re
 
 ### Held Keys
 
-| ID | Class | Live implementation / refusal | Meaningful proof | Result |
+| ID | Class | Live implementation / refusal | Targeted proof | Result |
 |---|---|---|---|---|
 | HOLD-001 | `real` | `packages/cli/src/held-keys` (+1) | `packages/cli/test/held-keys.*.test.ts` (+1) | `mapped` |
-| HOLD-002 | `real` | `packages/cli/src/held-keys` (+1) | `packages/cli/test/held-keys.*.test.ts` | `mapped` |
-| HOLD-003 | `real` | `packages/cli/test/held-keys.*.test.ts` | `packages/cli/test/held-keys.*.test.ts` | `mapped` |
+| HOLD-002 | `real` | `packages/cli/src/held-keys` (+1) | `packages/cli/test/held-keys.refusal-table.test.ts` | `mapped` |
+| HOLD-003 | `real` | `packages/cli/test/held-keys.*.test.ts` | `packages/cli/test/held-keys.regressions.test.ts` | `mapped` |
 
 ### Identity Billing
 
-| ID | Class | Live implementation / refusal | Meaningful proof | Result |
+| ID | Class | Live implementation / refusal | Targeted proof | Result |
 |---|---|---|---|---|
 | IDENT-001 | `real` | `packages/auth` (+3) | `tests/sites/identity-plane-wiring.test.ts` (+1) | `mapped` |
 | IDENT-002 | `real` | `packages/auth/src` | `packages/auth/test/identity-port.test.ts` (+1) | `mapped` |
@@ -151,7 +151,7 @@ Each row has at least one live implementation/refusal reference and one proof re
 
 ### Profiles
 
-| ID | Class | Live implementation / refusal | Meaningful proof | Result |
+| ID | Class | Live implementation / refusal | Targeted proof | Result |
 |---|---|---|---|---|
 | PROF-001 | `real` | `packages/profile-game` (+2) | `tests/e2e/cli-golden-path.test.ts` (+2) | `mapped` |
 | PROF-002 | `real` | `packages/profile-web` (+1) | `tests/e2e/profile-web-golden-path.test.ts` (+1) | `mapped` |
@@ -162,9 +162,9 @@ Each row has at least one live implementation/refusal reference and one proof re
 
 ### Release And Authority
 
-| ID | Class | Live implementation / refusal | Meaningful proof | Result |
+| ID | Class | Live implementation / refusal | Targeted proof | Result |
 |---|---|---|---|---|
-| REL-001 | `real` | `package.json` (+4) | `tests/syntax/` (+3) | `mapped` |
+| REL-001 | `real` | `package.json` (+4) | `tests/syntax/check-syntax.test.ts` (+2) | `mapped` |
 | REL-002 | `held` | `docs/program/spec-41.md` (+1) | `docs/proof/README.md` (+1) | `mapped` |
 | REL-003 | `real` | `docs/bootstrap.md` (+1) | `tests/` (+1) | `mapped` |
 | REL-004 | `held` | `docs/production-activation.md` (+1) | `docs/production-activation.md` | `mapped` |
@@ -174,7 +174,7 @@ Each row has at least one live implementation/refusal reference and one proof re
 
 ### Runnable Surfaces
 
-| ID | Class | Live implementation / refusal | Meaningful proof | Result |
+| ID | Class | Live implementation / refusal | Targeted proof | Result |
 |---|---|---|---|---|
 | SURFACE-001 | `real` | `packages/cli/bin/sceneaxi.mjs` | `packages/cli/test/bin-smoke.test.ts` | `mapped` |
 | SURFACE-002 | `real` | `apps/desktop-shell/bin/sceneaxi-desktop.mjs` | `apps/desktop-shell/test/bin-smoke.test.ts` (+1) | `mapped` |
@@ -193,10 +193,10 @@ Each row has at least one live implementation/refusal reference and one proof re
 
 ### Topology
 
-| ID | Class | Live implementation / refusal | Meaningful proof | Result |
+| ID | Class | Live implementation / refusal | Targeted proof | Result |
 |---|---|---|---|---|
-| TOPO-001 | `real` | `packages/authoring-core` (+3) | `tests/e2e/` (+2) | `mapped` |
-| TOPO-002 | `real` | `docs/dependency-matrix.json` (+1) | `tests/boundary/` (+1) | `mapped` |
+| TOPO-001 | `real` | `packages/authoring-core` (+3) | `tests/docs/module-coverage.test.ts` (+1) | `mapped` |
+| TOPO-002 | `real` | `docs/dependency-matrix.json` (+1) | `tests/boundary/injected-violations.test.ts` (+1) | `mapped` |
 | TOPO-003 | `real` | `docs/program/SPEC.md` (+1) | `tests/docs/module-coverage.test.ts` | `mapped` |
 | TOPO-004 | `real` | `packages/schemas` (+1) | `packages/schemas/test/seam.test.ts` (+1) | `mapped` |
 | TOPO-005 | `real` | `packages/profile-game/package.json` (+3) | `tests/boundary/` (+1) | `mapped` |
@@ -210,11 +210,11 @@ Each row has at least one live implementation/refusal reference and one proof re
 | BOUNDARY-006 | `real` | `@sceneaxi/cli` (+1) | `tests/boundary/` (+1) | `mapped` |
 | BOUNDARY-007 | `real` | `@sceneaxi/desktop-linux` (+1) | `tests/boundary/injected-desktop-violations.test.ts` (+1) | `mapped` |
 | BOUNDARY-008 | `partial` | `@sceneaxi/desktop-macos` (+1) | `desktop/macos/test/seam.test.ts` (+1) | `mapped` |
-| BOUNDARY-009 | `real` | `@sceneaxi/desktop-shell` (+1) | `tests/boundary/` (+1) | `mapped` |
+| BOUNDARY-009 | `real` | `@sceneaxi/desktop-shell` (+1) | `apps/desktop-shell/test/seam.test.ts` (+1) | `mapped` |
 | BOUNDARY-010 | `partial` | `@sceneaxi/desktop-windows` (+1) | `tests/e2e/desktop-project-build-golden.test.ts` (+1) | `mapped` |
 | BOUNDARY-011 | `real` | `@sceneaxi/engine-kernel` (+1) | `packages/engine-kernel/test/browser-open-play.test.ts` (+1) | `mapped` |
 | BOUNDARY-012 | `real` | `@sceneaxi/engine-orchestrator` (+1) | `packages/engine-orchestrator/test/golden-path-orchestrated.test.ts` (+1) | `mapped` |
-| BOUNDARY-013 | `real` | `@sceneaxi/engine-presentation` (+1) | `packages/engine-presentation/test/` (+1) | `mapped` |
+| BOUNDARY-013 | `real` | `@sceneaxi/engine-presentation` (+1) | `packages/engine-presentation/test/seam.test.ts` (+1) | `mapped` |
 | BOUNDARY-014 | `real` | `@sceneaxi/importers` (+1) | `tests/e2e/asset-ingestion-golden.test.ts` (+1) | `mapped` |
 | BOUNDARY-015 | `real` | `@sceneaxi/plugin-host` (+1) | `tests/e2e/plugin-capability-golden.test.ts` (+1) | `mapped` |
 | BOUNDARY-016 | `real` | `@sceneaxi/profile-game` (+1) | `packages/profile-game/test/seam.test.ts` (+1) | `mapped` |
@@ -225,7 +225,7 @@ Each row has at least one live implementation/refusal reference and one proof re
 | BOUNDARY-021 | `real` | `@sceneaxi/site-catalog-game` (+1) | `tests/sites/catalog-storefronts.test.ts` (+1) | `mapped` |
 | BOUNDARY-022 | `real` | `@sceneaxi/site-catalog-web` (+1) | `tests/sites/catalog-storefronts.test.ts` (+1) | `mapped` |
 | BOUNDARY-023 | `real` | `@sceneaxi/site-kids` (+1) | `tests/sites/kids-surface.test.ts` (+1) | `mapped` |
-| BOUNDARY-024 | `real` | `@sceneaxi/site-kit` (+1) | `packages/site-kit/test/` (+1) | `mapped` |
+| BOUNDARY-024 | `real` | `@sceneaxi/site-kit` (+1) | `packages/site-kit/test/seam.test.ts` (+1) | `mapped` |
 | BOUNDARY-025 | `real` | `@sceneaxi/site-umbrella` (+1) | `tests/sites/identity-plane-wiring.test.ts` (+1) | `mapped` |
 | BOUNDARY-026 | `real` | `@sceneaxi/web-shell` (+1) | `apps/web-shell/test/assistant-panel.test.ts` (+1) | `mapped` |
 

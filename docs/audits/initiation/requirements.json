@@ -38,9 +38,8 @@
         "packages/profile-kids"
       ],
       "expectedEvidenceLayer": [
-        "tests/e2e/",
-        "tests/parity/",
-        "tests/docs/module-coverage.test.ts"
+        "tests/docs/module-coverage.test.ts",
+        "tests/parity/shell-cli-parity.test.ts"
       ],
       "classification": "real",
       "liveImplementation": [
@@ -79,35 +78,18 @@
       ],
       "liveProofs": [
         {
-          "ref": "tests/e2e/",
-          "kind": "source",
-          "resolved": [
-            "tests/e2e/asset-ingestion-golden.test.ts",
-            "tests/e2e/asset-pipeline-golden.test.ts",
-            "tests/e2e/assistant-panel-golden.test.ts",
-            "tests/e2e/auth-credits-golden.test.ts",
-            "tests/e2e/auth-credits-refuse-matrix.test.ts",
-            "tests/e2e/catalog-fixture-commerce-golden.test.ts",
-            "tests/e2e/cli-golden-path.test.ts",
-            "tests/e2e/contained-git-golden.test.ts"
-          ],
-          "present": true
-        },
-        {
-          "ref": "tests/parity/",
-          "kind": "source",
-          "resolved": [
-            "tests/parity/editor-shell-parity.test.ts",
-            "tests/parity/open-path-policy-parity.test.ts",
-            "tests/parity/shell-cli-parity.test.ts"
-          ],
-          "present": true
-        },
-        {
           "ref": "tests/docs/module-coverage.test.ts",
           "kind": "owner-doc",
           "resolved": [
             "tests/docs/module-coverage.test.ts"
+          ],
+          "present": true
+        },
+        {
+          "ref": "tests/parity/shell-cli-parity.test.ts",
+          "kind": "source",
+          "resolved": [
+            "tests/parity/shell-cli-parity.test.ts"
           ],
           "present": true
         }
@@ -129,8 +111,8 @@
         "scripts/check-boundaries.mjs"
       ],
       "expectedEvidenceLayer": [
-        "tests/boundary/",
-        "pnpm check:boundaries"
+        "tests/boundary/injected-violations.test.ts",
+        "scripts/check-boundaries.mjs"
       ],
       "classification": "real",
       "liveImplementation": [
@@ -153,20 +135,18 @@
       ],
       "liveProofs": [
         {
-          "ref": "tests/boundary/",
+          "ref": "tests/boundary/injected-violations.test.ts",
           "kind": "source",
           "resolved": [
-            "tests/boundary/injected-desktop-violations.test.ts",
-            "tests/boundary/injected-site-violations.test.ts",
             "tests/boundary/injected-violations.test.ts"
           ],
           "present": true
         },
         {
-          "ref": "pnpm check:boundaries",
-          "kind": "command",
+          "ref": "scripts/check-boundaries.mjs",
+          "kind": "source",
           "resolved": [
-            "package.json#scripts.check:boundaries"
+            "scripts/check-boundaries.mjs"
           ],
           "present": true
         }
@@ -560,9 +540,9 @@
         "packages/cli"
       ],
       "expectedEvidenceLayer": [
-        "packages/authoring-core/test/",
-        "packages/cli/test/",
-        "tests/e2e/"
+        "packages/authoring-core/test/project-model.test.ts",
+        "packages/cli/test/project-lifecycle.test.ts",
+        "tests/e2e/cli-golden-path.test.ts"
       ],
       "classification": "real",
       "liveImplementation": [
@@ -585,47 +565,26 @@
       ],
       "liveProofs": [
         {
-          "ref": "packages/authoring-core/test/",
+          "ref": "packages/authoring-core/test/project-model.test.ts",
           "kind": "test",
           "resolved": [
-            "packages/authoring-core/test/assistant-sculpt.test.ts",
-            "packages/authoring-core/test/journal-recovery.test.ts",
-            "packages/authoring-core/test/model-provider-port.test.ts",
-            "packages/authoring-core/test/project-git.test.ts",
-            "packages/authoring-core/test/project-model.test.ts",
-            "packages/authoring-core/test/scene-composition.test.ts",
-            "packages/authoring-core/test/sculpt-reconstruction.test.ts",
-            "packages/authoring-core/test/seam.test.ts"
+            "packages/authoring-core/test/project-model.test.ts"
           ],
           "present": true
         },
         {
-          "ref": "packages/cli/test/",
+          "ref": "packages/cli/test/project-lifecycle.test.ts",
           "kind": "test",
           "resolved": [
-            "packages/cli/test/__snapshots__/envelope.snapshot.test.ts.snap",
-            "packages/cli/test/bin-smoke.test.ts",
-            "packages/cli/test/desktop-bridge.test.ts",
-            "packages/cli/test/desktop-socket-worker-lockstep.test.ts",
-            "packages/cli/test/envelope.snapshot.test.ts",
-            "packages/cli/test/exit-codes.golden.test.ts",
-            "packages/cli/test/fixtures/held-keys/firstmate-export.epoch2.json",
-            "packages/cli/test/fixtures/held-keys/firstmate-export.epoch3.all-resolved.json"
+            "packages/cli/test/project-lifecycle.test.ts"
           ],
           "present": true
         },
         {
-          "ref": "tests/e2e/",
-          "kind": "source",
+          "ref": "tests/e2e/cli-golden-path.test.ts",
+          "kind": "test",
           "resolved": [
-            "tests/e2e/asset-ingestion-golden.test.ts",
-            "tests/e2e/asset-pipeline-golden.test.ts",
-            "tests/e2e/assistant-panel-golden.test.ts",
-            "tests/e2e/auth-credits-golden.test.ts",
-            "tests/e2e/auth-credits-refuse-matrix.test.ts",
-            "tests/e2e/catalog-fixture-commerce-golden.test.ts",
-            "tests/e2e/cli-golden-path.test.ts",
-            "tests/e2e/contained-git-golden.test.ts"
+            "tests/e2e/cli-golden-path.test.ts"
           ],
           "present": true
         }
@@ -1060,7 +1019,7 @@
         "packages/schemas/contracts/held-key-registry.schema.json"
       ],
       "expectedEvidenceLayer": [
-        "packages/cli/test/held-keys.*.test.ts"
+        "packages/cli/test/held-keys.refusal-table.test.ts"
       ],
       "classification": "real",
       "liveImplementation": [
@@ -1083,13 +1042,10 @@
       ],
       "liveProofs": [
         {
-          "ref": "packages/cli/test/held-keys.*.test.ts",
+          "ref": "packages/cli/test/held-keys.refusal-table.test.ts",
           "kind": "test",
           "resolved": [
-            "packages/cli/test/held-keys.command-map.test.ts",
-            "packages/cli/test/held-keys.generator.test.ts",
-            "packages/cli/test/held-keys.refusal-table.test.ts",
-            "packages/cli/test/held-keys.regressions.test.ts"
+            "packages/cli/test/held-keys.refusal-table.test.ts"
           ],
           "present": true
         }
@@ -1110,7 +1066,7 @@
         "packages/cli/test/held-keys.*.test.ts"
       ],
       "expectedEvidenceLayer": [
-        "packages/cli/test/held-keys.*.test.ts"
+        "packages/cli/test/held-keys.regressions.test.ts"
       ],
       "classification": "real",
       "liveImplementation": [
@@ -1128,12 +1084,9 @@
       ],
       "liveProofs": [
         {
-          "ref": "packages/cli/test/held-keys.*.test.ts",
+          "ref": "packages/cli/test/held-keys.regressions.test.ts",
           "kind": "test",
           "resolved": [
-            "packages/cli/test/held-keys.command-map.test.ts",
-            "packages/cli/test/held-keys.generator.test.ts",
-            "packages/cli/test/held-keys.refusal-table.test.ts",
             "packages/cli/test/held-keys.regressions.test.ts"
           ],
           "present": true
@@ -3930,10 +3883,9 @@
         "tests/boundary"
       ],
       "expectedEvidenceLayer": [
-        "tests/syntax/",
-        "tests/contracts/",
-        "tests/boundary/",
-        "pnpm gate"
+        "tests/syntax/check-syntax.test.ts",
+        "tests/contracts/injected-open-path-drift.test.ts",
+        "tests/boundary/injected-violations.test.ts"
       ],
       "classification": "real",
       "liveImplementation": [
@@ -3987,7 +3939,7 @@
       ],
       "liveProofs": [
         {
-          "ref": "tests/syntax/",
+          "ref": "tests/syntax/check-syntax.test.ts",
           "kind": "source",
           "resolved": [
             "tests/syntax/check-syntax.test.ts"
@@ -3995,32 +3947,18 @@
           "present": true
         },
         {
-          "ref": "tests/contracts/",
+          "ref": "tests/contracts/injected-open-path-drift.test.ts",
           "kind": "contract",
           "resolved": [
-            "tests/contracts/injected-credit-pack-drift.test.ts",
-            "tests/contracts/injected-entitlement-drift.test.ts",
-            "tests/contracts/injected-listing-drift.test.ts",
-            "tests/contracts/injected-open-path-drift.test.ts",
-            "tests/contracts/no-committed-secrets.test.ts"
+            "tests/contracts/injected-open-path-drift.test.ts"
           ],
           "present": true
         },
         {
-          "ref": "tests/boundary/",
+          "ref": "tests/boundary/injected-violations.test.ts",
           "kind": "source",
           "resolved": [
-            "tests/boundary/injected-desktop-violations.test.ts",
-            "tests/boundary/injected-site-violations.test.ts",
             "tests/boundary/injected-violations.test.ts"
-          ],
-          "present": true
-        },
-        {
-          "ref": "pnpm gate",
-          "kind": "command",
-          "resolved": [
-            "package.json#scripts.gate"
           ],
           "present": true
         }
@@ -4921,8 +4859,8 @@
         "scripts/check-boundaries.mjs"
       ],
       "expectedEvidenceLayer": [
-        "tests/boundary/",
-        "apps/desktop-shell/test/"
+        "apps/desktop-shell/test/seam.test.ts",
+        "tests/boundary/injected-violations.test.ts"
       ],
       "classification": "real",
       "liveImplementation": [
@@ -4945,27 +4883,18 @@
       ],
       "liveProofs": [
         {
-          "ref": "tests/boundary/",
-          "kind": "source",
+          "ref": "apps/desktop-shell/test/seam.test.ts",
+          "kind": "test",
           "resolved": [
-            "tests/boundary/injected-desktop-violations.test.ts",
-            "tests/boundary/injected-site-violations.test.ts",
-            "tests/boundary/injected-violations.test.ts"
+            "apps/desktop-shell/test/seam.test.ts"
           ],
           "present": true
         },
         {
-          "ref": "apps/desktop-shell/test/",
-          "kind": "test",
+          "ref": "tests/boundary/injected-violations.test.ts",
+          "kind": "source",
           "resolved": [
-            "apps/desktop-shell/test/app.test.ts",
-            "apps/desktop-shell/test/bin-smoke.test.ts",
-            "apps/desktop-shell/test/chrome.test.ts",
-            "apps/desktop-shell/test/control-accounting.test.ts",
-            "apps/desktop-shell/test/open-path.test.ts",
-            "apps/desktop-shell/test/product-loop.test.ts",
-            "apps/desktop-shell/test/protocol-client.test.ts",
-            "apps/desktop-shell/test/seam.test.ts"
+            "tests/boundary/injected-violations.test.ts"
           ],
           "present": true
         }
@@ -5171,8 +5100,8 @@
         "scripts/check-boundaries.mjs"
       ],
       "expectedEvidenceLayer": [
-        "packages/engine-presentation/test/",
-        "tests/boundary/"
+        "packages/engine-presentation/test/seam.test.ts",
+        "tests/boundary/injected-violations.test.ts"
       ],
       "classification": "real",
       "liveImplementation": [
@@ -5195,23 +5124,17 @@
       ],
       "liveProofs": [
         {
-          "ref": "packages/engine-presentation/test/",
+          "ref": "packages/engine-presentation/test/seam.test.ts",
           "kind": "test",
           "resolved": [
-            "packages/engine-presentation/test/runtime.test.ts",
-            "packages/engine-presentation/test/sculpt-mount.test.ts",
-            "packages/engine-presentation/test/seam.test.ts",
-            "packages/engine-presentation/test/three-presentation.test.ts",
-            "packages/engine-presentation/test/three-surface.test.ts"
+            "packages/engine-presentation/test/seam.test.ts"
           ],
           "present": true
         },
         {
-          "ref": "tests/boundary/",
+          "ref": "tests/boundary/injected-violations.test.ts",
           "kind": "source",
           "resolved": [
-            "tests/boundary/injected-desktop-violations.test.ts",
-            "tests/boundary/injected-site-violations.test.ts",
             "tests/boundary/injected-violations.test.ts"
           ],
           "present": true
@@ -5837,8 +5760,8 @@
         "scripts/check-boundaries.mjs"
       ],
       "expectedEvidenceLayer": [
-        "packages/site-kit/test/",
-        "tests/boundary/"
+        "packages/site-kit/test/seam.test.ts",
+        "tests/boundary/injected-violations.test.ts"
       ],
       "classification": "real",
       "liveImplementation": [
@@ -5861,26 +5784,17 @@
       ],
       "liveProofs": [
         {
-          "ref": "packages/site-kit/test/",
+          "ref": "packages/site-kit/test/seam.test.ts",
           "kind": "test",
           "resolved": [
-            "packages/site-kit/test/access-states.test.ts",
-            "packages/site-kit/test/catalog.test.ts",
-            "packages/site-kit/test/change-review.test.ts",
-            "packages/site-kit/test/commerce-notice.test.ts",
-            "packages/site-kit/test/design-tokens.test.ts",
-            "packages/site-kit/test/desktop-app-offer.test.ts",
-            "packages/site-kit/test/editor-session.test.ts",
-            "packages/site-kit/test/editor-shell.test.ts"
+            "packages/site-kit/test/seam.test.ts"
           ],
           "present": true
         },
         {
-          "ref": "tests/boundary/",
+          "ref": "tests/boundary/injected-violations.test.ts",
           "kind": "source",
           "resolved": [
-            "tests/boundary/injected-desktop-violations.test.ts",
-            "tests/boundary/injected-site-violations.test.ts",
             "tests/boundary/injected-violations.test.ts"
           ],
           "present": true
@@ -7859,5 +7773,9 @@
     "mapped": 106,
     "gap": 1,
     "refuse-only": 2
-  }
+  },
+  "liveMapNotes": [
+    "Every real requirement has at least one concrete test, contract, scanner, browser record, workflow, or release artifact path; generic directory citations were replaced with targeted owners.",
+    "Mapped and refused classifications retain their owner/reason metadata; the live join does not promote held, delayed, dormant, or host-blocked rows."
+  ]
 }
