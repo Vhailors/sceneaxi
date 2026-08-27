@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -137,5 +137,66 @@ describe("full-editor package manager vertical", () => {
         digest,
       }, "kids"),
     })).toMatchObject({ ok: false });
+  });
+
+  it("returns PACKAGE_CATALOG_INVALID when a project-controlled catalog is malformed", () => {
+    const root = fixture();
+    const host = bridge(root);
+    const documentPath = join(root, DESKTOP_ACTIVE_DOCUMENT_PATH);
+    const document = JSON.parse(readFileSync(documentPath, "utf8")) as { data: Record<string, unknown> };
+    const before = readFileSync(documentPath, "utf8");
+    document.data["scenePackages"] = {
+      schemaVersion: 1,
+      kind: "sceneaxi.scene-package-catalog",
+      lock: "evil",
+    };
+    writeFileSync(documentPath, `${JSON.stringify(document, null, 2)}\n`);
+    expect(readFileSync(documentPath, "utf8")).not.toBe(before);
+
+    expect(command(host, "package-inspect", "local-agent", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      profile: "game",
+    })).toMatchObject({ ok: false, reason: SCENE_PACKAGE_REFUSALS.catalogInvalid });
+
+    expect(command(host, "package-install", "desktop-control", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      expectedContentHash: hash(host),
+      profile: "game",
+      locator: "fixtures/plugin-host/sculpt-intake-source",
+      manifest,
+      digest,
+    })).toMatchObject({ ok: false, reason: SCENE_PACKAGE_REFUSALS.catalogInvalid });
+  });
+
+  it("refuses a present null catalog while keeping the absent-key empty default", () => {
+    const root = fixture();
+    const host = bridge(root);
+    const documentPath = join(root, DESKTOP_ACTIVE_DOCUMENT_PATH);
+    const document = JSON.parse(readFileSync(documentPath, "utf8")) as { data: Record<string, unknown> };
+    document.data["scenePackages"] = null;
+    writeFileSync(documentPath, `${JSON.stringify(document, null, 2)}\n`);
+
+    expect(command(host, "package-inspect", "local-agent", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      profile: "game",
+    })).toMatchObject({ ok: false, reason: SCENE_PACKAGE_REFUSALS.catalogInvalid });
+    expect(command(host, "package-install", "desktop-control", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      expectedContentHash: hash(host),
+      profile: "game",
+      locator: "fixtures/plugin-host/sculpt-intake-source",
+      manifest,
+      digest,
+    })).toMatchObject({ ok: false, reason: SCENE_PACKAGE_REFUSALS.catalogInvalid });
+
+    delete document.data["scenePackages"];
+    writeFileSync(documentPath, `${JSON.stringify(document, null, 2)}\n`);
+    expect(command(host, "package-inspect", "local-agent", {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      profile: "game",
+    })).toMatchObject({
+      ok: true,
+      data: { kind: "sceneaxi.scene-package-inspection", catalog: { lock: [] } },
+    });
   });
 });

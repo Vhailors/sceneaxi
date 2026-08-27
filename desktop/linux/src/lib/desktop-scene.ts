@@ -1900,13 +1900,25 @@ export function stageDesktopAssistantBuild(input: Readonly<{
 
 function packageCatalogFromData(documentData: unknown) {
   if (!isJsonObject(documentData)) return null;
-  return parseScenePackageCatalog(documentData[SCENE_PACKAGE_CATALOG_KEY]);
+  const value = documentData[SCENE_PACKAGE_CATALOG_KEY];
+  if (value === undefined) return emptyScenePackageCatalog();
+  if (value === null) return null;
+  return parseScenePackageCatalog(value);
 }
 
-export function inspectDesktopScenePackages(documentData: unknown) {
-  return inspectScenePackages({
-    catalog: packageCatalogFromData(documentData) ?? emptyScenePackageCatalog(),
-  });
+
+export function inspectDesktopScenePackages(documentData: unknown):
+  | ReturnType<typeof inspectScenePackages>
+  | Readonly<{ ok: false; reason: string; message: string }> {
+  const catalog = packageCatalogFromData(documentData);
+  if (catalog === null) {
+    return Object.freeze({
+      ok: false as const,
+      reason: SCENE_PACKAGE_REFUSALS.catalogInvalid,
+      message: "The package catalog is not a valid versioned document.",
+    });
+  }
+  return inspectScenePackages({ catalog });
 }
 
 export function stageDesktopScenePackage(input: Readonly<{

@@ -36,6 +36,84 @@ const pluginManifestInertExampleRelativePath = join(
   "plugin-manifest.inert.example.json",
 );
 const checkerRelativePath = join("scripts", "check-contracts.mjs");
+const creditPacksSchemaRelativePath = join(
+  "packages",
+  "schemas",
+  "contracts",
+  "credit-packs.schema.json",
+);
+const creditPacksFixturesRelativePath = join(
+  "packages",
+  "schemas",
+  "contracts",
+  "credit-packs.fixtures.json",
+);
+const authCreditsDocRelativePath = join("docs", "auth-credits.md");
+const creditPacksDataRelativePath = join(
+  "packages",
+  "schemas",
+  "src",
+  "credit-packs.data.ts",
+);
+const entitlementMatrixSchemaRelativePath = join(
+  "packages",
+  "schemas",
+  "contracts",
+  "entitlement-matrix.schema.json",
+);
+const entitlementMatrixFixturesRelativePath = join(
+  "packages",
+  "schemas",
+  "contracts",
+  "entitlement-matrix.fixtures.json",
+);
+const catalogListingsSchemaRelativePath = join(
+  "packages",
+  "schemas",
+  "contracts",
+  "catalog-listings.schema.json",
+);
+const catalogListingsFixturesRelativePath = join(
+  "packages",
+  "schemas",
+  "contracts",
+  "catalog-listings.fixtures.json",
+);
+const catalogListingsDataRelativePath = join(
+  "packages",
+  "schemas",
+  "src",
+  "catalog-listings.data.ts",
+);
+const openPathPolicySchemaRelativePath = join(
+  "packages",
+  "schemas",
+  "contracts",
+  "open-path-policy.schema.json",
+);
+const openPathPolicyFixturesRelativePath = join(
+  "packages",
+  "schemas",
+  "contracts",
+  "open-path-policy.fixtures.json",
+);
+const openPathPolicyDocRelativePath = join("docs", "open-path-policy.md");
+const profileGameSceneGoldenRelativePath = join(
+  "tests",
+  "e2e",
+  "profile-game-scene-golden.test.ts",
+);
+const profileWebGoldenPathRelativePath = join(
+  "tests",
+  "e2e",
+  "profile-web-golden-path.test.ts",
+);
+const profileKidsRefuseGoldenRelativePath = join(
+  "tests",
+  "e2e",
+  "profile-kids-refuse-golden.test.ts",
+);
+
 const sourcePaths = [
   docRelativePath,
   fixturesRelativePath,
@@ -46,8 +124,25 @@ const sourcePaths = [
   pluginManifestInertExampleRelativePath,
   pluginsDocRelativePath,
   schemasReadmeRelativePath,
+  creditPacksSchemaRelativePath,
+  creditPacksFixturesRelativePath,
+  authCreditsDocRelativePath,
+  creditPacksDataRelativePath,
+  entitlementMatrixSchemaRelativePath,
+  entitlementMatrixFixturesRelativePath,
+  catalogListingsSchemaRelativePath,
+  catalogListingsFixturesRelativePath,
+  catalogListingsDataRelativePath,
+  openPathPolicySchemaRelativePath,
+  openPathPolicyFixturesRelativePath,
+  openPathPolicyDocRelativePath,
+  profileGameSceneGoldenRelativePath,
+  profileWebGoldenPathRelativePath,
+  profileKidsRefuseGoldenRelativePath,
+
   checkerRelativePath,
 ];
+
 
 const createSandbox = () => {
   const sandbox = mkdtempSync(join(root, ".check-contracts-test-"));
@@ -340,13 +435,16 @@ const cases = [
     expectedOutput: "docs/plugins.md: registry seed state must exactly document registryVersion 1.0.0",
   },
   {
-    name: "rejects plugins.md empty-seed documentation drift",
+    name: "rejects plugins.md reviewed-count documentation drift",
     mutate(sandbox) {
       writePluginsDoc(
         sandbox,
         readPluginsDoc(sandbox).replace(
           registrySeedState,
-          registrySeedState.replace("exactly `[]` (empty)", "non-empty"),
+          registrySeedState.replace(
+            "exactly 1 reviewed capability ID",
+            "exactly 2 reviewed capability IDs",
+          ),
         ),
       );
     },
@@ -366,13 +464,16 @@ const cases = [
     expectedOutput: "packages/schemas/README.md: registry seed state must exactly document registryVersion 1.0.0",
   },
   {
-    name: "rejects schemas README empty-seed documentation drift",
+    name: "rejects schemas README reviewed-count documentation drift",
     mutate(sandbox) {
       writeSchemasReadme(
         sandbox,
         readSchemasReadme(sandbox).replace(
           registrySeedState,
-          registrySeedState.replace("exactly `[]` (empty)", "non-empty"),
+          registrySeedState.replace(
+            "exactly 1 reviewed capability ID",
+            "exactly 2 reviewed capability IDs",
+          ),
         ),
       );
     },

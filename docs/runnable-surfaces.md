@@ -74,11 +74,10 @@ is a shipping claim.
 and `pg` resolve only from that site's own install root, so it runs there instead
 (`sites/umbrella/README.md` owns the command) and CI runs it after the gate.
 `pnpm test:golden` runs the explicitly listed golden e2e files plus the required
-bin-smoke, parity, and module-coverage checks; it currently omits
+bin-smoke, parity, and module-coverage checks — including
 `contained-git-golden`, `desktop-assistant-scene-loop-golden`,
-`full-editor-transactions-golden`, and `hosted-ai-metering-golden`. Those
-omissions remain a Phase 02 verification gap; the R1 rows above still name their
-individual proof files.
+`full-editor-transactions-golden`, and `hosted-ai-metering-golden` (wired in by
+quality cycle `pq-2026-08-27-04`, closing the former Phase 02 omission).
 The Game multi-object and Web Experience tests assert their replay digests against
 checked-in `golden-digests.json` evidence rather than values produced only within
 the same run.

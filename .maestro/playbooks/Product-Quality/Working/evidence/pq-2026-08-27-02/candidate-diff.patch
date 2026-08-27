@@ -1,0 +1,249 @@
+diff --git a/desktop/linux/src/lib/bridge.ts b/desktop/linux/src/lib/bridge.ts
+index 75bb58d9..7249e2db 100644
+--- a/desktop/linux/src/lib/bridge.ts
++++ b/desktop/linux/src/lib/bridge.ts
+@@ -3171,7 +3171,11 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
+         const documentPath = input["documentPath"];
+         const read = readActiveDocument({ documentPath }, SCENE_DOCUMENT_REFUSALS);
+         if (!read.ok) return bridgeRefuse(read.reason, read.message);
+-        return bridgeOk("command", inspectDesktopScenePackages(read.status.data));
++        const inspected = inspectDesktopScenePackages(read.status.data);
++        if ("ok" in inspected && inspected.ok === false) {
++          return commandTransaction(validated.command.id, bridgeRefuse(inspected.reason, inspected.message));
++        }
++        return bridgeOk("command", inspected);
+       }
+       case "package-install": {
+         const documentPath = String(input["documentPath"]);
+diff --git a/desktop/linux/src/lib/desktop-scene.ts b/desktop/linux/src/lib/desktop-scene.ts
+index a014c7b0..855bae2f 100644
+--- a/desktop/linux/src/lib/desktop-scene.ts
++++ b/desktop/linux/src/lib/desktop-scene.ts
+@@ -1900,13 +1900,25 @@ export function stageDesktopAssistantBuild(input: Readonly<{
+ 
+ function packageCatalogFromData(documentData: unknown) {
+   if (!isJsonObject(documentData)) return null;
+-  return parseScenePackageCatalog(documentData[SCENE_PACKAGE_CATALOG_KEY]);
++  const value = documentData[SCENE_PACKAGE_CATALOG_KEY];
++  if (value === undefined) return emptyScenePackageCatalog();
++  if (value === null) return null;
++  return parseScenePackageCatalog(value);
+ }
+ 
+-export function inspectDesktopScenePackages(documentData: unknown) {
+-  return inspectScenePackages({
+-    catalog: packageCatalogFromData(documentData) ?? emptyScenePackageCatalog(),
+-  });
++
++export function inspectDesktopScenePackages(documentData: unknown):
++  | ReturnType<typeof inspectScenePackages>
++  | Readonly<{ ok: false; reason: string; message: string }> {
++  const catalog = packageCatalogFromData(documentData);
++  if (catalog === null) {
++    return Object.freeze({
++      ok: false as const,
++      reason: SCENE_PACKAGE_REFUSALS.catalogInvalid,
++      message: "The package catalog is not a valid versioned document.",
++    });
++  }
++  return inspectScenePackages({ catalog });
+ }
+ 
+ export function stageDesktopScenePackage(input: Readonly<{
+diff --git a/packages/schemas/src/desktop-scene-package.ts b/packages/schemas/src/desktop-scene-package.ts
+index 5412e5eb..06da4cda 100644
+--- a/packages/schemas/src/desktop-scene-package.ts
++++ b/packages/schemas/src/desktop-scene-package.ts
+@@ -70,13 +70,43 @@ export function emptyScenePackageCatalog(): ScenePackageCatalog {
+   });
+ }
+ 
++function parseScenePackageLockEntry(value: unknown): ScenePackageLockEntry | null {
++  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
++  const entry = value as Record<string, unknown>;
++  if (typeof entry["packageId"] !== "string" || entry["packageId"].length === 0) return null;
++  if (typeof entry["version"] !== "string" || entry["version"].length === 0) return null;
++  if (typeof entry["digest"] !== "string" || !/^sha256:[0-9a-f]{64}$/.test(entry["digest"])) return null;
++  if (
++    typeof entry["sourceLocator"] !== "string" ||
++    entry["sourceLocator"].length === 0 ||
++    entry["sourceLocator"].includes("://")
++  ) {
++    return null;
++  }
++  if (
++    !Array.isArray(entry["capabilities"]) ||
++    entry["capabilities"].some((capability) => typeof capability !== "string")
++  ) {
++    return null;
++  }
++  return value as ScenePackageLockEntry;
++}
++
+ export function parseScenePackageCatalog(value: unknown): ScenePackageCatalog | null {
+   if (value === undefined || value === null) return emptyScenePackageCatalog();
+   if (typeof value !== "object" || Array.isArray(value)) return null;
+   const record = value as Record<string, unknown>;
+-  if (record["schemaVersion"] !== 1 || record["kind"] !== SCENE_PACKAGE_CATALOG_KIND) {
++  if (record["schemaVersion"] !== SCENE_PACKAGE_SCHEMA_VERSION || record["kind"] !== SCENE_PACKAGE_CATALOG_KIND) {
+     return null;
+   }
++  if (!Array.isArray(record["lock"])) return null;
++  const seen = new Set<string>();
++  for (const entry of record["lock"]) {
++    const parsed = parseScenePackageLockEntry(entry);
++    if (parsed === null) return null;
++    if (seen.has(parsed.packageId)) return null;
++    seen.add(parsed.packageId);
++  }
+   return value as ScenePackageCatalog;
+ }
+ 
+diff --git a/packages/schemas/test/desktop-scene-package.test.ts b/packages/schemas/test/desktop-scene-package.test.ts
+index 37e44935..08047666 100644
+--- a/packages/schemas/test/desktop-scene-package.test.ts
++++ b/packages/schemas/test/desktop-scene-package.test.ts
+@@ -1,9 +1,11 @@
+ import { describe, expect, it } from "vitest";
+ import {
++  SCENE_PACKAGE_CATALOG_KIND,
+   SCENE_PACKAGE_REFUSALS,
+   applyScenePackageMutation,
+   discoverScenePackage,
+   emptyScenePackageCatalog,
++  parseScenePackageCatalog,
+ } from "@sceneaxi/schemas";
+ 
+ const digest = `sha256:${"11".repeat(32)}`;
+@@ -90,3 +92,53 @@ describe("desktop scene package catalog", () => {
+     expect(removed).toMatchObject({ ok: true, catalog: { lock: [] } });
+   });
+ });
++
++
++describe("desktop scene package catalog shape", () => {
++  const validEntry = Object.freeze({
++    packageId: "dev.sceneaxi.sample.intake-source",
++    version: "0.1.0",
++    digest: `sha256:${"22".repeat(32)}`,
++    sourceLocator: "fixtures/plugin-host/sculpt-intake-source",
++    capabilities: Object.freeze(["sceneaxi.sculpt.intake-source.v1"]),
++  });
++  const validCatalog = () => ({
++    schemaVersion: 1,
++    kind: SCENE_PACKAGE_CATALOG_KIND,
++    lock: [validEntry],
++  });
++
++  it("refuses malformed nested locks before consumers iterate them", () => {
++    for (const lock of [
++      undefined,
++      null,
++      "evil",
++      [validEntry, validEntry],
++      [validEntry, { ...validEntry, digest: `sha256:${"33".repeat(32)}` }],
++      {},
++      [null],
++      [42],
++      ["dev.sceneaxi.sample"],
++      [{ ...validEntry, packageId: "" }],
++      [{ ...validEntry, packageId: 7 }],
++      [{ ...validEntry, digest: "sha256:nope" }],
++      [{ ...validEntry, sourceLocator: "https://example.invalid/pkg" }],
++      [{ ...validEntry, capabilities: ["ok", 5] }],
++    ]) {
++      expect(parseScenePackageCatalog({ schemaVersion: 1, kind: SCENE_PACKAGE_CATALOG_KIND, lock })).toBeNull();
++    }
++  });
++
++  it("keeps accepting empty and valid locks with unknown extra fields", () => {
++    expect(parseScenePackageCatalog(undefined)).toEqual(emptyScenePackageCatalog());
++    expect(parseScenePackageCatalog(null)).toEqual(emptyScenePackageCatalog());
++    expect(parseScenePackageCatalog({ wrong: true })).toBeNull();
++    expect(parseScenePackageCatalog(validCatalog())).toMatchObject({ lock: [validEntry] });
++    expect(
++      parseScenePackageCatalog({ ...validCatalog(), futureField: { nested: true } }),
++    ).toMatchObject({ lock: [validEntry] });
++    expect(
++      parseScenePackageCatalog({ ...validCatalog(), lock: [{ ...validEntry, note: "extra" }] }),
++    ).toMatchObject({ lock: [{ ...validEntry, note: "extra" }] });
++  });
++});
+\ No newline at end of file
+diff --git a/tests/e2e/desktop-package-golden.test.ts b/tests/e2e/desktop-package-golden.test.ts
+index e48b7bc5..fd6d8f0d 100644
+--- a/tests/e2e/desktop-package-golden.test.ts
++++ b/tests/e2e/desktop-package-golden.test.ts
+@@ -1,5 +1,5 @@
+ import { createHash } from "node:crypto";
+-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
++import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+ import { tmpdir } from "node:os";
+ import { join } from "node:path";
+ import { afterEach, describe, expect, it } from "vitest";
+@@ -138,4 +138,65 @@ describe("full-editor package manager vertical", () => {
+       }, "kids"),
+     })).toMatchObject({ ok: false });
+   });
++
++  it("returns PACKAGE_CATALOG_INVALID when a project-controlled catalog is malformed", () => {
++    const root = fixture();
++    const host = bridge(root);
++    const documentPath = join(root, DESKTOP_ACTIVE_DOCUMENT_PATH);
++    const document = JSON.parse(readFileSync(documentPath, "utf8")) as { data: Record<string, unknown> };
++    const before = readFileSync(documentPath, "utf8");
++    document.data["scenePackages"] = {
++      schemaVersion: 1,
++      kind: "sceneaxi.scene-package-catalog",
++      lock: "evil",
++    };
++    writeFileSync(documentPath, `${JSON.stringify(document, null, 2)}\n`);
++    expect(readFileSync(documentPath, "utf8")).not.toBe(before);
++
++    expect(command(host, "package-inspect", "local-agent", {
++      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
++      profile: "game",
++    })).toMatchObject({ ok: false, reason: SCENE_PACKAGE_REFUSALS.catalogInvalid });
++
++    expect(command(host, "package-install", "desktop-control", {
++      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
++      expectedContentHash: hash(host),
++      profile: "game",
++      locator: "fixtures/plugin-host/sculpt-intake-source",
++      manifest,
++      digest,
++    })).toMatchObject({ ok: false, reason: SCENE_PACKAGE_REFUSALS.catalogInvalid });
++  });
++
++  it("refuses a present null catalog while keeping the absent-key empty default", () => {
++    const root = fixture();
++    const host = bridge(root);
++    const documentPath = join(root, DESKTOP_ACTIVE_DOCUMENT_PATH);
++    const document = JSON.parse(readFileSync(documentPath, "utf8")) as { data: Record<string, unknown> };
++    document.data["scenePackages"] = null;
++    writeFileSync(documentPath, `${JSON.stringify(document, null, 2)}\n`);
++
++    expect(command(host, "package-inspect", "local-agent", {
++      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
++      profile: "game",
++    })).toMatchObject({ ok: false, reason: SCENE_PACKAGE_REFUSALS.catalogInvalid });
++    expect(command(host, "package-install", "desktop-control", {
++      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
++      expectedContentHash: hash(host),
++      profile: "game",
++      locator: "fixtures/plugin-host/sculpt-intake-source",
++      manifest,
++      digest,
++    })).toMatchObject({ ok: false, reason: SCENE_PACKAGE_REFUSALS.catalogInvalid });
++
++    delete document.data["scenePackages"];
++    writeFileSync(documentPath, `${JSON.stringify(document, null, 2)}\n`);
++    expect(command(host, "package-inspect", "local-agent", {
++      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
++      profile: "game",
++    })).toMatchObject({
++      ok: true,
++      data: { kind: "sceneaxi.scene-package-inspection", catalog: { lock: [] } },
++    });
++  });
+ });

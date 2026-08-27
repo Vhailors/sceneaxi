@@ -70,12 +70,42 @@ export function emptyScenePackageCatalog(): ScenePackageCatalog {
   });
 }
 
+function parseScenePackageLockEntry(value: unknown): ScenePackageLockEntry | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+  const entry = value as Record<string, unknown>;
+  if (typeof entry["packageId"] !== "string" || entry["packageId"].length === 0) return null;
+  if (typeof entry["version"] !== "string" || entry["version"].length === 0) return null;
+  if (typeof entry["digest"] !== "string" || !/^sha256:[0-9a-f]{64}$/.test(entry["digest"])) return null;
+  if (
+    typeof entry["sourceLocator"] !== "string" ||
+    entry["sourceLocator"].length === 0 ||
+    entry["sourceLocator"].includes("://")
+  ) {
+    return null;
+  }
+  if (
+    !Array.isArray(entry["capabilities"]) ||
+    entry["capabilities"].some((capability) => typeof capability !== "string")
+  ) {
+    return null;
+  }
+  return value as ScenePackageLockEntry;
+}
+
 export function parseScenePackageCatalog(value: unknown): ScenePackageCatalog | null {
   if (value === undefined || value === null) return emptyScenePackageCatalog();
   if (typeof value !== "object" || Array.isArray(value)) return null;
   const record = value as Record<string, unknown>;
-  if (record["schemaVersion"] !== 1 || record["kind"] !== SCENE_PACKAGE_CATALOG_KIND) {
+  if (record["schemaVersion"] !== SCENE_PACKAGE_SCHEMA_VERSION || record["kind"] !== SCENE_PACKAGE_CATALOG_KIND) {
     return null;
+  }
+  if (!Array.isArray(record["lock"])) return null;
+  const seen = new Set<string>();
+  for (const entry of record["lock"]) {
+    const parsed = parseScenePackageLockEntry(entry);
+    if (parsed === null) return null;
+    if (seen.has(parsed.packageId)) return null;
+    seen.add(parsed.packageId);
   }
   return value as ScenePackageCatalog;
 }

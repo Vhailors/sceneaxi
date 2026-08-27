@@ -3171,7 +3171,11 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         const documentPath = input["documentPath"];
         const read = readActiveDocument({ documentPath }, SCENE_DOCUMENT_REFUSALS);
         if (!read.ok) return bridgeRefuse(read.reason, read.message);
-        return bridgeOk("command", inspectDesktopScenePackages(read.status.data));
+        const inspected = inspectDesktopScenePackages(read.status.data);
+        if ("ok" in inspected && inspected.ok === false) {
+          return commandTransaction(validated.command.id, bridgeRefuse(inspected.reason, inspected.message));
+        }
+        return bridgeOk("command", inspected);
       }
       case "package-install": {
         const documentPath = String(input["documentPath"]);

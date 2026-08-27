@@ -1,7 +1,9 @@
 import {
+  existsSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -12,11 +14,14 @@ import {
   applyRedoAvailability,
   applyUndoAvailability,
   createDocument,
+  editDirect,
   propose,
+  proposeMany,
   recoverIncompleteApplies,
   redoLastApply,
   undoLastApply,
   writeDocumentFile,
+  writeProposalFile,
 } from "@sceneaxi/authoring-core";
 
 function project() {
@@ -109,5 +114,128 @@ describe("full-editor durable command history", () => {
     writeFileSync(path, before);
     expect(recoverIncompleteApplies({ cwd })).toMatchObject({ ok: true, documentPaths: ["scene.json"] });
     expect(readFileSync(path, "utf8")).toBe(after);
+  });
+});
+
+describe("authoring root containment", () => {
+  it("refuses absolute, traversal, and symlinked document paths without creating journal bytes", () => {
+    const { cwd } = project();
+    const outside = mkdtempSync(join(tmpdir(), "sceneaxi-escape-"));
+    writeFileSync(join(outside, "scene.json"), readFileSync(join(cwd, "scene.json"), "utf8"));
+    const linkTarget = join(cwd, "link.json");
+    symlinkSync(join(outside, "scene.json"), linkTarget);
+    const snapshot = existsSync(join(cwd, ".sceneaxi")) ? readdirSync(join(cwd, ".sceneaxi")) : [];
+    const escape = {
+      code: "validation-failed",
+      message: "Document path must be inside its authoritative project root.",
+    };
+
+    for (const documentPath of [join(outside, "scene.json"), "../escape/scene.json", "link.json"]) {
+      expect(propose({ cwd, documentPath, jsonPointer: "/data/value", newValue: 1 })).toMatchObject({
+        ok: false,
+        diagnostics: [expect.objectContaining(escape)],
+      });
+      expect(editDirect({ cwd, documentPath, jsonPointer: "/data/value", newValue: 1 })).toMatchObject({
+        ok: false,
+        diagnostics: [expect.objectContaining(escape)],
+      });
+      expect(
+        proposeMany([{ cwd, documentPath, jsonPointer: "/data/value", newValue: 1 }]),
+      ).toMatchObject({ ok: false, diagnostics: [expect.objectContaining(escape)] });
+    }
+
+    expect(existsSync(join(cwd, ".sceneaxi")) ? readdirSync(join(cwd, ".sceneaxi")) : []).toEqual(snapshot);
+    expect(readFileSync(linkTarget, "utf8")).toBe(readFileSync(join(outside, "scene.json"), "utf8"));
+  });
+
+  it("refuses a proposal file that resolves outside the authoritative project root before reading it", () => {
+    const { cwd } = project();
+    const staged = propose({ cwd, documentPath: "scene.json", jsonPointer: "/data/value", newValue: 1 });
+    if (!staged.ok) throw new Error("proposal refused");
+    const outsideDir = mkdtempSync(join(tmpdir(), "sceneaxi-proposal-"));
+    const outsideProposal = join(outsideDir, "proposal.json");
+    writeProposalFile(outsideProposal, staged.proposal);
+    const before = readFileSync(join(cwd, "scene.json"), "utf8");
+
+    const refused = apply({ cwd, proposal: outsideProposal });
+
+    expect(refused).toMatchObject({
+      ok: false,
+      diagnostics: [
+        expect.objectContaining({
+          code: "validation-failed",
+          message: "Document path must be inside its authoritative project root.",
+          documentPath: outsideProposal,
+        }),
+      ],
+    });
+    expect(readFileSync(join(cwd, "scene.json"), "utf8")).toBe(before);
+    expect(existsSync(join(cwd, ".sceneaxi", "journal"))).toBe(false);
+  });
+  it("apply refuses proposal edits whose document paths escape the authoritative project root", () => {
+    const { cwd } = project();
+    const staged = propose({ cwd, documentPath: "scene.json", jsonPointer: "/data/value", newValue: 1 });
+    if (!staged.ok) throw new Error("proposal refused");
+    const outsideDir = mkdtempSync(join(tmpdir(), "sceneaxi-edit-"));
+    const outsideScene = join(outsideDir, "scene.json");
+    writeFileSync(outsideScene, readFileSync(join(cwd, "scene.json"), "utf8"));
+    symlinkSync(outsideScene, join(cwd, "edit-link.json"));
+    const before = readFileSync(join(cwd, "scene.json"), "utf8");
+
+    for (const documentPath of [outsideScene, "../sceneaxi-edit-missing/scene.json", "edit-link.json"]) {
+      const forged = {
+        ...staged.proposal,
+        edits: staged.proposal.edits.map((edit) => ({ ...edit, documentPath })),
+      } as typeof staged.proposal;
+      expect(apply({ cwd, proposal: forged })).toMatchObject({
+        ok: false,
+        diagnostics: [
+          expect.objectContaining({
+            code: "validation-failed",
+            message: "Document path must be inside its authoritative project root.",
+            documentPath,
+          }),
+        ],
+      });
+    }
+
+    expect(readFileSync(join(cwd, "scene.json"), "utf8")).toBe(before);
+    expect(existsSync(join(cwd, ".sceneaxi"))).toBe(false);
+  });
+
+  it("apply refuses proposal diffs whose document paths escape the authoritative project root after contained edits pass grouping", () => {
+    const { cwd } = project();
+    const staged = propose({ cwd, documentPath: "scene.json", jsonPointer: "/data/value", newValue: 1 });
+    if (!staged.ok) throw new Error("proposal refused");
+    const escapedDiffPath = "../sceneaxi-diff-escape/scene.json";
+    const forged = {
+      ...staged.proposal,
+      diffs: staged.proposal.diffs.map((diff) => ({ ...diff, documentPath: escapedDiffPath })),
+    } as typeof staged.proposal;
+    const before = readFileSync(join(cwd, "scene.json"), "utf8");
+
+    const refused = apply({ cwd, proposal: forged });
+
+    expect(refused).toMatchObject({
+      ok: false,
+      diagnostics: [
+        expect.objectContaining({
+          code: "validation-failed",
+          message: "Document path must be inside its authoritative project root.",
+          documentPath: escapedDiffPath,
+        }),
+      ],
+    });
+    expect(readFileSync(join(cwd, "scene.json"), "utf8")).toBe(before);
+    expect(existsSync(join(cwd, ".sceneaxi"))).toBe(false);
+  });
+
+  it("keeps contained relative edits working across propose and apply", () => {
+    const { cwd, path } = project();
+    commit(cwd, 7);
+    expect(readFileSync(path, "utf8")).toContain('"value": 7');
+    const direct = editDirect({ cwd, documentPath: "./scene.json", jsonPointer: "/data/value", newValue: 8 });
+    expect(direct).toMatchObject({ ok: true });
+    expect(readFileSync(path, "utf8")).toContain('"value": 8');
   });
 });

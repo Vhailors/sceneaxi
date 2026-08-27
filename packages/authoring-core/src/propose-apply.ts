@@ -92,8 +92,41 @@ export type ApplyInput = {
   readonly cwd?: string;
 };
 
-function resolvePath(cwd: string, documentPath: string): string {
-  return canonicalPath(resolve(cwd, documentPath));
+type ResolvedPath =
+  | { readonly ok: true; readonly abs: string }
+  | { readonly ok: false; readonly diagnostics: readonly ApplyDiagnostic[] };
+
+/**
+ * Resolve a caller-supplied document/proposal path against the authoritative
+ * project root and refuse anything that does not stay contained: absolute
+ * paths outside the root, traversal escapes, and symlinks resolving elsewhere.
+ * Matches writeDocumentFile's documented containment contract.
+ */
+function resolveContainedPath(
+  cwd: string,
+  documentPath: string,
+): ResolvedPath {
+  const root = canonicalPath(resolve(cwd));
+  const abs = canonicalPath(resolve(root, documentPath));
+  const relativePath = relative(root, abs);
+  if (
+    relativePath === "" ||
+    relativePath === ".." ||
+    relativePath.startsWith(`..${sep}`) ||
+    isAbsolute(relativePath)
+  ) {
+    return {
+      ok: false,
+      diagnostics: [
+        {
+          code: "validation-failed",
+          message: "Document path must be inside its authoritative project root.",
+          documentPath,
+        },
+      ],
+    };
+  }
+  return { ok: true, abs };
 }
 
 function jsonValuesEqual(left: unknown, right: unknown): boolean {
@@ -247,7 +280,9 @@ export function propose(input: ProposeInput): ProposeResult {
   if (recoveryFailure !== null) {
     return { ok: false, diagnostics: recoveryFailure };
   }
-  const abs = resolvePath(cwd, input.documentPath);
+  const contained = resolveContainedPath(cwd, input.documentPath);
+  if (!contained.ok) return contained;
+  const abs = contained.abs;
   const loaded = loadDocument(abs, input.documentPath);
   if (!loaded.ok) return loaded;
 
@@ -360,7 +395,9 @@ export function proposeMany(inputs: readonly ProposeInput[]): ProposeResult {
   const displayPath = new Map<string, string>();
 
   for (const input of inputs) {
-    const abs = resolvePath(input.cwd ?? cwd, input.documentPath);
+    const contained = resolveContainedPath(input.cwd ?? cwd, input.documentPath);
+    if (!contained.ok) return contained;
+    const abs = contained.abs;
     const documentPath = displayPath.get(abs) ?? input.documentPath;
     displayPath.set(abs, documentPath);
     let text = workingText.get(abs);
@@ -491,7 +528,9 @@ export function editDirect(input: DirectEditInput): DirectEditResult {
   if (recoveryFailure !== null) {
     return { ok: false, diagnostics: recoveryFailure };
   }
-  const abs = resolvePath(cwd, input.documentPath);
+  const contained = resolveContainedPath(cwd, input.documentPath);
+  if (!contained.ok) return contained;
+  const abs = contained.abs;
   const loaded = loadDocument(abs, input.documentPath);
   if (!loaded.ok) return loaded;
 
@@ -572,7 +611,9 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
     // Treat as proposal JSON text if it looks like JSON, else as a path.
     const asPath = input.proposalPath === undefined && !input.proposal.trimStart().startsWith("{");
     if (asPath) {
-      const abs = resolvePath(cwd, input.proposal);
+      const contained = resolveContainedPath(cwd, input.proposal);
+      if (!contained.ok) return contained;
+      const abs = contained.abs;
       if (!fileExists(abs)) {
         return {
           ok: false,
@@ -648,7 +689,9 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
     { readonly documentPath: string; readonly edits: ProposalEdit[] }
   >();
   for (const edit of proposal.edits) {
-    const abs = resolvePath(cwd, edit.documentPath);
+    const contained = resolveContainedPath(cwd, edit.documentPath);
+    if (!contained.ok) return contained;
+    const abs = contained.abs;
     const existing = byDoc.get(abs);
     if (existing !== undefined && existing.documentPath !== edit.documentPath) {
       return {
@@ -785,7 +828,9 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
     { readonly documentPath: string; readonly unifiedDiff: string }
   >();
   for (const diff of proposal.diffs) {
-    const abs = resolvePath(cwd, diff.documentPath);
+    const contained = resolveContainedPath(cwd, diff.documentPath);
+    if (!contained.ok) return contained;
+    const abs = contained.abs;
     const grouped = byDoc.get(abs);
     if (
       grouped === undefined ||
