@@ -30,8 +30,9 @@ coverage claim is incomplete. `direction-only` means the mismatch is verified,
 but the owning contract or product authority must define the implementation
 before it becomes an actionable defect ticket. `documentation-drift` means the
 live behavior is accounted for but the owner prose is stale; it does not
-require a runtime change. `resolved` means the documentation disposition is
-already corrected and is retained only to prevent rediscovery.
+require a runtime change. `closed` means code and executable checks now cover
+the gap. `resolved` means the documentation disposition is already corrected
+and is retained only to prevent rediscovery.
 
 ## Prioritized verified gaps
 
@@ -43,10 +44,10 @@ gap, and `P2` is a documentation or operational reconciliation item.
 
 | Priority | Stable gap ID | Requirement IDs | Category | Owner and evidence anchors | Concrete impact | Effort | Fix risk | Confidence | Owning phase | Dependencies | Status |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| P0 | `AUDIT-CONTRACT-REGRESSION-DISCOVERY` | `REL-001` | Verification foundation | Owner: `scripts/check-contracts.test.mjs:105-490`; omission: `vitest.config.ts:75-82`, `package.json:20-23` | Authoring-job, hostile-key, plugin-registry, and inert-example process regressions are not in `pnpm test` or `pnpm gate`. | S | Low | High | Phase 02 | None | `open` |
+| P0 | `AUDIT-CONTRACT-REGRESSION-DISCOVERY` | `REL-001` | Verification foundation | Owner: `scripts/check-contracts.test.mjs`; runner: `package.json#scripts.test` | `pnpm test` and `pnpm gate` run the 40-case Node process suite after Vitest; its sandbox includes the checker's current inputs. | S | Low | High | Phase 02 | None | `closed` (2026-09-23) |
 | P0 | `AUDIT-AUTHORING-ROOT-ESCAPE` | `AUTH-002`, `CORE-010` | Authoring security/integrity | Owner: `packages/authoring-core/src/propose-apply.ts:95-97`; consumers: `:250-252`, `:363-365`, `:650-653`, `:787-790`; existing containment contrast: `:1097-1127`; proof gap: `packages/authoring-core/test/transaction-history.test.ts:40-77` | Absolute, traversal, or outside-resolving symlink document paths can reach proposal journals and atomic rewrites outside the authoritative project root. | M | High | High | Phase 03 | Close the verification-foundation items before changing the shared authoring path. | `open` |
 | P0 | `AUDIT-PACKAGE-CATALOG-SHAPE` | `TOPO-004`, `DESK-003` | Privileged input validation | Owner: `packages/schemas/src/desktop-scene-package.ts:73-80`; consumers: `desktop/linux/src/lib/desktop-scene.ts:1899-1941`, `desktop/linux/src/lib/bridge.ts:3170-3212`; proof gap: `packages/schemas/test/desktop-scene-package.test.ts:1-92` | A malformed project-controlled catalog can throw through the privileged bridge instead of returning `PACKAGE_CATALOG_INVALID`. | M | Medium | High | Phase 03 | None; keep the refusal name and validate the nested lock before consumers iterate it. | `open` |
-| P1 | `AUDIT-GOLDEN-COMMAND-OMISSIONS` | `REL-001`, `REL-005` | Verification foundation | Owner: `package.json:17`; live declaration: `docs/audits/initiation/requirements.json:7670-7710`; claim owner: `docs/runnable-surfaces.md:56-61` | The dedicated `test:golden` command omits `contained-git-golden`, `desktop-assistant-scene-loop-golden`, `full-editor-transactions-golden`, and `hosted-ai-metering-golden`, while the runnable claim implies dedicated coverage. | S | Low | High | Phase 02 | None. | `open` |
+| P1 | `AUDIT-GOLDEN-COMMAND-OMISSIONS` | `REL-001`, `REL-005` | Verification foundation | Owner: `package.json#scripts.test:golden`; inventory: `docs/audits/initiation/requirements.json#liveInventory.goldenTests` | The dedicated command includes all four formerly omitted goldens; `pnpm check:traceability` checks its 55-file declaration. | S | Low | High | Phase 02 | None. | `closed` (2026-09-23) |
 | P1 | `AUDIT-CI-TIMEOUT-BOUND` | `REL-001` | Verification operations | Owners: `.github/workflows/gate.yml:9-31`, `.github/workflows/desktop-linux.yml:10-68`, `.github/workflows/desktop-macos.yml:18-94`, `.github/workflows/engine-sdk.yml:9-59` | Install, gate, packaging, smoke, provider, and archive jobs have no repository-owned wall-clock bound and can consume runner resources indefinitely. | S | Low | High | Phase 03 | None; preserve existing job steps and failure semantics. | `open` |
 | P1 | `AUDIT-PACKAGE-METADATA-INTEGRITY` | `TOPO-004`, `DESK-003` | Direction-only package integrity clarification | Owner: `packages/schemas/src/desktop-scene-package.ts:83-131`; IPC crossing: `desktop/linux/src/lib/bridge.ts:3176-3184`; capability owner: `docs/full-editor-v1-capability-matrix.md:177` | Renderer/request metadata is accepted without binding its digest to inspected bytes; malformed capability values are discarded and non-empty `pluginVersion` is accepted without stronger package identity. This is not a proven execution bypass: discovery remains metadata-only with `executed: false`. | L | High | Medium | Phase 03 | Validate catalog shape first; then define the byte-inspection/trust owner and version/capability policy without changing the `executed: false`, `networking: false`, and `marketplace: false` guarantees. | `direction-only` |
 | P1 | `AUDIT-CHECKOUT-BODY-ORDER` | `IDENT-001`, `IDENT-006` | Web request boundary | Owner: `sites/umbrella/src/app/api/checkout/route.ts:26-35`; origin check occurs at `:50-53`; comparable caught parser: `sites/umbrella/src/app/api/editor/catalog-intake/route.ts:44-60` | An untrusted-origin request is parsed and enumerated before fail-closed origin/configuration checks; malformed multipart input can escape without a named 400 response. | S | Medium | High | Phase 05 | Define the public request-boundary policy before adding application-owned limits; preserve documented billing-plane refusal precedence. | `open` |
@@ -57,9 +58,9 @@ gap, and `P2` is a documentation or operational reconciliation item.
 
 ## Dependency order for later phases
 
-1. **Phase 02 — verification and reconciliation:** wire the orphaned
-   `scripts/check-contracts.test.mjs` regressions and add the four omitted
-   golden entries. The 61-versus-67 tool count is reconciled in the canonical
+1. **Phase 02 — verification and reconciliation:** `pnpm test` now runs
+   `scripts/check-contracts.test.mjs`, and `pnpm test:golden` includes the four
+   formerly omitted entries. The 61-versus-67 tool count is reconciled in the canonical
    capability matrix; retain the corrected scanner-test taxonomy and this
    resolved count-drift row as documentation records. These changes make later
    gap closure observable without weakening the gate.
@@ -114,8 +115,6 @@ The current audit wording at `Initiation-Audit.md:170-171,192` correctly calls
 than process-level tests. It remains here as a resolved audit-history note so
 the former classification is not rediscovered as implementation work.
 
-All 10 actionable, partial, documentation-drift, or direction-only findings
-have evidence paths and anchors, a named owner, a priority, and a
-phase/dependency disposition.
-Together with the one resolved scanner-taxonomy history row, the register has
-11 total rows and no evidence-free gap is carried forward.
+The register has 11 total rows: two closed verification gaps, two resolved
+documentation rows, and seven remaining gaps or direction-only items. Each
+remaining item retains its evidence, owner, and phase disposition.
