@@ -8544,7 +8544,11 @@
       "apps/desktop-shell/test/bin-smoke.test.ts",
       "apps/web-shell/test/bin-smoke.test.ts",
       "tests/parity/shell-cli-parity.test.ts",
-      "tests/parity/open-path-policy-parity.test.ts"
+      "tests/parity/open-path-policy-parity.test.ts",
+      "tests/e2e/contained-git-golden.test.ts",
+      "tests/e2e/desktop-assistant-scene-loop-golden.test.ts",
+      "tests/e2e/full-editor-transactions-golden.test.ts",
+      "tests/e2e/hosted-ai-metering-golden.test.ts"
     ],
     "browserEvidence": [
       ".maestro/playbooks/Initiation/Working/Phase-01/Baseline.md",
@@ -8605,7 +8609,7 @@
       "routes": 22,
       "migrations": 5,
       "workflows": 4,
-      "goldenTests": 51
+      "goldenTests": 55
     },
     "documentedClaims": [
       {

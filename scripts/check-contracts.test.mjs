@@ -47,6 +47,25 @@ const sourcePaths = [
   pluginsDocRelativePath,
   schemasReadmeRelativePath,
   checkerRelativePath,
+  ...[
+    "credit-packs.schema.json",
+    "credit-packs.fixtures.json",
+    "entitlement-matrix.schema.json",
+    "entitlement-matrix.fixtures.json",
+    "catalog-listings.schema.json",
+    "catalog-listings.fixtures.json",
+    "open-path-policy.schema.json",
+    "open-path-policy.fixtures.json",
+  ].map((name) => join("packages", "schemas", "contracts", name)),
+  join("packages", "schemas", "src", "credit-packs.data.ts"),
+  join("packages", "schemas", "src", "catalog-listings.data.ts"),
+  join("docs", "auth-credits.md"),
+  join("docs", "open-path-policy.md"),
+  ...[
+    "profile-game-scene-golden.test.ts",
+    "profile-web-golden-path.test.ts",
+    "profile-kids-refuse-golden.test.ts",
+  ].map((name) => join("tests", "e2e", name)),
 ];
 
 const createSandbox = () => {
@@ -340,13 +359,13 @@ const cases = [
     expectedOutput: "docs/plugins.md: registry seed state must exactly document registryVersion 1.0.0",
   },
   {
-    name: "rejects plugins.md empty-seed documentation drift",
+    name: "rejects plugins.md capability-count documentation drift",
     mutate(sandbox) {
       writePluginsDoc(
         sandbox,
         readPluginsDoc(sandbox).replace(
           registrySeedState,
-          registrySeedState.replace("exactly `[]` (empty)", "non-empty"),
+          registrySeedState.replace("exactly 1 reviewed capability ID", "exactly 0 reviewed capability IDs"),
         ),
       );
     },
@@ -366,13 +385,13 @@ const cases = [
     expectedOutput: "packages/schemas/README.md: registry seed state must exactly document registryVersion 1.0.0",
   },
   {
-    name: "rejects schemas README empty-seed documentation drift",
+    name: "rejects schemas README capability-count documentation drift",
     mutate(sandbox) {
       writeSchemasReadme(
         sandbox,
         readSchemasReadme(sandbox).replace(
           registrySeedState,
-          registrySeedState.replace("exactly `[]` (empty)", "non-empty"),
+          registrySeedState.replace("exactly 1 reviewed capability ID", "exactly 0 reviewed capability IDs"),
         ),
       );
     },
