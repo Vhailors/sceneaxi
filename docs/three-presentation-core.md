@@ -39,6 +39,25 @@ The null presentation path (`createNullPresentationRuntime`,
 `createNullSculptPresentationBackend`) is unchanged and remains the no-backend
 gate path.
 
+## Studio lighting and pixel budget
+
+The shared core lights its existing metallic/roughness materials with a small
+procedural equirectangular studio reflection, a sky/ground fill, and warm key
+plus cool fill. The canvas renderer outputs sRGB with ACES filmic tone mapping.
+This works with the desktop's transparent clear and needs no network texture or
+second renderer. The reflection is disposed with the core. A shadow pass is not
+enabled: the desktop's 21-draw-call fixture doubled to 42 calls when tried,
+and its dark artifact looked worse without a ground receiver.
+
+The desktop and umbrella browser viewports cap device pixel ratio at 1.5; the
+headless contract still accepts any valid ratio. At device scale 2 on `/open`,
+the same 762,392 CSS-pixel viewport uses 1,715,382 backing pixels instead of
+3,049,568 at the former cap of 2, a 43.75% reduction. The reproducible browser
+capture and frame-interval probe is `.bb/skills/verify-sceneaxi/viewport.mjs`.
+The browser probe samples `requestAnimationFrame` under software SwiftShader,
+not GPU time; frame intervals vary with host load and do not establish a
+hardware frame-rate guarantee.
+
 ## Labels
 
 Product surfaces use **Three presentation core**. A headless run identifies

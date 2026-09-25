@@ -10,9 +10,11 @@
  * any exported signature, so ADR 0002 backend-hiding still holds.
  */
 import {
+  ACESFilmicToneMapping,
   Camera,
   Mesh,
   Object3D,
+  SRGBColorSpace,
   WebGLRenderer,
   type WebGLRendererParameters,
 } from "three";
@@ -183,6 +185,9 @@ export function createWebGLCanvasSurface(
     preserveDrawingBuffer,
     alpha: options.alpha ?? false,
   });
+  renderer.outputColorSpace = SRGBColorSpace;
+  renderer.toneMapping = ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.35;
   let drawn = false;
   let contextAvailable = true;
   const onContextLost = () => {

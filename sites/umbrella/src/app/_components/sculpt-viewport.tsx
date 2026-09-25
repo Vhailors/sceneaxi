@@ -51,7 +51,7 @@ import { StatePanel } from "./state-panel.js";
  * still draws every frame. A snapshot publishes the one frame it settles on instead.
  */
 const FRAME_REPORT_INTERVAL = 15;
-const MAX_PIXEL_RATIO = 2;
+const MAX_PIXEL_RATIO = 1.5;
 
 type RefusalStage = "open" | "draw";
 

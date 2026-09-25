@@ -853,7 +853,7 @@ async function mountLiveViewport(): Promise<void> {
       viewport: {
         width,
         height,
-        pixelRatio: Math.min(globalThis.devicePixelRatio || 1, 2),
+        pixelRatio: Math.min(globalThis.devicePixelRatio || 1, 1.5),
       },
     });
   } catch (error) {
@@ -885,7 +885,7 @@ async function mountLiveViewport(): Promise<void> {
     backend.resize(
       Math.max(1, stage.clientWidth),
       Math.max(1, stage.clientHeight),
-      Math.min(globalThis.devicePixelRatio || 1, 2),
+      Math.min(globalThis.devicePixelRatio || 1, 1.5),
     );
   };
   if (typeof ResizeObserver === "function") new ResizeObserver(applyViewport).observe(stage);

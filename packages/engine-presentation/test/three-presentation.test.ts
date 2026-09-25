@@ -1,4 +1,4 @@
-import { Object3D } from "three";
+import { DataTexture, EquirectangularReflectionMapping, Object3D, Scene, SRGBColorSpace } from "three";
 import { describe, expect, it, vi } from "vitest";
 import {
   THREE_HEADLESS_SURFACE_LABEL,
@@ -170,10 +170,17 @@ describe("Three presentation core — sculpt backend", () => {
     expect(recorder.resizes[0]).toEqual([800, 600, 2]);
     const scene = sceneOf(recorder.draws[0]);
     expect(scene.getObjectByName("crate-one")).toBeDefined();
+    if (!(scene instanceof Scene)) throw new Error("surface received no Three scene");
+    expect(scene.environment).toBeInstanceOf(DataTexture);
+    expect(scene.environment?.mapping).toBe(EquirectangularReflectionMapping);
+    expect(scene.environment?.colorSpace).toBe(SRGBColorSpace);
+    const reflectionDisposed = vi.fn();
+    scene.environment?.addEventListener("dispose", reflectionDisposed);
     expect(recorder.draws[0]?.camera).toBeInstanceOf(Object3D);
 
     expect(mounts.render().frame).toBe(2);
     mounts.dispose();
+    expect(reflectionDisposed).toHaveBeenCalledOnce();
     expect(recorder.disposed()).toBe(true);
   });
 

@@ -31,6 +31,10 @@ export default defineConfig(
     languageOptions: { globals: globals.node },
   },
   {
+    files: [".bb/skills/verify-sceneaxi/viewport.mjs"],
+    languageOptions: { globals: { ...globals.node, ...globals.browser } },
+  },
+  {
     // Sites are React server components: browser globals plus the JSX pragma-free
     // transform. They are type-checked by `next build`, not by this config.
     files: ["sites/**/*.{ts,tsx}"],

@@ -9,11 +9,16 @@
 import {
   AmbientLight,
   Color,
+  DataTexture,
   DirectionalLight,
+  EquirectangularReflectionMapping,
+  HemisphereLight,
   Fog,
   Group,
   Mesh,
+  RGBAFormat,
   Scene,
+  SRGBColorSpace,
   type Object3D,
 } from "three";
 import { createOrbitCamera, type OrbitCameraOptions, type OrbitCameraControls } from "./orbit-camera.js";
@@ -100,6 +105,27 @@ export type ThreePresentationCore = {
 
 const DEFAULT_VIEWPORT = { width: 1280, height: 720 } as const;
 
+// Metallic materials need a reflection source even when the viewport is transparent.
+function studioEnvironment(): DataTexture {
+  const pixels = new Uint8Array(16 * 8 * 4);
+  for (let y = 0; y < 8; y += 1) {
+    for (let x = 0; x < 16; x += 1) {
+      const offset = (y * 16 + x) * 4;
+      const sky = y < 4;
+      const softbox = x >= 3 && x <= 7 && y >= 1 && y <= 4;
+      pixels[offset] = softbox ? 245 : sky ? 174 : 100;
+      pixels[offset + 1] = softbox ? 232 : sky ? 193 : 105;
+      pixels[offset + 2] = softbox ? 207 : sky ? 219 : 114;
+      pixels[offset + 3] = 255;
+    }
+  }
+  const texture = new DataTexture(pixels, 16, 8, RGBAFormat);
+  texture.colorSpace = SRGBColorSpace;
+  texture.mapping = EquirectangularReflectionMapping;
+  texture.needsUpdate = true;
+  return texture;
+}
+
 function resolveViewport(options: ThreePresentationCoreOptions): {
   width: number;
   height: number;
@@ -147,6 +173,9 @@ export function createThreePresentationCore(
   const viewport = resolveViewport(options);
   const orbit = createOrbitCamera(options.camera ?? {});
   const scene = new Scene();
+  const reflection = studioEnvironment();
+  scene.environment = reflection;
+  scene.environmentIntensity = 2;
   const background = options.background === undefined ? "#101318" : options.background;
   scene.background = background === null ? null : new Color(background);
 
@@ -154,12 +183,13 @@ export function createThreePresentationCore(
   content.name = "sceneaxi-content";
   scene.add(content);
 
-  const ambient = new AmbientLight(0xffffff, 0.45);
-  const key = new DirectionalLight(0xffffff, 2.2);
-  key.position.set(4, 6, 5);
-  const fill = new DirectionalLight(0x99bbff, 0.6);
+  const ambient = new AmbientLight(0xffffff, 0.7);
+  const sky = new HemisphereLight(0xc9deff, 0x554a43, 0.85);
+  const key = new DirectionalLight(0xffeedb, 3);
+  key.position.set(4, 8, 5);
+  const fill = new DirectionalLight(0x99bbff, 0.8);
   fill.position.set(-5, 2, -4);
-  scene.add(ambient, key, fill);
+  scene.add(ambient, sky, key, fill);
 
   let appliedEffects: readonly string[] = Object.freeze([]);
   let environmentBackground: string | null =
@@ -270,6 +300,7 @@ export function createThreePresentationCore(
       disposeSubtree(content);
       content.clear();
       scene.clear();
+      reflection.dispose();
       surface.dispose();
       disposed = true;
     },
