@@ -7,6 +7,7 @@ export default defineConfig(
   globalIgnores([
     "**/dist/",
     "**/node_modules/",
+    "tools/oxlint/anti-slop/",
     "coverage/",
     // Framework build output and generated ambient declarations in the sites/ tier.
     // Authored site sources are still linted; only generated files are skipped.
@@ -29,6 +30,10 @@ export default defineConfig(
       "eslint.config.mjs",
     ],
     languageOptions: { globals: globals.node },
+  },
+  {
+    files: ["sites/*/scripts/**/*.mjs"],
+    languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
   {
     // Sites are React server components: browser globals plus the JSX pragma-free
