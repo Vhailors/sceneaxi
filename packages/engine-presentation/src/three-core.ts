@@ -12,6 +12,7 @@ import {
   DirectionalLight,
   Fog,
   Group,
+  HemisphereLight,
   Mesh,
   Scene,
   type Object3D,
@@ -155,11 +156,12 @@ export function createThreePresentationCore(
   scene.add(content);
 
   const ambient = new AmbientLight(0xffffff, 0.45);
-  const key = new DirectionalLight(0xffffff, 2.2);
+  const sky = new HemisphereLight(0xdceaff, 0x5e6880, 1.5);
+  const key = new DirectionalLight(0xffffff, 2.5);
   key.position.set(4, 6, 5);
-  const fill = new DirectionalLight(0x99bbff, 0.6);
+  const fill = new DirectionalLight(0xabcaff, 1.1);
   fill.position.set(-5, 2, -4);
-  scene.add(ambient, key, fill);
+  scene.add(ambient, sky, key, fill);
 
   let appliedEffects: readonly string[] = Object.freeze([]);
   let environmentBackground: string | null =

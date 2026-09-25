@@ -161,30 +161,39 @@ function bridge(): BridgeGlobal | null {
   return typeof request === "function" ? (candidate as BridgeGlobal) : null;
 }
 
-function overlayLine(host: Element, id: string, kind: string, bottom: string, text: string): void {
+function overlayLine(host: Element, id: string, kind: string, text: string): void {
+  let stack = host.querySelector<HTMLElement>("[data-live-viewport='reports']");
+  if (stack === null) {
+    stack = document.createElement("div");
+    stack.dataset.liveViewport = "reports";
+    stack.style.position = "absolute";
+    stack.style.inset = "auto 12px 8px";
+    stack.style.display = "flex";
+    stack.style.flexDirection = "column";
+    stack.style.gap = "3px";
+    stack.style.maxHeight = "35%";
+    stack.style.overflow = "hidden";
+    stack.style.pointerEvents = "auto";
+    host.append(stack);
+  }
   let line = document.getElementById(id);
   if (line === null) {
     line = document.createElement("p");
     line.id = id;
     line.className = "viewport-note";
     line.setAttribute("data-live-viewport", kind);
-    // An overlay above the canvas: absolute siblings paint in DOM order, and the
-    // note must stay readable over whatever the frame drew.
-    line.style.position = "absolute";
-    line.style.left = "12px";
-    line.style.right = "12px";
-    line.style.bottom = bottom;
     line.style.margin = "0";
+    line.style.padding = "3px 6px";
+    line.style.background = "rgba(10, 17, 29, 0.88)";
     line.style.textAlign = "left";
     line.style.maxWidth = "none";
-    line.style.pointerEvents = "none";
-    // `.viewport-note` sets no `white-space`, so a multi-line body would collapse
-    // into one run-on paragraph. The safe-evidence overlay is the one line whose
-    // field boundaries carry meaning; single-line notes are unaffected.
-    line.style.whiteSpace = "pre-wrap";
-    host.append(line);
+    line.style.whiteSpace = "nowrap";
+    line.style.overflow = "hidden";
+    line.style.textOverflow = "ellipsis";
+    stack.append(line);
   }
   line.textContent = text;
+  line.title = text;
 }
 
 /**
@@ -200,21 +209,21 @@ function clearOverlayLine(id: string): void {
 }
 
 function reportLine(host: Element, text: string): void {
-  overlayLine(host, REPORT_ID, "report", "8px", text);
+  overlayLine(host, REPORT_ID, "report", text);
 }
 
 // The frame report rewrites itself every 15 frames, so anything that happens after
 // the render loop starts needs its own line or it is erased within ~250ms.
 function openPathLine(host: Element, text: string): void {
-  overlayLine(host, OPEN_PATH_ID, "open-path", "52px", text);
+  overlayLine(host, OPEN_PATH_ID, "open-path", text);
 }
 
 function frameReportLine(host: Element, text: string): void {
-  overlayLine(host, FRAME_REPORT_ID, "frame-report", "96px", text);
+  overlayLine(host, FRAME_REPORT_ID, "frame-report", text);
 }
 
 function rarityEvidenceLine(host: Element, text: string): void {
-  overlayLine(host, RARITY_EVIDENCE_ID, "rarity-evidence", "140px", text);
+  overlayLine(host, RARITY_EVIDENCE_ID, "rarity-evidence", text);
 }
 
 function refusalText(error: unknown): string {
@@ -232,10 +241,10 @@ function updatePixelsMeta(frame: SculptPresentationFrame): void {
 function frameText(frame: SculptPresentationFrame): string {
   return [
     `backend ${frame.backend}`,
-    `label ${frame.label}`,
     `surface ${frame.surface ?? "unreported"}`,
-    `pixelsDrawn ${frame.pixelsDrawn ?? "unreported"}`,
     `drawCalls ${frame.drawCalls}`,
+    `pixelsDrawn ${frame.pixelsDrawn ?? "unreported"}`,
+    `label ${frame.label}`,
     `mounted ${frame.instanceIds.join(", ") || "none"}`,
   ].join(" · ");
 }
@@ -296,7 +305,7 @@ function rarityEvidenceReport(exercise: RarityReportable): string | null {
 }
 
 export function createDesktopPresentationBackend(
-  options: ThreePresentationCoreOptions = {},
+  options: ThreePresentationCoreOptions & { readonly editorGrid?: boolean } = {},
 ) {
   return createThreeSculptPresentationBackend(options);
 }
@@ -850,6 +859,8 @@ async function mountLiveViewport(): Promise<void> {
       // Transparent clear: the chrome's own viewport gradient stays visible
       // behind the mounted scene instead of a second background fighting it.
       background: null,
+      preserveDrawingBuffer: false,
+      editorGrid: true,
       viewport: {
         width,
         height,

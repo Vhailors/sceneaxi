@@ -1,4 +1,4 @@
-import { Object3D } from "three";
+import { GridHelper, HemisphereLight, Mesh, MeshStandardMaterial, Object3D } from "three";
 import { describe, expect, it, vi } from "vitest";
 import {
   THREE_HEADLESS_SURFACE_LABEL,
@@ -170,6 +170,11 @@ describe("Three presentation core — sculpt backend", () => {
     expect(recorder.resizes[0]).toEqual([800, 600, 2]);
     const scene = sceneOf(recorder.draws[0]);
     expect(scene.getObjectByName("crate-one")).toBeDefined();
+    const sky = scene.children.find((child) => child instanceof HemisphereLight);
+    expect(sky?.intensity).toBe(1.5);
+    const crate = scene.getObjectByName("crate");
+    expect(crate).toBeInstanceOf(Mesh);
+    if (crate instanceof Mesh) expect(crate.material).toBeInstanceOf(MeshStandardMaterial);
     expect(recorder.draws[0]?.camera).toBeInstanceOf(Object3D);
 
     expect(mounts.render().frame).toBe(2);
@@ -205,6 +210,26 @@ describe("Three presentation core — sculpt backend", () => {
     expect(framed.distance).toBeGreaterThan(1);
     expect(framed.distance).toBeLessThan(20);
 
+    mounts.dispose();
+  });
+
+  it("anchors the optional editor grid below content without framing the grid", () => {
+    const recorder = recordingSurface();
+    const backend = createThreeSculptPresentationBackend({
+      surface: recorder.surface,
+      editorGrid: true,
+    });
+    const mounts = createSculptMountApi(backend);
+    mounts.mount({ instanceId: "crate-one", artifact: fixtureArtifact() });
+    backend.frameMountedContent();
+    mounts.render();
+
+    const grid = sceneOf(recorder.draws[0]).children
+      .flatMap((child) => child.children)
+      .find((child) => child instanceof GridHelper);
+    expect(grid?.position.y).toBeCloseTo(-1.03);
+    expect(backend.camera.state().target[1]).toBeGreaterThan(-1);
+    expect(backend.camera.state().distance).toBeLessThan(20);
     mounts.dispose();
   });
 

@@ -15,13 +15,14 @@ Usage: verify <command>
   serve <project-dir>        Start the inspector on loopback with an OS-chosen port
   inspect <url>             Print the inspector's /api/state JSON
   screenshot <url> <png>     Capture the inspector with installed Chrome/Chromium
+  desktop-viewport <png>    Build and smoke the real Electron window; save PNG and timed log
   help                      Show this help
 EOF
 }
 
 case "$command" in
   help|doctor|build|gate) expected=0 ;;
-  serve|inspect) expected=1 ;;
+  serve|inspect|desktop-viewport) expected=1 ;;
   screenshot) expected=2 ;;
   test) expected=$# ;;
   *) usage >&2; exit 2 ;;
@@ -40,10 +41,15 @@ case "$command" in
     ;;
 esac
 
-if [[ $command == screenshot ]]; then
-  output=$(realpath -m -- "$2")
+if [[ $command == screenshot || $command == desktop-viewport ]]; then
+  if [[ $command == screenshot ]]; then target=$2; else target=$1; fi
+  output=$(realpath -m -- "$target")
   if [[ $output != *.png || -e $output ]]; then
     echo 'Screenshot needs a new .png path; existing files are never replaced.' >&2
+    exit 2
+  fi
+  if [[ $command == desktop-viewport && ( -e ${output%.png}.log || -e ${output%.png}.build.log ) ]]; then
+    echo 'Desktop viewport log already exists; existing evidence is never replaced.' >&2
     exit 2
   fi
 fi
@@ -82,6 +88,15 @@ case "$command" in
     ;;
   serve) exec node apps/web-shell/bin/sceneaxi-web-shell.mjs --host 127.0.0.1 --port 0 --cwd "$project" ;;
   inspect) exec curl --fail --silent --show-error --max-time 10 "$url/api/state" ;;
+  desktop-viewport)
+    pnpm --dir desktop/linux build >"${output%.png}.build.log" 2>&1
+    SCENEAXI_SMOKE_SHOT="$output" /usr/bin/time -f 'wall_seconds=%e peak_kb=%M' \
+      pnpm --dir desktop/linux smoke >"${output%.png}.log" 2>&1
+    test -s "$output"
+    grep -q 'desktop-linux smoke OK' "${output%.png}.log"
+    printf 'Desktop viewport saved: %s\n' "$output"
+    tail -2 "${output%.png}.log"
+    ;;
   screenshot)
     browser=${CHROME_BIN:-}
     if [[ -z $browser ]]; then

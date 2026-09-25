@@ -61,6 +61,8 @@ No Three type crosses the package exports:
   filesystem-backed Profile Conformance runner lives only at
   `@sceneaxi/schemas/node/profile-conformance-suite`.
 
+The canvas renderer uses sRGB output and AgX tone mapping at 1.4 exposure. The shared scene lights include a sky-to-ground hemisphere fill so faces turned away from the key light remain legible with `MeshStandardMaterial`. The desktop alone requests an editor grid. Its height follows the lowest mounted geometry when the camera frames the scene, and the grid stays out of camera bounds. This adds one WebGL draw call but does not change headless mesh counts or the authored scene. The desktop also opts out of a preserved drawing buffer because it captures the window through Electron, not `canvas.toDataURL()`. The umbrella keeps its readable drawing buffer for canvas captures. No shadow receiver, environment map, or post-processing chain is implied by these settings.
+
 The Three `OrbitControls` addon is deliberately unused: it needs DOM lib types
 this package does not take, and it hands out the camera object itself, which
 would leak a backend type across the seam.

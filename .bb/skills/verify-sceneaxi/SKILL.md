@@ -62,7 +62,7 @@ Screenshot requires installed Chrome/Chromium, optionally selected by `CHROME_BI
 
 ## Evidence
 
-Retain command, revision, exit code, stdout/stderr, state JSON, and the inspected screenshot. Store files under the printed `EVIDENCE` directory. It is local proof, not something to add to a commit. For changed behavior, capture the action and resulting state, including persisted bytes for writes and named refusals for denied operations. Existing fixture-provider tests prove fixture mode only. Do not invent captain decisions, replace held-key registries, enable hosted AI, use live credentials, or infer shipping authorization from a test pass.
+Retain command, revision, exit code, stdout/stderr, state JSON, and the inspected screenshot. Store files under the printed `EVIDENCE` directory. It is local proof, not something to add to a commit. For changed behavior, capture the action and resulting state, including persisted bytes for writes and named refusals for denied operations. For a Three desktop viewport change, use the [desktop viewport recipe](features/desktop-viewport.md) to capture real Electron pixels and whole-smoke timing; the inspector screenshot cannot prove either. Existing fixture-provider tests prove fixture mode only. Do not invent captain decisions, replace held-key registries, enable hosted AI, use live credentials, or infer shipping authorization from a test pass.
 
 ## Cleanup
 

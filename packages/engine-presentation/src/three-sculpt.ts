@@ -11,6 +11,7 @@ import {
   BufferGeometry,
   CylinderGeometry,
   Float32BufferAttribute,
+  GridHelper,
   Group,
   Mesh,
   MeshStandardMaterial,
@@ -189,10 +190,13 @@ function buildTriangleAsset(input: ThreeTriangleAssetInput) {
  * claiming pixels.
  */
 export function createThreeSculptPresentationBackend(
-  options: ThreePresentationCoreOptions = {},
+  options: ThreePresentationCoreOptions & { readonly editorGrid?: boolean } = {},
 ): ThreeSculptPresentationBackend {
   const core = createThreePresentationCore(options);
   const roots = new Map<string, Group>();
+  // ponytail: the 20-unit grid fits current editor scenes; size it from bounds when large scenes need it.
+  const grid = options.editorGrid ? new GridHelper(20, 20, 0x52637b, 0x334256) : null;
+  if (grid !== null) core.content.add(grid);
 
   function replace(instance: SculptMountedInstance) {
     const previous = roots.get(instance.instanceId);
@@ -251,8 +255,9 @@ export function createThreeSculptPresentationBackend(
     },
 
     frameMountedContent() {
-      const bounds = boundingSphereOf(core.content);
+      const bounds = boundingSphereOf(roots.values());
       if (bounds === null) return;
+      if (grid !== null) grid.position.y = bounds.bottom - 0.03;
       core.camera.frameSphere(bounds.center, bounds.radius);
     },
 
@@ -269,18 +274,28 @@ export function createThreeSculptPresentationBackend(
 
     dispose() {
       roots.clear();
+      if (grid !== null) {
+        grid.geometry.dispose();
+        for (const material of Array.isArray(grid.material) ? grid.material : [grid.material]) {
+          material.dispose();
+        }
+      }
       core.dispose();
     },
   };
 }
 
-function boundingSphereOf(root: Group) {
-  root.updateMatrixWorld(true);
-  const box = new Box3().setFromObject(root);
+function boundingSphereOf(roots: Iterable<Group>) {
+  const box = new Box3();
+  for (const root of roots) {
+    root.updateMatrixWorld(true);
+    box.expandByObject(root);
+  }
   if (box.isEmpty()) return null;
   const sphere = box.getBoundingSphere(new Sphere());
   return {
     center: [sphere.center.x, sphere.center.y, sphere.center.z] as const,
     radius: Math.max(sphere.radius, 0.001),
+    bottom: box.min.y,
   };
 }
