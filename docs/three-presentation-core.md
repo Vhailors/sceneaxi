@@ -215,6 +215,12 @@ headless backend. The tier's second install root,
 Windows updater bootstrap, so this list is unchanged by it
 ([`desktop-windows.md`](desktop-windows.md)).
 
+## September 2026 viewport refresh
+
+The shared canvas renderer now uses explicit sRGB output and ACES tone mapping. The core raises ambient and fill illumination and draws a world-origin editor grid. Sculpt materials remain the artifact's PBR values; the presentation changes no spec bytes. The umbrella's interactive viewport now stops requesting frames after a settled draw and requests another on orbit, zoom, reset, mount changes, resize, density changes, or WebGL context restoration. The hero snapshot still takes no input. The desktop continues to own its own playback loop.
+
+On 2026-09-25, the [viewport verification recipe](../.bb/skills/verify-sceneaxi/features/three-viewport.md) captured the public `/open` canvas in local Chrome at 1214 × 682 CSS pixels with a software GPU. The before and after PNGs are local, untracked evidence in `.cache/engine-refresh/`. The before session reported 15 draw calls and 14.6 frames per second while idle, with an animation-frame p95 of 149.9 ms over 120 samples. After sessions reported 16 draw calls and zero new frames while idle; animation-frame p95 ranged from 16.8 to 50.1 ms over 120 samples per run. The additional draw call is the grid. The browser also changed canvas pixels on orbit and wheel zoom, returned to a byte-identical opening PNG on reset, dropped to 6 draw calls with only the root mounted, redrew after a resize, and resumed after simulated WebGL context restoration. These browser timings reflect concurrent host load and are not a controlled GPU benchmark. A trial of procedural environment lighting reduced the measured software-GPU rate to approximately 3 to 4 frames per second, so it was removed rather than shipped.
+
 ## Not claimed
 
 Stage 1 execution or adjudication, a renderer winner, general E2, Kids safety,

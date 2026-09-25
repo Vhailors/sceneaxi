@@ -148,22 +148,14 @@ designed around that rather than around widening the contract.
 "No control is offered" is enforced rather than described. `useSculptViewport` takes a
 `presentation`, and the two are a product distinction, not a tuning knob:
 
-- `interactive` — what `/open` and `/editor` mount. Orbit and zoom are attached to the
-  canvas and the loop runs for the life of the mount, which is what their own copy
-  promises.
-- `snapshot` — what the hero mounts. No input is attached, the canvas keeps the touch
-  gestures the page needs so a swipe that starts on the art still scrolls, and the loop
-  draws only until the frame **settles** and then stops. Settled is the core's own report
-  — pixels reached a buffer, reconciliation has nothing left to apply, every wanted
-  instance is in the frame — so a stopped hero is a finished one rather than one frozen
-  part-way through opening, and its provenance line is still the running core's, not the
-  page's. Because a stopped surface has no next frame to recover on, everything that can
-  invalidate the settled frame asks for another one by name: a resize, a
-  device-pixel-ratio change, a restored WebGL context, and a change to what the caller
-  wants mounted. A *lost* context drops the frame report first, so a provenance line
-  never outlives the pixels it describes. Being still art rather than a target, that
-  canvas is also the one that takes `role="img"`, which is what makes its label
-  dependable.
+- `interactive` is what `/open` and `/editor` mount. Orbit and zoom are attached to
+  the canvas. A settled frame stops the loop until camera input, a mount change, a
+  resize, a density change, or WebGL context restoration requests a new frame.
+- `snapshot` is what the hero mounts. No input is attached, and the canvas keeps the
+  touch gestures the page needs to scroll. It also stops after a settled frame.
+  Settled means that pixels reached a buffer and every mounted instance contributed
+  draw calls. A lost context drops the frame report before restoration requests a
+  new frame. Only the snapshot canvas takes `role="img"`.
 
 - `src/app/_components/sculpt-viewport.tsx` is the **only** file on the site that
   constructs a renderer, and it touches it only through the ADR 0002 seam: Sculpt
