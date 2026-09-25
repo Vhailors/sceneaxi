@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
+verify=$PWD/verify
+bash -n "$verify"
+test -x "$verify"
+grep -qx -- 'name: verify-sceneaxi' SKILL.md
+grep -q '^description: .' SKILL.md
+test "$(head -n 1 SKILL.md)" = '---'
+test "$(grep -c '^---$' SKILL.md)" = 2
+
+for file in SKILL.md features/*.md; do
+  while IFS= read -r link; do
+    test -e "$(dirname -- "$file")/$link"
+  done < <(grep -oE '\]\([^)]*\)' "$file" | sed 's/^](//; s/)$//')
+done
+for file in features/assistant.md features/documents.md features/profiles.md; do
+  test "$(grep '^## ' "$file")" = $'## Sub-features\n## How to get to it (user POV)\n## Driving it with verify\n## Gotchas'
+done
+
+refuses() {
+  local status=0
+  "$verify" "$@" >/dev/null 2>&1 || status=$?
+  if [[ $status != 2 ]]; then
+    printf 'Expected exit 2, got %s for %s\n' "$status" "$*" >&2
+    exit 1
+  fi
+}
+
+"$verify" help | grep -q 'Usage: verify'
+refuses unknown
+refuses doctor extra
+refuses build extra
+refuses gate extra
+refuses serve
+refuses inspect
+refuses screenshot
+refuses test missing.test.ts
+refuses test --passWithNoTests
+refuses inspect https://example.com
+refuses inspect http://127.0.0.1:0/
+refuses inspect http://127.0.0.1:65536/
+refuses inspect http://127.0.0.1:99999999999999999999/
+refuses inspect http://127.0.0.1:5180/extra
+refuses screenshot http://127.0.0.1:5180/ SKILL.md
+refuses screenshot http://127.0.0.1:5180/ verify
+scratch=$(mktemp -d)
+trap 'rm -rf -- "$scratch"' EXIT
+printf 'keep this evidence\n' > "$scratch/existing.png"
+refuses screenshot http://127.0.0.1:5180/ "$scratch/existing.png"
+test "$(cat "$scratch/existing.png")" = 'keep this evidence'
+printf 'check OK: skill links, feature structure and CLI usage refusals.\n'

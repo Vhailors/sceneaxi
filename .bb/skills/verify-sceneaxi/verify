@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.." && pwd)
+command=${1:-help}
+if (($#)); then shift; fi
+
+usage() {
+  cat <<'EOF'
+Usage: verify <command>
+  doctor                    Check installed tools, dependencies and built binaries
+  build                     Run the root pnpm build
+  test [file ...]            Run selected Vitest files (default: three binary smokes)
+  gate                      Run the authoritative root pnpm gate
+  serve <project-dir>        Start the inspector on loopback with an OS-chosen port
+  inspect <url>             Print the inspector's /api/state JSON
+  screenshot <url> <png>     Capture the inspector with installed Chrome/Chromium
+  help                      Show this help
+EOF
+}
+
+case "$command" in
+  help|doctor|build|gate) expected=0 ;;
+  serve|inspect) expected=1 ;;
+  screenshot) expected=2 ;;
+  test) expected=$# ;;
+  *) usage >&2; exit 2 ;;
+esac
+if (($# != expected)); then usage >&2; exit 2; fi
+
+case "$command" in
+  serve) project=$(cd -- "$1" && pwd) ;;
+  inspect|screenshot)
+    if [[ ! $1 =~ ^http://127\.0\.0\.1:([0-9]{1,5})/?$ ]] ||
+       ((10#${BASH_REMATCH[1]} < 1 || 10#${BASH_REMATCH[1]} > 65535)); then
+      echo 'Expected the http://127.0.0.1:<port>/ URL printed by serve.' >&2
+      exit 2
+    fi
+    url=${1%/}
+    ;;
+esac
+
+if [[ $command == screenshot ]]; then
+  output=$(realpath -m -- "$2")
+  if [[ $output != *.png || -e $output ]]; then
+    echo 'Screenshot needs a new .png path; existing files are never replaced.' >&2
+    exit 2
+  fi
+fi
+cd -- "$root"
+
+case "$command" in
+  help) usage ;;
+  doctor)
+    trap 'echo "doctor failed: check Node/pnpm versions, install root and desktop/linux frozen lockfiles, then run verify build." >&2' ERR
+    node --version
+    pnpm --version
+    node -e 'const [major, minor] = process.versions.node.split(".").map(Number); if (!((major === 20 && minor >= 19) || (major === 22 && minor >= 13) || major >= 24)) process.exit(1)'
+    [[ $(pnpm --version) == "$(node -p 'require("./package.json").packageManager.split("@")[1]')" ]]
+    test -x node_modules/.bin/tsc
+    test -x node_modules/.bin/vitest
+    test -f desktop/linux/node_modules/electron/package.json
+    test -f desktop/linux/node_modules/@sceneaxi/importers/package.json
+    node packages/cli/bin/sceneaxi.mjs --help >/dev/null
+    node apps/desktop-shell/bin/sceneaxi-desktop.mjs --help >/dev/null
+    node apps/web-shell/bin/sceneaxi-web-shell.mjs --help >/dev/null
+    echo 'doctor OK: root dependencies and three built binaries are runnable.'
+    echo 'Build freshness, server ownership, site installs and packaged Electron launch are not checked.'
+    ;;
+  build|gate) exec pnpm "$command" ;;
+  test)
+    if (($# == 0)); then
+      set -- packages/cli/test/bin-smoke.test.ts apps/desktop-shell/test/bin-smoke.test.ts apps/web-shell/test/bin-smoke.test.ts
+    fi
+    for file in "$@"; do
+      if [[ ! -f $file || $file != *.test.ts ]]; then
+        printf 'Expected an existing .test.ts file, got: %s\n' "$file" >&2
+        exit 2
+      fi
+    done
+    exec pnpm exec vitest run "$@"
+    ;;
+  serve) exec node apps/web-shell/bin/sceneaxi-web-shell.mjs --host 127.0.0.1 --port 0 --cwd "$project" ;;
+  inspect) exec curl --fail --silent --show-error --max-time 10 "$url/api/state" ;;
+  screenshot)
+    browser=${CHROME_BIN:-}
+    if [[ -z $browser ]]; then
+      for candidate in google-chrome chromium chromium-browser; do
+        if command -v "$candidate" >/dev/null; then browser=$candidate; break; fi
+      done
+    fi
+    if [[ -z $browser ]]; then echo 'No Chrome/Chromium installed. Set CHROME_BIN or report screenshot unavailable.' >&2; exit 1; fi
+    curl --fail --silent --show-error --max-time 10 "$url/api/state" >/dev/null
+    profile=$(mktemp -d)
+    trap 'rm -rf -- "$profile"' EXIT
+    "$browser" --headless --disable-gpu --no-first-run --no-default-browser-check \
+      --disable-background-networking --user-data-dir="$profile" \
+      --window-size=1280,900 --timeout=15000 --screenshot="$output" "$url/"
+    test -s "$output"
+    printf 'Screenshot saved: %s\n' "$output"
+    ;;
+esac
