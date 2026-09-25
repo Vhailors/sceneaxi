@@ -10,12 +10,17 @@
  * any exported signature, so ADR 0002 backend-hiding still holds.
  */
 import {
+  ACESFilmicToneMapping,
   Camera,
   Mesh,
   Object3D,
+  PMREMGenerator,
+  Scene,
+  SRGBColorSpace,
   WebGLRenderer,
   type WebGLRendererParameters,
 } from "three";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { ThreePresentationError } from "./three-presentation-error.js";
 
 /**
@@ -183,6 +188,11 @@ export function createWebGLCanvasSurface(
     preserveDrawingBuffer,
     alpha: options.alpha ?? false,
   });
+  renderer.outputColorSpace = SRGBColorSpace;
+  renderer.toneMapping = ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.35;
+  let environment: ReturnType<PMREMGenerator["fromScene"]> | null = null;
+  let environmentScene: Scene | null = null;
   let drawn = false;
   let contextAvailable = true;
   const onContextLost = () => {
@@ -190,6 +200,10 @@ export function createWebGLCanvasSurface(
     drawn = false;
   };
   const onContextRestored = () => {
+    if (environmentScene !== null) environmentScene.environment = null;
+    environment?.dispose();
+    environment = null;
+    environmentScene = null;
     contextAvailable = true;
     drawn = false;
   };
@@ -219,6 +233,18 @@ export function createWebGLCanvasSurface(
       const targets = asRenderTargets(sceneHandle, cameraHandle);
       if (!contextAvailable) {
         return Object.freeze({ drawCalls: 0, pixelsDrawn: false });
+      }
+      if (targets.scene instanceof Scene && targets.scene.environment === null) {
+        const room = new RoomEnvironment();
+        const generator = new PMREMGenerator(renderer);
+        try {
+          environment = generator.fromScene(room, 0, 0.1, 100, { size: 64 });
+          targets.scene.environment = environment.texture;
+          environmentScene = targets.scene;
+        } finally {
+          room.dispose();
+          generator.dispose();
+        }
       }
       renderer.info.reset();
       renderer.render(targets.scene, targets.camera);
@@ -251,6 +277,8 @@ export function createWebGLCanvasSurface(
     dispose() {
       canvas.removeEventListener("webglcontextlost", onContextLost);
       canvas.removeEventListener("webglcontextrestored", onContextRestored);
+      if (environmentScene !== null) environmentScene.environment = null;
+      environment?.dispose();
       renderer.dispose();
       drawn = false;
       contextAvailable = false;

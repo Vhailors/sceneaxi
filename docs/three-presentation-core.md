@@ -215,6 +215,35 @@ headless backend. The tier's second install root,
 Windows updater bootstrap, so this list is unchanged by it
 ([`desktop-windows.md`](desktop-windows.md)).
 
+## September 2026 renderer refresh
+
+The canvas surface now renders physically based materials under a generated studio
+reflection map, a sky fill, and warm and cool directional lights. It writes sRGB
+output with ACES filmic tone mapping. The reflection map is generated once per
+WebGL context, regenerated after context restore, and released with the canvas. Headless draws still make no pixel claim.
+Shadows and post-processing were not added: their extra passes were not justified
+by the measured software-renderer budget.
+
+The umbrella's interactive viewport now stops after each settled frame, then redraws
+on drag, zoom, Reset view, mount changes, resize, density change, or WebGL context
+restore. The desktop renderer retains its continuous loop for its separate runtime.
+Run `node sites/umbrella/scripts/verify-three-viewport.mjs
+http://127.0.0.1:4189 .cache/engine-refresh check` while the umbrella dev server
+is on port 4189 to capture pixels and repeat the idle and interaction checks.
+
+In Chrome WebGL2 with SwiftShader at 1280×900 and device scale 1, the `/open`
+canvas measured 1214×628 pixels. Before the change, a 120-sample animation-frame
+window had a 33.4 ms median and 50.1 ms p95. After the change, the same window
+had a 16.7 ms median and 16.8 ms p95 while idle. The viewport held at frame 2
+for the full window, then advanced to frames 7, 8, 9, and 10 after drag,
+Reset view, wheel zoom, and root-only mounting. The script checked that drag
+and wheel input changed the PNG, Reset view restored byte-identical pixels,
+and context restore kept the isolated pixels. These are idle browser frame intervals, not
+GPU draw times or a claim that interactive frames became faster. Studio reflections
+alone raised the measured median to 50–66 ms when continuously redrawn under
+SwiftShader; the on-demand loop removes that idle work. Before and after PNGs and
+JSON readings remain in `.cache/engine-refresh/` in the verifying worktree.
+
 ## Not claimed
 
 Stage 1 execution or adjudication, a renderer winner, general E2, Kids safety,

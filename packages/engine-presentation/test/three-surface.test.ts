@@ -3,12 +3,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const rendererState = vi.hoisted(() => ({
   disposals: 0,
   draws: 0,
+  environments: 0,
+  environmentDisposals: 0,
   options: [] as unknown[],
+  renderers: [] as Array<{ outputColorSpace: string; toneMapping: number; toneMappingExposure: number }>,
 }));
 
 vi.mock("three", async (importOriginal) => {
   const actual = await importOriginal<typeof import("three")>();
   class TestWebGLRenderer {
+    outputColorSpace = actual.LinearSRGBColorSpace;
+    toneMapping = actual.NoToneMapping;
+    toneMappingExposure = 1;
     readonly info = {
       render: { calls: 0 },
       reset: () => {
@@ -18,6 +24,7 @@ vi.mock("three", async (importOriginal) => {
 
     constructor(options: unknown) {
       rendererState.options.push(options);
+      rendererState.renderers.push(this);
     }
 
     setPixelRatio() {}
@@ -34,8 +41,16 @@ vi.mock("three", async (importOriginal) => {
     }
   }
 
+  class TestPMREMGenerator {
+    fromScene() {
+      rendererState.environments += 1;
+      return { texture: new actual.Texture(), dispose() { rendererState.environmentDisposals += 1; } };
+    }
+    dispose() {}
+  }
   return {
     ...actual,
+    PMREMGenerator: TestPMREMGenerator as unknown as typeof actual.PMREMGenerator,
     WebGLRenderer:
       TestWebGLRenderer as unknown as typeof actual.WebGLRenderer,
   };
@@ -79,7 +94,10 @@ describe("Three canvas surface capture lifecycle", () => {
   beforeEach(() => {
     rendererState.disposals = 0;
     rendererState.draws = 0;
+    rendererState.environments = 0;
+    rendererState.environmentDisposals = 0;
     rendererState.options.length = 0;
+    rendererState.renderers.length = 0;
   });
 
   it("forwards transparent clearing to the WebGL renderer alpha option", () => {
@@ -105,6 +123,18 @@ describe("Three canvas surface capture lifecycle", () => {
     colored.dispose();
   });
 
+  it("uses sRGB output and filmic tone mapping for the canvas", async () => {
+    const { SRGBColorSpace, ACESFilmicToneMapping } = await import("three");
+    const runtime = createThreePresentationRuntime({ canvas: eventCanvas().canvas });
+    runtime.mount();
+    expect(rendererState.renderers[0]).toMatchObject({
+      outputColorSpace: SRGBColorSpace,
+      toneMapping: ACESFilmicToneMapping,
+      toneMappingExposure: 1.35,
+    });
+    runtime.dispose();
+  });
+
   it("invalidates the captured frame after a resize", () => {
     const { canvas } = eventCanvas();
     const runtime = createThreePresentationRuntime({ canvas });
@@ -115,8 +145,12 @@ describe("Three canvas surface capture lifecycle", () => {
     runtime.present(snapshot, [], 1);
 
     expect(rendererState.draws).toBe(1);
+    expect(rendererState.environments).toBe(1);
     expect(runtime.capture()?.bytes).toBeInstanceOf(Uint8Array);
 
+    runtime.resize(640, 480);
+    runtime.present(snapshot, [], 1);
+    expect(rendererState.environments).toBe(1);
     runtime.resize(640, 480);
     expect(runtime.capture()).toBeNull();
     runtime.dispose();
@@ -155,8 +189,11 @@ describe("Three canvas surface capture lifecycle", () => {
       pixelsDrawn: true,
     });
     expect(rendererState.draws).toBe(2);
+    expect(rendererState.environments).toBe(2);
+    expect(rendererState.environmentDisposals).toBe(1);
 
     runtime.dispose();
+    expect(rendererState.environmentDisposals).toBe(2);
     expect(target.listenerCount("webglcontextlost")).toBe(0);
     expect(target.listenerCount("webglcontextrestored")).toBe(0);
     expect(rendererState.disposals).toBe(1);

@@ -531,8 +531,9 @@ only module on the tier that constructs a renderer.
 The two frame *numbers* are the difference between the two presentations, not noise. The
 hero is a `snapshot` surface: it attaches no camera input, and its loop stops once the
 frame settles instead of redrawing an unchanging image for the rest of the visit, so `2`
-is the settled frame rather than a running count. `/open` is `interactive` and its loop
-runs for the life of the mount, so its number keeps climbing.
+is the settled frame rather than a running count. The September 2026 renderer refresh
+changed `/open` to stop after a settled frame too. It redraws when the camera, viewport,
+or mounted scene changes; its frame number no longer climbs while idle.
 
 Because a stopped surface has no next frame to recover on, a lost WebGL context is asked
 for a new one by name. Observed on `/` by forcing the loss through

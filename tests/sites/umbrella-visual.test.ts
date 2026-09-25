@@ -592,17 +592,16 @@ describe("the hero draws a real Sculpt Artifact", () => {
     */
     expect(boundary).toContain("frame.pixelsDrawn === true");
     expect(boundary).toContain("frame.drawCalls > 0");
-    expect(boundary).toMatch(/if \(!settled\) \{\s*loop\.start\(\);/);
-    // A stopped loop still redraws on resize and on a density change, so stopped art
-    // stays correct rather than stretched.
-    expect(boundary).toMatch(/if \(snapshot\) drawFrame\(\);/);
+    expect(boundary).toContain("if (!settled) return;");
+    expect(boundary).toContain("loop.stop();");
+    // Both still and orbitable viewports redraw on resize and density changes.
+    expect(boundary).toMatch(/backend\.resize\([\s\S]*?redraw\(\);/);
     expect(boundary).toContain("dppx)`");
 
     /*
       A stopped surface has no next frame to recover on, so the rest of what can
       invalidate the settled frame has to ask for one by name. A restored WebGL context
-      redraws — an interactive surface self-heals on its next frame and a snapshot would
-      otherwise stay blank for the visit — and a lost one drops the frame report first,
+      redraws even when no loop is running, and a lost one drops the frame report first,
       so the provenance line never outlives the pixels it describes. New mount intent
       asks too, so the hook's idempotent reconciliation still converges on both
       presentations rather than silently recording a mount it never draws.

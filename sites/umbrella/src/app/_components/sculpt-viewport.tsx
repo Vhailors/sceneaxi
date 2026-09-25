@@ -16,9 +16,8 @@
  *
  * A surface is one of two presentations, and the difference is a product distinction
  * rather than a tuning knob. An `interactive` surface is a session: orbit and zoom input
- * is attached to its canvas and its loop runs for the life of the mount, which is what
- * the routed open and editor paths promise in their own copy. A `snapshot` surface is
- * art: no input is attached, the canvas keeps the touch gestures the page needs to
+ * is attached to its canvas and draws when the camera or scene changes. A `snapshot`
+ * surface is art: no input is attached, the canvas keeps the touch gestures the page needs to
  * scroll, and the loop draws only until the frame settles and then stops. Because the
  * two travel together, a surface cannot end up orbitable but frozen, or still and
  * redrawing an unchanging image sixty times a second.
@@ -26,9 +25,7 @@
  * A stopped surface has no next frame to recover on, so everything that can invalidate
  * the frame it settled on asks for a new one by name: a resize, a density change, a
  * restored WebGL context, and a change to what the caller wants mounted. That is what
- * keeps the two presentations telling the same story — an interactive surface converges
- * because it is always drawing, and a snapshot converges because each of those draws
- * once more and then settles again.
+ * keeps both presentations converged without redrawing unchanged pixels.
  *
  * WebGL can fail for reasons a page cannot control (no GPU, a blocked context, a
  * headless crawler). That refuses in the open with the error the core produced, rather
@@ -46,11 +43,6 @@ import type { MountableScene } from "@sceneaxi/site-kit";
 import { VIEWPORT_LETTERBOX } from "../../lib/viewport-letterbox.js";
 import { StatePanel } from "./state-panel.js";
 
-/**
- * Frames are published to React at this cadence on an interactive surface; the loop
- * still draws every frame. A snapshot publishes the one frame it settles on instead.
- */
-const FRAME_REPORT_INTERVAL = 15;
 const MAX_PIXEL_RATIO = 2;
 
 type RefusalStage = "open" | "draw";
@@ -136,15 +128,12 @@ export function useSculptViewport(input: {
   const wantedKey = input.mountedInstanceIds.join("\u0000");
   const wantedRef = useRef(wantedKey);
   /**
-   * Ask a stopped snapshot for one more frame. It is null while a surface is already
-   * drawing every frame, and null again once a session is released.
+   * Schedule a frame after a camera, scene, or viewport change. Cleared on release.
    */
   const redrawRef = useRef<(() => void) | null>(null);
   useEffect(() => {
     wantedRef.current = wantedKey;
-    // New intent has to reach the picture. An interactive surface reconciles on its very
-    // next frame; a settled snapshot has to be asked, or a mount would be recorded and
-    // then silently never drawn.
+    // A settled surface must be asked to reconcile new mount intent.
     redrawRef.current?.();
   }, [wantedKey]);
 
@@ -211,7 +200,6 @@ export function useSculptViewport(input: {
 
       const mounted = new Set<string>();
       let appliedKey: string | null = null;
-      let reportNextFrame = true;
       // Reconcile what is mounted against the caller's intent, through the same Mount
       // API the pages demonstrate. The renderer is never torn down to do it.
       const reconcileMounts = () => {
@@ -222,9 +210,6 @@ export function useSculptViewport(input: {
         for (const placement of placements) {
           const shouldMount = wanted.has(placement.instanceId);
           if (shouldMount === mounted.has(placement.instanceId)) continue;
-          // What is mounted is about to change, so the report must not wait for its
-          // interval.
-          reportNextFrame = true;
           if (shouldMount) {
             mounts.mount(placement);
             mounted.add(placement.instanceId);
@@ -254,33 +239,17 @@ export function useSculptViewport(input: {
        * The loop cannot keep drawing after this, so releasing here is what stops the
        * page from showing a stale frame report over a frozen image with no refusal.
        *
-       * A snapshot publishes the frame it *settled* on and nothing before it, and settled
-       * is the core's own report rather than a guess about elapsed time: the frame
-       * reached a real drawing buffer, and it issued draw calls whenever there is
-       * anything mounted to draw. Until both hold it keeps drawing — a blocked WebGL
-       * context, or a canvas measured before layout resolved, is a frame to draw again,
-       * not one to stop on — so a surface that stops is one that finished rather than one
-       * that froze part-way through opening.
+       * Both presentations settle only after the surface reports real pixels and draw
+       * calls for mounted content. An unfinished frame retries rather than freezing.
        */
       const drawFrame = () => {
         try {
           reconcileMounts();
           const frame = mounts.render();
-          if (snapshot) {
-            const settled =
-              frame.pixelsDrawn === true && (mounted.size === 0 || frame.drawCalls > 0);
-            if (!settled) {
-              loop.start();
-              return;
-            }
-            loop.stop();
-            setStatus({ kind: "running", frame });
-            return;
-          }
-          if (reportNextFrame || frame.frame % FRAME_REPORT_INTERVAL === 0) {
-            reportNextFrame = false;
-            setStatus({ kind: "running", frame });
-          }
+          const settled = frame.pixelsDrawn === true && (mounted.size === 0 || frame.drawCalls > 0);
+          if (!settled) return;
+          loop.stop();
+          setStatus({ kind: "running", frame });
         } catch (error) {
           sessionRef.current = null;
           releaseAll(cleanups);
@@ -297,44 +266,55 @@ export function useSculptViewport(input: {
        * The one thing a stopped surface cannot do on its own: come back from a lost
        * WebGL context.
        *
-       * A browser may take the GPU context away for reasons the page does not control,
-       * and an interactive surface recovers on its next frame because it always has one.
-       * A snapshot has to be asked. Losing the context drops the frame report first —
-       * the drawing buffer is cleared, so a provenance line still naming that frame's
-       * draw calls would outlive the pixels it describes — and a restored context asks
-       * for one more frame. Whether the pixels actually came back is the core's own
-       * report, not a guess here: the settle check keeps drawing until the surface says
-       * it drew, and stops again the moment it did.
+       * Both surfaces stop while idle, so a restored context must schedule a new frame.
+       * Losing the context drops the old report before the pixels disappear.
        */
-      if (snapshot) {
-        const redraw = () => {
-          loop.start();
-        };
-        const onSurfaceContextLost = () => {
-          loop.stop();
-          setStatus({ kind: "starting" });
-        };
-        canvas.addEventListener("webglcontextlost", onSurfaceContextLost);
-        canvas.addEventListener("webglcontextrestored", redraw);
+      const redraw = () => {
+        loop.start();
+      };
+      const onSurfaceContextLost = () => {
+        loop.stop();
+        setStatus({ kind: "starting" });
+      };
+      canvas.addEventListener("webglcontextlost", onSurfaceContextLost);
+      canvas.addEventListener("webglcontextrestored", redraw);
+      cleanups.push(() => {
+        canvas.removeEventListener("webglcontextlost", onSurfaceContextLost);
+        canvas.removeEventListener("webglcontextrestored", redraw);
+      });
+      redrawRef.current = redraw;
+      cleanups.push(() => {
+        if (redrawRef.current === redraw) redrawRef.current = null;
+      });
+      if (!snapshot) {
+        let dragging = false;
+        const down = () => { dragging = true; };
+        const up = () => { dragging = false; };
+        const move = () => { if (dragging) redraw(); };
+        canvas.addEventListener("pointerdown", down);
+        canvas.addEventListener("pointermove", move);
+        canvas.addEventListener("pointerup", up);
+        canvas.addEventListener("pointercancel", up);
+        canvas.addEventListener("pointerleave", up);
+        canvas.addEventListener("wheel", redraw);
         cleanups.push(() => {
-          canvas.removeEventListener("webglcontextlost", onSurfaceContextLost);
-          canvas.removeEventListener("webglcontextrestored", redraw);
-        });
-        redrawRef.current = redraw;
-        cleanups.push(() => {
-          if (redrawRef.current === redraw) redrawRef.current = null;
+          canvas.removeEventListener("pointerdown", down);
+          canvas.removeEventListener("pointermove", move);
+          canvas.removeEventListener("pointerup", up);
+          canvas.removeEventListener("pointercancel", up);
+          canvas.removeEventListener("pointerleave", up);
+          canvas.removeEventListener("wheel", redraw);
         });
       }
 
       /**
-       * Re-measure and redraw. A snapshot has no loop running to pick the new size up on
-       * its next frame, so it draws here instead — which is what keeps stopped art
-       * correct rather than stretched.
+       * Re-measure and redraw when the canvas box changes, rather than stretching the
+       * previous frame.
        */
       const applyViewport = () => {
         const next = measure();
         backend.resize(next.width, next.height, next.pixelRatio);
-        if (snapshot) drawFrame();
+        redraw();
       };
 
       const observer = new ResizeObserver(applyViewport);
@@ -391,6 +371,7 @@ export function useSculptViewport(input: {
     if (session === null) return;
     session.backend.camera.reset();
     session.backend.frameMountedContent();
+    redrawRef.current?.();
   }, []);
 
   return { canvasRef, status, resetView, presentation };
