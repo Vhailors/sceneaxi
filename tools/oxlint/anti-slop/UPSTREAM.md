@@ -1,0 +1,5 @@
+# Vendored anti-slop rules
+
+The files in this directory came from `assets/anti-slop/` in the installed `install-anti-slop` skill on 2026-09-25. The upstream repository and commit were not available from that installation. The recoverable pristine snapshot is the SHA-256 digest `69fa217ad6262822167aeaa4b4cf9d10bddbba0bd9fcb7f83e1807f3707bdca3` of sorted file checksums, before this record was added. Recompute it with `find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum` against the original skill assets. The bundled `vendor/eslint-stylistic/LICENSE` remains intact.
+
+Installed entry point: `tools/oxlint/anti-slop/index.ts`. The repository configuration is `.oxlintrc.json`, with the generic rules enabled as errors. There are no changes to the copied rule implementations. The existing repository had no Oxlint installation; the first whole-repository run reported 22,680 findings in pre-existing source. This task does not suppress rules or rewrite unrelated modules to clear them.

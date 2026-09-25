@@ -58,7 +58,7 @@ These are all helper commands, including a focused-file example. The worker limi
 
 Inspection must return `app: sceneaxi-web-shell`, `ok: true`, and `snapshot.phase: idle` for this empty project. `test` defaults to the three existing binary smoke suites. They spawn real processes and prove edits through public commands and HTTP, including unchanged bytes before acceptance and changed bytes after acceptance. File arguments select existing `.test.ts` files. Flags and nonexistent paths refuse before Vitest runs. The authoritative `gate` delegates to the root script unchanged, including contract, boundary, type/build, test and lint checks. A focused pass never substitutes for the gate.
 
-Screenshot requires installed Chrome/Chromium, optionally selected by `CHROME_BIN`. It uses a fresh temporary profile and refuses an existing output path. Open the resulting PNG and check the inspector heading and project root. It proves only inspector rendering, not an engine viewport. If Chrome is unavailable or sandboxing fails, report that limitation; do not add dependencies or disable its sandbox just to pass.
+Screenshot requires installed Chrome/Chromium, optionally selected by `CHROME_BIN`. It uses a fresh temporary profile and refuses an existing output path. Open the resulting PNG and check the inspector heading and project root. It proves only inspector rendering, not an engine viewport. For Three canvas pixels and idle pacing, follow [Three viewport](features/three-viewport.md) and run [viewport.mjs](viewport.mjs) against the local umbrella `/open` route. If Chrome is unavailable or sandboxing fails, report that limitation; do not add dependencies or disable its sandbox just to pass.
 
 ## Evidence
 

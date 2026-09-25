@@ -532,7 +532,10 @@ The two frame *numbers* are the difference between the two presentations, not no
 hero is a `snapshot` surface: it attaches no camera input, and its loop stops once the
 frame settles instead of redrawing an unchanging image for the rest of the visit, so `2`
 is the settled frame rather than a running count. `/open` is `interactive` and its loop
-runs for the life of the mount, so its number keeps climbing.
+ran for the life of the mount in that recorded build, so its number kept climbing.
+Since the September 2026 viewport refresh, `/open` also stops on a settled frame and
+redraws on camera input or another invalidation. The current observation and screenshot
+are recorded in [Three presentation core](../../docs/three-presentation-core.md).
 
 Because a stopped surface has no next frame to recover on, a lost WebGL context is asked
 for a new one by name. Observed on `/` by forcing the loss through

@@ -3,6 +3,7 @@ set -euo pipefail
 cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
 verify=$PWD/verify
 bash -n "$verify"
+node --check viewport.mjs
 test -x "$verify"
 grep -qx -- 'name: verify-sceneaxi' SKILL.md
 grep -q '^description: .' SKILL.md
@@ -44,6 +45,9 @@ refuses inspect http://127.0.0.1:99999999999999999999/
 refuses inspect http://127.0.0.1:5180/extra
 refuses screenshot http://127.0.0.1:5180/ SKILL.md
 refuses screenshot http://127.0.0.1:5180/ verify
+viewport_status=0
+node viewport.mjs https://example.com .cache invalid >/dev/null 2>&1 || viewport_status=$?
+test "$viewport_status" -eq 2
 scratch=$(mktemp -d)
 trap 'rm -rf -- "$scratch"' EXIT
 printf 'keep this evidence\n' > "$scratch/existing.png"

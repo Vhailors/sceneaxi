@@ -1,4 +1,4 @@
-import { Object3D } from "three";
+import { GridHelper, Object3D } from "three";
 import { describe, expect, it, vi } from "vitest";
 import {
   THREE_HEADLESS_SURFACE_LABEL,
@@ -169,6 +169,7 @@ describe("Three presentation core — sculpt backend", () => {
     expect(recorder.draws).toHaveLength(1);
     expect(recorder.resizes[0]).toEqual([800, 600, 2]);
     const scene = sceneOf(recorder.draws[0]);
+    expect(scene.children.some((child) => child instanceof GridHelper)).toBe(true);
     expect(scene.getObjectByName("crate-one")).toBeDefined();
     expect(recorder.draws[0]?.camera).toBeInstanceOf(Object3D);
 

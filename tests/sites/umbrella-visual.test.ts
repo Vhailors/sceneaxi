@@ -562,13 +562,13 @@ describe("the hero draws a real Sculpt Artifact", () => {
     expect(heroRefusal).toContain("level={2}");
   });
 
-  it("mounts a snapshot: no camera input, and no loop left running behind the page", () => {
+  it("mounts a non-interactive snapshot and sleeps both viewports between changes", () => {
     /*
       "Offers no control" has to be a property of the mount rather than a sentence about
       it. The hero is the tier's one `snapshot` surface: the shared hook attaches orbit
       and zoom only on the interactive path, and the canvas keeps `touch-action` so a
-      swipe that starts on the art still scrolls the landing page. The two routed
-      viewports are untouched — their "drag to orbit, scroll to zoom" copy stays true.
+      swipe that starts on the art still scrolls the landing page. Both routed
+      viewports still accept drag and zoom input.
     */
     const hero = read("src/app/_components/hero-viewport.tsx");
     const boundary = read("src/app/_components/sculpt-viewport.tsx");
@@ -584,25 +584,24 @@ describe("the hero draws a real Sculpt Artifact", () => {
     expect(CSS).not.toMatch(/\.viewport-canvas-static[^{]*\{[^}]*cursor:\s*grab/);
 
     /*
-      And the loop stops once the frame settles, so a static image on the site's
-      highest-traffic page is not redrawn for the rest of the visit. "Settled" is the
+      The loop stops once the frame settles, so a static image is not redrawn
+      until its scene or camera changes. "Settled" is the
       core's own report — the frame reached a real drawing buffer and issued draw calls
       for what is mounted — so an unfinished frame keeps the loop running rather than
       freezing the hero part-way through opening.
     */
     expect(boundary).toContain("frame.pixelsDrawn === true");
     expect(boundary).toContain("frame.drawCalls > 0");
-    expect(boundary).toMatch(/if \(!settled\) \{\s*loop\.start\(\);/);
-    // A stopped loop still redraws on resize and on a density change, so stopped art
-    // stays correct rather than stretched.
-    expect(boundary).toMatch(/if \(snapshot\) drawFrame\(\);/);
+    expect(boundary).toMatch(/if \(!settled\) return;\s*loop\.stop\(\);/);
+    expect(boundary).toMatch(/backend\.resize\(next\.width, next\.height, next\.pixelRatio\);\s*redrawRef\.current\?\.\(\);/);
+    expect(boundary).toContain('canvas.addEventListener("pointermove", onPointerMove)');
+    expect(boundary).toContain('canvas.addEventListener("wheel", onWheel)');
     expect(boundary).toContain("dppx)`");
 
     /*
       A stopped surface has no next frame to recover on, so the rest of what can
       invalidate the settled frame has to ask for one by name. A restored WebGL context
-      redraws — an interactive surface self-heals on its next frame and a snapshot would
-      otherwise stay blank for the visit — and a lost one drops the frame report first,
+      redraws both presentations, and a lost one drops the frame report first,
       so the provenance line never outlives the pixels it describes. New mount intent
       asks too, so the hook's idempotent reconciliation still converges on both
       presentations rather than silently recording a mount it never draws.
