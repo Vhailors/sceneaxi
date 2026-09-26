@@ -6,12 +6,13 @@
     "configuration": "no provider environment (every provider-backed plane is expected to report unconfigured)"
   },
   "totals": {
-    "working": 333,
+    "working": 318,
     "partial": 31,
     "unconfigured": 10,
     "refused": 15,
-    "gap": 2,
-    "parked": 49
+    "gap": 17,
+    "parked": 49,
+    "unknown": 2
   },
   "areas": [
     {
@@ -47,15 +48,31 @@
       "area": "site: catalog-web",
       "group": "HTTP routes",
       "skipped": "no install root (run `pnpm install --frozen-lockfile` in the site)",
-      "nodes": [],
-      "totals": {}
+      "nodes": [
+        {
+          "id": "(not probed)",
+          "state": "unknown",
+          "note": "no install root (run `pnpm install --frozen-lockfile` in the site)"
+        }
+      ],
+      "totals": {
+        "unknown": 1
+      }
     },
     {
       "area": "site: kids",
       "group": "HTTP routes",
       "skipped": "no install root (run `pnpm install --frozen-lockfile` in the site)",
-      "nodes": [],
-      "totals": {}
+      "nodes": [
+        {
+          "id": "(not probed)",
+          "state": "unknown",
+          "note": "no install root (run `pnpm install --frozen-lockfile` in the site)"
+        }
+      ],
+      "totals": {
+        "unknown": 1
+      }
     },
     {
       "area": "site: umbrella",
@@ -444,7 +461,8 @@
         },
         {
           "id": "effect-apply",
-          "state": "working"
+          "state": "working",
+          "note": "GUI-dispatched"
         },
         {
           "id": "effect-inspect",
@@ -453,7 +471,8 @@
         },
         {
           "id": "environment-apply",
-          "state": "working"
+          "state": "working",
+          "note": "GUI-dispatched"
         },
         {
           "id": "environment-inspect",
@@ -467,26 +486,32 @@
         },
         {
           "id": "extension-start",
-          "state": "working",
-          "note": "GUI-dispatched"
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
         },
         {
           "id": "input-action-rebind",
-          "state": "working",
-          "note": "GUI-dispatched"
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
         },
         {
           "id": "input-actions-inspect",
-          "state": "working"
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
         },
         {
           "id": "input-actions-reset",
-          "state": "working",
-          "note": "GUI-dispatched"
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
         },
         {
           "id": "material-apply",
-          "state": "working"
+          "state": "working",
+          "note": "GUI-dispatched"
         },
         {
           "id": "material-inspect",
@@ -500,21 +525,26 @@
         },
         {
           "id": "package-install",
-          "state": "working",
-          "note": "GUI-dispatched"
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
         },
         {
           "id": "package-remove",
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
+        },
+        {
+          "id": "physics-apply",
           "state": "working",
           "note": "GUI-dispatched"
         },
         {
-          "id": "physics-apply",
-          "state": "working"
-        },
-        {
           "id": "physics-evaluate",
-          "state": "working"
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
         },
         {
           "id": "physics-inspect",
@@ -563,8 +593,9 @@
         },
         {
           "id": "project-migration-commit",
-          "state": "working",
-          "note": "GUI-dispatched"
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
         },
         {
           "id": "project-migration-propose",
@@ -628,23 +659,33 @@
         },
         {
           "id": "scene-prefab-define",
-          "state": "working"
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
         },
         {
           "id": "scene-prefab-inspect",
-          "state": "working"
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
         },
         {
           "id": "scene-prefab-instance",
-          "state": "working"
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
         },
         {
           "id": "scene-prefab-override",
-          "state": "working"
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
         },
         {
           "id": "scene-prefab-refresh",
-          "state": "working"
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
         },
         {
           "id": "scene-property-set",
@@ -668,7 +709,9 @@
         },
         {
           "id": "viewport-source-set",
-          "state": "working"
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
         },
         {
           "id": "workspace-layout-apply",
@@ -687,7 +730,8 @@
         }
       ],
       "totals": {
-        "working": 66
+        "working": 52,
+        "gap": 14
       }
     },
     {
@@ -1968,7 +2012,7 @@
         },
         {
           "id": "#53 Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path",
-          "state": "working",
+          "state": "gap",
           "note": "blocker · wave 3"
         },
         {
@@ -2158,8 +2202,8 @@
         }
       ],
       "totals": {
-        "working": 39,
-        "gap": 2,
+        "working": 38,
+        "gap": 3,
         "parked": 49
       }
     }

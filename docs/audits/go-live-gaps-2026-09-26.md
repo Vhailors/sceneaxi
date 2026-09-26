@@ -177,7 +177,7 @@ node scripts/probe-surfaces.mjs [--build]   # needs each site's install root; wr
 node scripts/surface-map.mjs                # needs `pnpm build`; writes surface-map.{json,html,md}
 ```
 
-Found while building the map (owned by item 53): the capability matrix marks `dock-timeline` as **real**, but no desktop GUI or renderer code names `animation-apply`. The row's evidence is the bridge-level animation golden, not a GUI dispatch path.
+Found while building the map (owned by item 53): the capability matrix marked `dock-timeline` as **real** before any GUI code named `animation-apply`. Item 53 added that dispatch (`apps/desktop-shell/src/chrome.ts` `stageSceneCommand('animation-apply', …)`); the branch review then reopened 53 for the 12 commands that still have no GUI control (backlog `progress`).
 
 ## Loop result (2026-09-27, `go-live-loop`)
 

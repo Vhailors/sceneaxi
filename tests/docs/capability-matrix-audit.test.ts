@@ -1,9 +1,10 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   auditMatrixDocument,
+  PACKAGED_SMOKE_ROW,
   expandInventoryToken,
   parseMarkdownTables,
   resolveRelativeCliVerbs,
@@ -99,11 +100,20 @@ describe("capability matrix audit", () => {
     ]));
   });
 
-  it("fails when the host limitation or canonical todo sentence is missing", () => {
+  it("fails when the packaged-smoke record or canonical todo sentence is missing", () => {
     const findings = auditMatrixDocument("# empty", process.cwd(), live);
     expect(findings.map((finding) => finding.code)).toEqual(expect.arrayContaining([
-      "missing-host-limitation",
+      "missing-packaged-smoke-record",
       "second-todo-list",
     ]));
+  });
+
+  it("refuses a sentence that only mentions the host limitation", () => {
+    const matrix = readFileSync(join(process.cwd(), "docs/full-editor-v1-capability-matrix.md"), "utf8");
+    const kept = auditMatrixDocument(matrix, process.cwd(), live).map((finding) => finding.code);
+    expect(kept).not.toContain("missing-packaged-smoke-record");
+    const negated = matrix.split("\n").filter((line) => !line.startsWith(PACKAGED_SMOKE_ROW)).join("\n")
+      + "\nIts Electron 43.2.0 host limitation is not established.\n";
+    expect(auditMatrixDocument(negated, process.cwd(), live).map((finding) => finding.code)).toContain("missing-packaged-smoke-record");
   });
 });

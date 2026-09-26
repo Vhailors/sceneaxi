@@ -105,6 +105,7 @@ const rendererDir = "desktop/linux/src/renderer";
 const guiSource = [
   "apps/desktop-shell/src/chrome.ts",
   "apps/desktop-shell/src/interaction-commands.ts",
+  "apps/desktop-shell/src/visual-model.ts",
   ...readdirSync(join(root, rendererDir)).filter((f) => f.endsWith(".ts")).map((f) => `${rendererDir}/${f}`),
 ].map(read).join("\n");
 
@@ -120,10 +121,29 @@ const { EDITOR_COMMAND_REGISTRY } = await import(registryModule);
 const acceptsDesktop = (id) =>
   EDITOR_COMMAND_REGISTRY.find((command) => command.id === id)?.acceptedClients.includes("desktop-control") ?? false;
 
+// Commands the GUI names but sends without the input their schema requires; the
+// command interaction golden pins each one to the registry's input refusal.
+const inputRequiredCommands = new Set(
+  [...(read("tests/e2e/desktop-command-interactions-golden.test.ts")
+    .match(/const INPUT_REQUIRED_COMMANDS = new Set\(\[([^\]]*)\]/)?.[1] ?? "")
+    .matchAll(/"([a-z0-9-]+)"/g)].map((match) => match[1]),
+);
+
+if (inputRequiredCommands.size === 0) {
+  process.stderr.write("surface map: INPUT_REQUIRED_COMMANDS not found in the command interaction golden\n");
+  process.exit(1);
+}
+
 const editorCommandState = (id) => {
+  if (inputRequiredCommands.has(id)) {
+    return fromBacklog(53) ?? { state: "partial", note: "GUI control sends no form input; registry refuses EDITOR_COMMAND_INPUT_INVALID" };
+  }
+
   if (guiSource.includes(`'${id}'`) || guiSource.includes(`"${id}"`)) return { state: "working", note: "GUI-dispatched" };
 
-  if (acceptsDesktop(id)) return fromBacklog(53) ?? { state: "working" };
+  // Accepting `desktop-control` is not a GUI: without a control that dispatches it, the
+  // command is reachable only through the desktop bridge and local agents.
+  if (acceptsDesktop(id)) return fromBacklog(53) ?? { state: "partial", note: "desktop-control accepted; no GUI control dispatches it" };
 
   return { state: "refused", note: "CLI / local-agent only by registry" };
 };
@@ -136,7 +156,8 @@ for (const site of probe.sites) {
     area: `site: ${site.site}`,
     group: "HTTP routes",
     skipped: site.skipped,
-    nodes: site.routes.map((route) => ({
+    // A site the probe could not start has no evidence, so it is `unknown`, never green.
+    nodes: site.skipped ? [{ id: "(not probed)", state: "unknown", note: site.skipped }] : site.routes.map((route) => ({
       id: route.request,
       state: route.state,
       note: [route.status, ...route.reasons].join(" "),

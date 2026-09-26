@@ -21,7 +21,7 @@ import {
 import { ROOT_COMMANDS, type CommandNode } from "../../packages/cli/src/commands.ts";
 import {
   EDITOR_CHILD_ISSUES,
-  HOST_GRAPHICS_LIMITATION,
+  PACKAGED_SMOKE_ROW,
   auditMatrixDocument,
 } from "../docs/capability-matrix-audit.ts";
 
@@ -110,9 +110,8 @@ describe("full-editor capability-matrix evidence", () => {
     expect(findings, findings.map((finding) => `${finding.code}: ${finding.message}`).join("\n")).toEqual([]);
   });
 
-  it("keeps the host graphics limitation and agrees the child graph is the only todo list", () => {
-    expect(matrix).toContain(HOST_GRAPHICS_LIMITATION);
-    expect(matrix).toMatch(/host limitation/i);
+  it("keeps the packaged-smoke SIGSEGV record and agrees the child graph is the only todo list", () => {
+    expect(matrix).toContain(PACKAGED_SMOKE_ROW);
     expect(matrix).toContain("The GitHub sub-issue graph under #249 is the canonical todo list");
     expect(matrix).toMatch(/Matrix-to-evidence enforcement \| \*\*real\*\*/);
     for (const issue of EDITOR_CHILD_ISSUES) {

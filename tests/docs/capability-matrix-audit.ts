@@ -13,6 +13,7 @@ export const EDITOR_CHILD_ISSUES = Object.freeze(
 );
 
 export const HOST_GRAPHICS_LIMITATION = "Electron 43.2.0";
+export const PACKAGED_SMOKE_ROW = "| Current-host Linux packaged smoke | **partial** |";
 
 export type MatrixTable = Readonly<{
   heading: string;
@@ -41,7 +42,7 @@ export type MatrixFinding = Readonly<{
     | "fake-missing-refusal"
     | "unaccounted-control"
     | "duplicate-inventory"
-    | "missing-host-limitation"
+    | "missing-packaged-smoke-record"
     | "second-todo-list";
   message: string;
 }>;
@@ -211,10 +212,14 @@ export function auditMatrixDocument(
   }>,
 ): MatrixFinding[] {
   const findings: MatrixFinding[] = [];
-  if (!markdown.includes(HOST_GRAPHICS_LIMITATION) || !/host limitation/i.test(markdown)) {
+  // Item 60 found no current-host crash, so the matrix records the historical
+  // packaged-smoke SIGSEGV as unresolved rather than as a host limitation. Require
+  // that exact row, so a sentence merely mentioning "host limitation" cannot pass.
+  const packagedSmokeRow = markdown.split("\n").find((line) => line.startsWith(PACKAGED_SMOKE_ROW));
+  if (packagedSmokeRow === undefined || !/SIGSEGV/.test(packagedSmokeRow) || !/cause is unknown/i.test(packagedSmokeRow)) {
     findings.push({
-      code: "missing-host-limitation",
-      message: "Matrix must keep the Electron 43.2.0 local headless crash as a host limitation.",
+      code: "missing-packaged-smoke-record",
+      message: "Matrix must keep the partial current-host packaged-smoke row recording the unresolved historical SIGSEGV.",
     });
   }
   if (!/GitHub sub-issue graph under #249 is the canonical todo list/i.test(markdown)) {

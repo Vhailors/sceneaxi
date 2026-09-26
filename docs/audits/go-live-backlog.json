@@ -638,11 +638,11 @@
       "severity": "blocker",
       "title": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path",
       "cls": "autonomous",
-      "status": "done",
+      "status": "open",
       "wave": 3,
       "thread": "thr_diqya99sza",
       "commit": null,
-      "progress": null,
+      "progress": "reopened by the branch review. GUI dispatch works for run-stop/run-reset, {physics,environment,material,effect}-{inspect,apply}, package-inspect, workspace-layout-{inspect,apply,reset}, project-{inspect,build}, project-migration-{propose,recover}, extension-inspect and profile-inspect. GUI controls exist but send no form input, so the registry refuses them (EDITOR_COMMAND_INPUT_INVALID): package-install, package-remove, project-migration-commit, extension-start, input-action-rebind, input-actions-reset. No GUI control at all: input-actions-inspect, physics-evaluate, scene-prefab-{define,inspect,instance,override,refresh}, viewport-source-set (desktop bridge and local agents only).",
       "openDecision": "project-build targets Linux only; broader targets future work"
     },
     {
