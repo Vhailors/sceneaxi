@@ -73,6 +73,38 @@ const SITE_SOURCE_FILES: readonly string[] = readdirSync(SITES_DIR)
   .flatMap((dir) => collectSiteSources(dir))
   .map((path) => relative(SITES_DIR, path).split(sep).join("/"));
 
+describe("site metadata and error boundaries", () => {
+  it("keeps catalog error boundaries identical and limited to digest plus home link", () => {
+    const game = readFileSync(join(SITES_DIR, "catalog-game/src/app/error.tsx"), "utf8");
+    const web = readFileSync(join(SITES_DIR, "catalog-web/src/app/error.tsx"), "utf8");
+    expect(game).toBe(web);
+    expect(game).toContain('"use client"');
+    expect(game).toContain("{error.digest}");
+    expect(game).toContain('href="/"');
+    expect(game).not.toContain("error.message");
+    expect(game).not.toMatch(/retry|reset\(/i);
+  });
+
+  it.each(["catalog-game", "catalog-web"])(
+    "derives item metadata and Foundation image routes for %s",
+    (site) => {
+      const item = readFileSync(join(SITES_DIR, site, "src/app/item/[itemId]/page.tsx"), "utf8");
+      expect(item).toContain("generateMetadata");
+      expect(item).toContain("showSiteListing(CATALOG_SITE_SURFACE, itemId)");
+      expect(item).toContain("found.value.title");
+      expect(item).toContain("found.value.creatorId");
+      const icon = readFileSync(join(SITES_DIR, site, "src/app/icon.svg"), "utf8");
+      expect(icon).toContain("<svg");
+      expect(existsSync(join(SITES_DIR, site, "src/app/opengraph-image.tsx"))).toBe(true);
+    },
+  );
+
+  it("declares umbrella icon and OpenGraph image routes", () => {
+    expect(readFileSync(join(SITES_DIR, "umbrella/src/app/icon.svg"), "utf8")).toContain("<svg");
+    expect(existsSync(join(SITES_DIR, "umbrella/src/app/opengraph-image.tsx"))).toBe(true);
+  });
+});
+
 describe("site seams", () => {
   it.each([
     ["@sceneaxi/site-umbrella", umbrellaSeam],

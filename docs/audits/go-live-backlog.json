@@ -502,9 +502,9 @@
       "severity": "medium",
       "title": "`robots.txt` and `sitemap.xml` return `404`",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 1,
-      "thread": null,
+      "thread": "thr_3wtyhdjvg8",
       "commit": null
     },
     {
@@ -514,9 +514,9 @@
       "severity": "medium",
       "title": "Umbrella has no `not-found.tsx`; no site has `error.tsx`, `global-error.tsx`, or `loading.tsx`.",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 1,
-      "thread": null,
+      "thread": "thr_3wtyhdjvg8",
       "commit": null
     },
     {
