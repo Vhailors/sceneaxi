@@ -6,6 +6,7 @@ export type BaseColorTexture = Readonly<{
 
 export type AssetRenderMesh = Readonly<{
   meshId: string;
+  nodeIndex?: number;
   positions: readonly number[];
   normals?: readonly number[];
   uvs?: readonly number[];

@@ -66,6 +66,8 @@ import {
   type BaseColorTexture,
   type SculptArtifact,
   type SculptTransform,
+  type GltfAnimationChannel,
+  type GltfAnimationClip,
 } from "@sceneaxi/schemas";
 
 export const CONTAINED_GLTF_PROFILE_ID =
@@ -167,6 +169,8 @@ export type ProjectAssetManifest = Readonly<{
   assets: readonly ProjectAssetManifestEntry[];
 }>;
 
+export type ContainedGltfNode = Readonly<{ node: number; parent: number | null; matrix: readonly number[]; matrixAuthored: boolean; translation: readonly number[]; rotation: readonly number[]; scale: readonly number[] }>;
+
 export type ContainedGltfProjection = Readonly<{
   entry: ProjectAssetManifestEntry & Readonly<{
     family: "model";
@@ -176,6 +180,8 @@ export type ContainedGltfProjection = Readonly<{
     instanceId: string;
   }>;
   meshes: readonly ImportedAssetRenderMesh[];
+  nodes: readonly ContainedGltfNode[];
+  animations: readonly GltfAnimationClip[];
   bounds: Readonly<{
     minimum: readonly [number, number, number];
     maximum: readonly [number, number, number];
@@ -259,7 +265,9 @@ export type MaterializeAssetCopiesResult =
 type ParsedGltf = Readonly<{
   mediaType: "model/gltf-binary" | "model/gltf+json";
   meshes: readonly ImportedAssetRenderMesh[];
+  nodes: readonly ContainedGltfNode[];
   bounds: ContainedGltfProjection["bounds"];
+  animations: readonly GltfAnimationClip[];
 }>;
 
 type ParsedAsset = Readonly<{
@@ -861,7 +869,7 @@ type AccessorContext = Readonly<{
 function accessorValues(
   context: AccessorContext,
   index: unknown,
-  expectedType: "SCALAR" | "VEC2" | "VEC3",
+  expectedType: "SCALAR" | "VEC2" | "VEC3" | "VEC4",
   allowedComponents: readonly number[],
 ): readonly number[] | null {
   if (!nonNegativeInteger(index)) return null;
@@ -893,7 +901,7 @@ function accessorValues(
   ) return null;
   const source = context.buffers[bufferIndex];
   if (source === undefined || bufferOffset + bufferLength > source.byteLength) return null;
-  const components = expectedType === "VEC3" ? 3 : expectedType === "VEC2" ? 2 : 1;
+  const components = expectedType === "VEC4" ? 4 : expectedType === "VEC3" ? 3 : expectedType === "VEC2" ? 2 : 1;
   const componentBytes = componentType === 5121
     ? 1
     : componentType === 5123
@@ -1045,11 +1053,14 @@ function parseGltf(bytes: Uint8Array, sourceName: string): ParsedGltf | Refusal 
   if (!plainRecord(asset) || asset["version"] !== "2.0") {
     return refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, "The contained profile requires glTF asset.version 2.0.");
   }
-  for (const denied of ["extensionsUsed", "extensionsRequired", "animations", "skins", "cameras"] as const) {
+  for (const denied of ["extensionsUsed", "extensionsRequired", "cameras"] as const) {
     const value = json[denied];
     if (value !== undefined && (!Array.isArray(value) || value.length > 0)) {
       return refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, `The contained v1 profile does not support ${denied}.`);
     }
+  }
+  if (json["skins"] !== undefined && (!Array.isArray(json["skins"]) || json["skins"].length > 0)) {
+    return refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, "Skinning (skins, JOINTS_0, WEIGHTS_0) is not supported by the contained profile.");
   }
   const samplers = json["samplers"];
   if (samplers !== undefined && (!Array.isArray(samplers) || samplers.length > 0)) {
@@ -1103,6 +1114,42 @@ function parseGltf(bytes: Uint8Array, sourceName: string): ParsedGltf | Refusal 
     bufferViews,
     buffers: Object.freeze([bufferBytes]),
   };
+  const animations: GltfAnimationClip[] = [];
+  const rawAnimations = json["animations"];
+  if (rawAnimations !== undefined && !Array.isArray(rawAnimations)) return refuse(CONTAINED_GLTF_REFUSALS.malformed, "glTF animations must be an array.");
+  for (const [clipIndex, rawClip] of (rawAnimations ?? []).entries()) {
+    if (!plainRecord(rawClip) || !Array.isArray(rawClip["samplers"]) || !Array.isArray(rawClip["channels"])) return refuse(CONTAINED_GLTF_REFUSALS.malformed, `glTF animation ${clipIndex} is malformed.`);
+    const channels: GltfAnimationChannel[] = [];
+    const targets = new Set<string>();
+    let duration = 0;
+    for (const rawChannel of rawClip["channels"]) {
+      if (!plainRecord(rawChannel) || !plainRecord(rawChannel["target"]) || !nonNegativeInteger(rawChannel["sampler"])) return refuse(CONTAINED_GLTF_REFUSALS.malformed, `glTF animation ${clipIndex} has an invalid channel.`);
+      const target = rawChannel["target"];
+      const sampler = rawClip["samplers"][rawChannel["sampler"]];
+      if (!plainRecord(sampler)) return refuse(CONTAINED_GLTF_REFUSALS.malformed, `glTF animation ${clipIndex} references an invalid sampler.`);
+      const interpolation = sampler["interpolation"] ?? "LINEAR";
+      if (interpolation === "CUBICSPLINE") return refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, "glTF CUBICSPLINE animation interpolation is not supported.");
+      if (interpolation !== "LINEAR" && interpolation !== "STEP") return refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, `glTF animation interpolation ${String(interpolation)} is not supported.`);
+      const path = target["path"];
+      if (path !== "translation" && path !== "rotation" && path !== "scale") return refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, `glTF animation target path ${String(path)} is not supported.`);
+      const targetNodeIndex = target["node"];
+      if (!nonNegativeInteger(targetNodeIndex)) return refuse(CONTAINED_GLTF_REFUSALS.malformed, `glTF animation ${clipIndex} targets an invalid node.`);
+      const targetNode = nodes[targetNodeIndex];
+      if (!plainRecord(targetNode)) return refuse(CONTAINED_GLTF_REFUSALS.malformed, `glTF animation ${clipIndex} targets an invalid node.`);
+      if (own(targetNode, "matrix") !== undefined) return refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, `glTF animation target node ${targetNodeIndex} uses matrix instead of TRS.`);
+      const targetKey = `${String(target["node"])}:${path}`;
+      if (targets.has(targetKey)) return refuse(CONTAINED_GLTF_REFUSALS.malformed, `glTF animation ${clipIndex} targets node ${target["node"]} path ${path} more than once.`);
+      targets.add(targetKey);
+      const times = accessorValues(context, sampler["input"], "SCALAR", [5126]);
+      const values = accessorValues(context, sampler["output"], path === "rotation" ? "VEC4" : "VEC3", [5126]);
+      if (times === null || values === null || values.length !== times.length * (path === "rotation" ? 4 : 3) || times.some((value, index) => { const previous = times[index - 1]; return index > 0 && (previous === undefined || value <= previous); })) return refuse(CONTAINED_GLTF_REFUSALS.malformed, `glTF animation ${clipIndex} sampler accessors are invalid.`);
+      if (path === "rotation" && Array.from({ length: times.length }, (_v, index) => Math.hypot(...values.slice(index * 4, index * 4 + 4))).some((length) => Math.abs(length - 1) > 0.0001)) return refuse(CONTAINED_GLTF_REFUSALS.malformed, `glTF animation ${clipIndex} contains a non-unit rotation quaternion.`);
+      duration = Math.max(duration, times[times.length - 1] ?? 0);
+      channels.push(Object.freeze({ node: targetNodeIndex, path, interpolation, times, values }));
+    }
+    if (channels.length === 0) return refuse(CONTAINED_GLTF_REFUSALS.malformed, `glTF animation ${clipIndex} contains no channels.`);
+    animations.push(Object.freeze({ name: typeof rawClip["name"] === "string" ? rawClip["name"] : `Animation ${clipIndex + 1}`, channels: Object.freeze(channels), duration }));
+  }
   const decodedImages: BaseColorTexture[] = [];
   let decodedImageBytes = 0;
   for (const image of images ?? []) {
@@ -1174,13 +1221,17 @@ function parseGltf(bytes: Uint8Array, sourceName: string): ParsedGltf | Refusal 
   const maximum: [number, number, number] = [-Infinity, -Infinity, -Infinity];
   let triangleCount = 0;
   const active = new Set<number>();
+  const nodeParents = new Map<number, number | null>();
+  const nodeMatrices = new Map<number, Matrix4>();
 
-  const visit = (nodeIndex: number, parentMatrix: Matrix4): boolean => {
+  const visit = (nodeIndex: number, parentMatrix: Matrix4, parentNode: number | null): boolean => {
     const node = nodes[nodeIndex];
-    if (!plainRecord(node) || active.has(nodeIndex)) return false;
+    if (!plainRecord(node) || active.has(nodeIndex) || nodeParents.has(nodeIndex)) return false;
     const local = matrixForNode(node);
     if (local === null) return false;
     const world = multiplyMatrix(parentMatrix, local);
+    nodeParents.set(nodeIndex, parentNode);
+    nodeMatrices.set(nodeIndex, local);
     active.add(nodeIndex);
     try {
       const meshIndex = node["mesh"];
@@ -1194,6 +1245,10 @@ function parseGltf(bytes: Uint8Array, sourceName: string): ParsedGltf | Refusal 
           const attributes = primitive["attributes"];
           if (!plainRecord(attributes)) return false;
           const attributeKeys = Object.keys(attributes);
+          if (attributeKeys.includes("JOINTS_0") || attributeKeys.includes("WEIGHTS_0")) {
+            primitiveRefusal = refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, "Skinning attributes JOINTS_0 and WEIGHTS_0 are not supported by this contained glTF profile.");
+            return false;
+          }
           if (attributeKeys.some((key) => key !== "POSITION" && key !== "NORMAL" && key !== "TEXCOORD_0")) return false;
           const positions = accessorValues(context, attributes["POSITION"], "VEC3", [5126]);
           if (positions === null || positions.length % 9 !== 0) return false;
@@ -1290,6 +1345,7 @@ function parseGltf(bytes: Uint8Array, sourceName: string): ParsedGltf | Refusal 
             : 1;
           const projectedMesh: { -readonly [Key in keyof ImportedAssetRenderMesh]: ImportedAssetRenderMesh[Key] } = {
             meshId: `node-${String(nodeIndex)}-mesh-${String(meshIndex)}-primitive-${String(primitiveIndex)}`,
+            nodeIndex,
             positions,
             indices,
             matrix: world,
@@ -1307,7 +1363,7 @@ function parseGltf(bytes: Uint8Array, sourceName: string): ParsedGltf | Refusal 
       if (children !== undefined) {
         if (!Array.isArray(children) || !children.every(nonNegativeInteger)) return false;
         for (const child of children) {
-          if (!visit(child, world)) return false;
+          if (!visit(child, world, nodeIndex)) return false;
         }
       }
       return true;
@@ -1317,9 +1373,12 @@ function parseGltf(bytes: Uint8Array, sourceName: string): ParsedGltf | Refusal 
   };
 
   for (const root of roots) {
-    if (!visit(root, IDENTITY_MATRIX)) {
+    if (!visit(root, IDENTITY_MATRIX, null)) {
       return primitiveRefusal ?? refuse(CONTAINED_GLTF_REFUSALS.malformed, "The contained glTF scene graph or triangle accessor is invalid.");
     }
+  }
+  if (animations.some((clip) => clip.channels.some((channel) => !nodeParents.has(channel.node)))) {
+    return refuse(CONTAINED_GLTF_REFUSALS.malformed, "Every glTF animation target node must be reachable from the selected scene.");
   }
   if (projected.length === 0 || minimum.some((value) => !Number.isFinite(value))) {
     return refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, "The contained profile requires at least one triangle primitive reachable from the scene.");
@@ -1327,6 +1386,8 @@ function parseGltf(bytes: Uint8Array, sourceName: string): ParsedGltf | Refusal 
   return Object.freeze({
     mediaType: container.mediaType,
     meshes: Object.freeze(projected),
+    nodes: Object.freeze([...nodeParents].sort(([a], [b]) => a - b).map(([node, parent]) => Object.freeze({ node, parent, matrix: nodeMatrices.get(node) ?? IDENTITY_MATRIX, matrixAuthored: own(nodes[node], "matrix") !== undefined, translation: vector(own(nodes[node], "translation"), 3, [0, 0, 0]) ?? [0, 0, 0], rotation: vector(own(nodes[node], "rotation"), 4, [0, 0, 0, 1]) ?? [0, 0, 0, 1], scale: vector(own(nodes[node], "scale"), 3, [1, 1, 1]) ?? [1, 1, 1] }))),
+    animations: Object.freeze(animations),
     bounds: Object.freeze({
       minimum: Object.freeze(minimum),
       maximum: Object.freeze(maximum),
@@ -1778,7 +1839,7 @@ export function stageProjectAssetImport(input: Readonly<{
   }) as JsonObject;
   const projection: ProjectAssetProjection = parsed.gltf === null
     ? Object.freeze({ entry, preview: parsed.preview })
-    : Object.freeze({ entry: entry as ContainedGltfProjection["entry"], meshes: parsed.gltf.meshes, bounds: parsed.gltf.bounds });
+    : Object.freeze({ entry: entry as ContainedGltfProjection["entry"], meshes: parsed.gltf.meshes, nodes: parsed.gltf.nodes, animations: parsed.gltf.animations, bounds: parsed.gltf.bounds });
   return Object.freeze({
     ok: true as const,
     replayed: false,
@@ -1999,7 +2060,7 @@ export function projectAssetManifestEntry(
     ? Object.freeze({ ok: true as const, value: Object.freeze({ entry, preview: parsed.preview }) })
     : Object.freeze({
         ok: true as const,
-        value: Object.freeze({ entry: entry as ContainedGltfProjection["entry"], meshes: parsed.gltf.meshes, bounds: parsed.gltf.bounds }),
+        value: Object.freeze({ entry: entry as ContainedGltfProjection["entry"], meshes: parsed.gltf.meshes, nodes: parsed.gltf.nodes, animations: parsed.gltf.animations, bounds: parsed.gltf.bounds }),
       });
 }
 

@@ -111,6 +111,7 @@ import {
   type SculptArtifact,
   type SculptTransform,
   type Vector3,
+  type GltfAnimationClip,
 } from "@sceneaxi/schemas";
 import {
   mountableScene,
@@ -123,6 +124,7 @@ import {
   projectAssetManifestEntry,
   projectAssetManifestFromDocumentData,
   type ImportedAssetRenderMesh,
+  type ContainedGltfNode,
   type ProjectAssetManifestEntry,
 } from "@sceneaxi/importers";
 import { DESKTOP_ACTIVE_DOCUMENT_PATH } from "./bridge-contract.js";
@@ -274,6 +276,8 @@ export type DesktopImportedAsset = Readonly<{
   instanceId: string;
   digest: string;
   meshes: readonly ImportedAssetRenderMesh[];
+  nodes: readonly ContainedGltfNode[];
+  animations: readonly GltfAnimationClip[];
 }>;
 
 export type DesktopMountableScene = MountableScene & Readonly<{
@@ -356,6 +360,8 @@ function withImportedAssets(
       instanceId: entry.instanceId,
       digest: entry.digest,
       meshes: projected.value.meshes,
+      nodes: projected.value.nodes,
+      animations: projected.value.animations,
     }));
   }
   return Object.freeze({

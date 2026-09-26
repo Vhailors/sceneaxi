@@ -1,3 +1,4 @@
+import type { GltfAnimationClip } from "@sceneaxi/schemas";
 import type {
   SculptMountApi,
   ThreeSculptPresentationBackend,
@@ -20,6 +21,8 @@ export type DesktopMountablePayload = {
     instanceId: string;
     digest: string;
     meshes: ThreeTriangleAssetInput["meshes"];
+    nodes: NonNullable<ThreeTriangleAssetInput["nodes"]>;
+    animations: readonly GltfAnimationClip[];
   }>[];
 };
 
@@ -57,7 +60,26 @@ export function mountDesktopScene(
       instanceId: asset.instanceId,
       transform: instance.worldTransform as ThreeTriangleAssetInput["transform"],
       meshes: asset.meshes,
+      nodes: asset.nodes,
     });
+  }
+}
+
+export function resetDesktopSceneAnimations(input: {
+  readonly backend: Pick<ThreeSculptPresentationBackend, "resetTriangleAnimation">;
+  readonly scene: DesktopMountablePayload;
+}): void {
+  for (const asset of input.scene.importedAssets ?? []) input.backend.resetTriangleAnimation(asset.instanceId);
+}
+
+export function playDesktopSceneAnimations(input: {
+  readonly backend: Pick<ThreeSculptPresentationBackend, "playTriangleAnimation">;
+  readonly scene: DesktopMountablePayload;
+  readonly time: number;
+}): void {
+  for (const asset of input.scene.importedAssets ?? []) {
+    const clip = asset.animations[0];
+    if (clip !== undefined) input.backend.playTriangleAnimation(asset.instanceId, clip, input.time);
   }
 }
 

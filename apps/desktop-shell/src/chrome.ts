@@ -63,6 +63,7 @@ import {
   DESKTOP_PRODUCT_REFUSALS,
   DESKTOP_RARITY_PROPOSAL_EVENT,
   DESKTOP_VIEWPORT_PLAY_EVENT,
+  DESKTOP_VIEWPORT_STOP_EVENT,
   DESKTOP_VIEWPORT_SCENE_OPEN_EVENT,
   DESKTOP_WEB_STAGE_CONFIG,
   DESKTOP_WEB_STARTER,
@@ -1681,6 +1682,7 @@ function script(view: DesktopVisualView): string {
     product: {
       documentPath: view.product.surface.project.activeFile,
       viewportPlayEvent: DESKTOP_VIEWPORT_PLAY_EVENT,
+      viewportStopEvent: DESKTOP_VIEWPORT_STOP_EVENT,
       viewportSceneOpenEvent: DESKTOP_VIEWPORT_SCENE_OPEN_EVENT,
       rarityProposalEvent: DESKTOP_RARITY_PROPOSAL_EVENT,
       webStarter: DESKTOP_WEB_STARTER,
@@ -2322,6 +2324,7 @@ if (shell) {
       : 'completed';
     runStatus((commandId === 'run-stop' ? 'Stopped' : 'Reset') + ' · ' + detail);
     appendConsoleEvidence(commandId, response.data);
+    document.dispatchEvent(new CustomEvent(T.product.viewportStopEvent));
     productStatus('open', 'Run command completed · ' + commandId);
   };
 

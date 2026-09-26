@@ -130,6 +130,7 @@
   "packages/schemas/src/editor-shell.ts",
   "packages/schemas/src/entitlements.ts",
   "packages/schemas/src/exact-semver.ts",
+  "packages/schemas/src/gltf-animation.ts",
   "packages/schemas/src/identity.ts",
   "packages/schemas/src/input-action-registry.ts",
   "packages/schemas/src/index.ts",

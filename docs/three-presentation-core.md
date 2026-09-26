@@ -107,8 +107,13 @@ opaque. Opaque materials ignore texture alpha and `alphaCutoff`; an omitted
 8 MiB per model. Presentation accepts the shared neutral payload, validates
 UV/RGBA shapes, and builds an sRGB `DataTexture`; disposal releases that map.
 Async JPEG/WebP decode remains follow-up work. Raster image entries are separate
-assets and are not applied to model materials. Browser pixel evidence remains a
-recorded observation, not a gate inference or a new texture-rendering claim.
+assets and are not applied to model materials. Contained glTF node hierarchies
+carry validated translation, rotation, and scale channels into the viewport.
+During Play, the renderer samples LINEAR/STEP clips against elapsed presentation
+time and updates Three node groups only; it never writes the authoring document.
+CUBICSPLINE and skinning refuse by name. Headless checks remain no-pixel claims.
+Browser pixel evidence remains a recorded observation, not a gate inference or
+a new texture-rendering claim.
 
 Kernel snapshots to a canvas through the ADR 0002 seam:
 

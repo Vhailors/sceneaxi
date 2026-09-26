@@ -353,6 +353,7 @@ describe("Three presentation core — camera input wiring", () => {
     });
     const meshPayload = {
       meshId: "textured-triangle",
+      nodeIndex: 0,
       positions: [-1, 0, 0, 1, 0, 0, 0, 1, 0],
       uvs: [0, 0, 1, 0, 0.5, 1],
       indices: [0, 1, 2],
@@ -362,10 +363,15 @@ describe("Three presentation core — camera input wiring", () => {
       roughness: 1,
       baseColorTexture: { width: 1, height: 1, rgba: [255, 32, 8, 255] },
     };
-    backend.mountTriangleAsset({ instanceId: "textured", transform, meshes: [meshPayload] });
+    backend.mountTriangleAsset({ instanceId: "textured", transform, meshes: [meshPayload], nodes: [{ node: 0, parent: null, matrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1], matrixAuthored: false, translation: [0, 0, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] }] });
+    backend.playTriangleAnimation("textured", { name: "move", duration: 1, channels: [{ node: 0, path: "translation", interpolation: "LINEAR", times: [0, 1], values: [0, 0, 0, 2, 1, 0] }] }, 0.5);
     expect(backend.render(["textured"]).pixelsDrawn).toBe(false);
     expect(scene).toBeInstanceOf(Object3D);
     if (!(scene instanceof Object3D)) return;
+    const animatedNode = scene.getObjectByName("gltf-node-0");
+    expect(animatedNode?.position.toArray()).toEqual([1, 0.5, 0]);
+    backend.resetTriangleAnimation("textured");
+    expect(animatedNode?.position.toArray()).toEqual([0, 0, 0]);
     const mesh = scene.getObjectByName("textured-triangle");
     expect(mesh).toBeInstanceOf(Mesh);
     if (!(mesh instanceof Mesh)) return;

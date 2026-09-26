@@ -135,6 +135,33 @@ function gltfBytes(offset = 0, external = false) {
   }));
 }
 
+function animatedGltfBytes(interpolation = "LINEAR", skinned = false) {
+  const buffer = Buffer.concat([
+    Buffer.from(triangleBytes()),
+    Buffer.from(new Float32Array([0, 2]).buffer),
+    Buffer.from(new Float32Array([0, 0, 0, 2, 4, 6]).buffer),
+  ]);
+  return Buffer.from(JSON.stringify({
+    asset: { version: "2.0" },
+    buffers: [{ byteLength: buffer.byteLength, uri: `data:application/octet-stream;base64,${buffer.toString("base64")}` }],
+    bufferViews: [
+      { buffer: 0, byteLength: 36 },
+      { buffer: 0, byteOffset: 36, byteLength: 8 },
+      { buffer: 0, byteOffset: 44, byteLength: 24 },
+    ],
+    accessors: [
+      { bufferView: 0, componentType: 5126, count: 3, type: "VEC3" },
+      { bufferView: 1, componentType: 5126, count: 2, type: "SCALAR" },
+      { bufferView: 2, componentType: 5126, count: 2, type: "VEC3" },
+    ],
+    meshes: [{ primitives: [{ attributes: { POSITION: 0 } }] }],
+    nodes: [{ mesh: 0 }],
+    ...(skinned ? { skins: [{}] } : {}),
+    scenes: [{ nodes: [0] }],
+    animations: [{ name: "move", samplers: [{ input: 1, output: 2, interpolation }], channels: [{ sampler: 0, target: { node: 0, path: "translation" } }] }],
+  }));
+}
+
 function padded(bytes: Uint8Array, fill: number) {
   const length = Math.ceil(bytes.byteLength / 4) * 4;
   const result = new Uint8Array(length);
@@ -212,6 +239,23 @@ function project() {
 }
 
 describe("contained GLB/glTF project ingestion", () => {
+  it("ingests node TRS channels and refuses CUBICSPLINE and skinning by name", () => {
+    const root = project();
+    const documentData = parseDocumentTextForTest(root).data;
+    const staged = stageContainedGltfAssetImport({ sourceName: "animated.gltf", sourceBytes: animatedGltfBytes(), documentPath: "scene.json", expectedContentHash: `sha256:${"0".repeat(64)}`, documentData });
+    expect(staged).toMatchObject({ ok: true, projection: { animations: [{ name: "move", duration: 2, channels: [{ node: 0, path: "translation", interpolation: "LINEAR", times: [0, 2], values: [0, 0, 0, 2, 4, 6] }] }] } });
+    const cubic = stageContainedGltfAssetImport({ sourceName: "cubic.gltf", sourceBytes: animatedGltfBytes("CUBICSPLINE"), documentPath: "scene.json", expectedContentHash: `sha256:${"0".repeat(64)}`, documentData });
+    expect(cubic).toMatchObject({ ok: false, reason: CONTAINED_GLTF_REFUSALS.unsupportedFormat, message: expect.stringContaining("CUBICSPLINE") });
+    const skin = stageContainedGltfAssetImport({ sourceName: "skin.gltf", sourceBytes: animatedGltfBytes("LINEAR", true), documentPath: "scene.json", expectedContentHash: `sha256:${"0".repeat(64)}`, documentData });
+    expect(skin).toMatchObject({ ok: false, reason: CONTAINED_GLTF_REFUSALS.unsupportedFormat, message: expect.stringContaining("Skinning") });
+    const joints = JSON.parse(animatedGltfBytes().toString("utf8")) as { meshes: { primitives: { attributes: Record<string, number> }[] }[] };
+    const attributes = joints.meshes[0]?.primitives[0]?.attributes;
+    if (attributes === undefined) throw new Error("Fixture primitive has no attributes.");
+    attributes["JOINTS_0"] = 0;
+    const jointRefusal = stageContainedGltfAssetImport({ sourceName: "joints.gltf", sourceBytes: Buffer.from(JSON.stringify(joints)), documentPath: "scene.json", expectedContentHash: `sha256:${"0".repeat(64)}`, documentData });
+    expect(jointRefusal).toMatchObject({ ok: false, reason: CONTAINED_GLTF_REFUSALS.unsupportedFormat, message: expect.stringContaining("JOINTS_0") });
+  });
+
   it("stages through E1 without writing, then accepts and materializes byte-identical project copies", () => {
     const root = project();
     const sourceRoot = temporary("sceneaxi-contained-gltf-source-");

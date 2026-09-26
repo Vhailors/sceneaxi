@@ -27,7 +27,7 @@ import {
   type Material,
   type Object3D,
 } from "three";
-import type { AssetRenderMesh, SculptComponent, SculptMaterial, SculptTransform } from "@sceneaxi/schemas";
+import { evaluateGltfAnimation, type AssetRenderMesh, type GltfAnimationClip, type SculptComponent, type SculptMaterial, type SculptTransform } from "@sceneaxi/schemas";
 import type { OrbitCameraControls } from "./orbit-camera.js";
 import {
   createThreePresentationCore,
@@ -56,14 +56,19 @@ export interface ThreeSculptPresentationBackend extends SculptPresentationBacken
    * authoritative; this is not a second renderer or a loader side channel.
    */
   mountTriangleAsset(input: ThreeTriangleAssetInput): void;
+  playTriangleAnimation(instanceId: string, clip: GltfAnimationClip, time: number): void;
+  resetTriangleAnimation(instanceId: string): void;
 }
 
 export type ThreeTrianglePrimitiveInput = AssetRenderMesh;
+
+export type ThreeTriangleNodeInput = Readonly<{ node: number; parent: number | null; matrix: readonly number[]; matrixAuthored: boolean; translation: readonly number[]; rotation: readonly number[]; scale: readonly number[] }>;
 
 export type ThreeTriangleAssetInput = Readonly<{
   instanceId: string;
   transform: SculptTransform;
   meshes: readonly ThreeTrianglePrimitiveInput[];
+  nodes?: readonly ThreeTriangleNodeInput[];
 }>;
 
 function radians(degrees: number) {
@@ -134,6 +139,26 @@ function buildTriangleAsset(input: ThreeTriangleAssetInput) {
   const root = new Group();
   root.name = input.instanceId;
   applyTransform(root, input.transform);
+  const nodeGroups = new Map<number, Group>();
+  for (const node of input.nodes ?? []) {
+    const group = new Group();
+    group.name = `gltf-node-${String(node.node)}`;
+    if (node.matrixAuthored) {
+      group.matrix.fromArray([...node.matrix]);
+      group.matrixAutoUpdate = false;
+    } else {
+      group.position.set(node.translation[0] ?? 0, node.translation[1] ?? 0, node.translation[2] ?? 0);
+      group.quaternion.set(node.rotation[0] ?? 0, node.rotation[1] ?? 0, node.rotation[2] ?? 0, node.rotation[3] ?? 1);
+      group.scale.set(node.scale[0] ?? 1, node.scale[1] ?? 1, node.scale[2] ?? 1);
+    }
+    nodeGroups.set(node.node, group);
+  }
+  for (const node of input.nodes ?? []) {
+    const group = nodeGroups.get(node.node);
+    if (group === undefined) continue;
+    const parent = node.parent === null ? root : nodeGroups.get(node.parent);
+    parent?.add(group);
+  }
   for (const mesh of input.meshes) {
     const vertexCount = mesh.positions.length / 3;
     if (
@@ -196,9 +221,15 @@ function buildTriangleAsset(input: ThreeTriangleAssetInput) {
     if (texture !== undefined) material.map = texture;
     const object = new Mesh(geometry, material);
     object.name = mesh.meshId;
-    object.matrix.fromArray(mesh.matrix as number[]);
-    object.matrixAutoUpdate = false;
-    root.add(object);
+    if ((input.nodes?.length ?? 0) > 0 && mesh.nodeIndex !== undefined) {
+      object.matrix.identity();
+      object.matrixAutoUpdate = false;
+      nodeGroups.get(mesh.nodeIndex)?.add(object);
+    } else {
+      object.matrix.fromArray([...mesh.matrix]);
+      object.matrixAutoUpdate = false;
+      root.add(object);
+    }
   }
   root.updateMatrixWorld(true);
   return root;
@@ -217,6 +248,8 @@ export function createThreeSculptPresentationBackend(
 ): ThreeSculptPresentationBackend {
   const core = createThreePresentationCore(options);
   const roots = new Map<string, Group>();
+  const importedNodes = new Map<string, ReadonlyMap<number, Group>>();
+  const importedNodeDefaults = new Map<string, ReadonlyMap<number, ThreeTriangleNodeInput>>();
 
   function replace(instance: SculptMountedInstance) {
     const previous = roots.get(instance.instanceId);
@@ -227,6 +260,19 @@ export function createThreeSculptPresentationBackend(
     const next = buildInstance(instance);
     roots.set(instance.instanceId, next);
     core.content.add(next);
+  }
+
+  function resetImportedNodes(instanceId: string) {
+    const nodes = importedNodes.get(instanceId);
+    const defaults = importedNodeDefaults.get(instanceId);
+    if (nodes === undefined || defaults === undefined) return;
+    for (const [node, group] of nodes) {
+      const base = defaults.get(node);
+      if (base === undefined || base.matrixAuthored) continue;
+      group.position.set(base.translation[0] ?? 0, base.translation[1] ?? 0, base.translation[2] ?? 0);
+      group.quaternion.set(base.rotation[0] ?? 0, base.rotation[1] ?? 0, base.rotation[2] ?? 0, base.rotation[3] ?? 1);
+      group.scale.set(base.scale[0] ?? 1, base.scale[1] ?? 1, base.scale[2] ?? 1);
+    }
   }
 
   function updateTransform(instance: SculptMountedInstance) {
@@ -251,6 +297,8 @@ export function createThreeSculptPresentationBackend(
       core.content.remove(root);
       disposeSubtree(root);
       roots.delete(instanceId);
+      importedNodes.delete(instanceId);
+      importedNodeDefaults.delete(instanceId);
     },
 
     render(instanceIds) {
@@ -288,11 +336,33 @@ export function createThreeSculptPresentationBackend(
         disposeSubtree(previous);
       }
       roots.set(input.instanceId, next);
+      importedNodes.set(input.instanceId, new Map((input.nodes ?? []).flatMap((node) => { const group = next.getObjectByName(`gltf-node-${String(node.node)}`); return group instanceof Group ? [[node.node, group] as const] : []; })));
+      importedNodeDefaults.set(input.instanceId, new Map((input.nodes ?? []).map((node) => [node.node, node])));
       core.content.add(next);
+    },
+
+    playTriangleAnimation(instanceId, clip, time) {
+      const nodes = importedNodes.get(instanceId);
+      const defaults = importedNodeDefaults.get(instanceId);
+      if (nodes === undefined || defaults === undefined) throw new Error(`Imported animation target "${instanceId}" is not mounted.`);
+      resetImportedNodes(instanceId);
+      for (const pose of evaluateGltfAnimation(clip, time).poses) {
+        const group = nodes.get(pose.node);
+        if (group === undefined) throw new Error(`Imported animation node "${String(pose.node)}" is not mounted.`);
+        if (pose.translation !== undefined) group.position.set(...pose.translation);
+        if (pose.rotation !== undefined) group.quaternion.set(...pose.rotation);
+        if (pose.scale !== undefined) group.scale.set(...pose.scale);
+      }
+    },
+
+    resetTriangleAnimation(instanceId) {
+      resetImportedNodes(instanceId);
     },
 
     dispose() {
       roots.clear();
+      importedNodes.clear();
+      importedNodeDefaults.clear();
       core.dispose();
     },
   };

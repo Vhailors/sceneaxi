@@ -8,6 +8,7 @@ import { createDesktopBridge, seedDesktopProject } from "../../desktop/linux/src
 import { mountDesktopScene } from "../../desktop/linux/src/renderer/viewport-playback.ts";
 import { runAssetImport } from "../../packages/cli/src/asset-verbs.ts";
 import { runProjectApply } from "../../packages/cli/src/project-verbs.ts";
+import { stageContainedGltfAssetImport } from "../../packages/importers/src/index.ts";
 
 const roots: string[] = [];
 afterEach(() => roots.splice(0).forEach((root) => rmSync(root, { recursive: true, force: true })));
@@ -32,7 +33,7 @@ function pngChunk(type: string, data: Uint8Array) {
   return chunk;
 }
 
-function containedTriangle(alphaMode?: string, baseColorFactor?: readonly number[]) {
+function containedTriangle(alphaMode?: string, baseColorFactor?: readonly number[], animated = false) {
   const positions = Buffer.from(new Float32Array([-1, 0, 0, 1, 0, 0, 0, 1, 0]).buffer);
   const uvs = Buffer.from(new Float32Array([0, 0, 1, 0, 0.5, 1]).buffer);
   const header = Buffer.alloc(13);
@@ -45,7 +46,9 @@ function containedTriangle(alphaMode?: string, baseColorFactor?: readonly number
     pngChunk("IDAT", deflateSync(Buffer.from([0, 255, 32, 8, 255]))),
     pngChunk("IEND", Buffer.alloc(0)),
   ]);
-  const bytes = Buffer.concat([positions, uvs, png]);
+  const times = Buffer.from(new Float32Array([0, 1]).buffer);
+  const translations = Buffer.from(new Float32Array([0, 0, 0, 2, 0, 0]).buffer);
+  const bytes = Buffer.concat([positions, uvs, png, ...(animated ? [times, translations] : [])]);
   return Buffer.from(JSON.stringify({
     asset: { version: "2.0" },
     buffers: [{ byteLength: bytes.byteLength, uri: `data:application/octet-stream;base64,${bytes.toString("base64")}` }],
@@ -53,10 +56,18 @@ function containedTriangle(alphaMode?: string, baseColorFactor?: readonly number
       { buffer: 0, byteLength: positions.byteLength },
       { buffer: 0, byteOffset: positions.byteLength, byteLength: uvs.byteLength },
       { buffer: 0, byteOffset: positions.byteLength + uvs.byteLength, byteLength: png.byteLength },
+      ...(animated ? [
+        { buffer: 0, byteOffset: positions.byteLength + uvs.byteLength + png.byteLength, byteLength: times.byteLength },
+        { buffer: 0, byteOffset: positions.byteLength + uvs.byteLength + png.byteLength + times.byteLength, byteLength: translations.byteLength },
+      ] : []),
     ],
     accessors: [
       { bufferView: 0, componentType: 5126, count: 3, type: "VEC3" },
       { bufferView: 1, componentType: 5126, count: 3, type: "VEC2" },
+      ...(animated ? [
+        { bufferView: 3, componentType: 5126, count: 2, type: "SCALAR" },
+        { bufferView: 4, componentType: 5126, count: 2, type: "VEC3" },
+      ] : []),
     ],
     images: [{ bufferView: 2, mimeType: "image/png" }],
     textures: [{ source: 0 }],
@@ -65,6 +76,7 @@ function containedTriangle(alphaMode?: string, baseColorFactor?: readonly number
     nodes: [{ mesh: 0 }],
     scenes: [{ nodes: [0] }],
     scene: 0,
+    ...(animated ? { animations: [{ name: "walk", samplers: [{ input: 2, output: 3, interpolation: "LINEAR" }], channels: [{ sampler: 0, target: { node: 0, path: "translation" } }] }] } : {}),
   }));
 }
 
@@ -75,6 +87,25 @@ function seededRoot(prefix: string) {
 }
 
 describe("offline asset ingestion vertical", () => {
+  it("carries imported clips through Play without changing authoring bytes", () => {
+    const root = seededRoot("sceneaxi-animated-asset-");
+    const sourceRoot = temporary("sceneaxi-animated-source-");
+    const source = join(sourceRoot, "triangle.gltf");
+    writeFileSync(source, containedTriangle(undefined, undefined, true));
+    const authoringBytes = readFileSync(join(root, "scene.json"));
+    const document = JSON.parse(authoringBytes.toString("utf8")) as { data: Record<string, unknown> };
+    const staged = stageContainedGltfAssetImport({ sourceName: "triangle.gltf", sourceBytes: readFileSync(source), documentPath: "scene.json", expectedContentHash: `sha256:${"0".repeat(64)}`, documentData: document.data });
+    expect(staged).toMatchObject({ ok: true, projection: { animations: [{ name: "walk", duration: 1 }] } });
+    if (!staged.ok) return;
+    const backend = createThreeSculptPresentationBackend();
+    const clip = staged.projection.animations[0];
+    if (clip === undefined) return;
+    backend.mountTriangleAsset({ instanceId: "animated", transform: { translation: [0, 0, 0], rotationEulerDegrees: [0, 0, 0], scale: [1, 1, 1] }, meshes: staged.projection.meshes, nodes: staged.projection.nodes });
+    backend.playTriangleAnimation("animated", clip, 0.5);
+    expect(backend.render(["animated"])).toMatchObject({ surface: "headless", pixelsDrawn: false });
+    expect(readFileSync(join(root, "scene.json"))).toEqual(authoringBytes);
+    backend.dispose();
+  });
   it.each([
     { alphaMode: undefined, baseColorFactor: undefined, expectedColor: "#ffffff" },
     { alphaMode: "OPAQUE", baseColorFactor: undefined, expectedColor: "#ffffff" },

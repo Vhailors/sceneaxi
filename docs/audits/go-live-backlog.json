@@ -814,10 +814,11 @@
       "severity": "medium",
       "title": "No imported-animation playback or skeletal animation",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 4,
-      "thread": null,
-      "commit": null
+      "thread": "thr_w94iaqdfkk",
+      "commit": null,
+      "openDecision": "Skinning (JOINTS_0/WEIGHTS_0) and CUBICSPLINE refuse; browser pixel proof pending"
     },
     {
       "id": 68,

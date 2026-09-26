@@ -66,6 +66,7 @@ import {
   DESKTOP_BRIDGE_REFUSALS,
   DESKTOP_RARITY_PROPOSAL_EVENT,
   DESKTOP_VIEWPORT_PLAY_EVENT,
+  DESKTOP_VIEWPORT_STOP_EVENT,
   DESKTOP_VIEWPORT_SCENE_OPEN_EVENT,
   PIXELS_META_NAME,
   type DesktopAssistantJobSnapshot,
@@ -75,6 +76,8 @@ import {
 import {
   desktopMountablePayload,
   mountDesktopScene,
+  playDesktopSceneAnimations,
+  resetDesktopSceneAnimations,
   synchronizeViewportScene,
 } from "./viewport-playback.js";
 import { installDesktopByoConfigurationSurface } from "./byo-configuration.js";
@@ -962,12 +965,14 @@ async function mountLiveViewport(): Promise<void> {
   stage.querySelector(".viewport-note-inert")?.remove();
 
   let printed = false;
+  let animationStartedAt: number | null = null;
   let frameReportSettled = false;
   let frameReportInFlight = false;
   let frameReportAttempts = 0;
   const loop = createThreeRenderLoop({
     onFrame: () => {
       pollGamepadInput(viewportInputContext);
+      if (animationStartedAt !== null) playDesktopSceneAnimations({ backend, scene, time: (performance.now() - animationStartedAt) / 1000 });
       const frame = mounts.render();
       updatePixelsMeta(frame);
       if (!printed || frame.frame % 15 === 0) {
@@ -1096,6 +1101,8 @@ async function mountLiveViewport(): Promise<void> {
     });
     if (!synchronized.ok) return;
     scene = synchronized.scene;
+    animationStartedAt = performance.now();
+    playDesktopSceneAnimations({ backend, scene, time: 0 });
     const frame = mounts.render();
     updatePixelsMeta(frame);
     detail.accepted = true;
@@ -1111,6 +1118,12 @@ async function mountLiveViewport(): Promise<void> {
       : exercise.rarity.namespaceDigest;
     if (rarity === null) clearOverlayLine(RARITY_EVIDENCE_ID);
     else rarityEvidenceLine(stage, rarity);
+  });
+
+  document.addEventListener(DESKTOP_VIEWPORT_STOP_EVENT, () => {
+    animationStartedAt = null;
+    viewportInputContext = "editor";
+    resetDesktopSceneAnimations({ backend, scene });
   });
 
   document.addEventListener(DESKTOP_VIEWPORT_SCENE_OPEN_EVENT, (event: Event) => {
@@ -1140,6 +1153,8 @@ async function mountLiveViewport(): Promise<void> {
     });
     if (!synchronized.ok) return;
     scene = synchronized.scene;
+    animationStartedAt = null;
+    viewportInputContext = "editor";
     const frame = mounts.render();
     updatePixelsMeta(frame);
     detail.accepted = true;

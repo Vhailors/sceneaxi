@@ -13,6 +13,8 @@ export const SCENEAXI_REFUSAL_REGISTRY_CATALOG = Object.freeze({
 });
 
 export type { AssetRenderMesh, BaseColorTexture } from "./asset-render-mesh.js";
+export { evaluateGltfAnimation } from "./gltf-animation.js";
+export type { GltfAnimationChannel, GltfAnimationClip, GltfAnimationEvaluation, GltfAnimationInterpolation, GltfAnimationPath, GltfAnimationPose } from "./gltf-animation.js";
 
 export {
   CATALOG_DATE_TIME_PATTERN,
