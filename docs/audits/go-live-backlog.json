@@ -382,9 +382,9 @@
       "severity": "high",
       "title": "No backup/PITR/restore policy or drill, while rollback is \"forward-fix only\" (`production-activation.md",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 2,
-      "thread": null,
+      "thread": "thr_fpuvyb6jej",
       "commit": null
     },
     {
