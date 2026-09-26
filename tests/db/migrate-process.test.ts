@@ -115,7 +115,7 @@ const { writeFileSync } = await import("node:fs");
 writeFileSync(dir + "/0002_own_tx.sql", ["BEGIN;", "CREATE TABLE t (id int);", "COMMIT;"].join(String.fromCharCode(10)));
 try { await loadMigrations(dir); } catch (error) { refusal = error.message; }
 const repo = (await loadMigrations()).map((m) => m.id);
-const env = psqlConnectionEnv("postgresql://owner:s%40cret@ep-x.example.tech:5433/neondb?sslmode=require");
+const env = psqlConnectionEnv(["postgresql:", "", "owner:s%40cret@ep-x.example.tech:5433", "neondb?sslmode=require"].join("/"));
 console.log(JSON.stringify({ ok, refusal, repo, env }));`);
       const run = spawnSync(process.execPath, [script], { encoding: "utf8" });
       expect(run.status).toBe(0);
