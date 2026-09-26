@@ -4223,7 +4223,14 @@ if (shell) {
         ? { profile: shell.dataset.profile }
         : commandId === 'project-build'
           ? { profile: shell.dataset.profile, target: 'linux' }
-          : {};
+          : commandId === 'workspace-layout-apply'
+            // Apply persists the layout the user is looking at: the current drawers.
+            ? {
+              profile: shell.dataset.profile,
+              leftVisible: shell.dataset.drawerLeft === 'open',
+              inspectorVisible: shell.dataset.drawerInspector === 'open',
+            }
+            : {};
     const response = await commandRequest(commandId, input);
     const diagnostic = responseDiagnostic(response);
     if (diagnostic !== null) {

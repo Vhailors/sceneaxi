@@ -50,6 +50,22 @@ function projectStatus(hasActiveProject: boolean) {
   };
 }
 
+/** Commands whose outcome dialog must show the engine's own answer, not a chrome-side refusal. */
+const ENGINE_ANSWERED_COMMANDS = new Set([
+  "project-migration-propose", "project-migration-recover", "workspace-layout-apply",
+]);
+
+/**
+ * Commands whose registered input needs a review flow the GUI does not collect yet
+ * (digests, approvals, locators; go-live item 53). Their controls send no form values,
+ * so the registry validator refuses them before the engine: pinned exactly, so a GUI
+ * that starts collecting the input has to move the id out of this set.
+ */
+const INPUT_REQUIRED_COMMANDS = new Set([
+  "package-install", "package-remove", "project-migration-commit", "extension-start",
+  "input-action-rebind", "input-actions-reset",
+]);
+
 function engineResponse(
   request: Record<string, unknown>,
   state: {
@@ -70,6 +86,9 @@ function engineResponse(
     const input = payload?.["input"] as Record<string, unknown> | undefined;
     if (commandId === "project-build") {
       return { ok: false, reason: "PROJECT_BUILD_SIGNING_MISSING", message: "Linux signing is not configured." };
+    }
+    if (ENGINE_ANSWERED_COMMANDS.has(String(commandId))) {
+      return { ok: false, reason: "DESKTOP_COMMAND_TEST_ANSWERED", message: `The engine answered ${String(commandId)}.` };
     }
     const translated = commandId === "project-save" || commandId === "change-review-accept"
       ? { action: "authoring", payload: { op: "accept" } }
@@ -492,11 +511,16 @@ async function invoke(
       .toMatchObject({ payload: { input: { profile: "web", target: "linux" } } });
     expect(element(window, "[data-outcome-code]").textContent).toBe("PROJECT_BUILD_SIGNING_MISSING");
   }
-  if (command.id.startsWith("project-migration-") ||
-      command.id === "package-install" || command.id === "package-remove" ||
-      command.id === "workspace-layout-apply" || command.id === "extension-start" ||
-      command.id === "input-action-rebind" || command.id === "input-actions-reset") {
-    expect(element(window, "[data-outcome-code]").textContent).not.toBe("");
+  if (INPUT_REQUIRED_COMMANDS.has(command.id)) {
+    expect(element(window, "[data-outcome-code]").textContent).toBe("EDITOR_COMMAND_INPUT_INVALID");
+  }
+  if (command.id === "workspace-layout-apply") {
+    expect(requests.find((request) => (request.payload as { commandId?: string }).commandId === command.id))
+      .toMatchObject({ payload: { input: { profile: expect.any(String), leftVisible: expect.any(Boolean), inspectorVisible: expect.any(Boolean) } } });
+  }
+  if (ENGINE_ANSWERED_COMMANDS.has(command.id)) {
+    expect(requests.some((request) => (request.payload as { commandId?: string }).commandId === command.id)).toBe(true);
+    expect(element(window, "[data-outcome-code]").textContent).toBe("DESKTOP_COMMAND_TEST_ANSWERED");
   }
   if (command.id === "run-play") {
     expect(element(window, ".shell").dataset.mode).toBe("run");
