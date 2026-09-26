@@ -3,7 +3,8 @@
 **What this document is:** an evidence-based snapshot of where the SceneAxi
 program actually stands, and the options that are *available* to consider next.
 Every claim below cites a merged PR, an issue, an ADR, or a doc that already owns
-the fact.
+the fact. Maintain the Position block against `origin/main` when refreshing this
+brief, and record every first-parent merge since its prior pin in the table below.
 
 **What it is not — and this is normative:** this document **authorizes nothing**.
 It grants no authority to publish a package, run a proof stage, spend money,
@@ -22,9 +23,9 @@ disagreement, #1 wins.
 | | |
 |---|---|
 | Branch | `main` |
-| SHA | `203eb53c3fa2501bfbc620668e90dba6e03d1a0b` (`203eb53`) |
-| Head commit | `refactor(site-kit): collapse duplicated site components onto shared seams (#169)`, merged 2026-07-29 |
-| Repository checks | `gate` and `engine-sdk` green on the merged [PR #169](https://github.com/Vhailors/sceneaxi/pull/169) head; the repository gate remains hermetic: no network, no `DATABASE_URL`, no Stripe key |
+| SHA | `f42f09aa1bd337191453d8d8b0f46034b412a50b` (`f42f09a`) |
+| Head commit | `chore: slim agents md (#306)`, merged 2026-09-26 |
+| Repository checks | The required repository gate is recorded at the pinned `main` head; the repository gate remains hermetic: no network, no `DATABASE_URL`, no Stripe key |
 | Registry publications | none, ever; no registry credential exists in this repository ([`publish-readiness.md`](../publish-readiness.md)) |
 | Proof stages executed | none; Stage 1 remains double-gated ([`spec-41.md`](spec-41.md)) |
 
@@ -38,7 +39,7 @@ observation, not as missing work to be invented.
 
 ## Landed ladder work
 
-All merged into `main`; all reachable from `203eb53`.
+All merged into `main`; all reachable from `f42f09a`.
 
 | Step | Issue | PR | Merged |
 |---|---|---|---|
@@ -87,21 +88,87 @@ account of landed work cannot disagree:
 
 ### Merged after the pinned SHA
 
-The Position block above pins the snapshot this brief was last re-pinned to, and re-pinning
-is its own change ([PR #170](https://github.com/Vhailors/sceneaxi/pull/170) was the last
-one). Six further first-parent merges landed after `203eb53` and **are not reachable from
-it**, so the "all reachable from `203eb53`" statement above covers the ladder table only.
-Sections below cite these merges by PR; read that as landed on `main` after the pin, not as
-work contained in the pinned snapshot:
+The Position block above pins `origin/main` at `f42f09a`. Every first-parent merge
+between the prior pin `203eb53` and this snapshot is recorded here. These changes are
+reachable from the current pin; sections below that cite a merge describe work landed on
+`main`, not necessarily work included in the prior snapshot:
 
 | Work | Issue | PR | Merged |
 |---|---|---|---|
-| Re-pin of this brief to `203eb53` | [#141](https://github.com/Vhailors/sceneaxi/issues/141) | [#170](https://github.com/Vhailors/sceneaxi/pull/170) | 2026-07-29 |
-| `/profiles` routed through shared site-kit profile contracts | [#165](https://github.com/Vhailors/sceneaxi/issues/165) | [#171](https://github.com/Vhailors/sceneaxi/pull/171) | 2026-07-29 |
-| D3 checkout-intent price-immutability migration | — | [#172](https://github.com/Vhailors/sceneaxi/pull/172) | 2026-07-30 |
-| Archived and versioned credit-pack catalog, D2's binding prerequisite | — | [#173](https://github.com/Vhailors/sceneaxi/pull/173) | 2026-07-30 |
-| D1 identity-port-witnessed principals | — | [#174](https://github.com/Vhailors/sceneaxi/pull/174) | 2026-07-30 |
-| Deployment-owned issuance authority contract | — | [#175](https://github.com/Vhailors/sceneaxi/pull/175) | 2026-07-30 |
+| refresh next-step brief against current main | — | [#170](https://github.com/Vhailors/sceneaxi/pull/170) | 2026-07-29 |
+| route umbrella /profiles through shared profile contracts | — | [#171](https://github.com/Vhailors/sceneaxi/pull/171) | 2026-07-29 |
+| enforce checkout intent price immutability | — | [#172](https://github.com/Vhailors/sceneaxi/pull/172) | 2026-07-30 |
+| archive and version the credit-pack catalog | — | [#173](https://github.com/Vhailors/sceneaxi/pull/173) | 2026-07-30 |
+| require identity-port-witnessed principals at every guard | — | [#174](https://github.com/Vhailors/sceneaxi/pull/174) | 2026-07-30 |
+| define the deployment-owned issuance authority contract | — | [#175](https://github.com/Vhailors/sceneaxi/pull/175) | 2026-07-30 |
+| serve the assistant panel over the loopback surface | — | [#178](https://github.com/Vhailors/sceneaxi/pull/178) | 2026-07-31 |
+| anchor checkout credit grants to the committed pack archive | — | [#179](https://github.com/Vhailors/sceneaxi/pull/179) | 2026-07-31 |
+| wire Neon-backed auth and credits TEST provider plane | — | [#186](https://github.com/Vhailors/sceneaxi/pull/186) | 2026-07-31 |
+| ship the packaged Linux desktop application over the real engine stack | — | [#188](https://github.com/Vhailors/sceneaxi/pull/188) | 2026-07-31 |
+| design-faithful Engine Desktop editor shell over the live engine | — | [#189](https://github.com/Vhailors/sceneaxi/pull/189) | 2026-07-31 |
+| hosted login path from the umbrella into the entitled editor | — | [#187](https://github.com/Vhailors/sceneaxi/pull/187) | 2026-08-01 |
+| reconcile TEST deployment readiness | — | [#190](https://github.com/Vhailors/sceneaxi/pull/190) | 2026-08-01 |
+| bind umbrella deployment authority behind a request facade | — | [#191](https://github.com/Vhailors/sceneaxi/pull/191) | 2026-08-02 |
+| ship verified Linux desktop download on /engine | — | [#205](https://github.com/Vhailors/sceneaxi/pull/205) | 2026-08-05 |
+| ship the first-release landing with detected download and profile matrix | — | [#206](https://github.com/Vhailors/sceneaxi/pull/206) | 2026-08-05 |
+| add fail-closed Windows packaging path | — | [#207](https://github.com/Vhailors/sceneaxi/pull/207) | 2026-08-05 |
+| add fail-closed macOS packaging path | — | [#208](https://github.com/Vhailors/sceneaxi/pull/208) | 2026-08-05 |
+| ship the simplified Web Experience editor on the entitled umbrella /editor | — | [#209](https://github.com/Vhailors/sceneaxi/pull/209) | 2026-08-05 |
+| land assistant sculpt output in the live desktop viewport | — | [#210](https://github.com/Vhailors/sceneaxi/pull/210) | 2026-08-05 |
+| unify the Engine Desktop project loop with real open, save, and play | — | [#211](https://github.com/Vhailors/sceneaxi/pull/211) | 2026-08-05 |
+| attach the CLI to a versioned Engine Desktop local bridge | — | [#212](https://github.com/Vhailors/sceneaxi/pull/212) | 2026-08-05 |
+| ship fixture-backed catalog storefronts for Game and Web | — | [#213](https://github.com/Vhailors/sceneaxi/pull/213) | 2026-08-06 |
+| reconcile full credit-pack refunds and gate TEST checkout UX | — | [#214](https://github.com/Vhailors/sceneaxi/pull/214) | 2026-08-06 |
+| add TEST-only Stripe Connect creator onboarding and payouts | — | [#215](https://github.com/Vhailors/sceneaxi/pull/215) | 2026-08-06 |
+| ship the simplified Kids activity surface on an isolated origin | — | [#216](https://github.com/Vhailors/sceneaxi/pull/216) | 2026-08-06 |
+| add production activation runbook and required-check recovery contract | — | [#217](https://github.com/Vhailors/sceneaxi/pull/217) | 2026-08-07 |
+| connect the entitled Web editor to TEST-only catalog intake | — | [#219](https://github.com/Vhailors/sceneaxi/pull/219) | 2026-08-07 |
+| add BYOK key configuration backed by OS secure storage | — | [#221](https://github.com/Vhailors/sceneaxi/pull/221) | 2026-08-07 |
+| add production-capable Better Auth provider behind the identity seam | — | [#223](https://github.com/Vhailors/sceneaxi/pull/223) | 2026-08-07 |
+| add contained New, Open, and Recent project lifecycle | — | [#228](https://github.com/Vhailors/sceneaxi/pull/228) | 2026-08-07 |
+| add typed scene property editing | — | [#229](https://github.com/Vhailors/sceneaxi/pull/229) | 2026-08-07 |
+| make Vercel serverless function packages symlink-safe | — | [#230](https://github.com/Vhailors/sceneaxi/pull/230) | 2026-08-07 |
+| wire real File/Edit/Run commands, palette rows, and accelerators | — | [#231](https://github.com/Vhailors/sceneaxi/pull/231) | 2026-08-08 |
+| render active proposals in Change Review | — | [#232](https://github.com/Vhailors/sceneaxi/pull/232) | 2026-08-08 |
+| wire the privileged OpenRouter provider host | — | [#238](https://github.com/Vhailors/sceneaxi/pull/238) | 2026-08-09 |
+| add deterministic rarity domain and kernel roll contract | — | [#242](https://github.com/Vhailors/sceneaxi/pull/242) | 2026-08-09 |
+| integrate Wayfinder rarity authoring | — | [#243](https://github.com/Vhailors/sceneaxi/pull/243) | 2026-08-10 |
+| replace dead controls with honest refusals | — | [#244](https://github.com/Vhailors/sceneaxi/pull/244) | 2026-08-10 |
+| expand selected-instance scene editing | — | [#245](https://github.com/Vhailors/sceneaxi/pull/245) | 2026-08-10 |
+| add contained GLB/glTF asset ingestion | — | [#246](https://github.com/Vhailors/sceneaxi/pull/246) | 2026-08-10 |
+| add deterministic static Web export | — | [#247](https://github.com/Vhailors/sceneaxi/pull/247) | 2026-08-11 |
+| add contained project and asset browser | — | [#248](https://github.com/Vhailors/sceneaxi/pull/248) | 2026-08-11 |
+| inventory full editor v1 | — | [#271](https://github.com/Vhailors/sceneaxi/pull/271) | 2026-08-12 |
+| register full editor command slice | — | [#272](https://github.com/Vhailors/sceneaxi/pull/272) | 2026-08-12 |
+| add versioned native project model | — | [#273](https://github.com/Vhailors/sceneaxi/pull/273) | 2026-08-12 |
+| add transactional command redo | — | [#275](https://github.com/Vhailors/sceneaxi/pull/275) | 2026-08-12 |
+| add hierarchy, multi-select, and parenting | — | [#279](https://github.com/Vhailors/sceneaxi/pull/279) | 2026-08-12 |
+| refresh Linux beta artifact evidence | — | [#280](https://github.com/Vhailors/sceneaxi/pull/280) | 2026-08-12 |
+| add contained project Git workflow | — | [#282](https://github.com/Vhailors/sceneaxi/pull/282) | 2026-08-13 |
+| add transform gizmos, snapping, and inspector | — | [#284](https://github.com/Vhailors/sceneaxi/pull/284) | 2026-08-13 |
+| add first-class asset pipeline | — | [#283](https://github.com/Vhailors/sceneaxi/pull/283) | 2026-08-13 |
+| add unified input actions | — | [#285](https://github.com/Vhailors/sceneaxi/pull/285) | 2026-08-13 |
+| add reusable scene content and overrides | — | [#286](https://github.com/Vhailors/sceneaxi/pull/286) | 2026-08-13 |
+| add isolated Play mode and viewport sources | — | [#287](https://github.com/Vhailors/sceneaxi/pull/287) | 2026-08-13 |
+| add animation authoring and deterministic replay | — | [#288](https://github.com/Vhailors/sceneaxi/pull/288) | 2026-08-13 |
+| add physics authoring and deterministic replay | — | [#289](https://github.com/Vhailors/sceneaxi/pull/289) | 2026-08-13 |
+| add assistant inspect, propose, approve, apply | — | [#290](https://github.com/Vhailors/sceneaxi/pull/290) | 2026-08-13 |
+| add package manager and plugin room lock | — | [#291](https://github.com/Vhailors/sceneaxi/pull/291) | 2026-08-13 |
+| add Play-backed profiling evidence | — | [#292](https://github.com/Vhailors/sceneaxi/pull/292) | 2026-08-13 |
+| add persistent dockable workspace layouts | — | [#293](https://github.com/Vhailors/sceneaxi/pull/293) | 2026-08-13 |
+| add honest advanced extension seams | — | [#294](https://github.com/Vhailors/sceneaxi/pull/294) | 2026-08-13 |
+| add fail-closed macos/windows project build targets | — | [#295](https://github.com/Vhailors/sceneaxi/pull/295) | 2026-08-13 |
+| add capability-matrix evidence audit | — | [#296](https://github.com/Vhailors/sceneaxi/pull/296) | 2026-08-13 |
+| add provider-desktop chain evidence and module coverage | — | [#297](https://github.com/Vhailors/sceneaxi/pull/297) | 2026-08-13 |
+| place assistant Builds into the scene and wire DeepSeek BYOK | — | [#298](https://github.com/Vhailors/sceneaxi/pull/298) | 2026-08-14 |
+| request gnome-libsecret so Linux BYOK can save keys | — | [#299](https://github.com/Vhailors/sceneaxi/pull/299) | 2026-08-14 |
+| persist assistant Builds into the scene and pin Flash | — | [#300](https://github.com/Vhailors/sceneaxi/pull/300) | 2026-08-14 |
+| Cinematic Pro desktop, Flash assistant, and Engine/Website/Kids split | — | [#301](https://github.com/Vhailors/sceneaxi/pull/301) | 2026-08-14 |
+| complete SceneAxi initiation traceability | — | [#302](https://github.com/Vhailors/sceneaxi/pull/302) | 2026-08-26 |
+| run contract regressions and omitted goldens | — | [#303](https://github.com/Vhailors/sceneaxi/pull/303) | 2026-09-23 |
+| Merge pull request #304 from Vhailors/bb/verify-skill-sceneaxi-thr_68nhy34kir | — | [#304](https://github.com/Vhailors/sceneaxi/pull/304) | 2026-09-25 |
+| Merge pull request #305 from Vhailors/bb/ab-scene-on-thr_mt7iid8u28 | — | [#305](https://github.com/Vhailors/sceneaxi/pull/305) | 2026-09-25 |
+| Merge pull request #306 from Vhailors/chore/slim-agents-md | — | [#306](https://github.com/Vhailors/sceneaxi/pull/306) | 2026-09-26 |
 
 Surface-by-surface runnable levels and their proofs are owned by
 [`runnable-surfaces.md`](../runnable-surfaces.md); how far each profile's open

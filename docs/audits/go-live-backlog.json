@@ -1007,9 +1007,9 @@
       "severity": "medium",
       "title": "Stale docs",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 1,
-      "thread": null,
+      "thread": "thr_72w7r82g4v",
       "commit": null
     },
     {

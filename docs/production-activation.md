@@ -208,7 +208,27 @@ or empty. Never substitute, copy, print, or invent credentials merely to obtain 
 check, and never request a release candidate to recover one. Only authoritative GitHub
 results for the intended head count as CI evidence.
 
-## Preflight checklist
+## Backup, PITR, and restore
+
+Neon supports point-in-time recovery by creating a branch from a timestamp within the project's history retention window. See [Neon's point-in-time restore documentation](https://neon.com/docs/guides/branch-restore) and [Neon's restore documentation](https://neon.com/docs/introduction/branching). The retention window is a project setting and is not asserted here. The operator must record the actual `sceneaxi-prod` retention value from the Neon console before relying on PITR; do not infer an account-specific number from product documentation.
+
+To restore, an authorized database operator creates a new Neon branch from the selected timestamp using Neon's branch-from-timestamp procedure. Keep the existing production branch unchanged. Record the source branch, chosen timestamp, new branch identifier, operator, and evidence location. Do not repoint production or change `DATABASE_URL` without the runbook's explicit authorization gate for that exact action.
+
+Before any authorized cutover, verify the candidate branch using the approved read-only database path. Record row counts for `users`, `credit_accounts`, and `credit_ledger_entries` and compare them with the expected recovery point or incident evidence. Verify that `credit_ledger_entries_append_only_trigger` exists on `credit_ledger_entries` and is enabled. A restore is not accepted if the trigger is absent or the counts are unexplained. Never edit or delete ledger rows to make counts match.
+
+Restore drills are operator actions and require the authorization gate above. A drill should use an isolated branch and must not alter production. Checklist:
+
+- [ ] Record the authorization, project, source branch, target timestamp, operator, time window, and evidence location.
+- [ ] Record the Neon project's actual history-retention/PITR value as observed by the operator.
+- [ ] Create an isolated branch from the selected timestamp and record its identifier.
+- [ ] Record `users`, `credit_accounts`, and `credit_ledger_entries` row counts and the expected comparison point.
+- [ ] Verify the append-only trigger is present and enabled; record the query/result.
+- [ ] Confirm production branch and application configuration were not changed, then delete the drill branch only under the applicable authorization.
+- [ ] Evidence: authorization ___; timestamp ___; branch ___; counts ___; trigger verification ___; operator/date ___; evidence location ___; outcome ___
+
+This section documents recovery mechanics only. It authorizes nothing and does not change the forward-fix-only database rollback policy.
+
+### Preflight checklist
 
 Do not start activation until every applicable item is checked with real evidence.
 
