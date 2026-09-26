@@ -167,6 +167,44 @@ describe("sceneaxi binary", () => {
     }
   });
 
+  it("exits non-zero when a watch is stopped on a refused cycle", async () => {
+    sceneaxi(["project", "new", "--document", "scene.json", "--json"], cwd);
+    const child = spawn(process.execPath, [BIN, "project", "dev", "--document", "scene.json", "--watch", "--json"], { cwd, stdio: ["ignore", "pipe", "pipe"] });
+    const lines = createInterface({ input: child.stdout });
+    const received: string[] = [];
+    const waiters: (() => void)[] = [];
+    lines.on("line", (line) => {
+      received.push(line);
+      waiters.shift()?.();
+    });
+    const lineCount = (count: number) => received.length >= count
+      ? Promise.resolve()
+      : new Promise<void>((resolveCount, reject) => {
+        const timer = setTimeout(() => reject(new Error("watch envelope timeout")), 5000);
+        const check = () => {
+          if (received.length >= count) {
+            clearTimeout(timer);
+            resolveCount();
+          } else waiters.push(check);
+        };
+        waiters.push(check);
+      });
+    try {
+      await lineCount(1);
+      expect(JSON.parse(received[0] ?? "")).toMatchObject({ ok: true });
+      writeFileSync(join(cwd, "scene.json"), "{ not json");
+      await lineCount(2);
+      expect(JSON.parse(received[1] ?? "")).toMatchObject({ ok: false });
+      child.kill("SIGINT");
+      await lineCount(3);
+      expect(JSON.parse(received[2] ?? "")["result"]).toMatchObject({ status: "stopped" });
+      expect(await new Promise<number | null>((resolveClose) => child.once("close", resolveClose))).not.toBe(0);
+    } finally {
+      child.kill("SIGKILL");
+      lines.close();
+    }
+  });
+
   it("resolves relative paths against the process working directory", () => {
     // No --cwd flag: the binary must honour where it was launched from.
     expect(

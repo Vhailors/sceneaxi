@@ -112,6 +112,8 @@ function runWatch(argv: readonly string[], format: OutputFormat): void {
   const watchers = new Map<string, FSWatcher>();
   const watchedNames = new Map<string, Set<string>>();
   let finalizing = false;
+  // A watch that ends on a refused cycle reports that refusal, not success.
+  let lastExitCode = 0;
 
   const emit = (outcome: Outcome): void => {
     const text = format === "json"
@@ -123,6 +125,7 @@ function runWatch(argv: readonly string[], format: OutputFormat): void {
   const runCycle = (): Outcome => {
     const result = runCli(argv);
     cycle += 1;
+    lastExitCode = result.exitCode;
     if (!result.envelope.ok) return result;
     return success(
       Object.freeze({ ...result.envelope.result, mode: "watch", cycle }),
@@ -156,15 +159,34 @@ function runWatch(argv: readonly string[], format: OutputFormat): void {
           if (debounce !== undefined) clearTimeout(debounce);
           debounce = setTimeout(() => {
             if (closed) return;
-            const outcome = runCycle();
-            emit(outcome);
-            syncWatchers();
+            try {
+              emit(runCycle());
+              syncWatchers();
+            } catch (error) {
+              fail(error);
+            }
           }, 75);
         }));
       } catch {
         throw new Error(`PROJECT_DEV_WATCH_UNAVAILABLE: ${directory}`);
       }
     }
+  };
+
+  const fail = (error: unknown): void => {
+    if (finalizing) return;
+    finalizing = true;
+    closed = true;
+    if (debounce !== undefined) clearTimeout(debounce);
+    process.removeListener("SIGINT", stop);
+    for (const watcher of watchers.values()) watcher.close();
+    watchers.clear();
+    const reason = error instanceof Error ? error.message : String(error);
+    emit(failure("INTERNAL", reason, {
+      path: ["project", "dev"],
+      help: ["Check that the document and admitted asset directories are readable"],
+    }));
+    process.exitCode = 1;
   };
 
   const stop = (): void => {
@@ -179,31 +201,26 @@ function runWatch(argv: readonly string[], format: OutputFormat): void {
       Object.freeze({ status: "stopped", mode: "watch", cycle }),
       ["Watch stopped after SIGINT"],
     ));
-    process.exitCode = 0;
+    process.exitCode = lastExitCode;
   };
 
   process.once("SIGINT", stop);
   try {
     const initial = runCycle();
-    emit(initial);
     if (
       !initial.envelope.ok &&
       (initial.envelope.error.code === "UNKNOWN_FLAG" ||
         initial.envelope.error.code === "AMBIGUOUS_INPUT")
     ) {
+      emit(initial);
       process.removeListener("SIGINT", stop);
       process.exitCode = initial.exitCode;
       return;
     }
+    // Watchers attach before the first envelope, so a client that sees cycle 1 never loses an edit.
     syncWatchers();
+    emit(initial);
   } catch (error) {
-    process.removeListener("SIGINT", stop);
-    for (const watcher of watchers.values()) watcher.close();
-    const reason = error instanceof Error ? error.message : String(error);
-    emit(failure("INTERNAL", reason, {
-      path: ["project", "dev"],
-      help: ["Check that the document and admitted asset directories are readable"],
-    }));
-    process.exitCode = 1;
+    fail(error);
   }
 }
