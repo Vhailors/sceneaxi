@@ -20,6 +20,7 @@ import {
   createCheckoutSessionIntent,
   createCreditStore,
   saleEntryKeys,
+  validateCreditReconciliationRecord,
   type CheckoutSettlement,
   type CreditStore,
   type CreditStoreAdapter,
@@ -33,9 +34,8 @@ export {
   checkoutPurposeGrantsCredits,
   checkoutPurposeSettlesElsewhere,
   loadLedgerState,
-  parseCreditPackRefundEvent,
+  persistCreditPackChargeEvent,
   parseCheckoutCompletedEvent,
-  persistCreditPackRefund,
   persistCheckoutCompletedGrant,
   verifyStripeWebhookSignature,
 } from "@sceneaxi/billing";
@@ -85,6 +85,26 @@ type StoredEntry = Awaited<
   ReturnType<CreditStore["listEntries"]>
 >[number];
 type StoredShare = CreditsSaleSettlement["share"];
+
+type StoredReconciliation = Parameters<CreditStore["appendOrReplayReconciliation"]>[0];
+
+const RECONCILIATION_COLUMNS = "event_id, mode, intent_id, user_id, charge_id, event_type, reason, amount, currency, dispute_id, dispute_status, occurred_at, payload_digest";
+
+function reconciliationFromRow(row: SqlRow): StoredReconciliation {
+  const parsed = validateCreditReconciliationRecord({
+    schemaVersion: 1,
+    kind: "sceneaxi.credit-reconciliation-record",
+    eventId: row["event_id"], mode: row["mode"], intentId: row["intent_id"], userId: row["user_id"],
+    chargeId: row["charge_id"], eventType: row["event_type"], reason: row["reason"],
+    amount: requiredInteger(row, "amount"), currency: row["currency"],
+    disputeId: row["dispute_id"], disputeStatus: row["dispute_status"],
+    occurredAt: requiredDateTime(row, "occurred_at"), payloadDigest: row["payload_digest"],
+  });
+
+  if (!parsed.ok) throw new Error(parsed.message);
+
+  return parsed.value;
+}
 
 function firstRow(rows: ReadonlyArray<SqlRow>): SqlRow | undefined {
   return rows[0];
@@ -498,7 +518,16 @@ export type StripeSessionCreateParams = Readonly<{
   }>;
 }>;
 
+export type StripeCharge = Readonly<{
+  id: string;
+  amount: number;
+  currency: string;
+  livemode: boolean;
+  metadata: Readonly<Record<string, string>>;
+}>;
+
 export type StripeClientLike = Readonly<{
+  readonly charges?: Readonly<{ retrieve(id: string): Promise<StripeCharge> }>;
   readonly checkout: Readonly<{
     readonly sessions: Readonly<{
       create(
@@ -706,7 +735,37 @@ export function createNeonCreditStoreAdapter(
     return row === undefined ? undefined : shareFromRow(row);
   };
 
+  const findReconciliation: CreditStore["findReconciliation"] = async (mode, eventId) => {
+    const row = firstRow(await database.query(
+      `SELECT ${RECONCILIATION_COLUMNS} FROM credit_reconciliation_records WHERE mode = $1 AND event_id = $2 LIMIT 1`,
+      [mode, eventId],
+    ));
+
+    return row === undefined ? undefined : reconciliationFromRow(row);
+  };
+
   return Object.freeze({
+    findReconciliation,
+    async listReconciliations() {
+      const rows = await database.query(`SELECT ${RECONCILIATION_COLUMNS} FROM credit_reconciliation_records ORDER BY occurred_at, mode, event_id`);
+
+      return Object.freeze(rows.map(reconciliationFromRow));
+    },
+    async appendOrReplayReconciliation(record) {
+      const row = firstRow(await database.query(
+        `INSERT INTO credit_reconciliation_records (${RECONCILIATION_COLUMNS})
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+         ON CONFLICT (mode, event_id) DO NOTHING RETURNING ${RECONCILIATION_COLUMNS}`,
+        [record.eventId, record.mode, record.intentId, record.userId, record.chargeId, record.eventType, record.reason, record.amount, record.currency, record.disputeId, record.disputeStatus, record.occurredAt, record.payloadDigest],
+      ));
+
+      if (row !== undefined) return { record: reconciliationFromRow(row), replayed: false };
+      const held = await findReconciliation(record.mode, record.eventId);
+
+      if (held === undefined) throw new Error("Reconciliation conflict returned no committed record");
+
+      return { record: held, replayed: true };
+    },
     async findAccountByUserId(userId) {
       return findAccount("user_id", userId);
     },
@@ -1141,9 +1200,15 @@ export function createStripeCheckoutEvidenceAdapter(options: {
   retrieveSettlement(
     sessionId: string,
   ): Promise<CheckoutSettlement | undefined>;
+  retrieveCharge(chargeId: string): Promise<StripeCharge>;
 }> {
   return Object.freeze({
     findIntent: options.intents.findIntent,
+    async retrieveCharge(chargeId) {
+      if (options.stripe.charges === undefined) throw new Error("Stripe Charge retrieval is unavailable");
+
+      return options.stripe.charges.retrieve(chargeId);
+    },
     async retrieveSettlement(sessionId) {
       const session = await options.stripe.checkout.sessions.retrieve(sessionId, {
         expand: ["line_items.data.price"],

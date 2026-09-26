@@ -36,6 +36,7 @@ import {
   applyCreditPackWebhook,
   createUmbrellaIdentityPlane as createIdentityPlaneForTest,
   creditWebhookHttpStatus,
+  creditWebhookOutcomeHttpStatus,
   parseSessionToken,
   performLogin,
   performLogout,
@@ -372,6 +373,7 @@ describe("acceptance 2 — the starter allotment is granted exactly once", () =>
   it("reports an unknown balance rather than zero when the ledger read throws", async () => {
     const plane = createUmbrellaIdentityPlane(ENV, {
       creditStore: {
+        ...createInMemoryCreditStore(),
         findAccountByUserId() {
           throw new Error("neon is unreachable");
         },
@@ -799,7 +801,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     }
   });
 
-  it("keeps every acknowledgement closed to the five current decisions", () => {
+  it("keeps no-record acknowledgements closed to unrelated events", () => {
     // Scan the module's code, never its prose: a doc comment that mentions `ignored(...)`
     // or `ignored: true` must not decide whether this gate passes, in either direction.
     const webhookSource = readFileSync(
@@ -837,32 +839,7 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       "CREDIT_WEBHOOK_REASONS.eventUnrelated",
     ]);
 
-    // Two more are acknowledged on the refund path alone, and only because the money is
-    // settled: a refund that returns part of the price, and a balance already spent. Both
-    // are pinned the same way, and neither may migrate into the set above — that would
-    // acknowledge a spent balance for an event that never involved a refund.
-    const terminalRefund = closedSet("TERMINAL_REFUND_REASONS");
-    expect(
-      terminalRefund,
-      "no acknowledged refund reason may be added to the closed set",
-    ).toEqual([
-      "BILLING_REFUSE_REASONS.balanceInsufficient",
-      "BILLING_REFUSE_REASONS.refundNotFull",
-    ]);
-    expect(
-      terminalRefund.filter((member) => members.includes(member)),
-      "a refund-only acknowledgement must never widen to every event",
-    ).toEqual([]);
-    // The scoping is what keeps it refund-only, so pin the guard rather than trusting the
-    // set's name: the second closed set may be consulted only behind the path check.
-    expect(
-      webhookSource,
-      "TERMINAL_REFUND_REASONS may be consulted only on the refund path",
-    ).toContain('path === "refund" && TERMINAL_REFUND_REASONS.has(reason)');
-    expect(
-      webhookSource.match(/TERMINAL_REFUND_REASONS\.has\b/g) ?? [],
-      "the refund-only set must have exactly one consultation",
-    ).toHaveLength(1);
+    expect(webhookSource).not.toContain("TERMINAL_REFUND_REASONS");
 
     // The closed sets govern only the refusals `settle()` downgrades, so pin the direct
     // acknowledgement call sites too: an `ignored(...)` written beside them would otherwise
@@ -888,15 +865,12 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       "no acknowledgement path may be added beside the four current ones",
     ).toHaveLength(4);
 
-    // The call sites above are only exhaustive while the helper is the only way to build an
-    // acknowledgement. `CreditWebhookOutcome` is a union, so a plain contextually-typed
-    // literal would need no helper, no `as const`, and no `Object.freeze` — and would answer
-    // Stripe `200` for a fault it never redelivers. `ignored: true` may therefore appear in
-    // exactly two places: the union member that declares the shape, and the helper.
     expect(
       webhookSource.match(/ignored:\s*true\b/g) ?? [],
-      "an acknowledged outcome may be built only by the one private helper the call sites above pin",
-    ).toHaveLength(2);
+      "only the two outcome types, the ignored helper, and the confirmed reconciliation branch may acknowledge",
+    ).toHaveLength(4);
+    expect(webhookSource).toContain('if (result.kind === "reconciliation-required")');
+    expect(webhookSource.match(/reconciliationRequired:\s*true\b/g) ?? []).toHaveLength(2);
   });
 
   it("owns a settlement bound to the wrong session, and still disowns a bad signature", () => {
@@ -999,11 +973,18 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     expect(granted).toMatchObject({ ok: true, ignored: false, balance: PACK.credits });
 
     const payload = refundBody("evt_test_refund");
-    const outcome = await signedCall({
-      payload,
-      store,
-      evidence: refundEvidence,
+    const [outcome, concurrentReplay] = await Promise.all([
+      signedCall({ payload, store, evidence: refundEvidence }),
+      signedCall({ payload, store, evidence: refundEvidence }),
+    ]);
+    expect(concurrentReplay).toMatchObject({
+      ok: true, ignored: false, movement: "refund", replayed: true, credits: -PACK.credits, balance: 0,
     });
+    expect(await store.listEntries("acct-1")).toMatchObject([
+      { movement: "grant", delta: PACK.credits },
+      { movement: "adjustment", delta: -PACK.credits, idempotencyKey: `stripe-refund:${INTENT.intentId}`, balanceAfter: 0 },
+    ]);
+    expect(await store.listReconciliations()).toEqual([]);
     expect(outcome).toMatchObject({
       ok: true,
       ignored: false,
@@ -1058,7 +1039,70 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
     if (!outcome.ok) expect(creditWebhookHttpStatus(outcome.reason)).toBe(503);
   });
 
-  it("acknowledges a partial refund by name instead of retrying it forever", async () => {
+  it.each(["charge.dispute.created", "charge.dispute.closed"])("records %s through the webhook", async (eventType) => {
+    const store = webhookStore();
+
+    const payload = JSON.stringify({
+      id: `evt_${eventType}`, type: eventType, created: NOW / 1000, livemode: false,
+      data: { object: { id: "dp_1", charge: "ch_1", amount: 500, currency: "usd", status: "won" } },
+    });
+
+    const calls: string[] = [];
+
+    const disputeEvidence = {
+      ...refundEvidence,
+      retrieveCharge(chargeId: string) {
+        calls.push(chargeId);
+
+        return {
+          id: "ch_1", amount: 500, currency: "usd", livemode: false,
+          metadata: { sceneaxiUserId: INTENT.userId, sceneaxiPurpose: INTENT.purpose, sceneaxiItemId: INTENT.itemId, sceneaxiIntentId: INTENT.intentId },
+        };
+      },
+    };
+
+    const outcome = await signedCall({ payload, store, evidence: disputeEvidence });
+    expect(outcome).toMatchObject({ ok: true, ignored: true, reconciliationRequired: true, replayed: false, eventId: `evt_${eventType}` });
+    expect(creditWebhookOutcomeHttpStatus(outcome)).toBe(200);
+    expect(calls).toEqual(["ch_1"]);
+    expect(await store.listReconciliations()).toMatchObject([{ eventType, disputeId: "dp_1", disputeStatus: "won", intentId: INTENT.intentId }]);
+    expect(store.entryCount("acct-1")).toBe(0);
+    expect(await signedCall({ payload, store, evidence: disputeEvidence })).toMatchObject({ reconciliationRequired: true, replayed: true });
+    expect(await store.listReconciliations()).toHaveLength(1);
+
+    const unavailable = await signedCall({ payload, store, evidence: refundEvidence });
+    expect(unavailable).toMatchObject({ ok: false, reason: "STRIPE_CHECKOUT_EVIDENCE_UNAVAILABLE" });
+    expect(creditWebhookOutcomeHttpStatus(unavailable)).toBe(503);
+    const mismatch = await signedCall({ payload, store, evidence: { ...disputeEvidence, retrieveCharge: () => ({ ...disputeEvidence.retrieveCharge("ch_1"), id: "ch_other" }) } });
+    expect(mismatch).toMatchObject({ ok: false, reason: "STRIPE_CHARGE_EVIDENCE_MISMATCH" });
+    expect(creditWebhookOutcomeHttpStatus(mismatch)).toBe(503);
+    const unrelated = await signedCall({ payload, store, evidence: { ...disputeEvidence, retrieveCharge: () => ({ ...disputeEvidence.retrieveCharge("ch_1"), metadata: {} }) } });
+    expect(unrelated).toMatchObject({ ok: true, ignored: true, reason: "STRIPE_WEBHOOK_EVENT_UNRELATED" });
+    expect(await store.listReconciliations()).toHaveLength(1);
+  });
+
+  it("retries a partial refund when its reconciliation record cannot be confirmed", async () => {
+    const base = webhookStore();
+    const store = { ...base, appendOrReplayReconciliation() { throw new Error("offline"); } };
+    const outcome = await signedCall({ payload: refundBody("evt_failed_record", { refunded: false, amountRefunded: 100 }), store, evidence: refundEvidence });
+    expect(outcome).toMatchObject({ ok: false, reason: "CREDIT_STORE_FAILED" });
+    expect(creditWebhookOutcomeHttpStatus(outcome)).toBe(503);
+    expect(await base.listReconciliations()).toEqual([]);
+    expect(base.entryCount("acct-1")).toBe(0);
+
+    for (const fault of [
+      { payload: refundBody("evt_bad_mode", { refunded: false, amountRefunded: 100 }).replace('"livemode":false', '"livemode":true'), intent: { ...INTENT, mode: "live" }, reason: "STRIPE_LIVE_MODE_NOT_AUTHORIZED", status: 400 },
+      { payload: refundBody("evt_wrong_user", { refunded: false, amountRefunded: 100 }), intent: { ...INTENT, userId: "other-user" }, reason: "STRIPE_WEBHOOK_PAYLOAD_INVALID", status: 400 },
+      { payload: refundBody("evt_wrong_archive", { refunded: false, amountRefunded: 100 }), intent: { ...INTENT, stripePriceId: "price_missing_revision" }, reason: "BILLING_CATALOG_REVISION_UNRESOLVABLE", status: 503 },
+    ]) {
+      const result = await signedCall({ payload: fault.payload, store: base, evidence: { ...refundEvidence, findIntent: () => fault.intent } });
+      expect(result).toMatchObject({ ok: false, reason: fault.reason });
+      expect(creditWebhookOutcomeHttpStatus(result)).toBe(fault.status);
+      expect(await base.listReconciliations()).toEqual([]);
+    }
+  });
+
+  it("records a partial refund by name instead of retrying it forever", async () => {
     // A partial refund can never become full on redelivery: the completing refund arrives
     // as its own event with its own body. Refusing it would ask Stripe to redeliver a
     // settled fact until it disabled the endpoint every real grant depends on.
@@ -1078,7 +1122,10 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       ok: true,
       ignored: true,
       reason: "STRIPE_REFUND_NOT_FULL",
+      reconciliationRequired: true,
     });
+    expect(creditWebhookOutcomeHttpStatus(outcome)).toBe(200);
+    expect(await store.listReconciliations()).toMatchObject([{ eventId: "evt_test_partial_refund", reason: "STRIPE_REFUND_NOT_FULL", amount: PACK.unitAmount - 1 }]);
     // Fail-closed is the point of the acknowledgement, not a casualty of it: the buyer's
     // credits are untouched and no adjustment was appended.
     expect(store.entryCount("acct-1")).toBe(1);
@@ -1133,8 +1180,14 @@ describe("acceptance 3 — TEST credit-pack checkout and the verified webhook gr
       ok: true,
       ignored: true,
       reason: "CREDIT_BALANCE_INSUFFICIENT",
+      reconciliationRequired: true,
     });
+    expect(await store.listReconciliations()).toMatchObject([{ eventId: "evt_test_spent_refund", reason: "CREDIT_BALANCE_INSUFFICIENT" }]);
     expect(store.entryCount("acct-1")).toBe(2);
+    await store.appendEntry({ ...grant, entryId: "entry_topup", sequence: 3, delta: PACK.credits, balanceAfter: PACK.credits, idempotencyKey: "topup:later" });
+    expect(await signedCall({ payload: refundBody("evt_test_spent_refund"), store, evidence: refundEvidence })).toMatchObject({ reconciliationRequired: true, replayed: true });
+    expect(store.entryCount("acct-1")).toBe(3);
+    expect(await store.listReconciliations()).toHaveLength(1);
   });
 
   it("still refuses a signed body that carries no event type", async () => {

@@ -14,6 +14,8 @@
 
 import type { PackageSeam } from "@sceneaxi/schemas";
 
+export { validateCreditReconciliationRecord, type CreditReconciliationRecord } from "@sceneaxi/schemas";
+
 export const seam: PackageSeam = Object.freeze({
   name: "@sceneaxi/billing",
   releaseGroup: "identity",
@@ -48,6 +50,7 @@ export {
   isSaleEntryKey,
   saleEntryKeys,
   type CommittedEntry,
+  type CommittedReconciliation,
   type CreditStore,
   type CreditStoreAdapter,
   type CreditsSaleSettlement,
@@ -140,6 +143,8 @@ export {
   parseCheckoutCompletedEvent,
   parseCreditPackRefundEvent,
   persistCreditPackRefund,
+  persistCreditPackChargeEvent,
+  type CreditPackChargeEventOutcome,
   persistCheckoutCompletedGrant,
   signStripeWebhookPayload,
   verifyStripeWebhookSignature,

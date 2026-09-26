@@ -238,10 +238,11 @@
       "severity": "blocker",
       "title": "Disputes/chargebacks unhandled",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 1,
-      "thread": null,
-      "commit": null
+      "thread": "thr_gmvj3csm9h",
+      "commit": null,
+      "openDecision": "Clawback amount, access restrictions, and dispute-resolution policy (records only; no money policy chosen)"
     },
     {
       "id": 21,
@@ -250,10 +251,11 @@
       "severity": "high",
       "title": "Refunds reconcile only when full and unspent; `STRIPE_REFUND_NOT_FULL` and spent-credit refunds are acknowledg",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 1,
-      "thread": null,
-      "commit": null
+      "thread": "thr_gmvj3csm9h",
+      "commit": null,
+      "openDecision": "Clawback amount, access restrictions, and dispute-resolution policy (records only; no money policy chosen)"
     },
     {
       "id": 22,

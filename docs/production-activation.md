@@ -89,13 +89,13 @@ claim; the deployment owner still proves each of them through the close-out colu
 | `BETTER_AUTH_ORIGIN` | Vercel Production scope, `sceneaxi-umbrella` | **Missing** from the latest name-only Vercel observation. The deployed umbrella also predates `/login`. | Better Auth/deployment owner supplies a real HTTPS provider origin and proves `POST /api/auth/sign-in/email` plus `GET /api/auth/get-session`. Credentials and provider tables remain provider-owned. A malformed or absent origin leaves the identity handle absent. |
 | `BETTER_AUTH_SECRET` | Vercel Production scope, `sceneaxi-umbrella` | Required by the in-repo provider implementation; absent from the latest name-only observation, and no value is recorded. | Captain/provider owner supplies signing material of the provider's required strength. Missing or malformed material returns `BETTER_AUTH_PROVIDER_CONFIGURATION_ABSENT` or `BETTER_AUTH_PROVIDER_CONFIGURATION_INVALID`; it is never printed or passed to core. |
 | `DATABASE_URL` | Vercel Production scope, all three web projects | The deployment doc records one encrypted value shared by all three; the latest external observation confirmed the name only on the umbrella, not its value or use. | Captain (Neon) owns the connection secret. The deployment owner confirms the same target database on all three projects without printing the URL. |
-| Neon project identifiers | project `sceneaxi-prod`, id `misty-king-68383952`, region `aws-us-east-2`, database `neondb` | Project identity is recorded; no connection or migration proof was performed in the latest readiness observation. | Neon/deployment owner verifies the identifiers and current schema, then independently verifies migrations 0001–0005 and, under the explicit authorization gate, follows the adoption procedure in [`db/README.md`](../db/README.md) with `node scripts/db-migrate.mjs --adopt-through 0005_better_auth_provider`. The operator retains the recorded checksums and captures schema/trigger/index evidence; adoption executes none of migrations 0001–0005 and runs the tracking DDL from `db/migrations/0000_schema_migrations.sql`. Never use adoption as a substitute for verification. This row authorizes no migration action. There is no down-migration rollback. |
+| Neon project identifiers | project `sceneaxi-prod`, id `misty-king-68383952`, region `aws-us-east-2`, database `neondb` | Project identity is recorded; no connection or migration proof was performed in the latest readiness observation. | Neon/deployment owner verifies the identifiers and current schema, then independently verifies migrations 0001–0005 and, under the explicit authorization gate, follows the adoption procedure in [`db/README.md`](../db/README.md) with `node scripts/db-migrate.mjs --adopt-through 0005_better_auth_provider`. Adoption executes none of 0001–0005 and runs only the tracking DDL from `db/migrations/0000_schema_migrations.sql`; the operator retains the recorded checksums. Later migrations, starting with `0006_credit_reconciliation.sql`, are then applied by `pnpm db:migrate` under the same gate, and schema/trigger/index evidence is captured. Never use adoption as a substitute for verification. Current migration state and its non-gate are owned by [`websites-deploy.md#verified-test-readiness`](websites-deploy.md#verified-test-readiness); this row authorizes no migration action. There is no down-migration rollback. |
 | Neon-backed provider handles | umbrella deployment owner behind `umbrellaRequestAuthority()` | Adapter code exists; production handle construction and authenticated read/write behavior are not yet evidenced. | Deployment owner supplies the real `IdentityStore`, `CreditStoreAdapter`, checkout-intent store, settlement evidence port, and any separately authorized Connect store. Missing or unreadable storage remains a refusal, never an empty account or zero balance. |
 | `SCENEAXI_ADMIN_EMAIL` | Vercel Production scope, `sceneaxi-umbrella` | Value is captain-held and intentionally undocumented. | Captain supplies the sole admin address. The deployment owner verifies a real provider-authenticated session for that address; the environment value alone grants no role. |
 | `SCENEAXI_ADMIN_BOOTSTRAP_SECRET` | Vercel Production scope, `sceneaxi-umbrella` | Encrypted variable name was observed; its value was not and must not be attested here. | Captain/provider owner supplies first-run credential material and proves it through the provider. It is never a role source or core input. |
 | `STRIPE_SECRET_KEY` | Vercel Production scope, `sceneaxi-umbrella` | Encrypted variable name was observed; the shipped adapter accepts **TEST** scope only. | Captain/Stripe TEST owner verifies TEST scope without exposing the key. A LIVE key is not a substitute. |
 | `STRIPE_WEBHOOK_SECRET` | Vercel Production scope, `sceneaxi-umbrella` | Encrypted variable name was observed for the TEST endpoint. | Captain/Stripe TEST owner keeps the endpoint-specific signing secret in the deployment store. Missing means `STRIPE_WEBHOOK_SECRET_MISSING` and HTTP 503, never acceptance. |
-| Stripe TEST endpoint | `https://sceneaxi-umbrella.vercel.app/api/stripe/webhook` | Recorded with `livemode: false`, but subscribed only to `checkout.session.completed`. | Stripe TEST/deployment owner adds `charge.refunded`, keeps Checkout card-only, and proves a signed TEST completion, replay, and full-refund reconciliation. An event never subscribed is not fail-closed; it is never delivered. |
+| Stripe TEST endpoint | `https://sceneaxi-umbrella.vercel.app/api/stripe/webhook` | Recorded with `livemode: false`, but subscribed only to `checkout.session.completed`. | Stripe TEST/deployment owner adds `charge.refunded`, `charge.dispute.created`, and `charge.dispute.closed`, keeps Checkout card-only, and proves a signed TEST completion, replay, full-refund reconciliation, and the [operator record mechanism](auth-credits.md#operator-reconciliation-records). An event never subscribed is not fail-closed; it is never delivered. |
 | `SCENEAXI_BILLING_MODE` | Vercel Production scope, `sceneaxi-umbrella` | `test` when unset; the name was observed. | Deployment owner pins `test` for this activation and records the scope. Mode selection never authorizes LIVE. |
 | TEST checkout/evidence adapters | umbrella deployment owner | In-repo behavior exists; a real persisted intent, returned TEST Checkout Session, exact settlement read, and ledger grant are not production-evidenced. | Deployment owner proves intent-before-redirect, required metadata on both Checkout Session and PaymentIntent, exact session binding, archived pack resolution, and one append-only grant before enabling Buy. |
 
@@ -253,16 +253,19 @@ Do not start activation until every applicable item is checked with real evidenc
 - [ ] Confirm all three `DATABASE_URL` entries target Neon project `sceneaxi-prod`
   (`misty-king-68383952`), `aws-us-east-2`, database `neondb`, without recording the
   connection string.
-- [ ] Verify the live schema, triggers, uniqueness, and checkout-intent price
-  immutability against migrations 0001–0005 before recording existing history. Confirm
-  the recorded tracking migration is `db/migrations/0000_schema_migrations.sql`. Under
-  the explicit authorization gate, run
-  `node scripts/db-migrate.mjs --adopt-through 0005_better_auth_provider` and retain
-  its identifier/checksum output. Adoption records metadata only; it does not verify
-  or execute 0001–0005. Then capture `pnpm db:migrate -- --status`. Do not create a
-  credit account by hand.
-- [ ] In Stripe TEST, prove the endpoint is `livemode: false` and subscribed to both
-  `checkout.session.completed` and `charge.refunded`; confirm card-only Checkout.
+- [ ] Verify the live schema, triggers (append-only ledger and Connect), uniqueness, and
+  checkout-intent price immutability against migrations 0001–0005 before recording
+  existing history; `0005_better_auth_provider.sql` is already applied — do not rerun it
+  or re-block this deployment on fresh `neonctl` OAuth. Confirm the tracking migration is
+  `db/migrations/0000_schema_migrations.sql`. Under the explicit authorization gate, run
+  `node scripts/db-migrate.mjs --adopt-through 0005_better_auth_provider` and retain its
+  identifier/checksum output (adoption records metadata only; it does not verify or
+  execute 0001–0005). Then apply `0006_credit_reconciliation.sql` and any later file with
+  `pnpm db:migrate`, and capture `pnpm db:migrate -- --status`. Do not create a credit
+  account by hand.
+- [ ] In Stripe TEST, prove the endpoint is `livemode: false` and subscribed to
+  `checkout.session.completed`, `charge.refunded`, `charge.dispute.created`, and
+  `charge.dispute.closed`; confirm card-only Checkout.
 - [ ] Confirm `SCENEAXI_STRIPE_LIVE_AUTHORIZED` and every forbidden alias are absent,
   the adapter remains TEST-key-only, and Connect LIVE still refuses.
 - [ ] Define stop conditions and incident ownership: authentication mismatch, unknown
@@ -284,7 +287,7 @@ Execute only the rows named by the current authorization; unchecked rows remain 
   `umbrellaRequestAuthority()`.
 - [ ] Set the exact Vercel Production variables and build-time origins on only their
   assigned projects. Keep `SCENEAXI_BILLING_MODE=test` and LIVE authorization absent.
-- [ ] Configure the existing Stripe TEST webhook endpoint for both handled event types
+- [ ] Configure the existing Stripe TEST webhook endpoint for all four handled event types
   and store its TEST signing secret under `STRIPE_WEBHOOK_SECRET`.
 - [ ] Deploy the authorized commit to the three named Vercel projects using their
   recorded root/install/build configuration. Record each immutable deployment id before
@@ -298,7 +301,8 @@ Execute only the rows named by the current authorization; unchecked rows remain 
   before redirect, card-only Checkout, signed completion, matching settlement and archive
   revision, one append-only grant, idempotent replay, and no second grant.
 - [ ] Prove one controlled full TEST refund appends one idempotent negative adjustment;
-  prove partial refund and spent-credit cases stay named terminal refusals.
+  prove partial refunds, spent-credit refunds, and disputes persist operator reconciliation
+  records without ledger movement. Confirm record replay and `503` on failed persistence.
 - [ ] Only after hosted sign-in and entitlement are verified, remove
   `SCENEAXI_SITE_EDITOR_PREVIEW` if it is present and redeploy the umbrella. Never use the
   preview flag to conceal broken provider wiring.
@@ -334,9 +338,10 @@ Execute only the rows named by the current authorization; unchecked rows remain 
   balance. A failed read must be `CREDITS_PLANE_UNAVAILABLE`, never zero.
 - [ ] Verify checkout uses `https://sceneaxi-umbrella.vercel.app` for success/cancel
   redirects and refuses an alias/Host mismatch as `BILLING_CHECKOUT_ORIGIN_UNTRUSTED`.
-- [ ] Verify Stripe TEST mode, both webhook subscriptions, signature enforcement,
+- [ ] Verify Stripe TEST mode, all four webhook subscriptions, signature enforcement,
   intent/settlement binding, one grant, duplicate replay, and full-refund adjustment
-  against Stripe object ids and ledger rows. Dashboard success alone is not evidence.
+  against Stripe object ids and ledger rows. Verify reconciliation records against their
+  event, Charge, and intent ids. Dashboard success alone is not evidence.
 - [ ] Verify the catalogs remain browse-only and return `CATALOG_COMMERCE_INERT` for
   marketplace purchase/publish. Web TEST activation does not open tier 6b.
 - [ ] Verify the Kids origin remains undeployed and disconnected. SA-KIDS-1 landing a

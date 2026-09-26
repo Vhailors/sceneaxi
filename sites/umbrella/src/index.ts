@@ -151,6 +151,7 @@ export {
   type SqlRow,
   type SqlStatement,
   type StripeClientLike,
+  type StripeCharge,
   type StripeSession,
   type StripeSessionCreateParams,
 } from "./lib/provider-adapters.js";

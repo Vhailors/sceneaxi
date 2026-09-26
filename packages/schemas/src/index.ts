@@ -246,6 +246,8 @@ export {
   validateConnectPayoutOutcome,
   validateConnectStatusRecord,
 } from "./stripe-connect.js";
+
+export { validateCreditReconciliationRecord, type CreditReconciliationRecord } from "./credit-reconciliation.js";
 export type {
   ConnectAccountRecord,
   ConnectOnboardingIntent,
@@ -688,6 +690,7 @@ export const contracts = Object.freeze({
   catalogListings: "contracts/catalog-listings.schema.json",
   revenueShare: "contracts/revenue-share.schema.json",
   stripeConnect: "contracts/stripe-connect.schema.json",
+  creditReconciliation: "contracts/credit-reconciliation.schema.json",
   /** Plugin Manifest descriptor (sceneaxi#20 / ADR 0005); host runtime is @sceneaxi/plugin-host. */
   pluginManifest: "contracts/plugin-manifest.schema.json",
   /** Plugin Capability ID registry schema (sceneaxi#21 / ADR 0005); seed path is PLUGIN_CAPABILITY_REGISTRY_SEED_PATH. */

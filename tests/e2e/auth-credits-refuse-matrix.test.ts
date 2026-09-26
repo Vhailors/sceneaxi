@@ -38,6 +38,7 @@ import {
   meterCredits,
   parseCheckoutCompletedEvent,
   parseCreditPackRefundEvent,
+  persistCreditPackChargeEvent,
   persistCreditsSale,
   purchaseListingWithCredits,
   refreshConnectStatus,
@@ -795,7 +796,7 @@ describe("billing refuse matrix", () => {
     record(createCheckoutSessionIntent(null as never));
   });
 
-  it("reaches every webhook refusal", () => {
+  it("reaches every webhook refusal", async () => {
     const packIntent = createCheckoutSessionIntent({
       principal: principal(),
       admin,
@@ -968,6 +969,17 @@ describe("billing refuse matrix", () => {
         },
       }),
     );
+
+    record(await persistCreditPackChargeEvent({
+      verified: verifyBody(JSON.stringify({
+        id: "evt_dispute_mismatch", type: "charge.dispute.created", created: NOW_SECONDS, livemode: false,
+        data: { object: { id: "dp_case", charge: "ch_expected", amount: 500, currency: "usd", status: "needs_response" } },
+      })),
+      intent: packIntent.value,
+      charge: { id: "ch_other" },
+      store: createInMemoryCreditStore(),
+      now: NOW,
+    }));
 
     // A refund bound to this exact intent that returns only part of the price. It is
     // well-formed, so it is not a payload refusal; the ledger simply never partially
@@ -1262,6 +1274,7 @@ describe("billing refuse matrix", () => {
       }),
     );
     const failedStore: CreditStore = Object.freeze({
+      ...createInMemoryCreditStore(),
       findAccountByUserId: () => undefined,
       findAccountById: () => undefined,
       listEntries: () => [],

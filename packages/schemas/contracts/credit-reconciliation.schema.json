@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sceneaxi.invalid/contracts/credit-reconciliation/v1",
+  "title": "Credit reconciliation record",
+  "$ref": "#/$defs/creditReconciliationRecord",
+  "$defs": {
+    "creditReconciliationRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "kind", "eventId", "mode", "intentId", "userId", "chargeId", "eventType", "reason", "amount", "currency", "disputeId", "disputeStatus", "occurredAt", "payloadDigest"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "kind": { "const": "sceneaxi.credit-reconciliation-record" },
+        "eventId": { "type": "string", "minLength": 1 },
+        "mode": { "enum": ["test", "live"] },
+        "intentId": { "type": "string", "minLength": 1 },
+        "userId": { "type": "string", "minLength": 1 },
+        "chargeId": { "type": "string", "minLength": 1 },
+        "eventType": { "enum": ["charge.refunded", "charge.dispute.created", "charge.dispute.closed"] },
+        "reason": { "enum": ["STRIPE_REFUND_NOT_FULL", "CREDIT_BALANCE_INSUFFICIENT", "STRIPE_DISPUTE_RECONCILIATION_REQUIRED"] },
+        "amount": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+        "currency": { "type": "string", "pattern": "^[a-z]{3}$" },
+        "disputeId": { "type": ["string", "null"], "minLength": 1 },
+        "disputeStatus": { "type": ["string", "null"], "minLength": 1 },
+        "occurredAt": { "type": "string", "format": "date-time" },
+        "payloadDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      },
+      "oneOf": [
+        { "properties": { "eventType": { "const": "charge.refunded" }, "reason": { "enum": ["STRIPE_REFUND_NOT_FULL", "CREDIT_BALANCE_INSUFFICIENT"] }, "disputeId": { "type": "null" }, "disputeStatus": { "type": "null" } } },
+        { "properties": { "eventType": { "enum": ["charge.dispute.created", "charge.dispute.closed"] }, "reason": { "const": "STRIPE_DISPUTE_RECONCILIATION_REQUIRED" }, "disputeId": { "type": "string", "minLength": 1 }, "disputeStatus": { "type": "string", "minLength": 1 } } }
+      ]
+    }
+  }
+}

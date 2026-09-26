@@ -98,6 +98,7 @@ function createDatabase(withAccount = true) {
   const entries: SqlRow[] = [];
   const intents: SqlRow[] = [];
   const shares: SqlRow[] = [];
+  const reconciliations: SqlRow[] = [];
 
   const database: NeonDatabase = {
     async query(query, values = []) {
@@ -167,6 +168,26 @@ function createDatabase(withAccount = true) {
         if (index === -1) return [];
         const [removed] = sessions.splice(index, 1);
         return removed === undefined ? [] : [removed];
+      }
+
+      if (query.includes("FROM credit_reconciliation_records")) {
+        return query.includes("WHERE")
+          ? reconciliations.filter((row) => row.mode === values[0] && row.event_id === values[1])
+          : [...reconciliations];
+      }
+
+      if (query.includes("INSERT INTO credit_reconciliation_records")) {
+        if (reconciliations.some((row) => row.event_id === values[0] && row.mode === values[1])) return [];
+
+        const row = {
+          event_id: values[0], mode: values[1], intent_id: values[2], user_id: values[3], charge_id: values[4],
+          event_type: values[5], reason: values[6], amount: values[7], currency: values[8],
+          dispute_id: values[9], dispute_status: values[10], occurred_at: values[11], payload_digest: values[12],
+        };
+
+        reconciliations.push(row);
+
+        return [row];
       }
       if (query.includes("FROM credit_accounts WHERE")) {
         const key = query.includes("user_id =") ? "user_id" : "account_id";
@@ -251,7 +272,7 @@ function createDatabase(withAccount = true) {
     },
   };
 
-  return { database, calls, users, accounts, sessions, entries, intents, shares };
+  return { database, calls, users, accounts, sessions, entries, intents, shares, reconciliations };
 }
 
 const authProvider: BetterAuthInstanceLike = {
@@ -728,9 +749,21 @@ describe("umbrella deployment provider adapters", () => {
     ).rejects.toThrow(/checkout intent conflict/);
   });
 
-  it("runs a persisted TEST intent through webhook grant and replay on the Neon store", async () => {
+  it("runs a persisted TEST intent through grant, dispute, partial refund, and replay on the Neon adapter", async () => {
     const fixture = createDatabase();
+
+    const charge = {
+      id: "ch_provider_1", amount: 500, currency: "usd", livemode: false,
+      metadata: { sceneaxiUserId: "member-1", sceneaxiPurpose: "credit-pack", sceneaxiItemId: "starter", sceneaxiIntentId: "int_provider_grant_1" },
+    };
     const stripe = {
+      charges: {
+        async retrieve(id: string) {
+          expect(id).toBe(charge.id);
+
+          return charge;
+        },
+      },
       checkout: {
         sessions: {
           async create() {
@@ -819,6 +852,34 @@ describe("umbrella deployment provider adapters", () => {
     expect(first).toMatchObject({ ok: true, ignored: false, replayed: false, credits: 100 });
     expect(replay).toMatchObject({ ok: true, ignored: false, replayed: true, credits: 100 });
     expect(fixture.entries).toHaveLength(1);
+
+    for (const type of ["charge.dispute.created", "charge.dispute.closed", "charge.refunded"]) {
+      const payload = JSON.stringify({
+        id: `evt_provider_${type}`, type, created: NOW / 1000, livemode: false,
+        data: { object: type === "charge.refunded"
+          ? { ...charge, refunded: false, amount_refunded: 200 }
+          : { id: "dp_provider_1", charge: charge.id, amount: 500, currency: "usd", status: "lost" } },
+      });
+
+      const request = { payload, signatureHeader: signStripeWebhookPayload({ payload, secret: "whsec_test_provider_fixture", timestamp: NOW / 1000 }), secret: "whsec_test_provider_fixture", store, evidence, now: NOW };
+      expect(await applyCreditPackWebhook(request)).toMatchObject({ ok: true, ignored: true, reconciliationRequired: true, replayed: false });
+      const reopened = createNeonCreditStore(fixture.database);
+      expect(await applyCreditPackWebhook({ ...request, store: reopened })).toMatchObject({ ok: true, reconciliationRequired: true, replayed: true });
+    }
+
+    expect(fixture.reconciliations).toHaveLength(3);
+    expect(await store.listReconciliations()).toMatchObject([
+      { eventType: "charge.dispute.created", disputeId: "dp_provider_1" },
+      { eventType: "charge.dispute.closed", disputeStatus: "lost" },
+      { eventType: "charge.refunded", amount: 200, reason: "STRIPE_REFUND_NOT_FULL" },
+    ]);
+    expect(fixture.entries).toHaveLength(1);
+    const saved = (await store.listReconciliations())[0];
+
+    if (saved === undefined) throw new Error("Missing reconciliation record");
+    expect(await store.appendOrReplayReconciliation(saved)).toMatchObject({ replayed: true });
+    await expect(store.appendOrReplayReconciliation({ ...saved, amount: 499 })).rejects.toThrow(/no matching record/);
+    expect(fixture.reconciliations).toHaveLength(3);
   });
 
   it("fails closed when the deployment has no Neon provider", () => {

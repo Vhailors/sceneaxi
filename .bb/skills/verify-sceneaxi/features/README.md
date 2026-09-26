@@ -6,6 +6,7 @@ Build and run doctor with [the skill](../SKILL.md) first. Each recipe selects ex
 | --- | --- |
 | [Document edits](documents.md) | CLI, desktop command and web inspector propose/apply; bytes and hashes agree. |
 | [Fixture assistant](assistant.md) | Inspector HTTP assistant route and embedded panel API; fixture reply without metering. |
+| [Credit reconciliation](../../../../docs/auth-credits.md#operator-reconciliation-records) | Signed `POST /api/stripe/webhook` application path. Run `pnpm exec vitest run packages/billing/test/stripe-webhook-reconciliation.test.ts tests/sites/identity-plane-wiring.test.ts tests/sites/provider-adapters.test.ts tests/db/schema-lockstep.test.ts tests/e2e/auth-credits-refuse-matrix.test.ts`. Proves durable adapter records, replay, unchanged credits, and 200/503/400 outcomes with fixture providers, not live Stripe or PostgreSQL. |
 | [Profile policy](profiles.md) | CLI and desktop open-path commands plus web-shell public view; Game/Web parity and Kids refusal. |
 | [Linux crash diagnostics](../../../../docs/desktop-linux.md#local-crash-diagnostics) | Native Help → Reveal logs; local rotating event log and minidumps; renderer-loss Reload window. Verify in packaged Electron, not the root inspector. |
 | [Three viewport](three-viewport.md) | Browser `/open` canvas, orbit, mount, reset, idle pacing, screenshots and timing samples. |

@@ -50,8 +50,9 @@ POST-AUTH box stays unchecked indefinitely.
 
 - [ ] **POST-AUTH** — Create a distinct LIVE endpoint at the canonical umbrella origin:
   `POST /api/stripe/webhook`. Subscribe only to event types the code handles, and to **all**
-  of them; today that is `checkout.session.completed` for credit grants and
-  `charge.refunded` for full-refund reconciliation. An unsubscribed handled type is not a
+  of them; today that is `checkout.session.completed` for credit grants,
+  `charge.refunded` for refunds, and `charge.dispute.created` plus `charge.dispute.closed`
+  for operator reconciliation records. An unsubscribed handled type is not a
   fail-closed state: the event is never delivered, so nothing refuses and the reconciliation
   it owns silently never runs.
 - [ ] **POST-AUTH** — Store the LIVE endpoint signing secret under `STRIPE_WEBHOOK_SECRET` in the deployment
@@ -86,10 +87,10 @@ POST-AUTH box stays unchecked indefinitely.
   evidence to the original paid intent and appends a new idempotent append-only adjustment.
   It must never edit/delete the grant, invent a balance, permit a negative ledger, or treat
   a money refund as a hosted-AI credit debit. Partial refunds and already-spent credits need
-  explicit product/legal decisions and named refusals; today both refuse by name
-  (`STRIPE_REFUND_NOT_FULL`, `CREDIT_BALANCE_INSUFFICIENT`) and the endpoint acknowledges
-  them without retrying, so confirm the operator process that settles the money side of
-  each — the ledger never moves for either.
+  explicit product/legal decisions. The endpoint now acknowledges them only after an
+  append-only reconciliation record is confirmed, with reasons `STRIPE_REFUND_NOT_FULL`
+  or `CREDIT_BALANCE_INSUFFICIENT`. Confirm the operator process for those records.
+  Neither case moves the ledger.
 - [ ] **PRE-AUTH** — Confirm the operator handling for a refund of a purchase whose grant
   predates the ledger's intent anchor. It cannot be reconciled automatically, refuses
   `CREDIT_LEDGER_STATE_INVALID`, and has no migration by design (`docs/auth-credits.md`).
@@ -97,6 +98,10 @@ POST-AUTH box stays unchecked indefinitely.
   settles one if it does.
 - [ ] **PRE-AUTH** — Document chargeback/dispute handling separately from voluntary refunds, including
   evidence retention, account access policy, ledger reconciliation, and support escalation.
+  Use the [operator reconciliation records](auth-credits.md#operator-reconciliation-records)
+  for `charge.dispute.created` and `charge.dispute.closed`. Verify exact Charge-to-intent
+  binding, record replay, and `503` on failed persistence. This mechanism records evidence
+  but does not settle the open clawback or account-access decisions.
 
 ## Deployment and data prerequisites
 

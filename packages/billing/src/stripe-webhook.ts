@@ -24,6 +24,7 @@ import {
   validateCheckoutCompletedEvent,
   validateCheckoutSessionIntent,
   type BillingMode,
+  type CreditReconciliationRecord,
   type CheckoutCompletedEvent,
   type CheckoutSessionIntent,
 } from "@sceneaxi/schemas";
@@ -33,11 +34,12 @@ import { resolveCreditPackRevision } from "./credit-packs.js";
 import {
   appendCreditEntry,
   deriveEntryId,
+  loadLedgerState,
   validateLedgerState,
   type AppendOutcome,
   type LedgerState,
 } from "./ledger.js";
-import { readCommittedEntry, type CreditStore } from "./store.js";
+import { readCommittedEntry, readCommittedReconciliation, type CommittedReconciliation, type CreditStore } from "./store.js";
 import {
   BILLING_REFUSE_REASONS,
   billingOk,
@@ -791,23 +793,36 @@ export function applyCheckoutCompletedGrant(
   });
 }
 
-/** Parse a signature-verified, full Stripe refund and bind it to a persisted intent. */
-export function parseCreditPackRefundEvent(input: {
-  readonly verified: VerifiedWebhook;
-  readonly intent: CheckoutSessionIntent | unknown;
-}): BillingOutcome<VerifiedCreditPackRefund> {
+type ParsedCreditPackChargeEvent =
+  | Readonly<{
+      kind: "refund";
+      refund: VerifiedCreditPackRefund;
+      full: boolean;
+      reconciliation: CreditReconciliationRecord;
+    }>
+  | Readonly<{ kind: "dispute"; reconciliation: CreditReconciliationRecord }>;
+
+type CreditPackChargeEventInput = Readonly<{
+  verified: VerifiedWebhook;
+  intent: unknown;
+  charge?: unknown;
+}>;
+
+function parseCreditPackChargeEvent(
+  input: CreditPackChargeEventInput,
+): BillingOutcome<ParsedCreditPackChargeEvent> {
   const record = snapshotPlainRecord(input);
   if (record === undefined || !hasVerifiedWebhookProvenance(record["verified"])) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.webhookNotVerified,
-      "A credit-pack refund must come from a signature-verified Stripe webhook.",
+      "A credit-pack Charge event must come from a signature-verified Stripe webhook.",
     );
   }
   const intent = validateCheckoutSessionIntent(record["intent"]);
   if (!intent.ok) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.checkoutIntentInvalid,
-      `A refund requires its persisted checkout intent (${intent.code}): ${intent.message}`,
+      `A Charge event requires its persisted checkout intent (${intent.code}): ${intent.message}`,
     );
   }
   if (!checkoutPurposeGrantsCredits(intent.value.purpose) || intent.value.credits === undefined) {
@@ -824,7 +839,37 @@ export function parseCreditPackRefundEvent(input: {
     raw = undefined;
   }
   const event = snapshotPlainRecord(raw);
-  const charge = snapshotPlainRecord(snapshotPlainRecord(event?.["data"])?.["object"]);
+  const object = snapshotPlainRecord(snapshotPlainRecord(event?.["data"])?.["object"]);
+  const eventType = event?.["type"];
+  const dispute = eventType === "charge.dispute.created" || eventType === "charge.dispute.closed";
+
+  if (!dispute && eventType !== "charge.refunded") {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.webhookEventTypeUnsupported,
+      "Only refunds and dispute created/closed events reach credit reconciliation.",
+    );
+  }
+
+  const charge = dispute ? snapshotPlainRecord(record["charge"]) : object;
+
+  const chargeReference = isNonEmptyString(object?.["charge"])
+    ? object["charge"]
+    : snapshotPlainRecord(object?.["charge"])?.["id"];
+
+  if (dispute && !isNonEmptyString(chargeReference)) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.webhookPayloadInvalid,
+      "The dispute must name its Charge.",
+    );
+  }
+
+  if (dispute && (charge === undefined || charge["id"] !== chargeReference)) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.chargeEvidenceMismatch,
+      "The retrieved Charge does not match the signed dispute's charge reference.",
+    );
+  }
+
   const metadata = snapshotPlainRecord(charge?.["metadata"]);
   const eventId = event?.["id"];
   const chargeId = charge?.["id"];
@@ -832,19 +877,23 @@ export function parseCreditPackRefundEvent(input: {
     typeof event?.["created"] === "number" ? event["created"] * 1_000 : Number.NaN;
   const livemode = event?.["livemode"];
   const refunded = charge?.["refunded"];
-  const amountRefunded = charge?.["amount_refunded"];
+  const amount = dispute ? object?.["amount"] : charge?.["amount_refunded"];
+  const currency = dispute ? object?.["currency"] : charge?.["currency"];
+
   if (
-    event?.["type"] !== "charge.refunded" ||
     typeof eventId !== "string" ||
     eventId.length === 0 ||
     typeof chargeId !== "string" ||
     chargeId.length === 0 ||
     !isEpochMilliseconds(occurredAtEpoch) ||
     typeof livemode !== "boolean" ||
-    typeof refunded !== "boolean" ||
-    typeof amountRefunded !== "number" ||
-    !Number.isSafeInteger(amountRefunded) ||
-    amountRefunded <= 0 ||
+    (!dispute && typeof refunded !== "boolean") ||
+    typeof amount !== "number" ||
+    !Number.isSafeInteger(amount) ||
+    amount <= 0 ||
+    (!dispute && amount > intent.value.unitAmount) ||
+    !isNonEmptyString(currency) || !/^[a-z]{3}$/.test(currency) ||
+    (dispute && (charge?.["amount"] !== intent.value.unitAmount || charge?.["livemode"] !== livemode)) ||
     charge?.["currency"] !== intent.value.currency ||
     metadata?.[CHECKOUT_METADATA_KEYS.userId] !== intent.value.userId ||
     metadata?.[CHECKOUT_METADATA_KEYS.purpose] !== intent.value.purpose ||
@@ -853,25 +902,14 @@ export function parseCreditPackRefundEvent(input: {
   ) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.webhookPayloadInvalid,
-      "The refund must be a charge.refunded event settled in the intent currency and carrying the exact persisted credit-pack metadata.",
-    );
-  }
-  // A refund that is bound to this intent but does not return the whole amount is its own
-  // named condition, not a malformed payload: the buyer keeps part of the purchase, and a
-  // grant is never partially reversed. It is separated from the payload refusal because it
-  // is the one refund condition an endpoint should expect, and no redelivery of this body
-  // can turn it into a full refund.
-  if (refunded !== true || amountRefunded !== intent.value.unitAmount) {
-    return billingRefuse(
-      BILLING_REFUSE_REASONS.refundNotFull,
-      `Only a full refund reconciles against the credit ledger; ${amountRefunded} of ${intent.value.unitAmount} was refunded, so no credit adjustment is made.`,
+      "The Charge event must carry valid provider amounts, the original Charge currency, and the exact persisted credit-pack metadata.",
     );
   }
   const mode: BillingMode = livemode ? "live" : "test";
   if (mode !== intent.value.mode) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.webhookPayloadInvalid,
-      "The refund mode does not match the persisted checkout intent.",
+      "The Charge event mode does not match the persisted checkout intent.",
     );
   }
   const revision = resolveCreditPackRevision(
@@ -886,12 +924,59 @@ export function parseCreditPackRefundEvent(input: {
   ) {
     return billingRefuse(
       BILLING_REFUSE_REASONS.catalogRevisionCreditsMismatch,
-      "The refunded intent no longer matches its committed credit-pack revision.",
+      "The Charge event's intent does not match its committed credit-pack revision.",
     );
   }
 
-  return billingOk(
-    verifiedRefundProvenance.issue(
+  const base = {
+    schemaVersion: 1 as const,
+    kind: "sceneaxi.credit-reconciliation-record" as const,
+    eventId,
+    mode,
+    intentId: intent.value.intentId,
+    userId: intent.value.userId,
+    chargeId,
+    amount,
+    currency,
+    occurredAt: new Date(occurredAtEpoch).toISOString(),
+    payloadDigest: createHash("sha256").update(record["verified"].payload, "utf8").digest("hex"),
+  };
+
+  if (eventType === "charge.dispute.created" || eventType === "charge.dispute.closed") {
+    const disputeId = object?.["id"];
+    const disputeStatus = object?.["status"];
+
+    if (!isNonEmptyString(disputeId) || !isNonEmptyString(disputeStatus)) {
+      return billingRefuse(
+        BILLING_REFUSE_REASONS.webhookPayloadInvalid,
+        "The dispute has no id or status.",
+      );
+    }
+
+    return billingOk({
+      kind: "dispute",
+      reconciliation: Object.freeze({
+        ...base, eventType, disputeId, disputeStatus,
+        reason: "STRIPE_DISPUTE_RECONCILIATION_REQUIRED",
+      }),
+    });
+  }
+
+  const full = refunded === true && amount === intent.value.unitAmount;
+
+  const reconciliation: CreditReconciliationRecord = Object.freeze({
+    ...base,
+    eventType: "charge.refunded",
+    reason: full ? "CREDIT_BALANCE_INSUFFICIENT" : "STRIPE_REFUND_NOT_FULL",
+    disputeId: null,
+    disputeStatus: null,
+  });
+
+  return billingOk({
+    kind: "refund",
+    full,
+    reconciliation,
+    refund: verifiedRefundProvenance.issue(
       Object.freeze({
         schemaVersion: 1 as const,
         kind: "sceneaxi.credit-pack-refund" as const,
@@ -907,7 +992,103 @@ export function parseCreditPackRefundEvent(input: {
         occurredAt: new Date(occurredAtEpoch).toISOString(),
       }) as VerifiedCreditPackRefund,
     ),
-  );
+  });
+}
+
+/** Only full refunds issue evidence that can reverse credits. */
+export function parseCreditPackRefundEvent(
+  input: CreditPackChargeEventInput,
+): BillingOutcome<VerifiedCreditPackRefund> {
+  const parsed = parseCreditPackChargeEvent(input);
+
+  if (!parsed.ok) return parsed;
+
+  if (parsed.value.kind !== "refund") {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.webhookEventTypeUnsupported,
+      "A dispute is not a voluntary refund.",
+    );
+  }
+
+  if (!parsed.value.full) {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.refundNotFull,
+      "Only a full refund can reverse the credit grant; operator reconciliation is required.",
+    );
+  }
+
+  return billingOk(parsed.value.refund);
+}
+
+export type CreditPackChargeEventOutcome =
+  | Readonly<{ kind: "refund"; adjustment: AppendOutcome }>
+  | (Readonly<{ kind: "reconciliation-required" }> & CommittedReconciliation);
+
+/** Confirm a ledger adjustment or an append-only operator record before acknowledging the event. */
+export async function persistCreditPackChargeEvent(
+  input: CreditPackChargeEventInput & Readonly<{ store: CreditStore; now: number }>,
+): Promise<BillingOutcome<CreditPackChargeEventOutcome>> {
+  const parsed = parseCreditPackChargeEvent(input);
+
+  if (!parsed.ok) return parsed;
+  const event = parsed.value;
+  const mode = assertModeAuthorized(event.reconciliation.mode, undefined);
+
+  if (!mode.ok) return mode;
+
+  try {
+    const held = await input.store.findReconciliation(
+      event.reconciliation.mode,
+      event.reconciliation.eventId,
+    );
+
+    if (held !== undefined) {
+      const replay = readCommittedReconciliation(event.reconciliation, {
+        record: held, replayed: true,
+      });
+
+      if (replay === undefined) throw new Error("Reconciliation evidence conflict");
+
+      return billingOk({ kind: "reconciliation-required", ...replay });
+    }
+
+    if (event.kind === "refund" && event.full) {
+      const account = await input.store.findAccountByUserId(event.refund.userId);
+
+      if (account === undefined) {
+        return billingRefuse(
+          BILLING_REFUSE_REASONS.ledgerStateInvalid,
+          "The refunded user has no provisioned credit account.",
+        );
+      }
+
+      const state = loadLedgerState(account, await input.store.listEntries(account.accountId));
+
+      if (!state.ok) return state;
+
+      const adjusted = await persistCreditPackRefund({
+        store: input.store, state: state.value, refund: event.refund, now: input.now,
+      });
+
+      if (adjusted.ok) return billingOk({ kind: "refund", adjustment: adjusted.value });
+
+      if (adjusted.reason !== BILLING_REFUSE_REASONS.balanceInsufficient) return adjusted;
+    }
+
+    const committed = readCommittedReconciliation(
+      event.reconciliation,
+      await input.store.appendOrReplayReconciliation(event.reconciliation),
+    );
+
+    if (committed === undefined) throw new Error("Reconciliation append was not confirmed");
+
+    return billingOk({ kind: "reconciliation-required", ...committed });
+  } catch {
+    return billingRefuse(
+      BILLING_REFUSE_REASONS.storeFailed,
+      "The credit store could not confirm this event's reconciliation; retry is required.",
+    );
+  }
 }
 
 export type ApplyCreditPackRefundRequest = Readonly<{

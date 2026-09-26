@@ -3582,7 +3582,8 @@
             "packages/billing/test/seam.test.ts",
             "packages/billing/test/store-boundary.test.ts",
             "packages/billing/test/stripe-checkout.test.ts",
-            "packages/billing/test/stripe-connect.test.ts"
+            "packages/billing/test/stripe-connect.test.ts",
+            "packages/billing/test/stripe-webhook-reconciliation.test.ts"
           ],
           "present": true
         },
@@ -8218,7 +8219,8 @@
       "db/migrations/0002_credits_billing.sql",
       "db/migrations/0003_checkout_session_intent_price_immutability.sql",
       "db/migrations/0004_stripe_connect_audit.sql",
-      "db/migrations/0005_better_auth_provider.sql"
+      "db/migrations/0005_better_auth_provider.sql",
+      "db/migrations/0006_credit_reconciliation.sql"
     ],
     "providerEntrypoints": [
       "sites/umbrella/src/lib/provider-adapters.ts",
@@ -8628,7 +8630,7 @@
       "assistantOperations": 3,
       "localAgentTools": 67,
       "routes": 22,
-      "migrations": 6,
+      "migrations": 7,
       "workflows": 5,
       "goldenTests": 55
     },

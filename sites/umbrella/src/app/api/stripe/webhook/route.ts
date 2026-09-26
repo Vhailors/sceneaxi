@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
   }
   if (outcome.ignored) {
     return NextResponse.json(
-      { ok: true, ignored: true, reason: outcome.reason, message: outcome.message },
+      outcome,
       { status: creditWebhookOutcomeHttpStatus(outcome) },
     );
   }

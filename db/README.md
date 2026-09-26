@@ -21,6 +21,10 @@ Forward-only, in numeric order. `pnpm db:migrate` applies pending files one tran
    `better_auth_users`, `better_auth_sessions`, `better_auth_accounts`,
    `better_auth_verifications`, and the durable `better_auth_rate_limits`
    counters; these are distinct from SceneAxi identity rows
+6. `migrations/0006_credit_reconciliation.sql` adds the append-only
+   `credit_reconciliation_records` table for disputes and non-reconcilable refunds.
+   The [operator contract](../docs/auth-credits.md#operator-reconciliation-records)
+   owns its usage and the unresolved money policy.
 
 There are no down-migrations. Reverting a financial schema by dropping tables loses the
 ledger, so a correction ships as a new forward migration.
@@ -52,6 +56,7 @@ plane and a bad row.
 | No raw token can be stored | only `token_digest char(64)` exists, shape-checked as hex |
 | Balance cannot drift | `credit_accounts` has no balance column |
 | Ledger is append-only | `BEFORE UPDATE OR DELETE` trigger raises `restrict_violation` |
+| Reconciliation evidence is append-only and event-idempotent | raising update/delete trigger and primary key on `(mode, event_id)` |
 | A replay cannot become a second row | unique index on `idempotency_key` |
 | Sequences cannot fork | unique index on `(account_id, sequence)` |
 | A listing price matches its mode | cross-field check constraints per price mode |

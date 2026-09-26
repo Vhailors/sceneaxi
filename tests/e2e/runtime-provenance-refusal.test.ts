@@ -47,6 +47,7 @@ import {
   hasVerifiedWebhookProvenance,
   parseCheckoutCompletedEvent,
   parseCreditPackRefundEvent,
+  persistCreditPackChargeEvent,
   persistCreditPackRefund,
   settleFixtureListingMoneySale,
   signStripeWebhookPayload,
@@ -639,7 +640,7 @@ describe("verified credit-pack refund provenance", () => {
     }
   });
 
-  it("refuses every copy of a genuine verified webhook at the refund parse step", () => {
+  it("refuses every copy of a genuine verified webhook at parsing and reconciliation persistence", async () => {
     for (const [how, impostor] of copiesOf(verifyBody(REFUND_BODY))) {
       expect(hasVerifiedWebhookProvenance(impostor), how).toBe(false);
       const parsed = parseCreditPackRefundEvent({
@@ -651,6 +652,12 @@ describe("verified credit-pack refund provenance", () => {
       expect(parsed.reason, how).toBe(
         BILLING_REFUSE_REASONS.webhookNotVerified,
       );
+      const store = createInMemoryCreditStore({ accounts: [ACCOUNT] });
+      expect(await persistCreditPackChargeEvent({ verified: impostor, intent: INTENT, store, now: NOW })).toMatchObject({
+        ok: false, reason: BILLING_REFUSE_REASONS.webhookNotVerified,
+      });
+      expect(await store.listReconciliations(), how).toEqual([]);
+      expect(store.entryCount(ACCOUNT.accountId), how).toBe(0);
     }
   });
 

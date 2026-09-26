@@ -18,6 +18,7 @@ import type {
 import {
   SALE_ENTRY_KEY_PREFIX,
   createCreditStore,
+  createInMemoryCreditStore,
   isSaleEntryKey,
   saleEntryKeys,
   type CommittedEntry,
@@ -59,6 +60,7 @@ const naiveAdapter = () => {
   const rows = new Map<string, CreditLedgerEntry>();
   const settlements: CreditsSaleSettlement[] = [];
   const adapter: CreditStoreAdapter = Object.freeze({
+    ...createInMemoryCreditStore(),
     findAccountByUserId: (userId: string) =>
       userId === ACCOUNT.userId ? ACCOUNT : undefined,
     findAccountById: (accountId: string) =>
