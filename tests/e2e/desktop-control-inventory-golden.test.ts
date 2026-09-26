@@ -581,8 +581,9 @@ describe("desktop mounted control inventory", () => {
     await click(window, "#mode-animate");
     await click(window, '[data-action="dock-tab"][data-value="timeline"]');
     expect(element(window, "[data-timeline-result]").textContent).toContain('"clipId": "idle"');
-    for (const id of ["timeline-mutation", "timeline-apply", "timeline-time", "timeline-scrub", "timeline-evaluate"]) {
-      expect(element(window, `#${id}`).getAttribute("data-kind")).toBeTruthy();
+    const timelineKinds = { "timeline-mutation": "view", "timeline-apply": "live", "timeline-time": "view", "timeline-scrub": "live", "timeline-evaluate": "live" } as const;
+    for (const [id, kind] of Object.entries(timelineKinds)) {
+      expect(element(window, `#${id}`).getAttribute("data-kind")).toBe(kind);
     }
     expect(element(window, "#timeline-apply").getAttribute("data-action")).toBe("timeline-apply");
     expect(element(window, "#timeline-evaluate").getAttribute("data-action")).toBe("timeline-evaluate");

@@ -224,12 +224,12 @@ describe("engine desktop chrome — control accounting (document → model)", ()
       expect(html, label).not.toMatch(/<(a|details|summary)\b/i);
       const inputs = html.match(/<input\b[^>]*>/g) ?? [];
       expect(inputs, label).toHaveLength(DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.length + 3);
-      expect(inputs.map((tag) => /\sid="([^"]+)"/.exec(tag)?.[1]), label).toContain("timeline-time");
-      expect(inputs.map((tag) => /\sid="([^"]+)"/.exec(tag)?.[1]), label).toContain("scene-transform-snap");
-      expect(inputs.map((tag) => /\sid="([^"]+)"/.exec(tag)?.[1]), label).toContain("project-git-commit-message");
-      expect(inputs.map((tag) => /\sid="([^"]+)"/.exec(tag)?.[1]), label).toEqual(expect.arrayContaining(
-        DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.map((definition) => `scene-property-${definition.id}`),
-      ));
+      expect(inputs.map((tag) => /\sid="([^"]+)"/.exec(tag)?.[1]).sort(), label).toEqual([
+        ...DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.map((definition) => `scene-property-${definition.id}`),
+        "scene-transform-snap",
+        "project-git-commit-message",
+        "timeline-time",
+      ].sort());
       for (const tag of inputs) {
         expect(tag, label).toMatch(/data-kind="(view|live|inert)"/);
       }

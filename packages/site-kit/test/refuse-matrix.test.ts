@@ -5,9 +5,10 @@
  * wired, and stops a reachable refusal from losing its covering case. Adding a key
  * to `SITE_REFUSALS` without a case here fails the gate.
  */
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   SITE_REFUSALS,
@@ -138,12 +139,21 @@ const reviewFixture = (): {
   return { proposal: proposed.proposal, documentPath, review: reviewed.value };
 };
 
-const CASES: Readonly<Record<SiteRefusalReason, () => Promise<unknown> | unknown>> = {
-  // The umbrella's real auth/billing paths are covered in auth-credits-refuse-matrix.
-  ADMIN_ROLE_REQUIRED: () => refuse("ADMIN_ROLE_REQUIRED"),
-  CREDIT_SUPPORT_TARGET_NOT_FOUND: () => refuse("CREDIT_SUPPORT_TARGET_NOT_FOUND"),
-  CREDIT_BALANCE_INSUFFICIENT: () => refuse("CREDIT_BALANCE_INSUFFICIENT"),
-  CREDIT_IDEMPOTENCY_KEY_CONFLICT: () => refuse("CREDIT_IDEMPOTENCY_KEY_CONFLICT"),
+/**
+ * Reasons only the umbrella's wired ledger-support plane produces. Site-kit cannot
+ * reach that plane, so constructing them here would only restate the name; their
+ * real paths are asserted in the root auth-credits refuse matrix, pinned below.
+ */
+const UMBRELLA_LEDGER_REASONS = [
+  "ADMIN_ROLE_REQUIRED",
+  "CREDIT_SUPPORT_TARGET_NOT_FOUND",
+  "CREDIT_BALANCE_INSUFFICIENT",
+  "CREDIT_IDEMPOTENCY_KEY_CONFLICT",
+] as const satisfies readonly SiteRefusalReason[];
+
+type SiteKitReason = Exclude<SiteRefusalReason, (typeof UMBRELLA_LEDGER_REASONS)[number]>;
+
+const CASES: Readonly<Record<SiteKitReason, () => Promise<unknown> | unknown>> = {
   IDENTITY_PLANE_NOT_WIRED: () => createIdentityPlane({ now }).resolvePrincipal(umbrella),
   CREDITS_PLANE_NOT_WIRED: () => createCreditsPlane().readBalance({ userId: "user-1" }),
   BILLING_PLANE_NOT_WIRED: () =>
@@ -473,7 +483,12 @@ const CASES: Readonly<Record<SiteRefusalReason, () => Promise<unknown> | unknown
 
 describe("refuse matrix", () => {
   it("declares a case for exactly the reasons in the registry", () => {
-    expect(Object.keys(CASES).sort()).toEqual([...SITE_REFUSAL_REASONS].sort());
+    expect([...Object.keys(CASES), ...UMBRELLA_LEDGER_REASONS].sort()).toEqual([...SITE_REFUSAL_REASONS].sort());
+  });
+
+  it.each([...UMBRELLA_LEDGER_REASONS])("pins %s to a real ledger-support assertion", (reason) => {
+    const matrix = readFileSync(fileURLToPath(new URL("../../../tests/e2e/auth-credits-refuse-matrix.test.ts", import.meta.url)), "utf8");
+    expect(matrix).toMatch(new RegExp(`plane\\.ledgerSupport\\.(?:lookup|adjust)\\([^\\n]*reason: "${reason}"`));
   });
 
   it("gives every reason a non-empty message", () => {
@@ -482,7 +497,7 @@ describe("refuse matrix", () => {
     }
   });
 
-  it.each([...SITE_REFUSAL_REASONS])("reaches %s", async (reason) => {
+  it.each(Object.keys(CASES) as SiteKitReason[])("reaches %s", async (reason) => {
     const produced = await CASES[reason]();
     expect(reasonOf(produced)).toBe(reason);
   });
