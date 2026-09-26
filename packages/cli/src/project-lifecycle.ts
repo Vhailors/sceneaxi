@@ -65,7 +65,7 @@ const REPORT_FLAGS = new Set(["--evidence", "--cwd"]);
 const NEW_USAGE =
   "Usage: sceneaxi project new --document <path> [--id <id>] [--title <text>] [--data <json>] [--cwd <dir>] [--force]";
 const DEV_USAGE =
-  "Usage: sceneaxi project dev --document <path> [--cwd <dir>]  (one-shot; --watch is refused)";
+  "Usage: sceneaxi project dev --document <path> [--cwd <dir>] [--watch]";
 const TEST_USAGE =
   "Usage: sceneaxi project test --document <path> [--cwd <dir>]";
 const CAPTURE_USAGE =
@@ -191,8 +191,7 @@ export function runProjectNew(
 /**
  * `project dev --document <path> [--cwd]`
  *
- * One-shot project status. `--watch` refuses: this CLI does not ship a
- * hot-reload loop, and pretending to would be a false runnable claim.
+ * One-shot project status. Process-level watch mode reruns this pipeline.
  */
 export function runProjectDev(
   path: readonly string[],
@@ -201,20 +200,6 @@ export function runProjectDev(
   const args = parseVerbArgs(tokens);
   const unknown = refuseUnknownArgs(args, DEV_FLAGS, path, DEV_SWITCHES);
   if (unknown) return unknown;
-
-  if (args.switches.has("--watch")) {
-    return failure(
-      "NOT_IMPLEMENTED",
-      "`project dev --watch` is not implemented; this CLI has no hot-reload loop.",
-      {
-        path,
-        help: [
-          "Run `sceneaxi project dev --document <path>` for a one-shot status",
-          "Re-run the verb after each edit; there is no background watcher to attach to",
-        ],
-      },
-    );
-  }
 
   const documentPath = args.flags.get("--document");
   if (documentPath === undefined || documentPath.length === 0) {
@@ -229,7 +214,6 @@ export function runProjectDev(
     Object.freeze({
       status: "ready",
       mode: "one-shot",
-      watchSupported: false,
       documentPath,
       documentId: loaded.document.id,
       contentHash: contentHash(loaded.text),
@@ -237,7 +221,7 @@ export function runProjectDev(
     }),
     [
       `Run \`sceneaxi project test --document ${documentPath}\` for the validation report`,
-      "There is no watcher: re-run this verb after each edit",
+      "Pass --watch to rerun this status after document or admitted-asset changes",
     ],
   );
 }
@@ -660,11 +644,11 @@ export function projectDevHelp(): ResultPayload {
   return Object.freeze({
     command: "project dev",
     description:
-      "One-shot project status over a document. There is no hot-reload loop: --watch refuses",
+      "Project status over a text-canonical document, optionally rerun on changes",
     flags: Object.freeze({
       "--document": "Path to the document (required)",
       "--cwd": "Working directory for relative paths",
-      "--watch": "Refused — this CLI ships no watcher",
+      "--watch": "Rerun status on document or admitted-asset changes until SIGINT",
     }),
   });
 }

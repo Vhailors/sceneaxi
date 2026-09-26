@@ -121,7 +121,7 @@ const projectGroup = group("project", "E1 authoring surface (source-first)", {
   ),
   dev: argVerb(
     "dev",
-    "One-shot project status (no hot-reload loop; --watch refuses)",
+    "Project status, optionally rerun on document or admitted-asset changes",
     (ctx) => runProjectDev(ctx.path, ctx.tokens),
     projectDevHelp,
   ),
