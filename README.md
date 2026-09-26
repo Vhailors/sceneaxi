@@ -110,6 +110,12 @@ session. Its committed three-instance demo and digest ledger live under
 [`tests/e2e/fixtures/scene-composition/`](tests/e2e/fixtures/scene-composition/),
 and it adds no presentation adapter, checklist item, renderer decision, or spend.
 
+## Documentation
+
+Start with the [SceneAxi user guides](docs/README.md) for installation,
+runnable surfaces, the CLI, desktop, web consumers, and plugins. Governance and
+architecture documents are indexed separately.
+
 ## Development
 
 Install the pinned workspace toolchain with `pnpm install`, then install the

@@ -970,9 +970,9 @@
       "severity": "high",
       "title": "No getting-started guide, tutorial, or `examples/`.",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 5,
-      "thread": null,
+      "thread": "thr_v3uhrxwujk",
       "commit": null
     },
     {
@@ -1006,9 +1006,9 @@
       "severity": "medium",
       "title": "Docs are governance-heavy, not user guides; the canonical spec lives in issue #1 and cites an out-of-tree arch",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 5,
-      "thread": null,
+      "thread": "thr_v3uhrxwujk",
       "commit": null
     },
     {

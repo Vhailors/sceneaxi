@@ -830,7 +830,8 @@
             "tests/e2e/scene-composition-golden.test.ts",
             "tests/e2e/sculpt-quality-golden.test.ts",
             "tests/e2e/umbrella-editor-viewport-golden.test.ts",
-            "tests/e2e/umbrella-live-open-golden.test.ts"
+            "tests/e2e/umbrella-live-open-golden.test.ts",
+            "tests/e2e/examples-golden.test.ts"
           ],
           "present": true
         }
@@ -1071,7 +1072,8 @@
             "tests/e2e/scene-composition-golden.test.ts",
             "tests/e2e/sculpt-quality-golden.test.ts",
             "tests/e2e/umbrella-editor-viewport-golden.test.ts",
-            "tests/e2e/umbrella-live-open-golden.test.ts"
+            "tests/e2e/umbrella-live-open-golden.test.ts",
+            "tests/e2e/examples-golden.test.ts"
           ],
           "present": true
         }
@@ -1458,6 +1460,7 @@
       ],
       "expectedEvidenceLayer": [
         "tests/e2e/scene-composition-golden.test.ts",
+        "tests/e2e/examples-golden.test.ts",
         "tests/e2e/profile-game-scene-golden.test.ts"
       ],
       "classification": "real",
@@ -1485,6 +1488,14 @@
           "kind": "test",
           "resolved": [
             "tests/e2e/scene-composition-golden.test.ts"
+          ],
+          "present": true
+        },
+        {
+          "ref": "tests/e2e/examples-golden.test.ts",
+          "kind": "test",
+          "resolved": [
+            "tests/e2e/examples-golden.test.ts"
           ],
           "present": true
         },
@@ -1764,7 +1775,8 @@
             "tests/e2e/scene-composition-golden.test.ts",
             "tests/e2e/sculpt-quality-golden.test.ts",
             "tests/e2e/umbrella-editor-viewport-golden.test.ts",
-            "tests/e2e/umbrella-live-open-golden.test.ts"
+            "tests/e2e/umbrella-live-open-golden.test.ts",
+            "tests/e2e/examples-golden.test.ts"
           ],
           "present": true
         }
@@ -2973,7 +2985,8 @@
             "tests/e2e/scene-composition-golden.test.ts",
             "tests/e2e/sculpt-quality-golden.test.ts",
             "tests/e2e/umbrella-editor-viewport-golden.test.ts",
-            "tests/e2e/umbrella-live-open-golden.test.ts"
+            "tests/e2e/umbrella-live-open-golden.test.ts",
+            "tests/e2e/examples-golden.test.ts"
           ],
           "present": true
         }
@@ -4605,7 +4618,8 @@
             "tests/sites/umbrella-visual.test.ts",
             "tests/sites/vercel-package.test.ts",
             "tests/sites/web-experience-editor.test.ts",
-            "tests/syntax/check-syntax.test.ts"
+            "tests/syntax/check-syntax.test.ts",
+            "tests/e2e/examples-golden.test.ts"
           ],
           "present": true
         },
@@ -4820,7 +4834,8 @@
             "tests/e2e/scene-composition-golden.test.ts",
             "tests/e2e/sculpt-quality-golden.test.ts",
             "tests/e2e/umbrella-editor-viewport-golden.test.ts",
-            "tests/e2e/umbrella-live-open-golden.test.ts"
+            "tests/e2e/umbrella-live-open-golden.test.ts",
+            "tests/e2e/examples-golden.test.ts"
           ],
           "present": true
         },
@@ -8624,6 +8639,7 @@
       "tests/e2e/hybrid-sculpt-golden.test.ts",
       "tests/e2e/sculpt-quality-golden.test.ts",
       "tests/e2e/scene-composition-golden.test.ts",
+      "tests/e2e/examples-golden.test.ts",
       "tests/e2e/rarity-engine-golden.test.ts",
       "tests/e2e/rarity-provider-desktop-golden.test.ts",
       "tests/e2e/profile-game-scene-golden.test.ts",
@@ -8733,7 +8749,7 @@
       "routes": 29,
       "migrations": 8,
       "workflows": 5,
-      "goldenTests": 56
+      "goldenTests": 57
     },
     "documentedClaims": [
       {
