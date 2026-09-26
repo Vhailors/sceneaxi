@@ -2,7 +2,18 @@ import { readFile, readdir } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PGlite } from "@electric-sql/pglite";
-import { saleEntryKeys } from "@sceneaxi/billing";
+import {
+  CONNECT_STORE_CONFLICT_CODE,
+  STRIPE_LIVE_MODE_ENV_VAR,
+  resolveLiveModeAuthorization,
+  saleEntryKeys,
+} from "@sceneaxi/billing";
+import type {
+  ConnectAccountRecord,
+  ConnectPayoutIntent,
+  ConnectPayoutOutcome,
+  MoneySplitRecord,
+} from "@sceneaxi/schemas";
 import { createIdentityPort, resolveAdminIdentity } from "@sceneaxi/auth";
 import { createUmbrellaIdentityPlane } from "../src/lib/identity-plane";
 import { verifyLoginRequestOrigin } from "../src/lib/login-flow";
@@ -10,6 +21,8 @@ import {
   createNeonCheckoutIntentStore,
   createNeonCreditStore,
   createNeonIdentityStore,
+  createNeonConnectStore,
+  createNeonLiveModeAuditSink,
   type NeonDatabase,
   type SqlRow,
 } from "../src/lib/provider-adapters";
@@ -362,5 +375,69 @@ describe("Neon adapters against PostgreSQL semantics", () => {
       .rejects.toThrow(/price columns are immutable/);
     await expect(intents.persistIntent({ ...intent, unitAmount: 900 }))
       .rejects.toThrow(/checkout intent conflict/);
+  });
+
+  it("commits Connect split and payout intent atomically, with exact replay/conflict semantics", async () => {
+    const { postgres, database } = fixture;
+    const identity = createNeonIdentityStore(database);
+    for (const [id, email] of [["buyer", "connect-buyer@example.com"], ["creator", "connect-creator@example.com"]] as const) {
+      await identity.ensureUserAndCreditAccount(
+        authentication(`member-${id}`, email), Date.parse("2026-07-01T00:00:00Z"),
+      );
+    }
+    const account: ConnectAccountRecord = {
+      schemaVersion: 1, kind: "sceneaxi.connect-account-record", creatorUserId: "member-creator",
+      stripeAccountId: "acct_connect_test", mode: "test", providerRequestId: "req-connect",
+      createdAt: "2026-07-01T00:00:00.000Z",
+    };
+    const split: MoneySplitRecord = {
+      schemaVersion: 1, kind: "sceneaxi.money-split-record", saleId: "sale-connect",
+      listingId: "listing-connect", buyerUserId: "member-buyer", creatorUserId: "member-creator",
+      grossMinor: 101, creatorMinor: 50, platformMinor: 51, currency: "usd", basisPoints: 5000,
+      mode: "test", occurredAt: "2026-07-01T00:00:00.000Z",
+    };
+    const intent: ConnectPayoutIntent = {
+      schemaVersion: 1, kind: "sceneaxi.connect-payout-intent", payoutIntentId: "payout-connect",
+      saleId: split.saleId, creatorUserId: account.creatorUserId, stripeAccountId: account.stripeAccountId,
+      grossMinor: split.grossMinor, creatorMinor: split.creatorMinor, platformMinor: split.platformMinor,
+      currency: split.currency, basisPoints: 5000, mode: "test",
+      idempotencyKey: "payout-connect-key", requestedAt: "2026-07-01T00:01:00.000Z",
+    };
+    const store = createNeonConnectStore(database);
+    await postgres.query(
+      `INSERT INTO catalog_listings (listing_id, catalog, seller_user_id, title, price_mode, credit_price, published_at)
+       VALUES ($1, 'game', $2, 'Connect fixture', 'credits', 1, $3)`,
+      [split.listingId, split.creatorUserId, split.occurredAt],
+    );
+    await expect(store.commitPayoutIntent({ split, intent })).rejects.toThrow();
+    expect((await postgres.query("SELECT sale_id FROM money_split_records WHERE sale_id = $1", [split.saleId])).rows).toEqual([]);
+    await postgres.query(
+      "INSERT INTO stripe_connect_accounts (creator_user_id, stripe_account_id, mode, provider_request_id, created_at) VALUES ($1, $2, $3, $4, $5)",
+      [account.creatorUserId, account.stripeAccountId, account.mode, account.providerRequestId, account.createdAt],
+    );
+    await expect(store.commitPayoutIntent({ split, intent })).resolves.toEqual({ split, intent, replayed: false });
+    await expect(store.commitPayoutIntent({ split, intent })).resolves.toEqual({ split, intent, replayed: true });
+    const outcome: ConnectPayoutOutcome = {
+      schemaVersion: 1, kind: "sceneaxi.connect-payout-outcome", payoutOutcomeId: "outcome-connect",
+      payoutIntentId: intent.payoutIntentId, status: "succeeded", providerPayoutId: "po_test_connect",
+      providerEvidenceId: "evidence-connect", providerMessage: "paid", observedAt: "2026-07-01T00:02:00.000Z",
+    };
+    await expect(store.appendPayoutOutcome(outcome)).resolves.toEqual({ record: outcome, replayed: false });
+    await expect(store.appendPayoutOutcome(outcome)).resolves.toEqual({ record: outcome, replayed: true });
+    await expect(store.appendPayoutOutcome({ ...outcome, payoutOutcomeId: "outcome-conflict" }))
+      .rejects.toMatchObject({ code: CONNECT_STORE_CONFLICT_CODE });
+  });
+
+  it("awaits Neon live-mode audit persistence and enforces its append-only trigger", async () => {
+    const { postgres, database } = fixture;
+    const authorized = await resolveLiveModeAuthorization({
+      env: { [STRIPE_LIVE_MODE_ENV_VAR]: "live-mode-authorized:captain@example.com:2026-07-01" },
+      recordAudit: createNeonLiveModeAuditSink(database),
+    });
+    expect(authorized.ok).toBe(true);
+    expect((await postgres.query("SELECT authorized_by, authorized_on FROM stripe_live_mode_authorization_audit")).rows)
+      .toEqual([{ authorized_by: "captain@example.com", authorized_on: new Date("2026-07-01T00:00:00.000Z") }]);
+    await expect(postgres.query("UPDATE stripe_live_mode_authorization_audit SET record = 'changed'")).rejects.toThrow(/append-only/);
+    await expect(postgres.query("DELETE FROM stripe_live_mode_authorization_audit")).rejects.toThrow(/append-only/);
   });
 });

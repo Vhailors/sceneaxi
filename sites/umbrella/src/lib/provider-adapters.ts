@@ -7,6 +7,7 @@
  * so the default gate can mock every provider call without a database or network.
  */
 import { createHash } from "node:crypto";
+import { isDeepStrictEqual } from "node:util";
 import {
   mapBetterAuthAuthentication,
   type Awaitable,
@@ -17,14 +18,29 @@ import {
 } from "@sceneaxi/auth";
 import {
   CHECKOUT_METADATA_KEYS,
+  CONNECT_STORE_CONFLICT_CODE,
   createCheckoutSessionIntent,
   createCreditStore,
   saleEntryKeys,
   validateCreditReconciliationRecord,
   type CheckoutSettlement,
+  type ConnectAccountRecord,
+  type ConnectOnboardingIntent,
+  type ConnectPayoutIntent,
+  type ConnectPayoutOutcome,
+  type ConnectStatusRecord,
+  type ConnectStore,
   type CreditStore,
   type CreditStoreAdapter,
   type CreditsSaleSettlement,
+  type LiveModeAuthorizationAudit,
+  connectPayoutMatchesMoneySplit,
+  validateConnectAccountRecord,
+  validateConnectOnboardingIntent,
+  validateConnectPayoutIntent,
+  validateConnectPayoutOutcome,
+  validateConnectStatusRecord,
+  validateMoneySplitRecord,
 } from "@sceneaxi/billing";
 
 export { CHECKOUT_METADATA_KEYS };
@@ -899,6 +915,224 @@ export function createNeonCreditStoreAdapter(
 /** The only credit store constructor exposed to the deployment wiring. */
 export function createNeonCreditStore(database: NeonDatabase): CreditStore {
   return createCreditStore(createNeonCreditStoreAdapter(database));
+}
+
+const CONNECT_ACCOUNT_COLUMNS =
+  "creator_user_id, stripe_account_id, mode, provider_request_id, created_at";
+const CONNECT_ONBOARDING_COLUMNS =
+  "onboarding_intent_id, creator_user_id, stripe_account_id, expires_at, mode, idempotency_key, provider_request_id, created_at";
+const CONNECT_STATUS_COLUMNS =
+  "status_id, creator_user_id, stripe_account_id, onboarding_complete, payouts_enabled, requirements_due, provider_request_id, observed_at";
+const CONNECT_PAYOUT_COLUMNS =
+  "payout_intent_id, sale_id, creator_user_id, stripe_account_id, gross_minor, creator_minor, platform_minor, currency, basis_points, mode, idempotency_key, requested_at";
+const CONNECT_OUTCOME_COLUMNS =
+  "payout_outcome_id, payout_intent_id, status, provider_payout_id, provider_evidence_id, provider_message, observed_at";
+
+const validatedRecord = <Value>(
+  candidate: unknown,
+  validate: (value: unknown) =>
+    | Readonly<{ ok: true; value: Value }>
+    | Readonly<{ ok: false }>,
+  label: string,
+): Value => {
+  const result = validate(candidate);
+  if (!result.ok) throw new Error(`invalid persisted ${label}`);
+  return result.value;
+};
+
+const accountFromConnectRow = (row: SqlRow): ConnectAccountRecord =>
+  validatedRecord({
+    schemaVersion: 1,
+    kind: "sceneaxi.connect-account-record",
+    creatorUserId: requiredString(row, "creator_user_id"),
+    stripeAccountId: requiredString(row, "stripe_account_id"),
+    mode: requiredString(row, "mode"),
+    providerRequestId: requiredString(row, "provider_request_id"),
+    createdAt: requiredDateTime(row, "created_at"),
+  }, validateConnectAccountRecord, "Connect account");
+
+const onboardingFromConnectRow = (row: SqlRow): ConnectOnboardingIntent =>
+  validatedRecord({
+    schemaVersion: 1,
+    kind: "sceneaxi.connect-onboarding-intent",
+    onboardingIntentId: requiredString(row, "onboarding_intent_id"),
+    creatorUserId: requiredString(row, "creator_user_id"),
+    stripeAccountId: requiredString(row, "stripe_account_id"),
+    expiresAt: requiredDateTime(row, "expires_at"),
+    mode: requiredString(row, "mode"),
+    idempotencyKey: requiredString(row, "idempotency_key"),
+    providerRequestId: requiredString(row, "provider_request_id"),
+    createdAt: requiredDateTime(row, "created_at"),
+  }, validateConnectOnboardingIntent, "Connect onboarding intent");
+
+const statusFromConnectRow = (row: SqlRow): ConnectStatusRecord =>
+  validatedRecord({
+    schemaVersion: 1,
+    kind: "sceneaxi.connect-status-record",
+    statusId: requiredString(row, "status_id"),
+    creatorUserId: requiredString(row, "creator_user_id"),
+    stripeAccountId: requiredString(row, "stripe_account_id"),
+    onboardingComplete: row["onboarding_complete"],
+    payoutsEnabled: row["payouts_enabled"],
+    requirementsDue: row["requirements_due"],
+    providerRequestId: requiredString(row, "provider_request_id"),
+    observedAt: requiredDateTime(row, "observed_at"),
+  }, validateConnectStatusRecord, "Connect status");
+
+const payoutIntentFromConnectRow = (row: SqlRow): ConnectPayoutIntent =>
+  validatedRecord({
+    schemaVersion: 1,
+    kind: "sceneaxi.connect-payout-intent",
+    payoutIntentId: requiredString(row, "payout_intent_id"),
+    saleId: requiredString(row, "sale_id"),
+    creatorUserId: requiredString(row, "creator_user_id"),
+    stripeAccountId: requiredString(row, "stripe_account_id"),
+    grossMinor: requiredInteger(row, "gross_minor"),
+    creatorMinor: requiredInteger(row, "creator_minor"),
+    platformMinor: requiredInteger(row, "platform_minor"),
+    currency: requiredString(row, "currency").trim(),
+    basisPoints: requiredInteger(row, "basis_points"),
+    mode: requiredString(row, "mode"),
+    idempotencyKey: requiredString(row, "idempotency_key"),
+    requestedAt: requiredDateTime(row, "requested_at"),
+  }, validateConnectPayoutIntent, "Connect payout intent");
+
+const payoutOutcomeFromConnectRow = (row: SqlRow): ConnectPayoutOutcome =>
+  validatedRecord({
+    schemaVersion: 1,
+    kind: "sceneaxi.connect-payout-outcome",
+    payoutOutcomeId: requiredString(row, "payout_outcome_id"),
+    payoutIntentId: requiredString(row, "payout_intent_id"),
+    status: requiredString(row, "status"),
+    providerPayoutId: row["provider_payout_id"],
+    providerEvidenceId: requiredString(row, "provider_evidence_id"),
+    providerMessage: requiredString(row, "provider_message"),
+    observedAt: requiredDateTime(row, "observed_at"),
+  }, validateConnectPayoutOutcome, "Connect payout outcome");
+
+const samePersisted = isDeepStrictEqual;
+
+/** Durable ConnectStore over the migration-owned append-only tables. */
+export function createNeonConnectStore(database: NeonDatabase): ConnectStore {
+  const one = async <Value>(
+    text: string,
+    values: ReadonlyArray<unknown>,
+    map: (row: SqlRow) => Value,
+  ): Promise<Value | undefined> => {
+    const row = firstRow(await database.query(text, values));
+    return row === undefined ? undefined : map(row);
+  };
+  const conflict = (): never => {
+    throw Object.assign(new Error("connect store: idempotency conflict"), {
+      code: CONNECT_STORE_CONFLICT_CODE,
+    });
+  };
+  const transact = async (statements: ReadonlyArray<SqlStatement>) => {
+    if (database.transaction === undefined) throw new Error("Connect persistence requires a Neon transaction");
+    try {
+      return await database.transaction(statements);
+    } catch (error) {
+      if (typeof error === "object" && error !== null && "code" in error && error.code === "23505") conflict();
+      throw error;
+    }
+  };
+  const readOnboarding = (key: string) => one(
+    `SELECT ${CONNECT_ONBOARDING_COLUMNS} FROM stripe_connect_onboarding_intents WHERE idempotency_key = $1 LIMIT 1`,
+    [key], onboardingFromConnectRow,
+  );
+  const readAccount = (creator: string) => one(
+    `SELECT ${CONNECT_ACCOUNT_COLUMNS} FROM stripe_connect_accounts WHERE creator_user_id = $1 LIMIT 1`,
+    [creator], accountFromConnectRow,
+  );
+  const readPayoutIntent = (key: string) => one(
+    `SELECT ${CONNECT_PAYOUT_COLUMNS} FROM stripe_connect_payout_intents WHERE idempotency_key = $1 LIMIT 1`,
+    [key], payoutIntentFromConnectRow,
+  );
+  const readSplit = (saleId: string) => one(
+    `SELECT sale_id, listing_id, buyer_user_id, creator_user_id, gross_minor, creator_minor, platform_minor, currency, basis_points, mode, occurred_at FROM money_split_records WHERE sale_id = $1 LIMIT 1`,
+    [saleId], (row) => validatedRecord({
+      schemaVersion: 1,
+      kind: "sceneaxi.money-split-record",
+      saleId: requiredString(row, "sale_id"),
+      listingId: requiredString(row, "listing_id"),
+      buyerUserId: requiredString(row, "buyer_user_id"),
+      creatorUserId: requiredString(row, "creator_user_id"),
+      grossMinor: requiredInteger(row, "gross_minor"),
+      creatorMinor: requiredInteger(row, "creator_minor"),
+      platformMinor: requiredInteger(row, "platform_minor"),
+      currency: requiredString(row, "currency").trim(),
+      basisPoints: requiredInteger(row, "basis_points"),
+      mode: requiredString(row, "mode"),
+      occurredAt: requiredDateTime(row, "occurred_at"),
+    }, validateMoneySplitRecord, "money split"),
+  );
+
+  return Object.freeze({
+    findAccountByCreatorUserId: readAccount,
+    findOnboardingIntent: readOnboarding,
+    async commitOnboarding({ account, intent }) {
+      const validAccount = validatedRecord(account, validateConnectAccountRecord, "Connect account");
+      const validIntent = validatedRecord(intent, validateConnectOnboardingIntent, "Connect onboarding intent");
+      if (validAccount.creatorUserId !== validIntent.creatorUserId || validAccount.stripeAccountId !== validIntent.stripeAccountId || validAccount.mode !== validIntent.mode) throw new Error("connect store: onboarding account does not match intent");
+      const inserted = await transact([
+        { text: `INSERT INTO stripe_connect_accounts (${CONNECT_ACCOUNT_COLUMNS}) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING`, values: [validAccount.creatorUserId, validAccount.stripeAccountId, validAccount.mode, validAccount.providerRequestId, validAccount.createdAt] },
+        { text: `INSERT INTO stripe_connect_onboarding_intents (${CONNECT_ONBOARDING_COLUMNS}) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT DO NOTHING RETURNING onboarding_intent_id`, values: [validIntent.onboardingIntentId, validIntent.creatorUserId, validIntent.stripeAccountId, validIntent.expiresAt, validIntent.mode, validIntent.idempotencyKey, validIntent.providerRequestId, validIntent.createdAt] },
+      ]);
+      const [heldAccount, heldIntent] = await Promise.all([readAccount(validAccount.creatorUserId), readOnboarding(validIntent.idempotencyKey)]);
+      if (heldAccount === undefined || heldIntent === undefined) return conflict();
+      if (heldAccount.stripeAccountId !== validAccount.stripeAccountId || heldAccount.mode !== validAccount.mode || !samePersisted(heldIntent, validIntent)) conflict();
+      return Object.freeze({ account: heldAccount, intent: heldIntent, replayed: (inserted[1]?.length ?? 0) === 0 });
+    },
+    async appendStatus(candidate) {
+      const status = validatedRecord(candidate, validateConnectStatusRecord, "Connect status");
+      const inserted = await database.query(`INSERT INTO stripe_connect_status_records (${CONNECT_STATUS_COLUMNS}) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (status_id) DO NOTHING RETURNING ${CONNECT_STATUS_COLUMNS}`, [status.statusId, status.creatorUserId, status.stripeAccountId, status.onboardingComplete, status.payoutsEnabled, status.requirementsDue, status.providerRequestId, status.observedAt]);
+      const insertedRow = firstRow(inserted);
+      const held = insertedRow === undefined
+        ? await one(`SELECT ${CONNECT_STATUS_COLUMNS} FROM stripe_connect_status_records WHERE status_id = $1`, [status.statusId], statusFromConnectRow)
+        : statusFromConnectRow(insertedRow);
+      if (held === undefined) throw new Error("connect store: status insert returned no row");
+      if (!samePersisted(held, status)) conflict();
+      return Object.freeze({ record: held, replayed: insertedRow === undefined });
+    },
+    latestStatus: (accountId) => one(`SELECT ${CONNECT_STATUS_COLUMNS} FROM stripe_connect_status_records WHERE stripe_account_id = $1 ORDER BY observed_at DESC LIMIT 1`, [accountId], statusFromConnectRow),
+    findPayoutIntent: readPayoutIntent,
+    async findPayoutOutcome(intentId) {
+      return one(`SELECT ${CONNECT_OUTCOME_COLUMNS} FROM stripe_connect_payout_outcomes WHERE payout_intent_id = $1 LIMIT 1`, [intentId], payoutOutcomeFromConnectRow);
+    },
+    async commitPayoutIntent({ split: candidateSplit, intent: candidateIntent }) {
+      const split = validatedRecord(candidateSplit, validateMoneySplitRecord, "money split");
+      const intent = validatedRecord(candidateIntent, validateConnectPayoutIntent, "Connect payout intent");
+      if (!connectPayoutMatchesMoneySplit(intent, split)) throw new Error("connect store: payout intent does not match money split");
+      const inserted = await transact([
+        { text: `INSERT INTO money_split_records (sale_id, listing_id, buyer_user_id, creator_user_id, gross_minor, creator_minor, platform_minor, currency, basis_points, mode, occurred_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) ON CONFLICT DO NOTHING`, values: [split.saleId, split.listingId, split.buyerUserId, split.creatorUserId, split.grossMinor, split.creatorMinor, split.platformMinor, split.currency, split.basisPoints, split.mode, split.occurredAt] },
+        { text: `INSERT INTO stripe_connect_payout_intents (${CONNECT_PAYOUT_COLUMNS}) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) ON CONFLICT DO NOTHING RETURNING payout_intent_id`, values: [intent.payoutIntentId, intent.saleId, intent.creatorUserId, intent.stripeAccountId, intent.grossMinor, intent.creatorMinor, intent.platformMinor, intent.currency, intent.basisPoints, intent.mode, intent.idempotencyKey, intent.requestedAt] },
+      ]);
+      const [heldSplit, heldIntent] = await Promise.all([readSplit(split.saleId), readPayoutIntent(intent.idempotencyKey)]);
+      if (heldSplit === undefined || heldIntent === undefined) throw new Error("connect store: payout commit returned no rows");
+      if (!samePersisted(heldSplit, split) || !samePersisted(heldIntent, intent)) return conflict();
+      return Object.freeze({ split: heldSplit, intent: heldIntent, replayed: (inserted[1]?.length ?? 0) === 0 });
+    },
+    async appendPayoutOutcome(candidate) {
+      const outcome = validatedRecord(candidate, validateConnectPayoutOutcome, "Connect payout outcome");
+      const inserted = await database.query(`INSERT INTO stripe_connect_payout_outcomes (${CONNECT_OUTCOME_COLUMNS}) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT DO NOTHING RETURNING ${CONNECT_OUTCOME_COLUMNS}`, [outcome.payoutOutcomeId, outcome.payoutIntentId, outcome.status, outcome.providerPayoutId, outcome.providerEvidenceId, outcome.providerMessage, outcome.observedAt]);
+      const insertedRow = firstRow(inserted);
+      if (insertedRow !== undefined) return Object.freeze({ record: payoutOutcomeFromConnectRow(insertedRow), replayed: false });
+      const held = await one(`SELECT ${CONNECT_OUTCOME_COLUMNS} FROM stripe_connect_payout_outcomes WHERE payout_outcome_id = $1 OR payout_intent_id = $2 LIMIT 1`, [outcome.payoutOutcomeId, outcome.payoutIntentId], payoutOutcomeFromConnectRow);
+      if (held === undefined) throw new Error("connect store: payout outcome insert returned no row");
+      if (!samePersisted(held, outcome)) conflict();
+      return Object.freeze({ record: held, replayed: true });
+    },
+  });
+}
+
+/** Neon audit writer. The database trigger makes every recorded statement immutable. */
+export function createNeonLiveModeAuditSink(database: NeonDatabase): (audit: LiveModeAuthorizationAudit) => Promise<void> {
+  return async (audit) => {
+    await database.query(
+      `INSERT INTO stripe_live_mode_authorization_audit (schema_version, kind, source, authorized_by, authorized_on, fingerprint, record) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [audit.schemaVersion, audit.kind, audit.source, audit.authorizedBy, audit.authorizedOn, audit.fingerprint, audit.record],
+    );
+  };
 }
 
 export type CheckoutIntentStore = Readonly<{

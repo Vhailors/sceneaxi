@@ -719,7 +719,7 @@ SCENEAXI_STRIPE_LIVE_AUTHORIZED=live-mode-authorized:<email>:<YYYY-MM-DD>
 |---|---|
 | **One name, never a second spelling** | `STRIPE_LIVE_MODE_ENV_VAR` is the only key read. Every alias in `STRIPE_LIVE_MODE_ALIAS_ENV_VARS` refuses **by its presence alone**, even alongside a correct affirmative — the same rule `SCENEAXI_ADMIN_EMAILS` gets, for the same reason |
 | **Absent means refused** | Unset, empty, `true`, `1`, `yes`, a value naming no address, or a date that is not a real `YYYY-MM-DD` all refuse `STRIPE_LIVE_MODE_NOT_AUTHORIZED`, so `assertModeAuthorized` refuses at both ends unchanged |
-| **Audit evidence** | The affirmative *names its author and the day*, so live mode cannot be switched on anonymously; and the caller must inject a `recordAudit` sink, which is handed a `LiveModeAuthorizationAudit` (`authorizedBy`, `authorizedOn`, a `sha256` fingerprint, and one ready-to-log line) **before** the authorization is issued. A missing sink, a non-function, one that throws, and one that answers with a promise all refuse — the resolver is synchronous, so a record it would have to await is a record it cannot witness — and no deployment can hold an authorization it never wrote down |
+| **Audit evidence** | The affirmative names its author and day. The caller must inject a `recordAudit` sink, which receives a `LiveModeAuthorizationAudit` (`authorizedBy`, `authorizedOn`, a SHA-256 fingerprint, and a ready-to-log line) before the resolver issues its witness. The resolver awaits the sink and refuses if it is absent, invalid, throws, or rejects. The umbrella adapter writes each record to `stripe_live_mode_authorization_audit`; migration `0006` blocks updates and deletes. No shipped call site uses the witness, so this audit path does not activate LIVE |
 | **The gate stays a gate** | Nothing else is an input. `NODE_ENV`, `VERCEL_ENV`, an `sk_live_` key, `SCENEAXI_BILLING_MODE`, the price, and the adapter's identity are not read and must not become inputs. The resolved value is runtime-witnessed (sceneaxi#126), so `liveModeAuthorizedFlag` answers `true` for the exact object the resolver issued and `undefined` for every copy or look-alike |
 | **The hermetic gate is unaffected** | The resolver takes an injected `env`; nothing reads a global. `pnpm gate` runs with the variable absent, and a test asserts that |
 
@@ -729,8 +729,7 @@ today `live` refuses everywhere regardless of the variable. Reaching live mode s
 the separate captain go-live decision ADR 0021 holds, *and* a deliberate wiring change on
 top of it. `SCENEAXI_BILLING_MODE=live` selects a mode; it authorizes nothing.
 
-The complete non-executable Stripe account, webhook, tax/legal, refund, deployment,
-preflight, and rollback gate is [`docs/stripe-live-activation.md`](stripe-live-activation.md).
+The resolver is asynchronous because the deployment-owned Neon audit write must finish before it can issue an authorization witness. `createDeploymentPlaneHandles` wires `createNeonLiveModeAuditSink` into the umbrella's private handles. No shipped call site invokes the resolver or consumes the sink. The complete non-executable Stripe account, webhook, tax/legal, refund, deployment, preflight, and rollback gate is [`docs/stripe-live-activation.md`](stripe-live-activation.md).
 Every item remains unchecked; the checklist neither supplies secrets nor authorizes LIVE.
 
 Regressions: `packages/billing/test/live-mode.test.ts` (the resolver's contract) and the

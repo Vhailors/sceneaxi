@@ -232,3 +232,21 @@ export {
   type StartConnectOnboardingRequest,
   type StripeConnectProvider,
 } from "./stripe-connect.js";
+
+export {
+  connectPayoutMatchesMoneySplit,
+  validateConnectAccountRecord,
+  validateConnectOnboardingIntent,
+  validateConnectPayoutIntent,
+  validateConnectPayoutOutcome,
+  validateConnectStatusRecord,
+  validateMoneySplitRecord,
+} from "@sceneaxi/schemas";
+export type {
+  ConnectAccountRecord,
+  ConnectOnboardingIntent,
+  ConnectPayoutIntent,
+  ConnectPayoutOutcome,
+  ConnectStatusRecord,
+  MoneySplitRecord,
+} from "@sceneaxi/schemas";

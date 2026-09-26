@@ -106,8 +106,9 @@ POST-AUTH box stays unchecked indefinitely.
 ## Deployment and data prerequisites
 
 - [ ] **POST-AUTH** — Apply every forward-only migration in `db/migrations` to the target Neon database;
-  verify the append-only trigger, unique ledger idempotency key, checkout-intent price
-  immutability, and provisioned credit accounts. Never invent an account from a webhook.
+  verify the append-only trigger on the credit ledger, Connect audit tables, and
+  `stripe_live_mode_authorization_audit`, the unique ledger idempotency key, checkout-intent
+  price immutability, and provisioned credit accounts. Never invent an account from a webhook.
 - [ ] **PRE-AUTH** — Deploy current green `main` to an isolated pre-production environment and prove
   `/login`, `/pricing`, `/account`, `POST /api/checkout`, and
   `POST /api/stripe/webhook` through the no-argument request-authority facade.
@@ -121,8 +122,9 @@ POST-AUTH box stays unchecked indefinitely.
   deployment would set it to `live`, but mode selection is not authorization.
 - [ ] **PRE-AUTH** — Leave `SCENEAXI_STRIPE_LIVE_AUTHORIZED` unset until the captain's separate recorded
   decision. If authorized later, its exact contract remains
-  `live-mode-authorized:<email>:<YYYY-MM-DD>` with the required audit sink described in
-  `docs/auth-credits.md`; setting it alone still enables nothing.
+  `live-mode-authorized:<email>:<YYYY-MM-DD>` with the required awaited Neon audit sink
+  described in `docs/auth-credits.md`; setting it alone still enables nothing. No shipped
+  call site consumes the resulting authorization witness.
 - [ ] **POST-AUTH** — Make the deliberate reviewed code change that injects the runtime-witnessed live
   authorization at both intent creation and grant settlement. This repository currently
   has no such call site and must continue to refuse LIVE until that change lands green.

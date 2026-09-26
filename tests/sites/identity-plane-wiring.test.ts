@@ -2354,6 +2354,7 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
     const revokedTokens: string[] = [];
 
     const deployment = {
+      configuration: inspectUmbrellaConfiguration({}),
       admin: admin.value,
       billingMode: "test" as const,
       clock,

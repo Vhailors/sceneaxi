@@ -432,10 +432,11 @@
       "severity": "medium",
       "title": "`ConnectStore` is in-memory only",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 2,
-      "thread": null,
-      "commit": null
+      "thread": "thr_n9u8bzr7sb",
+      "commit": null,
+      "openDecision": "LIVE activation stays held (D5); the sink records audits only"
     },
     {
       "id": 37,
@@ -444,10 +445,11 @@
       "severity": "medium",
       "title": "No live-mode audit-sink implementation",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 2,
-      "thread": null,
-      "commit": null
+      "thread": "thr_n9u8bzr7sb",
+      "commit": null,
+      "openDecision": "LIVE activation stays held (D5); the sink records audits only"
     },
     {
       "id": 38,

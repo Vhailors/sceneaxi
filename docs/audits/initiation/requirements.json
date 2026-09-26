@@ -3547,11 +3547,14 @@
       "authorityStatus": "held-authority",
       "expectedImplementationSurface": [
         "packages/billing/src/live-mode.ts",
-        "packages/billing/src"
+        "packages/billing/src",
+        "sites/umbrella/src/lib/provider-adapters.ts",
+        "db/migrations/0007_stripe_live_mode_audit.sql"
       ],
       "expectedEvidenceLayer": [
         "packages/billing/test/",
-        "tests/e2e/auth-credits-refuse-matrix.test.ts"
+        "tests/e2e/auth-credits-refuse-matrix.test.ts",
+        "sites/umbrella/test/provider-adapters.integration.test.ts"
       ],
       "classification": "held",
       "classificationReason": "The authorization resolver exists, but the repository does not authorize live activation.",
@@ -3569,6 +3572,22 @@
           "kind": "source",
           "resolved": [
             "packages/billing/src"
+          ],
+          "present": true
+        },
+        {
+          "ref": "sites/umbrella/src/lib/provider-adapters.ts",
+          "kind": "source",
+          "resolved": [
+            "sites/umbrella/src/lib/provider-adapters.ts"
+          ],
+          "present": true
+        },
+        {
+          "ref": "db/migrations/0007_stripe_live_mode_audit.sql",
+          "kind": "source",
+          "resolved": [
+            "db/migrations/0007_stripe_live_mode_audit.sql"
           ],
           "present": true
         }
@@ -3601,6 +3620,14 @@
           "kind": "source",
           "resolved": [
             "tests/e2e/auth-credits-refuse-matrix.test.ts"
+          ],
+          "present": true
+        },
+        {
+          "ref": "sites/umbrella/test/provider-adapters.integration.test.ts",
+          "kind": "provider",
+          "resolved": [
+            "sites/umbrella/test/provider-adapters.integration.test.ts"
           ],
           "present": true
         }
@@ -8292,7 +8319,8 @@
       "db/migrations/0003_checkout_session_intent_price_immutability.sql",
       "db/migrations/0004_stripe_connect_audit.sql",
       "db/migrations/0005_better_auth_provider.sql",
-      "db/migrations/0006_credit_reconciliation.sql"
+      "db/migrations/0006_credit_reconciliation.sql",
+      "db/migrations/0007_stripe_live_mode_audit.sql"
     ],
     "providerEntrypoints": [
       "sites/umbrella/src/lib/provider-adapters.ts",
@@ -8703,7 +8731,7 @@
       "assistantOperations": 3,
       "localAgentTools": 67,
       "routes": 29,
-      "migrations": 7,
+      "migrations": 8,
       "workflows": 5,
       "goldenTests": 56
     },

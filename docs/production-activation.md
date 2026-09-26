@@ -110,7 +110,7 @@ claim; the deployment owner still proves each of them through the close-out colu
 | `BETTER_AUTH_ORIGIN` | Vercel Production scope, `sceneaxi-umbrella` | **Missing** from the latest name-only Vercel observation. The deployed umbrella also predates `/login`. | Better Auth/deployment owner supplies a real HTTPS provider origin and proves `POST /api/auth/sign-in/email` plus `GET /api/auth/get-session`. Credentials and provider tables remain provider-owned. A malformed or absent origin leaves the identity handle absent. |
 | `BETTER_AUTH_SECRET` | Vercel Production scope, `sceneaxi-umbrella` | Required by the in-repo provider implementation; absent from the latest name-only observation, and no value is recorded. | Captain/provider owner supplies signing material of the provider's required strength. Missing or malformed material returns `BETTER_AUTH_PROVIDER_CONFIGURATION_ABSENT` or `BETTER_AUTH_PROVIDER_CONFIGURATION_INVALID`; it is never printed or passed to core. |
 | `DATABASE_URL` | Vercel Production scope, all three web projects | The deployment doc records one encrypted value shared by all three; the latest external observation confirmed the name only on the umbrella, not its value or use. | Captain (Neon) owns the connection secret. The deployment owner confirms the same target database on all three projects without printing the URL. |
-| Neon project identifiers | project `sceneaxi-prod`, id `misty-king-68383952`, region `aws-us-east-2`, database `neondb` | Project identity is recorded; no connection or migration proof was performed in the latest readiness observation. | Neon/deployment owner verifies the identifiers and current schema, then independently verifies migrations 0001–0005 and, under the explicit authorization gate, follows the adoption procedure in [`db/README.md`](../db/README.md) with `node scripts/db-migrate.mjs --adopt-through 0005_better_auth_provider`. Adoption executes none of 0001–0005 and runs only the tracking DDL from `db/migrations/0000_schema_migrations.sql`; the operator retains the recorded checksums. Later migrations, starting with `0006_credit_reconciliation.sql`, are then applied by `pnpm db:migrate` under the same gate, and schema/trigger/index evidence is captured. Never use adoption as a substitute for verification. Current migration state and its non-gate are owned by [`websites-deploy.md#verified-test-readiness`](websites-deploy.md#verified-test-readiness); this row authorizes no migration action. There is no down-migration rollback. |
+| Neon project identifiers | project `sceneaxi-prod`, id `misty-king-68383952`, region `aws-us-east-2`, database `neondb` | Project identity is recorded; no connection or migration proof was performed in the latest readiness observation. | Neon/deployment owner verifies the identifiers and current schema, then independently verifies migrations 0001–0006 and, under the explicit authorization gate, follows the adoption procedure in [`db/README.md`](../db/README.md) with `node scripts/db-migrate.mjs --adopt-through 0005_better_auth_provider`. Adoption executes none of 0001–0005 and runs only the tracking DDL from `db/migrations/0000_schema_migrations.sql`; the operator retains the recorded checksums. Later migrations, starting with `0006_credit_reconciliation.sql`, are then applied by `pnpm db:migrate` under the same gate, followed by `0007_stripe_live_mode_audit.sql`; capture schema/trigger/index evidence. Never use adoption as a substitute for verification. Current migration state and its non-gate are owned by [`websites-deploy.md#verified-test-readiness`](websites-deploy.md#verified-test-readiness); this row authorizes no migration action. There is no down-migration rollback.
 | Neon-backed provider handles | umbrella deployment owner behind `umbrellaRequestAuthority()` | Adapter code exists; production handle construction and authenticated read/write behavior are not yet evidenced. | Deployment owner supplies the real `IdentityStore`, `CreditStoreAdapter`, checkout-intent store, settlement evidence port, and any separately authorized Connect store. Missing or unreadable storage remains a refusal, never an empty account or zero balance. |
 | `SCENEAXI_ADMIN_EMAIL` | Vercel Production scope, `sceneaxi-umbrella` | Value is captain-held and intentionally undocumented. | Captain supplies the sole admin address. The deployment owner verifies a real provider-authenticated session for that address; the environment value alone grants no role. |
 | `SCENEAXI_ADMIN_BOOTSTRAP_SECRET` | Vercel Production scope, `sceneaxi-umbrella` | Encrypted variable name was observed; its value was not and must not be attested here. | Captain/provider owner supplies first-run credential material and proves it through the provider. It is never a role source or core input. |
@@ -274,16 +274,17 @@ Do not start activation until every applicable item is checked with real evidenc
 - [ ] Confirm all three `DATABASE_URL` entries target Neon project `sceneaxi-prod`
   (`misty-king-68383952`), `aws-us-east-2`, database `neondb`, without recording the
   connection string.
-- [ ] Verify the live schema, triggers (append-only ledger and Connect), uniqueness, and
-  checkout-intent price immutability against migrations 0001–0005 before recording
-  existing history; `0005_better_auth_provider.sql` is already applied — do not rerun it
-  or re-block this deployment on fresh `neonctl` OAuth. Confirm the tracking migration is
-  `db/migrations/0000_schema_migrations.sql`. Under the explicit authorization gate, run
+- [ ] Verify the live schema, triggers (append-only ledger, Connect, reconciliation,
+  and live-mode audit), uniqueness, and checkout-intent price immutability against
+  migrations 0001–0006 before recording existing history; `0005_better_auth_provider.sql`
+  is already applied — do not rerun it or re-block this deployment on fresh `neonctl`
+  OAuth. Confirm the tracking migration is `db/migrations/0000_schema_migrations.sql`.
+  Under the explicit authorization gate, run
   `node scripts/db-migrate.mjs --adopt-through 0005_better_auth_provider` and retain its
   identifier/checksum output (adoption records metadata only; it does not verify or
-  execute 0001–0005). Then apply `0006_credit_reconciliation.sql` and any later file with
-  `pnpm db:migrate`, and capture `pnpm db:migrate -- --status`. Do not create a credit
-  account by hand.
+  execute 0001–0005). Then apply `0006_credit_reconciliation.sql` and
+  `0007_stripe_live_mode_audit.sql` with `pnpm db:migrate`, and capture
+  `pnpm db:migrate -- --status`. Do not create a credit account by hand.
 - [ ] In Stripe TEST, prove the endpoint is `livemode: false` and subscribed to
   `checkout.session.completed`, `charge.refunded`, `charge.dispute.created`, and
   `charge.dispute.closed`; confirm card-only Checkout.
@@ -303,9 +304,9 @@ Execute only the rows named by the current authorization; unchecked rows remain 
 ### Web identity and Stripe TEST
 
 - [ ] Configure the shipped Better Auth handler at `BETTER_AUTH_ORIGIN`, including
-  `BETTER_AUTH_SECRET`, against the already-applied `0005_better_auth_provider.sql`
-  schema, and configure the real provider/store handles behind
-  `umbrellaRequestAuthority()`.
+  `BETTER_AUTH_SECRET`, against the verified provider schema, and configure the real
+  provider/store handles behind `umbrellaRequestAuthority()`. Apply newer migrations only
+  when the current authorization names that action.
 - [ ] Set the exact Vercel Production variables and build-time origins on only their
   assigned projects. Keep `SCENEAXI_BILLING_MODE=test` and LIVE authorization absent.
 - [ ] Configure the existing Stripe TEST webhook endpoint for all four handled event types

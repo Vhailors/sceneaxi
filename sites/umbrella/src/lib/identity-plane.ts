@@ -82,8 +82,10 @@ import {
   loadLedgerState,
   type BillingOutcome,
   type BillingRefuseReason,
+  type ConnectStore,
   type CreditStore,
   type LedgerState,
+  type LiveModeAuthorizationAudit,
 } from "@sceneaxi/billing";
 import {
   STRIPE_WEBHOOK_SECRET_ENV,
@@ -94,7 +96,9 @@ import {
 import {
   createBetterAuthHttpClient,
   createNeonCheckoutIntentStore,
+  createNeonConnectStore,
   createNeonCreditStore,
+  createNeonLiveModeAuditSink,
   createNeonDatabase,
   createNeonIdentityStore,
   createProvisioningIdentityAdapter,
@@ -455,6 +459,8 @@ export type UmbrellaPlaneHandles = {
   readonly creditStore?: CreditStore | undefined;
   readonly supportStore?: LedgerSupportStore | undefined;
   readonly verifyFormOrigin?: ((signals: Omit<SiteFormOriginSignals, "configuredOrigin">) => SiteResult<string>) | undefined;
+  readonly connectStore?: ConnectStore | undefined;
+  readonly liveModeAuditSink?: ((audit: LiveModeAuthorizationAudit) => Promise<void>) | undefined;
   readonly checkoutSessions?: CheckoutSessionAdapter | undefined;
   readonly checkoutEvidence?: CheckoutEvidencePort | undefined;
   /** Secret-holding webhook effect. The route can supply only request evidence. */
@@ -499,6 +505,8 @@ export function createDeploymentPlaneHandles(
 
   const identityStore = createNeonIdentityStore(database);
   const creditStore = createNeonCreditStore(database);
+  const connectStore = createNeonConnectStore(database);
+  const liveModeAuditSink = createNeonLiveModeAuditSink(database);
   const intentStore = createNeonCheckoutIntentStore(database);
 
   const betterAuth = providers.betterAuth;
@@ -538,6 +546,8 @@ export function createDeploymentPlaneHandles(
         : Object.freeze({ revokeSession: betterAuth.revokeSession.bind(betterAuth) }),
     creditStore,
     supportStore: Object.freeze({ users: identityStore, listCheckoutIntents: intentStore.listByUserId }),
+    connectStore,
+    liveModeAuditSink,
     checkoutSessions,
     checkoutEvidence,
     configuration,

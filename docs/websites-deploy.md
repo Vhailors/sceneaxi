@@ -672,10 +672,11 @@ webhook event, or performing a charge:
 
 Later captain-confirmed operating state (2026-08-07), separate from the dated
 name-only observation above: migration `0005_better_auth_provider.sql` is applied, and
-the umbrella Production environment values were reset without exposing them. Deployment
-close-out verifies the existing schema through the authorized database path; it does not
-rerun that migration or wait for fresh `neonctl` OAuth. This adds no secret value or
-production-success claim to the repository.
+the umbrella Production environment values were reset without exposing them. Migration
+`0007_stripe_live_mode_audit.sql` was added later; its production state is unverified.
+Deployment close-out verifies the existing schema through the authorized database path;
+it does not rerun migration `0005` or wait for fresh `neonctl` OAuth. This adds no secret
+value or production-success claim to the repository.
 
 A later name-and-status-only observation (2026-09-26, no credential used) supersedes the
 `/login` finding above: production `/login` returns `200`, and a sign-in POST with an

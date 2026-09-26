@@ -21,6 +21,8 @@ import {
   applyCreditPackWebhook,
   createBetterAuthHttpClient,
   createNeonCheckoutIntentStore,
+  createNeonConnectStore,
+  createNeonLiveModeAuditSink,
   createNeonCreditStore,
   createNeonDatabase,
   createNeonIdentityStore,
@@ -324,6 +326,8 @@ describe("umbrella deployment provider adapters", () => {
     try {
       const handles = createDeploymentPlaneHandles(options);
       expect(handles.identityPort).toBeDefined();
+      expect(handles.connectStore).toBeDefined();
+      expect(handles.liveModeAuditSink).toBeDefined();
       expect(handles.admin).toBe(options.admin);
       expect(String(createDeploymentPlaneHandles)).not.toMatch(
         /process\.env|providerFetch|createNeonDatabase|createStripeClient/,
@@ -1271,6 +1275,56 @@ describe("umbrella Neon credit settlement", () => {
     // before the write, so this is a throw and never a rejected promise.
     expect(() => store.appendEntry(buyerEntry)).toThrow(/requires atomic settlement/);
     expect(fixture.entries).toHaveLength(0);
+  });
+});
+
+describe("Neon Connect and live-mode audit adapters", () => {
+  it("maps a persisted Connect account back to the public ConnectStore record", async () => {
+    const account = {
+      schemaVersion: 1,
+      kind: "sceneaxi.connect-account-record",
+      creatorUserId: "creator-1",
+      stripeAccountId: "acct_test_1",
+      mode: "test",
+      providerRequestId: "req_1",
+      createdAt: "2026-07-01T00:00:00.000Z",
+    } as const;
+    const database: NeonDatabase = {
+      async query() {
+        return [{
+          creator_user_id: account.creatorUserId,
+          stripe_account_id: account.stripeAccountId,
+          mode: account.mode,
+          provider_request_id: account.providerRequestId,
+          created_at: account.createdAt,
+        }];
+      },
+    };
+    await expect(createNeonConnectStore(database).findAccountByCreatorUserId("creator-1")).resolves.toEqual(account);
+  });
+
+  it("writes the exact live-mode audit contract through Neon", async () => {
+    const calls: { query: string; values: ReadonlyArray<unknown> | undefined }[] = [];
+    const database: NeonDatabase = {
+      async query(query, values) {
+        calls.push({ query, values });
+        return [];
+      },
+    };
+    const audit = {
+      schemaVersion: 1 as const,
+      kind: "sceneaxi.stripe-live-mode-authorization-audit" as const,
+      source: "SCENEAXI_STRIPE_LIVE_AUTHORIZED" as const,
+      authorizedBy: "captain@example.com",
+      authorizedOn: "2026-07-01",
+      fingerprint: "a".repeat(64),
+      record: "audit record",
+    };
+    await createNeonLiveModeAuditSink(database)(audit);
+    expect(calls).toEqual([{
+      query: expect.stringContaining("INSERT INTO stripe_live_mode_authorization_audit"),
+      values: [1, audit.kind, audit.source, audit.authorizedBy, audit.authorizedOn, audit.fingerprint, audit.record],
+    }]);
   });
 });
 

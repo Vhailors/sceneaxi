@@ -137,6 +137,8 @@ export {
   createNeonCreditStoreAdapter,
   createNeonDatabase,
   createNeonIdentityStore,
+  createNeonConnectStore,
+  createNeonLiveModeAuditSink,
   createProvisioningIdentityAdapter,
   createStripeCheckoutEvidenceAdapter,
   createStripeCheckoutSessionAdapter,

@@ -25,6 +25,8 @@ Forward-only, in numeric order. `pnpm db:migrate` applies pending files one tran
    `credit_reconciliation_records` table for disputes and non-reconcilable refunds.
    The [operator contract](../docs/auth-credits.md#operator-reconciliation-records)
    owns its usage and the unresolved money policy.
+7. `migrations/0007_stripe_live_mode_audit.sql` — append-only authorization audit
+   records; the migration grants no LIVE authority
 
 There are no down-migrations. Reverting a financial schema by dropping tables loses the
 ledger, so a correction ships as a new forward migration.

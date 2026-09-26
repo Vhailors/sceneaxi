@@ -390,6 +390,17 @@ describe("migration hygiene", () => {
     }
   });
 
+  it("keeps live-mode authorization audit append-only", () => {
+    const audit = readFileSync(
+      join(migrationsDir, "0007_stripe_live_mode_audit.sql"),
+      "utf8",
+    );
+    expect(audit).toContain("CREATE TABLE IF NOT EXISTS stripe_live_mode_authorization_audit");
+    expect(audit).toContain("BEFORE UPDATE OR DELETE ON stripe_live_mode_authorization_audit");
+    expect(audit).toContain("CREATE TRIGGER stripe_live_mode_authorization_audit_append_only_trigger");
+    expect(audit).toContain("'SCENEAXI_STRIPE_LIVE_AUTHORIZED'");
+  });
+
   it("keeps Better Auth persistence provider-owned and schema-pinned", () => {
     const providerSource = readFileSync(
       new URL("../../sites/umbrella/src/provider/better-auth-provider.ts", import.meta.url),
