@@ -1105,11 +1105,14 @@ export function createNeonConnectStore(database: NeonDatabase): ConnectStore {
       if (!connectPayoutMatchesMoneySplit(intent, split)) throw new Error("connect store: payout intent does not match money split");
       const inserted = await transact([
         { text: `INSERT INTO money_split_records (sale_id, listing_id, buyer_user_id, creator_user_id, gross_minor, creator_minor, platform_minor, currency, basis_points, mode, occurred_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) ON CONFLICT DO NOTHING`, values: [split.saleId, split.listingId, split.buyerUserId, split.creatorUserId, split.grossMinor, split.creatorMinor, split.platformMinor, split.currency, split.basisPoints, split.mode, split.occurredAt] },
-        { text: `INSERT INTO stripe_connect_payout_intents (${CONNECT_PAYOUT_COLUMNS}) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) ON CONFLICT DO NOTHING RETURNING payout_intent_id`, values: [intent.payoutIntentId, intent.saleId, intent.creatorUserId, intent.stripeAccountId, intent.grossMinor, intent.creatorMinor, intent.platformMinor, intent.currency, intent.basisPoints, intent.mode, intent.idempotencyKey, intent.requestedAt] },
+        // The intent is written only against a held split identical to this one, so a
+        // conflicting pre-existing split can never commit a payout beside it.
+        { text: `INSERT INTO stripe_connect_payout_intents (${CONNECT_PAYOUT_COLUMNS}) SELECT $1::text, $2::text, $3::text, $4::text, $5::bigint, $6::bigint, $7::bigint, $8::char(3), $9::integer, $10::text, $11::text, $12::timestamptz WHERE EXISTS (SELECT 1 FROM money_split_records WHERE sale_id = $2 AND listing_id = $13 AND buyer_user_id = $14 AND creator_user_id = $3 AND gross_minor = $5 AND creator_minor = $6 AND platform_minor = $7 AND currency = $8 AND basis_points = $9 AND mode = $10 AND occurred_at = $15::timestamptz) ON CONFLICT DO NOTHING RETURNING payout_intent_id`, values: [intent.payoutIntentId, intent.saleId, intent.creatorUserId, intent.stripeAccountId, intent.grossMinor, intent.creatorMinor, intent.platformMinor, intent.currency, intent.basisPoints, intent.mode, intent.idempotencyKey, intent.requestedAt, split.listingId, split.buyerUserId, split.occurredAt] },
       ]);
       const [heldSplit, heldIntent] = await Promise.all([readSplit(split.saleId), readPayoutIntent(intent.idempotencyKey)]);
-      if (heldSplit === undefined || heldIntent === undefined) throw new Error("connect store: payout commit returned no rows");
-      if (!samePersisted(heldSplit, split) || !samePersisted(heldIntent, intent)) return conflict();
+      if (heldSplit === undefined) throw new Error("connect store: payout commit returned no split");
+      if (!samePersisted(heldSplit, split)) return conflict();
+      if (heldIntent === undefined || !samePersisted(heldIntent, intent)) return conflict();
       return Object.freeze({ split: heldSplit, intent: heldIntent, replayed: (inserted[1]?.length ?? 0) === 0 });
     },
     async appendPayoutOutcome(candidate) {

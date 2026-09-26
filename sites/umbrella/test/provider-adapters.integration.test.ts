@@ -415,6 +415,17 @@ describe("Neon adapters against PostgreSQL semantics", () => {
       "INSERT INTO stripe_connect_accounts (creator_user_id, stripe_account_id, mode, provider_request_id, created_at) VALUES ($1, $2, $3, $4, $5)",
       [account.creatorUserId, account.stripeAccountId, account.mode, account.providerRequestId, account.createdAt],
     );
+    const conflictingSplit: MoneySplitRecord = { ...split, saleId: "sale-connect-held", grossMinor: 200, creatorMinor: 100, platformMinor: 100 };
+    await postgres.query(
+      `INSERT INTO money_split_records (sale_id, listing_id, buyer_user_id, creator_user_id, gross_minor, creator_minor, platform_minor, currency, basis_points, mode, occurred_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+      [conflictingSplit.saleId, conflictingSplit.listingId, conflictingSplit.buyerUserId, conflictingSplit.creatorUserId, conflictingSplit.grossMinor, conflictingSplit.creatorMinor, conflictingSplit.platformMinor, conflictingSplit.currency, conflictingSplit.basisPoints, conflictingSplit.mode, conflictingSplit.occurredAt],
+    );
+    await expect(store.commitPayoutIntent({
+      split: { ...split, saleId: conflictingSplit.saleId },
+      intent: { ...intent, saleId: conflictingSplit.saleId, payoutIntentId: "payout-connect-held", idempotencyKey: "payout-connect-held-key" },
+    })).rejects.toMatchObject({ code: CONNECT_STORE_CONFLICT_CODE });
+    expect((await postgres.query("SELECT payout_intent_id FROM stripe_connect_payout_intents WHERE sale_id = $1", [conflictingSplit.saleId])).rows).toEqual([]);
     await expect(store.commitPayoutIntent({ split, intent })).resolves.toEqual({ split, intent, replayed: false });
     await expect(store.commitPayoutIntent({ split, intent })).resolves.toEqual({ split, intent, replayed: true });
     const outcome: ConnectPayoutOutcome = {
