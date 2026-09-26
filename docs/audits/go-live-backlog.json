@@ -726,10 +726,11 @@
       "severity": "medium",
       "title": "Electron 43.2.0 GPU process SIGSEGV in the current-host smoke",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 3,
-      "thread": null,
-      "commit": null
+      "thread": "thr_itkeme9y3p",
+      "commit": null,
+      "openDecision": "Historical SIGSEGV not reproduced; cause unresolved and recorded"
     },
     {
       "id": 61,
@@ -1070,6 +1071,19 @@
       "parkedReason": "Issue creation authority",
       "thread": null,
       "commit": null
+    },
+    {
+      "id": 89,
+      "section": "H",
+      "area": "Desktop apps and distribution",
+      "severity": "high",
+      "title": "`pnpm dist` builds the installers but exits with an electron-builder `channel` TypeError during cleanup",
+      "cls": "autonomous",
+      "status": "open",
+      "wave": 3,
+      "thread": null,
+      "commit": null,
+      "evidence": "found by thr_itkeme9y3p while investigating item 60"
     }
   ]
 }

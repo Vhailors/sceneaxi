@@ -422,15 +422,26 @@ The first download points to the concrete successful main-branch run recorded be
 No GitHub Release is created and no release URL is invented; the repository artifact
 is the distribution path for this first ship.
 
-Local host note, 2026-08-07: `pnpm build` completed, but two `pnpm smoke`
-attempts exited before SceneAxi printed its JSON proof line. Electron 43.2.0's GPU
-process logged `InitializeSandbox() called with multiple threads in process
-gpu-process` and then exited with `SIGSEGV`. The Phase 0 desktop report records
-this as a host-specific smoke limitation. No pixel or packaged-runtime claim is
-derived from those attempts, and the command was not retried after FirstMate
-confirmed the limitation. TypeScript checks, the pure bridge tests, the
-Happy DOM interaction test, and the protocol/CLI byte-parity test remain valid
-on this host; CI under Xvfb owns the packaged smoke proof.
+Historical host note, 2026-08-07: two `pnpm smoke` attempts exited before
+SceneAxi printed its JSON proof line. Electron 43.2.0 logged
+`InitializeSandbox() called with multiple threads in process gpu-process` before
+a reported GPU-process `SIGSEGV`. Those attempts established neither a cause nor
+a general host limitation.
+
+Rechecked 2026-09-26 on the current host after installing the packaged Electron
+43.2.0 binary: `xvfb-run -a pnpm smoke --packaged` passed and reported
+`surface webgl-canvas · pixelsDrawn true`. The packaged smoke already launches
+with `--use-angle=swiftshader --enable-unsafe-swiftshader`; with
+`--enable-logging=stderr`, the sandbox warning appeared, but no GPU-process
+SIGSEGV or child-process-gone failure was observed. A direct packaged launch
+with `--use-gl=swiftshader --enable-unsafe-swiftshader` also completed without
+that crash. `--disable-gpu-compositing` likewise produced no GPU SIGSEGV, but
+that run failed the smoke's project-browser UI proof (`opened:false`), so it is
+not a passing software-rendering configuration. The prior crash's trigger and
+root cause remain unknown; there is not enough evidence to add runtime recovery
+or claim that any flag fixes it. Keep the packaged smoke's proven SwiftShader
+path; retry with `xvfb-run -a pnpm smoke --packaged` and `--enable-logging=stderr`
+if the crash returns, preserving the complete stderr and exit status.
 
 ## First download record
 
