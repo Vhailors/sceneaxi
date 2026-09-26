@@ -13,6 +13,7 @@
  * and navigation away from the packaged document is refused.
  */
 import { createHash } from "node:crypto";
+import { spawn } from "node:child_process";
 import {
   existsSync,
   mkdtempSync,
@@ -570,6 +571,155 @@ async function start(): Promise<void> {
       fail("selected-instance edit did not apply atomically");
     }
   };
+  const smokeCommand = (id: Parameters<typeof createEditorCommandInvocation>[0], input: Record<string, unknown> = {}) =>
+    proofBridge.handle({
+      action: "command",
+      payload: createEditorCommandInvocation(id, "desktop-control", {
+        ...(id === "run-stop" || id === "run-reset" ? {} : { documentPath: SAMPLE_DOCUMENT }),
+        ...input,
+      }),
+    });
+
+  const created = smokeCommand("scene-object-create", {
+    expectedContentHash: currentContentHash(),
+    profile: "game",
+    sourceInstanceId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
+    parentInstanceId: "desktop-crate-root",
+  });
+  const hierarchyCopyId = `${DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId}-copy-1`;
+  if (!created.ok || payloadField(created.data, "phase") !== "reviewing") {
+    fail("hierarchy create did not stage through Change Review");
+  }
+  acceptSceneOperation();
+  const reparented = smokeCommand("scene-object-reparent", {
+    expectedContentHash: currentContentHash(),
+    profile: "game",
+    instanceId: hierarchyCopyId,
+    parentInstanceId: "desktop-crate-stacked",
+    transformPolicy: "preserve-local",
+  });
+  if (!reparented.ok || payloadField(reparented.data, "phase") !== "reviewing") {
+    fail("hierarchy reparent did not stage through Change Review");
+  }
+  acceptSceneOperation();
+  const verifiedHierarchy = smokeCommand("scene-hierarchy-inspect", { profile: "game" });
+  if (!verifiedHierarchy.ok) fail(`hierarchy inspection refused: ${verifiedHierarchy.reason}`);
+  const verifiedHierarchyObjects = payloadField(payloadField(verifiedHierarchy.data, "hierarchy"), "objects");
+  if (
+    !verifiedHierarchy.ok || !Array.isArray(verifiedHierarchyObjects) ||
+    !verifiedHierarchyObjects.some((item) =>
+      payloadField(item, "id") === hierarchyCopyId &&
+      payloadField(item, "parentId") === "desktop-crate-stacked")
+  ) fail("hierarchy create/reparent outcome was not visible in bridge inspection");
+
+  const transformed = smokeCommand("scene-transform-apply", {
+    expectedContentHash: currentContentHash(),
+    profile: "game",
+    instanceIds: [DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId],
+    mode: "translate",
+    space: "local",
+    pivot: "individual",
+    axes: "y",
+    snapIncrement: null,
+    valueKind: "delta",
+    values: [0, 0.5, 0],
+  });
+  if (!transformed.ok || payloadField(transformed.data, "affectedIds") === undefined) {
+    fail("transform command did not affect the selected packaged scene instance");
+  }
+  acceptSceneOperation();
+
+  const animation = smokeCommand("animation-apply", {
+    expectedContentHash: currentContentHash(),
+    profile: "game",
+    mutation: { kind: "clip-upsert", clipId: "smoke-idle", name: "Smoke idle", startMs: 0, durationMs: 1000 },
+  });
+  if (!animation.ok || payloadField(payloadField(animation.data, "authoringSnapshot"), "phase") !== "reviewing") {
+    fail("animation apply did not stage through Change Review");
+  }
+  acceptSceneOperation();
+  const inspectedAnimation = smokeCommand("animation-inspect", { profile: "game" });
+  if (!inspectedAnimation.ok) fail(`animation inspection refused: ${inspectedAnimation.reason}`);
+  const animationCatalog = payloadField(inspectedAnimation.data, "catalog");
+  const animationClips = payloadField(animationCatalog, "clips");
+  if (!inspectedAnimation.ok || !Array.isArray(animationClips) ||
+      !animationClips.some((clip) => payloadField(clip, "clipId") === "smoke-idle")) {
+    fail("animation apply did not persist the named clip");
+  }
+
+  const physics = smokeCommand("physics-apply", {
+    expectedContentHash: currentContentHash(),
+    profile: "game",
+    mutation: {
+      kind: "body-upsert",
+      bodyId: "smoke-body",
+      instanceId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
+      bodyKind: "dynamic",
+      mass: 1,
+    },
+  });
+  if (!physics.ok || payloadField(payloadField(physics.data, "authoringSnapshot"), "phase") !== "reviewing") {
+    fail("physics apply did not stage through Change Review");
+  }
+  acceptSceneOperation();
+  const inspectedPhysics = smokeCommand("physics-inspect", { profile: "game" });
+  if (!inspectedPhysics.ok) fail(`physics inspection refused: ${inspectedPhysics.reason}`);
+  const physicsBodies = payloadField(payloadField(inspectedPhysics.data, "catalog"), "bodies");
+  if (!inspectedPhysics.ok || !Array.isArray(physicsBodies) ||
+      !physicsBodies.some((body) => payloadField(body, "bodyId") === "smoke-body")) {
+    fail("physics apply did not persist the named body");
+  }
+
+  const play = smokeCommand("run-play");
+  if (!play.ok) fail(`run-play refused: ${play.reason}`);
+  const playSession = payloadField(play.data, "playSession");
+  if (payloadField(playSession, "state") !== "playing") {
+    fail("run-play did not start an isolated Play session");
+  }
+  const stoppedPlay = smokeCommand("run-stop");
+  if (!stoppedPlay.ok || payloadField(stoppedPlay.data, "state") !== "stopped") {
+    fail("run-stop did not stop the Play session");
+  }
+  const resetPlay = smokeCommand("run-reset");
+  if (!resetPlay.ok || payloadField(resetPlay.data, "state") !== "playing") {
+    fail("run-reset did not restore the isolated Play session");
+  }
+  const finalStoppedPlay = smokeCommand("run-stop");
+  if (!finalStoppedPlay.ok || payloadField(finalStoppedPlay.data, "state") !== "stopped") {
+    fail("Play session did not stop after reset");
+  }
+
+  const cliEntry = process.env["SCENEAXI_CLI_ENTRYPOINT"];
+  if (typeof cliEntry !== "string") fail("smoke launcher did not provide the built CLI entrypoint");
+  const cliHandshake = await new Promise<{ status: number | null; stdout: string; stderr: string }>((resolveResult) => {
+    const child = spawn("node", [
+      cliEntry,
+      "desktop", "bridge", "status", "--descriptor", join(cwd, ".sceneaxi-config", "desktop-bridge-v1.json"), "--json",
+    ], { cwd, env: process.env });
+    let stdout = "";
+    let stderr = "";
+    const timer = setTimeout(() => child.kill("SIGKILL"), 10_000);
+    child.stdout.setEncoding("utf8").on("data", (chunk: string) => { stdout += chunk; });
+    child.stderr.setEncoding("utf8").on("data", (chunk: string) => { stderr += chunk; });
+    child.on("error", (error) => {
+      clearTimeout(timer);
+      resolveResult({ status: null, stdout, stderr: `${stderr}${error.message}` });
+    });
+    child.on("close", (status) => {
+      clearTimeout(timer);
+      resolveResult({ status, stdout, stderr });
+    });
+  });
+  let cliHandshakeProof: unknown;
+  try {
+    cliHandshakeProof = JSON.parse(cliHandshake.stdout.trim());
+  } catch {
+    fail(`local CLI bridge handshake returned invalid JSON: ${cliHandshake.stderr}`);
+  }
+  if (cliHandshake.status !== 0 || payloadField(cliHandshakeProof, "ok") !== true ||
+      payloadField(payloadField(cliHandshakeProof, "result"), "connected") !== true) {
+    fail(`local CLI bridge handshake failed: ${cliHandshake.stdout} ${cliHandshake.stderr}`);
+  }
 
   stageSceneOperation({
     kind: "set-transform-component",
@@ -934,6 +1084,17 @@ async function start(): Promise<void> {
       ok: true,
       handshake: handshake.data,
       openPath: openPath.data,
+      newerEditor: {
+        hierarchyCreated: true,
+        hierarchyReparented: true,
+        transformApplied: true,
+        playStarted: true,
+        playStopped: true,
+        playReset: true,
+        physicsReviewed: true,
+        animationReviewed: true,
+        cliHandshake: true,
+      },
       authoring: {
         selected: true,
         proposed: true,

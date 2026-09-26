@@ -22,6 +22,12 @@ import { fileURLToPath } from "node:url";
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const packaged = process.argv.includes("--packaged");
+const cliEntrypoint = resolve(appRoot, "../../packages/cli/bin/sceneaxi.mjs");
+const builtCliEntrypoint = resolve(appRoot, "../../packages/cli/dist/src/index.js");
+if (!existsSync(cliEntrypoint) || !existsSync(builtCliEntrypoint)) {
+  console.error("smoke FAILED — local CLI bridge proof requires a built SceneAxi workspace checkout; run root `pnpm build` first");
+  process.exit(1);
+}
 
 // SwiftShader keeps WebGL real (a software rasterizer, not a stub) on hosts
 // without a usable GPU — the same fallback the recorded umbrella browser
@@ -57,7 +63,11 @@ const result = spawnSync(command, args, {
   cwd: appRoot,
   encoding: "utf8",
   timeout: 120_000,
-  env: { ...process.env, ELECTRON_ENABLE_LOGGING: "0" },
+  env: {
+    ...process.env,
+    ELECTRON_ENABLE_LOGGING: "0",
+    SCENEAXI_CLI_ENTRYPOINT: cliEntrypoint,
+  },
 });
 
 const stdout = result.stdout ?? "";
@@ -78,6 +88,17 @@ const failures = [];
 if (proof.ok !== true) failures.push("proof.ok is not true");
 if (proof.handshake?.app !== "@sceneaxi/desktop-linux") failures.push("handshake app wrong");
 if (proof.handshake?.runtime !== "electron") failures.push("handshake runtime wrong");
+if (
+  proof.newerEditor?.hierarchyCreated !== true ||
+  proof.newerEditor?.hierarchyReparented !== true ||
+  proof.newerEditor?.transformApplied !== true ||
+  proof.newerEditor?.playStarted !== true ||
+  proof.newerEditor?.playStopped !== true ||
+  proof.newerEditor?.playReset !== true ||
+  proof.newerEditor?.physicsReviewed !== true ||
+  proof.newerEditor?.animationReviewed !== true ||
+  proof.newerEditor?.cliHandshake !== true
+) failures.push("newer editor bridge smoke outcomes are incomplete");
 if (!Array.isArray(proof.openPath?.tickDigests) || proof.openPath.tickDigests.length === 0) {
   failures.push("open-path advanced no ticks");
 }
@@ -203,6 +224,12 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
+console.log(JSON.stringify({
+  smoke: "desktop-linux",
+  ok: true,
+  mode: packaged ? "packaged" : "built-runtime",
+  capabilities: ["hierarchy-create-reparent", "transform", "run-play-stop-reset", "physics-review", "animation-review", "export-web", "local-cli-bridge-handshake"],
+}));
 console.log("desktop-linux smoke OK —");
 console.log(`  mode: ${packaged ? "packaged (linux-unpacked)" : "built runtime (dist/main.cjs)"}`);
 console.log(

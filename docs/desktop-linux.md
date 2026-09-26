@@ -350,6 +350,7 @@ same-backend triangle replacement; its headless draw proof is
 
 ```bash
 pnpm install                                   # repository root, once
+pnpm build                                     # repository root, required for the CLI bridge handshake
 cd desktop/linux
 pnpm install                                   # tier-local: electron, esbuild, electron-builder
 pnpm check:renderer                            # browser graph + sole presentation owner
@@ -362,7 +363,14 @@ pnpm smoke --packaged                          # the same proof from the package
 ```
 
 Headless hosts wrap the smoke in `xvfb-run -a`; the launcher forces SwiftShader so
-WebGL stays a real software rasterizer. CI (`.github/workflows/desktop-linux.yml`)
+WebGL stays a real software rasterizer. The packaged smoke drives the Electron bridge
+through hierarchy create/reparent and transform, Play start/stop/reset, physics and
+animation Change Review, Web export, and a real `sceneaxi desktop bridge status`
+handshake over the same-user local socket. The smoke requires the repository
+checkout and root build because it launches the real workspace CLI; the smoke
+preflight refuses if either the CLI source or compiled entrypoint is missing. It
+runs on a fresh temporary project, needs no network or provider key, and emits a
+JSON capability summary line. The launcher enforces a 120-second upper bound. CI (`.github/workflows/desktop-linux.yml`)
 builds both artifacts on `ubuntu-latest`, runs the packaged smoke under xvfb, and
 uploads them with `SHA256SUMS` as the workflow artifact `sceneaxi-desktop-linux`.
 The first download points to the concrete successful main-branch run recorded below.
