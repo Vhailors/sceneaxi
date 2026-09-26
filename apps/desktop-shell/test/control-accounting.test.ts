@@ -223,16 +223,15 @@ describe("engine desktop chrome — control accounting (document → model)", ()
       const html = render(state);
       expect(html, label).not.toMatch(/<(a|details|summary)\b/i);
       const inputs = html.match(/<input\b[^>]*>/g) ?? [];
-      expect(inputs, label).toHaveLength(DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.length + 2);
-      expect(inputs.map((tag) => /\sid="([^"]+)"/.exec(tag)?.[1]), label).toEqual([
-        ...DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.map(
-          (definition) => `scene-property-${definition.id}`,
-        ),
-        "scene-transform-snap",
-        "project-git-commit-message",
-      ]);
+      expect(inputs, label).toHaveLength(DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.length + 3);
+      expect(inputs.map((tag) => /\sid="([^"]+)"/.exec(tag)?.[1]), label).toContain("timeline-time");
+      expect(inputs.map((tag) => /\sid="([^"]+)"/.exec(tag)?.[1]), label).toContain("scene-transform-snap");
+      expect(inputs.map((tag) => /\sid="([^"]+)"/.exec(tag)?.[1]), label).toContain("project-git-commit-message");
+      expect(inputs.map((tag) => /\sid="([^"]+)"/.exec(tag)?.[1]), label).toEqual(expect.arrayContaining(
+        DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.map((definition) => `scene-property-${definition.id}`),
+      ));
       for (const tag of inputs) {
-        expect(tag, label).toMatch(/data-kind="(live|inert)"/);
+        expect(tag, label).toMatch(/data-kind="(view|live|inert)"/);
       }
       const selects = html.match(/<select\b[^>]*>/g) ?? [];
       expect(selects, label).toHaveLength(7);
@@ -253,17 +252,17 @@ describe("engine desktop chrome — control accounting (document → model)", ()
       expect(selects[5], label).toMatch(/data-kind="(live|inert)"/);
       expect(selects[6], label).toMatch(/data-kind="(live|inert)"/);
       const textareas = html.match(/<textarea\b[^>]*>/g) ?? [];
-      expect(textareas, label).toHaveLength(5);
-      expect(textareas.map((tag) => /\sid="([^"]+)"/.exec(tag)?.[1]).sort(), label).toEqual([
+      const textareaIds = textareas.map((tag) => /\sid="([^"]+)"/.exec(tag)?.[1]);
+      expect(textareas, label).toHaveLength(6);
+      expect(textareaIds.sort(), label).toEqual([
         "assistant-prompt",
         "effect-mutation",
         "environment-mutation",
         "material-mutation",
         "physics-mutation",
+        "timeline-mutation",
       ]);
-      for (const tag of textareas) {
-        expect(tag, label).toMatch(/data-kind="(live|inert)"/);
-      }
+      for (const tag of textareas) expect(tag, label).toMatch(/data-kind="(view|live|inert)"/);
       expect(html, label).not.toMatch(/\son[a-z]+=/i);
       // A focus stop outside a <button> would be an interactive element with no
       // control behind it; the tabs' roving `tabindex` sits on buttons. The one

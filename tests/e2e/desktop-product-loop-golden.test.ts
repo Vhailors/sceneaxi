@@ -21,6 +21,7 @@ import {
   type JsonValue,
 } from "@sceneaxi/schemas";
 import {
+  DESKTOP_INTERACTION_COMMANDS,
   DESKTOP_PRODUCT_REFUSALS,
   DESKTOP_VIEWPORT_PLAY_EVENT,
   createDesktopVisualState,
@@ -568,9 +569,11 @@ describe("desktop first-release product loop", () => {
       query(window, "[data-project-status]")?.textContent ?? "";
     expect(shell?.dataset.tier).toBe("narrow");
     expect(shell?.dataset.profile).toBe("game");
-    expect(window.document.querySelectorAll("button")).toHaveLength(102);
+    expect(window.document.querySelectorAll("button")).toHaveLength(
+      102 + (DESKTOP_INTERACTION_COMMANDS.length - 11) * 2 + 3,
+    );
     expect(window.document.querySelectorAll('button:not([tabindex="-1"])')).toHaveLength(
-      97,
+      97 + (DESKTOP_INTERACTION_COMMANDS.length - 11) * 2 + 3,
     );
 
     const refusalHelp = query(window, "#status-refusal-help");

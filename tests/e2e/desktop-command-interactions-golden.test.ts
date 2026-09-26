@@ -63,6 +63,9 @@ function engineResponse(
   if (action === "command") {
     const commandId = payload?.["commandId"];
     const input = payload?.["input"] as Record<string, unknown> | undefined;
+    if (commandId === "project-build") {
+      return { ok: false, reason: "PROJECT_BUILD_SIGNING_MISSING", message: "Linux signing is not configured." };
+    }
     const translated = commandId === "project-save" || commandId === "change-review-accept"
       ? { action: "authoring", payload: { op: "accept" } }
       : commandId === "change-review-reject"
@@ -451,6 +454,8 @@ function expectedEffect(command: DesktopInteractionCommand) {
       return { plane: "engine", action: "command", op: "edit-redo" } as const;
     case "run-play":
       return { plane: "engine", action: "command", op: "run-play" } as const;
+    default:
+      return { plane: "engine", action: "command", op: command.id } as const;
   }
 }
 
@@ -458,7 +463,7 @@ async function invoke(
   path: "menu" | "palette" | "shortcut",
   command: DesktopInteractionCommand,
 ) {
-  const { window, calls } = await harness();
+  const { window, calls, requests } = await harness();
   await prepare(command, window);
   calls.splice(0);
 
@@ -477,6 +482,17 @@ async function invoke(
   }
 
   expect(calls).toContainEqual(expectedEffect(command));
+  if (command.id === "project-build") {
+    expect(requests.find((request) => (request.payload as { commandId?: string }).commandId === command.id))
+      .toMatchObject({ payload: { input: { profile: "web", target: "linux" } } });
+    expect(element(window, "[data-outcome-code]").textContent).toBe("PROJECT_BUILD_SIGNING_MISSING");
+  }
+  if (command.id.startsWith("project-migration-") ||
+      command.id === "package-install" || command.id === "package-remove" ||
+      command.id === "workspace-layout-apply" || command.id === "extension-start" ||
+      command.id === "input-action-rebind" || command.id === "input-actions-reset") {
+    expect(element(window, "[data-outcome-code]").textContent).not.toBe("");
+  }
   if (command.id === "run-play") {
     expect(element(window, ".shell").dataset.mode).toBe("run");
     expect(element(window, "[data-project-status]").textContent).toContain(

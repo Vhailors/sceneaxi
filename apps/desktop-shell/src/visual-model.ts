@@ -1102,6 +1102,7 @@ export type DesktopVisualView = Readonly<{
   profiles: ReadonlyArray<DesktopProfileChip>;
   policy: OpenPathPolicyViewModel;
   dockTabs: ReadonlyArray<Readonly<{ id: DesktopDockTabId; label: string; active: boolean; badge: number; control: DesktopControl }>>;
+  timelineControls: Readonly<{ mutation: DesktopControl; apply: DesktopControl; time: DesktopControl; scrub: DesktopControl; evaluate: DesktopControl }>;
   assistant: DesktopAssistantView;
   changeReview: DesktopChangeReviewView;
   sculpt: DesktopSculptView;
@@ -1639,6 +1640,13 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
       ? "kids profile · refuse-only · separate origin"
       : `${state.profile} profile · core 0.0.0`,
 
+    timelineControls: Object.freeze({
+      mutation: control("timeline-mutation", "Animation mutation JSON", "view"),
+      apply: control("timeline-apply", "Stage animation edit", "live"),
+      time: control("timeline-time", "Time in milliseconds", "view"),
+      scrub: control("timeline-scrub", "Scrub animation", "live"),
+      evaluate: control("timeline-evaluate", "Evaluate animation", "live"),
+    }),
     controls: Object.freeze([...minted]),
   });
 }

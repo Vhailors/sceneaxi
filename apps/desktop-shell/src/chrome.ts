@@ -730,7 +730,7 @@ function dock(view: DesktopVisualView): string {
     assets: `<div class="asset-browser" data-project-assets><p class="panel-empty">No admitted project assets are present.</p></div>`,
     console: `<p class="panel-empty">No session is running, so there is no console output to show.</p>`,
     evidence: `<p class="panel-empty" data-rarity-evidence-empty>No accepted rarity evidence has been opened or staged in this session.</p><pre class="change-diff" data-rarity-evidence hidden tabindex="0" role="region" aria-label="Rarity evidence"></pre><p class="panel-empty">No evidence packet has been captured here. Evidence digests are produced by <code>sceneaxi project capture</code>, never invented by a viewer.</p>`,
-    timeline: `<p class="panel-empty">No clip is loaded, so the timeline has no tracks.</p>`,
+    timeline: `<label>${escapeHtml(view.timelineControls.mutation.label)} <textarea id="${escapeHtml(view.timelineControls.mutation.id)}" data-kind="${view.timelineControls.mutation.kind}"${view.timelineControls.mutation.kind === "inert" ? ` readonly aria-disabled="true" data-refusal="${escapeHtml(view.timelineControls.mutation.refusal ?? "")}"` : ""} data-timeline-mutation>{"kind":"clip-upsert","clipId":"idle","name":"Idle","startMs":0,"durationMs":1000}</textarea></label>${button(view.timelineControls.apply, view.timelineControls.apply.label, "ghost-button", ` data-action="timeline-apply"`)}<label>${escapeHtml(view.timelineControls.time.label)} <input id="${escapeHtml(view.timelineControls.time.id)}" data-kind="${view.timelineControls.time.kind}"${view.timelineControls.time.kind === "inert" ? ` readonly aria-disabled="true" data-refusal="${escapeHtml(view.timelineControls.time.refusal ?? "")}"` : ""} type="number" min="0" step="1" data-timeline-time value="0"></label>${button(view.timelineControls.scrub, view.timelineControls.scrub.label, "ghost-button", ` data-action="timeline-scrub"`)}${button(view.timelineControls.evaluate, view.timelineControls.evaluate.label, "ghost-button", ` data-action="timeline-evaluate"`)}<pre data-timeline-result aria-live="polite">Open Timeline to inspect clips, tracks, and keyframes.</pre>`,
   };
 
   const panels = DESKTOP_DOCK_TAB_IDS.map(
@@ -1063,7 +1063,7 @@ function overlays(view: DesktopVisualView): string {
 
   <div class="overlay" data-overlay="outcome" role="dialog" aria-modal="true" aria-labelledby="outcome-title" hidden>
     <div class="overlay-card overlay-refused">
-      <div class="overlay-head"><span class="overlay-mark mark-refuse" aria-hidden="true">!</span><h2 id="outcome-title" data-outcome-title></h2></div>
+      <div class="overlay-head"><span class="overlay-mark mark-refuse" data-outcome-mark aria-hidden="true">!</span><h2 id="outcome-title" data-outcome-title></h2></div>
       <p class="overlay-body"><code data-outcome-code></code><br><span data-outcome-message></span></p>
       <div class="overlay-actions">${dismissals("outcome")}</div>
     </div>
@@ -1490,6 +1490,7 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .overlay-head h2{margin:0;font-size:15px;font-weight:600}
 .overlay-mark{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;flex:none}
 .mark-refuse{background:${SIGNAL.refuseSurface};border:1px solid ${SIGNAL.refuseLine};color:var(--refuse)}
+.mark-complete{background:${SIGNAL.infoSurface};border:1px solid ${SIGNAL.infoLine};color:var(--info)}
 .overlay-body{margin:0;padding:15px 18px;font-size:12px;line-height:1.6;color:var(--text-2)}
 .overlay-actions{display:flex;gap:9px;justify-content:flex-end;padding:13px 18px;background:var(--well);border-top:1px solid var(--line)}
 .overlay-actions .primary-button,.overlay-actions .ghost-button{height:31px;padding:0 14px;font-size:12px}
@@ -1705,6 +1706,7 @@ if (shell) {
 
   let projectData = null;
   let projectContentHash = null;
+  let projectContentRoot = null;
   let projectDirty = false;
   let projectRecovering = false;
   let recoveryStatusText = null;
@@ -2914,6 +2916,7 @@ if (shell) {
     }
     projectData = status.data;
     projectContentHash = status.contentHash;
+    projectContentRoot = activeProject?.root ?? null;
     reconcileRarityEvidence(status);
     if (rarityEvidenceText(restartedRarityEvidence) !== null) {
       const acceptedDigest = status.acceptedRarityEvidence &&
@@ -2989,6 +2992,7 @@ if (shell) {
     }
     projectData = status.data;
     projectContentHash = status.contentHash;
+    projectContentRoot = activeProject?.root ?? null;
     reconcileRarityEvidence(status);
     await syncSceneHierarchy(hierarchyReviewRedacted);
     undoAvailability = status.undoAvailability === 'available' || status.undoAvailability === 'recovery-pending'
@@ -3014,6 +3018,7 @@ if (shell) {
       reviewProjection(authoringSnapshot) === null;
     projectData = status.data;
     projectContentHash = status.contentHash;
+    projectContentRoot = activeProject?.root ?? null;
     reconcileRarityEvidence(status);
     projectDirty = false;
     projectRecovering = false;
@@ -3405,6 +3410,7 @@ if (shell) {
       // proposal is spent, so the review panel goes with it while the panel
       // keeps showing the value the next Play will mount.
       await syncSceneHierarchy();
+      if (shell.querySelector('[data-dock-panel="timeline"]')?.hidden === false) await refreshTimeline();
       productStatus('saved', withSceneRefusal(T.product.documentPath + ' · saved'));
       return true;
     }
@@ -3906,6 +3912,7 @@ if (shell) {
       el.tabIndex = on ? 0 : -1;
     });
     q('[data-dock-panel]').forEach((el) => { el.hidden = el.dataset.dockPanel !== id; });
+    if (id === 'timeline') void productAction(refreshTimeline);
   };
 
   // Roving tabindex takes the non-active tabs out of the Tab order, so the arrow
@@ -3990,6 +3997,12 @@ if (shell) {
   };
 
   const showOutcome = (title, code, message) => {
+    q('[data-outcome-mark]').forEach((el) => {
+      const complete = code === 'COMMAND_COMPLETED';
+      el.classList.toggle('mark-complete', complete);
+      el.classList.toggle('mark-refuse', !complete);
+      el.textContent = complete ? '✓' : '!';
+    });
     q('[data-outcome-title]').forEach((el) => { el.textContent = String(title); });
     q('[data-outcome-code]').forEach((el) => { el.textContent = String(code); });
     q('[data-outcome-message]').forEach((el) => { el.textContent = String(message); });
@@ -4179,6 +4192,96 @@ if (shell) {
     }
   });
 
+  const runEditorCommand = async (commandId) => {
+    const input = commandId === 'package-inspect' || commandId === 'profile-inspect'
+      ? { documentPath: T.product.documentPath, profile: shell.dataset.profile }
+      : commandId === 'extension-inspect'
+        ? { profile: shell.dataset.profile }
+        : commandId === 'project-build'
+          ? { profile: shell.dataset.profile, target: 'linux' }
+          : {};
+    const response = await commandRequest(commandId, input);
+    const diagnostic = responseDiagnostic(response);
+    if (diagnostic !== null) {
+      showOutcome(commandId + ' refused', diagnostic.code, diagnostic.message);
+      productStatus('refused', commandId + ' refused · ' + diagnostic.code);
+      return;
+    }
+    const output = JSON.stringify(response.data, null, 2);
+    showOutcome(commandId, 'COMMAND_COMPLETED', output);
+    productStatus('open', commandId + ' completed');
+  };
+
+  const refreshTimeline = async () => {
+    if (activeProject === null && !(await openProject())) return;
+    const response = await commandRequest('animation-inspect', {
+      documentPath: T.product.documentPath,
+      profile: shell.dataset.profile,
+    });
+    const diagnostic = responseDiagnostic(response);
+    const output = diagnostic === null ? JSON.stringify(response.data, null, 2)
+      : diagnostic.code + ' · ' + diagnostic.message;
+    q('[data-timeline-result]').forEach((el) => { el.textContent = output; });
+    if (diagnostic !== null) productStatus('refused', 'Timeline inspection refused · ' + diagnostic.code);
+  };
+
+  const applyTimelineMutation = async () => {
+    if (activeProject === null && !(await openProject())) return;
+    let mutation;
+    try { mutation = JSON.parse(shell.querySelector('[data-timeline-mutation]')?.value || ''); }
+    catch { productStatus('refused', 'Animation edit refused · invalid JSON'); return; }
+    const result = await stageSceneCommand('animation-apply', {
+      documentPath: T.product.documentPath,
+      expectedContentHash: projectContentHash,
+      mutation,
+    }, 'animation');
+    if (result) q('[data-timeline-result]').forEach((el) => {
+      el.textContent = 'Animation edit staged in Change Review. Save applies the proposal.';
+    });
+  };
+
+  const openTimelineVersion = async () => {
+    if (projectRecovering || projectDirty) {
+      const code = projectRecovering ? T.product.refusals.recoveryPending : T.product.refusals.profileSwitchDirty;
+      productStatus('refused', 'Timeline evaluation refused · ' + code);
+      return false;
+    }
+    return projectData !== null && projectContentHash !== null &&
+      projectContentRoot === (activeProject?.root ?? null) ? true : openProject();
+  };
+
+  const scrubTimeline = async () => {
+    if (!(await openTimelineVersion())) return;
+    const timeMs = Number(shell.querySelector('[data-timeline-time]')?.value);
+    const response = await commandRequest('animation-scrub', {
+      documentPath: T.product.documentPath,
+      expectedContentHash: projectContentHash,
+      profile: shell.dataset.profile,
+      timeMs,
+    });
+    const diagnostic = responseDiagnostic(response);
+    q('[data-timeline-result]').forEach((el) => {
+      el.textContent = diagnostic === null ? JSON.stringify(response.data, null, 2)
+        : diagnostic.code + ' · ' + diagnostic.message;
+    });
+  };
+
+  const evaluateTimeline = async () => {
+    if (!(await openTimelineVersion())) return;
+    const timeMs = Number(shell.querySelector('[data-timeline-time]')?.value);
+    const response = await commandRequest('animation-evaluate', {
+      documentPath: T.product.documentPath,
+      expectedContentHash: projectContentHash,
+      profile: shell.dataset.profile,
+      timeMs,
+    });
+    const diagnostic = responseDiagnostic(response);
+    q('[data-timeline-result]').forEach((el) => {
+      el.textContent = diagnostic === null ? JSON.stringify(response.data, null, 2)
+        : diagnostic.code + ' · ' + diagnostic.message;
+    });
+  };
+
   const commandHandlers = Object.freeze({
     'project-new': () => chooseProject('choose-new'),
     'project-open': () => chooseProject('choose-open'),
@@ -4197,6 +4300,13 @@ if (shell) {
     'environment-inspect': () => inspectCatalog('environment', 'environment-inspect'),
     'material-inspect': () => inspectCatalog('material', 'material-inspect'),
     'effect-inspect': () => inspectCatalog('effect', 'effect-inspect'),
+    ...Object.fromEntries([
+      'package-inspect', 'package-install', 'package-remove',
+      'workspace-layout-inspect', 'workspace-layout-apply', 'workspace-layout-reset',
+      'project-migration-propose', 'project-migration-commit', 'project-migration-recover',
+      'project-build', 'extension-inspect', 'extension-start', 'profile-inspect',
+      'project-inspect', 'input-action-rebind', 'input-actions-reset',
+    ].map((id) => [id, () => runEditorCommand(id)])),
   });
 
   const executeCommand = (id) => {
@@ -4299,6 +4409,9 @@ if (shell) {
     else if (action === 'web-inject-asset') void productAction(stageAssetImport);
     else if (action === 'mode' && value) showModePanels(value);
     else if (action === 'dock-tab' && value) selectDockTab(value);
+    else if (action === 'timeline-apply') void productAction(applyTimelineMutation);
+    else if (action === 'timeline-scrub') void productAction(scrubTimeline);
+    else if (action === 'timeline-evaluate') void productAction(evaluateTimeline);
     else if (action === 'overlay') setOverlay(value || 'none');
     else if (action === 'refusal-help') {
       const panel = shell.querySelector('#refusal-legend');
