@@ -2,6 +2,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { NextConfig } from "next";
 import pageExtensions from "./page-extensions.json";
+import securityPolicy from "./security-headers.json";
 
 /**
  * SceneAxi packages export TypeScript source (`"." : "./src/index.ts"`) and, per the
@@ -53,6 +54,14 @@ const nextConfig: NextConfig = {
     ],
   },
   reactStrictMode: true,
+  // Baseline response headers for every route. The CSP is deliberately narrow — it
+  // forbids framing, `<base>` rewriting, and plugins without restricting scripts or
+  // form targets, because the hosted checkout is a form POST that redirects to the
+  // payment provider and Next emits inline bootstrap scripts.
+  poweredByHeader: false,
+  async headers() {
+    return [{ source: "/:path*", headers: securityPolicy.headers }];
+  },
   turbopack: {
     resolveExtensions: [".ts", ".tsx", ".mjs", ".js", ".jsx", ".json"],
   },

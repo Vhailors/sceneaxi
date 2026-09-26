@@ -29,3 +29,31 @@ jobs:
         working-directory: sites/umbrella
       - run: pnpm typecheck
         working-directory: sites/umbrella
+
+  # `pnpm gate` type-checks each site's `src/index.ts` and `src/lib/**`, but nothing in it
+  # runs a site's own production Next build, so a bundling or trace regression would first
+  # surface on the Vercel builder. Each site is its own install root (ADR 0018); its
+  # `postbuild` runs the same Vercel packaging check the deployment runs.
+  sites-build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        site: [umbrella, catalog-game, catalog-web]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            sites/${{ matrix.site }}/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile
+        working-directory: sites/${{ matrix.site }}
+      - run: pnpm typecheck
+        working-directory: sites/${{ matrix.site }}
+      - run: pnpm build
+        working-directory: sites/${{ matrix.site }}

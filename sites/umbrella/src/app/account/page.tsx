@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import {
   SITE_STARTER_CREDIT_ALLOTMENT,
   describeSiteAccessState,
@@ -11,6 +12,12 @@ import {
 } from "../../lib/request-authority.js";
 import { CREDIT_LEDGER_FACTS, CREDIT_LEDGER_COPY } from "../../lib/site-content.js";
 import { StatePanel } from "../_components/state-panel.js";
+
+/** Signed-in surface: never indexed, whatever a crawler is told elsewhere. */
+export const metadata: Metadata = {
+  title: "Account — SceneAxi",
+  robots: { index: false, follow: false },
+};
 
 /**
  * The account surface: anonymous, authenticated, or refused.

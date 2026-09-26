@@ -830,6 +830,9 @@ describe("the visual layer adds no behaviour the site did not already have", () 
       "src/app/editor/_components/editor-shell.tsx",
       "src/app/editor/_components/editor-viewport.tsx",
       "src/app/open/_components/live-viewport.tsx",
+      // Next requires the route error boundary to be a client component; it imports
+      // nothing and renders only a link (`tests/sites/site-response-hardening.test.ts`).
+      "src/app/error.tsx",
     ].sort());
   });
 

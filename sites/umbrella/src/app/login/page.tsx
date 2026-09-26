@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import {
   describeSiteAccessState,
   readEditorPreviewFlag,
@@ -15,6 +16,12 @@ import {
 } from "../../lib/login-flow.js";
 import { readSessionToken } from "../_session.js";
 import { StatePanel } from "../_components/state-panel.js";
+
+/** Signed-in surface: never indexed, whatever a crawler is told elsewhere. */
+export const metadata: Metadata = {
+  title: "Sign in — SceneAxi",
+  robots: { index: false, follow: false },
+};
 
 /**
  * The hosted sign-in surface (sceneaxi#185).

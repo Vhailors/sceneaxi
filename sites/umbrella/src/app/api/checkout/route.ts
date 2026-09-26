@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SITE_REFUSALS, resolveCheckoutRedirectOrigin } from "@sceneaxi/site-kit";
+import { verifyLoginRequestOrigin } from "../../../lib/login-flow.js";
 import { umbrellaRequestAuthority } from "../../../lib/request-authority.js";
-import { readSessionToken } from "../../_session.js";
+import { readSessionToken, readSiteMutationRequestSignals } from "../../_session.js";
 
 /**
  * Credit-pack checkout — the request-bound path that reaches `SiteBillingPort`.
@@ -19,11 +20,22 @@ import { readSessionToken } from "../../_session.js";
  */
 export const dynamic = "force-dynamic";
 
-function refusalResponse(reason: string, message: string): Response {
-  return NextResponse.json({ ok: false, reason, message }, { status: 402 });
+function refusalResponse(reason: string, message: string, status = 402): Response {
+  return NextResponse.json({ ok: false, reason, message }, { status });
 }
 
 export async function POST(request: NextRequest) {
+  // The same same-origin form proof login, logout, and catalog intake require.
+  // `SameSite=Lax` still sends the session cookie on a cross-site top-level POST, so
+  // without it another site could start a checkout under a signed-in buyer's session.
+  const requestOrigin = verifyLoginRequestOrigin(
+    process.env,
+    readSiteMutationRequestSignals(request).formOrigin,
+  );
+  if (!requestOrigin.ok) {
+    return refusalResponse(requestOrigin.reason, requestOrigin.message, 403);
+  }
+
   const form = await request.formData();
   const packIdEntry = form.get("packId");
   const packId = typeof packIdEntry === "string" ? packIdEntry.trim() : "";

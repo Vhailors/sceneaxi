@@ -661,6 +661,13 @@ close-out verifies the existing schema through the authorized database path; it 
 rerun that migration or wait for fresh `neonctl` OAuth. This adds no secret value or
 production-success claim to the repository.
 
+A later name-and-status-only observation (2026-09-26, no credential used) supersedes the
+`/login` finding above: production `/login` returns `200`, and a sign-in POST with an
+unknown address redirects to `/login?reason=LOGIN_CREDENTIALS_REJECTED`, so the deployed
+build includes the hosted-login route and reaches a configured provider. `/editor` still
+renders the preview-flag notice, so `SCENEAXI_SITE_EDITOR_PREVIEW` remains set. This is
+a dated external observation, not a gate-produced or production-success claim.
+
 `SCENEAXI_ADMIN_EMAIL` remains the only source of the `admin` role. Its value is
 captain-held deployment configuration and is not documented here. Neither its presence nor
 the bootstrap-secret name grants anything on its own: a session must be authenticated by
