@@ -203,6 +203,13 @@ into Better Auth's provider account table from the two captain-owned bootstrap i
 It creates no SceneAxi role: `@sceneaxi/auth` still derives the sole admin only after the
 provider authenticated a verified matching address and the SceneAxi store accepted it.
 
+### PostgreSQL adapter integration check
+
+From `sites/umbrella`, run `pnpm test:integration`. It applies all ordered files in
+`db/migrations/` to an in-process PGlite database and exercises the Neon store adapters
+against PostgreSQL conflict, transaction, trigger, and constraint behavior. This requires
+no Neon URL or network. CI runs it beside `pnpm test:provider` after the hermetic gate.
+
 ### Stripe
 
 **Test mode only.** Going live is a separate captain decision: the billing port refuses

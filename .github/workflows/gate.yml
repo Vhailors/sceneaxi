@@ -27,6 +27,8 @@ jobs:
         working-directory: sites/umbrella
       - run: pnpm test:provider
         working-directory: sites/umbrella
+      - run: pnpm test:integration
+        working-directory: sites/umbrella
       - run: pnpm typecheck
         working-directory: sites/umbrella
 

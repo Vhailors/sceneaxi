@@ -309,11 +309,15 @@ names them cannot sit in the set the gate compiles without those packages. `src/
 therefore stays pure TypeScript, and this directory is type-checked here, by this root's
 own `pnpm typecheck`.
 
-Its contract and integration proof is `test/better-auth-provider.test.ts`, run from this
-install root with `pnpm test:provider` over real Better Auth and an in-memory provider
-database — no network and no credential. The hermetic `pnpm gate` cannot run it, because
-both provider SDKs resolve only here, so CI installs this root and runs `pnpm
-test:provider` and `pnpm typecheck` after the gate.
+Its contract proof is `test/better-auth-provider.test.ts`, run from this install root
+with `pnpm test:provider` over real Better Auth and an in-memory provider database — no
+network and no credential. The Neon adapter integration proof is
+`test/provider-adapters.integration.test.ts`; `pnpm test:integration` applies every
+`db/migrations/*.sql` file in order to PGlite and exercises the adapters against real
+PostgreSQL semantics without a network or credential. The hermetic `pnpm gate` cannot
+run these site-owned tests, because their provider dependencies resolve only here, so CI
+installs this root and runs `pnpm test:provider`, `pnpm test:integration`, and
+`pnpm typecheck` after the gate.
 
 Three deployment properties of that provider are decided in code rather than left to a
 default. First-run provisioning gates `sign-in/email` alone and refuses a persisted

@@ -396,9 +396,9 @@
       "severity": "high",
       "title": "Neon adapters have only been tested against a mock",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 2,
-      "thread": null,
+      "thread": "thr_seiqqpbhzj",
       "commit": null
     },
     {
