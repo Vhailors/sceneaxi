@@ -96,4 +96,54 @@ describe("database migration runner process", () => {
       rmSync(directory, { recursive: true, force: true });
     }
   });
+  it("refuses a migration that manages its own transaction and keeps the password out of argv", () => {
+    const directory = mkdtempSync(join(tmpdir(), "sceneaxi-migration-guards-"));
+    try {
+      mkdirSync(join(directory, "db/migrations"), { recursive: true });
+      writeFileSync(join(directory, "db/migrations/0000_tracking.sql"), "CREATE TABLE schema_migrations (id text);");
+      // A PL/pgSQL body's BEGIN/END is not a transaction statement and must still load.
+      writeFileSync(
+        join(directory, "db/migrations/0001_function.sql"),
+        "CREATE FUNCTION f() RETURNS trigger LANGUAGE plpgsql AS $$\nBEGIN\n  RETURN NEW;\nEND;\n$$;",
+      );
+      const script = join(directory, "guards.mjs");
+      writeFileSync(script, `import { loadMigrations, psqlConnectionEnv } from ${JSON.stringify(runner.href)};
+const dir = ${JSON.stringify(join(directory, "db/migrations"))};
+const ok = (await loadMigrations(dir)).map((m) => m.id);
+let refusal = "";
+const { writeFileSync } = await import("node:fs");
+writeFileSync(dir + "/0002_own_tx.sql", ["BEGIN;", "CREATE TABLE t (id int);", "COMMIT;"].join(String.fromCharCode(10)));
+try { await loadMigrations(dir); } catch (error) { refusal = error.message; }
+const repo = (await loadMigrations()).map((m) => m.id);
+const env = psqlConnectionEnv("postgresql://owner:s%40cret@ep-x.example.tech:5433/neondb?sslmode=require");
+console.log(JSON.stringify({ ok, refusal, repo, env }));`);
+      const run = spawnSync(process.execPath, [script], { encoding: "utf8" });
+      expect(run.status).toBe(0);
+      const result = JSON.parse(run.stdout) as {
+        ok: string[];
+        refusal: string;
+        repo: string[];
+        env: Record<string, string>;
+      };
+      expect(result.ok).toEqual(["0000_tracking", "0001_function"]);
+      expect(result.refusal).toBe("migration manages its own transaction: 0002_own_tx.sql");
+      // Every committed migration loads: none opens its own transaction.
+      expect(result.repo[0]).toBe("0000_schema_migrations");
+      expect(result.repo.length).toBeGreaterThanOrEqual(8);
+      expect(result.env).toEqual({
+        PGHOST: "ep-x.example.tech",
+        PGUSER: "owner",
+        PGPASSWORD: "s@cret",
+        PGDATABASE: "neondb",
+        PGPORT: "5433",
+        PGSSLMODE: "require",
+      });
+      const source = readFileSync(runner, "utf8");
+      // The URL is handed to psql through libpq variables, never as an argument.
+      expect(source).not.toMatch(/spawnSync\("psql", \[databaseUrl/);
+      expect(source).toContain("pg_advisory_xact_lock(${MIGRATION_LOCK_KEY})");
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
 });

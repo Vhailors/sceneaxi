@@ -78,7 +78,9 @@ plane and a bad row.
 `.env.example` lists the name and nothing else. Applying these migrations against a live
 Neon branch requires the production-activation authorization and operator preflight;
 the runner does not grant authority. `pnpm gate` never invokes the runner or touches a
-database. ### Adopt a manually applied schema
+database.
+
+### Adopt a manually applied schema
 
 Only under the production-activation runbook's explicit authorization, and only after an
 operator has independently verified that the database already contains every listed

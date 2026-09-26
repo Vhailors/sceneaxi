@@ -1,5 +1,4 @@
 -- Provider evidence awaiting an operator decision. This table moves no credits.
-BEGIN;
 
 CREATE TABLE IF NOT EXISTS credit_reconciliation_records (
   event_id text NOT NULL CHECK (length(event_id) > 0),
@@ -35,5 +34,3 @@ DROP TRIGGER IF EXISTS credit_reconciliation_records_append_only_trigger ON cred
 CREATE TRIGGER credit_reconciliation_records_append_only_trigger
   BEFORE UPDATE OR DELETE ON credit_reconciliation_records
   FOR EACH ROW EXECUTE FUNCTION credit_ledger_entries_append_only();
-
-COMMIT;

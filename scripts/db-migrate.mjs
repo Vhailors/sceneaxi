@@ -9,6 +9,30 @@ import { spawnSync } from "node:child_process";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const migrationDir = resolve(root, "db/migrations");
 const idPattern = /^(\d{4})_[a-z0-9_]+\.sql$/;
+const TOP_LEVEL_TRANSACTION = /^\s*(?:BEGIN|START\s+TRANSACTION|COMMIT|ROLLBACK)\s*;/im;
+/** Serializes concurrent runs against one database; held for each migration's transaction. */
+const MIGRATION_LOCK_KEY = 70_227_001;
+
+/**
+ * libpq connection variables for a postgres:// URL, so the password never appears in the
+ * psql argument vector (visible to any local user through `ps`).
+ */
+export function psqlConnectionEnv(databaseUrl) {
+  const url = new URL(databaseUrl);
+  if (url.protocol !== "postgres:" && url.protocol !== "postgresql:") throw new Error("DATABASE_URL must be a postgres:// URL");
+  const env = {
+    PGHOST: decodeURIComponent(url.hostname),
+    PGUSER: decodeURIComponent(url.username),
+    PGPASSWORD: decodeURIComponent(url.password),
+    PGDATABASE: decodeURIComponent(url.pathname.replace(/^\//, "")),
+  };
+  if (url.port) env.PGPORT = url.port;
+  const sslmode = url.searchParams.get("sslmode");
+  if (sslmode) env.PGSSLMODE = sslmode;
+  const channelBinding = url.searchParams.get("channel_binding");
+  if (channelBinding) env.PGCHANNELBINDING = channelBinding;
+  return Object.fromEntries(Object.entries(env).filter(([, value]) => value !== ""));
+}
 
 export async function loadMigrations(directory = migrationDir) {
   const names = (await readdir(directory)).filter((name) => name.endsWith(".sql")).sort();
@@ -16,7 +40,11 @@ export async function loadMigrations(directory = migrationDir) {
   for (const name of names) {
     const match = idPattern.exec(name);
     if (!match) throw new Error(`invalid migration filename: ${name}`);
-    migrations.push({ id: name.slice(0, -4), number: Number(match[1]), sql: await readFile(resolve(directory, name), "utf8") });
+    const sql = await readFile(resolve(directory, name), "utf8");
+    // The runner owns the transaction: a file that opens or ends its own would commit its
+    // schema before the tracking row is written, so a failure leaves it applied but unrecorded.
+    if (TOP_LEVEL_TRANSACTION.test(sql)) throw new Error(`migration manages its own transaction: ${name}`);
+    migrations.push({ id: name.slice(0, -4), number: Number(match[1]), sql });
   }
   for (let index = 0; index < migrations.length; index += 1) {
     if (migrations[index].number !== index) throw new Error(`migration gap or out-of-order id at ${migrations[index].id}`);
@@ -59,8 +87,12 @@ export async function migrate({ executor, migrations, dryRun = false, status = f
 }
 
 function psqlExecutor(databaseUrl) {
+  const connection = psqlConnectionEnv(databaseUrl);
   const run = (sql) => {
-    const result = spawnSync("psql", [databaseUrl, "-X", "-q", "-A", "-t", "-v", "ON_ERROR_STOP=1", "-c", sql], { encoding: "utf8" });
+    const result = spawnSync("psql", ["-X", "-q", "-A", "-t", "-v", "ON_ERROR_STOP=1", "-c", sql], {
+      encoding: "utf8",
+      env: { ...process.env, ...connection },
+    });
     if (result.status !== 0) throw new Error(result.stderr.trim() || "psql failed");
     return result.stdout.trim();
   };
@@ -80,7 +112,7 @@ function psqlExecutor(databaseUrl) {
     async transaction(work) {
       const statements = [];
       await work({ execute: async (sql) => statements.push(sql), record: async (id, sha256) => statements.push(`INSERT INTO schema_migrations (id, sha256) VALUES ('${id}', '${sha256}')`) });
-      run(`BEGIN;\n${statements.join(";\n")};\nCOMMIT`);
+      run(`BEGIN;\nSELECT pg_advisory_xact_lock(${MIGRATION_LOCK_KEY});\n${statements.join(";\n")};\nCOMMIT`);
     },
   };
 }
