@@ -60,6 +60,16 @@ export {
 } from "./store.js";
 
 export {
+  adjustSupportLedger,
+  readSupportLedger,
+  requireLedgerSupportAdmin,
+  type LedgerAdjustmentFields,
+  type LedgerSupportAccess,
+  type LedgerSupportStore,
+  type LedgerSupportTarget,
+} from "./support-ledger.js";
+
+export {
   METERING_IDEMPOTENCY_PREFIX,
   meterCredits,
   meteringIdempotencyKey,

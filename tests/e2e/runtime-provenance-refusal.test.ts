@@ -27,6 +27,7 @@ import {
   ADMIN_EMAIL_ENV_VAR,
   AUTH_REFUSE_REASONS,
   createRoleGuards,
+  createInMemoryIdentityStore,
   digestSessionToken,
   hasAdminIdentityProvenance,
   hasPrincipalProvenance,
@@ -40,6 +41,8 @@ import {
   CHECKOUT_METADATA_KEYS,
   applyCheckoutCompletedGrant,
   applyCreditPackRefund,
+  adjustSupportLedger,
+  readSupportLedger,
   createInMemoryCreditStore,
   createLedgerState,
   hasVerifiedCompletionProvenance,
@@ -453,6 +456,65 @@ describe("principal provenance", () => {
         AUTH_REFUSE_REASONS.principalUnproven,
       );
     }
+  });
+});
+
+describe("ledger support principal provenance", () => {
+  it("refuses copied authority before persistence while genuine support can append once", async () => {
+    const issued = captainPrincipal();
+    const admin = resolvedAdmin();
+    const backing = createInMemoryCreditStore({ accounts: [ACCOUNT] });
+    const users = createInMemoryIdentityStore({ users: [issued.user] });
+    const reads: string[] = [];
+
+    const credits = {
+      ...backing,
+      findAccountByUserId(id: string) {
+        reads.push("account");
+
+        return backing.findAccountByUserId(id);
+      },
+    };
+
+    const support = {
+      users: {
+        findUserById(id: string) {
+          reads.push("user");
+
+          return users.findUserById(id);
+        },
+        findUserByEmail(email: string) {
+          reads.push("email");
+
+          return users.findUserByEmail(email);
+        },
+      },
+      async listCheckoutIntents() {
+        reads.push("intents");
+
+        return [];
+      },
+    };
+
+    const access = { principal: issued, admin, surface: "web-shell" as const, now: NOW, credits };
+    const target = { kind: "userId" as const, value: ACCOUNT.userId };
+    const fields = { userId: ACCOUNT.userId, delta: "4", reason: "Witnessed support", idempotencyKey: "support-provenance" };
+
+    for (const [how, impostor] of copiesOf(issued)) {
+      expect(await readSupportLedger({ ...access, principal: impostor, support, target }), how).toMatchObject({ ok: false, reason: AUTH_REFUSE_REASONS.principalUnproven });
+      expect(await adjustSupportLedger({ ...access, principal: impostor, fields }), how).toMatchObject({ ok: false, reason: AUTH_REFUSE_REASONS.principalUnproven });
+    }
+
+    for (const [how, impostor] of copiesOf(admin)) {
+      expect(await readSupportLedger({ ...access, admin: impostor, support, target }), how).toMatchObject({ ok: false, reason: AUTH_REFUSE_REASONS.adminIdentityUnproven });
+      expect(await adjustSupportLedger({ ...access, admin: impostor, fields }), how).toMatchObject({ ok: false, reason: AUTH_REFUSE_REASONS.adminIdentityUnproven });
+    }
+
+    expect(reads).toEqual([]);
+    expect(await readSupportLedger({ ...access, support, target })).toMatchObject({ ok: true, value: { state: { balance: 0, entries: [] } } });
+    expect(await adjustSupportLedger({ ...access, fields })).toMatchObject({ ok: true, value: { replayed: false, entry: { delta: 4 } } });
+    expect(await adjustSupportLedger({ ...access, fields })).toMatchObject({ ok: true, value: { replayed: true } });
+    expect(backing.entryCount(ACCOUNT.accountId)).toBe(1);
   });
 });
 

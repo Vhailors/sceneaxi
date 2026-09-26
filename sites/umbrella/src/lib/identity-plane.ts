@@ -49,6 +49,7 @@ import {
   type SiteIdentityAdapter,
   type SiteIdentityPort,
   type SiteIdentityRequest,
+  type SiteFormOriginSignals,
   type SiteLoginAdapter,
   type SiteLoginGrant,
   type SiteLoginPort,
@@ -70,6 +71,12 @@ import {
   BILLING_REFUSE_REASONS,
   STARTER_IDEMPOTENCY_PREFIX,
   createCheckoutSessionIntent,
+  adjustSupportLedger,
+  readSupportLedger,
+  requireLedgerSupportAdmin,
+  type LedgerAdjustmentFields,
+  type LedgerSupportStore,
+  type LedgerSupportTarget,
   grantStarterCredits,
   loadCreditPackCatalog,
   loadLedgerState,
@@ -101,6 +108,7 @@ import {
   type NeonDatabase,
   type ProviderSessionRevoker,
 } from "./provider-adapters.js";
+import { verifyLoginRequestOrigin } from "./login-flow.js";
 
 /**
  * Contract shapes reached through the two plane packages rather than imported from
@@ -296,6 +304,21 @@ export function siteReasonForBillingReason(
   }
 }
 
+function siteReasonForSupportReason(reason: BillingRefuseReason): SiteRefusalReason {
+  switch (reason) {
+    case AUTH_REFUSE_REASONS.roleNotPermitted:
+      return "ADMIN_ROLE_REQUIRED";
+    case BILLING_REFUSE_REASONS.supportTargetNotFound:
+    case BILLING_REFUSE_REASONS.balanceInsufficient:
+    case BILLING_REFUSE_REASONS.idempotencyConflict:
+      return reason;
+    case BILLING_REFUSE_REASONS.requestInvalid:
+      return "SITE_REQUEST_MALFORMED";
+    default:
+      return siteReasonForBillingReason(reason, "credits");
+  }
+}
+
 // --- principal projection ----------------------------------------------------
 
 /**
@@ -425,6 +448,8 @@ export type UmbrellaPlaneHandles = {
   /** Provider revocation is separate from the auth port's local session deletion. */
   readonly providerSessions?: ProviderSessionRevoker | undefined;
   readonly creditStore?: CreditStore | undefined;
+  readonly supportStore?: LedgerSupportStore | undefined;
+  readonly verifyFormOrigin?: ((signals: Omit<SiteFormOriginSignals, "configuredOrigin">) => SiteResult<string>) | undefined;
   readonly checkoutSessions?: CheckoutSessionAdapter | undefined;
   readonly checkoutEvidence?: CheckoutEvidencePort | undefined;
   /** Secret-holding webhook effect. The route can supply only request evidence. */
@@ -506,6 +531,7 @@ export function createDeploymentPlaneHandles(
         ? undefined
         : Object.freeze({ revokeSession: betterAuth.revokeSession.bind(betterAuth) }),
     creditStore,
+    supportStore: Object.freeze({ users: identityStore, listCheckoutIntents: intentStore.listByUserId }),
     checkoutSessions,
     checkoutEvidence,
   });
@@ -582,7 +608,13 @@ function buildUmbrellaPlaneHandles(
           evidence: base.checkoutEvidence,
           clock: base.clock,
         });
-  return Object.freeze({ ...base, creditWebhook });
+
+  return Object.freeze({
+    ...base,
+    creditWebhook,
+    verifyFormOrigin: (signals: Omit<SiteFormOriginSignals, "configuredOrigin">) =>
+      verifyLoginRequestOrigin(env, signals),
+  });
 }
 
 let deploymentHandles: UmbrellaPlaneHandles | undefined;
@@ -592,7 +624,7 @@ let deploymentHandles: UmbrellaPlaneHandles | undefined;
  * secret from its caller: the server resolves and holds those exactly once here.
  */
 export function umbrellaPlaneHandles(): UmbrellaPlaneHandles {
-  deploymentHandles ??= buildUmbrellaPlaneHandles(process.env);
+  deploymentHandles ??= buildUmbrellaPlaneHandles(Object.freeze({ ...process.env }));
   return deploymentHandles;
 }
 
@@ -605,6 +637,7 @@ export type IdentityPlaneWiring = IdentityPlaneAdapters & {
   readonly identityPort?: IdentityPort | undefined;
   /** The credit store from `@sceneaxi/billing`; the ledger is the only balance source. */
   readonly creditStore?: CreditStore | undefined;
+  readonly supportStore?: LedgerSupportStore | undefined;
   /** The provider round-trip that hosts a checkout. */
   readonly checkoutSessions?: CheckoutSessionAdapter | undefined;
   /** The pack catalog. Defaults to the committed contract fixture. */
@@ -619,7 +652,24 @@ export type IdentityPlaneWiring = IdentityPlaneAdapters & {
   readonly clock?: (() => number) | undefined;
 };
 
+export type LedgerSupportView = Extract<Awaited<ReturnType<typeof readSupportLedger>>, { ok: true }>["value"];
+
+export type LedgerSupportAdjustment = Extract<Awaited<ReturnType<typeof adjustSupportLedger>>, { ok: true }>["value"];
+
+export type UmbrellaLedgerSupport = Readonly<{
+  lookup(input: {
+    readonly surface: SiteIdentityRequest["surface"];
+    readonly target: LedgerSupportTarget | null;
+  }): Promise<SiteResult<LedgerSupportView | null>>;
+  adjust(input: {
+    readonly surface: SiteIdentityRequest["surface"];
+    readonly requestOrigin: SiteResult<string>;
+    readonly fields: LedgerAdjustmentFields;
+  }): Promise<SiteResult<LedgerSupportAdjustment>>;
+}>;
+
 export type UmbrellaIdentityPlane = {
+  readonly ledgerSupport: UmbrellaLedgerSupport;
   readonly identity: SiteIdentityPort;
   readonly credits: SiteCreditsPort;
   readonly billing: SiteBillingPort;
@@ -1052,6 +1102,55 @@ export function createUmbrellaIdentityPlane(
     return ok(null);
   };
 
+  const supportAccess = async (surface: SiteIdentityRequest["surface"]) => {
+    if (surface === "kids") return refuse("KIDS_SURFACE_DENIED");
+    const port = identityPort();
+
+    if (port === undefined || admin === null) return refuse("IDENTITY_PLANE_NOT_WIRED");
+    const verified = await verifyCarriedSession({ port, surface, sessionToken: wiring.sessionToken });
+
+    if (!verified.ok) return verified;
+
+    if (verified.value === null) return refuse("IDENTITY_SESSION_ABSENT");
+
+    const access = { principal: verified.value, admin, surface, now: clock() };
+    const guarded = requireLedgerSupportAdmin(access);
+
+    if (!guarded.ok) return refuse(siteReasonForSupportReason(guarded.reason));
+
+    return ok(access);
+  };
+
+  const ledgerSupport: UmbrellaLedgerSupport = Object.freeze({
+    async lookup(input) {
+      const access = await supportAccess(input.surface);
+
+      if (!access.ok) return access;
+
+      if (input.target === null) return ok(null);
+
+      const credits = wiring.creditStore ?? deploymentHandle("creditStore");
+      const support = wiring.supportStore ?? deploymentHandle("supportStore");
+
+      if (credits === undefined || support === undefined) return refuse("CREDITS_PLANE_NOT_WIRED");
+      const result = await readSupportLedger({ ...access.value, credits, support, target: input.target });
+
+      return result.ok ? ok(result.value) : refuse(siteReasonForSupportReason(result.reason));
+    },
+    async adjust(input) {
+      if (!input.requestOrigin.ok) return input.requestOrigin;
+      const access = await supportAccess(input.surface);
+
+      if (!access.ok) return access;
+      const credits = wiring.creditStore ?? deploymentHandle("creditStore");
+
+      if (credits === undefined) return refuse("CREDITS_PLANE_NOT_WIRED");
+      const result = await adjustSupportLedger({ ...access.value, credits, fields: input.fields });
+
+      return result.ok ? ok(result.value) : refuse(siteReasonForSupportReason(result.reason));
+    },
+  });
+
   const identityAdapter = wiring.identity ?? buildIdentityAdapter();
   const creditsAdapter = wiring.credits ?? buildCreditsAdapter();
   const billingAdapter = wiring.billing ?? buildBillingAdapter();
@@ -1072,6 +1171,7 @@ export function createUmbrellaIdentityPlane(
       now: () => new Date(clock()).toISOString(),
     }),
     signOut: signOutBoundSession,
+    ledgerSupport,
     wired: Object.freeze({
       identity: identityAdapter !== undefined,
       credits: creditsAdapter !== undefined,

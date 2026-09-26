@@ -17,6 +17,7 @@
  * `docs/auth-credits.md` (refusal ordering); the boundary is ADR 0021's 2026-08-01
  * clarification.
  */
+import { refuse, type SiteFormOriginSignals, type SiteResult } from "@sceneaxi/site-kit";
 import {
   IDENTITY_PLANE_DOC,
   IDENTITY_PLANE_PENDING_NOTE,
@@ -53,6 +54,7 @@ export type UmbrellaWebhookRequestEvidence = Readonly<{
 
 export type UmbrellaRequestAuthority = Readonly<{
   plane(request?: UmbrellaRequestEvidence): UmbrellaIdentityPlane;
+  verifyFormOrigin(signals: Omit<SiteFormOriginSignals, "configuredOrigin">): SiteResult<string>;
   applyCreditWebhook(request: UmbrellaWebhookRequestEvidence): Promise<CreditWebhookOutcome>;
 }>;
 
@@ -62,6 +64,9 @@ export function umbrellaRequestAuthority(): UmbrellaRequestAuthority {
   if (requestAuthority !== undefined) return requestAuthority;
   const deployment = umbrellaPlaneHandles();
   requestAuthority = Object.freeze({
+    verifyFormOrigin(signals) {
+      return deployment.verifyFormOrigin?.(signals) ?? refuse("SITE_REQUEST_CROSS_ORIGIN");
+    },
     plane(request = {}) {
       return createUmbrellaIdentityPlane(
         {},

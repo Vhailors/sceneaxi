@@ -8263,6 +8263,8 @@
       "sites/catalog-web/src/app/publish/page.tsx",
       "sites/kids/src/app/page.tsx",
       "sites/umbrella/src/app/account/page.tsx",
+      "sites/umbrella/src/app/admin/ledger/page.tsx",
+      "sites/umbrella/src/app/api/admin/ledger/route.ts",
       "sites/umbrella/src/app/api/auth/[...all]/route.ts",
       "sites/umbrella/src/app/api/checkout/route.ts",
       "sites/umbrella/src/app/api/editor/catalog-intake/route.ts",
@@ -8699,7 +8701,7 @@
       "authoringOperations": 10,
       "assistantOperations": 3,
       "localAgentTools": 67,
-      "routes": 26,
+      "routes": 28,
       "migrations": 7,
       "workflows": 5,
       "goldenTests": 56

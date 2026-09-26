@@ -59,6 +59,27 @@ An authorization for one row does not authorize another. In particular:
 The present #201 authorization satisfies none of those rows. If the authorization record
 does not name the proposed action exactly, record `REFUSED — AUTHORITY ABSENT` and stop.
 
+## Ledger support access
+
+`/admin/ledger` and `POST /api/admin/ledger` are restricted to the single verified
+principal resolved from `SCENEAXI_ADMIN_EMAIL`. There is no delegated support role,
+client-supplied admin flag, or Kids access. The page is noindex and dynamic. The action
+requires a same-origin form submission and repeats the role guard before any append.
+Missing identity configuration, accounts, or stores refuse by name.
+
+The administrator can look up a member by exact email or user id and inspect ledger
+entries, the derived balance, checkout intents, and reconciliation records. An adjustment
+requires signed credits, a support reason, and a unique key. It appends one attributed
+entry and cannot make the balance negative. Retain the original key for retries after
+an uncertain response. The ledger entry, not the redirect, is the commit evidence.
+[Support adjustments](auth-credits.md#support-adjustments) owns the detailed contract.
+
+Shipping this code does not authorize a production adjustment. Record the target member,
+signed amount, reason, operator, and idempotency key under the authorization gate above
+before changing production credits. This tool grants no money-refund, dispute-resolution,
+account-restriction, or reconciliation-resolution policy. Those captain decisions remain
+open; viewing a reconciliation record is not authority to claw back credits.
+
 ## Exact production inputs and owners
 
 No value from a secret store belongs in this repository, a pull request, an issue, a

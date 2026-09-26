@@ -585,6 +585,48 @@ already-spent balance that cannot absorb the adjustment, missing evidence, or an
 unavailable store refuses by name and never reports a reconciled refund. LIVE remains
 unreachable exactly as it is for grants.
 
+### Support adjustments
+
+The umbrella's noindex `/admin/ledger` page looks up an exact email or user id.
+It displays the provisioned account's ledger entries, derived balance, checkout
+intents, and migration `0006` reconciliation records. Reads do not provision an
+account or issue a starter grant. Missing users refuse `CREDIT_SUPPORT_TARGET_NOT_FOUND`;
+missing accounts or unreadable persistence refuse rather than show a zero balance.
+
+Only the verified principal named by `SCENEAXI_ADMIN_EMAIL` may use this tool.
+`requireLedgerSupportAdmin` calls the auth package's witnessed-principal role guard
+before any support-store read or append. A normal member refuses `ADMIN_ROLE_REQUIRED`,
+a copied principal refuses through the provenance guard, and Kids refuses by name.
+Routes use `umbrellaRequestAuthority()` only. The identity-plane adapter retains the
+original auth principal rather than reconstructing one from the site's role display.
+
+`POST /api/admin/ledger` checks the deployment-owned same-origin proof before reading
+the form. It rechecks admin access and calls `adjustSupportLedger` in billing.
+The form requires a provisioned user id, signed non-zero integer credits, a reason,
+and a unique idempotency key. The reason records the admin's user id with the supplied
+support reference. A positive or negative delta produces one `adjustment` entry through
+`createCreditStore().appendOrReplayEntry`, never an UPDATE or DELETE.
+
+Keys are prefixed `support-adjustment:` and cannot enter the reserved sale or webhook
+namespaces. Retrying the same key and payload returns the committed entry. Changing
+the delta or reason for that account refuses `CREDIT_IDEMPOTENCY_KEY_CONFLICT`.
+Reusing a key on another account cannot append and reports an unconfirmed commit.
+A debit below zero refuses
+`CREDIT_BALANCE_INSUFFICIENT`. Concurrent writers contend on the existing unique account
+sequence. A lost response or sequence collision reports an unconfirmed commit; retry
+with the same key after reading the ledger again. Never generate a replacement key
+merely because a response was lost.
+
+Support adjustments neither issue money refunds nor mark reconciliation records resolved.
+They do not decide how disputes, partial refunds, or spent-credit refunds should be handled.
+Those decisions remain open below. [Production activation](production-activation.md#ledger-support-access)
+owns who may operate the tool and the separate authority needed for production use.
+
+Proof is in `tests/e2e/auth-credits-refuse-matrix.test.ts`,
+`tests/e2e/runtime-provenance-refusal.test.ts`,
+`tests/sites/identity-plane-wiring.test.ts`, and the umbrella's existing
+`test/provider-adapters.integration.test.ts`, run with `pnpm test:integration` there.
+
 ### Operator reconciliation records
 
 `persistCreditPackChargeEvent` handles `charge.dispute.created`, `charge.dispute.closed`,
@@ -625,8 +667,8 @@ record replays before reconsidering the balance, so a later top-up cannot turn t
 event into an automatic clawback. Full refunds without a reconciliation record continue
 through `persistCreditPackRefund` and its existing intent-scoped adjustment key.
 
-Operators inspect `listReconciliations()` through the deployment-owned store, or query the
-table directly. The webhook response includes `reconciliationRequired: true`, `eventId`,
+The sole administrator can inspect a member's records at `/admin/ledger`, through the
+deployment-owned store. Operators with separate database authority can also query the table. The webhook response includes `reconciliationRequired: true`, `eventId`,
 `reason`, and `replayed` only after a record is confirmed. For a read-only SQL inventory:
 
 ```sql

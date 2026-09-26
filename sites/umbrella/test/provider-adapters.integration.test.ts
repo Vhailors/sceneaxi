@@ -3,6 +3,9 @@ import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PGlite } from "@electric-sql/pglite";
 import { saleEntryKeys } from "@sceneaxi/billing";
+import { createIdentityPort, resolveAdminIdentity } from "@sceneaxi/auth";
+import { createUmbrellaIdentityPlane } from "../src/lib/identity-plane";
+import { verifyLoginRequestOrigin } from "../src/lib/login-flow";
 import {
   createNeonCheckoutIntentStore,
   createNeonCreditStore,
@@ -215,6 +218,96 @@ describe("Neon adapters against PostgreSQL semantics", () => {
       "SELECT count(*)::int AS count FROM creator_share_records WHERE sale_id = $1",
       ["sale-transaction"],
     )).rows).toEqual([{ count: 1 }]);
+  });
+
+  it("supports witnessed-admin lookup and append-only adjustments with durable replay", async () => {
+    const { postgres, database } = fixture;
+    const now = Date.parse("2026-01-01T00:00:00Z");
+    const identity = createNeonIdentityStore(database);
+    const credits = createNeonCreditStore(database);
+    const intents = createNeonCheckoutIntentStore(database);
+    const admin = resolveAdminIdentity({ SCENEAXI_ADMIN_EMAIL: "support-admin@example.com" });
+
+    if (!admin.ok) throw new Error(admin.message);
+
+    for (const [id, email] of [["support-admin", "support-admin@example.com"], ["support-member", "support-member@example.com"]] as const) {
+      await identity.ensureUserAndCreditAccount(authentication(id, email), now);
+    }
+
+    const port = createIdentityPort({
+      admin: admin.value,
+      clock: () => now,
+      store: identity,
+      adapter: { authenticate: () => authentication("support-admin", "support-admin@example.com") },
+    });
+
+    const signedIn = await port.signIn({ surface: "site", email: "support-admin@example.com", password: "fixture" });
+
+    if (!signedIn.ok) throw new Error(signedIn.message);
+
+    const wiring = {
+      admin: admin.value, identityPort: port, creditStore: credits,
+      supportStore: { users: identity, listCheckoutIntents: intents.listByUserId },
+      sessionToken: `${signedIn.value.principal.session.sessionId}.${signedIn.value.sessionToken}`,
+      clock: () => now,
+    };
+
+    const plane = createUmbrellaIdentityPlane({}, wiring);
+
+    const requestOrigin = verifyLoginRequestOrigin({}, {
+      requestUrl: "https://sceneaxi.test/api/admin/ledger", origin: "https://sceneaxi.test",
+    });
+
+    const fields = { userId: "support-member", delta: "40", reason: "Support case 23", idempotencyKey: "integration-support-23" };
+    expect(await plane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields })).toMatchObject({ ok: true, value: { replayed: false, entry: { delta: 40, movement: "adjustment" } } });
+    const freshPlane = createUmbrellaIdentityPlane({}, { ...wiring, creditStore: createNeonCreditStore(database) });
+    expect(await freshPlane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields })).toMatchObject({ ok: true, value: { replayed: true } });
+    expect(await freshPlane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields: { ...fields, userId: "support-admin" } })).toMatchObject({ ok: false, reason: "CREDITS_PLANE_UNAVAILABLE" });
+    expect(await plane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields: { ...fields, delta: "41" } })).toMatchObject({ ok: false, reason: "CREDIT_IDEMPOTENCY_KEY_CONFLICT" });
+    expect(await plane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields: { ...fields, delta: "-41", idempotencyKey: "overdraft" } })).toMatchObject({ ok: false, reason: "CREDIT_BALANCE_INSUFFICIENT" });
+
+    const race = await Promise.all(["a", "b"].map((key) => plane.ledgerSupport.adjust({
+      surface: "site", requestOrigin, fields: { ...fields, delta: "-30", idempotencyKey: `support-race-${key}` },
+    })));
+
+    expect(race.filter((result) => result.ok)).toHaveLength(1);
+    const winningKey = race[0]?.ok ? "support-race-a" : "support-race-b";
+
+    expect(await freshPlane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields: { ...fields, delta: "-30", idempotencyKey: winningKey } })).toMatchObject({ ok: true, value: { replayed: true, entry: { balanceAfter: 10 } } });
+    expect(await freshPlane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields })).toMatchObject({ ok: true, value: { replayed: true, entry: { balanceAfter: 40 } } });
+    await intents.persistIntent({
+      schemaVersion: 1, kind: "sceneaxi.checkout-session-intent", intentId: "int_support", userId: "support-member",
+      purpose: "credit-pack", itemId: "starter", credits: 100, unitAmount: 500, currency: "usd", stripePriceId: "price_test_starter_100",
+      mode: "test", successUrl: "https://sceneaxi.test/account", cancelUrl: "https://sceneaxi.test/pricing", idempotencyKey: "integration:support-checkout", createdAt: new Date(now).toISOString(),
+    });
+    await credits.appendOrReplayReconciliation({
+      schemaVersion: 1, kind: "sceneaxi.credit-reconciliation-record", eventId: "evt_support", mode: "test",
+      intentId: "int_support", userId: "support-member", chargeId: "ch_support", eventType: "charge.refunded",
+      reason: "STRIPE_REFUND_NOT_FULL", amount: 100, currency: "usd", occurredAt: new Date(now).toISOString(), payloadDigest: "a".repeat(64), disputeId: null, disputeStatus: null,
+    });
+    const lookup = await freshPlane.ledgerSupport.lookup({ surface: "site", target: { kind: "email", value: " SUPPORT-MEMBER@EXAMPLE.COM " } });
+    expect(lookup).toMatchObject({ ok: true, value: { user: { userId: "support-member" }, state: { balance: 10 }, checkoutIntents: [{ intentId: "int_support" }], reconciliations: [{ eventId: "evt_support" }] } });
+    expect(await freshPlane.ledgerSupport.lookup({ surface: "site", target: { kind: "userId", value: "support-admin" } })).toMatchObject({ ok: true, value: { state: { balance: 0, entries: [] }, checkoutIntents: [], reconciliations: [] } });
+
+    if (!lookup.ok || lookup.value === null) throw new Error("Support lookup failed");
+    expect(lookup.value.state.entries).toHaveLength(2);
+    expect(lookup.value.state.entries[0]?.reason).toBe("support:support-admin: Support case 23");
+
+    const lostAnswer = createUmbrellaIdentityPlane({}, {
+      ...wiring,
+      creditStore: { ...credits, async appendOrReplayEntry(entry) {
+        await credits.appendOrReplayEntry(entry);
+        throw new Error("fixture lost response after commit");
+      } },
+    });
+
+    const uncertain = { ...fields, delta: "5", idempotencyKey: "support-lost-response" };
+    expect(await lostAnswer.ledgerSupport.adjust({ surface: "site", requestOrigin, fields: uncertain })).toMatchObject({ ok: false, reason: "CREDITS_PLANE_UNAVAILABLE" });
+    expect(await freshPlane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields: uncertain })).toMatchObject({ ok: true, value: { replayed: true, entry: { balanceAfter: 15 } } });
+    expect(await credits.listEntries(lookup.value.state.account.accountId)).toHaveLength(3);
+    expect(await credits.listReconciliations()).toHaveLength(1);
+    await expect(postgres.query("UPDATE credit_ledger_entries SET delta = 99 WHERE account_id = $1", [lookup.value.state.account.accountId])).rejects.toThrow(/append-only/);
+    await expect(postgres.query("DELETE FROM credit_ledger_entries WHERE account_id = $1", [lookup.value.state.account.accountId])).rejects.toThrow(/append-only/);
   });
 
   it("enforces append-only ledger and immutable checkout pricing in SQL", async () => {

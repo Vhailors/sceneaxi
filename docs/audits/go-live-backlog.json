@@ -276,9 +276,9 @@
       "severity": "high",
       "title": "No admin/support tooling",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 1,
-      "thread": null,
+      "thread": "thr_jhkwtbxd75",
       "commit": null
     },
     {

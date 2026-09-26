@@ -17,6 +17,8 @@ import {
   CHECKOUT_METADATA_KEYS,
   HOSTED_AI_DEFAULT_CONFIG,
   appendCreditEntry,
+  adjustSupportLedger,
+  readSupportLedger,
   applyCheckoutCompletedGrant,
   applyCreditsSale,
   assertCurrencyListed,
@@ -63,6 +65,8 @@ import type {
   CreditAccount,
 } from "@sceneaxi/schemas";
 import { issuePrincipalForTest } from "@sceneaxi/auth/testing/principal-issuance";
+import { createUmbrellaIdentityPlane } from "../../sites/umbrella/src/lib/identity-plane.ts";
+import { verifyLoginRequestOrigin } from "../../sites/umbrella/src/lib/login-flow.ts";
 
 /**
  * The refuse matrix.
@@ -1542,6 +1546,94 @@ describe("billing refuse matrix", () => {
         provider: disabledProvider,
       }),
     );
+  });
+});
+
+describe("administrator support refusal paths", () => {
+  it("guards provenance and role before any support read or append", async () => {
+    const credits = createInMemoryCreditStore({ accounts: [account("usr_crew")] });
+    const reads: string[] = [];
+
+    const store = { ...credits, findAccountByUserId(id: string) {
+      reads.push(id);
+
+      return credits.findAccountByUserId(id);
+    } };
+
+    const users = createInMemoryIdentityStore({ users: [CREW] });
+
+    const support = { users: {
+      findUserById(id: string) {
+        reads.push(id);
+
+        return users.findUserById(id);
+      },
+      findUserByEmail(email: string) {
+        reads.push(email);
+
+        return users.findUserByEmail(email);
+      },
+    }, async listCheckoutIntents() {
+      reads.push("intents");
+
+      return [];
+    } };
+
+    const fields = { userId: "usr_crew", delta: "5", reason: "Support case", idempotencyKey: "matrix-support" };
+    const issued = principal({ role: "admin", surface: "site" });
+    const copied = JSON.parse(JSON.stringify(issued));
+
+    for (const [actor, surface, expected] of [
+      [principal({ surface: "site" }), "site", AUTH_REFUSE_REASONS.roleNotPermitted],
+      [copied, "site", AUTH_REFUSE_REASONS.principalUnproven],
+      [issued, "kids", BILLING_REFUSE_REASONS.kidsCommerceDenied],
+    ] as const) {
+      const access = { principal: actor, admin, surface, now: NOW, credits: store };
+      const lookup = await readSupportLedger({ ...access, support, target: { kind: "userId", value: "usr_crew" } });
+      const adjustment = await adjustSupportLedger({ ...access, fields });
+      expect(lookup).toMatchObject({ ok: false, reason: expected });
+      expect(adjustment).toMatchObject({ ok: false, reason: expected });
+      record(lookup);
+      record(adjustment);
+    }
+
+    expect(reads).toEqual([]);
+    const absent = await readSupportLedger({ principal: issued, admin, surface: "site", now: NOW, credits, support, target: { kind: "userId", value: "absent" } });
+    expect(absent).toMatchObject({ ok: false, reason: BILLING_REFUSE_REASONS.supportTargetNotFound });
+    record(absent);
+  });
+
+  it("reaches every new site support refusal through the witnessed identity port", async () => {
+    const users = createInMemoryIdentityStore({ users: [CREW, user("usr_captain", CAPTAIN_EMAIL)] });
+    const credits = createInMemoryCreditStore({ accounts: [account("usr_crew")] });
+
+    const port = createIdentityPort({ admin, store: users, clock, adapter: {
+      authenticate({ email }) {
+        const id = email === CAPTAIN_EMAIL ? "usr_captain" : "usr_crew";
+
+        return { user: { id, email, emailVerified: true }, session: { id: `support-${id}`, token: `token-${id}`, userId: id, expiresAt: new Date(NOW + 3600000).toISOString() } };
+      },
+    } });
+
+    const requestOrigin = verifyLoginRequestOrigin({}, { requestUrl: "https://sceneaxi.test/api/admin/ledger", origin: "https://sceneaxi.test" });
+    const fields = { userId: "usr_crew", delta: "10", reason: "Case matrix", idempotencyKey: "matrix-site" };
+
+    for (const email of ["crew@example.com", CAPTAIN_EMAIL]) {
+      const signedIn = await port.signIn({ surface: "site", email, password: "fixture" });
+
+      if (!signedIn.ok) throw new Error(signedIn.message);
+      const plane = createUmbrellaIdentityPlane({}, { admin, identityPort: port, creditStore: credits, supportStore: { users, async listCheckoutIntents() { return []; } }, clock, sessionToken: `${signedIn.value.principal.session.sessionId}.${signedIn.value.sessionToken}` });
+
+      if (email !== CAPTAIN_EMAIL) {
+        expect(await plane.ledgerSupport.lookup({ surface: "site", target: null })).toMatchObject({ ok: false, reason: "ADMIN_ROLE_REQUIRED" });
+        continue;
+      }
+
+      expect(await plane.ledgerSupport.lookup({ surface: "site", target: { kind: "userId", value: "missing" } })).toMatchObject({ ok: false, reason: "CREDIT_SUPPORT_TARGET_NOT_FOUND" });
+      expect(await plane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields: { ...fields, delta: "-1" } })).toMatchObject({ ok: false, reason: "CREDIT_BALANCE_INSUFFICIENT" });
+      expect((await plane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields })).ok).toBe(true);
+      expect(await plane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields: { ...fields, delta: "11" } })).toMatchObject({ ok: false, reason: "CREDIT_IDEMPOTENCY_KEY_CONFLICT" });
+    }
   });
 });
 

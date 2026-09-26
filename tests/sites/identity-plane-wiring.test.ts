@@ -158,6 +158,107 @@ function createUmbrellaIdentityPlane(
   });
 }
 
+describe("administrator ledger support", () => {
+  function supportWorld(sessionToken = `sess-admin.${ADMIN_TOKEN}`) {
+    const users = createInMemoryIdentityStore({ users: [user("member-1", MEMBER_EMAIL)] });
+    const credits = createInMemoryCreditStore({ accounts: [account("acc_member", "member-1")] });
+    const reads: string[] = [];
+
+    const plane = createUmbrellaIdentityPlane(ENV, {
+      identityPort: adminWorld(), sessionToken, clock,
+      creditStore: { ...credits, findAccountByUserId(id) {
+        reads.push("account");
+
+        return credits.findAccountByUserId(id);
+      } },
+      supportStore: {
+        users: {
+          findUserById(id) {
+            reads.push("user");
+
+            return users.findUserById(id);
+          },
+          findUserByEmail(email) {
+            reads.push("email");
+
+            return users.findUserByEmail(email);
+          },
+        },
+        async listCheckoutIntents() {
+          reads.push("intents");
+
+          return [];
+        },
+      },
+    });
+
+    return { plane, credits, reads };
+  }
+
+  const target = { kind: "userId" as const, value: "member-1" };
+  const fields = { userId: "member-1", delta: "25", reason: "Case 23", idempotencyKey: "case-23" };
+  const requestOrigin = verifyLoginRequestOrigin({}, { requestUrl: "https://sceneaxi.test/api/admin/ledger", origin: "https://sceneaxi.test" });
+
+  it("refuses members, signed-out visitors, and Kids before support store reads", async () => {
+    for (const [token, reason] of [[`sess-member.${MEMBER_TOKEN}`, "ADMIN_ROLE_REQUIRED"], ["", "IDENTITY_SESSION_ABSENT"]]) {
+      const { plane, reads } = supportWorld(token);
+      expect(await plane.ledgerSupport.lookup({ surface: "site", target })).toMatchObject({ ok: false, reason });
+      expect(await plane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields })).toMatchObject({ ok: false, reason });
+      expect(reads).toEqual([]);
+    }
+
+    const { plane, reads } = supportWorld();
+    expect(await plane.ledgerSupport.lookup({ surface: "kids", target })).toMatchObject({ ok: false, reason: "KIDS_SURFACE_DENIED" });
+    expect(await plane.ledgerSupport.adjust({ surface: "kids", requestOrigin, fields })).toMatchObject({ ok: false, reason: "KIDS_SURFACE_DENIED" });
+    expect(reads).toEqual([]);
+  });
+
+  it("reads without a starter grant and appends signed, attributed entries exactly once", async () => {
+    const { plane, credits } = supportWorld();
+    expect(await plane.ledgerSupport.lookup({ surface: "site", target })).toMatchObject({ ok: true, value: { state: { balance: 0, entries: [] }, checkoutIntents: [], reconciliations: [] } });
+    expect(credits.entryCount("acc_member")).toBe(0);
+    const first = await plane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields });
+    expect(first).toMatchObject({ ok: true, value: { replayed: false, entry: { delta: 25, reason: "support:captain: Case 23", movement: "adjustment" } } });
+    expect(await plane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields })).toMatchObject({ ok: true, value: { replayed: true } });
+    expect(await plane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields: { ...fields, delta: "-10", idempotencyKey: "case-23-debit" } })).toMatchObject({ ok: true, value: { entry: { balanceAfter: 15 } } });
+    expect(await plane.ledgerSupport.lookup({ surface: "site", target: { kind: "email", value: MEMBER_EMAIL.toUpperCase() } })).toMatchObject({ ok: true, value: { state: { balance: 15 } } });
+    expect(credits.entryCount("acc_member")).toBe(2);
+  });
+
+  it("refuses malformed forms, cross-origin requests, conflicts, missing targets and overdrafts", async () => {
+    const { plane, credits, reads } = supportWorld();
+    const foreign = verifyLoginRequestOrigin({}, { requestUrl: "https://sceneaxi.test/api/admin/ledger", origin: "https://foreign.test" });
+    expect(await plane.ledgerSupport.adjust({ surface: "site", requestOrigin: foreign, fields })).toMatchObject({ ok: false, reason: "SITE_REQUEST_CROSS_ORIGIN" });
+    expect(reads).toEqual([]);
+
+    for (const invalid of [{ reason: " " }, { delta: "0" }, { delta: "1.5" }, { delta: "1e2" }, { delta: "9007199254740992" }, { idempotencyKey: "" }, { idempotencyKey: "sale:one:buyer" }]) {
+      expect(await plane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields: { ...fields, ...invalid } })).toMatchObject({ ok: false, reason: "SITE_REQUEST_MALFORMED" });
+    }
+
+    expect(reads).toEqual([]);
+    expect(await plane.ledgerSupport.lookup({ surface: "site", target: { kind: "userId", value: "absent" } })).toMatchObject({ ok: false, reason: "CREDIT_SUPPORT_TARGET_NOT_FOUND" });
+    expect(await plane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields: { ...fields, delta: "-1" } })).toMatchObject({ ok: false, reason: "CREDIT_BALANCE_INSUFFICIENT" });
+    await plane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields });
+    expect(await plane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields: { ...fields, delta: "26" } })).toMatchObject({ ok: false, reason: "CREDIT_IDEMPOTENCY_KEY_CONFLICT" });
+    expect(credits.entryCount("acc_member")).toBe(1);
+  });
+
+  it("keeps the page noindex and the POST-only route behind the request facade", () => {
+    const page = readFileSync("sites/umbrella/src/app/admin/ledger/page.tsx", "utf8");
+    const route = readFileSync("sites/umbrella/src/app/api/admin/ledger/route.ts", "utf8");
+    expect(page).toContain("robots: { index: false, follow: false }");
+    expect(page).toContain('dynamic = "force-dynamic"');
+    expect(route).toContain("export async function POST");
+    expect(route).not.toMatch(/export (?:async )?function (?:GET|PUT|PATCH|DELETE)/);
+    expect(route.indexOf("verifyFormOrigin")).toBeLessThan(route.indexOf("request.formData()"));
+
+    for (const source of [page, route]) {
+      expect(source).toContain("umbrellaRequestAuthority()");
+      expect(source).not.toMatch(/process\.env|provider-adapters|from ["']@sceneaxi\/(?:auth|billing)/);
+    }
+  });
+});
+
 describe("acceptance 1 — admin env login on the umbrella", () => {
   it("resolves the admin role for the session whose user the env names", async () => {
     const plane = createUmbrellaIdentityPlane(ENV, {

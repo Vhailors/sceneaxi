@@ -139,6 +139,11 @@ const reviewFixture = (): {
 };
 
 const CASES: Readonly<Record<SiteRefusalReason, () => Promise<unknown> | unknown>> = {
+  // The umbrella's real auth/billing paths are covered in auth-credits-refuse-matrix.
+  ADMIN_ROLE_REQUIRED: () => refuse("ADMIN_ROLE_REQUIRED"),
+  CREDIT_SUPPORT_TARGET_NOT_FOUND: () => refuse("CREDIT_SUPPORT_TARGET_NOT_FOUND"),
+  CREDIT_BALANCE_INSUFFICIENT: () => refuse("CREDIT_BALANCE_INSUFFICIENT"),
+  CREDIT_IDEMPOTENCY_KEY_CONFLICT: () => refuse("CREDIT_IDEMPOTENCY_KEY_CONFLICT"),
   IDENTITY_PLANE_NOT_WIRED: () => createIdentityPlane({ now }).resolvePrincipal(umbrella),
   CREDITS_PLANE_NOT_WIRED: () => createCreditsPlane().readBalance({ userId: "user-1" }),
   BILLING_PLANE_NOT_WIRED: () =>

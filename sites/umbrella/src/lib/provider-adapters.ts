@@ -908,7 +908,9 @@ export type CheckoutIntentStore = Readonly<{
 
 export function createNeonCheckoutIntentStore(
   database: NeonDatabase,
-): CheckoutIntentStore {
+): CheckoutIntentStore & Readonly<{
+  listByUserId(userId: string): Promise<ReadonlyArray<CheckoutIntent>>;
+}> {
   const readIntent = async (intentId: string): Promise<CheckoutIntent | undefined> => {
     const rows = await database.query(
       `SELECT intent_id, user_id, purpose, item_id, credits, unit_amount, currency,
@@ -951,6 +953,16 @@ export function createNeonCheckoutIntentStore(
       return held;
     },
     findIntent: readIntent,
+    async listByUserId(userId) {
+      const rows = await database.query(
+        `SELECT intent_id, user_id, purpose, item_id, credits, unit_amount, currency,
+                stripe_price_id, mode, success_url, cancel_url, idempotency_key, created_at
+         FROM checkout_session_intents WHERE user_id = $1 ORDER BY created_at, intent_id`,
+        [userId],
+      );
+
+      return Object.freeze(rows.map(intentFromRow));
+    },
   });
 }
 

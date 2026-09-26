@@ -59,6 +59,13 @@ deterministic site-level proof is
 cookie/bearer session lookup over an in-memory provider database. The editor's R1 claim remains owned by
 the golden e2e named in the table.
 
+The umbrella's admin-only `/admin/ledger` and `POST /api/admin/ledger` extend that
+identity path for support. `tests/sites/identity-plane-wiring.test.ts` and
+`tests/e2e/auth-credits-refuse-matrix.test.ts` cover guarded lookup and adjustments;
+`sites/umbrella/test/provider-adapters.integration.test.ts` proves persistence against
+PGlite with every migration. These are local proofs, not a production activation claim.
+[`auth-credits.md`](auth-credits.md#support-adjustments) owns the contract.
+
 `@sceneaxi/desktop-macos` is deliberately absent from the table. Its packaging,
 signing/notarization preflight, disabled-without-release update policy, and missing-input
 smoke are implemented and gate-tested, but no signed artifact or packaged launch proof
