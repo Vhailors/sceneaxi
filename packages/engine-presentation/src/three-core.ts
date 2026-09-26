@@ -103,6 +103,9 @@ export type ThreeDrawnFrame = {
   readonly environmentBackground: string | null;
 };
 
+/** The effects sampler's accepted time window (`sampleSceneEffects` refuses beyond it). */
+const EFFECTS_SAMPLE_WINDOW_MS = 60_000;
+
 export type ThreePresentationCore = {
   readonly surfaceKind: ThreePresentationSurfaceKind;
   readonly label: string;
@@ -307,7 +310,15 @@ export function createThreePresentationCore(
         ids.add(emitter.emitterId);
       }
 
-      const sampled = sampleSceneEffects({ catalog, timeMs });
+      // Callers pass an unbounded frame clock (performance.now()), while the sampler only
+      // accepts its 0..60000 ms window. Its pattern depends on time through floor(t) mod
+      // 1000, so wrapping at 60000 is output-identical and a long-lived viewport keeps
+      // drawing instead of throwing out of the render loop after one minute.
+      if (!Number.isFinite(timeMs) || timeMs < 0) {
+        throw new ThreePresentationError("invalid-renderable", "Effects sample time must be a finite, non-negative millisecond count.");
+      }
+
+      const sampled = sampleSceneEffects({ catalog, timeMs: timeMs % EFFECTS_SAMPLE_WINDOW_MS });
 
       if (!sampled.ok) throw new ThreePresentationError("invalid-renderable", sampled.message);
 

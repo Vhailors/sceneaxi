@@ -315,7 +315,12 @@ describe("Three presentation core — sculpt backend", () => {
     expect(backend.sampleEffects(catalog, 250)).toEqual(evaluation);
     expect(particles.geometry).toBe(geometry);
     expect(geometry.getAttribute("position")).toBe(position);
+    // A viewport's frame clock is unbounded: an hour-old viewport must keep sampling,
+    // and wrapping at the sampler's 60s window reproduces the same frame exactly.
+    expect(backend.sampleEffects(catalog, 250 + 60_000)).toEqual(evaluation);
+    expect(backend.sampleEffects(catalog, 250 + 3_600_000)).toEqual(evaluation);
     expect(() => backend.sampleEffects(catalog, -1)).toThrow(/time/i);
+    expect(() => backend.sampleEffects(catalog, Number.POSITIVE_INFINITY)).toThrow(/time/i);
     expect(() => backend.sampleEffects({ ...catalog, emitters: [{ ...emitter, speed: NaN }] }, 0)).toThrow(/emitter/i);
     const geometryDisposed = vi.fn();
     const materialDisposed = vi.fn();
