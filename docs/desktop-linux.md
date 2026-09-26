@@ -443,6 +443,15 @@ or claim that any flag fixes it. Keep the packaged smoke's proven SwiftShader
 path; retry with `xvfb-run -a pnpm smoke --packaged` and `--enable-logging=stderr`
 if the crash returns, preserving the complete stderr and exit status.
 
+## Distribution publish configuration
+
+`pnpm dist` previously failed during electron-builder 26.15.3 update-info cleanup:
+`app-builder-lib`'s `computeChannelNames` dereferenced `publishConfig.channel` when
+no publish configuration was supplied. Linux has no auto-update policy, so the
+configuration now sets `publish: null`, electron-builder's explicit no-publish
+value. This prevents update metadata generation without changing artifact names,
+contents, or the release policy.
+
 ## First download record
 
 The Linux tier's `desktop/linux/package.json` is the version source for the

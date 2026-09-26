@@ -1079,9 +1079,9 @@
       "severity": "high",
       "title": "`pnpm dist` builds the installers but exits with an electron-builder `channel` TypeError during cleanup",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 3,
-      "thread": null,
+      "thread": "thr_sny4j8ve4n",
       "commit": null,
       "evidence": "found by thr_itkeme9y3p while investigating item 60"
     }
