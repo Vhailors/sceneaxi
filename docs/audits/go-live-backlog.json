@@ -982,9 +982,9 @@
       "severity": "high",
       "title": "No generated API reference.",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 5,
-      "thread": null,
+      "thread": "thr_inciqf5y6w",
       "commit": null
     },
     {

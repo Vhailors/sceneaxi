@@ -134,6 +134,11 @@ pnpm sceneaxi-web-shell --help
 loopback and prints its URL; it refuses a non-loopback bind and writes nothing
 until a proposal is accepted ([`apps/web-shell/README.md`](apps/web-shell/README.md)).
 
+Generate and browse the public package API reference with `pnpm docs:api`, then open
+`docs/api/index.html`. The generated output is ignored and covers the consumer
+packages in [`docs/publish-readiness.md`](docs/publish-readiness.md) and
+[`docs/web-consumer.md`](docs/web-consumer.md), excluding private packages and Kids.
+
 Run `pnpm test:golden` for the focused product/profile and sculpt paths.
 [`docs/runnable-surfaces.md`](docs/runnable-surfaces.md) owns the complete
 surface inventory, levels, invocation requirements, and proof locations.

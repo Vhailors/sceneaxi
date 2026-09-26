@@ -26,6 +26,7 @@
     "check:desktop": "node scripts/check-desktop.mjs",
     "check:publish-ready": "node scripts/check-publish-ready.mjs",
     "build:sdk": "node scripts/build-engine-sdk.mjs --out dist-sdk",
+    "docs:api": "node scripts/docs-api.mjs",
     "db:migrate": "node scripts/db-migrate.mjs"
   },
   "license": "UNLICENSED",
@@ -43,6 +44,7 @@
     "globals": "^17.7.0",
     "happy-dom": "^20.11.1",
     "oxlint": "1.85.0",
+    "typedoc": "^0.28.20",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.65.0",
     "vitest": "^4.1.10",

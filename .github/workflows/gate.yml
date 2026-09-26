@@ -22,6 +22,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm install --frozen-lockfile
         working-directory: desktop/linux
+      - run: pnpm docs:api
       - run: pnpm gate
       - run: pnpm install --frozen-lockfile
         working-directory: sites/umbrella
