@@ -181,11 +181,11 @@ Found while building the map (owned by item 53): the capability matrix marked `d
 
 ## Loop result (2026-09-27, `go-live-loop`)
 
-- **Done: 39 items** — 14, 20, 21, 23, 24, 25, 31, 32, 33, 34, 35, 36, 37, 39, 41, 42, 43, 44, 45, 47, 53, 54, 57, 60, 63, 66, 67, 68, 69, 74, 80, 81, 82, 83, 84, 85, 86, 89, 90. Items 89 and 90 were found during the loop and added.
-- **Open: 2** — 61 (worker interrupted; not resumed without an explicit request); 64 (worker interrupted; not resumed without an explicit request).
+- **Done: 38 items** — 14, 20, 21, 23, 24, 25, 31, 32, 33, 34, 35, 36, 37, 39, 41, 42, 43, 44, 45, 47, 54, 57, 60, 63, 66, 67, 68, 69, 74, 80, 81, 82, 83, 84, 85, 86, 89, 90. Items 89 and 90 were found during the loop and added.
+- **Open: 3** — 53 (reopened by the branch review: 14 desktop-accepted commands still lack a GUI control that can send their input; exact list in the backlog `progress`); 61 (worker interrupted; not resumed without an explicit request); 64 (worker interrupted; not resumed without an explicit request).
 - **Parked: 49** — each needs a captain decision or external authority (`parkedReason` in the backlog).
-- **Final gate:** `pnpm gate` exit 0 on the final integrated head (272 files, 4,134 tests, lint clean).
-- **Graphmap:** working 333 · partial 31 · unconfigured 10 · refused 15 · gap 2 · parked 49 (probe `e61b51b`; catalog-web and kids not probed: no local install root).
+- **Final gate:** `pnpm gate` exit 0 on `468b461` (272 files, 4,140 tests, lint clean); `sites/umbrella` `pnpm test:integration` 7/7 against PGlite with every migration. The run logs are local, not checked in.
+- **Graphmap:** working 318 · partial 31 · unconfigured 10 · refused 15 · gap 17 · parked 49 · unknown 2 (routes from probe `e61b51b`; catalog-web and kids not probed — no local install root — so they count as `unknown`). The review found the earlier "working 333" headline counted desktop-accepted commands without a GUI as working; `scripts/surface-map.mjs` no longer does.
 
 Decisions the done items surfaced (implemented only up to the fail-closed part):
 
