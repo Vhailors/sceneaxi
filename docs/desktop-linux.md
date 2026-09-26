@@ -418,6 +418,11 @@ until the landing page's "Coming soon" rows move with it.
 | Artifact retention | 90 days |
 | Download expires by | 2026-11-10 |
 
+The scheduled `desktop-artifact-expiry` workflow checks this recorded date every
+Monday and can also be run manually. It fails when fewer than 21 days remain;
+re-record the run, source commit, checksums, verified date, and expiry in this document
+and `packages/site-kit/src/desktop-app-offer.ts`.
+
 **This download expires.** A workflow artifact is not a release. Run 31629556282
 was produced from the recorded main-branch source commit and uploaded only after the
 workflow's type-check, packaging, checksum, and packaged-smoke steps passed. GitHub

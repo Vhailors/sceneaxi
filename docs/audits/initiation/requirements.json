@@ -4263,7 +4263,8 @@
             "scripts/check-sites.mjs",
             "scripts/check-syntax.mjs",
             "scripts/check-traceability.mjs",
-            "scripts/check-vercel-package.mjs"
+            "scripts/check-vercel-package.mjs",
+            "scripts/check-desktop-artifact-expiry.mjs"
           ],
           "present": true
         },
@@ -4435,6 +4436,7 @@
             "tests/contracts/injected-traceability-violations.test.ts",
             "tests/contracts/no-committed-secrets.test.ts",
             "tests/db/schema-lockstep.test.ts",
+            "tests/desktop-artifact-expiry.test.ts",
             "tests/desktop/desktop-asset-picker-host.test.ts",
             "tests/desktop/desktop-byo-secure-storage.test.ts",
             "tests/desktop/desktop-linux-seams.test.ts",
@@ -8490,6 +8492,7 @@
       }
     ],
     "workflows": [
+      ".github/workflows/desktop-artifact-expiry.yml",
       ".github/workflows/desktop-linux.yml",
       ".github/workflows/desktop-macos.yml",
       ".github/workflows/engine-sdk.yml",
@@ -8610,7 +8613,7 @@
       "localAgentTools": 67,
       "routes": 22,
       "migrations": 5,
-      "workflows": 4,
+      "workflows": 5,
       "goldenTests": 55
     },
     "documentedClaims": [

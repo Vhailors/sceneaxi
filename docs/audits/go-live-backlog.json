@@ -705,11 +705,12 @@
       "area": "Desktop apps and distribution",
       "severity": "medium",
       "title": "BYOK is live only via OpenCode DeepSeek; OpenRouter is offered but fixture-only",
-      "cls": "autonomous",
-      "status": "open",
+      "cls": "decision",
+      "status": "parked",
       "wave": 3,
-      "thread": null,
-      "commit": null
+      "thread": "thr_azkybfqms8",
+      "commit": null,
+      "parkedReason": "Exact production OpenRouter model pin (fixture pin cannot ship); partial transport in thr_azkybfqms8"
     },
     {
       "id": 60,
@@ -1030,9 +1031,9 @@
       "severity": "high",
       "title": "No alert or scheduled job before the 2026-11-10 artifact expiry.",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 1,
-      "thread": null,
+      "thread": "thr_fbs5npngjy",
       "commit": null
     },
     {
