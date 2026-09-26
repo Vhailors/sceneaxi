@@ -2329,7 +2329,10 @@ if (shell) {
   };
 
   const inspectCatalog = async (kind, commandId) => {
-    const response = await commandRequest(commandId, { documentPath: T.product.documentPath });
+    const response = await commandRequest(commandId, {
+      documentPath: T.product.documentPath,
+      profile: shell.dataset.profile,
+    });
     const report = shell.querySelector('[data-catalog-report="' + kind + '"]');
     if (response === null || !response.ok) {
       const code = response === null ? T.product.refusals.runtimeUnavailable : response.reason;

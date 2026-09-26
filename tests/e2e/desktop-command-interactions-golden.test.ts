@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   DEFAULT_INPUT_ACTION_MAP,
   reviewInputActionRebind,
+  validateEditorCommandInvocation,
   type InputActionMap,
 } from "@sceneaxi/schemas";
 import {
@@ -61,6 +62,10 @@ function engineResponse(
   const action = request["action"];
   const op = payload?.["op"];
   if (action === "command") {
+    // The real bridge validates every invocation against the shared registry before
+    // routing it; the harness must too, or a malformed input looks like a success.
+    const validated = validateEditorCommandInvocation(payload);
+    if (!validated.ok) return { ok: false, reason: validated.reason, message: validated.message };
     const commandId = payload?.["commandId"];
     const input = payload?.["input"] as Record<string, unknown> | undefined;
     if (commandId === "project-build") {
