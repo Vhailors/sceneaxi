@@ -891,9 +891,9 @@
       "severity": "medium",
       "title": "`project dev --watch` refuses `NOT_IMPLEMENTED`",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 4,
-      "thread": null,
+      "thread": "thr_az2qkzrkup",
       "commit": null
     },
     {
@@ -987,9 +987,9 @@
       "severity": "medium",
       "title": "No root `CHANGELOG`, `CONTRIBUTING`, `SECURITY`, or `CODE_OF_CONDUCT`.",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 5,
-      "thread": null,
+      "thread": "thr_vnt4kknknc",
       "commit": null
     },
     {
@@ -1023,9 +1023,9 @@
       "severity": "low",
       "title": "Thin READMEs",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 5,
-      "thread": null,
+      "thread": "thr_vnt4kknknc",
       "commit": null
     },
     {
