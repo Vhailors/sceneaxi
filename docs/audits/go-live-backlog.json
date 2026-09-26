@@ -760,10 +760,11 @@
       "severity": "high",
       "title": "Physics is contract-only",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 4,
-      "thread": null,
-      "commit": null
+      "thread": "thr_j4up49nsuh",
+      "commit": null,
+      "openDecision": "ADR 0027 pose/animation/joint-frame contract; nonzero Rapier animation offsets refuse"
     },
     {
       "id": 64,

@@ -37,6 +37,7 @@ import {
   bridgeRefuse,
 } from "../lib/bridge-contract.js";
 import { createDesktopBridge, type DesktopBridge } from "../lib/bridge.js";
+import { initializeDesktopScenePhysics } from "../lib/desktop-scene.js";
 import { createDesktopAssetPickerHost } from "../lib/asset-picker-host.js";
 import { DESKTOP_SCENE_TRANSLATION_X_PROPERTY } from "../lib/desktop-scene.js";
 import {
@@ -194,6 +195,10 @@ function fail(message: string): never {
 
 async function start(): Promise<void> {
   await app.whenReady();
+  const physicsWorldHost = await initializeDesktopScenePhysics().catch((error: unknown) => {
+    console.error("PHYSICS_HOST_NOT_READY", error instanceof Error ? error.message : "Rapier initialization failed.");
+    return undefined;
+  });
 
   let frameReported: ((report: unknown) => void) | null = null;
   const firstFrameReport = new Promise((resolve) => {
@@ -270,6 +275,7 @@ async function start(): Promise<void> {
     });
     const next = createDesktopBridge({
       cwd: root,
+      ...(physicsWorldHost === undefined ? {} : { physicsWorldHost }),
       ...(commandCapabilities === undefined ? {} : { commandCapabilities }),
       inputActions: nextInputActions,
       projectBrowser: nextProjectBrowser,

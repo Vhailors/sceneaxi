@@ -2,6 +2,7 @@
   "files": [],
   "references": [
     { "path": "packages/schemas" },
+    { "path": "packages/physics-rapier" },
     { "path": "packages/engine-kernel" },
     { "path": "packages/engine-presentation" },
     { "path": "packages/engine-orchestrator" },

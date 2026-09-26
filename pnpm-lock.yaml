@@ -175,6 +175,15 @@ importers:
         specifier: workspace:^
         version: link:../schemas
 
+  packages/physics-rapier:
+    dependencies:
+      '@dimforge/rapier3d-compat':
+        specifier: npm:@dimforge/rapier3d-deterministic-compat@0.21.0
+        version: '@dimforge/rapier3d-deterministic-compat@0.21.0'
+      '@sceneaxi/schemas':
+        specifier: workspace:^
+        version: link:../schemas
+
   packages/plugin-host:
     dependencies:
       '@sceneaxi/schemas':
@@ -269,6 +278,9 @@ packages:
 
   '@dimforge/rapier3d-compat@0.12.0':
     resolution: {integrity: sha512-uekIGetywIgopfD97oDL5PfeezkFpNhwlzlaEYNOA0N6ghdsOvh/HYjSMek5Q2O1PYvRSDFcqFVJl4r4ZBwOow==}
+
+  '@dimforge/rapier3d-deterministic-compat@0.21.0':
+    resolution: {integrity: sha512-n7JuU62Obljlgq+OeH2DHhTmRSjRzwuJPl54tS9pFIzVQyvXsO5CH+a5KkIRBtnFWDbg1Zicv9BulG0jfBAopA==}
 
   '@emnapi/core@1.11.1':
     resolution: {integrity: sha512-RSvbQmHzdKzNsLYa/wHrbc3KN4sYLKAdPZxqiM2HATqv/SBk2/ENSHpvXGaLOMcsAyz0poEGqkmmKYG3OWiJEQ==}
@@ -1277,6 +1289,8 @@ packages:
 snapshots:
 
   '@dimforge/rapier3d-compat@0.12.0': {}
+
+  '@dimforge/rapier3d-deterministic-compat@0.21.0': {}
 
   '@emnapi/core@1.11.1':
     dependencies:

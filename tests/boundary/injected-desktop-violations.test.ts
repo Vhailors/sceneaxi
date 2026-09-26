@@ -89,6 +89,19 @@ describe("desktop tier — injected violations", () => {
     expect(res.status, `stderr: ${res.stderr}`).toBe(0);
   });
 
+  it("keeps Rapier out of the kernel, CLI, profiles and sites", () => {
+    for (const directory of ["packages/engine-kernel", "packages/cli", "packages/profile-game", "sites/umbrella"]) {
+      appendTo(fx, `${directory}/src/index.ts`, '\nimport "@sceneaxi/physics-rapier";\n');
+    }
+    appendTo(fx, "packages/physics-rapier/src/index.ts", '\nimport "@sceneaxi/engine-kernel";\n');
+    const res = runCheck(fx, "check-boundaries.mjs");
+    expect(res.status).toBe(1);
+    for (const directory of ["packages/engine-kernel", "packages/cli", "packages/profile-game", "sites/umbrella"]) {
+      expect(res.stderr).toContain(`${directory}/src/index.ts imports @sceneaxi/physics-rapier, DENIED by the matrix`);
+    }
+    expect(res.stderr).toContain("packages/physics-rapier/src/index.ts imports @sceneaxi/engine-kernel, DENIED by the matrix");
+  });
+
   it("boundary check denies the desktop app a profile package", () => {
     appendTo(fx, "desktop/linux/src/index.ts", '\nimport "@sceneaxi/profile-game";\n');
     const res = runCheck(fx, "check-boundaries.mjs");

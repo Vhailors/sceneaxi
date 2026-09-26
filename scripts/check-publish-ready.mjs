@@ -126,6 +126,7 @@ export const CHECK_IDS = Object.freeze([
   "no-publish-hooks",
   "no-registry-publish",
   "profile-core-pin",
+  "physics-deterministic-build",
   "sdk-covers-exports",
   "sdk-consumer-packages",
   "sdk-output-ignored",
@@ -987,6 +988,12 @@ export function checkPublishReady() {
   guard("no-registry-publish", () => checkNoRegistryPublish(sources));
   guard("sdk-output-ignored", () => checkSdkOutputIgnored(sources));
   guard("profile-core-pin", () => checkProfileCorePins(manifests));
+  guard("physics-deterministic-build", () => {
+    const adapter = manifests.get("@sceneaxi/physics-rapier");
+    if (adapter?.json.dependencies?.["@dimforge/rapier3d-compat"] !== "npm:@dimforge/rapier3d-deterministic-compat@0.21.0") {
+      fail("physics-deterministic-build", "@sceneaxi/physics-rapier must pin the deterministic-compat 0.21.0 build via @dimforge/rapier3d-compat (ADR 0027 replay golden)");
+    }
+  });
   const consumerPackages = missingDocs.has(CONSUMER_DOC)
     ? []
     : (guard("docs-consumer-surface", () => checkConsumerDoc(manifests)) ?? []);

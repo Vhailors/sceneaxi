@@ -7,6 +7,7 @@ This monorepo is the packaging home for:
 | Area | Location |
 |---|---|
 | Engine packages | `packages/engine-*` (kernel, presentation, orchestrator seeded; asset-compiler, platform-host, evidence delayed) |
+| Physics adapter | `packages/physics-rapier` (browser-safe deterministic Rapier host, composed by desktop; [ADR 0027](docs/adr/0027-physics-world-host.md)) |
 | Runtime/authoring core | `packages/authoring-core` (document model, propose/apply service, sessions, evidence hooks, Model Provider Port) |
 | Profiles | `packages/profile-*` |
 | Agent-first CLI | `packages/cli` (thin protocol adapter over authoring-core and the contained importer seam; no engine access) |

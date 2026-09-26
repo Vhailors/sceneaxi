@@ -382,7 +382,8 @@
             "packages/profile-web/package.json",
             "packages/provider-openrouter/package.json",
             "packages/schemas/package.json",
-            "packages/site-kit/package.json"
+            "packages/site-kit/package.json",
+            "packages/physics-rapier/package.json"
           ],
           "present": true
         },
@@ -784,6 +785,7 @@
             "tests/e2e/fixtures/importers/duplicate-member.sceneaxi.json",
             "tests/e2e/fixtures/importers/external-workshop.sceneaxi.json",
             "tests/e2e/fixtures/importers/unsupported-major.sceneaxi.json",
+            "tests/e2e/fixtures/physics-rapier-golden.json",
             "tests/e2e/fixtures/plugin-host/illegal-claim/package.json",
             "tests/e2e/fixtures/plugin-host/illegal-claim/plugin.js",
             "tests/e2e/fixtures/plugin-host/illegal-claim/sceneaxi.plugin.manifest.json",
@@ -817,6 +819,7 @@
             "tests/e2e/importers-plugin-golden.test.ts",
             "tests/e2e/input-actions-golden.test.ts",
             "tests/e2e/module-coverage-evidence.test.ts",
+            "tests/e2e/physics-rapier-golden.test.ts",
             "tests/e2e/plugin-capability-golden.test.ts",
             "tests/e2e/profile-game-scene-golden.test.ts",
             "tests/e2e/profile-kids-refuse-golden.test.ts",
@@ -1023,6 +1026,7 @@
             "tests/e2e/fixtures/importers/duplicate-member.sceneaxi.json",
             "tests/e2e/fixtures/importers/external-workshop.sceneaxi.json",
             "tests/e2e/fixtures/importers/unsupported-major.sceneaxi.json",
+            "tests/e2e/fixtures/physics-rapier-golden.json",
             "tests/e2e/fixtures/plugin-host/illegal-claim/package.json",
             "tests/e2e/fixtures/plugin-host/illegal-claim/plugin.js",
             "tests/e2e/fixtures/plugin-host/illegal-claim/sceneaxi.plugin.manifest.json",
@@ -1056,6 +1060,7 @@
             "tests/e2e/importers-plugin-golden.test.ts",
             "tests/e2e/input-actions-golden.test.ts",
             "tests/e2e/module-coverage-evidence.test.ts",
+            "tests/e2e/physics-rapier-golden.test.ts",
             "tests/e2e/plugin-capability-golden.test.ts",
             "tests/e2e/profile-game-scene-golden.test.ts",
             "tests/e2e/profile-kids-refuse-golden.test.ts",
@@ -1714,6 +1719,7 @@
             "tests/e2e/fixtures/importers/duplicate-member.sceneaxi.json",
             "tests/e2e/fixtures/importers/external-workshop.sceneaxi.json",
             "tests/e2e/fixtures/importers/unsupported-major.sceneaxi.json",
+            "tests/e2e/fixtures/physics-rapier-golden.json",
             "tests/e2e/fixtures/plugin-host/illegal-claim/package.json",
             "tests/e2e/fixtures/plugin-host/illegal-claim/plugin.js",
             "tests/e2e/fixtures/plugin-host/illegal-claim/sceneaxi.plugin.manifest.json",
@@ -1747,6 +1753,7 @@
             "tests/e2e/importers-plugin-golden.test.ts",
             "tests/e2e/input-actions-golden.test.ts",
             "tests/e2e/module-coverage-evidence.test.ts",
+            "tests/e2e/physics-rapier-golden.test.ts",
             "tests/e2e/plugin-capability-golden.test.ts",
             "tests/e2e/profile-game-scene-golden.test.ts",
             "tests/e2e/profile-kids-refuse-golden.test.ts",
@@ -2921,6 +2928,7 @@
             "tests/e2e/fixtures/importers/duplicate-member.sceneaxi.json",
             "tests/e2e/fixtures/importers/external-workshop.sceneaxi.json",
             "tests/e2e/fixtures/importers/unsupported-major.sceneaxi.json",
+            "tests/e2e/fixtures/physics-rapier-golden.json",
             "tests/e2e/fixtures/plugin-host/illegal-claim/package.json",
             "tests/e2e/fixtures/plugin-host/illegal-claim/plugin.js",
             "tests/e2e/fixtures/plugin-host/illegal-claim/sceneaxi.plugin.manifest.json",
@@ -2954,6 +2962,7 @@
             "tests/e2e/importers-plugin-golden.test.ts",
             "tests/e2e/input-actions-golden.test.ts",
             "tests/e2e/module-coverage-evidence.test.ts",
+            "tests/e2e/physics-rapier-golden.test.ts",
             "tests/e2e/plugin-capability-golden.test.ts",
             "tests/e2e/profile-game-scene-golden.test.ts",
             "tests/e2e/profile-kids-refuse-golden.test.ts",
@@ -4499,6 +4508,7 @@
             "tests/e2e/fixtures/importers/duplicate-member.sceneaxi.json",
             "tests/e2e/fixtures/importers/external-workshop.sceneaxi.json",
             "tests/e2e/fixtures/importers/unsupported-major.sceneaxi.json",
+            "tests/e2e/fixtures/physics-rapier-golden.json",
             "tests/e2e/fixtures/plugin-host/illegal-claim/package.json",
             "tests/e2e/fixtures/plugin-host/illegal-claim/plugin.js",
             "tests/e2e/fixtures/plugin-host/illegal-claim/sceneaxi.plugin.manifest.json",
@@ -4532,6 +4542,7 @@
             "tests/e2e/importers-plugin-golden.test.ts",
             "tests/e2e/input-actions-golden.test.ts",
             "tests/e2e/module-coverage-evidence.test.ts",
+            "tests/e2e/physics-rapier-golden.test.ts",
             "tests/e2e/plugin-capability-golden.test.ts",
             "tests/e2e/profile-game-scene-golden.test.ts",
             "tests/e2e/profile-kids-refuse-golden.test.ts",
@@ -4737,6 +4748,7 @@
             "tests/e2e/fixtures/importers/duplicate-member.sceneaxi.json",
             "tests/e2e/fixtures/importers/external-workshop.sceneaxi.json",
             "tests/e2e/fixtures/importers/unsupported-major.sceneaxi.json",
+            "tests/e2e/fixtures/physics-rapier-golden.json",
             "tests/e2e/fixtures/plugin-host/illegal-claim/package.json",
             "tests/e2e/fixtures/plugin-host/illegal-claim/plugin.js",
             "tests/e2e/fixtures/plugin-host/illegal-claim/sceneaxi.plugin.manifest.json",
@@ -4770,6 +4782,7 @@
             "tests/e2e/importers-plugin-golden.test.ts",
             "tests/e2e/input-actions-golden.test.ts",
             "tests/e2e/module-coverage-evidence.test.ts",
+            "tests/e2e/physics-rapier-golden.test.ts",
             "tests/e2e/plugin-capability-golden.test.ts",
             "tests/e2e/profile-game-scene-golden.test.ts",
             "tests/e2e/profile-kids-refuse-golden.test.ts",
@@ -7379,6 +7392,22 @@
         ]
       },
       {
+        "name": "@sceneaxi/engine-asset-compiler",
+        "directory": null,
+        "manifest": null,
+        "seam": null,
+        "exports": [],
+        "status": "delayed"
+      },
+      {
+        "name": "@sceneaxi/engine-evidence",
+        "directory": null,
+        "manifest": null,
+        "seam": null,
+        "exports": [],
+        "status": "delayed"
+      },
+      {
         "name": "@sceneaxi/engine-kernel",
         "directory": "packages/engine-kernel",
         "manifest": "packages/engine-kernel/package.json",
@@ -7409,6 +7438,14 @@
         ]
       },
       {
+        "name": "@sceneaxi/engine-platform-host",
+        "directory": null,
+        "manifest": null,
+        "seam": null,
+        "exports": [],
+        "status": "delayed"
+      },
+      {
         "name": "@sceneaxi/engine-presentation",
         "directory": "packages/engine-presentation",
         "manifest": "packages/engine-presentation/package.json",
@@ -7430,6 +7467,21 @@
         "seam": {
           "path": "packages/importers/src/index.ts",
           "name": "@sceneaxi/importers"
+        },
+        "exports": [
+          [
+            ".",
+            "./src/index.ts"
+          ]
+        ]
+      },
+      {
+        "name": "@sceneaxi/physics-rapier",
+        "directory": "packages/physics-rapier",
+        "manifest": "packages/physics-rapier/package.json",
+        "seam": {
+          "path": "packages/physics-rapier/src/index.ts",
+          "name": "@sceneaxi/physics-rapier"
         },
         "exports": [
           [
@@ -7497,6 +7549,14 @@
             "./src/index.ts"
           ]
         ]
+      },
+      {
+        "name": "@sceneaxi/provider-<name>",
+        "directory": null,
+        "manifest": null,
+        "seam": null,
+        "exports": [],
+        "status": "delayed"
       },
       {
         "name": "@sceneaxi/provider-openrouter",
@@ -7729,38 +7789,6 @@
             "./src/index.ts"
           ]
         ]
-      },
-      {
-        "name": "@sceneaxi/engine-asset-compiler",
-        "directory": null,
-        "manifest": null,
-        "seam": null,
-        "exports": [],
-        "status": "delayed"
-      },
-      {
-        "name": "@sceneaxi/engine-evidence",
-        "directory": null,
-        "manifest": null,
-        "seam": null,
-        "exports": [],
-        "status": "delayed"
-      },
-      {
-        "name": "@sceneaxi/engine-platform-host",
-        "directory": null,
-        "manifest": null,
-        "seam": null,
-        "exports": [],
-        "status": "delayed"
-      },
-      {
-        "name": "@sceneaxi/provider-<name>",
-        "directory": null,
-        "manifest": null,
-        "seam": null,
-        "exports": [],
-        "status": "delayed"
       }
     ],
     "cli": {
@@ -8612,7 +8640,8 @@
       "tests/e2e/contained-git-golden.test.ts",
       "tests/e2e/desktop-assistant-scene-loop-golden.test.ts",
       "tests/e2e/full-editor-transactions-golden.test.ts",
-      "tests/e2e/hosted-ai-metering-golden.test.ts"
+      "tests/e2e/hosted-ai-metering-golden.test.ts",
+      "tests/e2e/physics-rapier-golden.test.ts"
     ],
     "browserEvidence": [
       ".maestro/playbooks/Initiation/Working/Phase-01/Baseline.md",
@@ -8661,7 +8690,7 @@
       "desktop/windows/scripts/release.mjs"
     ],
     "counts": {
-      "matrixPackages": 26,
+      "matrixPackages": 27,
       "delayedPackages": 4,
       "cliVerbs": 21,
       "editorCommands": 66,
@@ -8673,7 +8702,7 @@
       "routes": 26,
       "migrations": 7,
       "workflows": 5,
-      "goldenTests": 55
+      "goldenTests": 56
     },
     "documentedClaims": [
       {

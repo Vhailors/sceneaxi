@@ -209,6 +209,30 @@ action, no TCP listener, no provider credential field, and no hosted route; the
 real CLI-to-socket-to-authoring round trip is in
 `tests/e2e/desktop-cli-local-bridge-golden.test.ts`.
 
+### Scene physics host
+
+`src/lib/desktop-scene.ts` owns Rapier initialization and the existing
+`physics-evaluate` path. Electron awaits `initializeDesktopScenePhysics()`
+before injecting the resulting `PhysicsWorldHost` into each project bridge.
+Initialization failure is logged as `PHYSICS_HOST_NOT_READY`; toy projects
+still open, while an explicit Rapier evaluation refuses that same code.
+A mismatched injected host refuses `PHYSICS_HOST_KIND_UNKNOWN`.
+
+The saved catalog selects `world.engine`, with toy still the default.
+Rapier uses the deterministic WASM adapter in `packages/physics-rapier`;
+`handle()` stays synchronous and evaluation never writes project bytes.
+This wires catalog evaluation, not a second gameplay loop in the renderer or
+an expansion of the kernel's sculpt physics. The current port exposes only
+`y` and `vy` in snapshots. Nonzero animation offsets refuse
+`PHYSICS_INPUT_UNSUPPORTED` rather than silently ignoring animation.
+The v1 shape and joint conventions and the unresolved pose contract are
+recorded in [ADR 0027](adr/0027-physics-world-host.md).
+
+`tests/e2e/desktop-physics-golden.test.ts` proves review, save, evaluate,
+missing-host refusal, and byte-identical reopen through the real bridge.
+`tests/e2e/physics-rapier-golden.test.ts` pins the state and evaluation digests
+across fresh WASM processes; existing toy goldens keep their default host.
+
 ### Assistant-to-viewport product loop
 
 The packaged document requests a build only from Assistant **Build** mode. The

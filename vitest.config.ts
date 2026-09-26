@@ -56,6 +56,9 @@ export default defineConfig({
       "@sceneaxi/engine-presentation": fileURLToPath(
         new URL("./packages/engine-presentation/src/index.ts", import.meta.url),
       ),
+      "@sceneaxi/physics-rapier": fileURLToPath(
+        new URL("./packages/physics-rapier/src/index.ts", import.meta.url),
+      ),
       "@sceneaxi/engine-kernel": fileURLToPath(
         new URL("./packages/engine-kernel/src/index.ts", import.meta.url),
       ),

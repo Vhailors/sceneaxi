@@ -26,6 +26,9 @@ importers:
       '@sceneaxi/importers':
         specifier: link:../../packages/importers
         version: link:../../packages/importers
+      '@sceneaxi/physics-rapier':
+        specifier: link:../../packages/physics-rapier
+        version: link:../../packages/physics-rapier
       '@sceneaxi/provider-openrouter':
         specifier: link:../../packages/provider-openrouter
         version: link:../../packages/provider-openrouter

@@ -89,6 +89,7 @@ import {
   parseScenePackageCatalog,
   type ScenePackageMutation,
   type ComposedScene,
+  type PhysicsWorldHost,
   type ScenePhysicsCatalog,
   type ScenePhysicsMutation,
   type SceneEnvironmentCatalog,
@@ -1515,11 +1516,17 @@ export function inspectDesktopScenePhysics(documentData: unknown) {
   return inspectScenePhysics(physicsCatalogFromData(documentData) ?? emptyScenePhysicsCatalog());
 }
 
+export async function initializeDesktopScenePhysics() {
+  const { createRapierPhysicsWorldHost } = await import("@sceneaxi/physics-rapier");
+  return createRapierPhysicsWorldHost();
+}
+
 export function evaluateDesktopScenePhysics(input: Readonly<{
   documentData: unknown;
   sourceContentHash: string;
   steps: number;
   animationOffsetY?: number;
+  physicsWorldHost?: PhysicsWorldHost;
 }>) {
   const catalog = physicsCatalogFromData(input.documentData);
   if (catalog === null) {
@@ -1533,6 +1540,7 @@ export function evaluateDesktopScenePhysics(input: Readonly<{
     catalog,
     sourceContentHash: input.sourceContentHash,
     steps: input.steps,
+    ...(input.physicsWorldHost === undefined ? {} : { host: input.physicsWorldHost }),
     ...(input.animationOffsetY === undefined ? {} : { animationOffsetY: input.animationOffsetY }),
   });
 }
