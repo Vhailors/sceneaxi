@@ -168,6 +168,17 @@ Severity: 🔴 blocker · 🟠 high · 🟡 medium · ⚪ low.
 Still open from those rows: OG images/favicon/catalog metadata (42), catalog `error.tsx` (43),
 `NEXT-STEP.md` re-pin and capability-matrix row drift (84).
 
+## Loop tracking
+
+Item status lives in [`go-live-backlog.json`](go-live-backlog.json): `class` is one of autonomous, decision, external, or gated; `status` is one of open, in-progress, done, or parked, with a `parkedReason`. The graphmap is [`surface-map.md`](surface-map.md) (Mermaid) and [`surface-map.html`](surface-map.html) (every node). Regenerate both with:
+
+```sh
+node scripts/probe-surfaces.mjs [--build]   # needs each site's install root; writes surface-probe.json
+node scripts/surface-map.mjs                # needs `pnpm build`; writes surface-map.{json,html,md}
+```
+
+Found while building the map (owned by item 53): the capability matrix marks `dock-timeline` as **real**, but no desktop GUI or renderer code names `animation-apply`. The row's evidence is the bridge-level animation golden, not a GUI dispatch path.
+
 ## Suggested sequencing
 
 1. Decisions A1–A5.
