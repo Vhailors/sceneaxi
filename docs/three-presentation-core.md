@@ -39,6 +39,16 @@ The null presentation path (`createNullPresentationRuntime`,
 `createNullSculptPresentationBackend`) is unchanged and remains the no-backend
 gate path.
 
+Audio is a separate presentation port, `createAudioPlaybackPort()`, with an
+injected structural `AudioContext` factory. It decodes supplied admitted bytes,
+plays/stops named clips, and sets a 0–1 master gain. It has no `node:*` import or
+DOM type dependency; node tests inject a fake context and assert port calls, not
+sound. The desktop renderer sends validated manifest audio bytes with the
+mountable scene and exposes controls only in Play. Kids is denied before the
+context factory is called. Audio is available to other allowed presentation
+consumers, including the umbrella viewport, without changing the dependency
+matrix; no umbrella audio UI is added here.
+
 ## Labels
 
 Product surfaces use **Three presentation core**. A headless run identifies
@@ -127,6 +137,9 @@ only, and presentation invents no state the kernel does not own.
 
 ## What is verified where
 
+- **Node gates** (`pnpm gate`) cover injected audio decode/play/stop/volume and
+  Kids denial without constructing an AudioContext; they make no audible-output
+  claim.
 - **Node gates** (`pnpm gate`) cover mount/present/capture/dispose lifecycle and
   refusals, the frame path through an injected surface, orbit/zoom math and
   clamping, pointer/wheel input wiring, snapshot interpolation and non-mutation,

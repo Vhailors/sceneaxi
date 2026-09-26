@@ -278,6 +278,7 @@ export type DesktopImportedAsset = Readonly<{
 
 export type DesktopMountableScene = MountableScene & Readonly<{
   importedAssets?: readonly DesktopImportedAsset[];
+  audioClips?: readonly Readonly<{ name: string; mediaType: string; bytesBase64: string }>[];
 }>;
 
 function consistentProjectAssetManifest(
@@ -330,6 +331,9 @@ function withImportedAssets(
     return Object.freeze({ ok: false as const, reason: manifest.reason, message: manifest.message });
   }
   const importedAssets: DesktopImportedAsset[] = [];
+  const audioClips = manifest.assets
+    .filter((entry) => entry.family === "audio")
+    .map((entry) => Object.freeze({ name: entry.assetId, mediaType: entry.mediaType, bytesBase64: entry.canonicalBytesBase64 }));
   for (const entry of manifest.assets) {
     if (entry.family !== "model") continue;
     if (entry.instanceId === null || entry.artifactId === null) {
@@ -361,9 +365,13 @@ function withImportedAssets(
   return Object.freeze({
     ok: true as const,
     composed,
-    mountable: importedAssets.length === 0
+    mountable: importedAssets.length === 0 && audioClips.length === 0
       ? mountable
-      : Object.freeze({ ...mountable, importedAssets: Object.freeze(importedAssets) }),
+      : Object.freeze({
+          ...mountable,
+          ...(importedAssets.length === 0 ? {} : { importedAssets: Object.freeze(importedAssets) }),
+          ...(audioClips.length === 0 ? {} : { audioClips: Object.freeze(audioClips) }),
+        }),
   });
 }
 

@@ -92,6 +92,8 @@ import {
 import {
   createDesktopPresentationBackend,
   installAssistantProductFlow,
+  installDesktopAudioControls,
+  stopDesktopAudioOnKidsProfile,
 } from "../../desktop/linux/src/renderer/viewport.ts";
 import {
   DESKTOP_ASSISTANT_START_MODES,
@@ -99,6 +101,7 @@ import {
   withAssistantStrengthInstruction,
 } from "../../desktop/linux/src/renderer/assistant-start.ts";
 import { desktopAssistantRuntimeSignal } from "../../desktop/linux/src/renderer/assistant-runtime.ts";
+import type { AudioSourceLike } from "../../packages/engine-presentation/src/index.ts";
 import {
   assistantInspectionText,
   assistantRarityInvalidation,
@@ -3907,6 +3910,80 @@ describe("desktop renderer behavior", () => {
     // rather than being written with a fabricated value.
     expect(pixelsMetaContent(frame(undefined))).toBeNull();
     expect(pixelsMetaContent(frame("true"))).toBeNull();
+  });
+
+  it("cancels pending audio decode on Stop and disposes controls when the Play scene changes", async () => {
+    const window = new HappyWindow();
+    const hostNode = window.document.createElement("section");
+    const host = hostNode as unknown as HTMLElement;
+    window.document.body.append(hostNode);
+    const events: string[] = [];
+    let resolveDecode: ((buffer: object) => void) | undefined;
+    let deferDecode = true;
+    const dispose = installDesktopAudioControls({
+      host,
+      clips: [{ name: "tone", mediaType: "audio/wav", bytesBase64: "AQ==" }],
+      createAudioContext: () => {
+        const source: AudioSourceLike = {
+          buffer: null,
+          connect: () => events.push("connect"),
+          start: () => events.push("start"),
+          stop: () => events.push("stop"),
+          onended: null,
+        };
+        return {
+          destination: { kind: "audio-output", target: {} },
+          decodeAudioData: async () => deferDecode
+            ? new Promise((resolve) => { resolveDecode = resolve; })
+            : {},
+          createBufferSource: () => source,
+          createGain: () => ({ kind: "audio-gain", gain: { value: 1 }, connect: () => undefined }),
+          close: async () => { events.push("close"); },
+        };
+      },
+      onRefusal: (message) => events.push(`refused:${message}`),
+    });
+
+    const buttons = [...host.querySelectorAll("button")];
+    buttons[0]?.click();
+    buttons[1]?.click();
+    resolveDecode?.({});
+    await vi.waitFor(() => expect(resolveDecode).toBeTypeOf("function"));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(events).not.toContain("start");
+
+    dispose();
+    expect(host.querySelector("[data-audio-playback]")).toBeNull();
+    expect(events).toContain("close");
+
+    deferDecode = false;
+    const replace = installDesktopAudioControls({
+      host,
+      clips: [{ name: "tone", mediaType: "audio/wav", bytesBase64: "AQ==" }],
+      createAudioContext: () => ({
+        destination: { kind: "audio-output", target: {} },
+        decodeAudioData: async () => ({}),
+        createBufferSource: () => ({ buffer: null, connect() {}, start: () => events.push("start-again"), stop: () => events.push("stop-again"), onended: null }),
+        createGain: () => ({ kind: "audio-gain", gain: { value: 1 }, connect() {} }),
+        close: async () => { events.push("close-again"); },
+      }),
+      onRefusal: (message) => events.push(`refused:${message}`),
+    });
+    host.querySelector("button")?.click();
+    await vi.waitFor(() => expect(events).toContain("start-again"));
+    const shellNode = window.document.createElement("div");
+    const shell = shellNode as unknown as HTMLElement;
+    shell.dataset.profile = "game";
+    window.document.body.append(shellNode);
+    stopDesktopAudioOnKidsProfile(shell, replace);
+    shell.dataset.profile = "kids";
+    await vi.waitFor(() => expect(events).toContain("close-again"));
+    expect(host.querySelector("[data-audio-playback]")).toBeNull();
+    expect(events).toContain("stop-again");
+    installDesktopAudioControls({ host, clips: [], createAudioContext: () => { throw new Error("Audio-free scene constructed a context"); }, onRefusal: (message) => events.push(message) });
+    expect(host.querySelector("[data-audio-playback]")).toBeNull();
+    replace();
+    window.happyDOM.abort();
   });
 
   it("acknowledges a playback only for an exercise it can honour", () => {

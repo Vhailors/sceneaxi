@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import {
+  createAudioPlaybackPort,
   createNullPresentationRuntime,
   seam,
   type PresentationCaptureResult,
@@ -22,8 +23,9 @@ describe("@sceneaxi/engine-presentation public seam", () => {
     expect(Object.isFrozen(seam)).toBe(true);
   });
 
-  it("exports the null Presentation Runtime factory", () => {
+  it("exports the null Presentation Runtime and audio factories", () => {
     expect(typeof createNullPresentationRuntime).toBe("function");
+    expect(typeof createAudioPlaybackPort).toBe("function");
   });
 
   it("keeps capture results backend-neutral and nullable", () => {

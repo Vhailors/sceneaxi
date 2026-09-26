@@ -18,7 +18,7 @@ import {
   proposeProjectAssetImport,
   stageProjectAssetImport,
 } from "../../packages/importers/src/index.ts";
-import { createDesktopBridge, createDesktopProjectBrowser, seedDesktopProject } from "../../desktop/linux/src/index.ts";
+import { createDesktopBridge, createDesktopProjectBrowser, desktopSceneFromDocumentData, seedDesktopProject } from "../../desktop/linux/src/index.ts";
 import { assistantAssetInspectionText } from "../../desktop/linux/src/renderer/assistant-inspection.ts";
 import { runAssetHotReload, runAssetImport } from "../../packages/cli/src/asset-verbs.ts";
 import { runProjectApply } from "../../packages/cli/src/project-verbs.ts";
@@ -161,6 +161,8 @@ describe("first-class manifest-backed asset pipeline", () => {
     const document = JSON.parse(readFileSync(join(root, "scene.json"), "utf8")) as { data: unknown };
     const manifest = projectAssetManifestFromDocumentData(document.data);
     expect(manifest.ok).toBe(true);
+    const desktopScene = desktopSceneFromDocumentData(document.data);
+    expect(desktopScene).toMatchObject({ ok: true, mountable: { audioClips: expect.arrayContaining([{ name: "tone", mediaType: "audio/wav", bytesBase64: expect.any(String) }]) } });
     if (!manifest.ok) return;
     expect(new Set(manifest.value.assets.map((entry) => entry.family))).toEqual(new Set(["sceneaxi", "model", "image", "audio", "font", "animation"]));
     expect(assistantAssetInspectionText(manifest.value.assets)).toContain("pixel · image · 1 × 1");

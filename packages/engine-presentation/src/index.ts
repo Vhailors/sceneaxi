@@ -13,6 +13,17 @@ export const seam: PackageSeam = Object.freeze({
 });
 
 export {
+  createAudioPlaybackPort,
+  type AudioBufferLike,
+  type AudioConnectionTarget,
+  type AudioContextLike,
+  type AudioGainLike,
+  type AudioOutputDestination,
+  type AudioPlaybackPort,
+  type AudioSourceLike,
+} from "./audio-playback.js";
+
+export {
   PresentationRuntimeError,
   createNullPresentationRuntime,
   type PresentationCaptureResult,

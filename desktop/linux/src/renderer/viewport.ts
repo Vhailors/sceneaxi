@@ -17,8 +17,14 @@
  * the main process only through the preload-exposed bridge global.
  */
 import {
+  createAudioPlaybackPort,
   createSculptMountApi,
   createThreeRenderLoop,
+  type AudioBufferLike,
+  type AudioConnectionTarget,
+  type AudioContextLike,
+  type AudioGainLike,
+  type AudioPlaybackPort,
   createThreeSculptPresentationBackend,
   type SculptPresentationFrame,
   type ThreePresentationCoreOptions,
@@ -353,6 +359,173 @@ type RarityReportable = {
  */
 function rarityEvidenceReport(exercise: RarityReportable): string | null {
   return formatSafeRarityEvidence(exercise.rarity, exercise.raritySession);
+}
+
+function createBrowserAudioContext(): AudioContextLike {
+  const context = new AudioContext();
+
+  const nativeGains = new WeakMap<AudioGainLike, GainNode>();
+
+  const targetNode = (target: AudioConnectionTarget): AudioNode => {
+    if (target.kind === "audio-gain") {
+      const node = nativeGains.get(target);
+
+      if (node === undefined) throw new Error("AUDIO_CONNECTION_TARGET_INVALID");
+
+      return node;
+    }
+
+    // SAFETY: this value is wrapped from this context's AudioDestinationNode below.
+    return target.target as AudioNode;
+  };
+
+  return {
+    destination: { kind: "audio-output", target: context.destination },
+    decodeAudioData: (bytes) => context.decodeAudioData(bytes),
+    createGain: () => {
+      const node = context.createGain();
+
+      const gain: AudioGainLike = {
+        kind: "audio-gain",
+        gain: node.gain,
+        connect: (target) => node.connect(targetNode(target)),
+      };
+
+      nativeGains.set(gain, node);
+
+      return gain;
+    },
+    createBufferSource: () => {
+      const source = context.createBufferSource();
+
+      let buffer: AudioBufferLike | null = null;
+
+      return {
+        get buffer() { return buffer; },
+        set buffer(value) {
+          buffer = value;
+          // SAFETY: port buffers are exclusively returned by this context's decoder.
+          source.buffer = value as AudioBuffer | null;
+        },
+        connect: (target) => source.connect(targetNode(target)),
+        start: () => source.start(),
+        stop: () => source.stop(),
+        get onended() { return source.onended === null ? null : () => source.onended?.(new Event("ended")); },
+        set onended(handler) { source.onended = handler === null ? null : () => handler(); },
+      };
+    },
+    close: () => context.close(),
+  };
+}
+
+const audioControlsByHost = new WeakMap<HTMLElement, () => void>();
+
+type DesktopAudioClip = Readonly<{ name: string; mediaType: string; bytesBase64: string }>;
+
+export function stopDesktopAudioOnKidsProfile(
+  shell: HTMLElement,
+  stop: () => void,
+): void {
+  const Observer = shell.ownerDocument.defaultView?.MutationObserver;
+
+  if (Observer === undefined) return;
+
+  const observer = new Observer(() => {
+    if (shell.dataset.profile === "kids") stop();
+  });
+
+  observer.observe(shell, { attributes: true, attributeFilter: ["data-profile"] });
+}
+
+export function installDesktopAudioControls(input: Readonly<{
+  host: HTMLElement;
+  clips: readonly DesktopAudioClip[];
+  createAudioContext: () => AudioContextLike;
+  onRefusal: (message: string) => void;
+}>): () => void {
+  audioControlsByHost.get(input.host)?.();
+
+  if (input.clips.length === 0) return () => undefined;
+
+  const controls = input.host.ownerDocument.createElement("div");
+
+  controls.dataset.audioPlayback = "true";
+  controls.setAttribute("aria-label", "Play session audio");
+  controls.style.cssText = "position:absolute;top:12px;right:12px;display:flex;gap:6px;z-index:2";
+  const volume = input.host.ownerDocument.createElement("input");
+  volume.type = "range";
+  volume.min = "0";
+  volume.max = "1";
+  volume.step = "0.01";
+  volume.value = "1";
+  volume.setAttribute("aria-label", "Master volume");
+  let audio: AudioPlaybackPort | null = null;
+  let disposed = false;
+  const generations = new Map<string, number>();
+  const generation = (name: string) => (generations.get(name) ?? 0) + 1;
+  const refuse = (message: string) => input.onRefusal(message);
+
+  volume.addEventListener("input", () => {
+    try { audio?.setMasterVolume(Number(volume.value)); }
+    catch { refuse("Audio volume update failed."); }
+  });
+
+  controls.append(volume);
+
+  for (const clip of input.clips) {
+    const play = input.host.ownerDocument.createElement("button");
+    play.type = "button";
+    play.textContent = `Play ${clip.name}`;
+    play.addEventListener("click", () => {
+      const request = generation(clip.name);
+      generations.set(clip.name, request);
+
+      try {
+        audio ??= createAudioPlaybackPort({ createAudioContext: input.createAudioContext });
+
+        audio.setMasterVolume(Number(volume.value));
+        const bytes = Uint8Array.from(atob(clip.bytesBase64), (character) => character.charCodeAt(0));
+        void audio.load(clip.name, bytes).then(() => {
+          if (disposed || generations.get(clip.name) !== request) return;
+
+          return audio?.play(clip.name);
+        }).catch(() => refuse("Audio decoding or playback failed."));
+      } catch {
+        refuse("Audio context setup failed.");
+      }
+    });
+    const stop = input.host.ownerDocument.createElement("button");
+    stop.type = "button";
+    stop.textContent = `Stop ${clip.name}`;
+    stop.addEventListener("click", () => {
+      generations.set(clip.name, generation(clip.name));
+      audio?.stop(clip.name);
+    });
+
+    controls.append(play, stop);
+  }
+
+  input.host.append(controls);
+
+  const dispose = () => {
+    if (disposed) return;
+
+    disposed = true;
+
+    for (const name of generations.keys()) generations.set(name, generation(name));
+
+    controls.remove();
+
+    if (audio !== null) void audio.dispose().catch(() => refuse("Audio context cleanup failed."));
+
+    audio = null;
+
+    if (audioControlsByHost.get(input.host) === dispose) audioControlsByHost.delete(input.host);
+  };
+
+  audioControlsByHost.set(input.host, dispose);
+
+  return dispose;
 }
 
 export function createDesktopPresentationBackend(
@@ -851,6 +1024,7 @@ async function mountLiveViewport(): Promise<void> {
     refuseLiveViewport(stage, "the desktop bridge is not exposed.");
     return;
   }
+  const shell = document.querySelector<HTMLElement>(".shell");
   let inputActionMap = DEFAULT_INPUT_ACTION_MAP;
   if (port.inputActions !== undefined) {
     const inspection = await port.inputActions();
@@ -1065,28 +1239,61 @@ async function mountLiveViewport(): Promise<void> {
     pollAssistantJob,
     persistReadyBuild,
   );
+
   signalAssistantRuntime(
     desktopAssistantRuntimeSignal({ status: "mounted", controlsBound: assistantBound }),
   );
 
   document.addEventListener(DESKTOP_RARITY_PROPOSAL_EVENT, (event: Event) => {
+    // SAFETY: the product event is dispatched as a CustomEvent by the desktop shell.
     if (!rarityInvalidationMatches(displayedViewportRarityDigest, (event as CustomEvent).detail)) {
       return;
     }
+
     displayedViewportRarityDigest = null;
     clearOverlayLine(RARITY_EVIDENCE_ID);
   });
 
+  let disposeAudioControls: (() => void) | null = null;
+
+  if (shell !== null) {
+    stopDesktopAudioOnKidsProfile(shell, () => {
+      disposeAudioControls?.();
+      disposeAudioControls = null;
+    });
+  }
+
   document.addEventListener(DESKTOP_VIEWPORT_PLAY_EVENT, (event: Event) => {
     if (!(event instanceof CustomEvent)) return;
+
+    // SAFETY: CustomEvent is established above; the shell event carries mutable acknowledgement fields.
     const detail = event.detail as {
       accepted?: unknown;
       frame?: unknown;
     } | null;
+
     const playable = playableExercise(event.detail);
+
     if (detail === null || playable === null) return;
+
     viewportInputContext = "play";
+
+    disposeAudioControls?.();
+    disposeAudioControls = null;
+
+    // SAFETY: playableExercise validates the event's play-session shape before returning.
     const exercise = playable as PlayableExercise & RarityReportable;
+    // SAFETY: audio clips are projected only from the accepted desktop asset manifest.
+    const mountable = exercise.mountable as { audioClips?: readonly DesktopAudioClip[] };
+    const clips = mountable.audioClips ?? [];
+
+    disposeAudioControls = installDesktopAudioControls({
+      host: stage,
+      clips: shell?.dataset.profile === "kids" ? [] : clips,
+      createAudioContext: createBrowserAudioContext,
+      onRefusal: (message) => openPathLine(stage, `Audio refused: ${message}`),
+    });
+
     const synchronized = synchronizeViewportScene({
       mounts,
       frameMountedContent: () => backend.frameMountedContent(),

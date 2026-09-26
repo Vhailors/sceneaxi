@@ -81,7 +81,9 @@ the stable id, contained path, and model composition identities.
 - Assistant inspection: formats read-only metadata from that entry and omits
   canonical bytes.
 - Play: consumes model entries only, retaining the original canonical glTF
-  projection and byte parity; non-model assets do not fabricate scene nodes.
+  projection and byte parity; audio entries are supplied as their accepted canonical
+  bytes to the desktop Play session. The renderer decodes them through WebAudio only
+  after a user selects Play; imported bytes are never interpreted as code.
   Separate raster image entries are not bound to glTF materials.
 - Export Web: verifies and packages every admitted entry by its manifest media
   type, length, digest, and project-contained path.
@@ -93,7 +95,14 @@ preview/browser/assistant parity, CLI reload, and approval boundary are in
 Reject/accept/Play/Three/CLI parity remains in
 `tests/e2e/asset-ingestion-golden.test.ts`.
 
-This slice adds no hierarchy, input map, Play lifecycle, animation authoring,
-physics, provider, assistant mutation contract, package manager, build target,
-auth/billing, deployment, publication, Kids activation, or Stage 1 proof. The
-known Electron 43.2.0 host limitation is unchanged.
+Audio is presentation-only: the desktop Play session offers named Play/Stop
+controls and a master-volume slider. WebAudio is injected behind the
+`@sceneaxi/engine-presentation` port, so node tests never claim audible output.
+Kids playback is refused. Scene-authored Play-start bindings are not present in
+the current scene contract and remain a follow-up; this does not add an authoring
+concept or change the Play lifecycle.
+
+This slice adds no hierarchy, input map, animation authoring, physics, provider,
+assistant mutation contract, package manager, build target, auth/billing,
+deployment, publication, Kids activation, or Stage 1 proof. The known Electron
+43.2.0 host limitation is unchanged.

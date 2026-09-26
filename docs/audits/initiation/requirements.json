@@ -1621,7 +1621,8 @@
             "packages/engine-presentation/test/sculpt-mount.test.ts",
             "packages/engine-presentation/test/seam.test.ts",
             "packages/engine-presentation/test/three-presentation.test.ts",
-            "packages/engine-presentation/test/three-surface.test.ts"
+            "packages/engine-presentation/test/three-surface.test.ts",
+            "packages/engine-presentation/test/audio-playback.test.ts"
           ],
           "present": true
         },
@@ -1778,7 +1779,8 @@
             "packages/engine-presentation/test/sculpt-mount.test.ts",
             "packages/engine-presentation/test/seam.test.ts",
             "packages/engine-presentation/test/three-presentation.test.ts",
-            "packages/engine-presentation/test/three-surface.test.ts"
+            "packages/engine-presentation/test/three-surface.test.ts",
+            "packages/engine-presentation/test/audio-playback.test.ts"
           ],
           "present": true
         },
