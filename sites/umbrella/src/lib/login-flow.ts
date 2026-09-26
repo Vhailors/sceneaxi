@@ -216,13 +216,13 @@ export async function performLogin(input: {
 export type LogoutOutcome =
   | {
       readonly kind: "signed-out";
-      /** Logout always lands on the home page. */
+      /** Home on confirmed revocation; the login page names any revocation failure. */
       readonly location: string;
       /** The Set-Cookie header value that clears the session cookie. */
       readonly clearCookie: string;
       /**
-       * The server-side revocation result. A refusal means the stored session may
-       * still be live; the browser is signed out either way.
+       * The server-side revocation result. A refusal means a provider or local
+       * session may still be live; the browser is signed out either way.
        */
       readonly revocation: SiteResult<null>;
     }
@@ -237,8 +237,9 @@ export type LogoutOutcome =
  * Sign the request's session out.
  *
  * The cookie is cleared unconditionally — a browser must always be able to
- * discard its credential — while the stored session is deleted through the
- * identity port when the plane can reach it.
+ * discard its credential. The identity plane revokes the provider session before
+ * deleting the local session through the identity port. Failed revocation redirects
+ * to the login page with its named refusal instead of claiming success.
  *
  * "Unconditionally" is about *this* browser's own request, though: a submission
  * from another site is refused before the port is reached, because a cross-site
@@ -261,7 +262,9 @@ export async function performLogout(input: {
   const revocation = await input.plane.signOut();
   return Object.freeze({
     kind: "signed-out" as const,
-    location: "/",
+    location: revocation.ok
+      ? "/"
+      : loginRefusalHref(revocation.reason, LOGIN_DEFAULT_DESTINATION),
     clearCookie: clearSiteSessionCookie({ secure: input.secure }),
     revocation,
   });

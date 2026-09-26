@@ -166,9 +166,9 @@
       "severity": "medium",
       "title": "Sign-out deletes only the SceneAxi `sessions` row; the Better Auth session/bearer stays valid until expiry",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 1,
-      "thread": null,
+      "thread": "thr_jhycg6uwie",
       "commit": null
     },
     {

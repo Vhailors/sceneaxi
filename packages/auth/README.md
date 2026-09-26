@@ -25,7 +25,14 @@ Dependencies: `@sceneaxi/schemas` only. No engine package, no profile, no CLI.
 
 `signOut` accepts only the exact principal capability the port issued — `signIn`'s grant
 carries it as `grant.principal`, and `verifySession` returns it directly. A bare session
-id is not revocation authority.
+id is not revocation authority. This operation deletes only the matching SceneAxi
+session row. The umbrella's hosted logout composes it with provider revocation in
+`sites/umbrella/src/lib/identity-plane.ts`, through the deployment-owned
+`providerSessions` capability. That capability revokes the Better Auth bearer and
+confirms that it no longer resolves before the plane deletes the local row.
+Missing wiring or failed revocation returns a named refusal, not successful logout.
+Raw provider tokens are not retained by this package. The complete hosted sign-out
+contract and retry behavior are in [`docs/auth-credits.md`](../../docs/auth-credits.md).
 
 A successful `signIn` resolves a `SignInGrant` (`{ principal, sessionToken }`), not a bare
 principal, because the store keeps only the token's digest: that raw token is the one

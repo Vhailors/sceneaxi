@@ -179,7 +179,7 @@ const providerModels = Object.freeze({
 });
 
 /**
- * Durable throttling for both public endpoints.
+ * Durable throttling for the public provider endpoints.
  *
  * The counter lives in the provider's own PostgreSQL, not in per-instance
  * memory, because a serverless instance's memory resets on every cold start and
@@ -187,11 +187,10 @@ const providerModels = Object.freeze({
  * and exactly one account is ever provisioned, which makes `/sign-in/email` the
  * whole brute-force surface for the sole admin address.
  *
- * Session lookup keeps the fallback rule rather than an exemption. Buckets are
- * keyed per source address, and this deployment's own relay reaches that path at
- * most once per sign-in — already capped by the sign-in rule — so the fallback
- * binds a direct flood without ever binding the relay, and unauthenticated
- * lookups cannot monopolise the small connection pool below.
+ * Session lookup and sign-out share the fallback budget per source address.
+ * The deployment relay uses one lookup per sign-in and two requests per sign-out,
+ * including the revocation confirmation. Neither operation bypasses throttling,
+ * so repeated lookups or sign-outs cannot monopolise the small connection pool.
  *
  * `fallback.window` is also the longest window here on purpose: Better Auth
  * prunes its own expired counters against `rateLimit.window`, so a custom window
@@ -383,7 +382,7 @@ export async function ensureBetterAuthAdminBootstrap(
  * `@neondatabase/serverless` HTTP driver; this pooled driver exists only because
  * Better Auth's Kysely adapter needs one. Every concurrently warm serverless
  * instance holds its own copy of this pool, so an unbounded default multiplies
- * held Neon connections across instances for two endpoints that issue a handful
+ * held Neon connections across instances for endpoints that issue a handful
  * of short queries each. `connectionTimeoutMillis` is set for the same reason a
  * refusal beats a hang: without it a request waits forever for a client instead
  * of failing closed.
@@ -573,22 +572,27 @@ function refusal(reason: BetterAuthProviderRefusal): Response {
   );
 }
 
-type ProviderEndpoint = "sign-in" | "get-session";
+type ProviderEndpoint = "sign-in" | "get-session" | "sign-out";
 
 function requiredEndpoint(request: Request): ProviderEndpoint | undefined {
   const { pathname } = new URL(request.url);
+
   if (request.method === "POST" && pathname === "/api/auth/sign-in/email") return "sign-in";
+
   if (request.method === "GET" && pathname === "/api/auth/get-session") return "get-session";
+
+  if (request.method === "POST" && pathname === "/api/auth/sign-out") return "sign-out";
+
   return undefined;
 }
 
 /**
- * Build the two-route HTTP boundary with an injectable runtime loader for tests.
+ * Build the three-route HTTP boundary with an injectable runtime loader for tests.
  *
  * Provisioning gates sign-in alone. It exists to create the one configured
  * credential, and nothing it decides makes an already-issued session forged, so
- * a disagreement stops new credential grants without taking session lookup down
- * for principals it never described.
+ * a disagreement stops new credential grants without blocking session lookup or
+ * revocation for principals it never described.
  */
 export function createBetterAuthProviderHandler(
   loadRuntime: () => BetterAuthProviderRuntimeResult = loadProductionBetterAuthProvider,

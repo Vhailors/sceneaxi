@@ -1045,6 +1045,11 @@ function issuedCookieHeader(headers: ProviderResponseHeaders | undefined): strin
   return pairs.length === 0 ? undefined : pairs.join("; ");
 }
 
+export type ProviderSessionRevoker = Readonly<{
+  /** Resolves only after the provider confirms revocation, including an already absent session. */
+  revokeSession(token: string): Promise<void>;
+}>;
+
 /**
  * Create the small Better Auth instance shape consumed by @sceneaxi/auth. The
  * provider remains external; this site never stores a password or implements a
@@ -1068,7 +1073,7 @@ function issuedCookieHeader(headers: ProviderResponseHeaders | undefined): strin
 export function createBetterAuthHttpClient(options: {
   readonly origin: string;
   readonly fetch: ProviderFetch;
-}): BetterAuthInstanceLike {
+}): BetterAuthInstanceLike & ProviderSessionRevoker {
   const origin = new URL(options.origin).origin;
 
   async function readSessionRecord(
@@ -1105,6 +1110,37 @@ export function createBetterAuthHttpClient(options: {
   }
 
   return Object.freeze({
+    async revokeSession(token: string) {
+      const response = await options.fetch(`${origin}/api/auth/sign-out`, {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${token}`,
+          "content-type": "application/json",
+        },
+        body: "{}",
+        redirect: "error",
+        cache: "no-store",
+      });
+
+      if (!response.ok) throw new Error(`Better Auth sign-out failed (${response.status})`);
+      const payload = recordOf(await response.json());
+
+      if (payload?.["success"] !== true) {
+        throw new Error("Better Auth did not confirm session revocation");
+      }
+
+      // Better Auth sign-out reports success even when its database deletion throws.
+      const verified = await options.fetch(`${origin}/api/auth/get-session`, {
+        method: "GET",
+        headers: { authorization: `Bearer ${token}` },
+        redirect: "error",
+        cache: "no-store",
+      });
+
+      if (!verified.ok || (await verified.json()) !== null) {
+        throw new Error("Better Auth session revocation could not be verified");
+      }
+    },
     api: Object.freeze({
       async signInEmail(input: { body: { email: string; password: string } }) {
         const { body } = input;
@@ -1248,7 +1284,7 @@ export function createStripeCheckoutEvidenceAdapter(options: {
 
 export type DeploymentProviderOverrides = Readonly<{
   readonly database?: NeonDatabase | undefined;
-  readonly betterAuth?: BetterAuthInstanceLike | undefined;
+  readonly betterAuth?: (BetterAuthInstanceLike & Partial<ProviderSessionRevoker>) | undefined;
   readonly stripe?: StripeClientLike | undefined;
   readonly fetch?: ProviderFetch | undefined;
 }>;

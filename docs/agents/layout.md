@@ -63,8 +63,11 @@ they implement no identity, no ledger, and no signature check. Provider clients 
 outside hermetic core per ADR 0021; the Better Auth handler and PostgreSQL pool now live
 only in the umbrella install root at `src/provider/better-auth-provider.ts` — beside
 `src/lib/`, not in it, because those SDKs resolve only in that install root while the
-hermetic gate compiles `src/index.ts` and `src/lib/**` without them — exposing the two
+hermetic gate compiles `src/index.ts` and `src/lib/**` without them — exposing the three
 stock routes through `/api/auth/[...all]` over migration `0005_better_auth_provider.sql`.
+Hosted logout composes the deployment-owned `providerSessions` revocation capability
+with the auth port's local deletion. `docs/auth-credits.md` owns the confirmation and
+failure ordering.
 They create no SceneAxi role and do not replace the one
 `umbrellaPlaneHandles()` function, which reads the server environment once and holds the
 issued admin identity and the secret-closing webhook capability beside the provider

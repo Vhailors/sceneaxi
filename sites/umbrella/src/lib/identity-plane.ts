@@ -99,6 +99,7 @@ import {
   resolveNonEmptyEnv,
   type DeploymentProviderOverrides,
   type NeonDatabase,
+  type ProviderSessionRevoker,
 } from "./provider-adapters.js";
 
 /**
@@ -421,6 +422,8 @@ export type UmbrellaPlaneHandles = {
   /** One deployment-owned clock shared by every issued port and capability. */
   readonly clock: () => number;
   readonly identityPort?: IdentityPort | undefined;
+  /** Provider revocation is separate from the auth port's local session deletion. */
+  readonly providerSessions?: ProviderSessionRevoker | undefined;
   readonly creditStore?: CreditStore | undefined;
   readonly checkoutSessions?: CheckoutSessionAdapter | undefined;
   readonly checkoutEvidence?: CheckoutEvidencePort | undefined;
@@ -498,6 +501,10 @@ export function createDeploymentPlaneHandles(
     billingMode,
     clock,
     identityPort,
+    providerSessions:
+      betterAuth?.revokeSession === undefined
+        ? undefined
+        : Object.freeze({ revokeSession: betterAuth.revokeSession.bind(betterAuth) }),
     creditStore,
     checkoutSessions,
     checkoutEvidence,
@@ -618,12 +625,11 @@ export type UmbrellaIdentityPlane = {
   readonly billing: SiteBillingPort;
   readonly login: SiteLoginPort;
   /**
-   * Delete the stored session this request's credential names, if any.
+   * Revoke the provider session, then delete the local session for this credential.
    *
-   * `ok(null)` means "no live session remains for that credential" — including the
-   * case where it was already gone — so the caller's next move is always the same:
-   * clear the browser cookie. A named refusal means the store could not answer and
-   * the session may still be live server-side.
+   * `ok(null)` means neither session remains live. Provider confirmation is required
+   * even when the local session is gone or expired. A named refusal means revocation
+   * could not be confirmed. The caller still clears the browser cookie.
    */
   readonly signOut: () => Promise<SiteResult<null>>;
   /** Whether an adapter is present for each plane, for honest UI copy. */
@@ -1005,20 +1011,35 @@ export function createUmbrellaIdentityPlane(
   const signOutBoundSession = async (): Promise<SiteResult<null>> => {
     const port = identityPort();
     if (port === undefined) return refuse("IDENTITY_PLANE_NOT_WIRED");
+    const carried = parseSessionToken(wiring.sessionToken);
+
+    if (carried === null) return ok(null);
     const verified = await verifyCarriedSession({
       port,
       surface: "site",
       sessionToken: wiring.sessionToken,
     });
-    // A credential that names no live session — absent, expired, or already
-    // deleted — has nothing left to revoke: the signed-out end state holds.
-    if (!verified.ok) {
-      return verified.reason === "IDENTITY_SESSION_ABSENT" ||
-        verified.reason === "IDENTITY_SESSION_EXPIRED"
-        ? ok(null)
-        : verified;
+
+    if (
+      !verified.ok &&
+      verified.reason !== "IDENTITY_SESSION_ABSENT" &&
+      verified.reason !== "IDENTITY_SESSION_EXPIRED"
+    ) {
+      return verified;
     }
-    if (verified.value === null) return ok(null);
+
+    const providerSessions = deploymentHandle("providerSessions");
+
+    if (providerSessions === undefined) return refuse("IDENTITY_PLANE_NOT_WIRED");
+
+    // Keep the local row until provider confirmation so a failed revocation can retry.
+    try {
+      await providerSessions.revokeSession(carried.token);
+    } catch {
+      return refuse("IDENTITY_PLANE_UNAVAILABLE");
+    }
+
+    if (!verified.ok || verified.value === null) return ok(null);
     const removed = await port.signOut({ principal: verified.value });
     if (!removed.ok) {
       // `principalInvalid` here means the stored session rotated or vanished

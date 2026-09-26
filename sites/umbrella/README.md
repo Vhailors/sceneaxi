@@ -210,10 +210,11 @@ Real Better Auth login into the entitled editor, over the existing identity plan
   (`src/lib/login-flow.ts`), which signs in through the plane's login port —
   `createAuthLoginAdapter` over the deployment's `IdentityPort` handle — and answers
   with a 303 plus the one HttpOnly `sceneaxi.session` cookie, whose lifetime is the
-  session's own. `POST /api/logout` deletes the stored session through the same port
-  and clears the cookie unconditionally — unconditionally about *this* browser's own
-  request, since a submission that fails the origin proof below is refused before the
-  port is reached and nothing is revoked or cleared from it.
+  session's own. `POST /api/logout` confirms provider revocation through the identity
+  plane before deleting the stored session through the same port. It clears the cookie
+  even on failure, but redirects with a named refusal when revocation cannot be confirmed.
+  A submission that fails the origin proof below is refused before either session is
+  revoked and receives no clearing cookie.
 - Both endpoints refuse a submission that cannot prove it came from these pages
   (`SITE_REQUEST_CROSS_ORIGIN`, decided by site-kit's `verifySiteFormOrigin` through
   `verifyLoginRequestOrigin`). `SameSite=Lax` does not cover this: a sign-in POST carries
@@ -296,7 +297,11 @@ token so either provider configuration resolves; a provider that honours neither
 named fault instead of reporting a valid password as refused
 (`docs/websites-deploy.md` owns that prerequisite). The provider itself is
 `src/provider/better-auth-provider.ts`, mounted only at `/api/auth/[...all]`: public sign-up
-and every endpoint other than `POST sign-in/email` and `GET get-session` return 404.
+and every endpoint other than `POST sign-in/email`, `GET get-session`, and
+`POST sign-out` return 404. Hosted logout revokes the provider bearer through the
+identity plane's deployment-owned `providerSessions` capability, confirms it no longer
+resolves, and then deletes the SceneAxi session. Failures clear the browser cookie but
+redirect to the login page with a named refusal. `docs/auth-credits.md` owns that contract.
 It uses `BETTER_AUTH_SECRET` and `DATABASE_URL` only on the server, persists in the
 provider-owned `better_auth_*` tables from migration 0005, and returns redacted 503
 refusals when configuration or storage is unavailable. Better Auth and `pg` remain
@@ -323,7 +328,7 @@ Three deployment properties of that provider are decided in code rather than lef
 default. First-run provisioning gates `sign-in/email` alone and refuses a persisted
 credential that disagrees with `SCENEAXI_ADMIN_BOOTSTRAP_SECRET` as
 `BETTER_AUTH_PROVIDER_BOOTSTRAP_DISAGREEMENT` — its own refusal, not the storage one —
-so a rotation stops new sessions without taking session lookup down for principals it
+so a rotation stops new sessions without blocking session lookup or revocation for principals it
 never described. That decision is memoized rather than re-run per request, but only for a
 bounded interval, because the remedy an operator applies changes the very state it read —
 a corrected database recovers on its own without a redeploy. Throttling is stored in

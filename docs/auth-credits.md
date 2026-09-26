@@ -47,7 +47,7 @@ Names only; values never appear in the repository.
 |---|---|
 | `SCENEAXI_ADMIN_EMAIL` | The **one** captain email that resolves to the `admin` role |
 | `SCENEAXI_ADMIN_BOOTSTRAP_SECRET` | Provider-owned first-admin credential material. It is not a role source and never enters core |
-| `BETTER_AUTH_ORIGIN` | Better Auth provider origin used by the umbrella sign-in adapter. The provider must serve `sign-in/email` and `get-session`, and must resolve that lookup from either the issued session cookie or the issued bearer token; `docs/websites-deploy.md` owns that prerequisite |
+| `BETTER_AUTH_ORIGIN` | Better Auth provider origin used by the umbrella sign-in adapter. The provider must serve `sign-in/email`, `get-session`, and `sign-out`. Hosted logout requires bearer support for revocation and its confirmation lookup; `docs/websites-deploy.md` owns that prerequisite |
 | `BETTER_AUTH_SECRET` | Better Auth session-signing material, read only by the umbrella provider and never by core |
 | `DATABASE_URL` | Neon Postgres connection string |
 | `STRIPE_SECRET_KEY` | Stripe **test** secret key |
@@ -195,7 +195,7 @@ grant decision, and commit boundary; the deployment adds no second verifier or i
 Better Auth is **injected into core**, not depended on by core: it needs a running HTTP
 host and a live database instance, which the hermetic packages do not contain (ADR 0021).
 The deployable umbrella now carries that provider dependency in its separate install root
-and mounts the two required routes; the boundary remains typed structurally against Better
+and mounts the three required routes; the boundary remains typed structurally against Better
 Auth's documented result, so another host still drops in:
 
 ```ts
@@ -255,6 +255,30 @@ stores the `Set-Cookie` it answers with — a cross-site page would otherwise be
 sign a visitor into an account it chose, and the mirror submission to sign-out would
 force a visitor's session away. Sign-out is refused there too, which is the one bound on
 "the cookie is cleared unconditionally": that promise is to this browser's own request.
+
+Hosted sign-out revokes both sessions through `UmbrellaIdentityPlane.signOut`.
+The deployment supplies `providerSessions.revokeSession` alongside `identityPort` through
+`umbrellaRequestAuthority()`. Request code supplies only its carried credential.
+The plane verifies that credential locally, calls `POST /api/auth/sign-out` with its
+provider bearer, and then calls the auth port's `signOut` to delete the local row.
+A missing or expired local session still requires provider revocation.
+The provider client confirms revocation with an uncached bearer `GET /api/auth/get-session`
+that must return a successful `null` response. Better Auth's sign-out response alone is
+insufficient because its handler can return success after a database deletion failure.
+A revoked token no longer resolves through provider cookie or bearer lookup.
+
+Missing revocation wiring refuses `IDENTITY_PLANE_NOT_WIRED`. A provider failure,
+unconfirmed revocation, or local store failure refuses `IDENTITY_PLANE_UNAVAILABLE`.
+Provider failure leaves the local row intact so the same credential can retry.
+Revocation is idempotent, including a retry after provider success but local deletion
+failure. `performLogout` clears the browser cookie on these same-origin outcomes, but
+redirects failures to `/login?reason=<named-refusal>` rather than the success destination.
+The auth package's `signOut` remains local-session deletion and retains its exact-principal
+and stored-session-version checks. It neither stores raw provider tokens nor owns HTTP.
+The hosted flow and failure ordering are covered in `tests/sites/identity-plane-wiring.test.ts`
+and `tests/sites/umbrella-login-flow.test.ts`. The real Better Auth handler and revoked
+cookie/bearer checks run in `sites/umbrella/test/better-auth-provider.test.ts` through
+that install root's `pnpm test:provider`.
 
 That credential format carries one obligation back onto the provider's session id: it is
 read back by splitting on the **first** `.`, so a session id that itself contains a dot —
@@ -1294,7 +1318,7 @@ umbrella serves `/login` beside `POST /api/login`, `POST /api/logout`, `/api/che
 `putSession` — through `createAuthLoginAdapter`, the login-port counterpart to the
 verify-only `createAuthIdentityAdapter`. The provider handler requested by
 [sceneaxi#222](https://github.com/Vhailors/sceneaxi/issues/222) now lands beside it and
-serves only stock `sign-in/email` and `get-session`, with cookie and bearer lookup over
+serves only stock `sign-in/email`, `get-session`, and `sign-out`, with cookie and bearer lookup over
 the provider-owned `better_auth_*` tables. What remains is the deployment's own: apply
 the migration, set the named secrets/origin, and configure the handles behind
 `umbrellaRequestAuthority()`. Until it does, `signIn` has no adapter to reach, so no user is provisioned, no starter grant

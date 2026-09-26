@@ -142,7 +142,7 @@ set them *before* deploying and redeploy after changing one.
 | Variable | Projects | Owner | Required for | Purpose |
 |---|---|---|---|---|
 | `DATABASE_URL` | all three | captain (Neon) | the identity plane | one shared Neon Postgres database: auth/billing plus catalog read models |
-| `BETTER_AUTH_ORIGIN` | umbrella | deployment owner | identity sign-in | https origin of the Better Auth provider endpoint used by the umbrella; credentials remain with that provider. The provider must serve `POST /api/auth/sign-in/email` and `GET /api/auth/get-session` under that origin — see the provider prerequisite below |
+| `BETTER_AUTH_ORIGIN` | umbrella | deployment owner | identity sign-in | https origin of the Better Auth provider endpoint used by the umbrella; credentials remain with that provider. The provider must serve `POST /api/auth/sign-in/email`, `GET /api/auth/get-session`, and `POST /api/auth/sign-out` under that origin — see the provider prerequisite below |
 | `BETTER_AUTH_SECRET` | umbrella | captain/provider owner | Better Auth session signing | provider-only signing material read by the umbrella's Better Auth handler; it never enters `@sceneaxi/auth`, a route response, or evidence |
 | `SCENEAXI_ADMIN_EMAIL` | umbrella | captain | admin sign-in | sole admin identity, resolved by `@sceneaxi/auth` only inside the deployment plug point; no route accepts an override |
 | `SCENEAXI_ADMIN_BOOTSTRAP_SECRET` | umbrella | captain | first admin sign-in | provider-owned first-run credential material; env-secret bootstrap only, never a role source or core input |
@@ -183,10 +183,11 @@ Anything else leaves `identityPort` absent and the surface refuses by name.
 
 The umbrella ships a deliberately narrow Better Auth 1.6 handler under that origin. It
 enables email/password authentication and the `bearer()` plugin, disables public sign-up,
-and exposes only these two endpoint/method pairs:
+and exposes only these three endpoint/method pairs:
 `POST /api/auth/sign-in/email`, whose answer (`{ redirect, token, user }`) carries no
-session record, and `GET /api/auth/get-session`, which supplies the session id, owner, and
-expiry the `sessions` row is written from. That lookup sends **both** credentials the
+session record, `GET /api/auth/get-session`, which supplies the session id, owner, and
+expiry the `sessions` row is written from, and `POST /api/auth/sign-out`, which revokes
+the presented provider session. The sign-in lookup sends **both** credentials the
 provider may accept — the `Set-Cookie` session cookie the sign-in answer issued, replayed
 as a `Cookie` header, and the issued token as `Authorization: Bearer` — because stock
 Better Auth resolves the session from the cookie while the `bearer()` plugin resolves it
@@ -194,6 +195,13 @@ from the header. Either configuration works; a provider that honours neither is 
 deployment fault, and the client throws a named error rather than reporting the member's
 correct password as a rejected sign-in. A provider that returns a session inline on
 sign-in is used as-is and no lookup is made.
+
+Hosted sign-out requires the provider's bearer support. The deployment's
+`providerSessions` capability calls `sign-out` with the carried bearer and then requires
+an uncached `get-session` lookup to return `null` before deleting the SceneAxi session.
+A provider success response alone does not prove deletion. Missing wiring and failures
+refuse by name, and the browser still clears its cookie. `docs/auth-credits.md` owns
+this ordering and the failure/retry contract.
 
 Startup is lazy and fail-closed. Missing or malformed `DATABASE_URL`,
 `BETTER_AUTH_ORIGIN`, `BETTER_AUTH_SECRET`, `SCENEAXI_ADMIN_EMAIL`, or
@@ -514,7 +522,7 @@ take payments this endpoint cannot settle.
 `/login`, `POST /api/login`, and `POST /api/logout` beside `/api/checkout` and
 `/api/stripe/webhook`, and `performLogin` calls `identityPort.signIn` through the
 plane's login port and sets the HttpOnly `sceneaxi.session` cookie. The provider handler
-now ships in the umbrella at `BETTER_AUTH_ORIGIN` (the `sign-in/email` and `get-session`
+now ships in the umbrella at `BETTER_AUTH_ORIGIN` (the `sign-in/email`, `get-session`, and `sign-out`
 endpoints named above). The migration state is owned by
 [Verified TEST readiness](#verified-test-readiness) and is not an outstanding operator
 step. What remains operational is to set the named configuration and configure the

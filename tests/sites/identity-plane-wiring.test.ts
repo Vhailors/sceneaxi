@@ -48,6 +48,8 @@ import {
   umbrellaRequestAuthority,
   verifyLoginRequestOrigin,
 } from "../../sites/umbrella/src/index.ts";
+import { createDeploymentPlaneHandles } from "../../sites/umbrella/src/lib/identity-plane.ts";
+import { createBetterAuthHttpClient } from "../../sites/umbrella/src/lib/provider-adapters.ts";
 import {
   CATALOG_IDENTITY_SURFACE,
   createCatalogIdentityPlane,
@@ -2180,7 +2182,22 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
       admin: admin.value,
       clock,
     });
-    return { store, port };
+
+    const revokedTokens: string[] = [];
+
+    const deployment = {
+      admin: admin.value,
+      billingMode: "test" as const,
+      clock,
+      identityPort: port,
+      providerSessions: {
+        async revokeSession(token: string) {
+          revokedTokens.push(token);
+        },
+      },
+    };
+
+    return { store, port, deployment, revokedTokens };
   };
 
   it("signs in through the real port and reaches the entitled editor", async () => {
@@ -2526,8 +2543,8 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
     expect(kept.kind === "success" && kept.location).toBe("/editor");
   });
 
-  it("signs out: the stored session is deleted and the cookie cleared", async () => {
-    const { store, port } = loginWorld();
+  it("signs out both sessions and clears the cookie", async () => {
+    const { store, port, deployment, revokedTokens } = loginWorld();
     const plane = createUmbrellaIdentityPlane(ENV, { identityPort: port, clock });
     const login = await plane.login.signIn({
       surface: "site",
@@ -2541,6 +2558,7 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
     const boundPlane = createUmbrellaIdentityPlane(ENV, {
       identityPort: port,
       sessionToken: login.value.sessionCredential,
+      deployment,
       clock,
     });
     const outcome = await performLogout({
@@ -2554,6 +2572,9 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
     expect(outcome.clearCookie).toContain("sceneaxi.session=;");
     expect(outcome.clearCookie).toContain("Max-Age=0");
     expect(store.sessionCount()).toBe(0);
+    expect(revokedTokens).toEqual([FRESH_TOKEN]);
+    expect(outcome.location).toBe("/");
+    expect(JSON.stringify(outcome)).not.toContain(FRESH_TOKEN);
 
     // The deleted credential is now simply signed out, not an error.
     expect(
@@ -2564,10 +2585,11 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
     ).toMatchObject({ ok: false, reason: "IDENTITY_SESSION_ABSENT" });
   });
 
-  it("signs out a credential that no longer names a session as already signed out", async () => {
-    const { port } = loginWorld();
+  it("still revokes the provider when the local session is already gone", async () => {
+    const { port, deployment, revokedTokens } = loginWorld();
     const plane = createUmbrellaIdentityPlane(ENV, {
       identityPort: port,
+      deployment,
       sessionToken: "sess-gone.some-token",
       clock,
     });
@@ -2580,7 +2602,163 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
     if (outcome.kind !== "signed-out") return;
     expect(outcome.revocation).toMatchObject({ ok: true, value: null });
     expect(outcome.clearCookie).not.toContain("Secure");
+    expect(revokedTokens).toEqual(["some-token"]);
   });
+
+  it("revokes the provider even when the local session expired", async () => {
+    const { store, port, deployment, revokedTokens } = loginWorld();
+
+    const grant = await port.signIn({ surface: "site", email: MEMBER_EMAIL, password: MEMBER_PASSWORD });
+
+    if (!grant.ok) throw new Error(grant.reason);
+
+    const expiredPort = createIdentityPort({ store, admin: TEST_ADMIN, clock: () => NOW + 7_200_000 });
+
+    const plane = createUmbrellaIdentityPlane(ENV, {
+      deployment, identityPort: expiredPort, sessionToken: `${LOGIN_SESSION}.${FRESH_TOKEN}`, clock,
+    });
+
+    expect(await plane.signOut()).toEqual({ ok: true, value: null });
+    expect(revokedTokens).toEqual([FRESH_TOKEN]);
+    expect(await plane.identity.resolvePrincipal({ surface: "site" })).toMatchObject({
+      ok: false, reason: "IDENTITY_SESSION_EXPIRED",
+    });
+  });
+
+  it("retries local deletion after provider revocation succeeded", async () => {
+    const { store, deployment, revokedTokens } = loginWorld();
+    let failDelete = true;
+
+    const port = createIdentityPort({
+      adapter: provider(MEMBER_EMAIL, "member-1"),
+      admin: TEST_ADMIN,
+      clock,
+      store: {
+        ...store,
+        deleteSession(session) {
+          if (failDelete) throw new Error("store unavailable");
+
+          return store.deleteSession(session);
+        },
+      },
+    });
+
+    const grant = await port.signIn({ surface: "site", email: MEMBER_EMAIL, password: MEMBER_PASSWORD });
+
+    if (!grant.ok) throw new Error(grant.reason);
+
+    const plane = createUmbrellaIdentityPlane(ENV, {
+      deployment, identityPort: port, sessionToken: `${LOGIN_SESSION}.${FRESH_TOKEN}`, clock,
+    });
+
+    expect(await plane.signOut()).toMatchObject({ ok: false, reason: "IDENTITY_PLANE_UNAVAILABLE" });
+    expect(store.sessionCount()).toBe(1);
+    expect(revokedTokens).toEqual([FRESH_TOKEN]);
+    failDelete = false;
+    expect(await plane.signOut()).toEqual({ ok: true, value: null });
+    expect(store.sessionCount()).toBe(0);
+    expect(revokedTokens).toEqual([FRESH_TOKEN, FRESH_TOKEN]);
+  });
+
+  it("dispatches no revocation for an absent credential", async () => {
+    const { port, deployment, revokedTokens } = loginWorld();
+    const plane = createUmbrellaIdentityPlane(ENV, { deployment, identityPort: port, clock });
+    expect(await plane.signOut()).toEqual({ ok: true, value: null });
+    expect(revokedTokens).toEqual([]);
+  });
+
+  it.each(["missing", "throw", "non-success", "malformed", "still-live", "lookup-failed"] as const)(
+    "refuses %s provider revocation without deleting the local session, and allows a retry",
+    async (failure) => {
+      const { store, port } = loginWorld();
+      const grant = await port.signIn({ surface: "site", email: MEMBER_EMAIL, password: MEMBER_PASSWORD });
+
+      if (!grant.ok) throw new Error(grant.reason);
+      let fail = true;
+      const requests: Array<{ url: string; init: Readonly<RequestInit> | undefined }> = [];
+
+      const client = createBetterAuthHttpClient({
+        origin: "https://auth.sceneaxi.test",
+        async fetch(url, init) {
+          requests.push({ url, init });
+
+          if (fail && failure === "throw") throw new Error(FRESH_TOKEN);
+
+          if (init?.method === "GET") {
+            return {
+              ok: !(fail && failure === "lookup-failed"),
+              status: fail && failure === "lookup-failed" ? 503 : 200,
+              async json() { return fail && failure === "still-live" ? { session: { token: FRESH_TOKEN } } : null; },
+            };
+          }
+
+          return {
+            ok: !(fail && failure === "non-success"),
+            status: fail && failure === "non-success" ? 503 : 200,
+            async json() { return fail && failure === "malformed" ? {} : { success: true }; },
+          };
+        },
+      });
+
+      const deployment = createDeploymentPlaneHandles({
+        admin: TEST_ADMIN,
+        clock,
+        providers: {
+          database: { async query() { throw new Error("test uses the injected identity port"); } },
+          betterAuth: failure === "missing" ? { api: client.api } : client,
+        },
+      });
+
+      const plane = createUmbrellaIdentityPlane(ENV, {
+        deployment,
+        identityPort: port,
+        sessionToken: `${LOGIN_SESSION}.${FRESH_TOKEN}`,
+        clock,
+      });
+
+      const outcome = await performLogout({ plane, requestOrigin: SAME_ORIGIN, secure: true });
+      const reason = failure === "missing" ? "IDENTITY_PLANE_NOT_WIRED" : "IDENTITY_PLANE_UNAVAILABLE";
+
+      expect(outcome).toMatchObject({
+        kind: "signed-out",
+        location: `/login?reason=${reason}`,
+        revocation: { ok: false, reason },
+      });
+
+      if (outcome.kind !== "signed-out") throw new Error("expected browser sign-out");
+
+      expect(outcome.clearCookie).toContain("Max-Age=0");
+      expect(JSON.stringify(outcome)).not.toContain(FRESH_TOKEN);
+      expect(store.sessionCount()).toBe(1);
+
+      if (failure === "missing") {
+        expect(requests).toEqual([]);
+
+        return;
+      }
+
+      fail = false;
+      expect(await plane.signOut()).toEqual({ ok: true, value: null });
+      expect(store.sessionCount()).toBe(0);
+      expect(requests).toHaveLength(failure === "still-live" || failure === "lookup-failed" ? 4 : 3);
+
+      for (const request of requests) {
+        expect(request.init).toMatchObject({
+          headers: { authorization: `Bearer ${FRESH_TOKEN}` },
+          redirect: "error",
+          cache: "no-store",
+        });
+
+        if (request.init?.method === "GET") {
+          expect(request.url).toBe("https://auth.sceneaxi.test/api/auth/get-session");
+        } else {
+          expect(request.url).toBe("https://auth.sceneaxi.test/api/auth/sign-out");
+          expect(request.init?.method).toBe("POST");
+          expect(request.init?.body).toBe("{}");
+        }
+      }
+    },
+  );
 
   it("stamps Secure from the configured origin, so a TLS-terminating proxy cannot strip it", async () => {
     const httpsEnv = {
@@ -2619,7 +2797,7 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
   });
 
   it("refuses a submission from another site before either plane is reached", async () => {
-    const { store, port } = loginWorld();
+    const { store, port, deployment, revokedTokens } = loginWorld();
     const plane = createUmbrellaIdentityPlane(ENV, { identityPort: port, clock });
 
     // 1. A cross-site page auto-submits its own credentials. Nothing is
@@ -2657,6 +2835,7 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
     const boundPlane = createUmbrellaIdentityPlane(ENV, {
       identityPort: port,
       sessionToken: `${LOGIN_SESSION}.${FRESH_TOKEN}`,
+      deployment,
       clock,
     });
     const forcedLogout = await performLogout({
@@ -2670,6 +2849,7 @@ describe("hosted login — the umbrella sign-in path (sceneaxi#185)", () => {
       location: "/login?reason=SITE_REQUEST_CROSS_ORIGIN",
     });
     expect(store.sessionCount()).toBe(1);
+    expect(revokedTokens).toEqual([]);
 
     // 4. What the visitor is told names the attempt for what it was, and offers
     //    nothing to retry.
