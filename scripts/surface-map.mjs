@@ -86,7 +86,11 @@ const controlState = (id) => {
 
   if (status === "partial") return { state: "partial" };
 
-  if (status === "fake") return { state: "gap", item: 57, note: "fake control (capability matrix)" };
+  // Item 57 turned fake controls into visibly inert ones that name their refusal up
+  // front; once it is done they are a by-design refusal, not an open gap.
+  if (status === "fake") {
+    return fromBacklog(57) ?? { state: "refused", note: "inert: no product operation behind it (capability matrix: fake)" };
+  }
 
   if (status?.startsWith("deliberately")) return { state: "refused", note: status };
 

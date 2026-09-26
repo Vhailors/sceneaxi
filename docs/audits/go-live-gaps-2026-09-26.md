@@ -179,6 +179,30 @@ node scripts/surface-map.mjs                # needs `pnpm build`; writes surface
 
 Found while building the map (owned by item 53): the capability matrix marks `dock-timeline` as **real**, but no desktop GUI or renderer code names `animation-apply`. The row's evidence is the bridge-level animation golden, not a GUI dispatch path.
 
+## Loop result (2026-09-27, `go-live-loop`)
+
+- **Done: 39 items** — 14, 20, 21, 23, 24, 25, 31, 32, 33, 34, 35, 36, 37, 39, 41, 42, 43, 44, 45, 47, 53, 54, 57, 60, 63, 66, 67, 68, 69, 74, 80, 81, 82, 83, 84, 85, 86, 89, 90. Items 89 and 90 were found during the loop and added.
+- **Open: 2** — 61 (worker interrupted; not resumed without an explicit request); 64 (worker interrupted; not resumed without an explicit request).
+- **Parked: 49** — each needs a captain decision or external authority (`parkedReason` in the backlog).
+- **Final gate:** `pnpm gate` exit 0 on the final integrated head (272 files, 4,134 tests, lint clean).
+- **Graphmap:** working 333 · partial 31 · unconfigured 10 · refused 15 · gap 2 · parked 49 (probe `e61b51b`; catalog-web and kids not probed: no local install root).
+
+Decisions the done items surfaced (implemented only up to the fail-closed part):
+
+- #20: Clawback amount, access restrictions, and dispute-resolution policy (records only; no money policy chosen)
+- #21: Clawback amount, access restrictions, and dispute-resolution policy (records only; no money policy chosen)
+- #36: LIVE activation stays held (D5); the sink records audits only
+- #37: LIVE activation stays held (D5); the sink records audits only
+- #53: project-build targets Linux only; broader targets future work
+- #54: Retention/sharing policy for local minidumps (never uploaded)
+- #60: Historical SIGSEGV not reproduced; cause unresolved and recorded
+- #63: ADR 0027 pose/animation/joint-frame contract; nonzero Rapier animation offsets refuse
+- #66: Async JPEG/WebP decoding is a follow-up; browser texture pixels not yet recorded
+- #67: Skinning (JOINTS_0/WEIGHTS_0) and CUBICSPLINE refuse; browser pixel proof pending
+- #68: Rendering layer only; product wiring is item 90
+- #69: No built-in gameplay consumer of play.primary; choosing gameplay behavior is an operator decision
+- #90: ADR 0026 asset-to-texture contract (pixel transport, UV set, colour space, sampler); non-null texture slots refuse
+
 ## Suggested sequencing
 
 1. Decisions A1–A5.

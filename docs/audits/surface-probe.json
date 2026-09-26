@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "probedAt": "2026-09-26T15:29:34.610Z",
-  "commit": "730e822",
+  "probedAt": "2026-09-26T22:14:47.409Z",
+  "commit": "e61b51b",
   "configuration": "no provider environment (every provider-backed plane is expected to report unconfigured)",
   "sites": [
     {
@@ -45,8 +45,20 @@
       "skipped": null
     },
     {
-      "site": "umbrella",
+      "site": "catalog-web",
       "port": 3941,
+      "routes": [],
+      "skipped": "no install root (run `pnpm install --frozen-lockfile` in the site)"
+    },
+    {
+      "site": "kids",
+      "port": 3942,
+      "routes": [],
+      "skipped": "no install root (run `pnpm install --frozen-lockfile` in the site)"
+    },
+    {
+      "site": "umbrella",
+      "port": 3943,
       "routes": [
         {
           "path": "/",
@@ -69,6 +81,39 @@
           ]
         },
         {
+          "path": "/admin/ledger",
+          "kind": "page",
+          "file": "sites/umbrella/src/app/admin/ledger/page.tsx",
+          "request": "GET /admin/ledger",
+          "status": 200,
+          "state": "unconfigured",
+          "reasons": [
+            "IDENTITY_PLANE_NOT_WIRED"
+          ]
+        },
+        {
+          "path": "/api/admin/ledger",
+          "kind": "api",
+          "file": "sites/umbrella/src/app/api/admin/ledger/route.ts",
+          "request": "POST /api/admin/ledger (same-origin form)",
+          "status": 403,
+          "state": "unconfigured",
+          "reasons": [
+            "IDENTITY_PLANE_NOT_WIRED"
+          ]
+        },
+        {
+          "path": "/api/admin/ledger",
+          "kind": "api",
+          "file": "sites/umbrella/src/app/api/admin/ledger/route.ts",
+          "request": "POST /api/admin/ledger (cross-origin form)",
+          "status": 403,
+          "state": "refused",
+          "reasons": [
+            "SITE_REQUEST_CROSS_ORIGIN"
+          ]
+        },
+        {
           "path": "/api/auth/[...all]",
           "kind": "api",
           "file": "sites/umbrella/src/app/api/auth/[...all]/route.ts",
@@ -84,10 +129,10 @@
           "kind": "api",
           "file": "sites/umbrella/src/app/api/checkout/route.ts",
           "request": "POST /api/checkout (same-origin form)",
-          "status": 402,
-          "state": "unconfigured",
+          "status": 303,
+          "state": "refused",
           "reasons": [
-            "BILLING_PLANE_NOT_WIRED"
+            "BILLING_CHECKOUT_REQUEST_INVALID"
           ]
         },
         {
@@ -95,7 +140,7 @@
           "kind": "api",
           "file": "sites/umbrella/src/app/api/checkout/route.ts",
           "request": "POST /api/checkout (cross-origin form)",
-          "status": 403,
+          "status": 303,
           "state": "refused",
           "reasons": [
             "SITE_REQUEST_CROSS_ORIGIN"
@@ -122,6 +167,24 @@
           "reasons": [
             "SITE_REQUEST_CROSS_ORIGIN"
           ]
+        },
+        {
+          "path": "/api/health",
+          "kind": "api",
+          "file": "sites/umbrella/src/app/api/health/route.ts",
+          "request": "POST /api/health (same-origin form)",
+          "status": 405,
+          "state": "refused",
+          "reasons": []
+        },
+        {
+          "path": "/api/health",
+          "kind": "api",
+          "file": "sites/umbrella/src/app/api/health/route.ts",
+          "request": "POST /api/health (cross-origin form)",
+          "status": 405,
+          "state": "refused",
+          "reasons": []
         },
         {
           "path": "/api/login",
@@ -151,8 +214,10 @@
           "file": "sites/umbrella/src/app/api/logout/route.ts",
           "request": "POST /api/logout (same-origin form)",
           "status": 303,
-          "state": "working",
-          "reasons": []
+          "state": "unconfigured",
+          "reasons": [
+            "IDENTITY_PLANE_NOT_WIRED"
+          ]
         },
         {
           "path": "/api/logout",
@@ -181,6 +246,42 @@
           "kind": "page",
           "file": "sites/umbrella/src/app/docs/page.tsx",
           "request": "GET /docs",
+          "status": 200,
+          "state": "working",
+          "reasons": []
+        },
+        {
+          "path": "/docs/cli",
+          "kind": "page",
+          "file": "sites/umbrella/src/app/docs/cli/page.tsx",
+          "request": "GET /docs/cli",
+          "status": 200,
+          "state": "working",
+          "reasons": []
+        },
+        {
+          "path": "/docs/credits-and-pricing",
+          "kind": "page",
+          "file": "sites/umbrella/src/app/docs/credits-and-pricing/page.tsx",
+          "request": "GET /docs/credits-and-pricing",
+          "status": 200,
+          "state": "working",
+          "reasons": []
+        },
+        {
+          "path": "/docs/faq",
+          "kind": "page",
+          "file": "sites/umbrella/src/app/docs/faq/page.tsx",
+          "request": "GET /docs/faq",
+          "status": 200,
+          "state": "working",
+          "reasons": []
+        },
+        {
+          "path": "/docs/getting-started",
+          "kind": "page",
+          "file": "sites/umbrella/src/app/docs/getting-started/page.tsx",
+          "request": "GET /docs/getting-started",
           "status": 200,
           "state": "working",
           "reasons": []
