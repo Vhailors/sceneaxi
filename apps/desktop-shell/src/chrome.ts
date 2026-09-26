@@ -222,7 +222,7 @@ function button(
   return [
     `<button type="button" class="${className}${inert ? " is-inert" : ""}"`,
     ` id="${escapeHtml(ctrl.id)}" data-kind="${ctrl.kind}"`,
-    inert ? ` aria-disabled="true" data-refusal="${escapeHtml(ctrl.refusal ?? "")}"` : "",
+    inert ? ` aria-disabled="true" data-refusal="${escapeHtml(ctrl.refusal ?? "")}" title="${escapeHtml(`${ctrl.refusal ?? ""}: ${ctrl.refusalMessage ?? ""}`)}"` : "",
     described,
     extra,
     `>${content}</button>`,
@@ -571,6 +571,7 @@ function leftDock(view: DesktopVisualView): string {
         ${button(view.product.renameBrowserFile, "Rename…", "ghost-button", ` data-product-action data-action="project-browser-rename"`)}
         ${button(view.product.deleteBrowserFile, "Delete…", "ghost-button", ` data-product-action data-action="project-browser-delete"`)}
       </div>
+      <p class="panel-empty">${escapeHtml(view.product.renameBrowserFile.refusal ?? "")} · ${escapeHtml(view.product.renameBrowserFile.refusalMessage ?? "")}</p>
     </section>
     <div class="scene-entities" data-scene-entities hidden>
       <p class="scene-entities-label">Objects · click to select</p>
@@ -728,7 +729,7 @@ function dock(view: DesktopVisualView): string {
       <p class="change-empty" data-change-empty>Nothing waiting for review. Generated edits land here before they touch the scene.</p>
     `,
     assets: `<div class="asset-browser" data-project-assets><p class="panel-empty">No admitted project assets are present.</p></div>`,
-    console: `<p class="panel-empty">No session is running, so there is no console output to show.</p>`,
+    console: `<pre class="change-diff" data-console-output tabindex="0" role="log" aria-label="Play evidence and results" aria-live="polite">Play evidence will appear here.</pre>`,
     evidence: `<p class="panel-empty" data-rarity-evidence-empty>No accepted rarity evidence has been opened or staged in this session.</p><pre class="change-diff" data-rarity-evidence hidden tabindex="0" role="region" aria-label="Rarity evidence"></pre><p class="panel-empty">No evidence packet has been captured here. Evidence digests are produced by <code>sceneaxi project capture</code>, never invented by a viewer.</p>`,
     timeline: `<label>${escapeHtml(view.timelineControls.mutation.label)} <textarea id="${escapeHtml(view.timelineControls.mutation.id)}" data-kind="${view.timelineControls.mutation.kind}"${view.timelineControls.mutation.kind === "inert" ? ` readonly aria-disabled="true" data-refusal="${escapeHtml(view.timelineControls.mutation.refusal ?? "")}"` : ""} data-timeline-mutation>{"kind":"clip-upsert","clipId":"idle","name":"Idle","startMs":0,"durationMs":1000}</textarea></label>${button(view.timelineControls.apply, view.timelineControls.apply.label, "ghost-button", ` data-action="timeline-apply"`)}<label>${escapeHtml(view.timelineControls.time.label)} <input id="${escapeHtml(view.timelineControls.time.id)}" data-kind="${view.timelineControls.time.kind}"${view.timelineControls.time.kind === "inert" ? ` readonly aria-disabled="true" data-refusal="${escapeHtml(view.timelineControls.time.refusal ?? "")}"` : ""} type="number" min="0" step="1" data-timeline-time value="0"></label>${button(view.timelineControls.scrub, view.timelineControls.scrub.label, "ghost-button", ` data-action="timeline-scrub"`)}${button(view.timelineControls.evaluate, view.timelineControls.evaluate.label, "ghost-button", ` data-action="timeline-evaluate"`)}<pre data-timeline-result aria-live="polite">Open Timeline to inspect clips, tracks, and keyframes.</pre>`,
   };
@@ -922,7 +923,7 @@ function assistant(view: DesktopVisualView): string {
         .map((route) =>
           button(
             route.control,
-            escapeHtml(route.label),
+            `${escapeHtml(route.label)}${route.id === "hosted" ? `<small class="assistant-route-refusal">${escapeHtml(route.control.refusal ?? "")}</small>` : ""}`,
             "assistant-route",
             ` data-action="assistant-route" data-value="${escapeHtml(route.id)}" aria-pressed="${route.id === view.state.assistantRoute ? "true" : "false"}"`,
           ),
@@ -1433,6 +1434,7 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .assistant-routes{display:none;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px}
 .shell[data-details-open="true"] .assistant-routes{display:grid}
 .assistant-route{min-width:0;padding:5px 3px;border:1px solid var(--line-control);border-radius:3px;color:var(--dim);font-size:9px;line-height:1.2}
+.assistant-route-refusal{display:block;margin-top:3px;font-size:7px;line-height:1.2;overflow-wrap:anywhere;color:var(--scene)}
 .assistant-route[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);background:${ACCENT.surface}}
 .composer-actions{display:flex;align-items:center;gap:7px}
 .assistant-modes{display:flex;background:var(--header);border:1px solid var(--line-control);border-radius:4px;padding:2px}
@@ -1728,6 +1730,7 @@ if (shell) {
   let sceneSelectionPending = Promise.resolve();
   let sceneSelectionGeneration = 0;
   let sceneRefusalText = null;
+  let consoleEvidence = [];
   let undoAvailability = 'unavailable';
   let redoAvailability = 'unavailable';
   let shippedSourceDigest = null;
@@ -2299,6 +2302,14 @@ if (shell) {
     showOutcome(command + ' refused', code, detail || 'The run command was not completed.');
   };
 
+  const appendConsoleEvidence = (event, data) => {
+    const output = shell.querySelector('[data-console-output]');
+    if (!output) return;
+    consoleEvidence.push(JSON.stringify({ event, data }, null, 2));
+    if (consoleEvidence.length > 20) consoleEvidence.shift();
+    output.textContent = consoleEvidence.join("\\n");
+  };
+
   const runControl = async (commandId) => {
     const response = await commandRequest(commandId, {});
     if (response === null || !response.ok) {
@@ -2310,6 +2321,7 @@ if (shell) {
       ? JSON.stringify(response.data)
       : 'completed';
     runStatus((commandId === 'run-stop' ? 'Stopped' : 'Reset') + ' · ' + detail);
+    appendConsoleEvidence(commandId, response.data);
     productStatus('open', 'Run command completed · ' + commandId);
   };
 
@@ -3632,6 +3644,9 @@ if (shell) {
       return;
     }
     const exercise = response.data;
+    appendConsoleEvidence('run-play', exercise);
+    const inspection = await commandRequest('play-inspect', {});
+    if (inspection?.ok) appendConsoleEvidence('play-inspect', inspection.data);
     const ticks = Array.isArray(exercise?.tickDigests) ? exercise.tickDigests.length : 0;
     if (exercise?.closed !== true || ticks === 0) {
       runRefusal(T.product.refusals.openPathEvidenceInvalid);
@@ -4372,19 +4387,6 @@ if (shell) {
     else if (action === 'project-browser-open') {
       const path = projectBrowserStatus?.selectedPath;
       if (typeof path === 'string') void productAction(() => projectBrowserAction('open', path));
-    }
-    else if (action === 'project-browser-rename') {
-      const path = projectBrowserStatus?.selectedPath;
-      if (typeof path === 'string' && globalThis.confirm('Confirm rename request for ' + path + '?')) {
-        const target = globalThis.prompt('New project-relative path', path);
-        if (typeof target === 'string') void productAction(() => projectBrowserAction('rename', path, target));
-      }
-    }
-    else if (action === 'project-browser-delete') {
-      const path = projectBrowserStatus?.selectedPath;
-      if (typeof path === 'string' && globalThis.confirm('Confirm delete request for ' + path + '?')) {
-        void productAction(() => projectBrowserAction('delete', path));
-      }
     }
     else if (action === 'document-reload') void productAction(openProject);
     else if (action === 'change-accept') void productAction(acceptProposal);

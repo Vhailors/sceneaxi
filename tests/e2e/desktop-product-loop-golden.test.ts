@@ -714,6 +714,14 @@ describe("desktop first-release product loop", () => {
     ).toContain("Viewport frame 27 acknowledged for desktop-linux-open-scene");
     expect(playback).toMatchObject({ closed: true });
     expect((playback as { tickDigests: string[] } | null)?.tickDigests).toHaveLength(4);
+    await click(window, "#dock-console");
+    const consoleOutput = query(window, "[data-console-output]");
+    expect(consoleOutput?.getAttribute("role")).toBe("log");
+    expect(consoleOutput?.textContent).toContain('"event": "run-play"');
+    expect(consoleOutput?.textContent).toContain('"tickDigests"');
+    expect(consoleOutput?.textContent).toContain('"event": "play-inspect"');
+    await click(window, "#run-stop");
+    expect(consoleOutput?.textContent).toContain('"event": "run-stop"');
 
     refuseNextPlay = true;
     await click(window, "#scene-play");
@@ -787,6 +795,8 @@ describe("desktop first-release product loop", () => {
       "restart",
       "scene-hierarchy-inspect",
       "open-path",
+      "play-inspect",
+      "run-stop",
       "open-path",
       "profile",
     ]);

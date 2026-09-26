@@ -689,9 +689,9 @@
       "severity": "high",
       "title": "Fake controls",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 3,
-      "thread": null,
+      "thread": "thr_j8rsh7htcy",
       "commit": null
     },
     {

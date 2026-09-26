@@ -425,9 +425,20 @@ describe("desktop mounted control inventory", () => {
     const shell = element(window, ".shell");
 
     for (const mode of DESKTOP_MODE_IDS) {
+      const control = element(window, `#mode-${mode}`);
+      if (mode === "compose" || mode === "plugins") {
+        const priorMode = shell.dataset.mode;
+        expect(control.getAttribute("data-kind")).toBe("inert");
+        expect(control.getAttribute("aria-disabled")).toBe("true");
+        expect(control.getAttribute("title")).toContain(DESKTOP_VISUAL_REFUSALS.noDocumentBound);
+        expect(element(window, `#refusal-${DESKTOP_VISUAL_REFUSALS.noDocumentBound}`).textContent).not.toBe("");
+        await click(window, `#mode-${mode}`);
+        expect(shell.dataset.mode).toBe(priorMode);
+        continue;
+      }
       await click(window, `#mode-${mode}`);
       expect(shell.dataset.mode).toBe(mode);
-      expect(element(window, `#mode-${mode}`).getAttribute("aria-pressed")).toBe("true");
+      expect(control.getAttribute("aria-pressed")).toBe("true");
       if (!["build", "run", "ship"].includes(mode)) {
         expect(element(window, `[data-mode-panel="${mode}"]`).textContent).toContain(
           DESKTOP_VISUAL_REFUSALS.noDocumentBound,
@@ -448,6 +459,31 @@ describe("desktop mounted control inventory", () => {
     await click(window, "#drawer-left");
     expect(shell.dataset.drawerLeft).toBe("closed");
 
+    const hosted = element(window, "#assistant-route-hosted");
+    expect(hosted.getAttribute("data-kind")).toBe("inert");
+    expect(hosted.getAttribute("aria-disabled")).toBe("true");
+    expect(hosted.textContent).toContain(DESKTOP_VISUAL_REFUSALS.hostedAssistantUnavailable);
+    expect(element(window, `#refusal-${hosted.getAttribute("data-refusal")}`).textContent)
+      .toContain("Hosted assistant metering is unavailable");
+    await click(window, "#assistant-route-hosted");
+    expect(shell.dataset.assistantRoute).toBe("byo");
+
+    for (const id of ["project-browser-rename", "project-browser-delete"]) {
+      const control = element(window, `#${id}`);
+      expect(control.getAttribute("data-kind")).toBe("inert");
+      expect(control.getAttribute("aria-disabled")).toBe("true");
+      expect(control.getAttribute("title")).toContain(control.getAttribute("data-refusal"));
+      expect(element(window, `#refusal-${control.getAttribute("data-refusal")}`).textContent)
+        .toContain("not permitted by the current project lifecycle contract");
+    }
+    Object.defineProperty(window, "confirm", {
+      value: () => { throw new Error("inert project-browser control opened a dialog"); },
+    });
+    Object.defineProperty(window, "prompt", {
+      value: () => { throw new Error("inert project-browser control opened a dialog"); },
+    });
+    await click(window, "#project-browser-rename");
+    await click(window, "#project-browser-delete");
     await click(window, "#assistant-route-byo");
     expect(shell.dataset.assistantRoute).toBe("byo");
     expect(element(window, "#assistant-route-byo").getAttribute("aria-pressed")).toBe("true");

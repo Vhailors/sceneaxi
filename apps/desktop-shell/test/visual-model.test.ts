@@ -158,7 +158,10 @@ describe("desktop visual model — profile switch", () => {
     for (const profile of ["game", "web"] as const) {
       const view = desktopVisualView(drive([{ type: "select-profile", profile }]));
       expect(view.profileRefusal).toBeNull();
-      expect(view.modes.every((mode) => mode.control.kind === "view")).toBe(true);
+      expect(view.modes.filter((mode) => mode.id === "compose" || mode.id === "plugins")
+        .every((mode) => mode.control.kind === "inert" && mode.control.refusal === DESKTOP_VISUAL_REFUSALS.noDocumentBound)).toBe(true);
+      expect(view.modes.filter((mode) => mode.id !== "compose" && mode.id !== "plugins")
+        .every((mode) => mode.control.kind === "view")).toBe(true);
     }
   });
 
@@ -478,6 +481,9 @@ describe("desktop visual model — refusals and honesty", () => {
       for (const control of [
         view.assistant.toggle,
         view.assistant.send,
+        ...view.assistant.routes.map((route) => route.control),
+        view.product.renameBrowserFile,
+        view.product.deleteBrowserFile,
         view.sculpt.start,
         view.sculpt.cancel,
         view.product.open,

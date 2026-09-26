@@ -2836,7 +2836,7 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
       },
     });
     await vi.waitFor(() => {
-      expect(statusReads).toBe(2);
+      expect(statusReads).toBe(3);
       expect(status.textContent).toContain("authoring state refreshed");
     });
     expect(proposal.hidden).toBe(true);

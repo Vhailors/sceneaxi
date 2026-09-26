@@ -124,7 +124,7 @@ describe("sceneaxi-desktop binary", () => {
     expect(r.status).toBe(0);
     expect(r.stdout.startsWith("<!doctype html>")).toBe(true);
     expect(r.stdout.trimEnd().endsWith("</html>")).toBe(true);
-    expect(r.stdout).toContain('data-mode="compose"');
+    expect(r.stdout).toContain('data-mode="build"');
     expect(r.stdout).toContain('content="false"');
     expect(r.stderr).toBe("");
   });

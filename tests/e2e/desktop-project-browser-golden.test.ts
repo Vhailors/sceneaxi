@@ -146,6 +146,7 @@ describe("desktop project and asset browser golden path", () => {
       activate: () => undefined,
     });
     const sceneRequests: unknown[] = [];
+    let browserRequestCount = 0;
     let hierarchyInspectionCount = 0;
     let openedAssetInstance: string | null = null;
     let openedAssetDigest: string | null = null;
@@ -154,8 +155,6 @@ describe("desktop project and asset browser golden path", () => {
     windows.push(window);
     const clone = <T>(value: T): T => window.eval(`(${JSON.stringify(value)})`) as T;
     Object.defineProperty(window, "structuredClone", { value: clone });
-    Object.defineProperty(window, "confirm", { value: () => true });
-    Object.defineProperty(window, "prompt", { value: () => "assets/renamed.gltf" });
     Object.defineProperty(window, "sceneaxiDesktopLinux", {
       value: {
         project: async (request: unknown) => clone(await host.handle(clone(request))),
@@ -172,7 +171,10 @@ describe("desktop project and asset browser golden path", () => {
           }
           return clone(bridge.handle(clone(request)));
         },
-        browseProject: async (request: unknown) => clone(browser.handle(clone(request))),
+        browseProject: async (request: unknown) => {
+          browserRequestCount += 1;
+          return clone(browser.handle(clone(request)));
+        },
       },
     });
 
@@ -271,8 +273,11 @@ describe("desktop project and asset browser golden path", () => {
     expect(query(window, "[data-project-status]")?.textContent).toContain("Asset open refused");
     runtimePort.request = runtimeRequest;
 
+    const browserRequestsBeforeInertClick = browserRequestCount;
     await click(window, '[data-action="project-browser-rename"]');
-    expect(query(window, "[data-project-status]")?.textContent).toContain(
+    await click(window, '[data-action="project-browser-delete"]');
+    expect(browserRequestCount).toBe(browserRequestsBeforeInertClick);
+    expect(query(window, ".project-browser-detail")?.textContent).toContain(
       DESKTOP_PROJECT_BROWSER_REFUSALS.operationNotPermitted,
     );
 
@@ -417,10 +422,9 @@ describe("desktop project and asset browser golden path", () => {
     });
 
     dirty = true;
+    const browserRequestsBeforeDirtyInertClick = browserRequestCount;
     await click(window, '[data-action="project-browser-delete"]');
-    expect(query(window, "[data-project-status]")?.textContent).toContain(
-      DESKTOP_PROJECT_BROWSER_REFUSALS.dirty,
-    );
+    expect(browserRequestCount).toBe(browserRequestsBeforeDirtyInertClick);
 
     dirty = false;
     desktopPort.browseProject = async (request: unknown) =>

@@ -3,6 +3,7 @@ import { OPEN_PATH_REFUSE_CODES } from "@sceneaxi/schemas";
 import {
   DESKTOP_PRODUCT_REFUSAL_MESSAGES,
   DESKTOP_PRODUCT_REFUSALS,
+  DESKTOP_VISUAL_REFUSALS,
   DESKTOP_VIEWPORT_PLAY_EVENT,
   DESKTOP_WEB_ASSET_MAX_COUNT,
   DESKTOP_WEB_ASSET_PATH_MAX_LENGTH,
@@ -153,10 +154,10 @@ describe("desktop product loop", () => {
       'id="project-browser-open" data-kind="live" data-product-action',
     );
     expect(game).toContain(
-      'id="project-browser-rename" data-kind="live" data-product-action',
+      `id="project-browser-rename" data-kind="inert" aria-disabled="true" data-refusal="${DESKTOP_VISUAL_REFUSALS.projectBrowserOperationNotPermitted}"`,
     );
     expect(game).toContain(
-      'id="project-browser-delete" data-kind="live" data-product-action',
+      `id="project-browser-delete" data-kind="inert" aria-disabled="true" data-refusal="${DESKTOP_VISUAL_REFUSALS.projectBrowserOperationNotPermitted}"`,
     );
     expect(game).toContain('<option value="scene.json" selected>scene.json');
     expect(game).toContain(
