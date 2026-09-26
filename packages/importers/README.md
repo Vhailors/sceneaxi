@@ -1,5 +1,21 @@
 # @sceneaxi/importers
 
+## Purpose
+
+Imports text-canonical SceneAxi documents and bounded project assets through the authoring-core proposal and apply service. The importer has no direct engine access.
+
+## Public exports
+
+`src/index.ts` exports the package `seam`, document-import planning and apply functions and result types, and project-asset and contained GLB/glTF import functions, profiles, limits, manifest types, and refusal data.
+
+## Refusals
+
+Document imports refuse invalid or ambiguous JSON, schema mismatches, and unsupported multi-document input. Asset imports validate bounded formats before writes. Hot reload creates a reviewable proposal and writes no saved bytes before approval. The importer does not provide a binary asset compiler, CMS, or multi-format registry.
+
+## Ownership and tests
+
+The contained GLB/glTF profile is owned by [`docs/asset-ingestion.md`](../../docs/asset-ingestion.md). Repository rules are in [`AGENTS.md`](../../AGENTS.md), and package ownership is mapped in [`docs/agents/layout.md`](../../docs/agents/layout.md). Tests include `packages/importers/test/` and the asset-ingestion and asset-pipeline end-to-end goldens in `tests/e2e/`.
+
 The first external-content adapter (sceneaxi#47) accepts one full,
 text-canonical SceneAxi document as recorded JSON, validates it with the public
 Core document parser, and proposes replacement of an existing target document's

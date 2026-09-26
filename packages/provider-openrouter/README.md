@@ -1,5 +1,21 @@
 # @sceneaxi/provider-openrouter
 
+## Purpose
+
+Implements an injected-transport OpenRouter adapter for the Model Provider Port. It owns no credentials and performs no network I/O itself.
+
+## Public exports
+
+`src/index.ts` exports the package `seam`, adapter and fixture-transport constructors, adapter schema and provider identifiers, transport and configuration types, and stable adapter error codes and error class.
+
+## Refusals
+
+The adapter refuses invalid configuration, requests that do not match the exact provider, model, quantization, and version pin, transport attestations that do not match that pin, malformed responses, and unrecorded fixture operations. It sends deterministic no-fallback requests. The Model Provider Port denies Kids third-party routes before dispatch.
+
+## Ownership and tests
+
+The Model Provider Port and Kids denial are owned by `@sceneaxi/authoring-core`; repository rules are in [`AGENTS.md`](../../AGENTS.md), and package ownership is mapped in [`docs/agents/layout.md`](../../docs/agents/layout.md). Adapter tests are in `packages/provider-openrouter/test/adapter.test.ts`. Fixture-backed hosted-call integration is covered by `tests/e2e/hosted-ai-metering-golden.test.ts`.
+
 Thin OpenRouter adapter behind `@sceneaxi/authoring-core`'s Model Provider Port
 (sceneaxi#46). It requires an exact provider/model/quantization/version pin and
 a deterministic `allowFallbacks: false`, `temperature: 0` eval configuration.
