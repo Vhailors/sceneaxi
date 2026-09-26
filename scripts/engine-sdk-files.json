@@ -99,6 +99,7 @@
   "packages/schemas/contracts/sculpt-intake.schema.json",
   "packages/schemas/contracts/stripe-connect.schema.json",
   "packages/schemas/package.json",
+  "packages/schemas/src/asset-render-mesh.ts",
   "packages/schemas/src/billing.ts",
   "packages/schemas/src/catalog-listing.ts",
   "packages/schemas/src/catalog-listings.data.ts",

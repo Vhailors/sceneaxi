@@ -1,4 +1,4 @@
-import { GridHelper, Object3D } from "three";
+import { DataTexture, GridHelper, Mesh, MeshStandardMaterial, Object3D } from "three";
 import { describe, expect, it, vi } from "vitest";
 import {
   THREE_HEADLESS_SURFACE_LABEL,
@@ -338,6 +338,56 @@ describe("Three presentation core — camera input wiring", () => {
     const backend = createThreeSculptPresentationBackend();
     expect(() => backend.camera.attach({} as never)).toThrow(ThreePresentationError);
     backend.dispose();
+  });
+
+  it("mounts shared UV and decoded PNG payloads as an sRGB Three texture and disposes it", () => {
+    let scene: ThreeRenderableHandle | null = null;
+    const backend = createThreeSculptPresentationBackend({
+      surface: {
+        kind: "headless",
+        resize() {},
+        draw(value) { scene = value; return { drawCalls: 1, pixelsDrawn: false }; },
+        capture() { return null; },
+        dispose() {},
+      },
+    });
+    const meshPayload = {
+      meshId: "textured-triangle",
+      positions: [-1, 0, 0, 1, 0, 0, 0, 1, 0],
+      uvs: [0, 0, 1, 0, 0.5, 1],
+      indices: [0, 1, 2],
+      matrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+      baseColor: "#ffffff",
+      metallic: 0,
+      roughness: 1,
+      baseColorTexture: { width: 1, height: 1, rgba: [255, 32, 8, 255] },
+    };
+    backend.mountTriangleAsset({ instanceId: "textured", transform, meshes: [meshPayload] });
+    expect(backend.render(["textured"]).pixelsDrawn).toBe(false);
+    expect(scene).toBeInstanceOf(Object3D);
+    if (!(scene instanceof Object3D)) return;
+    const mesh = scene.getObjectByName("textured-triangle");
+    expect(mesh).toBeInstanceOf(Mesh);
+    if (!(mesh instanceof Mesh)) return;
+    expect(mesh.geometry.getAttribute("uv").array).toEqual(new Float32Array([0, 0, 1, 0, 0.5, 1]));
+    expect(mesh.material).toBeInstanceOf(MeshStandardMaterial);
+    if (!(mesh.material instanceof MeshStandardMaterial)) return;
+    expect(mesh.material.map).toBeInstanceOf(DataTexture);
+    const texture = mesh.material.map;
+    if (!(texture instanceof DataTexture)) return;
+    expect(texture.colorSpace).toBe("srgb");
+    expect(texture.image.data).toEqual(new Uint8Array([255, 32, 8, 255]));
+    const disposed = vi.fn();
+    texture.addEventListener("dispose", disposed);
+    expect(() => backend.mountTriangleAsset({
+      instanceId: "textured",
+      transform,
+      meshes: [{ ...meshPayload, baseColorTexture: { width: 1, height: 1, rgba: [255] } }],
+    })).toThrow('Contained triangle mesh "textured-triangle" is invalid.');
+    expect(disposed).not.toHaveBeenCalled();
+    expect(backend.render(["textured"]).pixelsDrawn).toBe(false);
+    backend.dispose();
+    expect(disposed).toHaveBeenCalledOnce();
   });
 
   it("replaces a mounted proxy with contained triangle geometry on the same Three core", () => {

@@ -800,10 +800,11 @@
       "severity": "medium",
       "title": "Imported models are untextured",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 4,
-      "thread": null,
-      "commit": null
+      "thread": "thr_8m9dtawmrj",
+      "commit": null,
+      "openDecision": "Async JPEG/WebP decoding is a follow-up; browser texture pixels not yet recorded"
     },
     {
       "id": 67,

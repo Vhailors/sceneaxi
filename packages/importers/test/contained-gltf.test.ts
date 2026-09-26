@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import {
   mkdtempSync,
   readFileSync,
@@ -8,6 +9,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { deflateSync } from "node:zlib";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   apply,
@@ -52,6 +54,67 @@ function triangleBytes(offset = 0) {
     0 + offset, 1, 0,
   ]);
   return new Uint8Array(values.buffer);
+}
+
+function pngChunk(type: string, data: Uint8Array) {
+  const chunk = Buffer.alloc(data.byteLength + 12);
+  chunk.writeUInt32BE(data.byteLength, 0);
+  chunk.write(type, 4, "ascii");
+  chunk.set(data, 8);
+  let crc = 0xffffffff;
+  for (const byte of chunk.subarray(4, data.byteLength + 8)) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit += 1) crc = (crc >>> 1) ^ ((crc & 1) === 1 ? 0xedb88320 : 0);
+  }
+  chunk.writeUInt32BE((crc ^ 0xffffffff) >>> 0, data.byteLength + 8);
+  return chunk;
+}
+
+function pngBytes(interleavedIdat = false) {
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(1, 0);
+  header.writeUInt32BE(1, 4);
+  header.set([8, 6, 0, 0, 0], 8);
+  const compressed = deflateSync(Buffer.from([0, 255, 32, 8, 255]));
+  const dataChunks = interleavedIdat
+    ? [pngChunk("IDAT", compressed.subarray(0, 1)), pngChunk("tEXt", Buffer.from([120, 0, 121])), pngChunk("IDAT", compressed.subarray(1))]
+    : [pngChunk("IDAT", compressed)];
+  return Buffer.concat([
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+    pngChunk("IHDR", header),
+    ...dataChunks,
+    pngChunk("IEND", Buffer.alloc(0)),
+  ]);
+}
+
+function texturedGltfBytes(imageSource: string) {
+  const positionBytes = Buffer.from(new Float32Array([-1, 0, 0, 1, 0, 0, 0, 1, 0]).buffer);
+  const uvBytes = Buffer.from(new Float32Array([0, 0, 1, 0, 0.5, 1]).buffer);
+  const embeddedImage = imageSource === "bufferView" ? pngBytes() : Buffer.alloc(0);
+  const geometryBytes = Buffer.concat([positionBytes, uvBytes, embeddedImage]);
+  const image = imageSource === "bufferView"
+    ? { bufferView: 2, mimeType: "image/png" }
+    : { uri: imageSource };
+  return Buffer.from(JSON.stringify({
+    asset: { version: "2.0" },
+    buffers: [{ byteLength: geometryBytes.byteLength, uri: `data:application/octet-stream;base64,${geometryBytes.toString("base64")}` }],
+    bufferViews: [
+      { buffer: 0, byteOffset: 0, byteLength: positionBytes.byteLength },
+      { buffer: 0, byteOffset: positionBytes.byteLength, byteLength: uvBytes.byteLength },
+      ...(embeddedImage.byteLength === 0 ? [] : [{ buffer: 0, byteOffset: positionBytes.byteLength + uvBytes.byteLength, byteLength: embeddedImage.byteLength }]),
+    ],
+    accessors: [
+      { bufferView: 0, componentType: 5126, count: 3, type: "VEC3" },
+      { bufferView: 1, componentType: 5126, count: 3, type: "VEC2" },
+    ],
+    images: [image],
+    textures: [{ source: 0 }],
+    materials: [{ pbrMetallicRoughness: { baseColorTexture: { index: 0 } } }],
+    meshes: [{ primitives: [{ attributes: { POSITION: 0, TEXCOORD_0: 1 }, material: 0 }] }],
+    nodes: [{ mesh: 0 }],
+    scenes: [{ nodes: [0] }],
+    scene: 0,
+  }));
 }
 
 function gltfBytes(offset = 0, external = false) {
@@ -199,6 +262,123 @@ describe("contained GLB/glTF project ingestion", () => {
       copiedPaths: ["assets/triangle.gltf"],
     });
     expect(readFileSync(join(root, "assets/triangle.gltf"))).toEqual(bytes);
+  });
+
+  it("projects matching UVs and an embedded PNG as a decoded shared mesh payload", () => {
+    const root = project();
+    const png = pngBytes();
+    const bytes = texturedGltfBytes(`data:image/png;base64,${png.toString("base64")}`);
+    const staged = stageContainedGltfAssetImport({
+      sourceName: "textured.gltf",
+      sourceBytes: bytes,
+      documentPath: "scene.json",
+      expectedContentHash: `sha256:${"0".repeat(64)}`,
+      documentData: parseDocumentTextForTest(root).data,
+    });
+    expect(staged).toMatchObject({ ok: true });
+    if (!staged.ok) return;
+    expect(staged.projection.meshes[0]?.uvs).toEqual([0, 0, 1, 0, 0.5, 1]);
+    expect(staged.projection.meshes[0]?.baseColorTexture).toMatchObject({ width: 1, height: 1 });
+    expect(staged.projection.meshes[0]?.baseColorTexture?.rgba).toEqual([255, 32, 8, 255]);
+    expect(staged.entry.digest).toBe(`sha256:${createHash("sha256").update(bytes).digest("hex")}`);
+    expect(Buffer.from(staged.entry.canonicalBytesBase64, "base64")).toEqual(bytes);
+    const bufferView = stageContainedGltfAssetImport({
+      sourceName: "buffer-view.gltf",
+      sourceBytes: texturedGltfBytes("bufferView"),
+      documentPath: "scene.json",
+      expectedContentHash: `sha256:${"0".repeat(64)}`,
+      documentData: parseDocumentTextForTest(root).data,
+    });
+    expect(bufferView).toMatchObject({ ok: true, projection: { meshes: [{ baseColorTexture: { width: 1, height: 1 } }] } });
+  });
+
+  it("refuses external and non-PNG embedded glTF texture sources by name", () => {
+    const root = project();
+    const documentData = parseDocumentTextForTest(root).data;
+    for (const [uri, reason] of [
+      ["texture.png", CONTAINED_GLTF_REFUSALS.notContained],
+      ["data:image/jpeg;base64,AA==", CONTAINED_GLTF_REFUSALS.unsupportedFormat],
+      ["data:image/webp;base64,AA==", CONTAINED_GLTF_REFUSALS.unsupportedFormat],
+    ] as const) {
+      expect(stageContainedGltfAssetImport({
+        sourceName: "textured.gltf",
+        sourceBytes: texturedGltfBytes(uri),
+        documentPath: "scene.json",
+        expectedContentHash: `sha256:${"0".repeat(64)}`,
+        documentData,
+      })).toMatchObject({ ok: false, reason });
+    }
+    expect(stageContainedGltfAssetImport({
+      sourceName: "interleaved-idat.gltf",
+      sourceBytes: texturedGltfBytes(`data:image/png;base64,${pngBytes(true).toString("base64")}`),
+      documentPath: "scene.json",
+      expectedContentHash: `sha256:${"0".repeat(64)}`,
+      documentData,
+    })).toMatchObject({
+      ok: false,
+      reason: CONTAINED_GLTF_REFUSALS.malformed,
+      message: expect.stringContaining("consecutive"),
+    });
+    const png = pngBytes();
+    const truncatedChunk = Buffer.alloc(12);
+    truncatedChunk.writeUInt32BE(100, 0);
+    truncatedChunk.write("tEXt", 4, "ascii");
+    const malformedPng = Buffer.concat([png.subarray(0, -12), truncatedChunk, png.subarray(-12)]);
+    expect(stageContainedGltfAssetImport({
+      sourceName: "truncated-chunk.gltf",
+      sourceBytes: texturedGltfBytes(`data:image/png;base64,${malformedPng.toString("base64")}`),
+      documentPath: "scene.json",
+      expectedContentHash: `sha256:${"0".repeat(64)}`,
+      documentData,
+    })).toMatchObject({
+      ok: false,
+      reason: CONTAINED_GLTF_REFUSALS.malformed,
+      message: expect.stringContaining("chunk exceeds"),
+    });
+    const samplerBytes = Buffer.from(
+      texturedGltfBytes(`data:image/png;base64,${png.toString("base64")}`)
+        .toString()
+        .replace('"buffers":', '"samplers":[{}],"buffers":'),
+    );
+    const transparentPng = Buffer.concat([
+      png.subarray(0, 33),
+      pngChunk("tRNS", Buffer.from([0, 255, 0, 32, 0, 8])),
+      png.subarray(33),
+    ]);
+    expect(stageContainedGltfAssetImport({
+      sourceName: "transparent-png.gltf",
+      sourceBytes: texturedGltfBytes(`data:image/png;base64,${transparentPng.toString("base64")}`),
+      documentPath: "scene.json",
+      expectedContentHash: `sha256:${"0".repeat(64)}`,
+      documentData,
+    })).toMatchObject({
+      ok: false,
+      reason: CONTAINED_GLTF_REFUSALS.unsupportedFormat,
+      message: expect.stringContaining("tRNS"),
+    });
+    const unsupportedPbrTexture = Buffer.from(
+      texturedGltfBytes(`data:image/png;base64,${png.toString("base64")}`)
+        .toString()
+        .replace('"baseColorTexture":{"index":0}', '"baseColorTexture":{"index":0},"metallicRoughnessTexture":{"index":0}'),
+    );
+    expect(stageContainedGltfAssetImport({
+      sourceName: "unsupported-pbr-texture.gltf",
+      sourceBytes: unsupportedPbrTexture,
+      documentPath: "scene.json",
+      expectedContentHash: `sha256:${"0".repeat(64)}`,
+      documentData,
+    })).toMatchObject({
+      ok: false,
+      reason: CONTAINED_GLTF_REFUSALS.unsupportedFormat,
+      message: expect.stringContaining("metallicRoughnessTexture"),
+    });
+    expect(stageContainedGltfAssetImport({
+      sourceName: "sampler.gltf",
+      sourceBytes: samplerBytes,
+      documentPath: "scene.json",
+      expectedContentHash: `sha256:${"0".repeat(64)}`,
+      documentData,
+    })).toMatchObject({ ok: false, reason: CONTAINED_GLTF_REFUSALS.unsupportedFormat, message: expect.stringContaining("samplers") });
   });
 
   it("accepts the binary GLB form of the same contained triangle profile", () => {

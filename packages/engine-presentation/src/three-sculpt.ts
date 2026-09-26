@@ -8,19 +8,26 @@
 import {
   Box3,
   BoxGeometry,
+  DataTexture,
   BufferGeometry,
   CylinderGeometry,
   Float32BufferAttribute,
   Group,
+  LinearFilter,
+  LinearMipmapLinearFilter,
   Mesh,
   MeshStandardMaterial,
   Sphere,
   SphereGeometry,
+  SRGBColorSpace,
   Uint32BufferAttribute,
+  RGBAFormat,
+  UnsignedByteType,
+  RepeatWrapping,
   type Material,
   type Object3D,
 } from "three";
-import type { SculptComponent, SculptMaterial, SculptTransform } from "@sceneaxi/schemas";
+import type { AssetRenderMesh, SculptComponent, SculptMaterial, SculptTransform } from "@sceneaxi/schemas";
 import type { OrbitCameraControls } from "./orbit-camera.js";
 import {
   createThreePresentationCore,
@@ -51,17 +58,7 @@ export interface ThreeSculptPresentationBackend extends SculptPresentationBacken
   mountTriangleAsset(input: ThreeTriangleAssetInput): void;
 }
 
-export type ThreeTrianglePrimitiveInput = Readonly<{
-  meshId: string;
-  positions: readonly number[];
-  normals?: readonly number[];
-  indices: readonly number[];
-  /** glTF-compatible column-major local-to-asset matrix. */
-  matrix: readonly number[];
-  baseColor: string;
-  metallic: number;
-  roughness: number;
-}>;
+export type ThreeTrianglePrimitiveInput = AssetRenderMesh;
 
 export type ThreeTriangleAssetInput = Readonly<{
   instanceId: string;
@@ -143,6 +140,17 @@ function buildTriangleAsset(input: ThreeTriangleAssetInput) {
       !finiteArray(mesh.positions, 3) ||
       (mesh.normals !== undefined &&
         (!finiteArray(mesh.normals, 3) || mesh.normals.length !== mesh.positions.length)) ||
+      (mesh.uvs !== undefined &&
+        (!Array.isArray(mesh.uvs) || !finiteArray(mesh.uvs, 2) || mesh.uvs.length !== vertexCount * 2)) ||
+      (mesh.baseColorTexture !== undefined &&
+        (mesh.baseColorTexture === null ||
+          !Number.isSafeInteger(mesh.baseColorTexture.width) || mesh.baseColorTexture.width <= 0 ||
+          !Number.isSafeInteger(mesh.baseColorTexture.height) || mesh.baseColorTexture.height <= 0 ||
+          mesh.baseColorTexture.width * mesh.baseColorTexture.height * 4 > 4 * 1024 * 1024 ||
+          !Array.isArray(mesh.baseColorTexture.rgba) ||
+          mesh.baseColorTexture.rgba.length !== mesh.baseColorTexture.width * mesh.baseColorTexture.height * 4 ||
+          !mesh.baseColorTexture.rgba.every((value) => Number.isInteger(value) && value >= 0 && value <= 255) ||
+          mesh.uvs === undefined)) ||
       mesh.indices.length === 0 ||
       mesh.indices.length % 3 !== 0 ||
       mesh.indices.some(
@@ -160,17 +168,33 @@ function buildTriangleAsset(input: ThreeTriangleAssetInput) {
     geometry.setAttribute("position", new Float32BufferAttribute(mesh.positions, 3));
     if (mesh.normals === undefined) geometry.computeVertexNormals();
     else geometry.setAttribute("normal", new Float32BufferAttribute(mesh.normals, 3));
+    if (mesh.uvs !== undefined) geometry.setAttribute("uv", new Float32BufferAttribute(mesh.uvs, 2));
     geometry.setIndex(new Uint32BufferAttribute(mesh.indices, 1));
     geometry.computeBoundingBox();
     geometry.computeBoundingSphere();
-    const object = new Mesh(
-      geometry,
-      new MeshStandardMaterial({
-        color: mesh.baseColor,
-        metalness: mesh.metallic,
-        roughness: mesh.roughness,
-      }),
+    const texture = mesh.baseColorTexture === undefined ? undefined : new DataTexture(
+      new Uint8Array(mesh.baseColorTexture.rgba),
+      mesh.baseColorTexture.width,
+      mesh.baseColorTexture.height,
+      RGBAFormat,
+      UnsignedByteType,
     );
+    if (texture !== undefined) {
+      texture.colorSpace = SRGBColorSpace;
+      texture.wrapS = RepeatWrapping;
+      texture.wrapT = RepeatWrapping;
+      texture.magFilter = LinearFilter;
+      texture.minFilter = LinearMipmapLinearFilter;
+      texture.generateMipmaps = true;
+      texture.needsUpdate = true;
+    }
+    const material = new MeshStandardMaterial({
+      color: mesh.baseColor,
+      metalness: mesh.metallic,
+      roughness: mesh.roughness,
+    });
+    if (texture !== undefined) material.map = texture;
+    const object = new Mesh(geometry, material);
     object.name = mesh.meshId;
     object.matrix.fromArray(mesh.matrix as number[]);
     object.matrixAutoUpdate = false;
@@ -257,12 +281,12 @@ export function createThreeSculptPresentationBackend(
     },
 
     mountTriangleAsset(input) {
+      const next = buildTriangleAsset(input);
       const previous = roots.get(input.instanceId);
       if (previous !== undefined) {
         core.content.remove(previous);
         disposeSubtree(previous);
       }
-      const next = buildTriangleAsset(input);
       roots.set(input.instanceId, next);
       core.content.add(next);
     },

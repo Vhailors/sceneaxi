@@ -14,6 +14,7 @@ import {
   GridHelper,
   Group,
   Mesh,
+  MeshStandardMaterial,
   Scene,
   type Object3D,
 } from "three";
@@ -288,6 +289,9 @@ export function disposeSubtree(root: Object3D) {
     const materials = Array.isArray(object.material)
       ? object.material
       : [object.material];
-    for (const material of materials) material.dispose();
+    for (const material of materials) {
+      if (material instanceof MeshStandardMaterial) material.map?.dispose();
+      material.dispose();
+    }
   });
 }

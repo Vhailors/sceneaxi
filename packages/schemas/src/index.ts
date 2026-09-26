@@ -12,6 +12,8 @@ export const SCENEAXI_REFUSAL_REGISTRY_CATALOG = Object.freeze({
   PROJECT_MANIFEST_DIAGNOSTICS,
 });
 
+export type { AssetRenderMesh, BaseColorTexture } from "./asset-render-mesh.js";
+
 export {
   CATALOG_DATE_TIME_PATTERN,
   CATALOG_ITEM_SCHEMA_VERSION,

@@ -25,17 +25,26 @@ The bounded families are:
 | Family | Admitted profile |
 |---|---|
 | SceneAxi | validated Scene Document, Sculpt Intake, Sculpt Artifact, or Composed Scene JSON |
-| Model | `sceneaxi.gltf-contained-triangles-v1`: contained GLB or embedded-buffer glTF 2.0 |
-| Image | PNG, JPEG, or VP8X WebP with validated headers and bounded dimensions |
+| Model | `sceneaxi.gltf-contained-triangles-v1`: contained GLB or embedded-buffer glTF 2.0; PNG-textured triangles |
+| Image | PNG, JPEG, or VP8X WebP with validated headers and bounded dimensions; separate raster assets, not glTF textures |
 | Audio | bounded WAV, Ogg, or MP3 container metadata |
 | Font | WOFF2, WOFF, TTF, or OTF with bounded table metadata |
 | Animation data | `sceneaxi.animation-data` schema v1 metadata; no timeline authoring or runtime evaluator |
 
 Each file is at most 8 MiB and a project retains at most 16 entries. The glTF
-triangle/accessor limits remain unchanged. SVG, HTML, JavaScript, unknown JSON,
-archives, external glTF buffers, and unsupported codecs refuse by name. Preview
-records are recomputed from validated bytes and contain primitive metadata only;
-stored markup or untrusted code is never interpreted or executed.
+triangle/accessor limits remain unchanged. Textures accept only embedded
+8-bit, non-interlaced RGB/RGBA PNGs without `tRNS` transparency or unsupported
+`gAMA`/`cHRM`/`iCCP` color-profile chunks (decoded RGBA under a 4 MiB per-texture
+and 8 MiB per-model cap); external and non-PNG images, those PNG chunks, and
+sampler configurations refuse by name. Materials accept only omitted or `OPAQUE`
+`alphaMode`; `BLEND`, `MASK`, and unknown modes refuse before proposal creation.
+As in glTF, opaque materials ignore texture alpha and `alphaCutoff`. An omitted
+`baseColorFactor` defaults to white, leaving texture colors untinted.
+JPEG/WebP decode is an async follow-up. SVG, HTML, JavaScript,
+unknown JSON, archives, external glTF buffers, and unsupported codecs refuse by
+name. Preview records are recomputed
+from validated bytes and contain primitive metadata only; stored markup or
+untrusted code is never interpreted or executed.
 
 ## Review, copies, and hot reload
 
@@ -73,6 +82,7 @@ the stable id, contained path, and model composition identities.
   canonical bytes.
 - Play: consumes model entries only, retaining the original canonical glTF
   projection and byte parity; non-model assets do not fabricate scene nodes.
+  Separate raster image entries are not bound to glTF materials.
 - Export Web: verifies and packages every admitted entry by its manifest media
   type, length, digest, and project-contained path.
 

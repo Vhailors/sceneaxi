@@ -96,8 +96,19 @@ mounts the manifest's validated Sculpt proxy through the Mount API, it calls
 the importer's numeric triangle projection. The method retains the existing Three
 core, content root, camera, draw surface, and frame counter; it revalidates the
 neutral arrays and material scalars at the presentation boundary and exposes no
-Three type. Profile, provenance, filesystem, and network decisions remain outside
-this package in [`asset-ingestion.md`](asset-ingestion.md).
+Three type. The contained glTF projection maps `TEXCOORD_0` to `uvs` and embedded PNGs to
+`baseColorTexture: { width, height, rgba }`, using PNG bufferViews or base64 data
+URIs. It refuses external images, JPEG/WebP, non-8-bit RGB/RGBA or interlaced
+PNG, `tRNS` transparency, `gAMA`/`cHRM`/`iCCP` color-profile chunks, and sampler
+configurations. The importer accepts only omitted or `OPAQUE` material `alphaMode`
+and refuses `BLEND`, `MASK`, and unknown modes rather than silently making them
+opaque. Opaque materials ignore texture alpha and `alphaCutoff`; an omitted
+`baseColorFactor` projects to white. Decoded data is capped at 4 MiB per texture and
+8 MiB per model. Presentation accepts the shared neutral payload, validates
+UV/RGBA shapes, and builds an sRGB `DataTexture`; disposal releases that map.
+Async JPEG/WebP decode remains follow-up work. Raster image entries are separate
+assets and are not applied to model materials. Browser pixel evidence remains a
+recorded observation, not a gate inference or a new texture-rendering claim.
 
 Kernel snapshots to a canvas through the ADR 0002 seam:
 
@@ -198,8 +209,9 @@ only, and presentation invents no state the kernel does not own.
   Contained asset acceptance and reopen/Play additionally replace the manifest's
   proxy with its revalidated triangle projection on this same backend; the
   deterministic headless draw evidence is in
-  `tests/e2e/asset-ingestion-golden.test.ts`. That test makes no new pixel claim,
-  so the pixel observation above remains the desktop surface's recorded one.
+  `tests/e2e/asset-ingestion-golden.test.ts`. Its pixel result remains the desktop
+  surface's recorded browser observation, not evidence that the contract
+  guarantees rendered pixels or that textured browser pixels were observed.
 
 Reproduce the standalone snippets by serving a page that runs the consumer
 snippets above against a validated Sculpt Artifact;
