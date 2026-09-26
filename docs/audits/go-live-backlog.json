@@ -408,9 +408,9 @@
       "severity": "high",
       "title": "No observability",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 2,
-      "thread": null,
+      "thread": "thr_39rbdhrrbc",
       "commit": null
     },
     {

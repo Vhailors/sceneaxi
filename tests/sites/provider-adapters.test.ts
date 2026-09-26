@@ -37,6 +37,43 @@ import {
   type StripeClientLike,
 } from "../../sites/umbrella/src/index.ts";
 import { createDeploymentPlaneHandles } from "../../sites/umbrella/src/lib/identity-plane.ts";
+import { logWebhookOutcome, serverLog } from "../../sites/umbrella/src/lib/server-logger.ts";
+
+describe("umbrella server logging", () => {
+  it("emits stable JSON events and redacts secrets, tokens, emails, URLs, and unapproved fields", () => {
+    const lines: string[] = [];
+    serverLog("warn", "umbrella.test.refused", {
+      reason: "SITE_REQUEST_CROSS_ORIGIN",
+      email: "private@example.test",
+      outcome: "token=opaque-token",
+    }, (_level, line) => lines.push(line));
+    expect(lines).toHaveLength(1);
+    expect(JSON.parse(lines[0] ?? "null")).toEqual({
+      event: "umbrella.test.refused",
+      outcome: "[REDACTED]",
+      reason: "SITE_REQUEST_CROSS_ORIGIN",
+    });
+  });
+
+  it("writes exactly one safe event for each webhook outcome", () => {
+    const outcomes = [
+      { ok: false as const, reason: "CREDIT_STORE_FAILED", message: "private" },
+      { ok: true as const, ignored: true as const, reason: "STRIPE_WEBHOOK_EVENT_UNRELATED", message: "private" },
+      { ok: true as const, ignored: false as const, replayed: true, movement: "grant" as const, credits: 2, balance: 4 },
+      { ok: true as const, ignored: false as const, replayed: false, movement: "refund" as const, credits: -2, balance: 2 },
+    ];
+    for (const outcome of outcomes) {
+      const lines: string[] = [];
+      logWebhookOutcome("checkout.session.completed", outcome, (_level, line) => lines.push(line));
+      expect(lines).toHaveLength(1);
+      expect(JSON.parse(lines[0] ?? "null")).toMatchObject({
+        event: "umbrella.webhook.outcome",
+        eventType: "checkout.session.completed",
+      });
+      expect(lines[0]).not.toContain("private");
+    }
+  });
+});
 
 const NOW = Date.parse("2026-07-26T12:00:00.000Z");
 const iso = (offset: number) => new Date(NOW + offset).toISOString();

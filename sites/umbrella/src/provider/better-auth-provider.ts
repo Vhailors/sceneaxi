@@ -13,6 +13,7 @@
  * directory is type-checked by the site's own `pnpm typecheck`, like `src/app/`.
  */
 import { randomUUID } from "node:crypto";
+import { serverLog } from "../lib/server-logger.js";
 import { betterAuth, type BetterAuthOptions } from "better-auth";
 import { hashPassword, verifyPassword } from "better-auth/crypto";
 import { bearer } from "better-auth/plugins";
@@ -259,7 +260,11 @@ export function createBetterAuthProviderRuntime(options: {
       useSecureCookies: new URL(config.origin).protocol === "https:",
       database: { generateId: () => randomUUID() },
     },
-    logger: { disabled: true },
+    logger: {
+      disabled: false,
+      level: "warn",
+      log: () => serverLog("warn", "umbrella.auth.provider_warning", { provider: "better-auth" }),
+    },
   });
   return Object.freeze({
     auth,
@@ -554,6 +559,7 @@ export function loadProductionBetterAuthProvider(): BetterAuthProviderRuntimeRes
       value: productionRuntime(config.value),
     });
   } catch {
+    serverLog("error", "umbrella.auth.provider_construction_failed", { provider: "better-auth" });
     heldProductionRuntime = Object.freeze({
       ok: false as const,
       reason: BETTER_AUTH_PROVIDER_REFUSALS.storageUnavailable,
@@ -614,6 +620,7 @@ export function createBetterAuthProviderHandler(
       }
       return await loaded.value.auth.handler(request);
     } catch {
+      serverLog("error", "umbrella.auth.provider_request_failed", { provider: "better-auth", outcome: endpoint });
       return refusal(BETTER_AUTH_PROVIDER_REFUSALS.storageUnavailable);
     }
   };

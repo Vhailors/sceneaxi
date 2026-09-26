@@ -260,7 +260,16 @@ The umbrella exposes `GET /api/health` for deployment checks. It returns only ea
 plane's `wired`, `absent`, or `misconfigured` state and the build commit; `ok` is false
 only when a plane is misconfigured. An absent plane is reported explicitly without making
 liveness fail. The response never includes environment values and is sent with
-`Cache-Control: no-store`. The private
+`Cache-Control: no-store`. Structured server diagnostics are JSON lines emitted to the
+Vercel function's stdout/stderr and are available in that deployment's function logs.
+Events cover provider construction failures, Better Auth warnings, webhook outcomes,
+checkout/login/logout/intake/admin refusals, and health misconfiguration. They include
+stable event names and only bounded fields such as provider, plane, outcome, event type,
+and named refusal reason. They never include exception messages, environment/configuration
+values, request bodies, credentials, tokens, email addresses, or form fields. Use the
+Vercel deployment's **Logs** view and filter by `event` (for example,
+`umbrella.webhook.outcome` or `umbrella.provider.construction_failed`); logging is local
+stdout/stderr only and adds no third-party service. The private
 configuration report classifies every variable in the table above as `absent`,
 `present-valid`, or `present-malformed`. An unset variable stays distinct from a supplied
 invalid value, while malformed configuration never makes an unavailable plane look

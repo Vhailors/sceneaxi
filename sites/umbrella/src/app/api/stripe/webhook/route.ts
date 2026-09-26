@@ -4,6 +4,7 @@ import {
   creditWebhookOutcomeHttpStatus,
   umbrellaRequestAuthority,
 } from "../../../../lib/request-authority.js";
+import { logWebhookOutcome } from "../../../../lib/server-logger.js";
 
 /**
  * The Stripe credit-pack webhook endpoint.
@@ -28,11 +29,28 @@ import {
  */
 export const dynamic = "force-dynamic";
 
+function webhookEventType(payload: string): string | undefined {
+  try {
+    const value: unknown = JSON.parse(payload);
+    if (typeof value !== "object" || value === null || !("type" in value)) return undefined;
+    const eventType = value.type;
+    return typeof eventType === "string" && ["checkout.session.completed", "charge.refunded", "charge.dispute.created", "charge.dispute.closed"].includes(eventType)
+      ? eventType
+      : "other";
+  } catch {
+    return undefined;
+  }
+}
+
 export async function POST(request: NextRequest) {
+  const payload = await request.text();
+  const eventType = webhookEventType(payload);
   const outcome = await umbrellaRequestAuthority().applyCreditWebhook({
-    payload: await request.text(),
+    payload,
     signatureHeader: request.headers.get(STRIPE_SIGNATURE_HEADER),
   });
+
+  logWebhookOutcome(eventType, outcome);
 
   if (!outcome.ok) {
     return NextResponse.json(

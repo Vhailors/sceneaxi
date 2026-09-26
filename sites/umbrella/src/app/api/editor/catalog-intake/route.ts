@@ -14,6 +14,7 @@ import {
 import { verifyLoginRequestOrigin } from "../../../../lib/login-flow.js";
 import { resolveUmbrellaEditorAccess } from "../../../../lib/site-config.js";
 import { readSessionToken, readSiteMutationRequestSignals } from "../../../_session.js";
+import { serverLog } from "../../../../lib/server-logger.js";
 
 /**
  * The one place a catalog intake submission may happen (sceneaxi#218).
@@ -38,6 +39,7 @@ import { readSessionToken, readSiteMutationRequestSignals } from "../../../_sess
 export const dynamic = "force-dynamic";
 
 function refusalResponse(reason: string, message: string, status: number): Response {
+  serverLog("warn", "umbrella.intake.refused", { reason });
   return NextResponse.json({ ok: false, reason, message }, { status });
 }
 

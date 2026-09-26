@@ -10,6 +10,7 @@ import {
   readSessionToken,
   readSiteMutationRequestSignals,
 } from "../../_session.js";
+import { serverLog } from "../../../lib/server-logger.js";
 
 /**
  * Sign the carried session out.
@@ -28,6 +29,7 @@ export async function POST(request: NextRequest) {
   const signals = readSiteMutationRequestSignals(request);
   const requestOrigin = verifyLoginRequestOrigin(process.env, signals.formOrigin);
   if (!requestOrigin.ok) {
+    serverLog("warn", "umbrella.logout.refused", { reason: requestOrigin.reason });
     return new Response(null, {
       status: 303,
       headers: new Headers({
@@ -44,6 +46,8 @@ export async function POST(request: NextRequest) {
     secure: resolveSessionCookieSecurity(process.env, signals.cookieSecurity),
   });
 
+  if (outcome.kind === "refused") serverLog("warn", "umbrella.logout.refused", { reason: outcome.reason });
+  else if (!outcome.revocation.ok) serverLog("warn", "umbrella.logout.refused", { reason: outcome.revocation.reason });
   const headers = new Headers({ Location: outcome.location });
   if (outcome.kind === "signed-out") headers.set("Set-Cookie", outcome.clearCookie);
   return new Response(null, { status: 303, headers });

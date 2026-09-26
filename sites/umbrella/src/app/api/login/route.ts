@@ -7,6 +7,7 @@ import {
   verifyLoginRequestOrigin,
 } from "../../../lib/login-flow.js";
 import { readSiteMutationRequestSignals } from "../../_session.js";
+import { serverLog } from "../../../lib/server-logger.js";
 
 /**
  * The hosted sign-in handler (sceneaxi#185).
@@ -28,6 +29,7 @@ export async function POST(request: NextRequest) {
   const signals = readSiteMutationRequestSignals(request);
   const requestOrigin = verifyLoginRequestOrigin(process.env, signals.formOrigin);
   if (!requestOrigin.ok) {
+    serverLog("warn", "umbrella.login.refused", { reason: requestOrigin.reason });
     return new Response(null, {
       status: 303,
       headers: new Headers({
@@ -40,6 +42,7 @@ export async function POST(request: NextRequest) {
   try {
     form = await request.formData();
   } catch {
+    serverLog("warn", "umbrella.login.refused", { reason: "SITE_REQUEST_MALFORMED" });
     return new Response(null, {
       status: 303,
       headers: new Headers({
@@ -60,6 +63,7 @@ export async function POST(request: NextRequest) {
     secure: resolveSessionCookieSecurity(process.env, signals.cookieSecurity),
   });
 
+  if (outcome.kind === "refused") serverLog("warn", "umbrella.login.refused", { reason: outcome.reason });
   const headers = new Headers({ Location: outcome.location });
   if (outcome.kind === "success") {
     headers.set("Set-Cookie", outcome.setCookie);

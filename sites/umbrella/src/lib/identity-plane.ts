@@ -112,6 +112,7 @@ import {
   type NeonDatabase,
   type ProviderSessionRevoker,
 } from "./provider-adapters.js";
+import { serverLog } from "./server-logger.js";
 import { verifyLoginRequestOrigin } from "./login-flow.js";
 
 /**
@@ -563,16 +564,21 @@ function providerClientsFromEnvironment(
     try {
       database = createNeonDatabase(databaseUrl);
     } catch {
+      serverLog("error", "umbrella.provider.construction_failed", { provider: "database" });
       database = undefined;
     }
   }
 
   const authOrigin = resolveBetterAuthOrigin(resolveNonEmptyEnv(env, "BETTER_AUTH_ORIGIN"));
   const fetcher = providerFetch();
-  const betterAuth =
-    authOrigin === undefined || fetcher === undefined
-      ? undefined
-      : createBetterAuthHttpClient({ origin: authOrigin, fetch: fetcher });
+  let betterAuth: DeploymentProviderOverrides["betterAuth"];
+  if (authOrigin !== undefined && fetcher !== undefined) {
+    try {
+      betterAuth = createBetterAuthHttpClient({ origin: authOrigin, fetch: fetcher });
+    } catch {
+      serverLog("error", "umbrella.provider.construction_failed", { provider: "better-auth" });
+    }
+  }
 
   const stripeKey = resolveNonEmptyEnv(env, "STRIPE_SECRET_KEY");
   let stripe: DeploymentProviderOverrides["stripe"];
@@ -580,6 +586,7 @@ function providerClientsFromEnvironment(
     try {
       stripe = createStripeClient(stripeKey);
     } catch {
+      serverLog("error", "umbrella.provider.construction_failed", { provider: "stripe" });
       stripe = undefined;
     }
   }

@@ -3,6 +3,7 @@ import { SITE_REFUSALS, resolveCheckoutRedirectOrigin } from "@sceneaxi/site-kit
 import { umbrellaRequestAuthority } from "../../../lib/request-authority.js";
 import { readSessionToken, readSiteMutationRequestSignals } from "../../_session.js";
 import { verifyLoginRequestOrigin } from "../../../lib/login-flow.js";
+import { serverLog } from "../../../lib/server-logger.js";
 
 /**
  * Credit-pack checkout — the request-bound path that reaches `SiteBillingPort`.
@@ -21,6 +22,7 @@ import { verifyLoginRequestOrigin } from "../../../lib/login-flow.js";
 export const dynamic = "force-dynamic";
 
 function refusalResponse(request: NextRequest, reason: string, message: string): Response {
+  serverLog("warn", "umbrella.checkout.refused", { reason });
   if (request.headers.get("accept")?.includes("application/json")) {
     return NextResponse.json({ ok: false, reason, message }, { status: 402 });
   }
