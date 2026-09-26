@@ -286,9 +286,9 @@
       "severity": "high",
       "title": "Checkout UX: refusal is raw JSON `402` to an HTML form; no success/pending/cancel pages; no purchase history o",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 1,
-      "thread": null,
+      "thread": "thr_4us2rwfxca",
       "commit": null
     },
     {
@@ -298,9 +298,9 @@
       "severity": "medium",
       "title": "`/api/checkout` falls back to a random attempt UUID → a new intent and Stripe session per POST; no rate limit",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 1,
-      "thread": null,
+      "thread": "thr_4us2rwfxca",
       "commit": null
     },
     {
@@ -526,9 +526,9 @@
       "severity": "medium",
       "title": "Operator internals shown to users",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 1,
-      "thread": null,
+      "thread": "thr_4us2rwfxca",
       "commit": null
     },
     {

@@ -342,14 +342,16 @@ splits in two:
 | Capability | State | Why |
 |---|---|---|
 | Credit-pack list on `/pricing` | **live** | read from the committed contract fixture's bundled module (`packages/schemas/src/credit-packs.data.ts`, held in lockstep by `pnpm check:contracts`); needs no provider and no traced file |
-| The **Buy** control on `/pricing` | posts to a real checkout once the TEST Stripe handle is configured, but only for a signed-in buyer | the adapter persists the intent before creating a card-only hosted checkout; with no session the POST refuses `IDENTITY_SESSION_ABSENT`, so a visitor signs in at `/login` first and the control refuses by name until then |
+| The **Buy** control on `/pricing` | posts to a real checkout once the TEST Stripe handle is configured, but only for a signed-in buyer | refusals return to `/pricing?reason=<NAME>`; signed-out visitors go to `/login?next=/pricing&reason=IDENTITY_SESSION_ABSENT`. The same-origin proof remains required. The form's attempt token is mandatory and becomes part of the persisted intent idempotency key. |
 | Admin identity (`SCENEAXI_ADMIN_EMAIL`) | **live as deployment evidence** | resolved by `@sceneaxi/auth` only inside the deployment owner and held behind `umbrellaRequestAuthority()`; request routes cannot supply another environment or issuer |
 | Checkout intent, starter grant, webhook verification | **live as behaviour** | implemented in-repo and gate-tested |
 | Hosted sign-in on `/login` (`POST /api/login`, `POST /api/logout`) | **live as behaviour**; signs a member in once the shipped Better Auth handler + Neon are configured, and refuses `IDENTITY_PLANE_NOT_WIRED` until they are | the whole flow — provider routes, form, named refusal states, HttpOnly `sceneaxi.session` cookie, sign-out — is in-repo and contract-tested ([#185](https://github.com/Vhailors/sceneaxi/issues/185), [#222](https://github.com/Vhailors/sceneaxi/issues/222)); it drives the same `IdentityPort` handle |
 | Session verification on `/account`, `/editor` | adapter live when Better Auth + Neon are configured | `verifySession` is wired, and authentication provisions the SceneAxi user and credit account idempotently; the `sessions` row is written by the sign-in above, and that same `IdentityPort` verifies the credential both surfaces read. Unwired they refuse `IDENTITY_PLANE_NOT_WIRED`, and a visitor with no cookie refuses `IDENTITY_SESSION_ABSENT` |
 | Credit balance | adapter live; reachable for a signed-in member | the balance is derived from the append-only ledger through `createCreditStore`, and the once-per-user 100-credit starter grant runs on the first authenticated read |
-| Hosted checkout redirect | live when the TEST Stripe handle is configured | the adapter uses the committed intent and TEST-only Stripe API call |
+| Hosted checkout redirect | live when the TEST Stripe handle is configured | success returns to `/account?checkout=success`, where the page says payment was received and credits appear once confirmed in the ledger; cancellation returns to `/pricing?checkout=cancelled` and claims no payment or credits |
 | A signed-out visitor | refuses `IDENTITY_SESSION_ABSENT` | not a failure, and shown as "you are not signed in", with `/login` as the action that changes it |
+
+Browser checkout refusals are 303 redirects with a named reason; requests explicitly accepting `application/json` retain the 402 JSON response. Return URLs are fixed to the configured umbrella origin. A success redirect is not ledger evidence: the page never claims a credit grant before the webhook confirms it.
 
 `identity-plane.ts` is the **single** place those handles arrive. It resolves deployment
 configuration once and holds the admin witness plus the secret-backed webhook capability

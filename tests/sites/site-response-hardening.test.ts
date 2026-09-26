@@ -98,6 +98,10 @@ describe("umbrella checkout", () => {
     const formRead = route.indexOf("request.formData()");
     expect(proof).toBeGreaterThan(-1);
     expect(formRead).toBeGreaterThan(proof);
-    expect(route).toContain("refusalResponse(requestOrigin.reason, requestOrigin.message, 403)");
+    // A refused proof answers by name before any field is read, like the login flow.
+    expect(route).toMatch(/if \(!requestOrigin\.ok\) \{\s*return refusalResponse\(\s*request,\s*requestOrigin\.reason/);
+    // Refusal redirects are same-site relative; nothing is derived from the request host.
+    expect(route).not.toMatch(/new URL\([^)]*request\.url\)\s*;?\s*$/m);
+    expect(route).toContain("headers: { Location: `${signedOut ? \"/login\" : \"/pricing\"}?${query.toString()}` }");
   });
 });
