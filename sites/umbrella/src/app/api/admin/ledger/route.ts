@@ -40,11 +40,14 @@ export async function POST(request: NextRequest) {
     },
   });
 
+  const userId = form.get("userId");
+  const query = new URLSearchParams(typeof userId === "string" && userId.length > 0 ? { kind: "userId", query: userId } : {});
+
+  // A browser form gets the page back with the named refusal, never a raw JSON body.
   if (!result.ok) {
     serverLog("warn", "umbrella.admin.refused", { reason: result.reason });
-    return NextResponse.json(result, { status: 409, headers });
+    query.set("refused", result.reason);
   }
-  const query = new URLSearchParams({ kind: "userId", query: String(form.get("userId")) });
 
   return new Response(null, { status: 303, headers: { ...headers, Location: `/admin/ledger?${query}` } });
 }

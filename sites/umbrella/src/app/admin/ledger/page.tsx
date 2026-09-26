@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Metadata } from "next";
+import { SITE_REFUSALS, SITE_REFUSAL_REASONS, type SiteRefusalReason } from "@sceneaxi/site-kit";
 import { umbrellaRequestAuthority } from "../../../lib/request-authority.js";
 import { readSessionToken } from "../../_session.js";
 import { StatePanel } from "../../_components/state-panel.js";
@@ -19,6 +20,8 @@ export default async function LedgerSupportPage({ searchParams }: {
   const rawQuery = params["query"];
   const query = Array.isArray(rawQuery) ? "" : rawQuery ?? "";
   const kind = params["kind"] === "userId" ? "userId" : "email";
+  // Only a registered reason renders, so a crafted URL can show nothing but a known refusal.
+  const refused = SITE_REFUSAL_REASONS.find((reason): reason is SiteRefusalReason => reason === params["refused"]);
 
   const result = await umbrellaRequestAuthority().plane({ sessionToken }).ledgerSupport.lookup({
     surface: "site", target: query.length === 0 ? null : { kind, value: query },
@@ -45,6 +48,11 @@ export default async function LedgerSupportPage({ searchParams }: {
         <h1>Ledger support</h1>
         <p className="lede">Administrator only. Read a member&apos;s history or append one support adjustment. Existing entries cannot be changed.</p>
       </div>
+      {refused === undefined ? null : (
+        <StatePanel tone="deny" title="Adjustment refused" reason={refused}>
+          <p>{SITE_REFUSALS[refused]}</p>
+        </StatePanel>
+      )}
       <form method="get" action="/admin/ledger" className="stack">
         <div className="row">
           <div className="field">

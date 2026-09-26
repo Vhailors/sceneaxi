@@ -256,6 +256,10 @@ describe("administrator ledger support", () => {
     expect(route).toContain("export async function POST");
     expect(route).not.toMatch(/export (?:async )?function (?:GET|PUT|PATCH|DELETE)/);
     expect(route.indexOf("verifyFormOrigin")).toBeLessThan(route.indexOf("request.formData()"));
+    // A refused adjustment returns the browser to the page with its named reason.
+    expect(route).not.toContain("status: 409");
+    expect(route).toContain('query.set("refused", result.reason)');
+    expect(page).toContain("SITE_REFUSAL_REASONS.find(");
 
     for (const source of [page, route]) {
       expect(source).toContain("umbrellaRequestAuthority()");
