@@ -8282,7 +8282,8 @@
       "sites/umbrella/src/app/open/page.tsx",
       "sites/umbrella/src/app/page.tsx",
       "sites/umbrella/src/app/pricing/page.tsx",
-      "sites/umbrella/src/app/profiles/page.tsx"
+      "sites/umbrella/src/app/profiles/page.tsx",
+      "sites/umbrella/src/app/api/health/route.ts"
     ],
     "migrations": [
       "db/migrations/0000_schema_migrations.sql",
@@ -8701,7 +8702,7 @@
       "authoringOperations": 10,
       "assistantOperations": 3,
       "localAgentTools": 67,
-      "routes": 28,
+      "routes": 29,
       "migrations": 7,
       "workflows": 5,
       "goldenTests": 56

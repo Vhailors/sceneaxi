@@ -420,9 +420,9 @@
       "severity": "medium",
       "title": "No startup env validation; misconfiguration silently becomes \"not wired\".",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 1,
-      "thread": null,
+      "thread": "thr_4797p8qvb7",
       "commit": null
     },
     {
@@ -738,8 +738,9 @@
       "cls": "autonomous",
       "status": "open",
       "wave": 3,
-      "thread": null,
-      "commit": null
+      "thread": "thr_7svfbah827",
+      "commit": null,
+      "progress": "worker interrupted; not resumed without an explicit request"
     },
     {
       "id": 62,

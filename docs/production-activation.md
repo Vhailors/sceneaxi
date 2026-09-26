@@ -345,6 +345,11 @@ Execute only the rows named by the current authorization; unchecked rows remain 
 
 ## Verification checklist
 
+- [ ] Request `GET /api/health` from the umbrella candidate. Confirm `Cache-Control: no-store`,
+  the expected source commit, and a `planes` object containing only `wired`, `absent`, or
+  `misconfigured` states. A malformed supplied variable must report `misconfigured`, not
+  `absent`; the response must contain no variable names or values. Keep this safe response
+  with the deployment evidence.
 - [ ] Run and capture the complete web command set in
   [`websites-deploy.md#verification`](websites-deploy.md#verification), substituting the
   three exact aliases above. Record timestamps and immutable Vercel deployment ids.

@@ -437,7 +437,12 @@ export type IdentityPlaneAdapters = {
  * and the webhook endpoint reads the credit store and checkout evidence from this same
  * registry.
  */
+export type UmbrellaConfigurationState = "absent" | "present-valid" | "present-malformed";
+
+export type UmbrellaConfigurationReport = Readonly<Record<string, UmbrellaConfigurationState>>;
+
 export type UmbrellaPlaneHandles = {
+  readonly configuration: UmbrellaConfigurationReport;
   /** The deployment-issued single-admin evidence. Never resolved from a route argument. */
   readonly admin: AdminIdentity | null;
   /** Billing mode is deployment configuration; `live` still refuses in core. */
@@ -486,9 +491,10 @@ export function createDeploymentPlaneHandles(
   const clock = options.clock ?? (() => Date.now());
   const admin = options.admin ?? null;
   const billingMode = options.billingMode ?? "test";
+  const configuration = inspectUmbrellaConfiguration({});
   const database = providers.database;
   if (database === undefined) {
-    return Object.freeze({ admin, billingMode, clock });
+    return Object.freeze({ admin, billingMode, clock, configuration });
   }
 
   const identityStore = createNeonIdentityStore(database);
@@ -534,6 +540,7 @@ export function createDeploymentPlaneHandles(
     supportStore: Object.freeze({ users: identityStore, listCheckoutIntents: intentStore.listByUserId }),
     checkoutSessions,
     checkoutEvidence,
+    configuration,
   });
 }
 
@@ -614,6 +621,7 @@ function buildUmbrellaPlaneHandles(
     creditWebhook,
     verifyFormOrigin: (signals: Omit<SiteFormOriginSignals, "configuredOrigin">) =>
       verifyLoginRequestOrigin(env, signals),
+    configuration: inspectUmbrellaConfiguration(env),
   });
 }
 
@@ -626,6 +634,84 @@ let deploymentHandles: UmbrellaPlaneHandles | undefined;
 export function umbrellaPlaneHandles(): UmbrellaPlaneHandles {
   deploymentHandles ??= buildUmbrellaPlaneHandles(Object.freeze({ ...process.env }));
   return deploymentHandles;
+}
+
+const DOCUMENTED_UMBRELLA_ENV = Object.freeze([
+  ["DATABASE_URL", validPostgresUrl],
+  ["BETTER_AUTH_ORIGIN", validBetterAuthOrigin],
+  ["BETTER_AUTH_SECRET", (value: string) => value.trim().length >= 32],
+  ["SCENEAXI_ADMIN_EMAIL", validAdminEmail],
+  ["SCENEAXI_ADMIN_BOOTSTRAP_SECRET", (value: string) => value.trim().length >= 8 && value.trim().length <= 128],
+  ["STRIPE_SECRET_KEY", (value: string) => /^sk_test_[A-Za-z0-9]+$/.test(value.trim())],
+  ["STRIPE_WEBHOOK_SECRET", (value: string) => /^whsec_[A-Za-z0-9]+$/.test(value.trim())],
+  ["SCENEAXI_BILLING_MODE", (value: string) => ["test", "live"].includes(value.trim().toLowerCase())],
+  ["NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN", (value: string) => httpsOrigin(value) && new URL(value).hostname.endsWith(".vercel.app")],
+  ["NEXT_PUBLIC_SCENEAXI_GAME_CATALOG_ORIGIN", httpsOrigin],
+  ["NEXT_PUBLIC_SCENEAXI_WEB_CATALOG_ORIGIN", httpsOrigin],
+  ["SCENEAXI_SITE_EDITOR_PREVIEW", (value: string) => value === "1"],
+] as const);
+
+function validPostgresUrl(value: string): boolean {
+  try {
+    const url = new URL(value.trim());
+    return (url.protocol === "postgres:" || url.protocol === "postgresql:") && url.hostname !== "" && url.pathname.length > 1;
+  } catch {
+    return false;
+  }
+}
+
+function validBetterAuthOrigin(value: string): boolean {
+  try {
+    const url = new URL(value);
+    const loopback = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+    return url.username === "" && url.password === "" && url.pathname === "/" && url.search === "" && url.hash === "" &&
+      (url.protocol === "https:" || (loopback && url.protocol === "http:"));
+  } catch {
+    return false;
+  }
+}
+
+function validAdminEmail(value: string): boolean {
+  return /^[^@\s,;]+@[^@\s,;]+\.[^@\s,;]+$/.test(value.trim());
+}
+
+
+function httpsOrigin(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && url.origin === value && url.pathname === "/" && !url.search && !url.hash;
+  } catch {
+    return false;
+  }
+}
+
+/** Classify documented environment names without retaining or returning their values. */
+export function classifyUmbrellaPlane(
+  configuration: UmbrellaConfigurationReport,
+  variables: ReadonlyArray<string>,
+  wired: boolean,
+): "wired" | "absent" | "misconfigured" {
+  const states = variables.map((name) => configuration[name]);
+  if (states.includes("present-malformed")) return "misconfigured";
+  if (wired) return "wired";
+  if (states.includes("absent")) return "absent";
+  return "misconfigured";
+}
+
+export function inspectUmbrellaConfiguration(
+  env: Readonly<Record<string, string | undefined>>,
+): UmbrellaConfigurationReport {
+  return Object.freeze(Object.fromEntries(
+    DOCUMENTED_UMBRELLA_ENV.map(([name, isValid]) => {
+      const value = env[name];
+      const state: UmbrellaConfigurationState = value === undefined
+        ? "absent"
+        : isValid(value)
+          ? "present-valid"
+          : "present-malformed";
+      return [name, state];
+    }),
+  ));
 }
 
 export type IdentityPlaneWiring = IdentityPlaneAdapters & {

@@ -11,6 +11,9 @@ import securityPolicy from "./security-headers.json";
  * `.js` specifier onto its TypeScript source.
  */
 const nextConfig: NextConfig = {
+  env: {
+    SCENEAXI_BUILD_COMMIT: process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.GIT_COMMIT ?? "unknown",
+  },
   pageExtensions,
   // The site is its own install root, but its `link:` packages live two levels above
   // it. Vercel materializes serverless functions from Next's file traces, so the trace

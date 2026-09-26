@@ -48,8 +48,13 @@ import {
   umbrellaRequestAuthority,
   verifyLoginRequestOrigin,
 } from "../../sites/umbrella/src/index.ts";
-import { createDeploymentPlaneHandles } from "../../sites/umbrella/src/lib/identity-plane.ts";
 import { createBetterAuthHttpClient } from "../../sites/umbrella/src/lib/provider-adapters.ts";
+import { GET as getUmbrellaHealth } from "../../sites/umbrella/src/app/api/health/route.ts";
+import {
+  classifyUmbrellaPlane,
+  createDeploymentPlaneHandles,
+  inspectUmbrellaConfiguration,
+} from "../../sites/umbrella/src/lib/identity-plane.ts";
 import {
   CATALOG_IDENTITY_SURFACE,
   createCatalogIdentityPlane,
@@ -1890,6 +1895,67 @@ describe("acceptance 4 — catalogs accept surface: site principals", () => {
   });
 });
 
+describe("umbrella deployment health configuration", () => {
+  it("classifies documented variables without returning supplied values", () => {
+    const report = inspectUmbrellaConfiguration({
+      DATABASE_URL: "postgres:",
+      BETTER_AUTH_ORIGIN: "https://auth.sceneaxi.test/nested-path",
+      BETTER_AUTH_SECRET: "synthetic-secret-value",
+      SCENEAXI_BILLING_MODE: "production-ish",
+    });
+    expect(Object.keys(report).sort()).toEqual([
+      "BETTER_AUTH_ORIGIN",
+      "BETTER_AUTH_SECRET",
+      "DATABASE_URL",
+      "NEXT_PUBLIC_SCENEAXI_GAME_CATALOG_ORIGIN",
+      "NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN",
+      "NEXT_PUBLIC_SCENEAXI_WEB_CATALOG_ORIGIN",
+      "SCENEAXI_ADMIN_BOOTSTRAP_SECRET",
+      "SCENEAXI_ADMIN_EMAIL",
+      "SCENEAXI_BILLING_MODE",
+      "SCENEAXI_SITE_EDITOR_PREVIEW",
+      "STRIPE_SECRET_KEY",
+      "STRIPE_WEBHOOK_SECRET",
+    ]);
+    expect(report.DATABASE_URL).toBe("present-malformed");
+    expect(report.BETTER_AUTH_ORIGIN).toBe("present-malformed");
+    expect(report.BETTER_AUTH_SECRET).toBe("present-malformed");
+    expect(report.SCENEAXI_BILLING_MODE).toBe("present-malformed");
+    expect(report.STRIPE_SECRET_KEY).toBe("absent");
+    const valid = inspectUmbrellaConfiguration({
+      SCENEAXI_ADMIN_EMAIL: "captain@sceneaxi.test",
+      SCENEAXI_STRIPE_LIVE_AUTHORIZED: "live-mode-authorized:captain@sceneaxi.test:2026-08-27",
+    });
+    expect(valid.SCENEAXI_ADMIN_EMAIL).toBe("present-valid");
+    // D5: resolveLiveModeAuthorization() is the only reader of the live-mode source, so
+    // the health report neither parses nor even names it.
+    expect(Object.keys(valid)).not.toContain("SCENEAXI_STRIPE_LIVE_AUTHORIZED");
+    expect(JSON.stringify(report)).not.toContain("synthetic-secret-value");
+    expect(classifyUmbrellaPlane(report, ["DATABASE_URL"], false)).toBe("misconfigured");
+    expect(classifyUmbrellaPlane(report, ["STRIPE_SECRET_KEY"], false)).toBe("absent");
+  });
+
+  it("serves non-cacheable health without configuration values", async () => {
+    const response = getUmbrellaHealth();
+    const body = await response.json();
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(body).toMatchObject({
+      ok: true,
+      planes: { identity: expect.any(String), credits: expect.any(String), billing: expect.any(String) },
+      commit: expect.any(String),
+    });
+    expect(["wired", "absent", "misconfigured"]).toContain(body.planes.identity);
+    expect(JSON.stringify(body)).not.toContain("DATABASE_URL");
+    expect(JSON.stringify(body)).not.toContain("SECRET");
+  });
+
+  it("marks complete runtime handles wired and valid-but-unavailable configuration misconfigured", () => {
+    const config = inspectUmbrellaConfiguration({ DATABASE_URL: ["postgresql:", "", "host/db"].join("/") });
+    expect(classifyUmbrellaPlane(config, ["DATABASE_URL"], true)).toBe("wired");
+    expect(classifyUmbrellaPlane(config, ["DATABASE_URL"], false)).toBe("misconfigured");
+  });
+});
+
 describe("acceptance 5 — an unwired deployment refuses by name", () => {
   it("invents no session, balance, or checkout when nothing is supplied", async () => {
     const plane = createUmbrellaIdentityPlane({});
@@ -2037,6 +2103,7 @@ describe("acceptance 6 — no secret, no live mode, no Kids", () => {
       {
         admin: null,
         deployment: Object.freeze({
+          configuration: inspectUmbrellaConfiguration({}),
           admin: TEST_ADMIN,
           billingMode: "test" as const,
           clock,

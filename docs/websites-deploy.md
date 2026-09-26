@@ -256,10 +256,23 @@ provider account, and none of it asserts that production is activated.
 
 ## Verification
 
+The umbrella exposes `GET /api/health` for deployment checks. It returns only each
+plane's `wired`, `absent`, or `misconfigured` state and the build commit; `ok` is false
+only when a plane is misconfigured. An absent plane is reported explicitly without making
+liveness fail. The response never includes environment values and is sent with
+`Cache-Control: no-store`. The private
+configuration report classifies every variable in the table above as `absent`,
+`present-valid`, or `present-malformed`. An unset variable stays distinct from a supplied
+invalid value, while malformed configuration never makes an unavailable plane look
+intentionally absent.
+
 ```sh
 UMB=https://<umbrella>.vercel.app
 GAME=https://<game-catalog>.vercel.app
 WEB=https://<web-catalog>.vercel.app
+
+# Safe deployment health, including the exact build being checked
+curl -fsS -H 'Cache-Control: no-cache' "$UMB/api/health"
 
 # Umbrella pages
 for p in / /open /docs /engine /pricing /profiles /account /login /editor; do
