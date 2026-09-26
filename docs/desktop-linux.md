@@ -382,17 +382,21 @@ same-backend triangle replacement; its headless draw proof is
 
 The privileged Linux host writes a bounded, rotating event log to
 `<Electron userData>/logs/` (64 KiB per file, three files). The native Help menu
-provides **Reveal logs** to open that folder. Entries contain only a timestamp
-and fixed event identifiers for renderer loss, child-process loss, an unresponsive
-window, or an uncaught main-process exception. Raw exceptions, reason strings,
-provider keys, prompts, project paths, and project contents are never written.
+provides **Reveal logs** to open that folder. Entries contain a timestamp and a
+fixed event identifier for renderer loss, child-process loss, an unresponsive
+window, or an uncaught main-process exception, plus only allow-listed tokens:
+Electron's process-loss `reason` (for example `crashed` or `oom`), the integer
+`exitCode`, the lost `processType`, and an exception's class `errorName`
+(`desktop/linux/src/lib/diagnostics.ts`). Exception messages, stacks, provider
+keys, prompts, project paths, and project contents are never written.
 This follows the no-credential-in-logs rule in
 [`desktop-local-bridge.md`](desktop-local-bridge.md#byok-secure-storage-contract).
 Electron stores local crash minidumps under the same user-data tree; its crash
 reporter starts with `uploadToServer: false`. Neither the log nor minidumps are
 uploaded by SceneAxi. Minidumps can include process memory and must be treated
-as sensitive if an operator chooses to share them. When the renderer or a child
-process is lost, or the window stops responding, the host offers **Reload window**
+as sensitive if an operator chooses to share them; startup keeps only the five
+newest. When the renderer or a child process is lost (other than a clean exit),
+or the window stops responding, the host offers **Reload window**
 instead of leaving a blank or hung editor. Reloading does not commit an in-flight
 Change Review. To reproduce the recovery path on Linux from `desktop/linux`, run
 `xvfb-run -a node scripts/smoke-diagnostics.mjs` after `pnpm build`.

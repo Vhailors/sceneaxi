@@ -47,7 +47,12 @@ import {
 } from "../lib/local-rpc.js";
 import { seedDesktopProject } from "../lib/project-seed.js";
 import { DESKTOP_INPUT_ACTIONS_CHANNEL } from "../lib/input-action-contract.js";
-import { mapDesktopDiagnosticEvent, recordDesktopDiagnostic } from "../lib/diagnostics.js";
+import {
+  desktopProcessLossNeedsRecovery,
+  mapDesktopDiagnosticEvent,
+  pruneDesktopCrashDumps,
+  recordDesktopDiagnostic,
+} from "../lib/diagnostics.js";
 import {
   createDesktopInputActionHost,
   type DesktopInputActionHost,
@@ -118,6 +123,8 @@ mkdirSync(crashDumpsDirectory, { recursive: true, mode: 0o700 });
 app.setAppLogsPath(logsDirectory);
 
 app.setPath("crashDumps", crashDumpsDirectory);
+
+pruneDesktopCrashDumps(crashDumpsDirectory);
 
 crashReporter.start({ uploadToServer: false });
 
@@ -487,11 +494,14 @@ async function start(): Promise<void> {
     }).finally(() => { recoveryOffered = false; });
   };
 
-  window.webContents.on("render-process-gone", () => {
-    recordDesktopDiagnostic(logsDirectory, mapDesktopDiagnosticEvent("renderer"));
+  window.webContents.on("render-process-gone", (_event, details) => {
+    recordDesktopDiagnostic(logsDirectory, mapDesktopDiagnosticEvent("renderer"), {
+      reason: details.reason,
+      exitCode: details.exitCode,
+    });
 
     if (SMOKE) reportFailure("The renderer exited during the packaged smoke.");
-    else offerReload();
+    else if (desktopProcessLossNeedsRecovery(details.reason)) offerReload();
   });
 
   window.on("unresponsive", () => {
@@ -500,10 +510,14 @@ async function start(): Promise<void> {
     offerReload();
   });
 
-  app.on("child-process-gone", () => {
-    recordDesktopDiagnostic(logsDirectory, mapDesktopDiagnosticEvent("child"));
+  app.on("child-process-gone", (_event, details) => {
+    recordDesktopDiagnostic(logsDirectory, mapDesktopDiagnosticEvent("child"), {
+      reason: details.reason,
+      exitCode: details.exitCode,
+      processType: details.type,
+    });
 
-    if (!SMOKE) offerReload();
+    if (!SMOKE && desktopProcessLossNeedsRecovery(details.reason)) offerReload();
   });
 
   const projectHost = createDesktopProjectHost({
@@ -1106,15 +1120,22 @@ async function start(): Promise<void> {
   app.exit(0);
 }
 
-process.on("uncaughtException", () => {
-  recordDesktopDiagnostic(logsDirectory, "main-exception");
+const errorName = (error: unknown) => (error instanceof Error ? error.name : typeof error);
+
+process.on("uncaughtException", (error) => {
+  recordDesktopDiagnostic(logsDirectory, "main-exception", { errorName: errorName(error) });
+  // A blocking dialog would hang a headless smoke until its launcher timeout.
+  if (SMOKE) {
+    reportFailure("An uncaught exception stopped the packaged smoke. See local logs.");
+    return;
+  }
   dialog.showErrorBox("Desktop stopped", "A local error occurred. Open Help → Reveal logs after restarting.");
   app.exit(1);
 });
 
 // Smoke prints its own fixed proof failure. Normal startup never echoes an exception.
-void start().catch(() => {
-  recordDesktopDiagnostic(logsDirectory, "main-exception");
+void start().catch((error: unknown) => {
+  recordDesktopDiagnostic(logsDirectory, "main-exception", { errorName: errorName(error) });
   reportFailure("Desktop startup failed. See local logs.");
 });
 

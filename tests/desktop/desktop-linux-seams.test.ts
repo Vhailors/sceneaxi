@@ -6,12 +6,14 @@
  * really is a standalone install root, and the packaging surface the docs promise
  * (scripts, artifact naming, smoke proof) exists as declared.
  */
-import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  desktopProcessLossNeedsRecovery,
   mapDesktopDiagnosticEvent,
+  pruneDesktopCrashDumps,
   recordDesktopDiagnostic,
 } from "../../desktop/linux/src/lib/diagnostics.ts";
 import {
@@ -110,6 +112,56 @@ describe("desktop-linux local diagnostics", () => {
       }
     } finally {
       rmSync(logs, { recursive: true, force: true });
+    }
+  });
+
+  it("records only allow-listed process-loss detail, never a message", () => {
+    const logs = join(mkdtempSync(join(tmpdir(), "sceneaxi-diagnostics-")), "fresh");
+
+    try {
+      recordDesktopDiagnostic(logs, "child-gone", { reason: "crashed", exitCode: 139, processType: "GPU" });
+      recordDesktopDiagnostic(logs, "main-exception", { errorName: "TypeError" });
+      recordDesktopDiagnostic(logs, "renderer-gone", {
+        reason: "sk-or-v1 secret key in a message",
+        exitCode: 1.5,
+        processType: "../etc/passwd",
+      } as never);
+
+      expect(statSync(logs).mode & 0o777).toBe(0o700);
+      const records = readFileSync(join(logs, "diagnostics.log"), "utf8").trim().split("\n").map((line) => JSON.parse(line) as Record<string, unknown>);
+      for (const record of records) expect(typeof record["timestamp"]).toBe("string");
+      expect(records.map((record) => Object.fromEntries(Object.entries(record).filter(([key]) => key !== "timestamp")))).toEqual([
+        { code: "CHILD_PROCESS_LOST", reason: "crashed", exitCode: 139, processType: "GPU" },
+        { code: "MAIN_UNCAUGHT_EXCEPTION", errorName: "TypeError" },
+        { code: "RENDER_PROCESS_LOST" },
+      ]);
+      expect(desktopProcessLossNeedsRecovery("clean-exit")).toBe(false);
+      expect(desktopProcessLossNeedsRecovery("crashed")).toBe(true);
+      expect(desktopProcessLossNeedsRecovery(undefined)).toBe(true);
+    } finally {
+      rmSync(join(logs, ".."), { recursive: true, force: true });
+    }
+  });
+
+  it("keeps only the newest local minidumps", () => {
+    const dumps = mkdtempSync(join(tmpdir(), "sceneaxi-dumps-"));
+
+    try {
+      mkdirSync(join(dumps, "completed"));
+      for (let index = 0; index < 8; index += 1) {
+        const path = join(dumps, "completed", `dump-${index}.dmp`);
+        writeFileSync(path, "x");
+        utimesSync(path, 1_000 + index, 1_000 + index);
+      }
+      writeFileSync(join(dumps, "settings.dat"), "keep");
+
+      pruneDesktopCrashDumps(dumps, 5);
+
+      expect(readdirSync(join(dumps, "completed")).sort()).toEqual(["dump-3.dmp", "dump-4.dmp", "dump-5.dmp", "dump-6.dmp", "dump-7.dmp"]);
+      expect(readdirSync(dumps)).toContain("settings.dat");
+      expect(() => pruneDesktopCrashDumps(join(dumps, "missing"))).not.toThrow();
+    } finally {
+      rmSync(dumps, { recursive: true, force: true });
     }
   });
 
