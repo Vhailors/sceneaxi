@@ -973,6 +973,7 @@ async function mountLiveViewport(): Promise<void> {
     onFrame: () => {
       pollGamepadInput(viewportInputContext);
       if (animationStartedAt !== null) playDesktopSceneAnimations({ backend, scene, time: (performance.now() - animationStartedAt) / 1000 });
+      if (scene.effects !== undefined) backend.sampleEffects(scene.effects, performance.now());
       const frame = mounts.render();
       updatePixelsMeta(frame);
       if (!printed || frame.frame % 15 === 0) {

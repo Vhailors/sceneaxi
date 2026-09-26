@@ -24,7 +24,7 @@ opened — and what may be drawn — lives here.
 | `web-experience-editor.ts` | deterministic #197 page/HTML/site-canvas model over the shared Web Experience operation and sandbox contract; arbitrary assets and desktop-only actions refuse |
 | `editor-session.ts` | driving that session from URL state, and projecting its composed scene for a browser |
 | `editor-shell.ts` | `buildEditorShellView()` — the umbrella `/editor` Engine Desktop shell projected from the shared vocabulary in `@sceneaxi/schemas` over one real session render, plus the closed `EDITOR_SHELL_WEB_REFUSALS` registry; owner doc `docs/web-editor-shell.md` |
-| `mountable-scene.ts` | the one payload shape a browser mounts, shared by both umbrella viewports |
+| `mountable-scene.ts` | the browser payload shared by both umbrella viewports, including validated composition data and optional authored presentation catalogs |
 | `live-open.ts` | the public live open path: which committed fixture is opened, how it is placed by `composeScene()`, and the honest vocabulary a page may use for the presentation core |
 | `profile-contracts.ts` | the browser-safe re-export of `profileConformanceRegistry` and `OPEN_PATH_POLICY`, so the umbrella `/profiles` page reads the canonical contracts by reference instead of through the Node-bearing root barrel |
 | `design-tokens.ts` | the Foundations v2 visual tokens, the measured contrast contract, and the CSS emitters |

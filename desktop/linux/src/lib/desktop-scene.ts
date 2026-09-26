@@ -114,7 +114,7 @@ import {
   type GltfAnimationClip,
 } from "@sceneaxi/schemas";
 import {
-  mountableScene,
+  mountableSceneFromDocumentData,
   webEditorStarterArtifact,
   type ComposedSceneOk,
   type MountableScene,
@@ -327,8 +327,22 @@ function consistentProjectAssetManifest(
 function withImportedAssets(
   data: unknown,
   composed: ComposedSceneOk,
-  mountable: MountableScene,
 ): DesktopSceneResult {
+  if (!isJsonObject(data)) {
+    return Object.freeze({
+      ok: false as const,
+      reason: DESKTOP_SCENE_NOT_COMPOSABLE,
+      message: "Scene presentation catalogs are invalid.",
+    });
+  }
+  const mountable = mountableSceneFromDocumentData(composed, data);
+  if (mountable === null) {
+    return Object.freeze({
+      ok: false as const,
+      reason: DESKTOP_SCENE_NOT_COMPOSABLE,
+      message: "Scene presentation catalogs are invalid.",
+    });
+  }
   const manifest = consistentProjectAssetManifest(data, composed.scene);
   if (!manifest.ok) {
     return Object.freeze({ ok: false as const, reason: manifest.reason, message: manifest.message });
@@ -531,7 +545,7 @@ export function desktopOpenScene(): DesktopSceneResult {
     });
   }
 
-  return withImportedAssets({}, composed, mountableScene(composed));
+  return withImportedAssets({}, composed);
 }
 
 export function desktopSceneFromDocumentData(data: unknown): DesktopSceneResult {
@@ -563,7 +577,7 @@ export function desktopSceneFromDocumentData(data: unknown): DesktopSceneResult 
       message: "The active Scene Document composition could not be reproduced.",
     });
   }
-  return withImportedAssets(data, composed, mountableScene(composed));
+  return withImportedAssets(data, composed);
 }
 
 type DesktopEditableCompositionRead =

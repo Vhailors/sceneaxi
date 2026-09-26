@@ -1095,12 +1095,12 @@
       "severity": "medium",
       "title": "Product viewports do not forward authored environment/material/effect catalogs (effects payload lacks its seed; texture slots need an asset-to-texture binding contract)",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 4,
-      "thread": null,
+      "thread": "thr_jk8vteb2e5",
       "commit": null,
       "evidence": "reported by thr_ghk6fj8cug; ADRs 0025-0028 notes",
-      "openDecision": "Asset-to-texture binding contract may need an ADR decision"
+      "openDecision": "ADR 0026 asset-to-texture contract (pixel transport, UV set, colour space, sampler); non-null texture slots refuse"
     }
   ]
 }

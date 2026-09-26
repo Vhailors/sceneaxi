@@ -26,7 +26,10 @@ import {
   type SceneCompositionResult,
   type SceneDocument,
 } from "@sceneaxi/authoring-core";
-import { mountableScene, type MountableScene } from "./mountable-scene.js";
+import {
+  mountableSceneFromDocumentData,
+  type MountableScene,
+} from "./mountable-scene.js";
 import { type SiteResult, ok, refuse } from "./refusals.js";
 import { webEditorStarterArtifact } from "./starter-artifact.js";
 import {
@@ -131,6 +134,10 @@ function renderEditorSession(state: EditorState): SiteResult<EditorRender> {
       } catch {
         baseDocument = null;
       }
+      const mountable = composition.ok
+        ? mountableSceneFromDocumentData(composition, baseDocument?.data)
+        : null;
+      if (composition.ok && mountable === null) return refuse("EDITOR_WORKSPACE_INVALID");
 
       const save = session.save();
       if (!save.ok) {
@@ -140,7 +147,7 @@ function renderEditorSession(state: EditorState): SiteResult<EditorRender> {
             viewport: session.viewport(),
             save,
             composition,
-            mountable: composition.ok ? mountableScene(composition) : null,
+            mountable,
             artifactId: artifact.value.artifactId,
             documentDigest: "",
             artifactDigest: composition.ok ? composition.sceneDigest : "",
@@ -164,7 +171,7 @@ function renderEditorSession(state: EditorState): SiteResult<EditorRender> {
           viewport: session.viewport(),
           save,
           composition,
-          mountable: composition.ok ? mountableScene(composition) : null,
+          mountable,
           artifactId: artifact.value.artifactId,
           documentDigest,
           artifactDigest: composition.ok ? composition.sceneDigest : "",

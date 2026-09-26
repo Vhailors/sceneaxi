@@ -13,12 +13,22 @@
  * artifact, because an artifact's evidence binds its exact spec bytes.
  */
 import type { SceneCompositionResult } from "@sceneaxi/authoring-core";
-import type {
-  SceneEffectEmitter,
-  SceneEnvironmentCatalog,
-  SceneMaterialOverride,
-  SculptArtifact,
-  SculptTransform,
+import {
+  SCENE_EFFECTS_CATALOG_KEY,
+  SCENE_ENVIRONMENT_CATALOG_KEY,
+  SCENE_MATERIALS_CATALOG_KEY,
+  inspectSceneEffects,
+  isJsonObject,
+  parseSceneEffectsCatalog,
+  parseSceneEnvironmentCatalog,
+  parseSceneMaterialsCatalog,
+  sceneEnvironmentCatalogDigest,
+  sceneMaterialsCatalogDigest,
+  type SceneEffectsCatalog,
+  type SceneEnvironmentCatalog,
+  type SceneMaterialsCatalog,
+  type SculptArtifact,
+  type SculptTransform,
 } from "@sceneaxi/schemas";
 
 /** A composition the pipeline accepted; the only input a mountable scene is built from. */
@@ -49,11 +59,31 @@ export type MountableScene = {
   readonly instances: readonly MountableSceneInstance[];
   readonly environment?: SceneEnvironmentCatalog;
   readonly environmentDigest?: string;
-  readonly materials?: readonly SceneMaterialOverride[];
+  readonly materials?: SceneMaterialsCatalog;
   readonly materialsDigest?: string;
-  readonly effects?: readonly SceneEffectEmitter[];
+  readonly effects?: SceneEffectsCatalog;
   readonly effectsDigest?: string;
 };
+
+export type MountableSceneCatalogs = Readonly<{
+  environment: SceneEnvironmentCatalog;
+  materials: SceneMaterialsCatalog;
+  effects: SceneEffectsCatalog;
+}>;
+
+export function sceneCatalogsFromDocumentData(
+  value: unknown,
+): MountableSceneCatalogs | null | undefined {
+  if (value === undefined) return undefined;
+  if (!isJsonObject(value)) return null;
+  const keys = [SCENE_ENVIRONMENT_CATALOG_KEY, SCENE_MATERIALS_CATALOG_KEY, SCENE_EFFECTS_CATALOG_KEY];
+  if (!keys.some((key) => Object.hasOwn(value, key))) return undefined;
+  const environment = parseSceneEnvironmentCatalog(value[SCENE_ENVIRONMENT_CATALOG_KEY]);
+  const materials = parseSceneMaterialsCatalog(value[SCENE_MATERIALS_CATALOG_KEY]);
+  const effects = parseSceneEffectsCatalog(value[SCENE_EFFECTS_CATALOG_KEY]);
+  if (environment === null || materials === null || effects === null) return null;
+  return Object.freeze({ environment, materials, effects });
+}
 
 /**
  * Project an accepted composition into the browser mount payload.
@@ -62,9 +92,19 @@ export type MountableScene = {
  * two surfaces refuse for different published reasons; this function only ever sees a
  * scene that composed.
  */
+export function mountableSceneFromDocumentData(
+  composed: ComposedSceneOk,
+  data: unknown,
+  labels: ReadonlyMap<string, string> = new Map(),
+): MountableScene | null {
+  const catalogs = sceneCatalogsFromDocumentData(data);
+  return catalogs === null ? null : mountableScene(composed, labels, catalogs);
+}
+
 export function mountableScene(
   composed: ComposedSceneOk,
   labels: ReadonlyMap<string, string> = new Map(),
+  catalogs?: MountableSceneCatalogs,
 ): MountableScene {
   const artifacts: Record<string, SculptArtifact> = {};
   for (const instance of composed.scene.instances) {
@@ -88,5 +128,13 @@ export function mountableScene(
         }),
       ),
     ),
+    ...(catalogs === undefined ? {} : {
+      environment: catalogs.environment,
+      environmentDigest: sceneEnvironmentCatalogDigest(catalogs.environment),
+      materials: catalogs.materials,
+      materialsDigest: sceneMaterialsCatalogDigest(catalogs.materials),
+      effects: catalogs.effects,
+      effectsDigest: inspectSceneEffects(catalogs.effects).digest,
+    }),
   });
 }

@@ -297,6 +297,20 @@ The existing owner tests remain
 `packages/engine-presentation/test/three-surface.test.ts`. No new test file or
 requirements ownership is introduced.
 
+## Authored catalog handoff
+
+Desktop scene inspection projects the authored environment, material, and effects
+catalogs into the `MountableScene` validated by `packages/site-kit`. The two renderer
+owners apply the supported environment fields and material overrides. Each frame
+samples the full effects catalog, including its authored seed. Non-null texture slots
+still refuse under ADR 0026 because the asset-to-texture binding contract is undefined.
+
+`packages/site-kit/test/mountable-scene.test.ts`,
+`tests/e2e/desktop-linux-bridge-golden.test.ts`, and
+`tests/e2e/umbrella-editor-viewport-golden.test.ts` exercise the catalog handoff on
+headless surfaces. They claim no pixels. Product viewport pixel behavior for authored
+catalogs remains unverified.
+
 ## Not claimed
 
 Stage 1 execution or adjudication, a renderer winner, general E2, Kids safety,
