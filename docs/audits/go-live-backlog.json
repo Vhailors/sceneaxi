@@ -833,10 +833,11 @@
       "severity": "medium",
       "title": "No gamepad support; the kernel consumes no input.",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 4,
-      "thread": null,
-      "commit": null
+      "thread": "thr_7ng9zdxjjp",
+      "commit": null,
+      "openDecision": "No built-in gameplay consumer of play.primary; choosing gameplay behavior is an operator decision"
     },
     {
       "id": 70,

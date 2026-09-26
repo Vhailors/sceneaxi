@@ -24,6 +24,7 @@ export const INPUT_ACTION_DEVICES = Object.freeze([
   "pointer",
   "wheel",
   "controller",
+  "gamepad",
 ] as const);
 export type InputActionDevice = (typeof INPUT_ACTION_DEVICES)[number];
 
@@ -85,11 +86,21 @@ export type ControllerInputBinding = Readonly<{
   direction: "any" | "negative" | "positive";
 }>;
 
+export type GamepadInputBinding = Readonly<{
+  device: "gamepad";
+  gamepad: number;
+  input: "axis" | "button";
+  control: number;
+  direction: "any" | "negative" | "positive";
+  deadzone: number;
+}>;
+
 export type InputActionBinding =
   | KeyboardInputBinding
   | PointerInputBinding
   | WheelInputBinding
-  | ControllerInputBinding;
+  | ControllerInputBinding
+  | GamepadInputBinding;
 
 export type InputActionDefinition = Readonly<{
   schemaVersion: typeof INPUT_ACTION_SCHEMA_VERSION;
@@ -254,11 +265,12 @@ export const INPUT_ACTION_REGISTRY = Object.freeze([
     reserved: false,
     allowInTextEntry: false,
     defaultBinding: Object.freeze({
-      device: "controller" as const,
-      controller: 0,
+      device: "gamepad" as const,
+      gamepad: 0,
       input: "button" as const,
       control: 0,
       direction: "any" as const,
+      deadzone: 0.2,
     }),
   }),
 ] as const satisfies readonly InputActionDefinition[]);
@@ -326,6 +338,17 @@ export function validateInputActionBinding(value: unknown): value is InputAction
         Number(value["control"]) <= (value["input"] === "axis" ? 15 : 31) &&
         (value["direction"] === "any" || value["direction"] === "negative" ||
           value["direction"] === "positive");
+    case "gamepad":
+      return exactKeys(value, ["device", "gamepad", "input", "control", "direction", "deadzone"]) &&
+        Number.isInteger(value["gamepad"]) && Number(value["gamepad"]) >= 0 &&
+        Number(value["gamepad"]) <= 3 &&
+        (value["input"] === "axis" || value["input"] === "button") &&
+        Number.isInteger(value["control"]) && Number(value["control"]) >= 0 &&
+        Number(value["control"]) <= (value["input"] === "axis" ? 3 : 16) &&
+        (value["direction"] === "any" || value["direction"] === "negative" ||
+          value["direction"] === "positive") &&
+        Number.isFinite(value["deadzone"]) && Number(value["deadzone"]) >= 0 &&
+        Number(value["deadzone"]) < 1;
     default:
       return false;
   }
@@ -505,6 +528,11 @@ function bindingMatches(binding: InputActionBinding, input: InputActionBinding):
   }
   if (binding.device === "controller" && input.device === "controller") {
     return binding.controller === input.controller && binding.input === input.input &&
+      binding.control === input.control &&
+      (binding.direction === "any" || input.direction === "any" || binding.direction === input.direction);
+  }
+  if (binding.device === "gamepad" && input.device === "gamepad") {
+    return binding.gamepad === input.gamepad && binding.input === input.input &&
       binding.control === input.control &&
       (binding.direction === "any" || input.direction === "any" || binding.direction === input.direction);
   }

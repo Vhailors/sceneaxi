@@ -348,6 +348,7 @@ export {
 } from "./input-action-registry.js";
 export type {
   ControllerInputBinding,
+  GamepadInputBinding,
   InputActionBinding,
   InputActionContext,
   InputActionDefinition,

@@ -2147,7 +2147,7 @@
     },
     {
       "id": "CORE-014",
-      "statement": "Unified input actions cover keyboard, pointer, wheel, and controller contexts with defaults, conflict checks, rebind/reset review, and restart-durable settings outside document undo.",
+      "statement": "Unified input actions cover keyboard, pointer, wheel, legacy controller, and standard gamepad buttons/axes with deadzones across editor and play contexts, with defaults, conflict checks, rebind/reset review, and restart-durable settings outside document undo.",
       "owner": {
         "path": "docs/full-editor-v1-capability-matrix.md",
         "anchor": "#full-editor-capability-gaps"

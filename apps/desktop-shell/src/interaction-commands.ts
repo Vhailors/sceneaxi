@@ -89,6 +89,9 @@ export function formatInputBinding(binding: InputActionBinding): string {
   }
   if (binding.device === "pointer") return `Pointer ${binding.button} ${binding.gesture}`;
   if (binding.device === "wheel") return `Wheel ${binding.axis.toUpperCase()}`;
+  if (binding.device === "gamepad") {
+    return `Gamepad ${binding.gamepad + 1} ${binding.input} ${binding.control}`;
+  }
   return `Controller ${binding.controller + 1} ${binding.input} ${binding.control}`;
 }
 

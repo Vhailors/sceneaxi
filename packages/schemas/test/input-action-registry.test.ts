@@ -21,7 +21,7 @@ describe("input-action registry", () => {
     );
   });
 
-  it("resolves keyboard, pointer, wheel, and controller fixtures through one vocabulary", () => {
+  it("resolves keyboard, pointer, wheel, and gamepad fixtures through one vocabulary", () => {
     expect(resolveInputAction(DEFAULT_INPUT_ACTION_MAP, "editor", {
       device: "keyboard",
       code: "KeyS",
@@ -38,21 +38,60 @@ describe("input-action registry", () => {
       direction: "positive",
     })).toMatchObject({ ok: true, action: { id: "viewport.zoom" } });
     expect(resolveInputAction(DEFAULT_INPUT_ACTION_MAP, "play", {
-      device: "controller",
-      controller: 0,
+      device: "gamepad",
+      gamepad: 0,
       input: "button",
       control: 0,
       direction: "any",
+      deadzone: 0.2,
     })).toMatchObject({ ok: true, action: { id: "play.primary" } });
+  });
+
+  it("validates standard gamepad buttons and axes with a bounded deadzone", () => {
+    expect(resolveInputAction(DEFAULT_INPUT_ACTION_MAP, "play", {
+      device: "gamepad",
+      gamepad: 0,
+      input: "button",
+      control: 0,
+      direction: "any",
+      deadzone: 0.2,
+    })).toMatchObject({ ok: true, action: { id: "play.primary" } });
+    const axis = reviewInputActionRebind(DEFAULT_INPUT_ACTION_MAP, "play.primary", {
+      device: "gamepad",
+      gamepad: 0,
+      input: "axis",
+      control: 0,
+      direction: "positive",
+      deadzone: 0.25,
+    });
+    expect(axis).toMatchObject({ ok: true, action: { id: "play.primary" } });
+    if (!axis.ok || !("map" in axis)) throw new Error("gamepad axis rebind refused");
+    expect(resolveInputAction(axis.map, "play", {
+      device: "gamepad",
+      gamepad: 0,
+      input: "axis",
+      control: 0,
+      direction: "positive",
+      deadzone: 0.25,
+    })).toMatchObject({ ok: true, action: { id: "play.primary" } });
+    expect(resolveInputAction(DEFAULT_INPUT_ACTION_MAP, "play", {
+      device: "gamepad",
+      gamepad: 0,
+      input: "axis",
+      control: 4,
+      direction: "positive",
+      deadzone: 1,
+    })).toMatchObject({ ok: false, reason: INPUT_ACTION_REFUSALS.deviceInputInvalid });
   });
 
   it("refuses context leakage and malformed device inputs by stable name", () => {
     expect(resolveInputAction(DEFAULT_INPUT_ACTION_MAP, "editor", {
-      device: "controller",
-      controller: 0,
+      device: "gamepad",
+      gamepad: 0,
       input: "button",
       control: 0,
       direction: "any",
+      deadzone: 0.2,
     })).toMatchObject({ ok: false, reason: INPUT_ACTION_REFUSALS.contextDenied });
     expect(resolveInputAction(DEFAULT_INPUT_ACTION_MAP, "play", {
       device: "keyboard",

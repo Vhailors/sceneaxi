@@ -63,6 +63,14 @@ files are `.sceneaxi/input-actions.v1.json` for a project and
 They are intentionally separate from document history and from the later layout
 state owned by #265.
 
+The renderer samples `navigator.getGamepads()` from its frame callback only after
+Play context is active. Gamepad button/axis bindings resolve through the shared
+map and emit `sceneaxi:play-input` on the viewport canvas with `{ actionId,
+pressed, value }`; consumers can listen on that canvas. The desktop viewport has
+no game-specific `play.primary` handler, so this is an input handoff rather than
+an invented gameplay effect. Choosing built-in semantics for that action remains
+an open product decision.
+
 ### Ship → Export Web
 
 The packaged chrome exposes one `Export Web` command in the File menu, command
