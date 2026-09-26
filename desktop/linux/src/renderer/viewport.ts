@@ -933,7 +933,10 @@ async function mountLiveViewport(): Promise<void> {
       dispatchDesktopPlayInput(canvas, actionId, pressed, value),
   });
   try {
-    mountDesktopScene(mounts, scene, backend);
+    const mounted = mountDesktopScene(mounts, scene, backend);
+    for (const instanceId of mounted.refusedMaterialOverrides) {
+      reportLine(stage, `Material override refused for "${instanceId}": texture asset binding is unresolved (ADR 0026).`);
+    }
     backend.frameMountedContent();
     attachDesktopViewportInputActions(
       canvas,

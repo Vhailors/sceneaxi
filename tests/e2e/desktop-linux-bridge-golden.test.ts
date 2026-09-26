@@ -545,6 +545,26 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
     mounts.dispose();
   });
 
+  it("withholds a texture-bound material override without blanking the desktop viewport", () => {
+    const materials = Object.freeze({
+      ...emptySceneMaterialsCatalog(),
+      overrides: Object.freeze([
+        Object.freeze({ instanceId: "desktop-crate-root", emissiveColor: "#abcdef", emissiveIntensity: 1, opacity: 1, baseColorMapAssetId: "asset-albedo", normalMapAssetId: null, roughnessMapAssetId: null }),
+        Object.freeze({ instanceId: "desktop-crate-beside", emissiveColor: "#123456", emissiveIntensity: 2, opacity: 0.5, baseColorMapAssetId: null, normalMapAssetId: null, roughnessMapAssetId: null }),
+      ]),
+    });
+    const composed = desktopSceneFromDocumentData({ ...activeDocumentData("opened-project-scene"), sceneMaterials: materials });
+    if (!composed.ok) throw new Error(composed.reason);
+    const backend = createDesktopPresentationBackend();
+    const mounts = createSculptMountApi(backend);
+    const setMaterialOverrides = vi.spyOn(backend, "setMaterialOverrides");
+    expect(() => backend.setMaterialOverrides(materials.overrides)).toThrow(/ADR 0026/);
+    expect(mountDesktopScene(mounts, composed.mountable, backend)).toEqual({ refusedMaterialOverrides: ["desktop-crate-root"] });
+    expect(setMaterialOverrides).toHaveBeenLastCalledWith([materials.overrides[1]]);
+    expect(mounts.list().map((mounted) => mounted.instanceId)).toEqual(composed.mountable.instances.map((instance) => instance.instanceId));
+    mounts.dispose();
+  });
+
   it("mounts, transforms, and resets a replacement local assistant artifact", async () => {
     const bridge = bridgeAt(authoringDir());
     const readyResult = async (prompt: string) => {

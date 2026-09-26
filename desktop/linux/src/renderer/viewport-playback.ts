@@ -85,11 +85,17 @@ type DesktopPresentationBackend = Pick<
   "mountTriangleAsset" | "setEnvironment" | "setMaterialOverrides" | "sampleEffects"
 >;
 
+/**
+ * Material overrides with a texture binding are withheld whole (ADR 0026: the binding
+ * contract is unresolved), so one authored texture slot refuses its own instance's
+ * override instead of blanking the viewport. The withheld instance ids are returned
+ * for the caller to report; nothing is dropped silently.
+ */
 function applyDesktopScenePresentation(
   scene: DesktopMountablePayload,
   backend?: DesktopPresentationBackend,
-): void {
-  if (backend === undefined) return;
+): readonly string[] {
+  if (backend === undefined) return [];
   if (scene.environment !== undefined) {
     backend.setEnvironment({
       background: scene.environment.background,
@@ -105,15 +111,19 @@ function applyDesktopScenePresentation(
       exposure: scene.environment.exposure,
     });
   }
-  backend.setMaterialOverrides(scene.materials?.overrides ?? []);
+  const overrides = scene.materials?.overrides ?? [];
+  const textureBound = (override: (typeof overrides)[number]) =>
+    override.baseColorMapAssetId !== null || override.normalMapAssetId !== null || override.roughnessMapAssetId !== null;
+  backend.setMaterialOverrides(overrides.filter((override) => !textureBound(override)));
+  return Object.freeze(overrides.filter(textureBound).map((override) => override.instanceId));
 }
 
 export function mountDesktopScene(
   mounts: SculptMountApi,
   payload: DesktopMountablePayload,
   triangleBackend?: DesktopPresentationBackend,
-): void {
-  applyDesktopScenePresentation(payload, triangleBackend);
+): Readonly<{ refusedMaterialOverrides: readonly string[] }> {
+  const refusedMaterialOverrides = applyDesktopScenePresentation(payload, triangleBackend);
   for (const instance of payload.instances) {
     mounts.mount({
       instanceId: instance.instanceId,
@@ -132,7 +142,7 @@ export function mountDesktopScene(
       meshes: asset.meshes,
       nodes: asset.nodes,
     });
-  }
+  }  return Object.freeze({ refusedMaterialOverrides });
 }
 
 export function resetDesktopSceneAnimations(input: {
