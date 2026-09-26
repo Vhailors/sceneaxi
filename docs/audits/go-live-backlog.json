@@ -634,10 +634,11 @@
       "severity": "blocker",
       "title": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path",
       "cls": "autonomous",
-      "status": "open",
+      "status": "in-progress",
       "wave": 3,
-      "thread": null,
-      "commit": null
+      "thread": "thr_mgrf6pwxgj",
+      "commit": null,
+      "progress": "Run Stop/Reset + physics/environment/material/effect inspectors landed; timeline and project-level palette commands remain"
     },
     {
       "id": 54,

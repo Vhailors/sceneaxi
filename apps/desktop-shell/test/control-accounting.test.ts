@@ -253,10 +253,17 @@ describe("engine desktop chrome — control accounting (document → model)", ()
       expect(selects[5], label).toMatch(/data-kind="(live|inert)"/);
       expect(selects[6], label).toMatch(/data-kind="(live|inert)"/);
       const textareas = html.match(/<textarea\b[^>]*>/g) ?? [];
-      expect(textareas, label).toHaveLength(1);
-      expect(textareas[0], label).toMatch(
-        /id="assistant-prompt" data-kind="(live|inert)"/,
-      );
+      expect(textareas, label).toHaveLength(5);
+      expect(textareas.map((tag) => /\sid="([^"]+)"/.exec(tag)?.[1]).sort(), label).toEqual([
+        "assistant-prompt",
+        "effect-mutation",
+        "environment-mutation",
+        "material-mutation",
+        "physics-mutation",
+      ]);
+      for (const tag of textareas) {
+        expect(tag, label).toMatch(/data-kind="(live|inert)"/);
+      }
       expect(html, label).not.toMatch(/\son[a-z]+=/i);
       // A focus stop outside a <button> would be an interactive element with no
       // control behind it; the tabs' roving `tabindex` sits on buttons. The one

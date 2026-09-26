@@ -1121,6 +1121,16 @@ export type DesktopVisualView = Readonly<{
     renameBrowserFile: DesktopControl;
     deleteBrowserFile: DesktopControl;
     play: DesktopControl;
+    runStop: DesktopControl;
+    runReset: DesktopControl;
+    inspectors: readonly Readonly<{
+      kind: "physics" | "environment" | "material" | "effect";
+      inspectCommand: "physics-inspect" | "environment-inspect" | "material-inspect" | "effect-inspect";
+      applyCommand: "physics-apply" | "environment-apply" | "material-apply" | "effect-apply";
+      inspect: DesktopControl;
+      mutation: DesktopControl;
+      stage: DesktopControl;
+    }>[];
     exportWeb: DesktopControl;
     gitCommitMessage: DesktopControl;
     transformModeTranslate: DesktopControl;
@@ -1350,6 +1360,21 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
     renameBrowserFile: control("project-browser-rename", "Rename selected project file", "live"),
     deleteBrowserFile: control("project-browser-delete", "Delete selected project file", "live"),
     play: control("scene-play", "Play composed scene", "live"),
+    runStop: control("run-stop", "Stop run", "live"),
+    runReset: control("run-reset", "Reset run", "live"),
+    inspectors: Object.freeze(([
+      ["physics", "physics-inspect", "physics-apply", "Physics"],
+      ["environment", "environment-inspect", "environment-apply", "Environment"],
+      ["material", "material-inspect", "material-apply", "Materials"],
+      ["effect", "effect-inspect", "effect-apply", "Effects"],
+    ] as const).map(([kind, inspectCommand, applyCommand, label]) => Object.freeze({
+      kind,
+      inspectCommand,
+      applyCommand,
+      inspect: control(`${kind}-inspect`, `Inspect ${label}`, "live"),
+      mutation: control(`${kind}-mutation`, `${label} mutation JSON`, "live"),
+      stage: control(`${kind}-stage`, `Stage ${label} change`, "live"),
+    }))),
     exportWeb: control("ship-export-web", "Export Web", "live"),
     gitCommitMessage: control("project-git-commit-message", "Commit message", "live"),
     transformModeTranslate: control("scene-transform-mode-translate", "Move gizmo", "live"),
