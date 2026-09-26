@@ -1,9 +1,18 @@
 import type { MetadataRoute } from "next";
 import { resolveUmbrellaOriginConfiguration } from "@sceneaxi/site-kit";
+import { HELP_DOCS } from "../lib/help-docs.js";
 import { LIVE_OPEN_PATH } from "../lib/live-open.js";
 
 /** The public, crawlable routes. Signed-in surfaces are excluded, as in `robots.ts`. */
-const PUBLIC_PATHS = ["/", LIVE_OPEN_PATH, "/profiles", "/engine", "/docs", "/pricing"];
+const PUBLIC_PATHS = [
+  "/",
+  LIVE_OPEN_PATH,
+  "/profiles",
+  "/engine",
+  "/docs",
+  ...HELP_DOCS.map((doc) => `/docs/${doc.slug}`),
+  "/pricing",
+];
 
 /**
  * An empty sitemap when the deployment has not configured its origin: absolute URLs are

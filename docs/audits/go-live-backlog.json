@@ -564,9 +564,9 @@
       "severity": "low",
       "title": "`/docs` is a single page; no help, FAQ, or status page.",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 1,
-      "thread": null,
+      "thread": "thr_5w6m8pchpk",
       "commit": null
     },
     {
