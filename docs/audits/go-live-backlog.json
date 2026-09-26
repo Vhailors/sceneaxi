@@ -779,8 +779,9 @@
       "cls": "autonomous",
       "status": "open",
       "wave": 4,
-      "thread": null,
-      "commit": null
+      "thread": "thr_rww6kh273z",
+      "commit": null,
+      "progress": "worker interrupted; not resumed without an explicit request"
     },
     {
       "id": 65,
