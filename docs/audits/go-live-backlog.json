@@ -370,9 +370,9 @@
       "severity": "high",
       "title": "No migration runner and no applied-migrations tracking; `db/README.md` says to apply by hand.",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 2,
-      "thread": null,
+      "thread": "thr_5c3eihgufq",
       "commit": null
     },
     {

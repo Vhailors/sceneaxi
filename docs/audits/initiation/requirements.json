@@ -4435,6 +4435,7 @@
             "tests/contracts/injected-open-path-drift.test.ts",
             "tests/contracts/injected-traceability-violations.test.ts",
             "tests/contracts/no-committed-secrets.test.ts",
+            "tests/db/migrate-process.test.ts",
             "tests/db/schema-lockstep.test.ts",
             "tests/desktop-artifact-expiry.test.ts",
             "tests/desktop/desktop-asset-picker-host.test.ts",
@@ -8198,6 +8199,7 @@
       "sites/umbrella/src/app/api/stripe/webhook/route.ts"
     ],
     "migrations": [
+      "db/migrations/0000_schema_migrations.sql",
       "db/migrations/0001_identity.sql",
       "db/migrations/0002_credits_billing.sql",
       "db/migrations/0003_checkout_session_intent_price_immutability.sql",
@@ -8612,7 +8614,7 @@
       "assistantOperations": 3,
       "localAgentTools": 67,
       "routes": 22,
-      "migrations": 5,
+      "migrations": 6,
       "workflows": 5,
       "goldenTests": 55
     },

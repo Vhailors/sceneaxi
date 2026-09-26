@@ -5,8 +5,9 @@ map live in [`docs/auth-credits.md`](../docs/auth-credits.md).
 
 ## Apply order
 
-Forward-only, in numeric order:
+Forward-only, in numeric order. `pnpm db:migrate` applies pending files one transaction at a time; `pnpm db:migrate -- --status` reports recorded identifiers and checksums, and `pnpm db:migrate -- --dry-run` previews pending files. For an existing database whose schema was applied manually, use the explicitly authorized adoption procedure below.
 
+0. `migrations/0000_schema_migrations.sql` — applied migration identifiers, SHA-256 checksums, and timestamps
 1. `migrations/0001_identity.sql` — `users`, `role_assignments`, `sessions`
 2. `migrations/0002_credits_billing.sql` — `credit_accounts`,
    `credit_ledger_entries`, `stripe_customer_links`, `checkout_session_intents`,
@@ -68,8 +69,25 @@ plane and a bad row.
 
 `DATABASE_URL` comes from the environment only — never a committed file, never a default.
 `.env.example` lists the name and nothing else. Applying these migrations against a live
-Neon branch needs credentials and is separate authority; `pnpm gate` never touches a
-database.
+Neon branch requires the production-activation authorization and operator preflight;
+the runner does not grant authority. `pnpm gate` never invokes the runner or touches a
+database. ### Adopt a manually applied schema
+
+Only under the production-activation runbook's explicit authorization, and only after an
+operator has independently verified that the database already contains every listed
+migration through the requested identifier, run:
+
+```sh
+node scripts/db-migrate.mjs --adopt-through 0005_better_auth_provider
+```
+
+Adoption refuses unless `schema_migrations` is absent or empty, rejects unknown migration
+identifiers and non-contiguous histories, then creates the tracking table and records each
+migration checksum through the requested identifier in one transaction. It executes no
+schema migration other than the idempotent tracking-table DDL in `0000`. The output lists
+each identifier and checksum recorded. Never adopt based only on a deployment note; verify
+the live schema and triggers first. The operator owns that verification. `--adopt-through`
+does not authorize database access or establish that the listed schema is present.
 
 The contract ↔ DDL lockstep is verified without a database by
 `tests/db/schema-lockstep.test.ts`, so a contract field added without a column (or the

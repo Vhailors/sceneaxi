@@ -25,7 +25,8 @@
     "check:sites": "node scripts/check-sites.mjs",
     "check:desktop": "node scripts/check-desktop.mjs",
     "check:publish-ready": "node scripts/check-publish-ready.mjs",
-    "build:sdk": "node scripts/build-engine-sdk.mjs --out dist-sdk"
+    "build:sdk": "node scripts/build-engine-sdk.mjs --out dist-sdk",
+    "db:migrate": "node scripts/db-migrate.mjs"
   },
   "license": "UNLICENSED",
   "devDependencies": {
