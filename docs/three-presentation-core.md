@@ -115,7 +115,45 @@ CUBICSPLINE and skinning refuse by name. Headless checks remain no-pixel claims.
 Browser pixel evidence remains a recorded observation, not a gate inference or
 a new texture-rendering claim.
 
-Kernel snapshots to a canvas through the ADR 0002 seam:
+## Authored presentation at the seam
+
+The Sculpt backend exposes three neutral-data methods. They change presentation
+only and never rewrite artifacts, composition, or kernel snapshots.
+
+- `setEnvironment(environment)` patches lighting, background, fog, exposure,
+  tone mapping, and the closed `bloom` and `vignette` effect list. An empty effect
+  list removes postprocessing. Omitted fields retain their previous values.
+- `setMaterialOverrides(overrides)` replaces the per-instance override catalog.
+  Emissive color, intensity, and opacity apply to existing meshes, subsequent
+  Sculpt mounts, and contained-triangle replacements. Removing a row restores
+  the material defaults. A translucent override disables depth writes. Non-null
+  texture asset slots refuse atomically under
+  [ADR 0026's unresolved binding contract](adr/0026-parametric-material-overrides.md#unresolved-rendering-detail).
+- `sampleEffects(catalog, timeMs)` calls the schema-owned seeded sampler, updates
+  one points buffer per emitter, and returns its digest-stamped evaluation.
+  Removed emitters release their geometry and material. Points use a white
+  material with world size `0.08` and stay outside mounted-content camera framing.
+  The caller owns time. Invalid sample times refuse, and repeated catalog/time
+  inputs restore the same positions. No random generator or kernel state is added.
+
+The WebGL surface builds Three's `EffectComposer` only when effects are enabled.
+It uses `RenderPass`, the requested `UnrealBloomPass` and `VignetteShader` passes
+in list order, then `OutputPass` for tone mapping and output color conversion.
+Bloom uses strength `1`, radius `0`, and threshold `1`; vignette uses the addon
+defaults. These are renderer parameters, not new authored controls. Resize and
+pixel-ratio changes reach the composer. Removing effects, context restoration,
+and disposal release its passes and render targets. Draw-call counts include
+all passes. Headless core frames declare configured effects and count particle
+objects, but still report no pixels and capture nothing.
+
+These methods are available to hosts through `engine-presentation`; the current
+product viewports do not yet forward the authored sibling catalogs. In
+particular, the mountable effects payload omits the seed, as recorded in
+[ADR 0028](adr/0028-seeded-decorative-effects.md#rendering-integration-note).
+Authored shadows and texture-slot bindings remain unimplemented. No product
+preview or complete task-68 integration is claimed by this package change.
+
+## Kernel snapshots through ADR 0002
 
 ```ts
 const runtime = createThreePresentationRuntime({ canvas });
@@ -136,7 +174,9 @@ only, and presentation invents no state the kernel does not own.
   refusals, the frame path through an injected surface, orbit/zoom math and
   clamping, pointer/wheel input wiring, snapshot interpolation and non-mutation,
   contained-triangle replacement on the same scene root, the render loop,
-  presentation-authored environment echo (declared effects, never a pixel claim),
+  closed environment settings and headless effect declarations, per-instance
+  material override replacement and texture-slot refusal, exact seeded sample
+  projection and emitter disposal (never a pixel claim),
   and that the canvas path really constructs a `WebGLRenderer`
   (which must fail in node, where no WebGL context exists).
 - **Real browser**, manually, since node has no WebGL. Verified 2026-07-25 in
@@ -237,6 +277,25 @@ Windows updater bootstrap, so this list is unchanged by it
 The shared canvas renderer now uses explicit sRGB output and ACES tone mapping. The core raises ambient and fill illumination and draws a world-origin editor grid. Sculpt materials remain the artifact's PBR values; the presentation changes no spec bytes. The umbrella's interactive viewport now stops requesting frames after a settled draw and requests another on orbit, zoom, reset, mount changes, resize, density changes, or WebGL context restoration. The hero snapshot still takes no input. The desktop continues to own its own playback loop.
 
 On 2026-09-25, the [viewport verification recipe](../.bb/skills/verify-sceneaxi/features/three-viewport.md) captured the public `/open` canvas in local Chrome at 1214 × 682 CSS pixels with a software GPU. The before and after PNGs are local, untracked evidence in `.cache/engine-refresh/`. The before session reported 15 draw calls and 14.6 frames per second while idle, with an animation-frame p95 of 149.9 ms over 120 samples. After sessions reported 16 draw calls and zero new frames while idle; animation-frame p95 ranged from 16.8 to 50.1 ms over 120 samples per run. The additional draw call is the grid. The browser also changed canvas pixels on orbit and wheel zoom, returned to a byte-identical opening PNG on reset, dropped to 6 draw calls with only the root mounted, redrew after a resize, and resumed after simulated WebGL context restoration. These browser timings reflect concurrent host load and are not a controlled GPU benchmark. A trial of procedural environment lighting reduced the measured software-GPU rate to approximately 3 to 4 frames per second, so it was removed rather than shipped.
+
+## Task 68 focused browser observation
+
+An isolated browser fixture using the public Sculpt backend methods verified
+scalar material overrides, bloom, vignette, their composition, DPR resize,
+clearing, seeded points, repeated samples, context loss/restoration, and PNG
+capture. The baseline triangle plus grid issued 2 draw calls. Bloom issued 16,
+vignette 4, both 17, and one particle emitter added 1. Clearing overrides and
+effects restored a byte-identical baseline PNG. Equal sample times restored
+byte-identical particle PNGs. Restored WebGL context recovered the same image.
+This is package-level browser evidence, not product viewport integration.
+
+The repeatable fixture, browser check script, JSON result, and screenshot are
+retained in task 68's BB thread storage as `task68-browser.mjs`,
+`task68-browser-check.js`, `task68-browser-result.json`, and `task68-browser.jpg`.
+The existing owner tests remain
+`packages/engine-presentation/test/three-presentation.test.ts` and
+`packages/engine-presentation/test/three-surface.test.ts`. No new test file or
+requirements ownership is introduced.
 
 ## Not claimed
 

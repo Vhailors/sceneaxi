@@ -27,12 +27,13 @@ import {
   type Material,
   type Object3D,
 } from "three";
-import { evaluateGltfAnimation, type AssetRenderMesh, type GltfAnimationClip, type SculptComponent, type SculptMaterial, type SculptTransform } from "@sceneaxi/schemas";
+import { evaluateGltfAnimation, isSculptIdentifier, type AssetRenderMesh, type GltfAnimationClip, type SceneEffectsCatalog, type SceneEffectsEvaluation, type SceneMaterialOverride, type SculptComponent, type SculptMaterial, type SculptTransform } from "@sceneaxi/schemas";
 import type { OrbitCameraControls } from "./orbit-camera.js";
 import {
   createThreePresentationCore,
   disposeSubtree,
   type ThreePresentationCoreOptions,
+  type ThreeSceneEnvironment,
 } from "./three-core.js";
 import type { ThreePresentationSurfaceKind } from "./three-surface.js";
 import type {
@@ -58,6 +59,9 @@ export interface ThreeSculptPresentationBackend extends SculptPresentationBacken
   mountTriangleAsset(input: ThreeTriangleAssetInput): void;
   playTriangleAnimation(instanceId: string, clip: GltfAnimationClip, time: number): void;
   resetTriangleAnimation(instanceId: string): void;
+  setEnvironment(environment: ThreeSceneEnvironment): void;
+  setMaterialOverrides(overrides: readonly SceneMaterialOverride[]): void;
+  sampleEffects(catalog: SceneEffectsCatalog, timeMs: number): SceneEffectsEvaluation;
 }
 
 export type ThreeTrianglePrimitiveInput = AssetRenderMesh;
@@ -250,6 +254,27 @@ export function createThreeSculptPresentationBackend(
   const roots = new Map<string, Group>();
   const importedNodes = new Map<string, ReadonlyMap<number, Group>>();
   const importedNodeDefaults = new Map<string, ReadonlyMap<number, ThreeTriangleNodeInput>>();
+  let overrides = new Map<string, SceneMaterialOverride>();
+  let disposed = false;
+
+  function applyMaterialOverride(root: Group, override: SceneMaterialOverride | undefined) {
+    root.traverse((object) => {
+      if (!(object instanceof Mesh)) return;
+      const materials = Array.isArray(object.material) ? object.material : [object.material];
+
+      for (const material of materials) {
+        if (!(material instanceof MeshStandardMaterial)) continue;
+        material.emissive.set(override?.emissiveColor ?? "#000000");
+        material.emissiveIntensity = override?.emissiveIntensity ?? 1;
+        material.opacity = override?.opacity ?? 1;
+        const transparent = material.opacity < 1;
+
+        if (material.transparent !== transparent) material.needsUpdate = true;
+        material.transparent = transparent;
+        material.depthWrite = !transparent;
+      }
+    });
+  }
 
   function replace(instance: SculptMountedInstance) {
     const previous = roots.get(instance.instanceId);
@@ -258,6 +283,7 @@ export function createThreeSculptPresentationBackend(
       disposeSubtree(previous);
     }
     const next = buildInstance(instance);
+    applyMaterialOverride(next, overrides.get(instance.instanceId));
     roots.set(instance.instanceId, next);
     core.content.add(next);
   }
@@ -288,6 +314,32 @@ export function createThreeSculptPresentationBackend(
     label: core.label,
     surface: core.surfaceKind,
     camera: core.camera,
+    setEnvironment: core.setEnvironment,
+    sampleEffects: core.sampleEffects,
+
+    setMaterialOverrides(input) {
+      if (disposed) throw new Error("Three sculpt backend is disposed.");
+      const next = new Map<string, SceneMaterialOverride>();
+
+      for (const override of input) {
+        if (override.baseColorMapAssetId !== null || override.normalMapAssetId !== null || override.roughnessMapAssetId !== null) {
+          throw new Error(`Material texture asset binding is unresolved for "${override.instanceId}" (ADR 0026).`);
+        }
+
+        if (next.has(override.instanceId) || !isSculptIdentifier(override.instanceId) || !/^#[0-9a-f]{6}$/i.test(override.emissiveColor) ||
+          !Number.isFinite(override.emissiveIntensity) || override.emissiveIntensity < 0 || override.emissiveIntensity > 16 ||
+          !Number.isFinite(override.opacity) || override.opacity < 0 || override.opacity > 1) {
+          throw new Error(`Invalid material override for "${override.instanceId}".`);
+        }
+
+        next.set(override.instanceId, Object.freeze({ ...override }));
+      }
+
+      overrides = next;
+
+      for (const [id, root] of roots) applyMaterialOverride(root, overrides.get(id));
+    },
+
     mount: replace,
     update: updateTransform,
 
@@ -330,6 +382,7 @@ export function createThreeSculptPresentationBackend(
 
     mountTriangleAsset(input) {
       const next = buildTriangleAsset(input);
+      applyMaterialOverride(next, overrides.get(input.instanceId));
       const previous = roots.get(input.instanceId);
       if (previous !== undefined) {
         core.content.remove(previous);
@@ -360,6 +413,8 @@ export function createThreeSculptPresentationBackend(
     },
 
     dispose() {
+      disposed = true;
+      overrides.clear();
       roots.clear();
       importedNodes.clear();
       importedNodeDefaults.clear();

@@ -18,6 +18,24 @@ node .bb/skills/verify-sceneaxi/viewport.mjs http://127.0.0.1:4187/open .cache/e
 
 The command writes a canvas screenshot, a full-page screenshot, and JSON measurements. It refuses a missing canvas, a headless surface, a frame with no pixels, continuous idle drawing when `--idle` is set, failed orbit or wheel zoom, a reset that does not recover the opening PNG, a mount toggle with unchanged draw calls, a resize without a new frame, and a failed WebGL context restoration when the browser exposes `WEBGL_lose_context`. For a pre-change baseline, omit `--idle`. Compare recorded frame counts over 120 animation frames and the browser's animation-frame p50/p95. Those timings include the host, browser, and software GPU. They are not a hardware-independent render benchmark. Run `verify test packages/engine-presentation/test/three-surface.test.ts`, then `verify gate` and `pnpm --dir sites/umbrella typecheck`.
 
+## Authored presentation seam
+
+Run the focused owner suites for closed postprocessing settings, material
+replacement/refusal, and sampled particle projection:
+
+```sh
+pnpm exec vitest run packages/engine-presentation/test packages/schemas/test/desktop-scene-environment.test.ts packages/schemas/test/desktop-scene-materials.test.ts packages/schemas/test/desktop-scene-effects.test.ts
+pnpm exec tsc --build packages/engine-presentation/tsconfig.json
+```
+
+The package's browser fixture must exercise `setEnvironment`,
+`setMaterialOverrides`, and `sampleEffects` on a real canvas. Compare baseline,
+bloom, vignette, opacity, repeated samples, and clearing; then resize with DPR 2
+and lose/restore the WebGL context. Keep PNG comparisons, draw-call counts, and
+the screenshot. [The presentation owner](../../../../docs/three-presentation-core.md#task-68-focused-browser-observation)
+records the task 68 fixture and observations. `/open` alone does not prove these
+methods because product catalog forwarding remains unwired.
+
 ## Gotchas
 
 The script requires installed Chrome at `/usr/bin/google-chrome` unless `CHROME_BIN` names another executable. The first Next request compiles the route and may take more than a minute. Warm the route before measuring. The grid adds one WebGL draw call that the headless mesh counter does not claim. A screenshot of the web-shell inspector is not a screenshot of this canvas. Keep the development server separate from shared services and stop only the process started for this run.

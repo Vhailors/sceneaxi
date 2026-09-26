@@ -12,12 +12,24 @@
 import {
   ACESFilmicToneMapping,
   Camera,
+  LinearToneMapping,
+  NoToneMapping,
+  ReinhardToneMapping,
   Mesh,
-  Object3D,
+  Points,
+  Scene,
+  Vector2,
   SRGBColorSpace,
   WebGLRenderer,
   type WebGLRendererParameters,
 } from "three";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+import { VignetteShader } from "three/addons/shaders/VignetteShader.js";
+import type { SceneEnvironmentCatalog } from "@sceneaxi/schemas";
 import { ThreePresentationError } from "./three-presentation-error.js";
 
 /**
@@ -35,6 +47,12 @@ export type ThreeSurfaceDrawResult = {
   readonly pixelsDrawn: boolean;
 };
 
+export type ThreeSurfaceSettings = Readonly<Pick<SceneEnvironmentCatalog, "effects" | "toneMapping" | "exposure">>;
+
+const DEFAULT_SETTINGS: ThreeSurfaceSettings = Object.freeze({ effects: Object.freeze([]), toneMapping: "aces", exposure: 1.35 });
+
+const TONE_MAPPING = { none: NoToneMapping, linear: LinearToneMapping, reinhard: ReinhardToneMapping, aces: ACESFilmicToneMapping } as const;
+
 /** Pixel destination for the Three presentation core. */
 export interface ThreePresentationSurface {
   readonly kind: ThreePresentationSurfaceKind;
@@ -42,6 +60,7 @@ export interface ThreePresentationSurface {
   draw(
     scene: ThreeRenderableHandle,
     camera: ThreeRenderableHandle,
+    settings?: ThreeSurfaceSettings,
   ): ThreeSurfaceDrawResult;
   /** PNG bytes of the last drawn frame, or null when the surface cannot capture. */
   capture(): Uint8Array | null;
@@ -134,7 +153,7 @@ function asRenderTargets(
   scene: ThreeRenderableHandle,
   camera: ThreeRenderableHandle,
 ) {
-  if (!(scene instanceof Object3D) || !(camera instanceof Camera)) {
+  if (!(scene instanceof Scene) || !(camera instanceof Camera)) {
     throw new ThreePresentationError(
       "invalid-renderable",
       "Surface received a renderable it cannot draw.",
@@ -188,6 +207,54 @@ export function createWebGLCanvasSurface(
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.toneMapping = ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.35;
+  let composer: EffectComposer | null = null;
+  let renderPass: RenderPass | null = null;
+  let effectKey = "";
+
+  function disposeComposer() {
+    if (composer === null) return;
+
+    for (const pass of composer.passes) pass.dispose();
+    composer.dispose();
+    composer = null;
+    renderPass = null;
+    effectKey = "";
+  }
+
+  function configureEffects(scene: Scene, camera: Camera, effects: ThreeSurfaceSettings["effects"]) {
+    const nextKey = effects.join(",");
+
+    if (nextKey !== effectKey) {
+      disposeComposer();
+
+      if (effects.length > 0) {
+        composer = new EffectComposer(renderer);
+        renderPass = new RenderPass(scene, camera);
+        composer.addPass(renderPass);
+
+        for (const effect of effects) {
+          switch (effect) {
+            case "bloom":
+              composer.addPass(new UnrealBloomPass(new Vector2(1, 1), 1, 0, 1));
+              break;
+            case "vignette":
+              composer.addPass(new ShaderPass(VignetteShader));
+              break;
+          }
+        }
+
+        composer.addPass(new OutputPass());
+      }
+
+      effectKey = nextKey;
+    }
+
+    if (renderPass !== null) {
+      renderPass.scene = scene;
+      renderPass.camera = camera;
+    }
+  }
+
   let drawn = false;
   let contextAvailable = true;
   const onContextLost = () => {
@@ -195,6 +262,7 @@ export function createWebGLCanvasSurface(
     drawn = false;
   };
   const onContextRestored = () => {
+    disposeComposer();
     contextAvailable = true;
     drawn = false;
   };
@@ -218,15 +286,34 @@ export function createWebGLCanvasSurface(
       drawn = false;
       renderer.setPixelRatio(pixelRatio);
       renderer.setSize(width, height, false);
+
+      if (composer !== null) {
+        composer.setPixelRatio(pixelRatio);
+        composer.setSize(width, height);
+      }
     },
 
-    draw(sceneHandle, cameraHandle) {
+    draw(sceneHandle, cameraHandle, settings = DEFAULT_SETTINGS) {
       const targets = asRenderTargets(sceneHandle, cameraHandle);
       if (!contextAvailable) {
         return Object.freeze({ drawCalls: 0, pixelsDrawn: false });
       }
+
+      drawn = false;
+      renderer.toneMapping = TONE_MAPPING[settings.toneMapping];
+      renderer.toneMappingExposure = settings.exposure;
+      configureEffects(targets.scene, targets.camera, settings.effects);
       renderer.info.reset();
-      renderer.render(targets.scene, targets.camera);
+      const autoReset = renderer.info.autoReset;
+      renderer.info.autoReset = false;
+
+      try {
+        if (composer === null) renderer.render(targets.scene, targets.camera);
+        else composer.render(0);
+      } finally {
+        renderer.info.autoReset = autoReset;
+      }
+
       drawn = true;
       return Object.freeze({
         drawCalls: renderer.info.render.calls,
@@ -254,6 +341,7 @@ export function createWebGLCanvasSurface(
     },
 
     dispose() {
+      disposeComposer();
       canvas.removeEventListener("webglcontextlost", onContextLost);
       canvas.removeEventListener("webglcontextrestored", onContextRestored);
       renderer.dispose();
@@ -284,7 +372,7 @@ export function createHeadlessThreeSurface(): ThreePresentationSurface {
       targets.scene.updateMatrixWorld(true);
       let drawCalls = 0;
       targets.scene.traverse((object) => {
-        if (object instanceof Mesh && object.visible) drawCalls += 1;
+        if ((object instanceof Mesh || object instanceof Points) && object.visible) drawCalls += 1;
       });
       return Object.freeze({ drawCalls, pixelsDrawn: false });
     },

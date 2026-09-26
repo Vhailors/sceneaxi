@@ -827,10 +827,11 @@
       "severity": "medium",
       "title": "Post-processing, particles, and material overrides are in schemas only and never drawn",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 4,
-      "thread": null,
-      "commit": null
+      "thread": "thr_ghk6fj8cug",
+      "commit": null,
+      "openDecision": "Rendering layer only; product wiring is item 90"
     },
     {
       "id": 69,
@@ -1085,6 +1086,20 @@
       "thread": "thr_sny4j8ve4n",
       "commit": null,
       "evidence": "found by thr_itkeme9y3p while investigating item 60"
+    },
+    {
+      "id": 90,
+      "section": "I",
+      "area": "Engine features a \"game engine\" user expects",
+      "severity": "medium",
+      "title": "Product viewports do not forward authored environment/material/effect catalogs (effects payload lacks its seed; texture slots need an asset-to-texture binding contract)",
+      "cls": "autonomous",
+      "status": "open",
+      "wave": 4,
+      "thread": null,
+      "commit": null,
+      "evidence": "reported by thr_ghk6fj8cug; ADRs 0025-0028 notes",
+      "openDecision": "Asset-to-texture binding contract may need an ADR decision"
     }
   ]
 }

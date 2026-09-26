@@ -20,6 +20,19 @@ digest-stamped. Particle state never enters kernel snapshots.
 - Headless gates assert sample identity, not pixels.
 - three.quarks remains a later option only if its RNG becomes injectable.
 
+## Rendering integration note
+
+The presentation backend's `sampleEffects(catalog, timeMs)` consumes the full
+catalog and uses `sampleSceneEffects` unchanged. It draws the returned positions
+as white points and returns the same digest-stamped evaluation. It does not
+invent different distributions for the sampler's emitter kinds or advance a
+kernel clock.
+
+`MountableScene.effects` currently carries emitters without the catalog seed.
+Product viewport wiring must preserve that seed before it can reproduce these
+samples. No default seed or playback-time wrapping is inferred by the renderer.
+The sampler's existing 0..60000 ms range still applies.
+
 ## Rejected alternatives
 
 - Gameplay-coupled effects in v1.

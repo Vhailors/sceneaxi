@@ -1,4 +1,4 @@
-import { DataTexture, GridHelper, Mesh, MeshStandardMaterial, Object3D } from "three";
+import { DataTexture, GridHelper, Mesh, MeshStandardMaterial, Object3D, Points } from "three";
 import { describe, expect, it, vi } from "vitest";
 import {
   THREE_HEADLESS_SURFACE_LABEL,
@@ -13,6 +13,7 @@ import {
   type FrameScheduler,
   type ThreePresentationSurface,
   type ThreeRenderableHandle,
+  type ThreeSceneEnvironment,
 } from "@sceneaxi/engine-presentation";
 import { open, type ProductManifest } from "@sceneaxi/engine-kernel";
 import {
@@ -23,7 +24,10 @@ import {
   SCULPT_PROCEDURAL_SOURCE_DIGEST,
   SCULPT_SCHEMA_VERSION,
   digestObjectSculptSpec,
+  emptySceneEffectsCatalog,
+  sampleSceneEffects,
   projectAnimationReadyHierarchy,
+  type SceneMaterialOverride,
   type SculptQualityArtifact,
 } from "@sceneaxi/schemas";
 
@@ -222,6 +226,133 @@ describe("Three presentation core — sculpt backend", () => {
     expect(frame.effects).toEqual(["bloom", "vignette"]);
     core.setEnvironment({ background: "#101318", effects: ["bloom"] });
     expect(core.draw().effects).toEqual(["bloom"]);
+    core.dispose();
+  });
+
+  it("projects and clears scalar overrides without changing artifact bytes or sibling instances", () => {
+    const recorder = recordingSurface();
+    const backend = createThreeSculptPresentationBackend({ surface: recorder.surface });
+    const mounts = createSculptMountApi(backend);
+    const artifact = fixtureArtifact();
+    const before = JSON.stringify(artifact);
+
+    const override: SceneMaterialOverride = {
+      instanceId: "crate-one", emissiveColor: "#ff0000", emissiveIntensity: 2,
+      opacity: 0.4, baseColorMapAssetId: null, normalMapAssetId: null, roughnessMapAssetId: null,
+    };
+
+    backend.setMaterialOverrides([override]);
+    mounts.mount({ instanceId: "crate-one", artifact });
+    mounts.mount({ instanceId: "crate-two", artifact });
+    mounts.render();
+    const scene = sceneOf(recorder.draws[0]);
+
+    const materials = (id: string) => {
+      const values: MeshStandardMaterial[] = [];
+      scene.getObjectByName(id)?.traverse((node) => {
+        if (node instanceof Mesh && node.material instanceof MeshStandardMaterial) values.push(node.material);
+      });
+
+      return values;
+    };
+
+    expect(materials("crate-one")).toHaveLength(2);
+
+    for (const material of materials("crate-one")) {
+      expect(material.emissive.getHexString()).toBe("ff0000");
+      expect(material).toMatchObject({ emissiveIntensity: 2, opacity: 0.4, transparent: true, depthWrite: false });
+    }
+
+    expect(materials("crate-two")[0]).toMatchObject({ opacity: 1, transparent: false });
+
+    for (const slot of ["baseColorMapAssetId", "normalMapAssetId", "roughnessMapAssetId"] as const) {
+      expect(() => backend.setMaterialOverrides([{ ...override, [slot]: "image-one" }])).toThrow(/texture.*unresolved/i);
+    }
+
+    expect(() => backend.setMaterialOverrides([{ ...override, opacity: NaN }])).toThrow(/override/i);
+    expect(materials("crate-one")[0]?.opacity).toBe(0.4);
+    backend.mountTriangleAsset({
+      instanceId: "crate-one", transform,
+      meshes: [{ meshId: "triangle", positions: [0, 0, 0, 1, 0, 0, 0, 1, 0], indices: [0, 1, 2],
+        matrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+        baseColor: "#ffffff", metallic: 0, roughness: 1 }],
+    });
+    expect(materials("crate-one")[0]).toMatchObject({ opacity: 0.4, emissiveIntensity: 2 });
+    backend.setMaterialOverrides([]);
+    expect(materials("crate-one")[0]).toMatchObject({ opacity: 1, transparent: false, depthWrite: true });
+    expect(materials("crate-one")[0]?.emissive.getHexString()).toBe("000000");
+    expect(JSON.stringify(artifact)).toBe(before);
+    mounts.dispose();
+  });
+
+  it("draws the seeded sampler's positions, reuses buffers, and disposes removed emitters", () => {
+    const recorder = recordingSurface();
+    const backend = createThreeSculptPresentationBackend({ surface: recorder.surface });
+
+    const emitter = { emitterId: "sparks", kind: "point" as const, rate: 3, lifetimeMs: 1000, speed: 2, spread: 1 };
+    const catalog = { ...emptySceneEffectsCatalog(), seed: 17, emitters: [emitter] };
+    const before = JSON.stringify(catalog);
+    const expected = sampleSceneEffects({ catalog, timeMs: 250 });
+
+    if (!expected.ok) throw new Error(expected.message);
+
+    const evaluation = backend.sampleEffects(catalog, 250);
+    expect(evaluation).toEqual(expected.evaluation);
+    backend.render([]);
+    const scene = sceneOf(recorder.draws[0]);
+    const particles = scene.getObjectByName("sceneaxi-effect:sparks");
+
+    if (!(particles instanceof Points)) throw new Error("Sampled emitter was not drawn as points.");
+
+    expect(Array.from(particles.geometry.getAttribute("position").array).slice(0, 9)).toEqual(
+      Array.from(new Float32Array(expected.evaluation.samples.flatMap((sample) => sample.positions.flat()))),
+    );
+    expect(particles.geometry.drawRange.count).toBe(3);
+    const geometry = particles.geometry;
+    const position = geometry.getAttribute("position");
+    const digest = backend.sampleEffects(catalog, 251).digest;
+    expect(digest).not.toBe(evaluation.digest);
+    expect(backend.sampleEffects(catalog, 250)).toEqual(evaluation);
+    expect(particles.geometry).toBe(geometry);
+    expect(geometry.getAttribute("position")).toBe(position);
+    expect(() => backend.sampleEffects(catalog, -1)).toThrow(/time/i);
+    expect(() => backend.sampleEffects({ ...catalog, emitters: [{ ...emitter, speed: NaN }] }, 0)).toThrow(/emitter/i);
+    const geometryDisposed = vi.fn();
+    const materialDisposed = vi.fn();
+    geometry.addEventListener("dispose", geometryDisposed);
+
+    if (Array.isArray(particles.material)) throw new Error("Expected one points material.");
+
+    particles.material.addEventListener("dispose", materialDisposed);
+    backend.sampleEffects(emptySceneEffectsCatalog(), 0);
+    expect(scene.getObjectByName("sceneaxi-effect:sparks")).toBeUndefined();
+    expect(geometryDisposed).toHaveBeenCalledOnce();
+    expect(materialDisposed).toHaveBeenCalledOnce();
+    expect(JSON.stringify(catalog)).toBe(before);
+    backend.dispose();
+  });
+
+  it("refuses unknown postprocessing and forwards the closed renderer settings", () => {
+    const settings: Array<ThreeSceneEnvironment | undefined> = [];
+    const recorder = recordingSurface();
+
+    const core = createThreePresentationCore({ surface: { ...recorder.surface,
+      draw(scene, camera, environment) {
+        settings.push(environment);
+
+        return recorder.surface.draw(scene, camera);
+      },
+    } });
+
+    core.setEnvironment({ effects: ["vignette", "bloom"], toneMapping: "reinhard", exposure: 0.8 });
+    core.draw();
+    expect(settings[0]).toMatchObject({ effects: ["vignette", "bloom"], toneMapping: "reinhard", exposure: 0.8 });
+    // SAFETY: Deliberately bypass the typed vocabulary to check JavaScript callers.
+    expect(() => core.setEnvironment({ effects: ["arbitrary-shader"] } as never)).toThrow(/effect/i);
+    expect(() => core.setEnvironment({ exposure: NaN })).toThrow(/exposure/i);
+    expect(core.draw().effects).toEqual(["vignette", "bloom"]);
+    core.setEnvironment({ effects: [] });
+    expect(core.draw().effects).toEqual([]);
     core.dispose();
   });
 
