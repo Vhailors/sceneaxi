@@ -6,8 +6,14 @@
  * really is a standalone install root, and the packaging surface the docs promise
  * (scripts, artifact naming, smoke proof) exists as declared.
  */
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import {
+  mapDesktopDiagnosticEvent,
+  recordDesktopDiagnostic,
+} from "../../desktop/linux/src/lib/diagnostics.ts";
 import {
   DESKTOP_VISUAL_REFUSALS,
   desktopProductSurface,
@@ -79,6 +85,60 @@ describe("desktop-linux seam", () => {
     expect(DESKTOP_BRIDGE_REFUSALS.presentationRuntimeUnavailable).toBe(
       DESKTOP_VISUAL_REFUSALS.noPresentationRuntime,
     );
+  });
+});
+
+describe("desktop-linux local diagnostics", () => {
+  it("maps process sources to fixed events and persists only timestamp and code", () => {
+    const logs = mkdtempSync(join(tmpdir(), "sceneaxi-diagnostics-"));
+
+    try {
+      expect(mapDesktopDiagnosticEvent("renderer")).toBe("renderer-gone");
+      expect(mapDesktopDiagnosticEvent("child")).toBe("child-gone");
+      recordDesktopDiagnostic(logs, mapDesktopDiagnosticEvent("renderer"));
+      recordDesktopDiagnostic(logs, mapDesktopDiagnosticEvent("child"));
+      recordDesktopDiagnostic(logs, "window-unresponsive");
+      recordDesktopDiagnostic(logs, "main-exception");
+
+      const content = readFileSync(join(logs, "diagnostics.log"), "utf8");
+      expect(content).toContain('"code":"RENDER_PROCESS_LOST"');
+      expect(content).toContain('"code":"CHILD_PROCESS_LOST"');
+      expect(content).toContain('"code":"APP_UNRESPONSIVE"');
+      expect(content).toContain('"code":"MAIN_UNCAUGHT_EXCEPTION"');
+      for (const line of content.trim().split("\n")) {
+        expect(Object.keys(JSON.parse(line))).toEqual(["timestamp", "code"]);
+      }
+    } finally {
+      rmSync(logs, { recursive: true, force: true });
+    }
+  });
+
+  it("rotates within three bounded files, including oversized pre-existing logs", () => {
+    const logs = mkdtempSync(join(tmpdir(), "sceneaxi-diagnostics-"));
+
+    try {
+      for (let index = 0; index < 2500; index += 1) {
+        recordDesktopDiagnostic(logs, "renderer-gone");
+      }
+
+      const files = readdirSync(logs).sort();
+
+      expect(files).toEqual(["diagnostics.log", "diagnostics.log.1", "diagnostics.log.2"]);
+
+      for (const file of files) expect(statSync(join(logs, file)).size).toBeLessThanOrEqual(64 * 1024);
+
+      const oversized = "x".repeat(64 * 1024 + 1);
+
+      rmSync(join(logs, "diagnostics.log"));
+      writeFileSync(join(logs, "diagnostics.log"), oversized);
+
+      recordDesktopDiagnostic(logs, "main-exception");
+
+      for (const file of readdirSync(logs)) expect(statSync(join(logs, file)).size).toBeLessThanOrEqual(64 * 1024);
+      expect(() => recordDesktopDiagnostic(join(logs, "not-a-directory"), "main-exception")).not.toThrow();
+    } finally {
+      rmSync(logs, { recursive: true, force: true });
+    }
   });
 });
 

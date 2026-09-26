@@ -346,6 +346,27 @@ rolls back to the prior mount set. Contained ingestion uses that synchronizer's
 same-backend triangle replacement; its headless draw proof is
 `tests/e2e/asset-ingestion-golden.test.ts`. The umbrella's owner list is unchanged.
 
+## Local crash diagnostics
+
+The privileged Linux host writes a bounded, rotating event log to
+`<Electron userData>/logs/` (64 KiB per file, three files). The native Help menu
+provides **Reveal logs** to open that folder. Entries contain only a timestamp
+and fixed event identifiers for renderer loss, child-process loss, an unresponsive
+window, or an uncaught main-process exception. Raw exceptions, reason strings,
+provider keys, prompts, project paths, and project contents are never written.
+This follows the no-credential-in-logs rule in
+[`desktop-local-bridge.md`](desktop-local-bridge.md#byok-secure-storage-contract).
+Electron stores local crash minidumps under the same user-data tree; its crash
+reporter starts with `uploadToServer: false`. Neither the log nor minidumps are
+uploaded by SceneAxi. Minidumps can include process memory and must be treated
+as sensitive if an operator chooses to share them. When the renderer or a child
+process is lost, or the window stops responding, the host offers **Reload window**
+instead of leaving a blank or hung editor. Reloading does not commit an in-flight
+Change Review. To reproduce the recovery path on Linux from `desktop/linux`, run
+`xvfb-run -a node scripts/smoke-diagnostics.mjs` after `pnpm build`.
+The smoke crashes its own isolated renderer, checks the reloaded document, safe
+log event, and Help item, and removes its temporary user-data directory on exit.
+
 ## Build, verify, run
 
 ```bash

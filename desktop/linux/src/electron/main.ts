@@ -16,6 +16,7 @@ import { createHash } from "node:crypto";
 import {
   existsSync,
   mkdtempSync,
+  mkdirSync,
   readFileSync,
   rmSync,
   unlinkSync,
@@ -23,7 +24,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, sep } from "node:path";
-import { BrowserWindow, app, dialog, ipcMain } from "electron";
+import { BrowserWindow, Menu, app, crashReporter, dialog, ipcMain, shell } from "electron";
 import { DESKTOP_MINIMUM_WINDOW } from "@sceneaxi/desktop-shell";
 import { inspectProjectModel } from "@sceneaxi/authoring-core";
 import { createEditorCommandInvocation, parseDeliveryHandoffText } from "@sceneaxi/schemas";
@@ -45,6 +46,7 @@ import {
 } from "../lib/local-rpc.js";
 import { seedDesktopProject } from "../lib/project-seed.js";
 import { DESKTOP_INPUT_ACTIONS_CHANNEL } from "../lib/input-action-contract.js";
+import { mapDesktopDiagnosticEvent, recordDesktopDiagnostic } from "../lib/diagnostics.js";
 import {
   createDesktopInputActionHost,
   type DesktopInputActionHost,
@@ -79,6 +81,7 @@ import {
 declare const __dirname: string;
 
 const SMOKE = process.argv.includes("--smoke");
+const DIAGNOSTICS_SMOKE = process.argv.includes("--diagnostics-smoke");
 const SMOKE_TIMEOUT_MS = 45_000;
 
 if (process.platform === "linux") {
@@ -95,6 +98,27 @@ if (!app.isPackaged) {
   app.setName("sceneaxi-engine-desktop");
   app.setPath("userData", join(app.getPath("appData"), "sceneaxi-engine-desktop"));
 }
+
+if (DIAGNOSTICS_SMOKE && (
+  !process.env["XDG_CONFIG_HOME"] ||
+  !app.getPath("userData").startsWith(`${process.env["XDG_CONFIG_HOME"]}${sep}`)
+)) {
+  throw new Error("Diagnostics smoke requires an isolated XDG_CONFIG_HOME.");
+}
+
+const logsDirectory = join(app.getPath("userData"), "logs");
+
+mkdirSync(logsDirectory, { recursive: true, mode: 0o700 });
+
+const crashDumpsDirectory = join(logsDirectory, "crashDumps");
+
+mkdirSync(crashDumpsDirectory, { recursive: true, mode: 0o700 });
+
+app.setAppLogsPath(logsDirectory);
+
+app.setPath("crashDumps", crashDumpsDirectory);
+
+crashReporter.start({ uploadToServer: false });
 
 /** Active document name shared by explicit projects and the isolated smoke. */
 const SAMPLE_DOCUMENT = DESKTOP_ACTIVE_DOCUMENT_PATH;
@@ -413,6 +437,69 @@ async function start(): Promise<void> {
   window.webContents.on("will-navigate", (event) => event.preventDefault());
   window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
 
+  Menu.setApplicationMenu(Menu.buildFromTemplate([
+    { role: "editMenu" },
+    { role: "viewMenu" },
+    { role: "windowMenu" },
+    {
+      label: "Help",
+      submenu: [{
+        label: "Reveal logs",
+        click: () => {
+          void shell.openPath(logsDirectory).then((failure) => {
+            if (failure) dialog.showErrorBox("Logs unavailable", "The local logs folder could not be opened.");
+          }).catch(() => dialog.showErrorBox("Logs unavailable", "The local logs folder could not be opened."));
+        },
+      }],
+    },
+  ]));
+
+  let recoveryOffered = false;
+
+  const offerReload = () => {
+    if (window.isDestroyed() || recoveryOffered) return;
+
+    recoveryOffered = true;
+
+    if (DIAGNOSTICS_SMOKE) {
+      window.webContents.reload();
+
+      return;
+    }
+
+    void dialog.showMessageBox(window, {
+      type: "warning",
+      buttons: ["Reload window", "Not now"],
+      defaultId: 0,
+      cancelId: 1,
+      title: "Desktop window stopped",
+      message: "The desktop window stopped responding or a process exited. Reload the window?",
+    }).then(({ response }) => {
+      if (response === 0 && !window.isDestroyed()) window.webContents.reload();
+    }).catch(() => {
+      dialog.showErrorBox("Recovery unavailable", "The window could not be reloaded.");
+    }).finally(() => { recoveryOffered = false; });
+  };
+
+  window.webContents.on("render-process-gone", () => {
+    recordDesktopDiagnostic(logsDirectory, mapDesktopDiagnosticEvent("renderer"));
+
+    if (SMOKE) reportFailure("The renderer exited during the packaged smoke.");
+    else offerReload();
+  });
+
+  window.on("unresponsive", () => {
+    recordDesktopDiagnostic(logsDirectory, "window-unresponsive");
+
+    offerReload();
+  });
+
+  app.on("child-process-gone", () => {
+    recordDesktopDiagnostic(logsDirectory, mapDesktopDiagnosticEvent("child"));
+
+    if (!SMOKE) offerReload();
+  });
+
   const projectHost = createDesktopProjectHost({
     lifecycle,
     dialogs: {
@@ -449,6 +536,30 @@ async function start(): Promise<void> {
   });
 
   await window.loadFile(join(__dirname, "index.html"));
+
+  if (DIAGNOSTICS_SMOKE) {
+    const reloaded = new Promise<void>((resolve, reject) => {
+      window.webContents.once("did-finish-load", () => resolve());
+      setTimeout(() => reject(new Error("renderer reload timed out")), 15_000);
+    });
+
+    window.webContents.forcefullyCrashRenderer();
+    await reloaded;
+
+    const log = readFileSync(join(logsDirectory, "diagnostics.log"), "utf8");
+    const help = Menu.getApplicationMenu()?.items.find((item) => item.label === "Help");
+    const reveal = help?.submenu?.items.find((item) => item.label === "Reveal logs");
+
+    if (!log.includes("RENDER_PROCESS_LOST") || !window.webContents.getURL().startsWith("file:") || !reveal?.enabled) {
+      fail("renderer crash did not record a safe event and reload the window");
+    }
+
+    console.log(JSON.stringify({ ok: true, diagnostics: "renderer reloaded; local event recorded" }));
+
+    app.exit(0);
+
+    return;
+  }
 
   if (!SMOKE) return;
 
@@ -989,10 +1100,16 @@ async function start(): Promise<void> {
   app.exit(0);
 }
 
-// Every await above can reject; without this the process would keep an open window
-// alive until the launcher's timeout and print no cause at all.
-void start().catch((error: unknown) => {
-  reportFailure(error instanceof Error ? error.message : String(error));
+process.on("uncaughtException", () => {
+  recordDesktopDiagnostic(logsDirectory, "main-exception");
+  dialog.showErrorBox("Desktop stopped", "A local error occurred. Open Help → Reveal logs after restarting.");
+  app.exit(1);
+});
+
+// Smoke prints its own fixed proof failure. Normal startup never echoes an exception.
+void start().catch(() => {
+  recordDesktopDiagnostic(logsDirectory, "main-exception");
+  reportFailure("Desktop startup failed. See local logs.");
 });
 
 app.on("window-all-closed", () => {

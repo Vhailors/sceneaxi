@@ -646,10 +646,11 @@
       "severity": "high",
       "title": "No crash reporting or telemetry; no `render-process-gone` / `child-process-gone` handling.",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 3,
-      "thread": null,
-      "commit": null
+      "thread": "thr_42wbgwffs4",
+      "commit": null,
+      "openDecision": "Retention/sharing policy for local minidumps (never uploaded)"
     },
     {
       "id": 55,
