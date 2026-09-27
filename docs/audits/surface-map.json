@@ -6,13 +6,13 @@
     "configuration": "no provider environment (every provider-backed plane is expected to report unconfigured)"
   },
   "totals": {
-    "working": 318,
+    "working": 301,
     "partial": 31,
     "unconfigured": 10,
     "refused": 15,
-    "gap": 17,
+    "gap": 3,
     "parked": 49,
-    "unknown": 2
+    "unknown": 33
   },
   "areas": [
     {
@@ -386,352 +386,338 @@
       "nodes": [
         {
           "id": "animation-apply",
-          "state": "working",
-          "note": "GUI-dispatched"
+          "state": "unknown",
+          "note": "desktop-control accepted; no matching GUI registry-validation golden"
         },
         {
           "id": "animation-evaluate",
-          "state": "working",
-          "note": "GUI-dispatched"
+          "state": "unknown",
+          "note": "desktop-control accepted; no matching GUI registry-validation golden"
         },
         {
           "id": "animation-inspect",
-          "state": "working",
-          "note": "GUI-dispatched"
+          "state": "unknown",
+          "note": "desktop-control accepted; no matching GUI registry-validation golden"
         },
         {
           "id": "animation-scrub",
-          "state": "working",
-          "note": "GUI-dispatched"
+          "state": "unknown",
+          "note": "desktop-control accepted; no matching GUI registry-validation golden"
         },
         {
           "id": "assistant-apply-build",
-          "state": "working",
-          "note": "GUI-dispatched"
+          "state": "unknown",
+          "note": "desktop-control accepted; no matching GUI registry-validation golden"
         },
         {
           "id": "assistant-ask",
-          "state": "working",
-          "note": "GUI-dispatched"
+          "state": "unknown",
+          "note": "desktop-control accepted; no matching GUI registry-validation golden"
         },
         {
           "id": "assistant-byo-build",
-          "state": "working",
-          "note": "GUI-dispatched"
+          "state": "unknown",
+          "note": "desktop-control accepted; no matching GUI registry-validation golden"
         },
         {
           "id": "assistant-cancel",
-          "state": "working",
-          "note": "GUI-dispatched"
+          "state": "unknown",
+          "note": "desktop-control accepted; no matching GUI registry-validation golden"
         },
         {
           "id": "assistant-local-agent",
-          "state": "working",
-          "note": "GUI-dispatched"
+          "state": "unknown",
+          "note": "desktop-control accepted; no matching GUI registry-validation golden"
         },
         {
           "id": "assistant-local-build",
-          "state": "working",
-          "note": "GUI-dispatched"
+          "state": "unknown",
+          "note": "desktop-control accepted; no matching GUI registry-validation golden"
         },
         {
           "id": "assistant-status",
-          "state": "working",
-          "note": "GUI-dispatched"
+          "state": "unknown",
+          "note": "desktop-control accepted; no matching GUI registry-validation golden"
         },
         {
           "id": "change-review-accept",
-          "state": "working",
-          "note": "GUI-dispatched"
+          "state": "unknown",
+          "note": "desktop-control accepted; no matching GUI registry-validation golden"
         },
         {
           "id": "change-review-reject",
-          "state": "working",
-          "note": "GUI-dispatched"
+          "state": "unknown",
+          "note": "desktop-control accepted; no matching GUI registry-validation golden"
         },
         {
           "id": "edit-redo",
           "state": "working",
-          "note": "GUI-dispatched"
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "edit-undo",
           "state": "working",
-          "note": "GUI-dispatched"
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "effect-apply",
-          "state": "working",
-          "note": "GUI-dispatched"
+          "state": "unknown",
+          "note": "desktop-control accepted; no matching GUI registry-validation golden"
         },
         {
           "id": "effect-inspect",
-          "state": "working",
-          "note": "GUI-dispatched"
+          "state": "unknown",
+          "note": "desktop-control accepted; no matching GUI registry-validation golden"
         },
         {
           "id": "environment-apply",
-          "state": "working",
-          "note": "GUI-dispatched"
+          "state": "unknown",
+          "note": "desktop-control accepted; no matching GUI registry-validation golden"
         },
         {
           "id": "environment-inspect",
-          "state": "working",
-          "note": "GUI-dispatched"
+          "state": "unknown",
+          "note": "desktop-control accepted; no matching GUI registry-validation golden"
         },
         {
           "id": "extension-inspect",
           "state": "working",
-          "note": "GUI-dispatched"
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "extension-start",
-          "state": "gap",
-          "item": 53,
-          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "input-action-rebind",
-          "state": "gap",
-          "item": 53,
-          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "input-actions-inspect",
-          "state": "gap",
-          "item": 53,
-          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "input-actions-reset",
-          "state": "gap",
-          "item": 53,
-          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "material-apply",
-          "state": "working",
-          "note": "GUI-dispatched"
+          "state": "unknown",
+          "note": "desktop-control accepted; no matching GUI registry-validation golden"
         },
         {
           "id": "material-inspect",
-          "state": "working",
-          "note": "GUI-dispatched"
+          "state": "unknown",
+          "note": "desktop-control accepted; no matching GUI registry-validation golden"
         },
         {
           "id": "package-inspect",
           "state": "working",
-          "note": "GUI-dispatched"
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "package-install",
-          "state": "gap",
-          "item": 53,
-          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "package-remove",
-          "state": "gap",
-          "item": 53,
-          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "physics-apply",
-          "state": "working",
-          "note": "GUI-dispatched"
+          "state": "unknown",
+          "note": "desktop-control accepted; no matching GUI registry-validation golden"
         },
         {
           "id": "physics-evaluate",
-          "state": "gap",
-          "item": 53,
-          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "physics-inspect",
-          "state": "working",
-          "note": "GUI-dispatched"
+          "state": "unknown",
+          "note": "desktop-control accepted; no matching GUI registry-validation golden"
         },
         {
           "id": "play-inspect",
-          "state": "working",
-          "note": "GUI-dispatched"
+          "state": "unknown",
+          "note": "desktop-control accepted; no matching GUI registry-validation golden"
         },
         {
           "id": "profile-inspect",
           "state": "working",
-          "note": "GUI-dispatched"
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "project-build",
           "state": "working",
-          "note": "GUI-dispatched"
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "project-git-commit-prepare",
           "state": "working",
-          "note": "GUI-dispatched"
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "project-git-diff",
           "state": "working",
-          "note": "GUI-dispatched"
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "project-git-stage",
           "state": "working",
-          "note": "GUI-dispatched"
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "project-git-status",
           "state": "working",
-          "note": "GUI-dispatched"
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "project-inspect",
           "state": "working",
-          "note": "GUI-dispatched"
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "project-migration-commit",
-          "state": "gap",
-          "item": 53,
-          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "project-migration-propose",
           "state": "working",
-          "note": "GUI-dispatched"
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "project-migration-recover",
           "state": "working",
-          "note": "GUI-dispatched"
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "project-new",
           "state": "working",
-          "note": "GUI-dispatched"
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "project-open",
           "state": "working",
-          "note": "GUI-dispatched"
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "project-save",
           "state": "working",
-          "note": "GUI-dispatched"
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "run-play",
           "state": "working",
-          "note": "GUI-dispatched"
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "run-reset",
-          "state": "working",
-          "note": "GUI-dispatched"
+          "state": "unknown",
+          "note": "desktop-control accepted; no matching GUI registry-validation golden"
         },
         {
           "id": "run-stop",
-          "state": "working",
-          "note": "GUI-dispatched"
+          "state": "unknown",
+          "note": "desktop-control accepted; no matching GUI registry-validation golden"
         },
         {
           "id": "scene-hierarchy-inspect",
-          "state": "working",
-          "note": "GUI-dispatched"
+          "state": "unknown",
+          "note": "desktop-control accepted; no matching GUI registry-validation golden"
         },
         {
           "id": "scene-object-create",
-          "state": "working",
-          "note": "GUI-dispatched"
+          "state": "unknown",
+          "note": "desktop-control accepted; no matching GUI registry-validation golden"
         },
         {
           "id": "scene-object-remove",
-          "state": "working",
-          "note": "GUI-dispatched"
+          "state": "unknown",
+          "note": "desktop-control accepted; no matching GUI registry-validation golden"
         },
         {
           "id": "scene-object-reparent",
-          "state": "working",
-          "note": "GUI-dispatched"
+          "state": "unknown",
+          "note": "desktop-control accepted; no matching GUI registry-validation golden"
         },
         {
           "id": "scene-prefab-define",
-          "state": "gap",
-          "item": 53,
-          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "scene-prefab-inspect",
-          "state": "gap",
-          "item": 53,
-          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "scene-prefab-instance",
-          "state": "gap",
-          "item": 53,
-          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "scene-prefab-override",
-          "state": "gap",
-          "item": 53,
-          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "scene-prefab-refresh",
-          "state": "gap",
-          "item": 53,
-          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "scene-property-set",
-          "state": "working",
-          "note": "GUI-dispatched"
+          "state": "unknown",
+          "note": "desktop-control accepted; no matching GUI registry-validation golden"
         },
         {
           "id": "scene-selection-set",
-          "state": "working",
-          "note": "GUI-dispatched"
+          "state": "unknown",
+          "note": "desktop-control accepted; no matching GUI registry-validation golden"
         },
         {
           "id": "scene-transform-apply",
-          "state": "working",
-          "note": "GUI-dispatched"
+          "state": "unknown",
+          "note": "desktop-control accepted; no matching GUI registry-validation golden"
         },
         {
           "id": "ship-export-web",
           "state": "working",
-          "note": "GUI-dispatched"
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "viewport-source-set",
-          "state": "gap",
-          "item": 53,
-          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "workspace-layout-apply",
           "state": "working",
-          "note": "GUI-dispatched"
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "workspace-layout-inspect",
           "state": "working",
-          "note": "GUI-dispatched"
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "workspace-layout-reset",
           "state": "working",
-          "note": "GUI-dispatched"
+          "note": "GUI dispatch validated by mounted-chrome golden"
         }
       ],
       "totals": {
-        "working": 52,
-        "gap": 14
+        "working": 35,
+        "unknown": 31
       }
     },
     {

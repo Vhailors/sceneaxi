@@ -173,6 +173,13 @@ function preparePrefabInstance(bridge: ReturnType<typeof createDesktopBridge>, d
   return ids;
 }
 
+const GUI_WORKING_COMMANDS = new Set([
+  "package-install", "package-remove", "project-migration-commit", "extension-start",
+  "input-action-rebind", "input-actions-reset", "input-actions-inspect", "physics-evaluate",
+  "scene-prefab-define", "scene-prefab-inspect", "scene-prefab-instance", "scene-prefab-override",
+  "scene-prefab-refresh", "viewport-source-set",
+]);
+
 const packageManifest = {
   pluginId: "dev.sceneaxi.sample.intake-source",
   pluginVersion: "0.1.0",
@@ -181,6 +188,12 @@ const packageManifest = {
 const packageDigest = `sha256:${createHash("sha256").update("contained-package-lock").digest("hex")}`;
 
 describe("desktop editor command forms against the real bridge", () => {
+  it("pins every GUI-proven command to the desktop-control registry", () => {
+    expect(GUI_WORKING_COMMANDS.size).toBe(14);
+    for (const id of GUI_WORKING_COMMANDS) {
+      expect(EDITOR_COMMAND_REGISTRY.find((command) => command.id === id)?.acceptedClients).toContain("desktop-control");
+    }
+  });
   it("installs a user-supplied contained package through Change Review", async () => {
     const { root, window } = fixture("package-install");
     await openScene(window);

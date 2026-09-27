@@ -831,7 +831,8 @@
             "tests/e2e/sculpt-quality-golden.test.ts",
             "tests/e2e/umbrella-editor-viewport-golden.test.ts",
             "tests/e2e/umbrella-live-open-golden.test.ts",
-            "tests/e2e/examples-golden.test.ts"
+            "tests/e2e/examples-golden.test.ts",
+            "tests/e2e/desktop-editor-command-forms-golden.test.ts"
           ],
           "present": true
         }
@@ -1073,7 +1074,8 @@
             "tests/e2e/sculpt-quality-golden.test.ts",
             "tests/e2e/umbrella-editor-viewport-golden.test.ts",
             "tests/e2e/umbrella-live-open-golden.test.ts",
-            "tests/e2e/examples-golden.test.ts"
+            "tests/e2e/examples-golden.test.ts",
+            "tests/e2e/desktop-editor-command-forms-golden.test.ts"
           ],
           "present": true
         }
@@ -1776,7 +1778,8 @@
             "tests/e2e/sculpt-quality-golden.test.ts",
             "tests/e2e/umbrella-editor-viewport-golden.test.ts",
             "tests/e2e/umbrella-live-open-golden.test.ts",
-            "tests/e2e/examples-golden.test.ts"
+            "tests/e2e/examples-golden.test.ts",
+            "tests/e2e/desktop-editor-command-forms-golden.test.ts"
           ],
           "present": true
         }
@@ -2986,7 +2989,8 @@
             "tests/e2e/sculpt-quality-golden.test.ts",
             "tests/e2e/umbrella-editor-viewport-golden.test.ts",
             "tests/e2e/umbrella-live-open-golden.test.ts",
-            "tests/e2e/examples-golden.test.ts"
+            "tests/e2e/examples-golden.test.ts",
+            "tests/e2e/desktop-editor-command-forms-golden.test.ts"
           ],
           "present": true
         }
@@ -4520,6 +4524,7 @@
             "tests/e2e/desktop-cli-local-bridge-golden.test.ts",
             "tests/e2e/desktop-command-interactions-golden.test.ts",
             "tests/e2e/desktop-control-inventory-golden.test.ts",
+            "tests/e2e/desktop-editor-command-forms-golden.test.ts",
             "tests/e2e/desktop-extension-seams-golden.test.ts",
             "tests/e2e/desktop-hierarchy-golden.test.ts",
             "tests/e2e/desktop-linux-bridge-golden.test.ts",
@@ -4539,6 +4544,7 @@
             "tests/e2e/desktop-web-export-golden.test.ts",
             "tests/e2e/desktop-workspace-layout-golden.test.ts",
             "tests/e2e/editor-catalog-intake-golden.test.ts",
+            "tests/e2e/examples-golden.test.ts",
             "tests/e2e/fixtures/desktop-web-export/golden-digests.json",
             "tests/e2e/fixtures/golden-project.ts",
             "tests/e2e/fixtures/hybrid-sculpt/README.md",
@@ -4618,8 +4624,7 @@
             "tests/sites/umbrella-visual.test.ts",
             "tests/sites/vercel-package.test.ts",
             "tests/sites/web-experience-editor.test.ts",
-            "tests/syntax/check-syntax.test.ts",
-            "tests/e2e/examples-golden.test.ts"
+            "tests/syntax/check-syntax.test.ts"
           ],
           "present": true
         },
@@ -4835,7 +4840,8 @@
             "tests/e2e/sculpt-quality-golden.test.ts",
             "tests/e2e/umbrella-editor-viewport-golden.test.ts",
             "tests/e2e/umbrella-live-open-golden.test.ts",
-            "tests/e2e/examples-golden.test.ts"
+            "tests/e2e/examples-golden.test.ts",
+            "tests/e2e/desktop-editor-command-forms-golden.test.ts"
           ],
           "present": true
         },
@@ -8632,63 +8638,64 @@
       ".github/workflows/gate.yml"
     ],
     "goldenTests": [
-      "tests/e2e/asset-pipeline-golden.test.ts",
-      "tests/e2e/asset-ingestion-golden.test.ts",
-      "tests/e2e/desktop-web-export-golden.test.ts",
-      "tests/e2e/cli-golden-path.test.ts",
-      "tests/e2e/hybrid-sculpt-golden.test.ts",
-      "tests/e2e/sculpt-quality-golden.test.ts",
-      "tests/e2e/scene-composition-golden.test.ts",
-      "tests/e2e/examples-golden.test.ts",
-      "tests/e2e/rarity-engine-golden.test.ts",
-      "tests/e2e/rarity-provider-desktop-golden.test.ts",
-      "tests/e2e/profile-game-scene-golden.test.ts",
-      "tests/e2e/profile-web-golden-path.test.ts",
-      "tests/e2e/profile-kids-refuse-golden.test.ts",
-      "tests/e2e/importers-plugin-golden.test.ts",
-      "tests/e2e/plugin-capability-golden.test.ts",
-      "tests/e2e/umbrella-live-open-golden.test.ts",
-      "tests/e2e/umbrella-editor-viewport-golden.test.ts",
-      "tests/e2e/editor-catalog-intake-golden.test.ts",
-      "tests/e2e/catalog-fixture-commerce-golden.test.ts",
-      "tests/e2e/assistant-panel-golden.test.ts",
-      "tests/e2e/desktop-linux-bridge-golden.test.ts",
-      "tests/e2e/desktop-provider-host-golden.test.ts",
-      "tests/e2e/desktop-cli-local-bridge-golden.test.ts",
-      "tests/e2e/desktop-product-loop-golden.test.ts",
-      "tests/e2e/desktop-project-lifecycle-golden.test.ts",
-      "tests/e2e/desktop-project-browser-golden.test.ts",
-      "tests/e2e/desktop-scene-property-golden.test.ts",
-      "tests/e2e/desktop-hierarchy-golden.test.ts",
-      "tests/e2e/desktop-transform-golden.test.ts",
-      "tests/e2e/desktop-prefab-golden.test.ts",
-      "tests/e2e/desktop-play-session-golden.test.ts",
-      "tests/e2e/desktop-animation-golden.test.ts",
-      "tests/e2e/desktop-physics-golden.test.ts",
-      "tests/e2e/desktop-assistant-ask-golden.test.ts",
-      "tests/e2e/desktop-package-golden.test.ts",
-      "tests/e2e/desktop-profile-golden.test.ts",
-      "tests/e2e/desktop-workspace-layout-golden.test.ts",
-      "tests/e2e/desktop-extension-seams-golden.test.ts",
-      "tests/e2e/desktop-project-build-golden.test.ts",
-      "tests/e2e/desktop-capability-matrix-audit.test.ts",
-      "tests/docs/capability-matrix-audit.test.ts",
-      "tests/e2e/desktop-provider-authoring-engine-golden.test.ts",
-      "tests/docs/module-coverage.test.ts",
-      "tests/e2e/module-coverage-evidence.test.ts",
-      "tests/e2e/input-actions-golden.test.ts",
-      "tests/e2e/desktop-command-interactions-golden.test.ts",
-      "tests/e2e/desktop-control-inventory-golden.test.ts",
-      "packages/cli/test/bin-smoke.test.ts",
       "apps/desktop-shell/test/bin-smoke.test.ts",
       "apps/web-shell/test/bin-smoke.test.ts",
-      "tests/parity/shell-cli-parity.test.ts",
-      "tests/parity/open-path-policy-parity.test.ts",
+      "packages/cli/test/bin-smoke.test.ts",
+      "tests/docs/capability-matrix-audit.test.ts",
+      "tests/docs/module-coverage.test.ts",
+      "tests/e2e/asset-ingestion-golden.test.ts",
+      "tests/e2e/asset-pipeline-golden.test.ts",
+      "tests/e2e/assistant-panel-golden.test.ts",
+      "tests/e2e/catalog-fixture-commerce-golden.test.ts",
+      "tests/e2e/cli-golden-path.test.ts",
       "tests/e2e/contained-git-golden.test.ts",
+      "tests/e2e/desktop-animation-golden.test.ts",
+      "tests/e2e/desktop-assistant-ask-golden.test.ts",
       "tests/e2e/desktop-assistant-scene-loop-golden.test.ts",
+      "tests/e2e/desktop-capability-matrix-audit.test.ts",
+      "tests/e2e/desktop-cli-local-bridge-golden.test.ts",
+      "tests/e2e/desktop-command-interactions-golden.test.ts",
+      "tests/e2e/desktop-control-inventory-golden.test.ts",
+      "tests/e2e/desktop-editor-command-forms-golden.test.ts",
+      "tests/e2e/desktop-extension-seams-golden.test.ts",
+      "tests/e2e/desktop-hierarchy-golden.test.ts",
+      "tests/e2e/desktop-linux-bridge-golden.test.ts",
+      "tests/e2e/desktop-package-golden.test.ts",
+      "tests/e2e/desktop-physics-golden.test.ts",
+      "tests/e2e/desktop-play-session-golden.test.ts",
+      "tests/e2e/desktop-prefab-golden.test.ts",
+      "tests/e2e/desktop-product-loop-golden.test.ts",
+      "tests/e2e/desktop-profile-golden.test.ts",
+      "tests/e2e/desktop-project-browser-golden.test.ts",
+      "tests/e2e/desktop-project-build-golden.test.ts",
+      "tests/e2e/desktop-project-lifecycle-golden.test.ts",
+      "tests/e2e/desktop-provider-authoring-engine-golden.test.ts",
+      "tests/e2e/desktop-provider-host-golden.test.ts",
+      "tests/e2e/desktop-scene-property-golden.test.ts",
+      "tests/e2e/desktop-transform-golden.test.ts",
+      "tests/e2e/desktop-web-export-golden.test.ts",
+      "tests/e2e/desktop-workspace-layout-golden.test.ts",
+      "tests/e2e/editor-catalog-intake-golden.test.ts",
+      "tests/e2e/examples-golden.test.ts",
       "tests/e2e/full-editor-transactions-golden.test.ts",
       "tests/e2e/hosted-ai-metering-golden.test.ts",
-      "tests/e2e/physics-rapier-golden.test.ts"
+      "tests/e2e/hybrid-sculpt-golden.test.ts",
+      "tests/e2e/importers-plugin-golden.test.ts",
+      "tests/e2e/input-actions-golden.test.ts",
+      "tests/e2e/module-coverage-evidence.test.ts",
+      "tests/e2e/physics-rapier-golden.test.ts",
+      "tests/e2e/plugin-capability-golden.test.ts",
+      "tests/e2e/profile-game-scene-golden.test.ts",
+      "tests/e2e/profile-kids-refuse-golden.test.ts",
+      "tests/e2e/profile-web-golden-path.test.ts",
+      "tests/e2e/rarity-engine-golden.test.ts",
+      "tests/e2e/rarity-provider-desktop-golden.test.ts",
+      "tests/e2e/scene-composition-golden.test.ts",
+      "tests/e2e/sculpt-quality-golden.test.ts",
+      "tests/e2e/umbrella-editor-viewport-golden.test.ts",
+      "tests/e2e/umbrella-live-open-golden.test.ts",
+      "tests/parity/open-path-policy-parity.test.ts",
+      "tests/parity/shell-cli-parity.test.ts"
     ],
     "browserEvidence": [
       ".maestro/playbooks/Initiation/Working/Phase-01/Baseline.md",
@@ -8749,7 +8756,7 @@
       "routes": 29,
       "migrations": 8,
       "workflows": 5,
-      "goldenTests": 57
+      "goldenTests": 58
     },
     "documentedClaims": [
       {
