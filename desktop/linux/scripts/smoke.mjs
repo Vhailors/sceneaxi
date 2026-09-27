@@ -124,11 +124,35 @@ if (profileEvidence.kind !== "sceneaxi.profile-evidence" || profileEvidence.save
     typeof profileEvidence.digest !== "string" || !/^sha256:[0-9a-f]{64}$/.test(profileEvidence.digest)) {
   failures.push("#270 profile evidence lacks the matching source digest and measured presentation draw-call count");
 }
-for (const feature of ["#255", "#257"]) {
-  if (features?.[feature]?.gui !== false || features?.[feature]?.state !== "pending-gui-control" ||
-      !Array.isArray(features?.[feature]?.pendingControls) || features[feature].pendingControls.length === 0) {
-    failures.push(`${feature} is not recorded as an explicit pending GUI gap`);
-  }
+const prefabProof = features?.["#255"];
+if (prefabProof?.gui !== true || prefabProof.state !== "prefab-define-instance-override-refresh-accepted" ||
+    prefabProof.define?.result?.code !== "COMMAND_COMPLETED" || prefabProof.define?.unchangedBeforeAccept !== true ||
+    prefabProof.define?.changed !== true || prefabProof.define?.definitionId !== "smoke-prefab" ||
+    !/^sha256:[0-9a-f]{64}$/.test(prefabProof.define?.digestBefore ?? "") ||
+    !/^sha256:[0-9a-f]{64}$/.test(prefabProof.define?.digestAfter ?? "") || prefabProof.define.digestBefore === prefabProof.define.digestAfter ||
+    prefabProof.inspect?.code !== "COMMAND_COMPLETED" || prefabProof.inspect?.definitionId !== "smoke-prefab" ||
+    prefabProof.instance?.result?.code !== "COMMAND_COMPLETED" || prefabProof.instance?.unchangedBeforeAccept !== true ||
+    prefabProof.instance?.changed !== true || prefabProof.instance?.instanceKey !== "smoke-copy" ||
+    !/^sha256:[0-9a-f]{64}$/.test(prefabProof.instance?.digestBefore ?? "") ||
+    !/^sha256:[0-9a-f]{64}$/.test(prefabProof.instance?.digestAfter ?? "") || prefabProof.instance.digestBefore === prefabProof.instance.digestAfter ||
+    prefabProof.override?.result?.code !== "COMMAND_COMPLETED" || prefabProof.override?.unchangedBeforeAccept !== true ||
+    prefabProof.override?.changed !== true || prefabProof.override?.value !== 2.75 ||
+    !/^sha256:[0-9a-f]{64}$/.test(prefabProof.override?.digestBefore ?? "") ||
+    !/^sha256:[0-9a-f]{64}$/.test(prefabProof.override?.digestAfter ?? "") || prefabProof.override.digestBefore === prefabProof.override.digestAfter ||
+    prefabProof.refresh?.result?.code !== "COMMAND_COMPLETED" || prefabProof.refresh?.unchangedBeforeAccept !== true ||
+    prefabProof.refresh?.changed !== true || prefabProof.refresh?.stale !== false ||
+    !/^sha256:[0-9a-f]{64}$/.test(prefabProof.refresh?.digestAfter ?? "")) {
+  failures.push("#255 GUI prefab define/inspect/instance/override/refresh did not preserve review boundaries and persist the expected catalog");
+}
+const inputActionProof = features?.["#257"];
+if (inputActionProof?.gui !== true || inputActionProof.state !== "input-actions-inspected-rebound-and-reset" ||
+    inputActionProof.inspectCode !== "COMMAND_COMPLETED" || inputActionProof.actionId !== "editor.project.save" ||
+    inputActionProof.reviewCode !== "COMMAND_COMPLETED" || inputActionProof.bindingPersisted !== true ||
+    inputActionProof.unchangedBeforeReview !== true || inputActionProof.resetReviewCode !== "COMMAND_COMPLETED" ||
+    inputActionProof.resetUnchangedBeforeReview !== true || inputActionProof.resetPersistedChangedBytes !== true ||
+    !/^sha256:[0-9a-f]{64}$/.test(inputActionProof.resetDigestBefore ?? "") ||
+    !/^sha256:[0-9a-f]{64}$/.test(inputActionProof.finalDigest ?? "") || inputActionProof.resetDigestBefore === inputActionProof.finalDigest) {
+  failures.push("#257 GUI input-action inspect/rebind/reset did not persist only after explicit form review");
 }
 for (const [feature, state] of [["#267", "unsupported-host-macos"], ["#268", "unsupported-host-windows"]]) {
   if (features?.[feature]?.gui !== false || features?.[feature]?.state !== state) {
@@ -192,14 +216,45 @@ if (features?.["#254"]?.gui !== true || features["#254"].state !== "scene-proper
     features["#254"].digestBeforeAccept === features["#254"].digestAfterAccept) {
   failures.push("#254 GUI entity selection, inspector stage, pre-Accept immutability, or persisted transform digest was wrong");
 }
-for (const [feature, commands] of [
-  ["#258", ["viewport-source-set"]], ["#260", ["physics-evaluate"]],
-  ["#262", ["package-install", "package-remove"]],
-  ["#263", ["project-migration-commit"]], ["#269", ["extension-start"]],
-]) {
-  if (JSON.stringify(features?.[feature]?.pendingControls) !== JSON.stringify(commands)) {
-    failures.push(`${feature} pending control list is inaccurate`);
-  }
+const viewportSource = features?.["#258"]?.sourceSet;
+if (viewportSource?.gui !== true || viewportSource.state !== "viewport-source-set-completed" ||
+    viewportSource.source !== "scene" || viewportSource.code !== "COMMAND_COMPLETED" ||
+    viewportSource.authoringBytesUnchanged !== true || !/^sha256:[0-9a-f]{64}$/.test(viewportSource.digest ?? "")) {
+  failures.push("#258 viewport-source-set did not complete through the GUI without changing authoring bytes");
+}
+const physicsEvaluation = features?.["#260"]?.evaluate;
+if (physicsEvaluation?.gui !== true || physicsEvaluation.code !== "COMMAND_COMPLETED" ||
+    physicsEvaluation.kind !== "sceneaxi.scene-physics-evaluation" || physicsEvaluation.steps !== 1 || physicsEvaluation.finalStep !== 1 ||
+    physicsEvaluation.authoringBytesUnchanged !== true || !/^sha256:[0-9a-f]{64}$/.test(physicsEvaluation.digest ?? "")) {
+  failures.push("#260 physics-evaluate did not return the one-step GUI evaluation without writing project bytes");
+}
+const packageProof = features?.["#262"];
+if (packageProof?.gui !== true || packageProof.state !== "package-installed-inspected-and-removed" ||
+    packageProof.install?.result?.code !== "COMMAND_COMPLETED" || packageProof.install?.unchangedBeforeAccept !== true ||
+    packageProof.install?.changed !== true || packageProof.install?.pluginId !== "dev.sceneaxi.sample.intake-source" ||
+    !/^sha256:[0-9a-f]{64}$/.test(packageProof.install?.digestBefore ?? "") ||
+    !/^sha256:[0-9a-f]{64}$/.test(packageProof.install?.digestAfter ?? "") || packageProof.install.digestBefore === packageProof.install.digestAfter ||
+    packageProof.install?.persisted !== true || packageProof.inspect?.code !== "COMMAND_COMPLETED" ||
+    packageProof.inspect?.packageId !== "dev.sceneaxi.sample.intake-source" ||
+    packageProof.remove?.result?.code !== "COMMAND_COMPLETED" || packageProof.remove?.unchangedBeforeAccept !== true ||
+    packageProof.remove?.changed !== true || packageProof.remove?.persistedRemoved !== true ||
+    !/^sha256:[0-9a-f]{64}$/.test(packageProof.remove?.digestBefore ?? "") ||
+    !/^sha256:[0-9a-f]{64}$/.test(packageProof.remove?.digestAfter ?? "") || packageProof.remove.digestBefore === packageProof.remove.digestAfter) {
+  failures.push("#262 GUI package install/inspect/remove did not persist the reviewed package lifecycle");
+}
+const migrationProof = features?.["#263"]?.migration;
+if (migrationProof?.gui !== true || migrationProof.state !== "legacy-project-migrated" ||
+    migrationProof.proposalCode !== "COMMAND_COMPLETED" || migrationProof.commitCode !== "COMMAND_COMPLETED" ||
+    migrationProof.sourceBytesUnchanged !== true || migrationProof.manifestPersisted !== true ||
+    !/^sha256:[0-9a-f]{64}$/.test(migrationProof.digest ?? "")) {
+  failures.push("#263 project-migration-commit did not migrate a GUI-opened legacy scratch project");
+}
+const extensionProof = features?.["#269"];
+if (extensionProof?.gui !== true || extensionProof.state !== "inspected-seam-refused-without-adapter" ||
+    extensionProof.inspectCode !== "COMMAND_COMPLETED" || extensionProof.seamId !== "networking" ||
+    extensionProof.code !== "EXTENSION_ADAPTER_ABSENT" || extensionProof.authoringBytesUnchanged !== true ||
+    !/^sha256:[0-9a-f]{64}$/.test(extensionProof.digest ?? "")) {
+  failures.push("#269 extension-start did not report the named absent-adapter refusal for the inspected seam");
 }
 if (features?.["#258"]?.state !== "acknowledged" || typeof features["#258"]?.frame !== "number" ||
     !features["#258"].stop.startsWith("Stopped ·") || !features["#258"].reset.startsWith("Reset ·") ||

@@ -41,8 +41,8 @@ pnpm smoke --packaged # the same proof from the electron-builder output
 ```
 
 Headless hosts run the smoke under `xvfb-run -a`; it forces SwiftShader so WebGL
-stays a real software rasterizer rather than a stub. `--smoke` prints one JSON
-line proving: bridge handshake, a real kernel scene session bootstrapped through
+stays a real software rasterizer rather than a stub. On a green run, `--smoke`
+prints one JSON proof line covering the bridge handshake, a real kernel scene session bootstrapped through
 `@sceneaxi/engine-orchestrator` with digests that move across ticks, an
 authoring selection → proposal review → atomic save → fresh-session reopen → Play
 round trip for selected Translation X, Rotation Y, and Scale Z plus bounded
@@ -52,17 +52,9 @@ frame acknowledgement, restart selection recovery, confirmation and immutable
 mutation refusals, a static Web export whose source bytes and Delivery Handoff
 digests are verified, and the renderer's real presentation frame report
 (`backend three`, `surface webgl-canvas` where a drawing buffer exists). The
-proof JSON also records `features` keyed `#254`–`#270`. GUI actions cover inspector Stage/Accept with before/after document digests
-(#254), native-picker asset import, source revision, GUI Reload, and reimport with
-changed manifest digest (#256), animation apply/Accept/evaluation at the accepted
-content hash (#259), and physics apply/Accept with persisted gravity (#260). They
-also cover Play/Stop/Reset, fixture Agent proposal, package inspection, contained
-Git status/diff/stage, workspace inspect/apply/reset, project build, extension
-inspect, and profile evidence. The prefab, input-action, physics-evaluation,
-viewport-source, package install/remove, migration-commit, and extension-start
-controls remain pending. macOS and Windows artifact targets are reported
-unavailable on Linux. All GUI mutations use only the disposable smoke project;
-the asset picker is stubbed only at Electron's native-dialog boundary.
+proof JSON also records `features` keyed `#254`–`#270`. GUI actions cover inspector Stage/Accept with before/after document digests (#254), asset import, source revision, GUI Reload, and reimport with changed manifest digest (#256), animation apply/Accept/evaluation at the accepted content hash (#259), and physics apply/Accept plus a read-only one-step evaluation (#260). The smoke also drives Play/Stop/Reset and viewport-source selection (#258), prefab define/inspect/instance/override/refresh (#255), input-action inspect/rebind/reset (#257), package install/inspect/remove (#262), and the named extension adapter refusal (#269). Git status/diff/stage and migration commit share #263 evidence. The migration proof uses a separate legacy scratch project. Workspace inspect/apply/reset, project build, fixture Agent proposal, and profile evidence remain covered. macOS and Windows artifact targets report unavailable on Linux. The asset picker is stubbed only at Electron's native-dialog boundary.
+
+The audio proof runs after these editor feature steps. At commit `ab2339d`, the smoke reaches audio Play and then fails with `DESKTOP_SCENE_NOT_COMPOSABLE` after the asset-import sequence. The smoke does not skip that failure.
 
 The bound Build inspector also projects the accepted composition as versioned
 hierarchy v1: distinct stable artifact and object ids, parent/child depth,

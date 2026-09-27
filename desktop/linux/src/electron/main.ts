@@ -28,7 +28,12 @@ import { join, sep } from "node:path";
 import { BrowserWindow, Menu, app, crashReporter, dialog, ipcMain, shell } from "electron";
 import { DESKTOP_MINIMUM_WINDOW } from "@sceneaxi/desktop-shell";
 import { inspectProjectModel } from "@sceneaxi/authoring-core";
-import { createEditorCommandInvocation, parseDeliveryHandoffText } from "@sceneaxi/schemas";
+import {
+  createEditorCommandInvocation,
+  EXTENSION_SEAM_REFUSALS,
+  parseDeliveryHandoffText,
+  PROJECT_MANIFEST_PATH,
+} from "@sceneaxi/schemas";
 import { DESKTOP_BYO_CONFIGURATION_CHANNEL } from "../lib/byo-configuration-contract.js";
 import {
   DESKTOP_ACTIVE_DOCUMENT_PATH,
@@ -205,6 +210,7 @@ async function clickRendererControl(
       candidate.getBoundingClientRect().height > 0 &&
       ${text === undefined ? "true" : `candidate.textContent?.trim() === ${JSON.stringify(text)}`});
     if (!(element instanceof HTMLElement)) return null;
+    element.scrollIntoView({ block: 'center', inline: 'nearest' });
     const rect = element.getBoundingClientRect();
     const x = Math.round(rect.left + rect.width * ${position});
     const y = Math.round(rect.top + rect.height / 2);
@@ -212,7 +218,16 @@ async function clickRendererControl(
     return { x, y, hit: hit === element || element.contains(hit), hitTag: hit?.tagName ?? null };
   })()`);
   if (target === null || target.hit !== true) {
-    throw new Error(`Electron pointer hit-test failed for ${selector}: ${JSON.stringify(target)}`);
+    const candidates = await window.webContents.executeJavaScript(`(() => [...document.querySelectorAll(${JSON.stringify(selector)})].map((element) => ({
+      tag: element.tagName,
+      text: element.textContent?.trim().slice(0, 80),
+      hidden: element.hidden,
+      parentHidden: element.closest('[hidden]')?.tagName ?? null,
+      rect: (() => { const rect = element.getBoundingClientRect(); return [rect.x, rect.y, rect.width, rect.height]; })(),
+      mode: document.querySelector('.shell')?.dataset.mode,
+      inspectorVisible: getComputedStyle(document.querySelector('.inspector')).display,
+    })))()`);
+    throw new Error(`Electron pointer hit-test failed for ${selector}: ${JSON.stringify({ target, candidates })}`);
   }
   const point = { x: target.x, y: target.y };
   window.webContents.sendInputEvent({ type: "mouseMove", ...point });
@@ -229,6 +244,48 @@ async function waitForRenderer(window: BrowserWindow, expression: string): Promi
     }
     return false;
   })()`);
+}
+
+async function fillRendererCommandField(
+  window: BrowserWindow,
+  commandId: string,
+  fieldName: string,
+  value: string,
+): Promise<boolean> {
+  return await window.webContents.executeJavaScript(`(() => {
+    const selector = ${JSON.stringify(commandId === "viewport-source-set"
+      ? `[data-command-field="${fieldName}"]`
+      : `[data-editor-command-form="${commandId}"] [data-command-field="${fieldName}"]`)};
+    const field = document.querySelector(selector);
+    if (!(field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement || field instanceof HTMLSelectElement)) return false;
+    if (field instanceof HTMLSelectElement && ![...field.options].some((option) => option.value === ${JSON.stringify(value)})) return false;
+    field.focus();
+    field.value = ${JSON.stringify(value)};
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    field.dispatchEvent(new Event('change', { bubbles: true }));
+    return field.value === ${JSON.stringify(value)};
+  })()`);
+}
+
+async function rendererOutcome(window: BrowserWindow) {
+  return await window.webContents.executeJavaScript(`(() => {
+    const dialog = document.querySelector('[data-overlay="outcome"]');
+    return {
+      visible: dialog instanceof HTMLElement && !dialog.hidden,
+      title: document.querySelector('[data-outcome-title]')?.textContent ?? '',
+      code: document.querySelector('[data-outcome-code]')?.textContent ?? '',
+      message: document.querySelector('[data-outcome-message]')?.textContent ?? '',
+    };
+  })()`);
+}
+
+async function dismissRendererOutcome(window: BrowserWindow): Promise<void> {
+  const outcome = await rendererOutcome(window);
+  if (!outcome.visible) return;
+  await clickRendererControl(window, '[data-overlay="outcome"] [data-action="overlay"][data-value="none"]');
+  if (!await waitForRenderer(window, "document.querySelector('[data-overlay=\"outcome\"]')?.hidden === true")) {
+    throw new Error("the outcome dialog did not close through its own GUI control");
+  }
 }
 
 async function runAudioResetSmokeProof(window: BrowserWindow): Promise<boolean> {
@@ -1402,6 +1459,7 @@ async function start(): Promise<void> {
     stagedValue: number;
     snapIncrement?: string;
     status?: string;
+    transformMode?: string;
     outcome?: string;
     outcomeCode?: string;
     badge?: string;
@@ -1660,6 +1718,302 @@ async function start(): Promise<void> {
     fail(`Animation evaluate used a stale content version after the GUI proposal was accepted: ${guiAnimationEvaluation}`);
   }
 
+  const guiCommandFormProofs = new Map<string, object>();
+  const fileBytes = () => readFileSync(documentFile, "utf8");
+  const digestBytes = (value: string) => `sha256:${createHash("sha256").update(value).digest("hex")}`;
+  const readCommandFieldOptions = async (commandId: string, fieldName: string) =>
+    await window.webContents.executeJavaScript(`(() => {
+      const field = document.querySelector('[data-editor-command-form="${commandId}"] [data-command-field="${fieldName}"]');
+      return field instanceof HTMLSelectElement ? [...field.options].map((option) => option.value).filter(Boolean) : [];
+    })()`);
+  const readGuiOutcomeAfter = async () => {
+    if (!await waitForRenderer(window, "document.querySelector('[data-overlay=\"outcome\"]')?.hidden === false")) {
+      fail("GUI command did not open its outcome dialog");
+    }
+    const outcome = await rendererOutcome(window);
+    if (!await waitForRenderer(window, "document.querySelector('[data-product-action][data-busy=\"true\"]') === null")) {
+      fail(`GUI command action did not settle after its outcome: ${JSON.stringify(outcome)}`);
+    }
+    return outcome;
+  };
+  const submitGuiForm = async (commandId: string) => {
+    await dismissRendererOutcome(window);
+    const ready = await window.webContents.executeJavaScript(`(() => {
+      const button = document.querySelector('[data-editor-command-submit="${commandId}"]');
+      return button instanceof HTMLButtonElement && !button.disabled;
+    })()`);
+    if (!ready) fail(`${commandId} form is not enabled after its GUI prerequisites`);
+    await clickRendererControl(window, `[data-editor-command-submit="${commandId}"]`);
+    return await readGuiOutcomeAfter();
+  };
+  const runGuiMenuCommand = async (commandId: string) => {
+    await dismissRendererOutcome(window);
+    await clickRendererControl(window, '[data-menu-trigger="file"]');
+    if (!await waitForRenderer(window, "document.querySelector('#menu-panel-file')?.hidden === false")) fail("File menu did not open through the GUI");
+    await clickRendererControl(window, `#menu-command-${commandId}`);
+    return await readGuiOutcomeAfter();
+  };
+  const acceptGuiSceneReview = async (label = "scene command") => {
+    await dismissRendererOutcome(window);
+    await clickRendererControl(window, '[data-action="dock-tab"][data-value="changes"]');
+    if (!await waitForRenderer(window, "document.querySelector('[data-change-proposal]')?.hidden === false")) {
+      fail("GUI Change Review did not show the staged proposal");
+    }
+    await clickRendererControl(window, '[data-action="change-accept"]');
+    if (!await waitForRenderer(window, "document.querySelector('[data-change-badge]')?.textContent === '0' && document.querySelector('[data-project-status]')?.textContent?.includes('saved') && document.querySelector('[data-product-action][data-busy=\"true\"]') === null")) {
+      const state = await window.webContents.executeJavaScript(`({ badge: document.querySelector('[data-change-badge]')?.textContent, status: document.querySelector('[data-project-status]')?.textContent, outcome: document.querySelector('[data-outcome-code]')?.textContent, proposalHidden: document.querySelector('[data-change-proposal]')?.hidden })`);
+      fail(`GUI Change Review Accept did not save ${label}: ${JSON.stringify(state)}`);
+    }
+    await dismissRendererOutcome(window);
+  };
+  const setProfileAndMode = async () => {
+    await dismissRendererOutcome(window);
+    await clickRendererControl(window, '[data-action="profile"][data-value="game"]');
+    if (!await waitForRenderer(window, "document.querySelector('.shell')?.dataset.profile === 'game'")) fail("Game profile did not open for command forms");
+    await clickRendererControl(window, '[data-action="mode"][data-value="build"]');
+    if (!await waitForRenderer(window, "document.querySelector('[data-mode-panel=\"build\"]')?.hidden === false")) fail("Build mode did not open for command forms");
+  };
+  const submitAndAcceptMutation = async (commandId: string) => {
+    const before = fileBytes();
+    const result = await submitGuiForm(commandId);
+    if (result.code !== "COMMAND_COMPLETED") fail(`${commandId} did not stage through its GUI form: ${JSON.stringify(result)}`);
+    const unchangedBeforeAccept = fileBytes() === before;
+    await acceptGuiSceneReview(commandId);
+    const after = fileBytes();
+    if (!unchangedBeforeAccept || after === before) fail(`${commandId} did not defer persisted bytes until GUI Accept`);
+    return { result, unchangedBeforeAccept, digestBefore: digestBytes(before), digestAfter: digestBytes(after), changed: after !== before };
+  };
+  await setProfileAndMode();
+
+  const viewportBefore = fileBytes();
+  await dismissRendererOutcome(window);
+  await clickRendererControl(window, '[data-command="run-play"]');
+  if (!await waitForRenderer(window, "document.querySelector('.viewport')?.dataset.playback === 'acknowledged'")) fail("Play did not create a viewport session for viewport-source-set");
+  if (!await fillRendererCommandField(window, "viewport-source-set", "source", "scene")) fail("viewport-source-set source field was not available through the GUI");
+  const viewportSourceResult = await submitGuiForm("viewport-source-set");
+  const viewportAfter = fileBytes();
+  if (viewportSourceResult.code !== "COMMAND_COMPLETED" || viewportAfter !== viewportBefore) fail(`viewport-source-set changed authoring bytes or refused: ${JSON.stringify(viewportSourceResult)}`);
+  guiCommandFormProofs.set("#258", {
+    gui: true,
+    state: "viewport-source-set-completed",
+    source: "scene",
+    code: viewportSourceResult.code,
+    authoringBytesUnchanged: viewportAfter === viewportBefore,
+    digest: digestBytes(viewportAfter),
+  });
+  await dismissRendererOutcome(window);
+  await clickRendererControl(window, '[data-action="mode"][data-value="run"]');
+  await clickRendererControl(window, '[data-command="run-stop"]');
+  if (!await waitForRenderer(window, "(document.querySelector('[data-product-run-report]')?.textContent ?? '').startsWith('Stopped ·')")) fail("viewport-source smoke Play did not stop through the GUI");
+  await setProfileAndMode();
+
+  await clickRendererControl(window, '[data-command="physics-inspect"]');
+  if (!await waitForRenderer(window, "document.querySelector('[data-catalog-report=\"physics\"]')?.textContent !== ''")) fail("physics inspection did not render its GUI catalog");
+  const physicsInspectionMessage = await window.webContents.executeJavaScript(`document.querySelector('[data-catalog-report="physics"]')?.textContent ?? ''`);
+  if (!physicsInspectionMessage.includes('"physicsHostReady": true')) fail(`physics inspection did not ready the evaluator: ${physicsInspectionMessage}`);
+  const physicsBeforeEvaluate = fileBytes();
+  if (!await fillRendererCommandField(window, "physics-evaluate", "steps", "1")) fail("physics-evaluate steps field was unavailable");
+  const physicsEvaluation = await submitGuiForm("physics-evaluate");
+  const physicsAfterEvaluate = fileBytes();
+  const physicsReport = JSON.parse(physicsEvaluation.message);
+  const physicsEvaluatedSteps = physicsReport.snapshots?.length ?? 0;
+  if (physicsEvaluation.code !== "COMMAND_COMPLETED" || physicsReport.kind !== "sceneaxi.scene-physics-evaluation" || physicsEvaluatedSteps !== 1 || physicsReport.snapshots[0]?.step !== 1 || physicsAfterEvaluate !== physicsBeforeEvaluate) {
+    fail(`physics-evaluate did not return a read-only one-step evaluation: ${JSON.stringify({ physicsEvaluation, authoringUnchanged: physicsAfterEvaluate === physicsBeforeEvaluate })}`);
+  }
+  guiCommandFormProofs.set("#260", {
+    evaluate: { gui: true, code: physicsEvaluation.code, kind: physicsReport.kind, steps: physicsEvaluatedSteps, finalStep: physicsReport.snapshots[0].step, authoringBytesUnchanged: physicsAfterEvaluate === physicsBeforeEvaluate, digest: digestBytes(physicsAfterEvaluate) },
+  });
+  await dismissRendererOutcome(window);
+
+  if (!await fillRendererCommandField(window, "scene-prefab-define", "definitionId", "smoke-prefab")) fail("prefab definition ID field was unavailable");
+  const prefabDefine = await submitAndAcceptMutation("scene-prefab-define");
+  const prefabAfterDefine = fileBytes();
+  if (!prefabAfterDefine.includes("smoke-prefab")) fail("accepted prefab definition was not persisted");
+  const prefabInspect = await submitGuiForm("scene-prefab-inspect");
+  const prefabCatalog = JSON.parse(prefabInspect.message);
+  if (prefabInspect.code !== "COMMAND_COMPLETED" || prefabCatalog.kind !== "sceneaxi.scene-prefab-inspection" || !prefabCatalog.catalog?.definitions?.some((definition: { definitionId?: string }) => definition.definitionId === "smoke-prefab")) {
+    fail(`GUI prefab inspection did not return the accepted definition: ${JSON.stringify(prefabInspect)}`);
+  }
+  await dismissRendererOutcome(window);
+  const prefabDefinitionOptions = await readCommandFieldOptions("scene-prefab-instance", "definitionId");
+  const prefabParentOptions = await readCommandFieldOptions("scene-prefab-instance", "parentInstanceId");
+  if (!prefabDefinitionOptions.includes("smoke-prefab") || prefabParentOptions.length === 0) fail("GUI prefab instance prerequisites were not populated by inspection");
+  for (const [fieldName, value] of [["definitionId", "smoke-prefab"], ["parentInstanceId", prefabParentOptions[0]], ["instanceKey", "smoke-copy"]]) {
+    if (!await fillRendererCommandField(window, "scene-prefab-instance", fieldName, value)) fail(`could not fill prefab instance field ${fieldName}`);
+  }
+  const prefabInstance = await submitAndAcceptMutation("scene-prefab-instance");
+  const prefabAfterInstance = fileBytes();
+  if (!prefabAfterInstance.includes("smoke-copy")) fail("accepted prefab instance was not persisted");
+  const inspectForOverride = await submitGuiForm("scene-prefab-inspect");
+  const instanceOptions = await readCommandFieldOptions("scene-prefab-override", "instanceId");
+  const sourceOptions = await readCommandFieldOptions("scene-prefab-override", "sourceInstanceId");
+  if (inspectForOverride.code !== "COMMAND_COMPLETED" || instanceOptions.length === 0 || sourceOptions.length === 0) fail("GUI prefab inspection did not populate override prerequisites");
+  await dismissRendererOutcome(window);
+  const overrideValues: ReadonlyArray<readonly [string, string]> = [
+    ["instanceId", instanceOptions.at(-1) ?? ""],
+    ["sourceInstanceId", DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId],
+    ["propertyId", "translation-x"],
+    ["newValue", "2.75"],
+  ];
+  for (const [fieldName, value] of overrideValues) {
+    if (!await fillRendererCommandField(window, "scene-prefab-override", fieldName, value)) fail(`could not fill prefab override field ${fieldName}`);
+  }
+  const prefabOverride = await submitAndAcceptMutation("scene-prefab-override");
+  if (!fileBytes().includes('"value": 2.75')) fail("accepted prefab override did not persist its exact value");
+  const prefabRefreshInspect = await submitGuiForm("scene-prefab-inspect");
+  await dismissRendererOutcome(window);
+  const sourceProperty = await waitForGui<boolean>(`(() => {
+    const field = document.querySelector('#scene-property-translation-x');
+    if (!(field instanceof HTMLInputElement)) return false;
+    field.value = String(Number(field.value) + 0.1);
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    return true;
+  })()`);
+  if (!sourceProperty) fail("could not edit prefab source through the scene inspector");
+  await clickRendererControl(window, '[data-action="scene-property-stage"]');
+  await acceptGuiSceneReview("prefab source edit");
+  const refreshDefinitionOptions = await readCommandFieldOptions("scene-prefab-refresh", "definitionId");
+  if (prefabRefreshInspect.code !== "COMMAND_COMPLETED" || !refreshDefinitionOptions.includes("smoke-prefab")) fail("GUI prefab refresh prerequisite was not available");
+  if (!await fillRendererCommandField(window, "scene-prefab-refresh", "definitionId", "smoke-prefab")) fail("could not fill prefab refresh definition");
+  const prefabRefresh = await submitAndAcceptMutation("scene-prefab-refresh");
+  const prefabFinalBytes = fileBytes();
+  const prefabFinalInspection = await submitGuiForm("scene-prefab-inspect");
+  const finalPrefabReport = JSON.parse(prefabFinalInspection.message);
+  const refreshedPrefab = finalPrefabReport.resolved?.find((item: { definitionId: string; stale: boolean }) => item.definitionId === "smoke-prefab");
+  if (!prefabFinalBytes.includes("smoke-prefab") || prefabFinalInspection.code !== "COMMAND_COMPLETED" || refreshedPrefab === undefined || refreshedPrefab.stale) fail("prefab refresh did not update the stale definition");
+  await dismissRendererOutcome(window);
+  guiCommandFormProofs.set("#255", {
+    gui: true,
+    state: "prefab-define-instance-override-refresh-accepted",
+    define: { result: { code: prefabDefine.result.code }, unchangedBeforeAccept: prefabDefine.unchangedBeforeAccept, changed: prefabDefine.changed, digestBefore: prefabDefine.digestBefore, digestAfter: prefabDefine.digestAfter, definitionId: "smoke-prefab", persisted: prefabAfterDefine.includes("smoke-prefab") },
+    inspect: { code: prefabInspect.code, definitionId: prefabCatalog.catalog.definitions.find((definition: { definitionId: string }) => definition.definitionId === "smoke-prefab").definitionId },
+    instance: { result: { code: prefabInstance.result.code }, unchangedBeforeAccept: prefabInstance.unchangedBeforeAccept, changed: prefabInstance.changed, digestBefore: prefabInstance.digestBefore, digestAfter: prefabInstance.digestAfter, instanceKey: "smoke-copy", persisted: prefabAfterInstance.includes("smoke-copy") },
+    override: { result: { code: prefabOverride.result.code }, unchangedBeforeAccept: prefabOverride.unchangedBeforeAccept, changed: prefabOverride.changed, digestBefore: prefabOverride.digestBefore, digestAfter: prefabOverride.digestAfter, value: 2.75 },
+    refresh: { result: { code: prefabRefresh.result.code }, unchangedBeforeAccept: prefabRefresh.unchangedBeforeAccept, changed: prefabRefresh.changed, inspectionCode: prefabFinalInspection.code, stale: refreshedPrefab.stale, digestAfter: digestBytes(prefabFinalBytes) },
+  });
+
+  const packageDigest = `sha256:${createHash("sha256").update("contained-package-lock").digest("hex")}`;
+  const packageManifest = { pluginId: "dev.sceneaxi.sample.intake-source", pluginVersion: "0.1.0", capabilities: ["sceneaxi.sculpt.intake-source.v1"] };
+  if (!await fillRendererCommandField(window, "package-install", "locator", "fixtures/plugin-host/sculpt-intake-source") ||
+      !await fillRendererCommandField(window, "package-install", "manifest", JSON.stringify(packageManifest)) ||
+      !await fillRendererCommandField(window, "package-install", "digest", packageDigest)) fail("could not fill contained package install form");
+  const packageInstall = await submitAndAcceptMutation("package-install");
+  const packageAfterInstall = fileBytes();
+  if (!packageAfterInstall.includes(packageManifest.pluginId)) fail("accepted package install was not persisted");
+  const packageInspection = await runGuiMenuCommand("package-inspect");
+  const packageOptions = await readCommandFieldOptions("package-remove", "packageId");
+  if (packageInspection.code !== "COMMAND_COMPLETED" || !packageInspection.message.includes(packageManifest.pluginId) || !packageOptions.includes(packageManifest.pluginId)) fail("package inspection did not enable GUI removal of the installed package");
+  await dismissRendererOutcome(window);
+  if (!await fillRendererCommandField(window, "package-remove", "packageId", packageManifest.pluginId)) fail("could not select the inspected package for removal");
+  const packageRemove = await submitAndAcceptMutation("package-remove");
+  const packageAfterRemove = fileBytes();
+  if (packageAfterRemove.includes(packageManifest.pluginId)) fail("accepted package removal left the package in project bytes");
+  guiCommandFormProofs.set("#262", {
+    gui: true,
+    state: "package-installed-inspected-and-removed",
+    install: { result: { code: packageInstall.result.code }, unchangedBeforeAccept: packageInstall.unchangedBeforeAccept, changed: packageInstall.changed, digestBefore: packageInstall.digestBefore, digestAfter: packageInstall.digestAfter, pluginId: packageManifest.pluginId, persisted: packageAfterInstall.includes(packageManifest.pluginId) },
+    inspect: { code: packageInspection.code, packageId: packageManifest.pluginId },
+    remove: { result: { code: packageRemove.result.code }, unchangedBeforeAccept: packageRemove.unchangedBeforeAccept, changed: packageRemove.changed, digestBefore: packageRemove.digestBefore, digestAfter: packageRemove.digestAfter, packageId: packageManifest.pluginId, persistedRemoved: !packageAfterRemove.includes(packageManifest.pluginId) },
+  });
+
+  const extensionBytesBefore = fileBytes();
+  const extensionInspection = await runGuiMenuCommand("extension-inspect");
+  const seamOptions = await readCommandFieldOptions("extension-start", "seamId");
+  if (extensionInspection.code !== "COMMAND_COMPLETED" || !extensionInspection.message.includes("networking") || !seamOptions.includes("networking")) fail("extension inspect did not populate the networking seam in the GUI");
+  await dismissRendererOutcome(window);
+  if (!await fillRendererCommandField(window, "extension-start", "seamId", "networking")) fail("could not select inspected extension seam");
+  const extensionStart = await submitGuiForm("extension-start");
+  const extensionBytesAfter = fileBytes();
+  if (extensionStart.code !== EXTENSION_SEAM_REFUSALS.adapterAbsent || extensionBytesAfter !== extensionBytesBefore) fail(`extension-start did not show its named adapter-absent refusal without writing project bytes: ${JSON.stringify(extensionStart)}`);
+  guiCommandFormProofs.set("#269", {
+    gui: true,
+    state: "inspected-seam-refused-without-adapter",
+    inspectCode: extensionInspection.code,
+    seamId: "networking",
+    code: extensionStart.code,
+    authoringBytesUnchanged: extensionBytesAfter === extensionBytesBefore,
+    digest: digestBytes(extensionBytesAfter),
+  });
+  await dismissRendererOutcome(window);
+
+  const actionsPath = join(cwd, ".sceneaxi/input-actions.v1.json");
+  const inputBytesBefore = existsSync(actionsPath) ? readFileSync(actionsPath, "utf8") : null;
+  const inputInspect = await submitGuiForm("input-actions-inspect");
+  if (inputInspect.code !== "COMMAND_COMPLETED" || !inputInspect.message.includes("baseVersions") || !inputInspect.message.includes("editor.project.save")) fail("GUI input-action inspection did not return base versions and the save action");
+  await dismissRendererOutcome(window);
+  const rebindFields: ReadonlyArray<readonly [string, string]> = [
+    ["scope", "project"],
+    ["actionId", "editor.project.save"],
+    ["binding", JSON.stringify({ device: "keyboard", code: "KeyB", modifiers: ["primary"] })],
+  ];
+  for (const [fieldName, value] of rebindFields) {
+    if (!await fillRendererCommandField(window, "input-action-rebind", fieldName, value)) fail(`could not fill input-action rebind field ${fieldName}`);
+  }
+  const rebindStage = await submitGuiForm("input-action-rebind");
+  const rebindBeforeReview = existsSync(actionsPath) ? readFileSync(actionsPath, "utf8") : null;
+  const rebindUnchanged = rebindBeforeReview === inputBytesBefore;
+  if (rebindStage.code !== "INPUT_ACTION_REVIEW_REQUIRED" || !rebindUnchanged) fail(`input-action rebind wrote before its GUI review or used an unexpected result: ${JSON.stringify(rebindStage)}`);
+  await dismissRendererOutcome(window);
+  await clickRendererControl(window, '[data-editor-command-review="input-action-rebind"]');
+  const rebindReview = await readGuiOutcomeAfter();
+  const inputBytesAfterRebind = existsSync(actionsPath) ? readFileSync(actionsPath, "utf8") : null;
+  if (rebindReview.code !== "COMMAND_COMPLETED" || inputBytesAfterRebind === null || !inputBytesAfterRebind.includes('"code": "KeyB"')) fail("GUI input-action review did not persist the selected binding");
+  await dismissRendererOutcome(window);
+  const resetInspect = await submitGuiForm("input-actions-inspect");
+  if (resetInspect.code !== "COMMAND_COMPLETED") fail("GUI input-action reinspection failed before reset");
+  await dismissRendererOutcome(window);
+  if (!await fillRendererCommandField(window, "input-actions-reset", "scope", "project")) fail("could not fill input-actions reset scope");
+  const resetStage = await submitGuiForm("input-actions-reset");
+  const inputBytesBeforeReset = existsSync(actionsPath) ? readFileSync(actionsPath, "utf8") : null;
+  if (resetStage.code !== "INPUT_ACTION_REVIEW_REQUIRED" || inputBytesBeforeReset !== inputBytesAfterRebind) fail(`input-actions reset was not held for review: ${JSON.stringify(resetStage)}`);
+  await dismissRendererOutcome(window);
+  await clickRendererControl(window, '[data-editor-command-review="input-actions-reset"]');
+  const resetReview = await readGuiOutcomeAfter();
+  const inputBytesAfterReset = existsSync(actionsPath) ? readFileSync(actionsPath, "utf8") : null;
+  if (resetReview.code !== "COMMAND_COMPLETED" || inputBytesAfterReset === null || inputBytesAfterReset === inputBytesBeforeReset || !inputBytesAfterReset.includes('"schemaVersion"')) fail("GUI input-action reset did not persist the reviewed default map");
+  guiCommandFormProofs.set("#257", {
+    gui: true,
+    state: "input-actions-inspected-rebound-and-reset",
+    inspectCode: inputInspect.code,
+    actionId: "editor.project.save",
+    reviewCode: rebindReview.code,
+    bindingPersisted: inputBytesAfterRebind?.includes('"code": "KeyB"') === true,
+    unchangedBeforeReview: rebindUnchanged,
+    resetReviewCode: resetReview.code,
+    resetUnchangedBeforeReview: inputBytesBeforeReset === inputBytesAfterRebind,
+    resetPersistedChangedBytes: inputBytesAfterReset !== inputBytesBeforeReset,
+    resetDigestBefore: inputBytesBeforeReset === null ? null : digestBytes(inputBytesBeforeReset),
+    finalDigest: inputBytesAfterReset === null ? null : digestBytes(inputBytesAfterReset),
+  });
+  await dismissRendererOutcome(window);
+
+  const migrationRoot = smokeProjectDir();
+  const migrationDocument = join(migrationRoot, DESKTOP_ACTIVE_DOCUMENT_PATH);
+  const migrationManifest = join(migrationRoot, PROJECT_MANIFEST_PATH);
+  unlinkSync(migrationManifest);
+  await activateProject(migrationRoot);
+  await dismissRendererOutcome(window);
+  const migrationStatusBeforeReload = await window.webContents.executeJavaScript(`document.querySelector('[data-project-status]')?.textContent ?? ''`);
+  await clickRendererControl(window, '[data-action="document-reload"]');
+  if (!await waitForRenderer(window, `document.querySelector('[data-project-status]')?.textContent !== ${JSON.stringify(migrationStatusBeforeReload)} && document.querySelector('[data-project-state]')?.getAttribute('data-project-state') === 'open' && document.querySelector('[data-product-action][data-busy="true"]') === null`)) fail("GUI Reload did not reopen the migration scratch document");
+  const migrationBefore = readFileSync(migrationDocument, "utf8");
+  const migrationProposal = await runGuiMenuCommand("project-migration-propose");
+  if (migrationProposal.code !== "COMMAND_COMPLETED" || !existsSync(join(migrationRoot, ".sceneaxi/project-migration-proposal.json"))) fail(`GUI migration proposal did not persist its review artifact: ${JSON.stringify(migrationProposal)}`);
+  await dismissRendererOutcome(window);
+  const migrationCommit = await submitGuiForm("project-migration-commit");
+  const migrationAfter = readFileSync(migrationDocument, "utf8");
+  const migrationManifestBytes = readFileSync(migrationManifest, "utf8");
+  if (migrationCommit.code !== "COMMAND_COMPLETED" || migrationAfter !== migrationBefore || !migrationManifestBytes.includes('"schemaVersion"')) fail(`GUI migration commit did not persist a native manifest without rewriting source bytes: ${JSON.stringify(migrationCommit)}`);
+  guiCommandFormProofs.set("#263", {
+    migration: { gui: true, state: "legacy-project-migrated", proposalCode: migrationProposal.code, commitCode: migrationCommit.code, sourceBytesUnchanged: migrationAfter === migrationBefore, manifestPersisted: migrationManifestBytes.includes('"schemaVersion"'), digest: digestBytes(migrationManifestBytes) },
+  });
+  await dismissRendererOutcome(window);
+  await activateProject(cwd);
+  const migrationStatusBeforeRestore = await window.webContents.executeJavaScript(`document.querySelector('[data-project-status]')?.textContent ?? ''`);
+  await clickRendererControl(window, '[data-action="document-reload"]');
+  if (!await waitForRenderer(window, `document.querySelector('[data-project-status]')?.textContent !== ${JSON.stringify(migrationStatusBeforeRestore)} && document.querySelector('[data-project-state]')?.getAttribute('data-project-state') === 'open' && document.querySelector('[data-product-action][data-busy="true"]') === null`)) fail("GUI Reload did not restore the main smoke document after migration proof");
+  rmSync(migrationRoot, { recursive: true, force: true });
+
   const guiAssetImport = async () => await waitForGui<{
     staged: boolean;
     status: string;
@@ -1728,9 +2082,10 @@ async function start(): Promise<void> {
       document.querySelector('[data-action="web-inject-asset"]') instanceof HTMLElement &&
       document.querySelector('[data-product-action][data-busy="true"]') === null);
   })()`);
+  const guiFeatureBytesBeforeAsset = fileBytes();
   const guiAssetFirstStage = await guiAssetImport();
   const assetFirstBeforeAccept = readFileSync(documentFile, "utf8");
-  const assetFirstStagedUnchanged = assetFirstBeforeAccept === animationAcceptedBytes;
+  const assetFirstStagedUnchanged = assetFirstBeforeAccept === guiFeatureBytesBeforeAsset;
   const guiAssetFirstAccepted = await guiAssetAccept();
   const assetFirstAcceptedBytes = readFileSync(documentFile, "utf8");
   const guiAssetFirstDigest = await guiAssetDigest(guiAssetPath);
@@ -1877,30 +2232,6 @@ async function start(): Promise<void> {
       } else {
         results['#261'] = { gui: false, state: 'pending-gui-control' };
       }
-      const transformMode = document.querySelector('[data-action="scene-transform-mode"][data-value="rotate"]');
-      const nudge = document.querySelector('[data-action="scene-transform-nudge"][data-axis="x"][data-sign="1"]');
-      if (transformMode instanceof HTMLElement && nudge instanceof HTMLElement) {
-        transformMode.click();
-        nudge.click();
-        results['#254'] = {
-          gui: true,
-          state: 'rotate-mode-and-positive-x-nudge-clicked',
-          transformMode: document.querySelector('.shell')?.getAttribute('data-transform-mode') ?? '',
-          diagnostic: document.querySelector('[data-scene-property-diagnostic]')?.textContent ?? '',
-          pendingProof: ['scene-property-stage GUI proposal'],
-        };
-      } else {
-        results['#254'] = { gui: false, state: 'pending-gui-control' };
-      }
-      for (const feature of ['#255', '#257']) {
-        results[feature] = {
-          gui: false,
-          state: 'pending-gui-control',
-          pendingControls: feature === '#255'
-            ? ['scene-prefab-*']
-            : ['input-actions-inspect', 'input-action-rebind', 'input-actions-reset'],
-        };
-      }
       return results;
     })()`,
   )) as Record<string, {
@@ -1911,8 +2242,6 @@ async function start(): Promise<void> {
     code?: string;
     message?: string;
     result?: string;
-    pendingControls?: string[];
-    pendingProof?: string[];
   }>;
 
   const audioSwitchRoot = mkdtempSync(join(tmpdir(), "sceneaxi-audio-switch-"));
@@ -1947,7 +2276,7 @@ async function start(): Promise<void> {
 
   await localBridgeServer?.close();
   localBridgeServer = null;
-  if (bridge !== null && !bridge.close()) {
+  if (closeActiveDesktopBridge !== null && !closeActiveDesktopBridge()) {
     fail("The desktop mutation-owner lease could not be released after smoke verification.");
   }
   bridge = null;
@@ -2008,6 +2337,8 @@ async function start(): Promise<void> {
       frameReport,
       features: {
         ...guiFeatures,
+        '#255': guiCommandFormProofs.get('#255'),
+        '#257': guiCommandFormProofs.get('#257'),
         '#254': {
           gui: true,
           state: 'scene-property-staged-and-accepted',
@@ -2033,7 +2364,7 @@ async function start(): Promise<void> {
           reloadCompleted: guiReloadCompleted,
           unchangedBeforeAccept: assetFirstStagedUnchanged && assetSecondStagedUnchanged,
         },
-        '#258': { gui: true, state: playbackDom.state, frame: playbackDom.frame, stop: playbackDom.stop, reset: playbackDom.reset, pendingControls: ['viewport-source-set'] },
+        '#258': { gui: true, state: playbackDom.state, frame: playbackDom.frame, stop: playbackDom.stop, reset: playbackDom.reset, sourceSet: guiCommandFormProofs.get('#258') },
         '#259': {
           gui: true,
           state: 'animation-applied-and-evaluated',
@@ -2049,17 +2380,17 @@ async function start(): Promise<void> {
           applied: guiPhysicsStage.staged,
           unchangedBeforeAccept: physicsUnchangedBeforeAccept,
           digestAfterAccept: `sha256:${physicsAcceptedDigest}`,
-          pendingControls: ['physics-evaluate'],
+          ...guiCommandFormProofs.get('#260'),
         },
         '#261': { ...guiFeatures['#261'] },
-        '#263': { ...guiFeatures['#263'], pendingControls: ['project-migration-commit'] },
-        '#264': { gui: true, state: 'profile-evidence', digest: JSON.parse(guiFeatures['#270'].message ?? '{}').digest, result: guiFeatures['#270'].message },
+        '#263': { ...guiFeatures['#263'], ...guiCommandFormProofs.get('#263') },
+        '#264': { gui: true, state: 'profile-evidence', digest: JSON.parse(guiFeatures['#270']?.message ?? '{}').digest, result: guiFeatures['#270']?.message },
         '#265': { ...guiFeatures['#265'] },
         '#266': { ...guiFeatures['#266'] },
         '#267': { gui: false, state: 'unsupported-host-macos' },
         '#268': { gui: false, state: 'unsupported-host-windows' },
-        '#262': { ...guiFeatures['#262'], pendingControls: ['package-install', 'package-remove'] },
-        '#269': { ...guiFeatures['#269'], pendingControls: ['extension-start'] },
+        '#262': { ...guiCommandFormProofs.get('#262') },
+        '#269': { ...guiCommandFormProofs.get('#269') },
         '#270': { ...guiFeatures['#270'] },
       },
       playbackDom,

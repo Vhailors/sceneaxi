@@ -230,28 +230,32 @@ intentionally denied surfaces.
 ### Packaged Linux smoke evidence
 
 `desktop/linux/scripts/smoke.mjs` asserts the `proof.features` entries printed by
-the real Electron `--smoke` path. The GUI steps run only against the disposable
-smoke project. The smoke proves these current GUI outcomes; it does not turn the
-remaining pending controls into supported features.
+the real Electron `--smoke` path. GUI steps run against the disposable smoke
+project or its separate legacy migration fixture. The smoke proves only the
+listed local GUI outcomes.
 
 | Issue | Packaged GUI evidence | Remaining gap |
 |---|---|---|
 | #254 | Selects `desktop-crate-beside`, chooses Rotate and 0.1 snap, edits Translation X, clicks Stage and Accept, and asserts bytes stay unchanged before Accept then persist `-3.05` with a changed digest. | The smoke covers inspector staging and transform mode/snap selection; other gizmo combinations remain covered by transform goldens. |
-| #255 | Records the absent prefab controls. | `scene-prefab-*` controls are pending. |
+| #255 | Defines and inspects a prefab, creates an instance, applies an override, edits the source through the inspector, then refreshes the stale prefab. Each write stays unchanged before GUI Accept and persists with changed scene bytes afterward. | Broader reusable-content authoring remains outside this smoke. |
 | #256 | Uses the GUI import action twice through the native-dialog boundary stub, edits the source fixture, clicks GUI Reload, and asserts pre-Accept immutability plus distinct manifest digests for the two revisions. | Reload/reimport creates a separately identified asset; in-place replacement of an existing asset is not claimed. |
-| #257 | Records the absent input-action controls. | Inspect, rebind, and reset controls are pending. |
-| #258 | Clicks Play, Stop, and Reset. Asserts the acknowledged viewport frame and unchanged authoring bytes. | `viewport-source-set` control is pending. |
+| #257 | Inspects action base versions, rebinds `editor.project.save` to `KeyB`, approves the review, then inspects and approves a project reset. The smoke checks settings bytes stay unchanged before approval and change after each approval. | Other scopes, devices, and actions remain outside this smoke. |
+| #258 | Clicks Play, sets the viewport source to `scene`, and asserts the command completes without changing authoring bytes. The existing Play/Stop/Reset proof checks the acknowledged frame and run states. | Persistent Play is not claimed. |
 | #259 | Applies a `smoke-idle` clip through Timeline, verifies unchanged bytes before GUI Accept, changed document digest and persisted clip after Accept, then evaluates against that accepted content hash. | None for this smoke path. |
-| #260 | Stages `world-set` through the Physics inspector, verifies bytes are unchanged before GUI Accept, then asserts persisted gravity `-10.25`, changed document digest, and the inspected toy engine. | `physics-evaluate` control is pending. |
+| #260 | Stages `world-set` through the Physics inspector, accepts gravity `-10.25`, then runs a one-step physics evaluation through its GUI form. The evaluation leaves authoring bytes unchanged. | Other physics engines and evaluations are not claimed. |
 | #261 | Uses the local fixture route and stages a proposal for review. | No live provider or credential is used. |
-| #262 | Inspects the empty package lock and fixed digest without marketplace or network access. | Install and remove controls are pending. |
-| #263 | Initializes Git in the scratch project, then clicks status, diff, selects a scratch path, and stages it. | Migration commit control is pending. |
+| #262 | Installs the fixed contained package, inspects the lock, then removes it. Both writes stay unchanged before GUI Accept and persist afterward. No marketplace or network access is used. | Package discovery outside the fixed smoke fixture is not claimed. |
+| #263 | Initializes Git in the scratch project, clicks status and diff, selects and stages a scratch path, then commits migration through the GUI form against a separate legacy scratch project. Migration preserves the source document bytes and writes a native manifest. | Git commit and remote operations are not claimed. |
 | #264 | Records profile evidence and its digest after GUI Play. | No separate profiling panel is claimed. |
 | #265 | Clicks workspace inspect, apply, and reset. Asserts both persisted layout digests. | None for this smoke path. |
 | #266 | Clicks Linux project build and asserts `PROJECT_BUILD_SIGNING_MISSING`. | No project artifact is built. |
 | #267, #268 | Records that macOS and Windows targets are absent on the Linux host. | Native-host project artifacts remain unavailable. |
-| #269 | Inspects extension seams and verifies adapters stay disabled. | Extension start control is pending. |
+| #269 | Inspects extension seams, selects `networking`, and asserts GUI Start returns `EXTENSION_ADAPTER_ABSENT` without changing project bytes. | No extension adapter is started. |
 | #270 | Inspects profile evidence and verifies its source digest and measured draw-call count. | No claim is made for unsupported metrics. |
+
+At base commit `ab2339d`, the smoke reaches the audio proof after these editor
+steps, then fails with `DESKTOP_SCENE_NOT_COMPOSABLE` during Play. The editor
+feature steps ran, but the packaged smoke is not green at this base.
 
 ## First implementation slice
 
