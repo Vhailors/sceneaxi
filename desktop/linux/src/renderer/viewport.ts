@@ -546,13 +546,20 @@ function installAudioControls(
     disposed = true;
     if (audio === null) controls.dataset.audioContextDisposed = "true";
     else {
-      void audio.dispose().then(
-        () => {
-          controls.dataset.audioRms = String(audio?.measureOutputRms() ?? 0);
-          controls.dataset.audioContextDisposed = "true";
-        },
-        () => openPathLine(host, "Audio refused: AUDIO_CONTEXT_CLOSE_FAILED"),
-      );
+      const closing = audio;
+      closing.stopAll();
+      // Let the still-running graph render past the stopped sources before
+      // closing: a closed context freezes the analyser on its last buffer, so the
+      // recorded level must be taken first to describe the output after Stop.
+      void new Promise((resolve) => setTimeout(resolve, 100))
+        .then(() => {
+          controls.dataset.audioRms = String(closing.measureOutputRms());
+          return closing.dispose();
+        })
+        .then(
+          () => { controls.dataset.audioContextDisposed = "true"; },
+          () => openPathLine(host, "Audio refused: AUDIO_CONTEXT_CLOSE_FAILED"),
+        );
     }
     for (const button of buttons) {
       if (button.dataset.audioState === "started") button.dataset.audioState = "stopped";
@@ -1193,6 +1200,8 @@ async function mountLiveViewport(): Promise<void> {
           (response) => {
             frameReportInFlight = false;
             frameReportSettled = true;
+            // Observable for the product and its proofs: the host now holds this frame.
+            if (response.ok) stage.dataset.frameReported = String(frame.frame);
             if (!response.ok) {
               frameReportLine(
                 stage,
@@ -1291,8 +1300,17 @@ async function mountLiveViewport(): Promise<void> {
 
   let disposeAudioControls: (() => void) | null = null;
 
+  // The host keeps the last frame report per bridge, and a project switch
+  // replaces the bridge; report the next frame again so profiling measures the
+  // frames of the project and Play session that are current.
+  const reportNextFrame = () => {
+    frameReportSettled = false;
+    frameReportAttempts = 0;
+  };
+
   document.addEventListener(DESKTOP_VIEWPORT_PLAY_EVENT, (event: Event) => {
     if (!(event instanceof CustomEvent)) return;
+    reportNextFrame();
     const detail = event.detail as {
       accepted?: unknown;
       frame?: unknown;
@@ -1353,6 +1371,7 @@ async function mountLiveViewport(): Promise<void> {
     disposeAudioControls?.();
     disposeAudioControls = null;
     if (!(event instanceof CustomEvent)) return;
+    reportNextFrame();
     const detail = event.detail as {
       mountable?: unknown;
       asset?: { instanceId?: unknown; digest?: unknown };
