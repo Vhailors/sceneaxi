@@ -527,6 +527,66 @@ function note(text: string, tone: "info" | "scene" | "accent"): string {
   return `<p class="panel-note" style="background:${colors.bg};border-color:${colors.line};color:${colors.fg}"><span class="dot" style="background:${colors.dot}" aria-hidden="true"></span>${escapeHtml(text)}</p>`;
 }
 
+type EditorCommandFormField = Readonly<{ name: string; label: string; kind?: "text" | "number" | "json" | "select"; options?: readonly string[] }>;
+
+const EDITOR_COMMAND_FORM_FIELDS: Readonly<Record<string, readonly EditorCommandFormField[]>> = Object.freeze({
+  "package-install": [
+    { name: "locator", label: "Contained package locator" },
+    { name: "manifest", label: "Package manifest JSON", kind: "json" },
+    { name: "digest", label: "Package digest" },
+  ],
+  "package-remove": [{ name: "packageId", label: "Installed package ID", kind: "select" }],
+  "project-migration-commit": [],
+  "extension-start": [{ name: "seamId", label: "Inspected extension seam", kind: "select" }],
+  "input-action-rebind": [
+    { name: "scope", label: "Scope", kind: "select", options: ["project", "workspace"] },
+    { name: "actionId", label: "Inspected action ID", kind: "select" },
+    { name: "binding", label: "New binding JSON", kind: "json" },
+  ],
+  "input-actions-reset": [
+    { name: "scope", label: "Scope", kind: "select", options: ["project", "workspace"] },
+  ],
+  "input-actions-inspect": [],
+  "physics-evaluate": [{ name: "steps", label: "Simulation steps", kind: "number" }],
+  "scene-prefab-define": [
+    { name: "definitionId", label: "Prefab ID" },
+    { name: "instanceIds", label: "Selected instance IDs (JSON array)", kind: "json" },
+  ],
+  "scene-prefab-inspect": [],
+  "scene-prefab-instance": [
+    { name: "definitionId", label: "Inspected prefab ID", kind: "select" },
+    { name: "parentInstanceId", label: "Selected parent instance ID" },
+    { name: "instanceKey", label: "New instance key" },
+  ],
+  "scene-prefab-override": [
+    { name: "instanceId", label: "Selected instance ID" },
+    { name: "sourceInstanceId", label: "Source instance ID" },
+    { name: "propertyId", label: "Property ID" },
+    { name: "newValue", label: "New numeric value", kind: "number" },
+  ],
+  "scene-prefab-refresh": [{ name: "definitionId", label: "Inspected prefab ID", kind: "select" }],
+  "viewport-source-set": [{ name: "source", label: "Viewport source", kind: "select", options: ["scene", "game", "sculpt-preview"] }],
+});
+
+function editorCommandForm(commandId: keyof typeof EDITOR_COMMAND_FORM_FIELDS, title: string): string {
+  const fields = (EDITOR_COMMAND_FORM_FIELDS[commandId] ?? []).map((field) => {
+    const name = escapeHtml(field.name);
+    const control = field.kind === "json"
+      ? `<textarea data-command-field="${name}" aria-label="${escapeHtml(field.label)}"></textarea>`
+      : field.kind === "select"
+        ? `<select data-command-field="${name}" aria-label="${escapeHtml(field.label)}"><option value="">Choose after inspection</option>${(field.options ?? []).map((option) => `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`).join("")}</select>`
+        : `<input data-command-field="${name}" type="${field.kind ?? "text"}" aria-label="${escapeHtml(field.label)}">`;
+    return `<label>${escapeHtml(field.label)}${control}</label>`;
+  }).join("");
+  return `<section class="editor-command-form" data-editor-command-form="${commandId}" aria-label="${escapeHtml(title)}">
+    <h3>${escapeHtml(title)}</h3>${fields}
+    ${commandId === "project-migration-commit" ? '<p data-migration-proposal-refusal>Run Propose Project Migration first.</p>' : ""}
+    <p data-editor-command-refusal="${commandId}" aria-live="polite">${commandId === "input-action-rebind" || commandId === "input-actions-reset" ? "Inspect input actions before choosing a target." : "Complete the required fields before submitting."}</p>
+    <button type="button" data-action="editor-command-submit" data-value="${commandId}" data-editor-command-submit="${commandId}" disabled aria-disabled="true" data-refusal="EDITOR_COMMAND_PREREQUISITE_MISSING">${commandId === "input-actions-inspect" ? "Inspect input actions" : title}</button>
+    <button type="button" data-action="editor-command-review" data-value="${commandId}" data-editor-command-review="${commandId}" hidden>Approve reviewed change</button>
+  </section>`;
+}
+
 function leftDock(view: DesktopVisualView): string {
   const active = view.state.mode;
   const project = view.product.surface.project;
@@ -581,6 +641,12 @@ function leftDock(view: DesktopVisualView): string {
     </div>
     <p class="scene-entities-refusal" data-scene-entities-refusal aria-live="polite" hidden></p>
     <p class="project-root" data-project-root></p>
+    <section class="project-command-tools" aria-label="Project commands">
+      ${editorCommandForm("project-migration-commit", "Commit approved project migration")}
+      ${editorCommandForm("input-actions-inspect", "Inspect input actions")}
+      ${editorCommandForm("input-action-rebind", "Rebind input action")}
+      ${editorCommandForm("input-actions-reset", "Reset input actions")}
+    </section>
   </div>
   <p class="project-file-state" data-project-file-state>Active · not opened</p>
 </section>
@@ -647,6 +713,8 @@ function viewport(view: DesktopVisualView): string {
         )
         .join("")}
     </div>
+    <label class="viewport-source-control">Set source<select data-command-field="source" aria-label="Viewport source command"><option value="">Choose source</option><option value="scene">Scene</option><option value="game">Game</option><option value="sculpt-preview">Sculpt preview</option></select></label>
+    <button type="button" data-editor-command-submit="viewport-source-set" disabled aria-disabled="true" data-refusal="EDITOR_COMMAND_PREREQUISITE_MISSING">Apply source</button>
     <span class="spacer"></span>
     <span class="view-tools" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
   </div>
@@ -848,7 +916,17 @@ function inspector(view: DesktopVisualView): string {
   </div>`
         : ""
   }
-  ${mode === "build" ? inspectorCatalogs(view) : ""}
+  ${mode === "build" ? `${inspectorCatalogs(view)}<section class="editor-command-tools" aria-label="Build command tools">
+    ${editorCommandForm("scene-prefab-inspect", "Inspect reusable content")}
+    ${editorCommandForm("scene-prefab-define", "Define reusable content")}
+    ${editorCommandForm("scene-prefab-instance", "Create reusable-content instance")}
+    ${editorCommandForm("scene-prefab-override", "Override instance property")}
+    ${editorCommandForm("scene-prefab-refresh", "Refresh reusable-content instances")}
+    ${editorCommandForm("physics-evaluate", "Evaluate physics")}
+    ${editorCommandForm("package-install", "Install contained package")}
+    ${editorCommandForm("package-remove", "Remove installed package")}
+    ${editorCommandForm("extension-start", "Start inspected extension seam")}
+  </section>` : ""}
 </section>`;
   }).join("");
 
@@ -1193,6 +1271,17 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .left-dock,.inspector{background:var(--panel);display:flex;flex-direction:column;min-height:0;overflow-y:auto}
 .left-dock{border-right:1px solid var(--line)}
 .inspector{border-left:1px solid var(--line)}
+.editor-command-tools,.project-command-tools{display:grid;gap:7px;padding:8px;border-top:1px solid var(--line)}
+.editor-command-form{display:grid;gap:5px;padding:8px;border:1px solid var(--line-card);border-radius:5px;background:var(--well)}
+.editor-command-form h3{margin:0;font-size:10px;font-weight:600}
+.editor-command-form label,.viewport-source-control{display:grid;gap:3px;font-size:9px;color:var(--dim)}
+.editor-command-form input,.editor-command-form select,.editor-command-form textarea,.viewport-source-control select{min-width:0;width:100%;padding:5px;border:1px solid var(--line-control);border-radius:4px;background:var(--raised);color:var(--text);font:9px var(--mono)}
+.editor-command-form textarea{min-height:48px;resize:vertical}
+.editor-command-form [aria-live]{margin:0;font-size:8px;line-height:1.4;color:var(--dim);overflow-wrap:anywhere}
+.editor-command-form button,.view-tabs>[data-editor-command-submit]{min-height:24px;padding:3px 7px;border:1px solid var(--line-control);border-radius:4px;text-align:left;font-size:9px}
+.editor-command-form button:disabled,.view-tabs>[data-editor-command-submit]:disabled{color:var(--inert);cursor:not-allowed}
+.viewport-source-control{display:flex;align-items:center;white-space:nowrap}
+.viewport-source-control select{width:auto}
 .panel-head{margin:0;height:29px;flex:none;display:flex;align-items:center;padding:0 10px;background:var(--header);border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-family:var(--mono);font-size:9px;font-weight:400;letter-spacing:.15em;color:var(--text-3)}
 .panel-empty{margin:0;padding:12px 11px;font-size:11px;line-height:1.55;color:var(--dim)}
 .panel-note{display:flex;gap:9px;align-items:flex-start;margin:0 10px 11px;padding:10px 11px;border:1px solid;border-radius:4px;font-size:11px;line-height:1.55}
@@ -1742,6 +1831,13 @@ if (shell) {
   // host's single-proposal session — both reporting success, one edit gone.
   let inFlight = false;
   let activeInputActionMap = T.defaultInputActionMap;
+  let editorInputActionBaseVersions = null;
+  let editorMigrationDigest = null;
+  let editorPackageIds = [];
+  let editorExtensionSeams = [];
+  let editorInputActionReview = null;
+  let editorPrefabDefinitions = [];
+  let editorCommandResponses = Object.create(null);
 
   const bindingLabel = (binding) => {
     if (binding.device === 'keyboard') {
@@ -3043,6 +3139,7 @@ if (shell) {
     reconcileRarityEvidence(status);
     projectDirty = false;
     projectRecovering = false;
+    updateEditorCommandControls();
     await syncSceneHierarchy(hierarchyReviewRedacted);
     undoAvailability = status.undoAvailability === 'available' || status.undoAvailability === 'recovery-pending'
       ? status.undoAvailability
@@ -4216,31 +4313,196 @@ if (shell) {
     }
   });
 
+  const editorCommandInput = (commandId) => {
+    const form = shell.querySelector('[data-editor-command-form="' + commandId + '"]');
+    const input = Object.create(null);
+    if (form) {
+      for (const field of Array.from(form.querySelectorAll('[data-command-field]'))) {
+        const name = field.dataset.commandField;
+        if (!name) continue;
+        if (!field.value && ['instanceIds', 'parentInstanceId', 'instanceId', 'sourceInstanceId'].includes(name)) continue;
+        if (!field.value) throw new Error('EDITOR_COMMAND_PREREQUISITE_MISSING');
+        if (field.tagName === 'TEXTAREA') {
+          try { input[name] = JSON.parse(field.value); }
+          catch { throw new Error('EDITOR_COMMAND_INPUT_INVALID'); }
+        } else if (field.type === 'number') input[name] = Number(field.value);
+        else input[name] = field.value;
+      }
+    }
+    if (['package-install', 'package-remove', 'scene-prefab-inspect', 'scene-prefab-define',
+      'scene-prefab-instance', 'scene-prefab-override', 'scene-prefab-refresh', 'physics-evaluate'].includes(commandId)) {
+      input.documentPath = T.product.documentPath;
+      input.profile = shell.dataset.profile;
+      input.expectedContentHash = projectContentHash;
+    }
+    if (commandId === 'viewport-source-set') {
+      input.source = shell.querySelector('[data-command-field="source"]')?.value || '';
+    }
+    if (commandId === 'package-inspect' || commandId === 'profile-inspect') {
+      input.documentPath = T.product.documentPath;
+      input.profile = shell.dataset.profile;
+    }
+    if (commandId === 'extension-inspect') input.profile = shell.dataset.profile;
+    if (commandId === 'extension-start') input.profile = shell.dataset.profile;
+    if (commandId === 'project-build') {
+      input.profile = shell.dataset.profile;
+      input.target = 'linux';
+    }
+    if (commandId === 'workspace-layout-apply') {
+      input.profile = shell.dataset.profile;
+      input.leftVisible = shell.dataset.drawerLeft === 'open';
+      input.inspectorVisible = shell.dataset.drawerInspector === 'open';
+    }
+    if (commandId === 'scene-prefab-define' && (!input.instanceIds || input.instanceIds.length === 0) && selectedSceneEntityIds.length > 0) {
+      input.instanceIds = selectedSceneEntityIds;
+    }
+    if (commandId === 'scene-prefab-instance' && !input.parentInstanceId && selectedSceneEntityId) {
+      input.parentInstanceId = selectedSceneEntityId;
+    }
+    if (commandId === 'scene-prefab-override') {
+      if (!input.instanceId && selectedSceneEntityId) input.instanceId = selectedSceneEntityId;
+      if (!input.sourceInstanceId && selectedSceneEntityId) input.sourceInstanceId = selectedSceneEntityId;
+    }
+    if (commandId === 'project-migration-commit') {
+      if (!editorMigrationDigest) throw new Error('PROJECT_MIGRATION_PROPOSAL_REQUIRED');
+      input.approved = true;
+      input.proposalDigest = editorMigrationDigest;
+    }
+    if (commandId === 'input-action-rebind' || commandId === 'input-actions-reset') {
+      const current = editorInputActionReview;
+      input.expectedBaseVersion = current?.baseVersion || editorInputActionBaseVersions?.[input.scope];
+      if (!input.expectedBaseVersion) throw new Error('INPUT_ACTION_INSPECTION_REQUIRED');
+      input.approved = current?.commandId === commandId;
+      input.reviewDigest = current?.commandId === commandId ? current.reviewDigest : null;
+    }
+    if (commandId === 'scene-prefab-inspect') delete input.expectedContentHash;
+    return input;
+  };
+
   const runEditorCommand = async (commandId) => {
-    const input = commandId === 'package-inspect' || commandId === 'profile-inspect'
-      ? { documentPath: T.product.documentPath, profile: shell.dataset.profile }
-      : commandId === 'extension-inspect'
-        ? { profile: shell.dataset.profile }
-        : commandId === 'project-build'
-          ? { profile: shell.dataset.profile, target: 'linux' }
-          : commandId === 'workspace-layout-apply'
-            // Apply persists the layout the user is looking at: the current drawers.
-            ? {
-              profile: shell.dataset.profile,
-              leftVisible: shell.dataset.drawerLeft === 'open',
-              inspectorVisible: shell.dataset.drawerInspector === 'open',
-            }
-            : {};
+    if (activeProject === null && !(await openProject())) return;
+    if (projectContentHash === null && !(await openProject())) return;
+    let input;
+    try {
+      input = editorCommandInput(commandId);
+    } catch (error) {
+      const code = error instanceof Error ? error.message : 'EDITOR_COMMAND_INPUT_INVALID';
+      showOutcome(commandId + ' refused', code, 'Inspect the relevant catalog and provide all required values before submitting.');
+      productStatus('refused', commandId + ' refused · ' + code);
+      return;
+    }
     const response = await commandRequest(commandId, input);
+    editorCommandResponses[commandId] = response;
     const diagnostic = responseDiagnostic(response);
     if (diagnostic !== null) {
       showOutcome(commandId + ' refused', diagnostic.code, diagnostic.message);
       productStatus('refused', commandId + ' refused · ' + diagnostic.code);
       return;
     }
-    const output = JSON.stringify(response.data, null, 2);
+    const data = response.data;
+    if (commandId === 'project-migration-propose' && typeof data?.proposal?.proposalDigest === 'string') {
+      editorMigrationDigest = data.proposal.proposalDigest;
+      const refusal = shell.querySelector('[data-migration-proposal-refusal]');
+      if (refusal) refusal.textContent = 'Proposal ready. The commit uses its returned digest.';
+      updateEditorCommandControls();
+    }
+    if (commandId === 'package-inspect' && Array.isArray(data?.catalog?.lock)) {
+      editorPackageIds = data.catalog.lock.map((row) => row.packageId).filter((id) => typeof id === 'string');
+      populateEditorChoices('packageId', editorPackageIds);
+    }
+    if (commandId === 'extension-inspect' && Array.isArray(data?.seams)) {
+      editorExtensionSeams = data.seams.map((row) => row.id).filter((id) => typeof id === 'string');
+      populateEditorChoices('seamId', editorExtensionSeams);
+    }
+    if (commandId === 'input-actions-inspect' && data?.baseVersions && data?.map) {
+      editorInputActionBaseVersions = data.baseVersions;
+      activeInputActionMap = data.map;
+      populateEditorChoices('actionId', data.map.bindings.map((row) => row.actionId));
+      editorInputActionReview = null;
+    }
+    if (commandId === 'scene-prefab-inspect' && Array.isArray(data?.catalog?.definitions)) {
+      editorPrefabDefinitions = data.catalog.definitions.map((row) => row.definitionId);
+      populateEditorChoices('definitionId', editorPrefabDefinitions);
+    }
+    if ((commandId === 'input-action-rebind' || commandId === 'input-actions-reset') && data?.status === 'review') {
+      editorInputActionReview = { commandId, baseVersion: input.expectedBaseVersion, reviewDigest: data.reviewDigest };
+      const approve = shell.querySelector('[data-editor-command-review="' + commandId + '"]');
+      if (approve) approve.hidden = false;
+      showOutcome(commandId + ' review', 'INPUT_ACTION_REVIEW_REQUIRED', JSON.stringify(data, null, 2));
+      updateEditorCommandControls();
+      return;
+    }
+    if (data?.authoringSnapshot) {
+      syncReview(data.authoringSnapshot);
+      projectDirty = data.authoringSnapshot.phase === 'reviewing';
+    }
+    if ((commandId === 'input-action-rebind' || commandId === 'input-actions-reset') && data?.status === 'committed') {
+      editorInputActionReview = null;
+      const approve = shell.querySelector('[data-editor-command-review="' + commandId + '"]');
+      if (approve) approve.hidden = true;
+      await hydrateInputActions();
+    }
+    const output = JSON.stringify(data, null, 2);
     showOutcome(commandId, 'COMMAND_COMPLETED', output);
     productStatus('open', commandId + ' completed');
+  };
+
+  const populateEditorChoices = (name, values) => {
+    q('[data-command-field="' + name + '"]').forEach((field) => {
+      if (field.tagName === 'SELECT') {
+        const first = field.querySelector('option');
+        field.replaceChildren(first);
+        for (const value of values) {
+          const option = document.createElement('option');
+          option.value = value;
+          option.textContent = value;
+          field.append(option);
+        }
+      } else if (field.tagName === 'INPUT') {
+        field.value = values[0] || '';
+        field.setAttribute('list', 'editor-choice-' + name);
+        let list = shell.querySelector('#editor-choice-' + name);
+        if (!list) {
+          list = document.createElement('datalist');
+          list.id = 'editor-choice-' + name;
+          shell.append(list);
+        }
+        list.replaceChildren(...values.map((value) => {
+          const option = document.createElement('option');
+          option.value = value;
+          return option;
+        }));
+      }
+    });
+    updateEditorCommandControls();
+  };
+
+  const updateEditorCommandControls = () => {
+    q('[data-editor-command-submit]').forEach((button) => {
+      const id = button.dataset.editorCommandSubmit;
+      const form = button.closest('[data-editor-command-form]');
+      const fields = form ? Array.from(form.querySelectorAll('[data-command-field]')) : [];
+      const missingField = fields.some((field) => !field.value);
+      const missingPrerequisite = id === 'project-migration-commit' && !editorMigrationDigest ||
+        id === 'package-remove' && editorPackageIds.length === 0 ||
+        id === 'extension-start' && editorExtensionSeams.length === 0 ||
+        (id === 'input-action-rebind' || id === 'input-actions-reset') && !editorInputActionBaseVersions;
+      const invalidJson = fields.some((field) => field.tagName === 'TEXTAREA' && field.value && (() => { try { JSON.parse(field.value); return false; } catch { return true; } })());
+      const disabled = (id === 'input-actions-inspect' ? activeProject === null : missingField || invalidJson || missingPrerequisite);
+      button.disabled = disabled;
+      button.setAttribute('aria-disabled', String(disabled));
+      if (!disabled) button.removeAttribute('data-refusal');
+      else button.dataset.refusal = missingPrerequisite ? 'EDITOR_COMMAND_PREREQUISITE_MISSING' : 'EDITOR_COMMAND_INPUT_INVALID';
+    });
+    const source = shell.querySelector('[data-editor-command-submit="viewport-source-set"]');
+    if (source) {
+      const select = shell.querySelector('[data-command-field="source"]');
+      const disabled = !select?.value;
+      source.disabled = disabled;
+      source.setAttribute('aria-disabled', String(disabled));
+      if (disabled) source.dataset.refusal = 'EDITOR_COMMAND_PREREQUISITE_MISSING';
+      else delete source.dataset.refusal;
+    }
   };
 
   const refreshTimeline = async () => {
@@ -4313,6 +4575,17 @@ if (shell) {
     });
   };
 
+  const focusEditorCommandForm = (commandId) => {
+    if (['physics-evaluate', 'scene-prefab-inspect', 'scene-prefab-define', 'scene-prefab-instance',
+      'scene-prefab-override', 'scene-prefab-refresh', 'package-install', 'package-remove', 'extension-start'].includes(commandId)) {
+      showModePanels('build');
+    }
+    const field = shell.querySelector('[data-editor-command-form="' + commandId + '"] [data-command-field]');
+    if (field) field.focus();
+    const refusal = shell.querySelector('[data-editor-command-refusal="' + commandId + '"]');
+    if (refusal) refusal.textContent = 'Fill in the form here. The command is not sent from the menu until its inputs are ready.';
+  };
+
   const commandHandlers = Object.freeze({
     'project-new': () => chooseProject('choose-new'),
     'project-open': () => chooseProject('choose-open'),
@@ -4336,8 +4609,12 @@ if (shell) {
       'workspace-layout-inspect', 'workspace-layout-apply', 'workspace-layout-reset',
       'project-migration-propose', 'project-migration-commit', 'project-migration-recover',
       'project-build', 'extension-inspect', 'extension-start', 'profile-inspect',
-      'project-inspect', 'input-action-rebind', 'input-actions-reset',
-    ].map((id) => [id, () => runEditorCommand(id)])),
+      'project-inspect', 'input-actions-inspect', 'input-action-rebind', 'input-actions-reset',
+      'physics-evaluate', 'scene-prefab-inspect', 'scene-prefab-define', 'scene-prefab-instance',
+      'scene-prefab-override', 'scene-prefab-refresh',
+    ].map((id) => [id, () => ['package-install', 'package-remove', 'project-migration-commit', 'extension-start',
+      'input-action-rebind', 'input-actions-reset'].includes(id) ? focusEditorCommandForm(id) : runEditorCommand(id)])),
+
   });
 
   const executeCommand = (id) => {
@@ -4373,6 +4650,16 @@ if (shell) {
     void productAction(handler);
   };
 
+  shell.addEventListener('input', (event) => {
+    if (event.target instanceof Element && event.target.closest('[data-editor-command-form], [data-command-field="source"]')) {
+      updateEditorCommandControls();
+    }
+  });
+
+  shell.addEventListener('change', (event) => {
+    if (event.target instanceof Element && event.target.matches('[data-command-field="source"]')) updateEditorCommandControls();
+  });
+
   shell.addEventListener('click', (event) => {
     const command = event.target instanceof Element ? event.target.closest('[data-command]') : null;
     if (command && command.getAttribute('aria-disabled') !== 'true') {
@@ -4388,7 +4675,13 @@ if (shell) {
     if (!el || el.getAttribute('aria-disabled') === 'true') return;
     const action = el.dataset.action;
     const value = el.dataset.value;
-    if (action === 'drawer' && value) {
+    if (action === 'editor-command-submit' && value) {
+      void productAction(() => runEditorCommand(value));
+    }
+    else if (action === 'editor-command-review' && value) {
+      void productAction(() => runEditorCommand(value));
+    }
+    else if (action === 'drawer' && value) {
       const key = value === 'left' ? 'drawerLeft' : 'drawerInspector';
       const open = shell.dataset[key] !== 'open';
       shell.dataset[key] = open ? 'open' : 'closed';
@@ -4607,7 +4900,7 @@ if (shell) {
   syncReview(null);
   syncAssistantTier();
   syncCommandAvailability();
-  void syncProjectLifecycle().then(hydrateInputActions);
+  void syncProjectLifecycle().then(hydrateInputActions).then(updateEditorCommandControls);
 }
 `;
 }
