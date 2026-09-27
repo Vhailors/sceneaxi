@@ -3993,6 +3993,7 @@ if (shell) {
       return;
     }
     await beginSceneLifecycleTransition();
+    if (typeof Event !== 'undefined') document.dispatchEvent(new Event(T.product.viewportStopEvent));
     shell.dataset.profile = value;
     q('.profile-chip').forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.value === value)));
     const promptField = shell.querySelector('#assistant-prompt');

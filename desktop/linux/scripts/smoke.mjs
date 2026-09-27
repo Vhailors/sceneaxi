@@ -295,6 +295,26 @@ if (
 ) {
   failures.push("the packaged viewport did not acknowledge the saved-composition redraw");
 }
+if (
+  proof.audioProof?.duration !== 2 ||
+  proof.audioProof?.sampleRate !== 44100 ||
+  proof.audioProof?.channels !== 1 ||
+  typeof proof.audioProof?.volume !== "number" || proof.audioProof.volume < 0.3 || proof.audioProof.volume > 0.4 ||
+  typeof proof.audioProof?.gain !== "number" || proof.audioProof.gain < 0.3 || proof.audioProof.gain > 0.4 ||
+  proof.audioProof?.pointerTargets?.volume !== true || proof.audioProof?.pointerTargets?.play !== true ||
+  proof.audioProof?.sourceStarted !== true ||
+  typeof proof.audioProof?.offlineRms !== "number" || proof.audioProof.offlineRms <= 0.01 ||
+  typeof proof.audioProof?.liveRms !== "number" || proof.audioProof.liveRms < 0.07 || proof.audioProof.liveRms > 0.11 ||
+  typeof proof.audioProof?.stoppedRms !== "number" || proof.audioProof.stoppedRms > 0.01 ||
+  proof.audioProof?.stopped !== true ||
+  proof.audioProof?.contextDisposed !== true ||
+  proof.audioProof?.resetStopped !== true ||
+  proof.audioProof?.decodeRefused !== true ||
+  proof.audioProof?.kidsSwitchStopped !== true ||
+  proof.audioProof?.projectSwitchStopped !== true
+) {
+  failures.push("renderer audio proof did not decode, start, render non-silence, and stop the ingested WAV");
+}
 if (proof.frameReport?.backend !== "three") failures.push("frame report is not the Three core");
 // The pixel claim the docs and the site-kit offer carry is only ever this
 // observation: a WebGL canvas surface that reported drawing something.
@@ -342,6 +362,9 @@ console.log(
 );
 console.log(
   `  ship: static Web bundle ${proof.ship.bundleDigest} · source ${proof.ship.sourceDigest} · Delivery Handoff present`,
+);
+console.log(
+  `  audio: ${proof.audioProof.duration}s · ${proof.audioProof.sampleRate} Hz · ${proof.audioProof.channels} channel · source started · live RMS ${proof.audioProof.liveRms.toFixed(4)} → ${proof.audioProof.stoppedRms.toFixed(4)} after Stop · real pointer hit-tested controls · decode refusal named · Stop/Reset/Kids/project switch stopped and disposed the context`,
 );
 console.log(
   `  frame: backend ${proof.frameReport.backend} · surface ${proof.frameReport.surface ?? "unreported"} · pixelsDrawn ${proof.frameReport.pixelsDrawn ?? "unreported"} · drawCalls ${proof.frameReport.drawCalls}`,

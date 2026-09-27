@@ -35,6 +35,12 @@ imply pixels that were never drawn:
   surface: "webgl-canvas", pixelsDrawn: true }
 ```
 
+Audio playback is a small injected Web Audio port. It owns decoded named buffers,
+active source nodes, master gain, stop-all, and context disposal without importing
+browser globals or constructing output for node consumers. Desktop fetches
+manifest-accepted bytes only after a user selects a clip, verifies their length
+and digest, and then invokes the port.
+
 The null presentation path (`createNullPresentationRuntime`,
 `createNullSculptPresentationBackend`) is unchanged and remains the no-backend
 gate path.

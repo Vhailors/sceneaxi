@@ -34,6 +34,7 @@ import {
   DESKTOP_ACTIVE_DOCUMENT_PATH,
   DESKTOP_ASSET_IMPORT_CHANNEL,
   DESKTOP_BRIDGE_CHANNEL,
+  DESKTOP_VIEWPORT_STOP_EVENT,
   bridgeRefuse,
 } from "../lib/bridge-contract.js";
 import { createDesktopBridge, type DesktopBridge } from "../lib/bridge.js";
@@ -162,6 +163,211 @@ function smokeProjectDir(): string {
   return dir;
 }
 
+function smokeUndecodableOggBytes(): Buffer {
+  const bytes = Buffer.alloc(27);
+  bytes.write("OggS", 0, "ascii");
+  return bytes;
+}
+
+function smokeAudioBytes(): Buffer {
+  const sampleRate = 44_100;
+  const frames = sampleRate * 2;
+  const bytes = Buffer.alloc(44 + frames * 2);
+  bytes.write("RIFF", 0, "ascii");
+  bytes.writeUInt32LE(bytes.byteLength - 8, 4);
+  bytes.write("WAVEfmt ", 8, "ascii");
+  bytes.writeUInt32LE(16, 16);
+  bytes.writeUInt16LE(1, 20);
+  bytes.writeUInt16LE(1, 22);
+  bytes.writeUInt32LE(sampleRate, 24);
+  bytes.writeUInt32LE(sampleRate * 2, 28);
+  bytes.writeUInt16LE(2, 32);
+  bytes.writeUInt16LE(16, 34);
+  bytes.write("data", 36, "ascii");
+  bytes.writeUInt32LE(frames * 2, 40);
+  for (let frame = 0; frame < frames; frame += 1) {
+    bytes.writeInt16LE(Math.round(Math.sin((2 * Math.PI * 440 * frame) / sampleRate) * 12_000), 44 + frame * 2);
+  }
+  return bytes;
+}
+
+async function clickRendererControl(
+  window: BrowserWindow,
+  selector: string,
+  text?: string,
+  position = 0.5,
+): Promise<boolean> {
+  const target = await window.webContents.executeJavaScript(`(() => {
+    const elements = [...document.querySelectorAll(${JSON.stringify(selector)})];
+    const element = elements.find((candidate) =>
+      candidate instanceof HTMLElement &&
+      candidate.getBoundingClientRect().width > 0 &&
+      candidate.getBoundingClientRect().height > 0 &&
+      ${text === undefined ? "true" : `candidate.textContent?.trim() === ${JSON.stringify(text)}`});
+    if (!(element instanceof HTMLElement)) return null;
+    const rect = element.getBoundingClientRect();
+    const x = Math.round(rect.left + rect.width * ${position});
+    const y = Math.round(rect.top + rect.height / 2);
+    const hit = document.elementFromPoint(x, y);
+    return { x, y, hit: hit === element || element.contains(hit), hitTag: hit?.tagName ?? null };
+  })()`);
+  if (target === null || target.hit !== true) {
+    throw new Error(`Electron pointer hit-test failed for ${selector}: ${JSON.stringify(target)}`);
+  }
+  const point = { x: target.x, y: target.y };
+  window.webContents.sendInputEvent({ type: "mouseMove", ...point });
+  window.webContents.sendInputEvent({ type: "mouseDown", ...point, button: "left", clickCount: 1 });
+  window.webContents.sendInputEvent({ type: "mouseUp", ...point, button: "left", clickCount: 1 });
+  return true;
+}
+
+async function waitForRenderer(window: BrowserWindow, expression: string): Promise<boolean> {
+  return await window.webContents.executeJavaScript(`(async () => {
+    for (let attempt = 0; attempt < 500; attempt += 1) {
+      if (${expression}) return true;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    return false;
+  })()`);
+}
+
+async function runAudioResetSmokeProof(window: BrowserWindow): Promise<boolean> {
+  await clickRendererControl(window, '[data-command="run-play"]');
+  if (!await waitForRenderer(window, "document.querySelector('[data-audio-playback]') !== null")) return false;
+  await clickRendererControl(window, '[data-audio-playback] button', 'Play tone');
+  if (!await waitForRenderer(window, "document.querySelector('[data-audio-playback] button')?.dataset.audioState === 'started'")) return false;
+  await window.webContents.executeJavaScript(`(() => {
+    const button = [...document.querySelectorAll('[data-audio-playback] button')].find((item) => item.textContent === 'Play tone');
+    globalThis.__sceneaxiAudioResetButton = button;
+    globalThis.__sceneaxiAudioResetControls = button?.closest('[data-audio-playback]');
+  })()`);
+  await clickRendererControl(window, '[data-command="run-reset"]');
+  return await waitForRenderer(window, "globalThis.__sceneaxiAudioResetButton?.dataset.audioState === 'stopped' && globalThis.__sceneaxiAudioResetControls?.dataset.audioContextDisposed === 'true' && document.querySelector('[data-audio-playback]') === null");
+}
+
+async function runAudioDecodeRefusalSmokeProof(window: BrowserWindow): Promise<boolean> {
+  await clickRendererControl(window, '[data-command="run-play"]');
+  if (!await waitForRenderer(window, "document.querySelector('[data-audio-playback]') !== null")) return false;
+  await clickRendererControl(window, '[data-audio-playback] button', 'Play undecodable');
+  if (!await waitForRenderer(window, "document.getElementById('desktop-live-viewport-open-path')?.textContent?.includes('AUDIO_DECODE_FAILED undecodable') === true")) return false;
+  await window.webContents.executeJavaScript(`(() => {
+    const button = [...document.querySelectorAll('[data-audio-playback] button')].find((item) => item.textContent === 'Play undecodable');
+    globalThis.__sceneaxiAudioDecodeButton = button;
+    globalThis.__sceneaxiAudioDecodeControls = button?.closest('[data-audio-playback]');
+  })()`);
+  await clickRendererControl(window, '[data-command="run-stop"]');
+  return await waitForRenderer(window, "globalThis.__sceneaxiAudioDecodeControls?.dataset.audioContextDisposed === 'true'");
+}
+
+async function runAudioKidsProfileSmokeProof(window: BrowserWindow): Promise<boolean> {
+  await clickRendererControl(window, '[data-command="run-play"]');
+  if (!await waitForRenderer(window, "document.querySelector('[data-audio-playback]') !== null")) return false;
+  await clickRendererControl(window, '[data-audio-playback] button', 'Play tone');
+  if (!await waitForRenderer(window, "document.querySelector('[data-audio-playback] button')?.dataset.audioState === 'started'")) return false;
+  await window.webContents.executeJavaScript(`(() => {
+    const button = [...document.querySelectorAll('[data-audio-playback] button')].find((item) => item.textContent === 'Play tone');
+    globalThis.__sceneaxiAudioKidsButton = button;
+    globalThis.__sceneaxiAudioKidsControls = button?.closest('[data-audio-playback]');
+  })()`);
+  await clickRendererControl(window, '.profile-chip[data-value="kids"]');
+  const stopped = await waitForRenderer(window, "document.querySelector('.shell')?.dataset.profile === 'kids' && globalThis.__sceneaxiAudioKidsButton?.dataset.audioState === 'stopped' && globalThis.__sceneaxiAudioKidsControls?.dataset.audioContextDisposed === 'true' && document.querySelector('.profile-refusal[role=alert]')?.textContent?.includes('OPEN_PATH_KIDS_REFUSED') === true && document.querySelector('[data-audio-playback]') === null");
+  await clickRendererControl(window, '.profile-chip[data-value="game"]');
+  return stopped && await waitForRenderer(window, "document.querySelector('.shell')?.dataset.profile === 'game'");
+}
+
+async function runAudioProjectSwitchSmokeProof(
+  window: BrowserWindow,
+  switchProject: () => Promise<void>,
+): Promise<boolean> {
+  await clickRendererControl(window, '[data-command="run-play"]');
+  if (!await waitForRenderer(window, "document.querySelector('[data-audio-playback]') !== null")) return false;
+  await clickRendererControl(window, '[data-audio-playback] button', 'Play tone');
+  if (!await waitForRenderer(window, "document.querySelector('[data-audio-playback] button')?.dataset.audioState === 'started'")) return false;
+  await window.webContents.executeJavaScript(`(() => {
+    const button = [...document.querySelectorAll('[data-audio-playback] button')].find((item) => item.textContent === 'Play tone');
+    globalThis.__sceneaxiAudioSmokeButton = button;
+    globalThis.__sceneaxiAudioSmokeControls = button?.closest('[data-audio-playback]');
+  })()`);
+  await switchProject();
+  return await waitForRenderer(window, "globalThis.__sceneaxiAudioSmokeButton?.dataset.audioState === 'stopped' && globalThis.__sceneaxiAudioSmokeControls?.dataset.audioContextDisposed === 'true' && document.querySelector('[data-audio-playback]') === null");
+}
+
+async function runAudioSmokeProof(window: BrowserWindow): Promise<{
+  duration: number;
+  sampleRate: number;
+  channels: number;
+  volume: number;
+  gain: number;
+  sourceStarted: boolean;
+  offlineRms: number;
+  liveRms: number;
+  stoppedRms: number;
+  stopped: boolean;
+  contextDisposed: boolean;
+  pointerTargets: Readonly<{ volume: boolean; play: boolean }>;
+}> {
+  const volumePointerHit = await clickRendererControl(window, '[aria-label="Audio volume"]', undefined, 0.35);
+  await window.webContents.executeJavaScript(`(() => {
+    const slider = document.querySelector('[aria-label="Audio volume"]');
+    slider.value = '0.35';
+    slider.dispatchEvent(new Event('input', { bubbles: true }));
+  })()`);
+  const volume = await window.webContents.executeJavaScript(`document.querySelector('[aria-label="Audio volume"]').value`);
+  const controlsBeforePlay = await window.webContents.executeJavaScript(`document.querySelector('[data-audio-playback]') !== null`);
+  const playPointerHit = await clickRendererControl(window, '[data-audio-playback] button', 'Play tone');
+  if (!await waitForRenderer(window, "document.querySelector('[data-audio-playback] button')?.dataset.audioState === 'started'")) {
+    throw new Error('real Electron pointer did not start the selected clip');
+  }
+  if (!await waitForRenderer(window, "Number(document.querySelector('[data-audio-playback]')?.dataset.audioRms) >= 0.07 && Number(document.querySelector('[data-audio-playback]')?.dataset.audioRms) <= 0.11")) {
+    throw new Error('live playback graph RMS did not reach the expected volume-scaled signal');
+  }
+  const playback = await window.webContents.executeJavaScript(`(async () => {
+    const audioButton = [...document.querySelectorAll('[data-audio-playback] button')].find((button) => button.textContent === 'Play tone');
+    const response = await globalThis.sceneaxiDesktopLinux.request({ action: 'audio-asset', payload: { assetId: 'tone', documentPath: 'scene.json' } });
+    if (!response.ok || typeof response.data?.bytesBase64 !== 'string') throw new Error('audio bytes refused');
+    const audioControls = audioButton.closest('[data-audio-playback]');
+    const liveRms = Number(audioControls.dataset.audioRms);
+    const bytes = Uint8Array.from(atob(response.data.bytesBase64), (character) => character.charCodeAt(0));
+    const decodeContext = new AudioContext();
+    const decoded = await decodeContext.decodeAudioData(bytes.slice().buffer);
+    const offline = new OfflineAudioContext(decoded.numberOfChannels, decoded.length, decoded.sampleRate);
+    const source = offline.createBufferSource();
+    source.buffer = decoded;
+    source.connect(offline.destination);
+    source.start();
+    const rendered = await offline.startRendering();
+    let energy = 0;
+    let samples = 0;
+    for (let channel = 0; channel < rendered.numberOfChannels; channel += 1) {
+      for (const sample of rendered.getChannelData(channel)) { energy += sample * sample; samples += 1; }
+    }
+    globalThis.__sceneaxiAudioSmokeButton = audioButton;
+    globalThis.__sceneaxiAudioSmokeControls = audioControls;
+    const result = {
+      duration: decoded.duration,
+      sampleRate: decoded.sampleRate,
+      channels: decoded.numberOfChannels,
+      sourceStarted: audioButton.dataset.audioState === 'started',
+      offlineRms: Math.sqrt(energy / samples),
+      liveRms,
+      gain: Number(audioControls.dataset.audioVolume),
+    };
+    await decodeContext.close();
+    return result;
+  })()`);
+  await clickRendererControl(window, '[data-command="run-stop"]');
+  const stopped = await waitForRenderer(window, "globalThis.__sceneaxiAudioSmokeButton?.dataset.audioState === 'stopped' && globalThis.__sceneaxiAudioSmokeControls?.dataset.audioContextDisposed === 'true' && document.querySelector('[data-audio-playback]') === null");
+  const stoppedRms = await window.webContents.executeJavaScript("Number(globalThis.__sceneaxiAudioSmokeControls?.dataset.audioRms)");
+  return {
+    ...playback,
+    stoppedRms,
+    volume: Number(volume),
+    stopped,
+    contextDisposed: await window.webContents.executeJavaScript("globalThis.__sceneaxiAudioSmokeControls?.dataset.audioContextDisposed === 'true'"),
+    pointerTargets: { volume: controlsBeforePlay && volumePointerHit, play: playPointerHit },
+  };
+}
+
 function smokeAssetBytes(): Buffer {
   const positions = Buffer.from(new Float32Array([
     -1, 0, 0,
@@ -245,6 +451,7 @@ async function start(): Promise<void> {
       : join(__dirname, "sceneaxi-publish-no-replace");
   }
   let bridge: DesktopBridge | null = null;
+  let desktopWindow: BrowserWindow | null = null;
   closeActiveDesktopBridge = () => bridge?.close() ?? true;
   let inputActions: DesktopInputActionHost | null = null;
   let projectBrowser: DesktopProjectBrowser | null = null;
@@ -252,6 +459,11 @@ async function start(): Promise<void> {
 
   const activateProject = async (root: string): Promise<DesktopBridge> => {
     if (bridge !== null && activeRoot === root) return bridge;
+    if (bridge !== null && desktopWindow !== null) {
+      void desktopWindow.webContents.executeJavaScript(
+        `document.dispatchEvent(new CustomEvent(${JSON.stringify(DESKTOP_VIEWPORT_STOP_EVENT)}))`,
+      ).catch(() => undefined);
+    }
     if (bridge !== null && !bridge.close()) {
       throw new Error("The active project's desktop mutation-owner lease could not be released.");
     }
@@ -370,6 +582,34 @@ async function start(): Promise<void> {
       fail("smoke asset did not apply through the existing authoring bridge");
     }
     unlinkSync(sourcePath);
+    const audioSourcePath = join(smokeRoot, "tone.wav");
+    writeFileSync(audioSourcePath, smokeAudioBytes());
+    const stagedAudio = smokeBridge.handle({
+      action: "asset-import",
+      payload: { profile: "game", documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH, sourcePath: audioSourcePath },
+    });
+    if (!stagedAudio.ok || payloadField(stagedAudio.data, "outcome") !== "reviewing") {
+      fail("deterministic WAV did not enter the existing asset-import review");
+    }
+    const acceptedAudio = smokeBridge.handle({ action: "authoring", payload: { op: "accept" } });
+    if (!acceptedAudio.ok || payloadField(acceptedAudio.data, "phase") !== "applied") {
+      fail("deterministic WAV did not apply through the existing asset-import bridge");
+    }
+    unlinkSync(audioSourcePath);
+    const invalidAudioPath = join(smokeRoot, "undecodable.ogg");
+    writeFileSync(invalidAudioPath, smokeUndecodableOggBytes());
+    const stagedInvalidAudio = smokeBridge.handle({
+      action: "asset-import",
+      payload: { profile: "game", documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH, sourcePath: invalidAudioPath },
+    });
+    if (!stagedInvalidAudio.ok || payloadField(stagedInvalidAudio.data, "outcome") !== "reviewing") {
+      fail("metadata-valid Ogg fixture did not enter asset review");
+    }
+    const acceptedInvalidAudio = smokeBridge.handle({ action: "authoring", payload: { op: "accept" } });
+    if (!acceptedInvalidAudio.ok || payloadField(acceptedInvalidAudio.data, "phase") !== "applied") {
+      fail("metadata-valid Ogg fixture did not apply through the asset-import bridge");
+    }
+    unlinkSync(invalidAudioPath);
     const openedSmokeProject = lifecycle.openProject(smokeRoot);
     if (!openedSmokeProject.ok) {
       fail(`smoke project lifecycle did not bind the contained root: ${openedSmokeProject.reason}`);
@@ -453,6 +693,7 @@ async function start(): Promise<void> {
       nodeIntegration: false,
     },
   });
+  desktopWindow = window;
 
   window.webContents.on("will-navigate", (event) => event.preventDefault());
   window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
@@ -1068,7 +1309,26 @@ async function start(): Promise<void> {
     playbackDom.state !== "acknowledged" ||
     typeof playbackDom.frame !== "number"
   ) {
-    fail("Play did not redraw the saved composition in the packaged viewport");
+    fail(`Play did not redraw the saved composition in the packaged viewport: ${JSON.stringify(playbackDom)}`);
+  }
+
+  const audioProof = await runAudioSmokeProof(window);
+  const audioResetStopped = await runAudioResetSmokeProof(window);
+  const audioDecodeRefused = await runAudioDecodeRefusalSmokeProof(window);
+  const audioKidsSwitchStopped = await runAudioKidsProfileSmokeProof(window);
+  const audioSwitchRoot = mkdtempSync(join(tmpdir(), "sceneaxi-audio-switch-"));
+  seedProject(audioSwitchRoot);
+  const audioProjectSwitchStopped = await runAudioProjectSwitchSmokeProof(
+    window,
+    async () => { await activateProject(audioSwitchRoot); },
+  );
+  if (
+    audioProof.duration !== 2 || audioProof.sampleRate !== 44_100 ||
+    audioProof.channels !== 1 || audioProof.volume < 0.3 || audioProof.volume > 0.4 || audioProof.gain < 0.3 || audioProof.gain > 0.4 || audioProof.sourceStarted !== true || audioProof.pointerTargets.volume !== true || audioProof.pointerTargets.play !== true ||
+    audioProof.offlineRms <= 0.01 || audioProof.liveRms < 0.07 || audioProof.liveRms > 0.11 || audioProof.stoppedRms > 0.01 || audioProof.stopped !== true || audioProof.contextDisposed !== true ||
+    audioResetStopped !== true || audioDecodeRefused !== true || audioKidsSwitchStopped !== true || audioProjectSwitchStopped !== true
+  ) {
+    fail(`renderer audio proof failed: ${JSON.stringify({ audioProof, audioResetStopped, audioDecodeRefused, audioKidsSwitchStopped, audioProjectSwitchStopped })}`);
   }
 
   // The window's own DOM must agree with the frame report: one live canvas, the
@@ -1240,11 +1500,12 @@ async function start(): Promise<void> {
 
   await localBridgeServer?.close();
   localBridgeServer = null;
-  if (!proofBridge.close()) {
+  if (bridge !== null && !bridge.close()) {
     fail("The desktop mutation-owner lease could not be released after smoke verification.");
   }
   bridge = null;
   rmSync(cwd, { recursive: true, force: true });
+  rmSync(audioSwitchRoot, { recursive: true, force: true });
 
   console.log(
     JSON.stringify({
@@ -1317,6 +1578,7 @@ async function start(): Promise<void> {
         '#270': { ...guiFeatures['#270'] },
       },
       playbackDom,
+      audioProof: { ...audioProof, resetStopped: audioResetStopped, decodeRefused: audioDecodeRefused, kidsSwitchStopped: audioKidsSwitchStopped, projectSwitchStopped: audioProjectSwitchStopped },
       viewportDom,
       ...(screenshotBytes > 0 ? { screenshotBytes } : {}),
     }),

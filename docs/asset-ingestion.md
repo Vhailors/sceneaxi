@@ -27,7 +27,7 @@ The bounded families are:
 | SceneAxi | validated Scene Document, Sculpt Intake, Sculpt Artifact, or Composed Scene JSON |
 | Model | `sceneaxi.gltf-contained-triangles-v1`: contained GLB or embedded-buffer glTF 2.0; PNG-textured triangles and node translation/rotation/scale clips with LINEAR or STEP sampling |
 | Image | PNG, JPEG, or VP8X WebP with validated headers and bounded dimensions; separate raster assets, not glTF textures |
-| Audio | bounded WAV, Ogg, or MP3 container metadata |
+| Audio | bounded WAV, Ogg, or MP3 container metadata; desktop Game/Web Play manually decodes accepted clips through Web Audio |
 | Font | WOFF2, WOFF, TTF, or OTF with bounded table metadata |
 | Animation data | `sceneaxi.animation-data` schema v1 metadata; no timeline authoring or runtime evaluator |
 
@@ -80,13 +80,19 @@ the stable id, contained path, and model composition identities.
   from the manifest entry.
 - Assistant inspection: formats read-only metadata from that entry and omits
   canonical bytes.
-- Play: consumes model entries only, retaining the original canonical glTF
-  bytes and applying validated node-TRS clips through the presentation core.
-  LINEAR and STEP are supported; CUBICSPLINE and skinning (`skins`,
-  `JOINTS_0`, `WEIGHTS_0`) refuse by name. Animation changes presentation state
-  only and never writes authoring bytes. Non-model assets do not fabricate scene
-  nodes.
-  Separate raster image entries are not bound to glTF materials.
+- Play: consumes model entries, retaining the original canonical glTF bytes
+  and applying validated node-TRS clips through the presentation core. LINEAR
+  and STEP are supported; CUBICSPLINE and skinning (`skins`, `JOINTS_0`,
+  `WEIGHTS_0`) refuse by name. Animation changes presentation state only and
+  never writes authoring bytes. Non-model assets do not fabricate scene nodes.
+  The desktop Game/Web Play session also lists accepted audio clips by stable
+  asset id. The user starts each clip manually and controls master volume; the
+  desktop fetches accepted bytes on demand, verifies length and digest, then
+  decodes WAV, Ogg, or MP3 with Web Audio. This adds no scene-authored trigger,
+  loop, spatial audio, or autoplay behavior. Export Web packages audio but does
+  not play it. Kids remains refuse-only at the existing open-path boundary; this
+  change adds no Kids asset or playback behavior. Separate raster image entries
+  are not bound to glTF materials.
 - Export Web: verifies and packages every admitted entry by its manifest media
   type, length, digest, and project-contained path.
 
@@ -97,8 +103,11 @@ preview/browser/assistant parity, CLI reload, and approval boundary are in
 Reject/accept/Play/Three/CLI parity remains in
 `tests/e2e/asset-ingestion-golden.test.ts`.
 
+Kids audio behavior remains a captain question before any Kids asset/playback
+surface is added; the current Kids open-path refusal stays in force.
+
 This slice does not add hierarchy editing, input-map editing, a new Play
-lifecycle, animation authoring, physics, provider adapters, assistant mutation,
-package management, build targets, auth or billing, deployment, publication,
-Kids activation, or the Stage 1 proof. The known Electron 43.2.0 host limitation
-is unchanged.
+lifecycle, scene-authored audio behavior, animation authoring, physics, provider
+adapters, assistant mutation, package management, build targets, auth or billing,
+deployment, publication, Kids activation, or the Stage 1 proof. The known Electron
+43.2.0 host limitation is unchanged.
