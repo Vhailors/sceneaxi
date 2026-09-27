@@ -4548,7 +4548,7 @@ if (shell) {
       documentPath: T.product.documentPath,
       expectedContentHash: projectContentHash,
       mutation,
-    }, 'animation');
+    }, 'animation', { authoringSnapshot: true });
     if (result) q('[data-timeline-result]').forEach((el) => {
       el.textContent = 'Animation edit staged in Change Review. Save applies the proposal.';
     });

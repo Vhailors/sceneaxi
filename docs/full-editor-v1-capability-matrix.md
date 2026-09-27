@@ -235,13 +235,13 @@ remaining pending controls into supported features.
 
 | Issue | Packaged GUI evidence | Remaining gap |
 |---|---|---|
-| #254 | Clicks Rotate and +X nudge controls and verifies the selected transform mode. | Numeric inspector proposal staging remains unverified by this smoke. |
+| #254 | Selects `desktop-crate-beside`, chooses Rotate and 0.1 snap, edits Translation X, clicks Stage and Accept, and asserts bytes stay unchanged before Accept then persist `-3.05` with a changed digest. | The smoke covers inspector staging and transform mode/snap selection; other gizmo combinations remain covered by transform goldens. |
 | #255 | Records the absent prefab controls. | `scene-prefab-*` controls are pending. |
-| #256 | Opens the imported asset through Project Browser and records its SHA-256 digest. | GUI import and hot-reload actions remain unverified by this smoke; import behavior has separate bridge and golden evidence. |
+| #256 | Uses the GUI import action twice through the native-dialog boundary stub, edits the source fixture, clicks GUI Reload, and asserts pre-Accept immutability plus distinct manifest digests for the two revisions. | Reload/reimport creates a separately identified asset; in-place replacement of an existing asset is not claimed. |
 | #257 | Records the absent input-action controls. | Inspect, rebind, and reset controls are pending. |
 | #258 | Clicks Play, Stop, and Reset. Asserts the acknowledged viewport frame and unchanged authoring bytes. | `viewport-source-set` control is pending. |
-| #259 | Clicks Timeline Evaluate and asserts the named `ANIMATION_STALE_VERSION` refusal. | GUI animation apply and successful replay remain unverified by this smoke. |
-| #260 | Inspects the physics catalog and asserts gravity, engine, and unchanged project bytes. | `physics-evaluate` control is pending. GUI physics apply remains unverified by this smoke. |
+| #259 | Applies a `smoke-idle` clip through Timeline, verifies unchanged bytes before GUI Accept, changed document digest and persisted clip after Accept, then evaluates against that accepted content hash. | None for this smoke path. |
+| #260 | Stages `world-set` through the Physics inspector, verifies bytes are unchanged before GUI Accept, then asserts persisted gravity `-10.25`, changed document digest, and the inspected toy engine. | `physics-evaluate` control is pending. |
 | #261 | Uses the local fixture route and stages a proposal for review. | No live provider or credential is used. |
 | #262 | Inspects the empty package lock and fixed digest without marketplace or network access. | Install and remove controls are pending. |
 | #263 | Initializes Git in the scratch project, then clicks status, diff, selects a scratch path, and stages it. | Migration commit control is pending. |

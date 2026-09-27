@@ -119,7 +119,7 @@ if (features?.["#264"]?.gui !== true || features["#264"].state !== "profile-evid
 const measuredDrawCalls = profileEvidence.metrics?.find((metric) => metric.id === "draw-calls");
 if (profileEvidence.kind !== "sceneaxi.profile-evidence" || profileEvidence.savedBytesWritten !== false ||
     profileEvidence.digest !== features?.["#264"]?.digest ||
-    profileEvidence.sourceContentHash !== proof.ship?.sourceDigest ||
+    profileEvidence.sourceContentHash !== features?.["#256"]?.finalProjectDigest ||
     measuredDrawCalls?.status !== "measured" || measuredDrawCalls.value !== proof.frameReport?.drawCalls ||
     typeof profileEvidence.digest !== "string" || !/^sha256:[0-9a-f]{64}$/.test(profileEvidence.digest)) {
   failures.push("#270 profile evidence lacks the matching source digest and measured presentation draw-call count");
@@ -135,9 +135,15 @@ for (const [feature, state] of [["#267", "unsupported-host-macos"], ["#268", "un
     failures.push(`${feature} did not record the expected host artifact absence`);
   }
 }
-if (features?.["#259"]?.gui !== true || features?.["#259"]?.state !== "animation-evaluation-result" ||
-    features["#259"].result !== "ANIMATION_STALE_VERSION · Scrub and Play evaluation name the exact project version being previewed.") {
-  failures.push("#259 did not record the expected GUI animation stale-version refusal");
+const animationEvaluation = features?.["#259"]?.evaluation ?? "";
+if (features?.["#259"]?.gui !== true || features["#259"].state !== "animation-applied-and-evaluated" ||
+    features["#259"].staged !== true || features["#259"].unchangedBeforeAccept !== true ||
+    JSON.stringify(features["#259"].mutation) !== JSON.stringify({ clipId: "smoke-idle", name: "Smoke Idle", durationMs: 1200 }) ||
+    !/^sha256:[0-9a-f]{64}$/.test(features["#259"].digestAfterAccept ?? "") ||
+    !animationEvaluation.includes('"kind": "sceneaxi.scene-animation-evaluation"') ||
+    !animationEvaluation.includes(`"sourceContentHash": "${features?.["#259"]?.digestAfterAccept}"`) ||
+    animationEvaluation.includes("ANIMATION_STALE_VERSION")) {
+  failures.push("#259 GUI animation apply did not persist changed bytes and evaluate the new content version");
 }
 if (features?.["#261"]?.gui !== true || features["#261"].completed !== true ||
     features["#261"].state !== "Rarity proposal staged · review the canonical diff before Accept or Reject.") {
@@ -145,8 +151,10 @@ if (features?.["#261"]?.gui !== true || features["#261"].completed !== true ||
 }
 const physicsCatalog = JSON.parse(features?.["#260"]?.message ?? "{}");
 if (physicsCatalog.kind !== "sceneaxi.scene-physics-inspection" ||
-    physicsCatalog.catalog?.world?.gravityY !== -9.81 || physicsCatalog.savedBytesWritten !== false) {
-  failures.push("#260 physics inspection did not report the expected unchanged toy-world catalog");
+    physicsCatalog.catalog?.world?.gravityY !== -10.25 || physicsCatalog.savedBytesWritten !== false ||
+    features?.["#260"]?.applied !== true || features["#260"].unchangedBeforeAccept !== true ||
+    !/^sha256:[0-9a-f]{64}$/.test(features["#260"].digestAfterAccept ?? "")) {
+  failures.push("#260 physics inspection did not prove GUI staging and accepted world gravity in changed scratch bytes");
 }
 const packageCatalog = JSON.parse(features?.["#262"]?.message ?? "{}");
 if (packageCatalog.kind !== "sceneaxi.scene-package-inspection" ||
@@ -164,15 +172,25 @@ if (features?.["#265"]?.apply?.completed !== true ||
     !features["#265"].reset.message.includes('"digest": "sha256:5636d88918f6eb20650a18388061eed50c5bd030bfd305d9ade5ffd8d8ebd361"')) {
   failures.push("#265 workspace layout apply/reset did not persist and restore the expected scratch-project digests");
 }
-if (features?.["#256"]?.gui !== true || features["#256"].state !== "existing-project-browser-asset-open-proof" ||
-    features["#256"].digest !== proof.projectBrowser?.assetDigest ||
+if (features?.["#256"]?.gui !== true || features["#256"].state !== "gui-import-source-edit-reload-reimport" ||
+    features["#256"].importedPath !== "assets/smoke-gui-source.gltf" ||
+    features["#256"].importedRevisionPath !== "assets/smoke-gui-source-revision-2.gltf" ||
+    features["#256"].reloadCompleted !== true || features["#256"].unchangedBeforeAccept !== true ||
+    !/^sha256:[0-9a-f]{64}$/.test(features["#256"].initialDigest ?? "") ||
+    !/^sha256:[0-9a-f]{64}$/.test(features["#256"].editedDigest ?? "") ||
+    features["#256"].initialDigest === features["#256"].editedDigest ||
     proof.projectBrowser?.selected !== true || proof.projectBrowser?.opened !== true) {
-  failures.push("#256 did not select and open the digest-bound imported asset through the GUI");
+  failures.push("#256 GUI import/reload did not preserve pre-Accept bytes and change the selected asset manifest digest after source revision");
 }
-if (features?.["#254"]?.gui !== true || features["#254"].state !== "rotate-mode-and-positive-x-nudge-clicked" ||
-    features["#254"].transformMode !== "rotate" ||
-    JSON.stringify(features["#254"].pendingProof) !== JSON.stringify(["scene-property-stage GUI proposal"])) {
-  failures.push("#254 did not record GUI gizmo mode and nudge actions");
+if (features?.["#254"]?.gui !== true || features["#254"].state !== "scene-property-staged-and-accepted" ||
+    features["#254"].selectedEntity !== "desktop-crate-beside" || features["#254"].transformMode !== "rotate" ||
+    features["#254"].snapIncrement !== "0.1" ||
+    features["#254"].staged !== true || features["#254"].unchangedBeforeAccept !== true ||
+    features["#254"].valueBefore !== -3.25 || features["#254"].valueAfter !== -3.05 ||
+    !/^sha256:[0-9a-f]{64}$/.test(features["#254"].digestBeforeAccept ?? "") ||
+    !/^sha256:[0-9a-f]{64}$/.test(features["#254"].digestAfterAccept ?? "") ||
+    features["#254"].digestBeforeAccept === features["#254"].digestAfterAccept) {
+  failures.push("#254 GUI entity selection, inspector stage, pre-Accept immutability, or persisted transform digest was wrong");
 }
 for (const [feature, commands] of [
   ["#258", ["viewport-source-set"]], ["#260", ["physics-evaluate"]],
@@ -181,15 +199,6 @@ for (const [feature, commands] of [
 ]) {
   if (JSON.stringify(features?.[feature]?.pendingControls) !== JSON.stringify(commands)) {
     failures.push(`${feature} pending control list is inaccurate`);
-  }
-}
-for (const [feature, steps] of [
-  ["#256", ["asset import and hot-reload GUI actions"]],
-  ["#259", ["animation-apply GUI proposal"]],
-  ["#260", ["physics-apply GUI proposal"]],
-]) {
-  if (JSON.stringify(features?.[feature]?.pendingProof) !== JSON.stringify(steps)) {
-    failures.push(`${feature} pending GUI proof steps are inaccurate`);
   }
 }
 if (features?.["#258"]?.state !== "acknowledged" || typeof features["#258"]?.frame !== "number" ||

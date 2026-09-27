@@ -306,6 +306,22 @@ async function runAudioSmokeProof(window: BrowserWindow): Promise<{
   contextDisposed: boolean;
   pointerTargets: Readonly<{ volume: boolean; play: boolean }>;
 }> {
+  // The feature proofs end with Stop and Reset, which dispose the audio controls;
+  // start a fresh Play session the way a user would before measuring audio,
+  // first dismissing the outcome dialog the last feature proof left open.
+  if (await window.webContents.executeJavaScript(`document.querySelector('.shell')?.dataset.overlay === 'outcome'`)) {
+    await clickRendererControl(window, '[data-overlay="outcome"] [data-action="overlay"][data-value="none"]');
+    if (!await waitForRenderer(window, "document.querySelector('.shell')?.dataset.overlay === 'none'")) {
+      throw new Error("the outcome dialog did not close before audio Play");
+    }
+  }
+  await clickRendererControl(window, '[data-command="run-play"]');
+  if (!await waitForRenderer(window, "document.querySelector('[data-audio-playback]') !== null")) {
+    const status = await window.webContents.executeJavaScript(
+      `[document.querySelector('[data-product-status]')?.textContent, document.querySelector('[data-product-run-report]')?.textContent, document.querySelector('.viewport')?.dataset.playback, document.querySelector('[data-outcome-message]')?.textContent, document.querySelector('[data-run-live-report]')?.textContent].join(' | ')`,
+    );
+    throw new Error(`Play did not mount the session audio controls: ${status}`);
+  }
   const volumePointerHit = await clickRendererControl(window, '[aria-label="Audio volume"]', undefined, 0.35);
   await window.webContents.executeJavaScript(`(() => {
     const slider = document.querySelector('[aria-label="Audio volume"]');
@@ -426,6 +442,13 @@ async function start(): Promise<void> {
   });
 
   const smokeRoot = SMOKE ? smokeProjectDir() : null;
+  const smokeGuiAssetPath = smokeRoot === null
+    ? null
+    : join(smokeRoot, ".sceneaxi-runtime", "smoke-gui-source.gltf");
+  const smokeGuiAssetRevisionPath = smokeRoot === null
+    ? null
+    : join(smokeRoot, ".sceneaxi-runtime", "smoke-gui-source-revision-2.gltf");
+  let smokeGuiAssetPickerPath = smokeGuiAssetPath;
   const providerKeyStore = createElectronProviderKeyStore(app.getPath("userData"));
   const byoRuntime = createPrivilegedDesktopByoRuntime({
     keyStore: providerKeyStore,
@@ -562,6 +585,11 @@ async function start(): Promise<void> {
   if (smokeRoot !== null) {
     smokeBridge = await activateProject(smokeRoot);
     const sourcePath = join(smokeRoot, "smoke-source.gltf");
+    mkdirSync(join(smokeRoot, ".sceneaxi-runtime"), { recursive: true });
+    if (smokeGuiAssetPath === null) fail("GUI import fixture path was not configured");
+    const guiAssetSource = JSON.parse(smokeAssetBytes().toString("utf8"));
+    guiAssetSource.extras = { sceneaxiSmokeRevision: 1 };
+    writeFileSync(smokeGuiAssetPath, JSON.stringify(guiAssetSource));
     writeFileSync(sourcePath, smokeAssetBytes());
     const stagedAsset = smokeBridge.handle({
       action: "asset-import",
@@ -644,15 +672,17 @@ async function start(): Promise<void> {
       );
     }
     const picker = createDesktopAssetPickerHost({
-      chooseFile: () => dialog.showOpenDialog(window, {
-        title: "Import validated project asset",
-        buttonLabel: "Stage Import",
-        properties: ["openFile"],
-        filters: [{
-          name: "SceneAxi project assets",
-          extensions: ["glb", "gltf", "json", "png", "jpg", "jpeg", "webp", "wav", "ogg", "mp3", "woff2", "woff", "ttf", "otf"],
-        }],
-      }),
+      chooseFile: () => SMOKE && smokeGuiAssetPickerPath !== null
+        ? Promise.resolve({ canceled: false, filePaths: [smokeGuiAssetPickerPath] })
+        : dialog.showOpenDialog(window, {
+            title: "Import validated project asset",
+            buttonLabel: "Stage Import",
+            properties: ["openFile"],
+            filters: [{
+              name: "SceneAxi project assets",
+              extensions: ["glb", "gltf", "json", "png", "jpg", "jpeg", "webp", "wav", "ogg", "mp3", "woff2", "woff", "ttf", "otf"],
+            }],
+          }),
       stage: (selection) => bridge?.handle(selection) ?? bridgeRefuse(
         DESKTOP_PROJECT_REFUSALS.projectRequired,
         "The selected project was closed before the asset could be staged.",
@@ -1089,17 +1119,24 @@ async function start(): Promise<void> {
         }
         return false;
       };
+      const selectorReady = await waitFor(() => {
+        const candidate = document.querySelector('#project-browser-file-select');
+        return candidate instanceof HTMLSelectElement &&
+          [...candidate.options].some((option) => option.value === ${JSON.stringify(browserAssetPath)});
+      });
       const selector = document.querySelector('#project-browser-file-select');
       const opener = document.querySelector('[data-action="project-browser-open"]');
-      if (!(selector instanceof HTMLSelectElement) || !(opener instanceof HTMLButtonElement)) {
+      if (!selectorReady || !(selector instanceof HTMLSelectElement) || !(opener instanceof HTMLButtonElement)) {
         return { selected: false, opened: false, frame: null, instanceId: null, digest: null };
       }
       selector.value = ${JSON.stringify(browserAssetPath)};
       selector.dispatchEvent(new Event('change', { bubbles: true }));
       const selected = await waitFor(() =>
         document.querySelector('[data-busy]') === null &&
-        document.querySelector('#project-browser-file-select')?.value === ${JSON.stringify(browserAssetPath)});
-      document.querySelector('[data-action="project-browser-open"]')?.click();
+        document.querySelector('#project-browser-file-select')?.value === ${JSON.stringify(browserAssetPath)} &&
+        document.querySelector('[data-project-browser-path]')?.textContent?.startsWith(${JSON.stringify(browserAssetPath)}));
+      if (!selected) return { selected, opened: false, frame: null, instanceId: null, digest: null };
+      opener.click();
       const opened = await waitFor(() =>
         document.querySelector('[data-busy]') === null &&
         document.querySelector('.viewport')?.dataset.assetOpen === ${JSON.stringify(browserAssetInstanceId)} &&
@@ -1312,24 +1349,6 @@ async function start(): Promise<void> {
     fail(`Play did not redraw the saved composition in the packaged viewport: ${JSON.stringify(playbackDom)}`);
   }
 
-  const audioProof = await runAudioSmokeProof(window);
-  const audioResetStopped = await runAudioResetSmokeProof(window);
-  const audioDecodeRefused = await runAudioDecodeRefusalSmokeProof(window);
-  const audioKidsSwitchStopped = await runAudioKidsProfileSmokeProof(window);
-  const audioSwitchRoot = mkdtempSync(join(tmpdir(), "sceneaxi-audio-switch-"));
-  seedProject(audioSwitchRoot);
-  const audioProjectSwitchStopped = await runAudioProjectSwitchSmokeProof(
-    window,
-    async () => { await activateProject(audioSwitchRoot); },
-  );
-  if (
-    audioProof.duration !== 2 || audioProof.sampleRate !== 44_100 ||
-    audioProof.channels !== 1 || audioProof.volume < 0.3 || audioProof.volume > 0.4 || audioProof.gain < 0.3 || audioProof.gain > 0.4 || audioProof.sourceStarted !== true || audioProof.pointerTargets.volume !== true || audioProof.pointerTargets.play !== true ||
-    audioProof.offlineRms <= 0.01 || audioProof.liveRms < 0.07 || audioProof.liveRms > 0.11 || audioProof.stoppedRms > 0.01 || audioProof.stopped !== true || audioProof.contextDisposed !== true ||
-    audioResetStopped !== true || audioDecodeRefused !== true || audioKidsSwitchStopped !== true || audioProjectSwitchStopped !== true
-  ) {
-    fail(`renderer audio proof failed: ${JSON.stringify({ audioProof, audioResetStopped, audioDecodeRefused, audioKidsSwitchStopped, audioProjectSwitchStopped })}`);
-  }
 
   // The window's own DOM must agree with the frame report: one live canvas, the
   // inert note gone, the report line printed. Asserted by scripts/smoke.mjs.
@@ -1338,6 +1357,388 @@ async function start(): Promise<void> {
         inertNotePresent: document.querySelector('.viewport-note-inert') !== null,
         reportText: document.getElementById('desktop-live-viewport-report')?.textContent ?? null })`,
   )) as { canvases: number; inertNotePresent: boolean; reportText: string | null };
+
+  const waitForGui = async <T>(script: string) =>
+    await window.webContents.executeJavaScript(script) as T;
+
+  const guiTransformProof = await waitForGui<{
+    gui: boolean;
+    selectedEntity: string;
+    nudgeAccepted: boolean;
+    staged: boolean;
+    diagnostic: string;
+    valueBefore: number;
+    stagedValue: number;
+    snapIncrement?: string;
+    status?: string;
+    outcome?: string;
+    outcomeCode?: string;
+    badge?: string;
+  }>(`(async () => {
+    const waitFor = async (predicate) => {
+      for (let attempt = 0; attempt < 500; attempt += 1) {
+        if (predicate()) return true;
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      return false;
+    };
+    const click = (selector) => document.querySelector(selector)?.click();
+    const priorReloadStatus = document.querySelector('[data-project-status]')?.textContent ?? '';
+    click('[data-action="document-reload"]');
+    await waitFor(() => document.querySelector('[data-project-status]')?.textContent !== priorReloadStatus &&
+      document.querySelector('[data-project-state]')?.getAttribute('data-project-state') === 'open' &&
+      document.querySelector('[data-busy]') === null);
+    click('[data-action="profile"][data-value="game"]');
+    await waitFor(() => document.querySelector('.shell')?.dataset.profile === 'game');
+    click('[data-action="mode"][data-value="build"]');
+    await waitFor(() => document.querySelector('[data-mode-panel="build"]')?.hidden === false);
+    const entity = document.querySelector('[data-action="scene-entity-select"]');
+    const entityId = ${JSON.stringify(DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId)};
+    if (!(entity instanceof HTMLSelectElement) || ![...entity.options].some((option) => option.value === entityId)) {
+      return { gui: false, selectedEntity: '', nudgeAccepted: false, staged: false, diagnostic: '', valueBefore: NaN, stagedValue: NaN };
+    }
+    entity.value = entityId;
+    entity.dispatchEvent(new Event('change', { bubbles: true }));
+    const inputSelector = '#scene-property-translation-x';
+    const hasInput = await waitFor(() => document.querySelector(inputSelector) instanceof HTMLInputElement);
+    if (!hasInput) return { gui: false, selectedEntity: '', nudgeAccepted: false, staged: false, diagnostic: '', valueBefore: NaN, stagedValue: NaN };
+    const input = document.querySelector(inputSelector);
+    const valueBefore = input.valueAsNumber;
+    const snap = document.querySelector('[data-scene-transform-snap]');
+    if (snap instanceof HTMLInputElement) {
+      snap.value = '0.1';
+      snap.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    click('[data-action="scene-transform-mode"][data-value="rotate"]');
+    const stagedValue = Number((valueBefore + 0.2).toFixed(6));
+    input.value = String(stagedValue);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    click('[data-action="scene-property-stage"]');
+    const staged = await waitFor(() => document.querySelector('[data-change-badge]')?.textContent === '1' &&
+      document.querySelector('[data-product-action][data-busy="true"]') === null);
+    return {
+      gui: true,
+      selectedEntity: entityId,
+      nudgeAccepted: false,
+      staged,
+      diagnostic: document.querySelector('[data-scene-property-diagnostic]')?.textContent ?? '',
+      valueBefore,
+      stagedValue,
+      transformMode: document.querySelector('.shell')?.dataset.transformMode ?? '',
+      snapIncrement: snap instanceof HTMLInputElement ? snap.value : '',
+    };
+  })()`);
+  const sceneStageBytes = readFileSync(documentFile, "utf8");
+  const sceneStageDigest = createHash("sha256").update(sceneStageBytes).digest("hex");
+  if (!guiTransformProof.gui || !guiTransformProof.staged ||
+      guiTransformProof.transformMode !== "rotate" ||
+      guiTransformProof.stagedValue === guiTransformProof.valueBefore) {
+    fail(`GUI transform/property staging did not reach review: ${JSON.stringify(guiTransformProof)}`);
+  }
+  const guiStageUnchangedBytes = readFileSync(documentFile, "utf8") === sceneStageBytes;
+  await waitForGui<boolean>(`(async () => {
+    const waitFor = async (predicate) => {
+      for (let attempt = 0; attempt < 500; attempt += 1) {
+        if (predicate()) return true;
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      return false;
+    };
+    document.querySelector('[data-action="dock-tab"][data-value="changes"]')?.click();
+    document.querySelector('[data-action="change-accept"]')?.click();
+    return await waitFor(() => document.querySelector('[data-change-badge]')?.textContent === '0' &&
+      document.querySelector('[data-product-status]')?.textContent?.includes('saved') &&
+      document.querySelector('[data-product-action][data-busy="true"]') === null);
+  })()`);
+  const sceneAcceptedBytes = readFileSync(documentFile, "utf8");
+  const sceneAcceptedDigest = createHash("sha256").update(sceneAcceptedBytes).digest("hex");
+  const acceptedSceneDocument = JSON.parse(sceneAcceptedBytes);
+  const acceptedSceneEntity = acceptedSceneDocument.data?.composedScene?.instances?.find(
+    (entity: { instanceId?: string }) => entity.instanceId === DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
+  );
+  const acceptedSceneValue = acceptedSceneEntity?.localTransform?.translation?.[0];
+  if (!guiStageUnchangedBytes || sceneAcceptedBytes === sceneStageBytes ||
+      acceptedSceneValue !== guiTransformProof.stagedValue) {
+    fail(`GUI scene property Accept did not preserve-before-accept and persist the expected value: ${JSON.stringify({
+      guiTransformProof,
+      guiStageUnchangedBytes,
+      changed: sceneAcceptedBytes !== sceneStageBytes,
+      acceptedSceneValue,
+      sceneStageDigest,
+      sceneAcceptedDigest,
+    })}`);
+  }
+
+  const guiPhysicsStage = await waitForGui<{
+    staged: boolean;
+    diagnostic: string;
+  }>(`(async () => {
+    const waitFor = async (predicate) => {
+      for (let attempt = 0; attempt < 700; attempt += 1) {
+        if (predicate()) return true;
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      return false;
+    };
+    const mutation = document.querySelector('[data-catalog-mutation="physics"]');
+    if (!(mutation instanceof HTMLTextAreaElement)) return { staged: false, diagnostic: 'physics mutation control missing' };
+    mutation.value = JSON.stringify({ kind: 'world-set', gravityY: -10.25, stepMs: 16, seed: 1, engine: 'toy' });
+    mutation.dispatchEvent(new Event('input', { bubbles: true }));
+    document.querySelector('[data-action="catalog-stage"][data-value="physics"]')?.click();
+    return {
+      staged: await waitFor(() => document.querySelector('[data-change-badge]')?.textContent === '1' &&
+        document.querySelector('[data-product-action][data-busy="true"]') === null),
+      diagnostic: document.querySelector('[data-project-status]')?.textContent ?? '',
+    };
+  })()`);
+  const physicsBeforeAccept = readFileSync(documentFile, "utf8");
+  const physicsUnchangedBeforeAccept = physicsBeforeAccept === sceneAcceptedBytes;
+  await waitForGui<boolean>(`(async () => {
+    const waitFor = async (predicate) => {
+      for (let attempt = 0; attempt < 700; attempt += 1) {
+        if (predicate()) return true;
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      return false;
+    };
+    document.querySelector('[data-action="dock-tab"][data-value="changes"]')?.click();
+    document.querySelector('[data-action="change-accept"]')?.click();
+    return await waitFor(() => document.querySelector('[data-change-badge]')?.textContent === '0' &&
+      document.querySelector('[data-project-status]')?.textContent?.includes('saved') &&
+      document.querySelector('[data-product-action][data-busy="true"]') === null);
+  })()`);
+  const physicsAcceptedBytes = readFileSync(documentFile, "utf8");
+  const physicsAcceptedDigest = createHash("sha256").update(physicsAcceptedBytes).digest("hex");
+  if (!guiPhysicsStage.staged || !physicsUnchangedBeforeAccept || physicsAcceptedBytes === physicsBeforeAccept ||
+      !physicsAcceptedBytes.includes('"gravityY": -10.25')) {
+    fail(`GUI physics proposal did not stage without writes and persist on Accept: ${JSON.stringify({
+      guiPhysicsStage,
+      physicsUnchangedBeforeAccept,
+      changedAfterAccept: physicsAcceptedBytes !== physicsBeforeAccept,
+      expectedWorldValue: physicsAcceptedBytes.includes('"gravityY": -10.25'),
+    })}`);
+  }
+
+  const guiAnimationStage = await waitForGui<{
+    staged: boolean;
+    result: string;
+    status?: string;
+    kind?: string;
+    disabled?: boolean;
+    outcome?: string;
+    outcomeCode?: string;
+  }>(`(async () => {
+    const waitFor = async (predicate) => {
+      for (let attempt = 0; attempt < 700; attempt += 1) {
+        if (predicate()) return true;
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      return false;
+    };
+    document.querySelector('[data-action="mode"][data-value="animate"]')?.click();
+    const modeReady = await waitFor(() => document.querySelector('.shell')?.dataset.mode === 'animate' &&
+      document.querySelector('[data-action="dock-tab"][data-value="timeline"]') instanceof HTMLElement);
+    if (!modeReady) return { staged: false, result: 'animation mode did not expose Timeline' };
+    document.querySelector('[data-action="dock-tab"][data-value="timeline"]')?.click();
+    const timelineOpened = await waitFor(() => document.querySelector('[data-dock-panel="timeline"]')?.hidden === false &&
+      document.querySelector('[data-timeline-result]')?.textContent !== 'Open Timeline to inspect clips, tracks, and keyframes.' &&
+      document.querySelector('[data-product-action][data-busy="true"]') === null);
+    if (!timelineOpened) return {
+      staged: false,
+      result: document.querySelector('[data-timeline-result]')?.textContent ?? '',
+      status: document.querySelector('[data-project-status]')?.textContent ?? '',
+    };
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const mutation = document.querySelector('[data-timeline-mutation]');
+    if (!(mutation instanceof HTMLTextAreaElement)) return { staged: false, result: 'timeline mutation control missing' };
+    mutation.value = JSON.stringify({ kind: 'clip-upsert', clipId: 'smoke-idle', name: 'Smoke Idle', startMs: 0, durationMs: 1200 });
+    mutation.dispatchEvent(new Event('input', { bubbles: true }));
+    document.querySelector('[data-action="timeline-apply"]')?.click();
+    const staged = await waitFor(() => document.querySelector('[data-change-badge]')?.textContent === '1' &&
+      document.querySelector('[data-product-action][data-busy="true"]') === null);
+    return {
+      staged,
+      result: document.querySelector('[data-timeline-result]')?.textContent ?? '',
+      status: document.querySelector('[data-project-status]')?.textContent ?? '',
+      kind: mutation.dataset.kind,
+      disabled: mutation.disabled,
+      outcome: document.querySelector('[data-outcome-title]')?.textContent ?? '',
+      outcomeCode: document.querySelector('[data-outcome-code]')?.textContent ?? '',
+    };
+  })()`);
+  const animationBeforeAccept = readFileSync(documentFile, "utf8");
+  const animationUnchangedBeforeAccept = animationBeforeAccept === physicsAcceptedBytes;
+  await waitForGui<boolean>(`(async () => {
+    const waitFor = async (predicate) => {
+      for (let attempt = 0; attempt < 700; attempt += 1) {
+        if (predicate()) return true;
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      return false;
+    };
+    document.querySelector('[data-action="dock-tab"][data-value="changes"]')?.click();
+    document.querySelector('[data-action="change-accept"]')?.click();
+    return await waitFor(() => document.querySelector('[data-change-badge]')?.textContent === '0' &&
+      document.querySelector('[data-project-status]')?.textContent?.includes('saved') &&
+      document.querySelector('[data-product-action][data-busy="true"]') === null);
+  })()`);
+  const animationAcceptedBytes = readFileSync(documentFile, "utf8");
+  const animationAcceptedDigest = createHash("sha256").update(animationAcceptedBytes).digest("hex");
+  if (!guiAnimationStage.staged || !animationUnchangedBeforeAccept || animationAcceptedBytes === animationBeforeAccept ||
+      !animationAcceptedBytes.includes('"clipId": "smoke-idle"') ||
+      !animationAcceptedBytes.includes('"name": "Smoke Idle"') ||
+      !animationAcceptedBytes.includes('"durationMs": 1200')) {
+    fail(`GUI animation proposal did not stage without writes and persist on Accept: ${JSON.stringify({
+      guiAnimationStage,
+      animationUnchangedBeforeAccept,
+      changedAfterAccept: animationAcceptedBytes !== animationBeforeAccept,
+    })}`);
+  }
+  const guiAnimationEvaluation = await waitForGui<string>(`(async () => {
+    const waitFor = async (predicate) => {
+      for (let attempt = 0; attempt < 700; attempt += 1) {
+        if (predicate()) return true;
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      return false;
+    };
+    document.querySelector('[data-action="dock-tab"][data-value="timeline"]')?.click();
+    const output = document.querySelector('[data-timeline-result]');
+    const inspectionReady = await waitFor(() => output?.textContent?.includes('sceneaxi.scene-animation-inspection') &&
+      document.querySelector('[data-product-action][data-busy="true"]') === null);
+    if (!inspectionReady) return JSON.stringify({ evaluated: false, output: output?.textContent ?? '', status: document.querySelector('[data-project-status]')?.textContent ?? '', buttonFound: false, buttonDisabled: null });
+    const evaluateButton = document.querySelector('[data-action="timeline-evaluate"]');
+    const priorResult = output?.textContent ?? '';
+    evaluateButton?.click();
+    const evaluated = await waitFor(() => output?.textContent !== priorResult &&
+      (output?.textContent?.includes('sceneaxi.scene-animation-evaluation') ||
+        output?.textContent?.includes('ANIMATION_')) &&
+      document.querySelector('[data-product-action][data-busy="true"]') === null);
+    return JSON.stringify({
+      evaluated,
+      output: output?.textContent ?? '',
+      status: document.querySelector('[data-project-status]')?.textContent ?? '',
+      buttonFound: evaluateButton instanceof HTMLElement,
+      buttonDisabled: evaluateButton instanceof HTMLButtonElement ? evaluateButton.disabled : null,
+    });
+  })()`);
+  const animationEvaluationProof = JSON.parse(guiAnimationEvaluation);
+  if (animationEvaluationProof.evaluated !== true ||
+      !animationEvaluationProof.output.includes('sceneaxi.scene-animation-evaluation') ||
+      animationEvaluationProof.output.includes('ANIMATION_STALE_VERSION')) {
+    fail(`Animation evaluate used a stale content version after the GUI proposal was accepted: ${guiAnimationEvaluation}`);
+  }
+
+  const guiAssetImport = async () => await waitForGui<{
+    staged: boolean;
+    status: string;
+  }>(`(async () => {
+    const waitFor = async (predicate) => {
+      for (let attempt = 0; attempt < 800; attempt += 1) {
+        if (predicate()) return true;
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      return false;
+    };
+    document.querySelector('[data-action="web-inject-asset"]')?.click();
+    return {
+      staged: await waitFor(() => document.querySelector('[data-project-status]')?.textContent?.includes('import staged') &&
+        document.querySelector('[data-change-badge]')?.textContent === '1' &&
+        document.querySelector('[data-product-action][data-busy="true"]') === null),
+      status: document.querySelector('[data-project-status]')?.textContent ?? '',
+    };
+  })()`);
+  const guiAssetAccept = async () => await waitForGui<boolean>(`(async () => {
+    const waitFor = async (predicate) => {
+      for (let attempt = 0; attempt < 800; attempt += 1) {
+        if (predicate()) return true;
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      return false;
+    };
+    document.querySelector('[data-action="dock-tab"][data-value="changes"]')?.click();
+    document.querySelector('[data-action="change-accept"]')?.click();
+    return await waitFor(() => document.querySelector('[data-change-badge]')?.textContent === '0' &&
+      document.querySelector('[data-project-status]')?.textContent?.includes('saved') &&
+      document.querySelector('[data-product-action][data-busy="true"]') === null);
+  })()`);
+  const guiAssetDigest = async (path: string) => await waitForGui<string>(`(async () => {
+    const waitFor = async (predicate) => {
+      for (let attempt = 0; attempt < 800; attempt += 1) {
+        if (predicate()) return true;
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      return false;
+    };
+    const selector = document.querySelector('#project-browser-file-select');
+    const path = ${JSON.stringify("__PATH__")};
+    const ready = await waitFor(() => selector instanceof HTMLSelectElement &&
+      [...selector.options].some((option) => option.value === path));
+    if (!ready || !(selector instanceof HTMLSelectElement)) return '';
+    selector.value = path;
+    selector.dispatchEvent(new Event('change', { bubbles: true }));
+    const detail = await waitFor(() => document.querySelector('[data-project-browser-path]')?.textContent?.startsWith(path) &&
+      /^sha256:[0-9a-f]{64}$/.test(document.querySelector('[data-project-browser-digest]')?.textContent ?? ''));
+    return detail ? document.querySelector('[data-project-browser-digest]')?.textContent ?? '' : '';
+  })()`.replace(JSON.stringify("__PATH__"), JSON.stringify(path)));
+
+  const guiAssetPath = "assets/smoke-gui-source.gltf";
+  const guiAssetRevisionPath = "assets/smoke-gui-source-revision-2.gltf";
+  await waitForGui<boolean>(`(async () => {
+    const waitFor = async (predicate) => {
+      for (let attempt = 0; attempt < 800; attempt += 1) {
+        if (predicate()) return true;
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      return false;
+    };
+    document.querySelector('[data-action="profile"][data-value="web"]')?.click();
+    return await waitFor(() => document.querySelector('.shell')?.dataset.profile === 'web' &&
+      document.querySelector('[data-action="web-inject-asset"]') instanceof HTMLElement &&
+      document.querySelector('[data-product-action][data-busy="true"]') === null);
+  })()`);
+  const guiAssetFirstStage = await guiAssetImport();
+  const assetFirstBeforeAccept = readFileSync(documentFile, "utf8");
+  const assetFirstStagedUnchanged = assetFirstBeforeAccept === animationAcceptedBytes;
+  const guiAssetFirstAccepted = await guiAssetAccept();
+  const assetFirstAcceptedBytes = readFileSync(documentFile, "utf8");
+  const guiAssetFirstDigest = await guiAssetDigest(guiAssetPath);
+  const editedSource = JSON.parse(readFileSync(smokeGuiAssetPath ?? "", "utf8"));
+  editedSource.extras = { sceneaxiSmokeRevision: 2 };
+  writeFileSync(smokeGuiAssetPath ?? "", JSON.stringify(editedSource));
+  const statusBeforeGuiReload = await waitForGui<string>(`document.querySelector('[data-project-status]')?.textContent ?? ''`);
+  const guiReloadCompleted = await waitForGui<boolean>(`(async () => {
+    const waitFor = async (predicate) => {
+      for (let attempt = 0; attempt < 800; attempt += 1) {
+        if (predicate()) return true;
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      return false;
+    };
+    document.querySelector('[data-action="document-reload"]')?.click();
+    return await waitFor(() => document.querySelector('[data-project-status]')?.textContent !== ${JSON.stringify(statusBeforeGuiReload)} &&
+      document.querySelector('[data-project-state]')?.getAttribute('data-project-state') === 'open' &&
+      document.querySelector('[data-product-action][data-busy="true"]') === null);
+  })()`);
+  if (smokeGuiAssetRevisionPath === null || smokeGuiAssetPath === null) fail("GUI asset revision fixture path was not configured");
+  writeFileSync(smokeGuiAssetRevisionPath, readFileSync(smokeGuiAssetPath));
+  smokeGuiAssetPickerPath = smokeGuiAssetRevisionPath;
+  const guiAssetSecondStage = await guiAssetImport();
+  const assetSecondBeforeAccept = readFileSync(documentFile, "utf8");
+  const assetSecondStagedUnchanged = assetSecondBeforeAccept === assetFirstAcceptedBytes;
+  const guiAssetSecondAccepted = await guiAssetAccept();
+  const guiAssetSecondDigest = await guiAssetDigest(guiAssetRevisionPath);
+  const guiAssetFinalProjectDigest = createHash("sha256").update(readFileSync(documentFile, "utf8")).digest("hex");
+  if (!guiAssetFirstStage.staged || !assetFirstStagedUnchanged || !guiAssetFirstAccepted ||
+      !/^sha256:[0-9a-f]{64}$/.test(guiAssetFirstDigest) || !guiReloadCompleted ||
+      !guiAssetSecondStage.staged || !assetSecondStagedUnchanged || !guiAssetSecondAccepted ||
+      !/^sha256:[0-9a-f]{64}$/.test(guiAssetSecondDigest) || guiAssetFirstDigest === guiAssetSecondDigest) {
+    fail(`GUI asset import/reload did not prove contained source revision and changed manifest digest: ${JSON.stringify({
+      guiAssetFirstStage, assetFirstStagedUnchanged, guiAssetFirstAccepted, guiAssetFirstDigest,
+      guiReloadCompleted, guiAssetSecondStage, assetSecondStagedUnchanged, guiAssetSecondAccepted,
+      guiAssetSecondDigest,
+    })}`);
+  }
 
   const guiFeatures = (await window.webContents.executeJavaScript(
     `(async () => {
@@ -1483,6 +1884,27 @@ async function start(): Promise<void> {
     pendingProof?: string[];
   }>;
 
+  // Audio runs after the feature proofs: its project-switch step rebinds the
+  // window to a second scratch project, which the feature proofs must not see.
+  const audioProof = await runAudioSmokeProof(window);
+  const audioResetStopped = await runAudioResetSmokeProof(window);
+  const audioDecodeRefused = await runAudioDecodeRefusalSmokeProof(window);
+  const audioKidsSwitchStopped = await runAudioKidsProfileSmokeProof(window);
+  const audioSwitchRoot = mkdtempSync(join(tmpdir(), "sceneaxi-audio-switch-"));
+  seedProject(audioSwitchRoot);
+  const audioProjectSwitchStopped = await runAudioProjectSwitchSmokeProof(
+    window,
+    async () => { await activateProject(audioSwitchRoot); },
+  );
+  if (
+    audioProof.duration !== 2 || audioProof.sampleRate !== 44_100 ||
+    audioProof.channels !== 1 || audioProof.volume < 0.3 || audioProof.volume > 0.4 || audioProof.gain < 0.3 || audioProof.gain > 0.4 || audioProof.sourceStarted !== true || audioProof.pointerTargets.volume !== true || audioProof.pointerTargets.play !== true ||
+    audioProof.offlineRms <= 0.01 || audioProof.liveRms < 0.07 || audioProof.liveRms > 0.11 || audioProof.stoppedRms > 0.01 || audioProof.stopped !== true || audioProof.contextDisposed !== true ||
+    audioResetStopped !== true || audioDecodeRefused !== true || audioKidsSwitchStopped !== true || audioProjectSwitchStopped !== true
+  ) {
+    fail(`renderer audio proof failed: ${JSON.stringify({ audioProof, audioResetStopped, audioDecodeRefused, audioKidsSwitchStopped, audioProjectSwitchStopped })}`);
+  }
+
   // Optional visual evidence: capture the real window once the live frame exists.
   const shotPath = process.env["SCENEAXI_SMOKE_SHOT"];
   let screenshotBytes = 0;
@@ -1561,11 +1983,49 @@ async function start(): Promise<void> {
       frameReport,
       features: {
         ...guiFeatures,
-        '#254': { ...guiFeatures['#254'] },
-        '#256': { gui: true, state: 'existing-project-browser-asset-open-proof', digest: browserAssetDigest, pendingProof: ['asset import and hot-reload GUI actions'] },
+        '#254': {
+          gui: true,
+          state: 'scene-property-staged-and-accepted',
+          selectedEntity: guiTransformProof.selectedEntity,
+          transformMode: guiTransformProof.transformMode,
+          snapIncrement: guiTransformProof.snapIncrement,
+          inspectorEditStaged: guiTransformProof.staged,
+          staged: guiTransformProof.staged,
+          unchangedBeforeAccept: guiStageUnchangedBytes,
+          valueBefore: guiTransformProof.valueBefore,
+          valueAfter: acceptedSceneValue,
+          digestBeforeAccept: `sha256:${sceneStageDigest}`,
+          digestAfterAccept: `sha256:${sceneAcceptedDigest}`,
+        },
+        '#256': {
+          gui: true,
+          state: 'gui-import-source-edit-reload-reimport',
+          importedPath: guiAssetPath,
+          importedRevisionPath: guiAssetRevisionPath,
+          initialDigest: guiAssetFirstDigest,
+          editedDigest: guiAssetSecondDigest,
+          finalProjectDigest: `sha256:${guiAssetFinalProjectDigest}`,
+          reloadCompleted: guiReloadCompleted,
+          unchangedBeforeAccept: assetFirstStagedUnchanged && assetSecondStagedUnchanged,
+        },
         '#258': { gui: true, state: playbackDom.state, frame: playbackDom.frame, stop: playbackDom.stop, reset: playbackDom.reset, pendingControls: ['viewport-source-set'] },
-        '#259': { ...guiFeatures['#259'], pendingProof: ['animation-apply GUI proposal'] },
-        '#260': { ...guiFeatures['#260'], pendingControls: ['physics-evaluate'], pendingProof: ['physics-apply GUI proposal'] },
+        '#259': {
+          gui: true,
+          state: 'animation-applied-and-evaluated',
+          staged: guiAnimationStage.staged,
+          unchangedBeforeAccept: animationUnchangedBeforeAccept,
+          digestAfterAccept: `sha256:${animationAcceptedDigest}`,
+          mutation: { clipId: 'smoke-idle', name: 'Smoke Idle', durationMs: 1200 },
+          evaluation: animationEvaluationProof.output,
+        },
+        '#260': {
+          ...guiFeatures['#260'],
+          state: 'physics-applied',
+          applied: guiPhysicsStage.staged,
+          unchangedBeforeAccept: physicsUnchangedBeforeAccept,
+          digestAfterAccept: `sha256:${physicsAcceptedDigest}`,
+          pendingControls: ['physics-evaluate'],
+        },
         '#261': { ...guiFeatures['#261'] },
         '#263': { ...guiFeatures['#263'], pendingControls: ['project-migration-commit'] },
         '#264': { gui: true, state: 'profile-evidence', digest: JSON.parse(guiFeatures['#270'].message ?? '{}').digest, result: guiFeatures['#270'].message },
@@ -1599,10 +2059,14 @@ process.on("uncaughtException", (error) => {
   app.exit(1);
 });
 
-// Smoke prints its own fixed proof failure. Normal startup never echoes an exception.
+// Normal startup never echoes an exception; the smoke names the failing step.
 void start().catch((error: unknown) => {
   recordDesktopDiagnostic(logsDirectory, "main-exception", { errorName: errorName(error) });
-  reportFailure("Desktop startup failed. See local logs.");
+  // The smoke runs on a scratch project with no user data, so its proof line may
+  // name the failing step; a user's startup still echoes nothing.
+  reportFailure(SMOKE && error instanceof Error
+    ? `Desktop startup failed: ${error.message}`
+    : "Desktop startup failed. See local logs.");
 });
 
 app.on("window-all-closed", () => {
