@@ -832,7 +832,8 @@
             "tests/e2e/umbrella-editor-viewport-golden.test.ts",
             "tests/e2e/umbrella-live-open-golden.test.ts",
             "tests/e2e/examples-golden.test.ts",
-            "tests/e2e/desktop-editor-command-forms-golden.test.ts"
+            "tests/e2e/desktop-editor-command-forms-golden.test.ts",
+            "tests/e2e/desktop-control-dispatch-real-bridge-golden.test.ts"
           ],
           "present": true
         }
@@ -1075,7 +1076,8 @@
             "tests/e2e/umbrella-editor-viewport-golden.test.ts",
             "tests/e2e/umbrella-live-open-golden.test.ts",
             "tests/e2e/examples-golden.test.ts",
-            "tests/e2e/desktop-editor-command-forms-golden.test.ts"
+            "tests/e2e/desktop-editor-command-forms-golden.test.ts",
+            "tests/e2e/desktop-control-dispatch-real-bridge-golden.test.ts"
           ],
           "present": true
         }
@@ -1779,7 +1781,8 @@
             "tests/e2e/umbrella-editor-viewport-golden.test.ts",
             "tests/e2e/umbrella-live-open-golden.test.ts",
             "tests/e2e/examples-golden.test.ts",
-            "tests/e2e/desktop-editor-command-forms-golden.test.ts"
+            "tests/e2e/desktop-editor-command-forms-golden.test.ts",
+            "tests/e2e/desktop-control-dispatch-real-bridge-golden.test.ts"
           ],
           "present": true
         }
@@ -2990,7 +2993,8 @@
             "tests/e2e/umbrella-editor-viewport-golden.test.ts",
             "tests/e2e/umbrella-live-open-golden.test.ts",
             "tests/e2e/examples-golden.test.ts",
-            "tests/e2e/desktop-editor-command-forms-golden.test.ts"
+            "tests/e2e/desktop-editor-command-forms-golden.test.ts",
+            "tests/e2e/desktop-control-dispatch-real-bridge-golden.test.ts"
           ],
           "present": true
         }
@@ -4525,6 +4529,7 @@
             "tests/e2e/desktop-command-interactions-golden.test.ts",
             "tests/e2e/desktop-control-inventory-golden.test.ts",
             "tests/e2e/desktop-editor-command-forms-golden.test.ts",
+            "tests/e2e/desktop-control-dispatch-real-bridge-golden.test.ts",
             "tests/e2e/desktop-extension-seams-golden.test.ts",
             "tests/e2e/desktop-hierarchy-golden.test.ts",
             "tests/e2e/desktop-linux-bridge-golden.test.ts",
@@ -4602,6 +4607,7 @@
             "tests/e2e/umbrella-live-open-golden.test.ts",
             "tests/helpers/electron-runtime-stub.ts",
             "tests/helpers/fixture.ts",
+            "tests/helpers/scoped-tmpdir.ts",
             "tests/helpers/traceability-runtime.ts",
             "tests/parity/editor-shell-parity.test.ts",
             "tests/parity/open-path-policy-parity.test.ts",
@@ -4841,7 +4847,8 @@
             "tests/e2e/umbrella-editor-viewport-golden.test.ts",
             "tests/e2e/umbrella-live-open-golden.test.ts",
             "tests/e2e/examples-golden.test.ts",
-            "tests/e2e/desktop-editor-command-forms-golden.test.ts"
+            "tests/e2e/desktop-editor-command-forms-golden.test.ts",
+            "tests/e2e/desktop-control-dispatch-real-bridge-golden.test.ts"
           ],
           "present": true
         },
@@ -8705,6 +8712,7 @@
       "tests/e2e/desktop-command-interactions-golden.test.ts",
       "tests/e2e/desktop-control-inventory-golden.test.ts",
       "tests/e2e/desktop-editor-command-forms-golden.test.ts",
+      "tests/e2e/desktop-control-dispatch-real-bridge-golden.test.ts",
       "tests/e2e/desktop-extension-seams-golden.test.ts",
       "tests/e2e/desktop-hierarchy-golden.test.ts",
       "tests/e2e/desktop-linux-bridge-golden.test.ts",
@@ -8804,7 +8812,7 @@
       "routes": 29,
       "migrations": 8,
       "workflows": 5,
-      "goldenTests": 58
+      "goldenTests": 59
     },
     "documentedClaims": [
       {
