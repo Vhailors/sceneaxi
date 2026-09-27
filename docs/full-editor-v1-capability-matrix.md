@@ -225,6 +225,32 @@ historical sequencing, not a second todo list. Remaining partial and fake rows
 above name host credentials, closed #266 Linux project packaging, or
 intentionally denied surfaces.
 
+### Packaged Linux smoke evidence
+
+`desktop/linux/scripts/smoke.mjs` asserts the `proof.features` entries printed by
+the real Electron `--smoke` path. The GUI steps run only against the disposable
+smoke project. The smoke proves these current GUI outcomes; it does not turn the
+remaining pending controls into supported features.
+
+| Issue | Packaged GUI evidence | Remaining gap |
+|---|---|---|
+| #254 | Clicks Rotate and +X nudge controls and verifies the selected transform mode. | Numeric inspector proposal staging remains unverified by this smoke. |
+| #255 | Records the absent prefab controls. | `scene-prefab-*` controls are pending. |
+| #256 | Opens the imported asset through Project Browser and records its SHA-256 digest. | GUI import and hot-reload actions remain unverified by this smoke; import behavior has separate bridge and golden evidence. |
+| #257 | Records the absent input-action controls. | Inspect, rebind, and reset controls are pending. |
+| #258 | Clicks Play, Stop, and Reset. Asserts the acknowledged viewport frame and unchanged authoring bytes. | `viewport-source-set` control is pending. |
+| #259 | Clicks Timeline Evaluate and asserts the named `ANIMATION_STALE_VERSION` refusal. | GUI animation apply and successful replay remain unverified by this smoke. |
+| #260 | Inspects the physics catalog and asserts gravity, engine, and unchanged project bytes. | `physics-evaluate` control is pending. GUI physics apply remains unverified by this smoke. |
+| #261 | Uses the local fixture route and stages a proposal for review. | No live provider or credential is used. |
+| #262 | Inspects the empty package lock and fixed digest without marketplace or network access. | Install and remove controls are pending. |
+| #263 | Initializes Git in the scratch project, then clicks status, diff, selects a scratch path, and stages it. | Migration commit control is pending. |
+| #264 | Records profile evidence and its digest after GUI Play. | No separate profiling panel is claimed. |
+| #265 | Clicks workspace inspect, apply, and reset. Asserts both persisted layout digests. | None for this smoke path. |
+| #266 | Clicks Linux project build and asserts `PROJECT_BUILD_SIGNING_MISSING`. | No project artifact is built. |
+| #267, #268 | Records that macOS and Windows targets are absent on the Linux host. | Native-host project artifacts remain unavailable. |
+| #269 | Inspects extension seams and verifies adapters stay disabled. | Extension start control is pending. |
+| #270 | Inspects profile evidence and verifies its source digest and measured draw-call count. | No claim is made for unsupported metrics. |
+
 ## First implementation slice
 
 [#250](https://github.com/Vhailors/sceneaxi/issues/250) removes the most visible

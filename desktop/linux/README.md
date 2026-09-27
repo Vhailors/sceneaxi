@@ -51,7 +51,19 @@ project-browser listing and selection, digest-bound asset Open with a viewport
 frame acknowledgement, restart selection recovery, confirmation and immutable
 mutation refusals, a static Web export whose source bytes and Delivery Handoff
 digests are verified, and the renderer's real presentation frame report
-(`backend three`, `surface webgl-canvas` where a drawing buffer exists).
+(`backend three`, `surface webgl-canvas` where a drawing buffer exists). The
+proof JSON also records `features` keyed `#254`–`#270`. GUI clicks cover transform
+mode/nudge, animation evaluation, physics inspection, fixture Agent proposal,
+package inspection, contained Git status/diff/stage, persistent workspace
+inspect/apply/reset, project build, extension inspect, and profile inspect. It
+asserts catalog values and digests, proposal state, and named refusals. The
+prefab, input-action, physics-evaluation, viewport-source, package install/remove,
+migration-commit, and extension-start controls remain pending. The smoke also
+marks unexercised existing GUI paths, including transform staging, asset import
+and reload, animation apply, and physics apply. macOS and Windows artifact
+targets are reported unavailable on Linux. Asset import remains covered by
+existing bridge/golden evidence; the packaged GUI proof opens the imported asset
+in Project Browser.
 
 The bound Build inspector also projects the accepted composition as versioned
 hierarchy v1: distinct stable artifact and object ids, parent/child depth,
@@ -60,8 +72,9 @@ preserve-world or preserve-local reparenting. These commands use the same Change
 Review, transaction history, reopen, and Play paths; the CLI and local assistant
 inspect the same hierarchy through the permission-bound desktop bridge. The
 focused end-to-end proof is `tests/e2e/desktop-hierarchy-golden.test.ts`; the
-Electron smoke above remains the packaged-host proof and does not claim the later
-#254 gizmo or #258 Play-lifecycle work.
+Electron smoke above also clicks the #254 gizmo mode/nudge controls and verifies
+the #258 viewport acknowledgement. It does not claim persistent Play or viewport
+source switching.
 
 On Web Experience, **Import GLB/glTF…** opens a native file dialog and stages the
 selected contained asset through that same Change Review. Save owns the accepted

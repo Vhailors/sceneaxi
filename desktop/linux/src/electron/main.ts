@@ -13,6 +13,7 @@
  * and navigation away from the packaged document is refused.
  */
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import {
   existsSync,
   mkdtempSync,
@@ -33,7 +34,6 @@ import {
   DESKTOP_ACTIVE_DOCUMENT_PATH,
   DESKTOP_ASSET_IMPORT_CHANNEL,
   DESKTOP_BRIDGE_CHANNEL,
-  DESKTOP_VIEWPORT_PLAY_EVENT,
   bridgeRefuse,
 } from "../lib/bridge-contract.js";
 import { createDesktopBridge, type DesktopBridge } from "../lib/bridge.js";
@@ -152,6 +152,13 @@ function retiredImplicitProjectDir(): string {
 function smokeProjectDir(): string {
   const dir = mkdtempSync(join(tmpdir(), "sceneaxi-desktop-smoke-"));
   seedProject(dir);
+  execFileSync("git", ["init", "--quiet", dir], { stdio: "ignore" });
+  execFileSync("git", [
+    "-C", dir,
+    "-c", "user.name=SceneAxi Smoke",
+    "-c", "user.email=smoke@sceneaxi.invalid",
+    "commit", "--allow-empty", "--quiet", "-m", "smoke fixture baseline",
+  ], { stdio: "ignore" });
   return dir;
 }
 
@@ -1011,17 +1018,52 @@ async function start(): Promise<void> {
   if (frameReport === null) fail("no renderer frame report within the smoke timeout");
 
   const playbackDom = (await window.webContents.executeJavaScript(
-    `(() => {
-      const detail = { exercise: ${JSON.stringify(openPath.data)}, accepted: false, frame: null };
-      document.dispatchEvent(new CustomEvent(${JSON.stringify(DESKTOP_VIEWPORT_PLAY_EVENT)}, { detail }));
+    `(async () => {
+      const waitFor = async (predicate) => {
+        for (let attempt = 0; attempt < 500; attempt += 1) {
+          if (predicate()) return true;
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+        return false;
+      };
+      const play = [...document.querySelectorAll('[data-command]')]
+        .find((element) => element.dataset.command === 'run-play');
+      if (!(play instanceof HTMLElement)) return { clicked: false, accepted: false, frame: null, state: null };
+      play.click();
+      const accepted = await waitFor(() => document.querySelector('.viewport')?.dataset.playback === 'acknowledged');
+      const frame = /Viewport frame ([0-9]+) acknowledged/.exec(document.querySelector('[data-run-live-report]')?.textContent ?? '');
+      const stop = [...document.querySelectorAll('[data-command]')]
+        .find((element) => element.dataset.command === 'run-stop');
+      const reset = [...document.querySelectorAll('[data-command]')]
+        .find((element) => element.dataset.command === 'run-reset');
+      if (!(stop instanceof HTMLElement) || !(reset instanceof HTMLElement)) {
+        return { clicked: true, accepted, frame: frame === null ? null : Number(frame[1]), state: document.querySelector('.viewport')?.dataset.playback ?? null, stop: '', reset: '' };
+      }
+      stop.click();
+      await waitFor(() => (document.querySelector('[data-product-run-report]')?.textContent ?? '').startsWith('Stopped ·'));
+      const stopState = document.querySelector('[data-product-run-report]')?.textContent ?? '';
+      reset.click();
+      await waitFor(() => (document.querySelector('[data-product-run-report]')?.textContent ?? '').startsWith('Reset ·'));
+      const resetState = document.querySelector('[data-product-run-report]')?.textContent ?? '';
       return {
-        accepted: detail.accepted,
-        frame: detail.frame,
+        clicked: true,
+        accepted,
+        frame: frame === null ? null : Number(frame[1]),
         state: document.querySelector('.viewport')?.dataset.playback ?? null,
+        stop: stopState,
+        reset: resetState,
       };
     })()`,
-  )) as { accepted: boolean; frame: number | null; state: string | null };
+  )) as {
+    clicked: boolean;
+    accepted: boolean;
+    frame: number | null;
+    state: string | null;
+    stop: string;
+    reset: string;
+  };
   if (
+    playbackDom.clicked !== true ||
     playbackDom.accepted !== true ||
     playbackDom.state !== "acknowledged" ||
     typeof playbackDom.frame !== "number"
@@ -1036,6 +1078,150 @@ async function start(): Promise<void> {
         inertNotePresent: document.querySelector('.viewport-note-inert') !== null,
         reportText: document.getElementById('desktop-live-viewport-report')?.textContent ?? null })`,
   )) as { canvases: number; inertNotePresent: boolean; reportText: string | null };
+
+  const guiFeatures = (await window.webContents.executeJavaScript(
+    `(async () => {
+      const waitFor = async (predicate) => {
+        for (let attempt = 0; attempt < 500; attempt += 1) {
+          if (predicate()) return true;
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+        return false;
+      };
+      const run = async (commandId) => {
+        const button = [...document.querySelectorAll('[data-command]')]
+          .find((element) => element.dataset.command === commandId);
+        if (!(button instanceof HTMLElement)) return { gui: false, state: 'control-not-found' };
+        const previous = document.querySelector('[data-outcome-title]')?.textContent ?? '';
+        const previousGit = document.querySelector('[data-project-git-evidence]')?.textContent ?? '';
+        button.click();
+        if (commandId.startsWith('project-git-')) {
+          const evidence = document.querySelector('[data-project-git-evidence]');
+          const completed = await waitFor(() =>
+            (evidence?.textContent !== '' && evidence?.textContent !== previousGit) ||
+            (document.querySelector('[data-outcome-title]')?.textContent ?? '') !== previous,
+          );
+          const rawEvidence = evidence?.textContent ?? '';
+          const gitState = rawEvidence === '' ? null : JSON.parse(rawEvidence);
+          return {
+            gui: true,
+            completed,
+            title: commandId,
+            code: completed && gitState !== null
+              ? 'PROJECT_GIT_EVIDENCE'
+              : document.querySelector('[data-outcome-code]')?.textContent ?? '',
+            message: gitState === null
+              ? document.querySelector('[data-outcome-message]')?.textContent ?? ''
+              : JSON.stringify({
+                  kind: gitState.kind,
+                  entries: gitState.entries
+                    .filter((entry) => entry.index !== '?')
+                    .map((entry) => ({ path: entry.path, index: entry.index })),
+                  stagedDiffPresent: gitState.stagedDiff.length > 0,
+                }),
+          };
+        }
+        if (commandId === 'physics-inspect') {
+          const report = document.querySelector('[data-catalog-report="physics"]');
+          const completed = await waitFor(() => report?.textContent !== '');
+          return { gui: true, completed, title: commandId, code: 'COMMAND_COMPLETED', message: report?.textContent ?? '' };
+        }
+        const completed = await waitFor(() => {
+          const title = document.querySelector('[data-outcome-title]')?.textContent ?? '';
+          return title !== '' && title !== previous;
+        });
+        return {
+          gui: true,
+          completed,
+          title: document.querySelector('[data-outcome-title]')?.textContent ?? '',
+          code: document.querySelector('[data-outcome-code]')?.textContent ?? '',
+          message: document.querySelector('[data-outcome-message]')?.textContent ?? '',
+        };
+      };
+      const results = {};
+      results['#260'] = await run('physics-inspect');
+      results['#262'] = await run('package-inspect');
+      results['#263'] = await run('project-git-status');
+      const gitStatus = results['#263'];
+      await run('project-git-diff');
+      const gitPath = document.querySelector('[data-project-git-path]');
+      if (gitPath instanceof HTMLInputElement) {
+        gitPath.checked = true;
+        gitPath.dispatchEvent(new Event('change', { bubbles: true }));
+        const staged = await run('project-git-stage');
+        results['#263'] = { ...gitStatus, stage: staged, selectedPath: gitPath.value };
+      }
+      results['#265'] = await run('workspace-layout-inspect');
+      results['#265'].apply = await run('workspace-layout-apply');
+      results['#265'].reset = await run('workspace-layout-reset');
+      results['#266'] = await run('project-build');
+      results['#269'] = await run('extension-inspect');
+      results['#270'] = await run('profile-inspect');
+      const timelineButton = document.querySelector('[data-action="timeline-evaluate"]');
+      if (timelineButton instanceof HTMLElement) {
+        const output = document.querySelector('[data-timeline-result]');
+        timelineButton.click();
+        await waitFor(() => output?.textContent !== 'Open Timeline to inspect clips, tracks, and keyframes.');
+        results['#259'] = { gui: true, state: 'animation-evaluation-result', result: output?.textContent ?? '' };
+      } else {
+        results['#259'] = { gui: false, state: 'pending-gui-control' };
+      }
+      const prompt = document.querySelector('.assistant-prompt');
+      const localRoute = document.querySelector('[data-action="assistant-route"][data-value="local"]');
+      const agentMode = document.querySelector('[data-action="assistant-mode"][data-value="agent"]');
+      const assistantSend = document.querySelector('[data-action="assistant-send"]');
+      if (prompt instanceof HTMLTextAreaElement && localRoute instanceof HTMLElement &&
+          agentMode instanceof HTMLElement && assistantSend instanceof HTMLElement) {
+        prompt.value = 'Inspect the scratch project and propose one small safe improvement.';
+        prompt.dispatchEvent(new Event('input', { bubbles: true }));
+        localRoute.click();
+        agentMode.click();
+        const status = document.querySelector('[data-assistant-status]');
+        const previousStatus = status?.textContent ?? '';
+        assistantSend.click();
+        const completed = await waitFor(() => status?.textContent !== previousStatus &&
+          (document.querySelector('.shell')?.getAttribute('data-assistant-busy') !== 'true'));
+        results['#261'] = { gui: true, completed, state: status?.textContent ?? '' };
+      } else {
+        results['#261'] = { gui: false, state: 'pending-gui-control' };
+      }
+      const transformMode = document.querySelector('[data-action="scene-transform-mode"][data-value="rotate"]');
+      const nudge = document.querySelector('[data-action="scene-transform-nudge"][data-axis="x"][data-sign="1"]');
+      if (transformMode instanceof HTMLElement && nudge instanceof HTMLElement) {
+        transformMode.click();
+        nudge.click();
+        results['#254'] = {
+          gui: true,
+          state: 'rotate-mode-and-positive-x-nudge-clicked',
+          transformMode: document.querySelector('.shell')?.getAttribute('data-transform-mode') ?? '',
+          diagnostic: document.querySelector('[data-scene-property-diagnostic]')?.textContent ?? '',
+          pendingProof: ['scene-property-stage GUI proposal'],
+        };
+      } else {
+        results['#254'] = { gui: false, state: 'pending-gui-control' };
+      }
+      for (const feature of ['#255', '#257']) {
+        results[feature] = {
+          gui: false,
+          state: 'pending-gui-control',
+          pendingControls: feature === '#255'
+            ? ['scene-prefab-*']
+            : ['input-actions-inspect', 'input-action-rebind', 'input-actions-reset'],
+        };
+      }
+      return results;
+    })()`,
+  )) as Record<string, {
+    gui: boolean;
+    state?: string;
+    completed?: boolean;
+    title?: string;
+    code?: string;
+    message?: string;
+    result?: string;
+    pendingControls?: string[];
+    pendingProof?: string[];
+  }>;
 
   // Optional visual evidence: capture the real window once the live frame exists.
   const shotPath = process.env["SCENEAXI_SMOKE_SHOT"];
@@ -1112,6 +1298,24 @@ async function start(): Promise<void> {
             refusal: shipped.reason,
           },
       frameReport,
+      features: {
+        ...guiFeatures,
+        '#254': { ...guiFeatures['#254'] },
+        '#256': { gui: true, state: 'existing-project-browser-asset-open-proof', digest: browserAssetDigest, pendingProof: ['asset import and hot-reload GUI actions'] },
+        '#258': { gui: true, state: playbackDom.state, frame: playbackDom.frame, stop: playbackDom.stop, reset: playbackDom.reset, pendingControls: ['viewport-source-set'] },
+        '#259': { ...guiFeatures['#259'], pendingProof: ['animation-apply GUI proposal'] },
+        '#260': { ...guiFeatures['#260'], pendingControls: ['physics-evaluate'], pendingProof: ['physics-apply GUI proposal'] },
+        '#261': { ...guiFeatures['#261'] },
+        '#263': { ...guiFeatures['#263'], pendingControls: ['project-migration-commit'] },
+        '#264': { gui: true, state: 'profile-evidence', digest: JSON.parse(guiFeatures['#270'].message ?? '{}').digest, result: guiFeatures['#270'].message },
+        '#265': { ...guiFeatures['#265'] },
+        '#266': { ...guiFeatures['#266'] },
+        '#267': { gui: false, state: 'unsupported-host-macos' },
+        '#268': { gui: false, state: 'unsupported-host-windows' },
+        '#262': { ...guiFeatures['#262'], pendingControls: ['package-install', 'package-remove'] },
+        '#269': { ...guiFeatures['#269'], pendingControls: ['extension-start'] },
+        '#270': { ...guiFeatures['#270'] },
+      },
       playbackDom,
       viewportDom,
       ...(screenshotBytes > 0 ? { screenshotBytes } : {}),

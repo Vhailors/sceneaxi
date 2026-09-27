@@ -76,6 +76,130 @@ if (result.status !== 0 || jsonLine === undefined) {
 const proof = JSON.parse(jsonLine);
 const failures = [];
 if (proof.ok !== true) failures.push("proof.ok is not true");
+const features = proof.features;
+for (const feature of Array.from({ length: 17 }, (_, index) => `#${index + 254}`)) {
+  if (features?.[feature] === undefined) failures.push(`proof.features is missing ${feature}`);
+}
+for (const [feature, title] of [
+  ["#260", "physics-inspect"], ["#262", "package-inspect"],
+  ["#265", "workspace-layout-inspect"], ["#269", "extension-inspect"],
+]) {
+  const result = features?.[feature];
+  if (result?.gui !== true || result?.completed !== true ||
+      result?.title !== title || result?.code !== "COMMAND_COMPLETED") {
+    failures.push(`${feature} GUI action did not complete ${title} with COMMAND_COMPLETED`);
+  }
+}
+if (features?.["#263"]?.gui !== true || features["#263"].completed !== true ||
+    features["#263"].code !== "PROJECT_GIT_EVIDENCE" ||
+    features["#263"].stage?.completed !== true ||
+    features["#263"].stage?.code !== "PROJECT_GIT_EVIDENCE" ||
+    typeof features["#263"].selectedPath !== "string" || features["#263"].selectedPath.length === 0) {
+  failures.push("#263 did not complete GUI Git status, diff, and staging of a selected scratch-project path");
+}
+const stagedGitState = JSON.parse(features?.["#263"]?.stage?.message ?? "{}");
+if (stagedGitState.kind !== "sceneaxi.project-git-state" ||
+    !stagedGitState.entries?.some((entry) => entry.path === features["#263"].selectedPath && entry.index === "A") ||
+    stagedGitState.stagedDiffPresent !== true) {
+  failures.push("#263 staged Git evidence does not show the exact GUI-selected scratch path in the index");
+}
+if (features?.["#266"]?.gui !== true || features["#266"].completed !== true ||
+    features["#266"].code !== "PROJECT_BUILD_SIGNING_MISSING") {
+  failures.push("#266 did not report the named Linux project-build signing refusal");
+}
+if (features?.["#270"]?.gui !== true || features["#270"].completed !== true ||
+    features["#270"].code !== "COMMAND_COMPLETED") {
+  failures.push("#270 profile inspection did not complete through the GUI");
+}
+const profileEvidence = JSON.parse(features?.["#270"]?.message ?? "{}");
+if (features?.["#264"]?.gui !== true || features["#264"].state !== "profile-evidence" ||
+    features["#264"].digest !== profileEvidence.digest) {
+  failures.push("#264 did not retain the exact digest of GUI-measured profile evidence");
+}
+const measuredDrawCalls = profileEvidence.metrics?.find((metric) => metric.id === "draw-calls");
+if (profileEvidence.kind !== "sceneaxi.profile-evidence" || profileEvidence.savedBytesWritten !== false ||
+    profileEvidence.digest !== features?.["#264"]?.digest ||
+    profileEvidence.sourceContentHash !== proof.ship?.sourceDigest ||
+    measuredDrawCalls?.status !== "measured" || measuredDrawCalls.value !== proof.frameReport?.drawCalls ||
+    typeof profileEvidence.digest !== "string" || !/^sha256:[0-9a-f]{64}$/.test(profileEvidence.digest)) {
+  failures.push("#270 profile evidence lacks the matching source digest and measured presentation draw-call count");
+}
+for (const feature of ["#255", "#257"]) {
+  if (features?.[feature]?.gui !== false || features?.[feature]?.state !== "pending-gui-control" ||
+      !Array.isArray(features?.[feature]?.pendingControls) || features[feature].pendingControls.length === 0) {
+    failures.push(`${feature} is not recorded as an explicit pending GUI gap`);
+  }
+}
+for (const [feature, state] of [["#267", "unsupported-host-macos"], ["#268", "unsupported-host-windows"]]) {
+  if (features?.[feature]?.gui !== false || features?.[feature]?.state !== state) {
+    failures.push(`${feature} did not record the expected host artifact absence`);
+  }
+}
+if (features?.["#259"]?.gui !== true || features?.["#259"]?.state !== "animation-evaluation-result" ||
+    features["#259"].result !== "ANIMATION_STALE_VERSION · Scrub and Play evaluation name the exact project version being previewed.") {
+  failures.push("#259 did not record the expected GUI animation stale-version refusal");
+}
+if (features?.["#261"]?.gui !== true || features["#261"].completed !== true ||
+    features["#261"].state !== "Rarity proposal staged · review the canonical diff before Accept or Reject.") {
+  failures.push("#261 did not stage the fixture-provider proposal through the GUI");
+}
+const physicsCatalog = JSON.parse(features?.["#260"]?.message ?? "{}");
+if (physicsCatalog.kind !== "sceneaxi.scene-physics-inspection" ||
+    physicsCatalog.catalog?.world?.gravityY !== -9.81 || physicsCatalog.savedBytesWritten !== false) {
+  failures.push("#260 physics inspection did not report the expected unchanged toy-world catalog");
+}
+const packageCatalog = JSON.parse(features?.["#262"]?.message ?? "{}");
+if (packageCatalog.kind !== "sceneaxi.scene-package-inspection" ||
+    packageCatalog.catalog?.lock?.length !== 0 || packageCatalog.marketplace !== false ||
+    packageCatalog.networking !== false || packageCatalog.lockDigest !== "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945") {
+  failures.push("#262 package inspection did not report the empty offline lock and stable digest");
+}
+if (features?.["#265"]?.apply?.completed !== true ||
+    features["#265"].apply.title !== "workspace-layout-apply" ||
+    features["#265"].apply.code !== "COMMAND_COMPLETED" ||
+    features["#265"].reset?.completed !== true ||
+    features["#265"].reset.title !== "workspace-layout-reset" ||
+    features["#265"].reset.code !== "COMMAND_COMPLETED" ||
+    !features["#265"].apply.message.includes('"digest": "sha256:f3f0de7196e1157ed2412ca87ef74c496ff0efeaa62ecf1c14d0e0ff4af8e544"') ||
+    !features["#265"].reset.message.includes('"digest": "sha256:5636d88918f6eb20650a18388061eed50c5bd030bfd305d9ade5ffd8d8ebd361"')) {
+  failures.push("#265 workspace layout apply/reset did not persist and restore the expected scratch-project digests");
+}
+if (features?.["#256"]?.gui !== true || features["#256"].state !== "existing-project-browser-asset-open-proof" ||
+    features["#256"].digest !== proof.projectBrowser?.assetDigest ||
+    proof.projectBrowser?.selected !== true || proof.projectBrowser?.opened !== true) {
+  failures.push("#256 did not select and open the digest-bound imported asset through the GUI");
+}
+if (features?.["#254"]?.gui !== true || features["#254"].state !== "rotate-mode-and-positive-x-nudge-clicked" ||
+    features["#254"].transformMode !== "rotate" ||
+    JSON.stringify(features["#254"].pendingProof) !== JSON.stringify(["scene-property-stage GUI proposal"])) {
+  failures.push("#254 did not record GUI gizmo mode and nudge actions");
+}
+for (const [feature, commands] of [
+  ["#258", ["viewport-source-set"]], ["#260", ["physics-evaluate"]],
+  ["#262", ["package-install", "package-remove"]],
+  ["#263", ["project-migration-commit"]], ["#269", ["extension-start"]],
+]) {
+  if (JSON.stringify(features?.[feature]?.pendingControls) !== JSON.stringify(commands)) {
+    failures.push(`${feature} pending control list is inaccurate`);
+  }
+}
+for (const [feature, steps] of [
+  ["#256", ["asset import and hot-reload GUI actions"]],
+  ["#259", ["animation-apply GUI proposal"]],
+  ["#260", ["physics-apply GUI proposal"]],
+]) {
+  if (JSON.stringify(features?.[feature]?.pendingProof) !== JSON.stringify(steps)) {
+    failures.push(`${feature} pending GUI proof steps are inaccurate`);
+  }
+}
+if (features?.["#258"]?.state !== "acknowledged" || typeof features["#258"]?.frame !== "number" ||
+    !features["#258"].stop.startsWith("Stopped ·") || !features["#258"].reset.startsWith("Reset ·") ||
+    !features["#258"].stop.includes('"state":"stopped"') ||
+    !features["#258"].reset.includes('"state":"playing"') ||
+    !features["#258"].reset.includes('"authoringBytesUnchanged":true')) {
+  failures.push("#258 GUI Play/Stop/Reset did not produce viewport acknowledgement and named run statuses");
+}
+
 if (proof.handshake?.app !== "@sceneaxi/desktop-linux") failures.push("handshake app wrong");
 if (proof.handshake?.runtime !== "electron") failures.push("handshake runtime wrong");
 if (!Array.isArray(proof.openPath?.tickDigests) || proof.openPath.tickDigests.length === 0) {
@@ -199,12 +323,14 @@ if (typeof reportText !== "string" || reportText.length === 0) {
 
 if (failures.length > 0) {
   console.error(`smoke FAILED — ${failures.join("; ")}`);
+  console.error(`feature proof: ${JSON.stringify(features)}`);
   console.error(jsonLine);
   process.exit(1);
 }
 
 console.log("desktop-linux smoke OK —");
 console.log(`  mode: ${packaged ? "packaged (linux-unpacked)" : "built runtime (dist/main.cjs)"}`);
+console.log(`  features: ${Object.keys(features).length} issue entries asserted, including pending GUI gaps`);
 console.log(
   `  open path: ${proof.openPath.tickDigests.length} ticks, digest ${String(proof.openPath.initialDigest).slice(0, 18)}… → ${String(proof.openPath.tickDigests.at(-1)).slice(0, 18)}…`,
 );
