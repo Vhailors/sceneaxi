@@ -203,6 +203,18 @@ Decisions the done items surfaced (implemented only up to the fail-closed part):
 - #69: No built-in gameplay consumer of play.primary; choosing gameplay behavior is an operator decision
 - #90: ADR 0026 asset-to-texture contract (pixel transport, UV set, colour space, sampler); non-null texture slots refuse
 
+## Loop 2 result (2026-09-27, branch `bb/opus-go-live-loop-2-for-sceneaxi-the-previous-lo-thr_cgpu4vbkib`)
+
+- **Done: 44 items** — the 38 above plus 53, 61, and 64, and three found during the loop: 91 (Vitest fixtures leaked into the shared TMPDIR until the host ran out of /tmp inodes), 92 (an imported model whose id sorts before a sibling made the project unplayable), and 93 (profiling lost its frame metrics after a project switch).
+  - 53: all 14 desktop-accepted commands have GUI forms fed by real inspection state. `tests/e2e/desktop-editor-command-forms-golden.test.ts` drives them into a real bridge, and `tests/e2e/desktop-control-dispatch-real-bridge-golden.test.ts` proves 29 more GUI dispatches. The Electron smoke fills and clicks the 14 forms with real pointer input.
+  - 61: the Electron smoke asserts specific per-feature values for #254–#270 (`proof.features`). #267/#268 record host absence. The README and capability matrix say which older steps still click through the DOM.
+  - 64: desktop Game/Web Play plays ingested clips through Web Audio. The smoke measures the live output level (it follows the pointer-set gain) and silence after Stop. Kids audio stays refused.
+- **Open: 3** — 94 (a profile switch refuses DESKTOP_PROFILE_SWITCH_DIRTY after the full smoke flow with no review badge; root cause not confirmed), 95 (assistant-ask/apply-build GUI dispatch not golden-proven), 96 (per-project form-state reset lacks a root-change test; an inspect answered after a switch can refill old choices).
+- **Parked: 49**, unchanged; each needs a captain decision or external authority.
+- **Final gate:** `pnpm gate` on `2944f1c` passed every static stage and 4,192 of 4,193 tests. The failure, a `queueMicrotask` reference in a vm-hosted golden, was fixed in `f5f98e5`. Its five affected goldens pass 228/228. The run on the final commit is recorded in the PR. It needs a real, short TMPDIR outside the command sandbox, because the local-RPC suites bind Unix sockets. The Electron smoke passed 5/5 locally at about 50 s per run.
+- **Graphmap:** working 372 · partial 31 · unconfigured 10 · refused 15 · gap 3 · parked 49 · unknown 4. "Working" now needs a golden that validates the GUI dispatch; a mention in the GUI source no longer counts. The 11 unused Approve controls were removed.
+- **Captain questions surfaced:** Kids audio (enabling it is a policy decision); 53's Linux-only project-build target is unchanged.
+
 ## Suggested sequencing
 
 1. Decisions A1–A5.

@@ -6,7 +6,7 @@
     "configuration": "no provider environment (every provider-backed plane is expected to report unconfigured)"
   },
   "totals": {
-    "working": 377,
+    "working": 372,
     "partial": 31,
     "unconfigured": 10,
     "refused": 15,
@@ -902,55 +902,11 @@
           "state": "working"
         },
         {
-          "id": "editor-command-review-extension-start",
-          "state": "working"
-        },
-        {
           "id": "editor-command-review-input-action-rebind",
           "state": "working"
         },
         {
-          "id": "editor-command-review-input-actions-inspect",
-          "state": "working"
-        },
-        {
           "id": "editor-command-review-input-actions-reset",
-          "state": "working"
-        },
-        {
-          "id": "editor-command-review-package-install",
-          "state": "working"
-        },
-        {
-          "id": "editor-command-review-package-remove",
-          "state": "working"
-        },
-        {
-          "id": "editor-command-review-physics-evaluate",
-          "state": "working"
-        },
-        {
-          "id": "editor-command-review-project-migration-commit",
-          "state": "working"
-        },
-        {
-          "id": "editor-command-review-scene-prefab-define",
-          "state": "working"
-        },
-        {
-          "id": "editor-command-review-scene-prefab-inspect",
-          "state": "working"
-        },
-        {
-          "id": "editor-command-review-scene-prefab-instance",
-          "state": "working"
-        },
-        {
-          "id": "editor-command-review-scene-prefab-override",
-          "state": "working"
-        },
-        {
-          "id": "editor-command-review-scene-prefab-refresh",
           "state": "working"
         },
         {
@@ -1571,7 +1527,7 @@
         }
       ],
       "totals": {
-        "working": 174,
+        "working": 163,
         "partial": 31,
         "refused": 5
       }
@@ -2186,7 +2142,7 @@
         },
         {
           "id": "#53 Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path",
-          "state": "gap",
+          "state": "working",
           "note": "blocker · wave 3"
         },
         {
@@ -2226,7 +2182,7 @@
         },
         {
           "id": "#61 The packaged smoke does not exercise the #254–#270 features.",
-          "state": "gap",
+          "state": "working",
           "note": "medium · wave 3"
         },
         {
@@ -2241,7 +2197,7 @@
         },
         {
           "id": "#64 No audio playback; audio is metadata-only",
-          "state": "gap",
+          "state": "working",
           "note": "high · wave 4"
         },
         {
@@ -2373,10 +2329,40 @@
           "id": "#90 Product viewports do not forward authored environment/material/effect catalogs (effects payload lacks its seed; texture slots need an asset-to-texture binding contract)",
           "state": "working",
           "note": "medium · wave 4"
+        },
+        {
+          "id": "#91 Vitest suites leak mkdtemp fixtures (whole-tree copies, scratch projects) into the shared TMPDIR; repeated gate runs exhausted the host /tmp inodes and failed unrelated work with ENOSPC",
+          "state": "working",
+          "note": "high · wave 5"
+        },
+        {
+          "id": "#92 Importing a model whose instance id sorts before an existing sibling made the project unplayable (Play refused DESKTOP_SCENE_NOT_COMPOSABLE for the rest of the session)",
+          "state": "working",
+          "note": "high · wave 5"
+        },
+        {
+          "id": "#93 After a project switch, profiling reported frame timing and draw calls as PROFILE_FRAME_ABSENT for the rest of the session",
+          "state": "working",
+          "note": "medium · wave 5"
+        },
+        {
+          "id": "#94 After the smoke's full feature flow the chrome refuses a profile switch with DESKTOP_PROFILE_SWITCH_DIRTY while the Changes badge shows no active review",
+          "state": "gap",
+          "note": "low · wave 5"
+        },
+        {
+          "id": "#95 assistant-ask and assistant-apply-build GUI dispatch is not yet proven by a mounted-chrome golden (graphmap: unknown)",
+          "state": "gap",
+          "note": "low · wave 5"
+        },
+        {
+          "id": "#96 Desktop command forms: no test drives the per-project state reset through a real root change, and an inspect answered after a project switch can repopulate the previous project's choices (the host still refuses those ids)",
+          "state": "gap",
+          "note": "low · wave 5"
         }
       ],
       "totals": {
-        "working": 38,
+        "working": 44,
         "gap": 3,
         "parked": 49
       }
