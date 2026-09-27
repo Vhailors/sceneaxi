@@ -3521,6 +3521,15 @@ if (shell) {
     }
   };
 
+  const queueSceneSelection = () => {
+    const instanceIds = [...selectedSceneEntityIds];
+    const generation = sceneSelectionGeneration;
+    sceneSelectionPending = sceneSelectionPending.then(
+      () => setSceneSelection(instanceIds, generation),
+      () => setSceneSelection(instanceIds, generation),
+    );
+  };
+
   const applySaveSnapshot = async (snapshot) => {
     if (!isSessionSnapshot(snapshot)) return false;
     syncReview(snapshot);
@@ -4720,7 +4729,10 @@ if (shell) {
     else if (action === 'change-reject') void productAction(() => rejectProposal('rejected'));
     else if (action === 'scene-entity-select' && value) {
       const primary = el.tagName === 'SELECT' ? el.value : value;
-      if (primary && showSceneProperty(primary) && shell.dataset.mode !== 'build') showModePanels('build');
+      if (primary && showSceneProperty(primary)) {
+        if (shell.dataset.mode !== 'build') showModePanels('build');
+        if (el.tagName !== 'SELECT') queueSceneSelection();
+      }
     }
     else if (action === 'scene-property-stage') void productAction(stageSceneProperty);
     else if (action === 'catalog-stage' && value) void productAction(() => stageCatalog(value));
@@ -4805,12 +4817,7 @@ if (shell) {
       showSceneProperty(selectedSceneEntityIds[0]);
       if (shell.dataset.mode !== 'build') showModePanels('build');
     }
-    const instanceIds = [...selectedSceneEntityIds];
-    const generation = sceneSelectionGeneration;
-    sceneSelectionPending = sceneSelectionPending.then(
-      () => setSceneSelection(instanceIds, generation),
-      () => setSceneSelection(instanceIds, generation),
-    );
+    queueSceneSelection();
   });
 
   // Tab is deliberately not captured inside a menu — every item keeps its plain

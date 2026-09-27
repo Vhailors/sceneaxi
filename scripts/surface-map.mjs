@@ -75,7 +75,7 @@ for (const line of read("docs/full-editor-v1-capability-matrix.md").split("\n"))
 
   if (!status) continue;
 
-  for (const id of cells[1].matchAll(/`([a-z0-9{},*-]+)`/g)) {
+  for (const id of cells[1].matchAll(/`([a-zA-Z0-9{},*-]+)`/g)) {
     for (const expanded of expandBraces(id[1])) matrixState.set(expanded, status);
   }
 }
@@ -140,9 +140,21 @@ if (!interactionsGolden.includes("for (const command of DESKTOP_INTERACTION_COMM
   process.exit(1);
 }
 const guiWorkingInteractions = new Set(DESKTOP_INTERACTION_COMMANDS.map(({ id }) => id));
+const realBridgeGolden = read("tests/e2e/desktop-control-dispatch-real-bridge-golden.test.ts");
+const realBridgeIds = realBridgeGolden.match(/export const GUI_REAL_BRIDGE_COMMANDS = \[([\s\S]*?)\] as const;/)?.[1];
+if (realBridgeIds === undefined || !realBridgeGolden.includes("for (const commandId of GUI_REAL_BRIDGE_COMMANDS)") ||
+    !realBridgeGolden.includes("validateEditorCommandInvocation") || !realBridgeGolden.includes("bridge.handle")) {
+  process.stderr.write("surface map: mounted-chrome real-bridge dispatch golden coverage missing\n");
+  process.exit(1);
+}
+const guiRealBridgeCommands = new Set([...realBridgeIds.matchAll(/"([a-z0-9-]+)"/g)].map((match) => match[1]));
+if (guiRealBridgeCommands.size === 0 || [...guiRealBridgeCommands].some((id) => !acceptsDesktop(id))) {
+  process.stderr.write("surface map: real-bridge golden lists unknown or unaccepted command\n");
+  process.exit(1);
+}
 
 const editorCommandState = (id) => {
-  if (guiWorkingCommands.has(id) || guiWorkingInteractions.has(id)) return { state: "working", note: "GUI dispatch validated by mounted-chrome golden" };
+  if (guiWorkingCommands.has(id) || guiWorkingInteractions.has(id) || guiRealBridgeCommands.has(id)) return { state: "working", note: "GUI dispatch validated by mounted-chrome golden" };
 
   // Accepting `desktop-control` is not a GUI: without a control that dispatches it, the
   // command is reachable only through the desktop bridge and local agents.

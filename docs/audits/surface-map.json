@@ -6,13 +6,13 @@
     "configuration": "no provider environment (every provider-backed plane is expected to report unconfigured)"
   },
   "totals": {
-    "working": 301,
+    "working": 377,
     "partial": 31,
     "unconfigured": 10,
     "refused": 15,
     "gap": 3,
     "parked": 49,
-    "unknown": 33
+    "unknown": 4
   },
   "areas": [
     {
@@ -386,23 +386,23 @@
       "nodes": [
         {
           "id": "animation-apply",
-          "state": "unknown",
-          "note": "desktop-control accepted; no matching GUI registry-validation golden"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "animation-evaluate",
-          "state": "unknown",
-          "note": "desktop-control accepted; no matching GUI registry-validation golden"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "animation-inspect",
-          "state": "unknown",
-          "note": "desktop-control accepted; no matching GUI registry-validation golden"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "animation-scrub",
-          "state": "unknown",
-          "note": "desktop-control accepted; no matching GUI registry-validation golden"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "assistant-apply-build",
@@ -416,38 +416,38 @@
         },
         {
           "id": "assistant-byo-build",
-          "state": "unknown",
-          "note": "desktop-control accepted; no matching GUI registry-validation golden"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "assistant-cancel",
-          "state": "unknown",
-          "note": "desktop-control accepted; no matching GUI registry-validation golden"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "assistant-local-agent",
-          "state": "unknown",
-          "note": "desktop-control accepted; no matching GUI registry-validation golden"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "assistant-local-build",
-          "state": "unknown",
-          "note": "desktop-control accepted; no matching GUI registry-validation golden"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "assistant-status",
-          "state": "unknown",
-          "note": "desktop-control accepted; no matching GUI registry-validation golden"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "change-review-accept",
-          "state": "unknown",
-          "note": "desktop-control accepted; no matching GUI registry-validation golden"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "change-review-reject",
-          "state": "unknown",
-          "note": "desktop-control accepted; no matching GUI registry-validation golden"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "edit-redo",
@@ -461,23 +461,23 @@
         },
         {
           "id": "effect-apply",
-          "state": "unknown",
-          "note": "desktop-control accepted; no matching GUI registry-validation golden"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "effect-inspect",
-          "state": "unknown",
-          "note": "desktop-control accepted; no matching GUI registry-validation golden"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "environment-apply",
-          "state": "unknown",
-          "note": "desktop-control accepted; no matching GUI registry-validation golden"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "environment-inspect",
-          "state": "unknown",
-          "note": "desktop-control accepted; no matching GUI registry-validation golden"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "extension-inspect",
@@ -506,13 +506,13 @@
         },
         {
           "id": "material-apply",
-          "state": "unknown",
-          "note": "desktop-control accepted; no matching GUI registry-validation golden"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "material-inspect",
-          "state": "unknown",
-          "note": "desktop-control accepted; no matching GUI registry-validation golden"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "package-inspect",
@@ -531,8 +531,8 @@
         },
         {
           "id": "physics-apply",
-          "state": "unknown",
-          "note": "desktop-control accepted; no matching GUI registry-validation golden"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "physics-evaluate",
@@ -541,13 +541,13 @@
         },
         {
           "id": "physics-inspect",
-          "state": "unknown",
-          "note": "desktop-control accepted; no matching GUI registry-validation golden"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "play-inspect",
-          "state": "unknown",
-          "note": "desktop-control accepted; no matching GUI registry-validation golden"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "profile-inspect",
@@ -621,33 +621,33 @@
         },
         {
           "id": "run-reset",
-          "state": "unknown",
-          "note": "desktop-control accepted; no matching GUI registry-validation golden"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "run-stop",
-          "state": "unknown",
-          "note": "desktop-control accepted; no matching GUI registry-validation golden"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "scene-hierarchy-inspect",
-          "state": "unknown",
-          "note": "desktop-control accepted; no matching GUI registry-validation golden"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "scene-object-create",
-          "state": "unknown",
-          "note": "desktop-control accepted; no matching GUI registry-validation golden"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "scene-object-remove",
-          "state": "unknown",
-          "note": "desktop-control accepted; no matching GUI registry-validation golden"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "scene-object-reparent",
-          "state": "unknown",
-          "note": "desktop-control accepted; no matching GUI registry-validation golden"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "scene-prefab-define",
@@ -676,18 +676,18 @@
         },
         {
           "id": "scene-property-set",
-          "state": "unknown",
-          "note": "desktop-control accepted; no matching GUI registry-validation golden"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "scene-selection-set",
-          "state": "unknown",
-          "note": "desktop-control accepted; no matching GUI registry-validation golden"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "scene-transform-apply",
-          "state": "unknown",
-          "note": "desktop-control accepted; no matching GUI registry-validation golden"
+          "state": "working",
+          "note": "GUI dispatch validated by mounted-chrome golden"
         },
         {
           "id": "ship-export-web",
@@ -716,8 +716,8 @@
         }
       ],
       "totals": {
-        "working": 35,
-        "unknown": 31
+        "working": 64,
+        "unknown": 2
       }
     },
     {
@@ -794,6 +794,86 @@
           "state": "working"
         },
         {
+          "id": "command-field-extension-start-seamId",
+          "state": "working"
+        },
+        {
+          "id": "command-field-input-action-rebind-actionId",
+          "state": "working"
+        },
+        {
+          "id": "command-field-input-action-rebind-binding",
+          "state": "working"
+        },
+        {
+          "id": "command-field-input-action-rebind-scope",
+          "state": "working"
+        },
+        {
+          "id": "command-field-input-actions-reset-scope",
+          "state": "working"
+        },
+        {
+          "id": "command-field-package-install-digest",
+          "state": "working"
+        },
+        {
+          "id": "command-field-package-install-locator",
+          "state": "working"
+        },
+        {
+          "id": "command-field-package-install-manifest",
+          "state": "working"
+        },
+        {
+          "id": "command-field-package-remove-packageId",
+          "state": "working"
+        },
+        {
+          "id": "command-field-physics-evaluate-steps",
+          "state": "working"
+        },
+        {
+          "id": "command-field-scene-prefab-define-definitionId",
+          "state": "working"
+        },
+        {
+          "id": "command-field-scene-prefab-instance-definitionId",
+          "state": "working"
+        },
+        {
+          "id": "command-field-scene-prefab-instance-instanceKey",
+          "state": "working"
+        },
+        {
+          "id": "command-field-scene-prefab-instance-parentInstanceId",
+          "state": "working"
+        },
+        {
+          "id": "command-field-scene-prefab-override-instanceId",
+          "state": "working"
+        },
+        {
+          "id": "command-field-scene-prefab-override-newValue",
+          "state": "working"
+        },
+        {
+          "id": "command-field-scene-prefab-override-propertyId",
+          "state": "working"
+        },
+        {
+          "id": "command-field-scene-prefab-override-sourceInstanceId",
+          "state": "working"
+        },
+        {
+          "id": "command-field-scene-prefab-refresh-definitionId",
+          "state": "working"
+        },
+        {
+          "id": "command-field-viewport-source-set-source",
+          "state": "working"
+        },
+        {
           "id": "dock-assets",
           "state": "working"
         },
@@ -819,6 +899,114 @@
         },
         {
           "id": "drawer-left",
+          "state": "working"
+        },
+        {
+          "id": "editor-command-review-extension-start",
+          "state": "working"
+        },
+        {
+          "id": "editor-command-review-input-action-rebind",
+          "state": "working"
+        },
+        {
+          "id": "editor-command-review-input-actions-inspect",
+          "state": "working"
+        },
+        {
+          "id": "editor-command-review-input-actions-reset",
+          "state": "working"
+        },
+        {
+          "id": "editor-command-review-package-install",
+          "state": "working"
+        },
+        {
+          "id": "editor-command-review-package-remove",
+          "state": "working"
+        },
+        {
+          "id": "editor-command-review-physics-evaluate",
+          "state": "working"
+        },
+        {
+          "id": "editor-command-review-project-migration-commit",
+          "state": "working"
+        },
+        {
+          "id": "editor-command-review-scene-prefab-define",
+          "state": "working"
+        },
+        {
+          "id": "editor-command-review-scene-prefab-inspect",
+          "state": "working"
+        },
+        {
+          "id": "editor-command-review-scene-prefab-instance",
+          "state": "working"
+        },
+        {
+          "id": "editor-command-review-scene-prefab-override",
+          "state": "working"
+        },
+        {
+          "id": "editor-command-review-scene-prefab-refresh",
+          "state": "working"
+        },
+        {
+          "id": "editor-command-submit-extension-start",
+          "state": "working"
+        },
+        {
+          "id": "editor-command-submit-input-action-rebind",
+          "state": "working"
+        },
+        {
+          "id": "editor-command-submit-input-actions-inspect",
+          "state": "working"
+        },
+        {
+          "id": "editor-command-submit-input-actions-reset",
+          "state": "working"
+        },
+        {
+          "id": "editor-command-submit-package-install",
+          "state": "working"
+        },
+        {
+          "id": "editor-command-submit-package-remove",
+          "state": "working"
+        },
+        {
+          "id": "editor-command-submit-physics-evaluate",
+          "state": "working"
+        },
+        {
+          "id": "editor-command-submit-project-migration-commit",
+          "state": "working"
+        },
+        {
+          "id": "editor-command-submit-scene-prefab-define",
+          "state": "working"
+        },
+        {
+          "id": "editor-command-submit-scene-prefab-inspect",
+          "state": "working"
+        },
+        {
+          "id": "editor-command-submit-scene-prefab-instance",
+          "state": "working"
+        },
+        {
+          "id": "editor-command-submit-scene-prefab-override",
+          "state": "working"
+        },
+        {
+          "id": "editor-command-submit-scene-prefab-refresh",
+          "state": "working"
+        },
+        {
+          "id": "editor-command-submit-viewport-source-set",
           "state": "working"
         },
         {
@@ -1383,7 +1571,7 @@
         }
       ],
       "totals": {
-        "working": 127,
+        "working": 174,
         "partial": 31,
         "refused": 5
       }
