@@ -84,7 +84,9 @@ for (const [feature, title] of [
   ["#260", "physics-inspect"], ["#262", "package-inspect"],
   ["#265", "workspace-layout-inspect"], ["#269", "extension-inspect"],
 ]) {
-  const result = features?.[feature];
+  // #262 and #269 also carry their command-form proofs; the catalog inspection
+  // the feature pass performed sits beside them.
+  const result = feature === "#262" || feature === "#269" ? features?.[feature]?.catalogInspect : features?.[feature];
   if (result?.gui !== true || result?.completed !== true ||
       result?.title !== title || result?.code !== "COMMAND_COMPLETED") {
     failures.push(`${feature} GUI action did not complete ${title} with COMMAND_COMPLETED`);
@@ -119,8 +121,9 @@ if (features?.["#264"]?.gui !== true || features["#264"].state !== "profile-evid
 const measuredDrawCalls = profileEvidence.metrics?.find((metric) => metric.id === "draw-calls");
 if (profileEvidence.kind !== "sceneaxi.profile-evidence" || profileEvidence.savedBytesWritten !== false ||
     profileEvidence.digest !== features?.["#264"]?.digest ||
-    profileEvidence.sourceContentHash !== features?.["#256"]?.finalProjectDigest ||
-    measuredDrawCalls?.status !== "measured" || measuredDrawCalls.value !== proof.frameReport?.drawCalls ||
+    profileEvidence.sourceContentHash !== features?.["#270"]?.projectDigestAtProfile ||
+    measuredDrawCalls?.status !== "measured" || typeof measuredDrawCalls.value !== "number" || measuredDrawCalls.value <= 0 ||
+    measuredDrawCalls.value !== features?.["#270"]?.drawCallsAtProfile ||
     typeof profileEvidence.digest !== "string" || !/^sha256:[0-9a-f]{64}$/.test(profileEvidence.digest)) {
   failures.push("#270 profile evidence lacks the matching source digest and measured presentation draw-call count");
 }
@@ -180,7 +183,7 @@ if (physicsCatalog.kind !== "sceneaxi.scene-physics-inspection" ||
     !/^sha256:[0-9a-f]{64}$/.test(features["#260"].digestAfterAccept ?? "")) {
   failures.push("#260 physics inspection did not prove GUI staging and accepted world gravity in changed scratch bytes");
 }
-const packageCatalog = JSON.parse(features?.["#262"]?.message ?? "{}");
+const packageCatalog = JSON.parse(features?.["#262"]?.catalogInspect?.message ?? "{}");
 if (packageCatalog.kind !== "sceneaxi.scene-package-inspection" ||
     packageCatalog.catalog?.lock?.length !== 0 || packageCatalog.marketplace !== false ||
     packageCatalog.networking !== false || packageCatalog.lockDigest !== "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945") {
@@ -414,7 +417,8 @@ if (failures.length > 0) {
 
 console.log("desktop-linux smoke OK —");
 console.log(`  mode: ${packaged ? "packaged (linux-unpacked)" : "built runtime (dist/main.cjs)"}`);
-console.log(`  features: ${Object.keys(features).length} issue entries asserted, including pending GUI gaps`);
+const hostAbsent = Object.entries(features).filter(([, entry]) => entry?.gui === false).map(([feature]) => feature);
+console.log(`  features: ${Object.keys(features).length} issue entries asserted through the GUI; host-absent: ${hostAbsent.join(", ") || "none"}`);
 console.log(
   `  open path: ${proof.openPath.tickDigests.length} ticks, digest ${String(proof.openPath.initialDigest).slice(0, 18)}… → ${String(proof.openPath.tickDigests.at(-1)).slice(0, 18)}…`,
 );

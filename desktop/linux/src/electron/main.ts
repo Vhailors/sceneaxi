@@ -363,13 +363,19 @@ async function runAudioProjectSwitchSmokeProof(
   window: BrowserWindow,
   switchProject: () => Promise<void>,
 ): Promise<boolean> {
-  // Last proof: the feature proofs leave the Web profile with an edit flagged,
-  // and this proof needs only Play and the clip control, not Stop or Reset.
-  await prepareAudioPlay(window, false);
+  await prepareAudioPlay(window);
   await clickRendererControl(window, '[data-command="run-play"]');
-  if (!await waitForRenderer(window, "document.querySelector('[data-audio-playback]') !== null")) return false;
+  if (!await waitForRenderer(window, "document.querySelector('[data-audio-playback]') !== null")) {
+    throw new Error(`project-switch audio: Play mounted no audio controls: ${await window.webContents.executeJavaScript("document.querySelector('[data-product-run-report]')?.textContent ?? document.querySelector('[data-project-status]')?.textContent ?? ''")}`);
+  }
   await clickRendererControl(window, '[data-audio-playback] button', 'Play tone');
-  if (!await waitForRenderer(window, "document.querySelector('[data-audio-playback] button')?.dataset.audioState === 'started'")) return false;
+  let toneStarted = false;
+  for (let attempt = 0; attempt < 3 && !toneStarted; attempt += 1) {
+    toneStarted = await waitForRenderer(window, "document.querySelector('[data-audio-playback] button')?.dataset.audioState === 'started'");
+  }
+  if (!toneStarted) {
+    throw new Error(`project-switch audio: the tone did not start: ${await window.webContents.executeJavaScript("[document.getElementById('desktop-live-viewport-open-path')?.textContent, [...document.querySelectorAll('[data-audio-playback] button')].map((b) => b.textContent + '=' + (b.dataset.audioState ?? '')).join(','), document.querySelector('.shell')?.dataset.profile].join(' | ')")}`);
+  }
   await window.webContents.executeJavaScript(`(() => {
     const button = [...document.querySelectorAll('[data-audio-playback] button')].find((item) => item.textContent === 'Play tone');
     globalThis.__sceneaxiAudioSmokeButton = button;
@@ -417,12 +423,17 @@ async function runAudioSmokeProof(window: BrowserWindow): Promise<{
   if (!await waitForRenderer(window, "Number(document.querySelector('[data-audio-playback]')?.dataset.audioRms) >= 0.07 && Number(document.querySelector('[data-audio-playback]')?.dataset.audioRms) <= 0.11")) {
     throw new Error('live playback graph RMS did not reach the expected volume-scaled signal');
   }
+  // Read the live level while the tone is still playing, before the slower
+  // offline decode below.
+  const liveRmsWhilePlaying = await window.webContents.executeJavaScript(
+    "Number(document.querySelector('[data-audio-playback]')?.dataset.audioRms)",
+  );
   const playback = await window.webContents.executeJavaScript(`(async () => {
     const audioButton = [...document.querySelectorAll('[data-audio-playback] button')].find((button) => button.textContent === 'Play tone');
     const response = await globalThis.sceneaxiDesktopLinux.request({ action: 'audio-asset', payload: { assetId: 'tone', documentPath: 'scene.json' } });
     if (!response.ok || typeof response.data?.bytesBase64 !== 'string') throw new Error('audio bytes refused');
     const audioControls = audioButton.closest('[data-audio-playback]');
-    const liveRms = Number(audioControls.dataset.audioRms);
+    const liveRms = ${liveRmsWhilePlaying};
     const bytes = Uint8Array.from(atob(response.data.bytesBase64), (character) => character.charCodeAt(0));
     const decodeContext = new AudioContext();
     const decoded = await decodeContext.decodeAudioData(bytes.slice().buffer);
@@ -1431,12 +1442,34 @@ async function start(): Promise<void> {
 
 
   // Audio: the session proofs run while the window is still in the clean Game
-  // state; the project-switch proof runs last, because it rebinds the window to a
-  // second scratch project that the feature proofs must not see.
+  // state; the project-switch proof then rebinds the smoke project.
   const audioProof = await runAudioSmokeProof(window);
   const audioResetStopped = await runAudioResetSmokeProof(window);
   const audioDecodeRefused = await runAudioDecodeRefusalSmokeProof(window);
   const audioKidsSwitchStopped = await runAudioKidsProfileSmokeProof(window);
+  const audioSwitchRoot = mkdtempSync(join(tmpdir(), "sceneaxi-audio-switch-"));
+  seedProject(audioSwitchRoot);
+  const audioProjectSwitchStopped = await runAudioProjectSwitchSmokeProof(
+    window,
+    async () => { await activateProject(audioSwitchRoot); },
+  );
+  // Rebind the smoke project for the feature proofs. The chrome never saw the
+  // switch (the host only stopped its viewport), and the smoke bytes are unchanged.
+  if (cwd === null) fail("smoke project root missing");
+  await activateProject(cwd);
+  const audioStatusBeforeRestore = await window.webContents.executeJavaScript(`document.querySelector('[data-project-status]')?.textContent ?? ''`);
+  await clickRendererControl(window, '[data-action="document-reload"]');
+  if (!await waitForRenderer(window, `document.querySelector('[data-project-status]')?.textContent !== ${JSON.stringify(audioStatusBeforeRestore)} && document.querySelector('[data-project-state]')?.getAttribute('data-project-state') === 'open' && document.querySelector('[data-product-action][data-busy="true"]') === null`)) {
+    fail("GUI Reload did not restore the smoke document after the audio project switch");
+  }
+  if (
+    audioProof.duration !== 2 || audioProof.sampleRate !== 44_100 ||
+    audioProof.channels !== 1 || audioProof.volume < 0.3 || audioProof.volume > 0.4 || audioProof.gain < 0.3 || audioProof.gain > 0.4 || audioProof.sourceStarted !== true || audioProof.pointerTargets.volume !== true || audioProof.pointerTargets.play !== true ||
+    audioProof.offlineRms <= 0.01 || audioProof.liveRms < 0.07 || audioProof.liveRms > 0.11 || audioProof.stoppedRms > 0.01 || audioProof.stopped !== true || audioProof.contextDisposed !== true ||
+    audioResetStopped !== true || audioDecodeRefused !== true || audioKidsSwitchStopped !== true || audioProjectSwitchStopped !== true
+  ) {
+    fail(`renderer audio proof failed: ${JSON.stringify({ audioProof, audioResetStopped, audioDecodeRefused, audioKidsSwitchStopped, audioProjectSwitchStopped })}`);
+  }
 
   // The window's own DOM must agree with the frame report: one live canvas, the
   // inert note gone, the report line printed. Asserted by scripts/smoke.mjs.
@@ -2136,6 +2169,8 @@ async function start(): Promise<void> {
         return false;
       };
       const run = async (commandId) => {
+        // One request at a time, as the chrome enforces: wait for the last to finish.
+        await waitFor(() => document.querySelector('[data-product-action][data-busy="true"]') === null);
         const button = [...document.querySelectorAll('[data-command]')]
           .find((element) => element.dataset.command === commandId);
         if (!(button instanceof HTMLElement)) return { gui: false, state: 'control-not-found' };
@@ -2203,6 +2238,19 @@ async function start(): Promise<void> {
       results['#265'].reset = await run('workspace-layout-reset');
       results['#266'] = await run('project-build');
       results['#269'] = await run('extension-inspect');
+      // Profiling measures an isolated Play clone of the exact current version;
+      // the edits above changed it, so Play it again first as a user would.
+      const playForProfile = [...document.querySelectorAll('[data-command]')]
+        .find((element) => element.dataset.command === 'run-play');
+      if (playForProfile instanceof HTMLElement) {
+        const before = document.querySelector('[data-run-live-report]')?.textContent ?? '';
+        const reportedBefore = document.querySelector('[data-frame-reported]')?.dataset.frameReported ?? '';
+        playForProfile.click();
+        await waitFor(() => (document.querySelector('[data-run-live-report]')?.textContent ?? '') !== before &&
+          document.querySelector('.viewport')?.dataset.playback === 'acknowledged');
+        // Profile only once the host holds a frame report for this Play.
+        await waitFor(() => (document.querySelector('[data-frame-reported]')?.dataset.frameReported ?? '') !== reportedBefore);
+      }
       results['#270'] = await run('profile-inspect');
       const timelineButton = document.querySelector('[data-action="timeline-evaluate"]');
       if (timelineButton instanceof HTMLElement) {
@@ -2243,21 +2291,10 @@ async function start(): Promise<void> {
     message?: string;
     result?: string;
   }>;
+  // Profiling measured the project as it stood after every edit above.
+  const projectDigestAtProfile = `sha256:${createHash("sha256").update(readFileSync(documentFile)).digest("hex")}`;
+  const frameReportAtProfile = bridge?.lastFrameReport() ?? null;
 
-  const audioSwitchRoot = mkdtempSync(join(tmpdir(), "sceneaxi-audio-switch-"));
-  seedProject(audioSwitchRoot);
-  const audioProjectSwitchStopped = await runAudioProjectSwitchSmokeProof(
-    window,
-    async () => { await activateProject(audioSwitchRoot); },
-  );
-  if (
-    audioProof.duration !== 2 || audioProof.sampleRate !== 44_100 ||
-    audioProof.channels !== 1 || audioProof.volume < 0.3 || audioProof.volume > 0.4 || audioProof.gain < 0.3 || audioProof.gain > 0.4 || audioProof.sourceStarted !== true || audioProof.pointerTargets.volume !== true || audioProof.pointerTargets.play !== true ||
-    audioProof.offlineRms <= 0.01 || audioProof.liveRms < 0.07 || audioProof.liveRms > 0.11 || audioProof.stoppedRms > 0.01 || audioProof.stopped !== true || audioProof.contextDisposed !== true ||
-    audioResetStopped !== true || audioDecodeRefused !== true || audioKidsSwitchStopped !== true || audioProjectSwitchStopped !== true
-  ) {
-    fail(`renderer audio proof failed: ${JSON.stringify({ audioProof, audioResetStopped, audioDecodeRefused, audioKidsSwitchStopped, audioProjectSwitchStopped })}`);
-  }
 
   // Optional visual evidence: capture the real window once the live frame exists.
   const shotPath = process.env["SCENEAXI_SMOKE_SHOT"];
@@ -2389,9 +2426,9 @@ async function start(): Promise<void> {
         '#266': { ...guiFeatures['#266'] },
         '#267': { gui: false, state: 'unsupported-host-macos' },
         '#268': { gui: false, state: 'unsupported-host-windows' },
-        '#262': { ...guiCommandFormProofs.get('#262') },
-        '#269': { ...guiCommandFormProofs.get('#269') },
-        '#270': { ...guiFeatures['#270'] },
+        '#262': { ...guiCommandFormProofs.get('#262'), catalogInspect: guiFeatures['#262'] },
+        '#269': { ...guiCommandFormProofs.get('#269'), catalogInspect: guiFeatures['#269'] },
+        '#270': { ...guiFeatures['#270'], projectDigestAtProfile, drawCallsAtProfile: frameReportAtProfile?.drawCalls ?? null },
       },
       playbackDom,
       audioProof: { ...audioProof, resetStopped: audioResetStopped, decodeRefused: audioDecodeRefused, kidsSwitchStopped: audioKidsSwitchStopped, projectSwitchStopped: audioProjectSwitchStopped },
