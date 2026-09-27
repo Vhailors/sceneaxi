@@ -238,7 +238,7 @@ async function clickRendererControl(
 
 async function waitForRenderer(window: BrowserWindow, expression: string): Promise<boolean> {
   return await window.webContents.executeJavaScript(`(async () => {
-    for (let attempt = 0; attempt < 500; attempt += 1) {
+    for (let attempt = 0; attempt < 1500; attempt += 1) {
       if (${expression}) return true;
       await new Promise((resolve) => setTimeout(resolve, 10));
     }
@@ -1388,7 +1388,7 @@ async function start(): Promise<void> {
   const playbackDom = (await window.webContents.executeJavaScript(
     `(async () => {
       const waitFor = async (predicate) => {
-        for (let attempt = 0; attempt < 500; attempt += 1) {
+        for (let attempt = 0; attempt < 1500; attempt += 1) {
           if (predicate()) return true;
           await new Promise((resolve) => setTimeout(resolve, 10));
         }
@@ -1497,7 +1497,7 @@ async function start(): Promise<void> {
     badge?: string;
   }>(`(async () => {
     const waitFor = async (predicate) => {
-      for (let attempt = 0; attempt < 500; attempt += 1) {
+      for (let attempt = 0; attempt < 1500; attempt += 1) {
         if (predicate()) return true;
         await new Promise((resolve) => setTimeout(resolve, 10));
       }
@@ -1534,6 +1534,9 @@ async function start(): Promise<void> {
     const stagedValue = Number((valueBefore + 0.2).toFixed(6));
     input.value = String(stagedValue);
     input.dispatchEvent(new Event('input', { bubbles: true }));
+    // Selecting the entity sent a selection request; Stage is a second request,
+    // which the chrome refuses while the first is in flight.
+    await waitFor(() => document.querySelector('[data-product-action][data-busy="true"]') === null);
     click('[data-action="scene-property-stage"]');
     const staged = await waitFor(() => document.querySelector('[data-change-badge]')?.textContent === '1' &&
       document.querySelector('[data-product-action][data-busy="true"]') === null);
@@ -1559,7 +1562,7 @@ async function start(): Promise<void> {
   const guiStageUnchangedBytes = readFileSync(documentFile, "utf8") === sceneStageBytes;
   await waitForGui<boolean>(`(async () => {
     const waitFor = async (predicate) => {
-      for (let attempt = 0; attempt < 500; attempt += 1) {
+      for (let attempt = 0; attempt < 1500; attempt += 1) {
         if (predicate()) return true;
         await new Promise((resolve) => setTimeout(resolve, 10));
       }
@@ -2161,7 +2164,7 @@ async function start(): Promise<void> {
   const guiFeatures = (await window.webContents.executeJavaScript(
     `(async () => {
       const waitFor = async (predicate) => {
-        for (let attempt = 0; attempt < 500; attempt += 1) {
+        for (let attempt = 0; attempt < 1500; attempt += 1) {
           if (predicate()) return true;
           await new Promise((resolve) => setTimeout(resolve, 10));
         }

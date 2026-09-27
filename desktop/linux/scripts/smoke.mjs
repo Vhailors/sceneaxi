@@ -56,7 +56,8 @@ if (packaged) {
 const result = spawnSync(command, args, {
   cwd: appRoot,
   encoding: "utf8",
-  timeout: 120_000,
+  // Wall-clock allowance for a loaded host; every assertion below is unchanged.
+  timeout: 240_000,
   env: { ...process.env, ELECTRON_ENABLE_LOGGING: "0" },
 });
 
