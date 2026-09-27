@@ -25,17 +25,26 @@ The bounded families are:
 | Family | Admitted profile |
 |---|---|
 | SceneAxi | validated Scene Document, Sculpt Intake, Sculpt Artifact, or Composed Scene JSON |
-| Model | `sceneaxi.gltf-contained-triangles-v1`: contained GLB or embedded-buffer glTF 2.0 |
-| Image | PNG, JPEG, or VP8X WebP with validated headers and bounded dimensions |
+| Model | `sceneaxi.gltf-contained-triangles-v1`: contained GLB or embedded-buffer glTF 2.0; PNG-textured triangles and node translation/rotation/scale clips with LINEAR or STEP sampling |
+| Image | PNG, JPEG, or VP8X WebP with validated headers and bounded dimensions; separate raster assets, not glTF textures |
 | Audio | bounded WAV, Ogg, or MP3 container metadata |
 | Font | WOFF2, WOFF, TTF, or OTF with bounded table metadata |
 | Animation data | `sceneaxi.animation-data` schema v1 metadata; no timeline authoring or runtime evaluator |
 
 Each file is at most 8 MiB and a project retains at most 16 entries. The glTF
-triangle/accessor limits remain unchanged. SVG, HTML, JavaScript, unknown JSON,
-archives, external glTF buffers, and unsupported codecs refuse by name. Preview
-records are recomputed from validated bytes and contain primitive metadata only;
-stored markup or untrusted code is never interpreted or executed.
+triangle/accessor limits remain unchanged. Textures accept only embedded
+8-bit, non-interlaced RGB/RGBA PNGs without `tRNS` transparency or unsupported
+`gAMA`/`cHRM`/`iCCP` color-profile chunks (decoded RGBA under a 4 MiB per-texture
+and 8 MiB per-model cap); external and non-PNG images, those PNG chunks, and
+sampler configurations refuse by name. Materials accept only omitted or `OPAQUE`
+`alphaMode`; `BLEND`, `MASK`, and unknown modes refuse before proposal creation.
+As in glTF, opaque materials ignore texture alpha and `alphaCutoff`. An omitted
+`baseColorFactor` defaults to white, leaving texture colors untinted.
+JPEG/WebP decode is an async follow-up. SVG, HTML, JavaScript,
+unknown JSON, archives, external glTF buffers, and unsupported codecs refuse by
+name. Preview records are recomputed
+from validated bytes and contain primitive metadata only; stored markup or
+untrusted code is never interpreted or executed.
 
 ## Review, copies, and hot reload
 
@@ -72,7 +81,12 @@ the stable id, contained path, and model composition identities.
 - Assistant inspection: formats read-only metadata from that entry and omits
   canonical bytes.
 - Play: consumes model entries only, retaining the original canonical glTF
-  projection and byte parity; non-model assets do not fabricate scene nodes.
+  bytes and applying validated node-TRS clips through the presentation core.
+  LINEAR and STEP are supported; CUBICSPLINE and skinning (`skins`,
+  `JOINTS_0`, `WEIGHTS_0`) refuse by name. Animation changes presentation state
+  only and never writes authoring bytes. Non-model assets do not fabricate scene
+  nodes.
+  Separate raster image entries are not bound to glTF materials.
 - Export Web: verifies and packages every admitted entry by its manifest media
   type, length, digest, and project-contained path.
 
@@ -83,7 +97,8 @@ preview/browser/assistant parity, CLI reload, and approval boundary are in
 Reject/accept/Play/Three/CLI parity remains in
 `tests/e2e/asset-ingestion-golden.test.ts`.
 
-This slice adds no hierarchy, input map, Play lifecycle, animation authoring,
-physics, provider, assistant mutation contract, package manager, build target,
-auth/billing, deployment, publication, Kids activation, or Stage 1 proof. The
-known Electron 43.2.0 host limitation is unchanged.
+This slice does not add hierarchy editing, input-map editing, a new Play
+lifecycle, animation authoring, physics, provider adapters, assistant mutation,
+package management, build targets, auth or billing, deployment, publication,
+Kids activation, or the Stage 1 proof. The known Electron 43.2.0 host limitation
+is unchanged.

@@ -43,6 +43,10 @@ import {
   RARITY_SCHEMA_VERSION,
   SCENE_COMPOSITION_INTAKE_KIND,
   SCENE_COMPOSITION_SCHEMA_VERSION,
+  emptySceneEffectsCatalog,
+  emptySceneEnvironmentCatalog,
+  emptySceneMaterialsCatalog,
+  sceneEnvironmentCatalogDigest,
   createEditorCommandInvocation,
   type SceneCompositionIntake,
 } from "@sceneaxi/schemas";
@@ -86,6 +90,7 @@ import {
   desktopLinuxIndexHtml,
 } from "../../desktop/linux/src/lib/chrome-document.ts";
 import {
+  desktopMountablePayload,
   mountDesktopScene,
   synchronizeViewportScene,
 } from "../../desktop/linux/src/renderer/viewport-playback.ts";
@@ -312,13 +317,17 @@ function activeDocumentData(sceneId = "desktop-linux-open-scene") {
   return composed.document.data;
 }
 
-function authoringDir(sceneId = "desktop-linux-open-scene"): string {
+function authoringDir(
+  sceneId = "desktop-linux-open-scene",
+  extraData: Readonly<Record<string, unknown>> = {},
+): string {
   const dir = mkdtempSync(join(tmpdir(), "sceneaxi-desktop-golden-"));
   tmpDirs.push(dir);
   const doc = createDocument({
     id: "scene",
     data: {
       ...activeDocumentData(sceneId),
+      ...extraData,
       entities: [{ id: "hero", x: 1, y: 2, rz: 0 }],
       material: { roughness: 0.4 },
     },
@@ -453,11 +462,44 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
     })).toMatchObject({ ok: false, reason: EDITOR_COMMAND_REFUSALS.kidsDenied });
   });
 
-  it("serves the composed MountableScene the renderer mounts", () => {
-    const data = activeDocumentData("opened-project-scene");
-    const expected = desktopSceneFromDocumentData(data);
+  it("serves authored presentation catalogs with the composed MountableScene", () => {
+    const environment = Object.freeze({ ...emptySceneEnvironmentCatalog(), background: "#123456", exposure: 1.5, toneMapping: "aces" as const });
+    const materials = Object.freeze({
+      ...emptySceneMaterialsCatalog(),
+      overrides: Object.freeze([Object.freeze({
+        instanceId: "desktop-crate-root",
+        emissiveColor: "#abcdef",
+        emissiveIntensity: 2,
+        opacity: 0.5,
+        baseColorMapAssetId: null,
+        normalMapAssetId: null,
+        roughnessMapAssetId: null,
+      })]),
+    });
+    const effects = Object.freeze({
+      ...emptySceneEffectsCatalog(),
+      seed: 73,
+      emitters: Object.freeze([Object.freeze({
+        emitterId: "dust",
+        kind: "point" as const,
+        rate: 10,
+        lifetimeMs: 1000,
+        speed: 1,
+        spread: 2,
+      })]),
+    });
+    const dir = authoringDir("opened-project-scene", {
+      sceneEnvironment: environment,
+      sceneMaterials: materials,
+      sceneEffects: effects,
+    });
+    const expected = desktopSceneFromDocumentData({
+      ...activeDocumentData("opened-project-scene"),
+      sceneEnvironment: environment,
+      sceneMaterials: materials,
+      sceneEffects: effects,
+    });
     if (!expected.ok) throw new Error(expected.reason);
-    const dir = authoringDir("opened-project-scene");
     const bridge = bridgeAt(dir);
     const res = bridge.handle({
       action: "scene",
@@ -477,6 +519,50 @@ describe("desktop bridge — the packaged app's engine paths are real", () => {
       "desktop-crate-beside",
       "desktop-crate-stacked",
     ]);
+    expect(scene.environment).toEqual(environment);
+    expect(scene.materials).toEqual(materials);
+    expect(scene.effects).toEqual(effects);
+    expect(scene.effects?.seed).toBe(73);
+    expect(desktopMountablePayload(expected.mountable)).toBe(true);
+    expect(desktopMountablePayload({ ...expected.mountable, effectsDigest: "sha256:stale" })).toBe(false);
+
+    const backend = createDesktopPresentationBackend();
+    const mounts = createSculptMountApi(backend);
+    const setEnvironment = vi.spyOn(backend, "setEnvironment");
+    const setMaterialOverrides = vi.spyOn(backend, "setMaterialOverrides");
+    const sampleEffects = vi.spyOn(backend, "sampleEffects");
+    mountDesktopScene(mounts, expected.mountable, backend);
+    const authoredEffects = expected.mountable.effects;
+    if (authoredEffects === undefined) throw new Error("scene omitted its authored effects catalog");
+    backend.sampleEffects(authoredEffects, 25);
+    expect(setEnvironment).toHaveBeenCalledWith(expect.objectContaining({
+      background: "#123456",
+      exposure: 1.5,
+      toneMapping: "aces",
+    }));
+    expect(setMaterialOverrides).toHaveBeenCalledWith(materials.overrides);
+    expect(sampleEffects).toHaveBeenCalledWith(effects, 25);
+    mounts.dispose();
+  });
+
+  it("withholds a texture-bound material override without blanking the desktop viewport", () => {
+    const materials = Object.freeze({
+      ...emptySceneMaterialsCatalog(),
+      overrides: Object.freeze([
+        Object.freeze({ instanceId: "desktop-crate-root", emissiveColor: "#abcdef", emissiveIntensity: 1, opacity: 1, baseColorMapAssetId: "asset-albedo", normalMapAssetId: null, roughnessMapAssetId: null }),
+        Object.freeze({ instanceId: "desktop-crate-beside", emissiveColor: "#123456", emissiveIntensity: 2, opacity: 0.5, baseColorMapAssetId: null, normalMapAssetId: null, roughnessMapAssetId: null }),
+      ]),
+    });
+    const composed = desktopSceneFromDocumentData({ ...activeDocumentData("opened-project-scene"), sceneMaterials: materials });
+    if (!composed.ok) throw new Error(composed.reason);
+    const backend = createDesktopPresentationBackend();
+    const mounts = createSculptMountApi(backend);
+    const setMaterialOverrides = vi.spyOn(backend, "setMaterialOverrides");
+    expect(() => backend.setMaterialOverrides(materials.overrides)).toThrow(/ADR 0026/);
+    expect(mountDesktopScene(mounts, composed.mountable, backend)).toEqual({ refusedMaterialOverrides: ["desktop-crate-root"] });
+    expect(setMaterialOverrides).toHaveBeenLastCalledWith([materials.overrides[1]]);
+    expect(mounts.list().map((mounted) => mounted.instanceId)).toEqual(composed.mountable.instances.map((instance) => instance.instanceId));
+    mounts.dispose();
   });
 
   it("mounts, transforms, and resets a replacement local assistant artifact", async () => {
@@ -2836,7 +2922,7 @@ describe("desktop chrome document — the shell's chrome, unforked, plus two inj
       },
     });
     await vi.waitFor(() => {
-      expect(statusReads).toBe(2);
+      expect(statusReads).toBe(3);
       expect(status.textContent).toContain("authoring state refreshed");
     });
     expect(proposal.hidden).toBe(true);
@@ -3832,20 +3918,42 @@ describe("desktop renderer behavior", () => {
   });
 
   it("synchronizes the mounted viewport scene and restores it after a refused replacement", () => {
-    const initial = desktopOpenScene();
+    const initial = desktopSceneFromDocumentData({
+      ...activeDocumentData(),
+      sceneEnvironment: emptySceneEnvironmentCatalog(),
+    });
     const replacement = desktopSceneFromDocumentData(activeDocumentData("viewport-replacement"));
     if (!initial.ok || !replacement.ok) throw new Error("viewport scene fixture refused");
     const backend = createThreeSculptPresentationBackend();
     const mounts = createSculptMountApi(backend);
-    mountDesktopScene(mounts, initial.mountable);
+    mountDesktopScene(mounts, initial.mountable, backend);
+    const setEnvironment = vi.spyOn(backend, "setEnvironment");
     let reframes = 0;
+    const currentEnvironment = initial.mountable.environment;
+    if (currentEnvironment === undefined) throw new Error("desktop scene omitted its environment catalog");
+    const changedEnvironment = { ...currentEnvironment, background: "#123456" };
+    const visualUpdate = {
+      ...initial.mountable,
+      environment: changedEnvironment,
+      environmentDigest: sceneEnvironmentCatalogDigest(changedEnvironment),
+    };
+    const presentationSync = synchronizeViewportScene({
+      mounts,
+      frameMountedContent: () => { reframes += 1; },
+      current: initial.mountable,
+      next: visualUpdate,
+      triangleBackend: backend,
+    });
+    expect(presentationSync.ok).toBe(true);
+    expect(setEnvironment).toHaveBeenLastCalledWith(expect.objectContaining({ background: "#123456" }));
     const synchronized = synchronizeViewportScene({
       mounts,
       frameMountedContent: () => {
         reframes += 1;
       },
-      current: initial.mountable,
+      current: visualUpdate,
       next: replacement.mountable,
+      triangleBackend: backend,
     });
     expect(synchronized).toMatchObject({
       ok: true,
@@ -3870,12 +3978,13 @@ describe("desktop renderer behavior", () => {
       },
       current: synchronized.scene,
       next: invalid,
+      triangleBackend: backend,
     });
     expect(refused.ok).toBe(false);
     expect(mounts.list().map((instance) => instance.instanceId)).toEqual(
       replacement.mountable.instances.map((instance) => instance.instanceId),
     );
-    expect(reframes).toBe(2);
+    expect(reframes).toBe(3);
     mounts.dispose();
   });
 

@@ -2,6 +2,7 @@ node_modules/
 dist/
 dist-sdk/
 dist-sdk-again/
+docs/api/
 build/
 .turbo/
 .cache/

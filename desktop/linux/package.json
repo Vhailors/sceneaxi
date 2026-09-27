@@ -26,6 +26,7 @@
     "@sceneaxi/engine-orchestrator": "link:../../packages/engine-orchestrator",
     "@sceneaxi/engine-presentation": "link:../../packages/engine-presentation",
     "@sceneaxi/importers": "link:../../packages/importers",
+    "@sceneaxi/physics-rapier": "link:../../packages/physics-rapier",
     "@sceneaxi/provider-openrouter": "link:../../packages/provider-openrouter",
     "@sceneaxi/schemas": "link:../../packages/schemas",
     "@sceneaxi/site-kit": "link:../../packages/site-kit"

@@ -14,6 +14,8 @@
 
 import type { PackageSeam } from "@sceneaxi/schemas";
 
+export { validateCreditReconciliationRecord, type CreditReconciliationRecord } from "@sceneaxi/schemas";
+
 export const seam: PackageSeam = Object.freeze({
   name: "@sceneaxi/billing",
   releaseGroup: "identity",
@@ -48,6 +50,7 @@ export {
   isSaleEntryKey,
   saleEntryKeys,
   type CommittedEntry,
+  type CommittedReconciliation,
   type CreditStore,
   type CreditStoreAdapter,
   type CreditsSaleSettlement,
@@ -55,6 +58,16 @@ export {
   type InMemoryCreditStore,
   type InMemoryCreditStoreOptions,
 } from "./store.js";
+
+export {
+  adjustSupportLedger,
+  readSupportLedger,
+  requireLedgerSupportAdmin,
+  type LedgerAdjustmentFields,
+  type LedgerSupportAccess,
+  type LedgerSupportStore,
+  type LedgerSupportTarget,
+} from "./support-ledger.js";
 
 export {
   METERING_IDEMPOTENCY_PREFIX,
@@ -140,6 +153,8 @@ export {
   parseCheckoutCompletedEvent,
   parseCreditPackRefundEvent,
   persistCreditPackRefund,
+  persistCreditPackChargeEvent,
+  type CreditPackChargeEventOutcome,
   persistCheckoutCompletedGrant,
   signStripeWebhookPayload,
   verifyStripeWebhookSignature,
@@ -217,3 +232,21 @@ export {
   type StartConnectOnboardingRequest,
   type StripeConnectProvider,
 } from "./stripe-connect.js";
+
+export {
+  connectPayoutMatchesMoneySplit,
+  validateConnectAccountRecord,
+  validateConnectOnboardingIntent,
+  validateConnectPayoutIntent,
+  validateConnectPayoutOutcome,
+  validateConnectStatusRecord,
+  validateMoneySplitRecord,
+} from "@sceneaxi/schemas";
+export type {
+  ConnectAccountRecord,
+  ConnectOnboardingIntent,
+  ConnectPayoutIntent,
+  ConnectPayoutOutcome,
+  ConnectStatusRecord,
+  MoneySplitRecord,
+} from "@sceneaxi/schemas";

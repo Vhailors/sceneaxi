@@ -49,6 +49,7 @@ import {
   type SiteIdentityAdapter,
   type SiteIdentityPort,
   type SiteIdentityRequest,
+  type SiteFormOriginSignals,
   type SiteLoginAdapter,
   type SiteLoginGrant,
   type SiteLoginPort,
@@ -70,13 +71,21 @@ import {
   BILLING_REFUSE_REASONS,
   STARTER_IDEMPOTENCY_PREFIX,
   createCheckoutSessionIntent,
+  adjustSupportLedger,
+  readSupportLedger,
+  requireLedgerSupportAdmin,
+  type LedgerAdjustmentFields,
+  type LedgerSupportStore,
+  type LedgerSupportTarget,
   grantStarterCredits,
   loadCreditPackCatalog,
   loadLedgerState,
   type BillingOutcome,
   type BillingRefuseReason,
+  type ConnectStore,
   type CreditStore,
   type LedgerState,
+  type LiveModeAuthorizationAudit,
 } from "@sceneaxi/billing";
 import {
   STRIPE_WEBHOOK_SECRET_ENV,
@@ -87,7 +96,9 @@ import {
 import {
   createBetterAuthHttpClient,
   createNeonCheckoutIntentStore,
+  createNeonConnectStore,
   createNeonCreditStore,
+  createNeonLiveModeAuditSink,
   createNeonDatabase,
   createNeonIdentityStore,
   createProvisioningIdentityAdapter,
@@ -99,7 +110,10 @@ import {
   resolveNonEmptyEnv,
   type DeploymentProviderOverrides,
   type NeonDatabase,
+  type ProviderSessionRevoker,
 } from "./provider-adapters.js";
+import { serverLog } from "./server-logger.js";
+import { verifyLoginRequestOrigin } from "./login-flow.js";
 
 /**
  * Contract shapes reached through the two plane packages rather than imported from
@@ -295,6 +309,21 @@ export function siteReasonForBillingReason(
   }
 }
 
+function siteReasonForSupportReason(reason: BillingRefuseReason): SiteRefusalReason {
+  switch (reason) {
+    case AUTH_REFUSE_REASONS.roleNotPermitted:
+      return "ADMIN_ROLE_REQUIRED";
+    case BILLING_REFUSE_REASONS.supportTargetNotFound:
+    case BILLING_REFUSE_REASONS.balanceInsufficient:
+    case BILLING_REFUSE_REASONS.idempotencyConflict:
+      return reason;
+    case BILLING_REFUSE_REASONS.requestInvalid:
+      return "SITE_REQUEST_MALFORMED";
+    default:
+      return siteReasonForBillingReason(reason, "credits");
+  }
+}
+
 // --- principal projection ----------------------------------------------------
 
 /**
@@ -413,7 +442,12 @@ export type IdentityPlaneAdapters = {
  * and the webhook endpoint reads the credit store and checkout evidence from this same
  * registry.
  */
+export type UmbrellaConfigurationState = "absent" | "present-valid" | "present-malformed";
+
+export type UmbrellaConfigurationReport = Readonly<Record<string, UmbrellaConfigurationState>>;
+
 export type UmbrellaPlaneHandles = {
+  readonly configuration: UmbrellaConfigurationReport;
   /** The deployment-issued single-admin evidence. Never resolved from a route argument. */
   readonly admin: AdminIdentity | null;
   /** Billing mode is deployment configuration; `live` still refuses in core. */
@@ -421,7 +455,13 @@ export type UmbrellaPlaneHandles = {
   /** One deployment-owned clock shared by every issued port and capability. */
   readonly clock: () => number;
   readonly identityPort?: IdentityPort | undefined;
+  /** Provider revocation is separate from the auth port's local session deletion. */
+  readonly providerSessions?: ProviderSessionRevoker | undefined;
   readonly creditStore?: CreditStore | undefined;
+  readonly supportStore?: LedgerSupportStore | undefined;
+  readonly verifyFormOrigin?: ((signals: Omit<SiteFormOriginSignals, "configuredOrigin">) => SiteResult<string>) | undefined;
+  readonly connectStore?: ConnectStore | undefined;
+  readonly liveModeAuditSink?: ((audit: LiveModeAuthorizationAudit) => Promise<void>) | undefined;
   readonly checkoutSessions?: CheckoutSessionAdapter | undefined;
   readonly checkoutEvidence?: CheckoutEvidencePort | undefined;
   /** Secret-holding webhook effect. The route can supply only request evidence. */
@@ -458,13 +498,16 @@ export function createDeploymentPlaneHandles(
   const clock = options.clock ?? (() => Date.now());
   const admin = options.admin ?? null;
   const billingMode = options.billingMode ?? "test";
+  const configuration = inspectUmbrellaConfiguration({});
   const database = providers.database;
   if (database === undefined) {
-    return Object.freeze({ admin, billingMode, clock });
+    return Object.freeze({ admin, billingMode, clock, configuration });
   }
 
   const identityStore = createNeonIdentityStore(database);
   const creditStore = createNeonCreditStore(database);
+  const connectStore = createNeonConnectStore(database);
+  const liveModeAuditSink = createNeonLiveModeAuditSink(database);
   const intentStore = createNeonCheckoutIntentStore(database);
 
   const betterAuth = providers.betterAuth;
@@ -498,9 +541,17 @@ export function createDeploymentPlaneHandles(
     billingMode,
     clock,
     identityPort,
+    providerSessions:
+      betterAuth?.revokeSession === undefined
+        ? undefined
+        : Object.freeze({ revokeSession: betterAuth.revokeSession.bind(betterAuth) }),
     creditStore,
+    supportStore: Object.freeze({ users: identityStore, listCheckoutIntents: intentStore.listByUserId }),
+    connectStore,
+    liveModeAuditSink,
     checkoutSessions,
     checkoutEvidence,
+    configuration,
   });
 }
 
@@ -513,16 +564,21 @@ function providerClientsFromEnvironment(
     try {
       database = createNeonDatabase(databaseUrl);
     } catch {
+      serverLog("error", "umbrella.provider.construction_failed", { provider: "database" });
       database = undefined;
     }
   }
 
   const authOrigin = resolveBetterAuthOrigin(resolveNonEmptyEnv(env, "BETTER_AUTH_ORIGIN"));
   const fetcher = providerFetch();
-  const betterAuth =
-    authOrigin === undefined || fetcher === undefined
-      ? undefined
-      : createBetterAuthHttpClient({ origin: authOrigin, fetch: fetcher });
+  let betterAuth: DeploymentProviderOverrides["betterAuth"];
+  if (authOrigin !== undefined && fetcher !== undefined) {
+    try {
+      betterAuth = createBetterAuthHttpClient({ origin: authOrigin, fetch: fetcher });
+    } catch {
+      serverLog("error", "umbrella.provider.construction_failed", { provider: "better-auth" });
+    }
+  }
 
   const stripeKey = resolveNonEmptyEnv(env, "STRIPE_SECRET_KEY");
   let stripe: DeploymentProviderOverrides["stripe"];
@@ -530,6 +586,7 @@ function providerClientsFromEnvironment(
     try {
       stripe = createStripeClient(stripeKey);
     } catch {
+      serverLog("error", "umbrella.provider.construction_failed", { provider: "stripe" });
       stripe = undefined;
     }
   }
@@ -575,7 +632,14 @@ function buildUmbrellaPlaneHandles(
           evidence: base.checkoutEvidence,
           clock: base.clock,
         });
-  return Object.freeze({ ...base, creditWebhook });
+
+  return Object.freeze({
+    ...base,
+    creditWebhook,
+    verifyFormOrigin: (signals: Omit<SiteFormOriginSignals, "configuredOrigin">) =>
+      verifyLoginRequestOrigin(env, signals),
+    configuration: inspectUmbrellaConfiguration(env),
+  });
 }
 
 let deploymentHandles: UmbrellaPlaneHandles | undefined;
@@ -585,8 +649,86 @@ let deploymentHandles: UmbrellaPlaneHandles | undefined;
  * secret from its caller: the server resolves and holds those exactly once here.
  */
 export function umbrellaPlaneHandles(): UmbrellaPlaneHandles {
-  deploymentHandles ??= buildUmbrellaPlaneHandles(process.env);
+  deploymentHandles ??= buildUmbrellaPlaneHandles(Object.freeze({ ...process.env }));
   return deploymentHandles;
+}
+
+const DOCUMENTED_UMBRELLA_ENV = Object.freeze([
+  ["DATABASE_URL", validPostgresUrl],
+  ["BETTER_AUTH_ORIGIN", validBetterAuthOrigin],
+  ["BETTER_AUTH_SECRET", (value: string) => value.trim().length >= 32],
+  ["SCENEAXI_ADMIN_EMAIL", validAdminEmail],
+  ["SCENEAXI_ADMIN_BOOTSTRAP_SECRET", (value: string) => value.trim().length >= 8 && value.trim().length <= 128],
+  ["STRIPE_SECRET_KEY", (value: string) => /^sk_test_[A-Za-z0-9]+$/.test(value.trim())],
+  ["STRIPE_WEBHOOK_SECRET", (value: string) => /^whsec_[A-Za-z0-9]+$/.test(value.trim())],
+  ["SCENEAXI_BILLING_MODE", (value: string) => ["test", "live"].includes(value.trim().toLowerCase())],
+  ["NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN", (value: string) => httpsOrigin(value) && new URL(value).hostname.endsWith(".vercel.app")],
+  ["NEXT_PUBLIC_SCENEAXI_GAME_CATALOG_ORIGIN", httpsOrigin],
+  ["NEXT_PUBLIC_SCENEAXI_WEB_CATALOG_ORIGIN", httpsOrigin],
+  ["SCENEAXI_SITE_EDITOR_PREVIEW", (value: string) => value === "1"],
+] as const);
+
+function validPostgresUrl(value: string): boolean {
+  try {
+    const url = new URL(value.trim());
+    return (url.protocol === "postgres:" || url.protocol === "postgresql:") && url.hostname !== "" && url.pathname.length > 1;
+  } catch {
+    return false;
+  }
+}
+
+function validBetterAuthOrigin(value: string): boolean {
+  try {
+    const url = new URL(value);
+    const loopback = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+    return url.username === "" && url.password === "" && url.pathname === "/" && url.search === "" && url.hash === "" &&
+      (url.protocol === "https:" || (loopback && url.protocol === "http:"));
+  } catch {
+    return false;
+  }
+}
+
+function validAdminEmail(value: string): boolean {
+  return /^[^@\s,;]+@[^@\s,;]+\.[^@\s,;]+$/.test(value.trim());
+}
+
+
+function httpsOrigin(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && url.origin === value && url.pathname === "/" && !url.search && !url.hash;
+  } catch {
+    return false;
+  }
+}
+
+/** Classify documented environment names without retaining or returning their values. */
+export function classifyUmbrellaPlane(
+  configuration: UmbrellaConfigurationReport,
+  variables: ReadonlyArray<string>,
+  wired: boolean,
+): "wired" | "absent" | "misconfigured" {
+  const states = variables.map((name) => configuration[name]);
+  if (states.includes("present-malformed")) return "misconfigured";
+  if (wired) return "wired";
+  if (states.includes("absent")) return "absent";
+  return "misconfigured";
+}
+
+export function inspectUmbrellaConfiguration(
+  env: Readonly<Record<string, string | undefined>>,
+): UmbrellaConfigurationReport {
+  return Object.freeze(Object.fromEntries(
+    DOCUMENTED_UMBRELLA_ENV.map(([name, isValid]) => {
+      const value = env[name];
+      const state: UmbrellaConfigurationState = value === undefined
+        ? "absent"
+        : isValid(value)
+          ? "present-valid"
+          : "present-malformed";
+      return [name, state];
+    }),
+  ));
 }
 
 export type IdentityPlaneWiring = IdentityPlaneAdapters & {
@@ -598,6 +740,7 @@ export type IdentityPlaneWiring = IdentityPlaneAdapters & {
   readonly identityPort?: IdentityPort | undefined;
   /** The credit store from `@sceneaxi/billing`; the ledger is the only balance source. */
   readonly creditStore?: CreditStore | undefined;
+  readonly supportStore?: LedgerSupportStore | undefined;
   /** The provider round-trip that hosts a checkout. */
   readonly checkoutSessions?: CheckoutSessionAdapter | undefined;
   /** The pack catalog. Defaults to the committed contract fixture. */
@@ -612,18 +755,34 @@ export type IdentityPlaneWiring = IdentityPlaneAdapters & {
   readonly clock?: (() => number) | undefined;
 };
 
+export type LedgerSupportView = Extract<Awaited<ReturnType<typeof readSupportLedger>>, { ok: true }>["value"];
+
+export type LedgerSupportAdjustment = Extract<Awaited<ReturnType<typeof adjustSupportLedger>>, { ok: true }>["value"];
+
+export type UmbrellaLedgerSupport = Readonly<{
+  lookup(input: {
+    readonly surface: SiteIdentityRequest["surface"];
+    readonly target: LedgerSupportTarget | null;
+  }): Promise<SiteResult<LedgerSupportView | null>>;
+  adjust(input: {
+    readonly surface: SiteIdentityRequest["surface"];
+    readonly requestOrigin: SiteResult<string>;
+    readonly fields: LedgerAdjustmentFields;
+  }): Promise<SiteResult<LedgerSupportAdjustment>>;
+}>;
+
 export type UmbrellaIdentityPlane = {
+  readonly ledgerSupport: UmbrellaLedgerSupport;
   readonly identity: SiteIdentityPort;
   readonly credits: SiteCreditsPort;
   readonly billing: SiteBillingPort;
   readonly login: SiteLoginPort;
   /**
-   * Delete the stored session this request's credential names, if any.
+   * Revoke the provider session, then delete the local session for this credential.
    *
-   * `ok(null)` means "no live session remains for that credential" — including the
-   * case where it was already gone — so the caller's next move is always the same:
-   * clear the browser cookie. A named refusal means the store could not answer and
-   * the session may still be live server-side.
+   * `ok(null)` means neither session remains live. Provider confirmation is required
+   * even when the local session is gone or expired. A named refusal means revocation
+   * could not be confirmed. The caller still clears the browser cookie.
    */
   readonly signOut: () => Promise<SiteResult<null>>;
   /** Whether an adapter is present for each plane, for honest UI copy. */
@@ -754,12 +913,11 @@ async function readLedgerState(
   userId: string,
 ): Promise<SiteResult<LedgerState>> {
   const account = await store.findAccountByUserId(userId);
-  // No account is not a zero balance. Nothing in this repository provisions a credit
-  // account: the schema creates the table and inserts no row, and `CreditStore` exposes
-  // no account-creation method, so provisioning belongs to the deployment's own store
-  // implementation — the same one `umbrellaPlaneHandles()` supplies, and a named step in
-  // `docs/websites-deploy.md`. A site may not invent the account it failed to find, so
-  // an absent one means the balance is unknown and every dependent surface refuses.
+  // No account is not a zero balance. `CreditStore` exposes no account-creation method;
+  // the deployment adapter provisions the account when a user authenticates
+  // (`ensureUserAndCreditAccount` in `provider-adapters.ts`). A site may not invent the
+  // account it failed to find here, so an absent one means the balance is unknown and
+  // every dependent surface refuses.
   if (account === undefined) return refuse("CREDITS_PLANE_UNAVAILABLE");
   const state = loadLedgerState(account, await store.listEntries(account.accountId));
   if (!state.ok) return refuse(siteReasonForBillingReason(state.reason, "credits"));
@@ -1006,20 +1164,35 @@ export function createUmbrellaIdentityPlane(
   const signOutBoundSession = async (): Promise<SiteResult<null>> => {
     const port = identityPort();
     if (port === undefined) return refuse("IDENTITY_PLANE_NOT_WIRED");
+    const carried = parseSessionToken(wiring.sessionToken);
+
+    if (carried === null) return ok(null);
     const verified = await verifyCarriedSession({
       port,
       surface: "site",
       sessionToken: wiring.sessionToken,
     });
-    // A credential that names no live session — absent, expired, or already
-    // deleted — has nothing left to revoke: the signed-out end state holds.
-    if (!verified.ok) {
-      return verified.reason === "IDENTITY_SESSION_ABSENT" ||
-        verified.reason === "IDENTITY_SESSION_EXPIRED"
-        ? ok(null)
-        : verified;
+
+    if (
+      !verified.ok &&
+      verified.reason !== "IDENTITY_SESSION_ABSENT" &&
+      verified.reason !== "IDENTITY_SESSION_EXPIRED"
+    ) {
+      return verified;
     }
-    if (verified.value === null) return ok(null);
+
+    const providerSessions = deploymentHandle("providerSessions");
+
+    if (providerSessions === undefined) return refuse("IDENTITY_PLANE_NOT_WIRED");
+
+    // Keep the local row until provider confirmation so a failed revocation can retry.
+    try {
+      await providerSessions.revokeSession(carried.token);
+    } catch {
+      return refuse("IDENTITY_PLANE_UNAVAILABLE");
+    }
+
+    if (!verified.ok || verified.value === null) return ok(null);
     const removed = await port.signOut({ principal: verified.value });
     if (!removed.ok) {
       // `principalInvalid` here means the stored session rotated or vanished
@@ -1031,6 +1204,55 @@ export function createUmbrellaIdentityPlane(
     }
     return ok(null);
   };
+
+  const supportAccess = async (surface: SiteIdentityRequest["surface"]) => {
+    if (surface === "kids") return refuse("KIDS_SURFACE_DENIED");
+    const port = identityPort();
+
+    if (port === undefined || admin === null) return refuse("IDENTITY_PLANE_NOT_WIRED");
+    const verified = await verifyCarriedSession({ port, surface, sessionToken: wiring.sessionToken });
+
+    if (!verified.ok) return verified;
+
+    if (verified.value === null) return refuse("IDENTITY_SESSION_ABSENT");
+
+    const access = { principal: verified.value, admin, surface, now: clock() };
+    const guarded = requireLedgerSupportAdmin(access);
+
+    if (!guarded.ok) return refuse(siteReasonForSupportReason(guarded.reason));
+
+    return ok(access);
+  };
+
+  const ledgerSupport: UmbrellaLedgerSupport = Object.freeze({
+    async lookup(input) {
+      const access = await supportAccess(input.surface);
+
+      if (!access.ok) return access;
+
+      if (input.target === null) return ok(null);
+
+      const credits = wiring.creditStore ?? deploymentHandle("creditStore");
+      const support = wiring.supportStore ?? deploymentHandle("supportStore");
+
+      if (credits === undefined || support === undefined) return refuse("CREDITS_PLANE_NOT_WIRED");
+      const result = await readSupportLedger({ ...access.value, credits, support, target: input.target });
+
+      return result.ok ? ok(result.value) : refuse(siteReasonForSupportReason(result.reason));
+    },
+    async adjust(input) {
+      if (!input.requestOrigin.ok) return input.requestOrigin;
+      const access = await supportAccess(input.surface);
+
+      if (!access.ok) return access;
+      const credits = wiring.creditStore ?? deploymentHandle("creditStore");
+
+      if (credits === undefined) return refuse("CREDITS_PLANE_NOT_WIRED");
+      const result = await adjustSupportLedger({ ...access.value, credits, fields: input.fields });
+
+      return result.ok ? ok(result.value) : refuse(siteReasonForSupportReason(result.reason));
+    },
+  });
 
   const identityAdapter = wiring.identity ?? buildIdentityAdapter();
   const creditsAdapter = wiring.credits ?? buildCreditsAdapter();
@@ -1052,6 +1274,7 @@ export function createUmbrellaIdentityPlane(
       now: () => new Date(clock()).toISOString(),
     }),
     signOut: signOutBoundSession,
+    ledgerSupport,
     wired: Object.freeze({
       identity: identityAdapter !== undefined,
       credits: creditsAdapter !== undefined,

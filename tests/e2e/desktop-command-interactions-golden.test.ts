@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   DEFAULT_INPUT_ACTION_MAP,
   reviewInputActionRebind,
+  validateEditorCommandInvocation,
   type InputActionMap,
 } from "@sceneaxi/schemas";
 import {
@@ -49,6 +50,22 @@ function projectStatus(hasActiveProject: boolean) {
   };
 }
 
+/** Commands whose outcome dialog must show the engine's own answer, not a chrome-side refusal. */
+const ENGINE_ANSWERED_COMMANDS = new Set([
+  "project-migration-propose", "project-migration-recover", "workspace-layout-apply",
+]);
+
+/**
+ * Commands whose registered input needs a review flow the GUI does not collect yet
+ * (digests, approvals, locators; go-live item 53). Their controls send no form values,
+ * so the registry validator refuses them before the engine: pinned exactly, so a GUI
+ * that starts collecting the input has to move the id out of this set.
+ */
+const INPUT_REQUIRED_COMMANDS = new Set([
+  "package-install", "package-remove", "project-migration-commit", "extension-start",
+  "input-action-rebind", "input-actions-reset",
+]);
+
 function engineResponse(
   request: Record<string, unknown>,
   state: {
@@ -61,8 +78,18 @@ function engineResponse(
   const action = request["action"];
   const op = payload?.["op"];
   if (action === "command") {
+    // The real bridge validates every invocation against the shared registry before
+    // routing it; the harness must too, or a malformed input looks like a success.
+    const validated = validateEditorCommandInvocation(payload);
+    if (!validated.ok) return { ok: false, reason: validated.reason, message: validated.message };
     const commandId = payload?.["commandId"];
     const input = payload?.["input"] as Record<string, unknown> | undefined;
+    if (commandId === "project-build") {
+      return { ok: false, reason: "PROJECT_BUILD_SIGNING_MISSING", message: "Linux signing is not configured." };
+    }
+    if (ENGINE_ANSWERED_COMMANDS.has(String(commandId))) {
+      return { ok: false, reason: "DESKTOP_COMMAND_TEST_ANSWERED", message: `The engine answered ${String(commandId)}.` };
+    }
     const translated = commandId === "project-save" || commandId === "change-review-accept"
       ? { action: "authoring", payload: { op: "accept" } }
       : commandId === "change-review-reject"
@@ -73,12 +100,43 @@ function engineResponse(
             ? { action: "authoring", payload: { op: "redo" } }
           : commandId === "run-play"
             ? { action: "open-path", payload: input }
+            : commandId === "run-stop" || commandId === "run-reset"
+              ? { action: "run-control", payload: { commandId } }
+              : commandId === "physics-inspect" || commandId === "environment-inspect" ||
+                  commandId === "material-inspect" || commandId === "effect-inspect"
+                ? { action: "catalog-inspect", payload: { commandId } }
             : commandId === "ship-export-web"
               ? { action: "ship", payload: { op: "export-web", ...input } }
               : commandId === "project-git-status" || commandId === "project-git-diff" ||
                   commandId === "project-git-stage" || commandId === "project-git-commit-prepare"
                 ? { action: "project-git", payload: { op: commandId, input } }
               : null;
+    if (["physics-apply", "environment-apply", "material-apply", "effect-apply"].includes(String(commandId))) {
+      return {
+        ok: true,
+        action: "command",
+        data: {
+          authoringSnapshot: {
+            phase: "reviewing",
+            ok: true,
+            unifiedDiff: "--- scene.json\n+++ scene.json\n",
+            renderedDiff: "Physics change staged for review.",
+            appliedPaths: null,
+            transactionId: null,
+            diagnostics: null,
+            journalRecoveryPending: false,
+            proposal: {
+              edits: [{
+                documentPath: "scene.json",
+                baseContentHash: CONTENT_HASH,
+                jsonPointer: "/data",
+                newValue: { entities: [] },
+              }],
+            },
+          },
+        },
+      };
+    }
     if (translated !== null) return engineResponse(translated, state);
   }
   if (action === "authoring" && op === "status") {
@@ -151,6 +209,12 @@ function engineResponse(
       action,
       data: { ok: true, transactionId: "1700000000000-0123456789abcdef", restoredPaths: ["scene.json"] },
     };
+  }
+  if (action === "run-control") {
+    return { ok: true, action: "command", data: { completed: true } };
+  }
+  if (action === "catalog-inspect") {
+    return { ok: true, action: "command", data: { kind: "sceneaxi.test-catalog", catalog: {} } };
   }
   if (action === "open-path") {
     return {
@@ -336,6 +400,10 @@ function element(window: HappyWindow, selector: string) {
   return found;
 }
 
+function textarea(window: HappyWindow, selector: string) {
+  return element(window, selector) as HappyHTMLElement & { value: string };
+}
+
 async function click(window: HappyWindow, selector: string) {
   element(window, selector).click();
   await settle(window);
@@ -410,6 +478,8 @@ function expectedEffect(command: DesktopInteractionCommand) {
       return { plane: "engine", action: "command", op: "edit-redo" } as const;
     case "run-play":
       return { plane: "engine", action: "command", op: "run-play" } as const;
+    default:
+      return { plane: "engine", action: "command", op: command.id } as const;
   }
 }
 
@@ -417,7 +487,7 @@ async function invoke(
   path: "menu" | "palette" | "shortcut",
   command: DesktopInteractionCommand,
 ) {
-  const { window, calls } = await harness();
+  const { window, calls, requests } = await harness();
   await prepare(command, window);
   calls.splice(0);
 
@@ -436,6 +506,22 @@ async function invoke(
   }
 
   expect(calls).toContainEqual(expectedEffect(command));
+  if (command.id === "project-build") {
+    expect(requests.find((request) => (request.payload as { commandId?: string }).commandId === command.id))
+      .toMatchObject({ payload: { input: { profile: "web", target: "linux" } } });
+    expect(element(window, "[data-outcome-code]").textContent).toBe("PROJECT_BUILD_SIGNING_MISSING");
+  }
+  if (INPUT_REQUIRED_COMMANDS.has(command.id)) {
+    expect(element(window, "[data-outcome-code]").textContent).toBe("EDITOR_COMMAND_INPUT_INVALID");
+  }
+  if (command.id === "workspace-layout-apply") {
+    expect(requests.find((request) => (request.payload as { commandId?: string }).commandId === command.id))
+      .toMatchObject({ payload: { input: { profile: expect.any(String), leftVisible: expect.any(Boolean), inspectorVisible: expect.any(Boolean) } } });
+  }
+  if (ENGINE_ANSWERED_COMMANDS.has(command.id)) {
+    expect(requests.some((request) => (request.payload as { commandId?: string }).commandId === command.id)).toBe(true);
+    expect(element(window, "[data-outcome-code]").textContent).toBe("DESKTOP_COMMAND_TEST_ANSWERED");
+  }
   if (command.id === "run-play") {
     expect(element(window, ".shell").dataset.mode).toBe("run");
     expect(element(window, "[data-project-status]").textContent).toContain(
@@ -501,6 +587,76 @@ describe("desktop command menu, palette, and accelerator parity", () => {
       });
     }
   }
+
+  it("dispatches Stop and Reset from the Run inspector", async () => {
+    const { window, calls, requests } = await harness();
+    await click(window, "#mode-run");
+    calls.splice(0);
+    await click(window, "#run-stop");
+    expect(calls).toContainEqual({ plane: "engine", action: "command", op: "run-stop" });
+    expect(requests.find((request) => (request["payload"] as Record<string, unknown>)?.["commandId"] === "run-stop"))
+      .toMatchObject({ payload: { input: {} } });
+    expect(element(window, "[data-project-status]").textContent).toContain("run-stop");
+    await click(window, "#run-reset");
+    expect(calls).toContainEqual({ plane: "engine", action: "command", op: "run-reset" });
+    expect(requests.find((request) => (request["payload"] as Record<string, unknown>)?.["commandId"] === "run-reset"))
+      .toMatchObject({ payload: { input: {} } });
+    expect(element(window, "[data-project-status]").textContent).toContain("run-reset");
+  });
+
+  it("stages an inspector mutation through the shared Change Review proposal", async () => {
+    const { window, requests } = await harness();
+    await click(window, "#mode-build");
+    const mutation = textarea(window, '[data-catalog-mutation="physics"]');
+    mutation.value = JSON.stringify({ kind: "world-set", gravityY: -9.81, stepMs: 16, seed: 1 });
+    await click(window, "#physics-stage");
+    const request = requests.find((candidate) => {
+      const payload = candidate["payload"] as Record<string, unknown> | undefined;
+      return payload?.["commandId"] === "physics-apply";
+    });
+    expect(request).toMatchObject({ payload: { input: { mutation: { kind: "world-set" } } } });
+    expect(element(window, "[data-change-proposal]").hidden).toBe(false);
+    expect(element(window, "[data-change-diff]").textContent).toContain("Physics change staged");
+  });
+
+  it("stages all four inspector mutation types through Change Review", async () => {
+    for (const kind of ["physics", "environment", "material", "effect"] as const) {
+      const { window, requests } = await harness();
+      await click(window, "#mode-build");
+      const mutation = textarea(window, `[data-catalog-mutation="${kind}"]`);
+      mutation.value = JSON.stringify({ kind: "set" });
+      await click(window, `#${kind}-stage`);
+      const request = requests.find((candidate) => {
+        const payload = candidate["payload"] as Record<string, unknown> | undefined;
+        return payload?.["commandId"] === `${kind}-apply`;
+      });
+      expect(request, `${kind} GUI apply command`).toMatchObject({
+        payload: { input: { mutation: { kind: "set" } } },
+      });
+      expect(element(window, "[data-change-proposal]").hidden).toBe(false);
+    }
+  });
+
+  it("names malformed inspector JSON and refuses before host dispatch", async () => {
+    const { window, calls } = await harness();
+    await click(window, "#mode-build");
+    const mutation = textarea(window, '[data-catalog-mutation="physics"]');
+    mutation.value = "[]";
+    calls.splice(0);
+    await click(window, "#physics-stage");
+    expect(calls.some((call) => call.op === "physics-apply")).toBe(false);
+    expect(element(window, "[data-outcome-code]").textContent).toBe("EDITOR_COMMAND_INPUT_INVALID");
+  });
+
+  it("dispatches inspector reads for all four registered catalogs", async () => {
+    const { window, calls } = await harness();
+    await click(window, "#mode-build");
+    for (const kind of ["physics", "environment", "material", "effect"] as const) {
+      await click(window, `#${kind}-inspect`);
+      expect(calls).toContainEqual({ plane: "engine", action: "command", op: `${kind}-inspect` });
+      expect(element(window, `[data-catalog-report="${kind}"]`).textContent).toContain("sceneaxi.test-catalog");
+    }
+  });
 
   it("opens the palette with Ctrl/Cmd+K even from text entry", async () => {
     const { window } = await harness();

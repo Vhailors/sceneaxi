@@ -2,9 +2,12 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { initializeDesktopScenePhysics } from "../../desktop/linux/src/lib/desktop-scene.ts";
 import {
+  PHYSICS_WORLD_HOST_REFUSALS,
   SCENE_PHYSICS_REFUSALS,
   createEditorCommandInvocation,
+  createToyPhysicsWorldHost,
   type EditorCommandClient,
   type JsonObject,
 } from "@sceneaxi/schemas";
@@ -57,6 +60,57 @@ function command(
 }
 
 describe("full-editor physics vertical", () => {
+  it("opts into initialized Rapier through review, refuses an absent host, and reopens identically", async () => {
+    const root = fixture();
+    const physicsWorldHost = await initializeDesktopScenePhysics();
+    const options = {
+      cwd: root,
+      physicsWorldHost,
+      commandCapabilities: ["scene.compose", "authoring.change-review", "authoring.undo", "authoring.redo", "runtime.play"],
+    };
+    const host = createDesktopBridge(options);
+    for (const mutation of [
+      { kind: "body-upsert", bodyId: "falling", instanceId: "desktop-crate-beside", bodyKind: "dynamic", mass: 1 },
+      { kind: "shape-upsert", shapeId: "ball", bodyId: "falling", shapeKind: "sphere", size: 0.5 },
+      { kind: "world-set", gravityY: -9.81, stepMs: 16, seed: 1, engine: "rapier" },
+    ]) {
+      expect(command(host, "physics-apply", "desktop-control", {
+        documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+        expectedContentHash: hash(host),
+        profile: "game",
+        mutation,
+      })).toMatchObject({ ok: true });
+      expect(command(host, "change-review-accept", "desktop-control", {})).toMatchObject({ ok: true });
+    }
+    const saved = readFileSync(join(root, DESKTOP_ACTIVE_DOCUMENT_PATH));
+    const input = {
+      documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+      expectedContentHash: hash(host),
+      profile: "game",
+      steps: 4,
+    };
+    const first = command(host, "physics-evaluate", "desktop-control", input);
+    expect(first).toMatchObject({ ok: true, data: { savedBytesWritten: false, snapshots: [
+      { step: 1, bodies: [{ bodyId: "falling", y: 1.00843, vy: -0.15696 }] },
+      { step: 2 }, { step: 3 }, { step: 4 },
+    ] } });
+    expect(command(host, "physics-evaluate", "desktop-control", { ...input, animationOffsetY: 1 }))
+      .toMatchObject({ ok: false, reason: SCENE_PHYSICS_REFUSALS.inputUnsupported });
+    expect(host.close()).toBe(true);
+    const absent = bridge(root);
+    expect(command(absent, "physics-evaluate", "cli", input))
+      .toMatchObject({ ok: false, reason: PHYSICS_WORLD_HOST_REFUSALS.notReady });
+    expect(absent.close()).toBe(true);
+    const mismatched = createDesktopBridge({ ...options, physicsWorldHost: createToyPhysicsWorldHost() });
+    expect(command(mismatched, "physics-evaluate", "cli", input))
+      .toMatchObject({ ok: false, reason: PHYSICS_WORLD_HOST_REFUSALS.kindUnknown });
+    expect(mismatched.close()).toBe(true);
+    const reopened = createDesktopBridge(options);
+    expect(command(reopened, "physics-evaluate", "local-agent", input)).toEqual(first);
+    expect(readFileSync(join(root, DESKTOP_ACTIVE_DOCUMENT_PATH))).toEqual(saved);
+    expect(reopened.close()).toBe(true);
+  });
+
   it("authors bodies through review and replays identical Play snapshots without writing", () => {
     const root = fixture();
     const host = bridge(root);

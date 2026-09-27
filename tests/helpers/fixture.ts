@@ -33,9 +33,10 @@ const COPY_FILES = [
   "tsconfig.base.json",
   "vitest.config.ts",
 ];
-// `release` and `dist-build` are desktop-tier packaging output (ADR 0024): heavy
-// binaries the checkers never read, so copying them would only slow every fixture.
-const SKIP_DIRS = new Set(["node_modules", "dist", "coverage", "release", "dist-build"]);
+// `release` and `dist-build` are desktop-tier packaging output (ADR 0024), and `.next` is a
+// site's production build (hundreds of MB after `pnpm build` in a site): output the
+// checkers never read, so copying it would only slow every fixture past its timeout.
+const SKIP_DIRS = new Set(["node_modules", "dist", "coverage", "release", "dist-build", ".next"]);
 
 /**
  * Copy the parts of the repo the gate scripts read (manifests, sources, matrix,

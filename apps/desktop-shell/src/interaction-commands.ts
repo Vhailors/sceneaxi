@@ -39,7 +39,13 @@ function interaction<
     | "ship-export-web"
     | "edit-undo"
     | "edit-redo"
-    | "run-play">,
+    | "run-play"
+    | "package-inspect" | "package-install" | "package-remove"
+    | "workspace-layout-inspect" | "workspace-layout-apply" | "workspace-layout-reset"
+    | "project-migration-propose" | "project-migration-commit" | "project-migration-recover"
+    | "project-build" | "extension-inspect" | "extension-start"
+    | "profile-inspect" | "project-inspect"
+    | "input-action-rebind" | "input-actions-reset">,
   Row extends Readonly<{
     menu: DesktopMenuId;
   }>,
@@ -83,6 +89,9 @@ export function formatInputBinding(binding: InputActionBinding): string {
   }
   if (binding.device === "pointer") return `Pointer ${binding.button} ${binding.gesture}`;
   if (binding.device === "wheel") return `Wheel ${binding.axis.toUpperCase()}`;
+  if (binding.device === "gamepad") {
+    return `Gamepad ${binding.gamepad + 1} ${binding.input} ${binding.control}`;
+  }
   return `Controller ${binding.controller + 1} ${binding.input} ${binding.control}`;
 }
 
@@ -123,6 +132,18 @@ export const DESKTOP_INTERACTION_COMMANDS = Object.freeze([
   interaction("ship-export-web", {
     menu: "file" as const,
   }),
+  ...([
+    "package-inspect", "package-install", "package-remove",
+    "workspace-layout-inspect", "workspace-layout-apply", "workspace-layout-reset",
+    "project-migration-propose", "project-migration-commit", "project-migration-recover",
+    "project-build", "extension-inspect", "extension-start", "profile-inspect",
+    "project-inspect", "input-action-rebind", "input-actions-reset",
+  ] as const).map((id) => interaction(id, {
+    menu: "file" as const,
+    accelerator: "",
+    key: null,
+    allowInTextEntry: false,
+  })),
   interaction("edit-undo", {
     menu: "edit" as const,
   }),

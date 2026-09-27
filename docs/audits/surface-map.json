@@ -1,0 +1,2211 @@
+{
+  "schemaVersion": 1,
+  "probe": {
+    "probedAt": "2026-09-26T22:14:47.409Z",
+    "commit": "e61b51b",
+    "configuration": "no provider environment (every provider-backed plane is expected to report unconfigured)"
+  },
+  "totals": {
+    "working": 318,
+    "partial": 31,
+    "unconfigured": 10,
+    "refused": 15,
+    "gap": 17,
+    "parked": 49,
+    "unknown": 2
+  },
+  "areas": [
+    {
+      "area": "site: catalog-game",
+      "group": "HTTP routes",
+      "skipped": null,
+      "nodes": [
+        {
+          "id": "GET /",
+          "state": "working",
+          "note": "200",
+          "source": "sites/catalog-game/src/app/page.tsx"
+        },
+        {
+          "id": "GET /item/lantern-prop",
+          "state": "refused",
+          "note": "200 DEEP_LINK_ORIGIN_INSECURE IDENTITY_PLANE_NOT_WIRED CATALOG_COMMERCE_INERT",
+          "source": "sites/catalog-game/src/app/item/[itemId]/page.tsx"
+        },
+        {
+          "id": "GET /publish",
+          "state": "refused",
+          "note": "200 CATALOG_COMMERCE_INERT",
+          "source": "sites/catalog-game/src/app/publish/page.tsx"
+        }
+      ],
+      "totals": {
+        "working": 1,
+        "refused": 2
+      }
+    },
+    {
+      "area": "site: catalog-web",
+      "group": "HTTP routes",
+      "skipped": "no install root (run `pnpm install --frozen-lockfile` in the site)",
+      "nodes": [
+        {
+          "id": "(not probed)",
+          "state": "unknown",
+          "note": "no install root (run `pnpm install --frozen-lockfile` in the site)"
+        }
+      ],
+      "totals": {
+        "unknown": 1
+      }
+    },
+    {
+      "area": "site: kids",
+      "group": "HTTP routes",
+      "skipped": "no install root (run `pnpm install --frozen-lockfile` in the site)",
+      "nodes": [
+        {
+          "id": "(not probed)",
+          "state": "unknown",
+          "note": "no install root (run `pnpm install --frozen-lockfile` in the site)"
+        }
+      ],
+      "totals": {
+        "unknown": 1
+      }
+    },
+    {
+      "area": "site: umbrella",
+      "group": "HTTP routes",
+      "skipped": null,
+      "nodes": [
+        {
+          "id": "GET /",
+          "state": "working",
+          "note": "200",
+          "source": "sites/umbrella/src/app/page.tsx"
+        },
+        {
+          "id": "GET /account",
+          "state": "unconfigured",
+          "note": "200 IDENTITY_PLANE_NOT_WIRED",
+          "source": "sites/umbrella/src/app/account/page.tsx"
+        },
+        {
+          "id": "GET /admin/ledger",
+          "state": "unconfigured",
+          "note": "200 IDENTITY_PLANE_NOT_WIRED",
+          "source": "sites/umbrella/src/app/admin/ledger/page.tsx"
+        },
+        {
+          "id": "POST /api/admin/ledger (same-origin form)",
+          "state": "unconfigured",
+          "note": "403 IDENTITY_PLANE_NOT_WIRED",
+          "source": "sites/umbrella/src/app/api/admin/ledger/route.ts"
+        },
+        {
+          "id": "POST /api/admin/ledger (cross-origin form)",
+          "state": "refused",
+          "note": "403 SITE_REQUEST_CROSS_ORIGIN",
+          "source": "sites/umbrella/src/app/api/admin/ledger/route.ts"
+        },
+        {
+          "id": "GET /api/auth/get-session",
+          "state": "unconfigured",
+          "note": "503 BETTER_AUTH_PROVIDER_CONFIGURATION_ABSENT",
+          "source": "sites/umbrella/src/app/api/auth/[...all]/route.ts"
+        },
+        {
+          "id": "POST /api/checkout (same-origin form)",
+          "state": "refused",
+          "note": "303 BILLING_CHECKOUT_REQUEST_INVALID",
+          "source": "sites/umbrella/src/app/api/checkout/route.ts"
+        },
+        {
+          "id": "POST /api/checkout (cross-origin form)",
+          "state": "refused",
+          "note": "303 SITE_REQUEST_CROSS_ORIGIN",
+          "source": "sites/umbrella/src/app/api/checkout/route.ts"
+        },
+        {
+          "id": "POST /api/editor/catalog-intake (same-origin form)",
+          "state": "unconfigured",
+          "note": "403 IDENTITY_PLANE_NOT_WIRED",
+          "source": "sites/umbrella/src/app/api/editor/catalog-intake/route.ts"
+        },
+        {
+          "id": "POST /api/editor/catalog-intake (cross-origin form)",
+          "state": "refused",
+          "note": "403 SITE_REQUEST_CROSS_ORIGIN",
+          "source": "sites/umbrella/src/app/api/editor/catalog-intake/route.ts"
+        },
+        {
+          "id": "POST /api/health (same-origin form)",
+          "state": "refused",
+          "note": "405",
+          "source": "sites/umbrella/src/app/api/health/route.ts"
+        },
+        {
+          "id": "POST /api/health (cross-origin form)",
+          "state": "refused",
+          "note": "405",
+          "source": "sites/umbrella/src/app/api/health/route.ts"
+        },
+        {
+          "id": "POST /api/login (same-origin form)",
+          "state": "unconfigured",
+          "note": "303 IDENTITY_PLANE_NOT_WIRED",
+          "source": "sites/umbrella/src/app/api/login/route.ts"
+        },
+        {
+          "id": "POST /api/login (cross-origin form)",
+          "state": "refused",
+          "note": "303 SITE_REQUEST_CROSS_ORIGIN",
+          "source": "sites/umbrella/src/app/api/login/route.ts"
+        },
+        {
+          "id": "POST /api/logout (same-origin form)",
+          "state": "unconfigured",
+          "note": "303 IDENTITY_PLANE_NOT_WIRED",
+          "source": "sites/umbrella/src/app/api/logout/route.ts"
+        },
+        {
+          "id": "POST /api/logout (cross-origin form)",
+          "state": "refused",
+          "note": "303 SITE_REQUEST_CROSS_ORIGIN",
+          "source": "sites/umbrella/src/app/api/logout/route.ts"
+        },
+        {
+          "id": "POST /api/stripe/webhook (unsigned event)",
+          "state": "unconfigured",
+          "note": "503 CREDITS_PLANE_NOT_WIRED",
+          "source": "sites/umbrella/src/app/api/stripe/webhook/route.ts"
+        },
+        {
+          "id": "GET /docs",
+          "state": "working",
+          "note": "200",
+          "source": "sites/umbrella/src/app/docs/page.tsx"
+        },
+        {
+          "id": "GET /docs/cli",
+          "state": "working",
+          "note": "200",
+          "source": "sites/umbrella/src/app/docs/cli/page.tsx"
+        },
+        {
+          "id": "GET /docs/credits-and-pricing",
+          "state": "working",
+          "note": "200",
+          "source": "sites/umbrella/src/app/docs/credits-and-pricing/page.tsx"
+        },
+        {
+          "id": "GET /docs/faq",
+          "state": "working",
+          "note": "200",
+          "source": "sites/umbrella/src/app/docs/faq/page.tsx"
+        },
+        {
+          "id": "GET /docs/getting-started",
+          "state": "working",
+          "note": "200",
+          "source": "sites/umbrella/src/app/docs/getting-started/page.tsx"
+        },
+        {
+          "id": "GET /editor",
+          "state": "unconfigured",
+          "note": "200 IDENTITY_PLANE_NOT_WIRED",
+          "source": "sites/umbrella/src/app/editor/page.tsx"
+        },
+        {
+          "id": "GET /engine",
+          "state": "working",
+          "note": "200",
+          "source": "sites/umbrella/src/app/engine/page.tsx"
+        },
+        {
+          "id": "GET /login",
+          "state": "unconfigured",
+          "note": "200 IDENTITY_PLANE_NOT_WIRED",
+          "source": "sites/umbrella/src/app/login/page.tsx"
+        },
+        {
+          "id": "GET /open",
+          "state": "working",
+          "note": "200",
+          "source": "sites/umbrella/src/app/open/page.tsx"
+        },
+        {
+          "id": "GET /pricing",
+          "state": "working",
+          "note": "200",
+          "source": "sites/umbrella/src/app/pricing/page.tsx"
+        },
+        {
+          "id": "GET /profiles",
+          "state": "working",
+          "note": "200",
+          "source": "sites/umbrella/src/app/profiles/page.tsx"
+        },
+        {
+          "id": "GET /robots.txt",
+          "state": "working",
+          "note": "200",
+          "source": "sites/umbrella/src/app/robots.ts"
+        },
+        {
+          "id": "GET /sitemap.xml",
+          "state": "working",
+          "note": "200",
+          "source": "sites/umbrella/src/app/sitemap.ts"
+        }
+      ],
+      "totals": {
+        "working": 12,
+        "unconfigured": 10,
+        "refused": 8
+      }
+    },
+    {
+      "area": "CLI",
+      "group": "verbs",
+      "nodes": [
+        {
+          "id": "project new",
+          "state": "working",
+          "note": "exit 0"
+        },
+        {
+          "id": "project dev",
+          "state": "working",
+          "note": "exit 0"
+        },
+        {
+          "id": "project test",
+          "state": "working",
+          "note": "exit 0"
+        },
+        {
+          "id": "project capture",
+          "state": "working",
+          "note": "exit 0"
+        },
+        {
+          "id": "project report",
+          "state": "working",
+          "note": "exit 0"
+        },
+        {
+          "id": "project propose",
+          "state": "working",
+          "note": "exit 0"
+        },
+        {
+          "id": "project apply",
+          "state": "working",
+          "note": "exit 0"
+        },
+        {
+          "id": "scene compose",
+          "state": "working",
+          "note": "exit 0"
+        },
+        {
+          "id": "asset list",
+          "state": "working",
+          "note": "exit 0"
+        },
+        {
+          "id": "asset import",
+          "state": "working",
+          "note": "exit 0"
+        },
+        {
+          "id": "asset reload",
+          "state": "working",
+          "note": "exit 0"
+        },
+        {
+          "id": "profile list",
+          "state": "working",
+          "note": "exit 0"
+        },
+        {
+          "id": "profile open-path",
+          "state": "working",
+          "note": "exit 0"
+        },
+        {
+          "id": "catalog list",
+          "state": "working",
+          "note": "exit 0"
+        },
+        {
+          "id": "evidence list",
+          "state": "working",
+          "note": "exit 0"
+        },
+        {
+          "id": "desktop bridge call",
+          "state": "working",
+          "note": "exit 0"
+        },
+        {
+          "id": "desktop bridge status",
+          "state": "working",
+          "note": "exit 0"
+        },
+        {
+          "id": "desktop bridge tools",
+          "state": "working",
+          "note": "exit 0"
+        },
+        {
+          "id": "demo gated",
+          "state": "working",
+          "note": "exit 0"
+        },
+        {
+          "id": "protocol version",
+          "state": "working",
+          "note": "exit 0"
+        },
+        {
+          "id": "protocol inspect",
+          "state": "working",
+          "note": "exit 0"
+        }
+      ],
+      "totals": {
+        "working": 21
+      }
+    },
+    {
+      "area": "desktop",
+      "group": "editor commands",
+      "nodes": [
+        {
+          "id": "animation-apply",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "animation-evaluate",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "animation-inspect",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "animation-scrub",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "assistant-apply-build",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "assistant-ask",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "assistant-byo-build",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "assistant-cancel",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "assistant-local-agent",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "assistant-local-build",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "assistant-status",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "change-review-accept",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "change-review-reject",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "edit-redo",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "edit-undo",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "effect-apply",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "effect-inspect",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "environment-apply",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "environment-inspect",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "extension-inspect",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "extension-start",
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
+        },
+        {
+          "id": "input-action-rebind",
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
+        },
+        {
+          "id": "input-actions-inspect",
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
+        },
+        {
+          "id": "input-actions-reset",
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
+        },
+        {
+          "id": "material-apply",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "material-inspect",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "package-inspect",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "package-install",
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
+        },
+        {
+          "id": "package-remove",
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
+        },
+        {
+          "id": "physics-apply",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "physics-evaluate",
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
+        },
+        {
+          "id": "physics-inspect",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "play-inspect",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "profile-inspect",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "project-build",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "project-git-commit-prepare",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "project-git-diff",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "project-git-stage",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "project-git-status",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "project-inspect",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "project-migration-commit",
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
+        },
+        {
+          "id": "project-migration-propose",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "project-migration-recover",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "project-new",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "project-open",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "project-save",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "run-play",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "run-reset",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "run-stop",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "scene-hierarchy-inspect",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "scene-object-create",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "scene-object-remove",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "scene-object-reparent",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "scene-prefab-define",
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
+        },
+        {
+          "id": "scene-prefab-inspect",
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
+        },
+        {
+          "id": "scene-prefab-instance",
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
+        },
+        {
+          "id": "scene-prefab-override",
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
+        },
+        {
+          "id": "scene-prefab-refresh",
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
+        },
+        {
+          "id": "scene-property-set",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "scene-selection-set",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "scene-transform-apply",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "ship-export-web",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "viewport-source-set",
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
+        },
+        {
+          "id": "workspace-layout-apply",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "workspace-layout-inspect",
+          "state": "working",
+          "note": "GUI-dispatched"
+        },
+        {
+          "id": "workspace-layout-reset",
+          "state": "working",
+          "note": "GUI-dispatched"
+        }
+      ],
+      "totals": {
+        "working": 52,
+        "gap": 14
+      }
+    },
+    {
+      "area": "desktop",
+      "group": "controls",
+      "nodes": [
+        {
+          "id": "assistant-close",
+          "state": "working"
+        },
+        {
+          "id": "assistant-manipulator-move-x",
+          "state": "partial"
+        },
+        {
+          "id": "assistant-manipulator-move-y",
+          "state": "partial"
+        },
+        {
+          "id": "assistant-manipulator-rotate-y",
+          "state": "partial"
+        },
+        {
+          "id": "assistant-manipulator-scale-up",
+          "state": "partial"
+        },
+        {
+          "id": "assistant-mode-agent",
+          "state": "partial"
+        },
+        {
+          "id": "assistant-mode-ask",
+          "state": "working"
+        },
+        {
+          "id": "assistant-mode-build",
+          "state": "partial"
+        },
+        {
+          "id": "assistant-prompt",
+          "state": "partial"
+        },
+        {
+          "id": "assistant-retry",
+          "state": "partial"
+        },
+        {
+          "id": "assistant-route-byo",
+          "state": "working"
+        },
+        {
+          "id": "assistant-route-hosted",
+          "state": "refused",
+          "note": "inert: no product operation behind it (capability matrix: fake)"
+        },
+        {
+          "id": "assistant-route-local",
+          "state": "working"
+        },
+        {
+          "id": "assistant-send",
+          "state": "partial"
+        },
+        {
+          "id": "assistant-toggle",
+          "state": "working"
+        },
+        {
+          "id": "change-review-accept",
+          "state": "working"
+        },
+        {
+          "id": "change-review-reject",
+          "state": "working"
+        },
+        {
+          "id": "dock-assets",
+          "state": "working"
+        },
+        {
+          "id": "dock-changes",
+          "state": "working"
+        },
+        {
+          "id": "dock-console",
+          "state": "partial"
+        },
+        {
+          "id": "dock-evidence",
+          "state": "partial"
+        },
+        {
+          "id": "dock-timeline",
+          "state": "working"
+        },
+        {
+          "id": "drawer-inspector",
+          "state": "working"
+        },
+        {
+          "id": "drawer-left",
+          "state": "working"
+        },
+        {
+          "id": "effect-inspect",
+          "state": "partial"
+        },
+        {
+          "id": "effect-mutation",
+          "state": "partial"
+        },
+        {
+          "id": "effect-stage",
+          "state": "partial"
+        },
+        {
+          "id": "environment-inspect",
+          "state": "partial"
+        },
+        {
+          "id": "environment-mutation",
+          "state": "partial"
+        },
+        {
+          "id": "environment-stage",
+          "state": "partial"
+        },
+        {
+          "id": "material-inspect",
+          "state": "partial"
+        },
+        {
+          "id": "material-mutation",
+          "state": "partial"
+        },
+        {
+          "id": "material-stage",
+          "state": "partial"
+        },
+        {
+          "id": "menu-command-edit-redo",
+          "state": "working"
+        },
+        {
+          "id": "menu-command-edit-undo",
+          "state": "working"
+        },
+        {
+          "id": "menu-command-extension-inspect",
+          "state": "working"
+        },
+        {
+          "id": "menu-command-extension-start",
+          "state": "working"
+        },
+        {
+          "id": "menu-command-input-action-rebind",
+          "state": "working"
+        },
+        {
+          "id": "menu-command-input-actions-reset",
+          "state": "working"
+        },
+        {
+          "id": "menu-command-package-inspect",
+          "state": "working"
+        },
+        {
+          "id": "menu-command-package-install",
+          "state": "working"
+        },
+        {
+          "id": "menu-command-package-remove",
+          "state": "working"
+        },
+        {
+          "id": "menu-command-profile-inspect",
+          "state": "working"
+        },
+        {
+          "id": "menu-command-project-build",
+          "state": "working"
+        },
+        {
+          "id": "menu-command-project-git-commit-prepare",
+          "state": "working"
+        },
+        {
+          "id": "menu-command-project-git-diff",
+          "state": "working"
+        },
+        {
+          "id": "menu-command-project-git-stage",
+          "state": "working"
+        },
+        {
+          "id": "menu-command-project-git-status",
+          "state": "working"
+        },
+        {
+          "id": "menu-command-project-inspect",
+          "state": "working"
+        },
+        {
+          "id": "menu-command-project-migration-commit",
+          "state": "working"
+        },
+        {
+          "id": "menu-command-project-migration-propose",
+          "state": "working"
+        },
+        {
+          "id": "menu-command-project-migration-recover",
+          "state": "working"
+        },
+        {
+          "id": "menu-command-project-new",
+          "state": "working"
+        },
+        {
+          "id": "menu-command-project-open",
+          "state": "working"
+        },
+        {
+          "id": "menu-command-project-save",
+          "state": "working"
+        },
+        {
+          "id": "menu-command-run-play",
+          "state": "working"
+        },
+        {
+          "id": "menu-command-ship-export-web",
+          "state": "working"
+        },
+        {
+          "id": "menu-command-workspace-layout-apply",
+          "state": "working"
+        },
+        {
+          "id": "menu-command-workspace-layout-inspect",
+          "state": "working"
+        },
+        {
+          "id": "menu-command-workspace-layout-reset",
+          "state": "working"
+        },
+        {
+          "id": "menu-edit",
+          "state": "working"
+        },
+        {
+          "id": "menu-file",
+          "state": "working"
+        },
+        {
+          "id": "menu-run",
+          "state": "working"
+        },
+        {
+          "id": "mode-animate",
+          "state": "working"
+        },
+        {
+          "id": "mode-build",
+          "state": "partial"
+        },
+        {
+          "id": "mode-compose",
+          "state": "refused",
+          "note": "inert: no product operation behind it (capability matrix: fake)"
+        },
+        {
+          "id": "mode-plugins",
+          "state": "refused",
+          "note": "inert: no product operation behind it (capability matrix: fake)"
+        },
+        {
+          "id": "mode-run",
+          "state": "partial"
+        },
+        {
+          "id": "mode-sculpt",
+          "state": "partial"
+        },
+        {
+          "id": "mode-ship",
+          "state": "partial"
+        },
+        {
+          "id": "overlay-close-outcome-dismiss",
+          "state": "working"
+        },
+        {
+          "id": "overlay-open-palette",
+          "state": "working"
+        },
+        {
+          "id": "palette-edit-redo",
+          "state": "working"
+        },
+        {
+          "id": "palette-edit-undo",
+          "state": "working"
+        },
+        {
+          "id": "palette-extension-inspect",
+          "state": "working"
+        },
+        {
+          "id": "palette-extension-start",
+          "state": "working"
+        },
+        {
+          "id": "palette-input-action-rebind",
+          "state": "working"
+        },
+        {
+          "id": "palette-input-actions-reset",
+          "state": "working"
+        },
+        {
+          "id": "palette-package-inspect",
+          "state": "working"
+        },
+        {
+          "id": "palette-package-install",
+          "state": "working"
+        },
+        {
+          "id": "palette-package-remove",
+          "state": "working"
+        },
+        {
+          "id": "palette-profile-inspect",
+          "state": "working"
+        },
+        {
+          "id": "palette-project-build",
+          "state": "working"
+        },
+        {
+          "id": "palette-project-git-commit-prepare",
+          "state": "working"
+        },
+        {
+          "id": "palette-project-git-diff",
+          "state": "working"
+        },
+        {
+          "id": "palette-project-git-stage",
+          "state": "working"
+        },
+        {
+          "id": "palette-project-git-status",
+          "state": "working"
+        },
+        {
+          "id": "palette-project-inspect",
+          "state": "working"
+        },
+        {
+          "id": "palette-project-migration-commit",
+          "state": "working"
+        },
+        {
+          "id": "palette-project-migration-propose",
+          "state": "working"
+        },
+        {
+          "id": "palette-project-migration-recover",
+          "state": "working"
+        },
+        {
+          "id": "palette-project-new",
+          "state": "working"
+        },
+        {
+          "id": "palette-project-open",
+          "state": "working"
+        },
+        {
+          "id": "palette-project-save",
+          "state": "working"
+        },
+        {
+          "id": "palette-run-play",
+          "state": "working"
+        },
+        {
+          "id": "palette-ship-export-web",
+          "state": "working"
+        },
+        {
+          "id": "palette-workspace-layout-apply",
+          "state": "working"
+        },
+        {
+          "id": "palette-workspace-layout-inspect",
+          "state": "working"
+        },
+        {
+          "id": "palette-workspace-layout-reset",
+          "state": "working"
+        },
+        {
+          "id": "physics-inspect",
+          "state": "partial"
+        },
+        {
+          "id": "physics-mutation",
+          "state": "partial"
+        },
+        {
+          "id": "physics-stage",
+          "state": "partial"
+        },
+        {
+          "id": "profile-game",
+          "state": "working"
+        },
+        {
+          "id": "profile-kids",
+          "state": "working"
+        },
+        {
+          "id": "profile-web",
+          "state": "working"
+        },
+        {
+          "id": "project-browser-delete",
+          "state": "refused",
+          "note": "inert: no product operation behind it (capability matrix: fake)"
+        },
+        {
+          "id": "project-browser-file-select",
+          "state": "working"
+        },
+        {
+          "id": "project-browser-open",
+          "state": "working"
+        },
+        {
+          "id": "project-browser-rename",
+          "state": "refused",
+          "note": "inert: no product operation behind it (capability matrix: fake)"
+        },
+        {
+          "id": "project-git-commit-message",
+          "state": "working"
+        },
+        {
+          "id": "project-new-root",
+          "state": "working"
+        },
+        {
+          "id": "project-open",
+          "state": "working"
+        },
+        {
+          "id": "project-open-recent",
+          "state": "working"
+        },
+        {
+          "id": "project-open-root",
+          "state": "working"
+        },
+        {
+          "id": "project-recent-select",
+          "state": "working"
+        },
+        {
+          "id": "project-remove-recent",
+          "state": "working"
+        },
+        {
+          "id": "project-save",
+          "state": "working"
+        },
+        {
+          "id": "run-reset",
+          "state": "partial"
+        },
+        {
+          "id": "run-stop",
+          "state": "partial"
+        },
+        {
+          "id": "scene-entity-desktop-crate-beside",
+          "state": "working"
+        },
+        {
+          "id": "scene-instance-add",
+          "state": "working"
+        },
+        {
+          "id": "scene-instance-parent",
+          "state": "working"
+        },
+        {
+          "id": "scene-instance-policy",
+          "state": "working"
+        },
+        {
+          "id": "scene-instance-remove",
+          "state": "working"
+        },
+        {
+          "id": "scene-instance-reparent",
+          "state": "working"
+        },
+        {
+          "id": "scene-play",
+          "state": "partial"
+        },
+        {
+          "id": "scene-property-rotation-x",
+          "state": "working"
+        },
+        {
+          "id": "scene-property-rotation-y",
+          "state": "working"
+        },
+        {
+          "id": "scene-property-rotation-z",
+          "state": "working"
+        },
+        {
+          "id": "scene-property-scale-x",
+          "state": "working"
+        },
+        {
+          "id": "scene-property-scale-y",
+          "state": "working"
+        },
+        {
+          "id": "scene-property-scale-z",
+          "state": "working"
+        },
+        {
+          "id": "scene-property-stage",
+          "state": "working"
+        },
+        {
+          "id": "scene-property-translation-x",
+          "state": "working"
+        },
+        {
+          "id": "scene-property-translation-y",
+          "state": "working"
+        },
+        {
+          "id": "scene-property-translation-z",
+          "state": "working"
+        },
+        {
+          "id": "scene-transform-mode-rotate",
+          "state": "working"
+        },
+        {
+          "id": "scene-transform-mode-scale",
+          "state": "working"
+        },
+        {
+          "id": "scene-transform-mode-translate",
+          "state": "working"
+        },
+        {
+          "id": "scene-transform-nudge-x-minus",
+          "state": "working"
+        },
+        {
+          "id": "scene-transform-nudge-x-plus",
+          "state": "working"
+        },
+        {
+          "id": "scene-transform-nudge-y-minus",
+          "state": "working"
+        },
+        {
+          "id": "scene-transform-nudge-y-plus",
+          "state": "working"
+        },
+        {
+          "id": "scene-transform-nudge-z-minus",
+          "state": "working"
+        },
+        {
+          "id": "scene-transform-nudge-z-plus",
+          "state": "working"
+        },
+        {
+          "id": "scene-transform-pivot",
+          "state": "working"
+        },
+        {
+          "id": "scene-transform-snap",
+          "state": "working"
+        },
+        {
+          "id": "scene-transform-space",
+          "state": "working"
+        },
+        {
+          "id": "sculpt-cancel",
+          "state": "working"
+        },
+        {
+          "id": "sculpt-start",
+          "state": "working"
+        },
+        {
+          "id": "ship-export-web",
+          "state": "working"
+        },
+        {
+          "id": "status-overlay-palette",
+          "state": "working"
+        },
+        {
+          "id": "status-refusal-help",
+          "state": "working"
+        },
+        {
+          "id": "timeline-apply",
+          "state": "working"
+        },
+        {
+          "id": "timeline-evaluate",
+          "state": "working"
+        },
+        {
+          "id": "timeline-mutation",
+          "state": "working"
+        },
+        {
+          "id": "timeline-scrub",
+          "state": "working"
+        },
+        {
+          "id": "timeline-time",
+          "state": "working"
+        },
+        {
+          "id": "viewport-source-game",
+          "state": "working"
+        },
+        {
+          "id": "viewport-source-scene",
+          "state": "working"
+        },
+        {
+          "id": "viewport-source-sculpt-preview",
+          "state": "working"
+        },
+        {
+          "id": "web-inject-asset",
+          "state": "working"
+        },
+        {
+          "id": "web-stage-html",
+          "state": "partial"
+        }
+      ],
+      "totals": {
+        "working": 127,
+        "partial": 31,
+        "refused": 5
+      }
+    },
+    {
+      "area": "desktop",
+      "group": "local-agent tools",
+      "nodes": [
+        {
+          "id": "sceneaxi.bridge.handshake",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.project.status",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.project.inspect",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.project.migration.propose",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.project.migration.commit",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.project.migration.recover",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.project.git.status",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.project.git.diff",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.project.git.stage",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.project.git.commit.prepare",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.scene.hierarchy.inspect",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.scene.selection.set",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.scene.property.set",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.scene.transform.apply",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.scene.object.create",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.scene.object.remove",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.scene.object.reparent",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.scene.prefab.inspect",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.scene.prefab.define",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.scene.prefab.instance",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.scene.prefab.override",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.scene.prefab.refresh",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.input-actions.inspect",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.input-actions.rebind",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.input-actions.reset",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.project.propose",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.project.accept",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.project.reject",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.project.recover",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.project.restart",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.project.undo",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.project.redo",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.run.play",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.run.stop",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.run.reset",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.play.inspect",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.viewport.source.set",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.animation.inspect",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.animation.apply",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.animation.scrub",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.animation.evaluate",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.physics.inspect",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.physics.apply",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.physics.evaluate",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.environment.inspect",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.environment.apply",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.material.inspect",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.material.apply",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.effect.inspect",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.effect.apply",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.package.inspect",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.package.install",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.package.remove",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.profile.inspect",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.workspace.layout.inspect",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.workspace.layout.apply",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.workspace.layout.reset",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.extension.inspect",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.extension.start",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.project.build",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.assistant.ask",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.assistant.apply-build",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.assistant.local.start",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.assistant.byo.start",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.assistant.local.agent",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.assistant.status",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        },
+        {
+          "id": "sceneaxi.assistant.abandon",
+          "state": "working",
+          "note": "desktop-cli-local-bridge golden"
+        }
+      ],
+      "totals": {
+        "working": 67
+      }
+    },
+    {
+      "area": "go-live backlog",
+      "group": "items",
+      "nodes": [
+        {
+          "id": "#1 Licence",
+          "state": "parked",
+          "note": "Captain decision A1"
+        },
+        {
+          "id": "#2 Trademark clearance for \"SceneAxi\"",
+          "state": "parked",
+          "note": "Captain decision A2"
+        },
+        {
+          "id": "#3 Open public sign-up",
+          "state": "parked",
+          "note": "Captain decision A3"
+        },
+        {
+          "id": "#4 Stripe LIVE go-live",
+          "state": "parked",
+          "note": "Captain decision A4"
+        },
+        {
+          "id": "#5 Execute `docs/production-activation.md`",
+          "state": "parked",
+          "note": "Captain decision A5"
+        },
+        {
+          "id": "#6 Tier-6b marketplace activation",
+          "state": "parked",
+          "note": "Captain decision A6"
+        },
+        {
+          "id": "#7 npm publication",
+          "state": "parked",
+          "note": "Captain decision A7"
+        },
+        {
+          "id": "#8 Kids in or out of launch",
+          "state": "parked",
+          "note": "Captain decision A8"
+        },
+        {
+          "id": "#9 Proof stages",
+          "state": "parked",
+          "note": "Captain decision A9"
+        },
+        {
+          "id": "#10 Hosted AI in launch scope",
+          "state": "parked",
+          "note": "Captain decision A10"
+        },
+        {
+          "id": "#11 No sign-up, email verification, forgot/reset or change password/email",
+          "state": "parked",
+          "note": "Needs A3 public sign-up"
+        },
+        {
+          "id": "#12 No email transport configured anywhere.",
+          "state": "parked",
+          "note": "Needs A3 public sign-up"
+        },
+        {
+          "id": "#13 No account deletion / GDPR data export; ledger `ON DELETE RESTRICT` + append-only trigger",
+          "state": "parked",
+          "note": "Needs A3 + retention/pseudonymisation policy"
+        },
+        {
+          "id": "#14 Sign-out deletes only the SceneAxi `sessions` row; the Better Auth session/bearer stays valid until expiry",
+          "state": "working",
+          "note": "medium · wave 1"
+        },
+        {
+          "id": "#15 Email verification enforced only for the admin",
+          "state": "parked",
+          "note": "Needs A3 public sign-up"
+        },
+        {
+          "id": "#16 No OAuth/social login, no MFA.",
+          "state": "parked",
+          "note": "Provider choice for OAuth/MFA"
+        },
+        {
+          "id": "#17 Production `/editor` still renders \"Preview",
+          "state": "parked",
+          "note": "Deploy authority: remove preview flag in production"
+        },
+        {
+          "id": "#18 LIVE is blocked in code",
+          "state": "parked",
+          "note": "Needs A4 Stripe LIVE"
+        },
+        {
+          "id": "#19 No tax/VAT, invoices, or receipts",
+          "state": "parked",
+          "note": "Stripe account tax settings + A4"
+        },
+        {
+          "id": "#20 Disputes/chargebacks unhandled",
+          "state": "working",
+          "note": "blocker · wave 1"
+        },
+        {
+          "id": "#21 Refunds reconcile only when full and unspent; `STRIPE_REFUND_NOT_FULL` and spent-credit refunds are acknowledg",
+          "state": "working",
+          "note": "high · wave 1"
+        },
+        {
+          "id": "#22 Recorded Stripe endpoint subscribes only to `checkout.session.completed`; `charge.refunded` must be added",
+          "state": "parked",
+          "note": "Stripe dashboard webhook subscription"
+        },
+        {
+          "id": "#23 No admin/support tooling",
+          "state": "working",
+          "note": "high · wave 1"
+        },
+        {
+          "id": "#24 Checkout UX: refusal is raw JSON `402` to an HTML form; no success/pending/cancel pages; no purchase history o",
+          "state": "working",
+          "note": "high · wave 1"
+        },
+        {
+          "id": "#25 `/api/checkout` falls back to a random attempt UUID → a new intent and Stripe session per POST; no rate limit",
+          "state": "working",
+          "note": "medium · wave 1"
+        },
+        {
+          "id": "#26 USD only.",
+          "state": "parked",
+          "note": "Pricing/currency decision"
+        },
+        {
+          "id": "#27 `stripe_customer_links` table is created but never used.",
+          "state": "parked",
+          "note": "Forward-only migration to drop unused table"
+        },
+        {
+          "id": "#28 Advertised on `/login`, `/account`, and marketing copy, but no site calls `runMeteredModelCall`; the editor as",
+          "state": "parked",
+          "note": "Needs A10 hosted AI scope"
+        },
+        {
+          "id": "#29 `@sceneaxi/provider-openrouter` ships only `createFixtureTransport`; there is no live hosted transport.",
+          "state": "parked",
+          "note": "Needs A10 hosted AI scope"
+        },
+        {
+          "id": "#30 No credit price table; `creditAmount` is caller-supplied",
+          "state": "parked",
+          "note": "Needs A10 credit price table"
+        },
+        {
+          "id": "#31 No migration runner and no applied-migrations tracking; `db/README.md` says to apply by hand.",
+          "state": "working",
+          "note": "high · wave 2"
+        },
+        {
+          "id": "#32 No backup/PITR/restore policy or drill, while rollback is \"forward-fix only\" (`production-activation.md",
+          "state": "working",
+          "note": "high · wave 2"
+        },
+        {
+          "id": "#33 Neon adapters have only been tested against a mock",
+          "state": "working",
+          "note": "high · wave 2"
+        },
+        {
+          "id": "#34 No observability",
+          "state": "working",
+          "note": "high · wave 2"
+        },
+        {
+          "id": "#35 No startup env validation; misconfiguration silently becomes \"not wired\".",
+          "state": "working",
+          "note": "medium · wave 1"
+        },
+        {
+          "id": "#36 `ConnectStore` is in-memory only",
+          "state": "working",
+          "note": "medium · wave 2"
+        },
+        {
+          "id": "#37 No live-mode audit-sink implementation",
+          "state": "working",
+          "note": "medium · wave 2"
+        },
+        {
+          "id": "#38 No legal pages",
+          "state": "parked",
+          "note": "Legal entity, jurisdiction, and reviewed legal text"
+        },
+        {
+          "id": "#39 No security headers on the umbrella or catalogs",
+          "state": "working",
+          "note": "high"
+        },
+        {
+          "id": "#40 Cross-site identity can't work",
+          "state": "parked",
+          "note": "Custom domains / shared cookie domain"
+        },
+        {
+          "id": "#41 No automated `next build` of any site",
+          "state": "working",
+          "note": "high"
+        },
+        {
+          "id": "#42 `robots.txt` and `sitemap.xml` return `404`",
+          "state": "working",
+          "note": "medium · wave 1"
+        },
+        {
+          "id": "#43 Umbrella has no `not-found.tsx`; no site has `error.tsx`, `global-error.tsx`, or `loading.tsx`.",
+          "state": "working",
+          "note": "medium · wave 1"
+        },
+        {
+          "id": "#44 Operator internals shown to users",
+          "state": "working",
+          "note": "medium · wave 1"
+        },
+        {
+          "id": "#45 `/api/checkout` has no origin check, unlike login, logout, and intake.",
+          "state": "working",
+          "note": "medium"
+        },
+        {
+          "id": "#46 No editor project persistence; all state lives in the URL.",
+          "state": "parked",
+          "note": "Storage choice for editor persistence"
+        },
+        {
+          "id": "#47 `/docs` is a single page; no help, FAQ, or status page.",
+          "state": "working",
+          "note": "low · wave 1"
+        },
+        {
+          "id": "#48 Buy and publish are inert; no download or delivery path for any listing.",
+          "state": "parked",
+          "note": "Needs A6 marketplace"
+        },
+        {
+          "id": "#49 `POST /api/editor/catalog-intake` always refuses `CATALOG_INTAKE_STORAGE_UNAVAILABLE`",
+          "state": "parked",
+          "note": "Needs A6 marketplace + moderation owner"
+        },
+        {
+          "id": "#50 Four TEST fixture listings; no search, filter, or sort.",
+          "state": "parked",
+          "note": "Needs A6 marketplace inventory"
+        },
+        {
+          "id": "#51 Connect payouts are TEST-only; LIVE is \"not implemented\" (`stripe-connect.ts",
+          "state": "parked",
+          "note": "Needs A6 + Connect LIVE"
+        },
+        {
+          "id": "#52 The offered Linux build is stale and expiring",
+          "state": "parked",
+          "note": "Release/tag/push authority for a fresh Linux Release"
+        },
+        {
+          "id": "#53 Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path",
+          "state": "gap",
+          "note": "blocker · wave 3"
+        },
+        {
+          "id": "#54 No crash reporting or telemetry; no `render-process-gone` / `child-process-gone` handling.",
+          "state": "working",
+          "note": "high · wave 3"
+        },
+        {
+          "id": "#55 macOS: no signed or notarized artifact",
+          "state": "parked",
+          "note": "Apple/Windows signing credentials"
+        },
+        {
+          "id": "#56 No auto-update, no release/tag workflow, unsigned Linux packages.",
+          "state": "parked",
+          "note": "Release infrastructure + signing"
+        },
+        {
+          "id": "#57 Fake controls",
+          "state": "working",
+          "note": "high · wave 3"
+        },
+        {
+          "id": "#58 User project builds refuse on every OS (`PROJECT_BUILD_SIGNING_MISSING` on Linux; host/signing missing on macO",
+          "state": "parked",
+          "note": "Signing credentials"
+        },
+        {
+          "id": "#59 BYOK is live only via OpenCode DeepSeek; OpenRouter is offered but fixture-only",
+          "state": "parked",
+          "note": "Exact production OpenRouter model pin (fixture pin cannot ship); partial transport in thr_azkybfqms8"
+        },
+        {
+          "id": "#60 Electron 43.2.0 GPU process SIGSEGV in the current-host smoke",
+          "state": "working",
+          "note": "medium · wave 3"
+        },
+        {
+          "id": "#61 The packaged smoke does not exercise the #254–#270 features.",
+          "state": "gap",
+          "note": "medium · wave 3"
+        },
+        {
+          "id": "#62 No scripting or game logic",
+          "state": "parked",
+          "note": "Scripting model needs an ADR decision"
+        },
+        {
+          "id": "#63 Physics is contract-only",
+          "state": "working",
+          "note": "high · wave 4"
+        },
+        {
+          "id": "#64 No audio playback; audio is metadata-only",
+          "state": "gap",
+          "note": "high · wave 4"
+        },
+        {
+          "id": "#65 Only export target is the desktop's static Web viewer; no native, mobile, or PWA target and no CLI export.",
+          "state": "parked",
+          "note": "Export targets are spec Stage 4/5"
+        },
+        {
+          "id": "#66 Imported models are untextured",
+          "state": "working",
+          "note": "medium · wave 4"
+        },
+        {
+          "id": "#67 No imported-animation playback or skeletal animation",
+          "state": "working",
+          "note": "medium · wave 4"
+        },
+        {
+          "id": "#68 Post-processing, particles, and material overrides are in schemas only and never drawn",
+          "state": "working",
+          "note": "medium · wave 4"
+        },
+        {
+          "id": "#69 No gamepad support; the kernel consumes no input.",
+          "state": "working",
+          "note": "medium · wave 4"
+        },
+        {
+          "id": "#70 Axis-aligned placement only",
+          "state": "parked",
+          "note": "Rotation-aware placement deferred by ADR"
+        },
+        {
+          "id": "#71 Spec'd packages `engine-asset-compiler`, `engine-platform-host`, and `engine-evidence` are absent, as are the ",
+          "state": "parked",
+          "note": "Spec-delayed packages/contracts"
+        },
+        {
+          "id": "#72 WebGL only; no networking.",
+          "state": "parked",
+          "note": "WebGPU/networking not chartered"
+        },
+        {
+          "id": "#73 General E2 is specified, not built",
+          "state": "parked",
+          "note": "General E2 gated on Stage 6 proof"
+        },
+        {
+          "id": "#74 `project dev --watch` refuses `NOT_IMPLEMENTED`",
+          "state": "working",
+          "note": "medium · wave 4"
+        },
+        {
+          "id": "#75 The plugin registry has one capability",
+          "state": "parked",
+          "note": "Plugin trust/sandbox decision"
+        },
+        {
+          "id": "#76 Web profile not conformance-claimed; `shippingClaim` is `false` for every profile.",
+          "state": "parked",
+          "note": "Web profile conformance claim"
+        },
+        {
+          "id": "#77 Missing verbs",
+          "state": "parked",
+          "note": "Dependency-matrix widening for CLI kernel verbs"
+        },
+        {
+          "id": "#78 The held-key runtime always refuses",
+          "state": "parked",
+          "note": "FirstMate epoch authority"
+        },
+        {
+          "id": "#79 Exports point at `.ts` source; a published tarball would not run in Node without a build/export rework.",
+          "state": "parked",
+          "note": "Publish decision (dist exports)"
+        },
+        {
+          "id": "#80 No getting-started guide, tutorial, or `examples/`.",
+          "state": "working",
+          "note": "high · wave 5"
+        },
+        {
+          "id": "#81 No generated API reference.",
+          "state": "working",
+          "note": "high · wave 5"
+        },
+        {
+          "id": "#82 No root `CHANGELOG`, `CONTRIBUTING`, `SECURITY`, or `CODE_OF_CONDUCT`.",
+          "state": "working",
+          "note": "medium · wave 5"
+        },
+        {
+          "id": "#83 Docs are governance-heavy, not user guides; the canonical spec lives in issue #1 and cites an out-of-tree arch",
+          "state": "working",
+          "note": "medium · wave 5"
+        },
+        {
+          "id": "#84 Stale docs",
+          "state": "working",
+          "note": "medium · wave 1"
+        },
+        {
+          "id": "#85 Thin READMEs",
+          "state": "working",
+          "note": "low · wave 5"
+        },
+        {
+          "id": "#86 No alert or scheduled job before the 2026-11-10 artifact expiry.",
+          "state": "working",
+          "note": "high · wave 1"
+        },
+        {
+          "id": "#87 The \"Actions budget-blocked\" operator note is outdated",
+          "state": "parked",
+          "note": "Operator's own global note"
+        },
+        {
+          "id": "#88 Zero open GitHub issues, so none of the above is tracked.",
+          "state": "parked",
+          "note": "Issue creation authority"
+        },
+        {
+          "id": "#89 `pnpm dist` builds the installers but exits with an electron-builder `channel` TypeError during cleanup",
+          "state": "working",
+          "note": "high · wave 3"
+        },
+        {
+          "id": "#90 Product viewports do not forward authored environment/material/effect catalogs (effects payload lacks its seed; texture slots need an asset-to-texture binding contract)",
+          "state": "working",
+          "note": "medium · wave 4"
+        }
+      ],
+      "totals": {
+        "working": 38,
+        "gap": 3,
+        "parked": 49
+      }
+    }
+  ]
+}

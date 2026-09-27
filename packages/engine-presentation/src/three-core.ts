@@ -8,15 +8,30 @@
  */
 import {
   AmbientLight,
+  BufferGeometry,
+  Float32BufferAttribute,
+  Points,
+  PointsMaterial,
   Color,
   DirectionalLight,
   Fog,
   GridHelper,
   Group,
   Mesh,
+  MeshStandardMaterial,
   Scene,
   type Object3D,
 } from "three";
+import {
+  SCENE_EFFECT_EMITTER_KINDS,
+  SCENE_ENVIRONMENT_EFFECTS,
+  SCENE_ENVIRONMENT_TONE_MAPS,
+  sampleSceneEffects,
+  isSculptIdentifier,
+  type SceneEffectsCatalog,
+  type SceneEffectsEvaluation,
+  type SceneEnvironmentCatalog,
+} from "@sceneaxi/schemas";
 import { createOrbitCamera, type OrbitCameraOptions, type OrbitCameraControls } from "./orbit-camera.js";
 import { ThreePresentationError } from "./three-presentation-error.js";
 import {
@@ -25,6 +40,7 @@ import {
   type ThreeCanvasTarget,
   type ThreePresentationSurface,
   type ThreePresentationSurfaceKind,
+  type ThreeSurfaceSettings,
 } from "./three-surface.js";
 
 /** UI-facing identification of the product presentation core. */
@@ -73,7 +89,9 @@ export type ThreeSceneEnvironment = {
   readonly keyDirection?: readonly [number, number, number];
   readonly fillIntensity?: number;
   readonly fog?: Readonly<{ enabled: boolean; color: string; near: number; far: number }>;
-  readonly effects?: readonly string[];
+  readonly effects?: SceneEnvironmentCatalog["effects"];
+  readonly toneMapping?: SceneEnvironmentCatalog["toneMapping"];
+  readonly exposure?: number;
 };
 
 export type ThreeDrawnFrame = {
@@ -85,6 +103,9 @@ export type ThreeDrawnFrame = {
   readonly environmentBackground: string | null;
 };
 
+/** The effects sampler's accepted time window (`sampleSceneEffects` refuses beyond it). */
+const EFFECTS_SAMPLE_WINDOW_MS = 60_000;
+
 export type ThreePresentationCore = {
   readonly surfaceKind: ThreePresentationSurfaceKind;
   readonly label: string;
@@ -94,6 +115,7 @@ export type ThreePresentationCore = {
   frames(): number;
   draw(): ThreeDrawnFrame;
   setEnvironment(environment: ThreeSceneEnvironment): void;
+  sampleEffects(catalog: SceneEffectsCatalog, timeMs: number): SceneEffectsEvaluation;
   resize(width: number, height: number, pixelRatio?: number): void;
   capture(): Uint8Array | null;
   dispose(): void;
@@ -164,11 +186,27 @@ export function createThreePresentationCore(
   const grid = new GridHelper(24, 24, 0x52647c, 0x303949);
   scene.add(grid);
 
-  let appliedEffects: readonly string[] = Object.freeze([]);
+  const particles = new Group();
+  particles.name = "sceneaxi-effects";
+  scene.add(particles);
+  const emitters = new Map<string, Points<BufferGeometry, PointsMaterial>>();
+  let settings: ThreeSurfaceSettings = Object.freeze({ effects: Object.freeze([]), toneMapping: "aces", exposure: 1.35 });
   let environmentBackground: string | null =
     background === undefined ? "#101318" : background;
 
   function applyEnvironment(environment: ThreeSceneEnvironment): void {
+    if (environment.effects?.some((effect) => !SCENE_ENVIRONMENT_EFFECTS.includes(effect))) {
+      throw new ThreePresentationError("invalid-renderable", "Unknown post-process effect.");
+    }
+
+    if (environment.toneMapping !== undefined && !SCENE_ENVIRONMENT_TONE_MAPS.includes(environment.toneMapping)) {
+      throw new ThreePresentationError("invalid-renderable", "Unknown tone mapping.");
+    }
+
+    if (environment.exposure !== undefined && (!Number.isFinite(environment.exposure) || environment.exposure < 0 || environment.exposure > 16)) {
+      throw new ThreePresentationError("invalid-renderable", "Exposure must be in 0..16.");
+    }
+
     if (environment.background !== undefined) {
       environmentBackground = environment.background;
       scene.background = environment.background === null ? null : new Color(environment.background);
@@ -190,9 +228,12 @@ export function createThreePresentationCore(
         ? new Fog(environment.fog.color, environment.fog.near, environment.fog.far)
         : null;
     }
-    if (environment.effects !== undefined) {
-      appliedEffects = Object.freeze([...environment.effects]);
-    }
+
+    settings = Object.freeze({
+      effects: environment.effects === undefined ? settings.effects : Object.freeze([...new Set(environment.effects)]),
+      toneMapping: environment.toneMapping ?? settings.toneMapping,
+      exposure: environment.exposure ?? settings.exposure,
+    });
   }
 
   if (options.environment !== undefined) applyEnvironment(options.environment);
@@ -233,14 +274,14 @@ export function createThreePresentationCore(
 
     draw() {
       requireLive();
-      const result = surface.draw(scene, orbit.camera);
+      const result = surface.draw(scene, orbit.camera, settings);
       frame += 1;
       return Object.freeze({
         frame,
         drawCalls: result.drawCalls,
         pixelsDrawn: result.pixelsDrawn,
         surface: surface.kind,
-        effects: appliedEffects,
+        effects: settings.effects,
         environmentBackground,
       });
     },
@@ -248,6 +289,78 @@ export function createThreePresentationCore(
     setEnvironment(environment) {
       requireLive();
       applyEnvironment(environment);
+    },
+
+    sampleEffects(catalog, timeMs) {
+      requireLive();
+      const ids = new Set<string>();
+
+      if (!Number.isInteger(catalog.seed) || catalog.seed < 0) {
+        throw new ThreePresentationError("invalid-renderable", "Effects seed must be a non-negative integer.");
+      }
+
+      for (const emitter of catalog.emitters) {
+        if (ids.has(emitter.emitterId) || !isSculptIdentifier(emitter.emitterId) || !SCENE_EFFECT_EMITTER_KINDS.includes(emitter.kind) ||
+          !Number.isFinite(emitter.rate) || emitter.rate <= 0 || emitter.rate > 200 ||
+          !Number.isFinite(emitter.lifetimeMs) || emitter.lifetimeMs < 16 || emitter.lifetimeMs > 8000 ||
+          !Number.isFinite(emitter.speed) || !Number.isFinite(emitter.spread)) {
+          throw new ThreePresentationError("invalid-renderable", "Invalid decorative emitter.");
+        }
+
+        ids.add(emitter.emitterId);
+      }
+
+      // Callers pass an unbounded frame clock (performance.now()), while the sampler only
+      // accepts its 0..60000 ms window. Its pattern depends on time through floor(t) mod
+      // 1000, so wrapping at 60000 is output-identical and a long-lived viewport keeps
+      // drawing instead of throwing out of the render loop after one minute.
+      if (!Number.isFinite(timeMs) || timeMs < 0) {
+        throw new ThreePresentationError("invalid-renderable", "Effects sample time must be a finite, non-negative millisecond count.");
+      }
+
+      const sampled = sampleSceneEffects({ catalog, timeMs: timeMs % EFFECTS_SAMPLE_WINDOW_MS });
+
+      if (!sampled.ok) throw new ThreePresentationError("invalid-renderable", sampled.message);
+
+      for (const sample of sampled.evaluation.samples) {
+        if (sample.positions.some((position) => position.some((value) => !Number.isFinite(Math.fround(value))))) {
+          throw new ThreePresentationError("invalid-renderable", "Decorative emitter positions exceed the renderer range.");
+        }
+      }
+
+      for (const [id, object] of emitters) {
+        if (ids.has(id)) continue;
+        particles.remove(object);
+        disposeSubtree(object);
+        emitters.delete(id);
+      }
+
+      for (const sample of sampled.evaluation.samples) {
+        let object = emitters.get(sample.emitterId);
+
+        if (object === undefined) {
+          const geometry = new BufferGeometry();
+          geometry.setAttribute("position", new Float32BufferAttribute(new Float32Array(sample.count * 3), 3));
+          object = new Points(geometry, new PointsMaterial({ color: "#ffffff", size: 0.08 }));
+          object.name = `sceneaxi-effect:${sample.emitterId}`;
+          object.frustumCulled = false;
+          emitters.set(sample.emitterId, object);
+          particles.add(object);
+        }
+
+        if (object.geometry.getAttribute("position").count !== sample.count) {
+          object.geometry.dispose();
+          object.geometry = new BufferGeometry();
+          object.geometry.setAttribute("position", new Float32BufferAttribute(new Float32Array(sample.count * 3), 3));
+        }
+
+        const position = object.geometry.getAttribute("position");
+        sample.positions.forEach((value, index) => position.setXYZ(index, ...value));
+        position.needsUpdate = true;
+        object.geometry.setDrawRange(0, sample.count);
+      }
+
+      return sampled.evaluation;
     },
 
     resize(width, height, pixelRatio) {
@@ -271,6 +384,9 @@ export function createThreePresentationCore(
     dispose() {
       if (disposed) return;
       disposeSubtree(content);
+      disposeSubtree(particles);
+      emitters.clear();
+      particles.clear();
       grid.dispose();
       content.clear();
       scene.clear();
@@ -283,11 +399,14 @@ export function createThreePresentationCore(
 /** Releases GPU resources owned by a subtree without touching kernel state. */
 export function disposeSubtree(root: Object3D) {
   root.traverse((object) => {
-    if (!(object instanceof Mesh)) return;
+    if (!(object instanceof Mesh) && !(object instanceof Points)) return;
     object.geometry.dispose();
     const materials = Array.isArray(object.material)
       ? object.material
       : [object.material];
-    for (const material of materials) material.dispose();
+    for (const material of materials) {
+      if (material instanceof MeshStandardMaterial) material.map?.dispose();
+      material.dispose();
+    }
   });
 }

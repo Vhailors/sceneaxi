@@ -52,6 +52,15 @@ describe("publish-ready check — injected violations", () => {
     expect(res.status).toBe(0);
   });
 
+  it("refuses replacing the deterministic Rapier build or changing its replay pin", () => {
+    editManifest(fx, "packages/physics-rapier/package.json", (manifest) => {
+      manifest.dependencies = { ...manifest.dependencies, "@dimforge/rapier3d-compat": "0.21.0" };
+    });
+    const res = runCheck(fx, CHECK);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("[physics-deterministic-build]");
+  });
+
   it("fails when a package stops being private", () => {
     editManifest(fx, "packages/schemas/package.json", (m) => {
       m.private = false;

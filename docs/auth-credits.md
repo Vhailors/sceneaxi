@@ -47,7 +47,7 @@ Names only; values never appear in the repository.
 |---|---|
 | `SCENEAXI_ADMIN_EMAIL` | The **one** captain email that resolves to the `admin` role |
 | `SCENEAXI_ADMIN_BOOTSTRAP_SECRET` | Provider-owned first-admin credential material. It is not a role source and never enters core |
-| `BETTER_AUTH_ORIGIN` | Better Auth provider origin used by the umbrella sign-in adapter. The provider must serve `sign-in/email` and `get-session`, and must resolve that lookup from either the issued session cookie or the issued bearer token; `docs/websites-deploy.md` owns that prerequisite |
+| `BETTER_AUTH_ORIGIN` | Better Auth provider origin used by the umbrella sign-in adapter. The provider must serve `sign-in/email`, `get-session`, and `sign-out`. Hosted logout requires bearer support for revocation and its confirmation lookup; `docs/websites-deploy.md` owns that prerequisite |
 | `BETTER_AUTH_SECRET` | Better Auth session-signing material, read only by the umbrella provider and never by core |
 | `DATABASE_URL` | Neon Postgres connection string |
 | `STRIPE_SECRET_KEY` | Stripe **test** secret key |
@@ -195,7 +195,7 @@ grant decision, and commit boundary; the deployment adds no second verifier or i
 Better Auth is **injected into core**, not depended on by core: it needs a running HTTP
 host and a live database instance, which the hermetic packages do not contain (ADR 0021).
 The deployable umbrella now carries that provider dependency in its separate install root
-and mounts the two required routes; the boundary remains typed structurally against Better
+and mounts the three required routes; the boundary remains typed structurally against Better
 Auth's documented result, so another host still drops in:
 
 ```ts
@@ -255,6 +255,30 @@ stores the `Set-Cookie` it answers with — a cross-site page would otherwise be
 sign a visitor into an account it chose, and the mirror submission to sign-out would
 force a visitor's session away. Sign-out is refused there too, which is the one bound on
 "the cookie is cleared unconditionally": that promise is to this browser's own request.
+
+Hosted sign-out revokes both sessions through `UmbrellaIdentityPlane.signOut`.
+The deployment supplies `providerSessions.revokeSession` alongside `identityPort` through
+`umbrellaRequestAuthority()`. Request code supplies only its carried credential.
+The plane verifies that credential locally, calls `POST /api/auth/sign-out` with its
+provider bearer, and then calls the auth port's `signOut` to delete the local row.
+A missing or expired local session still requires provider revocation.
+The provider client confirms revocation with an uncached bearer `GET /api/auth/get-session`
+that must return a successful `null` response. Better Auth's sign-out response alone is
+insufficient because its handler can return success after a database deletion failure.
+A revoked token no longer resolves through provider cookie or bearer lookup.
+
+Missing revocation wiring refuses `IDENTITY_PLANE_NOT_WIRED`. A provider failure,
+unconfirmed revocation, or local store failure refuses `IDENTITY_PLANE_UNAVAILABLE`.
+Provider failure leaves the local row intact so the same credential can retry.
+Revocation is idempotent, including a retry after provider success but local deletion
+failure. `performLogout` clears the browser cookie on these same-origin outcomes, but
+redirects failures to `/login?reason=<named-refusal>` rather than the success destination.
+The auth package's `signOut` remains local-session deletion and retains its exact-principal
+and stored-session-version checks. It neither stores raw provider tokens nor owns HTTP.
+The hosted flow and failure ordering are covered in `tests/sites/identity-plane-wiring.test.ts`
+and `tests/sites/umbrella-login-flow.test.ts`. The real Better Auth handler and revoked
+cookie/bearer checks run in `sites/umbrella/test/better-auth-provider.test.ts` through
+that install root's `pnpm test:provider`.
 
 That credential format carries one obligation back onto the provider's session id: it is
 read back by splitting on the **first** `.`, so a session id that itself contains a dot —
@@ -514,7 +538,8 @@ The endpoint's three-way outcome split is unchanged, and so is what its success 
 
 | Outcome | HTTP | Meaning |
 |---|---|---|
-| `ok: true, ignored: true` | `200` | an event this endpoint owes no work, decided from the verified body alone before any port or store is read; permanent, because Stripe stops redelivering |
+| `ok: true, ignored: true`, no `reconciliationRequired` | `200` | an unhandled type, another checkout purpose, or an unrelated event owes no credit movement. Disputes require a Charge lookup before their metadata can establish that they are unrelated. |
+| `ok: true, ignored: true, reconciliationRequired: true` | `200` | this event's reconciliation record is durably confirmed. `eventId`, `reason`, and `replayed` identify the operator case. No credits moved. |
 | `ok: true, ignored: false` | `200` | **this event's movement is in the ledger** — nothing else is reported as success. `movement` names which one it was and `credits` carries the committed entry's signed delta, so a reconciled full refund reports `"refund"` and a negative delta rather than reading as a second purchase |
 | `CREDITS_PLANE_NOT_WIRED` from the request facade | `503` | no deployment webhook capability is wired, so nothing was verified and nothing was granted; it is `CREDIT_WEBHOOK_REASONS.planeNotWired` and sits in `SERVER_SIDE_REASONS` like every other deployment fault, so `creditWebhookHttpStatus` — never the route — answers it |
 | refusal in `SERVER_SIDE_REASONS` | `503` | this deployment's own fault, retried |
@@ -526,17 +551,15 @@ and the redelivery reads the ledger and answers the replay. **An issuance-author
 refusal is never `ignored`**: a fault answered as a permanent acknowledgement is money
 silently lost. A new issuance-authority refusal belongs in `SERVER_SIDE_REASONS` (`503`)
 unless it is decided purely from the inbound bytes without consulting a port, in which
-case it is a `400`. Nothing new is ever added to `UNHANDLED_EVENT_REASONS`, whose three
-members remain only the verified-body cases documented in
+case it is a `400`. `UNHANDLED_EVENT_REASONS` still covers only the three unrelated-event
+cases documented in
 [`docs/websites-deploy.md`](websites-deploy.md#how-the-seam-holds): an unhandled event
 type, a completion purpose that settles elsewhere, and an event carrying no SceneAxi
-metadata. The refund path adds the endpoint's only other acknowledgements, from its own
-second closed set and scoped to that path alone — a partial refund and a balance the buyer
-already spent, both settled facts about money no redelivery changes, and neither one moves
-the ledger. That doc owns the transport rule for all of them. The closed-set assertions in
+metadata. Disputes and non-reconcilable refunds use the separate confirmed-record outcome
+below. They are never downgraded from a refusal to an unrecorded acknowledgement.
 [`tests/sites/identity-plane-wiring.test.ts`](../tests/sites/identity-plane-wiring.test.ts)
-make a new member of either set — or a new acknowledgement path added beside them — a gate
-failure.
+pins the no-record acknowledgement set and proves that failed reconciliation writes stay
+retryable.
 `CREDIT_REQUEST_INVALID` joins the server-side set for
 the same reason: the boundary refuses it for a request the endpoint built, never for
 anything the inbound bytes decided.
@@ -562,17 +585,104 @@ already-spent balance that cannot absorb the adjustment, missing evidence, or an
 unavailable store refuses by name and never reports a reconciled refund. LIVE remains
 unreachable exactly as it is for grants.
 
-A partial refund carries its own reason, `STRIPE_REFUND_NOT_FULL`, rather than the
-payload refusal: it is bound to the intent and well-formed, and only the money is
-partial. That distinction is what lets a transport tell the two conditions apart — a
-payload it could not read may be worth retrying, while a partial refund and a spent
-balance are settled facts no redelivery changes. The umbrella endpoint therefore
-acknowledges exactly those two on the refund path with their own names and no ledger
-movement (`docs/websites-deploy.md` owns that transport rule); the refusal itself is
-unchanged here, and neither one ever appends, rewrites, or partially reverses anything.
-Reconciling the money side of either is an operator decision taken outside this
-repository — never a hand-edited ledger row, which the append-only trigger refuses
-anyway.
+### Support adjustments
+
+The umbrella's noindex `/admin/ledger` page looks up an exact email or user id.
+It displays the provisioned account's ledger entries, derived balance, checkout
+intents, and migration `0006` reconciliation records. Reads do not provision an
+account or issue a starter grant. Missing users refuse `CREDIT_SUPPORT_TARGET_NOT_FOUND`;
+missing accounts or unreadable persistence refuse rather than show a zero balance.
+
+Only the verified principal named by `SCENEAXI_ADMIN_EMAIL` may use this tool.
+`requireLedgerSupportAdmin` calls the auth package's witnessed-principal role guard
+before any support-store read or append. A normal member refuses `ADMIN_ROLE_REQUIRED`,
+a copied principal refuses through the provenance guard, and Kids refuses by name.
+Routes use `umbrellaRequestAuthority()` only. The identity-plane adapter retains the
+original auth principal rather than reconstructing one from the site's role display.
+
+`POST /api/admin/ledger` checks the deployment-owned same-origin proof before reading
+the form. It rechecks admin access and calls `adjustSupportLedger` in billing.
+The form requires a provisioned user id, signed non-zero integer credits, a reason,
+and a unique idempotency key. The reason records the admin's user id with the supplied
+support reference. A positive or negative delta produces one `adjustment` entry through
+`createCreditStore().appendOrReplayEntry`, never an UPDATE or DELETE.
+
+Keys are prefixed `support-adjustment:` and cannot enter the reserved sale or webhook
+namespaces. Retrying the same key and payload returns the committed entry. Changing
+the delta or reason for that account refuses `CREDIT_IDEMPOTENCY_KEY_CONFLICT`.
+Reusing a key on another account cannot append and reports an unconfirmed commit.
+A debit below zero refuses
+`CREDIT_BALANCE_INSUFFICIENT`. Concurrent writers contend on the existing unique account
+sequence. A lost response or sequence collision reports an unconfirmed commit; retry
+with the same key after reading the ledger again. Never generate a replacement key
+merely because a response was lost.
+
+Support adjustments neither issue money refunds nor mark reconciliation records resolved.
+They do not decide how disputes, partial refunds, or spent-credit refunds should be handled.
+Those decisions remain open below. [Production activation](production-activation.md#ledger-support-access)
+owns who may operate the tool and the separate authority needed for production use.
+
+Proof is in `tests/e2e/auth-credits-refuse-matrix.test.ts`,
+`tests/e2e/runtime-provenance-refusal.test.ts`,
+`tests/sites/identity-plane-wiring.test.ts`, and the umbrella's existing
+`test/provider-adapters.integration.test.ts`, run with `pnpm test:integration` there.
+
+### Operator reconciliation records
+
+`persistCreditPackChargeEvent` handles `charge.dispute.created`, `charge.dispute.closed`,
+and `charge.refunded` after signature verification. Disputes carry a Dispute object,
+not the Charge metadata copied from Checkout. The deployment's
+`CheckoutEvidencePort.retrieveCharge` retrieves the signed dispute's exact Charge id.
+Billing checks that id, Charge mode, original amount, currency, and all four SceneAxi
+metadata fields against the persisted intent. Dispute metadata cannot substitute for
+Charge metadata. A wrong Charge id refuses `STRIPE_CHARGE_EVIDENCE_MISMATCH` with `503`.
+An absent retrieval adapter or failed retrieval also returns `503`.
+
+For a bound dispute, billing records the provider's dispute id, status, amount, and
+currency without deciding who won or changing access. A closed event does not require
+its created event to have arrived first. The dispute amount and currency are evidence,
+not a credit conversion formula; they may differ from the original Charge.
+
+A partial refund retains `STRIPE_REFUND_NOT_FULL`. A full refund whose anchored grant
+exists but whose balance cannot absorb the reversal retains `CREDIT_BALANCE_INSUFFICIENT`.
+Both now require a durable record before the endpoint returns `200`. A refund record's
+`amount` is the Charge's cumulative `amount_refunded` at that event, not an incremental
+refund amount. Signature, mode, metadata, and retained pack revision checks precede
+persistence, including for partial refunds. A missing original grant still refuses with `503` rather than inventing one.
+
+`createCreditStore` owns `findReconciliation`, `listReconciliations`, and
+`appendOrReplayReconciliation`. Every adapter must implement them. The shared boundary
+validates both the requested record and the returned row. Migration
+`0006_credit_reconciliation.sql` adds `credit_reconciliation_records`, with a primary key
+on `(mode, event_id)` and an append-only trigger that refuses updates and deletes.
+The Neon adapter inserts or reads the existing row, never upserts its contents.
+The record retains the exact intent and user, Charge, event type, reason, provider amount
+and currency, event timestamp, dispute details where present, and a SHA-256 digest of the
+signed payload. It stores no raw body, secret, credit delta, or mutable resolution flag.
+
+Identical deliveries replay one record. Changed evidence under the same event key refuses
+`CREDIT_STORE_FAILED` with `503`; it never overwrites the first record. A lost write response
+also returns `503`, and redelivery reads the committed record. An existing spent-credit
+record replays before reconsidering the balance, so a later top-up cannot turn that same
+event into an automatic clawback. Full refunds without a reconciliation record continue
+through `persistCreditPackRefund` and its existing intent-scoped adjustment key.
+
+The sole administrator can inspect a member's records at `/admin/ledger`, through the
+deployment-owned store. Operators with separate database authority can also query the table. The webhook response includes `reconciliationRequired: true`, `eventId`,
+`reason`, and `replayed` only after a record is confirmed. For a read-only SQL inventory:
+
+```sql
+SELECT mode, event_id, intent_id, user_id, charge_id, event_type, reason,
+       amount, currency, dispute_id, dispute_status, occurred_at, payload_digest
+FROM credit_reconciliation_records
+ORDER BY occurred_at, mode, event_id;
+```
+
+**Open captain decision.** Whether to claw back credits, how many, whether to restrict
+account access, and how to resolve or compensate disputes, partial refunds, and spent-credit
+refunds remain undecided. The records authorize none of those actions. Operator assignment,
+alert thresholds, response windows, and legal/support wording also remain deployment decisions.
+There is no automatic charge, refund, debt, negative balance, or record-resolution workflow.
 
 **Grants committed before the intent anchor shipped cannot be reconciled.** The anchor is
 part of a grant's `reason`, the ledger is append-only, and a committed row is immutable,
@@ -609,7 +719,7 @@ SCENEAXI_STRIPE_LIVE_AUTHORIZED=live-mode-authorized:<email>:<YYYY-MM-DD>
 |---|---|
 | **One name, never a second spelling** | `STRIPE_LIVE_MODE_ENV_VAR` is the only key read. Every alias in `STRIPE_LIVE_MODE_ALIAS_ENV_VARS` refuses **by its presence alone**, even alongside a correct affirmative — the same rule `SCENEAXI_ADMIN_EMAILS` gets, for the same reason |
 | **Absent means refused** | Unset, empty, `true`, `1`, `yes`, a value naming no address, or a date that is not a real `YYYY-MM-DD` all refuse `STRIPE_LIVE_MODE_NOT_AUTHORIZED`, so `assertModeAuthorized` refuses at both ends unchanged |
-| **Audit evidence** | The affirmative *names its author and the day*, so live mode cannot be switched on anonymously; and the caller must inject a `recordAudit` sink, which is handed a `LiveModeAuthorizationAudit` (`authorizedBy`, `authorizedOn`, a `sha256` fingerprint, and one ready-to-log line) **before** the authorization is issued. A missing sink, a non-function, one that throws, and one that answers with a promise all refuse — the resolver is synchronous, so a record it would have to await is a record it cannot witness — and no deployment can hold an authorization it never wrote down |
+| **Audit evidence** | The affirmative names its author and day. The caller must inject a `recordAudit` sink, which receives a `LiveModeAuthorizationAudit` (`authorizedBy`, `authorizedOn`, a SHA-256 fingerprint, and a ready-to-log line) before the resolver issues its witness. The resolver awaits the sink and refuses if it is absent, invalid, throws, or rejects. The umbrella adapter writes each record to `stripe_live_mode_authorization_audit`; migration `0006` blocks updates and deletes. No shipped call site uses the witness, so this audit path does not activate LIVE |
 | **The gate stays a gate** | Nothing else is an input. `NODE_ENV`, `VERCEL_ENV`, an `sk_live_` key, `SCENEAXI_BILLING_MODE`, the price, and the adapter's identity are not read and must not become inputs. The resolved value is runtime-witnessed (sceneaxi#126), so `liveModeAuthorizedFlag` answers `true` for the exact object the resolver issued and `undefined` for every copy or look-alike |
 | **The hermetic gate is unaffected** | The resolver takes an injected `env`; nothing reads a global. `pnpm gate` runs with the variable absent, and a test asserts that |
 
@@ -619,8 +729,7 @@ today `live` refuses everywhere regardless of the variable. Reaching live mode s
 the separate captain go-live decision ADR 0021 holds, *and* a deliberate wiring change on
 top of it. `SCENEAXI_BILLING_MODE=live` selects a mode; it authorizes nothing.
 
-The complete non-executable Stripe account, webhook, tax/legal, refund, deployment,
-preflight, and rollback gate is [`docs/stripe-live-activation.md`](stripe-live-activation.md).
+The resolver is asynchronous because the deployment-owned Neon audit write must finish before it can issue an authorization witness. `createDeploymentPlaneHandles` wires `createNeonLiveModeAuditSink` into the umbrella's private handles. No shipped call site invokes the resolver or consumes the sink. The complete non-executable Stripe account, webhook, tax/legal, refund, deployment, preflight, and rollback gate is [`docs/stripe-live-activation.md`](stripe-live-activation.md).
 Every item remains unchecked; the checklist neither supplies secrets nor authorizes LIVE.
 
 Regressions: `packages/billing/test/live-mode.test.ts` (the resolver's contract) and the
@@ -1250,7 +1359,7 @@ umbrella serves `/login` beside `POST /api/login`, `POST /api/logout`, `/api/che
 `putSession` — through `createAuthLoginAdapter`, the login-port counterpart to the
 verify-only `createAuthIdentityAdapter`. The provider handler requested by
 [sceneaxi#222](https://github.com/Vhailors/sceneaxi/issues/222) now lands beside it and
-serves only stock `sign-in/email` and `get-session`, with cookie and bearer lookup over
+serves only stock `sign-in/email`, `get-session`, and `sign-out`, with cookie and bearer lookup over
 the provider-owned `better_auth_*` tables. What remains is the deployment's own: apply
 the migration, set the named secrets/origin, and configure the handles behind
 `umbrellaRequestAuthority()`. Until it does, `signIn` has no adapter to reach, so no user is provisioned, no starter grant

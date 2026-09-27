@@ -66,6 +66,7 @@ import {
   DESKTOP_BRIDGE_REFUSALS,
   DESKTOP_RARITY_PROPOSAL_EVENT,
   DESKTOP_VIEWPORT_PLAY_EVENT,
+  DESKTOP_VIEWPORT_STOP_EVENT,
   DESKTOP_VIEWPORT_SCENE_OPEN_EVENT,
   PIXELS_META_NAME,
   type DesktopAssistantJobSnapshot,
@@ -75,6 +76,8 @@ import {
 import {
   desktopMountablePayload,
   mountDesktopScene,
+  playDesktopSceneAnimations,
+  resetDesktopSceneAnimations,
   synchronizeViewportScene,
 } from "./viewport-playback.js";
 import { installDesktopByoConfigurationSurface } from "./byo-configuration.js";
@@ -86,6 +89,66 @@ type BridgeGlobal = {
     request: DesktopByoConfigurationRequest,
   ) => Promise<DesktopByoConfigurationResponse>;
 };
+
+export function dispatchDesktopPlayInput(
+  target: EventTarget,
+  actionId: string,
+  pressed: boolean,
+  value: number,
+): void {
+  target.dispatchEvent(new CustomEvent("sceneaxi:play-input", {
+    detail: { actionId, pressed, value },
+  }));
+}
+
+export function createDesktopGamepadInputPoller(input: {
+  readonly map: InputActionMap;
+  readonly getGamepads: () => readonly (Readonly<{
+    connected: boolean;
+    axes: readonly number[];
+    buttons: readonly Pick<GamepadButton, "value">[];
+  }> | null)[];
+  readonly onAction: (actionId: string, pressed: boolean, value: number) => void;
+}) {
+  const active = new Map<string, number>();
+  return (context: InputActionContext): void => {
+    if (context !== "play") {
+      for (const actionId of active.keys()) input.onAction(actionId, false, 0);
+      active.clear();
+      return;
+    }
+    const seen = new Set<string>();
+    const gamepads = input.getGamepads();
+    for (const row of input.map.bindings) {
+      const binding = row.binding;
+      if (binding.device !== "gamepad") continue;
+      const gamepad = gamepads[binding.gamepad];
+      const raw = gamepad?.connected
+        ? binding.input === "axis"
+          ? gamepad.axes[binding.control] ?? 0
+          : gamepad.buttons[binding.control]?.value ?? 0
+        : 0;
+      const value = Math.abs(raw) < binding.deadzone ? 0 : raw;
+      const direction = value < 0 ? "negative" : value > 0 ? "positive" : "any";
+      const matches = binding.direction === "any" ? value !== 0 : binding.direction === direction;
+      const pressed = matches && (binding.input === "button" || Math.abs(value) >= binding.deadzone);
+      const key = row.actionId;
+      seen.add(key);
+      const previous = active.get(key) ?? 0;
+      const current = pressed ? value : 0;
+      if (current !== previous) {
+        input.onAction(row.actionId, pressed, current);
+        if (pressed) active.set(key, current);
+        else active.delete(key);
+      }
+    }
+    for (const [actionId, value] of active) {
+      if (seen.has(actionId)) continue;
+      input.onAction(actionId, false, value);
+      active.delete(actionId);
+    }
+  };
+}
 
 export function attachDesktopViewportInputActions(
   canvas: HTMLCanvasElement,
@@ -863,8 +926,17 @@ async function mountLiveViewport(): Promise<void> {
   }
 
   const mounts = createSculptMountApi(backend);
+  const pollGamepadInput = createDesktopGamepadInputPoller({
+    map: inputActionMap,
+    getGamepads: () => navigator.getGamepads(),
+    onAction: (actionId, pressed, value) =>
+      dispatchDesktopPlayInput(canvas, actionId, pressed, value),
+  });
   try {
-    mountDesktopScene(mounts, scene, backend);
+    const mounted = mountDesktopScene(mounts, scene, backend);
+    for (const instanceId of mounted.refusedMaterialOverrides) {
+      reportLine(stage, `Material override refused for "${instanceId}": texture asset binding is unresolved (ADR 0026).`);
+    }
     backend.frameMountedContent();
     attachDesktopViewportInputActions(
       canvas,
@@ -896,11 +968,15 @@ async function mountLiveViewport(): Promise<void> {
   stage.querySelector(".viewport-note-inert")?.remove();
 
   let printed = false;
+  let animationStartedAt: number | null = null;
   let frameReportSettled = false;
   let frameReportInFlight = false;
   let frameReportAttempts = 0;
   const loop = createThreeRenderLoop({
     onFrame: () => {
+      pollGamepadInput(viewportInputContext);
+      if (animationStartedAt !== null) playDesktopSceneAnimations({ backend, scene, time: (performance.now() - animationStartedAt) / 1000 });
+      if (scene.effects !== undefined) backend.sampleEffects(scene.effects, performance.now());
       const frame = mounts.render();
       updatePixelsMeta(frame);
       if (!printed || frame.frame % 15 === 0) {
@@ -1029,6 +1105,8 @@ async function mountLiveViewport(): Promise<void> {
     });
     if (!synchronized.ok) return;
     scene = synchronized.scene;
+    animationStartedAt = performance.now();
+    playDesktopSceneAnimations({ backend, scene, time: 0 });
     const frame = mounts.render();
     updatePixelsMeta(frame);
     detail.accepted = true;
@@ -1044,6 +1122,12 @@ async function mountLiveViewport(): Promise<void> {
       : exercise.rarity.namespaceDigest;
     if (rarity === null) clearOverlayLine(RARITY_EVIDENCE_ID);
     else rarityEvidenceLine(stage, rarity);
+  });
+
+  document.addEventListener(DESKTOP_VIEWPORT_STOP_EVENT, () => {
+    animationStartedAt = null;
+    viewportInputContext = "editor";
+    resetDesktopSceneAnimations({ backend, scene });
   });
 
   document.addEventListener(DESKTOP_VIEWPORT_SCENE_OPEN_EVENT, (event: Event) => {
@@ -1073,6 +1157,8 @@ async function mountLiveViewport(): Promise<void> {
     });
     if (!synchronized.ok) return;
     scene = synchronized.scene;
+    animationStartedAt = null;
+    viewportInputContext = "editor";
     const frame = mounts.render();
     updatePixelsMeta(frame);
     detail.accepted = true;

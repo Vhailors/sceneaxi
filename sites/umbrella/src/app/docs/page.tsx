@@ -1,5 +1,6 @@
 import { SITE_CATALOG_POLICY_CITES } from "@sceneaxi/site-kit";
 import { docsRefusalCodes } from "../../lib/site-content.js";
+import { HELP_DOCS } from "../../lib/help-docs.js";
 
 /**
  * Documentation index, in the accepted three-column docs shell.
@@ -119,7 +120,17 @@ export default function DocsPage() {
           <li>Contracts</li>
         </ol>
 
-        <h1>Contracts first</h1>
+        <h1>SceneAxi help</h1>
+        <p className="lede">Practical guides for installing, opening scenes, credits, and the command line.</p>
+        <nav aria-label="Help topics" className="grid grid-2">
+          {HELP_DOCS.map((doc) => (
+            <a className="panel card-link" href={`/docs/${doc.slug}`} key={doc.slug}>
+              <h2>{doc.title}</h2>
+              <p>{doc.sections[0]?.body}</p>
+            </a>
+          ))}
+        </nav>
+        <h2>Engine contracts</h2>
         <p className="lede">
           SceneAxi is specified before it is implemented. These are the documents that
           govern the engine, the CLI, and the profiles — the code follows them, not the

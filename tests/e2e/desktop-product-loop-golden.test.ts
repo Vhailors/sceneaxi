@@ -21,6 +21,7 @@ import {
   type JsonValue,
 } from "@sceneaxi/schemas";
 import {
+  DESKTOP_INTERACTION_COMMANDS,
   DESKTOP_PRODUCT_REFUSALS,
   DESKTOP_VIEWPORT_PLAY_EVENT,
   createDesktopVisualState,
@@ -568,9 +569,11 @@ describe("desktop first-release product loop", () => {
       query(window, "[data-project-status]")?.textContent ?? "";
     expect(shell?.dataset.tier).toBe("narrow");
     expect(shell?.dataset.profile).toBe("game");
-    expect(window.document.querySelectorAll("button")).toHaveLength(92);
+    expect(window.document.querySelectorAll("button")).toHaveLength(
+      102 + (DESKTOP_INTERACTION_COMMANDS.length - 11) * 2 + 3,
+    );
     expect(window.document.querySelectorAll('button:not([tabindex="-1"])')).toHaveLength(
-      87,
+      97 + (DESKTOP_INTERACTION_COMMANDS.length - 11) * 2 + 3,
     );
 
     const refusalHelp = query(window, "#status-refusal-help");
@@ -711,6 +714,14 @@ describe("desktop first-release product loop", () => {
     ).toContain("Viewport frame 27 acknowledged for desktop-linux-open-scene");
     expect(playback).toMatchObject({ closed: true });
     expect((playback as { tickDigests: string[] } | null)?.tickDigests).toHaveLength(4);
+    await click(window, "#dock-console");
+    const consoleOutput = query(window, "[data-console-output]");
+    expect(consoleOutput?.getAttribute("role")).toBe("log");
+    expect(consoleOutput?.textContent).toContain('"event": "run-play"');
+    expect(consoleOutput?.textContent).toContain('"tickDigests"');
+    expect(consoleOutput?.textContent).toContain('"event": "play-inspect"');
+    await click(window, "#run-stop");
+    expect(consoleOutput?.textContent).toContain('"event": "run-stop"');
 
     refuseNextPlay = true;
     await click(window, "#scene-play");
@@ -784,6 +795,8 @@ describe("desktop first-release product loop", () => {
       "restart",
       "scene-hierarchy-inspect",
       "open-path",
+      "play-inspect",
+      "run-stop",
       "open-path",
       "profile",
     ]);

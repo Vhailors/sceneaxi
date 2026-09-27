@@ -17,10 +17,12 @@
  * `docs/auth-credits.md` (refusal ordering); the boundary is ADR 0021's 2026-08-01
  * clarification.
  */
+import { refuse, type SiteFormOriginSignals, type SiteResult } from "@sceneaxi/site-kit";
 import {
   IDENTITY_PLANE_DOC,
   IDENTITY_PLANE_PENDING_NOTE,
   BILLING_PLANE_PENDING_NOTE,
+  classifyUmbrellaPlane,
   createUmbrellaIdentityPlane,
   umbrellaPlaneHandles,
   type UmbrellaIdentityPlane,
@@ -53,6 +55,10 @@ export type UmbrellaWebhookRequestEvidence = Readonly<{
 
 export type UmbrellaRequestAuthority = Readonly<{
   plane(request?: UmbrellaRequestEvidence): UmbrellaIdentityPlane;
+  verifyFormOrigin(signals: Omit<SiteFormOriginSignals, "configuredOrigin">): SiteResult<string>;
+  health(): Readonly<{
+    planes: Readonly<{ identity: "wired" | "absent" | "misconfigured"; credits: "wired" | "absent" | "misconfigured"; billing: "wired" | "absent" | "misconfigured" }>;
+  }>;
   applyCreditWebhook(request: UmbrellaWebhookRequestEvidence): Promise<CreditWebhookOutcome>;
 }>;
 
@@ -61,7 +67,21 @@ let requestAuthority: UmbrellaRequestAuthority | undefined;
 export function umbrellaRequestAuthority(): UmbrellaRequestAuthority {
   if (requestAuthority !== undefined) return requestAuthority;
   const deployment = umbrellaPlaneHandles();
+
   requestAuthority = Object.freeze({
+    verifyFormOrigin(signals) {
+      return deployment.verifyFormOrigin?.(signals) ?? refuse("SITE_REQUEST_CROSS_ORIGIN");
+    },
+    health() {
+      const configuration = deployment.configuration;
+      return Object.freeze({
+        planes: Object.freeze({
+          identity: classifyUmbrellaPlane(configuration, ["DATABASE_URL", "BETTER_AUTH_ORIGIN", "BETTER_AUTH_SECRET", "SCENEAXI_ADMIN_EMAIL", "SCENEAXI_ADMIN_BOOTSTRAP_SECRET"], deployment.identityPort !== undefined),
+          credits: classifyUmbrellaPlane(configuration, ["DATABASE_URL", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"], deployment.creditStore !== undefined && deployment.creditWebhook !== undefined),
+          billing: classifyUmbrellaPlane(configuration, ["DATABASE_URL", "STRIPE_SECRET_KEY", "SCENEAXI_BILLING_MODE", "NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN"], deployment.checkoutSessions !== undefined),
+        }),
+      });
+    },
     plane(request = {}) {
       return createUmbrellaIdentityPlane(
         {},

@@ -8,6 +8,7 @@ import * as engineKernel from "../../packages/engine-kernel/src/index.js";
 import * as engineOrchestrator from "../../packages/engine-orchestrator/src/index.js";
 import * as enginePresentation from "../../packages/engine-presentation/src/index.js";
 import * as importers from "../../packages/importers/src/index.js";
+import * as physicsRapier from "@sceneaxi/physics-rapier";
 import * as pluginHost from "../../packages/plugin-host/src/index.js";
 import * as profileGame from "../../packages/profile-game/src/index.js";
 import * as profileKids from "../../packages/profile-kids/src/index.js";
@@ -59,6 +60,7 @@ const PUBLIC_MODULES = Object.freeze([
   { path: "packages/importers/src/index.ts", exports: importers },
   { path: "packages/provider-openrouter/src/index.ts", exports: providerOpenrouter },
   { path: "packages/plugin-host/src/index.ts", exports: pluginHost },
+  { path: "packages/physics-rapier/src/index.ts", exports: physicsRapier },
   { path: "packages/auth/src/index.ts", exports: auth },
   { path: "packages/billing/src/index.ts", exports: billing },
   { path: "apps/web-shell/src/index.ts", exports: webShell },

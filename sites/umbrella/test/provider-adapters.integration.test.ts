@@ -1,0 +1,454 @@
+import { readFile, readdir } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { PGlite } from "@electric-sql/pglite";
+import {
+  CONNECT_STORE_CONFLICT_CODE,
+  STRIPE_LIVE_MODE_ENV_VAR,
+  resolveLiveModeAuthorization,
+  saleEntryKeys,
+} from "@sceneaxi/billing";
+import type {
+  ConnectAccountRecord,
+  ConnectPayoutIntent,
+  ConnectPayoutOutcome,
+  MoneySplitRecord,
+} from "@sceneaxi/schemas";
+import { createIdentityPort, resolveAdminIdentity } from "@sceneaxi/auth";
+import { createUmbrellaIdentityPlane } from "../src/lib/identity-plane";
+import { verifyLoginRequestOrigin } from "../src/lib/login-flow";
+import {
+  createNeonCheckoutIntentStore,
+  createNeonCreditStore,
+  createNeonIdentityStore,
+  createNeonConnectStore,
+  createNeonLiveModeAuditSink,
+  type NeonDatabase,
+  type SqlRow,
+} from "../src/lib/provider-adapters";
+
+function authentication(userId: string, email: string) {
+  return {
+    user: { id: userId, email, emailVerified: true },
+    session: {
+      id: `session-${userId}`,
+      token: `token-${userId}`,
+      userId,
+      expiresAt: "2026-01-01T01:00:00.000Z",
+    },
+  };
+}
+
+async function createDatabase() {
+  const postgres = new PGlite();
+  const migrationDirectory = new URL("../../../db/migrations/", import.meta.url);
+  const migrations = (await readdir(fileURLToPath(migrationDirectory)))
+    .filter((name) => /^\d+.*\.sql$/.test(name))
+    .sort();
+  for (const migration of migrations) {
+    await postgres.exec(await readFile(new URL(migration, migrationDirectory), "utf8"));
+  }
+
+  const database: NeonDatabase = {
+    async query(text, values = []) {
+      return (await postgres.query<SqlRow>(text, [...values])).rows;
+    },
+    async transaction(statements) {
+      return postgres.transaction(async (transaction) => {
+        const results = [];
+        for (const statement of statements) {
+          results.push((await transaction.query<SqlRow>(statement.text, [...statement.values])).rows);
+        }
+        return results;
+      });
+    },
+  };
+  return { postgres, database };
+}
+
+describe("Neon adapters against PostgreSQL semantics", () => {
+  let fixture: Awaited<ReturnType<typeof createDatabase>>;
+  beforeAll(async () => {
+    fixture = await createDatabase();
+  }, 60_000);
+  afterAll(async () => {
+    await fixture.postgres.close();
+  });
+
+  it("provisions a user and credit account idempotently through every migration", async () => {
+    const { postgres, database } = fixture;
+    const identity = createNeonIdentityStore(database);
+    const authentication = {
+      user: { id: "member-provision", email: "provision@example.com", emailVerified: true },
+      session: {
+        id: "provider-session-1",
+        token: "provider-token-1",
+        userId: "member-provision",
+        expiresAt: "2026-01-01T01:00:00.000Z",
+      },
+    };
+
+    await identity.ensureUserAndCreditAccount(authentication, Date.parse("2026-01-01T00:00:00Z"));
+    await identity.ensureUserAndCreditAccount(authentication, Date.parse("2026-01-02T00:00:00Z"));
+
+    expect(await identity.findUserById("member-provision")).toMatchObject({
+      userId: "member-provision",
+      email: "provision@example.com",
+      emailVerified: true,
+    });
+    expect(await createNeonCreditStore(database).findAccountByUserId("member-provision"))
+      .toMatchObject({ userId: "member-provision" });
+    expect((await postgres.query("SELECT account_id FROM credit_accounts WHERE user_id = $1", ["member-provision"])).rows)
+      .toHaveLength(1);
+    expect((await postgres.query("SELECT count(*)::int AS count FROM users")).rows)
+      .toEqual([{ count: 1 }]);
+  });
+
+  it("appends once on a repeated idempotency key and races on unique account sequence", async () => {
+    const { postgres, database } = fixture;
+    const identity = createNeonIdentityStore(database);
+    await identity.ensureUserAndCreditAccount(
+      authentication("member-race", "race@example.com"),
+      Date.parse("2026-01-01T00:00:00Z"),
+    );
+    const account = await createNeonCreditStore(database).findAccountByUserId("member-race");
+    expect(account).toBeDefined();
+    if (account === undefined) return;
+    const credits = createNeonCreditStore(database);
+    const grant = {
+      schemaVersion: 1 as const,
+      kind: "sceneaxi.credit-ledger-entry" as const,
+      entryId: "entry-grant",
+      accountId: account.accountId,
+      sequence: 1,
+      movement: "grant" as const,
+      delta: 100,
+      balanceAfter: 100,
+      reason: "integration fixture",
+      idempotencyKey: "integration:grant",
+      occurredAt: "2026-01-01T00:00:00.000Z",
+    };
+    const first = await credits.appendOrReplayEntry(grant);
+    const replay = await credits.appendOrReplayEntry({ ...grant, entryId: "entry-retry" });
+    expect(first.replayed).toBe(false);
+    expect(replay).toMatchObject({ replayed: true, entry: { entryId: "entry-grant" } });
+
+    const race = await Promise.allSettled(["one", "two"].map((suffix) =>
+      credits.appendOrReplayEntry({
+        ...grant,
+        entryId: `entry-debit-${suffix}`,
+        sequence: 2,
+        movement: "debit",
+        delta: -10,
+        balanceAfter: 90,
+        idempotencyKey: `integration:debit:${suffix}`,
+      }),
+    ));
+    expect(race.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    const rejected = race.find((result) => result.status === "rejected");
+    expect(rejected?.status).toBe("rejected");
+    if (rejected?.status === "rejected") {
+      expect(String(rejected.reason)).toContain("credit_ledger_entries_account_sequence");
+    }
+    expect(await credits.listEntries(account.accountId)).toHaveLength(2);
+    await expect(postgres.query(
+      `INSERT INTO sessions (session_id, user_id, surface, issued_at, expires_at, token_digest)
+       VALUES ('session-kids', 'member-race', 'kids', '2026-01-01T00:00:00Z',
+               '2026-01-01T01:00:00Z', repeat('a', 64))`,
+    )).rejects.toThrow(/sessions_surface_known/);
+  });
+
+  it("settles both ledger legs and the share through one PostgreSQL transaction", async () => {
+    const { postgres, database } = fixture;
+    const identity = createNeonIdentityStore(database);
+    for (const [id, email] of [["buyer", "buyer@example.com"], ["creator", "creator@example.com"]] as const) {
+      await identity.ensureUserAndCreditAccount(
+        authentication(`member-${id}`, email),
+        Date.parse("2026-01-01T00:00:00Z"),
+      );
+    }
+    const buyer = await createNeonCreditStore(database).findAccountByUserId("member-buyer");
+    const creator = await createNeonCreditStore(database).findAccountByUserId("member-creator");
+    expect(buyer).toBeDefined();
+    expect(creator).toBeDefined();
+    if (buyer === undefined || creator === undefined) return;
+    await postgres.query(
+      `INSERT INTO catalog_listings
+       (listing_id, catalog, seller_user_id, title, price_mode, credit_price, published_at)
+       VALUES ($1, 'game', $2, 'Fixture listing', 'credits', 100, $3)`,
+      ["listing-transaction", "member-creator", "2026-01-01T00:00:00.000Z"],
+    );
+    const keys = saleEntryKeys("sale-transaction");
+    const settlement = {
+      buyerEntry: {
+        schemaVersion: 1 as const,
+        kind: "sceneaxi.credit-ledger-entry" as const,
+        entryId: "entry-buyer-sale",
+        accountId: buyer.accountId,
+        sequence: 1,
+        movement: "debit" as const,
+        delta: -100,
+        balanceAfter: 0,
+        reason: "catalog listing purchase",
+        idempotencyKey: keys.buyer,
+        occurredAt: "2026-01-01T00:00:00.000Z",
+      },
+      creatorEntry: {
+        schemaVersion: 1 as const,
+        kind: "sceneaxi.credit-ledger-entry" as const,
+        entryId: "entry-creator-sale",
+        accountId: creator.accountId,
+        sequence: 1,
+        movement: "grant" as const,
+        delta: 50,
+        balanceAfter: 50,
+        reason: "creator revenue share",
+        idempotencyKey: keys.creator,
+        occurredAt: "2026-01-01T00:00:00.000Z",
+      },
+      share: {
+        schemaVersion: 1 as const,
+        kind: "sceneaxi.creator-share-record" as const,
+        saleId: "sale-transaction",
+        listingId: "listing-transaction",
+        buyerUserId: "member-buyer",
+        creatorUserId: "member-creator",
+        grossCredits: 100,
+        creatorCredits: 50,
+        platformCredits: 50,
+        basisPoints: 5000,
+        occurredAt: "2026-01-01T00:00:00.000Z",
+      },
+    };
+    const credits = createNeonCreditStore(database);
+    await expect(credits.settleCreditsSale(settlement)).resolves.toEqual({ replayed: false });
+    await expect(credits.settleCreditsSale(settlement)).resolves.toEqual({ replayed: true });
+    expect((await postgres.query(
+      "SELECT count(*)::int AS count FROM credit_ledger_entries WHERE account_id IN ($1, $2)",
+      [buyer.accountId, creator.accountId],
+    )).rows).toEqual([{ count: 2 }]);
+    expect((await postgres.query(
+      "SELECT count(*)::int AS count FROM creator_share_records WHERE sale_id = $1",
+      ["sale-transaction"],
+    )).rows).toEqual([{ count: 1 }]);
+  });
+
+  it("supports witnessed-admin lookup and append-only adjustments with durable replay", async () => {
+    const { postgres, database } = fixture;
+    const now = Date.parse("2026-01-01T00:00:00Z");
+    const identity = createNeonIdentityStore(database);
+    const credits = createNeonCreditStore(database);
+    const intents = createNeonCheckoutIntentStore(database);
+    const admin = resolveAdminIdentity({ SCENEAXI_ADMIN_EMAIL: "support-admin@example.com" });
+
+    if (!admin.ok) throw new Error(admin.message);
+
+    for (const [id, email] of [["support-admin", "support-admin@example.com"], ["support-member", "support-member@example.com"]] as const) {
+      await identity.ensureUserAndCreditAccount(authentication(id, email), now);
+    }
+
+    const port = createIdentityPort({
+      admin: admin.value,
+      clock: () => now,
+      store: identity,
+      adapter: { authenticate: () => authentication("support-admin", "support-admin@example.com") },
+    });
+
+    const signedIn = await port.signIn({ surface: "site", email: "support-admin@example.com", password: "fixture" });
+
+    if (!signedIn.ok) throw new Error(signedIn.message);
+
+    const wiring = {
+      admin: admin.value, identityPort: port, creditStore: credits,
+      supportStore: { users: identity, listCheckoutIntents: intents.listByUserId },
+      sessionToken: `${signedIn.value.principal.session.sessionId}.${signedIn.value.sessionToken}`,
+      clock: () => now,
+    };
+
+    const plane = createUmbrellaIdentityPlane({}, wiring);
+
+    const requestOrigin = verifyLoginRequestOrigin({}, {
+      requestUrl: "https://sceneaxi.test/api/admin/ledger", origin: "https://sceneaxi.test",
+    });
+
+    const fields = { userId: "support-member", delta: "40", reason: "Support case 23", idempotencyKey: "integration-support-23" };
+    expect(await plane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields })).toMatchObject({ ok: true, value: { replayed: false, entry: { delta: 40, movement: "adjustment" } } });
+    const freshPlane = createUmbrellaIdentityPlane({}, { ...wiring, creditStore: createNeonCreditStore(database) });
+    expect(await freshPlane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields })).toMatchObject({ ok: true, value: { replayed: true } });
+    expect(await freshPlane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields: { ...fields, userId: "support-admin" } })).toMatchObject({ ok: false, reason: "CREDITS_PLANE_UNAVAILABLE" });
+    expect(await plane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields: { ...fields, delta: "41" } })).toMatchObject({ ok: false, reason: "CREDIT_IDEMPOTENCY_KEY_CONFLICT" });
+    expect(await plane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields: { ...fields, delta: "-41", idempotencyKey: "overdraft" } })).toMatchObject({ ok: false, reason: "CREDIT_BALANCE_INSUFFICIENT" });
+
+    const race = await Promise.all(["a", "b"].map((key) => plane.ledgerSupport.adjust({
+      surface: "site", requestOrigin, fields: { ...fields, delta: "-30", idempotencyKey: `support-race-${key}` },
+    })));
+
+    expect(race.filter((result) => result.ok)).toHaveLength(1);
+    const winningKey = race[0]?.ok ? "support-race-a" : "support-race-b";
+
+    expect(await freshPlane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields: { ...fields, delta: "-30", idempotencyKey: winningKey } })).toMatchObject({ ok: true, value: { replayed: true, entry: { balanceAfter: 10 } } });
+    expect(await freshPlane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields })).toMatchObject({ ok: true, value: { replayed: true, entry: { balanceAfter: 40 } } });
+    await intents.persistIntent({
+      schemaVersion: 1, kind: "sceneaxi.checkout-session-intent", intentId: "int_support", userId: "support-member",
+      purpose: "credit-pack", itemId: "starter", credits: 100, unitAmount: 500, currency: "usd", stripePriceId: "price_test_starter_100",
+      mode: "test", successUrl: "https://sceneaxi.test/account", cancelUrl: "https://sceneaxi.test/pricing", idempotencyKey: "integration:support-checkout", createdAt: new Date(now).toISOString(),
+    });
+    await credits.appendOrReplayReconciliation({
+      schemaVersion: 1, kind: "sceneaxi.credit-reconciliation-record", eventId: "evt_support", mode: "test",
+      intentId: "int_support", userId: "support-member", chargeId: "ch_support", eventType: "charge.refunded",
+      reason: "STRIPE_REFUND_NOT_FULL", amount: 100, currency: "usd", occurredAt: new Date(now).toISOString(), payloadDigest: "a".repeat(64), disputeId: null, disputeStatus: null,
+    });
+    const lookup = await freshPlane.ledgerSupport.lookup({ surface: "site", target: { kind: "email", value: " SUPPORT-MEMBER@EXAMPLE.COM " } });
+    expect(lookup).toMatchObject({ ok: true, value: { user: { userId: "support-member" }, state: { balance: 10 }, checkoutIntents: [{ intentId: "int_support" }], reconciliations: [{ eventId: "evt_support" }] } });
+    expect(await freshPlane.ledgerSupport.lookup({ surface: "site", target: { kind: "userId", value: "support-admin" } })).toMatchObject({ ok: true, value: { state: { balance: 0, entries: [] }, checkoutIntents: [], reconciliations: [] } });
+
+    if (!lookup.ok || lookup.value === null) throw new Error("Support lookup failed");
+    expect(lookup.value.state.entries).toHaveLength(2);
+    expect(lookup.value.state.entries[0]?.reason).toBe("support:support-admin: Support case 23");
+
+    const lostAnswer = createUmbrellaIdentityPlane({}, {
+      ...wiring,
+      creditStore: { ...credits, async appendOrReplayEntry(entry) {
+        await credits.appendOrReplayEntry(entry);
+        throw new Error("fixture lost response after commit");
+      } },
+    });
+
+    const uncertain = { ...fields, delta: "5", idempotencyKey: "support-lost-response" };
+    expect(await lostAnswer.ledgerSupport.adjust({ surface: "site", requestOrigin, fields: uncertain })).toMatchObject({ ok: false, reason: "CREDITS_PLANE_UNAVAILABLE" });
+    expect(await freshPlane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields: uncertain })).toMatchObject({ ok: true, value: { replayed: true, entry: { balanceAfter: 15 } } });
+    expect(await credits.listEntries(lookup.value.state.account.accountId)).toHaveLength(3);
+    expect(await credits.listReconciliations()).toHaveLength(1);
+    await expect(postgres.query("UPDATE credit_ledger_entries SET delta = 99 WHERE account_id = $1", [lookup.value.state.account.accountId])).rejects.toThrow(/append-only/);
+    await expect(postgres.query("DELETE FROM credit_ledger_entries WHERE account_id = $1", [lookup.value.state.account.accountId])).rejects.toThrow(/append-only/);
+  });
+
+  it("enforces append-only ledger and immutable checkout pricing in SQL", async () => {
+    const { postgres, database } = fixture;
+    const identity = createNeonIdentityStore(database);
+    await identity.ensureUserAndCreditAccount(
+      authentication("member-immutable", "immutable@example.com"),
+      Date.parse("2026-01-01T00:00:00Z"),
+    );
+    const account = await createNeonCreditStore(database).findAccountByUserId("member-immutable");
+    expect(account).toBeDefined();
+    if (account === undefined) return;
+    const credits = createNeonCreditStore(database);
+    await credits.appendOrReplayEntry({
+      schemaVersion: 1,
+      kind: "sceneaxi.credit-ledger-entry",
+      entryId: "entry-immutable",
+      accountId: account.accountId,
+      sequence: 1,
+      movement: "grant",
+      delta: 100,
+      balanceAfter: 100,
+      reason: "integration fixture",
+      idempotencyKey: "integration:immutable",
+      occurredAt: "2026-01-01T00:00:00.000Z",
+    });
+    await expect(postgres.query("UPDATE credit_ledger_entries SET reason = 'rewritten' WHERE entry_id = $1", ["entry-immutable"]))
+      .rejects.toThrow(/append-only/);
+    await expect(postgres.query("DELETE FROM credit_ledger_entries WHERE entry_id = $1", ["entry-immutable"]))
+      .rejects.toThrow(/append-only/);
+
+    const intents = createNeonCheckoutIntentStore(database);
+    const intent = {
+      schemaVersion: 1 as const,
+      kind: "sceneaxi.checkout-session-intent" as const,
+      intentId: "int_integration_1",
+      userId: "member-immutable",
+      purpose: "credit-pack" as const,
+      itemId: "starter",
+      credits: 100,
+      unitAmount: 500,
+      currency: "usd",
+      stripePriceId: "price_test_starter_100",
+      mode: "test" as const,
+      successUrl: "https://sceneaxi.test/account",
+      cancelUrl: "https://sceneaxi.test/pricing",
+      idempotencyKey: "integration:checkout:1",
+      createdAt: "2026-01-01T00:00:00.000Z",
+    };
+    await intents.persistIntent(intent);
+    await expect(postgres.query("UPDATE checkout_session_intents SET unit_amount = 900 WHERE intent_id = $1", [intent.intentId]))
+      .rejects.toThrow(/price columns are immutable/);
+    await expect(intents.persistIntent({ ...intent, unitAmount: 900 }))
+      .rejects.toThrow(/checkout intent conflict/);
+  });
+
+  it("commits Connect split and payout intent atomically, with exact replay/conflict semantics", async () => {
+    const { postgres, database } = fixture;
+    const identity = createNeonIdentityStore(database);
+    for (const [id, email] of [["buyer", "connect-buyer@example.com"], ["creator", "connect-creator@example.com"]] as const) {
+      await identity.ensureUserAndCreditAccount(
+        authentication(`member-${id}`, email), Date.parse("2026-07-01T00:00:00Z"),
+      );
+    }
+    const account: ConnectAccountRecord = {
+      schemaVersion: 1, kind: "sceneaxi.connect-account-record", creatorUserId: "member-creator",
+      stripeAccountId: "acct_connect_test", mode: "test", providerRequestId: "req-connect",
+      createdAt: "2026-07-01T00:00:00.000Z",
+    };
+    const split: MoneySplitRecord = {
+      schemaVersion: 1, kind: "sceneaxi.money-split-record", saleId: "sale-connect",
+      listingId: "listing-connect", buyerUserId: "member-buyer", creatorUserId: "member-creator",
+      grossMinor: 101, creatorMinor: 50, platformMinor: 51, currency: "usd", basisPoints: 5000,
+      mode: "test", occurredAt: "2026-07-01T00:00:00.000Z",
+    };
+    const intent: ConnectPayoutIntent = {
+      schemaVersion: 1, kind: "sceneaxi.connect-payout-intent", payoutIntentId: "payout-connect",
+      saleId: split.saleId, creatorUserId: account.creatorUserId, stripeAccountId: account.stripeAccountId,
+      grossMinor: split.grossMinor, creatorMinor: split.creatorMinor, platformMinor: split.platformMinor,
+      currency: split.currency, basisPoints: 5000, mode: "test",
+      idempotencyKey: "payout-connect-key", requestedAt: "2026-07-01T00:01:00.000Z",
+    };
+    const store = createNeonConnectStore(database);
+    await postgres.query(
+      `INSERT INTO catalog_listings (listing_id, catalog, seller_user_id, title, price_mode, credit_price, published_at)
+       VALUES ($1, 'game', $2, 'Connect fixture', 'credits', 1, $3)`,
+      [split.listingId, split.creatorUserId, split.occurredAt],
+    );
+    await expect(store.commitPayoutIntent({ split, intent })).rejects.toThrow();
+    expect((await postgres.query("SELECT sale_id FROM money_split_records WHERE sale_id = $1", [split.saleId])).rows).toEqual([]);
+    await postgres.query(
+      "INSERT INTO stripe_connect_accounts (creator_user_id, stripe_account_id, mode, provider_request_id, created_at) VALUES ($1, $2, $3, $4, $5)",
+      [account.creatorUserId, account.stripeAccountId, account.mode, account.providerRequestId, account.createdAt],
+    );
+    const conflictingSplit: MoneySplitRecord = { ...split, saleId: "sale-connect-held", grossMinor: 200, creatorMinor: 100, platformMinor: 100 };
+    await postgres.query(
+      `INSERT INTO money_split_records (sale_id, listing_id, buyer_user_id, creator_user_id, gross_minor, creator_minor, platform_minor, currency, basis_points, mode, occurred_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+      [conflictingSplit.saleId, conflictingSplit.listingId, conflictingSplit.buyerUserId, conflictingSplit.creatorUserId, conflictingSplit.grossMinor, conflictingSplit.creatorMinor, conflictingSplit.platformMinor, conflictingSplit.currency, conflictingSplit.basisPoints, conflictingSplit.mode, conflictingSplit.occurredAt],
+    );
+    await expect(store.commitPayoutIntent({
+      split: { ...split, saleId: conflictingSplit.saleId },
+      intent: { ...intent, saleId: conflictingSplit.saleId, payoutIntentId: "payout-connect-held", idempotencyKey: "payout-connect-held-key" },
+    })).rejects.toMatchObject({ code: CONNECT_STORE_CONFLICT_CODE });
+    expect((await postgres.query("SELECT payout_intent_id FROM stripe_connect_payout_intents WHERE sale_id = $1", [conflictingSplit.saleId])).rows).toEqual([]);
+    await expect(store.commitPayoutIntent({ split, intent })).resolves.toEqual({ split, intent, replayed: false });
+    await expect(store.commitPayoutIntent({ split, intent })).resolves.toEqual({ split, intent, replayed: true });
+    const outcome: ConnectPayoutOutcome = {
+      schemaVersion: 1, kind: "sceneaxi.connect-payout-outcome", payoutOutcomeId: "outcome-connect",
+      payoutIntentId: intent.payoutIntentId, status: "succeeded", providerPayoutId: "po_test_connect",
+      providerEvidenceId: "evidence-connect", providerMessage: "paid", observedAt: "2026-07-01T00:02:00.000Z",
+    };
+    await expect(store.appendPayoutOutcome(outcome)).resolves.toEqual({ record: outcome, replayed: false });
+    await expect(store.appendPayoutOutcome(outcome)).resolves.toEqual({ record: outcome, replayed: true });
+    await expect(store.appendPayoutOutcome({ ...outcome, payoutOutcomeId: "outcome-conflict" }))
+      .rejects.toMatchObject({ code: CONNECT_STORE_CONFLICT_CODE });
+  });
+
+  it("awaits Neon live-mode audit persistence and enforces its append-only trigger", async () => {
+    const { postgres, database } = fixture;
+    const authorized = await resolveLiveModeAuthorization({
+      env: { [STRIPE_LIVE_MODE_ENV_VAR]: "live-mode-authorized:captain@example.com:2026-07-01" },
+      recordAudit: createNeonLiveModeAuditSink(database),
+    });
+    expect(authorized.ok).toBe(true);
+    expect((await postgres.query("SELECT authorized_by, authorized_on FROM stripe_live_mode_authorization_audit")).rows)
+      .toEqual([{ authorized_by: "captain@example.com", authorized_on: new Date("2026-07-01T00:00:00.000Z") }]);
+    await expect(postgres.query("UPDATE stripe_live_mode_authorization_audit SET record = 'changed'")).rejects.toThrow(/append-only/);
+    await expect(postgres.query("DELETE FROM stripe_live_mode_authorization_audit")).rejects.toThrow(/append-only/);
+  });
+});

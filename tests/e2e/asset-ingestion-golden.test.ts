@@ -1,12 +1,14 @@
 import { mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { deflateSync } from "node:zlib";
 import { afterEach, describe, expect, it } from "vitest";
 import { createSculptMountApi, createThreeSculptPresentationBackend } from "@sceneaxi/engine-presentation";
 import { createDesktopBridge, seedDesktopProject } from "../../desktop/linux/src/index.ts";
 import { mountDesktopScene } from "../../desktop/linux/src/renderer/viewport-playback.ts";
 import { runAssetImport } from "../../packages/cli/src/asset-verbs.ts";
 import { runProjectApply } from "../../packages/cli/src/project-verbs.ts";
+import { stageContainedGltfAssetImport } from "../../packages/importers/src/index.ts";
 
 const roots: string[] = [];
 afterEach(() => roots.splice(0).forEach((root) => rmSync(root, { recursive: true, force: true })));
@@ -17,19 +19,64 @@ function temporary(prefix: string) {
   return root;
 }
 
-function containedTriangle() {
-  const positions = new Float32Array([-1, 0, 0, 1, 0, 0, 0, 1, 0]);
-  const bytes = Buffer.from(positions.buffer);
+function pngChunk(type: string, data: Uint8Array) {
+  const chunk = Buffer.alloc(data.byteLength + 12);
+  chunk.writeUInt32BE(data.byteLength, 0);
+  chunk.write(type, 4, "ascii");
+  chunk.set(data, 8);
+  let crc = 0xffffffff;
+  for (const byte of chunk.subarray(4, data.byteLength + 8)) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit += 1) crc = (crc >>> 1) ^ ((crc & 1) === 1 ? 0xedb88320 : 0);
+  }
+  chunk.writeUInt32BE((crc ^ 0xffffffff) >>> 0, data.byteLength + 8);
+  return chunk;
+}
+
+function containedTriangle(alphaMode?: string, baseColorFactor?: readonly number[], animated = false) {
+  const positions = Buffer.from(new Float32Array([-1, 0, 0, 1, 0, 0, 0, 1, 0]).buffer);
+  const uvs = Buffer.from(new Float32Array([0, 0, 1, 0, 0.5, 1]).buffer);
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(1, 0);
+  header.writeUInt32BE(1, 4);
+  header.set([8, 6, 0, 0, 0], 8);
+  const png = Buffer.concat([
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+    pngChunk("IHDR", header),
+    pngChunk("IDAT", deflateSync(Buffer.from([0, 255, 32, 8, 255]))),
+    pngChunk("IEND", Buffer.alloc(0)),
+  ]);
+  const times = Buffer.from(new Float32Array([0, 1]).buffer);
+  const translations = Buffer.from(new Float32Array([0, 0, 0, 2, 0, 0]).buffer);
+  const bytes = Buffer.concat([positions, uvs, png, ...(animated ? [times, translations] : [])]);
   return Buffer.from(JSON.stringify({
     asset: { version: "2.0" },
     buffers: [{ byteLength: bytes.byteLength, uri: `data:application/octet-stream;base64,${bytes.toString("base64")}` }],
-    bufferViews: [{ buffer: 0, byteLength: bytes.byteLength }],
-    accessors: [{ bufferView: 0, componentType: 5126, count: 3, type: "VEC3" }],
-    materials: [{ pbrMetallicRoughness: { baseColorFactor: [0.2, 0.6, 0.9, 1], roughnessFactor: 0.7 } }],
-    meshes: [{ primitives: [{ attributes: { POSITION: 0 }, material: 0 }] }],
+    bufferViews: [
+      { buffer: 0, byteLength: positions.byteLength },
+      { buffer: 0, byteOffset: positions.byteLength, byteLength: uvs.byteLength },
+      { buffer: 0, byteOffset: positions.byteLength + uvs.byteLength, byteLength: png.byteLength },
+      ...(animated ? [
+        { buffer: 0, byteOffset: positions.byteLength + uvs.byteLength + png.byteLength, byteLength: times.byteLength },
+        { buffer: 0, byteOffset: positions.byteLength + uvs.byteLength + png.byteLength + times.byteLength, byteLength: translations.byteLength },
+      ] : []),
+    ],
+    accessors: [
+      { bufferView: 0, componentType: 5126, count: 3, type: "VEC3" },
+      { bufferView: 1, componentType: 5126, count: 3, type: "VEC2" },
+      ...(animated ? [
+        { bufferView: 3, componentType: 5126, count: 2, type: "SCALAR" },
+        { bufferView: 4, componentType: 5126, count: 2, type: "VEC3" },
+      ] : []),
+    ],
+    images: [{ bufferView: 2, mimeType: "image/png" }],
+    textures: [{ source: 0 }],
+    materials: [{ alphaMode, alphaCutoff: 0.7, pbrMetallicRoughness: { baseColorFactor, roughnessFactor: 0.7, baseColorTexture: { index: 0 } } }],
+    meshes: [{ primitives: [{ attributes: { POSITION: 0, TEXCOORD_0: 1 }, material: 0 }] }],
     nodes: [{ mesh: 0 }],
     scenes: [{ nodes: [0] }],
     scene: 0,
+    ...(animated ? { animations: [{ name: "walk", samplers: [{ input: 2, output: 3, interpolation: "LINEAR" }], channels: [{ sampler: 0, target: { node: 0, path: "translation" } }] }] } : {}),
   }));
 }
 
@@ -40,11 +87,34 @@ function seededRoot(prefix: string) {
 }
 
 describe("offline asset ingestion vertical", () => {
-  it("keeps Reject byte-clean, accepts atomically, reopens into kernel Play, and redraws real triangles", () => {
+  it("carries imported clips through Play without changing authoring bytes", () => {
+    const root = seededRoot("sceneaxi-animated-asset-");
+    const sourceRoot = temporary("sceneaxi-animated-source-");
+    const source = join(sourceRoot, "triangle.gltf");
+    writeFileSync(source, containedTriangle(undefined, undefined, true));
+    const authoringBytes = readFileSync(join(root, "scene.json"));
+    const document = JSON.parse(authoringBytes.toString("utf8")) as { data: Record<string, unknown> };
+    const staged = stageContainedGltfAssetImport({ sourceName: "triangle.gltf", sourceBytes: readFileSync(source), documentPath: "scene.json", expectedContentHash: `sha256:${"0".repeat(64)}`, documentData: document.data });
+    expect(staged).toMatchObject({ ok: true, projection: { animations: [{ name: "walk", duration: 1 }] } });
+    if (!staged.ok) return;
+    const backend = createThreeSculptPresentationBackend();
+    const clip = staged.projection.animations[0];
+    if (clip === undefined) return;
+    backend.mountTriangleAsset({ instanceId: "animated", transform: { translation: [0, 0, 0], rotationEulerDegrees: [0, 0, 0], scale: [1, 1, 1] }, meshes: staged.projection.meshes, nodes: staged.projection.nodes });
+    backend.playTriangleAnimation("animated", clip, 0.5);
+    expect(backend.render(["animated"])).toMatchObject({ surface: "headless", pixelsDrawn: false });
+    expect(readFileSync(join(root, "scene.json"))).toEqual(authoringBytes);
+    backend.dispose();
+  });
+  it.each([
+    { alphaMode: undefined, baseColorFactor: undefined, expectedColor: "#ffffff" },
+    { alphaMode: "OPAQUE", baseColorFactor: undefined, expectedColor: "#ffffff" },
+    { alphaMode: "OPAQUE", baseColorFactor: [0.2, 0.6, 0.9, 1], expectedColor: "#3399e6" },
+  ])("keeps Reject byte-clean, accepts atomically, and reopens $alphaMode triangles with $expectedColor", ({ alphaMode, baseColorFactor, expectedColor }) => {
     const root = seededRoot("sceneaxi-desktop-asset-");
     const sourceRoot = temporary("sceneaxi-desktop-asset-source-");
     const source = join(sourceRoot, "triangle.gltf");
-    const sourceBytes = containedTriangle();
+    const sourceBytes = containedTriangle(alphaMode, baseColorFactor);
     writeFileSync(source, sourceBytes);
     const before = readFileSync(join(root, "scene.json"), "utf8");
     const bridge = createDesktopBridge({ cwd: root, nowMs: () => 1_753_920_000_000 });
@@ -68,12 +138,45 @@ describe("offline asset ingestion vertical", () => {
     if (!played.ok) return;
     const mountable = (played.data as { mountable: Parameters<typeof mountDesktopScene>[1] }).mountable;
     expect(mountable.importedAssets).toHaveLength(1);
+    expect(mountable.importedAssets?.[0]?.meshes[0]).toMatchObject({
+      baseColor: expectedColor,
+      uvs: [0, 0, 1, 0, 0.5, 1],
+      baseColorTexture: { width: 1, height: 1, rgba: [255, 32, 8, 255] },
+    });
     const backend = createThreeSculptPresentationBackend();
     const mounts = createSculptMountApi(backend);
     mountDesktopScene(mounts, mountable, backend);
     const frame = mounts.render();
     expect(frame).toMatchObject({ surface: "headless", pixelsDrawn: false, drawCalls: 16 });
     mounts.dispose();
+  });
+
+  it.each(["BLEND", "MASK", "UNKNOWN"])("refuses %s materials through desktop and CLI without writing project bytes", (alphaMode) => {
+    const root = seededRoot("sceneaxi-alpha-refusal-");
+    const sourceRoot = temporary("sceneaxi-alpha-source-");
+    const source = join(sourceRoot, "triangle.gltf");
+    writeFileSync(source, containedTriangle(alphaMode));
+    const before = readFileSync(join(root, "scene.json"));
+    const bridge = createDesktopBridge({ cwd: root });
+    expect(bridge.handle({
+      action: "asset-import",
+      payload: { profile: "web", documentPath: "scene.json", sourcePath: source },
+    })).toMatchObject({
+      ok: false,
+      reason: "ASSET_IMPORT_FORMAT_UNSUPPORTED",
+      message: expect.stringContaining("alphaMode"),
+    });
+    const proposed = runAssetImport(["asset", "import"], ["--source", source, "--document", "scene.json", "--cwd", root, "--out", "asset-proposal.json"]);
+    expect(proposed.envelope).toMatchObject({
+      ok: false,
+      error: {
+        code: "VALIDATION",
+        message: expect.stringContaining("ASSET_IMPORT_FORMAT_UNSUPPORTED"),
+      },
+    });
+    expect(readFileSync(join(root, "scene.json"))).toEqual(before);
+    expect(() => readFileSync(join(root, "assets/triangle.gltf"))).toThrow();
+    expect(() => readFileSync(join(root, "asset-proposal.json"))).toThrow();
   });
 
   it("produces byte-identical accepted desktop and CLI projects", () => {

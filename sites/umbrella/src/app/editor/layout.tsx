@@ -1,3 +1,11 @@
+import type { Metadata } from "next";
+
+/** Signed-in surface: never indexed, whatever a crawler is told elsewhere. */
+export const metadata: Metadata = {
+  title: "Editor — SceneAxi",
+  robots: { index: false, follow: false },
+};
+
 /**
  * The editor route owns the whole viewport.
  *

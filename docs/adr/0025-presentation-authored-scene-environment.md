@@ -25,6 +25,20 @@ surface declares the configured effect names and never claims they drew.
 - WebGPU revisit is behind the presentation seam.
 - Kids is refused independently on the catalog.
 
+## Rendering integration note
+
+The renderer maps the closed tone-mapping values and `bloom`/`vignette` names to
+Three's own tone-mapping and postprocessing addons. The effect list is applied
+in authored order; bloom strength/radius/threshold and vignette parameters use
+addon defaults because v1 defines no authored controls for them. The headless
+surface reports configured names only and claims no pixels.
+
+The catalog also has a `shadows` flag, but v1 does not define caster/receiver
+selection or a shadow-map budget. Rendering that flag is deferred until those
+constraints are specified; it is not inferred from light intensity or scene
+geometry. Product viewport catalog forwarding remains host-owned and is not
+implied by this renderer contract.
+
 ## Rejected alternatives
 
 - Putting environment into `composeScene()` — would rewrite placement goldens.

@@ -259,6 +259,8 @@ export const DESKTOP_VISUAL_REFUSALS = Object.freeze({
   redoUnavailable: "DESKTOP_REDO_UNAVAILABLE",
   /** The window is smaller than the editor chrome's declared minimum. */
   windowBelowMinimum: "DESKTOP_WINDOW_BELOW_MINIMUM",
+  hostedAssistantUnavailable: "DESKTOP_ASSISTANT_HOSTED_METERING_UNAVAILABLE",
+  projectBrowserOperationNotPermitted: "DESKTOP_PROJECT_BROWSER_OPERATION_NOT_PERMITTED",
   /**
    * HTML and asset injection belong only to Web Experience. Read from the
    * product-loop registry rather than restated, so the code the chrome renders
@@ -292,6 +294,10 @@ export const DESKTOP_REFUSAL_MESSAGES: Readonly<
     "Redo becomes available after Undo and remains available until a new mutation commits.",
   [DESKTOP_VISUAL_REFUSALS.windowBelowMinimum]:
     "The editor chrome refuses below its minimum window size rather than rendering an unusable layout.",
+  [DESKTOP_VISUAL_REFUSALS.hostedAssistantUnavailable]:
+    "Hosted assistant metering is unavailable in this desktop tier; choose Local or BYOK.",
+  [DESKTOP_VISUAL_REFUSALS.projectBrowserOperationNotPermitted]:
+    "Project-browser rename and delete are not permitted by the current project lifecycle contract.",
   [DESKTOP_VISUAL_REFUSALS.webCapabilityRequired]:
     "HTML, site-canvas, and asset-injection authoring are available only on the Web Experience profile.",
 });
@@ -505,14 +511,16 @@ export function createDesktopVisualState(
  * action so no caller can construct a state the renderer would have to guess at.
  */
 function normalize(state: DesktopVisualState): DesktopVisualState {
-  const tabs = dockTabsFor(state.mode);
+  const mode = state.mode === "compose" || state.mode === "plugins" ? "build" : state.mode;
+  const tabs = dockTabsFor(mode);
   const dockTab = tabs.includes(state.dockTab)
     ? state.dockTab
-    : defaultDockTabFor(state.mode);
+    : defaultDockTabFor(mode);
   const assistant: DesktopAssistantState =
     state.profile === "kids" ? "denied" : state.assistant === "denied" ? "open" : state.assistant;
   return Object.freeze({
     ...state,
+    mode,
     dockTab,
     overlay:
       state.overlay !== null && DESKTOP_OVERLAY_IDS.includes(state.overlay)
@@ -948,7 +956,9 @@ function assistantProjection(
           label,
           control: refuseOnly
             ? mint(`assistant-route-${id}`, label, "inert", denial.code)
-            : mint(`assistant-route-${id}`, label, "view"),
+            : id === "hosted"
+              ? mint(`assistant-route-${id}`, label, "inert", DESKTOP_VISUAL_REFUSALS.hostedAssistantUnavailable)
+              : mint(`assistant-route-${id}`, label, "view"),
         }),
       ),
     ),
@@ -1102,6 +1112,7 @@ export type DesktopVisualView = Readonly<{
   profiles: ReadonlyArray<DesktopProfileChip>;
   policy: OpenPathPolicyViewModel;
   dockTabs: ReadonlyArray<Readonly<{ id: DesktopDockTabId; label: string; active: boolean; badge: number; control: DesktopControl }>>;
+  timelineControls: Readonly<{ mutation: DesktopControl; apply: DesktopControl; time: DesktopControl; scrub: DesktopControl; evaluate: DesktopControl }>;
   assistant: DesktopAssistantView;
   changeReview: DesktopChangeReviewView;
   sculpt: DesktopSculptView;
@@ -1121,6 +1132,16 @@ export type DesktopVisualView = Readonly<{
     renameBrowserFile: DesktopControl;
     deleteBrowserFile: DesktopControl;
     play: DesktopControl;
+    runStop: DesktopControl;
+    runReset: DesktopControl;
+    inspectors: readonly Readonly<{
+      kind: "physics" | "environment" | "material" | "effect";
+      inspectCommand: "physics-inspect" | "environment-inspect" | "material-inspect" | "effect-inspect";
+      applyCommand: "physics-apply" | "environment-apply" | "material-apply" | "effect-apply";
+      inspect: DesktopControl;
+      mutation: DesktopControl;
+      stage: DesktopControl;
+    }>[];
     exportWeb: DesktopControl;
     gitCommitMessage: DesktopControl;
     transformModeTranslate: DesktopControl;
@@ -1347,9 +1368,24 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
     save: control("project-save", "Save scene.json", "live"),
     browseFile: control("project-browser-file-select", "Project file", "live"),
     openBrowserFile: control("project-browser-open", "Open selected project file", "live"),
-    renameBrowserFile: control("project-browser-rename", "Rename selected project file", "live"),
-    deleteBrowserFile: control("project-browser-delete", "Delete selected project file", "live"),
+    renameBrowserFile: control("project-browser-rename", "Rename selected project file", "inert", DESKTOP_VISUAL_REFUSALS.projectBrowserOperationNotPermitted),
+    deleteBrowserFile: control("project-browser-delete", "Delete selected project file", "inert", DESKTOP_VISUAL_REFUSALS.projectBrowserOperationNotPermitted),
     play: control("scene-play", "Play composed scene", "live"),
+    runStop: control("run-stop", "Stop run", "live"),
+    runReset: control("run-reset", "Reset run", "live"),
+    inspectors: Object.freeze(([
+      ["physics", "physics-inspect", "physics-apply", "Physics"],
+      ["environment", "environment-inspect", "environment-apply", "Environment"],
+      ["material", "material-inspect", "material-apply", "Materials"],
+      ["effect", "effect-inspect", "effect-apply", "Effects"],
+    ] as const).map(([kind, inspectCommand, applyCommand, label]) => Object.freeze({
+      kind,
+      inspectCommand,
+      applyCommand,
+      inspect: control(`${kind}-inspect`, `Inspect ${label}`, "live"),
+      mutation: control(`${kind}-mutation`, `${label} mutation JSON`, "live"),
+      stage: control(`${kind}-stage`, `Stage ${label} change`, "live"),
+    }))),
     exportWeb: control("ship-export-web", "Export Web", "live"),
     gitCommitMessage: control("project-git-commit-message", "Commit message", "live"),
     transformModeTranslate: control("scene-transform-mode-translate", "Move gizmo", "live"),
@@ -1460,7 +1496,9 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
           title: mode.title,
           active: mode.id === state.mode,
           surface: editorShellModeSurface(mode.id),
-          control: control(`mode-${mode.id}`, mode.title, "view"),
+          control: mode.id === "compose" || mode.id === "plugins"
+            ? control(`mode-${mode.id}`, mode.title, "inert", DESKTOP_VISUAL_REFUSALS.noDocumentBound)
+            : control(`mode-${mode.id}`, mode.title, "view"),
         }),
       ),
     ),
@@ -1614,6 +1652,13 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
       ? "kids profile · refuse-only · separate origin"
       : `${state.profile} profile · core 0.0.0`,
 
+    timelineControls: Object.freeze({
+      mutation: control("timeline-mutation", "Animation mutation JSON", "view"),
+      apply: control("timeline-apply", "Stage animation edit", "live"),
+      time: control("timeline-time", "Time in milliseconds", "view"),
+      scrub: control("timeline-scrub", "Scrub animation", "live"),
+      evaluate: control("timeline-evaluate", "Evaluate animation", "live"),
+    }),
     controls: Object.freeze([...minted]),
   });
 }

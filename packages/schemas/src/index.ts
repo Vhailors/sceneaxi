@@ -12,6 +12,10 @@ export const SCENEAXI_REFUSAL_REGISTRY_CATALOG = Object.freeze({
   PROJECT_MANIFEST_DIAGNOSTICS,
 });
 
+export type { AssetRenderMesh, BaseColorTexture } from "./asset-render-mesh.js";
+export { evaluateGltfAnimation } from "./gltf-animation.js";
+export type { GltfAnimationChannel, GltfAnimationClip, GltfAnimationEvaluation, GltfAnimationInterpolation, GltfAnimationPath, GltfAnimationPose } from "./gltf-animation.js";
+
 export {
   CATALOG_DATE_TIME_PATTERN,
   CATALOG_ITEM_SCHEMA_VERSION,
@@ -246,6 +250,8 @@ export {
   validateConnectPayoutOutcome,
   validateConnectStatusRecord,
 } from "./stripe-connect.js";
+
+export { validateCreditReconciliationRecord, type CreditReconciliationRecord } from "./credit-reconciliation.js";
 export type {
   ConnectAccountRecord,
   ConnectOnboardingIntent,
@@ -346,6 +352,7 @@ export {
 } from "./input-action-registry.js";
 export type {
   ControllerInputBinding,
+  GamepadInputBinding,
   InputActionBinding,
   InputActionContext,
   InputActionDefinition,
@@ -688,6 +695,7 @@ export const contracts = Object.freeze({
   catalogListings: "contracts/catalog-listings.schema.json",
   revenueShare: "contracts/revenue-share.schema.json",
   stripeConnect: "contracts/stripe-connect.schema.json",
+  creditReconciliation: "contracts/credit-reconciliation.schema.json",
   /** Plugin Manifest descriptor (sceneaxi#20 / ADR 0005); host runtime is @sceneaxi/plugin-host. */
   pluginManifest: "contracts/plugin-manifest.schema.json",
   /** Plugin Capability ID registry schema (sceneaxi#21 / ADR 0005); seed path is PLUGIN_CAPABILITY_REGISTRY_SEED_PATH. */

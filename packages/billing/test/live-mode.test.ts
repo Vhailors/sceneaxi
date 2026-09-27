@@ -62,23 +62,23 @@ const SHIPPED_SOURCES: ReadonlyArray<{ path: string; text: string }> = (() => {
   return Object.freeze(found);
 })();
 
-const resolve = (
+const resolve = async (
   env: Readonly<Record<string, string | undefined>>,
-  recordAudit?: unknown,
+  recordAudit?: (audit: LiveModeAuthorizationAudit) => unknown,
 ) =>
-  resolveLiveModeAuthorization({
+  await resolveLiveModeAuthorization({
     env,
-    recordAudit: (recordAudit ?? (() => undefined)) as never,
+    recordAudit: recordAudit ?? (() => undefined),
   });
 
 describe("D5 requirement 1 — one named variable, never a second spelling", () => {
-  it("names exactly one variable", () => {
+  it("names exactly one variable", async () => {
     expect(STRIPE_LIVE_MODE_ENV_VAR).toBe("SCENEAXI_STRIPE_LIVE_AUTHORIZED");
   });
 
-  it("authorizes from that variable alone", () => {
+  it("authorizes from that variable alone", async () => {
     const sink = recorder();
-    const result = resolve({ [STRIPE_LIVE_MODE_ENV_VAR]: AFFIRMATIVE }, sink.recordAudit);
+    const result = await resolve({ [STRIPE_LIVE_MODE_ENV_VAR]: AFFIRMATIVE }, sink.recordAudit);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.value.source).toBe(STRIPE_LIVE_MODE_ENV_VAR);
@@ -86,14 +86,14 @@ describe("D5 requirement 1 — one named variable, never a second spelling", () 
     expect(result.value.authorizedOn).toBe(ON);
   });
 
-  it("refuses every alias by its presence alone, even holding a correct affirmative", () => {
+  it("refuses every alias by its presence alone, even holding a correct affirmative", async () => {
     // The admin identity refuses `SCENEAXI_ADMIN_EMAILS` even when it names one valid
     // address, because a second spelling normalizes the thing the first spelling exists
     // to prevent. A second way to say "live is authorized" is the same defect, so this
     // must be no looser — the alias refuses even alongside a genuine affirmative.
     expect(STRIPE_LIVE_MODE_ALIAS_ENV_VARS.length).toBeGreaterThan(0);
     for (const alias of STRIPE_LIVE_MODE_ALIAS_ENV_VARS) {
-      const result = resolve({
+      const result = await resolve({
         [STRIPE_LIVE_MODE_ENV_VAR]: AFFIRMATIVE,
         [alias]: AFFIRMATIVE,
       });
@@ -104,22 +104,22 @@ describe("D5 requirement 1 — one named variable, never a second spelling", () 
     }
   });
 
-  it("does not read the alias itself as an authorization", () => {
+  it("does not read the alias itself as an authorization", async () => {
     for (const alias of STRIPE_LIVE_MODE_ALIAS_ENV_VARS) {
-      expect(resolve({ [alias]: AFFIRMATIVE }).ok).toBe(false);
+      expect((await resolve({ [alias]: AFFIRMATIVE })).ok).toBe(false);
     }
   });
 });
 
 describe("D5 requirement 2 — absent, malformed, or anything else means refused", () => {
-  it("refuses an unset variable", () => {
-    const result = resolve({});
+  it("refuses an unset variable", async () => {
+    const result = await resolve({});
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.reason).toBe(BILLING_REFUSE_REASONS.liveModeNotAuthorized);
   });
 
-  it("refuses every value that is not the exact affirmative", () => {
+  it("refuses every value that is not the exact affirmative", async () => {
     // Each of these is a value an operator might reasonably expect to work. None is
     // an affirmative: the only accepted value states who authorized live mode and when.
     for (const value of [
@@ -142,23 +142,23 @@ describe("D5 requirement 2 — absent, malformed, or anything else means refused
       `${STRIPE_LIVE_MODE_AFFIRMATIVE}:${AUTHORIZER}:2026-02-30`,
       `${STRIPE_LIVE_MODE_AFFIRMATIVE}:${AUTHORIZER}:${ON}:extra`,
     ]) {
-      const result = resolve({ [STRIPE_LIVE_MODE_ENV_VAR]: value });
+      const result = await resolve({ [STRIPE_LIVE_MODE_ENV_VAR]: value });
       expect(result.ok, `"${value}" must not authorize live mode`).toBe(false);
       if (result.ok) return;
       expect(result.reason).toBe(BILLING_REFUSE_REASONS.liveModeNotAuthorized);
     }
   });
 
-  it("refuses a comma-separated list of authorizers", () => {
+  it("refuses a comma-separated list of authorizers", async () => {
     // Plural by value rather than by variable name, and refused for the same reason.
-    const result = resolve({
+    const result = await resolve({
       [STRIPE_LIVE_MODE_ENV_VAR]: `${STRIPE_LIVE_MODE_AFFIRMATIVE}:${AUTHORIZER},mate@example.com:${ON}`,
     });
     expect(result.ok).toBe(false);
   });
 
-  it("hands `assertModeAuthorized` nothing but `true` or `undefined`", () => {
-    const refused = resolve({});
+  it("hands `assertModeAuthorized` nothing but `true` or `undefined`", async () => {
+    const refused = await resolve({});
     expect(liveModeAuthorizedFlag(refused.ok ? refused.value : undefined)).toBeUndefined();
     expect(
       assertModeAuthorized("live", liveModeAuthorizedFlag(undefined)).ok,
@@ -170,9 +170,9 @@ describe("D5 requirement 2 — absent, malformed, or anything else means refused
 });
 
 describe("D5 requirement 3 — the audit record is a precondition", () => {
-  it("records who authorized live mode and when, before answering", () => {
+  it("records who authorized live mode and when, before answering", async () => {
     const sink = recorder();
-    const result = resolve({ [STRIPE_LIVE_MODE_ENV_VAR]: AFFIRMATIVE }, sink.recordAudit);
+    const result = await resolve({ [STRIPE_LIVE_MODE_ENV_VAR]: AFFIRMATIVE }, sink.recordAudit);
     expect(result.ok).toBe(true);
     expect(sink.written.length).toBe(1);
     const audit = sink.written[0];
@@ -185,10 +185,10 @@ describe("D5 requirement 3 — the audit record is a precondition", () => {
     expect(audit?.record).toContain(audit?.fingerprint ?? "");
   });
 
-  it("refuses when no audit sink is supplied", () => {
+  it("refuses when no audit sink is supplied", async () => {
     // An authorization nobody can observe afterwards is the silent environment edit
     // the captain's requirement exists to prevent, so it is not an authorization.
-    const result = resolveLiveModeAuthorization({
+    const result = await resolveLiveModeAuthorization({
       env: { [STRIPE_LIVE_MODE_ENV_VAR]: AFFIRMATIVE },
     } as never);
     expect(result.ok).toBe(false);
@@ -196,8 +196,8 @@ describe("D5 requirement 3 — the audit record is a precondition", () => {
     expect(result.reason).toBe(BILLING_REFUSE_REASONS.liveModeNotAuthorized);
   });
 
-  it("refuses when the audit sink fails, rather than authorizing unrecorded", () => {
-    const result = resolve({ [STRIPE_LIVE_MODE_ENV_VAR]: AFFIRMATIVE }, () => {
+  it("refuses when the audit sink fails, rather than authorizing unrecorded", async () => {
+    const result = await resolve({ [STRIPE_LIVE_MODE_ENV_VAR]: AFFIRMATIVE }, () => {
       throw new Error("the audit log is unreachable");
     });
     expect(result.ok).toBe(false);
@@ -205,35 +205,21 @@ describe("D5 requirement 3 — the audit record is a precondition", () => {
     expect(result.reason).toBe(BILLING_REFUSE_REASONS.liveModeNotAuthorized);
   });
 
-  it("refuses an audit sink that answers asynchronously", async () => {
-    // A sink returning a promise cannot be a precondition of a synchronous
-    // resolver: its rejection would arrive after the authorization was already
-    // issued, which is the unobservable authorization requirement 3 forbids.
-    let settled: (() => void) | undefined;
-    const written = new Promise<void>((resolve_) => {
-      settled = resolve_;
-    });
-    const result = resolve(
+  it("waits for an asynchronous audit sink before authorizing", async () => {
+    const sink = recorder();
+    const result = await resolve(
       { [STRIPE_LIVE_MODE_ENV_VAR]: AFFIRMATIVE },
-      () =>
-        written.then(() => {
-          throw new Error("the audit log write failed");
-        }),
+      async (audit) => {
+        await Promise.resolve();
+        sink.recordAudit(audit);
+      },
     );
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
-    expect(result.reason).toBe(BILLING_REFUSE_REASONS.liveModeNotAuthorized);
-    // The rejection this resolver could never have awaited is handled, not left
-    // to surface as an unhandled rejection long after the refusal.
-    settled?.();
-    await written.then(
-      () => undefined,
-      () => undefined,
-    );
+    expect(result.ok).toBe(true);
+    expect(sink.written).toHaveLength(1);
   });
 
-  it("refuses a sink whose answer cannot even be inspected", () => {
-    const result = resolve({ [STRIPE_LIVE_MODE_ENV_VAR]: AFFIRMATIVE }, () =>
+  it("refuses a sink whose answer cannot even be inspected", async () => {
+    const result = await resolve({ [STRIPE_LIVE_MODE_ENV_VAR]: AFFIRMATIVE }, () =>
       Object.defineProperty({}, "then", {
         get() {
           throw new Error("unreadable");
@@ -245,11 +231,11 @@ describe("D5 requirement 3 — the audit record is a precondition", () => {
     expect(result.reason).toBe(BILLING_REFUSE_REASONS.liveModeNotAuthorized);
   });
 
-  it("fingerprints two different authorizations differently", () => {
+  it("fingerprints two different authorizations differently", async () => {
     const first = recorder();
     const second = recorder();
-    resolve({ [STRIPE_LIVE_MODE_ENV_VAR]: AFFIRMATIVE }, first.recordAudit);
-    resolve(
+    await resolve({ [STRIPE_LIVE_MODE_ENV_VAR]: AFFIRMATIVE }, first.recordAudit);
+    await resolve(
       {
         [STRIPE_LIVE_MODE_ENV_VAR]: `${STRIPE_LIVE_MODE_AFFIRMATIVE}:mate@example.com:${ON}`,
       },
@@ -260,7 +246,7 @@ describe("D5 requirement 3 — the audit record is a precondition", () => {
 });
 
 describe("D5 requirement 4 — the gate stays a gate", () => {
-  it("reads nothing that merely correlates with production", () => {
+  it("reads nothing that merely correlates with production", async () => {
     // Every value here says "this is production" to a human. None of them is an input:
     // a gate that can infer its own authorization is not a gate. `SCENEAXI_BILLING_MODE`
     // is the sharpest of them — it is the variable most likely to be mistaken for live
@@ -268,7 +254,7 @@ describe("D5 requirement 4 — the gate stays a gate", () => {
     // The values are deliberately not credential-shaped: what is being asserted is that
     // the name is never read, and a realistic secret literal would prove nothing extra
     // while planting a credential-shaped string in the tree.
-    const result = resolve({
+    const result = await resolve({
       NODE_ENV: "production",
       VERCEL_ENV: "production",
       SCENEAXI_BILLING_MODE: "live",
@@ -282,9 +268,9 @@ describe("D5 requirement 4 — the gate stays a gate", () => {
     expect(result.reason).toBe(BILLING_REFUSE_REASONS.liveModeNotAuthorized);
   });
 
-  it("authorizes only the exact object it issued, never a look-alike", () => {
+  it("authorizes only the exact object it issued, never a look-alike", async () => {
     const sink = recorder();
-    const result = resolve({ [STRIPE_LIVE_MODE_ENV_VAR]: AFFIRMATIVE }, sink.recordAudit);
+    const result = await resolve({ [STRIPE_LIVE_MODE_ENV_VAR]: AFFIRMATIVE }, sink.recordAudit);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     const issued = result.value;
@@ -315,18 +301,18 @@ describe("D5 requirement 4 — the gate stays a gate", () => {
 });
 
 describe("D5 requirement 5 — the gate runs with no live authorization present", () => {
-  it("resolves nothing from this process's own environment", () => {
+  it("resolves nothing from this process's own environment", async () => {
     // `pnpm gate` is hermetic by rule: no network, no DATABASE_URL, no Stripe keys, and
     // no live authorization. If this ever passes, the gate is running somewhere it
     // must not.
-    const result = resolveLiveModeAuthorization({
+    const result = await resolveLiveModeAuthorization({
       env: process.env,
       recordAudit: () => undefined,
     });
     expect(result.ok).toBe(false);
   });
 
-  it("is wired to no shipped call site, so live activation still needs its own decision", () => {
+  it("is wired to no shipped call site, so live activation still needs its own decision", async () => {
     // D5 decided where a `liveModeAuthorized` may come from. It did not enable live
     // mode: ADR 0021 holds live activation as a separate captain decision, so nothing
     // this repository ships passes this resolver's result to a checkout or a grant.

@@ -38,12 +38,9 @@
  * verified body before any adapter or store is consulted. An event this path owes
  * nothing must not become a permanent retry because an unrelated port was unreachable.
  *
- * A refund adds the other half of that rule. Its own body can state a condition this
- * ledger will never reconcile — a partial refund, or a balance the buyer already spent —
- * and no redelivery changes either. Those are acknowledged with the package's own named
- * reason and no ledger movement, so the refusal is still reported and still fail-closed
- * while the retry stops. A refund whose grant is simply not committed *yet* is not one of
- * them: it refuses and is retried, because redelivery can genuinely change that answer.
+ * Disputes, partial refunds, and spent-credit refunds require a durable reconciliation
+ * record before acknowledgement. Billing owns that commit and leaves the ledger unchanged.
+ * A missing grant or failed record write remains retryable.
  *
  * Only `checkout.session.completed` grants credits here, which keeps this endpoint's
  * Checkout card-only: a delayed-notification payment method completes the session before
@@ -62,13 +59,13 @@ import {
   checkoutPurposeGrantsCredits,
   checkoutPurposeSettlesElsewhere,
   loadLedgerState,
-  parseCreditPackRefundEvent,
+  persistCreditPackChargeEvent,
   parseCheckoutCompletedEvent,
-  persistCreditPackRefund,
   persistCheckoutCompletedGrant,
   verifyStripeWebhookSignature,
   type CheckoutSettlement,
   type CreditStore,
+  type StripeCharge,
 } from "./provider-adapters.js";
 
 /** The header Stripe signs every webhook body with. */
@@ -85,6 +82,8 @@ export const STRIPE_WEBHOOK_SECRET_ENV = "STRIPE_WEBHOOK_SECRET" as const;
  * does not carry line items. Neither is trusted from the event.
  */
 export type CheckoutEvidencePort = {
+  /** Required for disputes. Absence is a retryable deployment fault. */
+  retrieveCharge?(chargeId: string): Promise<StripeCharge | undefined> | StripeCharge | undefined;
   findIntent(intentId: string): Promise<unknown> | unknown;
   retrieveSettlement(
     sessionId: string,
@@ -124,6 +123,16 @@ export type CreditWebhookOutcome =
   | {
       readonly ok: true;
       readonly ignored: true;
+      readonly reason: string;
+      readonly message: string;
+      readonly reconciliationRequired?: never;
+    }
+  | {
+      readonly ok: true;
+      readonly ignored: true;
+      readonly reconciliationRequired: true;
+      readonly eventId: string;
+      readonly replayed: boolean;
       readonly reason: string;
       readonly message: string;
     }
@@ -168,34 +177,6 @@ const UNHANDLED_EVENT_REASONS: ReadonlySet<string> = Object.freeze(
 );
 
 /**
- * The refund refusals that are settled facts about the money, not failures to retry.
- *
- * A refund is the one event whose own body can state a condition this ledger will never
- * be able to reconcile, however often Stripe redelivers it. A partial refund returns part
- * of the price, and a grant is never partially reversed. A balance the buyer has already
- * spent cannot absorb the reversal, and the ledger is append-only, so no redelivery makes
- * it absorbable. Both keep every fail-closed property: nothing is appended, the buyer's
- * credits are untouched, and the endpoint answers with the package's own named reason —
- * only the retry stops, because a permanently-retried non-2xx wears down the health of
- * the same endpoint every real grant depends on, and Stripe eventually disables it.
- *
- * A refund that finds no committed grant is deliberately **not** here: the grant event
- * for the same purchase may still be in Stripe's own retry sequence, so redelivery can
- * genuinely change that answer. It stays a refusal and is retried.
- *
- * The set is consulted only on the refund path. `CREDIT_BALANCE_INSUFFICIENT` names a
- * settled fact about a buyer's ledger *there*; on any other path it would name a request
- * this module built, which is why the acknowledgement is scoped to the path rather than
- * to the reason alone.
- */
-const TERMINAL_REFUND_REASONS: ReadonlySet<string> = Object.freeze(
-  new Set<string>([
-    BILLING_REFUSE_REASONS.refundNotFull,
-    BILLING_REFUSE_REASONS.balanceInsufficient,
-  ]),
-);
-
-/**
  * The refusals that mean *this deployment* could not complete a well-formed event.
  *
  * The sender did nothing wrong in any of them: the endpoint has no signing secret
@@ -226,8 +207,7 @@ const TERMINAL_REFUND_REASONS: ReadonlySet<string> = Object.freeze(
  * the transport, which would leave two owners disagreeing about one reason.
  *
  * `CREDIT_BALANCE_INSUFFICIENT` is the one member no path here can currently refuse: the
- * refund path — the only one whose append can drive a balance negative — acknowledges it
- * as a settled fact about the buyer's own ledger. It is kept because the ledger state it
+ * refund path records it for operator reconciliation before acknowledging it. It is kept because the ledger state it
  * names is always this deployment's, never the sender's bytes, so any future path that
  * does refuse it must not report a buyer's spent credits as a bad request from Stripe.
  */
@@ -242,6 +222,7 @@ const SERVER_SIDE_REASONS: ReadonlySet<string> = Object.freeze(
     BILLING_REFUSE_REASONS.checkoutIntentInvalid,
     BILLING_REFUSE_REASONS.webhookSecretMissing,
     BILLING_REFUSE_REASONS.settlementSessionMismatch,
+    BILLING_REFUSE_REASONS.chargeEvidenceMismatch,
     BILLING_REFUSE_REASONS.clockInvalid,
     BILLING_REFUSE_REASONS.storeFailed,
     BILLING_REFUSE_REASONS.ledgerStateInvalid,
@@ -273,29 +254,12 @@ export function creditWebhookOutcomeHttpStatus(
   return outcome.ok ? 200 : creditWebhookHttpStatus(outcome.reason);
 }
 
-/** Which event the refusal was produced for. Acknowledgement is scoped to it. */
-type WebhookEventPath = "grant" | "refund";
-
-/**
- * Report a package refusal, acknowledging the ones no redelivery could change.
- *
- * Two closed sets decide that, and nothing else does: an event this endpoint is not built
- * to act on at all, and — on the refund path only — a settled fact about the money that
- * the ledger will never be able to reconcile. Every security refusal — signature, payload,
- * intent mismatch, live mode — falls through to a genuine refusal, because none of them is
- * in either set, and a refusal this deployment could still recover from is retried.
- *
- * The path is a parameter rather than an inferred property of the reason because the same
- * reason means different things on the two paths: a balance that cannot absorb a reversal
- * is a settled fact about a refund, and would be a fault anywhere else.
- */
+/** Only unrelated events are acknowledged without a confirmed store write. */
 const settle = (
-  path: WebhookEventPath,
   reason: string,
   message: string,
 ): CreditWebhookOutcome =>
-  UNHANDLED_EVENT_REASONS.has(reason) ||
-  (path === "refund" && TERMINAL_REFUND_REASONS.has(reason))
+  UNHANDLED_EVENT_REASONS.has(reason)
     ? ignored(reason, message)
     : refused(reason, message);
 
@@ -351,7 +315,8 @@ const asId = (value: unknown): string | undefined =>
  */
 type CheckoutLookup =
   | { readonly kind: "keys"; readonly intentId: string; readonly sessionId: string }
-  | { readonly kind: "refund"; readonly intentId: string }
+  | { readonly kind: "charge"; readonly intentId: string }
+  | { readonly kind: "dispute"; readonly chargeId: string }
   | { readonly kind: "unhandledType"; readonly eventType: string }
   | { readonly kind: "unhandledPurpose"; readonly purpose: string }
   | { readonly kind: "incomplete" }
@@ -395,7 +360,7 @@ const claimsSceneAxiCheckout = (metadata: Record<string, unknown> | undefined): 
  * path, and `parseCheckoutCompletedEvent` still owns the authoritative check — including
  * the purpose cross-check against the persisted intent — for every body that stays on it.
  */
-function lookupKeysOf(payload: string): CheckoutLookup {
+function lookupKeysOf(payload: string, charge?: StripeCharge): CheckoutLookup {
   let raw: unknown;
   try {
     raw = JSON.parse(payload) as unknown;
@@ -414,10 +379,22 @@ function lookupKeysOf(payload: string): CheckoutLookup {
       "The verified event carries no type, so which path owes it work cannot be decided; Stripe does not send such a body.",
     );
   }
-  if (eventType !== HANDLED_EVENT_TYPE && eventType !== HANDLED_REFUND_EVENT_TYPE) {
+
+  const isDispute = eventType === "charge.dispute.created" || eventType === "charge.dispute.closed";
+
+  if (eventType !== HANDLED_EVENT_TYPE && eventType !== HANDLED_REFUND_EVENT_TYPE && !isDispute) {
     return Object.freeze({ kind: "unhandledType" as const, eventType });
   }
-  const object = asRecord(asRecord(event["data"])?.["object"]);
+
+  const eventObject = asRecord(asRecord(event["data"])?.["object"]);
+
+  if (isDispute && charge === undefined) {
+    const chargeId = asId(eventObject?.["charge"]) ?? asId(asRecord(eventObject?.["charge"])?.["id"]);
+
+    return chargeId === undefined ? unreadable("The dispute names no Charge.") : { kind: "dispute", chargeId };
+  }
+
+  const object = isDispute ? asRecord(charge) : eventObject;
   const metadata = asRecord(object?.["metadata"]);
   const sessionId = asId(object?.["id"]);
   const intentId = asId(metadata?.[CHECKOUT_METADATA_KEYS.intentId]);
@@ -430,8 +407,9 @@ function lookupKeysOf(payload: string): CheckoutLookup {
   if (typeof purpose === "string" && checkoutPurposeSettlesElsewhere(purpose)) {
     return Object.freeze({ kind: "unhandledPurpose" as const, purpose });
   }
-  if (eventType === HANDLED_REFUND_EVENT_TYPE) {
-    return Object.freeze({ kind: "refund" as const, intentId });
+
+  if (eventType === HANDLED_REFUND_EVENT_TYPE || isDispute) {
+    return Object.freeze({ kind: "charge" as const, intentId });
   }
   if (sessionId === undefined) {
     return Object.freeze({ kind: "incomplete" as const });
@@ -467,7 +445,32 @@ export async function applyCreditPackWebhook(input: {
   });
   if (!verified.ok) return refused(verified.reason, verified.message);
 
-  const lookup = lookupKeysOf(verified.value.payload);
+  let lookup = lookupKeysOf(verified.value.payload);
+  let charge: StripeCharge | undefined;
+
+  if (lookup.kind === "dispute") {
+    const chargeId = lookup.chargeId;
+
+    const retrieved = await attempt(() => {
+      if (input.evidence.retrieveCharge === undefined) throw new Error("Charge retrieval is not wired");
+
+      return input.evidence.retrieveCharge(chargeId);
+    });
+
+    if (!retrieved.ok || retrieved.value === undefined) {
+      return refused(CREDIT_WEBHOOK_REASONS.evidenceUnavailable, "The disputed Charge could not be retrieved; retry is required.");
+    }
+
+    charge = retrieved.value;
+
+    if (asRecord(charge)?.["id"] !== chargeId) {
+      return refused(BILLING_REFUSE_REASONS.chargeEvidenceMismatch, "The provider returned evidence for a different Charge.");
+    }
+
+    lookup = lookupKeysOf(verified.value.payload, charge);
+  }
+
+  if (lookup.kind === "dispute") return refused(BILLING_REFUSE_REASONS.webhookPayloadInvalid, "The dispute could not be bound to its Charge.");
   if (lookup.kind === "unreadable") {
     return refused(BILLING_REFUSE_REASONS.webhookPayloadInvalid, lookup.detail);
   }
@@ -495,73 +498,55 @@ export async function applyCreditPackWebhook(input: {
       "The verified event carries no SceneAxi checkout metadata, so it is not a checkout this deployment created. Nothing was granted, and redelivery would not change that.",
     );
   }
-  if (lookup.kind === "refund") {
+  if (lookup.kind === "charge") {
     const readIntent = await attempt(() => input.evidence.findIntent(lookup.intentId));
     if (!readIntent.ok) {
       return refused(
         CREDIT_WEBHOOK_REASONS.evidenceUnavailable,
-        "The persisted intent for this refund could not be read, so no credit adjustment is attempted.",
+        "The persisted intent for this Charge event could not be read; retry is required.",
       );
     }
     if (readIntent.value === undefined) {
       return refused(
         CREDIT_WEBHOOK_REASONS.evidenceMissing,
-        "The persisted intent for this refund is missing, so no credit adjustment is attempted.",
+        "The persisted intent for this Charge event is missing; retry is required.",
       );
     }
-    const refund = parseCreditPackRefundEvent({
-      verified: verified.value,
-      intent: readIntent.value,
-    });
-    if (!refund.ok) return settle("refund", refund.reason, refund.message);
-
-    const found = await attempt(() => input.store.findAccountByUserId(refund.value.userId));
-    if (!found.ok) {
-      return refused(
-        CREDIT_WEBHOOK_REASONS.storeFailed,
-        "The refunded user's credit account could not be read, so the adjustment must be retried.",
-      );
-    }
-    if (found.value === undefined) {
-      return refused(
-        CREDIT_WEBHOOK_REASONS.ledgerUnavailable,
-        "The refunded user has no credit account; a refund never creates one.",
-      );
-    }
-    const account = found.value;
-    const entries = await attempt(() => input.store.listEntries(account.accountId));
-    if (!entries.ok) {
-      return refused(
-        CREDIT_WEBHOOK_REASONS.storeFailed,
-        "The refunded user's ledger could not be read, so no adjustment is attempted.",
-      );
-    }
-    const state = loadLedgerState(account, entries.value);
-    if (!state.ok) return refused(state.reason, state.message);
     const committed = await attempt(() =>
-      persistCreditPackRefund({
+      persistCreditPackChargeEvent({
+        verified: verified.value,
+        intent: readIntent.value,
+        charge,
         store: input.store,
-        state: state.value,
-        refund: refund.value,
         now: input.now,
       }),
     );
     if (!committed.ok) {
       return refused(
         CREDIT_WEBHOOK_REASONS.storeFailed,
-        "The refund adjustment commit threw, so the event remains unacknowledged for retry.",
+        "The Charge event commit threw, so the event remains unacknowledged for retry.",
       );
     }
     if (!committed.value.ok) {
-      return settle("refund", committed.value.reason, committed.value.message);
+      return refused(committed.value.reason, committed.value.message);
+    }
+
+    const result = committed.value.value;
+
+    if (result.kind === "reconciliation-required") {
+      return Object.freeze({
+        ok: true as const, ignored: true as const, reconciliationRequired: true as const,
+        eventId: result.record.eventId, replayed: result.replayed, reason: result.record.reason,
+        message: "Reconciliation required. Provider evidence is persisted; no credits were moved. An operator decision is required.",
+      });
     }
     return Object.freeze({
       ok: true as const,
       ignored: false as const,
-      replayed: committed.value.value.replayed,
+      replayed: result.adjustment.replayed,
       movement: "refund" as const,
-      credits: committed.value.value.entry?.delta ?? -refund.value.credits,
-      balance: committed.value.value.state.balance,
+      credits: result.adjustment.entry?.delta ?? 0,
+      balance: result.adjustment.state.balance,
     });
   }
   const keys = lookup;
@@ -591,7 +576,7 @@ export async function applyCreditPackWebhook(input: {
     intent,
     settlement,
   });
-  if (!completion.ok) return settle("grant", completion.reason, completion.message);
+  if (!completion.ok) return settle(completion.reason, completion.message);
 
   // The routing above already sent every known non-crediting purpose to the acknowledged
   // path, and the parser cross-checks the metadata purpose against the persisted intent,
@@ -650,7 +635,7 @@ export async function applyCreditPackWebhook(input: {
     );
   }
   const granted = commit.value;
-  if (!granted.ok) return settle("grant", granted.reason, granted.message);
+  if (!granted.ok) return settle(granted.reason, granted.message);
 
   return Object.freeze({
     ok: true as const,

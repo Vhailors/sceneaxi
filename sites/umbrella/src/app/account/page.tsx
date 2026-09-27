@@ -1,16 +1,19 @@
+import type { Metadata } from "next";
 import {
   SITE_STARTER_CREDIT_ALLOTMENT,
   describeSiteAccessState,
   resolveEditorAccess,
 } from "@sceneaxi/site-kit";
 import { readSessionToken } from "../_session.js";
-import {
-  IDENTITY_PLANE_DOC,
-  IDENTITY_PLANE_PENDING_NOTE,
-  umbrellaRequestAuthority,
-} from "../../lib/request-authority.js";
+import { umbrellaRequestAuthority } from "../../lib/request-authority.js";
 import { CREDIT_LEDGER_FACTS, CREDIT_LEDGER_COPY } from "../../lib/site-content.js";
 import { StatePanel } from "../_components/state-panel.js";
+
+/** Signed-in surface: never indexed, whatever a crawler is told elsewhere. */
+export const metadata: Metadata = {
+  title: "Account — SceneAxi",
+  robots: { index: false, follow: false },
+};
 
 /**
  * The account surface: anonymous, authenticated, or refused.
@@ -29,9 +32,15 @@ import { StatePanel } from "../_components/state-panel.js";
  * ledger is the only source of truth, so this page reads a balance and never offers to
  * change one.
  */
-export default async function AccountPage() {
+export default async function AccountPage({
+  searchParams,
+}: {
+  readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
   const sessionToken = await readSessionToken();
   const plane = umbrellaRequestAuthority().plane({ sessionToken });
+
   const resolved = await resolveEditorAccess({
     identity: plane.identity,
     credits: plane.credits,
@@ -44,24 +53,9 @@ export default async function AccountPage() {
   // outcome but "signed out" claimed this deployment had no identity plane, which
   // is false for an expired or disabled session on a fully wired one.
   const identityRefusal = resolved.identity.ok ? null : resolved.identity;
+
   const outcome =
     identityRefusal === null ? null : describeSiteAccessState(identityRefusal.reason);
-  // A signed-out visitor is its own phase: the plane saying "nobody is signed in
-  // here", which must not read like a broken deployment.
-  const signedOut = outcome?.key === "signed-out";
-  const phase =
-    resolved.principal !== null ? "authenticated" : signedOut ? "anonymous" : "refused";
-
-  /** The plane readout, in the same evidence shape every other machine fact uses. */
-  const planeEvidence = [
-    { term: "Phase", value: phase },
-    { term: "Identity plane", value: plane.wired.identity ? "wired" : "not wired" },
-    { term: "Credits plane", value: plane.wired.credits ? "wired" : "not wired" },
-    {
-      term: "Billing plane",
-      value: `${plane.wired.billing ? "wired" : "not wired"} · mode ${plane.billingMode}`,
-    },
-  ];
 
   return (
     <div className="page">
@@ -75,18 +69,6 @@ export default async function AccountPage() {
           client.
         </p>
       </div>
-
-      <h2>This deployment</h2>
-      <dl className="dl">
-        {planeEvidence.map((entry) => (
-          <div className="dl-row" key={entry.term}>
-            <dt>{entry.term}</dt>
-            <dd>
-              <code>{entry.value}</code>
-            </dd>
-          </div>
-        ))}
-      </dl>
 
       {resolved.principal !== null ? (
         <>
@@ -197,20 +179,17 @@ export default async function AccountPage() {
               </a>
             </p>
           )}
-          {outcome?.key === "identity-not-wired" && (
-            <>
-              <p>{IDENTITY_PLANE_PENDING_NOTE}</p>
-              <p>
-                The wiring steps and the exact environment variables are documented in{" "}
-                <code>{IDENTITY_PLANE_DOC}</code>.
-              </p>
-            </>
-          )}
           <p>
             Everything free stays available now:{" "}
             <a href="/engine">the engine SDK download</a>, <a href="/docs">the docs</a>,
             and browsing either catalog.
           </p>
+        </StatePanel>
+      )}
+
+      {params.checkout === "success" && (
+        <StatePanel tone="warn" title="Payment received, awaiting confirmation">
+          <p>Payment received. Credits appear once confirmed in your ledger.</p>
         </StatePanel>
       )}
 

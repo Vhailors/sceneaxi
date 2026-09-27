@@ -6,6 +6,9 @@ import { describe, expect, it } from "vitest";
 import {
   AUTH_REFUSE_REASONS,
   createIdentityPort,
+  createBetterAuthIdentityAdapter,
+  createInMemoryIdentityStore,
+  resolveAdminIdentity,
   type IdentityAdapter,
   type IdentityStore,
 } from "@sceneaxi/auth";
@@ -27,6 +30,10 @@ import {
   type BetterAuthProviderConfig,
   type BetterAuthProviderRuntimeResult,
 } from "../src/provider/better-auth-provider.js";
+
+import { createBetterAuthHttpClient } from "../src/lib/provider-adapters.js";
+import { createDeploymentPlaneHandles, createUmbrellaIdentityPlane, parseSessionToken } from "../src/lib/identity-plane.js";
+import { performLogin, performLogout } from "../src/lib/login-flow.js";
 
 const ORIGIN = "https://auth.example.invalid";
 const EMAIL = ["captain", "example.invalid"].join("@");
@@ -59,7 +66,7 @@ const config = (): BetterAuthProviderConfig =>
     bootstrapSecret: PASSWORD,
   });
 
-async function providerFixture() {
+async function providerFixture(failSessionDeletion = () => false) {
   const userId = "provider-user-1";
   const now = new Date("2026-08-07T10:00:00.000Z");
   const database: MemoryDB = {
@@ -89,9 +96,25 @@ async function providerFixture() {
     better_auth_verifications: [],
     better_auth_rate_limits: [],
   };
+
+  const adapter = memoryAdapter(database);
+
   const runtime = createBetterAuthProviderRuntime({
     config: config(),
-    database: memoryAdapter(database),
+    database(options: Parameters<typeof adapter>[0]) {
+      const memory = adapter(options);
+
+      return {
+        ...memory,
+        async delete(input: Parameters<typeof memory.delete>[0]) {
+          if (input.model === "session" && failSessionDeletion()) {
+            throw new Error("synthetic session deletion failure");
+          }
+
+          return memory.delete(input);
+        },
+      };
+    },
   });
   const loaded: BetterAuthProviderRuntimeResult = Object.freeze({
     ok: true,
@@ -230,6 +253,136 @@ describe("umbrella Better Auth provider", () => {
       user: { id: "provider-user-1", email: EMAIL },
     });
     expect(database["better_auth_sessions"]).toHaveLength(1);
+  });
+
+  it("revokes only the presented provider session by bearer and rejects its cookie and bearer afterwards", async () => {
+    const { database, handler } = await providerFixture();
+    const response = await signIn(handler);
+    const payload: { token: string } = await response.json();
+    const cookie = response.headers.get("set-cookie")?.split(";", 1)[0] ?? "";
+    const other: { token: string } = await (await signIn(handler)).json();
+    expect(database["better_auth_sessions"]).toHaveLength(2);
+
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const removed = await handler(new Request(`${ORIGIN}/api/auth/sign-out`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${payload.token}`, "content-type": "application/json" },
+        body: "{}",
+      }));
+
+      expect(removed.status).toBe(200);
+      expect(await removed.json()).toEqual({ success: true });
+    }
+
+    expect(database["better_auth_sessions"]).toHaveLength(1);
+
+    for (const headers of [{ cookie }, { authorization: `Bearer ${payload.token}` }]) {
+      const lookup = await handler(new Request(`${ORIGIN}/api/auth/get-session`, { headers }));
+      expect(lookup.status).toBe(200);
+      expect(await lookup.json()).toBeNull();
+    }
+
+    const otherLookup = await handler(new Request(`${ORIGIN}/api/auth/get-session`, {
+      headers: { authorization: `Bearer ${other.token}` },
+    }));
+
+    expect(await otherLookup.json()).toMatchObject({ session: { token: other.token } });
+  });
+
+  it.each([false, true])("the hosted logout flow revokes both sessions, including after a provider delete failure (%s)", async (failFirstDelete) => {
+    let failDelete = failFirstDelete;
+
+    const { database, handler } = await providerFixture(() => failDelete);
+
+    const client = createBetterAuthHttpClient({
+      origin: ORIGIN,
+      fetch: async (url, init) => handler(new Request(url, init)),
+    });
+
+    const admin = resolveAdminIdentity({ SCENEAXI_ADMIN_EMAIL: EMAIL });
+
+    if (!admin.ok) throw new Error(admin.reason);
+
+    const clock = Date.now;
+
+    const store = createInMemoryIdentityStore({ users: [{
+      schemaVersion: 1,
+      kind: "sceneaxi.user",
+      userId: "provider-user-1",
+      email: EMAIL,
+      emailVerified: true,
+      disabled: false,
+      createdAt: new Date().toISOString(),
+    }] });
+
+    const port = createIdentityPort({
+      adapter: createBetterAuthIdentityAdapter(client), store, admin: admin.value, clock,
+    });
+
+    const deployment = createDeploymentPlaneHandles({
+      admin: admin.value,
+      clock,
+      providers: {
+        betterAuth: client,
+        database: { async query() { throw new Error("test uses the injected identity store"); } },
+      },
+    });
+
+    const requestOrigin = { ok: true as const, value: ORIGIN };
+
+    const login = await performLogin({
+      plane: createUmbrellaIdentityPlane({}, { deployment, identityPort: port }),
+      requestOrigin,
+      fields: { email: EMAIL, password: PASSWORD },
+      secure: true,
+    });
+
+    expect(login.kind).toBe("success");
+
+    if (login.kind !== "success") throw new Error(login.reason);
+
+    const credential = decodeURIComponent((login.setCookie.split(";", 1)[0] ?? "").slice("sceneaxi.session=".length));
+    const carried = parseSessionToken(credential);
+
+    if (carried === null) throw new Error("missing issued credential");
+
+    const plane = createUmbrellaIdentityPlane({}, {
+      deployment, identityPort: port, sessionToken: credential,
+    });
+
+    expect((await plane.identity.resolvePrincipal({ surface: "site" })).ok).toBe(true);
+    expect(database["better_auth_sessions"]).toHaveLength(1);
+    expect(store.sessionCount()).toBe(1);
+
+    if (failFirstDelete) {
+      const failed = await performLogout({ plane, requestOrigin, secure: true });
+      expect(failed).toMatchObject({
+        kind: "signed-out",
+        location: "/login?reason=IDENTITY_PLANE_UNAVAILABLE",
+        revocation: { ok: false, reason: "IDENTITY_PLANE_UNAVAILABLE" },
+      });
+      expect(database["better_auth_sessions"]).toHaveLength(1);
+      expect(store.sessionCount()).toBe(1);
+      failDelete = false;
+    }
+
+    const logout = await performLogout({ plane, requestOrigin, secure: true });
+
+    expect(logout).toMatchObject({ kind: "signed-out", location: "/", revocation: { ok: true } });
+    expect(database["better_auth_sessions"]).toHaveLength(0);
+    expect(store.sessionCount()).toBe(0);
+
+    const lookup = await handler(new Request(`${ORIGIN}/api/auth/get-session`, {
+      headers: { authorization: `Bearer ${carried.token}` },
+    }));
+
+    expect(await lookup.json()).toBeNull();
+    expect(await plane.identity.resolvePrincipal({ surface: "site" })).toMatchObject({
+      ok: false, reason: "IDENTITY_SESSION_ABSENT",
+    });
+    expect(await performLogout({ plane, requestOrigin, secure: true })).toMatchObject({
+      kind: "signed-out", revocation: { ok: true },
+    });
   });
 
   it("serves the header shape its own server-to-server adapter sends", async () => {
@@ -608,7 +761,7 @@ describe("umbrella Better Auth provider", () => {
     expect(providerCalls).toBe(0);
   });
 
-  it("exposes only the two required endpoint/method pairs", async () => {
+  it("exposes only the three required endpoint/method pairs", async () => {
     let loads = 0;
     const handler = createBetterAuthProviderHandler(() => {
       loads += 1;
@@ -620,7 +773,7 @@ describe("umbrella Better Auth provider", () => {
 
     for (const [path, method] of [
       ["/api/auth/sign-up/email", "POST"],
-      ["/api/auth/sign-out", "POST"],
+      ["/api/auth/sign-out", "GET"],
       ["/api/auth/sign-in/email", "GET"],
       ["/api/auth/get-session", "POST"],
     ] as const) {

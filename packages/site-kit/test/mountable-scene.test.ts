@@ -10,11 +10,24 @@ import { composeScene } from "@sceneaxi/authoring-core";
 import {
   SCENE_COMPOSITION_INTAKE_KIND,
   SCENE_COMPOSITION_SCHEMA_VERSION,
+  emptySceneEffectsCatalog,
+  emptySceneEnvironmentCatalog,
+  emptySceneMaterialsCatalog,
+  applySceneEffectsMutation,
+  applySceneEnvironmentMutation,
+  applySceneMaterialsMutation,
+  inspectSceneEffects,
+  sceneEnvironmentCatalogDigest,
+  sceneMaterialsCatalogDigest,
   identitySculptTransform,
   type SceneCompositionIntake,
   type SculptArtifact,
 } from "@sceneaxi/schemas";
-import { mountableScene, webEditorStarterArtifact } from "@sceneaxi/site-kit";
+import {
+  mountableScene,
+  mountableSceneFromDocumentData,
+  webEditorStarterArtifact,
+} from "@sceneaxi/site-kit";
 
 const starter = (): SculptArtifact => {
   const artifact = webEditorStarterArtifact();
@@ -104,6 +117,64 @@ describe("mountableScene — the payload a browser mounts", () => {
       "fixture-root",
       "Placed beside the root",
     ]);
+  });
+
+  it("carries validated authored presentation catalogs and their independent digests", () => {
+    const environment = applySceneEnvironmentMutation({
+      catalog: emptySceneEnvironmentCatalog(),
+      mutation: { kind: "set", background: "#123456", exposure: 1.75, toneMapping: "aces" },
+    });
+    const materials = applySceneMaterialsMutation({
+      catalog: emptySceneMaterialsCatalog(),
+      instanceIds: ["fixture-root"],
+      mutation: {
+        kind: "upsert",
+        instanceId: "fixture-root",
+        emissiveColor: "#abcdef",
+        emissiveIntensity: 2,
+        opacity: 0.5,
+        baseColorMapAssetId: null,
+        normalMapAssetId: null,
+        roughnessMapAssetId: null,
+      },
+    });
+    const emitter = applySceneEffectsMutation({
+      catalog: emptySceneEffectsCatalog(),
+      mutation: {
+        kind: "upsert",
+        emitterId: "dust",
+        emitterKind: "point",
+        rate: 10,
+        lifetimeMs: 1000,
+        speed: 1,
+        spread: 2,
+      },
+    });
+    if (!emitter.ok) throw new Error("effects emitter fixture refused");
+    const effects = applySceneEffectsMutation({
+      catalog: emitter.catalog,
+      mutation: { kind: "seed-set", seed: 73 },
+    });
+    if (!environment.ok || !materials.ok || !effects.ok) throw new Error("catalog fixture refused");
+    const data = {
+      sceneEnvironment: environment.catalog,
+      sceneMaterials: materials.catalog,
+      sceneEffects: effects.catalog,
+    };
+    const scene = mountableSceneFromDocumentData(composedFixture(), data);
+    const withoutCatalogs = mountableSceneFromDocumentData(composedFixture(), {});
+    expect(withoutCatalogs?.effects).toBeUndefined();
+    expect(mountableSceneFromDocumentData(composedFixture(), {
+      sceneEffects: { seed: "invalid" },
+    })).toBeNull();
+    if (scene === null) throw new Error("document catalogs refused");
+    expect(scene.environment).toEqual(environment.catalog);
+    expect(scene.environmentDigest).toBe(sceneEnvironmentCatalogDigest(environment.catalog));
+    expect(scene.materials).toEqual(materials.catalog);
+    expect(scene.materialsDigest).toBe(sceneMaterialsCatalogDigest(materials.catalog));
+    expect(scene.effects).toEqual(effects.catalog);
+    expect(scene.effects?.seed).toBe(73);
+    expect(scene.effectsDigest).toBe(inspectSceneEffects(effects.catalog).digest);
   });
 
   it("never rewrites an artifact to place it", () => {

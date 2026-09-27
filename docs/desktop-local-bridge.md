@@ -157,7 +157,8 @@ request/response, discovery descriptor, log, evidence packet, project document,
 or committed file. The v1 BYOK tool accepts only `prompt` and a non-Kids
 `profile`; schema validation rejects extra fields such as a key or token.
 
-The desktop configuration surface supports the non-Kids `OpenRouter` provider.
+The desktop configuration surface supports the non-Kids `opencode` provider (the
+OpenCode DeepSeek V4 Flash transport below); OpenRouter remains fixture-only.
 It is a renderer-only settings path beside the existing Assistant route control,
 not a local agent tool. Selecting BYOK shows whether a key is stored and the
 available Save, Replace, Remove, or named-unavailable action. The password field

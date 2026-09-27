@@ -43,6 +43,7 @@ import {
   RELEASE_MARKER,
 } from "../../sites/umbrella/src/lib/site-content.ts";
 import { LAUNCH_PROOFS } from "../../sites/umbrella/src/lib/launch-marketing.ts";
+import { HELP_DOCS } from "../../sites/umbrella/src/lib/help-docs.ts";
 import {
   UMBRELLA_RECORDED_GAPS,
   umbrellaFoundationsCss,
@@ -88,6 +89,38 @@ const UMBRELLA_SOURCES: readonly string[] = collect(join(UMBRELLA, "src")).map((
 );
 
 const ALL_SOURCE = UMBRELLA_SOURCES.map((path) => read(path)).join("\n");
+
+describe("umbrella help section", () => {
+  it("renders the four source-backed guides and lists their public routes", () => {
+    expect(HELP_DOCS.map(({ slug }) => slug)).toEqual([
+      "getting-started",
+      "credits-and-pricing",
+      "cli",
+      "faq",
+    ]);
+    for (const { slug, title } of HELP_DOCS) {
+      const route = `src/app/docs/${slug}/page.tsx`;
+      expect(existsSync(join(UMBRELLA, route))).toBe(true);
+      expect(read(route)).toContain(`slug="${slug}"`);
+      expect(ALL_SOURCE).toContain(title);
+    }
+    const sitemap = read("src/app/sitemap.ts");
+    expect(sitemap).toContain("`/docs/${doc.slug}`");
+    expect(DOCS).toContain("HELP_DOCS.map");
+    const cli = HELP_DOCS.find(({ slug }) => slug === "cli");
+    expect(cli?.sections.find(({ heading }) => heading === "Commands")?.body).toContain(
+      "project, scene, asset, profile, catalog, evidence, desktop, demo, and protocol",
+    );
+  });
+
+  it("marks undecided credit policy and restricts refunds to documented TEST behavior", () => {
+    const credits = HELP_DOCS.find(({ slug }) => slug === "credits-and-pricing");
+    expect(credits?.sections.find(({ heading }) => heading === "Starter allotment")?.body).toContain("100 credits once");
+    expect(credits?.sections.find(({ heading }) => heading === "Refunds")?.body).toContain("Full TEST-mode");
+    expect(credits?.sections.find(({ heading }) => heading === "Refunds")?.body).toContain("not yet decided");
+    expect(ALL_SOURCE).not.toMatch(/\b(?:monthly|subscription plan|live price: \$)\b/i);
+  });
+});
 
 describe("shipped content stays frozen and rendered", () => {
   it("freezes every content collection so a render cannot mutate it", () => {
@@ -830,6 +863,9 @@ describe("the visual layer adds no behaviour the site did not already have", () 
       "src/app/editor/_components/editor-shell.tsx",
       "src/app/editor/_components/editor-viewport.tsx",
       "src/app/open/_components/live-viewport.tsx",
+      // Next requires the route error boundary to be a client component; it imports
+      // nothing and renders only a link (`tests/sites/site-response-hardening.test.ts`).
+      "src/app/error.tsx",
     ].sort());
   });
 

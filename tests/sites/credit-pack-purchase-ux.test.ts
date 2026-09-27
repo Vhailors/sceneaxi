@@ -1,10 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { SiteCreditPack } from "@sceneaxi/site-kit";
-import {
-  buildCreditPackOffers,
-  creditPackBillingModeNotice,
-} from "../../sites/umbrella/src/lib/credit-pack-offers.js";
+import { buildCreditPackOffers } from "../../sites/umbrella/src/lib/credit-pack-offers.js";
 
 const PACKS: readonly SiteCreditPack[] = Object.freeze([
   Object.freeze({
@@ -49,6 +46,7 @@ describe("SA-PAY-1 credit-pack purchase presentation", () => {
     expect(offers.filter((offer) => offer.bestRate).map((offer) => offer.packId)).toEqual([
       "studio",
     ]);
+
     for (const offer of offers) {
       expect(offer.purchase).toEqual({
         enabled: true,
@@ -110,30 +108,15 @@ describe("SA-PAY-1 credit-pack purchase presentation", () => {
     }
   });
 
-  it("states the deployment's own billing mode rather than a fixed TEST claim", () => {
-    const test = creditPackBillingModeNotice("test");
-    expect(test.mode).toBe("TEST");
-    expect(test.charge).toContain("TEST mode does not make a real charge");
-
-    // The panel prints `plane.billingMode` as evidence beside this copy, so a LIVE
-    // deployment must not read "runs against TEST" next to a `Mode: live` row — and the
-    // packs beside it already refuse by name.
-    const live = creditPackBillingModeNotice("live");
-    expect(live.mode).toBe("LIVE");
-    expect(live.charge).not.toContain("TEST");
-    expect(live.charge).toContain("no checkout is offered");
-    for (const notice of [test, live]) {
-      expect(notice.activation).toContain("refuses live mode without explicit authorization");
-    }
-
-    // The page may state the mode only through this function.
+  it("keeps operator billing configuration off the member-facing pricing page", () => {
     const pricing = readFileSync(
       new URL("../../sites/umbrella/src/app/pricing/page.tsx", import.meta.url),
       "utf8",
     );
-    expect(pricing).toContain("creditPackBillingModeNotice(plane.billingMode)");
-    expect(pricing).not.toContain("TEST</strong>");
-    expect(pricing).not.toContain("does not make a real charge");
+
+    expect(pricing).not.toContain('title="Billing mode"');
+    expect(pricing).not.toContain('term: "Mode"');
+    expect(pricing).not.toContain('term: "Checkout"');
   });
 
   it("does not assume every currency has two decimal minor units", () => {
@@ -152,17 +135,58 @@ describe("SA-PAY-1 credit-pack purchase presentation", () => {
         identityConfigured: true,
       },
     );
+
     expect(offer?.price).toBe("500 JPY minor units");
   });
 
-  it("keeps the account surface explicit about balance, starter grant, and admin allowance", () => {
+  it("keeps the account surface explicit about balance without exposing operator wiring", () => {
     const account = readFileSync(
       new URL("../../sites/umbrella/src/app/account/page.tsx", import.meta.url),
       "utf8",
     );
+
     expect(account).toContain("resolved.credits.value.balance");
     expect(account).toContain("Starter grant");
     expect(account).toContain("Administrator — no balance was read");
     expect(account).toContain("Nothing was debited to render this page");
+    expect(account).not.toContain("Identity plane");
+    expect(account).not.toContain("Billing plane");
+    expect(account).not.toContain("IDENTITY_PLANE_DOC");
+  });
+
+  it("uses browser redirects for named checkout refusals and requires a stable attempt token", () => {
+    const route = readFileSync(
+      new URL("../../sites/umbrella/src/app/api/checkout/route.ts", import.meta.url),
+      "utf8",
+    );
+
+    expect(route).toContain("readSiteMutationRequestSignals(request)");
+    expect(route).toContain("verifyLoginRequestOrigin(process.env, signals.formOrigin)");
+    expect(route).toContain('request.headers.get("accept")?.includes("application/json")');
+    // Named refusals redirect 303 to a same-site relative path carrying the reason.
+    expect(route).toContain("status: 303");
+    expect(route).toContain("new URLSearchParams(signedOut ? { next: \"/pricing\", reason } : { reason })");
+    expect(route).toContain("IDENTITY_SESSION_ABSENT");
+    expect(route).toContain("BILLING_CHECKOUT_REQUEST_INVALID");
+    expect(route).not.toContain("crypto.randomUUID");
+    expect(route).toContain("?checkout=success");
+    expect(route).toContain("?checkout=cancelled");
+  });
+
+  it("shows payment return states without claiming an unconfirmed ledger grant", () => {
+    const pricing = readFileSync(
+      new URL("../../sites/umbrella/src/app/pricing/page.tsx", import.meta.url),
+      "utf8",
+    );
+
+    const account = readFileSync(
+      new URL("../../sites/umbrella/src/app/account/page.tsx", import.meta.url),
+      "utf8",
+    );
+
+    expect(account).toContain("Payment received. Credits appear once confirmed in your ledger.");
+    expect(pricing).toContain("No payment was completed. No credits were added.");
+    expect(pricing).not.toContain('title="Billing mode"');
+    expect(pricing).not.toContain('term: "Checkout"');
   });
 });

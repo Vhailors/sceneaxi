@@ -5,8 +5,9 @@ map live in [`docs/auth-credits.md`](../docs/auth-credits.md).
 
 ## Apply order
 
-Forward-only, in numeric order:
+Forward-only, in numeric order. `pnpm db:migrate` applies pending files one transaction at a time; `pnpm db:migrate -- --status` reports recorded identifiers and checksums, and `pnpm db:migrate -- --dry-run` previews pending files. For an existing database whose schema was applied manually, use the explicitly authorized adoption procedure below.
 
+0. `migrations/0000_schema_migrations.sql` — applied migration identifiers, SHA-256 checksums, and timestamps
 1. `migrations/0001_identity.sql` — `users`, `role_assignments`, `sessions`
 2. `migrations/0002_credits_billing.sql` — `credit_accounts`,
    `credit_ledger_entries`, `stripe_customer_links`, `checkout_session_intents`,
@@ -20,6 +21,12 @@ Forward-only, in numeric order:
    `better_auth_users`, `better_auth_sessions`, `better_auth_accounts`,
    `better_auth_verifications`, and the durable `better_auth_rate_limits`
    counters; these are distinct from SceneAxi identity rows
+6. `migrations/0006_credit_reconciliation.sql` adds the append-only
+   `credit_reconciliation_records` table for disputes and non-reconcilable refunds.
+   The [operator contract](../docs/auth-credits.md#operator-reconciliation-records)
+   owns its usage and the unresolved money policy.
+7. `migrations/0007_stripe_live_mode_audit.sql` — append-only authorization audit
+   records; the migration grants no LIVE authority
 
 There are no down-migrations. Reverting a financial schema by dropping tables loses the
 ledger, so a correction ships as a new forward migration.
@@ -51,6 +58,7 @@ plane and a bad row.
 | No raw token can be stored | only `token_digest char(64)` exists, shape-checked as hex |
 | Balance cannot drift | `credit_accounts` has no balance column |
 | Ledger is append-only | `BEFORE UPDATE OR DELETE` trigger raises `restrict_violation` |
+| Reconciliation evidence is append-only and event-idempotent | raising update/delete trigger and primary key on `(mode, event_id)` |
 | A replay cannot become a second row | unique index on `idempotency_key` |
 | Sequences cannot fork | unique index on `(account_id, sequence)` |
 | A listing price matches its mode | cross-field check constraints per price mode |
@@ -68,8 +76,27 @@ plane and a bad row.
 
 `DATABASE_URL` comes from the environment only — never a committed file, never a default.
 `.env.example` lists the name and nothing else. Applying these migrations against a live
-Neon branch needs credentials and is separate authority; `pnpm gate` never touches a
+Neon branch requires the production-activation authorization and operator preflight;
+the runner does not grant authority. `pnpm gate` never invokes the runner or touches a
 database.
+
+### Adopt a manually applied schema
+
+Only under the production-activation runbook's explicit authorization, and only after an
+operator has independently verified that the database already contains every listed
+migration through the requested identifier, run:
+
+```sh
+node scripts/db-migrate.mjs --adopt-through 0005_better_auth_provider
+```
+
+Adoption refuses unless `schema_migrations` is absent or empty, rejects unknown migration
+identifiers and non-contiguous histories, then creates the tracking table and records each
+migration checksum through the requested identifier in one transaction. It executes no
+schema migration other than the idempotent tracking-table DDL in `0000`. The output lists
+each identifier and checksum recorded. Never adopt based only on a deployment note; verify
+the live schema and triggers first. The operator owns that verification. `--adopt-through`
+does not authorize database access or establish that the listed schema is present.
 
 The contract ↔ DDL lockstep is verified without a database by
 `tests/db/schema-lockstep.test.ts`, so a contract field added without a column (or the

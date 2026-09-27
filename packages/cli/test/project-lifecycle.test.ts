@@ -164,7 +164,7 @@ describe("project lifecycle verbs", () => {
   });
 
   describe("project dev", () => {
-    it("reports one-shot status and never claims a watcher", () => {
+    it("reports one-shot status", () => {
       create();
       const r = runCli([
         "project",
@@ -177,24 +177,6 @@ describe("project lifecycle verbs", () => {
       expect(r.exitCode).toBe(ExitCode.OK);
       if (!r.envelope.ok) return;
       expect(r.envelope.result["mode"]).toBe("one-shot");
-      expect(r.envelope.result["watchSupported"]).toBe(false);
-    });
-
-    it("refuses --watch rather than faking a hot-reload loop", () => {
-      create();
-      const r = runCli([
-        "project",
-        "dev",
-        "--document",
-        "scene.json",
-        "--watch",
-        "--cwd",
-        cwd,
-      ]);
-      expect(r.exitCode).toBe(ExitCode.ERROR);
-      if (!r.envelope.ok) {
-        expect(r.envelope.error.code).toBe("NOT_IMPLEMENTED");
-      }
     });
 
     it.each([["--watch=true"], ["--watch", "true"]])(

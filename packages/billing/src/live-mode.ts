@@ -26,12 +26,9 @@
  * a silent environment edit.
  *
  * **The audit record is a precondition, not a side effect.** The caller injects
- * the sink that records the authorization; an absent sink, a sink that is not a
- * function, one that throws, and one that answers with a promise all refuse —
- * this resolver is synchronous, so a record it would have to await is a record
- * it cannot witness, and a rejection arriving after the fact would leave an
- * authorization already issued. No deployment can hold an authorization it
- * never wrote down.
+ * the sink that records the authorization. This resolver waits for the write
+ * before it issues the witness. Missing, invalid, throwing, or rejecting sinks
+ * refuse, so no deployment can hold an authorization it never recorded.
  *
  * **Nothing else is an input.** The mode, the price, the Stripe key's own
  * `sk_live_` prefix, `NODE_ENV`, and every other value that merely correlates
@@ -147,26 +144,6 @@ const notAuthorized = (detail: string): BillingOutcome<never> =>
     `Live-mode billing is not authorized: ${detail}`,
   );
 
-/**
- * Whether a value is one this resolver would have to await.
- *
- * Fail-closed on a `then` accessor that throws: a sink whose answer cannot even
- * be inspected is not one that proved it recorded anything.
- */
-function isThenable(value: unknown): boolean {
-  if (
-    value === null ||
-    (typeof value !== "object" && typeof value !== "function")
-  ) {
-    return false;
-  }
-  try {
-    return typeof (value as { then?: unknown }).then === "function";
-  } catch {
-    return true;
-  }
-}
-
 /** Whether `YYYY-MM-DD` names a real calendar day, not merely four-two-two digits. */
 function isCalendarDate(value: string): boolean {
   if (!AUTHORIZED_ON_RE.test(value)) return false;
@@ -185,13 +162,13 @@ function isCalendarDate(value: string): boolean {
  * variable is absent" have exactly the same consequence, and a caller that could
  * tell them apart might be tempted to treat one as recoverable.
  *
- * The order is the contract — alias, presence, shape, authorship, date, audit —
- * and the audit sink runs last, so it is only asked to record an authorization
- * that is otherwise complete, and its failure still refuses.
+ * The order is the contract: alias, presence, shape, authorship, date, audit.
+ * The resolver asks the sink to record only a complete authorization and waits
+ * for that write before it issues the witness.
  */
-export function resolveLiveModeAuthorization(
+export async function resolveLiveModeAuthorization(
   request: ResolveLiveModeAuthorizationRequest,
-): BillingOutcome<LiveModeAuthorization> {
+): Promise<BillingOutcome<LiveModeAuthorization>> {
   const record = snapshotPlainRecord(request);
   if (record === undefined) {
     return notAuthorized(
@@ -261,18 +238,11 @@ export function resolveLiveModeAuthorization(
     record: `${STRIPE_LIVE_MODE_ENV_VAR}: Stripe live mode authorized by ${authorizedBy} on ${authorizedOn} (sha256:${fingerprint})`,
   });
 
-  let recorded: unknown;
   try {
-    recorded = recordAudit(audit);
+    await recordAudit(audit);
   } catch {
     return notAuthorized(
       "the audit sink failed, so the authorization was not recorded and is not honored.",
-    );
-  }
-  if (isThenable(recorded)) {
-    void Promise.resolve(recorded).catch(() => undefined);
-    return notAuthorized(
-      "the audit sink answered with a promise, and a synchronous resolver cannot wait for it, so the authorization would be issued before the record it depends on either exists or fails.",
     );
   }
 

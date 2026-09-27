@@ -1,8 +1,9 @@
-import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { spawn, spawnSync } from "node:child_process";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createInterface } from "node:readline";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 /**
@@ -110,6 +111,98 @@ describe("sceneaxi binary", () => {
     expect(envelopeOf(listed.stdout)["result"]).toMatchObject({
       packetCount: 1,
     });
+  });
+
+  it("watches canonical documents, streams versioned cycles, and stops on SIGINT", async () => {
+    sceneaxi(["project", "new", "--document", "scene.json", "--json"], cwd);
+    const child = spawn(process.execPath, [
+      BIN,
+      "project",
+      "dev",
+      "--document",
+      "scene.json",
+      "--watch",
+      "--json",
+    ], { cwd, stdio: ["ignore", "pipe", "pipe"] });
+    const lines = createInterface({ input: child.stdout });
+    const pending: string[] = [];
+    const waiters: ((line: string) => void)[] = [];
+    lines.on("line", (line) => {
+      const waiter = waiters.shift();
+      if (waiter) waiter(line);
+      else pending.push(line);
+    });
+    const nextLine = () => {
+      const line = pending.shift();
+      if (line !== undefined) return Promise.resolve(line);
+      return new Promise<string>((resolveLine, reject) => {
+        const timer = setTimeout(() => reject(new Error("watch envelope timeout")), 5000);
+        waiters.push((value) => {
+          clearTimeout(timer);
+          resolveLine(value);
+        });
+      });
+    };
+    try {
+      const initial = JSON.parse(await nextLine()) as Record<string, unknown>;
+      expect(initial).toMatchObject({ schemaVersion: 1, ok: true });
+      expect(initial["result"]).toMatchObject({ mode: "watch", cycle: 1 });
+
+      writeFileSync(join(cwd, "scene.json"), `${JSON.stringify({
+        schemaVersion: 1,
+        kind: "sceneaxi.document",
+        id: "scene",
+        data: { edited: true },
+      }, null, 2)}\n`);
+      const changed = JSON.parse(await nextLine()) as Record<string, unknown>;
+      expect(changed["result"]).toMatchObject({ mode: "watch", cycle: 2, dataKeys: ["edited"] });
+
+      child.kill("SIGINT");
+      const stopped = JSON.parse(await nextLine()) as Record<string, unknown>;
+      expect(stopped["result"]).toMatchObject({ status: "stopped", mode: "watch", cycle: 2 });
+      expect(await new Promise<number | null>((resolveClose) => child.once("close", resolveClose))).toBe(0);
+    } finally {
+      child.kill("SIGKILL");
+      lines.close();
+    }
+  });
+
+  it("exits non-zero when a watch is stopped on a refused cycle", async () => {
+    sceneaxi(["project", "new", "--document", "scene.json", "--json"], cwd);
+    const child = spawn(process.execPath, [BIN, "project", "dev", "--document", "scene.json", "--watch", "--json"], { cwd, stdio: ["ignore", "pipe", "pipe"] });
+    const lines = createInterface({ input: child.stdout });
+    const received: string[] = [];
+    const waiters: (() => void)[] = [];
+    lines.on("line", (line) => {
+      received.push(line);
+      waiters.shift()?.();
+    });
+    const lineCount = (count: number) => received.length >= count
+      ? Promise.resolve()
+      : new Promise<void>((resolveCount, reject) => {
+        const timer = setTimeout(() => reject(new Error("watch envelope timeout")), 5000);
+        const check = () => {
+          if (received.length >= count) {
+            clearTimeout(timer);
+            resolveCount();
+          } else waiters.push(check);
+        };
+        waiters.push(check);
+      });
+    try {
+      await lineCount(1);
+      expect(JSON.parse(received[0] ?? "")).toMatchObject({ ok: true });
+      writeFileSync(join(cwd, "scene.json"), "{ not json");
+      await lineCount(2);
+      expect(JSON.parse(received[1] ?? "")).toMatchObject({ ok: false });
+      child.kill("SIGINT");
+      await lineCount(3);
+      expect(JSON.parse(received[2] ?? "")["result"]).toMatchObject({ status: "stopped" });
+      expect(await new Promise<number | null>((resolveClose) => child.once("close", resolveClose))).not.toBe(0);
+    } finally {
+      child.kill("SIGKILL");
+      lines.close();
+    }
   });
 
   it("resolves relative paths against the process working directory", () => {

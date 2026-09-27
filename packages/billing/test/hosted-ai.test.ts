@@ -402,6 +402,7 @@ describe("runMeteredModelCall — hosted route, funded", () => {
     const provider = recordingProvider();
     let raced = false;
     const racedStore: CreditStore = {
+      ...store,
       findAccountByUserId: (userId) => store.findAccountByUserId(userId),
       findAccountById: (accountId) => store.findAccountById(accountId),
       listEntries: (accountId) => store.listEntries(accountId),
@@ -784,6 +785,15 @@ describe("runMeteredModelCall — hosted route refuses before spending", () => {
     const state = funded(100);
     const backing = storeFor(state);
     class PrototypeCreditStore implements CreditStore {
+      findReconciliation(...args: Parameters<CreditStore["findReconciliation"]>) {
+        return backing.findReconciliation(...args);
+      }
+      listReconciliations() {
+        return backing.listReconciliations();
+      }
+      appendOrReplayReconciliation(...args: Parameters<CreditStore["appendOrReplayReconciliation"]>) {
+        return backing.appendOrReplayReconciliation(...args);
+      }
       findAccountByUserId(userId: string) {
         return backing.findAccountByUserId(userId);
       }

@@ -142,7 +142,7 @@ set them *before* deploying and redeploy after changing one.
 | Variable | Projects | Owner | Required for | Purpose |
 |---|---|---|---|---|
 | `DATABASE_URL` | all three | captain (Neon) | the identity plane | one shared Neon Postgres database: auth/billing plus catalog read models |
-| `BETTER_AUTH_ORIGIN` | umbrella | deployment owner | identity sign-in | https origin of the Better Auth provider endpoint used by the umbrella; credentials remain with that provider. The provider must serve `POST /api/auth/sign-in/email` and `GET /api/auth/get-session` under that origin — see the provider prerequisite below |
+| `BETTER_AUTH_ORIGIN` | umbrella | deployment owner | identity sign-in | https origin of the Better Auth provider endpoint used by the umbrella; credentials remain with that provider. The provider must serve `POST /api/auth/sign-in/email`, `GET /api/auth/get-session`, and `POST /api/auth/sign-out` under that origin — see the provider prerequisite below |
 | `BETTER_AUTH_SECRET` | umbrella | captain/provider owner | Better Auth session signing | provider-only signing material read by the umbrella's Better Auth handler; it never enters `@sceneaxi/auth`, a route response, or evidence |
 | `SCENEAXI_ADMIN_EMAIL` | umbrella | captain | admin sign-in | sole admin identity, resolved by `@sceneaxi/auth` only inside the deployment plug point; no route accepts an override |
 | `SCENEAXI_ADMIN_BOOTSTRAP_SECRET` | umbrella | captain | first admin sign-in | provider-owned first-run credential material; env-secret bootstrap only, never a role source or core input |
@@ -183,10 +183,11 @@ Anything else leaves `identityPort` absent and the surface refuses by name.
 
 The umbrella ships a deliberately narrow Better Auth 1.6 handler under that origin. It
 enables email/password authentication and the `bearer()` plugin, disables public sign-up,
-and exposes only these two endpoint/method pairs:
+and exposes only these three endpoint/method pairs:
 `POST /api/auth/sign-in/email`, whose answer (`{ redirect, token, user }`) carries no
-session record, and `GET /api/auth/get-session`, which supplies the session id, owner, and
-expiry the `sessions` row is written from. That lookup sends **both** credentials the
+session record, `GET /api/auth/get-session`, which supplies the session id, owner, and
+expiry the `sessions` row is written from, and `POST /api/auth/sign-out`, which revokes
+the presented provider session. The sign-in lookup sends **both** credentials the
 provider may accept — the `Set-Cookie` session cookie the sign-in answer issued, replayed
 as a `Cookie` header, and the issued token as `Authorization: Bearer` — because stock
 Better Auth resolves the session from the cookie while the `bearer()` plugin resolves it
@@ -195,6 +196,13 @@ deployment fault, and the client throws a named error rather than reporting the 
 correct password as a rejected sign-in. A provider that returns a session inline on
 sign-in is used as-is and no lookup is made.
 
+Hosted sign-out requires the provider's bearer support. The deployment's
+`providerSessions` capability calls `sign-out` with the carried bearer and then requires
+an uncached `get-session` lookup to return `null` before deleting the SceneAxi session.
+A provider success response alone does not prove deletion. Missing wiring and failures
+refuse by name, and the browser still clears its cookie. `docs/auth-credits.md` owns
+this ordering and the failure/retry contract.
+
 Startup is lazy and fail-closed. Missing or malformed `DATABASE_URL`,
 `BETTER_AUTH_ORIGIN`, `BETTER_AUTH_SECRET`, `SCENEAXI_ADMIN_EMAIL`, or
 `SCENEAXI_ADMIN_BOOTSTRAP_SECRET` returns a redacted provider `503`; an unavailable or
@@ -202,6 +210,13 @@ unmigrated Neon database does the same. The first-run credential is idempotently
 into Better Auth's provider account table from the two captain-owned bootstrap inputs.
 It creates no SceneAxi role: `@sceneaxi/auth` still derives the sole admin only after the
 provider authenticated a verified matching address and the SceneAxi store accepted it.
+
+### PostgreSQL adapter integration check
+
+From `sites/umbrella`, run `pnpm test:integration`. It applies all ordered files in
+`db/migrations/` to an in-process PGlite database and exercises the Neon store adapters
+against PostgreSQL conflict, transaction, trigger, and constraint behavior. This requires
+no Neon URL or network. CI runs it beside `pnpm test:provider` after the hermetic gate.
 
 ### Stripe
 
@@ -241,10 +256,32 @@ provider account, and none of it asserts that production is activated.
 
 ## Verification
 
+The umbrella exposes `GET /api/health` for deployment checks. It returns only each
+plane's `wired`, `absent`, or `misconfigured` state and the build commit; `ok` is false
+only when a plane is misconfigured. An absent plane is reported explicitly without making
+liveness fail. The response never includes environment values and is sent with
+`Cache-Control: no-store`. Structured server diagnostics are JSON lines emitted to the
+Vercel function's stdout/stderr and are available in that deployment's function logs.
+Events cover provider construction failures, Better Auth warnings, webhook outcomes,
+checkout/login/logout/intake/admin refusals, and health misconfiguration. They include
+stable event names and only bounded fields such as provider, plane, outcome, event type,
+and named refusal reason. They never include exception messages, environment/configuration
+values, request bodies, credentials, tokens, email addresses, or form fields. Use the
+Vercel deployment's **Logs** view and filter by `event` (for example,
+`umbrella.webhook.outcome` or `umbrella.provider.construction_failed`); logging is local
+stdout/stderr only and adds no third-party service. The private
+configuration report classifies every variable in the table above as `absent`,
+`present-valid`, or `present-malformed`. An unset variable stays distinct from a supplied
+invalid value, while malformed configuration never makes an unavailable plane look
+intentionally absent.
+
 ```sh
 UMB=https://<umbrella>.vercel.app
 GAME=https://<game-catalog>.vercel.app
 WEB=https://<web-catalog>.vercel.app
+
+# Safe deployment health, including the exact build being checked
+curl -fsS -H 'Cache-Control: no-cache' "$UMB/api/health"
 
 # Umbrella pages
 for p in / /open /docs /engine /pricing /profiles /account /login /editor; do
@@ -342,14 +379,16 @@ splits in two:
 | Capability | State | Why |
 |---|---|---|
 | Credit-pack list on `/pricing` | **live** | read from the committed contract fixture's bundled module (`packages/schemas/src/credit-packs.data.ts`, held in lockstep by `pnpm check:contracts`); needs no provider and no traced file |
-| The **Buy** control on `/pricing` | posts to a real checkout once the TEST Stripe handle is configured, but only for a signed-in buyer | the adapter persists the intent before creating a card-only hosted checkout; with no session the POST refuses `IDENTITY_SESSION_ABSENT`, so a visitor signs in at `/login` first and the control refuses by name until then |
+| The **Buy** control on `/pricing` | posts to a real checkout once the TEST Stripe handle is configured, but only for a signed-in buyer | refusals return to `/pricing?reason=<NAME>`; signed-out visitors go to `/login?next=/pricing&reason=IDENTITY_SESSION_ABSENT`. The same-origin proof remains required. The form's attempt token is mandatory and becomes part of the persisted intent idempotency key. |
 | Admin identity (`SCENEAXI_ADMIN_EMAIL`) | **live as deployment evidence** | resolved by `@sceneaxi/auth` only inside the deployment owner and held behind `umbrellaRequestAuthority()`; request routes cannot supply another environment or issuer |
 | Checkout intent, starter grant, webhook verification | **live as behaviour** | implemented in-repo and gate-tested |
 | Hosted sign-in on `/login` (`POST /api/login`, `POST /api/logout`) | **live as behaviour**; signs a member in once the shipped Better Auth handler + Neon are configured, and refuses `IDENTITY_PLANE_NOT_WIRED` until they are | the whole flow — provider routes, form, named refusal states, HttpOnly `sceneaxi.session` cookie, sign-out — is in-repo and contract-tested ([#185](https://github.com/Vhailors/sceneaxi/issues/185), [#222](https://github.com/Vhailors/sceneaxi/issues/222)); it drives the same `IdentityPort` handle |
 | Session verification on `/account`, `/editor` | adapter live when Better Auth + Neon are configured | `verifySession` is wired, and authentication provisions the SceneAxi user and credit account idempotently; the `sessions` row is written by the sign-in above, and that same `IdentityPort` verifies the credential both surfaces read. Unwired they refuse `IDENTITY_PLANE_NOT_WIRED`, and a visitor with no cookie refuses `IDENTITY_SESSION_ABSENT` |
 | Credit balance | adapter live; reachable for a signed-in member | the balance is derived from the append-only ledger through `createCreditStore`, and the once-per-user 100-credit starter grant runs on the first authenticated read |
-| Hosted checkout redirect | live when the TEST Stripe handle is configured | the adapter uses the committed intent and TEST-only Stripe API call |
+| Hosted checkout redirect | live when the TEST Stripe handle is configured | success returns to `/account?checkout=success`, where the page says payment was received and credits appear once confirmed in the ledger; cancellation returns to `/pricing?checkout=cancelled` and claims no payment or credits |
 | A signed-out visitor | refuses `IDENTITY_SESSION_ABSENT` | not a failure, and shown as "you are not signed in", with `/login` as the action that changes it |
+
+Browser checkout refusals are 303 redirects with a named reason; requests explicitly accepting `application/json` retain the 402 JSON response. Return URLs are fixed to the configured umbrella origin. A success redirect is not ledger evidence: the page never claims a credit grant before the webhook confirms it.
 
 `identity-plane.ts` is the **single** place those handles arrive. It resolves deployment
 configuration once and holds the admin witness plus the secret-backed webhook capability
@@ -474,7 +513,8 @@ webhook still refuses `CREDIT_LEDGER_UNAVAILABLE` rather than creating one from 
 
 Register the webhook endpoint `POST /api/stripe/webhook` in the Stripe **test**
 dashboard for **both** event types this endpoint acts on — `checkout.session.completed`
-for credit grants and `charge.refunded` for full-refund reconciliation — and set
+for credit grants, `charge.refunded` for refunds, and `charge.dispute.created` plus
+`charge.dispute.closed` for reconciliation records. Set
 `STRIPE_WEBHOOK_SECRET` to the signing secret it issues. An endpoint subscribed to only
 the completion never receives a refund event, so the refund adjustment silently never
 runs: the ledger keeps credits the buyer was paid back for, and nothing refuses, because
@@ -504,7 +544,7 @@ take payments this endpoint cannot settle.
 `/login`, `POST /api/login`, and `POST /api/logout` beside `/api/checkout` and
 `/api/stripe/webhook`, and `performLogin` calls `identityPort.signIn` through the
 plane's login port and sets the HttpOnly `sceneaxi.session` cookie. The provider handler
-now ships in the umbrella at `BETTER_AUTH_ORIGIN` (the `sign-in/email` and `get-session`
+now ships in the umbrella at `BETTER_AUTH_ORIGIN` (the `sign-in/email`, `get-session`, and `sign-out`
 endpoints named above). The migration state is owned by
 [Verified TEST readiness](#verified-test-readiness) and is not an outstanding operator
 step. What remains operational is to set the named configuration and configure the
@@ -578,35 +618,20 @@ Load-bearing properties, each gate-tested in `tests/sites/identity-plane-wiring.
   cannot change. Only `ignored: false` means this event's movement is in the ledger, and
   that outcome states which movement it was: `movement: "grant"` with a positive `credits`
   delta for a purchase, `movement: "refund"` with a negative one for a reconciled full
-  refund, so a reversal is never read as a second purchase. Three
-  things are acknowledged for any event, and all three are decided from the verified body
-  before any
-  adapter or store is consulted: an event type this path does not handle, a completion
-  whose purpose settles on the revenue-share path, and a checkout session carrying no
-  SceneAxi metadata key at all — another product's event. Two more are acknowledged on the
-  **refund** path alone, and only because the money is already settled: a partial refund
-  (`STRIPE_REFUND_NOT_FULL`) and a balance the buyer has already spent
-  (`CREDIT_BALANCE_INSUFFICIENT`). Both keep every fail-closed property — nothing is
-  appended, the buyer's credits are untouched, and the response carries the refusal's own
-  name — but the retry stops, because neither can change on redelivery and a permanently
-  retried non-2xx wears down the endpoint every real grant depends on. A refund that finds
-  no committed grant is deliberately not one of them: the grant's own event may still be in
-  Stripe's retry sequence, so it refuses `CREDIT_LEDGER_STATE_INVALID` and is retried. The
-  purpose is read from the session
-  metadata only to route *away* from the grant path — an absent, malformed, or unknown
-  one keeps its normal path, and `parseCheckoutCompletedEvent` still cross-checks the
-  purpose against the persisted intent for everything that stays on it. A
-  `checkout.session.completed` this deployment *did* create is never acknowledged as
-  another product's event: if it carries any SceneAxi key but cannot be routed, it is
-  refused and retried. `tests/sites/identity-plane-wiring.test.ts` locks both private sets —
-  `UNHANDLED_EVENT_REASONS` to the reason symbols representing exactly those three
-  decisions and `TERMINAL_REFUND_REASONS` to the two refund ones — and locks every
-  acknowledgement the module can emit to them: the one
-  path that downgrades a package refusal by consulting them, plus each direct acknowledgement,
-  the purpose decision being re-asked of the parsed completion included. It also pins the
-  scoping, so the refund-only set can never be consulted for a grant, and a spent balance
-  cannot become an acknowledgement for an event that involved no refund. Adding another
-  acknowledged reason, or another acknowledgement path, fails the gate.
+  refund, so a reversal is never read as a second purchase. Unhandled types, purposes
+  that settle elsewhere, and events with no SceneAxi metadata still acknowledge without
+  a ledger write. Disputes require a provider Charge lookup before their metadata can
+  establish that they belong to another product.
+  Disputes, partial refunds, and spent-credit refunds now acknowledge only after
+  `persistCreditPackChargeEvent` confirms an append-only reconciliation record. Their
+  response carries `reconciliationRequired: true`, `eventId`, `reason`, and `replayed`.
+  The ledger does not move. Failed writes return `CREDIT_STORE_FAILED` with `503`.
+  A missing original grant still returns `CREDIT_LEDGER_STATE_INVALID` with `503`.
+  The record contract, operator query, and open policy decisions are owned by
+  [auth-credits.md](auth-credits.md#operator-reconciliation-records).
+  `tests/sites/identity-plane-wiring.test.ts` pins the no-record acknowledgement set
+  and exercises confirmed records, replay, failed writes, and exact Charge binding.
+  Incomplete SceneAxi metadata still refuses rather than pretending the event is unrelated.
 - **A webhook grant commits through one boundary, everywhere.** The endpoint calls
   `persistCheckoutCompletedGrant` — the same boundary any other deployment uses — so
   there is no second commit path for a paid event (captain decision D4), and `200` with
@@ -656,10 +681,18 @@ webhook event, or performing a charge:
 
 Later captain-confirmed operating state (2026-08-07), separate from the dated
 name-only observation above: migration `0005_better_auth_provider.sql` is applied, and
-the umbrella Production environment values were reset without exposing them. Deployment
-close-out verifies the existing schema through the authorized database path; it does not
-rerun that migration or wait for fresh `neonctl` OAuth. This adds no secret value or
-production-success claim to the repository.
+the umbrella Production environment values were reset without exposing them. Migration
+`0007_stripe_live_mode_audit.sql` was added later; its production state is unverified.
+Deployment close-out verifies the existing schema through the authorized database path;
+it does not rerun migration `0005` or wait for fresh `neonctl` OAuth. This adds no secret
+value or production-success claim to the repository.
+
+A later name-and-status-only observation (2026-09-26, no credential used) supersedes the
+`/login` finding above: production `/login` returns `200`, and a sign-in POST with an
+unknown address redirects to `/login?reason=LOGIN_CREDENTIALS_REJECTED`, so the deployed
+build includes the hosted-login route and reaches a configured provider. `/editor` still
+renders the preview-flag notice, so `SCENEAXI_SITE_EDITOR_PREVIEW` remains set. This is
+a dated external observation, not a gate-produced or production-success claim.
 
 `SCENEAXI_ADMIN_EMAIL` remains the only source of the `admin` role. Its value is
 captain-held deployment configuration and is not documented here. Neither its presence nor

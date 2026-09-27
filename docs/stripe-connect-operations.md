@@ -38,7 +38,8 @@ minor-unit amounts, currency, sale ids, and idempotency keys.
 
 The versioned record contract is
 `packages/schemas/contracts/stripe-connect.schema.json`; forward-only DDL is
-`db/migrations/0004_stripe_connect_audit.sql`.
+`db/migrations/0004_stripe_connect_audit.sql`. The deployment-owned Neon adapter is
+`createNeonConnectStore` in `sites/umbrella/src/lib/provider-adapters.ts`.
 
 - Account, onboarding intent, status observation, payout intent, and payout outcome
   are separate immutable records.
@@ -67,6 +68,7 @@ The versioned record contract is
   key conflicts, and so does a second payout intent for a sale that already has one
   — the store holds one intent per `saleId`, mirroring `sale_id ... UNIQUE`, so a
   fresh idempotency key cannot buy a second provider payout for the same sale.
+- `createNeonConnectStore` maps all five records to their migration-owned tables. It requires a Neon transaction for `commitOnboarding` and `commitPayoutIntent`. The latter inserts the exact money split and payout intent in one transaction, then verifies both persisted rows before it returns.
 - A conflicting write is a typed signal, never message text: an adapter throws
   `ConnectStoreConflictError` (or any error carrying
   `code: CONNECT_STORE_CONFLICT_CODE`), which the seam refuses as
@@ -74,6 +76,10 @@ The versioned record contract is
   durable adapter maps its unique-constraint violations onto that signal.
 - A payout retry first reads the outcome for its committed intent. Once an outcome
   exists, the provider is not called again.
+- The PGlite-backed umbrella integration suite applies every migration and proves the
+  payout transaction rolls back both rows on a failed intent insert, then commits and
+  replays the valid pair. It also proves the LIVE authorization audit trigger rejects
+  updates and deletes.
 - A successful outcome requires both `providerEvidenceId` and `providerPayoutId` in
   the TypeScript validator and SQL constraint. A thrown call leaves only a pending
   intent. An evidenced provider refusal may append only a `failed` outcome, whose

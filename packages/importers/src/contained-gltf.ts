@@ -7,6 +7,7 @@
  * provider response, or network location is persisted.
  */
 import { createHash } from "node:crypto";
+import { inflateSync } from "node:zlib";
 import {
   closeSync,
   existsSync,
@@ -61,8 +62,12 @@ import {
   validateSculptArtifact,
   validateSculptIntake,
   type ComposedScene,
+  type AssetRenderMesh,
+  type BaseColorTexture,
   type SculptArtifact,
   type SculptTransform,
+  type GltfAnimationChannel,
+  type GltfAnimationClip,
 } from "@sceneaxi/schemas";
 
 export const CONTAINED_GLTF_PROFILE_ID =
@@ -121,16 +126,7 @@ export const CONTAINED_GLTF_REFUSALS = Object.freeze({
 export type ContainedGltfRefusal =
   (typeof CONTAINED_GLTF_REFUSALS)[keyof typeof CONTAINED_GLTF_REFUSALS];
 
-export type ImportedAssetRenderMesh = Readonly<{
-  meshId: string;
-  positions: readonly number[];
-  normals?: readonly number[];
-  indices: readonly number[];
-  matrix: readonly number[];
-  baseColor: string;
-  metallic: number;
-  roughness: number;
-}>;
+export type ImportedAssetRenderMesh = AssetRenderMesh;
 
 export type ProjectAssetPreview = Readonly<{
   kind: "metadata";
@@ -173,6 +169,8 @@ export type ProjectAssetManifest = Readonly<{
   assets: readonly ProjectAssetManifestEntry[];
 }>;
 
+export type ContainedGltfNode = Readonly<{ node: number; parent: number | null; matrix: readonly number[]; matrixAuthored: boolean; translation: readonly number[]; rotation: readonly number[]; scale: readonly number[] }>;
+
 export type ContainedGltfProjection = Readonly<{
   entry: ProjectAssetManifestEntry & Readonly<{
     family: "model";
@@ -182,6 +180,8 @@ export type ContainedGltfProjection = Readonly<{
     instanceId: string;
   }>;
   meshes: readonly ImportedAssetRenderMesh[];
+  nodes: readonly ContainedGltfNode[];
+  animations: readonly GltfAnimationClip[];
   bounds: Readonly<{
     minimum: readonly [number, number, number];
     maximum: readonly [number, number, number];
@@ -265,7 +265,9 @@ export type MaterializeAssetCopiesResult =
 type ParsedGltf = Readonly<{
   mediaType: "model/gltf-binary" | "model/gltf+json";
   meshes: readonly ImportedAssetRenderMesh[];
+  nodes: readonly ContainedGltfNode[];
   bounds: ContainedGltfProjection["bounds"];
+  animations: readonly GltfAnimationClip[];
 }>;
 
 type ParsedAsset = Readonly<{
@@ -847,6 +849,8 @@ function transformPosition(matrix: Matrix4, x: number, y: number, z: number) {
 }
 
 function colorHex(value: unknown): string {
+  if (value === undefined) return "#ffffff";
+
   if (!Array.isArray(value) || value.length !== 4 || !value.every(finiteNumber)) {
     return "#b8c4d8";
   }
@@ -865,7 +869,7 @@ type AccessorContext = Readonly<{
 function accessorValues(
   context: AccessorContext,
   index: unknown,
-  expectedType: "SCALAR" | "VEC3",
+  expectedType: "SCALAR" | "VEC2" | "VEC3" | "VEC4",
   allowedComponents: readonly number[],
 ): readonly number[] | null {
   if (!nonNegativeInteger(index)) return null;
@@ -897,7 +901,7 @@ function accessorValues(
   ) return null;
   const source = context.buffers[bufferIndex];
   if (source === undefined || bufferOffset + bufferLength > source.byteLength) return null;
-  const components = expectedType === "VEC3" ? 3 : 1;
+  const components = expectedType === "VEC4" ? 4 : expectedType === "VEC3" ? 3 : expectedType === "VEC2" ? 2 : 1;
   const componentBytes = componentType === 5121
     ? 1
     : componentType === 5123
@@ -924,6 +928,123 @@ function accessorValues(
   return Object.freeze(values);
 }
 
+function pngCrc32(bytes: Uint8Array) {
+  let crc = 0xffffffff;
+  for (const byte of bytes) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit += 1) crc = (crc >>> 1) ^ ((crc & 1) === 1 ? 0xedb88320 : 0);
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function decodePng(bytes: Uint8Array): BaseColorTexture | Refusal {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const signature = [137, 80, 78, 71, 13, 10, 26, 10];
+  if (bytes.byteLength < 33 || !signature.every((byte, index) => bytes[index] === byte)) {
+    return refuse(CONTAINED_GLTF_REFUSALS.malformed, "The embedded PNG signature or required chunks are invalid.");
+  }
+  let width = 0;
+  let height = 0;
+  let colorType = -1;
+  let sawHeader = false;
+  let sawData = false;
+  let endedData = false;
+  let sawEnd = false;
+  const compressed: Uint8Array[] = [];
+  for (let offset = 8; offset + 12 <= bytes.byteLength;) {
+    const length = view.getUint32(offset, false);
+    const end = offset + 12 + length;
+    if (length > bytes.byteLength || end > bytes.byteLength) {
+      return refuse(CONTAINED_GLTF_REFUSALS.malformed, "An embedded PNG chunk exceeds its contained image bytes.");
+    }
+    const typeBytes = bytes.subarray(offset + 4, offset + 8);
+    const type = String.fromCharCode(...typeBytes);
+    const payload = bytes.subarray(offset + 8, offset + 8 + length);
+    if (pngCrc32(bytes.subarray(offset + 4, offset + 8 + length)) !== view.getUint32(offset + 8 + length, false)) {
+      return refuse(CONTAINED_GLTF_REFUSALS.malformed, "An embedded PNG chunk has an invalid CRC.");
+    }
+    if (!sawHeader && type !== "IHDR") return refuse(CONTAINED_GLTF_REFUSALS.malformed, "An embedded PNG must start with IHDR.");
+    if (sawData && type !== "IDAT" && type !== "IEND") endedData = true;
+    if (type === "tRNS") {
+      return refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, "Embedded PNG transparency chunks are unsupported; use RGBA pixels without tRNS.");
+    }
+    if (["gAMA", "cHRM", "iCCP"].includes(type)) {
+      return refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, `Embedded PNG color-profile chunk ${type} is unsupported.`);
+    }
+    if (type === "IHDR") {
+      if (sawHeader || length !== 13) return refuse(CONTAINED_GLTF_REFUSALS.malformed, "The embedded PNG IHDR chunk is invalid.");
+      width = view.getUint32(offset + 8, false);
+      height = view.getUint32(offset + 12, false);
+      const bitDepth = bytes[offset + 16];
+      colorType = bytes[offset + 17] ?? -1;
+      if (
+        width === 0 || height === 0 || width * height * 4 > 4 * 1024 * 1024 ||
+        bitDepth !== 8 || (colorType !== 2 && colorType !== 6) ||
+        bytes[offset + 18] !== 0 || bytes[offset + 19] !== 0 || bytes[offset + 20] !== 0
+      ) return refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, "Embedded PNG textures require non-interlaced 8-bit RGB or RGBA within the 4 MiB decoded limit.");
+      sawHeader = true;
+    } else if (type === "IDAT") {
+      if (!sawHeader || sawEnd || endedData) return refuse(CONTAINED_GLTF_REFUSALS.malformed, "The embedded PNG IDAT chunks must be consecutive.");
+      sawData = true;
+      compressed.push(payload);
+    } else if (type === "IEND") {
+      if (length !== 0 || sawEnd) return refuse(CONTAINED_GLTF_REFUSALS.malformed, "The embedded PNG IEND chunk is invalid.");
+      sawEnd = true;
+      if (end !== bytes.byteLength) return refuse(CONTAINED_GLTF_REFUSALS.malformed, "An embedded PNG may not contain trailing data.");
+      break;
+    } else if ((typeBytes[0] ?? 0) >= 65 && (typeBytes[0] ?? 0) <= 90) {
+      return refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, `Embedded PNG critical chunk ${type} is unsupported.`);
+    }
+    offset = end;
+  }
+  if (!sawHeader || !sawEnd || compressed.length === 0) {
+    return refuse(CONTAINED_GLTF_REFUSALS.malformed, "The embedded PNG is missing IHDR, IDAT, or IEND.");
+  }
+  const channels = colorType === 6 ? 4 : 3;
+  const rowBytes = width * channels;
+  const expectedBytes = (rowBytes + 1) * height;
+  let raw: Buffer;
+  try {
+    raw = inflateSync(Buffer.concat(compressed.map((part) => Buffer.from(part))), { maxOutputLength: expectedBytes });
+  } catch {
+    return refuse(CONTAINED_GLTF_REFUSALS.malformed, "The embedded PNG compressed pixels cannot be safely decoded within the pixel limit.");
+  }
+  if (raw.byteLength !== expectedBytes) return refuse(CONTAINED_GLTF_REFUSALS.malformed, "The embedded PNG decoded pixel length is invalid.");
+  const rgba: number[] = new Array(width * height * 4);
+  for (let y = 0; y < height; y += 1) {
+    const inputStart = y * (rowBytes + 1);
+    const filter = raw[inputStart];
+    if (filter === undefined || filter > 4) return refuse(CONTAINED_GLTF_REFUSALS.malformed, "The embedded PNG uses an invalid row filter.");
+    const row = inputStart + 1;
+    for (let x = 0; x < rowBytes; x += 1) {
+      const left = x >= channels ? raw[row + x - channels] ?? 0 : 0;
+      const above = y > 0 ? raw[row - rowBytes - 1 + x] ?? 0 : 0;
+      const upperLeft = y > 0 && x >= channels ? raw[row - rowBytes - 1 + x - channels] ?? 0 : 0;
+      const predictor = filter === 1 ? left : filter === 2 ? above : filter === 3 ? Math.floor((left + above) / 2) : filter === 4 ? paeth(left, above, upperLeft) : 0;
+      raw[row + x] = ((raw[row + x] ?? 0) + predictor) & 0xff;
+    }
+    for (let x = 0; x < width; x += 1) {
+      const src = row + x * channels;
+      const dst = (y * width + x) * 4;
+      rgba[dst] = raw[src] ?? 0;
+      rgba[dst + 1] = raw[src + 1] ?? 0;
+      rgba[dst + 2] = raw[src + 2] ?? 0;
+      rgba[dst + 3] = channels === 4 ? raw[src + 3] ?? 0 : 255;
+    }
+  }
+  return Object.freeze({ width, height, rgba: Object.freeze(rgba) });
+}
+
+function paeth(left: number, above: number, upperLeft: number) {
+  const estimate = left + above - upperLeft;
+  const leftDistance = Math.abs(estimate - left);
+  const aboveDistance = Math.abs(estimate - above);
+  const upperLeftDistance = Math.abs(estimate - upperLeft);
+  return leftDistance <= aboveDistance && leftDistance <= upperLeftDistance
+    ? left
+    : aboveDistance <= upperLeftDistance ? above : upperLeft;
+}
+
 function parseGltf(bytes: Uint8Array, sourceName: string): ParsedGltf | Refusal {
   const container = parseContainer(bytes, sourceName);
   if (!container.ok) return container;
@@ -932,11 +1053,23 @@ function parseGltf(bytes: Uint8Array, sourceName: string): ParsedGltf | Refusal 
   if (!plainRecord(asset) || asset["version"] !== "2.0") {
     return refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, "The contained profile requires glTF asset.version 2.0.");
   }
-  for (const denied of ["extensionsUsed", "extensionsRequired", "images", "textures", "samplers", "animations", "skins", "cameras"] as const) {
+  for (const denied of ["extensionsUsed", "extensionsRequired", "cameras"] as const) {
     const value = json[denied];
     if (value !== undefined && (!Array.isArray(value) || value.length > 0)) {
       return refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, `The contained v1 profile does not support ${denied}.`);
     }
+  }
+  if (json["skins"] !== undefined && (!Array.isArray(json["skins"]) || json["skins"].length > 0)) {
+    return refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, "Skinning (skins, JOINTS_0, WEIGHTS_0) is not supported by the contained profile.");
+  }
+  const samplers = json["samplers"];
+  if (samplers !== undefined && (!Array.isArray(samplers) || samplers.length > 0)) {
+    return refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, "The contained texture profile does not support glTF samplers.");
+  }
+  const images = json["images"];
+  const textures = json["textures"];
+  if ((images !== undefined && !Array.isArray(images)) || (textures !== undefined && !Array.isArray(textures))) {
+    return refuse(CONTAINED_GLTF_REFUSALS.malformed, "The glTF image and texture declarations must be arrays.");
   }
   const rawBuffers = json["buffers"];
   const bufferViews = json["bufferViews"];
@@ -981,24 +1114,124 @@ function parseGltf(bytes: Uint8Array, sourceName: string): ParsedGltf | Refusal 
     bufferViews,
     buffers: Object.freeze([bufferBytes]),
   };
+  const animations: GltfAnimationClip[] = [];
+  const rawAnimations = json["animations"];
+  if (rawAnimations !== undefined && !Array.isArray(rawAnimations)) return refuse(CONTAINED_GLTF_REFUSALS.malformed, "glTF animations must be an array.");
+  for (const [clipIndex, rawClip] of (rawAnimations ?? []).entries()) {
+    if (!plainRecord(rawClip) || !Array.isArray(rawClip["samplers"]) || !Array.isArray(rawClip["channels"])) return refuse(CONTAINED_GLTF_REFUSALS.malformed, `glTF animation ${clipIndex} is malformed.`);
+    const channels: GltfAnimationChannel[] = [];
+    const targets = new Set<string>();
+    let duration = 0;
+    for (const rawChannel of rawClip["channels"]) {
+      if (!plainRecord(rawChannel) || !plainRecord(rawChannel["target"]) || !nonNegativeInteger(rawChannel["sampler"])) return refuse(CONTAINED_GLTF_REFUSALS.malformed, `glTF animation ${clipIndex} has an invalid channel.`);
+      const target = rawChannel["target"];
+      const sampler = rawClip["samplers"][rawChannel["sampler"]];
+      if (!plainRecord(sampler)) return refuse(CONTAINED_GLTF_REFUSALS.malformed, `glTF animation ${clipIndex} references an invalid sampler.`);
+      const interpolation = sampler["interpolation"] ?? "LINEAR";
+      if (interpolation === "CUBICSPLINE") return refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, "glTF CUBICSPLINE animation interpolation is not supported.");
+      if (interpolation !== "LINEAR" && interpolation !== "STEP") return refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, `glTF animation interpolation ${String(interpolation)} is not supported.`);
+      const path = target["path"];
+      if (path !== "translation" && path !== "rotation" && path !== "scale") return refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, `glTF animation target path ${String(path)} is not supported.`);
+      const targetNodeIndex = target["node"];
+      if (!nonNegativeInteger(targetNodeIndex)) return refuse(CONTAINED_GLTF_REFUSALS.malformed, `glTF animation ${clipIndex} targets an invalid node.`);
+      const targetNode = nodes[targetNodeIndex];
+      if (!plainRecord(targetNode)) return refuse(CONTAINED_GLTF_REFUSALS.malformed, `glTF animation ${clipIndex} targets an invalid node.`);
+      if (own(targetNode, "matrix") !== undefined) return refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, `glTF animation target node ${targetNodeIndex} uses matrix instead of TRS.`);
+      const targetKey = `${String(target["node"])}:${path}`;
+      if (targets.has(targetKey)) return refuse(CONTAINED_GLTF_REFUSALS.malformed, `glTF animation ${clipIndex} targets node ${target["node"]} path ${path} more than once.`);
+      targets.add(targetKey);
+      const times = accessorValues(context, sampler["input"], "SCALAR", [5126]);
+      const values = accessorValues(context, sampler["output"], path === "rotation" ? "VEC4" : "VEC3", [5126]);
+      if (times === null || values === null || values.length !== times.length * (path === "rotation" ? 4 : 3) || times.some((value, index) => { const previous = times[index - 1]; return index > 0 && (previous === undefined || value <= previous); })) return refuse(CONTAINED_GLTF_REFUSALS.malformed, `glTF animation ${clipIndex} sampler accessors are invalid.`);
+      if (path === "rotation" && Array.from({ length: times.length }, (_v, index) => Math.hypot(...values.slice(index * 4, index * 4 + 4))).some((length) => Math.abs(length - 1) > 0.0001)) return refuse(CONTAINED_GLTF_REFUSALS.malformed, `glTF animation ${clipIndex} contains a non-unit rotation quaternion.`);
+      duration = Math.max(duration, times[times.length - 1] ?? 0);
+      channels.push(Object.freeze({ node: targetNodeIndex, path, interpolation, times, values }));
+    }
+    if (channels.length === 0) return refuse(CONTAINED_GLTF_REFUSALS.malformed, `glTF animation ${clipIndex} contains no channels.`);
+    animations.push(Object.freeze({ name: typeof rawClip["name"] === "string" ? rawClip["name"] : `Animation ${clipIndex + 1}`, channels: Object.freeze(channels), duration }));
+  }
+  const decodedImages: BaseColorTexture[] = [];
+  let decodedImageBytes = 0;
+  for (const image of images ?? []) {
+    if (!plainRecord(image)) return refuse(CONTAINED_GLTF_REFUSALS.malformed, "A glTF image declaration is invalid.");
+    if (image["extensions"] !== undefined) {
+      return refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, "glTF image extensions are unsupported.");
+    }
+    let imageBytes: Uint8Array | null = null;
+    if (image["uri"] !== undefined && image["bufferView"] !== undefined) {
+      return refuse(CONTAINED_GLTF_REFUSALS.malformed, "A glTF image must use either uri or bufferView, not both.");
+    }
+    if (image["mimeType"] !== undefined && image["mimeType"] !== "image/png") {
+      return refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, "Textured glTF models currently accept PNG images only; JPEG and WebP decoding is not supported.");
+    }
+    if (typeof image["uri"] === "string") {
+      const uri = image["uri"];
+      if (/^data:image\/(?:jpeg|webp);base64,/i.test(uri)) {
+        return refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, "Textured glTF models currently accept PNG images only; JPEG and WebP decoding is not supported.");
+      }
+      const match = /^data:image\/png;base64,([A-Za-z0-9+/]*={0,2})$/.exec(uri);
+      imageBytes = match === null ? null : decodeBase64(match[1] ?? "");
+    } else if (nonNegativeInteger(image["bufferView"])) {
+      const view = bufferViews[image["bufferView"]];
+      if (plainRecord(view) && view["buffer"] === 0 && nonNegativeInteger(view["byteLength"])) {
+        const offset = view["byteOffset"] === undefined ? 0 : view["byteOffset"];
+        if (nonNegativeInteger(offset) && offset + view["byteLength"] <= bufferBytes.byteLength) {
+          imageBytes = bufferBytes.subarray(offset, offset + view["byteLength"]);
+        }
+      }
+      if (image["mimeType"] !== "image/png") {
+        return refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, "Embedded glTF bufferView images must declare image/png.");
+      }
+    }
+    if (imageBytes === null) {
+      return refuse(CONTAINED_GLTF_REFUSALS.notContained, "glTF images must be embedded PNG data URIs or PNG bufferViews; external and non-embedded images are refused.");
+    }
+    const decoded = decodePng(imageBytes);
+    if ("ok" in decoded) return decoded;
+    decodedImageBytes += decoded.rgba.length;
+    if (decodedImageBytes > 8 * 1024 * 1024) {
+      return refuse(CONTAINED_GLTF_REFUSALS.oversize, "Decoded PNG textures exceed the 8 MiB per-model RGBA limit.");
+    }
+    decodedImages.push(decoded);
+  }
+  const textureImages: BaseColorTexture[] = [];
+  for (const texture of textures ?? []) {
+    if (!plainRecord(texture) || !nonNegativeInteger(texture["source"]) || texture["source"] >= decodedImages.length) {
+      return refuse(CONTAINED_GLTF_REFUSALS.malformed, "A glTF texture must reference a validated embedded PNG image.");
+    }
+    if (texture["sampler"] !== undefined || texture["extensions"] !== undefined) {
+      return refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, "glTF texture samplers and texture extensions are unsupported.");
+    }
+    const image = decodedImages[texture["source"]];
+    if (image === undefined) return refuse(CONTAINED_GLTF_REFUSALS.malformed, "A glTF texture references a missing PNG image.");
+    textureImages.push(image);
+  }
   const scene = scenes[0];
   const roots = plainRecord(scene) ? scene["nodes"] : undefined;
   if (!Array.isArray(roots) || roots.length === 0 || !roots.every(nonNegativeInteger)) {
     return refuse(CONTAINED_GLTF_REFUSALS.malformed, "The glTF scene root list is invalid.");
   }
+  if (json["materials"] !== undefined && !Array.isArray(json["materials"])) {
+    return refuse(CONTAINED_GLTF_REFUSALS.malformed, "The glTF materials declaration must be an array.");
+  }
   const materials = Array.isArray(json["materials"]) ? json["materials"] : [];
   const projected: ImportedAssetRenderMesh[] = [];
+  let primitiveRefusal: Refusal | null = null;
   const minimum: [number, number, number] = [Infinity, Infinity, Infinity];
   const maximum: [number, number, number] = [-Infinity, -Infinity, -Infinity];
   let triangleCount = 0;
   const active = new Set<number>();
+  const nodeParents = new Map<number, number | null>();
+  const nodeMatrices = new Map<number, Matrix4>();
 
-  const visit = (nodeIndex: number, parentMatrix: Matrix4): boolean => {
+  const visit = (nodeIndex: number, parentMatrix: Matrix4, parentNode: number | null): boolean => {
     const node = nodes[nodeIndex];
-    if (!plainRecord(node) || active.has(nodeIndex)) return false;
+    if (!plainRecord(node) || active.has(nodeIndex) || nodeParents.has(nodeIndex)) return false;
     const local = matrixForNode(node);
     if (local === null) return false;
     const world = multiplyMatrix(parentMatrix, local);
+    nodeParents.set(nodeIndex, parentNode);
+    nodeMatrices.set(nodeIndex, local);
     active.add(nodeIndex);
     try {
       const meshIndex = node["mesh"];
@@ -1012,13 +1245,23 @@ function parseGltf(bytes: Uint8Array, sourceName: string): ParsedGltf | Refusal 
           const attributes = primitive["attributes"];
           if (!plainRecord(attributes)) return false;
           const attributeKeys = Object.keys(attributes);
-          if (attributeKeys.some((key) => key !== "POSITION" && key !== "NORMAL")) return false;
+          if (attributeKeys.includes("JOINTS_0") || attributeKeys.includes("WEIGHTS_0")) {
+            primitiveRefusal = refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, "Skinning attributes JOINTS_0 and WEIGHTS_0 are not supported by this contained glTF profile.");
+            return false;
+          }
+          if (attributeKeys.some((key) => key !== "POSITION" && key !== "NORMAL" && key !== "TEXCOORD_0")) return false;
           const positions = accessorValues(context, attributes["POSITION"], "VEC3", [5126]);
           if (positions === null || positions.length % 9 !== 0) return false;
           const normals = attributes["NORMAL"] === undefined
             ? undefined
             : accessorValues(context, attributes["NORMAL"], "VEC3", [5126]);
-          if (normals === null || (normals !== undefined && normals.length !== positions.length)) return false;
+          const texcoords0 = attributes["TEXCOORD_0"] === undefined
+            ? undefined
+            : accessorValues(context, attributes["TEXCOORD_0"], "VEC2", [5126]);
+          if (
+            normals === null || (normals !== undefined && normals.length !== positions.length) ||
+            texcoords0 === null || (texcoords0 !== undefined && texcoords0.length !== positions.length / 3 * 2)
+          ) return false;
           const vertexCount = positions.length / 3;
           const indices = primitive["indices"] === undefined
             ? Object.freeze(Array.from({ length: vertexCount }, (_value, index) => index))
@@ -1043,32 +1286,84 @@ function parseGltf(bytes: Uint8Array, sourceName: string): ParsedGltf | Refusal 
             }
           }
           const materialIndex = primitive["material"];
+          if (materialIndex !== undefined && (!nonNegativeInteger(materialIndex) || !plainRecord(materials[materialIndex]))) {
+            primitiveRefusal = refuse(CONTAINED_GLTF_REFUSALS.malformed, "A glTF primitive references a missing or invalid material.");
+            return false;
+          }
           const material = nonNegativeInteger(materialIndex) ? materials[materialIndex] : undefined;
+
+          if (plainRecord(material) && material["alphaMode"] !== undefined && material["alphaMode"] !== "OPAQUE") {
+            primitiveRefusal = refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, "The contained glTF profile supports only OPAQUE alphaMode; BLEND, MASK, and unknown modes are refused.");
+
+            return false;
+          }
+
+          if (plainRecord(material) && material["extensions"] !== undefined) {
+            primitiveRefusal = refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, "glTF material extensions are unsupported.");
+            return false;
+          }
+          if (plainRecord(material) && ["normalTexture", "occlusionTexture", "emissiveTexture"].some((key) => material[key] !== undefined)) {
+            primitiveRefusal = refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, "Only glTF PBR baseColorTexture is supported; other material texture slots are refused.");
+            return false;
+          }
           const pbr = plainRecord(material) ? material["pbrMetallicRoughness"] : undefined;
+          if (pbr !== undefined && !plainRecord(pbr)) return false;
           const pbrRecord = plainRecord(pbr) ? pbr : {};
+          if (pbrRecord["metallicRoughnessTexture"] !== undefined) {
+            primitiveRefusal = refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, "Only glTF PBR baseColorTexture is supported; metallicRoughnessTexture is refused.");
+            return false;
+          }
+          const baseColorTexture = pbrRecord["baseColorTexture"];
+          let texture: BaseColorTexture | undefined;
+          if (plainRecord(baseColorTexture) && baseColorTexture["texCoord"] !== undefined && baseColorTexture["texCoord"] !== 0) {
+            primitiveRefusal = refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, "glTF baseColorTexture supports only the TEXCOORD_0 set.");
+            return false;
+          }
+          if (plainRecord(baseColorTexture) && baseColorTexture["extensions"] !== undefined) {
+            primitiveRefusal = refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, "glTF baseColorTexture extensions are unsupported.");
+            return false;
+          }
+          if (baseColorTexture !== undefined) {
+            if (
+              !plainRecord(baseColorTexture) || !nonNegativeInteger(baseColorTexture["index"]) ||
+              baseColorTexture["index"] >= textureImages.length
+            ) {
+              primitiveRefusal = refuse(CONTAINED_GLTF_REFUSALS.malformed, "A glTF baseColorTexture reference or TEXCOORD_0 binding is invalid.");
+              return false;
+            }
+            texture = textureImages[baseColorTexture["index"]];
+            if (texcoords0 === undefined || texture === undefined) {
+              primitiveRefusal = refuse(CONTAINED_GLTF_REFUSALS.malformed, "A textured glTF primitive requires matching TEXCOORD_0 vertices.");
+              return false;
+            }
+          }
           const metallic = finiteNumber(pbrRecord["metallicFactor"])
             ? Math.min(1, Math.max(0, pbrRecord["metallicFactor"]))
             : 1;
           const roughness = finiteNumber(pbrRecord["roughnessFactor"])
             ? Math.min(1, Math.max(0, pbrRecord["roughnessFactor"]))
             : 1;
-          projected.push(Object.freeze({
+          const projectedMesh: { -readonly [Key in keyof ImportedAssetRenderMesh]: ImportedAssetRenderMesh[Key] } = {
             meshId: `node-${String(nodeIndex)}-mesh-${String(meshIndex)}-primitive-${String(primitiveIndex)}`,
+            nodeIndex,
             positions,
-            ...(normals === undefined ? {} : { normals }),
             indices,
             matrix: world,
             baseColor: colorHex(pbrRecord["baseColorFactor"]),
             metallic,
             roughness,
-          }));
+          };
+          if (normals !== undefined) projectedMesh.normals = normals;
+          if (texcoords0 !== undefined) projectedMesh.uvs = texcoords0;
+          if (texture !== undefined) projectedMesh.baseColorTexture = texture;
+          projected.push(Object.freeze(projectedMesh));
         }
       }
       const children = node["children"];
       if (children !== undefined) {
         if (!Array.isArray(children) || !children.every(nonNegativeInteger)) return false;
         for (const child of children) {
-          if (!visit(child, world)) return false;
+          if (!visit(child, world, nodeIndex)) return false;
         }
       }
       return true;
@@ -1078,9 +1373,12 @@ function parseGltf(bytes: Uint8Array, sourceName: string): ParsedGltf | Refusal 
   };
 
   for (const root of roots) {
-    if (!visit(root, IDENTITY_MATRIX)) {
-      return refuse(CONTAINED_GLTF_REFUSALS.malformed, "The contained glTF scene graph or triangle accessor is invalid.");
+    if (!visit(root, IDENTITY_MATRIX, null)) {
+      return primitiveRefusal ?? refuse(CONTAINED_GLTF_REFUSALS.malformed, "The contained glTF scene graph or triangle accessor is invalid.");
     }
+  }
+  if (animations.some((clip) => clip.channels.some((channel) => !nodeParents.has(channel.node)))) {
+    return refuse(CONTAINED_GLTF_REFUSALS.malformed, "Every glTF animation target node must be reachable from the selected scene.");
   }
   if (projected.length === 0 || minimum.some((value) => !Number.isFinite(value))) {
     return refuse(CONTAINED_GLTF_REFUSALS.unsupportedFormat, "The contained profile requires at least one triangle primitive reachable from the scene.");
@@ -1088,6 +1386,8 @@ function parseGltf(bytes: Uint8Array, sourceName: string): ParsedGltf | Refusal 
   return Object.freeze({
     mediaType: container.mediaType,
     meshes: Object.freeze(projected),
+    nodes: Object.freeze([...nodeParents].sort(([a], [b]) => a - b).map(([node, parent]) => Object.freeze({ node, parent, matrix: nodeMatrices.get(node) ?? IDENTITY_MATRIX, matrixAuthored: own(nodes[node], "matrix") !== undefined, translation: vector(own(nodes[node], "translation"), 3, [0, 0, 0]) ?? [0, 0, 0], rotation: vector(own(nodes[node], "rotation"), 4, [0, 0, 0, 1]) ?? [0, 0, 0, 1], scale: vector(own(nodes[node], "scale"), 3, [1, 1, 1]) ?? [1, 1, 1] }))),
+    animations: Object.freeze(animations),
     bounds: Object.freeze({
       minimum: Object.freeze(minimum),
       maximum: Object.freeze(maximum),
@@ -1539,7 +1839,7 @@ export function stageProjectAssetImport(input: Readonly<{
   }) as JsonObject;
   const projection: ProjectAssetProjection = parsed.gltf === null
     ? Object.freeze({ entry, preview: parsed.preview })
-    : Object.freeze({ entry: entry as ContainedGltfProjection["entry"], meshes: parsed.gltf.meshes, bounds: parsed.gltf.bounds });
+    : Object.freeze({ entry: entry as ContainedGltfProjection["entry"], meshes: parsed.gltf.meshes, nodes: parsed.gltf.nodes, animations: parsed.gltf.animations, bounds: parsed.gltf.bounds });
   return Object.freeze({
     ok: true as const,
     replayed: false,
@@ -1760,7 +2060,7 @@ export function projectAssetManifestEntry(
     ? Object.freeze({ ok: true as const, value: Object.freeze({ entry, preview: parsed.preview }) })
     : Object.freeze({
         ok: true as const,
-        value: Object.freeze({ entry: entry as ContainedGltfProjection["entry"], meshes: parsed.gltf.meshes, bounds: parsed.gltf.bounds }),
+        value: Object.freeze({ entry: entry as ContainedGltfProjection["entry"], meshes: parsed.gltf.meshes, nodes: parsed.gltf.nodes, animations: parsed.gltf.animations, bounds: parsed.gltf.bounds }),
       });
 }
 

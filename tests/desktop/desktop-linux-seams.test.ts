@@ -6,8 +6,16 @@
  * really is a standalone install root, and the packaging surface the docs promise
  * (scripts, artifact naming, smoke proof) exists as declared.
  */
-import { readFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import {
+  desktopProcessLossNeedsRecovery,
+  mapDesktopDiagnosticEvent,
+  pruneDesktopCrashDumps,
+  recordDesktopDiagnostic,
+} from "../../desktop/linux/src/lib/diagnostics.ts";
 import {
   DESKTOP_VISUAL_REFUSALS,
   desktopProductSurface,
@@ -79,6 +87,110 @@ describe("desktop-linux seam", () => {
     expect(DESKTOP_BRIDGE_REFUSALS.presentationRuntimeUnavailable).toBe(
       DESKTOP_VISUAL_REFUSALS.noPresentationRuntime,
     );
+  });
+});
+
+describe("desktop-linux local diagnostics", () => {
+  it("maps process sources to fixed events and persists only timestamp and code", () => {
+    const logs = mkdtempSync(join(tmpdir(), "sceneaxi-diagnostics-"));
+
+    try {
+      expect(mapDesktopDiagnosticEvent("renderer")).toBe("renderer-gone");
+      expect(mapDesktopDiagnosticEvent("child")).toBe("child-gone");
+      recordDesktopDiagnostic(logs, mapDesktopDiagnosticEvent("renderer"));
+      recordDesktopDiagnostic(logs, mapDesktopDiagnosticEvent("child"));
+      recordDesktopDiagnostic(logs, "window-unresponsive");
+      recordDesktopDiagnostic(logs, "main-exception");
+
+      const content = readFileSync(join(logs, "diagnostics.log"), "utf8");
+      expect(content).toContain('"code":"RENDER_PROCESS_LOST"');
+      expect(content).toContain('"code":"CHILD_PROCESS_LOST"');
+      expect(content).toContain('"code":"APP_UNRESPONSIVE"');
+      expect(content).toContain('"code":"MAIN_UNCAUGHT_EXCEPTION"');
+      for (const line of content.trim().split("\n")) {
+        expect(Object.keys(JSON.parse(line))).toEqual(["timestamp", "code"]);
+      }
+    } finally {
+      rmSync(logs, { recursive: true, force: true });
+    }
+  });
+
+  it("records only allow-listed process-loss detail, never a message", () => {
+    const logs = join(mkdtempSync(join(tmpdir(), "sceneaxi-diagnostics-")), "fresh");
+
+    try {
+      recordDesktopDiagnostic(logs, "child-gone", { reason: "crashed", exitCode: 139, processType: "GPU" });
+      recordDesktopDiagnostic(logs, "main-exception", { errorName: "TypeError" });
+      recordDesktopDiagnostic(logs, "renderer-gone", {
+        reason: "sk-or-v1 secret key in a message",
+        exitCode: 1.5,
+        processType: "../etc/passwd",
+      } as never);
+
+      expect(statSync(logs).mode & 0o777).toBe(0o700);
+      const records = readFileSync(join(logs, "diagnostics.log"), "utf8").trim().split("\n").map((line) => JSON.parse(line) as Record<string, unknown>);
+      for (const record of records) expect(typeof record["timestamp"]).toBe("string");
+      expect(records.map((record) => Object.fromEntries(Object.entries(record).filter(([key]) => key !== "timestamp")))).toEqual([
+        { code: "CHILD_PROCESS_LOST", reason: "crashed", exitCode: 139, processType: "GPU" },
+        { code: "MAIN_UNCAUGHT_EXCEPTION", errorName: "TypeError" },
+        { code: "RENDER_PROCESS_LOST" },
+      ]);
+      expect(desktopProcessLossNeedsRecovery("clean-exit")).toBe(false);
+      expect(desktopProcessLossNeedsRecovery("crashed")).toBe(true);
+      expect(desktopProcessLossNeedsRecovery(undefined)).toBe(true);
+    } finally {
+      rmSync(join(logs, ".."), { recursive: true, force: true });
+    }
+  });
+
+  it("keeps only the newest local minidumps", () => {
+    const dumps = mkdtempSync(join(tmpdir(), "sceneaxi-dumps-"));
+
+    try {
+      mkdirSync(join(dumps, "completed"));
+      for (let index = 0; index < 8; index += 1) {
+        const path = join(dumps, "completed", `dump-${index}.dmp`);
+        writeFileSync(path, "x");
+        utimesSync(path, 1_000 + index, 1_000 + index);
+      }
+      writeFileSync(join(dumps, "settings.dat"), "keep");
+
+      pruneDesktopCrashDumps(dumps, 5);
+
+      expect(readdirSync(join(dumps, "completed")).sort()).toEqual(["dump-3.dmp", "dump-4.dmp", "dump-5.dmp", "dump-6.dmp", "dump-7.dmp"]);
+      expect(readdirSync(dumps)).toContain("settings.dat");
+      expect(() => pruneDesktopCrashDumps(join(dumps, "missing"))).not.toThrow();
+    } finally {
+      rmSync(dumps, { recursive: true, force: true });
+    }
+  });
+
+  it("rotates within three bounded files, including oversized pre-existing logs", () => {
+    const logs = mkdtempSync(join(tmpdir(), "sceneaxi-diagnostics-"));
+
+    try {
+      for (let index = 0; index < 2500; index += 1) {
+        recordDesktopDiagnostic(logs, "renderer-gone");
+      }
+
+      const files = readdirSync(logs).sort();
+
+      expect(files).toEqual(["diagnostics.log", "diagnostics.log.1", "diagnostics.log.2"]);
+
+      for (const file of files) expect(statSync(join(logs, file)).size).toBeLessThanOrEqual(64 * 1024);
+
+      const oversized = "x".repeat(64 * 1024 + 1);
+
+      rmSync(join(logs, "diagnostics.log"));
+      writeFileSync(join(logs, "diagnostics.log"), oversized);
+
+      recordDesktopDiagnostic(logs, "main-exception");
+
+      for (const file of readdirSync(logs)) expect(statSync(join(logs, file)).size).toBeLessThanOrEqual(64 * 1024);
+      expect(() => recordDesktopDiagnostic(join(logs, "not-a-directory"), "main-exception")).not.toThrow();
+    } finally {
+      rmSync(logs, { recursive: true, force: true });
+    }
   });
 });
 

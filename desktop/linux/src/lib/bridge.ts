@@ -89,6 +89,7 @@ import {
   stopPlaySession,
   validateEditorCommandInvocation,
   type PlaySession,
+  type PhysicsWorldHost,
   validateRarityNamespace,
   type EditorCommandId,
   ASSISTANT_ASK_REFUSALS,
@@ -175,6 +176,8 @@ export type DesktopBridgeOptions = {
   readonly commandCapabilities?: readonly string[];
   /** Integer-millisecond clock for the orchestrator host. Injectable for goldens. */
   readonly nowMs?: () => number;
+  /** Initialized at the tier boundary; an absent Rapier host refuses rather than using toy. */
+  readonly physicsWorldHost?: PhysicsWorldHost;
   /** Observer for renderer frame reports (the smoke path listens here). */
   readonly onFrameReport?: (report: DesktopFrameReport) => void;
   /** Optional privileged BYOK runner. Credentials never enter this bridge. */
@@ -3072,6 +3075,7 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           documentData: read.status.data,
           sourceContentHash: read.status.contentHash,
           steps: Number(input["steps"]),
+          ...(options.physicsWorldHost === undefined ? {} : { physicsWorldHost: options.physicsWorldHost }),
           ...(typeof input["animationOffsetY"] === "number" ? { animationOffsetY: input["animationOffsetY"] } : {}),
         });
         if (!evaluated.ok) return bridgeRefuse(evaluated.reason, evaluated.message);

@@ -172,8 +172,10 @@ export {
 
 export {
   mountableScene,
+  mountableSceneFromDocumentData,
   type ComposedSceneOk,
   type MountableScene,
+  type MountableSceneCatalogs,
   type MountableSceneInstance,
 } from "./mountable-scene.js";
 

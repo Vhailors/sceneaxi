@@ -89,6 +89,7 @@ import {
   parseScenePackageCatalog,
   type ScenePackageMutation,
   type ComposedScene,
+  type PhysicsWorldHost,
   type ScenePhysicsCatalog,
   type ScenePhysicsMutation,
   type SceneEnvironmentCatalog,
@@ -110,9 +111,10 @@ import {
   type SculptArtifact,
   type SculptTransform,
   type Vector3,
+  type GltfAnimationClip,
 } from "@sceneaxi/schemas";
 import {
-  mountableScene,
+  mountableSceneFromDocumentData,
   webEditorStarterArtifact,
   type ComposedSceneOk,
   type MountableScene,
@@ -122,6 +124,7 @@ import {
   projectAssetManifestEntry,
   projectAssetManifestFromDocumentData,
   type ImportedAssetRenderMesh,
+  type ContainedGltfNode,
   type ProjectAssetManifestEntry,
 } from "@sceneaxi/importers";
 import { DESKTOP_ACTIVE_DOCUMENT_PATH } from "./bridge-contract.js";
@@ -273,6 +276,8 @@ export type DesktopImportedAsset = Readonly<{
   instanceId: string;
   digest: string;
   meshes: readonly ImportedAssetRenderMesh[];
+  nodes: readonly ContainedGltfNode[];
+  animations: readonly GltfAnimationClip[];
 }>;
 
 export type DesktopMountableScene = MountableScene & Readonly<{
@@ -322,8 +327,22 @@ function consistentProjectAssetManifest(
 function withImportedAssets(
   data: unknown,
   composed: ComposedSceneOk,
-  mountable: MountableScene,
 ): DesktopSceneResult {
+  if (!isJsonObject(data)) {
+    return Object.freeze({
+      ok: false as const,
+      reason: DESKTOP_SCENE_NOT_COMPOSABLE,
+      message: "Scene presentation catalogs are invalid.",
+    });
+  }
+  const mountable = mountableSceneFromDocumentData(composed, data);
+  if (mountable === null) {
+    return Object.freeze({
+      ok: false as const,
+      reason: DESKTOP_SCENE_NOT_COMPOSABLE,
+      message: "Scene presentation catalogs are invalid.",
+    });
+  }
   const manifest = consistentProjectAssetManifest(data, composed.scene);
   if (!manifest.ok) {
     return Object.freeze({ ok: false as const, reason: manifest.reason, message: manifest.message });
@@ -355,6 +374,8 @@ function withImportedAssets(
       instanceId: entry.instanceId,
       digest: entry.digest,
       meshes: projected.value.meshes,
+      nodes: projected.value.nodes,
+      animations: projected.value.animations,
     }));
   }
   return Object.freeze({
@@ -524,7 +545,7 @@ export function desktopOpenScene(): DesktopSceneResult {
     });
   }
 
-  return withImportedAssets({}, composed, mountableScene(composed));
+  return withImportedAssets({}, composed);
 }
 
 export function desktopSceneFromDocumentData(data: unknown): DesktopSceneResult {
@@ -556,7 +577,7 @@ export function desktopSceneFromDocumentData(data: unknown): DesktopSceneResult 
       message: "The active Scene Document composition could not be reproduced.",
     });
   }
-  return withImportedAssets(data, composed, mountableScene(composed));
+  return withImportedAssets(data, composed);
 }
 
 type DesktopEditableCompositionRead =
@@ -1515,11 +1536,17 @@ export function inspectDesktopScenePhysics(documentData: unknown) {
   return inspectScenePhysics(physicsCatalogFromData(documentData) ?? emptyScenePhysicsCatalog());
 }
 
+export async function initializeDesktopScenePhysics() {
+  const { createRapierPhysicsWorldHost } = await import("@sceneaxi/physics-rapier");
+  return createRapierPhysicsWorldHost();
+}
+
 export function evaluateDesktopScenePhysics(input: Readonly<{
   documentData: unknown;
   sourceContentHash: string;
   steps: number;
   animationOffsetY?: number;
+  physicsWorldHost?: PhysicsWorldHost;
 }>) {
   const catalog = physicsCatalogFromData(input.documentData);
   if (catalog === null) {
@@ -1533,6 +1560,7 @@ export function evaluateDesktopScenePhysics(input: Readonly<{
     catalog,
     sourceContentHash: input.sourceContentHash,
     steps: input.steps,
+    ...(input.physicsWorldHost === undefined ? {} : { host: input.physicsWorldHost }),
     ...(input.animationOffsetY === undefined ? {} : { animationOffsetY: input.animationOffsetY }),
   });
 }

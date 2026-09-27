@@ -63,6 +63,14 @@ files are `.sceneaxi/input-actions.v1.json` for a project and
 They are intentionally separate from document history and from the later layout
 state owned by #265.
 
+The renderer samples `navigator.getGamepads()` from its frame callback only after
+Play context is active. Gamepad button/axis bindings resolve through the shared
+map and emit `sceneaxi:play-input` on the viewport canvas with `{ actionId,
+pressed, value }`; consumers can listen on that canvas. The desktop viewport has
+no game-specific `play.primary` handler, so this is an input handoff rather than
+an invented gameplay effect. Choosing built-in semantics for that action remains
+an open product decision.
+
 ### Ship → Export Web
 
 The packaged chrome exposes one `Export Web` command in the File menu, command
@@ -209,6 +217,30 @@ action, no TCP listener, no provider credential field, and no hosted route; the
 real CLI-to-socket-to-authoring round trip is in
 `tests/e2e/desktop-cli-local-bridge-golden.test.ts`.
 
+### Scene physics host
+
+`src/lib/desktop-scene.ts` owns Rapier initialization and the existing
+`physics-evaluate` path. Electron awaits `initializeDesktopScenePhysics()`
+before injecting the resulting `PhysicsWorldHost` into each project bridge.
+Initialization failure is logged as `PHYSICS_HOST_NOT_READY`; toy projects
+still open, while an explicit Rapier evaluation refuses that same code.
+A mismatched injected host refuses `PHYSICS_HOST_KIND_UNKNOWN`.
+
+The saved catalog selects `world.engine`, with toy still the default.
+Rapier uses the deterministic WASM adapter in `packages/physics-rapier`;
+`handle()` stays synchronous and evaluation never writes project bytes.
+This wires catalog evaluation, not a second gameplay loop in the renderer or
+an expansion of the kernel's sculpt physics. The current port exposes only
+`y` and `vy` in snapshots. Nonzero animation offsets refuse
+`PHYSICS_INPUT_UNSUPPORTED` rather than silently ignoring animation.
+The v1 shape and joint conventions and the unresolved pose contract are
+recorded in [ADR 0027](adr/0027-physics-world-host.md).
+
+`tests/e2e/desktop-physics-golden.test.ts` proves review, save, evaluate,
+missing-host refusal, and byte-identical reopen through the real bridge.
+`tests/e2e/physics-rapier-golden.test.ts` pins the state and evaluation digests
+across fresh WASM processes; existing toy goldens keep their default host.
+
 ### Assistant-to-viewport product loop
 
 The packaged document requests a build only from Assistant **Build** mode. The
@@ -346,6 +378,31 @@ rolls back to the prior mount set. Contained ingestion uses that synchronizer's
 same-backend triangle replacement; its headless draw proof is
 `tests/e2e/asset-ingestion-golden.test.ts`. The umbrella's owner list is unchanged.
 
+## Local crash diagnostics
+
+The privileged Linux host writes a bounded, rotating event log to
+`<Electron userData>/logs/` (64 KiB per file, three files). The native Help menu
+provides **Reveal logs** to open that folder. Entries contain a timestamp and a
+fixed event identifier for renderer loss, child-process loss, an unresponsive
+window, or an uncaught main-process exception, plus only allow-listed tokens:
+Electron's process-loss `reason` (for example `crashed` or `oom`), the integer
+`exitCode`, the lost `processType`, and an exception's class `errorName`
+(`desktop/linux/src/lib/diagnostics.ts`). Exception messages, stacks, provider
+keys, prompts, project paths, and project contents are never written.
+This follows the no-credential-in-logs rule in
+[`desktop-local-bridge.md`](desktop-local-bridge.md#byok-secure-storage-contract).
+Electron stores local crash minidumps under the same user-data tree; its crash
+reporter starts with `uploadToServer: false`. Neither the log nor minidumps are
+uploaded by SceneAxi. Minidumps can include process memory and must be treated
+as sensitive if an operator chooses to share them; startup keeps only the five
+newest. When the renderer or a child process is lost (other than a clean exit),
+or the window stops responding, the host offers **Reload window**
+instead of leaving a blank or hung editor. Reloading does not commit an in-flight
+Change Review. To reproduce the recovery path on Linux from `desktop/linux`, run
+`xvfb-run -a node scripts/smoke-diagnostics.mjs` after `pnpm build`.
+The smoke crashes its own isolated renderer, checks the reloaded document, safe
+log event, and Help item, and removes its temporary user-data directory on exit.
+
 ## Build, verify, run
 
 ```bash
@@ -369,15 +426,35 @@ The first download points to the concrete successful main-branch run recorded be
 No GitHub Release is created and no release URL is invented; the repository artifact
 is the distribution path for this first ship.
 
-Local host note, 2026-08-07: `pnpm build` completed, but two `pnpm smoke`
-attempts exited before SceneAxi printed its JSON proof line. Electron 43.2.0's GPU
-process logged `InitializeSandbox() called with multiple threads in process
-gpu-process` and then exited with `SIGSEGV`. The Phase 0 desktop report records
-this as a host-specific smoke limitation. No pixel or packaged-runtime claim is
-derived from those attempts, and the command was not retried after FirstMate
-confirmed the limitation. TypeScript checks, the pure bridge tests, the
-Happy DOM interaction test, and the protocol/CLI byte-parity test remain valid
-on this host; CI under Xvfb owns the packaged smoke proof.
+Historical host note, 2026-08-07: two `pnpm smoke` attempts exited before
+SceneAxi printed its JSON proof line. Electron 43.2.0 logged
+`InitializeSandbox() called with multiple threads in process gpu-process` before
+a reported GPU-process `SIGSEGV`. Those attempts established neither a cause nor
+a general host limitation.
+
+Rechecked 2026-09-26 on the current host after installing the packaged Electron
+43.2.0 binary: `xvfb-run -a pnpm smoke --packaged` passed and reported
+`surface webgl-canvas · pixelsDrawn true`. The packaged smoke already launches
+with `--use-angle=swiftshader --enable-unsafe-swiftshader`; with
+`--enable-logging=stderr`, the sandbox warning appeared, but no GPU-process
+SIGSEGV or child-process-gone failure was observed. A direct packaged launch
+with `--use-gl=swiftshader --enable-unsafe-swiftshader` also completed without
+that crash. `--disable-gpu-compositing` likewise produced no GPU SIGSEGV, but
+that run failed the smoke's project-browser UI proof (`opened:false`), so it is
+not a passing software-rendering configuration. The prior crash's trigger and
+root cause remain unknown; there is not enough evidence to add runtime recovery
+or claim that any flag fixes it. Keep the packaged smoke's proven SwiftShader
+path; retry with `xvfb-run -a pnpm smoke --packaged` and `--enable-logging=stderr`
+if the crash returns, preserving the complete stderr and exit status.
+
+## Distribution publish configuration
+
+`pnpm dist` previously failed during electron-builder 26.15.3 update-info cleanup:
+`app-builder-lib`'s `computeChannelNames` dereferenced `publishConfig.channel` when
+no publish configuration was supplied. Linux has no auto-update policy, so the
+configuration now sets `publish: null`, electron-builder's explicit no-publish
+value. This prevents update metadata generation without changing artifact names,
+contents, or the release policy.
 
 ## First download record
 
@@ -417,6 +494,11 @@ until the landing page's "Coming soon" rows move with it.
 | Verified | 2026-08-12 |
 | Artifact retention | 90 days |
 | Download expires by | 2026-11-10 |
+
+The scheduled `desktop-artifact-expiry` workflow checks this recorded date every
+Monday and can also be run manually. It fails when fewer than 21 days remain;
+re-record the run, source commit, checksums, verified date, and expiry in this document
+and `packages/site-kit/src/desktop-app-offer.ts`.
 
 **This download expires.** A workflow artifact is not a release. Run 31629556282
 was produced from the recorded main-branch source commit and uploaded only after the

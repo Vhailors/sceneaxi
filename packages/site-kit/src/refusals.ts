@@ -25,7 +25,7 @@ export const SITE_REFUSALS = Object.freeze({
   SITE_REQUEST_TARGET_TOO_LONG:
     "The state this request reconstructs would submit a URL beyond the bounded editor request-target budget, so it is refused by name here rather than left to a platform URL or header limit.",
   SITE_REQUEST_CROSS_ORIGIN:
-    "The submission did not come from this deployment's own pages, so no session was created, revoked, or cleared from it.",
+    "The submission did not come from this deployment's own pages, so no action was performed.",
 
   // --- plane availability, distinct from "not wired" and from "no session" ---
   IDENTITY_SESSION_ABSENT:
@@ -73,6 +73,12 @@ export const SITE_REFUSALS = Object.freeze({
   CAPABILITY_UNKNOWN: "The requested capability is not in the published site capability matrix.",
   HOSTED_AI_REQUIRES_CREDITS:
     "Hosted AI requires a positive credit balance for a non-admin; the unused starter allotment is not sufficient.",
+
+  // --- administrator ledger support ---
+  ADMIN_ROLE_REQUIRED: "Ledger support requires the single environment-resolved administrator.",
+  CREDIT_SUPPORT_TARGET_NOT_FOUND: "No user matches this lookup.",
+  CREDIT_BALANCE_INSUFFICIENT: "This debit would take the balance below zero. Nothing was appended.",
+  CREDIT_IDEMPOTENCY_KEY_CONFLICT: "This key already names a different adjustment. Nothing was appended.",
 
   // --- billing ---
   BILLING_LIVE_MODE_NOT_AUTHORIZED:

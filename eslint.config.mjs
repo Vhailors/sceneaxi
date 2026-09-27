@@ -8,6 +8,7 @@ export default defineConfig(
     "**/dist/",
     "**/node_modules/",
     "coverage/",
+    "docs/api/",
     "tools/oxlint/anti-slop/**",
     // Framework build output and generated ambient declarations in the sites/ tier.
     // Authored site sources are still linted; only generated files are skipped.

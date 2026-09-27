@@ -158,6 +158,22 @@ export function useSculptViewport(input: {
         viewport: measure(),
         background: background ?? VIEWPORT_LETTERBOX,
       });
+      if (scene.environment !== undefined) {
+        backend.setEnvironment({
+          background: scene.environment.background,
+          ambientIntensity: scene.environment.ambientIntensity,
+          ambientColor: scene.environment.ambientColor,
+          keyIntensity: scene.environment.keyIntensity,
+          keyColor: scene.environment.keyColor,
+          keyDirection: scene.environment.keyDirection,
+          fillIntensity: scene.environment.fillIntensity,
+          fog: scene.environment.fog,
+          effects: scene.environment.effects,
+          toneMapping: scene.environment.toneMapping,
+          exposure: scene.environment.exposure,
+        });
+      }
+      backend.setMaterialOverrides(scene.materials?.overrides ?? []);
       /**
        * Renderer ownership moves with construction. The backend owns itself until
        * `createSculptMountApi` takes it, after which `mounts.dispose()` is the single
@@ -237,6 +253,7 @@ export function useSculptViewport(input: {
       const drawFrame = () => {
         try {
           reconcileMounts();
+          if (scene.effects !== undefined) backend.sampleEffects(scene.effects, performance.now());
           const frame = mounts.render();
           const settled =
             frame.pixelsDrawn === true && (mounted.size === 0 || frame.drawCalls > 0);

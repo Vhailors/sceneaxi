@@ -13,9 +13,32 @@ import {
   loginRefusalHref,
   loginRefusalOutcome,
   readLoginRefusalReason,
+  createUmbrellaIdentityPlane,
+  performLogout,
   resolveLoginDestination,
   verifyLoginRequestOrigin,
 } from "../../sites/umbrella/src/index.ts";
+
+describe("performLogout", () => {
+  it("clears the browser cookie but exposes failed revocation on the login page", async () => {
+    const outcome = await performLogout({
+      plane: createUmbrellaIdentityPlane(),
+      requestOrigin: { ok: true, value: "https://sceneaxi.example" },
+      secure: true,
+    });
+
+    expect(outcome).toMatchObject({
+      kind: "signed-out",
+      location: "/login?reason=IDENTITY_PLANE_NOT_WIRED",
+      revocation: { ok: false, reason: "IDENTITY_PLANE_NOT_WIRED" },
+    });
+
+    if (outcome.kind !== "signed-out") throw new Error("expected browser sign-out");
+    expect(outcome.clearCookie).toContain("sceneaxi.session=;");
+    expect(outcome.clearCookie).toContain("Max-Age=0");
+    expect(outcome.clearCookie).toContain("Secure");
+  });
+});
 
 describe("resolveLoginDestination", () => {
   it("keeps a same-site relative path", () => {

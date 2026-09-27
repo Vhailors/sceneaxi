@@ -63,6 +63,7 @@ import {
   DESKTOP_PRODUCT_REFUSALS,
   DESKTOP_RARITY_PROPOSAL_EVENT,
   DESKTOP_VIEWPORT_PLAY_EVENT,
+  DESKTOP_VIEWPORT_STOP_EVENT,
   DESKTOP_VIEWPORT_SCENE_OPEN_EVENT,
   DESKTOP_WEB_STAGE_CONFIG,
   DESKTOP_WEB_STARTER,
@@ -222,11 +223,16 @@ function button(
   return [
     `<button type="button" class="${className}${inert ? " is-inert" : ""}"`,
     ` id="${escapeHtml(ctrl.id)}" data-kind="${ctrl.kind}"`,
-    inert ? ` aria-disabled="true" data-refusal="${escapeHtml(ctrl.refusal ?? "")}"` : "",
+    inert ? ` aria-disabled="true" data-refusal="${escapeHtml(ctrl.refusal ?? "")}" title="${escapeHtml(`${ctrl.refusal ?? ""}: ${ctrl.refusalMessage ?? ""}`)}"` : "",
     described,
     extra,
     `>${content}</button>`,
   ].join("");
+}
+
+function mutationTextarea(control: DesktopControl, extra = ""): string {
+  const inert = control.kind === "inert";
+  return `<textarea id="${escapeHtml(control.id)}" data-kind="${control.kind}"${inert ? ` aria-disabled="true" readonly data-refusal="${escapeHtml(control.refusal ?? "")}" aria-describedby="refusal-${escapeHtml(control.refusal ?? "")}"` : ""}${extra}></textarea>`;
 }
 
 function editorCommandAttributes(id: EditorCommandId): string {
@@ -566,6 +572,7 @@ function leftDock(view: DesktopVisualView): string {
         ${button(view.product.renameBrowserFile, "Rename…", "ghost-button", ` data-product-action data-action="project-browser-rename"`)}
         ${button(view.product.deleteBrowserFile, "Delete…", "ghost-button", ` data-product-action data-action="project-browser-delete"`)}
       </div>
+      <p class="panel-empty">${escapeHtml(view.product.renameBrowserFile.refusal ?? "")} · ${escapeHtml(view.product.renameBrowserFile.refusalMessage ?? "")}</p>
     </section>
     <div class="scene-entities" data-scene-entities hidden>
       <p class="scene-entities-label">Objects · click to select</p>
@@ -723,9 +730,9 @@ function dock(view: DesktopVisualView): string {
       <p class="change-empty" data-change-empty>Nothing waiting for review. Generated edits land here before they touch the scene.</p>
     `,
     assets: `<div class="asset-browser" data-project-assets><p class="panel-empty">No admitted project assets are present.</p></div>`,
-    console: `<p class="panel-empty">No session is running, so there is no console output to show.</p>`,
+    console: `<pre class="change-diff" data-console-output tabindex="0" role="log" aria-label="Play evidence and results" aria-live="polite">Play evidence will appear here.</pre>`,
     evidence: `<p class="panel-empty" data-rarity-evidence-empty>No accepted rarity evidence has been opened or staged in this session.</p><pre class="change-diff" data-rarity-evidence hidden tabindex="0" role="region" aria-label="Rarity evidence"></pre><p class="panel-empty">No evidence packet has been captured here. Evidence digests are produced by <code>sceneaxi project capture</code>, never invented by a viewer.</p>`,
-    timeline: `<p class="panel-empty">No clip is loaded, so the timeline has no tracks.</p>`,
+    timeline: `<label>${escapeHtml(view.timelineControls.mutation.label)} <textarea id="${escapeHtml(view.timelineControls.mutation.id)}" data-kind="${view.timelineControls.mutation.kind}"${view.timelineControls.mutation.kind === "inert" ? ` readonly aria-disabled="true" data-refusal="${escapeHtml(view.timelineControls.mutation.refusal ?? "")}"` : ""} data-timeline-mutation>{"kind":"clip-upsert","clipId":"idle","name":"Idle","startMs":0,"durationMs":1000}</textarea></label>${button(view.timelineControls.apply, view.timelineControls.apply.label, "ghost-button", ` data-action="timeline-apply"`)}<label>${escapeHtml(view.timelineControls.time.label)} <input id="${escapeHtml(view.timelineControls.time.id)}" data-kind="${view.timelineControls.time.kind}"${view.timelineControls.time.kind === "inert" ? ` readonly aria-disabled="true" data-refusal="${escapeHtml(view.timelineControls.time.refusal ?? "")}"` : ""} type="number" min="0" step="1" data-timeline-time value="0"></label>${button(view.timelineControls.scrub, view.timelineControls.scrub.label, "ghost-button", ` data-action="timeline-scrub"`)}${button(view.timelineControls.evaluate, view.timelineControls.evaluate.label, "ghost-button", ` data-action="timeline-evaluate"`)}<pre data-timeline-result aria-live="polite">Open Timeline to inspect clips, tracks, and keyframes.</pre>`,
   };
 
   const panels = DESKTOP_DOCK_TAB_IDS.map(
@@ -746,6 +753,17 @@ function dock(view: DesktopVisualView): string {
     ${panels}
   </div>
 </section>`;
+}
+
+function inspectorCatalogs(view: DesktopVisualView): string {
+  return view.product.inspectors.map((inspector) => `<section class="scene-catalog-editor" aria-label="${escapeHtml(inspector.kind)} inspector">
+    <h3>${escapeHtml(inspector.kind)}</h3>
+    ${button(inspector.inspect, "Inspect", "ghost-button", ` data-product-action data-command="${inspector.inspectCommand}"`)}
+    <pre data-catalog-report="${inspector.kind}" hidden role="region" aria-label="${escapeHtml(inspector.kind)} inspection"></pre>
+    <p>Inspect the catalog, then enter one supported mutation object and stage it for review.</p>
+    <label>Mutation JSON${mutationTextarea(inspector.mutation, ` data-catalog-mutation="${inspector.kind}" rows="3" spellcheck="false" aria-label="${escapeHtml(inspector.kind)} mutation JSON"`)}</label>
+    ${button(inspector.stage, "Stage change", "primary-button", ` data-product-action data-action="catalog-stage" data-value="${inspector.kind}"`)}
+  </section>`).join("");
 }
 
 function inspector(view: DesktopVisualView): string {
@@ -805,7 +823,12 @@ function inspector(view: DesktopVisualView): string {
       <pre class="scene-property-review" data-scene-property-review hidden></pre>
     </div>
   </div>`
-      : mode === "ship"
+      : mode === "run"
+        ? `<div class="run-controls">
+    ${button(view.product.runStop, "Stop", "ghost-button", ` data-product-action data-command="run-stop"`)}
+    ${button(view.product.runReset, "Reset", "ghost-button", ` data-product-action data-command="run-reset"`)}
+  </div>`
+        : mode === "ship"
         ? `<div class="ship-export-panel">
     ${button(view.product.exportWeb, "Export Web", "primary-button block-button", ` data-product-action data-command="ship-export-web"`)}
     <dl class="ship-export-evidence" data-ship-export-evidence hidden>
@@ -825,6 +848,7 @@ function inspector(view: DesktopVisualView): string {
   </div>`
         : ""
   }
+  ${mode === "build" ? inspectorCatalogs(view) : ""}
 </section>`;
   }).join("");
 
@@ -900,7 +924,7 @@ function assistant(view: DesktopVisualView): string {
         .map((route) =>
           button(
             route.control,
-            escapeHtml(route.label),
+            `${escapeHtml(route.label)}${route.id === "hosted" ? `<small class="assistant-route-refusal">${escapeHtml(route.control.refusal ?? "")}</small>` : ""}`,
             "assistant-route",
             ` data-action="assistant-route" data-value="${escapeHtml(route.id)}" aria-pressed="${route.id === view.state.assistantRoute ? "true" : "false"}"`,
           ),
@@ -1041,7 +1065,7 @@ function overlays(view: DesktopVisualView): string {
 
   <div class="overlay" data-overlay="outcome" role="dialog" aria-modal="true" aria-labelledby="outcome-title" hidden>
     <div class="overlay-card overlay-refused">
-      <div class="overlay-head"><span class="overlay-mark mark-refuse" aria-hidden="true">!</span><h2 id="outcome-title" data-outcome-title></h2></div>
+      <div class="overlay-head"><span class="overlay-mark mark-refuse" data-outcome-mark aria-hidden="true">!</span><h2 id="outcome-title" data-outcome-title></h2></div>
       <p class="overlay-body"><code data-outcome-code></code><br><span data-outcome-message></span></p>
       <div class="overlay-actions">${dismissals("outcome")}</div>
     </div>
@@ -1411,6 +1435,7 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .assistant-routes{display:none;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px}
 .shell[data-details-open="true"] .assistant-routes{display:grid}
 .assistant-route{min-width:0;padding:5px 3px;border:1px solid var(--line-control);border-radius:3px;color:var(--dim);font-size:9px;line-height:1.2}
+.assistant-route-refusal{display:block;margin-top:3px;font-size:7px;line-height:1.2;overflow-wrap:anywhere;color:var(--scene)}
 .assistant-route[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);background:${ACCENT.surface}}
 .composer-actions{display:flex;align-items:center;gap:7px}
 .assistant-modes{display:flex;background:var(--header);border:1px solid var(--line-control);border-radius:4px;padding:2px}
@@ -1468,6 +1493,7 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .overlay-head h2{margin:0;font-size:15px;font-weight:600}
 .overlay-mark{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;flex:none}
 .mark-refuse{background:${SIGNAL.refuseSurface};border:1px solid ${SIGNAL.refuseLine};color:var(--refuse)}
+.mark-complete{background:${SIGNAL.infoSurface};border:1px solid ${SIGNAL.infoLine};color:var(--info)}
 .overlay-body{margin:0;padding:15px 18px;font-size:12px;line-height:1.6;color:var(--text-2)}
 .overlay-actions{display:flex;gap:9px;justify-content:flex-end;padding:13px 18px;background:var(--well);border-top:1px solid var(--line)}
 .overlay-actions .primary-button,.overlay-actions .ghost-button{height:31px;padding:0 14px;font-size:12px}
@@ -1656,6 +1682,7 @@ function script(view: DesktopVisualView): string {
     product: {
       documentPath: view.product.surface.project.activeFile,
       viewportPlayEvent: DESKTOP_VIEWPORT_PLAY_EVENT,
+      viewportStopEvent: DESKTOP_VIEWPORT_STOP_EVENT,
       viewportSceneOpenEvent: DESKTOP_VIEWPORT_SCENE_OPEN_EVENT,
       rarityProposalEvent: DESKTOP_RARITY_PROPOSAL_EVENT,
       webStarter: DESKTOP_WEB_STARTER,
@@ -1665,6 +1692,7 @@ function script(view: DesktopVisualView): string {
       refusals: DESKTOP_PRODUCT_REFUSALS,
       /** The one staging decision's own configuration, not a browser copy. */
       stageConfig: DESKTOP_WEB_STAGE_CONFIG,
+      inspectors: view.product.inspectors.map(({ kind, applyCommand }) => ({ kind, applyCommand })),
     },
     controlsByProfile: controlsByProfile(view),
   };
@@ -1682,6 +1710,7 @@ if (shell) {
 
   let projectData = null;
   let projectContentHash = null;
+  let projectContentRoot = null;
   let projectDirty = false;
   let projectRecovering = false;
   let recoveryStatusText = null;
@@ -1703,6 +1732,7 @@ if (shell) {
   let sceneSelectionPending = Promise.resolve();
   let sceneSelectionGeneration = 0;
   let sceneRefusalText = null;
+  let consoleEvidence = [];
   let undoAvailability = 'unavailable';
   let redoAvailability = 'unavailable';
   let shippedSourceDigest = null;
@@ -1722,6 +1752,9 @@ if (shell) {
     }
     if (binding.device === 'pointer') return 'Pointer ' + binding.button + ' ' + binding.gesture;
     if (binding.device === 'wheel') return 'Wheel ' + binding.axis.toUpperCase();
+    if (binding.device === 'gamepad') {
+      return 'Gamepad ' + (binding.gamepad + 1) + ' ' + binding.input + ' ' + binding.control;
+    }
     return 'Controller ' + (binding.controller + 1) + ' ' + binding.input + ' ' + binding.control;
   };
 
@@ -2258,17 +2291,80 @@ if (shell) {
     q('[data-product-run-report]').forEach((el) => { el.textContent = text; });
   };
 
-  const runRefusal = (code, detail) => {
-    const text = 'Play refused · ' + code + (detail ? ' · ' + detail : '');
+  const runRefusal = (code, detail, command = 'Play') => {
+    const text = command + ' refused · ' + code + (detail ? ' · ' + detail : '');
     runStatus(text);
     q('[data-run-session-report]').forEach((el) => {
-      el.textContent = 'No completed session for the latest Play request · ' + code;
+      el.textContent = 'No completed session for the latest ' + command + ' request · ' + code;
     });
     q('[data-run-live-report]').forEach((el) => {
-      el.textContent = 'No viewport frame was acknowledged for the latest Play request.';
+      el.textContent = 'No viewport frame was acknowledged for the latest ' + command + ' request.';
     });
     productStatus('refused', text);
-    showOutcome('Play refused', code, detail || 'The composed scene was not played.');
+    showOutcome(command + ' refused', code, detail || 'The run command was not completed.');
+  };
+
+  const appendConsoleEvidence = (event, data) => {
+    const output = shell.querySelector('[data-console-output]');
+    if (!output) return;
+    consoleEvidence.push(JSON.stringify({ event, data }, null, 2));
+    if (consoleEvidence.length > 20) consoleEvidence.shift();
+    output.textContent = consoleEvidence.join("\\n");
+  };
+
+  const runControl = async (commandId) => {
+    const response = await commandRequest(commandId, {});
+    if (response === null || !response.ok) {
+      runRefusal(response === null ? T.product.refusals.runtimeUnavailable : response.reason,
+        response === null ? null : response.detail, commandId === 'run-stop' ? 'Stop' : 'Reset');
+      return;
+    }
+    const detail = response.data && typeof response.data === 'object'
+      ? JSON.stringify(response.data)
+      : 'completed';
+    runStatus((commandId === 'run-stop' ? 'Stopped' : 'Reset') + ' · ' + detail);
+    appendConsoleEvidence(commandId, response.data);
+    document.dispatchEvent(new CustomEvent(T.product.viewportStopEvent));
+    productStatus('open', 'Run command completed · ' + commandId);
+  };
+
+  const inspectCatalog = async (kind, commandId) => {
+    const response = await commandRequest(commandId, {
+      documentPath: T.product.documentPath,
+      profile: shell.dataset.profile,
+    });
+    const report = shell.querySelector('[data-catalog-report="' + kind + '"]');
+    if (response === null || !response.ok) {
+      const code = response === null ? T.product.refusals.runtimeUnavailable : response.reason;
+      if (report) { report.textContent = code; report.hidden = false; }
+      productStatus('refused', 'Inspect refused · ' + code);
+      showOutcome('Inspect refused', code, response?.detail || response?.message || 'The catalog was not returned.');
+      return;
+    }
+    if (report) { report.textContent = JSON.stringify(response.data, null, 2); report.hidden = false; }
+    productStatus('open', kind + ' catalog inspected');
+  };
+
+  const stageCatalog = async (kind) => {
+    const inspector = T.product.inspectors.find((row) => row.kind === kind);
+    const field = shell.querySelector('[data-catalog-mutation="' + kind + '"]');
+    if (!inspector || !field || typeof field.value !== 'string') return;
+    let mutation;
+    try { mutation = JSON.parse(field.value); } catch {
+      productStatus('refused', 'Stage refused · EDITOR_COMMAND_INPUT_INVALID');
+      showOutcome('Stage refused', 'EDITOR_COMMAND_INPUT_INVALID', 'Enter one valid JSON mutation object.');
+      return;
+    }
+    if (!mutation || typeof mutation !== 'object' || Array.isArray(mutation)) {
+      productStatus('refused', 'Stage refused · EDITOR_COMMAND_INPUT_INVALID');
+      showOutcome('Stage refused', 'EDITOR_COMMAND_INPUT_INVALID', 'Mutation must be a JSON object.');
+      return;
+    }
+    await stageSceneCommand(inspector.applyCommand, {
+      documentPath: T.product.documentPath,
+      profile: shell.dataset.profile,
+      mutation,
+    }, kind + ' change', { refreshScene: false, authoringSnapshot: true });
   };
 
   const desktopPort = () => {
@@ -2841,6 +2937,7 @@ if (shell) {
     }
     projectData = status.data;
     projectContentHash = status.contentHash;
+    projectContentRoot = activeProject?.root ?? null;
     reconcileRarityEvidence(status);
     if (rarityEvidenceText(restartedRarityEvidence) !== null) {
       const acceptedDigest = status.acceptedRarityEvidence &&
@@ -2916,6 +3013,7 @@ if (shell) {
     }
     projectData = status.data;
     projectContentHash = status.contentHash;
+    projectContentRoot = activeProject?.root ?? null;
     reconcileRarityEvidence(status);
     await syncSceneHierarchy(hierarchyReviewRedacted);
     undoAvailability = status.undoAvailability === 'available' || status.undoAvailability === 'recovery-pending'
@@ -2941,6 +3039,7 @@ if (shell) {
       reviewProjection(authoringSnapshot) === null;
     projectData = status.data;
     projectContentHash = status.contentHash;
+    projectContentRoot = activeProject?.root ?? null;
     reconcileRarityEvidence(status);
     projectDirty = false;
     projectRecovering = false;
@@ -3096,7 +3195,7 @@ if (shell) {
     productStatus('dirty', name + ' · import staged · review before Save');
   };
 
-  const stageSceneChange = async ({ label, request, requiresSelection, propertyFeedback }) => {
+  const stageSceneChange = async ({ label, request, requiresSelection, propertyFeedback, refreshScene, authoringSnapshot }) => {
     await sceneSelectionPending;
     if (projectRecovering) {
       reportRecoveryRefusal('Edit');
@@ -3113,7 +3212,9 @@ if (shell) {
     }
     const response = await request(projectContentHash);
     const diagnostic = responseDiagnostic(response);
-    const snapshot = response?.ok ? response.data : null;
+    const snapshot = response?.ok
+      ? (authoringSnapshot ? response.data?.authoringSnapshot || response.data : response.data)
+      : null;
     const message = propertyFeedback
       ? shell.querySelector('[data-scene-property-diagnostic]')
       : null;
@@ -3137,8 +3238,10 @@ if (shell) {
     const edit = Array.isArray(snapshot.proposal?.edits) ? snapshot.proposal.edits[0] : null;
     if (edit && edit.jsonPointer === '/data/composedScene' && projectData && typeof projectData === 'object') {
       projectData = { ...projectData, composedScene: edit.newValue };
+    } else if (edit && edit.jsonPointer === '/data' && typeof edit.newValue === 'object' && edit.newValue !== null) {
+      projectData = edit.newValue;
     }
-    syncSceneProperties(snapshot);
+    if (refreshScene !== false) syncSceneProperties(snapshot);
     const review = propertyFeedback
       ? shell.querySelector('[data-scene-property-review]')
       : null;
@@ -3213,10 +3316,11 @@ if (shell) {
     await stageSceneCommand(commandId, input, kind === 'add-instance' ? 'object create' : 'object removal');
   };
 
-  const stageSceneCommand = async (commandId, input, label) => stageSceneChange({
+  const stageSceneCommand = async (commandId, input, label, options = {}) => stageSceneChange({
     label,
     requiresSelection: false,
     propertyFeedback: false,
+    ...options,
     request: (expectedContentHash) => commandRequest(commandId, {
       ...input,
       expectedContentHash,
@@ -3327,6 +3431,7 @@ if (shell) {
       // proposal is spent, so the review panel goes with it while the panel
       // keeps showing the value the next Play will mount.
       await syncSceneHierarchy();
+      if (shell.querySelector('[data-dock-panel="timeline"]')?.hidden === false) await refreshTimeline();
       productStatus('saved', withSceneRefusal(T.product.documentPath + ' · saved'));
       return true;
     }
@@ -3545,6 +3650,9 @@ if (shell) {
       return;
     }
     const exercise = response.data;
+    appendConsoleEvidence('run-play', exercise);
+    const inspection = await commandRequest('play-inspect', {});
+    if (inspection?.ok) appendConsoleEvidence('play-inspect', inspection.data);
     const ticks = Array.isArray(exercise?.tickDigests) ? exercise.tickDigests.length : 0;
     if (exercise?.closed !== true || ticks === 0) {
       runRefusal(T.product.refusals.openPathEvidenceInvalid);
@@ -3828,6 +3936,7 @@ if (shell) {
       el.tabIndex = on ? 0 : -1;
     });
     q('[data-dock-panel]').forEach((el) => { el.hidden = el.dataset.dockPanel !== id; });
+    if (id === 'timeline') void productAction(refreshTimeline);
   };
 
   // Roving tabindex takes the non-active tabs out of the Tab order, so the arrow
@@ -3912,6 +4021,12 @@ if (shell) {
   };
 
   const showOutcome = (title, code, message) => {
+    q('[data-outcome-mark]').forEach((el) => {
+      const complete = code === 'COMMAND_COMPLETED';
+      el.classList.toggle('mark-complete', complete);
+      el.classList.toggle('mark-refuse', !complete);
+      el.textContent = complete ? '✓' : '!';
+    });
     q('[data-outcome-title]').forEach((el) => { el.textContent = String(title); });
     q('[data-outcome-code]').forEach((el) => { el.textContent = String(code); });
     q('[data-outcome-message]').forEach((el) => { el.textContent = String(message); });
@@ -4101,6 +4216,103 @@ if (shell) {
     }
   });
 
+  const runEditorCommand = async (commandId) => {
+    const input = commandId === 'package-inspect' || commandId === 'profile-inspect'
+      ? { documentPath: T.product.documentPath, profile: shell.dataset.profile }
+      : commandId === 'extension-inspect'
+        ? { profile: shell.dataset.profile }
+        : commandId === 'project-build'
+          ? { profile: shell.dataset.profile, target: 'linux' }
+          : commandId === 'workspace-layout-apply'
+            // Apply persists the layout the user is looking at: the current drawers.
+            ? {
+              profile: shell.dataset.profile,
+              leftVisible: shell.dataset.drawerLeft === 'open',
+              inspectorVisible: shell.dataset.drawerInspector === 'open',
+            }
+            : {};
+    const response = await commandRequest(commandId, input);
+    const diagnostic = responseDiagnostic(response);
+    if (diagnostic !== null) {
+      showOutcome(commandId + ' refused', diagnostic.code, diagnostic.message);
+      productStatus('refused', commandId + ' refused · ' + diagnostic.code);
+      return;
+    }
+    const output = JSON.stringify(response.data, null, 2);
+    showOutcome(commandId, 'COMMAND_COMPLETED', output);
+    productStatus('open', commandId + ' completed');
+  };
+
+  const refreshTimeline = async () => {
+    if (activeProject === null && !(await openProject())) return;
+    const response = await commandRequest('animation-inspect', {
+      documentPath: T.product.documentPath,
+      profile: shell.dataset.profile,
+    });
+    const diagnostic = responseDiagnostic(response);
+    const output = diagnostic === null ? JSON.stringify(response.data, null, 2)
+      : diagnostic.code + ' · ' + diagnostic.message;
+    q('[data-timeline-result]').forEach((el) => { el.textContent = output; });
+    if (diagnostic !== null) productStatus('refused', 'Timeline inspection refused · ' + diagnostic.code);
+  };
+
+  const applyTimelineMutation = async () => {
+    if (activeProject === null && !(await openProject())) return;
+    let mutation;
+    try { mutation = JSON.parse(shell.querySelector('[data-timeline-mutation]')?.value || ''); }
+    catch { productStatus('refused', 'Animation edit refused · invalid JSON'); return; }
+    const result = await stageSceneCommand('animation-apply', {
+      documentPath: T.product.documentPath,
+      expectedContentHash: projectContentHash,
+      mutation,
+    }, 'animation');
+    if (result) q('[data-timeline-result]').forEach((el) => {
+      el.textContent = 'Animation edit staged in Change Review. Save applies the proposal.';
+    });
+  };
+
+  const openTimelineVersion = async () => {
+    if (projectRecovering || projectDirty) {
+      const code = projectRecovering ? T.product.refusals.recoveryPending : T.product.refusals.profileSwitchDirty;
+      productStatus('refused', 'Timeline evaluation refused · ' + code);
+      return false;
+    }
+    return projectData !== null && projectContentHash !== null &&
+      projectContentRoot === (activeProject?.root ?? null) ? true : openProject();
+  };
+
+  const scrubTimeline = async () => {
+    if (!(await openTimelineVersion())) return;
+    const timeMs = Number(shell.querySelector('[data-timeline-time]')?.value);
+    const response = await commandRequest('animation-scrub', {
+      documentPath: T.product.documentPath,
+      expectedContentHash: projectContentHash,
+      profile: shell.dataset.profile,
+      timeMs,
+    });
+    const diagnostic = responseDiagnostic(response);
+    q('[data-timeline-result]').forEach((el) => {
+      el.textContent = diagnostic === null ? JSON.stringify(response.data, null, 2)
+        : diagnostic.code + ' · ' + diagnostic.message;
+    });
+  };
+
+  const evaluateTimeline = async () => {
+    if (!(await openTimelineVersion())) return;
+    const timeMs = Number(shell.querySelector('[data-timeline-time]')?.value);
+    const response = await commandRequest('animation-evaluate', {
+      documentPath: T.product.documentPath,
+      expectedContentHash: projectContentHash,
+      profile: shell.dataset.profile,
+      timeMs,
+    });
+    const diagnostic = responseDiagnostic(response);
+    q('[data-timeline-result]').forEach((el) => {
+      el.textContent = diagnostic === null ? JSON.stringify(response.data, null, 2)
+        : diagnostic.code + ' · ' + diagnostic.message;
+    });
+  };
+
   const commandHandlers = Object.freeze({
     'project-new': () => chooseProject('choose-new'),
     'project-open': () => chooseProject('choose-open'),
@@ -4113,6 +4325,19 @@ if (shell) {
     'edit-undo': undoProject,
     'edit-redo': redoProject,
     'run-play': playScene,
+    'run-stop': () => runControl('run-stop'),
+    'run-reset': () => runControl('run-reset'),
+    'physics-inspect': () => inspectCatalog('physics', 'physics-inspect'),
+    'environment-inspect': () => inspectCatalog('environment', 'environment-inspect'),
+    'material-inspect': () => inspectCatalog('material', 'material-inspect'),
+    'effect-inspect': () => inspectCatalog('effect', 'effect-inspect'),
+    ...Object.fromEntries([
+      'package-inspect', 'package-install', 'package-remove',
+      'workspace-layout-inspect', 'workspace-layout-apply', 'workspace-layout-reset',
+      'project-migration-propose', 'project-migration-commit', 'project-migration-recover',
+      'project-build', 'extension-inspect', 'extension-start', 'profile-inspect',
+      'project-inspect', 'input-action-rebind', 'input-actions-reset',
+    ].map((id) => [id, () => runEditorCommand(id)])),
   });
 
   const executeCommand = (id) => {
@@ -4124,8 +4349,9 @@ if (shell) {
     const registryCommand = T.editorCommands.find((candidate) => candidate.id === id);
     const exposedCommand = T.commands.find((candidate) => candidate.id === id);
     if (!registryCommand || !registryCommand.acceptedClients.includes('desktop-control') ||
-        exposedCommand?.schemaVersion !== registryCommand.schemaVersion ||
-        exposedCommand?.permission !== registryCommand.permission) {
+        (exposedCommand !== undefined &&
+          (exposedCommand.schemaVersion !== registryCommand.schemaVersion ||
+            exposedCommand.permission !== registryCommand.permission))) {
       commandRefusal('EDITOR_COMMAND_REGISTRY_INVALID');
       return;
     }
@@ -4175,19 +4401,6 @@ if (shell) {
       const path = projectBrowserStatus?.selectedPath;
       if (typeof path === 'string') void productAction(() => projectBrowserAction('open', path));
     }
-    else if (action === 'project-browser-rename') {
-      const path = projectBrowserStatus?.selectedPath;
-      if (typeof path === 'string' && globalThis.confirm('Confirm rename request for ' + path + '?')) {
-        const target = globalThis.prompt('New project-relative path', path);
-        if (typeof target === 'string') void productAction(() => projectBrowserAction('rename', path, target));
-      }
-    }
-    else if (action === 'project-browser-delete') {
-      const path = projectBrowserStatus?.selectedPath;
-      if (typeof path === 'string' && globalThis.confirm('Confirm delete request for ' + path + '?')) {
-        void productAction(() => projectBrowserAction('delete', path));
-      }
-    }
     else if (action === 'document-reload') void productAction(openProject);
     else if (action === 'change-accept') void productAction(acceptProposal);
     else if (action === 'change-reject') void productAction(() => rejectProposal('rejected'));
@@ -4196,6 +4409,7 @@ if (shell) {
       if (primary && showSceneProperty(primary) && shell.dataset.mode !== 'build') showModePanels('build');
     }
     else if (action === 'scene-property-stage') void productAction(stageSceneProperty);
+    else if (action === 'catalog-stage' && value) void productAction(() => stageCatalog(value));
     else if (action === 'scene-transform-mode' && value) {
       shell.dataset.transformMode = value;
     }
@@ -4213,6 +4427,9 @@ if (shell) {
     else if (action === 'web-inject-asset') void productAction(stageAssetImport);
     else if (action === 'mode' && value) showModePanels(value);
     else if (action === 'dock-tab' && value) selectDockTab(value);
+    else if (action === 'timeline-apply') void productAction(applyTimelineMutation);
+    else if (action === 'timeline-scrub') void productAction(scrubTimeline);
+    else if (action === 'timeline-evaluate') void productAction(evaluateTimeline);
     else if (action === 'overlay') setOverlay(value || 'none');
     else if (action === 'refusal-help') {
       const panel = shell.querySelector('#refusal-legend');

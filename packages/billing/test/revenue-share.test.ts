@@ -739,6 +739,7 @@ describe("applyCreditsSale", () => {
     let settlementCalls = 0;
     let appendCalls = 0;
     const store: CreditStore = Object.freeze({
+      ...createInMemoryCreditStore(),
       findAccountByUserId: () => undefined,
       findAccountById: () => undefined,
       listEntries: () => [],

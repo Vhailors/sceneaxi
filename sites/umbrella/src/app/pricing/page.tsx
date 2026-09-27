@@ -1,6 +1,7 @@
 import {
   CREATOR_SHARE_ROUNDING_NOTE,
   CREATOR_SHARE_RULE,
+  describeSiteAccessState,
   SITE_REFUSALS,
   SITE_STARTER_CREDIT_ALLOTMENT,
 } from "@sceneaxi/site-kit";
@@ -13,12 +14,10 @@ import {
   CREDIT_LEDGER_FACTS,
   PRICING_FAQ,
 } from "../../lib/site-content.js";
-import {
-  buildCreditPackOffers,
-  creditPackBillingModeNotice,
-} from "../../lib/credit-pack-offers.js";
+import { buildCreditPackOffers } from "../../lib/credit-pack-offers.js";
 import { CapabilityTable } from "../_components/capability-table.js";
 import { StatePanel } from "../_components/state-panel.js";
+import { readLoginRefusalReason } from "../../lib/login-flow.js";
 
 /**
  * Pricing: the free-vs-paid matrix and credit packs.
@@ -38,9 +37,19 @@ import { StatePanel } from "../_components/state-panel.js";
  */
 export const dynamic = "force-dynamic";
 
-export default async function PricingPage() {
+export default async function PricingPage({
+  searchParams,
+}: {
+  readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const reasonValue = params.reason;
+  const refusalReason = readLoginRefusalReason(reasonValue);
+  const refusal = refusalReason === null ? null : describeSiteAccessState(refusalReason);
+  const checkoutState = params.checkout;
   const plane = umbrellaRequestAuthority().plane();
   const packs = await plane.billing.listCreditPacks();
+
   const offers = packs.ok
     ? buildCreditPackOffers(packs.value, {
         billingMode: plane.billingMode,
@@ -48,7 +57,6 @@ export default async function PricingPage() {
         identityConfigured: plane.wired.identity,
       })
     : [];
-  const modeNotice = creditPackBillingModeNotice(plane.billingMode);
 
   return (
     <div className="page">
@@ -64,12 +72,23 @@ export default async function PricingPage() {
       </div>
 
       <div className="stack">
+        {refusal !== null && (
+          <StatePanel tone="deny" title={refusal.title} reason={refusal.reason}>
+            <p>{refusal.body}</p>
+          </StatePanel>
+        )}
+        {checkoutState === "cancelled" && (
+          <StatePanel tone="warn" title="Checkout cancelled">
+            <p>No payment was completed. No credits were added.</p>
+          </StatePanel>
+        )}
         <h2>Credit packs</h2>
         {packs.ok ? (
           <>
             <div className="grid grid-3">
               {offers.map((offer) => {
                 const featured = offer.bestRate;
+
                 return (
                   <article
                     className={featured ? "tier tier-featured" : "tier"}
@@ -149,26 +168,7 @@ export default async function PricingPage() {
               })}
             </div>
 
-            <StatePanel
-              tone="warn"
-              title="Billing mode"
-              evidence={[
-                { term: "Mode", value: plane.billingMode },
-                { term: "Checkout", value: plane.wired.billing ? "wired" : "not wired" },
-              ]}
-            >
-              <p>
-                <strong>{modeNotice.mode}</strong> — {modeNotice.charge}{" "}
-                {modeNotice.activation}
-              </p>
-              <p>{CREDIT_LEDGER_COPY.retryIsNotASecondCharge}</p>
-              {!plane.wired.billing && (
-                <p>
-                  These prices are shown for information and no purchase is offered.{" "}
-                  {BILLING_PLANE_PENDING_NOTE}
-                </p>
-              )}
-            </StatePanel>
+            <p className="note">{CREDIT_LEDGER_COPY.retryIsNotASecondCharge}</p>
           </>
         ) : (
           <StatePanel tone="deny" title="No credit packs to offer yet" reason={packs.reason}>

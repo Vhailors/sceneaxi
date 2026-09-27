@@ -5,6 +5,7 @@
  */
 import { digestSculptJson } from "./sculpt-json.js";
 import { isSculptIdentifier } from "./sculpt.js";
+import { PHYSICS_WORLD_HOST_REFUSALS, type PhysicsWorldHost } from "./physics-world-host.js";
 
 export const SCENE_PHYSICS_SCHEMA_VERSION = 1 as const;
 export const SCENE_PHYSICS_CATALOG_KIND = "sceneaxi.scene-physics-catalog" as const;
@@ -305,14 +306,47 @@ export function evaluateScenePhysics(input: Readonly<{
   sourceContentHash: string;
   steps: number;
   animationOffsetY?: number;
+  host?: PhysicsWorldHost;
 }>):
   | Readonly<{ ok: true; evaluation: ScenePhysicsEvaluation }>
-  | Failure {
+  | Failure
+  | Readonly<{ ok: false; reason: (typeof PHYSICS_WORLD_HOST_REFUSALS)[keyof typeof PHYSICS_WORLD_HOST_REFUSALS]; message: string }> {
   if (!/^sha256:[0-9a-f]{64}$/.test(input.sourceContentHash)) {
     return fail(SCENE_PHYSICS_REFUSALS.staleVersion, "Evaluation requires the exact project content hash.");
   }
   if (!Number.isInteger(input.steps) || input.steps < 1 || input.steps > 64) {
     return fail(SCENE_PHYSICS_REFUSALS.stepUnstable, "Replay must request 1 to 64 inclusive fixed steps.");
+  }
+  if (input.catalog.world.engine === "rapier") {
+    if (input.host === undefined) {
+      return Object.freeze({ ok: false, reason: PHYSICS_WORLD_HOST_REFUSALS.notReady, message: "Rapier initialization must complete before evaluation." });
+    }
+    if (input.host.kind !== "rapier") {
+      return Object.freeze({ ok: false, reason: PHYSICS_WORLD_HOST_REFUSALS.kindUnknown, message: "The injected physics host does not match the catalog engine." });
+    }
+    if ((input.animationOffsetY ?? 0) !== 0) {
+      return fail(SCENE_PHYSICS_REFUSALS.inputUnsupported, "Rapier v1 cannot receive animation poses through PhysicsWorldHost; nonzero offsets refuse.");
+    }
+    try {
+      const world = input.host.create(input.catalog);
+      try {
+        const snapshots: ScenePhysicsSnapshot[] = [];
+        for (let step = 1; step <= input.steps; step += 1) {
+          world.step(input.catalog.world.stepMs / 1000);
+          snapshots.push(Object.freeze({ step, timeMs: step * input.catalog.world.stepMs, bodies: world.snapshot() }));
+        }
+        return physicsEvaluation(input.catalog, input.sourceContentHash, snapshots);
+      } finally {
+        world.dispose();
+      }
+    } catch (error) {
+      const reason = [...Object.values(SCENE_PHYSICS_REFUSALS), ...Object.values(PHYSICS_WORLD_HOST_REFUSALS)]
+        .find((candidate) => error instanceof Error && candidate === error.message) ?? SCENE_PHYSICS_REFUSALS.catalogInvalid;
+      return Object.freeze({ ok: false, reason, message: `Rapier evaluation refused: ${reason}.` });
+    }
+  }
+  if (input.catalog.world.engine !== "toy") {
+    return Object.freeze({ ok: false, reason: PHYSICS_WORLD_HOST_REFUSALS.kindUnknown, message: "The catalog physics engine is unknown." });
   }
   const dt = input.catalog.world.stepMs / 1000;
   const snapshots: ScenePhysicsSnapshot[] = [];
@@ -347,19 +381,23 @@ export function evaluateScenePhysics(input: Readonly<{
       }))),
     }));
   }
+  return physicsEvaluation(input.catalog, input.sourceContentHash, snapshots);
+}
+
+function physicsEvaluation(catalog: ScenePhysicsCatalog, sourceContentHash: string, snapshots: ScenePhysicsSnapshot[]) {
   const frozen = Object.freeze(snapshots);
   return Object.freeze({
     ok: true as const,
     evaluation: Object.freeze({
-      schemaVersion: 1,
-      kind: "sceneaxi.scene-physics-evaluation",
-      sourceContentHash: input.sourceContentHash,
+      schemaVersion: SCENE_PHYSICS_SCHEMA_VERSION,
+      kind: "sceneaxi.scene-physics-evaluation" as const,
+      sourceContentHash,
       order: "animation-then-physics" as const,
       savedBytesWritten: false as const,
       snapshots: frozen,
       digest: digestSculptJson({
-        sourceContentHash: input.sourceContentHash,
-        world: input.catalog.world,
+        sourceContentHash,
+        world: catalog.world,
         snapshots: frozen,
         order: "animation-then-physics",
       }),

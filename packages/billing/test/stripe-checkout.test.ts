@@ -1576,16 +1576,13 @@ describe("checkoutPurposeSettlesElsewhere", () => {
  * end-to-end half, because both ends live here.
  */
 describe("live-mode authorization sourced from configuration (D5)", () => {
-  const flagFor = (env: Readonly<Record<string, string | undefined>>) =>
-    liveModeAuthorizedFlag(
-      (() => {
-        const resolved = resolveLiveModeAuthorization({
-          env,
-          recordAudit: () => undefined,
-        });
-        return resolved.ok ? resolved.value : undefined;
-      })(),
-    );
+  const flagFor = async (env: Readonly<Record<string, string | undefined>>) => {
+    const resolved = await resolveLiveModeAuthorization({
+      env,
+      recordAudit: () => undefined,
+    });
+    return liveModeAuthorizedFlag(resolved.ok ? resolved.value : undefined);
+  };
 
   const AUTHORIZED = {
     [STRIPE_LIVE_MODE_ENV_VAR]: "live-mode-authorized:captain@example.com:2026-07-29",
@@ -1599,10 +1596,10 @@ describe("live-mode authorization sourced from configuration (D5)", () => {
     { [STRIPE_LIVE_MODE_ENV_VAR]: "live-mode-authorized:captain@example.com:soon" },
   ];
 
-  it("refuses intent creation for every environment that is not the affirmative", () => {
+  it("refuses intent creation for every environment that is not the affirmative", async () => {
     for (const env of UNAUTHORIZED) {
       const result = createCheckoutSessionIntent(
-        intentRequest({ mode: "live", liveModeAuthorized: flagFor(env) }) as never,
+        intentRequest({ mode: "live", liveModeAuthorized: await flagFor(env) }) as never,
       );
       expect(result.ok).toBe(false);
       if (result.ok) return;
@@ -1610,14 +1607,14 @@ describe("live-mode authorization sourced from configuration (D5)", () => {
     }
   });
 
-  it("refuses the grant for every environment that is not the affirmative", () => {
+  it("refuses the grant for every environment that is not the affirmative", async () => {
     const completion = parsed({ livemode: true });
     for (const env of UNAUTHORIZED) {
       const result = applyCheckoutCompletedGrant({
         state: createLedgerState(ACCOUNT),
         completion,
         now: NOW,
-        liveModeAuthorized: flagFor(env),
+        liveModeAuthorized: await flagFor(env),
       });
       expect(result.ok).toBe(false);
       if (result.ok) return;
@@ -1625,12 +1622,12 @@ describe("live-mode authorization sourced from configuration (D5)", () => {
     }
   });
 
-  it("is a usable source at both ends when the variable is the exact affirmative", () => {
+  it("is a usable source at both ends when the variable is the exact affirmative", async () => {
     // This is what the captain decided the mechanism may be. It is not live
     // activation: no shipped call site derives a flag this way (ADR 0021), and this
     // test builds the environment itself rather than reading one.
     const intent = createCheckoutSessionIntent(
-      intentRequest({ mode: "live", liveModeAuthorized: flagFor(AUTHORIZED) }) as never,
+      intentRequest({ mode: "live", liveModeAuthorized: await flagFor(AUTHORIZED) }) as never,
     );
     expect(intent.ok).toBe(true);
     if (intent.ok) expect(intent.value.mode).toBe("live");
@@ -1639,7 +1636,7 @@ describe("live-mode authorization sourced from configuration (D5)", () => {
       state: createLedgerState(ACCOUNT),
       completion: parsed({ livemode: true }),
       now: NOW,
-      liveModeAuthorized: flagFor(AUTHORIZED),
+      liveModeAuthorized: await flagFor(AUTHORIZED),
     });
     expect(granted.ok).toBe(true);
   });

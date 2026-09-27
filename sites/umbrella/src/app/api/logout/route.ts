@@ -10,14 +10,14 @@ import {
   readSessionToken,
   readSiteMutationRequestSignals,
 } from "../../_session.js";
+import { serverLog } from "../../../lib/server-logger.js";
 
 /**
  * Sign the carried session out.
  *
- * The browser's cookie is cleared unconditionally; the stored session is
- * deleted through the identity port when the plane can reach it, and an
- * unreachable store still signs the browser out rather than holding it
- * hostage to a server-side fault. 303 because this answers a form POST.
+ * For a same-origin request, the browser's cookie is cleared even if revocation
+ * fails. The plane confirms provider revocation before deleting the local session.
+ * Failure redirects carry a named refusal. 303 because this answers a form POST.
  *
  * A submission that cannot prove it came from this deployment's own pages is
  * refused by `performLogout` before the port is reached, so another site cannot
@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
   const signals = readSiteMutationRequestSignals(request);
   const requestOrigin = verifyLoginRequestOrigin(process.env, signals.formOrigin);
   if (!requestOrigin.ok) {
+    serverLog("warn", "umbrella.logout.refused", { reason: requestOrigin.reason });
     return new Response(null, {
       status: 303,
       headers: new Headers({
@@ -45,6 +46,8 @@ export async function POST(request: NextRequest) {
     secure: resolveSessionCookieSecurity(process.env, signals.cookieSecurity),
   });
 
+  if (outcome.kind === "refused") serverLog("warn", "umbrella.logout.refused", { reason: outcome.reason });
+  else if (!outcome.revocation.ok) serverLog("warn", "umbrella.logout.refused", { reason: outcome.revocation.reason });
   const headers = new Headers({ Location: outcome.location });
   if (outcome.kind === "signed-out") headers.set("Set-Cookie", outcome.clearCookie);
   return new Response(null, { status: 303, headers });

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { evaluateGltfAnimation } from "../src/gltf-animation.js";
 import {
   SCENE_ANIMATION_REFUSALS,
   applySceneAnimationMutation,
@@ -59,6 +60,28 @@ function authored() {
   if (!end.ok) throw new Error(end.message);
   return end.catalog;
 }
+
+describe("glTF animation evaluation", () => {
+  it("samples LINEAR TRS channels deterministically and holds STEP values", () => {
+    const clip = {
+      name: "move",
+      duration: 1,
+      channels: [
+        { node: 2, path: "translation" as const, interpolation: "LINEAR" as const, times: [0, 1], values: [0, 0, 0, 2, 4, 6] },
+        { node: 2, path: "scale" as const, interpolation: "STEP" as const, times: [0, 1], values: [1, 1, 1, 3, 3, 3] },
+        { node: 3, path: "rotation" as const, interpolation: "LINEAR" as const, times: [0, 1], values: [0, 0, 0, 1, 0, 0, 1, 0] },
+      ],
+    };
+    const first = evaluateGltfAnimation(clip, 0.5);
+    expect(first.digest).toMatch(/^sha256:[0-9a-f]{64}$/);
+    expect(first.digest).toBe(evaluateGltfAnimation(clip, 0.5).digest);
+    expect(first.poses).toEqual([
+      { node: 2, translation: [1, 2, 3], scale: [1, 1, 1] },
+      { node: 3, rotation: [0, 0, 0.7071067811865475, 0.7071067811865475] },
+    ]);
+    expect(evaluateGltfAnimation(clip, 1).poses[0]?.scale).toEqual([3, 3, 3]);
+  });
+});
 
 describe("desktop scene animation catalog", () => {
   it("refuses missing targets, invalid ranges, and unsupported interpolation before mutation", () => {

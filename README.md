@@ -7,6 +7,7 @@ This monorepo is the packaging home for:
 | Area | Location |
 |---|---|
 | Engine packages | `packages/engine-*` (kernel, presentation, orchestrator seeded; asset-compiler, platform-host, evidence delayed) |
+| Physics adapter | `packages/physics-rapier` (browser-safe deterministic Rapier host, composed by desktop; [ADR 0027](docs/adr/0027-physics-world-host.md)) |
 | Runtime/authoring core | `packages/authoring-core` (document model, propose/apply service, sessions, evidence hooks, Model Provider Port) |
 | Profiles | `packages/profile-*` |
 | Agent-first CLI | `packages/cli` (thin protocol adapter over authoring-core and the contained importer seam; no engine access) |
@@ -109,6 +110,12 @@ session. Its committed three-instance demo and digest ledger live under
 [`tests/e2e/fixtures/scene-composition/`](tests/e2e/fixtures/scene-composition/),
 and it adds no presentation adapter, checklist item, renderer decision, or spend.
 
+## Documentation
+
+Start with the [SceneAxi user guides](docs/README.md) for installation,
+runnable surfaces, the CLI, desktop, web consumers, and plugins. Governance and
+architecture documents are indexed separately.
+
 ## Development
 
 Install the pinned workspace toolchain with `pnpm install`, then install the
@@ -132,6 +139,11 @@ pnpm sceneaxi-web-shell --help
 `pnpm sceneaxi-web-shell --cwd <project>` serves the local authoring inspector on
 loopback and prints its URL; it refuses a non-loopback bind and writes nothing
 until a proposal is accepted ([`apps/web-shell/README.md`](apps/web-shell/README.md)).
+
+Generate and browse the public package API reference with `pnpm docs:api`, then open
+`docs/api/index.html`. The generated output is ignored and covers the consumer
+packages in [`docs/publish-readiness.md`](docs/publish-readiness.md) and
+[`docs/web-consumer.md`](docs/web-consumer.md), excluding private packages and Kids.
 
 Run `pnpm test:golden` for the focused product/profile and sculpt paths.
 [`docs/runnable-surfaces.md`](docs/runnable-surfaces.md) owns the complete

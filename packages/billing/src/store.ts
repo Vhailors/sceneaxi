@@ -18,6 +18,9 @@ import {
   validateCreatorShareRecord,
   validateCreditAccount,
   validateCreditLedgerEntry,
+  validateCreditReconciliationRecord,
+  type BillingMode,
+  type CreditReconciliationRecord,
   type CreatorShareRecord,
   type CreditAccount,
   type CreditLedgerEntry,
@@ -77,7 +80,37 @@ export function readCommittedEntry(
   }
 }
 
+export type CommittedReconciliation = Readonly<{
+  record: CreditReconciliationRecord;
+  replayed: boolean;
+}>;
+
+function snapshotReconciliation(candidate: unknown): CreditReconciliationRecord {
+  const parsed = validateCreditReconciliationRecord(candidate);
+
+  if (!parsed.ok) return fail(parsed.message);
+
+  return parsed.value;
+}
+
+export function readCommittedReconciliation(
+  requested: CreditReconciliationRecord,
+  candidate: unknown,
+): CommittedReconciliation | undefined {
+  const answer = snapshotPlainRecord(candidate);
+
+  if (answer === undefined || typeof answer["replayed"] !== "boolean") return undefined;
+  const parsed = validateCreditReconciliationRecord(answer["record"]);
+
+  if (!parsed.ok || JSON.stringify(parsed.value) !== JSON.stringify(snapshotReconciliation(requested))) return undefined;
+
+  return Object.freeze({ record: parsed.value, replayed: answer["replayed"] });
+}
+
 export type CreditStore = Readonly<{
+  findReconciliation(mode: BillingMode, eventId: string): Awaitable<CreditReconciliationRecord | undefined>;
+  listReconciliations(): Awaitable<ReadonlyArray<CreditReconciliationRecord>>;
+  appendOrReplayReconciliation(record: CreditReconciliationRecord): Awaitable<CommittedReconciliation>;
   findAccountByUserId(userId: string): Awaitable<CreditAccount | undefined>;
   findAccountById(accountId: string): Awaitable<CreditAccount | undefined>;
   listEntries(accountId: string): Awaitable<ReadonlyArray<CreditLedgerEntry>>;
@@ -437,6 +470,30 @@ function mapAwaitable<In, Out>(
  */
 export function createCreditStore(adapter: CreditStoreAdapter): CreditStore {
   return Object.freeze({
+    findReconciliation(mode, eventId) {
+      return mapAwaitable(adapter.findReconciliation(mode, eventId), (candidate) => {
+        if (candidate === undefined) return undefined;
+        const record = snapshotReconciliation(candidate);
+
+        if (record.mode !== mode || record.eventId !== eventId) return fail("reconciliation lookup answered for a different event");
+
+        return record;
+      });
+    },
+    listReconciliations() {
+      return mapAwaitable(adapter.listReconciliations(), (records) => Object.freeze(records.map(snapshotReconciliation)));
+    },
+    appendOrReplayReconciliation(record) {
+      const requested = snapshotReconciliation(record);
+
+      return mapAwaitable(adapter.appendOrReplayReconciliation(requested), (candidate) => {
+        const committed = readCommittedReconciliation(requested, candidate);
+
+        if (committed === undefined) return fail("reconciliation append returned no matching record");
+
+        return committed;
+      });
+    },
     findAccountByUserId: (userId) => adapter.findAccountByUserId(userId),
     findAccountById: (accountId) => adapter.findAccountById(accountId),
     listEntries: (accountId) => adapter.listEntries(accountId),
@@ -464,6 +521,7 @@ export function createCreditStore(adapter: CreditStoreAdapter): CreditStore {
 export function createInMemoryCreditStore(
   options: InMemoryCreditStoreOptions = {},
 ): InMemoryCreditStore {
+  const reconciliations = new Map<string, CreditReconciliationRecord>();
   const accountsById = new Map<string, CreditAccount>();
   const accountsByUserId = new Map<string, CreditAccount>();
   const entriesByAccount = new Map<string, CreditLedgerEntry[]>();
@@ -705,6 +763,21 @@ export function createInMemoryCreditStore(
   // Built through the shared boundary rather than beside it, so the reference
   // store is held to exactly the rules a Neon adapter will be.
   const adapter: CreditStoreAdapter = Object.freeze({
+    findReconciliation(mode, eventId) {
+      return reconciliations.get(`${mode}:${eventId}`);
+    },
+    listReconciliations() {
+      return Object.freeze([...reconciliations.values()]);
+    },
+    appendOrReplayReconciliation(record) {
+      const key = `${record.mode}:${record.eventId}`;
+      const existing = reconciliations.get(key);
+
+      if (existing !== undefined) return { record: existing, replayed: true };
+      reconciliations.set(key, record);
+
+      return { record, replayed: false };
+    },
     findAccountByUserId(userId) {
       return accountsByUserId.get(userId);
     },

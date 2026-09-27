@@ -41,6 +41,7 @@ export {
   proposeContainedGltfAssetImport,
   stageContainedGltfAssetImport,
   stageProjectAssetImport,
+  type ContainedGltfNode,
   type ContainedGltfProjection,
   type ContainedGltfProposalResult,
   type ContainedGltfRefusal,

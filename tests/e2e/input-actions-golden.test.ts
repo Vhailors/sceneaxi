@@ -176,6 +176,45 @@ describe("unified input actions golden", () => {
     })).toMatchObject({ ok: true, action: { id: "editor.project.save" } });
   });
 
+  it("persists and resolves a standard gamepad binding through rebind approval", () => {
+    const projectRoot = root("sceneaxi-gamepad-project-");
+    const workspaceRoot = root("sceneaxi-gamepad-workspace-");
+    const host = createDesktopInputActionHost({ projectRoot, workspaceDirectory: workspaceRoot });
+    const initial = host.inspect();
+    if (!initial.ok) throw new Error(initial.message);
+    const binding = {
+      device: "gamepad",
+      gamepad: 0,
+      input: "axis",
+      control: 0,
+      direction: "positive",
+      deadzone: 0.2,
+    } as const;
+    const review = host.rebind({
+      scope: "project",
+      expectedBaseVersion: initial.data.baseVersions.project,
+      actionId: "play.primary",
+      binding,
+      approved: false,
+      reviewDigest: null,
+    });
+    if (!review.ok) throw new Error(review.message);
+    expect(host.rebind({
+      scope: "project",
+      expectedBaseVersion: initial.data.baseVersions.project,
+      actionId: "play.primary",
+      binding,
+      approved: true,
+      reviewDigest: review.data.reviewDigest,
+    })).toMatchObject({ ok: true, data: { status: "committed" } });
+    const restored = createDesktopInputActionHost({ projectRoot, workspaceDirectory: workspaceRoot }).inspect();
+    if (!restored.ok) throw new Error(restored.message);
+    expect(resolveInputAction(restored.data.map, "play", binding)).toMatchObject({
+      ok: true,
+      action: { id: "play.primary" },
+    });
+  });
+
   it("refuses conflicts, stale bases, Kids, and missing capabilities before mutation", () => {
     const projectRoot = root("sceneaxi-input-refuse-project-");
     const workspaceRoot = root("sceneaxi-input-refuse-workspace-");

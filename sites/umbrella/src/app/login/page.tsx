@@ -1,13 +1,10 @@
+import type { Metadata } from "next";
 import {
   describeSiteAccessState,
   readEditorPreviewFlag,
   type SearchParams,
 } from "@sceneaxi/site-kit";
-import {
-  IDENTITY_PLANE_DOC,
-  IDENTITY_PLANE_PENDING_NOTE,
-  umbrellaRequestAuthority,
-} from "../../lib/request-authority.js";
+import { umbrellaRequestAuthority } from "../../lib/request-authority.js";
 import {
   LOGIN_DEFAULT_DESTINATION,
   readLoginRefusalReason,
@@ -15,6 +12,12 @@ import {
 } from "../../lib/login-flow.js";
 import { readSessionToken } from "../_session.js";
 import { StatePanel } from "../_components/state-panel.js";
+
+/** Signed-in surface: never indexed, whatever a crawler is told elsewhere. */
+export const metadata: Metadata = {
+  title: "Sign in — SceneAxi",
+  robots: { index: false, follow: false },
+};
 
 /**
  * The hosted sign-in surface (sceneaxi#185).
@@ -26,7 +29,7 @@ import { StatePanel } from "../_components/state-panel.js";
  * provider, and role, identity, and session all come back server-derived.
  *
  * Three states, each named: already signed in (no form), sign-in not activated
- * on this deployment (a deployment fact with the wiring doc), and the form —
+ * on this deployment, and the form —
  * with any refused attempt's own named reason above it, carried back as a
  * validated registry key rather than free text.
  */
@@ -94,14 +97,10 @@ export default async function LoginPage({
         <StatePanel
           tone="deny"
           level={2}
-          title="Identity plane not wired"
+          title="Sign-in is unavailable"
           reason="IDENTITY_PLANE_NOT_WIRED"
         >
-          <p>{IDENTITY_PLANE_PENDING_NOTE}</p>
-          <p>
-            The wiring steps and the exact environment variables are documented in{" "}
-            <code>{IDENTITY_PLANE_DOC}</code>.
-          </p>
+          <p>Sign-in is not available right now. Your named reason is shown above.</p>
           {previewEnabled && (
             <p>
               This deployment sets the temporary server-side editor preview flag, so

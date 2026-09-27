@@ -16,6 +16,7 @@ plus the provider → authoring → desktop → engine command sequence — live
 
 ```text
 L0  schemas            (zero dependencies by rule)
+L1  physics-rapier     schemas-only injected PhysicsWorldHost adapter (ADR 0027)
 L1  engine packages    kernel ← presentation, orchestrator   (+ delayed: asset-compiler,
                                                               platform-host, evidence)
 L2  authoring-core     the one agent-native runtime/authoring core (document model,
@@ -36,7 +37,8 @@ L4  desktop            the packaged desktop applications (leaf; ADR 0024). deskt
                        consumes schemas, desktop-shell, site-kit, authoring-core, the
                        three engine packages it draws and opens through, importers for
                        contained asset ingestion, and provider-openrouter from
-                       src/electron/** alone (sceneaxi#235);
+                       src/electron/** alone (sceneaxi#235), plus physics-rapier
+                       at the existing desktop scene-physics host (ADR 0027);
                        no profile, no Kids, no auth/billing, no plugin host.
                        desktop/windows packages that same built application for Windows
                        and names no SceneAxi
@@ -50,6 +52,7 @@ L4  desktop            the packaged desktop applications (leaf; ADR 0024). deskt
 | From \ To | schemas | engine-kernel | engine-presentation | engine-orchestrator | authoring-core | profile-* | cli | external adapters | plugin-host | apps/* |
 |---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 | schemas | — | | | | | | | | | |
+| physics-rapier | ✓ | | | | | | | | | |
 | engine-kernel | ✓ | — | | | | | | | | |
 | engine-presentation | ✓ | ✓ | — | | | | | | | |
 | engine-orchestrator | ✓ | ✓ | | — | | | | | | |
@@ -66,12 +69,18 @@ L4  desktop            the packaged desktop applications (leaf; ADR 0024). deskt
 | site-kit | ✓ | | | | ✓ | | | | | |
 | site-umbrella (→ site-kit ✓, auth ✓, billing ✓) | | | ✓ | | | | | | | |
 | site-catalog-game / site-catalog-web (→ site-kit ✓) | | | | | | | | | | |
-| desktop-linux (→ site-kit ✓) | ✓ | ✓ | ✓ | ✓ | ✓ | | | ✓ (importers; provider-openrouter in `src/electron/` alone) | | ✓ (desktop-shell alone) |
+| desktop-linux (→ site-kit ✓, physics-rapier ✓) | ✓ | ✓ | ✓ | ✓ | ✓ | | | ✓ (importers; provider-openrouter in `src/electron/` alone) | | ✓ (desktop-shell alone) |
 | desktop-windows | | | | | | | | | | |
 | desktop-macos (stages desktop-linux dist) | ✓ | | | | | | | | | |
 
 Deliberate denials that carry design intent:
 
+- **physics-rapier → schemas only.** ADR 0027 puts Rapier outside the kernel.
+  Only `desktop-linux` may depend on the adapter. Its `desktop-scene.ts` host
+  initializes WASM before the Electron bridge receives the host; evaluation
+  selects it only for an explicit `world.engine: "rapier"`. No kernel, CLI,
+  profile, site, or authoring-core allow list gains a Rapier edge. Toy remains
+  the default deterministic reference.
 - **cli → engine packages: denied.** The CLI is a thin protocol adapter (verbs +
   envelope) over `authoring-core` and the contained-copy authority in `importers`.
   Denying direct engine access makes it structurally impossible for the orbiting
@@ -202,7 +211,7 @@ Recorded in `dependency-matrix.json → releaseGroups` and stamped on every mani
 - **contracts** (`schemas`): own versions; consumers refuse major mismatches.
   The package root stays browser-safe; Node-only executable suites use explicit
   `node/*` export subpaths and are not re-exported from the root.
-- **core-train** (`engine-*`, `authoring-core`): one shared semver train — a "core release".
+- **core-train** (`engine-*`, `physics-rapier`, `authoring-core`): one shared semver train — a "core release".
 - **profile** (`profile-*`): independently versioned; each manifest MUST carry
   `sceneaxi.corePin` — the semver range of the core train it supports (bootstrap value
   `^0.0.0`; becomes a real range at the first core release).

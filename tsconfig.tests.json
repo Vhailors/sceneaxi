@@ -45,6 +45,9 @@
       "@sceneaxi/engine-presentation": [
         "./packages/engine-presentation/src/index.ts"
       ],
+      "@sceneaxi/physics-rapier": [
+        "./packages/physics-rapier/src/index.ts"
+      ],
       "@sceneaxi/engine-kernel": [
         "./packages/engine-kernel/src/index.ts"
       ]

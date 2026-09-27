@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import {
   CREATOR_SHARE_ROUNDING_NOTE,
@@ -35,6 +36,23 @@ import { StatePanel } from "../../_components/state-panel.js";
  * contains no asset payload or payment evidence, so the page names those absences
  * and never fills the design with invented package, licence, preview, or delivery data.
  */
+export async function generateMetadata({
+  params,
+}: {
+  readonly params: Promise<{ readonly itemId: string }>;
+}): Promise<Metadata> {
+  const { itemId } = await params;
+
+  const found = showSiteListing(CATALOG_SITE_SURFACE, itemId);
+
+  if (!found.ok) return {};
+
+  return {
+    title: found.value.title,
+    description: `${found.value.title} by ${found.value.creatorId}.`,
+  };
+}
+
 export default async function ItemPage({
   params,
 }: {

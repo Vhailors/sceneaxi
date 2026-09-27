@@ -425,9 +425,20 @@ describe("desktop mounted control inventory", () => {
     const shell = element(window, ".shell");
 
     for (const mode of DESKTOP_MODE_IDS) {
+      const control = element(window, `#mode-${mode}`);
+      if (mode === "compose" || mode === "plugins") {
+        const priorMode = shell.dataset.mode;
+        expect(control.getAttribute("data-kind")).toBe("inert");
+        expect(control.getAttribute("aria-disabled")).toBe("true");
+        expect(control.getAttribute("title")).toContain(DESKTOP_VISUAL_REFUSALS.noDocumentBound);
+        expect(element(window, `#refusal-${DESKTOP_VISUAL_REFUSALS.noDocumentBound}`).textContent).not.toBe("");
+        await click(window, `#mode-${mode}`);
+        expect(shell.dataset.mode).toBe(priorMode);
+        continue;
+      }
       await click(window, `#mode-${mode}`);
       expect(shell.dataset.mode).toBe(mode);
-      expect(element(window, `#mode-${mode}`).getAttribute("aria-pressed")).toBe("true");
+      expect(control.getAttribute("aria-pressed")).toBe("true");
       if (!["build", "run", "ship"].includes(mode)) {
         expect(element(window, `[data-mode-panel="${mode}"]`).textContent).toContain(
           DESKTOP_VISUAL_REFUSALS.noDocumentBound,
@@ -448,6 +459,31 @@ describe("desktop mounted control inventory", () => {
     await click(window, "#drawer-left");
     expect(shell.dataset.drawerLeft).toBe("closed");
 
+    const hosted = element(window, "#assistant-route-hosted");
+    expect(hosted.getAttribute("data-kind")).toBe("inert");
+    expect(hosted.getAttribute("aria-disabled")).toBe("true");
+    expect(hosted.textContent).toContain(DESKTOP_VISUAL_REFUSALS.hostedAssistantUnavailable);
+    expect(element(window, `#refusal-${hosted.getAttribute("data-refusal")}`).textContent)
+      .toContain("Hosted assistant metering is unavailable");
+    await click(window, "#assistant-route-hosted");
+    expect(shell.dataset.assistantRoute).toBe("byo");
+
+    for (const id of ["project-browser-rename", "project-browser-delete"]) {
+      const control = element(window, `#${id}`);
+      expect(control.getAttribute("data-kind")).toBe("inert");
+      expect(control.getAttribute("aria-disabled")).toBe("true");
+      expect(control.getAttribute("title")).toContain(control.getAttribute("data-refusal"));
+      expect(element(window, `#refusal-${control.getAttribute("data-refusal")}`).textContent)
+        .toContain("not permitted by the current project lifecycle contract");
+    }
+    Object.defineProperty(window, "confirm", {
+      value: () => { throw new Error("inert project-browser control opened a dialog"); },
+    });
+    Object.defineProperty(window, "prompt", {
+      value: () => { throw new Error("inert project-browser control opened a dialog"); },
+    });
+    await click(window, "#project-browser-rename");
+    await click(window, "#project-browser-delete");
     await click(window, "#assistant-route-byo");
     expect(shell.dataset.assistantRoute).toBe("byo");
     expect(element(window, "#assistant-route-byo").getAttribute("aria-pressed")).toBe("true");
@@ -517,6 +553,46 @@ describe("desktop mounted control inventory", () => {
     await click(window, "#profile-game");
     expect(element(window, ".shell").dataset.profile).toBe("game");
     expect(window.getComputedStyle(element(window, ".profile-refusal")).display).toBe("none");
+  });
+
+  it("loads Timeline evidence through the desktop command and keeps controls typed", async () => {
+    const requests: unknown[] = [];
+    const window = mount(undefined, {
+      project: async () => ({
+        ok: true,
+        data: { status: { active: { name: "Animation", root: "/project", documentPath: "scene.json" }, recents: [] } },
+      }),
+      request: async (request) => {
+        requests.push(request);
+        const typed = request as { action?: string; payload?: { commandId?: string; op?: string } };
+        if (typed.action === "authoring" && typed.payload?.op === "status") {
+          return { ok: true, data: { ok: true, documentId: "animation", data: {}, contentHash: `sha256:${"a".repeat(64)}` } };
+        }
+        const commandId = typed.payload?.commandId;
+        if (commandId === "animation-inspect") {
+          return { ok: true, data: { kind: "sceneaxi.scene-animation-inspection", catalog: { clips: [{ clipId: "idle" }], tracks: [], keyframes: [] } } };
+        }
+        if (commandId === "animation-scrub" || commandId === "animation-evaluate") {
+          return { ok: true, data: { kind: "sceneaxi.scene-animation-evaluation", timeMs: 0, savedBytesWritten: false } };
+        }
+        return { ok: false, reason: "ANIMATION_INPUT_UNSUPPORTED", message: "Mutation input is required." };
+      },
+    });
+    await click(window, "#mode-animate");
+    await click(window, '[data-action="dock-tab"][data-value="timeline"]');
+    expect(element(window, "[data-timeline-result]").textContent).toContain('"clipId": "idle"');
+    const timelineKinds = { "timeline-mutation": "view", "timeline-apply": "live", "timeline-time": "view", "timeline-scrub": "live", "timeline-evaluate": "live" } as const;
+    for (const [id, kind] of Object.entries(timelineKinds)) {
+      expect(element(window, `#${id}`).getAttribute("data-kind")).toBe(kind);
+    }
+    expect(element(window, "#timeline-apply").getAttribute("data-action")).toBe("timeline-apply");
+    expect(element(window, "#timeline-evaluate").getAttribute("data-action")).toBe("timeline-evaluate");
+    expect(requests.find((request) => (request as { payload?: { commandId?: string } }).payload?.commandId === "animation-inspect"))
+      .toMatchObject({ payload: { input: { documentPath: "scene.json", profile: "game" } } });
+    await click(window, "#timeline-scrub");
+    await click(window, "#timeline-evaluate");
+    expect(requests.map((request) => (request as { payload?: { commandId?: string } }).payload?.commandId))
+      .toEqual(expect.arrayContaining(["animation-scrub", "animation-evaluate"]));
   });
 
   it("turns standalone product actions into observable named outcomes", async () => {

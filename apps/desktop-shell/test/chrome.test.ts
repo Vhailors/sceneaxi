@@ -370,8 +370,9 @@ describe("engine desktop chrome — accessibility", () => {
   it("marks the active mode and profile with aria-pressed", () => {
     const html = render(createDesktopVisualState({ mode: "compose", profile: "web" }));
     expect(html).toContain(
-      'id="mode-compose" data-kind="view" data-action="mode" data-value="compose" aria-pressed="true"',
+      `id="mode-compose" data-kind="inert" aria-disabled="true" data-refusal="${DESKTOP_VISUAL_REFUSALS.noDocumentBound}"`,
     );
+    expect(html).toContain('id="mode-build" data-kind="view" data-action="mode" data-value="build" aria-pressed="true"');
     expect(html).toContain(
       'id="profile-web" data-kind="view" data-product-action data-action="profile" data-value="web" aria-pressed="true"',
     );
@@ -713,12 +714,13 @@ describe("engine desktop chrome — honesty", () => {
   it("cannot enter a mode from behind the Kids refusal, in the bytes", () => {
     const html = render(createDesktopVisualState({ profile: "kids" }));
     for (const mode of DESKTOP_MODE_IDS) {
+      const refusal = mode === "compose" || mode === "plugins"
+        ? DESKTOP_VISUAL_REFUSALS.noDocumentBound
+        : DESKTOP_VISUAL_REFUSALS.kidsRefuseOnly;
       expect(html).toContain(
-        `id="mode-${mode}" data-kind="inert" aria-disabled="true" data-refusal="${DESKTOP_VISUAL_REFUSALS.kidsRefuseOnly}"`,
+        `id="mode-${mode}" data-kind="inert" aria-disabled="true" data-refusal="${refusal}"`,
       );
-      expect(html).toContain(
-        `aria-describedby="refusal-${DESKTOP_VISUAL_REFUSALS.kidsRefuseOnly}"`,
-      );
+      expect(html).toContain(`aria-describedby="refusal-${refusal}"`);
     }
     // The click handler's only guard is `aria-disabled`, so the attribute is what
     // stops a server-rendered Kids document from switching mode.

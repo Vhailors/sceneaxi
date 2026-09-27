@@ -1721,7 +1721,8 @@ p code {
 }
 
 .field input,
-.field select {
+.field select,
+.field textarea {
   font: inherit;
   font-family: var(--mono);
   font-size: 13px;
@@ -1734,8 +1735,21 @@ p code {
 }
 
 .field input:hover,
-.field select:hover {
+.field select:hover,
+.field textarea:hover {
   border-color: var(--line-strong);
+}
+
+.ledger-support {
+  overflow-wrap: anywhere;
+}
+
+.ledger-support pre {
+  white-space: pre-wrap;
+}
+
+.ledger-support textarea {
+  resize: vertical;
 }
 
 .row {

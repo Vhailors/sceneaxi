@@ -167,6 +167,7 @@ const catalogListingFields = (): string[] => {
 };
 
 const CONTRACT_FIELDS: Record<string, readonly string[]> = {
+  credit_reconciliation_records: persistedDefinitionFields("credit-reconciliation.schema.json", "creditReconciliationRecord"),
   users: persistedDefinitionFields("identity.schema.json", "user"),
   role_assignments: persistedDefinitionFields(
     "identity.schema.json",
@@ -221,6 +222,7 @@ const CONTRACT_FIELDS: Record<string, readonly string[]> = {
 };
 
 const FROZEN_V1_FIELDS: Record<string, readonly string[]> = {
+  credit_reconciliation_records: ["eventId", "mode", "intentId", "userId", "chargeId", "eventType", "reason", "amount", "currency", "disputeId", "disputeStatus", "occurredAt", "payloadDigest"],
   users: ["userId", "email", "emailVerified", "disabled", "createdAt"],
   role_assignments: ["userId", "role", "source", "assignedAt"],
   sessions: [
@@ -388,6 +390,17 @@ describe("migration hygiene", () => {
     }
   });
 
+  it("keeps live-mode authorization audit append-only", () => {
+    const audit = readFileSync(
+      join(migrationsDir, "0007_stripe_live_mode_audit.sql"),
+      "utf8",
+    );
+    expect(audit).toContain("CREATE TABLE IF NOT EXISTS stripe_live_mode_authorization_audit");
+    expect(audit).toContain("BEFORE UPDATE OR DELETE ON stripe_live_mode_authorization_audit");
+    expect(audit).toContain("CREATE TRIGGER stripe_live_mode_authorization_audit_append_only_trigger");
+    expect(audit).toContain("'SCENEAXI_STRIPE_LIVE_AUTHORIZED'");
+  });
+
   it("keeps Better Auth persistence provider-owned and schema-pinned", () => {
     const providerSource = readFileSync(
       new URL("../../sites/umbrella/src/provider/better-auth-provider.ts", import.meta.url),
@@ -486,6 +499,15 @@ describe("invariants the database enforces itself", () => {
     for (const column of columnsOf("credit_accounts")) {
       expect(column).not.toContain("balance");
     }
+  });
+
+  it("makes reconciliation records append-only and event-idempotent without a credit delta", () => {
+    expect(sql).toMatch(/PRIMARY KEY \(mode, event_id\)/);
+    expect(sql).toMatch(/CREATE TRIGGER credit_reconciliation_records_append_only_trigger\s+BEFORE UPDATE OR DELETE ON credit_reconciliation_records/);
+    expect(sql).toContain("REFERENCES checkout_session_intents(intent_id)");
+    expect(sql).toContain("EXECUTE FUNCTION credit_ledger_entries_append_only()");
+    expect(columnsOf("credit_reconciliation_records")).not.toContain("delta");
+    expect(columnsOf("credit_reconciliation_records")).not.toContain("balance");
   });
 
   it("makes the ledger append-only with a raising trigger", () => {

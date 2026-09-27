@@ -8,24 +8,32 @@
 import {
   Box3,
   BoxGeometry,
+  DataTexture,
   BufferGeometry,
   CylinderGeometry,
   Float32BufferAttribute,
   Group,
+  LinearFilter,
+  LinearMipmapLinearFilter,
   Mesh,
   MeshStandardMaterial,
   Sphere,
   SphereGeometry,
+  SRGBColorSpace,
   Uint32BufferAttribute,
+  RGBAFormat,
+  UnsignedByteType,
+  RepeatWrapping,
   type Material,
   type Object3D,
 } from "three";
-import type { SculptComponent, SculptMaterial, SculptTransform } from "@sceneaxi/schemas";
+import { evaluateGltfAnimation, isSculptIdentifier, type AssetRenderMesh, type GltfAnimationClip, type SceneEffectsCatalog, type SceneEffectsEvaluation, type SceneMaterialOverride, type SculptComponent, type SculptMaterial, type SculptTransform } from "@sceneaxi/schemas";
 import type { OrbitCameraControls } from "./orbit-camera.js";
 import {
   createThreePresentationCore,
   disposeSubtree,
   type ThreePresentationCoreOptions,
+  type ThreeSceneEnvironment,
 } from "./three-core.js";
 import type { ThreePresentationSurfaceKind } from "./three-surface.js";
 import type {
@@ -49,24 +57,22 @@ export interface ThreeSculptPresentationBackend extends SculptPresentationBacken
    * authoritative; this is not a second renderer or a loader side channel.
    */
   mountTriangleAsset(input: ThreeTriangleAssetInput): void;
+  playTriangleAnimation(instanceId: string, clip: GltfAnimationClip, time: number): void;
+  resetTriangleAnimation(instanceId: string): void;
+  setEnvironment(environment: ThreeSceneEnvironment): void;
+  setMaterialOverrides(overrides: readonly SceneMaterialOverride[]): void;
+  sampleEffects(catalog: SceneEffectsCatalog, timeMs: number): SceneEffectsEvaluation;
 }
 
-export type ThreeTrianglePrimitiveInput = Readonly<{
-  meshId: string;
-  positions: readonly number[];
-  normals?: readonly number[];
-  indices: readonly number[];
-  /** glTF-compatible column-major local-to-asset matrix. */
-  matrix: readonly number[];
-  baseColor: string;
-  metallic: number;
-  roughness: number;
-}>;
+export type ThreeTrianglePrimitiveInput = AssetRenderMesh;
+
+export type ThreeTriangleNodeInput = Readonly<{ node: number; parent: number | null; matrix: readonly number[]; matrixAuthored: boolean; translation: readonly number[]; rotation: readonly number[]; scale: readonly number[] }>;
 
 export type ThreeTriangleAssetInput = Readonly<{
   instanceId: string;
   transform: SculptTransform;
   meshes: readonly ThreeTrianglePrimitiveInput[];
+  nodes?: readonly ThreeTriangleNodeInput[];
 }>;
 
 function radians(degrees: number) {
@@ -137,12 +143,43 @@ function buildTriangleAsset(input: ThreeTriangleAssetInput) {
   const root = new Group();
   root.name = input.instanceId;
   applyTransform(root, input.transform);
+  const nodeGroups = new Map<number, Group>();
+  for (const node of input.nodes ?? []) {
+    const group = new Group();
+    group.name = `gltf-node-${String(node.node)}`;
+    if (node.matrixAuthored) {
+      group.matrix.fromArray([...node.matrix]);
+      group.matrixAutoUpdate = false;
+    } else {
+      group.position.set(node.translation[0] ?? 0, node.translation[1] ?? 0, node.translation[2] ?? 0);
+      group.quaternion.set(node.rotation[0] ?? 0, node.rotation[1] ?? 0, node.rotation[2] ?? 0, node.rotation[3] ?? 1);
+      group.scale.set(node.scale[0] ?? 1, node.scale[1] ?? 1, node.scale[2] ?? 1);
+    }
+    nodeGroups.set(node.node, group);
+  }
+  for (const node of input.nodes ?? []) {
+    const group = nodeGroups.get(node.node);
+    if (group === undefined) continue;
+    const parent = node.parent === null ? root : nodeGroups.get(node.parent);
+    parent?.add(group);
+  }
   for (const mesh of input.meshes) {
     const vertexCount = mesh.positions.length / 3;
     if (
       !finiteArray(mesh.positions, 3) ||
       (mesh.normals !== undefined &&
         (!finiteArray(mesh.normals, 3) || mesh.normals.length !== mesh.positions.length)) ||
+      (mesh.uvs !== undefined &&
+        (!Array.isArray(mesh.uvs) || !finiteArray(mesh.uvs, 2) || mesh.uvs.length !== vertexCount * 2)) ||
+      (mesh.baseColorTexture !== undefined &&
+        (mesh.baseColorTexture === null ||
+          !Number.isSafeInteger(mesh.baseColorTexture.width) || mesh.baseColorTexture.width <= 0 ||
+          !Number.isSafeInteger(mesh.baseColorTexture.height) || mesh.baseColorTexture.height <= 0 ||
+          mesh.baseColorTexture.width * mesh.baseColorTexture.height * 4 > 4 * 1024 * 1024 ||
+          !Array.isArray(mesh.baseColorTexture.rgba) ||
+          mesh.baseColorTexture.rgba.length !== mesh.baseColorTexture.width * mesh.baseColorTexture.height * 4 ||
+          !mesh.baseColorTexture.rgba.every((value) => Number.isInteger(value) && value >= 0 && value <= 255) ||
+          mesh.uvs === undefined)) ||
       mesh.indices.length === 0 ||
       mesh.indices.length % 3 !== 0 ||
       mesh.indices.some(
@@ -160,21 +197,43 @@ function buildTriangleAsset(input: ThreeTriangleAssetInput) {
     geometry.setAttribute("position", new Float32BufferAttribute(mesh.positions, 3));
     if (mesh.normals === undefined) geometry.computeVertexNormals();
     else geometry.setAttribute("normal", new Float32BufferAttribute(mesh.normals, 3));
+    if (mesh.uvs !== undefined) geometry.setAttribute("uv", new Float32BufferAttribute(mesh.uvs, 2));
     geometry.setIndex(new Uint32BufferAttribute(mesh.indices, 1));
     geometry.computeBoundingBox();
     geometry.computeBoundingSphere();
-    const object = new Mesh(
-      geometry,
-      new MeshStandardMaterial({
-        color: mesh.baseColor,
-        metalness: mesh.metallic,
-        roughness: mesh.roughness,
-      }),
+    const texture = mesh.baseColorTexture === undefined ? undefined : new DataTexture(
+      new Uint8Array(mesh.baseColorTexture.rgba),
+      mesh.baseColorTexture.width,
+      mesh.baseColorTexture.height,
+      RGBAFormat,
+      UnsignedByteType,
     );
+    if (texture !== undefined) {
+      texture.colorSpace = SRGBColorSpace;
+      texture.wrapS = RepeatWrapping;
+      texture.wrapT = RepeatWrapping;
+      texture.magFilter = LinearFilter;
+      texture.minFilter = LinearMipmapLinearFilter;
+      texture.generateMipmaps = true;
+      texture.needsUpdate = true;
+    }
+    const material = new MeshStandardMaterial({
+      color: mesh.baseColor,
+      metalness: mesh.metallic,
+      roughness: mesh.roughness,
+    });
+    if (texture !== undefined) material.map = texture;
+    const object = new Mesh(geometry, material);
     object.name = mesh.meshId;
-    object.matrix.fromArray(mesh.matrix as number[]);
-    object.matrixAutoUpdate = false;
-    root.add(object);
+    if ((input.nodes?.length ?? 0) > 0 && mesh.nodeIndex !== undefined) {
+      object.matrix.identity();
+      object.matrixAutoUpdate = false;
+      nodeGroups.get(mesh.nodeIndex)?.add(object);
+    } else {
+      object.matrix.fromArray([...mesh.matrix]);
+      object.matrixAutoUpdate = false;
+      root.add(object);
+    }
   }
   root.updateMatrixWorld(true);
   return root;
@@ -193,6 +252,29 @@ export function createThreeSculptPresentationBackend(
 ): ThreeSculptPresentationBackend {
   const core = createThreePresentationCore(options);
   const roots = new Map<string, Group>();
+  const importedNodes = new Map<string, ReadonlyMap<number, Group>>();
+  const importedNodeDefaults = new Map<string, ReadonlyMap<number, ThreeTriangleNodeInput>>();
+  let overrides = new Map<string, SceneMaterialOverride>();
+  let disposed = false;
+
+  function applyMaterialOverride(root: Group, override: SceneMaterialOverride | undefined) {
+    root.traverse((object) => {
+      if (!(object instanceof Mesh)) return;
+      const materials = Array.isArray(object.material) ? object.material : [object.material];
+
+      for (const material of materials) {
+        if (!(material instanceof MeshStandardMaterial)) continue;
+        material.emissive.set(override?.emissiveColor ?? "#000000");
+        material.emissiveIntensity = override?.emissiveIntensity ?? 1;
+        material.opacity = override?.opacity ?? 1;
+        const transparent = material.opacity < 1;
+
+        if (material.transparent !== transparent) material.needsUpdate = true;
+        material.transparent = transparent;
+        material.depthWrite = !transparent;
+      }
+    });
+  }
 
   function replace(instance: SculptMountedInstance) {
     const previous = roots.get(instance.instanceId);
@@ -201,8 +283,22 @@ export function createThreeSculptPresentationBackend(
       disposeSubtree(previous);
     }
     const next = buildInstance(instance);
+    applyMaterialOverride(next, overrides.get(instance.instanceId));
     roots.set(instance.instanceId, next);
     core.content.add(next);
+  }
+
+  function resetImportedNodes(instanceId: string) {
+    const nodes = importedNodes.get(instanceId);
+    const defaults = importedNodeDefaults.get(instanceId);
+    if (nodes === undefined || defaults === undefined) return;
+    for (const [node, group] of nodes) {
+      const base = defaults.get(node);
+      if (base === undefined || base.matrixAuthored) continue;
+      group.position.set(base.translation[0] ?? 0, base.translation[1] ?? 0, base.translation[2] ?? 0);
+      group.quaternion.set(base.rotation[0] ?? 0, base.rotation[1] ?? 0, base.rotation[2] ?? 0, base.rotation[3] ?? 1);
+      group.scale.set(base.scale[0] ?? 1, base.scale[1] ?? 1, base.scale[2] ?? 1);
+    }
   }
 
   function updateTransform(instance: SculptMountedInstance) {
@@ -218,6 +314,32 @@ export function createThreeSculptPresentationBackend(
     label: core.label,
     surface: core.surfaceKind,
     camera: core.camera,
+    setEnvironment: core.setEnvironment,
+    sampleEffects: core.sampleEffects,
+
+    setMaterialOverrides(input) {
+      if (disposed) throw new Error("Three sculpt backend is disposed.");
+      const next = new Map<string, SceneMaterialOverride>();
+
+      for (const override of input) {
+        if (override.baseColorMapAssetId !== null || override.normalMapAssetId !== null || override.roughnessMapAssetId !== null) {
+          throw new Error(`Material texture asset binding is unresolved for "${override.instanceId}" (ADR 0026).`);
+        }
+
+        if (next.has(override.instanceId) || !isSculptIdentifier(override.instanceId) || !/^#[0-9a-f]{6}$/i.test(override.emissiveColor) ||
+          !Number.isFinite(override.emissiveIntensity) || override.emissiveIntensity < 0 || override.emissiveIntensity > 16 ||
+          !Number.isFinite(override.opacity) || override.opacity < 0 || override.opacity > 1) {
+          throw new Error(`Invalid material override for "${override.instanceId}".`);
+        }
+
+        next.set(override.instanceId, Object.freeze({ ...override }));
+      }
+
+      overrides = next;
+
+      for (const [id, root] of roots) applyMaterialOverride(root, overrides.get(id));
+    },
+
     mount: replace,
     update: updateTransform,
 
@@ -227,6 +349,8 @@ export function createThreeSculptPresentationBackend(
       core.content.remove(root);
       disposeSubtree(root);
       roots.delete(instanceId);
+      importedNodes.delete(instanceId);
+      importedNodeDefaults.delete(instanceId);
     },
 
     render(instanceIds) {
@@ -257,18 +381,43 @@ export function createThreeSculptPresentationBackend(
     },
 
     mountTriangleAsset(input) {
+      const next = buildTriangleAsset(input);
+      applyMaterialOverride(next, overrides.get(input.instanceId));
       const previous = roots.get(input.instanceId);
       if (previous !== undefined) {
         core.content.remove(previous);
         disposeSubtree(previous);
       }
-      const next = buildTriangleAsset(input);
       roots.set(input.instanceId, next);
+      importedNodes.set(input.instanceId, new Map((input.nodes ?? []).flatMap((node) => { const group = next.getObjectByName(`gltf-node-${String(node.node)}`); return group instanceof Group ? [[node.node, group] as const] : []; })));
+      importedNodeDefaults.set(input.instanceId, new Map((input.nodes ?? []).map((node) => [node.node, node])));
       core.content.add(next);
     },
 
+    playTriangleAnimation(instanceId, clip, time) {
+      const nodes = importedNodes.get(instanceId);
+      const defaults = importedNodeDefaults.get(instanceId);
+      if (nodes === undefined || defaults === undefined) throw new Error(`Imported animation target "${instanceId}" is not mounted.`);
+      resetImportedNodes(instanceId);
+      for (const pose of evaluateGltfAnimation(clip, time).poses) {
+        const group = nodes.get(pose.node);
+        if (group === undefined) throw new Error(`Imported animation node "${String(pose.node)}" is not mounted.`);
+        if (pose.translation !== undefined) group.position.set(...pose.translation);
+        if (pose.rotation !== undefined) group.quaternion.set(...pose.rotation);
+        if (pose.scale !== undefined) group.scale.set(...pose.scale);
+      }
+    },
+
+    resetTriangleAnimation(instanceId) {
+      resetImportedNodes(instanceId);
+    },
+
     dispose() {
+      disposed = true;
+      overrides.clear();
       roots.clear();
+      importedNodes.clear();
+      importedNodeDefaults.clear();
       core.dispose();
     },
   };

@@ -19,6 +19,7 @@ Statuses: **real** (shipped and evidenced), **partial** (honest named gap),
 | Package | Role | Public seam | Verification owner | Status |
 |---|---|---|---|---|
 | `@sceneaxi/schemas` | Shared contracts and seam vocabulary | `packages/schemas/src/index.ts` | `packages/schemas/test/seam.test.ts` | **real** |
+| `@sceneaxi/physics-rapier` | Browser-safe deterministic physics host, desktop evaluation only (ADR 0027) | `packages/physics-rapier/src/index.ts` | `packages/physics-rapier/test/seam.test.ts` | **real** |
 | `@sceneaxi/engine-kernel` | Game Kernel: open/dispatch/advance/observe/save/replay | `packages/engine-kernel/src/index.ts` | `packages/engine-kernel/test/scene-session.test.ts` | **real** |
 | `@sceneaxi/engine-presentation` | Presentation runtime behind ADR 0002 | `packages/engine-presentation/src/index.ts` | `packages/engine-presentation/test/seam.test.ts` | **real** |
 | `@sceneaxi/engine-orchestrator` | Open-path host above the kernel (ADR 0023) | `packages/engine-orchestrator/src/index.ts` | `packages/engine-orchestrator/test/golden-path-orchestrated.test.ts` | **real** |

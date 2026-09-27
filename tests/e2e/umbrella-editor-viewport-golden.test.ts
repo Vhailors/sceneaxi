@@ -25,6 +25,15 @@ import {
   type FrameScheduler,
 } from "../../packages/engine-presentation/src/index.ts";
 import {
+  applySceneEffectsMutation,
+  applySceneEnvironmentMutation,
+  applySceneMaterialsMutation,
+  emptySceneEffectsCatalog,
+  emptySceneEnvironmentCatalog,
+  emptySceneMaterialsCatalog,
+  sampleSceneEffects,
+} from "@sceneaxi/schemas";
+import {
   EDITOR_MAX_OBJECTS,
   EDITOR_MIN_OBJECTS,
   WEB_EDITOR_SESSION_OPERATIONS,
@@ -33,6 +42,7 @@ import {
   ok,
   readEditorState,
   renderEditorState,
+  mountableSceneFromDocumentData,
   type EditorEntitlementInput,
   type EditorRender,
   type MountableScene,
@@ -77,6 +87,22 @@ function editorScene(params: SearchParams = {}): MountableScene {
 /** Mount every instance of the composed scene exactly as the browser viewport does. */
 function mountEditorScene(scene: MountableScene) {
   const backend = createThreeSculptPresentationBackend();
+  if (scene.environment !== undefined) {
+    backend.setEnvironment({
+      background: scene.environment.background,
+      ambientIntensity: scene.environment.ambientIntensity,
+      ambientColor: scene.environment.ambientColor,
+      keyIntensity: scene.environment.keyIntensity,
+      keyColor: scene.environment.keyColor,
+      keyDirection: scene.environment.keyDirection,
+      fillIntensity: scene.environment.fillIntensity,
+      fog: scene.environment.fog,
+      effects: scene.environment.effects,
+      toneMapping: scene.environment.toneMapping,
+      exposure: scene.environment.exposure,
+    });
+  }
+  backend.setMaterialOverrides(scene.materials?.overrides ?? []);
   const mounts = createSculptMountApi(backend);
   for (const instance of scene.instances) {
     const artifact = scene.artifacts[instance.artifactId];
@@ -131,6 +157,66 @@ describe("entitled editor viewport — the composed scene reaches the Three core
     expect(frame.drawCalls).toBe(nodesPerInstance.reduce((sum, count) => sum + count, 0));
     expect(frame.drawCalls).toBeGreaterThan(0);
 
+    mounts.dispose();
+  });
+
+  it("passes editor presentation catalogs and the authored effect seed to the core", () => {
+    const composition = editorRender().composition;
+    if (!composition.ok) throw new Error("editor composition refused");
+    const environment = applySceneEnvironmentMutation({
+      catalog: emptySceneEnvironmentCatalog(),
+      mutation: { kind: "set", background: "#123456", exposure: 1.5, toneMapping: "aces" },
+    });
+    const materials = applySceneMaterialsMutation({
+      catalog: emptySceneMaterialsCatalog(),
+      instanceIds: composition.scene.instances.map((instance) => instance.instanceId),
+      mutation: {
+        kind: "upsert",
+        instanceId: composition.scene.rootInstanceId,
+        emissiveColor: "#abcdef",
+        emissiveIntensity: 2,
+        opacity: 0.5,
+        baseColorMapAssetId: null,
+        normalMapAssetId: null,
+        roughnessMapAssetId: null,
+      },
+    });
+    const emitter = applySceneEffectsMutation({
+      catalog: emptySceneEffectsCatalog(),
+      mutation: {
+        kind: "upsert",
+        emitterId: "dust",
+        emitterKind: "point",
+        rate: 10,
+        lifetimeMs: 1000,
+        speed: 1,
+        spread: 2,
+      },
+    });
+    if (!emitter.ok) throw new Error("effects emitter fixture refused");
+    const effects = applySceneEffectsMutation({
+      catalog: emitter.catalog,
+      mutation: { kind: "seed-set", seed: 73 },
+    });
+    if (!environment.ok || !materials.ok || !effects.ok) throw new Error("catalog fixture refused");
+    const scene = mountableSceneFromDocumentData(composition, {
+      sceneEnvironment: environment.catalog,
+      sceneMaterials: materials.catalog,
+      sceneEffects: effects.catalog,
+    });
+    if (scene === null) throw new Error("editor document catalogs refused");
+    const { backend, mounts } = mountEditorScene(scene);
+    const evaluation = backend.sampleEffects(effects.catalog, 25);
+    const expected = sampleSceneEffects({ catalog: effects.catalog, timeMs: 25 });
+    if (!expected.ok) throw new Error("expected effects sample refused");
+
+    expect(scene.environment).toEqual(environment.catalog);
+    expect(scene.materials).toEqual(materials.catalog);
+    expect(scene.effects?.seed).toBe(73);
+    expect(evaluation).toEqual(expected.evaluation);
+    expect(evaluation.samples[0]?.count).toBeGreaterThan(0);
+    expect(mounts.render().surface).toBe("headless");
+    expect(mounts.render().pixelsDrawn).toBe(false);
     mounts.dispose();
   });
 
