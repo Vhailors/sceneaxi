@@ -3038,7 +3038,10 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         const documentPath = input["documentPath"];
         const read = readActiveDocument({ documentPath }, SCENE_DOCUMENT_REFUSALS);
         if (!read.ok) return bridgeRefuse(read.reason, read.message);
-        return bridgeOk("command", inspectDesktopScenePhysics(read.status.data));
+        return bridgeOk("command", {
+          ...inspectDesktopScenePhysics(read.status.data),
+          physicsHostReady: options.physicsWorldHost !== undefined,
+        });
       }
       case "physics-apply": {
         const documentPath = String(input["documentPath"]);

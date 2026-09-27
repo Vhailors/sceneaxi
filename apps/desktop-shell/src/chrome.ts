@@ -548,20 +548,17 @@ const EDITOR_COMMAND_FORM_FIELDS: Readonly<Record<string, readonly EditorCommand
   ],
   "input-actions-inspect": [],
   "physics-evaluate": [{ name: "steps", label: "Simulation steps", kind: "number" }],
-  "scene-prefab-define": [
-    { name: "definitionId", label: "Prefab ID" },
-    { name: "instanceIds", label: "Selected instance IDs (JSON array)", kind: "json" },
-  ],
+  "scene-prefab-define": [{ name: "definitionId", label: "Prefab ID" }],
   "scene-prefab-inspect": [],
   "scene-prefab-instance": [
     { name: "definitionId", label: "Inspected prefab ID", kind: "select" },
-    { name: "parentInstanceId", label: "Selected parent instance ID" },
+    { name: "parentInstanceId", label: "Selected parent instance ID", kind: "select" },
     { name: "instanceKey", label: "New instance key" },
   ],
   "scene-prefab-override": [
-    { name: "instanceId", label: "Selected instance ID" },
-    { name: "sourceInstanceId", label: "Source instance ID" },
-    { name: "propertyId", label: "Property ID" },
+    { name: "instanceId", label: "Selected instance ID", kind: "select" },
+    { name: "sourceInstanceId", label: "Source instance ID", kind: "select" },
+    { name: "propertyId", label: "Property ID", kind: "select", options: ["translation-x", "translation-y", "translation-z", "rotation-x", "rotation-y", "rotation-z", "scale-x", "scale-y", "scale-z"] },
     { name: "newValue", label: "New numeric value", kind: "number" },
   ],
   "scene-prefab-refresh": [{ name: "definitionId", label: "Inspected prefab ID", kind: "select" }],
@@ -714,7 +711,7 @@ function viewport(view: DesktopVisualView): string {
         .join("")}
     </div>
     <label class="viewport-source-control">Set source<select data-command-field="source" aria-label="Viewport source command"><option value="">Choose source</option><option value="scene">Scene</option><option value="game">Game</option><option value="sculpt-preview">Sculpt preview</option></select></label>
-    <button type="button" data-editor-command-submit="viewport-source-set" disabled aria-disabled="true" data-refusal="EDITOR_COMMAND_PREREQUISITE_MISSING">Apply source</button>
+    <button type="button" data-action="editor-command-submit" data-value="viewport-source-set" data-editor-command-submit="viewport-source-set" disabled aria-disabled="true" data-refusal="EDITOR_COMMAND_PREREQUISITE_MISSING">Apply source</button>
     <span class="spacer"></span>
     <span class="view-tools" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
   </div>
@@ -1837,6 +1834,9 @@ if (shell) {
   let editorExtensionSeams = [];
   let editorInputActionReview = null;
   let editorPrefabDefinitions = [];
+  let editorSceneInstanceIds = [];
+  let editorPlaySessionActive = false;
+  let editorPhysicsHostReady = false;
   let editorCommandResponses = Object.create(null);
 
   const bindingLabel = (binding) => {
@@ -2099,6 +2099,9 @@ if (shell) {
       });
       el.dataset.value = selectedSceneEntityIds.join(',');
     });
+    editorSceneInstanceIds = entitiesList.map((entity) => entity.id);
+    populateEditorChoices('parentInstanceId', editorSceneInstanceIds);
+    updateEditorCommandControls();
     const parent = shell.querySelector('[data-scene-parent]');
     if (parent && parent.tagName === 'SELECT') {
       parent.replaceChildren();
@@ -2436,6 +2439,10 @@ if (shell) {
       productStatus('refused', 'Inspect refused · ' + code);
       showOutcome('Inspect refused', code, response?.detail || response?.message || 'The catalog was not returned.');
       return;
+    }
+    if (kind === 'physics') {
+      editorPhysicsHostReady = response.data?.physicsHostReady === true;
+      updateEditorCommandControls();
     }
     if (report) { report.textContent = JSON.stringify(response.data, null, 2); report.hidden = false; }
     productStatus('open', kind + ' catalog inspected');
@@ -3755,6 +3762,8 @@ if (shell) {
       runRefusal(T.product.refusals.openPathEvidenceInvalid);
       return;
     }
+    editorPlaySessionActive = exercise.playSession?.state !== 'disposed';
+    updateEditorCommandControls();
     const playback = { exercise, accepted: false, frame: null };
     document.dispatchEvent(new CustomEvent(T.product.viewportPlayEvent, { detail: playback }));
     if (!playback.accepted || !Number.isSafeInteger(playback.frame) || playback.frame < 1) {
@@ -4353,11 +4362,9 @@ if (shell) {
       input.leftVisible = shell.dataset.drawerLeft === 'open';
       input.inspectorVisible = shell.dataset.drawerInspector === 'open';
     }
-    if (commandId === 'scene-prefab-define' && (!input.instanceIds || input.instanceIds.length === 0) && selectedSceneEntityIds.length > 0) {
-      input.instanceIds = selectedSceneEntityIds;
-    }
-    if (commandId === 'scene-prefab-instance' && !input.parentInstanceId && selectedSceneEntityId) {
-      input.parentInstanceId = selectedSceneEntityId;
+    if (commandId === 'scene-prefab-define') input.instanceIds = selectedSceneEntityIds;
+    if (commandId === 'scene-prefab-instance' && !input.parentInstanceId && (selectedSceneEntityId || selectedSceneEntityIds[0])) {
+      input.parentInstanceId = selectedSceneEntityId || selectedSceneEntityIds[0];
     }
     if (commandId === 'scene-prefab-override') {
       if (!input.instanceId && selectedSceneEntityId) input.instanceId = selectedSceneEntityId;
@@ -4423,6 +4430,8 @@ if (shell) {
     if (commandId === 'scene-prefab-inspect' && Array.isArray(data?.catalog?.definitions)) {
       editorPrefabDefinitions = data.catalog.definitions.map((row) => row.definitionId);
       populateEditorChoices('definitionId', editorPrefabDefinitions);
+      populateEditorChoices('instanceId', data.catalog.instances.map((row) => row.instanceId));
+      populateEditorChoices('sourceInstanceId', editorSceneInstanceIds);
     }
     if ((commandId === 'input-action-rebind' || commandId === 'input-actions-reset') && data?.status === 'review') {
       editorInputActionReview = { commandId, baseVersion: input.expectedBaseVersion, reviewDigest: data.reviewDigest };
@@ -4482,8 +4491,15 @@ if (shell) {
       const id = button.dataset.editorCommandSubmit;
       const form = button.closest('[data-editor-command-form]');
       const fields = form ? Array.from(form.querySelectorAll('[data-command-field]')) : [];
-      const missingField = fields.some((field) => !field.value);
+      const missingField = id === 'viewport-source-set'
+        ? !shell.querySelector('[data-command-field="source"]')?.value
+        : fields.some((field) => !field.value && !(id === 'scene-prefab-instance' && field.dataset.commandField === 'parentInstanceId' && editorSceneInstanceIds.length > 0));
       const missingPrerequisite = id === 'project-migration-commit' && !editorMigrationDigest ||
+        id === 'viewport-source-set' && !editorPlaySessionActive ||
+        id === 'physics-evaluate' && !editorPhysicsHostReady ||
+        id === 'scene-prefab-define' && selectedSceneEntityIds.length === 0 ||
+        id === 'scene-prefab-instance' && (editorPrefabDefinitions.length === 0 || editorSceneInstanceIds.length === 0) ||
+        (id === 'scene-prefab-override' || id === 'scene-prefab-refresh') && editorPrefabDefinitions.length === 0 ||
         id === 'package-remove' && editorPackageIds.length === 0 ||
         id === 'extension-start' && editorExtensionSeams.length === 0 ||
         (id === 'input-action-rebind' || id === 'input-actions-reset') && !editorInputActionBaseVersions;
@@ -4492,17 +4508,8 @@ if (shell) {
       button.disabled = disabled;
       button.setAttribute('aria-disabled', String(disabled));
       if (!disabled) button.removeAttribute('data-refusal');
-      else button.dataset.refusal = missingPrerequisite ? 'EDITOR_COMMAND_PREREQUISITE_MISSING' : 'EDITOR_COMMAND_INPUT_INVALID';
+      else button.dataset.refusal = id === 'viewport-source-set' && !editorPlaySessionActive ? 'PLAY_SESSION_MISSING' : id === 'physics-evaluate' && !editorPhysicsHostReady ? 'PHYSICS_WORLD_NOT_READY' : missingPrerequisite ? 'EDITOR_COMMAND_PREREQUISITE_MISSING' : 'EDITOR_COMMAND_INPUT_INVALID';
     });
-    const source = shell.querySelector('[data-editor-command-submit="viewport-source-set"]');
-    if (source) {
-      const select = shell.querySelector('[data-command-field="source"]');
-      const disabled = !select?.value;
-      source.disabled = disabled;
-      source.setAttribute('aria-disabled', String(disabled));
-      if (disabled) source.dataset.refusal = 'EDITOR_COMMAND_PREREQUISITE_MISSING';
-      else delete source.dataset.refusal;
-    }
   };
 
   const refreshTimeline = async () => {
