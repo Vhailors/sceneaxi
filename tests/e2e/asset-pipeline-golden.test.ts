@@ -18,7 +18,7 @@ import {
   proposeProjectAssetImport,
   stageProjectAssetImport,
 } from "../../packages/importers/src/index.ts";
-import { createDesktopBridge, createDesktopProjectBrowser, seedDesktopProject } from "../../desktop/linux/src/index.ts";
+import { createDesktopBridge, createDesktopProjectBrowser, desktopSceneFromDocumentData, seedDesktopProject } from "../../desktop/linux/src/index.ts";
 import { assistantAssetInspectionText } from "../../desktop/linux/src/renderer/assistant-inspection.ts";
 import { runAssetHotReload, runAssetImport } from "../../packages/cli/src/asset-verbs.ts";
 import { runProjectApply } from "../../packages/cli/src/project-verbs.ts";
@@ -206,6 +206,27 @@ describe("first-class manifest-backed asset pipeline", () => {
     symlinkSync(valid, link);
     expect(proposeProjectAssetImport({ projectRoot: root, documentPath: "scene.json", sourcePath: link })).toMatchObject({ ok: false, reason: CONTAINED_GLTF_REFUSALS.sourceSymlink });
     expect(readFileSync(join(root, "scene.json"))).not.toEqual(before);
+  });
+
+  it("projects audio manifests without bytes and serves only named accepted clips on demand", () => {
+    const root = project("sceneaxi-audio-projection-");
+    const sources = temporary("sceneaxi-audio-projection-source-");
+    const source = join(sources, "tone.wav");
+    writeFileSync(source, wav());
+    const bridge = createDesktopBridge({ cwd: root });
+    expect(bridge.handle({ action: "asset-import", payload: { profile: "game", documentPath: "scene.json", sourcePath: source } })).toMatchObject({ ok: true, data: { outcome: "reviewing" } });
+    expect(bridge.handle({ action: "authoring", payload: { op: "accept" } })).toMatchObject({ ok: true, data: { phase: "applied" } });
+    const document = JSON.parse(readFileSync(join(root, "scene.json"), "utf8")) as { data: unknown };
+    const scene = desktopSceneFromDocumentData(document.data);
+    expect(scene).toMatchObject({ ok: true, mountable: { audioClips: [{ assetId: "tone", mediaType: "audio/wav", byteLength: 44 }] } });
+    if (!scene.ok) return;
+    expect(JSON.stringify(scene.mountable)).not.toContain("bytesBase64");
+    expect(bridge.handle({ action: "audio-asset", payload: { assetId: "missing", documentPath: "scene.json" } })).toMatchObject({ ok: false, reason: "AUDIO_CLIP_UNKNOWN" });
+    expect(bridge.handle({ action: "audio-asset", payload: { assetId: 1, documentPath: "scene.json" } })).toMatchObject({ ok: false, reason: "DESKTOP_BRIDGE_REQUEST_MALFORMED" });
+    expect(bridge.handle({ action: "profile", payload: { profile: "kids" } })).toMatchObject({ ok: true });
+    expect(bridge.handle({ action: "audio-asset", payload: { assetId: "tone", documentPath: "scene.json" } })).toMatchObject({ ok: false, reason: "OPEN_PATH_KIDS_REFUSED" });
+    expect(bridge.handle({ action: "profile", payload: { profile: "game" } })).toMatchObject({ ok: true });
+    expect(bridge.handle({ action: "audio-asset", payload: { assetId: "tone", documentPath: "scene.json" } })).toMatchObject({ ok: true, data: { assetId: "tone", mediaType: "audio/wav", byteLength: 44, bytesBase64: expect.any(String) } });
   });
 
   it("stages digest hot reload by stable identity and keeps accepted bytes untouched until approval", () => {

@@ -1630,6 +1630,32 @@ function proxyArtifact(
     : refuse(CONTAINED_GLTF_REFUSALS.sceneInvalid, "The imported asset projection could not become a validated Sculpt Artifact.");
 }
 
+/**
+ * Compose, then compose again from the resolved depth/id traversal. The scene
+ * evidence binds intake order, and every reader recomposes from the stored
+ * traversal order; persisting any other order (an appended placement whose id
+ * sorts before a sibling) leaves a scene that no reader can reproduce.
+ */
+function composeCanonicalScene(
+  intake: Readonly<{ placements: readonly Readonly<{ instanceId: string }>[] }> & Record<string, unknown>,
+  artifacts: readonly SculptArtifact[],
+) {
+  const composed = composeScene(intake, artifacts);
+  if (!composed.ok) return composed;
+  return composeScene(
+    {
+      ...intake,
+      placements: composed.scene.instances.map((instance) => ({
+        instanceId: instance.instanceId,
+        artifactId: instance.artifactId,
+        parentInstanceId: instance.parentInstanceId,
+        transform: instance.localTransform,
+      })),
+    },
+    artifacts,
+  );
+}
+
 function sceneWithAsset(
   stored: ComposedScene,
   artifact: SculptArtifact,
@@ -1667,7 +1693,7 @@ function sceneWithAsset(
     return refuse(CONTAINED_GLTF_REFUSALS.identityConflict, "The imported asset artifact identity conflicts with the existing composition.");
   }
   artifacts.set(artifact.artifactId, artifact);
-  const composed = composeScene(intake, [...artifacts.values()]);
+  const composed = composeCanonicalScene(intake, [...artifacts.values()]);
   return composed.ok
     ? composed.scene
     : refuse(CONTAINED_GLTF_REFUSALS.sceneInvalid, `The existing composition refused the imported asset: ${composed.code}.`);
@@ -1698,7 +1724,7 @@ function sceneWithReloadedAsset(
   for (const instance of stored.instances) {
     artifacts.set(instance.artifactId, instance.artifactId === artifact.artifactId ? artifact : instance.artifact);
   }
-  const composed = composeScene(intake, [...artifacts.values()]);
+  const composed = composeCanonicalScene(intake, [...artifacts.values()]);
   return composed.ok
     ? composed.scene
     : refuse(CONTAINED_GLTF_REFUSALS.sceneInvalid, `The existing composition refused the reloaded model: ${composed.code}.`);

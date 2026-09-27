@@ -55,13 +55,7 @@ const ENGINE_ANSWERED_COMMANDS = new Set([
   "project-migration-propose", "project-migration-recover", "workspace-layout-apply",
 ]);
 
-/**
- * Commands whose registered input needs a review flow the GUI does not collect yet
- * (digests, approvals, locators; go-live item 53). Their controls send no form values,
- * so the registry validator refuses them before the engine: pinned exactly, so a GUI
- * that starts collecting the input has to move the id out of this set.
- */
-const INPUT_REQUIRED_COMMANDS = new Set([
+const FORM_NAVIGATION_COMMANDS = new Set([
   "package-install", "package-remove", "project-migration-commit", "extension-start",
   "input-action-rebind", "input-actions-reset",
 ]);
@@ -505,14 +499,17 @@ async function invoke(
     await settle(window);
   }
 
+  if (FORM_NAVIGATION_COMMANDS.has(command.id)) {
+    expect(calls).toEqual([]);
+    expect(element(window, `[data-editor-command-form="${command.id}"]`)).not.toBeNull();
+    expect(element(window, "[data-outcome-code]").textContent).not.toBe("EDITOR_COMMAND_INPUT_INVALID");
+    return;
+  }
   expect(calls).toContainEqual(expectedEffect(command));
   if (command.id === "project-build") {
     expect(requests.find((request) => (request.payload as { commandId?: string }).commandId === command.id))
       .toMatchObject({ payload: { input: { profile: "web", target: "linux" } } });
     expect(element(window, "[data-outcome-code]").textContent).toBe("PROJECT_BUILD_SIGNING_MISSING");
-  }
-  if (INPUT_REQUIRED_COMMANDS.has(command.id)) {
-    expect(element(window, "[data-outcome-code]").textContent).toBe("EDITOR_COMMAND_INPUT_INVALID");
   }
   if (command.id === "workspace-layout-apply") {
     expect(requests.find((request) => (request.payload as { commandId?: string }).commandId === command.id))

@@ -72,6 +72,7 @@ import {
   EDITOR_COMMAND_REFUSALS,
   EDITOR_COMMAND_REGISTRY,
   EDITOR_COMMAND_SCHEMA_VERSION,
+  OPEN_PATH_REFUSE_CODES,
   PROJECT_GIT_DIAGNOSTICS,
   RARITY_PROVIDER_REQUEST_MAX_CHARS,
   RARITY_REFUSE_CODES,
@@ -3038,7 +3039,10 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         const documentPath = input["documentPath"];
         const read = readActiveDocument({ documentPath }, SCENE_DOCUMENT_REFUSALS);
         if (!read.ok) return bridgeRefuse(read.reason, read.message);
-        return bridgeOk("command", inspectDesktopScenePhysics(read.status.data));
+        return bridgeOk("command", {
+          ...inspectDesktopScenePhysics(read.status.data),
+          physicsHostReady: options.physicsWorldHost !== undefined,
+        });
       }
       case "physics-apply": {
         const documentPath = String(input["documentPath"]);
@@ -3431,6 +3435,32 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         return projectBrowserOpen(payload);
       case "open-path":
         return openPathExercise(payload);
+      case "audio-asset": {
+        if (activeCommandProfile === "kids") {
+          return bridgeRefuse(OPEN_PATH_REFUSE_CODES.kidsRefused, "Kids remains refuse-only for open-path playback.");
+        }
+        const assetId = field(payload, "assetId");
+        if (typeof assetId !== "string" || assetId.length === 0) {
+          return bridgeRefuse(DESKTOP_BRIDGE_REFUSALS.requestMalformed, "audio-asset requires an assetId.");
+        }
+        const documentPath = field(payload, "documentPath");
+        const read = readActiveDocument({ documentPath }, SCENE_DOCUMENT_REFUSALS);
+        if (!read.ok) return bridgeRefuse(read.reason, read.message);
+        const manifest = projectAssetManifestFromDocumentData(read.status.data);
+        const entry = manifest.ok
+          ? manifest.value.assets.find((asset) => asset.assetId === assetId && asset.family === "audio")
+          : undefined;
+        if (entry === undefined) {
+          return bridgeRefuse("AUDIO_CLIP_UNKNOWN", `Audio clip "${assetId}" is not in the active project manifest.`);
+        }
+        return bridgeOk("audio-asset", {
+          assetId: entry.assetId,
+          mediaType: entry.mediaType,
+          digest: entry.digest,
+          byteLength: entry.byteLength,
+          bytesBase64: entry.canonicalBytesBase64,
+        });
+      }
       case "asset-import":
         return assetImport(payload);
       case "ship":

@@ -118,7 +118,7 @@ describe("full-editor capability-matrix evidence", () => {
       expect(matrix, `#${issue}`).toContain(`#${issue}`);
     }
     expect(EDITOR_COMMAND_REGISTRY.length).toBeGreaterThan(0);
-    expect(live.controls).toHaveLength(163);
+    expect(live.controls).toHaveLength(199);
     expect(live.cliVerbs).toHaveLength(21);
     expect(live.tools.length).toBe(DESKTOP_LOCAL_BRIDGE_TOOLS.length);
   });

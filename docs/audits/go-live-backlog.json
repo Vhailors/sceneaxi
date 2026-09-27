@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "source": "docs/audits/go-live-gaps-2026-09-26.md",
-  "branch": "go-live-loop",
+  "branch": "bb/opus-go-live-loop-2-for-sceneaxi-the-previous-lo-thr_cgpu4vbkib",
   "items": [
     {
       "id": 1,
@@ -638,11 +638,11 @@
       "severity": "blocker",
       "title": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 3,
-      "thread": "thr_diqya99sza",
-      "commit": null,
-      "progress": "reopened by the branch review. GUI dispatch works for run-stop/run-reset, {physics,environment,material,effect}-{inspect,apply}, package-inspect, workspace-layout-{inspect,apply,reset}, project-{inspect,build}, project-migration-{propose,recover}, extension-inspect and profile-inspect. GUI controls exist but send no form input, so the registry refuses them (EDITOR_COMMAND_INPUT_INVALID): package-install, package-remove, project-migration-commit, extension-start, input-action-rebind, input-actions-reset. No GUI control at all: input-actions-inspect, physics-evaluate, scene-prefab-{define,inspect,instance,override,refresh}, viewport-source-set (desktop bridge and local agents only).",
+      "thread": "thr_vunh2rd9be, thr_kbd365twbi, thr_vefpfrvmuz",
+      "commit": "462cb70..d0f04ff, 628dd30, ab2339d, 2427036",
+      "progress": "All 14 desktop-accepted commands have GUI forms that collect their input from real state (inspected packages/seams/actions/prefabs, migration digest, selection, content hash). Proof: tests/e2e/desktop-editor-command-forms-golden.test.ts drives the rendered chrome into a real createDesktopBridge (bytes unchanged before review, changed after); tests/e2e/desktop-control-dispatch-real-bridge-golden.test.ts proves 29 more GUI dispatches; the Electron smoke fills and clicks all 14 with real pointer input. Still unknown in the graphmap: assistant-ask and assistant-apply-build GUI dispatch (item 95).",
       "openDecision": "project-build targets Linux only; broader targets future work"
     },
     {
@@ -739,11 +739,11 @@
       "severity": "medium",
       "title": "The packaged smoke does not exercise the #254–#270 features.",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 3,
-      "thread": "thr_7svfbah827",
-      "commit": null,
-      "progress": "worker interrupted; not resumed without an explicit request"
+      "thread": "thr_vefpfrvmuz",
+      "commit": "786f226, 70f0452, 2427036, 989687d",
+      "progress": "The Electron smoke drives #254-#270 through the GUI with real pointer input and asserts specific values per feature (proof.features); #267/#268 record host absence. 5/5 local runs green (~50 s)."
     },
     {
       "id": 62,
@@ -777,11 +777,12 @@
       "severity": "high",
       "title": "No audio playback; audio is metadata-only",
       "cls": "autonomous",
-      "status": "open",
+      "status": "done",
       "wave": 4,
-      "thread": "thr_rww6kh273z",
-      "commit": null,
-      "progress": "worker interrupted; not resumed without an explicit request"
+      "thread": "thr_ga3vrsxwjh",
+      "commit": "bc02127, 69bd69d",
+      "progress": "db8afa6 reviewed and not reused. Desktop Game/Web Play plays ingested clips through Web Audio with a volume control; bytes are fetched on demand and digest-checked; Stop/Reset/project switch/Kids switch stop and close the context. Electron smoke measures the live analyser (RMS ~0.085 at volume 0.35, 0 after Stop) and a named decode refusal. Astra re-review passed.",
+      "openDecision": "Kids audio stays refused under the open-path policy (enabling it is a captain decision); no authored triggers/autoplay/loop, no exported Web viewer playback, no spatial audio"
     },
     {
       "id": 65,
@@ -1101,6 +1102,87 @@
       "commit": null,
       "evidence": "reported by thr_ghk6fj8cug; ADRs 0025-0028 notes",
       "openDecision": "ADR 0026 asset-to-texture contract (pixel transport, UV set, colour space, sampler); non-null texture slots refuse"
+    },
+    {
+      "id": 91,
+      "section": "M",
+      "area": "CI and tracking",
+      "severity": "high",
+      "title": "Vitest suites leak mkdtemp fixtures (whole-tree copies, scratch projects) into the shared TMPDIR; repeated gate runs exhausted the host /tmp inodes and failed unrelated work with ENOSPC",
+      "cls": "autonomous",
+      "status": "done",
+      "wave": 5,
+      "thread": "thr_cgpu4vbkib",
+      "commit": "7fcd3c2, 3e74132",
+      "evidence": "found by go-live loop 2 when three workers crashed with ENOSPC",
+      "progress": "Each vitest run gets its own TMPDIR, removed on teardown; abandoned run directories are removed by age (pid liveness is unreliable across sandbox pid namespaces). journal-recovery alone leaked 35 directories per run before, 0 after."
+    },
+    {
+      "id": 92,
+      "section": "I",
+      "area": "Engine runtime",
+      "severity": "high",
+      "title": "Importing a model whose instance id sorts before an existing sibling made the project unplayable (Play refused DESKTOP_SCENE_NOT_COMPOSABLE for the rest of the session)",
+      "cls": "autonomous",
+      "status": "done",
+      "wave": 5,
+      "thread": "thr_cgpu4vbkib",
+      "commit": "d09cd4a",
+      "evidence": "found by the packaged smoke in go-live loop 2",
+      "progress": "The importer persisted placements in append order while every reader recomposes from the depth/id traversal; import and hot reload now compose canonically. tests/e2e/desktop-asset-import-order-golden.test.ts fails on the old importer (2/3) and passes now."
+    },
+    {
+      "id": 93,
+      "section": "H",
+      "area": "Desktop apps and distribution",
+      "severity": "medium",
+      "title": "After a project switch, profiling reported frame timing and draw calls as PROFILE_FRAME_ABSENT for the rest of the session",
+      "cls": "autonomous",
+      "status": "done",
+      "wave": 5,
+      "thread": "thr_cgpu4vbkib",
+      "commit": "69bd69d",
+      "evidence": "found by the packaged smoke in go-live loop 2",
+      "progress": "The renderer reported one frame per mount while the host keeps the last report per bridge; it now reports again on Play and scene open and marks data-frame-reported."
+    },
+    {
+      "id": 94,
+      "section": "H",
+      "area": "Desktop apps and distribution",
+      "severity": "low",
+      "title": "After the smoke's full feature flow the chrome refuses a profile switch with DESKTOP_PROFILE_SWITCH_DIRTY while the Changes badge shows no active review",
+      "cls": "autonomous",
+      "status": "open",
+      "wave": 5,
+      "thread": null,
+      "commit": null,
+      "evidence": "observed in the go-live loop 2 smoke; root cause not yet confirmed (projectDirty set without an active review snapshot)"
+    },
+    {
+      "id": 95,
+      "section": "H",
+      "area": "Desktop apps and distribution",
+      "severity": "low",
+      "title": "assistant-ask and assistant-apply-build GUI dispatch is not yet proven by a mounted-chrome golden (graphmap: unknown)",
+      "cls": "autonomous",
+      "status": "open",
+      "wave": 5,
+      "thread": "thr_kbd365twbi",
+      "commit": null,
+      "evidence": "left unknown rather than claimed by the item 53 evidence-gap golden"
+    },
+    {
+      "id": 96,
+      "section": "H",
+      "area": "Desktop apps and distribution",
+      "severity": "low",
+      "title": "Desktop command forms: no test drives the per-project state reset through a real root change, and an inspect answered after a project switch can repopulate the previous project's choices (the host still refuses those ids)",
+      "cls": "autonomous",
+      "status": "open",
+      "wave": 5,
+      "thread": null,
+      "commit": null,
+      "evidence": "go-live loop 2 Opus re-review (LOW, not blocking)"
     }
   ]
 }

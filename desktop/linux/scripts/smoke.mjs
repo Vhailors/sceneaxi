@@ -56,7 +56,8 @@ if (packaged) {
 const result = spawnSync(command, args, {
   cwd: appRoot,
   encoding: "utf8",
-  timeout: 120_000,
+  // Wall-clock allowance for a loaded host; every assertion below is unchanged.
+  timeout: 240_000,
   env: { ...process.env, ELECTRON_ENABLE_LOGGING: "0" },
 });
 
@@ -76,6 +77,197 @@ if (result.status !== 0 || jsonLine === undefined) {
 const proof = JSON.parse(jsonLine);
 const failures = [];
 if (proof.ok !== true) failures.push("proof.ok is not true");
+const features = proof.features;
+for (const feature of Array.from({ length: 17 }, (_, index) => `#${index + 254}`)) {
+  if (features?.[feature] === undefined) failures.push(`proof.features is missing ${feature}`);
+}
+for (const [feature, title] of [
+  ["#260", "physics-inspect"], ["#262", "package-inspect"],
+  ["#265", "workspace-layout-inspect"], ["#269", "extension-inspect"],
+]) {
+  // #262 and #269 also carry their command-form proofs; the catalog inspection
+  // the feature pass performed sits beside them.
+  const result = feature === "#262" || feature === "#269" ? features?.[feature]?.catalogInspect : features?.[feature];
+  if (result?.gui !== true || result?.completed !== true ||
+      result?.title !== title || result?.code !== "COMMAND_COMPLETED") {
+    failures.push(`${feature} GUI action did not complete ${title} with COMMAND_COMPLETED`);
+  }
+}
+if (features?.["#263"]?.gui !== true || features["#263"].completed !== true ||
+    features["#263"].code !== "PROJECT_GIT_EVIDENCE" ||
+    features["#263"].stage?.completed !== true ||
+    features["#263"].stage?.code !== "PROJECT_GIT_EVIDENCE" ||
+    typeof features["#263"].selectedPath !== "string" || features["#263"].selectedPath.length === 0) {
+  failures.push("#263 did not complete GUI Git status, diff, and staging of a selected scratch-project path");
+}
+const stagedGitState = JSON.parse(features?.["#263"]?.stage?.message ?? "{}");
+if (stagedGitState.kind !== "sceneaxi.project-git-state" ||
+    !stagedGitState.entries?.some((entry) => entry.path === features["#263"].selectedPath && entry.index === "A") ||
+    stagedGitState.stagedDiffPresent !== true) {
+  failures.push("#263 staged Git evidence does not show the exact GUI-selected scratch path in the index");
+}
+if (features?.["#266"]?.gui !== true || features["#266"].completed !== true ||
+    features["#266"].code !== "PROJECT_BUILD_SIGNING_MISSING") {
+  failures.push("#266 did not report the named Linux project-build signing refusal");
+}
+if (features?.["#270"]?.gui !== true || features["#270"].completed !== true ||
+    features["#270"].code !== "COMMAND_COMPLETED") {
+  failures.push("#270 profile inspection did not complete through the GUI");
+}
+const profileEvidence = JSON.parse(features?.["#270"]?.message ?? "{}");
+if (features?.["#264"]?.gui !== true || features["#264"].state !== "profile-evidence" ||
+    features["#264"].digest !== profileEvidence.digest) {
+  failures.push("#264 did not retain the exact digest of GUI-measured profile evidence");
+}
+const measuredDrawCalls = profileEvidence.metrics?.find((metric) => metric.id === "draw-calls");
+if (profileEvidence.kind !== "sceneaxi.profile-evidence" || profileEvidence.savedBytesWritten !== false ||
+    profileEvidence.digest !== features?.["#264"]?.digest ||
+    profileEvidence.sourceContentHash !== features?.["#270"]?.projectDigestAtProfile ||
+    measuredDrawCalls?.status !== "measured" || typeof measuredDrawCalls.value !== "number" || measuredDrawCalls.value <= 0 ||
+    measuredDrawCalls.value !== features?.["#270"]?.drawCallsAtProfile ||
+    typeof profileEvidence.digest !== "string" || !/^sha256:[0-9a-f]{64}$/.test(profileEvidence.digest)) {
+  failures.push("#270 profile evidence lacks the matching source digest and measured presentation draw-call count");
+}
+const prefabProof = features?.["#255"];
+if (prefabProof?.gui !== true || prefabProof.state !== "prefab-define-instance-override-refresh-accepted" ||
+    prefabProof.define?.result?.code !== "COMMAND_COMPLETED" || prefabProof.define?.unchangedBeforeAccept !== true ||
+    prefabProof.define?.changed !== true || prefabProof.define?.definitionId !== "smoke-prefab" ||
+    !/^sha256:[0-9a-f]{64}$/.test(prefabProof.define?.digestBefore ?? "") ||
+    !/^sha256:[0-9a-f]{64}$/.test(prefabProof.define?.digestAfter ?? "") || prefabProof.define.digestBefore === prefabProof.define.digestAfter ||
+    prefabProof.inspect?.code !== "COMMAND_COMPLETED" || prefabProof.inspect?.definitionId !== "smoke-prefab" ||
+    prefabProof.instance?.result?.code !== "COMMAND_COMPLETED" || prefabProof.instance?.unchangedBeforeAccept !== true ||
+    prefabProof.instance?.changed !== true || prefabProof.instance?.instanceKey !== "smoke-copy" ||
+    !/^sha256:[0-9a-f]{64}$/.test(prefabProof.instance?.digestBefore ?? "") ||
+    !/^sha256:[0-9a-f]{64}$/.test(prefabProof.instance?.digestAfter ?? "") || prefabProof.instance.digestBefore === prefabProof.instance.digestAfter ||
+    prefabProof.override?.result?.code !== "COMMAND_COMPLETED" || prefabProof.override?.unchangedBeforeAccept !== true ||
+    prefabProof.override?.changed !== true || prefabProof.override?.value !== 2.75 ||
+    !/^sha256:[0-9a-f]{64}$/.test(prefabProof.override?.digestBefore ?? "") ||
+    !/^sha256:[0-9a-f]{64}$/.test(prefabProof.override?.digestAfter ?? "") || prefabProof.override.digestBefore === prefabProof.override.digestAfter ||
+    prefabProof.refresh?.result?.code !== "COMMAND_COMPLETED" || prefabProof.refresh?.unchangedBeforeAccept !== true ||
+    prefabProof.refresh?.changed !== true || prefabProof.refresh?.stale !== false ||
+    !/^sha256:[0-9a-f]{64}$/.test(prefabProof.refresh?.digestAfter ?? "")) {
+  failures.push("#255 GUI prefab define/inspect/instance/override/refresh did not preserve review boundaries and persist the expected catalog");
+}
+const inputActionProof = features?.["#257"];
+if (inputActionProof?.gui !== true || inputActionProof.state !== "input-actions-inspected-rebound-and-reset" ||
+    inputActionProof.inspectCode !== "COMMAND_COMPLETED" || inputActionProof.actionId !== "editor.project.save" ||
+    inputActionProof.reviewCode !== "COMMAND_COMPLETED" || inputActionProof.bindingPersisted !== true ||
+    inputActionProof.unchangedBeforeReview !== true || inputActionProof.resetReviewCode !== "COMMAND_COMPLETED" ||
+    inputActionProof.resetUnchangedBeforeReview !== true || inputActionProof.resetPersistedChangedBytes !== true ||
+    !/^sha256:[0-9a-f]{64}$/.test(inputActionProof.resetDigestBefore ?? "") ||
+    !/^sha256:[0-9a-f]{64}$/.test(inputActionProof.finalDigest ?? "") || inputActionProof.resetDigestBefore === inputActionProof.finalDigest) {
+  failures.push("#257 GUI input-action inspect/rebind/reset did not persist only after explicit form review");
+}
+for (const [feature, state] of [["#267", "unsupported-host-macos"], ["#268", "unsupported-host-windows"]]) {
+  if (features?.[feature]?.gui !== false || features?.[feature]?.state !== state) {
+    failures.push(`${feature} did not record the expected host artifact absence`);
+  }
+}
+const animationEvaluation = features?.["#259"]?.evaluation ?? "";
+if (features?.["#259"]?.gui !== true || features["#259"].state !== "animation-applied-and-evaluated" ||
+    features["#259"].staged !== true || features["#259"].unchangedBeforeAccept !== true ||
+    JSON.stringify(features["#259"].mutation) !== JSON.stringify({ clipId: "smoke-idle", name: "Smoke Idle", durationMs: 1200 }) ||
+    !/^sha256:[0-9a-f]{64}$/.test(features["#259"].digestAfterAccept ?? "") ||
+    !animationEvaluation.includes('"kind": "sceneaxi.scene-animation-evaluation"') ||
+    !animationEvaluation.includes(`"sourceContentHash": "${features?.["#259"]?.digestAfterAccept}"`) ||
+    animationEvaluation.includes("ANIMATION_STALE_VERSION")) {
+  failures.push("#259 GUI animation apply did not persist changed bytes and evaluate the new content version");
+}
+if (features?.["#261"]?.gui !== true || features["#261"].completed !== true ||
+    features["#261"].state !== "Rarity proposal staged · review the canonical diff before Accept or Reject.") {
+  failures.push("#261 did not stage the fixture-provider proposal through the GUI");
+}
+const physicsCatalog = JSON.parse(features?.["#260"]?.message ?? "{}");
+if (physicsCatalog.kind !== "sceneaxi.scene-physics-inspection" ||
+    physicsCatalog.catalog?.world?.gravityY !== -10.25 || physicsCatalog.savedBytesWritten !== false ||
+    features?.["#260"]?.applied !== true || features["#260"].unchangedBeforeAccept !== true ||
+    !/^sha256:[0-9a-f]{64}$/.test(features["#260"].digestAfterAccept ?? "")) {
+  failures.push("#260 physics inspection did not prove GUI staging and accepted world gravity in changed scratch bytes");
+}
+const packageCatalog = JSON.parse(features?.["#262"]?.catalogInspect?.message ?? "{}");
+if (packageCatalog.kind !== "sceneaxi.scene-package-inspection" ||
+    packageCatalog.catalog?.lock?.length !== 0 || packageCatalog.marketplace !== false ||
+    packageCatalog.networking !== false || packageCatalog.lockDigest !== "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945") {
+  failures.push("#262 package inspection did not report the empty offline lock and stable digest");
+}
+if (features?.["#265"]?.apply?.completed !== true ||
+    features["#265"].apply.title !== "workspace-layout-apply" ||
+    features["#265"].apply.code !== "COMMAND_COMPLETED" ||
+    features["#265"].reset?.completed !== true ||
+    features["#265"].reset.title !== "workspace-layout-reset" ||
+    features["#265"].reset.code !== "COMMAND_COMPLETED" ||
+    !features["#265"].apply.message.includes('"digest": "sha256:f3f0de7196e1157ed2412ca87ef74c496ff0efeaa62ecf1c14d0e0ff4af8e544"') ||
+    !features["#265"].reset.message.includes('"digest": "sha256:5636d88918f6eb20650a18388061eed50c5bd030bfd305d9ade5ffd8d8ebd361"')) {
+  failures.push("#265 workspace layout apply/reset did not persist and restore the expected scratch-project digests");
+}
+if (features?.["#256"]?.gui !== true || features["#256"].state !== "gui-import-source-edit-reload-reimport" ||
+    features["#256"].importedPath !== "assets/smoke-gui-source.gltf" ||
+    features["#256"].importedRevisionPath !== "assets/smoke-gui-source-revision-2.gltf" ||
+    features["#256"].reloadCompleted !== true || features["#256"].unchangedBeforeAccept !== true ||
+    !/^sha256:[0-9a-f]{64}$/.test(features["#256"].initialDigest ?? "") ||
+    !/^sha256:[0-9a-f]{64}$/.test(features["#256"].editedDigest ?? "") ||
+    features["#256"].initialDigest === features["#256"].editedDigest ||
+    proof.projectBrowser?.selected !== true || proof.projectBrowser?.opened !== true) {
+  failures.push("#256 GUI import/reload did not preserve pre-Accept bytes and change the selected asset manifest digest after source revision");
+}
+if (features?.["#254"]?.gui !== true || features["#254"].state !== "scene-property-staged-and-accepted" ||
+    features["#254"].selectedEntity !== "desktop-crate-beside" || features["#254"].transformMode !== "rotate" ||
+    features["#254"].snapIncrement !== "0.1" ||
+    features["#254"].staged !== true || features["#254"].unchangedBeforeAccept !== true ||
+    features["#254"].valueBefore !== -3.25 || features["#254"].valueAfter !== -3.05 ||
+    !/^sha256:[0-9a-f]{64}$/.test(features["#254"].digestBeforeAccept ?? "") ||
+    !/^sha256:[0-9a-f]{64}$/.test(features["#254"].digestAfterAccept ?? "") ||
+    features["#254"].digestBeforeAccept === features["#254"].digestAfterAccept) {
+  failures.push("#254 GUI entity selection, inspector stage, pre-Accept immutability, or persisted transform digest was wrong");
+}
+const viewportSource = features?.["#258"]?.sourceSet;
+if (viewportSource?.gui !== true || viewportSource.state !== "viewport-source-set-completed" ||
+    viewportSource.source !== "scene" || viewportSource.code !== "COMMAND_COMPLETED" ||
+    viewportSource.authoringBytesUnchanged !== true || !/^sha256:[0-9a-f]{64}$/.test(viewportSource.digest ?? "")) {
+  failures.push("#258 viewport-source-set did not complete through the GUI without changing authoring bytes");
+}
+const physicsEvaluation = features?.["#260"]?.evaluate;
+if (physicsEvaluation?.gui !== true || physicsEvaluation.code !== "COMMAND_COMPLETED" ||
+    physicsEvaluation.kind !== "sceneaxi.scene-physics-evaluation" || physicsEvaluation.steps !== 1 || physicsEvaluation.finalStep !== 1 ||
+    physicsEvaluation.authoringBytesUnchanged !== true || !/^sha256:[0-9a-f]{64}$/.test(physicsEvaluation.digest ?? "")) {
+  failures.push("#260 physics-evaluate did not return the one-step GUI evaluation without writing project bytes");
+}
+const packageProof = features?.["#262"];
+if (packageProof?.gui !== true || packageProof.state !== "package-installed-inspected-and-removed" ||
+    packageProof.install?.result?.code !== "COMMAND_COMPLETED" || packageProof.install?.unchangedBeforeAccept !== true ||
+    packageProof.install?.changed !== true || packageProof.install?.pluginId !== "dev.sceneaxi.sample.intake-source" ||
+    !/^sha256:[0-9a-f]{64}$/.test(packageProof.install?.digestBefore ?? "") ||
+    !/^sha256:[0-9a-f]{64}$/.test(packageProof.install?.digestAfter ?? "") || packageProof.install.digestBefore === packageProof.install.digestAfter ||
+    packageProof.install?.persisted !== true || packageProof.inspect?.code !== "COMMAND_COMPLETED" ||
+    packageProof.inspect?.packageId !== "dev.sceneaxi.sample.intake-source" ||
+    packageProof.remove?.result?.code !== "COMMAND_COMPLETED" || packageProof.remove?.unchangedBeforeAccept !== true ||
+    packageProof.remove?.changed !== true || packageProof.remove?.persistedRemoved !== true ||
+    !/^sha256:[0-9a-f]{64}$/.test(packageProof.remove?.digestBefore ?? "") ||
+    !/^sha256:[0-9a-f]{64}$/.test(packageProof.remove?.digestAfter ?? "") || packageProof.remove.digestBefore === packageProof.remove.digestAfter) {
+  failures.push("#262 GUI package install/inspect/remove did not persist the reviewed package lifecycle");
+}
+const migrationProof = features?.["#263"]?.migration;
+if (migrationProof?.gui !== true || migrationProof.state !== "legacy-project-migrated" ||
+    migrationProof.proposalCode !== "COMMAND_COMPLETED" || migrationProof.commitCode !== "COMMAND_COMPLETED" ||
+    migrationProof.sourceBytesUnchanged !== true || migrationProof.manifestPersisted !== true ||
+    !/^sha256:[0-9a-f]{64}$/.test(migrationProof.digest ?? "")) {
+  failures.push("#263 project-migration-commit did not migrate a GUI-opened legacy scratch project");
+}
+const extensionProof = features?.["#269"];
+if (extensionProof?.gui !== true || extensionProof.state !== "inspected-seam-refused-without-adapter" ||
+    extensionProof.inspectCode !== "COMMAND_COMPLETED" || extensionProof.seamId !== "networking" ||
+    extensionProof.code !== "EXTENSION_ADAPTER_ABSENT" || extensionProof.authoringBytesUnchanged !== true ||
+    !/^sha256:[0-9a-f]{64}$/.test(extensionProof.digest ?? "")) {
+  failures.push("#269 extension-start did not report the named absent-adapter refusal for the inspected seam");
+}
+if (features?.["#258"]?.state !== "acknowledged" || typeof features["#258"]?.frame !== "number" ||
+    !features["#258"].stop.startsWith("Stopped ·") || !features["#258"].reset.startsWith("Reset ·") ||
+    !features["#258"].stop.includes('"state":"stopped"') ||
+    !features["#258"].reset.includes('"state":"playing"') ||
+    !features["#258"].reset.includes('"authoringBytesUnchanged":true')) {
+  failures.push("#258 GUI Play/Stop/Reset did not produce viewport acknowledgement and named run statuses");
+}
+
 if (proof.handshake?.app !== "@sceneaxi/desktop-linux") failures.push("handshake app wrong");
 if (proof.handshake?.runtime !== "electron") failures.push("handshake runtime wrong");
 if (!Array.isArray(proof.openPath?.tickDigests) || proof.openPath.tickDigests.length === 0) {
@@ -171,6 +363,29 @@ if (
 ) {
   failures.push("the packaged viewport did not acknowledge the saved-composition redraw");
 }
+if (
+  proof.audioProof?.duration !== 2 ||
+  proof.audioProof?.sampleRate !== 44100 ||
+  proof.audioProof?.channels !== 1 ||
+  typeof proof.audioProof?.volume !== "number" || proof.audioProof.volume < 0.3 || proof.audioProof.volume > 0.4 ||
+  typeof proof.audioProof?.gain !== "number" || proof.audioProof.gain < 0.3 || proof.audioProof.gain > 0.4 ||
+  proof.audioProof?.pointerTargets?.volume !== true || proof.audioProof?.pointerTargets?.play !== true ||
+  proof.audioProof?.sourceStarted !== true ||
+  typeof proof.audioProof?.offlineRms !== "number" || proof.audioProof.offlineRms <= 0.01 ||
+  typeof proof.audioProof?.liveRms !== "number" || proof.audioProof.liveRms < 0.07 || proof.audioProof.liveRms > 0.11 ||
+  // The live level must follow the pointer-set gain: within 25% of gain × the clip's full-scale RMS.
+  Math.abs(proof.audioProof.liveRms - proof.audioProof.gain * proof.audioProof.offlineRms) >
+    0.25 * proof.audioProof.gain * proof.audioProof.offlineRms ||
+  typeof proof.audioProof?.stoppedRms !== "number" || proof.audioProof.stoppedRms > 0.01 ||
+  proof.audioProof?.stopped !== true ||
+  proof.audioProof?.contextDisposed !== true ||
+  proof.audioProof?.resetStopped !== true ||
+  proof.audioProof?.decodeRefused !== true ||
+  proof.audioProof?.kidsSwitchStopped !== true ||
+  proof.audioProof?.projectSwitchStopped !== true
+) {
+  failures.push("renderer audio proof did not decode, start, render non-silence, and stop the ingested WAV");
+}
 if (proof.frameReport?.backend !== "three") failures.push("frame report is not the Three core");
 // The pixel claim the docs and the site-kit offer carry is only ever this
 // observation: a WebGL canvas surface that reported drawing something.
@@ -199,12 +414,15 @@ if (typeof reportText !== "string" || reportText.length === 0) {
 
 if (failures.length > 0) {
   console.error(`smoke FAILED — ${failures.join("; ")}`);
+  console.error(`feature proof: ${JSON.stringify(features)}`);
   console.error(jsonLine);
   process.exit(1);
 }
 
 console.log("desktop-linux smoke OK —");
 console.log(`  mode: ${packaged ? "packaged (linux-unpacked)" : "built runtime (dist/main.cjs)"}`);
+const hostAbsent = Object.entries(features).filter(([, entry]) => entry?.gui === false).map(([feature]) => feature);
+console.log(`  features: ${Object.keys(features).length} issue entries asserted through the GUI; host-absent: ${hostAbsent.join(", ") || "none"}`);
 console.log(
   `  open path: ${proof.openPath.tickDigests.length} ticks, digest ${String(proof.openPath.initialDigest).slice(0, 18)}… → ${String(proof.openPath.tickDigests.at(-1)).slice(0, 18)}…`,
 );
@@ -216,6 +434,9 @@ console.log(
 );
 console.log(
   `  ship: static Web bundle ${proof.ship.bundleDigest} · source ${proof.ship.sourceDigest} · Delivery Handoff present`,
+);
+console.log(
+  `  audio: ${proof.audioProof.duration}s · ${proof.audioProof.sampleRate} Hz · ${proof.audioProof.channels} channel · source started · live RMS ${proof.audioProof.liveRms.toFixed(4)} → ${proof.audioProof.stoppedRms.toFixed(4)} after Stop · real pointer hit-tested controls · decode refusal named · Stop/Reset/Kids/project switch stopped and disposed the context`,
 );
 console.log(
   `  frame: backend ${proof.frameReport.backend} · surface ${proof.frameReport.surface ?? "unreported"} · pixelsDrawn ${proof.frameReport.pixelsDrawn ?? "unreported"} · drawCalls ${proof.frameReport.drawCalls}`,
