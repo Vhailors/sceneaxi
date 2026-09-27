@@ -586,13 +586,13 @@ function editorCommandForm(view: DesktopVisualView, commandId: keyof typeof EDIT
   }).join("");
   const submit = view.product.editorCommandControls.find((control) => control.id === `editor-command-submit-${commandId}`);
   const review = view.product.editorCommandControls.find((control) => control.id === `editor-command-review-${commandId}`);
-  if (!submit || !review) throw new Error(`Missing visual-model controls for ${commandId}`);
+  if (!submit) throw new Error(`Missing visual-model controls for ${commandId}`);
   return `<section class="editor-command-form" data-editor-command-form="${commandId}" aria-label="${escapeHtml(title)}">
     <h3>${escapeHtml(title)}</h3>${fields}
     ${commandId === "project-migration-commit" ? '<p data-migration-proposal-refusal>Run Propose Project Migration first.</p>' : ""}
     <p data-editor-command-refusal="${commandId}" aria-live="polite">${commandId === "input-action-rebind" || commandId === "input-actions-reset" ? "Inspect input actions before choosing a target." : "Complete the required fields before submitting."}</p>
     ${button(submit, commandId === "input-actions-inspect" ? "Inspect input actions" : title, "ghost-button", ` data-action="editor-command-submit" data-value="${commandId}" data-editor-command-submit="${commandId}"`)}
-    ${button(review, "Approve reviewed change", "ghost-button", ` data-action="editor-command-review" data-value="${commandId}" data-editor-command-review="${commandId}" hidden`)}
+    ${review ? button(review, "Approve reviewed change", "ghost-button", ` data-action="editor-command-review" data-value="${commandId}" data-editor-command-review="${commandId}" hidden`) : ""}
   </section>`;
 }
 
@@ -1850,7 +1850,6 @@ if (shell) {
   let editorSceneInstanceIds = [];
   let editorPlaySessionActive = false;
   let editorPhysicsHostReady = false;
-  let editorCommandResponses = Object.create(null);
 
   const bindingLabel = (binding) => {
     if (binding.device === 'keyboard') {
@@ -2436,6 +2435,10 @@ if (shell) {
       : 'completed';
     runStatus((commandId === 'run-stop' ? 'Stopped' : 'Reset') + ' · ' + detail);
     appendConsoleEvidence(commandId, response.data);
+    if (commandId === 'run-stop') {
+      editorPlaySessionActive = false;
+      updateEditorCommandControls();
+    }
     document.dispatchEvent(new CustomEvent(T.product.viewportStopEvent));
     productStatus('open', 'Run command completed · ' + commandId);
   };
@@ -2815,6 +2818,8 @@ if (shell) {
     if ((activeProject?.root ?? null) !== previousRoot) {
       sceneSelectionGeneration += 1;
       clearProjectBrowser();
+      // Deferred: this can run while the script is still defining its helpers.
+      queueMicrotask(() => resetEditorCommandState());
     }
     const launcher = shell.querySelector('[data-project-launcher]');
     const bound = shell.querySelector('[data-project-bound]');
@@ -3784,7 +3789,8 @@ if (shell) {
       runRefusal(T.product.refusals.openPathEvidenceInvalid);
       return;
     }
-    editorPlaySessionActive = exercise.playSession?.state !== 'disposed';
+    const playState = exercise.playSession?.state;
+    editorPlaySessionActive = typeof playState === 'string' && playState !== 'disposed';
     updateEditorCommandControls();
     const playback = { exercise, accepted: false, frame: null };
     document.dispatchEvent(new CustomEvent(T.product.viewportPlayEvent, { detail: playback }));
@@ -4003,6 +4009,8 @@ if (shell) {
     }
     await beginSceneLifecycleTransition();
     if (typeof Event !== 'undefined') document.dispatchEvent(new Event(T.product.viewportStopEvent));
+    editorPlaySessionActive = false;
+    updateEditorCommandControls();
     shell.dataset.profile = value;
     q('.profile-chip').forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.value === value)));
     const promptField = shell.querySelector('#assistant-prompt');
@@ -4345,7 +4353,7 @@ if (shell) {
     }
   });
 
-  const editorCommandInput = (commandId) => {
+  const editorCommandInput = (commandId, approve = false) => {
     const form = shell.querySelector('[data-editor-command-form="' + commandId + '"]');
     const input = Object.create(null);
     if (form) {
@@ -4402,19 +4410,43 @@ if (shell) {
       const current = editorInputActionReview;
       input.expectedBaseVersion = current?.baseVersion || editorInputActionBaseVersions?.[input.scope];
       if (!input.expectedBaseVersion) throw new Error('INPUT_ACTION_INSPECTION_REQUIRED');
-      input.approved = current?.commandId === commandId;
-      input.reviewDigest = current?.commandId === commandId ? current.reviewDigest : null;
+      // Only the Approve control approves; Submit always asks for a fresh review.
+      const approving = approve && current?.commandId === commandId;
+      input.approved = approving;
+      input.reviewDigest = approving ? current.reviewDigest : null;
     }
     if (commandId === 'scene-prefab-inspect') delete input.expectedContentHash;
     return input;
   };
 
-  const runEditorCommand = async (commandId) => {
+  const clearInputActionReview = () => {
+    editorInputActionReview = null;
+    q('[data-editor-command-review]').forEach((approve) => { approve.hidden = true; });
+  };
+
+  // Everything learned from one project's inspections belongs to that project.
+  const resetEditorCommandState = () => {
+    editorMigrationDigest = null;
+    editorPackageIds = [];
+    editorExtensionSeams = [];
+    editorInputActionBaseVersions = null;
+    editorPrefabDefinitions = [];
+    editorPlaySessionActive = false;
+    clearInputActionReview();
+    for (const name of ['packageId', 'seamId', 'actionId', 'definitionId', 'instanceId', 'sourceInstanceId', 'parentInstanceId']) {
+      populateEditorChoices(name, []);
+    }
+    const refusal = shell.querySelector('[data-migration-proposal-refusal]');
+    if (refusal) refusal.textContent = 'Run Propose Project Migration first.';
+    updateEditorCommandControls();
+  };
+
+  const runEditorCommand = async (commandId, approve = false) => {
     if (activeProject === null && !(await openProject())) return;
     if (projectContentHash === null && !(await openProject())) return;
     let input;
     try {
-      input = editorCommandInput(commandId);
+      input = editorCommandInput(commandId, approve);
     } catch (error) {
       const code = error instanceof Error ? error.message : 'EDITOR_COMMAND_INPUT_INVALID';
       showOutcome(commandId + ' refused', code, 'Inspect the relevant catalog and provide all required values before submitting.');
@@ -4422,9 +4454,10 @@ if (shell) {
       return;
     }
     const response = await commandRequest(commandId, input);
-    editorCommandResponses[commandId] = response;
     const diagnostic = responseDiagnostic(response);
     if (diagnostic !== null) {
+      // A refused review decision cannot be approved later; ask for a new review.
+      if (commandId === 'input-action-rebind' || commandId === 'input-actions-reset') clearInputActionReview();
       showOutcome(commandId + ' refused', diagnostic.code, diagnostic.message);
       productStatus('refused', commandId + ' refused · ' + diagnostic.code);
       return;
@@ -4469,10 +4502,18 @@ if (shell) {
       projectDirty = data.authoringSnapshot.phase === 'reviewing';
     }
     if ((commandId === 'input-action-rebind' || commandId === 'input-actions-reset') && data?.status === 'committed') {
-      editorInputActionReview = null;
-      const approve = shell.querySelector('[data-editor-command-review="' + commandId + '"]');
-      if (approve) approve.hidden = true;
+      clearInputActionReview();
       await hydrateInputActions();
+      // The commit moved the settings version; re-read it so the next change is based on it.
+      const inspected = await commandRequest('input-actions-inspect', {});
+      editorInputActionBaseVersions = responseDiagnostic(inspected) === null && inspected.data?.baseVersions
+        ? inspected.data.baseVersions
+        : null;
+      updateEditorCommandControls();
+    }
+    if (commandId === 'project-migration-commit') {
+      editorMigrationDigest = null;
+      updateEditorCommandControls();
     }
     const output = JSON.stringify(data, null, 2);
     showOutcome(commandId, 'COMMAND_COMPLETED', output);
@@ -4690,6 +4731,16 @@ if (shell) {
     if (event.target instanceof Element && event.target.matches('[data-command-field="source"]')) updateEditorCommandControls();
   });
 
+  // Changing a reviewed input-action request invalidates its review: Approve
+  // would otherwise commit a digest the user no longer sees.
+  const invalidateEditedReview = (event) => {
+    const form = event.target instanceof Element ? event.target.closest('[data-editor-command-form]') : null;
+    const id = form?.getAttribute('data-editor-command-form');
+    if (editorInputActionReview !== null && editorInputActionReview.commandId === id) clearInputActionReview();
+  };
+  shell.addEventListener('input', invalidateEditedReview);
+  shell.addEventListener('change', invalidateEditedReview);
+
   shell.addEventListener('click', (event) => {
     const command = event.target instanceof Element ? event.target.closest('[data-command]') : null;
     if (command && command.getAttribute('aria-disabled') !== 'true') {
@@ -4709,7 +4760,7 @@ if (shell) {
       void productAction(() => runEditorCommand(value));
     }
     else if (action === 'editor-command-review' && value) {
-      void productAction(() => runEditorCommand(value));
+      void productAction(() => runEditorCommand(value, true));
     }
     else if (action === 'drawer' && value) {
       const key = value === 'left' ? 'drawerLeft' : 'drawerInspector';

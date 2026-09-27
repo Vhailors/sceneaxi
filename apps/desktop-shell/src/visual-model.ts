@@ -1381,7 +1381,11 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
       "scene-prefab-refresh",
     ].flatMap((commandId) => [
       control(`editor-command-submit-${commandId}`, commandId, "live"),
-      control(`editor-command-review-${commandId}`, `Approve ${commandId}`, "live"),
+      // Only input-action settings have a command-level review; every document
+      // mutation is accepted through Change Review instead.
+      ...(commandId === "input-action-rebind" || commandId === "input-actions-reset"
+        ? [control(`editor-command-review-${commandId}`, `Approve ${commandId}`, "live")]
+        : []),
     ]).concat(
       ...([
         ["package-install", "locator"], ["package-install", "manifest"], ["package-install", "digest"],

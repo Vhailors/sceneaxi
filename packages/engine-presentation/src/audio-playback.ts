@@ -25,7 +25,11 @@ export function createAudioPlaybackPort(createContext: () => AudioContextLike) {
   const buffers = new Map<string, AudioBufferLike>();
   const sources = new Map<string, ReturnType<AudioContextLike["createBufferSource"]>>();
   let disposed = false;
-  let finalOutputRms = 0;
+
+  function stopAll() {
+    for (const source of sources.values()) source.stop();
+    sources.clear();
+  }
 
   function live() {
     if (disposed) throw new Error("AUDIO_CONTEXT_DISPOSED");
@@ -55,23 +59,18 @@ export function createAudioPlaybackPort(createContext: () => AudioContextLike) {
       sources.get(name)?.stop();
       sources.delete(name);
     },
-    stopAll() {
-      for (const source of sources.values()) source.stop();
-      sources.clear();
-    },
+    stopAll,
     setVolume(value: number) {
       live();
       if (!Number.isFinite(value) || value < 0 || value > 1) throw new Error("AUDIO_VOLUME_INVALID");
       gain.gain.value = value;
     },
     measureOutputRms() {
-      return disposed ? finalOutputRms : context.measureOutputRms?.() ?? 0;
+      return disposed ? 0 : context.measureOutputRms?.() ?? 0;
     },
     async dispose() {
       if (disposed) return;
-      this.stopAll();
-      await new Promise((resolve) => setTimeout(resolve, 50));
-      finalOutputRms = context.measureOutputRms?.() ?? 0;
+      stopAll();
       disposed = true;
       buffers.clear();
       await context.close();
