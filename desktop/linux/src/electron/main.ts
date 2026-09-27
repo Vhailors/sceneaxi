@@ -259,6 +259,33 @@ async function runAudioDecodeRefusalSmokeProof(window: BrowserWindow): Promise<b
   return await waitForRenderer(window, "globalThis.__sceneaxiAudioDecodeControls?.dataset.audioContextDisposed === 'true'");
 }
 
+/**
+ * Bring the window to where a user would press Play for audio: no outcome dialog
+ * over the stage and, unless the caller only needs Play, the Game Run room.
+ */
+async function prepareAudioPlay(window: BrowserWindow, gameRunRoom = true): Promise<void> {
+  if (await window.webContents.executeJavaScript(`document.querySelector('.shell')?.dataset.overlay === 'outcome'`)) {
+    await clickRendererControl(window, '[data-overlay="outcome"] [data-action="overlay"][data-value="none"]');
+    if (!await waitForRenderer(window, "document.querySelector('.shell')?.dataset.overlay === 'none'")) {
+      throw new Error("the outcome dialog did not close before audio Play");
+    }
+  }
+  if (!gameRunRoom) return;
+  // Stop and Reset live in the Game profile's Run room.
+  if (await window.webContents.executeJavaScript(`document.querySelector('.shell')?.dataset.profile !== 'game'`)) {
+    await clickRendererControl(window, '.profile-chip[data-value="game"]');
+    if (!await waitForRenderer(window, "document.querySelector('.shell')?.dataset.profile === 'game'")) {
+      throw new Error("the Game profile did not open before audio Play");
+    }
+  }
+  if (await window.webContents.executeJavaScript(`document.querySelector('.shell')?.dataset.mode !== 'run'`)) {
+    await clickRendererControl(window, '[data-action="mode"][data-value="run"]');
+    if (!await waitForRenderer(window, "document.querySelector('.shell')?.dataset.mode === 'run'")) {
+      throw new Error("the Run room did not open before audio Play");
+    }
+  }
+}
+
 async function runAudioKidsProfileSmokeProof(window: BrowserWindow): Promise<boolean> {
   await clickRendererControl(window, '[data-command="run-play"]');
   if (!await waitForRenderer(window, "document.querySelector('[data-audio-playback]') !== null")) return false;
@@ -279,6 +306,9 @@ async function runAudioProjectSwitchSmokeProof(
   window: BrowserWindow,
   switchProject: () => Promise<void>,
 ): Promise<boolean> {
+  // Last proof: the feature proofs leave the Web profile with an edit flagged,
+  // and this proof needs only Play and the clip control, not Stop or Reset.
+  await prepareAudioPlay(window, false);
   await clickRendererControl(window, '[data-command="run-play"]');
   if (!await waitForRenderer(window, "document.querySelector('[data-audio-playback]') !== null")) return false;
   await clickRendererControl(window, '[data-audio-playback] button', 'Play tone');
@@ -307,14 +337,7 @@ async function runAudioSmokeProof(window: BrowserWindow): Promise<{
   pointerTargets: Readonly<{ volume: boolean; play: boolean }>;
 }> {
   // The feature proofs end with Stop and Reset, which dispose the audio controls;
-  // start a fresh Play session the way a user would before measuring audio,
-  // first dismissing the outcome dialog the last feature proof left open.
-  if (await window.webContents.executeJavaScript(`document.querySelector('.shell')?.dataset.overlay === 'outcome'`)) {
-    await clickRendererControl(window, '[data-overlay="outcome"] [data-action="overlay"][data-value="none"]');
-    if (!await waitForRenderer(window, "document.querySelector('.shell')?.dataset.overlay === 'none'")) {
-      throw new Error("the outcome dialog did not close before audio Play");
-    }
-  }
+  await prepareAudioPlay(window);
   await clickRendererControl(window, '[data-command="run-play"]');
   if (!await waitForRenderer(window, "document.querySelector('[data-audio-playback]') !== null")) {
     const status = await window.webContents.executeJavaScript(
@@ -1350,6 +1373,14 @@ async function start(): Promise<void> {
   }
 
 
+  // Audio: the session proofs run while the window is still in the clean Game
+  // state; the project-switch proof runs last, because it rebinds the window to a
+  // second scratch project that the feature proofs must not see.
+  const audioProof = await runAudioSmokeProof(window);
+  const audioResetStopped = await runAudioResetSmokeProof(window);
+  const audioDecodeRefused = await runAudioDecodeRefusalSmokeProof(window);
+  const audioKidsSwitchStopped = await runAudioKidsProfileSmokeProof(window);
+
   // The window's own DOM must agree with the frame report: one live canvas, the
   // inert note gone, the report line printed. Asserted by scripts/smoke.mjs.
   const viewportDom = (await window.webContents.executeJavaScript(
@@ -1884,12 +1915,6 @@ async function start(): Promise<void> {
     pendingProof?: string[];
   }>;
 
-  // Audio runs after the feature proofs: its project-switch step rebinds the
-  // window to a second scratch project, which the feature proofs must not see.
-  const audioProof = await runAudioSmokeProof(window);
-  const audioResetStopped = await runAudioResetSmokeProof(window);
-  const audioDecodeRefused = await runAudioDecodeRefusalSmokeProof(window);
-  const audioKidsSwitchStopped = await runAudioKidsProfileSmokeProof(window);
   const audioSwitchRoot = mkdtempSync(join(tmpdir(), "sceneaxi-audio-switch-"));
   seedProject(audioSwitchRoot);
   const audioProjectSwitchStopped = await runAudioProjectSwitchSmokeProof(
