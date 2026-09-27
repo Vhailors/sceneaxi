@@ -408,12 +408,11 @@ async function runAudioSmokeProof(window: BrowserWindow): Promise<{
     );
     throw new Error(`Play did not mount the session audio controls: ${status}`);
   }
+  // The pointer sets the level: a click at 35% of the slider's width, nothing written from script.
   const volumePointerHit = await clickRendererControl(window, '[aria-label="Audio volume"]', undefined, 0.35);
-  await window.webContents.executeJavaScript(`(() => {
-    const slider = document.querySelector('[aria-label="Audio volume"]');
-    slider.value = '0.35';
-    slider.dispatchEvent(new Event('input', { bubbles: true }));
-  })()`);
+  if (!await waitForRenderer(window, "document.querySelector('[aria-label=\"Audio volume\"]')?.value !== '1'")) {
+    throw new Error("the pointer did not move the audio volume slider");
+  }
   const volume = await window.webContents.executeJavaScript(`document.querySelector('[aria-label="Audio volume"]').value`);
   const controlsBeforePlay = await window.webContents.executeJavaScript(`document.querySelector('[data-audio-playback]') !== null`);
   const playPointerHit = await clickRendererControl(window, '[data-audio-playback] button', 'Play tone');

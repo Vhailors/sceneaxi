@@ -55,13 +55,6 @@ const ENGINE_ANSWERED_COMMANDS = new Set([
   "project-migration-propose", "project-migration-recover", "workspace-layout-apply",
 ]);
 
-/**
- * Commands whose registered input needs a review flow the GUI does not collect yet
- * (digests, approvals, locators; go-live item 53). Their controls send no form values,
- * so the registry validator refuses them before the engine: pinned exactly, so a GUI
- * that starts collecting the input has to move the id out of this set.
- */
-const INPUT_REQUIRED_COMMANDS = new Set<string>();
 const FORM_NAVIGATION_COMMANDS = new Set([
   "package-install", "package-remove", "project-migration-commit", "extension-start",
   "input-action-rebind", "input-actions-reset",
@@ -553,10 +546,6 @@ async function invoke(
 }
 
 describe("desktop command menu, palette, and accelerator parity", () => {
-  it("has no editor commands pinned to input-invalid GUI submissions", () => {
-    expect(INPUT_REQUIRED_COMMANDS.size).toBe(0);
-  });
-
   for (const command of DESKTOP_INTERACTION_COMMANDS) {
     it(`invokes ${command.id} from its menu`, async () => {
       await invoke("menu", command);

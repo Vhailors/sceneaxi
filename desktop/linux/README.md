@@ -52,9 +52,9 @@ frame acknowledgement, restart selection recovery, confirmation and immutable
 mutation refusals, a static Web export whose source bytes and Delivery Handoff
 digests are verified, and the renderer's real presentation frame report
 (`backend three`, `surface webgl-canvas` where a drawing buffer exists). The
-proof JSON also records `features` keyed `#254`–`#270`. GUI actions cover inspector Stage/Accept with before/after document digests (#254), asset import, source revision, GUI Reload, and reimport with changed manifest digest (#256), animation apply/Accept/evaluation at the accepted content hash (#259), and physics apply/Accept plus a read-only one-step evaluation (#260). The smoke also drives Play/Stop/Reset and viewport-source selection (#258), prefab define/inspect/instance/override/refresh (#255), input-action inspect/rebind/reset (#257), package install/inspect/remove (#262), and the named extension adapter refusal (#269). Git status/diff/stage and migration commit share #263 evidence. The migration proof uses a separate legacy scratch project. Workspace inspect/apply/reset, project build, fixture Agent proposal, and profile evidence remain covered. macOS and Windows artifact targets report unavailable on Linux. The asset picker is stubbed only at Electron's native-dialog boundary.
+proof JSON also records `features` keyed `#254`–`#270`. GUI actions cover inspector Stage/Accept with before/after document digests (#254), asset import of a source and then of a revised copy as a second asset with its own manifest digest (#256; stable-id review reload of the same asset is proven by `tests/e2e/asset-pipeline-golden.test.ts`, not by the smoke), animation apply/Accept/evaluation at the accepted content hash (#259), and physics apply/Accept plus a read-only one-step evaluation (#260). The smoke also drives Play/Stop/Reset and viewport-source selection (#258), prefab define/inspect/instance/override/refresh (#255), input-action inspect/rebind/reset (#257), package install/inspect/remove (#262), and the named extension adapter refusal (#269). Git status/diff/stage and migration commit share #263 evidence. The migration proof uses a separate legacy scratch project. Workspace inspect/apply/reset, project build, fixture Agent proposal, and profile evidence remain covered. macOS and Windows artifact targets report unavailable on Linux. The asset picker is stubbed only at Electron's native-dialog boundary. The command forms, the audio controls, the profile and room switches, and Change Review Accept in those steps are clicked with real pointer input (a hit test at the control's centre, then `sendInputEvent`); the older feature steps (#254, #256, #259–#261, #263, #265, #266, #270 and the first Play/Stop/Reset) still click through DOM `click()` calls, which skip hit-testing.
 
-The audio proof runs after these editor feature steps. At commit `ab2339d`, the smoke reaches audio Play and then fails with `DESKTOP_SCENE_NOT_COMPOSABLE` after the asset-import sequence. The smoke does not skip that failure.
+The audio proof plays an ingested WAV in Game Play, measures the live output level at a pointer-set volume and silence after Stop, and checks that Reset, a switch to Kids, and a project switch stop playback and close the audio context.
 
 The bound Build inspector also projects the accepted composition as versioned
 hierarchy v1: distinct stable artifact and object ids, parent/child depth,
@@ -64,8 +64,8 @@ Review, transaction history, reopen, and Play paths; the CLI and local assistant
 inspect the same hierarchy through the permission-bound desktop bridge. The
 focused end-to-end proof is `tests/e2e/desktop-hierarchy-golden.test.ts`; the
 Electron smoke above also clicks the #254 gizmo mode control and verifies
-the #258 viewport acknowledgement. It does not claim persistent Play or viewport
-source switching.
+the #258 viewport acknowledgement and viewport-source selection during Play. It
+does not claim persistent Play.
 
 On Web Experience, **Import GLB/glTF…** opens a native file dialog and stages the
 selected contained asset through that same Change Review. Save owns the accepted

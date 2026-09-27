@@ -292,7 +292,38 @@ describe("desktop editor command forms against the real bridge", () => {
     expect(existsSync(settingPath)).toBe(false);
     expect(readFileSync(join(root, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8")).toContain('"entities"');
     await click(window, '[data-editor-command-review="input-action-rebind"]');
-    expect(readFileSync(settingPath, "utf8")).toContain('"editor.project.save"');
+    const persisted = readFileSync(settingPath, "utf8");
+    expect(persisted).toContain('"editor.project.save"');
+    expect(persisted).toContain('"KeyB"');
+  });
+
+  it("never commits a reviewed rebind from Submit alone", async () => {
+    const { root, window } = fixture("input-rebind-submit-twice");
+    await openScene(window);
+    await click(window, '[data-editor-command-submit="input-actions-inspect"]');
+    fill(window, "input-action-rebind", "scope", "project");
+    fill(window, "input-action-rebind", "binding", JSON.stringify({ device: "keyboard", code: "KeyB", modifiers: ["primary"] }));
+    fill(window, "input-action-rebind", "actionId", "editor.project.save");
+    const settingPath = join(root, PROJECT_INPUT_ACTIONS_PATH);
+    await click(window, '[data-editor-command-submit="input-action-rebind"]');
+    await click(window, '[data-editor-command-submit="input-action-rebind"]');
+    expect(element(window, "[data-outcome-code]").textContent).toBe("INPUT_ACTION_REVIEW_REQUIRED");
+    expect(existsSync(settingPath)).toBe(false);
+  });
+
+  it("withdraws Approve when the reviewed rebind is edited", async () => {
+    const { root, window } = fixture("input-rebind-edited");
+    await openScene(window);
+    await click(window, '[data-editor-command-submit="input-actions-inspect"]');
+    fill(window, "input-action-rebind", "scope", "project");
+    fill(window, "input-action-rebind", "binding", JSON.stringify({ device: "keyboard", code: "KeyB", modifiers: ["primary"] }));
+    fill(window, "input-action-rebind", "actionId", "editor.project.save");
+    await click(window, '[data-editor-command-submit="input-action-rebind"]');
+    const approve = element(window, '[data-editor-command-review="input-action-rebind"]');
+    expect(approve.hidden).toBe(false);
+    fill(window, "input-action-rebind", "binding", JSON.stringify({ device: "keyboard", code: "KeyJ", modifiers: ["primary"] }));
+    expect(approve.hidden).toBe(true);
+    expect(existsSync(join(root, PROJECT_INPUT_ACTIONS_PATH))).toBe(false);
   });
 
   it("reviews and commits a reset against the inspected settings version", async () => {
@@ -332,9 +363,11 @@ describe("desktop editor command forms against the real bridge", () => {
     await click(window, '[data-command="physics-inspect"]');
     expect(element(window, '[data-catalog-report="physics"]').textContent).toContain('"physicsHostReady": true');
     const before = readFileSync(join(root, DESKTOP_ACTIVE_DOCUMENT_PATH));
-    fill(window, "physics-evaluate", "steps", "1");
+    fill(window, "physics-evaluate", "steps", "3");
     await click(window, '[data-editor-command-submit="physics-evaluate"]');
     expect(element(window, "[data-outcome-code]").textContent).toBe("COMMAND_COMPLETED");
+    const evaluation = JSON.parse(element(window, "[data-outcome-message]").textContent ?? "{}") as { snapshots?: { step: number }[] };
+    expect(evaluation.snapshots?.map((snapshot) => snapshot.step)).toEqual([1, 2, 3]);
     expect(readFileSync(join(root, DESKTOP_ACTIVE_DOCUMENT_PATH))).toEqual(before);
   });
 
@@ -360,6 +393,7 @@ describe("desktop editor command forms against the real bridge", () => {
     expect(readFileSync(join(root, DESKTOP_ACTIVE_DOCUMENT_PATH))).toEqual(before);
     await acceptReview(window);
     expect(readFileSync(join(root, DESKTOP_ACTIVE_DOCUMENT_PATH))).not.toEqual(before);
+    expect(readFileSync(join(root, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8")).toContain('"selected-pair"');
   });
 
   it("instances an inspected prefab under a selected scene entity", async () => {
@@ -379,6 +413,7 @@ describe("desktop editor command forms against the real bridge", () => {
     expect(readFileSync(join(root, DESKTOP_ACTIVE_DOCUMENT_PATH))).toEqual(before);
     await acceptReview(window);
     expect(readFileSync(join(root, DESKTOP_ACTIVE_DOCUMENT_PATH))).not.toEqual(before);
+    expect(readFileSync(join(root, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8")).toContain("gui-copy");
   });
 
   it("overrides an inspected prefab instance through the shared review flow", async () => {
@@ -439,6 +474,10 @@ describe("desktop editor command forms against the real bridge", () => {
     fill(window, "viewport-source-set", "source", "scene");
     await click(window, '[data-editor-command-submit="viewport-source-set"]');
     expect(element(window, "[data-outcome-code]").textContent).toBe("COMMAND_COMPLETED");
+    expect(element(window, "[data-outcome-message]").textContent).toContain('"scene"');
     expect(readFileSync(join(root, DESKTOP_ACTIVE_DOCUMENT_PATH))).toEqual(before);
+    await click(window, "[data-command='run-stop']");
+    expect(changeSource.disabled).toBe(true);
+    expect(changeSource.dataset.refusal).toBe("PLAY_SESSION_MISSING");
   });
 });

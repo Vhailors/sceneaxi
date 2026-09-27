@@ -569,11 +569,14 @@ describe("desktop first-release product loop", () => {
       query(window, "[data-project-status]")?.textContent ?? "";
     expect(shell?.dataset.tier).toBe("narrow");
     expect(shell?.dataset.profile).toBe("game");
+    // One button per command-form submit/approve control the visual model declares.
+    const commandFormButtons = desktopVisualView(createDesktopVisualState({ profile: "game" }))
+      .product.editorCommandControls.filter((control) => control.id.startsWith("editor-command-")).length;
     expect(window.document.querySelectorAll("button")).toHaveLength(
-      102 + (DESKTOP_INTERACTION_COMMANDS.length - 11) * 2 + 3 + 27,
+      102 + (DESKTOP_INTERACTION_COMMANDS.length - 11) * 2 + 3 + commandFormButtons,
     );
     expect(window.document.querySelectorAll('button:not([tabindex="-1"])')).toHaveLength(
-      97 + (DESKTOP_INTERACTION_COMMANDS.length - 11) * 2 + 3 + 27,
+      97 + (DESKTOP_INTERACTION_COMMANDS.length - 11) * 2 + 3 + commandFormButtons,
     );
 
     const refusalHelp = query(window, "#status-refusal-help");

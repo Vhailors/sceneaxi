@@ -372,6 +372,9 @@ if (
   proof.audioProof?.sourceStarted !== true ||
   typeof proof.audioProof?.offlineRms !== "number" || proof.audioProof.offlineRms <= 0.01 ||
   typeof proof.audioProof?.liveRms !== "number" || proof.audioProof.liveRms < 0.07 || proof.audioProof.liveRms > 0.11 ||
+  // The live level must follow the pointer-set gain: within 25% of gain × the clip's full-scale RMS.
+  Math.abs(proof.audioProof.liveRms - proof.audioProof.gain * proof.audioProof.offlineRms) >
+    0.25 * proof.audioProof.gain * proof.audioProof.offlineRms ||
   typeof proof.audioProof?.stoppedRms !== "number" || proof.audioProof.stoppedRms > 0.01 ||
   proof.audioProof?.stopped !== true ||
   proof.audioProof?.contextDisposed !== true ||

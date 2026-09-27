@@ -83,7 +83,7 @@ function project() {
     })).toMatchObject({ ok: true, data: { phase: "reviewing" } });
     accept();
   };
-  return { host, contentHash, accept, command, playable, importModel, editScene };
+  return { root, host, contentHash, accept, command, playable, importModel, editScene };
 }
 
 describe("accepted model import keeps the composition reproducible", () => {
@@ -96,6 +96,20 @@ describe("accepted model import keeps the composition reproducible", () => {
       expect(p.command("run-play", { documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH })).toMatchObject({ ok: true });
     });
   }
+
+  it("hot reloads a model that sorts first and Play still composes", () => {
+    const p = project();
+    p.importModel("aaa-sorts-first.gltf", gltf());
+    const source = join(p.root, "aaa-sorts-first.gltf");
+    writeFileSync(source, gltf({ extras: { revision: 2 } }));
+    expect(p.host.handle({
+      action: "asset-import",
+      payload: { profile: "game", documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH, sourcePath: source, assetId: "aaa-sorts-first", hotReload: true },
+    })).toMatchObject({ ok: true, data: { outcome: "reviewing", hotReload: true } });
+    p.accept();
+    expect(p.playable()).toBe("ok");
+    expect(p.command("run-play", { documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH })).toMatchObject({ ok: true });
+  });
 
   it("imports after transform edits and after a second import that sorts first", () => {
     const p = project();
