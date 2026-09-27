@@ -223,19 +223,25 @@ describe("engine desktop chrome — control accounting (document → model)", ()
       const html = render(state);
       expect(html, label).not.toMatch(/<(a|details|summary)\b/i);
       const inputs = html.match(/<input\b[^>]*>/g) ?? [];
-      expect(inputs, label).toHaveLength(DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.length + 3);
+      expect(inputs, label).toHaveLength(DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.length + 9);
       expect(inputs.map((tag) => /\sid="([^"]+)"/.exec(tag)?.[1]).sort(), label).toEqual([
         ...DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.map((definition) => `scene-property-${definition.id}`),
         "scene-transform-snap",
         "project-git-commit-message",
         "timeline-time",
+        "command-field-package-install-locator",
+        "command-field-package-install-digest",
+        "command-field-physics-evaluate-steps",
+        "command-field-scene-prefab-define-definitionId",
+        "command-field-scene-prefab-instance-instanceKey",
+        "command-field-scene-prefab-override-newValue",
       ].sort());
       for (const tag of inputs) {
         expect(tag, label).toMatch(/data-kind="(view|live|inert)"/);
       }
       const selects = html.match(/<select\b[^>]*>/g) ?? [];
-      expect(selects, label).toHaveLength(7);
-      expect(selects.map((tag) => /\sid="([^"]+)"/.exec(tag)?.[1]), label).toEqual([
+      expect(selects, label).toHaveLength(19);
+      expect(selects.map((tag) => /\sid="([^"]+)"/.exec(tag)?.[1]).sort(), label).toEqual([
         "project-recent-select",
         "project-browser-file-select",
         "scene-entity-desktop-crate-beside",
@@ -243,17 +249,29 @@ describe("engine desktop chrome — control accounting (document → model)", ()
         "scene-transform-pivot",
         "scene-instance-parent",
         "scene-instance-policy",
-      ]);
+        "command-field-package-remove-packageId",
+        "command-field-extension-start-seamId",
+        "command-field-input-action-rebind-scope",
+        "command-field-input-action-rebind-actionId",
+        "command-field-input-actions-reset-scope",
+        "command-field-scene-prefab-instance-definitionId",
+        "command-field-scene-prefab-instance-parentInstanceId",
+        "command-field-scene-prefab-override-instanceId",
+        "command-field-scene-prefab-override-sourceInstanceId",
+        "command-field-scene-prefab-override-propertyId",
+        "command-field-scene-prefab-refresh-definitionId",
+        "command-field-viewport-source-set-source",
+      ].sort());
       expect(selects[0], label).toMatch(/data-kind="(view|inert)"/);
       expect(selects[1], label).toMatch(/data-kind="(live|inert)"/);
       expect(selects[2], label).toMatch(/data-kind="(view|inert)"/);
       expect(selects[3], label).toMatch(/data-kind="(live|inert)"/);
       expect(selects[4], label).toMatch(/data-kind="(live|inert)"/);
       expect(selects[5], label).toMatch(/data-kind="(live|inert)"/);
-      expect(selects[6], label).toMatch(/data-kind="(live|inert)"/);
+      for (const tag of selects.slice(7)) expect(tag, label).toMatch(/data-kind="(live|inert)"/);
       const textareas = html.match(/<textarea\b[^>]*>/g) ?? [];
       const textareaIds = textareas.map((tag) => /\sid="([^"]+)"/.exec(tag)?.[1]);
-      expect(textareas, label).toHaveLength(6);
+      expect(textareas, label).toHaveLength(8);
       expect(textareaIds.sort(), label).toEqual([
         "assistant-prompt",
         "effect-mutation",
@@ -261,7 +279,9 @@ describe("engine desktop chrome — control accounting (document → model)", ()
         "material-mutation",
         "physics-mutation",
         "timeline-mutation",
-      ]);
+        "command-field-package-install-manifest",
+        "command-field-input-action-rebind-binding",
+      ].sort());
       for (const tag of textareas) expect(tag, label).toMatch(/data-kind="(view|live|inert)"/);
       expect(html, label).not.toMatch(/\son[a-z]+=/i);
       // A focus stop outside a <button> would be an interactive element with no

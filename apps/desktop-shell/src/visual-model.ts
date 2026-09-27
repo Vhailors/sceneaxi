@@ -1134,6 +1134,7 @@ export type DesktopVisualView = Readonly<{
     play: DesktopControl;
     runStop: DesktopControl;
     runReset: DesktopControl;
+    editorCommandControls: readonly DesktopControl[];
     inspectors: readonly Readonly<{
       kind: "physics" | "environment" | "material" | "effect";
       inspectCommand: "physics-inspect" | "environment-inspect" | "material-inspect" | "effect-inspect";
@@ -1373,6 +1374,29 @@ export function desktopVisualView(state: DesktopVisualState): DesktopVisualView 
     play: control("scene-play", "Play composed scene", "live"),
     runStop: control("run-stop", "Stop run", "live"),
     runReset: control("run-reset", "Reset run", "live"),
+    editorCommandControls: Object.freeze([
+      "package-install", "package-remove", "project-migration-commit", "extension-start",
+      "input-action-rebind", "input-actions-reset", "input-actions-inspect", "physics-evaluate",
+      "scene-prefab-define", "scene-prefab-inspect", "scene-prefab-instance", "scene-prefab-override",
+      "scene-prefab-refresh",
+    ].flatMap((commandId) => [
+      control(`editor-command-submit-${commandId}`, commandId, "live"),
+      control(`editor-command-review-${commandId}`, `Approve ${commandId}`, "live"),
+    ]).concat(
+      ...([
+        ["package-install", "locator"], ["package-install", "manifest"], ["package-install", "digest"],
+        ["package-remove", "packageId"], ["extension-start", "seamId"],
+        ["input-action-rebind", "scope"], ["input-action-rebind", "actionId"], ["input-action-rebind", "binding"],
+        ["input-actions-reset", "scope"], ["physics-evaluate", "steps"], ["scene-prefab-define", "definitionId"],
+        ["scene-prefab-instance", "definitionId"], ["scene-prefab-instance", "parentInstanceId"],
+        ["scene-prefab-instance", "instanceKey"], ["scene-prefab-override", "instanceId"],
+        ["scene-prefab-override", "sourceInstanceId"], ["scene-prefab-override", "propertyId"],
+        ["scene-prefab-override", "newValue"], ["scene-prefab-refresh", "definitionId"],
+        ["viewport-source-set", "source"],
+      ] as const).map(([commandId, fieldName]) =>
+        control(`command-field-${commandId}-${fieldName}`, fieldName, "live"),
+      ),
+      control("editor-command-submit-viewport-source-set", "Apply viewport source", "live"))),
     inspectors: Object.freeze(([
       ["physics", "physics-inspect", "physics-apply", "Physics"],
       ["environment", "environment-inspect", "environment-apply", "Environment"],

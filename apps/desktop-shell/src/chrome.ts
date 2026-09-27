@@ -565,22 +565,34 @@ const EDITOR_COMMAND_FORM_FIELDS: Readonly<Record<string, readonly EditorCommand
   "viewport-source-set": [{ name: "source", label: "Viewport source", kind: "select", options: ["scene", "game", "sculpt-preview"] }],
 });
 
-function editorCommandForm(commandId: keyof typeof EDITOR_COMMAND_FORM_FIELDS, title: string): string {
+function editorCommandFieldAttrs(view: DesktopVisualView, commandId: string, name: string, label: string): string {
+  const control = view.product.editorCommandControls.find((candidate) => candidate.id === `command-field-${commandId}-${name}`);
+  if (!control) throw new Error(`Missing visual-model field control for ${commandId}.${name}`);
+  const inertAttrs = control.kind === "inert"
+    ? ` aria-disabled="true" data-refusal="${escapeHtml(control.refusal ?? "")}" aria-describedby="refusal-${escapeHtml(control.refusal ?? "")}"`
+    : "";
+  return `id="${escapeHtml(control.id)}" data-kind="${control.kind}"${inertAttrs} data-command-field="${escapeHtml(name)}" aria-label="${escapeHtml(label)}"`;
+}
+
+function editorCommandForm(view: DesktopVisualView, commandId: keyof typeof EDITOR_COMMAND_FORM_FIELDS, title: string): string {
   const fields = (EDITOR_COMMAND_FORM_FIELDS[commandId] ?? []).map((field) => {
-    const name = escapeHtml(field.name);
+    const attrs = editorCommandFieldAttrs(view, commandId, field.name, field.label);
     const control = field.kind === "json"
-      ? `<textarea data-command-field="${name}" aria-label="${escapeHtml(field.label)}"></textarea>`
+      ? `<textarea ${attrs}></textarea>`
       : field.kind === "select"
-        ? `<select data-command-field="${name}" aria-label="${escapeHtml(field.label)}"><option value="">Choose after inspection</option>${(field.options ?? []).map((option) => `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`).join("")}</select>`
-        : `<input data-command-field="${name}" type="${field.kind ?? "text"}" aria-label="${escapeHtml(field.label)}">`;
+        ? `<select ${attrs}><option value="">Choose after inspection</option>${(field.options ?? []).map((option) => `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`).join("")}</select>`
+        : `<input ${attrs} type="${field.kind ?? "text"}">`;
     return `<label>${escapeHtml(field.label)}${control}</label>`;
   }).join("");
+  const submit = view.product.editorCommandControls.find((control) => control.id === `editor-command-submit-${commandId}`);
+  const review = view.product.editorCommandControls.find((control) => control.id === `editor-command-review-${commandId}`);
+  if (!submit || !review) throw new Error(`Missing visual-model controls for ${commandId}`);
   return `<section class="editor-command-form" data-editor-command-form="${commandId}" aria-label="${escapeHtml(title)}">
     <h3>${escapeHtml(title)}</h3>${fields}
     ${commandId === "project-migration-commit" ? '<p data-migration-proposal-refusal>Run Propose Project Migration first.</p>' : ""}
     <p data-editor-command-refusal="${commandId}" aria-live="polite">${commandId === "input-action-rebind" || commandId === "input-actions-reset" ? "Inspect input actions before choosing a target." : "Complete the required fields before submitting."}</p>
-    <button type="button" data-action="editor-command-submit" data-value="${commandId}" data-editor-command-submit="${commandId}" disabled aria-disabled="true" data-refusal="EDITOR_COMMAND_PREREQUISITE_MISSING">${commandId === "input-actions-inspect" ? "Inspect input actions" : title}</button>
-    <button type="button" data-action="editor-command-review" data-value="${commandId}" data-editor-command-review="${commandId}" hidden>Approve reviewed change</button>
+    ${button(submit, commandId === "input-actions-inspect" ? "Inspect input actions" : title, "ghost-button", ` data-action="editor-command-submit" data-value="${commandId}" data-editor-command-submit="${commandId}"`)}
+    ${button(review, "Approve reviewed change", "ghost-button", ` data-action="editor-command-review" data-value="${commandId}" data-editor-command-review="${commandId}" hidden`)}
   </section>`;
 }
 
@@ -639,10 +651,10 @@ function leftDock(view: DesktopVisualView): string {
     <p class="scene-entities-refusal" data-scene-entities-refusal aria-live="polite" hidden></p>
     <p class="project-root" data-project-root></p>
     <section class="project-command-tools" aria-label="Project commands">
-      ${editorCommandForm("project-migration-commit", "Commit approved project migration")}
-      ${editorCommandForm("input-actions-inspect", "Inspect input actions")}
-      ${editorCommandForm("input-action-rebind", "Rebind input action")}
-      ${editorCommandForm("input-actions-reset", "Reset input actions")}
+      ${editorCommandForm(view, "project-migration-commit", "Commit approved project migration")}
+      ${editorCommandForm(view, "input-actions-inspect", "Inspect input actions")}
+      ${editorCommandForm(view, "input-action-rebind", "Rebind input action")}
+      ${editorCommandForm(view, "input-actions-reset", "Reset input actions")}
     </section>
   </div>
   <p class="project-file-state" data-project-file-state>Active · not opened</p>
@@ -694,6 +706,7 @@ function profileSurfaces(view: DesktopVisualView): string {
  */
 function viewport(view: DesktopVisualView): string {
   const sculptRunning = view.sculpt.phase === "running";
+  const sourceFieldAttrs = editorCommandFieldAttrs(view, "viewport-source-set", "source", "Viewport source command");
   return `
 <section class="viewport-region" aria-label="Viewport">
   ${profileSurfaces(view)}
@@ -710,8 +723,8 @@ function viewport(view: DesktopVisualView): string {
         )
         .join("")}
     </div>
-    <label class="viewport-source-control">Set source<select data-command-field="source" aria-label="Viewport source command"><option value="">Choose source</option><option value="scene">Scene</option><option value="game">Game</option><option value="sculpt-preview">Sculpt preview</option></select></label>
-    <button type="button" data-action="editor-command-submit" data-value="viewport-source-set" data-editor-command-submit="viewport-source-set" disabled aria-disabled="true" data-refusal="EDITOR_COMMAND_PREREQUISITE_MISSING">Apply source</button>
+    <label class="viewport-source-control">Set source<select ${sourceFieldAttrs}><option value="">Choose source</option><option value="scene">Scene</option><option value="game">Game</option><option value="sculpt-preview">Sculpt preview</option></select></label>
+    ${button(view.product.editorCommandControls.find((control) => control.id === "editor-command-submit-viewport-source-set") ?? (() => { throw new Error("Missing viewport source submit control"); })(), "Apply source", "ghost-button", ` data-action="editor-command-submit" data-value="viewport-source-set" data-editor-command-submit="viewport-source-set"`)}
     <span class="spacer"></span>
     <span class="view-tools" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
   </div>
@@ -914,15 +927,15 @@ function inspector(view: DesktopVisualView): string {
         : ""
   }
   ${mode === "build" ? `${inspectorCatalogs(view)}<section class="editor-command-tools" aria-label="Build command tools">
-    ${editorCommandForm("scene-prefab-inspect", "Inspect reusable content")}
-    ${editorCommandForm("scene-prefab-define", "Define reusable content")}
-    ${editorCommandForm("scene-prefab-instance", "Create reusable-content instance")}
-    ${editorCommandForm("scene-prefab-override", "Override instance property")}
-    ${editorCommandForm("scene-prefab-refresh", "Refresh reusable-content instances")}
-    ${editorCommandForm("physics-evaluate", "Evaluate physics")}
-    ${editorCommandForm("package-install", "Install contained package")}
-    ${editorCommandForm("package-remove", "Remove installed package")}
-    ${editorCommandForm("extension-start", "Start inspected extension seam")}
+    ${editorCommandForm(view, "scene-prefab-inspect", "Inspect reusable content")}
+    ${editorCommandForm(view, "scene-prefab-define", "Define reusable content")}
+    ${editorCommandForm(view, "scene-prefab-instance", "Create reusable-content instance")}
+    ${editorCommandForm(view, "scene-prefab-override", "Override instance property")}
+    ${editorCommandForm(view, "scene-prefab-refresh", "Refresh reusable-content instances")}
+    ${editorCommandForm(view, "physics-evaluate", "Evaluate physics")}
+    ${editorCommandForm(view, "package-install", "Install contained package")}
+    ${editorCommandForm(view, "package-remove", "Remove installed package")}
+    ${editorCommandForm(view, "extension-start", "Start inspected extension seam")}
   </section>` : ""}
 </section>`;
   }).join("");

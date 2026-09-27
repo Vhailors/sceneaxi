@@ -570,10 +570,10 @@ describe("desktop first-release product loop", () => {
     expect(shell?.dataset.tier).toBe("narrow");
     expect(shell?.dataset.profile).toBe("game");
     expect(window.document.querySelectorAll("button")).toHaveLength(
-      102 + (DESKTOP_INTERACTION_COMMANDS.length - 11) * 2 + 3,
+      102 + (DESKTOP_INTERACTION_COMMANDS.length - 11) * 2 + 3 + 27,
     );
     expect(window.document.querySelectorAll('button:not([tabindex="-1"])')).toHaveLength(
-      97 + (DESKTOP_INTERACTION_COMMANDS.length - 11) * 2 + 3,
+      97 + (DESKTOP_INTERACTION_COMMANDS.length - 11) * 2 + 3 + 27,
     );
 
     const refusalHelp = query(window, "#status-refusal-help");
