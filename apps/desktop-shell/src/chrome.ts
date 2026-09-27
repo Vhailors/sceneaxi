@@ -2819,7 +2819,7 @@ if (shell) {
       sceneSelectionGeneration += 1;
       clearProjectBrowser();
       // Deferred: this can run while the script is still defining its helpers.
-      queueMicrotask(() => resetEditorCommandState());
+      void Promise.resolve().then(() => resetEditorCommandState());
     }
     const launcher = shell.querySelector('[data-project-launcher]');
     const bound = shell.querySelector('[data-project-bound]');
