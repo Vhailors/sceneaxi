@@ -274,3 +274,30 @@ describe("CSS emission", () => {
     expect(typeof foundationsSurfacesCss()).toBe("string");
   });
 });
+
+describe("D-4 motion: stated, not transcribed", () => {
+  /**
+   * The sheet states no motion, so these lines are recorded decision D-4 in
+   * `docs/design-foundations.md`, pinned value for value: changing one changes it.
+   */
+  const motionDeclarations = [
+    "  --motion-fast: 120ms;",
+    "  --motion-base: 200ms;",
+    "  --ease-standard: cubic-bezier(0.2, 0, 0, 1);",
+  ];
+
+  /** Every line declaring a motion duration or an easing curve, in emission order. */
+  const motionLines = (css: string): string[] =>
+    css.split("\n").filter((line) => /^\s*--(?:motion|ease)-/.test(line));
+
+  it("declares exactly two durations and one easing curve in :root", () => {
+    expect(motionLines(unwrap(foundationsVariablesCss()))).toEqual(motionDeclarations);
+  });
+
+  it.each(["umbrella", "game-assets", "web-assets"] as const)(
+    "serves the %s sheet the same motion, since a surface shifts only its accent",
+    (surface) => {
+      expect(motionLines(unwrap(foundationsCss({ surface })))).toEqual(motionDeclarations);
+    },
+  );
+});

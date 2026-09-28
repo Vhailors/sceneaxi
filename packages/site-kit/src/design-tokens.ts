@@ -7,7 +7,9 @@
  * archive is the authority for purely visual facts; nothing here invents a
  * colour, a size, or a hover shade the sheet does not state. Where the sheet is
  * silent, this module is silent too — see `docs/design-foundations.md` for the
- * two recorded gaps (`--fg-3`, storefront hover accents).
+ * two recorded gaps (`--fg-3`, storefront hover accents). The one visual fact it
+ * states anyway is motion: `FOUNDATION_MOTION` is recorded decision D-4 in the same
+ * document, stated rather than transcribed.
  *
  * This is the S-1 seam: three sites currently carry near-identical copies of one
  * stylesheet, and ADR 0018 makes each of them a separate install root, so the one
@@ -370,6 +372,29 @@ export function resolveSurfaceAccent(
 }
 
 // ---------------------------------------------------------------------------
+// D-4 — MOTION (stated, not transcribed)
+// ---------------------------------------------------------------------------
+
+/**
+ * The only durations and easing a site-sheet transition may read.
+ *
+ * The sheet states no motion, so these values are recorded decision D-4 in
+ * `docs/design-foundations.md` rather than a transcription: changing one changes
+ * that decision. D-4 also caps transforms at `translateX(3px)` and `scale(1.015)`
+ * and zeroes every duration under `prefers-reduced-motion`; the site sheets own
+ * those rules, because they own every transition.
+ */
+export const FOUNDATION_MOTION: readonly {
+  readonly token: string;
+  readonly value: string;
+  readonly use: string;
+}[] = freezeAll([
+  { token: "--motion-fast", value: "120ms", use: "colour, background, border, opacity, box-shadow" },
+  { token: "--motion-base", value: "200ms", use: "transform" },
+  { token: "--ease-standard", value: "cubic-bezier(0.2, 0, 0, 1)", use: "the easing for both" },
+]);
+
+// ---------------------------------------------------------------------------
 // Accessibility — measured, not asserted
 // ---------------------------------------------------------------------------
 
@@ -445,6 +470,8 @@ export function foundationsVariablesCss(options: FoundationsCssOptions = {}): Si
     lines.push(`  --surface-${surface.id}-line: ${surface.line};`);
     lines.push(`  --surface-${surface.id}-shadow: ${surface.shadow};`);
   }
+
+  for (const motion of FOUNDATION_MOTION) lines.push(`  ${motion.token}: ${motion.value};`);
 
   if (options.surface !== undefined) {
     const accent = resolveSurfaceAccent(options.surface);
