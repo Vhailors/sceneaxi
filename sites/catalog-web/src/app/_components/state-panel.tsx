@@ -1,7 +1,9 @@
 /**
  * The storefront's thin React adapter over site-kit's shared state-panel model.
  *
- * React stays in this install root; status/refusal semantics stay in site-kit.
+ * React stays in this install root; status/refusal semantics stay in site-kit. The title
+ * and the reason key share the head row, so the key is the first thing read after the
+ * title and never trails the body text; it wraps under the title where the row is narrow.
  */
 import { createStatePanelModel } from "@sceneaxi/site-kit/state-panel";
 import type { StatePanelTone } from "@sceneaxi/site-kit/state-panel";
@@ -26,9 +28,11 @@ export function StatePanel({
 
   return (
     <section className={model.sectionClassName}>
-      <Heading>{model.title}</Heading>
+      <div className="state-head">
+        <Heading>{model.title}</Heading>
+        {model.reason !== null && <code className="reason">reason: {model.reason}</code>}
+      </div>
       {children}
-      {model.reason !== null && <code className="reason">reason: {model.reason}</code>}
     </section>
   );
 }

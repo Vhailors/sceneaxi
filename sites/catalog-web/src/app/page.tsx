@@ -1,34 +1,38 @@
 import {
   CREATOR_SHARE_ROUNDING_NOTE,
   CREATOR_SHARE_RULE,
+  SITE_CATALOG_MODE,
   listSiteCatalog,
 } from "@sceneaxi/site-kit";
 import { CATALOG_SITE_BRAND, CATALOG_SITE_SURFACE } from "../lib/site-config.js";
 import { catalogFacets } from "../lib/catalog-facts.js";
 import { ListingCard } from "./_components/listing-card.js";
-import { ListingTile } from "./_components/listing-tile.js";
+import { LeadPlate } from "./_components/listing-tile.js";
+import { PublishSlot } from "./_components/publish-slot.js";
 import { StatePanel } from "./_components/state-panel.js";
 
-/** The design leads with four hero tiles; the showroom fills as many as it has. */
-const HERO_TILES = 4;
-
 /**
- * The showroom page — hero band, then the design's rail-and-grid.
+ * The browse page — the hero and its lead record, the facts strip, then the design's
+ * rail-and-grid.
  *
  * The archive's rail is five filter groups of hand-written counts wired to checkboxes
  * that filter nothing, and its results header carries a sort control and a nine-page
- * pager. None of that ships: every count here is a count of the scenes on this page,
- * and no control appears whose behaviour a contract does not already define. What
- * survives is the layout, which is the part the design was right about.
+ * pager. None of that ships: every count here is a count of the records on this page,
+ * every figure in the facts strip is read from a contract, and no control appears whose
+ * behaviour a contract does not already define. What survives is the layout, which is the
+ * part the design was right about.
  */
-export default function ShowroomPage() {
+export default function StorefrontPage() {
   const listings = listSiteCatalog(CATALOG_SITE_SURFACE);
   const facets = catalogFacets(listings);
-  const featured = listings.slice(0, HERO_TILES);
+  const lead = listings[0];
+
   const word =
     listings.length === 1
       ? CATALOG_SITE_BRAND.listingWord
       : CATALOG_SITE_BRAND.listingWordPlural;
+
+  const priceModes = facets.find((facet) => facet.title === "Pricing")?.rows ?? [];
 
   return (
     <>
@@ -42,23 +46,55 @@ export default function ShowroomPage() {
             <h1>{CATALOG_SITE_BRAND.tagline}</h1>
             <p className="lede">{CATALOG_SITE_BRAND.audience}</p>
             <div className="hero-actions">
-              <a className="button" href="#catalogue">
+              <a className="button button-xl" href="#catalogue">
                 {CATALOG_SITE_BRAND.heroCta}
+                <span className="glyph glyph-nudge" aria-hidden="true">
+                  →
+                </span>
               </a>
-              <a className="button button-quiet" href="#pricing">
+              <a className="button button-xl button-quiet" href="#pricing">
                 {CATALOG_SITE_BRAND.heroSecondaryCta}
               </a>
             </div>
           </div>
 
-          <div>
-            <h2 className="sr-only">In the showroom now</h2>
-            <ul className="hero-tiles">
-              {featured.map((listing) => (
-                <ListingTile listing={listing} key={listing.itemId} />
-              ))}
-            </ul>
-          </div>
+          {lead !== undefined && (
+            <div className="hero-plate">
+              <h2 className="sr-only">
+                In the {CATALOG_SITE_BRAND.catalogueWord.toLowerCase()} now
+              </h2>
+              <LeadPlate listing={lead} />
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="facts">
+        <div className="shell">
+          <h2 className="sr-only">At a glance</h2>
+          <ul className="facts-list">
+            <li className="fact">
+              <span className="fact-value">{listings.length}</span>
+              <span className="fact-label">
+                {word} in this {CATALOG_SITE_BRAND.catalogueWord.toLowerCase()}
+              </span>
+            </li>
+            <li className="fact">
+              <span className="fact-value">{priceModes.length}</span>
+              <span className="fact-label">
+                price {priceModes.length === 1 ? "mode" : "modes"} ·{" "}
+                {priceModes.map((row) => row.name.toLowerCase()).join(", ")}
+              </span>
+            </li>
+            <li className="fact">
+              <span className="fact-value">{CREATOR_SHARE_RULE.creatorPercent}%</span>
+              <span className="fact-label">creator share</span>
+            </li>
+            <li className="fact">
+              <span className="fact-value">{SITE_CATALOG_MODE.toUpperCase()} mode</span>
+              <span className="fact-label">purchases refuse by name</span>
+            </li>
+          </ul>
         </div>
       </section>
 
@@ -69,9 +105,18 @@ export default function ShowroomPage() {
               <h2 className="rail-title">{facet.title}</h2>
               <ul className="rail-list">
                 {facet.rows.map((row) => (
-                  <li className="rail-row" key={row.name}>
+                  <li
+                    className="rail-row"
+                    key={row.name}
+                    style={
+                      // SAFETY: the object sets one custom property, which React's
+                      // CSSProperties type does not model; the value is a plain number.
+                      { "--share": String(row.count / listings.length) } as React.CSSProperties
+                    }
+                  >
                     <span className="rail-name">{row.name}</span>
                     <span className="rail-count">{row.count}</span>
+                    <span className="rail-bar" aria-hidden="true" />
                   </li>
                 ))}
               </ul>
@@ -79,9 +124,7 @@ export default function ShowroomPage() {
           ))}
 
           <div className="rail-note">
-            <p>
-              <strong>Every scene is a committed fixture record</strong>
-            </p>
+            <p>Every {CATALOG_SITE_BRAND.listingWord} is a committed fixture record</p>
             <p>
               Price mode, seller, publication time, TEST mode, and availability come from
               the validated catalog-listing contract. Asset payload, licence, preview,
@@ -92,32 +135,44 @@ export default function ShowroomPage() {
 
         <div className="results">
           <div className="results-head" id="catalogue">
-            <span>
-              <span className="results-count">{listings.length}</span> {word}
-            </span>
-            <span>on the {CATALOG_SITE_SURFACE.replace("catalog-", "")} surface</span>
+            <p className="results-count">
+              {listings.length} <span className="results-word">{word}</span>
+            </p>
+            <p className="results-surface">
+              on the {CATALOG_SITE_SURFACE.replace("catalog-", "")} surface
+            </p>
           </div>
 
           <ul className="cards">
             {listings.map((listing) => (
               <ListingCard listing={listing} key={listing.itemId} />
             ))}
+            <PublishSlot />
           </ul>
 
-          <p className="prose">
+          <p className="grid-note">
             Each card is marked with a figure derived from the validated listing record.
             It is a mark of the record digest, not a render of the scene — the fixture
             carries no asset payload or preview.
           </p>
 
-          <section className="section" id="pricing">
-            <h2>How pricing reads</h2>
-            <p className="prose">
-              A scene may be priced in credits, money, or both. The display keeps the
-              seller&apos;s choice exactly; it does not convert currencies. Creators receive
-              {" "}{CREATOR_SHARE_RULE.creatorPercent}% in the established share model.
-            </p>
-            <p className="reason">{CREATOR_SHARE_ROUNDING_NOTE}</p>
+          <section className="pricing" id="pricing" aria-labelledby="pricing-title">
+            <div className="pricing-copy">
+              <h2 id="pricing-title">{CATALOG_SITE_BRAND.heroSecondaryCta}</h2>
+              <p className="lede">
+                A {CATALOG_SITE_BRAND.listingWord} may be priced in credits, money, or both.
+                The display keeps the seller&apos;s choice exactly; it does not convert
+                currencies. Creators receive {CREATOR_SHARE_RULE.creatorPercent}% in the
+                established share model.
+              </p>
+            </div>
+            <div className="share">
+              <p className="share-figure">
+                <span className="share-num">{CREATOR_SHARE_RULE.creatorPercent}%</span>
+                <span className="share-label">creator share</span>
+              </p>
+              <p className="mono-note">{CREATOR_SHARE_ROUNDING_NOTE}</p>
+            </div>
           </section>
 
           <StatePanel tone="warn" title="TEST catalog · purchases refuse here">

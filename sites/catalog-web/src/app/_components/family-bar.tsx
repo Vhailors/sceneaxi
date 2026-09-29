@@ -7,7 +7,8 @@ import type { FamilyEntry } from "../../lib/family-bar.js";
  * 0018 allows it to be: three ordinary cross-origin links, one of which is the page you
  * are on. Entries whose origin this deployment has not configured render as text — a
  * storefront states the family it belongs to whether or not its siblings are deployed,
- * but it never emits a link it cannot resolve.
+ * but it never emits a link it cannot resolve. A linked sibling leaves this origin, so it
+ * carries the `↗` glyph.
  *
  * `resolveFamilyBar` has no Kids key, so nothing here can point at Kids.
  */
@@ -55,6 +56,9 @@ export function FamilyBar({
                       aria-hidden="true"
                     />
                     {entry.label}
+                    <span className="glyph family-out" aria-hidden="true">
+                      ↗
+                    </span>
                   </a>
                 )}
               </li>

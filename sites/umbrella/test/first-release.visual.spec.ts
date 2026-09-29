@@ -171,6 +171,23 @@ test("composited readability clears WCAG body contrast after the browser cascade
     ".comparison-sceneaxi td:nth-child(2)",
     ".profile-release-matrix tbody td",
     ".path-links a",
+    // The redesign's new text: chrome, provenance, the proof gallery, tables, footer.
+    ".masthead .nav a",
+    ".masthead-actions .button",
+    ".badge",
+    ".hero-stage-note",
+    ".launch-proof dt",
+    ".proof-title",
+    ".proof-claim",
+    ".proof-level",
+    ".proof-limits .chip",
+    ".proof-link",
+    ".comparison-table th[scope=\"row\"] > span",
+    ".comparison-table th[scope=\"row\"] > a",
+    ".profile-release-matrix thead .chip",
+    ".matrix-note p",
+    "footer .footer-col a",
+    "footer .footer-version",
   ];
 
   for (const selector of selectors) {
@@ -221,4 +238,157 @@ test("composited readability clears WCAG body contrast after the browser cascade
 
     expect(result.ratio, `${selector}: ${JSON.stringify(result)}`).toBeGreaterThanOrEqual(4.5);
   }
+});
+
+test("the masthead holds one row on desktop and two on a phone, on the shared edge", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await gotoOverview(page);
+  const masthead = await box(page.locator(".masthead"));
+  expect(masthead.height).toBeLessThanOrEqual(61.5);
+  // The wordmark, the hero copy, and the footer brand share one left edge.
+  const wordmark = await box(page.locator(".masthead .wordmark"));
+  const heroCopy = await box(page.locator(".hero-copy"));
+  const footerBrand = await box(page.locator(".footer-brand"));
+  expect(Math.abs(wordmark.x - heroCopy.x)).toBeLessThan(1);
+  expect(Math.abs(wordmark.x - footerBrand.x)).toBeLessThan(1);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const phone = await box(page.locator(".masthead"));
+  expect(phone.height).toBeLessThanOrEqual(104);
+  await expectNoSidewaysScroll(page);
+});
+
+test("the first fold carries the claim, both actions, the artifact, and the trust rail", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await gotoOverview(page);
+  const stage = await box(page.locator(".release-hero .viewport"));
+  expect(stage.width).toBeGreaterThanOrEqual(671);
+  expect(stage.height).toBeGreaterThanOrEqual(503);
+  const primary = await box(page.locator(".download-primary"));
+  const secondary = await box(page.locator(".release-actions > .button-quiet"));
+  expect(Math.abs(primary.y - secondary.y)).toBeLessThanOrEqual(1);
+  expect(primary.height).toBe(46);
+  expect(secondary.height).toBe(46);
+  const rail = await box(page.locator(".launch-proof-rail"));
+  expect(rail.y).toBeLessThanOrEqual(720);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const phoneStage = await box(page.locator(".release-hero .viewport"));
+  expect(phoneStage.y).toBeLessThanOrEqual(700);
+  const phonePrimary = await box(page.locator(".download-primary"));
+  const phoneSecondary = await box(page.locator(".release-actions > .button-quiet"));
+  // Download spans the column; the open-path link keeps its own width, below the facts.
+  expect(phoneSecondary.width).toBeLessThan(phonePrimary.width);
+  expect(phoneSecondary.y).toBeGreaterThan(phonePrimary.y + phonePrimary.height);
+});
+
+test("the proof gallery shows three captioned captures, each with its limits", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await gotoOverview(page);
+  const figures = page.locator(".proof-gallery .proof-figure");
+  await expect(figures).toHaveCount(3);
+  const heights: number[] = [];
+
+  for (let index = 0; index < 3; index += 1) {
+    const figure = figures.nth(index);
+    const image = figure.locator("img");
+    await expect(image).toHaveAttribute("loading", "lazy");
+    expect(((await image.getAttribute("alt")) ?? "").length).toBeGreaterThan(0);
+    expect(await figure.locator(".proof-limits li").count()).toBeGreaterThan(0);
+    // The capture is evidence, not a control: the image never sits inside a link.
+    await expect(figure.locator("a img")).toHaveCount(0);
+    heights.push((await box(figure)).height);
+  }
+
+  expect(Math.max(...heights) - Math.min(...heights)).toBeLessThan(1);
+
+  for (const href of await page.locator(".proof-link").evaluateAll((links) =>
+    links.map((link) => link.getAttribute("href")),
+  )) {
+    expect(["/engine", "/docs"]).toContain(href);
+  }
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const first = await box(figures.nth(0).locator(".proof-frame"));
+  const second = await box(figures.nth(1).locator(".proof-frame"));
+  expect(Math.abs(first.x - second.x)).toBeLessThan(1);
+  expect(second.y).toBeGreaterThan(first.y + first.height);
+  await expectNoSidewaysScroll(page);
+});
+
+test("the overview keeps an 11px floor, nine sizes at most, and a 1.4 heading ratio", async ({
+  page,
+}) => {
+  for (const viewport of [
+    { width: 1440, height: 900 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await gotoOverview(page);
+
+    /*
+      Every size a sighted reader can see: any laid-out element with its own text. Text
+      hidden from assistive technology still counts, since `aria-hidden` removes it from
+      the accessibility tree, not from the screen.
+    */
+    const ramp = await page.evaluate(() => {
+      const sizes = new Set<number>();
+
+      for (const element of document.querySelectorAll("body *")) {
+        const hasText = [...element.childNodes].some(
+          (node) => node.nodeType === Node.TEXT_NODE && (node.textContent ?? "").trim() !== "",
+        );
+        const rect = element.getBoundingClientRect();
+
+        if (hasText && rect.width > 0 && rect.height > 0) {
+          sizes.add(Number.parseFloat(getComputedStyle(element).fontSize));
+        }
+      }
+
+      const size = (element: Element | null) =>
+        element === null ? 0 : Number.parseFloat(getComputedStyle(element).fontSize);
+
+      return {
+        sizes: [...sizes].sort((a, b) => a - b),
+        h1: size(document.querySelector("#release-title")),
+        h2: Math.max(...[...document.querySelectorAll("main h2")].map(size)),
+      };
+    });
+    const evidence = `${JSON.stringify(viewport)} ${JSON.stringify(ramp)}`;
+
+    expect(Math.min(...ramp.sizes), evidence).toBeGreaterThanOrEqual(11);
+    expect(ramp.sizes.length, evidence).toBeLessThanOrEqual(9);
+
+    if (viewport.width === 1440) expect(ramp.h1 / ramp.h2, evidence).toBeGreaterThanOrEqual(1.4);
+    else expect(ramp.h2, evidence).toBeGreaterThanOrEqual(28);
+  }
+});
+
+test.describe("before any script runs", () => {
+  test.use({ javaScriptEnabled: false });
+
+  test("the hero stage is a labelled panel, never an unexplained black box", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/");
+
+    const stage = page.locator(".release-hero .hero-stage");
+    await expect(stage).toHaveAttribute("data-frame", "pending");
+    await expect(stage.locator(".hero-stage-note")).toContainText(
+      "Opening a committed Sculpt Artifact",
+    );
+
+    // The panel over the canvas: the panel fill under a token-line grid, fully shown.
+    const panel = await stage.locator(".viewport").evaluate((element) => {
+      const style = getComputedStyle(element, "::after");
+      return { opacity: style.opacity, image: style.backgroundImage };
+    });
+    expect(panel.opacity).toBe("1");
+    expect(panel.image).toContain("linear-gradient");
+  });
 });

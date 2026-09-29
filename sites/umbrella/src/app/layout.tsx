@@ -114,7 +114,7 @@ export default function RootLayout({ children }: { readonly children: React.Reac
                 </a>
               ))}
               {catalogs.length > 0 && <span className="masthead-divider" aria-hidden="true" />}
-              <a className="button button-sm" href="/engine">
+              <a className="button button-lg" href="/engine">
                 Download
               </a>
             </div>
@@ -131,7 +131,6 @@ export default function RootLayout({ children }: { readonly children: React.Reac
                 SceneAxi
               </span>
               <p>{UMBRELLA_BRAND.tagline}</p>
-              <p className="footer-version">{RELEASE_MARKER}</p>
             </div>
 
             {FOOTER_COLUMNS.map((column) => (
@@ -164,6 +163,7 @@ export default function RootLayout({ children }: { readonly children: React.Reac
 
           <div className="footer-base">
             <span>© 2026 SceneAxi</span>
+            <span className="footer-version">{RELEASE_MARKER}</span>
             <span className="footer-iso">
               <span className="dot" aria-hidden="true" />
               Kids runs on its own origin. This site links to it from nowhere.

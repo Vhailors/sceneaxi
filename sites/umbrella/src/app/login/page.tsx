@@ -121,61 +121,62 @@ export default async function LoginPage({
 
   return (
     <div className="page">
-      <div className="page-head">
-        <p className="eyebrow">Sign in</p>
-        <h1>Sign in to SceneAxi</h1>
-        <p className="lede">
-          Signing in unlocks the Minimum E2 web editor and hosted AI. Your role is
-          derived on the server from its own configuration — there is nothing a browser
-          can claim.
-        </p>
-      </div>
-
-      {refusal !== null && (
-        <StatePanel tone="deny" title={refusal.title} reason={refusal.reason}>
-          <p>{refusal.body}</p>
-        </StatePanel>
-      )}
-
-      <form method="post" action="/api/login">
-        {next !== LOGIN_DEFAULT_DESTINATION && (
-          <input type="hidden" name="next" value={next} />
-        )}
-        <div className="row">
-          <div className="field">
-            <label htmlFor="email">Email</label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              required
-              size={28}
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              size={28}
-            />
-          </div>
-          <button className="button" type="submit">
-            Sign in
-          </button>
+      <div className="auth-layout">
+        <div className="page-head">
+          <p className="eyebrow">Sign in</p>
+          <h1>Sign in to SceneAxi</h1>
+          <p className="lede">
+            Signing in unlocks the Minimum E2 web editor and hosted AI. Your role is
+            derived on the server from its own configuration — there is nothing a browser
+            can claim.
+          </p>
         </div>
-      </form>
 
-      <p className="note">
-        The session is an HttpOnly cookie scoped to this site, bound to the session the
-        identity provider issued, and it expires when that session does. Accounts are
-        created by the deployment&rsquo;s identity provider; this form only signs an
-        existing account in.
-      </p>
+        <div className="stack">
+          {refusal !== null && (
+            <StatePanel tone="deny" title={refusal.title} reason={refusal.reason}>
+              <p>{refusal.body}</p>
+            </StatePanel>
+          )}
+
+          <form className="auth-card" method="post" action="/api/login">
+            {next !== LOGIN_DEFAULT_DESTINATION && (
+              <input type="hidden" name="next" value={next} />
+            )}
+            <div className="field">
+              <label htmlFor="email">Email</label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                size={28}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="password">Password</label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+                size={28}
+              />
+            </div>
+            <button className="button button-block" type="submit">
+              Sign in
+            </button>
+            <p className="note">
+              The session is an HttpOnly cookie scoped to this site, bound to the session
+              the identity provider issued, and it expires when that session does.
+              Accounts are created by the deployment&rsquo;s identity provider; this form
+              only signs an existing account in.
+            </p>
+          </form>
+        </div>
+      </div>
     </div>
   );
 }

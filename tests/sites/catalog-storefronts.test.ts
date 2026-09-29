@@ -600,6 +600,13 @@ describe("accessibility corrections the archive needs", () => {
       ["--fg-2", "--accent-bg"],
       // The primary button paints base-on-accent, so it is judged the same way.
       ["--bg-base", "--accent"],
+      // The redesign's primary-text surfaces: the lead plate's caption bar, the price
+      // option cells and step ordinals on raised; the purchase notice and record spec
+      // values inset on field; the nav's hover row; the quiet button's hover fill.
+      ["--fg", "--bg-raised"],
+      ["--fg", "--bg-field"],
+      ["--fg", "--bg-row"],
+      ["--fg", "--bg-control"],
     ];
     for (const [fg, bg] of pairs) {
       const foreground = tokens[fg];

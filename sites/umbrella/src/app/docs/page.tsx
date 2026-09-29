@@ -101,6 +101,21 @@ export default function DocsPage() {
   return (
     <div className="docs-shell">
       <nav className="docs-rail" aria-label="Documents">
+        {/*
+          The reader's location is marked on the server: this is the index, so its own
+          entry carries `aria-current`, and each guide below marks itself on its page.
+        */}
+        <div className="docs-rail-group">
+          <p className="docs-rail-title">Help</p>
+          <a href="/docs" aria-current="page">
+            All documentation
+          </a>
+          {HELP_DOCS.map((doc) => (
+            <a key={doc.slug} href={`/docs/${doc.slug}`}>
+              {doc.title}
+            </a>
+          ))}
+        </div>
         {RAIL_GROUPS.map((group) => (
           <div className="docs-rail-group" key={group}>
             <p className="docs-rail-title">{group}</p>
@@ -114,11 +129,13 @@ export default function DocsPage() {
       </nav>
 
       <article className="docs-main">
-        <ol className="crumbs">
-          <li>SceneAxi</li>
-          <li>Docs</li>
-          <li>Contracts</li>
-        </ol>
+        <nav aria-label="Breadcrumb">
+          <ol className="crumbs">
+            <li>SceneAxi</li>
+            <li>Docs</li>
+            <li aria-current="page">Contracts</li>
+          </ol>
+        </nav>
 
         <h1>SceneAxi help</h1>
         <p className="lede">Practical guides for installing, opening scenes, credits, and the command line.</p>

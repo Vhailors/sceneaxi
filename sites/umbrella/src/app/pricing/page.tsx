@@ -72,16 +72,6 @@ export default async function PricingPage({
       </div>
 
       <div className="stack">
-        {refusal !== null && (
-          <StatePanel tone="deny" title={refusal.title} reason={refusal.reason}>
-            <p>{refusal.body}</p>
-          </StatePanel>
-        )}
-        {checkoutState === "cancelled" && (
-          <StatePanel tone="warn" title="Checkout cancelled">
-            <p>No payment was completed. No credits were added.</p>
-          </StatePanel>
-        )}
         <h2>Credit packs</h2>
         {packs.ok ? (
           <>
@@ -94,11 +84,13 @@ export default async function PricingPage({
                     className={featured ? "tier tier-featured" : "tier"}
                     key={offer.packId}
                   >
-                    {featured && <p className="tier-flag">BEST RATE PER CREDIT</p>}
                     <div className="tier-body">
-                      <h3>
-                        <code>{offer.packId}</code>
-                      </h3>
+                      <div className="tier-head">
+                        <h3>
+                          <code>{offer.packId}</code>
+                        </h3>
+                        {featured && <p className="tier-flag">BEST RATE PER CREDIT</p>}
+                      </div>
                       <p className="tier-price">
                         <span className="tier-amount">{offer.price}</span>
                         <span className="tier-unit">once</span>
@@ -129,39 +121,41 @@ export default async function PricingPage({
                           Catalog asset purchase — not open
                         </li>
                       </ul>
-                      <p className="note">
-                        <span
-                          className={`chip chip-${offer.purchase.enabled ? "validated" : "dormant"}`}
-                        >
-                          {offer.purchase.status}
-                        </span>
-                      </p>
-                      {offer.purchase.enabled ? (
-                        <form method="post" action="/api/checkout">
-                          <input type="hidden" name="packId" value={offer.packId} />
-                          <input
-                            type="hidden"
-                            name="attempt"
-                            value={crypto.randomUUID()}
-                            autoComplete="off"
-                          />
-                          <button className="button button-block" type="submit">
+                      <div className="tier-foot">
+                        <p className="note">
+                          <span
+                            className={`chip chip-${offer.purchase.enabled ? "validated" : "dormant"}`}
+                          >
+                            {offer.purchase.status}
+                          </span>
+                        </p>
+                        {offer.purchase.enabled ? (
+                          <form method="post" action="/api/checkout">
+                            <input type="hidden" name="packId" value={offer.packId} />
+                            <input
+                              type="hidden"
+                              name="attempt"
+                              value={crypto.randomUUID()}
+                              autoComplete="off"
+                            />
+                            <button className="button button-block" type="submit">
+                              {offer.purchase.label}
+                            </button>
+                          </form>
+                        ) : (
+                          <span
+                            className="button button-block"
+                            aria-disabled="true"
+                            title={
+                              offer.purchase.refusalReason === null
+                                ? undefined
+                                : SITE_REFUSALS[offer.purchase.refusalReason]
+                            }
+                          >
                             {offer.purchase.label}
-                          </button>
-                        </form>
-                      ) : (
-                        <span
-                          className="button button-block"
-                          aria-disabled="true"
-                          title={
-                            offer.purchase.refusalReason === null
-                              ? undefined
-                              : SITE_REFUSALS[offer.purchase.refusalReason]
-                          }
-                        >
-                          {offer.purchase.label}
-                        </span>
-                      )}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </article>
                 );
@@ -178,6 +172,21 @@ export default async function PricingPage({
               Pack contents and prices are a product decision owned by the billing
               vertical, so this page shows nothing rather than inventing a price.
             </p>
+          </StatePanel>
+        )}
+        {/*
+          The visitor's own outcome — a refused step or a cancelled checkout — sits
+          directly under the packs it concerns, so no refusal-toned panel is the first
+          thing the offer says.
+        */}
+        {refusal !== null && (
+          <StatePanel tone="deny" title={refusal.title} reason={refusal.reason}>
+            <p>{refusal.body}</p>
+          </StatePanel>
+        )}
+        {checkoutState === "cancelled" && (
+          <StatePanel tone="warn" title="Checkout cancelled">
+            <p>No payment was completed. No credits were added.</p>
           </StatePanel>
         )}
       </div>

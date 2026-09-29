@@ -15,17 +15,26 @@
  * decorative theme — a refusal looks like a refusal, evidence looks like evidence, and
  * nothing is styled to imply a claim the contracts do not make.
  *
- * Two deviations from the accepted screen are deliberate and are the only ones left
- * (the third, a contrast-safe text ramp, is now settled in site-kit, whose `--fg-2` is
- * measured rather than asserted):
+ * The three-site redesign adds four recorded decisions (`docs/design-foundations.md`):
  *
- *   1. Every interactive element in the mockup is a `div` with a cursor. Here they are
- *      real links and buttons with a visible `:focus-visible` ring.
- *   2. Motion respects `prefers-reduced-motion`.
+ *   D-4  Motion. Every transition reads `--motion-fast` (colour, fill, border, opacity) or
+ *        `--motion-base` (transform) with `--ease-standard`, and a state-change transform
+ *        stops at `translateX(3px)`. Reduced motion zeroes every duration and drops the
+ *        nudges, so a hover still shows; it just does not move.
+ *   D-5  Atmosphere is neutral light: `color-mix()` of `--fg` at 5% or less over the base,
+ *        never the accent. An orange glow would read as work pending on the visitor.
+ *   D-6  Media frames — the hero stage, the proof captures, the `/open` viewport — are
+ *        float surfaces: `--radius-lg`, a `--line-strong` edge, `--surface-float-shadow`.
+ *   D-7  Glyphs are text. `→` is an action, `↗` a cross-origin link, `›` a crumb; each is
+ *        hidden from the accessibility tree, in markup or through `content: "→" / ""`.
  *
- * Layout is fluid rather than fixed at the mockup's 1440×1000 preview: the same
- * composition reflows through 1180px, 1024px, 860px, and 620px, so the desktop,
- * tablet, and phone renderings are one implementation rather than three.
+ * Colour stays semantic: the accent marks the primary action, the current place, and
+ * pending states; mint marks a verified fact; red marks a refusal. Everything else is
+ * neutral, so the loudest pixels on a page are always the action or the artifact.
+ *
+ * Every interactive element is a real link or button with a visible `:focus-visible`
+ * ring, and the composition reflows through 1180px, 1024px, 860px, and 620px, so the
+ * desktop, tablet, and phone renderings are one implementation rather than three.
  *
  * Cascade note: site-kit's sheet is inlined in `<head>` and this file arrives as a
  * framework-hoisted stylesheet, so the two orders are not ours to fix. The handful of
@@ -48,21 +57,48 @@ html body {
 
 /*
  * Prose links inside body copy stay underlined: colour alone is not an accessible
- * affordance, and these sit inside sentences rather than in a nav or a button row.
+ * affordance, and these sit inside sentences rather than in a nav or a button row. At
+ * rest they are the text colour with a quiet underline; the accent arrives on hover.
  */
 main p a,
 main li a,
 main dd a,
 main td a {
+  color: var(--fg);
   text-decoration: underline;
   text-decoration-thickness: 1px;
-  text-underline-offset: 0.2em;
+  text-decoration-color: var(--fg-2);
+  text-underline-offset: 0.18em;
+  transition:
+    color var(--motion-fast) var(--ease-standard),
+    text-decoration-color var(--motion-fast) var(--ease-standard);
 }
 
+main p a:hover,
+main li a:hover,
+main dd a:hover,
+main td a:hover {
+  color: var(--accent-hi);
+  text-decoration-color: currentColor;
+}
+
+/* A link that leaves this origin says so, as a hidden glyph beside its words. */
+main p a[href^="https://"]::after,
+main li a[href^="https://"]::after,
+main dd a[href^="https://"]::after {
+  content: "↗" / "";
+  display: inline-block;
+  margin-left: 0.2em;
+  text-decoration: none;
+}
+
+/*
+ * The ring follows each element's own corners: no radius is forced on focus, so a
+ * rounded button, a pill, and a square table region each draw their own shape.
+ */
 :focus-visible {
   outline: 2px solid var(--accent-hi);
   outline-offset: 2px;
-  border-radius: 2px;
 }
 
 code,
@@ -105,20 +141,23 @@ canvas {
  * Shell
  * ------------------------------------------------------------------------ */
 
+/* Inset from the corner when shown, so its focus ring is never cut by the viewport edge. */
 .skip-link {
   position: absolute;
   left: -9999px;
-  top: 0;
+  top: 8px;
   z-index: 100;
   background: var(--accent);
   color: var(--bg-base);
+  /* The nav's size: a control, so it adds no size of its own to any page's ramp. */
+  font-size: 14px;
   font-weight: 600;
   padding: 0.6rem 1rem;
-  border-radius: 0 0 var(--radius-md) 0;
+  border-radius: var(--radius-md);
 }
 
 .skip-link:focus {
-  left: 0;
+  left: 8px;
   color: var(--bg-base);
 }
 
@@ -142,7 +181,7 @@ canvas {
   padding: var(--band-pad) var(--gutter);
   display: flex;
   flex-direction: column;
-  gap: 44px;
+  gap: 32px;
 }
 
 /* --------------------------------------------------------------------------
@@ -165,17 +204,24 @@ canvas {
   padding: 0 var(--gutter);
   display: flex;
   align-items: center;
-  gap: 34px;
+  gap: 16px;
 }
 
+/*
+ * The lockup's box is as tall as a nav item, so its focus ring reads as a control and it
+ * sits on the same line as the nav rather than a few pixels above it.
+ */
 .wordmark {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-height: 36px;
+  border-radius: var(--radius-md);
   color: var(--fg);
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 700;
   letter-spacing: -0.02em;
+  line-height: 1;
   flex: none;
 }
 
@@ -183,24 +229,21 @@ canvas {
   color: var(--fg);
 }
 
-/* The mark: an orange tile with a rotated square knocked out of it. */
+/* The mark: an orange tile with a rotated square knocked out of it. Flat, no glow. */
 .mark {
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: 6px;
   background: var(--accent);
   display: grid;
   place-items: center;
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent),
-    0 4px 14px -4px color-mix(in srgb, var(--accent) 60%, transparent);
   flex: none;
 }
 
 .mark::before {
   content: "";
-  width: 9px;
-  height: 9px;
+  width: 10px;
+  height: 10px;
   border: 2px solid var(--bg-base);
   border-radius: 1px;
   transform: rotate(45deg);
@@ -210,7 +253,6 @@ canvas {
   width: 22px;
   height: 22px;
   border-radius: 5px;
-  box-shadow: none;
 }
 
 .mark-sm::before {
@@ -218,39 +260,105 @@ canvas {
   height: 8px;
 }
 
+/*
+ * The primary nav: one line that scrolls rather than wraps. The padding is the room each
+ * link's focus ring needs inside the scroller; the trailing spacer lets the last link
+ * scroll clear of the fade that says there is more, and the fade lifts whenever a link in
+ * the strip has focus so a ring is never dimmed.
+ */
 .nav {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 2px;
   min-width: 0;
+  padding: 4px;
   overflow-x: auto;
+  scroll-snap-type: x proximity;
   scrollbar-width: none;
+  mask-image: linear-gradient(to right, var(--bg-base) calc(100% - 32px), transparent);
 }
 
 .nav::-webkit-scrollbar {
   display: none;
 }
 
+.nav::after {
+  content: "";
+  flex: none;
+  width: 24px;
+  height: 1px;
+}
+
+.nav:focus-within {
+  mask-image: none;
+}
+
+/*
+ * A keyboard walk keeps every link whole in view. Chromium does not scroll a focused
+ * link that is already mostly visible, which would leave its ring cut at the strip's
+ * edge; while focus is in the strip, the focused link is its only snap point, centred,
+ * so the strip settles with that link and its ring fully inside it.
+ */
+.nav:focus-within a:focus-visible {
+  scroll-snap-align: center;
+}
+
 .nav a {
-  font-size: 13px;
-  font-weight: 400;
-  color: var(--fg-2);
-  padding: 0 12px;
-  height: 30px;
+  position: relative;
+  flex: none;
   display: flex;
   align-items: center;
-  border-radius: 5px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--fg-2);
   white-space: nowrap;
+  transition:
+    color var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard);
 }
 
 .nav a:hover {
   color: var(--fg);
+  background: var(--bg-row);
 }
 
+/*
+ * The current section: brighter text, the control fill, and a 2px accent bar under the
+ * label. The bar and the fill both survive greyscale, so the state never rests on hue.
+ */
 .nav a[aria-current="page"] {
   color: var(--fg);
-  font-weight: 600;
   background: var(--bg-control);
+}
+
+.nav a[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--accent);
+}
+
+/* Account-backed routes sit after a hairline, so the grouping reads without a menu. */
+.nav a[href="/login"] {
+  margin-left: 17px;
+}
+
+.nav a[href="/login"]::before {
+  content: "";
+  position: absolute;
+  left: -10px;
+  top: 10px;
+  bottom: 10px;
+  width: 1px;
+  background: var(--line);
+  pointer-events: none;
 }
 
 .masthead-spacer {
@@ -260,21 +368,25 @@ canvas {
 .masthead-actions {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
   flex: none;
 }
 
 .store-link {
   display: flex;
   align-items: center;
-  gap: 7px;
-  height: 30px;
-  padding: 0 11px;
-  border-radius: 5px;
+  gap: 8px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--line);
   color: var(--fg-2);
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 500;
   white-space: nowrap;
+  transition:
+    color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard);
 }
 
 .store-link:hover {
@@ -282,11 +394,16 @@ canvas {
   color: var(--fg);
 }
 
+.store-link .dot {
+  width: 6px;
+  height: 6px;
+}
+
 .masthead-divider {
   width: 1px;
-  height: 18px;
+  height: 20px;
   background: var(--line);
-  margin: 0 6px;
+  margin: 0 4px;
 }
 
 .dot {
@@ -303,13 +420,18 @@ main {
 
 /* --------------------------------------------------------------------------
  * Type
+ *
+ * One ramp for every route: display 66 (the overview's H1 only), route H1 52, section
+ * H2 42 on the overview and 36 on routes (so every H1:H2 pair holds 1.4 or more), 24 for
+ * a named card, 18 lede, 17 card title, 15 for a small heading or an xl button, 14 body,
+ * 13 small, 12 machine evidence, 11 micro labels. Nothing meaningful renders below 11.
  * ------------------------------------------------------------------------ */
 
 h1 {
   margin: 0;
   font-size: clamp(2.25rem, 1.4rem + 3.4vw, 3.25rem);
   line-height: 1.04;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.03em;
   font-weight: 700;
   font-variation-settings: "wdth" 104;
   text-wrap: balance;
@@ -317,7 +439,7 @@ h1 {
 
 h2 {
   margin: 0;
-  font-size: clamp(1.6rem, 1.15rem + 1.9vw, 2.5rem);
+  font-size: clamp(1.75rem, 1.2rem + 1.4vw, 2.25rem);
   line-height: 1.1;
   letter-spacing: -0.03em;
   font-weight: 700;
@@ -336,18 +458,22 @@ p {
   text-wrap: pretty;
 }
 
+/*
+ * A route's lede shares the 17 step with card titles and prose, which keeps every route
+ * inside nine text sizes; the overview's hero lede alone takes 18.
+ */
 .lede {
   font-size: 17px;
-  line-height: 1.65;
+  line-height: 1.6;
   color: var(--fg-2);
   max-width: 56ch;
 }
 
 .prose {
-  font-size: 15px;
-  line-height: 1.7;
+  font-size: 17px;
+  line-height: 1.65;
   color: var(--fg-2);
-  max-width: 52ch;
+  max-width: 56ch;
 }
 
 .prose-wide {
@@ -355,31 +481,35 @@ p {
 }
 
 .note {
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.6;
   color: var(--fg-2);
 }
 
-/* The mono kicker above a section heading: `01 — SCULPT`. */
+/* The mono kicker above a heading. Neutral: an eyebrow names a section, it is not a state. */
 .eyebrow {
   margin: 0;
   font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 0.16em;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--fg-2);
 }
 
 .eyebrow-quiet {
   color: var(--fg-2);
-  letter-spacing: 0.14em;
 }
 
 .page-head {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  max-width: 680px;
+  gap: 16px;
+  max-width: 720px;
+}
+
+.page-head > .eyebrow {
+  margin-bottom: -4px;
 }
 
 .page-head-center {
@@ -396,82 +526,103 @@ p {
   max-width: 54ch;
 }
 
+/* A section's opening group on a route: kicker, heading, and its one paragraph. */
+.section-title {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.section-title > .eyebrow {
+  margin-bottom: -4px;
+}
+
 /* --------------------------------------------------------------------------
  * Badges and chips
  * ------------------------------------------------------------------------ */
 
+/* The release marker: a quiet pill, with the archived pulse on its dot only. */
 .badge {
   display: inline-flex;
   align-items: center;
-  gap: 9px;
-  padding: 5px 11px;
-  border: 1px solid var(--status-needs-review-line);
-  background: var(--status-needs-review-bg);
-  border-radius: 20px;
+  gap: 8px;
+  height: 26px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  background: var(--bg-panel);
+  border-radius: var(--radius-full);
   width: fit-content;
   font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  color: var(--accent-hi);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--fg-2);
 }
 
 .badge .dot {
+  width: 6px;
+  height: 6px;
   background: var(--accent);
   animation: sa-pulse 2s infinite;
 }
 
 .tag {
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 11px;
+  font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  border-radius: 3px;
-  padding: 3px 7px;
+  border-radius: var(--radius-sm);
+  padding: 2px 8px;
   border: 1px solid var(--line-strong);
   color: var(--fg-2);
   white-space: nowrap;
 }
 
-.tag-accent {
-  color: var(--accent);
-  border-color: var(--status-needs-review-line);
-  background: var(--status-needs-review-bg);
-}
-
+/* A profile's own word stays neutral; only the isolated boundary keeps its status tone. */
+.tag-accent,
 .tag-web {
-  color: var(--store-web);
-  border-color: var(--store-web-line);
-  background: var(--store-web-bg);
+  color: var(--fg-2);
+  border-color: var(--line-strong);
 }
 
 .tag-iso {
-  color: var(--kids);
+  color: var(--status-isolated-fg);
   border-color: var(--status-isolated-line);
   background: var(--status-isolated-bg);
 }
 
 /*
- * The capability-matrix tier chip, rendered from site-kit's own tier value — which is
- * `free | paid` and nothing else, so there are exactly two of these.
+ * A chip: a short machine-owned word in mono. The capability tier chips render site-kit's
+ * own `free | paid` value; neither is a status, so both stay neutral and the word carries
+ * the difference.
  */
 .chip {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.45;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  padding: 3px 7px;
-  border-radius: 3px;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
   border: 1px solid currentColor;
   white-space: nowrap;
 }
 
 .chip-free {
-  color: var(--ok);
+  color: var(--fg);
+  border-color: var(--line-strong);
 }
 
 .chip-paid {
-  color: var(--accent);
+  color: var(--fg-2);
+  border-color: var(--line);
+  background: var(--bg-control);
 }
 
 /*
@@ -487,9 +638,6 @@ p {
 .chip-experimental,
 .chip-isolated,
 .chip-dormant {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
   border-width: 1px;
   border-style: solid;
 }
@@ -534,29 +682,33 @@ p {
   background: currentColor;
 }
 
-/* A small square mark: ✓ / ✕ / ~ inside a matrix cell or a feature list. */
+/*
+ * A small square mark: ✓ / ✕ inside a feature list. Neutral on purpose: an included
+ * feature is not a verified fact and an excluded one is not a refusal, so neither borrows
+ * mint or red. The words beside the mark carry the meaning.
+ */
 .mark-box {
-  width: 15px;
-  height: 15px;
-  border-radius: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-sm);
   display: grid;
   place-items: center;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
   line-height: 1;
   flex: none;
 }
 
 .mark-yes {
-  background: var(--status-validated-bg);
-  border: 1px solid var(--status-validated-line);
-  color: var(--ok);
+  background: var(--bg-control);
+  border: 1px solid var(--line-strong);
+  color: var(--fg-2);
 }
 
 .mark-no {
-  background: var(--status-refused-bg);
-  border: 1px solid var(--status-refused-line);
-  color: var(--danger);
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--fg-2);
 }
 
 /* --------------------------------------------------------------------------
@@ -565,7 +717,7 @@ p {
 
 .grid {
   display: grid;
-  gap: 14px;
+  gap: 16px;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
 }
 
@@ -583,11 +735,16 @@ p {
   gap: 16px;
 }
 
+/*
+ * A docked panel: a hairline and nothing else. Only a panel that *is* a link reacts to
+ * hover (`.card-link` below); a panel that is just information stays still, so hover
+ * never promises an action that is not there.
+ */
 .panel {
   background: var(--bg-panel);
-  border: 1px solid var(--line-soft);
+  border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  padding: 22px 20px;
+  padding: 24px;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -596,12 +753,8 @@ p {
   min-width: 0;
 }
 
-.panel:hover {
-  border-color: var(--line-strong);
-}
-
 .panel p {
-  font-size: 12.5px;
+  font-size: 14px;
   line-height: 1.6;
   color: var(--fg-2);
 }
@@ -647,7 +800,7 @@ p {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
 }
 
 .panel-grow {
@@ -659,66 +812,83 @@ p {
   flex-direction: column;
   gap: 8px;
   padding-top: 12px;
-  border-top: 1px solid var(--line-soft);
+  border-top: 1px solid var(--line);
 }
 
-/* A card whose whole body is a link target (the docs page's next-step cards). */
+/*
+ * A card whose whole body is a link target. The one card hover verb shared by all three
+ * sites: the border steps up a rung and the title underlines. No lift, no shadow, no tint.
+ */
 .card-link {
   color: inherit;
   display: flex;
   flex-direction: column;
   min-width: 0;
+  transition: border-color var(--motion-fast) var(--ease-standard);
 }
 
 .card-link:hover {
   color: inherit;
+  border-color: var(--line-strong);
 }
 
-/* The profile card: a tinted rail over a body that grows to a shared baseline. */
+.card-link:hover h2,
+.card-link:hover h3 {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+
+/* The profile card: a tone rail over a body that grows to a shared baseline. */
 .profile-card {
   display: flex;
   flex-direction: column;
   background: var(--bg-panel);
-  border: 1px solid var(--tone-line, var(--line-soft));
-  border-radius: 11px;
+  border: 1px solid var(--tone-line, var(--line));
+  border-radius: var(--radius-lg);
   overflow: hidden;
 }
 
-.profile-card:hover {
-  border-color: var(--line-strong);
+/* Kids is a boundary, not an offer: its card sits on the isolated fill. */
+.profile-card.tone-iso {
+  background: var(--status-isolated-bg);
 }
 
 .profile-card-body {
-  padding: 26px 24px;
+  padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
   flex: 1;
   min-width: 0;
 }
 
+.profile-card-body h2,
 .profile-card-body h3 {
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 700;
   letter-spacing: -0.02em;
+  line-height: 1.15;
 }
 
 .profile-card-body > p {
-  font-size: 13.5px;
-  line-height: 1.65;
+  font-size: 14px;
+  line-height: 1.6;
   color: var(--fg-2);
 }
 
 /* A roomier panel: the download card and its verify companion. */
 .panel-roomy {
-  padding: 26px;
-  gap: 15px;
+  padding: 24px;
+  gap: 16px;
 }
 
 .card-title {
   font-size: 17px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
 }
 
 /*
@@ -727,64 +897,94 @@ p {
  */
 .panel .meta {
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 12px;
+  line-height: 1.5;
   color: var(--fg-2);
 }
 
 .panel .sha {
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 12px;
+  line-height: 1.5;
   color: var(--fg-2);
-  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
 /* A package name is the whole card: one compact row, not a card with an empty body. */
 .panel-line {
-  padding: 13px 16px;
+  padding: 12px 16px;
 }
 
 .panel .pkg {
   font-family: var(--mono);
-  font-size: 11.5px;
-  color: var(--accent);
-  word-break: break-word;
+  font-size: 12px;
+  color: var(--fg);
+  overflow-wrap: anywhere;
 }
 
 .panel .body-copy {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--fg-2);
 }
 
-/* The pipeline strip: six stages that scroll rather than squeeze. */
+/*
+ * The change pipeline: six step cards read left to right. Each carries its number, its
+ * name, its one line, and a 2px status rail; the rails line up into one track, so the
+ * strip reads as a flow. Below its minimum width it scrolls inside itself.
+ */
 .pipeline {
-  padding: 30px 26px;
+  padding: 24px;
 }
 
 .pipeline-grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(150px, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(6, minmax(8.5rem, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pipeline-step {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
 }
 
 .pipeline-rail {
   height: 2px;
+  margin-bottom: 8px;
   border-radius: 2px;
   background: var(--tone, var(--accent));
 }
 
 .pipeline-num {
+  align-self: flex-start;
+  padding: 1px 7px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
   font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: 0.1em;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   color: var(--fg-2);
+}
+
+.pipeline-step h3 {
+  font-size: 15px;
+}
+
+.pipeline-step .note {
+  line-height: 1.5;
 }
 
 /* The tinted product square an artifact card heads itself with, on `/engine`. */
 .family-mark {
-  width: 26px;
-  height: 26px;
-  border-radius: 7px;
-  background: var(--tone, var(--accent));
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: var(--tone, var(--line-strong));
   display: grid;
   place-items: center;
   flex: none;
@@ -792,8 +992,8 @@ p {
 
 .family-mark::before {
   content: "";
-  width: 9px;
-  height: 9px;
+  width: 10px;
+  height: 10px;
   border: 2px solid var(--bg-base);
   border-radius: 1px;
 }
@@ -814,9 +1014,9 @@ p {
 
 .bullets li {
   display: flex;
-  gap: 9px;
+  gap: 10px;
   align-items: baseline;
-  font-size: 12.5px;
+  font-size: 14px;
   line-height: 1.5;
   color: var(--fg-2);
 }
@@ -829,14 +1029,13 @@ p {
   background: currentColor;
   flex: none;
   position: relative;
-  top: -2px;
-  color: var(--accent);
+  top: -3px;
 }
 
 .checks {
   display: flex;
   flex-direction: column;
-  gap: 11px;
+  gap: 12px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -844,10 +1043,10 @@ p {
 
 .checks li {
   display: flex;
-  gap: 11px;
+  gap: 12px;
   align-items: flex-start;
-  font-size: 13.5px;
-  line-height: 1.55;
+  font-size: 14px;
+  line-height: 1.5;
   color: var(--fg-2);
 }
 
@@ -855,57 +1054,47 @@ p {
   margin-top: 2px;
 }
 
-/* A tinted note card — the engine page's four standing rules. */
+/*
+ * A note card: a standing rule, said quietly. The dot carries its tone; the card itself
+ * stays on the panel fill, so a limit is honest without becoming the loudest thing on
+ * the page.
+ */
 .note-card {
   background: var(--bg-panel);
-  border: 1px solid var(--line-soft);
+  border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 11px;
+  gap: 12px;
   min-width: 0;
 }
 
 .note-card h3 {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
   font-size: 15px;
 }
 
 .note-card h3 .dot {
   width: 6px;
   height: 6px;
-  color: var(--ok);
+  background: var(--fg-2);
 }
 
 .note-card p {
-  font-size: 13px;
-  line-height: 1.65;
+  font-size: 14px;
+  line-height: 1.6;
   color: var(--fg-2);
 }
 
-.note-card-info {
-  background: var(--status-experimental-bg);
-  border-color: var(--status-experimental-line);
-}
-
 .note-card-info h3 .dot {
-  color: var(--info);
-}
-
-.note-card-accent {
-  background: var(--status-needs-review-bg);
-  border-color: var(--status-needs-review-line);
+  background: var(--info);
 }
 
 .note-card-accent h3 .dot {
-  color: var(--accent);
-}
-
-.note-card-accent p {
-  color: var(--accent-hi);
+  background: var(--accent);
 }
 
 /* --------------------------------------------------------------------------
@@ -945,21 +1134,53 @@ p {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 26px;
+  gap: 24px;
 }
 
-/* The hero's drawing surface. Sized by aspect ratio so it reflows without a script. */
+/* The hero's drawing surface. Sized by the stage track so it reflows without a script. */
 .hero-stage {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .hero-stage .viewport {
   aspect-ratio: 4 / 3;
 }
 
+/*
+ * Until the core reports its first frame the stage shows a labelled panel, not a black
+ * box: the panel fill with a token-line grid under the viewport's own "opening" line.
+ * The grid clears the moment `hero-viewport.tsx` marks the frame drawn.
+ */
+.hero-stage .viewport::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(var(--line) 1px, transparent 1px) 0 0 / 28px 28px,
+    linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0 / 28px 28px,
+    var(--bg-panel);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--motion-fast) var(--ease-standard);
+}
+
+.hero-stage[data-frame="pending"] .viewport::after {
+  opacity: 1;
+}
+
+.hero-stage .viewport-overlay {
+  z-index: 1;
+}
+
+/* A refusal fills the stage box it replaces, so the layout holds when WebGL does not. */
+.hero-stage > .state {
+  justify-content: center;
+}
+
+/* One line of provenance under the art, straight from the running core. */
 .hero-stage-note {
   display: flex;
   align-items: center;
@@ -967,34 +1188,57 @@ p {
   flex-wrap: wrap;
   margin: 0;
   font-family: var(--mono);
-  font-size: 10.5px;
-  letter-spacing: 0.04em;
+  font-size: 12px;
+  letter-spacing: 0.02em;
   color: var(--fg-2);
+}
+
+.hero-stage-note code {
+  font-size: 1em;
+  color: var(--fg);
+}
+
+.hero-stage-note .dot {
+  width: 6px;
+  height: 6px;
 }
 
 .hero-copy h1 {
   font-size: clamp(2.5rem, 1.3rem + 4.6vw, 4.125rem);
-  line-height: 1.02;
+  line-height: 1;
+  letter-spacing: -0.035em;
 }
 
 .hero-copy .lede {
   font-size: 18px;
   color: var(--fg-2);
-  max-width: 52ch;
+  max-width: 48ch;
 }
 
 /* --------------------------------------------------------------------------
  * First public release overview (sceneaxi issue 203)
  * ------------------------------------------------------------------------ */
 
+/*
+ * The one piece of atmosphere on the site: neutral light behind the artifact, 5% of the
+ * text colour at its brightest, which composites below `--bg-raised` so every word over
+ * it stays inside a pairing the gate measures. No hue: an orange glow would read as a
+ * pending state.
+ */
+.release-hero {
+  background:
+    radial-gradient(56% 70% at 74% 40%, color-mix(in srgb, var(--fg) 5%, transparent), transparent 72%),
+    var(--bg-base);
+}
+
 .release-hero .hero-inner {
-  padding-top: 64px;
-  padding-bottom: 64px;
+  padding-top: 44px;
+  padding-bottom: 44px;
 }
 
 .release-hero .hero-inner-split {
-  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
-  gap: 48px;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 44px;
 }
 
 .release-hero .hero-copy {
@@ -1010,65 +1254,104 @@ p {
 }
 
 .release-hero .hero-stage .viewport {
-  height: min(32vw, 420px);
+  height: min(35vw, 504px);
   aspect-ratio: auto;
 }
 
+.release-hero .hero-stage > .state {
+  min-height: min(35vw, 504px);
+}
+
+/*
+ * The action block is one grid. `DownloadCta` is `display: contents`, so its button, its
+ * detection line, and its platform list become cells here beside the open-path link, in
+ * their DOM order: the two actions share a row, and the context sits under them.
+ */
 .release-actions {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
-  align-items: start;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  grid-template-areas:
+    "primary secondary ."
+    "context context context"
+    "platforms platforms platforms";
+  gap: 16px 12px;
+  align-items: center;
+  justify-items: start;
 }
 
 .download-cta {
-  min-width: 0;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 9px 14px;
-  align-items: center;
+  display: contents;
 }
 
 .download-primary {
-  grid-row: 1 / 3;
-  min-width: 9.5rem;
+  grid-area: primary;
+  min-width: 10rem;
+}
+
+.release-actions > .button-quiet {
+  grid-area: secondary;
 }
 
 .download-context {
-  font-size: 12px;
-  line-height: 1.45;
+  grid-area: context;
+  max-width: 62ch;
+  font-size: 13px;
+  line-height: 1.5;
   color: var(--fg-2);
 }
 
+/*
+ * The platform facts: a name and its state, three cells, no anchors. The state is always
+ * the last span, and it is a status chip rather than a button, so nothing here looks
+ * downloadable that is not.
+ */
 .platform-availability {
+  grid-area: platforms;
+  justify-self: stretch;
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--line);
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 7px;
+  gap: 12px;
 }
 
 .platform-availability li {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  padding-top: 6px;
-  border-top: 1px solid var(--line-soft);
-  font-family: var(--mono);
-  font-size: 9px;
-  line-height: 1.35;
-  color: var(--fg-2);
-}
-
-.platform-availability li > span:first-child {
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
   color: var(--fg);
 }
 
-.platform-availability li[data-availability="recorded-build"] > span:last-child {
-  color: var(--ok);
+.platform-availability li > span:last-child {
+  padding: 1px 7px;
+  border: 1px solid var(--status-dormant-line);
+  border-radius: var(--radius-sm);
+  background: var(--status-dormant-bg);
+  color: var(--status-dormant-fg);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 
+.platform-availability li[data-availability="recorded-build"] > span:last-child {
+  border-color: var(--status-validated-line);
+  background: var(--status-validated-bg);
+  color: var(--status-validated-fg);
+}
+
+/*
+ * The trust rail: four checkable statements under the fold line. Each title links to the
+ * route that proves it, except Kids, which is described and never linked.
+ */
 .launch-proof-rail {
   border-top: 1px solid var(--line-soft);
   background: var(--bg-band);
@@ -1079,12 +1362,12 @@ p {
   margin: 0 auto;
   padding: 0 var(--gutter);
   display: grid;
-  grid-template-columns: minmax(0, 1.16fr) repeat(2, minmax(0, 1fr)) minmax(0, 1.1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .launch-proof {
   min-width: 0;
-  padding: 22px 20px 24px;
+  padding: 24px;
   border-right: 1px solid var(--line-soft);
 }
 
@@ -1093,29 +1376,37 @@ p {
 }
 
 .launch-proof:last-child {
-  padding-right: 0;
   border-right: 0;
 }
 
 .launch-proof dt {
-  margin-bottom: 7px;
+  margin-bottom: 8px;
   color: var(--fg);
-  font-size: 13px;
+  font-size: 17px;
   font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
 }
 
 .launch-proof dt a {
   color: inherit;
   text-decoration: underline;
   text-decoration-color: var(--line-strong);
-  text-underline-offset: 0.2em;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.22em;
+  transition: text-decoration-color var(--motion-fast) var(--ease-standard);
+}
+
+.launch-proof dt a:hover {
+  color: var(--fg);
+  text-decoration-color: var(--fg-2);
 }
 
 .launch-proof dd {
   margin: 0;
   color: var(--fg-2);
-  font-size: 11.5px;
-  line-height: 1.55;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .proof-kids-isolation {
@@ -1123,7 +1414,7 @@ p {
 }
 
 .release-section {
-  gap: 38px;
+  gap: 32px;
 }
 
 .release-heading {
@@ -1133,9 +1424,176 @@ p {
   max-width: 760px;
 }
 
+.release-heading > .eyebrow {
+  margin-bottom: -4px;
+}
+
+/* The overview's section headings take the full display-l step; routes stay at 36. */
+.release-heading h2 {
+  max-width: 22ch;
+  font-size: clamp(1.75rem, 1.2rem + 2.2vw, 2.625rem);
+  line-height: 1.08;
+}
+
+/*
+ * The proof gallery: three captures of the recorded Linux build, each in a float frame
+ * with its level, its claim, and its limits attached. The cards share subgrid rows, so
+ * every title, claim, limit row, and proof link lines up across the three.
+ */
+.proof-gallery {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: 24px;
+  row-gap: 0;
+}
+
+.proof-gallery > .proof-figure {
+  display: grid;
+  grid-row: span 6;
+  grid-template-rows: subgrid;
+}
+
+.proof-gallery > .proof-figure > .proof-caption {
+  display: grid;
+  grid-row: span 5;
+  grid-template-rows: subgrid;
+}
+
+.proof-figure {
+  margin: 0;
+  min-width: 0;
+}
+
+.proof-frame {
+  overflow: hidden;
+  aspect-ratio: 16 / 10;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  background: var(--bg-panel);
+  box-shadow: var(--surface-float-shadow);
+}
+
+.proof-frame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.proof-caption {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.proof-level {
+  margin-top: 20px;
+}
+
+.proof-title {
+  margin-top: 12px;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--fg);
+}
+
+.proof-claim {
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--fg-2);
+}
+
+.proof-limits {
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 8px;
+}
+
+.proof-limits .chip {
+  white-space: normal;
+}
+
+/*
+ * The proof link underlines its words, not its arrow: the decoration sits on the label,
+ * so the `→` beside it reads as the link's direction rather than a second link.
+ */
+.proof-link {
+  align-self: start;
+  margin-top: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--fg);
+  transition: color var(--motion-fast) var(--ease-standard);
+}
+
+.proof-link-label {
+  text-decoration: underline;
+  text-decoration-color: var(--fg-2);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.22em;
+  transition: text-decoration-color var(--motion-fast) var(--ease-standard);
+}
+
+.proof-link:hover {
+  color: var(--accent-hi);
+}
+
+.proof-link:hover .proof-link-label {
+  text-decoration-color: currentColor;
+}
+
+.proof-link .glyph {
+  transition: transform var(--motion-base) var(--ease-standard);
+}
+
+/*
+ * The `/engine` figure: the whole developer-build window, shown at no more than half its
+ * natural width so it stays sharp on a 2x screen, with its caption and limits beside it
+ * like a plate label: title, claim, then the chips that bound what it shows.
+ */
+.proof-figure-wide {
+  display: grid;
+  grid-template-columns: minmax(0, 880px) minmax(0, 1fr);
+  gap: 24px 32px;
+  align-items: end;
+}
+
+.proof-figure-wide .proof-title {
+  margin-top: 0;
+}
+
+/*
+ * Wide evidence scrolls inside its own region. The frame around a region adds a fade at
+ * its trailing edge on narrow screens, so a cut-off column is announced rather than
+ * silently clipped; the table carries matching end padding, so the fade never sits on
+ * the last column's words once it is scrolled into view.
+ */
+.scroll-frame {
+  position: relative;
+  min-width: 0;
+}
+
 .comparison-scroll,
 .profile-release-scroll {
   scroll-padding-inline: 20px;
+}
+
+.comparison-table,
+.profile-release-matrix,
+.matrix {
+  border-collapse: separate;
+  border-spacing: 0;
 }
 
 .comparison-table,
@@ -1144,9 +1602,35 @@ p {
   table-layout: fixed;
 }
 
+/*
+ * The first column is sticky and opaque on every table that can scroll, so the row a
+ * value belongs to stays readable while its other columns pass under it.
+ */
+.comparison-table th[scope="row"],
+.profile-release-matrix th[scope="row"],
+.matrix th[scope="row"],
+.comparison-table thead th:first-child,
+.profile-release-matrix thead th:first-child,
+.matrix thead th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+}
+
+.comparison-table thead th:first-child,
+.profile-release-matrix thead th:first-child,
+.matrix thead th:first-child {
+  z-index: 2;
+}
+
+/* The comparison sits on the page ground, so only SceneAxi's own row carries the panel fill. */
+.scroll-x.comparison-scroll {
+  background: var(--bg-base);
+}
+
 .comparison-table th:first-child,
 .comparison-table td:first-child {
-  width: 16%;
+  width: 17%;
 }
 
 .comparison-table th:nth-child(2) {
@@ -1158,12 +1642,12 @@ p {
 }
 
 .comparison-table th:nth-child(4) {
-  width: 34%;
+  width: 33%;
 }
 
 .comparison-table th[scope="row"] {
   white-space: normal;
-  background: var(--bg-panel);
+  background: var(--bg-base);
 }
 
 .comparison-table th[scope="row"] > span,
@@ -1172,26 +1656,54 @@ p {
 }
 
 .comparison-table th[scope="row"] > span {
-  margin-bottom: 5px;
+  margin-bottom: 6px;
   color: var(--fg);
   font-family: var(--sans);
-  font-size: 15px;
+  font-size: 17px;
+  font-weight: 600;
   letter-spacing: -0.01em;
-}
-
-.comparison-table th[scope="row"] > a {
-  color: var(--fg-2);
-  font-family: var(--sans);
-  font-size: 10.5px;
-  letter-spacing: 0;
-  text-decoration: underline;
-  text-underline-offset: 0.2em;
+  line-height: 1.3;
   text-transform: none;
 }
 
-.comparison-sceneaxi th,
-.comparison-sceneaxi td {
-  background: var(--status-needs-review-bg);
+/*
+ * The source link underlines its words only. The `↗` after them is bound to the last
+ * word by a no-break space, so a narrow column never strands the arrow on its own line.
+ */
+.comparison-table th[scope="row"] > a {
+  width: fit-content;
+  color: var(--fg-2);
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.5;
+  text-transform: none;
+  transition: color var(--motion-fast) var(--ease-standard);
+}
+
+.comparison-table .source-label {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+.comparison-table th[scope="row"] > a:hover {
+  color: var(--accent-hi);
+}
+
+.comparison-table td {
+  font-size: 14px;
+}
+
+/* SceneAxi's own row: the current item, so it takes the panel fill and a 2px accent rail. No score. */
+.comparison-sceneaxi td,
+.comparison-table .comparison-sceneaxi th[scope="row"] {
+  background: var(--bg-panel);
+}
+
+.comparison-sceneaxi th[scope="row"] {
+  box-shadow: inset 2px 0 0 var(--accent);
 }
 
 .profile-release-matrix th:first-child {
@@ -1202,7 +1714,8 @@ p {
   background: var(--bg-panel);
   color: var(--fg);
   font-family: var(--sans);
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 500;
   letter-spacing: 0;
   text-transform: none;
 }
@@ -1211,12 +1724,22 @@ p {
   width: 27%;
 }
 
+.profile-release-matrix td {
+  font-size: 14px;
+}
+
+/* The Kids column is a boundary: its header sits on the isolated fill. */
+.profile-release-matrix .profile-col-kids {
+  background: var(--status-isolated-bg);
+}
+
 .profile-column-name {
   display: block;
   margin-bottom: 8px;
   color: var(--fg);
   font-family: var(--sans);
-  font-size: 14px;
+  font-size: 17px;
+  font-weight: 600;
   letter-spacing: -0.01em;
   text-transform: none;
 }
@@ -1226,48 +1749,79 @@ p {
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding-top: 18px;
+  padding-top: 24px;
   border-top: 1px solid var(--line-soft);
 }
 
 .matrix-note p {
   max-width: 68ch;
   color: var(--fg-2);
-  font-size: 12.5px;
+  font-size: 14px;
   line-height: 1.6;
 }
 
-.release-paths {
-  display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
-  align-items: end;
-  gap: 64px;
-}
-
+/* The paths: four link tiles, each naming the route it opens. */
 .path-links {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  border-top: 1px solid var(--line-soft);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
 }
 
 .path-links a {
-  padding: 14px 12px;
-  border-bottom: 1px solid var(--line-soft);
-  color: var(--fg-2);
-  font-size: 13px;
-}
-
-.path-links a:nth-child(odd) {
-  border-right: 1px solid var(--line-soft);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 104px;
+  padding: 20px 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  color: var(--fg);
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard);
 }
 
 .path-links a:hover {
   color: var(--fg);
-  background: var(--bg-raised);
+  background: var(--bg-row);
+  border-color: var(--line-strong);
+}
+
+.path-route {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--fg-2);
+}
+
+.path-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+.path-links .glyph {
+  color: var(--fg-2);
+  transition:
+    transform var(--motion-base) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard);
+}
+
+.path-links a:hover .glyph {
+  color: var(--fg);
 }
 
 /* --------------------------------------------------------------------------
  * Actions
+ *
+ * Three sizes from the Foundations button table and no others: xl 46/15/r6 (the
+ * default), lg 38/13/r5, sm 30/12/r4. Four tiers: primary, quiet, the text link with its
+ * nudging arrow, and disabled (`aria-disabled`), which keeps its focus stop.
  * ------------------------------------------------------------------------ */
 
 .actions {
@@ -1278,23 +1832,29 @@ p {
 }
 
 .button {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 9px;
+  gap: 10px;
   height: 46px;
   padding: 0 24px;
-  border-radius: var(--radius-md);
+  border-radius: 6px;
   border: 1px solid var(--accent);
   background: var(--accent);
   color: var(--bg-base);
   font: inherit;
   font-size: 15px;
   font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
   cursor: pointer;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.32),
-    0 12px 32px -12px color-mix(in srgb, var(--accent) 90%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--fg) 28%, transparent);
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard);
 }
 
 .button:hover {
@@ -1312,25 +1872,42 @@ p {
 }
 
 .button-quiet:hover {
-  background: transparent;
-  border-color: var(--line-strong);
+  background: var(--bg-control);
+  border-color: var(--fg-2);
   color: var(--fg);
 }
 
-.button-sm {
-  height: 32px;
+.button-lg {
+  height: 38px;
   padding: 0 16px;
+  border-radius: var(--radius-md);
   font-size: 13px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
+.button-sm {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+/*
+ * A full-width action. Its label may be a sentence (`Open Stripe TEST checkout for 2000
+ * credits`), so it may wrap onto a second line on a phone rather than overflow; one line
+ * is exactly the xl height.
+ */
 .button-block {
   width: 100%;
-  height: 40px;
-  font-size: 14px;
+  height: auto;
+  min-height: 46px;
+  padding: 11px 20px;
+  line-height: 1.25;
+  white-space: normal;
+  text-align: center;
 }
 
-.button[aria-disabled="true"] {
+.button[aria-disabled="true"],
+.button[aria-disabled="true"]:hover {
   background: transparent;
   border-color: var(--line-strong);
   color: var(--fg-2);
@@ -1339,85 +1916,67 @@ p {
 }
 
 .button-arrow::after {
-  content: "→";
+  content: "→" / "";
   color: var(--fg-2);
+  transition:
+    transform var(--motion-base) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard);
+}
+
+.button-arrow:hover::after {
+  color: var(--fg);
 }
 
 /* --------------------------------------------------------------------------
  * Named states — every refusal on this site renders through here
+ *
+ * The quiet register: the panel fill, a 3px rail in the state's tone, the published
+ * status chip, a plain-language title, and the machine key in the tone colour. The key is
+ * the easiest thing in the panel to copy; the panel is never the loudest thing on a page.
  * ------------------------------------------------------------------------ */
 
 .state {
   border: 1px solid var(--line);
-  border-left: 2px solid var(--line-strong);
+  border-left: 3px solid var(--line-strong);
   border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
   background: var(--bg-panel);
-  padding: 18px 20px;
+  padding: 20px 24px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
 }
 
 .state h2,
 .state h3 {
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: var(--fg);
 }
 
 .state p {
-  font-size: 13.5px;
-  line-height: 1.65;
+  font-size: 14px;
+  line-height: 1.6;
   color: var(--fg-2);
 }
 
 .state-ok {
-  border-color: var(--status-validated-line);
   border-left-color: var(--ok);
-  background: var(--status-validated-bg);
-}
-
-.state-ok h2,
-.state-ok h3 {
-  color: var(--ok);
 }
 
 .state-warn {
-  border-color: var(--status-needs-review-line);
   border-left-color: var(--accent);
-  background: var(--status-needs-review-bg);
-}
-
-.state-warn h2,
-.state-warn h3 {
-  color: var(--accent);
-}
-
-.state-warn p {
-  color: var(--accent-hi);
 }
 
 .state-deny {
-  border-color: var(--status-refused-line);
   border-left-color: var(--danger);
-  background: var(--status-refused-bg);
-}
-
-.state-deny h2,
-.state-deny h3 {
-  color: var(--danger);
 }
 
 .state-iso {
-  border-color: var(--status-isolated-line);
   border-left-color: var(--kids);
-  background: var(--status-isolated-bg);
-}
-
-.state-iso h2,
-.state-iso h3 {
-  color: var(--kids);
 }
 
 /*
@@ -1465,7 +2024,7 @@ p {
 
 .reason {
   font-family: var(--mono);
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--fg-2);
   display: inline-flex;
   align-items: baseline;
@@ -1478,7 +2037,7 @@ p {
    * key — a provider's own sentence, not a short registry token — from taking the row.
    * The key is not truncated by it: it wraps.
    */
-  max-width: 12rem;
+  max-width: 16rem;
   overflow-wrap: anywhere;
 }
 
@@ -1491,7 +2050,7 @@ p {
   color: var(--fg-2);
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  font-size: 9px;
+  font-size: 11px;
   /*
    * The label is one word and never breaks. Without this it is a flex item whose automatic
    * minimum size is its min-content size, and `overflow-wrap: anywhere` — inherited from
@@ -1501,29 +2060,52 @@ p {
   white-space: nowrap;
 }
 
+/* The key in its state's tone: the one coloured word a reader copies into an issue. */
+.state-ok .reason {
+  color: var(--ok);
+}
+
+.state-warn .reason {
+  color: var(--accent);
+}
+
+.state-deny .reason {
+  color: var(--danger);
+}
+
+.state-iso .reason {
+  color: var(--kids);
+}
+
 /* --------------------------------------------------------------------------
  * Command strip
  * ------------------------------------------------------------------------ */
 
-/* A quiet inline command strip: `$ …` with a copy affordance. */
-.command {
+/*
+ * A command, printed to be copied: one click selects the whole line (there is no copy
+ * button, because that would be a new client component). The `$` prompt is generated
+ * content, so it is never part of the selection. Inside a panel it keeps its own size
+ * rather than the panel's paragraph size.
+ */
+.command,
+.panel .command {
   display: flex;
   align-items: center;
-  gap: 11px;
-  padding: 8px 13px;
+  gap: 12px;
+  padding: 10px 14px;
   background: var(--bg-raised);
   border: 1px solid var(--line);
-  border-radius: 5px;
+  border-radius: var(--radius-md);
   font-family: var(--mono);
-  font-size: 12px;
-  color: var(--fg-2);
+  font-size: 13px;
+  color: var(--fg);
   overflow-x: auto;
   min-width: 0;
 }
 
 .command::before {
-  content: "$";
-  color: var(--ok);
+  content: "$" / "";
+  color: var(--fg-2);
   flex: none;
 }
 
@@ -1538,6 +2120,9 @@ p {
   flex: 1 1 auto;
   min-width: 0;
   overflow-x: auto;
+  font-size: 1em;
+  color: var(--fg);
+  user-select: all;
 }
 
 /* --------------------------------------------------------------------------
@@ -1546,7 +2131,7 @@ p {
 
 .scroll-x {
   overflow-x: auto;
-  border: 1px solid var(--line-soft);
+  border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background: var(--bg-panel);
 }
@@ -1554,7 +2139,7 @@ p {
 table {
   border-collapse: collapse;
   width: 100%;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 th,
@@ -1569,13 +2154,28 @@ td {
 
 th {
   font-family: var(--mono);
-  font-size: 9.5px;
-  letter-spacing: 0.14em;
+  font-size: 11px;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--fg-2);
   background: var(--bg-raised);
   border-bottom-color: var(--line);
   font-weight: 400;
+}
+
+.scroll-x th,
+.scroll-x td {
+  padding: 16px 20px;
+  line-height: 1.55;
+}
+
+.scroll-x thead th {
+  font-weight: 500;
+}
+
+/* A row header divides its row with the same hairline as the cells beside it. */
+.scroll-x tbody th {
+  border-bottom-color: var(--line-soft);
 }
 
 td.wrap,
@@ -1584,20 +2184,26 @@ th.wrap {
   min-width: 20ch;
 }
 
-tbody tr:last-child td {
+tbody tr:last-child td,
+tbody tr:last-child th {
   border-bottom: none;
 }
 
-tbody tr:hover td {
+tbody tr:hover td,
+.scroll-x tbody tr:hover th[scope="row"] {
   background: var(--bg-raised);
 }
 
+/*
+ * Inline code keeps the size of the sentence it sits in, so it never adds an off-ramp
+ * size; the mono face and the brighter text colour are what mark it as machine-owned.
+ */
 td code,
 dd code,
 li code,
 p code {
-  font-size: 0.9em;
-  color: var(--fg-2);
+  font-size: 1em;
+  color: var(--fg);
 }
 
 /* --------------------------------------------------------------------------
@@ -1607,25 +2213,26 @@ p code {
 .dl {
   display: grid;
   grid-template-columns: minmax(9rem, max-content) minmax(0, 1fr);
-  gap: 0.45rem 1.5rem;
-  font-size: 13.5px;
+  gap: 8px 24px;
+  font-size: 14px;
   margin: 0;
 }
 
 .dl dt {
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 11px;
+  font-weight: 500;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--fg-2);
-  padding-top: 0.25rem;
+  padding-top: 3px;
 }
 
 .dl dd {
   margin: 0;
   min-width: 0;
   color: var(--fg-2);
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 /*
@@ -1642,7 +2249,7 @@ p code {
 /* The one figure on the account surface that is a derived total, not a stored value. */
 .ledger-balance {
   font-family: var(--mono);
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 500;
   color: var(--fg);
 }
@@ -1658,7 +2265,7 @@ p code {
   background: var(--bg-panel);
   text-transform: none;
   font-family: var(--sans);
-  font-size: 13px;
+  font-size: 14px;
   letter-spacing: 0;
   color: var(--fg);
   min-width: 22ch;
@@ -1666,8 +2273,13 @@ p code {
 
 .matrix th[scope="row"] code {
   font-family: var(--mono);
-  font-size: 12px;
-  color: var(--accent);
+  font-size: 13px;
+  color: var(--fg);
+}
+
+.matrix th[scope="row"] .note {
+  display: inline-block;
+  margin-top: 4px;
 }
 
 .matrix td {
@@ -1708,13 +2320,13 @@ p code {
 
 .field {
   display: grid;
-  gap: 0.3rem;
+  gap: 6px;
   min-width: 0;
 }
 
 .field label {
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--fg-2);
@@ -1728,16 +2340,17 @@ p code {
   font-size: 13px;
   padding: 0.5rem 0.6rem;
   border: 1px solid var(--line-strong);
-  border-radius: 5px;
+  border-radius: var(--radius-md);
   background: var(--bg-field);
   color: var(--fg);
   min-width: 0;
+  transition: border-color var(--motion-fast) var(--ease-standard);
 }
 
 .field input:hover,
 .field select:hover,
 .field textarea:hover {
-  border-color: var(--line-strong);
+  border-color: var(--fg-2);
 }
 
 .ledger-support {
@@ -1755,14 +2368,62 @@ p code {
 .row {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 12px;
   align-items: flex-end;
+}
+
+/*
+ * The sign-in card: a product form, not a terminal. Words in Archivo, 44px inputs on the
+ * field fill, a label above each, and one full-width primary action.
+ */
+.auth-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 440px);
+  gap: 32px 72px;
+  align-items: start;
+}
+
+.auth-card {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 32px;
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+
+.auth-card .field {
+  gap: 8px;
+}
+
+.auth-card .field label {
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--fg);
+}
+
+.auth-card .field input {
+  width: 100%;
+  height: 44px;
+  padding: 0 12px;
+  font-family: var(--sans);
+  font-size: 15px;
+}
+
+.auth-card .note {
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
 }
 
 /* --------------------------------------------------------------------------
  * The live viewport (the public open path)
  * ------------------------------------------------------------------------ */
 
+/* A float-tier media frame (decision D-6): radius 9, the strong edge, the float shadow. */
 .viewport {
   position: relative;
   border: 1px solid var(--line-strong);
@@ -1771,7 +2432,7 @@ p code {
   aspect-ratio: 16 / 9;
   max-height: 70vh;
   overflow: hidden;
-  box-shadow: 0 30px 70px -24px rgba(0, 0, 0, 0.9);
+  box-shadow: var(--surface-float-shadow);
 }
 
 .viewport-canvas {
@@ -1813,6 +2474,52 @@ p code {
   pointer-events: none;
 }
 
+/*
+ * `/open`: the interactive viewport, its two quiet lg controls, and the frame report as
+ * a four-column readout of what the running core says about the frame it drew.
+ */
+.open-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.open-stage > .actions .button {
+  height: 38px;
+  padding: 0 16px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+}
+
+.open-stage > h3 {
+  margin-top: 8px;
+}
+
+.open-stage > .dl {
+  grid-template-columns: none;
+  grid-template-rows: repeat(4, auto);
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 4px 32px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--bg-panel);
+}
+
+.open-stage > .dl dd {
+  padding-bottom: 12px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--fg);
+}
+
+.open-stage > .dl dd code {
+  font-size: 1em;
+  color: var(--fg);
+}
+
 /* --------------------------------------------------------------------------
  * Page-level stacks
  * ------------------------------------------------------------------------ */
@@ -1823,18 +2530,28 @@ p code {
   padding: 72px var(--gutter) 104px;
   display: flex;
   flex-direction: column;
-  gap: 52px;
+  gap: 44px;
+}
+
+/* A heading sits 32px from the content it names, even where a route's blocks are 44 apart. */
+.page > h2 + * {
+  margin-top: -12px;
 }
 
 .stack {
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 24px;
   min-width: 0;
 }
 
 .stack-tight {
-  gap: 14px;
+  gap: 12px;
+}
+
+/* The platform facts under a route's heading, in the overview's vocabulary. */
+.page-head .platform-availability {
+  max-width: 480px;
 }
 
 /* --------------------------------------------------------------------------
@@ -1846,68 +2563,122 @@ p code {
   margin: 0 auto;
   padding: 0 var(--gutter);
   display: grid;
-  grid-template-columns: 236px minmax(0, 1fr) 200px;
+  grid-template-columns: 232px minmax(0, 1fr) 200px;
   gap: 44px;
   align-items: start;
 }
 
+/* A help document has no on-this-page column: the rail and the reading column only. */
+.docs-shell-doc {
+  grid-template-columns: 232px minmax(0, 1fr);
+}
+
 .docs-rail {
   position: sticky;
-  top: calc(var(--masthead-h) + 28px);
-  padding: 40px 0;
+  top: calc(var(--masthead-h) + 24px);
+  padding: 44px 0;
   display: flex;
   flex-direction: column;
-  gap: 26px;
+  gap: 24px;
   min-width: 0;
 }
 
 .docs-rail-group {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
 }
 
 .docs-rail-title {
   font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: 0.14em;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--fg-2);
-  padding: 0 10px 7px;
+  padding: 0 12px 8px 14px;
 }
 
 .docs-rail a {
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 1.4;
   color: var(--fg-2);
-  padding: 6px 10px;
-  border-radius: 5px;
+  padding: 7px 12px;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
   border-left: 2px solid transparent;
+  transition:
+    color var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard);
 }
 
 .docs-rail a:hover {
   color: var(--fg);
-  background: var(--bg-raised);
+  background: var(--bg-row);
+}
+
+/* The reader's location: computed on the server from the slug, marked twice over. */
+.docs-rail a[aria-current="page"] {
+  color: var(--fg);
+  background: var(--bg-control);
+  border-left-color: var(--accent);
 }
 
 .docs-main {
-  padding: 40px 0 96px;
+  padding: 44px 0 104px;
   display: flex;
   flex-direction: column;
-  gap: 26px;
+  gap: 24px;
   min-width: 0;
 }
 
 .docs-main h2 {
-  font-size: 22px;
+  position: relative;
+  font-size: 24px;
+  line-height: 1.25;
   letter-spacing: -0.02em;
-  margin-top: 14px;
+  margin-top: 16px;
 }
 
 .docs-main .lede {
-  font-size: 16px;
-  line-height: 1.75;
+  font-size: 17px;
+  line-height: 1.6;
   color: var(--fg-2);
-  max-width: none;
+  max-width: 62ch;
+}
+
+/* Reading prose: 16/1.7 held to a 60–72 character measure. */
+.docs-main > p,
+.docs-section p {
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--fg-2);
+  max-width: 68ch;
+}
+
+.docs-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* A jumped-to row or heading says it is the target, without moving the layout. */
+.docs-main tr:target > td {
+  background: var(--bg-raised);
+}
+
+.docs-main tr:target > td:first-child {
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.docs-main h2:target::before {
+  content: "";
+  position: absolute;
+  left: -16px;
+  top: 0.2em;
+  bottom: 0.2em;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--accent);
 }
 
 /*
@@ -1923,9 +2694,8 @@ p code {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 9px;
-  font-family: var(--mono);
-  font-size: 11px;
+  gap: 8px;
+  font-size: 13px;
   color: var(--fg-2);
   margin: 0;
   padding: 0;
@@ -1933,60 +2703,106 @@ p code {
 }
 
 .crumbs li:last-child {
-  color: var(--fg-2);
+  color: var(--fg);
 }
 
 .crumbs li + li::before {
-  content: "/";
-  color: var(--line-strong);
-  margin-right: 9px;
+  content: "›" / "";
+  color: var(--fg-2);
+  margin-right: 8px;
 }
 
+.crumbs a {
+  color: var(--fg-2);
+}
+
+/* The docs index's standing rule, said once, in the quiet register. */
 .rule-card {
   background: var(--bg-panel);
-  border: 1px solid var(--line-soft);
-  border-left: 2px solid var(--accent);
-  border-radius: 0 8px 8px 0;
-  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line-strong);
+  border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+  padding: 20px 24px;
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 8px;
 }
 
 .rule-card p {
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.65;
   color: var(--fg-2);
 }
 
 .toc {
   position: sticky;
-  top: calc(var(--masthead-h) + 28px);
-  padding: 40px 0;
+  top: calc(var(--masthead-h) + 24px);
+  padding: 44px 0;
   display: flex;
   flex-direction: column;
-  gap: 11px;
+  gap: 4px;
   min-width: 0;
 }
 
 .toc-title {
   font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: 0.14em;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--fg-2);
+  margin-bottom: 8px;
 }
 
 .toc a {
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--fg-2);
-  padding: 3px 0 3px 11px;
+  padding: 5px 0 5px 12px;
   border-left: 2px solid var(--line);
+  transition:
+    color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard);
 }
 
 .toc a:hover {
   color: var(--fg);
-  border-left-color: var(--accent);
+  border-left-color: var(--fg-2);
+}
+
+/* Onward links at the foot of a help document: tiles with the one nudging arrow. */
+.doc-links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.doc-links a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 56px;
+  padding: 12px 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--bg-panel);
+  color: var(--fg);
+  font-size: 16px;
+  font-weight: 600;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard);
+}
+
+.doc-links a:hover {
+  color: var(--fg);
+  background: var(--bg-row);
+  border-color: var(--line-strong);
+}
+
+.doc-links .glyph {
+  color: var(--fg-2);
+  transition: transform var(--motion-base) var(--ease-standard);
 }
 
 /*
@@ -2007,25 +2823,25 @@ p code {
 .code-defs {
   margin: 0;
   display: grid;
-  grid-template-columns: minmax(0, 230px) minmax(0, 1fr);
-  gap: 0 20px;
+  grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
+  gap: 0 24px;
 }
 
 .code-defs dt {
   font-family: var(--mono);
   font-size: 12px;
   color: var(--danger);
-  padding: 13px 0;
+  padding: 14px 0;
   border-bottom: 1px solid var(--line-soft);
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .code-defs dd {
   margin: 0;
-  font-size: 13.5px;
+  font-size: 14px;
   line-height: 1.6;
   color: var(--fg-2);
-  padding: 13px 0;
+  padding: 14px 0;
   border-bottom: 1px solid var(--line-soft);
 }
 
@@ -2033,105 +2849,138 @@ p code {
  * Pricing
  * ------------------------------------------------------------------------ */
 
+/*
+ * A credit pack. The three cards stretch to one height and every row inside them holds
+ * its place: the header row is reserved in all three, and the action sits at the foot,
+ * so prices and actions line up across the offer. The best-rate pack is a raised card
+ * with a neutral chip; nothing about it glows.
+ */
 .tier {
   background: var(--bg-panel);
-  border: 1px solid var(--line-soft);
-  border-radius: 12px;
-  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
 
-.tier-flag {
-  background: var(--accent);
-  color: var(--bg-base);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-align: center;
-  padding: 5px;
+.tier-featured {
+  background: var(--bg-raised);
+  border-color: var(--line-strong);
 }
 
 .tier-body {
-  padding: 28px 26px;
+  padding: 28px;
   display: flex;
   flex-direction: column;
   gap: 16px;
   flex: 1;
 }
 
+.tier-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 24px;
+}
+
 .tier h3 {
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.tier h3 code {
+  font-size: 1em;
+  color: var(--fg);
+}
+
+.tier-flag {
+  padding: 2px 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg-control);
+  color: var(--fg);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .tier-price {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
-  gap: 7px;
+  gap: 8px;
 }
 
 .tier-amount {
-  font-size: 44px;
+  font-size: 42px;
   font-weight: 700;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.03em;
   font-variation-settings: "wdth" 96;
   line-height: 1;
+  color: var(--fg);
 }
 
 .tier-unit {
-  font-size: 13px;
+  font-size: 14px;
+  color: var(--fg-2);
+}
+
+.tier .body-copy {
+  font-size: 14px;
+  line-height: 1.6;
   color: var(--fg-2);
 }
 
 .tier-rule {
   height: 1px;
-  background: var(--line-strong);
+  background: var(--line);
   margin: 4px 0;
   border: none;
 }
 
-.tier-featured {
-  background: var(--bg-raised);
-  border-color: var(--status-needs-review-line);
-  box-shadow: 0 30px 70px -28px color-mix(in srgb, var(--accent) 35%, transparent);
+.tier-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 /*
- * Two columns of question/answer pairs. The pair is a wrapper element rather than a
- * `display: contents` group, because the answer belongs under its question rather than
- * beside it — a bare `dt`/`dd` sequence in this grid would split them across columns.
+ * Questions and answers as always-open rows: the question on the left, its answer
+ * beside it, a hairline between rows. Nothing is behind a disclosure.
  */
 .faq {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 44px;
   margin: 0;
+  border-bottom: 1px solid var(--line);
 }
 
 .faq-item {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 18px 0;
-  border-top: 1px solid var(--line-soft);
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 8px 32px;
+  padding: 20px 0;
+  border-top: 1px solid var(--line);
   min-width: 0;
 }
 
 .faq dt {
-  font-size: 14.5px;
+  font-size: 16px;
   font-weight: 600;
+  line-height: 1.4;
   letter-spacing: -0.01em;
   color: var(--fg);
 }
 
 .faq dd {
   margin: 0;
-  font-size: 13px;
-  line-height: 1.65;
+  font-size: 14px;
+  line-height: 1.6;
   color: var(--fg-2);
 }
 
@@ -2147,52 +2996,49 @@ footer {
 .footer-inner {
   max-width: var(--shell);
   margin: 0 auto;
-  padding: 56px var(--gutter) 40px;
+  padding: 72px var(--gutter) 44px;
   display: grid;
-  grid-template-columns: 2fr repeat(3, minmax(0, 1fr));
-  gap: 36px;
+  grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr));
+  gap: 32px;
 }
 
 .footer-brand {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
   min-width: 0;
 }
 
 .footer-brand p {
-  font-size: 12.5px;
-  line-height: 1.65;
+  font-size: 14px;
+  line-height: 1.6;
   color: var(--fg-2);
   max-width: 34ch;
-}
-
-.footer-version {
-  font-family: var(--mono);
-  font-size: 10px;
-  color: var(--fg-2);
 }
 
 .footer-col {
   display: flex;
   flex-direction: column;
-  gap: 11px;
+  align-items: flex-start;
+  gap: 12px;
   min-width: 0;
 }
 
 .footer-col h2 {
+  margin-bottom: 4px;
   font-family: var(--mono);
-  font-size: 9px;
-  font-weight: 400;
-  letter-spacing: 0.14em;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  line-height: 1.6;
   text-transform: uppercase;
   color: var(--fg-2);
-  line-height: 1.6;
 }
 
 .footer-col a {
-  font-size: 12.5px;
+  font-size: 14px;
   color: var(--fg-2);
+  transition: color var(--motion-fast) var(--ease-standard);
 }
 
 .footer-col a:hover {
@@ -2201,19 +3047,32 @@ footer {
 
 .footer-note {
   color: var(--fg-2);
-  font-size: 12.5px;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
+/*
+ * The base row: copyright, the release marker, and the Kids isolation note. Its hairline
+ * spans the content column only, so every edge in the footer lines up with the masthead.
+ */
 .footer-base {
   max-width: var(--shell);
   margin: 0 auto;
-  padding: 22px var(--gutter) 40px;
-  border-top: 1px solid var(--line-soft);
+  padding: 24px var(--gutter) 44px;
+  background: linear-gradient(var(--line-soft), var(--line-soft)) top center / calc(100% - 2 * var(--gutter)) 1px no-repeat;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 16px;
-  font-size: 11.5px;
+  font-size: 13px;
+  color: var(--fg-2);
+}
+
+/* The release marker in the badge's register: mono 11, the micro label step. */
+.footer-version {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
   color: var(--fg-2);
 }
 
@@ -2224,8 +3083,8 @@ footer {
   padding: 5px 10px;
   border: 1px solid var(--status-isolated-line);
   background: var(--status-isolated-bg);
-  border-radius: 4px;
-  font-size: 11px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
   color: var(--kids);
   margin-left: auto;
 }
@@ -2234,13 +3093,32 @@ footer {
   background: var(--kids);
 }
 
+/*
+ * The one moving part of a state change: an action's arrow steps 3px toward where it
+ * goes. Declared only for visitors who have not asked for reduced motion; everyone else
+ * keeps the colour and border change, which is the state itself.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .button-arrow:hover::after,
+  .proof-link:hover .glyph,
+  .path-links a:hover .glyph,
+  .doc-links a:hover .glyph {
+    transform: translateX(3px);
+  }
+}
+
 /* --------------------------------------------------------------------------
  * Responsive — one composition, three renderings
+ *
+ * The layout metrics are declared on `:root` by the inlined token sheet, which the
+ * document loads *after* this file. A same-specificity `:root` override here would lose
+ * to it at every width, so each breakpoint writes `html:root` and wins by specificity,
+ * as the cascade note at the top of this file prescribes.
  * ------------------------------------------------------------------------ */
 
-/* Laptop / small desktop: the five- and four-up card rows lose a column. */
+/* Laptop / small desktop: the docs lose their third column, the wide figure stacks. */
 @media (max-width: 1180px) {
-  :root {
+  html:root {
     --band-pad: 84px;
   }
 
@@ -2252,11 +3130,25 @@ footer {
   .toc {
     display: none;
   }
+
+  .proof-figure-wide {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /*
+   * While the nav shares one row with the actions, the catalog chips step aside so every
+   * primary destination stays in view; the footer always lists the catalogs. They return
+   * once the nav has its own row.
+   */
+  .store-link,
+  .masthead-divider {
+    display: none;
+  }
 }
 
-/* Tablet: paired columns collapse, the docs rail becomes a strip above content. */
+/* Tablet: paired columns collapse, the hero stacks, wide tables announce their overflow. */
 @media (max-width: 1024px) {
-  :root {
+  html:root {
     --gutter: 24px;
   }
 
@@ -2280,6 +3172,11 @@ footer {
 
   .release-hero .hero-stage .viewport {
     height: auto;
+    aspect-ratio: 16 / 9;
+  }
+
+  .release-hero .hero-stage > .state {
+    min-height: 0;
   }
 
   .launch-proof-grid {
@@ -2298,9 +3195,32 @@ footer {
     padding-left: 0;
   }
 
-  .release-paths {
+  /* Each capture takes a full row: the image, and its caption beside it. */
+  .proof-gallery {
     grid-template-columns: minmax(0, 1fr);
-    gap: 32px;
+    row-gap: 44px;
+  }
+
+  .proof-gallery > .proof-figure {
+    grid-row: auto;
+    grid-template-rows: none;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    column-gap: 24px;
+    align-items: start;
+  }
+
+  .proof-gallery > .proof-figure > .proof-caption {
+    grid-row: auto;
+    grid-template-rows: none;
+    display: flex;
+  }
+
+  .proof-gallery .proof-level {
+    margin-top: 0;
+  }
+
+  .path-links {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .grid-3 {
@@ -2311,33 +3231,84 @@ footer {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 32px;
   }
+
+  .auth-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /*
+   * A table that can scroll here says so: a fade on the region's trailing edge, and end
+   * padding on the last column so no word sits under the fade once it is in view.
+   */
+  .scroll-frame::after {
+    content: "";
+    position: absolute;
+    top: 1px;
+    right: 1px;
+    bottom: 1px;
+    width: 32px;
+    border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+    background: linear-gradient(to right, transparent, var(--bg-panel));
+    pointer-events: none;
+  }
+
+  .scroll-frame:has(.comparison-scroll)::after {
+    background: linear-gradient(to right, transparent, var(--bg-base));
+  }
+
+  .comparison-table th:last-child,
+  .comparison-table td:last-child,
+  .profile-release-matrix th:last-child,
+  .profile-release-matrix td:last-child {
+    padding-right: 44px;
+  }
 }
 
-/* Tablet portrait: paired grids halve, the nav takes its own row, the docs rail strips. */
+/*
+ * Tablet portrait: the nav takes its own full-bleed row under the wordmark and the
+ * Download action. It is one line that scrolls with snap points, 44px rows, and the fade
+ * at its trailing edge, so every destination stays a real link reachable by keyboard and
+ * the header stays two rows tall.
+ */
 @media (max-width: 860px) {
-  :root {
+  html:root {
     --band-pad: 64px;
-    --masthead-h: 56px;
+    --masthead-h: 100px;
   }
 
   .masthead-inner {
     flex-wrap: wrap;
-    gap: 10px 16px;
-    padding-top: 10px;
-    padding-bottom: 10px;
+    align-content: flex-start;
+    column-gap: 16px;
+    row-gap: 0;
+    padding-top: 4px;
+    padding-bottom: 0;
   }
 
   /*
-   * The nav drops to its own row and wraps rather than scrolling. A scroll strip would
-   * hide the last destination behind an edge with nothing to say so; wrapping keeps
-   * every link visible, which is the whole job of a primary nav.
+   * The first row is 44px, set by the Download action's hit area; the lockup sits
+   * centred in it with a 40px box, so the nav row below starts clear of the lockup.
    */
+  .wordmark {
+    min-height: 40px;
+  }
+
   .nav {
     order: 3;
-    width: 100%;
-    flex-wrap: wrap;
-    overflow-x: visible;
-    row-gap: 2px;
+    flex: none;
+    width: calc(100% + 2 * var(--gutter));
+    margin: 0 calc(-1 * var(--gutter));
+    padding: 4px var(--gutter);
+    scroll-padding-inline: var(--gutter);
+  }
+
+  .nav a {
+    height: 44px;
+    scroll-snap-align: start;
+  }
+
+  .nav:focus-within a {
+    scroll-snap-align: none;
   }
 
   .masthead-spacer {
@@ -2346,14 +3317,15 @@ footer {
 
   .masthead-actions {
     margin-left: auto;
+    min-height: 44px;
   }
 
   .store-link {
-    display: none;
+    display: flex;
   }
 
   .masthead-divider {
-    display: none;
+    display: block;
   }
 
   .hero-inner {
@@ -2376,24 +3348,59 @@ footer {
     gap: 0;
   }
 
+  /*
+   * The rail becomes a strip: the guides as rows of 44px targets, wrapped rather than
+   * scrolled, so the current guide is always in view. The contract anchors leave it
+   * here, because on this width the table they point at is the next thing on the page.
+   */
   .docs-rail {
     position: static;
-    padding: 32px 0 0;
+    padding: 24px 0 0;
     flex-direction: row;
-    flex-wrap: wrap;
-    gap: 16px 28px;
-  }
-
-  .docs-main {
-    padding-top: 28px;
-    padding-bottom: 72px;
-  }
-
-  .faq {
-    grid-template-columns: minmax(0, 1fr);
     gap: 0;
   }
 
+  .docs-rail-group {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 4px;
+  }
+
+  .docs-rail-group + .docs-rail-group,
+  .docs-rail-title {
+    display: none;
+  }
+
+  .docs-rail a {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    border-left: 0;
+    border-radius: var(--radius-md);
+    white-space: nowrap;
+  }
+
+  .docs-rail a[aria-current="page"]::after {
+    content: "";
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: 0;
+    height: 2px;
+    border-radius: 2px 2px 0 0;
+    background: var(--accent);
+  }
+
+  .docs-main {
+    padding-top: 32px;
+    padding-bottom: 72px;
+  }
+
+  .faq-item {
+    grid-template-columns: minmax(0, 1fr);
+  }
 
   .code-defs {
     grid-template-columns: minmax(0, 1fr);
@@ -2412,8 +3419,8 @@ footer {
 
 /* Phone: everything is one column and the type scale steps down. */
 @media (max-width: 620px) {
-  :root {
-    --gutter: 18px;
+  html:root {
+    --gutter: 16px;
     --band-pad: 52px;
   }
 
@@ -2427,34 +3434,85 @@ footer {
     gap: 32px;
   }
 
+  /* The footer keeps the catalog links; the phone header keeps only the lockup and Download. */
+  .store-link,
+  .masthead-divider {
+    display: none;
+  }
+
+  /* A 38px action with a 44px hit area. */
+  .masthead-actions .button::before {
+    content: "";
+    position: absolute;
+    inset: -3px 0;
+  }
+
   .hero-inner {
     padding: 52px var(--gutter) 56px;
   }
 
-  .hero-copy {
-    gap: 20px;
+  .release-hero .hero-inner {
+    padding-top: 16px;
+    padding-bottom: 44px;
   }
 
-  .hero-copy .lede {
+  .release-hero .hero-inner-split {
+    gap: 32px;
+  }
+
+  /* The surface keeps the first line and the core's counters take the second, whole. */
+  .hero-stage-note {
+    row-gap: 4px;
+  }
+
+  .hero-stage-sep {
+    display: none;
+  }
+
+  .hero-stage-facts {
+    flex-basis: 100%;
+  }
+
+  .hero-copy,
+  .release-hero .hero-copy {
+    gap: 16px;
+  }
+
+  /* Greedy lines keep the desktop break, "Keep the / source.", at 40px. */
+  .release-hero .hero-copy h1 {
+    text-wrap: wrap;
+  }
+
+  .hero-copy .lede,
+  .release-heading .prose {
     font-size: 16px;
   }
 
-  .release-actions,
-  .download-cta {
+  /*
+   * Copy first: Download at full width, then what was detected, then the platform facts,
+   * then the open-path link at its own width, so the two actions never look equal.
+   */
+  .release-actions {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "primary"
+      "context"
+      "platforms"
+      "secondary";
+    gap: 12px;
   }
 
   .download-primary {
-    grid-row: auto;
     width: 100%;
   }
 
-  .release-actions > .button {
-    width: 100%;
+  .release-actions > .button-quiet {
+    justify-self: start;
   }
 
-  .platform-availability {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .platform-availability li > span:last-child {
+    padding: 1px 5px;
+    letter-spacing: 0;
   }
 
   .launch-proof-grid {
@@ -2465,13 +3523,48 @@ footer {
   .launch-proof:first-child,
   .launch-proof:nth-child(3),
   .launch-proof:last-child {
-    padding: 18px 0;
+    padding: 20px 0;
     border-right: 0;
     border-bottom: 1px solid var(--line-soft);
   }
 
   .launch-proof:last-child {
     border-bottom: 0;
+  }
+
+  .proof-kids-isolation,
+  .proof-kids-isolation:last-child {
+    padding: 20px;
+  }
+
+  .launch-proof dt {
+    font-size: 16px;
+  }
+
+  /* The title link keeps its line box but takes a 44px tap target. */
+  .launch-proof dt a {
+    display: inline-block;
+    padding-block: 12px;
+    margin-block: -12px;
+  }
+
+  /* Three stacked captures share one tighter rhythm, so the section stays one short scroll. */
+  .proof-gallery {
+    row-gap: 32px;
+  }
+
+  .proof-gallery > .proof-figure {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .proof-gallery .proof-level,
+  .proof-gallery .proof-limits,
+  .proof-gallery .proof-link {
+    margin-top: 12px;
+  }
+
+  .proof-gallery .proof-title {
+    margin-top: 8px;
   }
 
   .matrix-note {
@@ -2485,10 +3578,17 @@ footer {
 
   .path-links {
     grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
   }
 
-  .path-links a:nth-child(odd) {
-    border-right: 0;
+  .path-links a {
+    min-height: 56px;
+    justify-content: center;
+    padding: 12px 16px;
+  }
+
+  .path-route {
+    display: none;
   }
 
   .grid,
@@ -2498,7 +3598,7 @@ footer {
   }
 
   .actions {
-    gap: 10px;
+    gap: 12px;
   }
 
   .actions .button {
@@ -2506,16 +3606,20 @@ footer {
   }
 
   .page {
-    gap: 36px;
+    gap: 32px;
+  }
+
+  .page > h2 + * {
+    margin-top: -8px;
   }
 
   .dl {
     grid-template-columns: minmax(0, 1fr);
-    gap: 0.15rem 0;
+    gap: 2px 0;
   }
 
   .dl dt {
-    padding-top: 0.75rem;
+    padding-top: 12px;
   }
 
   .dl dt:first-child {
@@ -2538,18 +3642,66 @@ footer {
     max-width: none;
   }
 
+  .state {
+    padding: 16px 18px;
+  }
+
   .tier-body {
-    padding: 22px 20px;
+    padding: 24px 20px;
   }
 
   .tier-amount {
     font-size: 36px;
   }
 
-  .footer-inner {
+  .faq-item {
+    padding: 16px 0;
+  }
+
+  .auth-card {
+    padding: 24px 20px;
+  }
+
+  .doc-links {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* On a phone every section heading holds the 28px floor, the docs' included. */
+  .docs-main h2 {
+    font-size: 28px;
+  }
+
+  .open-stage > .dl {
+    grid-template-rows: repeat(8, auto);
+    gap: 4px 24px;
+    padding: 20px;
+  }
+
+  .footer-inner {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     padding-top: 44px;
-    gap: 28px;
+    gap: 32px 16px;
+  }
+
+  .footer-brand,
+  .footer-col:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .footer-col {
+    gap: 0;
+  }
+
+  .footer-col a {
+    display: flex;
+    align-items: center;
+    min-height: 40px;
+  }
+
+  .footer-base {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
   }
 
   .footer-iso {
@@ -2557,7 +3709,9 @@ footer {
   }
 
   th,
-  td {
+  td,
+  .scroll-x th,
+  .scroll-x td {
     padding: 12px 14px;
   }
 }
@@ -2570,7 +3724,7 @@ footer {
   }
 
   .release-hero .hero-copy {
-    gap: 14px;
+    gap: 12px;
   }
 
   .release-hero .hero-copy h1 {
@@ -2581,14 +3735,115 @@ footer {
     height: min(42vh, 300px);
   }
 
+  .release-hero .hero-stage > .state {
+    min-height: min(42vh, 300px);
+  }
+
+  .release-actions {
+    gap: 12px;
+  }
+
   .launch-proof {
-    padding-top: 14px;
+    padding-top: 16px;
     padding-bottom: 16px;
   }
 
   .launch-proof dd {
-    font-size: 10.5px;
+    font-size: 13px;
   }
+}
+
+/* --------------------------------------------------------------------------
+ * The editor shell keeps the primitives it was drawn with
+ *
+ * `/editor` is outside the three-site redesign: its chrome is the accepted Engine
+ * Desktop archive, with its own pinned dimensions and owner. It reuses a handful of the
+ * site primitives this sheet restyles above — the wordmark tile, the viewport frame, the
+ * definition list, inline code, the reason key, the eyebrow, a quiet button, prose
+ * links, the focus shape — so inside `.edshell` each one is restated with the value it
+ * had before the redesign. The scope is written `:where(.edshell)`, which adds no
+ * specificity: every rule here ties the rule it restates, wins over it by coming later,
+ * and still loses to the editor's own rules below, exactly as the originals did.
+ * ------------------------------------------------------------------------ */
+
+:where(.edshell) :focus-visible {
+  border-radius: 2px;
+}
+
+:where(.edshell) h1 {
+  letter-spacing: -0.035em;
+}
+
+main :where(.edshell) :is(p, li, dd, td) a {
+  text-underline-offset: 0.2em;
+  transition-property: none;
+}
+
+:where(.edshell) .mark {
+  width: 26px;
+  height: 26px;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent),
+    0 4px 14px -4px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
+:where(.edshell) .mark::before {
+  width: 9px;
+  height: 9px;
+}
+
+:where(.edshell) .eyebrow {
+  font-size: 10px;
+  font-weight: inherit;
+  letter-spacing: 0.16em;
+  color: var(--accent);
+}
+
+:where(.edshell) .button {
+  position: static;
+  gap: 9px;
+  border-radius: var(--radius-md);
+  line-height: inherit;
+  white-space: normal;
+  transition-property: none;
+}
+
+:where(.edshell) .viewport {
+  box-shadow: 0 30px 70px -24px rgba(0, 0, 0, 0.9);
+}
+
+:where(.edshell) .dl {
+  gap: 0.45rem 1.5rem;
+  font-size: 13.5px;
+}
+
+:where(.edshell) .dl dt {
+  font-size: 10px;
+  font-weight: inherit;
+  padding-top: 0.25rem;
+}
+
+:where(.edshell) .dl dd {
+  overflow-wrap: normal;
+  word-break: break-word;
+}
+
+:where(.edshell) :is(td, dd, li, p) code {
+  font-size: 0.9em;
+  color: var(--fg-2);
+}
+
+:where(.edshell) .reason {
+  font-size: 11.5px;
+  max-width: 12rem;
+}
+
+:where(.edshell) .reason-label {
+  font-size: 9px;
+}
+
+:where(.edshell) .note {
+  font-size: 12.5px;
 }
 
 /* ==========================================================================

@@ -39,6 +39,7 @@ import {
   PIPELINE,
   PRICING_FAQ,
   PROFILE_CARDS,
+  PROOF_MEDIA,
   REFUSAL_CODES,
   RELEASE_MARKER,
 } from "../../sites/umbrella/src/lib/site-content.ts";
@@ -131,8 +132,15 @@ describe("shipped content stays frozen and rendered", () => {
       REFUSAL_CODES,
       PRICING_FAQ,
       FOOTER_COLUMNS,
+      PROOF_MEDIA,
     ]) {
       expect(Object.isFrozen(collection)).toBe(true);
+    }
+
+    // A caption's limits are part of its record, so they are frozen with it.
+    for (const media of PROOF_MEDIA) {
+      expect(Object.isFrozen(media)).toBe(true);
+      expect(Object.isFrozen(media.limitation)).toBe(true);
     }
   });
 
@@ -289,6 +297,129 @@ describe("the marketing surface makes no claim the repository cannot stand behin
     expect(RELEASE_MARKER).toContain("0.0.0");
     for (const source of [LAYOUT, HOME, ENGINE]) {
       expect(source).toContain("RELEASE_MARKER");
+    }
+  });
+});
+
+describe("the proof media are real captures that say what they cannot claim", () => {
+  /*
+    DEC-05: the umbrella's only raster product imagery is four pixel-identical crops of
+    Engine Desktop captures, recorded in `MEDIA-PROVENANCE.md`. What is pinned here is
+    the half a render can break: the file each entry names is the file served, at the
+    size the markup declares; every image keeps at least one limitation; and no caption
+    drifts into a claim the capture record does not make.
+  */
+  it("names files that exist in public/proof at the size the markup declares", () => {
+    expect(PROOF_MEDIA.filter((media) => media.placement === "home")).toHaveLength(3);
+    expect(PROOF_MEDIA.filter((media) => media.placement === "engine")).toHaveLength(1);
+
+    for (const media of PROOF_MEDIA) {
+      expect(media.src).toMatch(/^\/proof\/[a-z0-9-]+\.png$/);
+      const bytes = readFileSync(join(UMBRELLA, "public", media.src));
+      // The PNG signature, then the IHDR chunk's big-endian width and height.
+      expect(bytes.subarray(1, 4).toString("latin1")).toBe("PNG");
+      expect(bytes.readUInt32BE(16), `${media.src} width`).toBe(media.width);
+      expect(bytes.readUInt32BE(20), `${media.src} height`).toBe(media.height);
+      expect(media.alt.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("keeps a limitation on every image and links only to routes that hold the proof", () => {
+    for (const media of PROOF_MEDIA) {
+      expect(media.limitation.length, media.id).toBeGreaterThan(0);
+      expect(media.proofHref === null).toBe(media.proofLabel === null);
+
+      if (media.proofHref !== null) expect(["/engine", "/docs"]).toContain(media.proofHref);
+    }
+  });
+
+  it("writes no dash, digest, availability, subscription, or page-level claim into a caption", () => {
+    for (const media of PROOF_MEDIA) {
+      const text = [media.alt, media.title, media.claim, ...media.limitation, media.proofLabel ?? ""].join("\n");
+      expect(text, media.id).not.toMatch(/[—–]/);
+      expect(text, media.id).not.toMatch(/\b[0-9a-f]{64}\b/);
+      expect(text, media.id).not.toMatch(/available|monthly|subscribe|this page/i);
+    }
+  });
+
+  it("renders the captures from a server component as plain, lazy images", () => {
+    const figure = read("src/app/_components/proof-figure.tsx");
+    expect(figure.startsWith('"use client"')).toBe(false);
+    expect(figure).not.toMatch(/from\s+["']next\/image["']/);
+
+    for (const attribute of ['loading="lazy"', 'decoding="async"', "width={media.width}", "height={media.height}"]) {
+      expect(figure).toContain(attribute);
+    }
+
+    expect(figure).toContain("media.limitation.map");
+    expect(HOME).toContain("PROOF_MEDIA");
+    expect(ENGINE).toContain("PROOF_MEDIA");
+  });
+});
+
+describe("motion reads the shared tokens and nothing else (decision D-4)", () => {
+  /** The sheet with every reduced-motion block cut out: those blocks zero durations on purpose. */
+  const outsideReducedMotion = (() => {
+    const marker = "@media (prefers-reduced-motion: reduce)";
+    let kept = "";
+    let rest = CSS;
+
+    for (let at = rest.indexOf(marker); at !== -1; at = rest.indexOf(marker)) {
+      kept += rest.slice(0, at);
+      let depth = 0;
+      let end = rest.indexOf("{", at);
+
+      for (; end < rest.length; end += 1) {
+        if (rest[end] === "{") depth += 1;
+
+        if (rest[end] === "}") {
+          depth -= 1;
+
+          if (depth === 0) break;
+        }
+      }
+
+      rest = rest.slice(end + 1);
+    }
+
+    return kept + rest;
+  })();
+
+  it("declares none of the motion tokens the shared sheet emits", () => {
+    const declared = [...CSS.matchAll(/^\s*(--[a-z0-9-]+):/gm)].map((match) => match[1]);
+
+    for (const token of ["--motion-fast", "--motion-base", "--ease-standard"]) {
+      expect(declared).not.toContain(token);
+    }
+  });
+
+  it("times every transition with the shared duration and easing tokens", () => {
+    const values = [
+      ...outsideReducedMotion.matchAll(/\btransition(?:-duration|-timing-function)?\s*:\s*([^;]+);/g),
+    ].map((match) => match[1] ?? "");
+
+    expect(values.length).toBeGreaterThan(0);
+
+    for (const value of values) {
+      expect(value, value).not.toMatch(/\d(?:ms|s)\b/);
+      expect(value, value).toMatch(/var\(--motion-(?:fast|base)\)/);
+      expect(value, value).toMatch(/var\(--ease-standard\)/);
+    }
+  });
+
+  it("moves a hovered or focused element no further than the recorded caps", () => {
+    const stateRules = [...outsideReducedMotion.matchAll(/([^{};]+)\{([^{}]*)\}/g)].filter(
+      ([, selector]) => /:(?:hover|focus|focus-visible|focus-within|active)\b/.test(selector ?? ""),
+    );
+
+    expect(stateRules.length).toBeGreaterThan(0);
+
+    for (const [, selector, body] of stateRules) {
+      for (const [, transform] of (body ?? "").matchAll(/transform:\s*([^;]+);/g)) {
+        expect(["translateX(3px)", "scale(1.015)", "none"], `${selector?.trim()}`).toContain(
+          transform?.trim(),
+        );
+      }
     }
   });
 });
