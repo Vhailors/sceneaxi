@@ -564,6 +564,7 @@ async function start(): Promise<void> {
       : join(__dirname, "sceneaxi-publish-no-replace");
   }
   let bridge: DesktopBridge | null = null;
+  const activeFrameReport = () => bridge?.lastFrameReport() ?? null;
   let desktopWindow: BrowserWindow | null = null;
   closeActiveDesktopBridge = () => bridge?.close() ?? true;
   let inputActions: DesktopInputActionHost | null = null;
@@ -2295,7 +2296,7 @@ async function start(): Promise<void> {
   }>;
   // Profiling measured the project as it stood after every edit above.
   const projectDigestAtProfile = `sha256:${createHash("sha256").update(readFileSync(documentFile)).digest("hex")}`;
-  const frameReportAtProfile = bridge?.lastFrameReport() ?? null;
+  const frameReportAtProfile = activeFrameReport();
 
 
   // Optional visual evidence: capture the real window once the live frame exists.

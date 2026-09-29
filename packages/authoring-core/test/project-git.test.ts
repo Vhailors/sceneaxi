@@ -449,7 +449,12 @@ describe("contained project Git service", () => {
     const { root } = repository("loose-object-indirection");
     const outside = mkdtempSync(join(tmpdir(), "sceneaxi-project-git-loose-object-outside-"));
     roots.push(outside);
-    symlinkSync(outside, join(root, ".git", "objects", "ab"));
+
+    const objectPrefix = Array.from({ length: 256 }, (_, index) => index.toString(16).padStart(2, "0"))
+      .find((prefix) => !existsSync(join(root, ".git", "objects", prefix)));
+
+    if (objectPrefix === undefined) throw new Error("Fixture has no unused loose-object prefix");
+    symlinkSync(outside, join(root, ".git", "objects", objectPrefix));
 
     expect(inspectProjectGit({
       root,
@@ -999,7 +1004,8 @@ describe("contained project Git service", () => {
     writeFileSync(largePath, text("A"));
     git(root, "add", "large.txt");
     git(root, "commit", "-m", "large fixture");
-    writeFileSync(largePath, text("B"));
+    // A different size makes Git notice the edit even within one stat timestamp.
+    writeFileSync(largePath, text("BB"));
     const result = inspectProjectGit({ root }, "diff");
     expect(result).toMatchObject({
       ok: false,
