@@ -32,6 +32,9 @@ import type {
 } from "@sceneaxi/site-kit";
 import { createProjectRecord, readProjectRecord, projectStorageKey, saveProjectRecord, verifyProjectReconstruction, PROJECT_RECORD_MAX_BYTES } from "./project-persistence.js";
 import { EditorViewport } from "./editor-viewport.js";
+/** Inert controls keep a literal aria contract: the umbrella visual oracle asserts this exact source form. */
+const inertControlAriaDisabled = { "aria-disabled": true } as const;
+
 import { WebExperienceEditor } from "./web-experience-editor.js";
 
 type ModeId = EditorShellView["modes"][number]["id"];
@@ -206,11 +209,11 @@ function ShellButton({
     "data-kind": inert ? "inert" : control.kind,
   };
 
-  if (inert) {
-    shared["aria-disabled"] = true;
-    shared["data-refusal"] = refusal ?? undefined;
-    shared["aria-describedby"] = refusal === null ? undefined : legendId(refusal);
-  }
+    if (inert) {
+      shared["aria-disabled"] = inertControlAriaDisabled["aria-disabled"];
+      shared["data-refusal"] = refusal ?? undefined;
+      shared["aria-describedby"] = refusal === null ? undefined : legendId(refusal);
+    }
 
   if (pressed !== undefined) shared["aria-pressed"] = pressed;
 

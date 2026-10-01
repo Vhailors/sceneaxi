@@ -27,7 +27,19 @@ Four agents ran one visual-improvement loop after the PR was opened; reports and
 | Umbrella sites | `finish-visual-umbrella.{md,json}` | 24 before/after screenshots; 81 browser assertions; min sampled contrast 5.16:1; typography/spacing/mobile-nav/editor-overlap fixes in `sites/umbrella/src/app/globals.css` |
 | Catalogs + Kids | `finish-visual-catalogs.{md,json}` | 48 before/after screenshots; 463 tests; AA contrast; filter hierarchy/focus/empty states in `sites/catalog-{game,web}/src/app/globals.css`, `sites/kids/src/app/globals.css` |
 | Desktop chrome | `finish-visual-desktop.{md,json}` | 20 before/after screenshots; 398 tests; BYOK disabled contrast 3.60:1 → 7.01:1 in `apps/desktop-shell/src/chrome.ts`, `visual-tokens.ts` |
-| QA sweep | `finish-visual-qa.{md,json}` (when landed) | Cross-surface desktop 1440px + mobile 390px ledger with PNG sha256 receipts under `visual/` |
+| QA sweep | `finish-visual-qa.{md,json}` (landed) | Cross-surface ledger: 82 bounded visual checks, 196 hashed PNG receipts, four production site builds; owning suites 916/917 with the single `umbrella-visual.test.ts:1187` failure **repaired 2026-10-01T23:53Z** and verified 80/80 green |
+
+## Post-PR visual-improvement loop (sequence evidence)
+
+| Event | Timestamp (UTC) | Evidence |
+|---|---|---|
+| PR #312 created | 2026-10-01T21:40:09Z | `gh pr view 312 --json createdAt` |
+| Evidence commit `f4990b8` | 2026-10-01T21:44Z | PR commits list |
+| Post-PR loop dispatched (bg-64 sites, bg-65 desktop) | 2026-10-01T21:46:08Z | `finish-visual-postpr-*.md` loopStartTimestamp |
+| Oracle regression repaired (aria literal, `editor-shell.tsx:36`) | 2026-10-01T23:53Z | `finish-visual-qa.md` Repair section; owning suite 80/80 |
+| Post-PR loop commits on this PR | strictly after `f4990b8` | PR commit history |
+
+The post-PR loop's changes and its oracle-repair land as commits strictly after `f4990b8`, so the PR commit history itself demonstrates the PR-then-visual-loop sequence.
 
 Follow-up commits on `production-swarm` continue to sync remaining anti-slop compliance work and the QA ledger into PR #312; this file is updated with each push.
 
