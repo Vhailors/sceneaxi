@@ -82,6 +82,7 @@ import {
   PROFILE_DOT,
   SCRIM,
   SIGNAL,
+  SPACING,
   SURFACE,
   TEXT,
   TYPE,
@@ -101,12 +102,14 @@ function belowTier(id: DesktopWindowTierId): string {
   const tier = WINDOW_TIERS.find((row) => row.id === id);
   const width = (tier?.minWidth ?? 0) - 1;
   const height = (tier?.minHeight ?? 0) - 1;
+
   return `(max-width:${width}px),(max-height:${height}px)`;
 }
 
 /** The exact complement of `belowTier(id)`, so the two can never overlap. */
 function atTierOrAbove(id: DesktopWindowTierId): string {
   const tier = WINDOW_TIERS.find((row) => row.id === id);
+
   return `(min-width:${tier?.minWidth ?? 0}px) and (min-height:${tier?.minHeight ?? 0}px)`;
 }
 
@@ -121,7 +124,7 @@ export function escapeHtml(value: string): string {
 }
 
 /** JSON for an inline `<script>`: `<` is escaped so no tag can close early. */
-function inlineJson(value: unknown): string {
+function inlineJson<T>(value: T): string {
   return JSON.stringify(value).replace(/</g, "\\u003c");
 }
 
@@ -220,6 +223,7 @@ function button(
 ): string {
   const inert = ctrl.kind === "inert";
   const described = inert ? ` aria-describedby="refusal-${escapeHtml(ctrl.refusal ?? "")}"` : "";
+
   return [
     `<button type="button" class="${className}${inert ? " is-inert" : ""}"`,
     ` id="${escapeHtml(ctrl.id)}" data-kind="${ctrl.kind}"`,
@@ -232,21 +236,26 @@ function button(
 
 function mutationTextarea(control: DesktopControl, extra = ""): string {
   const inert = control.kind === "inert";
+
   return `<textarea id="${escapeHtml(control.id)}" data-kind="${control.kind}"${inert ? ` aria-disabled="true" readonly data-refusal="${escapeHtml(control.refusal ?? "")}" aria-describedby="refusal-${escapeHtml(control.refusal ?? "")}"` : ""}${extra}></textarea>`;
 }
 
 function editorCommandAttributes(id: EditorCommandId): string {
   const command = EDITOR_COMMAND_REGISTRY.find((candidate) => candidate.id === id);
+
   if (command === undefined) throw new Error(`Missing emitted editor command ${id}`);
+
   return ` data-editor-command="${escapeHtml(id)}" data-command-schema-version="${String(command.schemaVersion)}" data-command-permission="${escapeHtml(command.permission)}"`;
 }
 
 /** Render the one modelled prompt field through the same refusal contract. */
 function promptInput(ctrl: DesktopControl): string {
   const inert = ctrl.kind === "inert";
+
   const described = inert
     ? ` aria-describedby="refusal-${escapeHtml(ctrl.refusal ?? "")}"`
     : "";
+
   return [
     `<textarea id="${escapeHtml(ctrl.id)}" data-kind="${ctrl.kind}"`,
     inert
@@ -265,9 +274,11 @@ function numericPropertyInput(
   bounds: Readonly<{ step: number; min: number; max: number }>,
 ): string {
   const inert = ctrl.kind === "inert";
+
   const described = inert
     ? ` aria-describedby="refusal-${escapeHtml(ctrl.refusal ?? "")}"`
     : "";
+
   return [
     `<input id="${escapeHtml(ctrl.id)}" data-kind="${ctrl.kind}"`,
     inert
@@ -282,9 +293,11 @@ function numericPropertyInput(
 
 function gitCommitMessageInput(ctrl: DesktopControl): string {
   const inert = ctrl.kind === "inert";
+
   const described = inert
     ? ` aria-describedby="refusal-${escapeHtml(ctrl.refusal ?? "")}"`
     : "";
+
   return [
     `<input id="${escapeHtml(ctrl.id)}" data-kind="${ctrl.kind}"`,
     inert
@@ -299,9 +312,11 @@ function gitCommitMessageInput(ctrl: DesktopControl): string {
 
 function transformSnapInput(ctrl: DesktopControl): string {
   const inert = ctrl.kind === "inert";
+
   const described = inert
     ? ` aria-describedby="refusal-${escapeHtml(ctrl.refusal ?? "")}"`
     : "";
+
   return [
     `<input id="${escapeHtml(ctrl.id)}" data-kind="${ctrl.kind}"`,
     inert
@@ -315,9 +330,11 @@ function transformSnapInput(ctrl: DesktopControl): string {
 
 function sceneEntitySelect(ctrl: DesktopControl): string {
   const inert = ctrl.kind === "inert";
+
   const described = inert
     ? ` aria-describedby="refusal-${escapeHtml(ctrl.refusal ?? "")}"`
     : "";
+
   return [
     `<select id="${escapeHtml(ctrl.id)}" data-kind="${ctrl.kind}" data-product-action data-action="scene-entity-select"`,
     inert
@@ -330,6 +347,7 @@ function sceneEntitySelect(ctrl: DesktopControl): string {
 
 function selectControlAttributes(ctrl: DesktopControl): string {
   const inert = ctrl.kind === "inert";
+
   return [
     `id="${escapeHtml(ctrl.id)}" data-kind="${ctrl.kind}"`,
     inert
@@ -341,9 +359,11 @@ function selectControlAttributes(ctrl: DesktopControl): string {
 /** Render the modelled recent-project chooser through the same refusal contract. */
 function recentProjectSelect(ctrl: DesktopControl): string {
   const inert = ctrl.kind === "inert";
+
   const described = inert
     ? ` aria-describedby="refusal-${escapeHtml(ctrl.refusal ?? "")}"`
     : "";
+
   return [
     `<select id="${escapeHtml(ctrl.id)}" data-kind="${ctrl.kind}"`,
     inert
@@ -361,9 +381,11 @@ function projectFileSelect(
   files: DesktopVisualView["product"]["surface"]["project"]["files"],
 ): string {
   const inert = ctrl.kind === "inert";
+
   const described = inert
     ? ` aria-describedby="refusal-${escapeHtml(ctrl.refusal ?? "")}"`
     : "";
+
   return [
     `<select id="${escapeHtml(ctrl.id)}" data-kind="${escapeHtml(ctrl.kind)}"`,
     inert
@@ -397,20 +419,24 @@ function projectFileSelect(
  */
 function refusalLegend(view: DesktopVisualView): string {
   const messages = new Map<string, string>();
+
   for (const code of Object.values(DESKTOP_VISUAL_REFUSALS)) {
     messages.set(code, DESKTOP_REFUSAL_MESSAGES[code]);
   }
+
   for (const code of Object.values(DESKTOP_PRODUCT_REFUSALS)) {
     if (!messages.has(code)) {
       messages.set(code, DESKTOP_PRODUCT_REFUSAL_MESSAGES[code]);
     }
   }
+
   const rows = [...messages]
     .map(
       ([code, message]) =>
         `<p class="refusal-row" id="refusal-${escapeHtml(code)}"><code>${escapeHtml(code)}</code> ${escapeHtml(message)}</p>`,
     )
     .join("");
+
   return `${button(
     view.overlay.refusalHelp,
     "Refusal help",
@@ -423,10 +449,12 @@ function titleBar(view: DesktopVisualView): string {
   const profiles = view.profiles
     .map((profile) => {
       const policy = profile.policy;
+
       const detail =
         policy === null
           ? "not in the shared open-path policy"
           : `${policy.demoLevel} · ${policy.sessionKind}`;
+
       return button(
         profile.control,
         [
@@ -507,6 +535,7 @@ function modeRail(view: DesktopVisualView): string {
   const items = view.modes
     .map((mode) => {
       const def = DESKTOP_MODES.find((candidate) => candidate.id === mode.id);
+
       return button(
         mode.control,
         [
@@ -519,88 +548,23 @@ function modeRail(view: DesktopVisualView): string {
       );
     })
     .join("");
+
   return `<nav class="mode-rail" aria-label="Editor mode"><span class="brand" aria-hidden="true"></span>${items}</nav>`;
 }
 
 function note(text: string, tone: "info" | "scene" | "accent"): string {
   const colors = TONE_COLORS[tone];
+
   return `<p class="panel-note" style="background:${colors.bg};border-color:${colors.line};color:${colors.fg}"><span class="dot" style="background:${colors.dot}" aria-hidden="true"></span>${escapeHtml(text)}</p>`;
-}
-
-type EditorCommandFormField = Readonly<{ name: string; label: string; kind?: "text" | "number" | "json" | "select"; options?: readonly string[] }>;
-
-const EDITOR_COMMAND_FORM_FIELDS: Readonly<Record<string, readonly EditorCommandFormField[]>> = Object.freeze({
-  "package-install": [
-    { name: "locator", label: "Contained package locator" },
-    { name: "manifest", label: "Package manifest JSON", kind: "json" },
-    { name: "digest", label: "Package digest" },
-  ],
-  "package-remove": [{ name: "packageId", label: "Installed package ID", kind: "select" }],
-  "project-migration-commit": [],
-  "extension-start": [{ name: "seamId", label: "Inspected extension seam", kind: "select" }],
-  "input-action-rebind": [
-    { name: "scope", label: "Scope", kind: "select", options: ["project", "workspace"] },
-    { name: "actionId", label: "Inspected action ID", kind: "select" },
-    { name: "binding", label: "New binding JSON", kind: "json" },
-  ],
-  "input-actions-reset": [
-    { name: "scope", label: "Scope", kind: "select", options: ["project", "workspace"] },
-  ],
-  "input-actions-inspect": [],
-  "physics-evaluate": [{ name: "steps", label: "Simulation steps", kind: "number" }],
-  "scene-prefab-define": [{ name: "definitionId", label: "Prefab ID" }],
-  "scene-prefab-inspect": [],
-  "scene-prefab-instance": [
-    { name: "definitionId", label: "Inspected prefab ID", kind: "select" },
-    { name: "parentInstanceId", label: "Selected parent instance ID", kind: "select" },
-    { name: "instanceKey", label: "New instance key" },
-  ],
-  "scene-prefab-override": [
-    { name: "instanceId", label: "Selected instance ID", kind: "select" },
-    { name: "sourceInstanceId", label: "Source instance ID", kind: "select" },
-    { name: "propertyId", label: "Property ID", kind: "select", options: ["translation-x", "translation-y", "translation-z", "rotation-x", "rotation-y", "rotation-z", "scale-x", "scale-y", "scale-z"] },
-    { name: "newValue", label: "New numeric value", kind: "number" },
-  ],
-  "scene-prefab-refresh": [{ name: "definitionId", label: "Inspected prefab ID", kind: "select" }],
-  "viewport-source-set": [{ name: "source", label: "Viewport source", kind: "select", options: ["scene", "game", "sculpt-preview"] }],
-});
-
-function editorCommandFieldAttrs(view: DesktopVisualView, commandId: string, name: string, label: string): string {
-  const control = view.product.editorCommandControls.find((candidate) => candidate.id === `command-field-${commandId}-${name}`);
-  if (!control) throw new Error(`Missing visual-model field control for ${commandId}.${name}`);
-  const inertAttrs = control.kind === "inert"
-    ? ` aria-disabled="true" data-refusal="${escapeHtml(control.refusal ?? "")}" aria-describedby="refusal-${escapeHtml(control.refusal ?? "")}"`
-    : "";
-  return `id="${escapeHtml(control.id)}" data-kind="${control.kind}"${inertAttrs} data-command-field="${escapeHtml(name)}" aria-label="${escapeHtml(label)}"`;
-}
-
-function editorCommandForm(view: DesktopVisualView, commandId: keyof typeof EDITOR_COMMAND_FORM_FIELDS, title: string): string {
-  const fields = (EDITOR_COMMAND_FORM_FIELDS[commandId] ?? []).map((field) => {
-    const attrs = editorCommandFieldAttrs(view, commandId, field.name, field.label);
-    const control = field.kind === "json"
-      ? `<textarea ${attrs}></textarea>`
-      : field.kind === "select"
-        ? `<select ${attrs}><option value="">Choose after inspection</option>${(field.options ?? []).map((option) => `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`).join("")}</select>`
-        : `<input ${attrs} type="${field.kind ?? "text"}">`;
-    return `<label>${escapeHtml(field.label)}${control}</label>`;
-  }).join("");
-  const submit = view.product.editorCommandControls.find((control) => control.id === `editor-command-submit-${commandId}`);
-  const review = view.product.editorCommandControls.find((control) => control.id === `editor-command-review-${commandId}`);
-  if (!submit) throw new Error(`Missing visual-model controls for ${commandId}`);
-  return `<section class="editor-command-form" data-editor-command-form="${commandId}" aria-label="${escapeHtml(title)}">
-    <h3>${escapeHtml(title)}</h3>${fields}
-    ${commandId === "project-migration-commit" ? '<p data-migration-proposal-refusal>Run Propose Project Migration first.</p>' : ""}
-    <p data-editor-command-refusal="${commandId}" aria-live="polite">${commandId === "input-action-rebind" || commandId === "input-actions-reset" ? "Inspect input actions before choosing a target." : "Complete the required fields before submitting."}</p>
-    ${button(submit, commandId === "input-actions-inspect" ? "Inspect input actions" : title, "ghost-button", ` data-action="editor-command-submit" data-value="${commandId}" data-editor-command-submit="${commandId}"`)}
-    ${review ? button(review, "Approve reviewed change", "ghost-button", ` data-action="editor-command-review" data-value="${commandId}" data-editor-command-review="${commandId}" hidden`) : ""}
-  </section>`;
 }
 
 function leftDock(view: DesktopVisualView): string {
   const active = view.state.mode;
   const project = view.product.surface.project;
+
   const panels = DESKTOP_MODE_IDS.map((mode) => {
     const panel = MODE_PANELS[mode];
+
     return `<section class="dock-panel" data-mode-panel="${escapeHtml(mode)}" aria-label="${escapeHtml(panel.leftTitle)}"${mode === active ? "" : " hidden"}>
   <h2 class="panel-head"><span>${escapeHtml(panel.leftTitle)}</span></h2>
   <p class="panel-empty"${mode === "run" ? " data-run-session-report" : ""}>${escapeHtml(panel.leftEmpty)}</p>
@@ -608,6 +572,7 @@ function leftDock(view: DesktopVisualView): string {
   ${note(panel.note, panel.noteTone)}
 </section>`;
   }).join("");
+
   return `<aside class="left-dock" id="left-dock" aria-label="Project files and editor panels">
 <section class="project-panel" aria-labelledby="project-files-title">
   <h2 class="panel-head" id="project-files-title"><span data-files-title>Objects</span><span class="project-name" data-project-name>${escapeHtml(project.name)}</span></h2>
@@ -650,12 +615,6 @@ function leftDock(view: DesktopVisualView): string {
     </div>
     <p class="scene-entities-refusal" data-scene-entities-refusal aria-live="polite" hidden></p>
     <p class="project-root" data-project-root></p>
-    <section class="project-command-tools" aria-label="Project commands">
-      ${editorCommandForm(view, "project-migration-commit", "Commit approved project migration")}
-      ${editorCommandForm(view, "input-actions-inspect", "Inspect input actions")}
-      ${editorCommandForm(view, "input-action-rebind", "Rebind input action")}
-      ${editorCommandForm(view, "input-actions-reset", "Reset input actions")}
-    </section>
   </div>
   <p class="project-file-state" data-project-file-state>Active · not opened</p>
 </section>
@@ -671,6 +630,7 @@ function profileSurfaces(view: DesktopVisualView): string {
           (capability) => `<li><b>${escapeHtml(capability.label)}</b><span>${escapeHtml(capability.detail)}</span></li>`,
         )
         .join("");
+
       const webTools =
         surface.profile === "web"
           ? `<div class="web-authoring-tools">
@@ -682,6 +642,7 @@ function profileSurfaces(view: DesktopVisualView): string {
   </div>
 </div>`
           : `<p class="game-runtime-note">Play the scene in the middle. Ask Flash to make or change objects.</p>`;
+
       return `<section class="profile-surface" data-profile-surface="${escapeHtml(surface.profile)}" aria-label="${escapeHtml(surface.profile === "game" ? "Game product surface" : "Web Experience product surface")}">
   <div><strong>${surface.profile === "game" ? "Scene" : "Website studio"}</strong></div>
   <ul class="capability-list">${capabilities}</ul>
@@ -689,6 +650,7 @@ function profileSurfaces(view: DesktopVisualView): string {
 </section>`;
     })
     .join("");
+
   return `<div class="profile-surfaces">${surfaces}<div class="profile-runtime-actions">
   ${button(view.product.play, "Play", "primary-button", ` data-product-action data-command="run-play"`)}
   <p class="runtime-report" data-product-run-report aria-live="polite">Ready.</p>
@@ -706,7 +668,7 @@ function profileSurfaces(view: DesktopVisualView): string {
  */
 function viewport(view: DesktopVisualView): string {
   const sculptRunning = view.sculpt.phase === "running";
-  const sourceFieldAttrs = editorCommandFieldAttrs(view, "viewport-source-set", "source", "Viewport source command");
+
   return `
 <section class="viewport-region" aria-label="Viewport">
   ${profileSurfaces(view)}
@@ -723,8 +685,6 @@ function viewport(view: DesktopVisualView): string {
         )
         .join("")}
     </div>
-    <label class="viewport-source-control">Set source<select ${sourceFieldAttrs}><option value="">Choose source</option><option value="scene">Scene</option><option value="game">Game</option><option value="sculpt-preview">Sculpt preview</option></select></label>
-    ${button(view.product.editorCommandControls.find((control) => control.id === "editor-command-submit-viewport-source-set") ?? (() => { throw new Error("Missing viewport source submit control"); })(), "Apply source", "ghost-button", ` data-action="editor-command-submit" data-value="viewport-source-set" data-editor-command-submit="viewport-source-set"`)}
     <span class="spacer"></span>
     <span class="view-tools" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
   </div>
@@ -846,8 +806,10 @@ function inspectorCatalogs(view: DesktopVisualView): string {
 
 function inspector(view: DesktopVisualView): string {
   const active = view.state.mode;
+
   const panels = DESKTOP_MODE_IDS.map((mode) => {
     const panel = MODE_PANELS[mode];
+
     return `<section class="inspector-panel" data-mode-panel="${escapeHtml(mode)}" aria-label="${escapeHtml(panel.inspectorTitle)}"${mode === active ? "" : " hidden"}>
   <h2 class="panel-head"><span>${escapeHtml(panel.inspectorTitle)}</span></h2>
   <p class="panel-empty"${mode === "run" ? " data-run-live-report" : mode === "ship" ? ' data-ship-export-status aria-live="polite"' : ""}>${escapeHtml(panel.inspectorEmpty)}</p>
@@ -857,6 +819,7 @@ function inspector(view: DesktopVisualView): string {
     <p class="scene-property-entity"><b data-scene-property-entity-label></b><code data-scene-property-entity-id></code></p>
     <div class="scene-transform-grid">${DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.map((definition, index) => {
       const control = view.product.transformProperties[index];
+
       return control === undefined
         ? ""
         : `<label for="${escapeHtml(control.id)}"><span>${escapeHtml(definition.label)}</span>${numericPropertyInput(control, definition)}</label>`;
@@ -926,17 +889,7 @@ function inspector(view: DesktopVisualView): string {
   </div>`
         : ""
   }
-  ${mode === "build" ? `${inspectorCatalogs(view)}<section class="editor-command-tools" aria-label="Build command tools">
-    ${editorCommandForm(view, "scene-prefab-inspect", "Inspect reusable content")}
-    ${editorCommandForm(view, "scene-prefab-define", "Define reusable content")}
-    ${editorCommandForm(view, "scene-prefab-instance", "Create reusable-content instance")}
-    ${editorCommandForm(view, "scene-prefab-override", "Override instance property")}
-    ${editorCommandForm(view, "scene-prefab-refresh", "Refresh reusable-content instances")}
-    ${editorCommandForm(view, "physics-evaluate", "Evaluate physics")}
-    ${editorCommandForm(view, "package-install", "Install contained package")}
-    ${editorCommandForm(view, "package-remove", "Remove installed package")}
-    ${editorCommandForm(view, "extension-start", "Start inspected extension seam")}
-  </section>` : ""}
+  ${mode === "build" ? inspectorCatalogs(view) : ""}
 </section>`;
   }).join("");
 
@@ -976,10 +929,12 @@ function inspector(view: DesktopVisualView): string {
  */
 function assistant(view: DesktopVisualView): string {
   const denial = kidsAssistantDenial();
+
   const assistantStatus =
     view.state.assistantRuntime === "local"
       ? "Ready. Type, then Send."
       : `${DESKTOP_VISUAL_REFUSALS.noPresentationRuntime} — assistant actions are unavailable until a packaged host binds.`;
+
   return `
 <aside class="assistant" aria-label="Assistant">
   <div class="assistant-head">
@@ -1053,6 +1008,7 @@ function assistant(view: DesktopVisualView): string {
  */
 function profileRefusal(view: DesktopVisualView): string {
   const refusal = view.profileRefusal ?? kidsProfileRefusal();
+
   return `
 <section class="profile-refusal" role="alert" aria-labelledby="kids-refusal-title">
   <div class="profile-refusal-card">
@@ -1132,6 +1088,7 @@ function overlays(view: DesktopVisualView): string {
         const action = dismissal.productAction === null
           ? ` data-action="overlay" data-value="none"`
           : ` data-product-action data-action="${escapeHtml(dismissal.productAction)}"`;
+
         return button(
           dismissal.control,
           escapeHtml(dismissal.label),
@@ -1181,6 +1138,8 @@ function styles(): string {
   --status-h:${METRICS.statusBarHeight}px;
   --sans:${TYPE.sans};--mono:${TYPE.mono};
   --r-panel:18px;--r-card:13px;--r-control:10px;
+  --space-1:${SPACING.unit}px;--space-2:${SPACING.small}px;--space-3:${SPACING.medium}px;
+  --space-4:${SPACING.large}px;--space-6:${SPACING.section}px;
 }
 *{box-sizing:border-box}
 /* Every hidden region here is an explicit model or runtime decision. */
@@ -1188,7 +1147,9 @@ function styles(): string {
 html,body{margin:0;padding:0;height:100%;overflow:hidden}
 body{background:var(--backdrop);color:var(--text);font-family:var(--sans);font-size:13px;-webkit-font-smoothing:antialiased}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-control)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-control);box-shadow:0 0 0 4px var(--well)}
+.view-tab:focus-visible,.dock-tab:focus-visible,.rail-mode:focus-visible{outline-offset:-3px;box-shadow:none}
+button{transition:background-color .14s ease,border-color .14s ease,color .14s ease}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 /* An inert control is dimmed by paint, never by element opacity: opacity
    composites the label toward whatever is behind it, and both the token gate and
@@ -1281,29 +1242,18 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .left-dock,.inspector{background:var(--panel);display:flex;flex-direction:column;min-height:0;overflow-y:auto}
 .left-dock{border-right:1px solid var(--line)}
 .inspector{border-left:1px solid var(--line)}
-.editor-command-tools,.project-command-tools{display:grid;gap:7px;padding:8px;border-top:1px solid var(--line)}
-.editor-command-form{display:grid;gap:5px;padding:8px;border:1px solid var(--line-card);border-radius:5px;background:var(--well)}
-.editor-command-form h3{margin:0;font-size:10px;font-weight:600}
-.editor-command-form label,.viewport-source-control{display:grid;gap:3px;font-size:9px;color:var(--dim)}
-.editor-command-form input,.editor-command-form select,.editor-command-form textarea,.viewport-source-control select{min-width:0;width:100%;padding:5px;border:1px solid var(--line-control);border-radius:4px;background:var(--raised);color:var(--text);font:9px var(--mono)}
-.editor-command-form textarea{min-height:48px;resize:vertical}
-.editor-command-form [aria-live]{margin:0;font-size:8px;line-height:1.4;color:var(--dim);overflow-wrap:anywhere}
-.editor-command-form button,.view-tabs>[data-editor-command-submit]{min-height:24px;padding:3px 7px;border:1px solid var(--line-control);border-radius:4px;text-align:left;font-size:9px}
-.editor-command-form button:disabled,.view-tabs>[data-editor-command-submit]:disabled{color:var(--inert);cursor:not-allowed}
-.viewport-source-control{display:flex;align-items:center;white-space:nowrap}
-.viewport-source-control select{width:auto}
-.panel-head{margin:0;height:29px;flex:none;display:flex;align-items:center;padding:0 10px;background:var(--header);border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-family:var(--mono);font-size:9px;font-weight:400;letter-spacing:.15em;color:var(--text-3)}
-.panel-empty{margin:0;padding:12px 11px;font-size:11px;line-height:1.55;color:var(--dim)}
+.panel-head{margin:0;height:32px;flex:none;display:flex;align-items:center;padding:0 var(--space-3);background:var(--header);border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.08em;color:var(--text-3)}
+.panel-empty{margin:0;padding:var(--space-4) var(--space-3);font-size:12px;line-height:1.65;color:var(--dim);overflow-wrap:anywhere}
 .panel-note{display:flex;gap:9px;align-items:flex-start;margin:0 10px 11px;padding:10px 11px;border:1px solid;border-radius:4px;font-size:11px;line-height:1.55}
 .panel-note .dot{margin-top:5px}
 .project-panel{flex:none;border-bottom:1px solid var(--line)}
 .project-panel .panel-head{justify-content:space-between}
 .project-name{max-width:126px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dim);font-size:8px;letter-spacing:.04em}
-.project-launcher{display:grid;gap:7px;padding:9px;border-bottom:1px solid var(--line)}
-.project-launcher p,.project-root{margin:0;color:var(--dim);font-size:9px;line-height:1.45;overflow-wrap:anywhere}
+.project-launcher{display:grid;gap:var(--space-2);padding:var(--space-3);border-bottom:1px solid var(--line)}
+.project-launcher p,.project-root{margin:0;color:var(--dim);font-size:11px;line-height:1.6;overflow-wrap:anywhere}
 .project-lifecycle-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px}
 .project-lifecycle-actions button{min-width:0;padding-inline:7px}
-.project-recent-label{font-family:var(--mono);font-size:8px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em}
+.project-recent-label{font-family:var(--mono);font-size:10px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em}
 .project-recent-select{width:100%;min-width:0;height:26px;padding:0 7px;border:1px solid var(--line-control);border-radius:4px;background:var(--raised);color:var(--text);font-family:var(--mono);font-size:9px}
 .project-recent-select.is-inert{color:var(--inert);border-color:var(--line-control)}
 .project-bound{min-width:0}
@@ -1314,10 +1264,10 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .project-files option:checked{background:${ACCENT.surface};color:var(--text)}
 .project-browser-detail{margin:0 7px 8px;padding:8px;border:1px solid var(--line);border-radius:4px;background:var(--well);min-width:0}
 .project-browser-detail>strong{display:block;overflow-wrap:anywhere;font-family:var(--mono);font-size:9px;color:var(--text)}
-.project-browser-detail dl{display:grid;gap:5px;margin:8px 0}
+.project-browser-detail dl{display:grid;gap:var(--space-2);margin:var(--space-3) 0}
 .project-browser-detail dl div{display:grid;grid-template-columns:54px minmax(0,1fr);gap:6px;min-width:0}
-.project-browser-detail dt{font-family:var(--mono);font-size:8px;color:var(--faint);text-transform:uppercase}
-.project-browser-detail dd{margin:0;min-width:0;overflow-wrap:anywhere;font-family:var(--mono);font-size:8px;line-height:1.45;color:var(--dim)}
+.project-browser-detail dt{font-family:var(--mono);font-size:10px;color:var(--faint);text-transform:uppercase}
+.project-browser-detail dd{margin:0;min-width:0;overflow-wrap:anywhere;font-family:var(--mono);font-size:10px;line-height:1.6;color:var(--dim)}
 .project-browser-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:5px}
 .project-browser-actions button{min-width:0;height:auto;min-height:24px;padding:4px 6px;font-size:8px;white-space:normal}
 .project-browser-actions button:first-child{grid-column:1/-1}
@@ -1328,20 +1278,21 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .asset-browser-card strong{font-family:var(--mono);font-size:9px;color:var(--text)}
 .asset-browser-card span{margin-top:4px;font-family:var(--mono);font-size:8px;line-height:1.45;color:var(--dim)}
 .asset-browser-card .asset-browser-meta{display:none}
-.scene-entities{padding:0 7px 9px}
+.scene-entities{padding:0 var(--space-2) var(--space-3)}
 .scene-entities-label{margin:0 3px 5px;font-size:10px;letter-spacing:.02em;color:var(--dim)}
 .scene-entities select{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
-.scene-entity-identities{display:grid;gap:5px;min-width:0;margin:6px 0 0;padding:0;list-style:none}
-.scene-entity-identity{min-width:0;margin-left:calc(var(--scene-depth,0) * 7px);padding:8px 9px;border:1px solid var(--line-card);border-left:2px solid var(--accent);border-radius:6px;background:var(--well);cursor:pointer}
+.scene-entity-identities{display:grid;gap:var(--space-2);min-width:0;margin:var(--space-2) 0 0;padding:0;list-style:none}
+.scene-entity-identity{min-width:0;margin-left:calc(var(--scene-depth,0) * var(--space-2));padding:var(--space-2) var(--space-3);border:1px solid var(--line-card);border-left:2px solid var(--line-card);border-radius:6px;background:var(--well);cursor:pointer;transition:background-color .14s ease,border-color .14s ease}
+.scene-entity-identity:focus-visible{outline-offset:-3px;box-shadow:none}
 .scene-entity-identity:hover{border-color:var(--line-hover)}
 .scene-entity-identity.is-selected{border-color:var(--accent);background:${ACCENT.surface}}
-.scene-entity-identity>span{display:block;margin-bottom:2px;font-size:11px;font-weight:600;color:var(--text)}
-.scene-entity-identity dl{display:none;gap:3px;margin:4px 0 0}
+.scene-entity-identity>span{display:block;margin-bottom:var(--space-1);font-size:12px;line-height:1.5;font-weight:600;color:var(--text);overflow-wrap:anywhere}
+.scene-entity-identity dl{display:none;gap:var(--space-1);margin:var(--space-2) 0 0}
 .shell[data-details-open="true"] .scene-entity-identity dl{display:grid}
 .scene-entity-identity dl div{display:grid;grid-template-columns:42px minmax(0,1fr);gap:5px;min-width:0}
-.scene-entity-identity dt{font-family:var(--mono);font-size:7px;line-height:1.45;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
+.scene-entity-identity dt{font-family:var(--mono);font-size:10px;line-height:1.6;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
 .scene-entity-identity dd{min-width:0;margin:0}
-.scene-entity-identity code{display:block;min-width:0;font-size:8px;line-height:1.45;color:var(--dim);white-space:normal;overflow-wrap:anywhere}
+.scene-entity-identity code{display:block;min-width:0;font-size:10px;line-height:1.6;color:var(--dim);white-space:normal;overflow-wrap:anywhere}
 .scene-entity{width:100%;min-width:0;padding:8px 9px;border:1px solid var(--line-card);border-radius:4px;background:var(--raised);color:var(--dim);text-align:left}
 .scene-entity span,.scene-entity code{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .scene-entity span{font-size:10px;color:var(--text)}.scene-entity code{margin-top:3px;font-size:8px;color:var(--dim)}
@@ -1364,9 +1315,9 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .scene-instance-actions button{min-width:0;padding-inline:6px}
 .scene-parenting{display:grid;gap:7px;padding-top:2px}.scene-parenting label{display:grid;gap:4px}.scene-parenting select{width:100%;min-width:0;height:28px;border:1px solid var(--line-control);border-radius:4px;background:var(--raised);color:var(--text);font-family:var(--mono);font-size:9px}
 .scene-property-input{width:100%;min-width:0;height:28px;padding:0 8px;border:1px solid var(--line-control);border-radius:4px;background:var(--raised);color:var(--text);font-family:var(--mono);font-size:11px}
-.scene-property-input:focus{outline:1px solid var(--accent);outline-offset:1px}.scene-property-input.is-inert{color:var(--inert)}
+.scene-property-input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.scene-property-input.is-inert{color:var(--inert)}
 .scene-property-diagnostic{margin:0;font-size:9px;line-height:1.45;color:var(--dim);overflow-wrap:anywhere}
-.scene-property-review{max-height:150px;margin:0;padding:8px;overflow:auto;border:1px solid var(--line);border-radius:4px;background:var(--well);color:var(--dim);font-family:var(--mono);font-size:8px;line-height:1.45;white-space:pre-wrap}
+.scene-property-review{max-height:150px;margin:0;padding:var(--space-2);overflow:auto;border:1px solid var(--line);border-radius:4px;background:var(--well);color:var(--dim);font-family:var(--mono);font-size:10px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
 .ship-export-panel{padding:0 12px 12px}.ship-export-evidence{display:grid;gap:8px;margin:12px 0 0}.ship-export-evidence div{min-width:0}.ship-export-evidence dt{font:9px/1.4 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}.ship-export-evidence dd{margin:2px 0 0;color:var(--dim);overflow-wrap:anywhere}.ship-export-evidence code{font-size:9px}
 .pass-list{list-style:none;margin:0;padding:10px 11px;display:flex;flex-direction:column;gap:6px}
 .pass-row{display:flex;align-items:center;gap:10px;padding:6px 9px;background:var(--raised);border:1px solid var(--line);border-radius:4px}
@@ -1430,7 +1381,7 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .view-tools{display:flex;align-items:center;gap:3px;padding:0 8px}
 .view-tools i{width:10px;height:10px;border:1.4px solid var(--faint);border-radius:1px}
 .viewport{flex:1;position:relative;min-height:0;overflow:hidden;background:radial-gradient(130% 95% at 50% 0%, ${VIEWPORT_GRADIENT.inner} 0%, ${VIEWPORT_GRADIENT.mid} 48%, ${SURFACE.canvas} 100%);display:grid;place-items:center}
-.viewport-backdrop{position:absolute;inset:0;pointer-events:none}
+.viewport-backdrop{position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 0 1px var(--line-row)}
 .site-stage{display:none}
 .shell[data-profile="web"] .stage-host{overflow:auto;background:${SIGNAL.infoSurface};padding:18px 20px 28px}
 .shell[data-profile="web"] .site-stage{display:block}
@@ -1494,16 +1445,16 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .change-diff{min-width:0;max-height:min(46vh,280px);overflow:auto;margin:0;padding:9px 10px;border:1px solid var(--line-control);border-radius:4px;background:var(--well);color:var(--text-2);font:10px/1.45 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere}
 .change-actions{display:flex;gap:7px;justify-content:flex-end}
 .change-actions .primary-button,.change-actions .ghost-button{height:30px;padding:0 13px}
-.change-empty{margin:0;padding:34px 14px;text-align:center;font-size:12px;color:var(--dim)}
+.change-empty{margin:auto;padding:var(--space-6) var(--space-4);max-width:52ch;text-align:center;font-size:13px;line-height:1.65;color:var(--dim)}
+.change-empty::before{content:"";display:block;width:24px;height:24px;margin:0 auto var(--space-3);border:1px solid var(--line-hover);border-radius:6px;background:var(--raised)}
 
 .assistant{background:var(--assistant);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
-.assistant-head{height:36px;flex:none;display:flex;align-items:center;gap:9px;padding:0 12px;background:var(--raised);border-bottom:1px solid var(--line)}
+.assistant-head{height:40px;flex:none;display:flex;align-items:center;gap:9px;padding:0 12px;background:var(--raised);border-bottom:1px solid var(--line)}
 .assistant-head h2{margin:0;font-size:12px;font-weight:600;flex:1}
 .assistant-mark{width:16px;height:16px;border-radius:4px;background:${ACCENT.surface};display:grid;place-items:center}
 .assistant-mark::before{content:"";width:6px;height:6px;border-radius:1px;background:var(--accent);transform:rotate(45deg)}
-.shell[data-assistant-busy="true"] .assistant-mark{box-shadow:0 0 0 4px ${ACCENT.surface};animation:assistant-breathe 1.1s ease-in-out infinite}
-.shell[data-assistant-busy="true"] .assistant-mark::before{animation:assistant-spin 1.6s linear infinite}
-.shell[data-assistant-busy="true"] .viewport::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(80% 70% at 50% 40%, ${ACCENT.surface} 0%, transparent 70%);animation:assistant-glow 1.4s ease-in-out infinite}
+/* One live-bars signal confirms work; the canvas and labels stay visually still. */
+.shell[data-assistant-busy="true"] .assistant-mark{box-shadow:0 0 0 4px ${ACCENT.surface}}
 .shell[data-assistant="denied"] .assistant-mark{background:${SIGNAL.sceneSurface}}
 .shell[data-assistant="denied"] .assistant-mark::before{background:var(--scene)}
 .assistant-model{font-family:var(--mono);font-size:9px;color:var(--dim);background:var(--header);border:1px solid var(--line-control);border-radius:3px;padding:2px 6px}
@@ -1512,8 +1463,8 @@ code,kbd{font-family:var(--mono);font-size:.86em}
    this the later single-class rule wins and paints --dim on orange (1.1:1). */
 .primary-button.icon-button{color:var(--on-accent)}
 .primary-button.icon-button.is-inert{color:var(--inert-on-accent)}
-.assistant-body{flex:1;min-height:0;overflow-y:auto;padding:13px 12px}
-.assistant-empty{margin:0;font-size:11px;line-height:1.55;color:var(--dim)}
+.assistant-body{flex:1;min-height:0;overflow-y:auto;padding:var(--space-4) var(--space-3)}
+.assistant-empty{margin:0;font-size:13px;line-height:1.65;color:var(--dim);max-width:40ch}
 .assistant-live{display:none;align-items:end;gap:4px;height:28px;margin:14px 0 0}
 .shell[data-assistant-busy="true"] .assistant-live{display:flex}
 .assistant-live i{width:5px;border-radius:99px;background:var(--accent);animation:assistant-bars 0.9s ease-in-out infinite}
@@ -1521,20 +1472,19 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .assistant-live i:nth-child(2){height:16px;animation-delay:.12s}
 .assistant-live i:nth-child(3){height:22px;animation-delay:.24s}
 .assistant-thinking{display:flex;align-items:center;gap:6px;margin:12px 0 0;font-size:12px;color:var(--accent)}
-.assistant-thinking .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:assistant-dot 1s ease-in-out infinite}
-.assistant-thinking .dot:nth-child(2){animation-delay:.15s}
-.assistant-thinking .dot:nth-child(3){animation-delay:.3s}
+.assistant-thinking .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
 .assistant-progress{font-size:11px;line-height:1.5;color:var(--text-2);padding:9px;border:1px solid var(--line-control);border-radius:4px;background:var(--header);transition:border-color .2s ease,color .2s ease}
-.shell[data-assistant-busy="true"] .assistant-progress{border-color:var(--accent);color:var(--text);animation:assistant-card 1.2s ease-in-out infinite}
-.assistant-result{font-size:10px;line-height:1.55;color:var(--text-3);white-space:pre-wrap;animation:rise .28s ease-out}
+.shell[data-assistant-busy="true"] .assistant-progress{border-color:var(--accent);color:var(--text)}
+.assistant-result{min-width:0;font-size:12px;line-height:1.65;color:var(--text-3);white-space:pre-wrap;overflow-wrap:anywhere;animation:rise .16s ease-out}
 .assistant-foot{font-size:10px;color:var(--dim);line-height:1.5;margin:12px 0 0}
-.assistant-composer{flex:none;border-top:1px solid var(--line);background:var(--panel);padding:9px 11px 11px;display:flex;flex-direction:column;gap:8px}
-.assistant-prompt{width:100%;min-height:58px;resize:vertical;border:1px solid var(--line-control);border-radius:4px;background:var(--well);color:var(--text);font:11px/1.5 var(--sans);padding:8px}
+.assistant-composer{flex:none;max-height:65%;min-height:0;overflow-y:auto;scroll-padding:var(--space-2);border-top:1px solid var(--line);background:var(--panel);padding:var(--space-3);display:flex;flex-direction:column;gap:var(--space-2)}
+.assistant-prompt{width:100%;min-height:72px;flex-shrink:0;resize:vertical;border:1px solid var(--line-control);border-radius:6px;background:var(--well);color:var(--text);font:12px/1.6 var(--sans);padding:var(--space-3)}
+.assistant-prompt::placeholder{color:var(--faint)}
 .assistant-prompt.is-inert{color:var(--inert);cursor:not-allowed}
 .assistant-routes{display:none;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px}
 .shell[data-details-open="true"] .assistant-routes{display:grid}
-.assistant-route{min-width:0;padding:5px 3px;border:1px solid var(--line-control);border-radius:3px;color:var(--dim);font-size:9px;line-height:1.2}
-.assistant-route-refusal{display:block;margin-top:3px;font-size:7px;line-height:1.2;overflow-wrap:anywhere;color:var(--scene)}
+.assistant-route{min-width:0;padding:var(--space-2) var(--space-1);border:1px solid var(--line-control);border-radius:3px;color:var(--dim);font-size:9px;line-height:1.2}
+.assistant-route-refusal{display:block;margin-top:var(--space-1);font-size:10px;line-height:1.5;overflow-wrap:anywhere;color:var(--scene)}
 .assistant-route[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);background:${ACCENT.surface}}
 .composer-actions{display:flex;align-items:center;gap:7px}
 .assistant-modes{display:flex;background:var(--header);border:1px solid var(--line-control);border-radius:4px;padding:2px}
@@ -1600,7 +1550,8 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .palette-group h3{margin:0;padding:8px 16px 4px;font-family:var(--mono);font-size:9px;font-weight:400;letter-spacing:.14em;color:var(--faint)}
 .palette-group ul{list-style:none;margin:0;padding:0}
 .palette-item{display:flex;align-items:center;gap:12px;padding:8px 16px;width:100%;text-align:left}
-.palette-item:hover{background:var(--hover)}
+.palette-item:hover,.palette-item:focus-visible{background:var(--hover)}
+.palette-item:focus-visible{outline-offset:-3px;box-shadow:none}
 .palette-name{flex:1;font-size:13px}
 .palette-item kbd{font-size:9px;color:var(--dim);border:1px solid var(--line-control);border-radius:3px;padding:2px 5px}
 .overlay-foot{margin:0;padding:10px 16px;background:var(--well);border-top:1px solid var(--line);font-size:10.5px;color:var(--dim)}
@@ -1611,19 +1562,14 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 .refusal-row{margin:0 0 6px;font-size:11px;line-height:1.5;color:var(--dim)}
 .refusal-row code{color:var(--accent);margin-right:8px}
 
-.window-refusal{display:none;max-width:52ch;margin:0 auto;padding:48px 24px;text-align:center}
+.window-refusal{display:none;max-width:52ch;margin:0 auto;padding:48px var(--space-6);text-align:center;overflow-wrap:anywhere}
 .window-refusal h1{font-size:17px;margin:0 0 12px}
 .window-refusal p{font-size:13px;line-height:1.65;color:var(--dim);margin:0 0 10px}
 .window-refusal code{color:var(--accent)}
 
 @keyframes rise{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
 @keyframes sweep{0%{transform:translateX(-120%)}100%{transform:translateX(420%)}}
-@keyframes assistant-breathe{0%,100%{opacity:1}50%{opacity:.62}}
-@keyframes assistant-spin{to{transform:rotate(225deg)}}
 @keyframes assistant-bars{0%,100%{opacity:.4}50%{opacity:1}}
-@keyframes assistant-dot{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:1;transform:translateY(-2px)}}
-@keyframes assistant-card{0%,100%{box-shadow:0 0 0 0 ${ACCENT.surface}}50%{box-shadow:0 0 0 4px ${ACCENT.surface}}}
-@keyframes assistant-glow{0%,100%{opacity:.18}50%{opacity:.4}}
 
 /* Compact: the assistant leaves the grid and becomes an overlay drawer. Its
    existing toggle opens and closes it, so nothing becomes unreachable. */
@@ -1697,10 +1643,12 @@ code,kbd{font-family:var(--mono);font-size:.86em}
 function controlsByProfile(
   view: DesktopVisualView,
   runtime = view.state.assistantRuntime,
-): Record<string, Record<string, readonly [string, string | null]>> {
+) {
   const table: Record<string, Record<string, readonly [string, string | null]>> = {};
+
   for (const profile of view.profiles) {
     const merged: Record<string, readonly [string, string | null]> = {};
+
     for (const mode of DESKTOP_MODE_IDS) {
       const projected = desktopVisualView({
         ...view.state,
@@ -1708,12 +1656,15 @@ function controlsByProfile(
         mode,
         assistantRuntime: runtime,
       });
+
       for (const control of projected.controls) {
         merged[control.id] = [control.kind, control.refusal] as const;
       }
     }
+
     table[profile.id] = merged;
   }
+
   return table;
 }
 
@@ -1725,6 +1676,7 @@ function script(view: DesktopVisualView): string {
         ...view.state,
         assistantRuntime: runtime,
       });
+
       return [
         runtime,
         {
@@ -1742,6 +1694,7 @@ function script(view: DesktopVisualView): string {
       ];
     }),
   );
+
   const tables = {
     dockTabsByMode: Object.fromEntries(
       DESKTOP_MODE_IDS.map((mode) => [mode, [...dockTabsFor(mode)]]),
@@ -1841,15 +1794,6 @@ if (shell) {
   // host's single-proposal session — both reporting success, one edit gone.
   let inFlight = false;
   let activeInputActionMap = T.defaultInputActionMap;
-  let editorInputActionBaseVersions = null;
-  let editorMigrationDigest = null;
-  let editorPackageIds = [];
-  let editorExtensionSeams = [];
-  let editorInputActionReview = null;
-  let editorPrefabDefinitions = [];
-  let editorSceneInstanceIds = [];
-  let editorPlaySessionActive = false;
-  let editorPhysicsHostReady = false;
 
   const bindingLabel = (binding) => {
     if (binding.device === 'keyboard') {
@@ -1882,7 +1826,7 @@ if (shell) {
     if (binding.code !== (event.code || fallback)) return false;
     const modifiers = binding.modifiers;
     const primary = event.ctrlKey || event.metaKey;
-    if (modifiers.includes('primary') !== primary) return false;
+    if (modifiers.includes('primary') && !primary) return false;
     if (!modifiers.includes('primary')) {
       if (modifiers.includes('control') !== Boolean(event.ctrlKey)) return false;
       if (modifiers.includes('meta') !== Boolean(event.metaKey)) return false;
@@ -2111,9 +2055,6 @@ if (shell) {
       });
       el.dataset.value = selectedSceneEntityIds.join(',');
     });
-    editorSceneInstanceIds = entitiesList.map((entity) => entity.id);
-    populateEditorChoices('parentInstanceId', editorSceneInstanceIds);
-    updateEditorCommandControls();
     const parent = shell.querySelector('[data-scene-parent]');
     if (parent && parent.tagName === 'SELECT') {
       parent.replaceChildren();
@@ -2435,10 +2376,6 @@ if (shell) {
       : 'completed';
     runStatus((commandId === 'run-stop' ? 'Stopped' : 'Reset') + ' · ' + detail);
     appendConsoleEvidence(commandId, response.data);
-    if (commandId === 'run-stop') {
-      editorPlaySessionActive = false;
-      updateEditorCommandControls();
-    }
     document.dispatchEvent(new CustomEvent(T.product.viewportStopEvent));
     productStatus('open', 'Run command completed · ' + commandId);
   };
@@ -2455,10 +2392,6 @@ if (shell) {
       productStatus('refused', 'Inspect refused · ' + code);
       showOutcome('Inspect refused', code, response?.detail || response?.message || 'The catalog was not returned.');
       return;
-    }
-    if (kind === 'physics') {
-      editorPhysicsHostReady = response.data?.physicsHostReady === true;
-      updateEditorCommandControls();
     }
     if (report) { report.textContent = JSON.stringify(response.data, null, 2); report.hidden = false; }
     productStatus('open', kind + ' catalog inspected');
@@ -2602,6 +2535,9 @@ if (shell) {
     if (files.length !== status.files.length ||
         !files.some((file) => file.path === status.selectedPath)) return false;
     projectBrowserStatus = status;
+    const browserRevision = Number(shell.dataset.projectBrowserRevision || '0') + 1;
+    shell.dataset.projectBrowserRevision = String(browserRevision);
+    shell.dataset.projectBrowserSelectedPath = status.selectedPath;
     const list = shell.querySelector('#project-browser-file-select');
     if (list && list.tagName === 'SELECT') {
       list.replaceChildren();
@@ -2667,6 +2603,7 @@ if (shell) {
 
   const clearProjectBrowser = () => {
     projectBrowserStatus = null;
+    delete shell.dataset.projectBrowserSelectedPath;
     const list = shell.querySelector('#project-browser-file-select');
     if (list) list.replaceChildren();
     const detail = shell.querySelector('[data-project-browser-detail]');
@@ -2818,8 +2755,6 @@ if (shell) {
     if ((activeProject?.root ?? null) !== previousRoot) {
       sceneSelectionGeneration += 1;
       clearProjectBrowser();
-      // Deferred: this can run while the script is still defining its helpers.
-      void Promise.resolve().then(() => resetEditorCommandState());
     }
     const launcher = shell.querySelector('[data-project-launcher]');
     const bound = shell.querySelector('[data-project-bound]');
@@ -3164,7 +3099,6 @@ if (shell) {
     reconcileRarityEvidence(status);
     projectDirty = false;
     projectRecovering = false;
-    updateEditorCommandControls();
     await syncSceneHierarchy(hierarchyReviewRedacted);
     undoAvailability = status.undoAvailability === 'available' || status.undoAvailability === 'recovery-pending'
       ? status.undoAvailability
@@ -3526,15 +3460,6 @@ if (shell) {
     }
   };
 
-  const queueSceneSelection = () => {
-    const instanceIds = [...selectedSceneEntityIds];
-    const generation = sceneSelectionGeneration;
-    sceneSelectionPending = sceneSelectionPending.then(
-      () => setSceneSelection(instanceIds, generation),
-      () => setSceneSelection(instanceIds, generation),
-    );
-  };
-
   const applySaveSnapshot = async (snapshot) => {
     if (!isSessionSnapshot(snapshot)) return false;
     syncReview(snapshot);
@@ -3789,9 +3714,6 @@ if (shell) {
       runRefusal(T.product.refusals.openPathEvidenceInvalid);
       return;
     }
-    const playState = exercise.playSession?.state;
-    editorPlaySessionActive = typeof playState === 'string' && playState !== 'disposed';
-    updateEditorCommandControls();
     const playback = { exercise, accepted: false, frame: null };
     document.dispatchEvent(new CustomEvent(T.product.viewportPlayEvent, { detail: playback }));
     if (!playback.accepted || !Number.isSafeInteger(playback.frame) || playback.frame < 1) {
@@ -4008,9 +3930,6 @@ if (shell) {
       return;
     }
     await beginSceneLifecycleTransition();
-    if (typeof Event !== 'undefined') document.dispatchEvent(new Event(T.product.viewportStopEvent));
-    editorPlaySessionActive = false;
-    updateEditorCommandControls();
     shell.dataset.profile = value;
     q('.profile-chip').forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.value === value)));
     const promptField = shell.querySelector('#assistant-prompt');
@@ -4112,7 +4031,7 @@ if (shell) {
   // would contain nothing at all.
   const overlayStops = () => {
     const open = shell.querySelector('.overlay:not([hidden])');
-    return open === null ? [] : Array.from(open.querySelectorAll('button'));
+    return open === null ? [] : Array.from(open.querySelectorAll('button, input:not([disabled]), textarea:not([disabled]), select:not([disabled])'));
   };
 
   const setOverlay = (id) => {
@@ -4353,227 +4272,184 @@ if (shell) {
     }
   });
 
-  const editorCommandInput = (commandId, approve = false) => {
-    const form = shell.querySelector('[data-editor-command-form="' + commandId + '"]');
-    const input = Object.create(null);
-    if (form) {
-      for (const field of Array.from(form.querySelectorAll('[data-command-field]'))) {
-        const name = field.dataset.commandField;
-        if (!name) continue;
-        if (!field.value && ['instanceIds', 'parentInstanceId', 'instanceId', 'sourceInstanceId'].includes(name)) continue;
-        if (!field.value) throw new Error('EDITOR_COMMAND_PREREQUISITE_MISSING');
-        if (field.tagName === 'TEXTAREA') {
-          try { input[name] = JSON.parse(field.value); }
-          catch { throw new Error('EDITOR_COMMAND_INPUT_INVALID'); }
-        } else if (field.type === 'number') input[name] = Number(field.value);
-        else input[name] = field.value;
+  // Collect the registry's real fields; the existing host remains the validator
+    // and the existing Change Review/Save path remains the sole document writer.
+    const inputCommands = new Set([
+    'input-action-rebind', 'input-actions-reset', 'scene-prefab-define',
+    'scene-prefab-instance', 'scene-prefab-override', 'scene-prefab-refresh',
+    'viewport-source-set', 'physics-evaluate', 'package-install', 'package-remove',
+    'project-migration-commit', 'extension-start',
+    ]);
+    const collectCommandInput = async (commandId) => {
+    const command = T.editorCommands.find((row) => row.id === commandId);
+    if (shell.dataset.profile === 'kids') return commandRefusal('EDITOR_COMMAND_KIDS_DENIED');
+    const properties = command.inputSchema.properties;
+    if (properties.expectedContentHash && !(await openTimelineVersion())) return;
+    let inspection = null;
+    if (properties.expectedBaseVersion || properties.proposalDigest) {
+      const response = await commandRequest(properties.expectedBaseVersion
+        ? 'input-actions-inspect' : 'project-migration-propose', {});
+      const diagnostic = responseDiagnostic(response);
+      if (diagnostic !== null) return showOutcome(commandId + ' refused', diagnostic.code, diagnostic.message);
+      inspection = response.data;
+    }
+    shell.querySelector('[data-overlay="command-input"]')?.remove();
+    const overlay = document.createElement('div');
+    overlay.className = 'overlay';
+    overlay.dataset.overlay = 'command-input';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'command-input-title');
+    const card = document.createElement('div');
+    card.className = 'overlay-card';
+    card.style.maxHeight = '85vh';
+    card.style.overflowY = 'auto';
+    const title = document.createElement('h2');
+    title.id = 'command-input-title';
+    title.textContent = command.label;
+    const help = document.createElement('p');
+    help.textContent = command.mutation === 'stages-change'
+      ? 'Stage for Change Review. Only Save writes; Reject discards.'
+      : 'Review exact input before submitting. Settings and approved migrations commit explicitly; host validation remains mandatory.';
+    const form = document.createElement('form');
+    form.dataset.commandInput = commandId;
+    const fields = new Map();
+    const required = command.inputSchema.required || [];
+    const defaults = {
+      documentPath: T.product.documentPath, expectedContentHash: projectContentHash,
+      profile: shell.dataset.profile, scope: 'project',
+      expectedBaseVersion: inspection?.baseVersions?.project,
+      proposalDigest: inspection?.proposal?.proposalDigest,
+      reviewDigest: 'null', instanceIds: JSON.stringify(selectedSceneEntityIds),
+      instanceId: selectedSceneEntityId, parentInstanceId: editableScene?.hierarchy?.rootInstanceId,
+      steps: 1,
+    };
+    for (const [name, schema] of Object.entries(properties)) {
+      const label = document.createElement('label');
+      label.style.display = 'grid';
+      label.style.marginBottom = '8px';
+      label.textContent = name;
+      const json = Array.isArray(schema.type) || schema.type === 'object' || schema.type === 'array';
+      const boolean = schema.type === 'boolean' || schema.const === true;
+      const field = document.createElement(schema.enum ? 'select' : json ? 'textarea' : 'input');
+      field.dataset.commandField = name;
+      field.name = name;
+      if (schema.enum) schema.enum.forEach((value) => {
+        const option = document.createElement('option');
+        option.value = String(value); option.textContent = String(value); field.append(option);
+      });
+      else if (boolean) field.type = 'checkbox';
+      else if (!json) field.type = schema.type === 'number' || schema.type === 'integer' ? 'number' : 'text';
+      if (!boolean) field.required = required.includes(name);
+      if (schema.type === 'integer') field.step = '1';
+      if (schema.type === 'number') field.step = 'any';
+      if (schema.minimum !== undefined) field.min = String(schema.minimum);
+      if (schema.maximum !== undefined) field.max = String(schema.maximum);
+      if (schema.pattern) field.pattern = schema.pattern;
+      if (schema.minLength !== undefined) field.minLength = schema.minLength;
+      if (schema.maxLength !== undefined) field.maxLength = schema.maxLength;
+      if (defaults[name] !== undefined && defaults[name] !== null) field.value = String(defaults[name]);
+      if (['documentPath', 'expectedContentHash', 'profile', 'expectedBaseVersion', 'proposalDigest', 'reviewDigest'].includes(name)) {
+        field.readOnly = true;
+        if (field.tagName === 'SELECT') field.disabled = true;
       }
+      label.append(field); form.append(label);
+      fields.set(name, { field, schema, json, boolean });
     }
-    if (['package-install', 'package-remove', 'scene-prefab-inspect', 'scene-prefab-define',
-      'scene-prefab-instance', 'scene-prefab-override', 'scene-prefab-refresh', 'physics-evaluate'].includes(commandId)) {
-      input.documentPath = T.product.documentPath;
-      input.profile = shell.dataset.profile;
-      input.expectedContentHash = projectContentHash;
-    }
-    if (commandId === 'viewport-source-set') {
-      input.source = shell.querySelector('[data-command-field="source"]')?.value || '';
-    }
-    if (commandId === 'package-inspect' || commandId === 'profile-inspect') {
-      input.documentPath = T.product.documentPath;
-      input.profile = shell.dataset.profile;
-    }
-    if (commandId === 'extension-inspect') input.profile = shell.dataset.profile;
-    if (commandId === 'extension-start') input.profile = shell.dataset.profile;
-    if (commandId === 'project-build') {
-      input.profile = shell.dataset.profile;
-      input.target = 'linux';
-    }
-    if (commandId === 'workspace-layout-apply') {
-      input.profile = shell.dataset.profile;
-      input.leftVisible = shell.dataset.drawerLeft === 'open';
-      input.inspectorVisible = shell.dataset.drawerInspector === 'open';
-    }
-    if (commandId === 'scene-prefab-define') input.instanceIds = selectedSceneEntityIds;
-    if (commandId === 'scene-prefab-instance' && !input.parentInstanceId && (selectedSceneEntityId || selectedSceneEntityIds[0])) {
-      input.parentInstanceId = selectedSceneEntityId || selectedSceneEntityIds[0];
-    }
-    if (commandId === 'scene-prefab-override') {
-      if (!input.instanceId && selectedSceneEntityId) input.instanceId = selectedSceneEntityId;
-      if (!input.sourceInstanceId && selectedSceneEntityId) input.sourceInstanceId = selectedSceneEntityId;
-    }
-    if (commandId === 'project-migration-commit') {
-      if (!editorMigrationDigest) throw new Error('PROJECT_MIGRATION_PROPOSAL_REQUIRED');
-      input.approved = true;
-      input.proposalDigest = editorMigrationDigest;
-    }
-    if (commandId === 'input-action-rebind' || commandId === 'input-actions-reset') {
-      const current = editorInputActionReview;
-      input.expectedBaseVersion = current?.baseVersion || editorInputActionBaseVersions?.[input.scope];
-      if (!input.expectedBaseVersion) throw new Error('INPUT_ACTION_INSPECTION_REQUIRED');
-      // Only the Approve control approves; Submit always asks for a fresh review.
-      const approving = approve && current?.commandId === commandId;
-      input.approved = approving;
-      input.reviewDigest = approving ? current.reviewDigest : null;
-    }
-    if (commandId === 'scene-prefab-inspect') delete input.expectedContentHash;
-    return input;
-  };
+    if (fields.has('expectedBaseVersion')) fields.get('scope').field.addEventListener('change', () => {
+      fields.get('expectedBaseVersion').field.value = inspection.baseVersions[fields.get('scope').field.value];
+      fields.get('approved').field.checked = false;
+      fields.get('reviewDigest').field.value = 'null';
+    });
+    const evidence = document.createElement('pre');
+    evidence.dataset.commandEvidence = '';
+    evidence.setAttribute('role', 'status');
+    evidence.textContent = inspection === null ? 'No command submitted.' : JSON.stringify(inspection, null, 2);
+    const submit = document.createElement('button');
+    submit.type = 'submit';
+    submit.textContent = command.mutation === 'stages-change' ? 'Stage for review' : 'Submit reviewed input';
+    const cancel = document.createElement('button');
+    cancel.type = 'button'; cancel.textContent = 'Cancel';
+    cancel.addEventListener('click', () => setOverlay('none'));
+    form.append(submit, cancel);
+    form.addEventListener('input', (event) => {
+      if (fields.has('reviewDigest') && event.target !== fields.get('approved').field) {
+        fields.get('approved').field.checked = false;
+        fields.get('reviewDigest').field.value = 'null';
+      }
+    });
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      if (inFlight || submit.disabled) return;
+      let input;
+      try {
+        input = Object.fromEntries(Array.from(fields, ([name, row]) => {
+          const value = row.boolean ? row.field.checked : row.json ? JSON.parse(row.field.value)
+            : row.schema.type === 'number' || row.schema.type === 'integer' ? Number(row.field.value) : row.field.value;
+          return [name, value];
+        }).filter(([name, value]) => required.includes(name) || value !== ''));
+      } catch { evidence.textContent = 'EDITOR_COMMAND_INPUT_INVALID: complex fields require valid JSON.'; return; }
+      submit.disabled = true;
+      void productAction(async () => {
+        try {
+          if (properties.expectedContentHash && input.expectedContentHash !== projectContentHash) {
+            evidence.textContent = 'EDITOR_COMMAND_STALE_BASE_VERSION: reopen and review the current document.';
+            return;
+          }
+          if (command.mutation === 'stages-change') {
+            setOverlay('none');
+            await stageSceneCommand(commandId, input, command.label, { authoringSnapshot: true });
+            return;
+          }
+          const response = await commandRequest(commandId, input);
+          const diagnostic = responseDiagnostic(response);
+          evidence.textContent = diagnostic === null ? JSON.stringify(response.data, null, 2)
+            : diagnostic.code + ' · ' + diagnostic.message;
+          if (diagnostic !== null) return;
+          if (response.data?.kind === 'sceneaxi.input-action-review') {
+            if (response.data.status === 'review') {
+              fields.get('reviewDigest').field.value = JSON.stringify(response.data.reviewDigest);
+              evidence.textContent += '\\nReview before/after, then explicitly check approved and submit the exact input.';
+            } else {
+              activeInputActionMap = response.data.after; refreshInputBindingLabels(); submit.hidden = true;
+            }
+          } else {
+            submit.hidden = true;
+            if (commandId === 'project-migration-commit') await openProject();
+          }
+        } finally { submit.disabled = false; }
+      });
+    });
+    card.append(title, help, form, evidence); overlay.append(card); shell.append(overlay);
+    setOverlay('command-input');
+    };
 
-  const clearInputActionReview = () => {
-    editorInputActionReview = null;
-    q('[data-editor-command-review]').forEach((approve) => { approve.hidden = true; });
-  };
-
-  // Everything learned from one project's inspections belongs to that project.
-  const resetEditorCommandState = () => {
-    editorMigrationDigest = null;
-    editorPackageIds = [];
-    editorExtensionSeams = [];
-    editorInputActionBaseVersions = null;
-    editorPrefabDefinitions = [];
-    editorPlaySessionActive = false;
-    clearInputActionReview();
-    for (const name of ['packageId', 'seamId', 'actionId', 'definitionId', 'instanceId', 'sourceInstanceId', 'parentInstanceId']) {
-      populateEditorChoices(name, []);
-    }
-    const refusal = shell.querySelector('[data-migration-proposal-refusal]');
-    if (refusal) refusal.textContent = 'Run Propose Project Migration first.';
-    updateEditorCommandControls();
-  };
-
-  const runEditorCommand = async (commandId, approve = false) => {
-    if (activeProject === null && !(await openProject())) return;
-    if (projectContentHash === null && !(await openProject())) return;
-    let input;
-    try {
-      input = editorCommandInput(commandId, approve);
-    } catch (error) {
-      const code = error instanceof Error ? error.message : 'EDITOR_COMMAND_INPUT_INVALID';
-      showOutcome(commandId + ' refused', code, 'Inspect the relevant catalog and provide all required values before submitting.');
-      productStatus('refused', commandId + ' refused · ' + code);
-      return;
-    }
+    const runEditorCommand = async (commandId) => {
+    if (inputCommands.has(commandId)) return collectCommandInput(commandId);
+    const input = commandId === 'package-inspect' || commandId === 'profile-inspect' || commandId === 'scene-prefab-inspect'
+      ? { documentPath: T.product.documentPath, profile: shell.dataset.profile }
+      : commandId === 'extension-inspect'
+        ? { profile: shell.dataset.profile }
+        : commandId === 'project-build'
+          ? { profile: shell.dataset.profile, target: 'linux' }
+          : commandId === 'workspace-layout-apply'
+            // Apply persists the layout the user is looking at: the current drawers.
+            ? {
+              profile: shell.dataset.profile,
+              leftVisible: shell.dataset.drawerLeft === 'open',
+              inspectorVisible: shell.dataset.drawerInspector === 'open',
+            }
+            : {};
     const response = await commandRequest(commandId, input);
     const diagnostic = responseDiagnostic(response);
     if (diagnostic !== null) {
-      // A refused review decision cannot be approved later; ask for a new review.
-      if (commandId === 'input-action-rebind' || commandId === 'input-actions-reset') clearInputActionReview();
       showOutcome(commandId + ' refused', diagnostic.code, diagnostic.message);
       productStatus('refused', commandId + ' refused · ' + diagnostic.code);
       return;
     }
-    const data = response.data;
-    if (commandId === 'project-migration-propose' && typeof data?.proposal?.proposalDigest === 'string') {
-      editorMigrationDigest = data.proposal.proposalDigest;
-      const refusal = shell.querySelector('[data-migration-proposal-refusal]');
-      if (refusal) refusal.textContent = 'Proposal ready. The commit uses its returned digest.';
-      updateEditorCommandControls();
-    }
-    if (commandId === 'package-inspect' && Array.isArray(data?.catalog?.lock)) {
-      editorPackageIds = data.catalog.lock.map((row) => row.packageId).filter((id) => typeof id === 'string');
-      populateEditorChoices('packageId', editorPackageIds);
-    }
-    if (commandId === 'extension-inspect' && Array.isArray(data?.seams)) {
-      editorExtensionSeams = data.seams.map((row) => row.id).filter((id) => typeof id === 'string');
-      populateEditorChoices('seamId', editorExtensionSeams);
-    }
-    if (commandId === 'input-actions-inspect' && data?.baseVersions && data?.map) {
-      editorInputActionBaseVersions = data.baseVersions;
-      activeInputActionMap = data.map;
-      populateEditorChoices('actionId', data.map.bindings.map((row) => row.actionId));
-      editorInputActionReview = null;
-    }
-    if (commandId === 'scene-prefab-inspect' && Array.isArray(data?.catalog?.definitions)) {
-      editorPrefabDefinitions = data.catalog.definitions.map((row) => row.definitionId);
-      populateEditorChoices('definitionId', editorPrefabDefinitions);
-      populateEditorChoices('instanceId', data.catalog.instances.map((row) => row.instanceId));
-      populateEditorChoices('sourceInstanceId', editorSceneInstanceIds);
-    }
-    if ((commandId === 'input-action-rebind' || commandId === 'input-actions-reset') && data?.status === 'review') {
-      editorInputActionReview = { commandId, baseVersion: input.expectedBaseVersion, reviewDigest: data.reviewDigest };
-      const approve = shell.querySelector('[data-editor-command-review="' + commandId + '"]');
-      if (approve) approve.hidden = false;
-      showOutcome(commandId + ' review', 'INPUT_ACTION_REVIEW_REQUIRED', JSON.stringify(data, null, 2));
-      updateEditorCommandControls();
-      return;
-    }
-    if (data?.authoringSnapshot) {
-      syncReview(data.authoringSnapshot);
-      projectDirty = data.authoringSnapshot.phase === 'reviewing';
-    }
-    if ((commandId === 'input-action-rebind' || commandId === 'input-actions-reset') && data?.status === 'committed') {
-      clearInputActionReview();
-      await hydrateInputActions();
-      // The commit moved the settings version; re-read it so the next change is based on it.
-      const inspected = await commandRequest('input-actions-inspect', {});
-      editorInputActionBaseVersions = responseDiagnostic(inspected) === null && inspected.data?.baseVersions
-        ? inspected.data.baseVersions
-        : null;
-      updateEditorCommandControls();
-    }
-    if (commandId === 'project-migration-commit') {
-      editorMigrationDigest = null;
-      updateEditorCommandControls();
-    }
-    const output = JSON.stringify(data, null, 2);
+    const output = JSON.stringify(response.data, null, 2);
     showOutcome(commandId, 'COMMAND_COMPLETED', output);
     productStatus('open', commandId + ' completed');
-  };
-
-  const populateEditorChoices = (name, values) => {
-    q('[data-command-field="' + name + '"]').forEach((field) => {
-      if (field.tagName === 'SELECT') {
-        const first = field.querySelector('option');
-        field.replaceChildren(first);
-        for (const value of values) {
-          const option = document.createElement('option');
-          option.value = value;
-          option.textContent = value;
-          field.append(option);
-        }
-      } else if (field.tagName === 'INPUT') {
-        field.value = values[0] || '';
-        field.setAttribute('list', 'editor-choice-' + name);
-        let list = shell.querySelector('#editor-choice-' + name);
-        if (!list) {
-          list = document.createElement('datalist');
-          list.id = 'editor-choice-' + name;
-          shell.append(list);
-        }
-        list.replaceChildren(...values.map((value) => {
-          const option = document.createElement('option');
-          option.value = value;
-          return option;
-        }));
-      }
-    });
-    updateEditorCommandControls();
-  };
-
-  const updateEditorCommandControls = () => {
-    q('[data-editor-command-submit]').forEach((button) => {
-      const id = button.dataset.editorCommandSubmit;
-      const form = button.closest('[data-editor-command-form]');
-      const fields = form ? Array.from(form.querySelectorAll('[data-command-field]')) : [];
-      const missingField = id === 'viewport-source-set'
-        ? !shell.querySelector('[data-command-field="source"]')?.value
-        : fields.some((field) => !field.value && !(id === 'scene-prefab-instance' && field.dataset.commandField === 'parentInstanceId' && editorSceneInstanceIds.length > 0));
-      const missingPrerequisite = id === 'project-migration-commit' && !editorMigrationDigest ||
-        id === 'viewport-source-set' && !editorPlaySessionActive ||
-        id === 'physics-evaluate' && !editorPhysicsHostReady ||
-        id === 'scene-prefab-define' && selectedSceneEntityIds.length === 0 ||
-        id === 'scene-prefab-instance' && (editorPrefabDefinitions.length === 0 || editorSceneInstanceIds.length === 0) ||
-        (id === 'scene-prefab-override' || id === 'scene-prefab-refresh') && editorPrefabDefinitions.length === 0 ||
-        id === 'package-remove' && editorPackageIds.length === 0 ||
-        id === 'extension-start' && editorExtensionSeams.length === 0 ||
-        (id === 'input-action-rebind' || id === 'input-actions-reset') && !editorInputActionBaseVersions;
-      const invalidJson = fields.some((field) => field.tagName === 'TEXTAREA' && field.value && (() => { try { JSON.parse(field.value); return false; } catch { return true; } })());
-      const disabled = (id === 'input-actions-inspect' ? activeProject === null : missingField || invalidJson || missingPrerequisite);
-      button.disabled = disabled;
-      button.setAttribute('aria-disabled', String(disabled));
-      if (!disabled) button.removeAttribute('data-refusal');
-      else button.dataset.refusal = id === 'viewport-source-set' && !editorPlaySessionActive ? 'PLAY_SESSION_MISSING' : id === 'physics-evaluate' && !editorPhysicsHostReady ? 'PHYSICS_WORLD_NOT_READY' : missingPrerequisite ? 'EDITOR_COMMAND_PREREQUISITE_MISSING' : 'EDITOR_COMMAND_INPUT_INVALID';
-    });
   };
 
   const refreshTimeline = async () => {
@@ -4598,7 +4474,7 @@ if (shell) {
       documentPath: T.product.documentPath,
       expectedContentHash: projectContentHash,
       mutation,
-    }, 'animation', { authoringSnapshot: true });
+    }, 'animation');
     if (result) q('[data-timeline-result]').forEach((el) => {
       el.textContent = 'Animation edit staged in Change Review. Save applies the proposal.';
     });
@@ -4646,17 +4522,6 @@ if (shell) {
     });
   };
 
-  const focusEditorCommandForm = (commandId) => {
-    if (['physics-evaluate', 'scene-prefab-inspect', 'scene-prefab-define', 'scene-prefab-instance',
-      'scene-prefab-override', 'scene-prefab-refresh', 'package-install', 'package-remove', 'extension-start'].includes(commandId)) {
-      showModePanels('build');
-    }
-    const field = shell.querySelector('[data-editor-command-form="' + commandId + '"] [data-command-field]');
-    if (field) field.focus();
-    const refusal = shell.querySelector('[data-editor-command-refusal="' + commandId + '"]');
-    if (refusal) refusal.textContent = 'Fill in the form here. The command is not sent from the menu until its inputs are ready.';
-  };
-
   const commandHandlers = Object.freeze({
     'project-new': () => chooseProject('choose-new'),
     'project-open': () => chooseProject('choose-open'),
@@ -4681,11 +4546,9 @@ if (shell) {
       'project-migration-propose', 'project-migration-commit', 'project-migration-recover',
       'project-build', 'extension-inspect', 'extension-start', 'profile-inspect',
       'project-inspect', 'input-actions-inspect', 'input-action-rebind', 'input-actions-reset',
-      'physics-evaluate', 'scene-prefab-inspect', 'scene-prefab-define', 'scene-prefab-instance',
-      'scene-prefab-override', 'scene-prefab-refresh',
-    ].map((id) => [id, () => ['package-install', 'package-remove', 'project-migration-commit', 'extension-start',
-      'input-action-rebind', 'input-actions-reset'].includes(id) ? focusEditorCommandForm(id) : runEditorCommand(id)])),
-
+      'scene-prefab-inspect', 'scene-prefab-define', 'scene-prefab-instance',
+      'scene-prefab-override', 'scene-prefab-refresh', 'viewport-source-set', 'physics-evaluate',
+    ].map((id) => [id, () => runEditorCommand(id)])),
   });
 
   const executeCommand = (id) => {
@@ -4721,26 +4584,6 @@ if (shell) {
     void productAction(handler);
   };
 
-  shell.addEventListener('input', (event) => {
-    if (event.target instanceof Element && event.target.closest('[data-editor-command-form], [data-command-field="source"]')) {
-      updateEditorCommandControls();
-    }
-  });
-
-  shell.addEventListener('change', (event) => {
-    if (event.target instanceof Element && event.target.matches('[data-command-field="source"]')) updateEditorCommandControls();
-  });
-
-  // Changing a reviewed input-action request invalidates its review: Approve
-  // would otherwise commit a digest the user no longer sees.
-  const invalidateEditedReview = (event) => {
-    const form = event.target instanceof Element ? event.target.closest('[data-editor-command-form]') : null;
-    const id = form?.getAttribute('data-editor-command-form');
-    if (editorInputActionReview !== null && editorInputActionReview.commandId === id) clearInputActionReview();
-  };
-  shell.addEventListener('input', invalidateEditedReview);
-  shell.addEventListener('change', invalidateEditedReview);
-
   shell.addEventListener('click', (event) => {
     const command = event.target instanceof Element ? event.target.closest('[data-command]') : null;
     if (command && command.getAttribute('aria-disabled') !== 'true') {
@@ -4756,13 +4599,7 @@ if (shell) {
     if (!el || el.getAttribute('aria-disabled') === 'true') return;
     const action = el.dataset.action;
     const value = el.dataset.value;
-    if (action === 'editor-command-submit' && value) {
-      void productAction(() => runEditorCommand(value));
-    }
-    else if (action === 'editor-command-review' && value) {
-      void productAction(() => runEditorCommand(value, true));
-    }
-    else if (action === 'drawer' && value) {
+    if (action === 'drawer' && value) {
       const key = value === 'left' ? 'drawerLeft' : 'drawerInspector';
       const open = shell.dataset[key] !== 'open';
       shell.dataset[key] = open ? 'open' : 'closed';
@@ -4780,10 +4617,7 @@ if (shell) {
     else if (action === 'change-reject') void productAction(() => rejectProposal('rejected'));
     else if (action === 'scene-entity-select' && value) {
       const primary = el.tagName === 'SELECT' ? el.value : value;
-      if (primary && showSceneProperty(primary)) {
-        if (shell.dataset.mode !== 'build') showModePanels('build');
-        if (el.tagName !== 'SELECT') queueSceneSelection();
-      }
+      if (primary && showSceneProperty(primary) && shell.dataset.mode !== 'build') showModePanels('build');
     }
     else if (action === 'scene-property-stage') void productAction(stageSceneProperty);
     else if (action === 'catalog-stage' && value) void productAction(() => stageCatalog(value));
@@ -4868,7 +4702,12 @@ if (shell) {
       showSceneProperty(selectedSceneEntityIds[0]);
       if (shell.dataset.mode !== 'build') showModePanels('build');
     }
-    queueSceneSelection();
+    const instanceIds = [...selectedSceneEntityIds];
+    const generation = sceneSelectionGeneration;
+    sceneSelectionPending = sceneSelectionPending.then(
+      () => setSceneSelection(instanceIds, generation),
+      () => setSceneSelection(instanceIds, generation),
+    );
   });
 
   // Tab is deliberately not captured inside a menu — every item keeps its plain
@@ -4979,7 +4818,7 @@ if (shell) {
   syncReview(null);
   syncAssistantTier();
   syncCommandAvailability();
-  void syncProjectLifecycle().then(hydrateInputActions).then(updateEditorCommandControls);
+  void syncProjectLifecycle().then(hydrateInputActions);
 }
 `;
 }
@@ -5002,6 +4841,7 @@ export function renderDesktopChrome(
   options: DesktopChromeOptions = {},
 ): string {
   const title = options.title ?? "SceneAxi — Engine Desktop";
+
   // The block is emitted in every document but `view.refusal` is non-null only
   // in the below-minimum render, so the fallback is what a browser actually
   // shows once the viewport crosses the breakpoint. It reads the same registry

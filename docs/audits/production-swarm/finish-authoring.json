@@ -1,0 +1,52 @@
+{
+  "lane": "authoring",
+  "root": "/home/devuser/Documents/Projects/sceneaxi",
+  "assignedRowCount": 9,
+  "doneImplementedVerified": 9,
+  "scope": "Assigned local acceptance only; not full-production or native macOS/Windows certification",
+  "preservedInheritedWork": true,
+  "filesTouchedThisRetry": [
+    "packages/authoring-core/src/apply-journal.ts",
+    "packages/authoring-core/src/propose-apply.ts",
+    "packages/authoring-core/test/final-acceptance.test.ts",
+    "docs/audits/production-swarm/finish-authoring.md",
+    "docs/audits/production-swarm/finish-authoring.json"
+  ],
+  "rows": [
+    {"id":"AUTHORING-001","status":"DONE_IMPLEMENTED_VERIFIED","filesTouched":["packages/authoring-core/test/final-acceptance.test.ts"],"proof":{"tests":[{"name":"names proposal/direct/multi refusal for escape","count":4},{"name":"rechecks canonical containment when a reviewed document is redirected before apply","count":1}],"passed":5,"refusalCodes":["validation-failed"],"assertions":"Relative/absolute/file-symlink/directory-symlink boundaries; unchanged victim bytes; inherited persisted proposal and actual CLI escape oracles also pass."}},
+    {"id":"AUTHORING-002","status":"DONE_IMPLEMENTED_VERIFIED","filesTouched":["packages/authoring-core/src/apply-journal.ts","packages/authoring-core/src/propose-apply.ts","packages/authoring-core/test/final-acceptance.test.ts"],"proof":{"tests":[{"name":"names prepared/undoing/redoing recovery refusal for escape","count":9},{"name":"names apply refusal for redirected journal resource","count":3},{"name":"refuses escaping completed/undone archives at history and transaction resolution boundaries","count":2},{"name":"refuses redirected resource with a named code","count":3}],"passed":17,"refusalCodes":["journal-invalid","validation-failed"],"assertions":"Active/archive/history/operation/directory/journal/symlink authority; scene, victim and active/archive bytes preserved; fresh four before-repair failures now pass unchanged."}},
+    {"id":"AUTHORING-003","status":"DONE_IMPLEMENTED_VERIFIED","filesTouched":["packages/authoring-core/test/final-acceptance.test.ts"],"proof":{"tests":[{"name":"names invalid seed refusal without creating artifacts","count":3},{"name":"preserves exact valid noncanonical seed bytes, but refuses a valid mismatched document","count":1}],"passed":4,"refusalConstant":"PROJECT_MANIFEST_DIAGNOSTICS.malformed","assertions":"Actual document-byte parsing, schema validation and supplied-document equality; invalid seeds produce no artifacts; matching noncanonical bytes reopen exactly."}},
+    {"id":"AUTHORING-004","status":"DONE_IMPLEMENTED_VERIFIED","filesTouched":["packages/authoring-core/src/apply-journal.ts","packages/authoring-core/src/propose-apply.ts","packages/authoring-core/test/final-acceptance.test.ts"],"proof":{"tests":[{"name":"final-acceptance.test.ts independent public and process oracles","count":65}],"passed":65,"beforeRepair":[{"passed":32,"failed":3},{"passed":46,"failed":1}],"assertions":"Negative containment/image/seed validity, procfs absence, exclusive scratch collisions and all nine actual CLI project verbs; no weakened or disabled assertions."}},
+    {"id":"AUTHORING-005","status":"DONE_IMPLEMENTED_VERIFIED","filesTouched":["packages/authoring-core/test/final-acceptance.test.ts"],"proof":{"tests":[{"name":"recovers on Linux with procfs unavailable and never opens a procfs file","count":1},{"name":"reads and recovers a valid journal on the darwin/win32 branch without procfs","count":2}],"passed":3,"assertions":"Fresh actual child hides procfs and rejects any procfs open; valid prepared migration recovers with unchanged document bytes. Darwin/win32 are branch simulation, not native-host execution."}},
+    {"id":"AUTHORING-006","status":"DONE_IMPLEMENTED_VERIFIED","filesTouched":["packages/authoring-core/test/final-acceptance.test.ts"],"proof":{"tests":[{"name":"refuses an actual tmp/bak creation collision without following or deleting the hostile symlink","count":2},{"name":"isolates a pre-existing tmp/bak artifact symlink without changing victim bytes","count":2}],"passed":4,"assertions":"Exclusive creation is exercised at actual randomized scratch paths in fresh child processes; victim/scene unchanged and malicious symlink retained; existing predictable-name artifacts remain isolated."}},
+    {"id":"AUTHORING-007","status":"DONE_IMPLEMENTED_VERIFIED","filesTouched":["packages/authoring-core/test/final-acceptance.test.ts"],"proof":{"tests":[{"name":"refuses digest-correct prepared/undoing/redoing before/after invalid image","count":18},{"name":"rejects matching-digest malformed after-images before overwriting a valid scene","count":1}],"passed":19,"refusalCodes":["journal-invalid"],"assertions":"Before/after images, all recovery states, malformed/schema-invalid/major-invalid bytes; canonical scene and active bytes preserved."}},
+    {"id":"AUTHORING-REPAIR-CRASH-REGRESSION","status":"DONE_IMPLEMENTED_VERIFIED","filesTouched":["packages/authoring-core/test/final-acceptance.test.ts"],"proof":{"tests":[{"name":"recovers a genuinely abruptly terminated apply with durable scratch files and stale locks","count":1},{"name":"refuses an actual tmp/bak creation collision without following or deleting the hostile symlink","count":2}],"passed":3,"assertions":"Existing real child exits91 before canonical rename; durable prepared journal and orphan scratch proven; rebuilt actual CLI replays exact after-image, clears active journal and stale locks; no simulated exception substitutes for process death."}},
+    {"id":"COVERAGE-AUTHORING","status":"DONE_IMPLEMENTED_VERIFIED","filesTouched":["packages/authoring-core/src/apply-journal.ts","packages/authoring-core/src/propose-apply.ts","packages/authoring-core/test/final-acceptance.test.ts"],"proof":{"tests":[{"name":"packages/authoring-core/test","files":10,"count":242},{"name":"project-lifecycle.test.ts + cli-golden-path.test.ts + full-editor-transactions-golden.test.ts","files":3,"count":31}],"passed":273,"failed":0,"skipped":0,"frontDoorSubset":{"positiveTests":9,"unknownFlagTests":9,"actualInvocations":20,"verbs":["init","migrate","new","dev","test","capture","report","propose","apply"],"refusalCodes":["UNKNOWN_FLAG"],"includedInPackageCount":true},"assertions":"Actual rebuilt binary, versioned envelopes, exit codes, byte-preservation and artifact checks; existing real CLI containment and abruptly terminated apply recovery tests also executed."}}
+  ],
+  "freshFailureEvidence": [
+    {"command":"pnpm exec vitest run packages/authoring-core/test/final-acceptance.test.ts --reporter=dot","exit":1,"passed":32,"failed":3,"phase":"before this retry's archive and empty-journal authority repairs","output":"completed/undone archive resolveApplyTransaction and redirected authoring-operation recovery: expected {ok:false, diagnostics:[{code:journal-invalid}]}, received {ok:true}"},
+    {"command":"pnpm exec vitest run packages/authoring-core/test/final-acceptance.test.ts --reporter=dot","exit":0,"passed":35,"failed":0,"phase":"after apply-journal.ts repair"},
+    {"command":"pnpm exec vitest run packages/authoring-core/test/final-acceptance.test.ts --reporter=dot","exit":1,"passed":46,"failed":1,"phase":"expanded journal-resource oracles before typed containment propagation repair","output":"redirected .completion-sequence: expected validation-failed, received apply-failed"},
+    {"command":"pnpm exec vitest run packages/authoring-core/test/final-acceptance.test.ts --reporter=dot","exit":0,"passed":47,"failed":0,"phase":"after propose-apply.ts repair"},
+    {"command":"pnpm exec vitest run packages/authoring-core/test/final-acceptance.test.ts --reporter=dot","exit":0,"passed":65,"failed":0,"phase":"final CLI front-door expansion"}
+  ],
+  "historicalFailureEvidenceNotRerun": {
+    "source":"docs/audits/production-swarm/fix-authoring.json:104-107",
+    "containmentAndSeedFailures":13,
+    "predictableScratchFailures":2,
+    "invalidImageFailures":1,
+    "abruptCrashRecoveryFailures":1,
+    "attribution":"Inherited implementation evidence; not this retry's executions or edits"
+  },
+  "latestVerification": [
+    {"command":"pnpm -s build","exit":0,"scope":"Full root referenced TypeScript build after source repairs"},
+    {"command":"pnpm exec vitest run packages/authoring-core/test --reporter=dot","exit":0,"files":10,"passed":242,"failed":0,"skipped":0},
+    {"command":"pnpm exec vitest run packages/cli/test/project-lifecycle.test.ts tests/e2e/cli-golden-path.test.ts tests/e2e/full-editor-transactions-golden.test.ts --reporter=dot","exit":0,"files":3,"passed":31,"failed":0,"skipped":0},
+    {"command":"pnpm exec eslint packages/authoring-core --max-warnings 0","exit":0},
+    {"command":"pnpm -s check:boundaries","exit":0,"packages":27},
+    {"command":"pnpm -s check:contracts","exit":0},
+    {"command":"git diff --check -- packages/authoring-core","exit":0}
+  ],
+  "sharedFileRequests": [],
+  "limits": ["No full repository gate rerun claimed", "No actual native macOS/Windows filesystem verification claimed", "No provider, held proof, hardware, deployment or production certification claimed", "Row proof subsets overlap; only package242 + additional31 is a disjoint aggregate"]
+}

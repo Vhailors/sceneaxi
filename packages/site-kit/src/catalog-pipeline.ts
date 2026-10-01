@@ -27,6 +27,7 @@ import { type SiteRefusal, type SiteResult, ok, refuse } from "./refusals.js";
 export const CATALOG_PIPELINE_MODE = "test" as const;
 
 const SHA256_RE = /^sha256:[0-9a-f]{64}$/;
+
 const SUPPORTED_PROFILE_BY_SURFACE = Object.freeze({
   "catalog-game": "game",
   "catalog-web": "web",
@@ -181,8 +182,10 @@ const nonEmpty = (value: string): boolean => value.trim().length > 0;
  */
 function canonicalValue(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(canonicalValue);
+
   if (value === null || typeof value !== "object") return value;
   const record = value as Record<string, unknown>;
+
   return Object.fromEntries(
     Object.keys(record)
       .sort()
@@ -196,8 +199,9 @@ function recordFingerprint(record: CatalogIntakeRecord): string {
   return JSON.stringify(canonicalValue(record));
 }
 
-function validRecord(record: CatalogIntakeRecord): boolean {
+export function validRecord(record: CatalogIntakeRecord): boolean {
   const validated = validateCatalogItem(record.item);
+
   return (
     record.mode === CATALOG_PIPELINE_MODE &&
     isSupportedSurface(record.surface) &&
@@ -220,37 +224,48 @@ export async function submitEditorCatalogItem(
   if (input.profile === "kids" || input.metadata.compatibility.profiles.includes("kids")) {
     return refuse("KIDS_SURFACE_DENIED");
   }
+
   if (!isSupportedSurface(input.surface)) {
     return refuse("CATALOG_SUBMISSION_SURFACE_UNSUPPORTED");
   }
+
   if (SUPPORTED_PROFILE_BY_SURFACE[input.surface] !== input.profile) {
     return refuse("CATALOG_SUBMISSION_SURFACE_UNSUPPORTED");
   }
 
   const principal = input.access.access.principal;
+
   if (principal === null) return refuse("EDITOR_ENTITLEMENT_ANONYMOUS");
   const identity = input.access.access.identity;
+
   if (!identity.ok) return identity;
+
   if (
     !nonEmpty(principal.user.userId) ||
     identity.value.user.userId !== principal.user.userId
   ) {
     return refuse("CATALOG_SUBMISSION_PRINCIPAL_INVALID");
   }
+
   if (!input.access.decision.granted) return refuse(input.access.decision.reason);
+
   if (input.access.decision.mode !== "entitled") {
     return refuse("CATALOG_SUBMISSION_ENTITLEMENT_REQUIRED");
   }
+
   if (!nonEmpty(input.idempotencyKey)) return refuse("CATALOG_SUBMISSION_REQUEST_INVALID");
+
   if (
     !SHA256_RE.test(input.evidence.documentDigest) ||
     !SHA256_RE.test(input.evidence.artifactDigest)
   ) {
     return refuse("CATALOG_SUBMISSION_DIGEST_INVALID");
   }
+
   if (!input.metadata.compatibility.profiles.includes(input.profile)) {
     return refuse("CATALOG_SUBMISSION_METADATA_INVALID");
   }
+
   if (input.provider.mode !== CATALOG_PIPELINE_MODE) {
     return refuse("CATALOG_PIPELINE_PROVIDER_FAILED");
   }
@@ -270,7 +285,9 @@ export async function submitEditorCatalogItem(
     aiGenerationDisclosure: input.metadata.aiGenerationDisclosure,
     compatibility: input.metadata.compatibility,
   });
+
   const validated = validateCatalogItem(item);
+
   if (!validated.ok) return refuse("CATALOG_SUBMISSION_METADATA_INVALID");
 
   const record: CatalogIntakeRecord = Object.freeze({
@@ -290,7 +307,9 @@ export async function submitEditorCatalogItem(
       }),
       record,
     });
+
     if (!submitted.ok) return submitted;
+
     if (
       !validRecord(submitted.value.record) ||
       submitted.value.record.item.moderation.pipelineState !== "intake" ||
@@ -299,6 +318,7 @@ export async function submitEditorCatalogItem(
     ) {
       return refuse("CATALOG_PIPELINE_PROVIDER_FAILED");
     }
+
     return ok(
       Object.freeze({
         record: submitted.value.record,
@@ -322,25 +342,32 @@ export async function transitionTestCatalogItem(input: {
   if (input.provider.mode !== CATALOG_PIPELINE_MODE) {
     return refuse("CATALOG_PIPELINE_PROVIDER_FAILED");
   }
+
   try {
     const found = await input.provider.read(input.itemId);
+
     if (!found.ok) return found;
+
     if (found.value === null) return refuse("CATALOG_ITEM_NOT_FOUND");
+
     if (!validRecord(found.value)) return refuse("CATALOG_PIPELINE_READ_MODEL_INVALID");
 
     const current = found.value;
+
     const transitioned = transitionCatalogItem(current.item, {
       to: input.to,
       reason: input.reason,
       at: input.at,
       ...(input.humanVerdict === undefined ? {} : { humanVerdict: input.humanVerdict }),
     });
+
     if (!transitioned.ok) {
       return Object.freeze({
         ...refuse("CATALOG_PIPELINE_TRANSITION_INVALID"),
         transitionCode: transitioned.code,
       });
     }
+
     if (transitioned.kind !== "catalog-item") {
       return refuse("CATALOG_PIPELINE_TRANSITION_INVALID");
     }
@@ -349,19 +376,23 @@ export async function transitionTestCatalogItem(input: {
       ...current,
       item: transitioned.item,
     });
+
     const committed = await input.provider.commitTransition({
       itemId: current.item.itemId,
       expectedState: current.item.moderation.pipelineState,
       expectedHistoryLength: current.item.moderation.history.length,
       next,
     });
+
     if (!committed.ok) return committed;
+
     if (
       !validRecord(committed.value) ||
       recordFingerprint(committed.value) !== recordFingerprint(next)
     ) {
       return refuse("CATALOG_PIPELINE_PROVIDER_FAILED");
     }
+
     return committed;
   } catch {
     return refuse("CATALOG_PIPELINE_PROVIDER_FAILED");
@@ -376,13 +407,18 @@ export async function readCatalogPipelineItem(input: {
   if (input.provider.mode !== CATALOG_PIPELINE_MODE) {
     return refuse("CATALOG_PIPELINE_PROVIDER_FAILED");
   }
+
   try {
     const found = await input.provider.read(input.itemId);
+
     if (!found.ok) return found;
+
     if (found.value === null) return refuse("CATALOG_ITEM_NOT_FOUND");
     const record = found.value;
+
     if (!validRecord(record)) return refuse("CATALOG_PIPELINE_READ_MODEL_INVALID");
     const item = record.item;
+
     const listing: CatalogListedProjection | null =
       item.moderation.pipelineState === "listed"
         ? Object.freeze({
@@ -405,6 +441,7 @@ export async function readCatalogPipelineItem(input: {
             }),
           })
         : null;
+
     return ok(
       Object.freeze({
         mode: CATALOG_PIPELINE_MODE,
@@ -425,6 +462,7 @@ export async function readCatalogPipelineItem(input: {
 /** Process-local reference provider used only by tests and the labeled UI demonstration. */
 export function createInMemoryCatalogTestPipelineProvider(): CatalogTestPipelineProvider {
   const records = new Map<string, CatalogIntakeRecord>();
+
   const retries = new Map<
     string,
     { readonly fingerprint: string; readonly receipt: CatalogSubmissionReceipt }
@@ -439,26 +477,32 @@ export function createInMemoryCatalogTestPipelineProvider(): CatalogTestPipeline
       if (!nonEmpty(input.idempotency.key)) {
         return refuse("CATALOG_SUBMISSION_REQUEST_INVALID");
       }
+
       if (
         !nonEmpty(input.idempotency.submittedBy) ||
         input.idempotency.submittedBy !== input.record.submittedBy
       ) {
         return refuse("CATALOG_SUBMISSION_PRINCIPAL_INVALID");
       }
+
       const scope = catalogSubmissionScopeKey(input.idempotency);
       const fingerprint = recordFingerprint(input.record);
       const retry = retries.get(scope);
+
       if (retry !== undefined) {
         return retry.fingerprint === fingerprint
           ? ok(Object.freeze({ ...retry.receipt, replayed: true as const }))
           : refuse("CATALOG_SUBMISSION_RETRY_CONFLICT");
       }
+
       if (records.has(input.record.item.itemId)) {
         return refuse("CATALOG_SUBMISSION_RETRY_CONFLICT");
       }
+
       const receipt = Object.freeze({ record: input.record, replayed: false as const });
       records.set(input.record.item.itemId, input.record);
       retries.set(scope, { fingerprint, receipt });
+
       return ok(receipt);
     },
     async read(itemId: string) {
@@ -466,6 +510,7 @@ export function createInMemoryCatalogTestPipelineProvider(): CatalogTestPipeline
     },
     async commitTransition(input: CatalogPipelineCommitInput) {
       const current = records.get(input.itemId);
+
       if (
         current === undefined ||
         current.item.moderation.pipelineState !== input.expectedState ||
@@ -475,10 +520,13 @@ export function createInMemoryCatalogTestPipelineProvider(): CatalogTestPipeline
       ) {
         return refuse("CATALOG_SUBMISSION_RETRY_CONFLICT");
       }
+
       records.set(input.itemId, input.next);
+
       return ok(input.next);
     },
   };
+
   return Object.freeze(provider);
 }
 
@@ -496,10 +544,13 @@ export async function catalogTestPipelineDemo(
 ): Promise<SiteResult<{ readonly intake: CatalogPipelineReadModel; readonly listed: CatalogPipelineReadModel }>> {
   const profile = SUPPORTED_PROFILE_BY_SURFACE[surface];
   const state = readEditorState({});
+
   if (!state.ok) return state;
   const render = renderEditorState(state.value);
+
   if (!render.ok) return render;
   const provider = createInMemoryCatalogTestPipelineProvider();
+
   const submitted = await submitEditorCatalogItem({
     access: {
       access: {
@@ -577,8 +628,10 @@ export async function catalogTestPipelineDemo(
     idempotencyKey: `${surface}-editor-test-submission`,
     provider,
   });
+
   if (!submitted.ok) return submitted;
   const intake = await readCatalogPipelineItem({ provider, itemId: submitted.value.record.item.itemId });
+
   if (!intake.ok) return intake;
 
   const steps = [
@@ -596,6 +649,7 @@ export async function catalogTestPipelineDemo(
       },
     },
   ];
+
   for (const [index, step] of steps.entries()) {
     const moved = await transitionTestCatalogItem({
       provider,
@@ -605,12 +659,16 @@ export async function catalogTestPipelineDemo(
       at: `2026-08-06T10:0${String(index)}:00.000Z`,
       ...("humanVerdict" in step ? { humanVerdict: step.humanVerdict } : {}),
     });
+
     if (!moved.ok) return moved;
   }
+
   const listed = await readCatalogPipelineItem({
     provider,
     itemId: submitted.value.record.item.itemId,
   });
+
   if (!listed.ok) return listed;
+
   return ok(Object.freeze({ intake: intake.value, listed: listed.value }));
 }

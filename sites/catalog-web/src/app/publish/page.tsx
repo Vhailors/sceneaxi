@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import {
   CREATOR_SHARE_ROUNDING_NOTE,
   CREATOR_SHARE_RULE,
@@ -5,9 +6,15 @@ import {
   createPublishIntent,
   submitPublishIntent,
 } from "@sceneaxi/site-kit";
-import { CATALOG_SITE_BRAND, CATALOG_SITE_SURFACE } from "../../lib/site-config.js";
+import { CATALOG_SITE_BRAND, CATALOG_SITE_SURFACE, catalogCanonical } from "../../lib/site-config.js";
 import { StatePanel } from "../_components/state-panel.js";
 import { TestPipelineProof } from "../_components/test-pipeline-proof.js";
+
+export function generateMetadata(): Metadata {
+  const canonical = catalogCanonical(process.env, "/publish");
+
+  return canonical === null ? {} : { alternates: { canonical } };
+}
 
 /**
  * The creator publish surface.
@@ -27,6 +34,7 @@ export default async function PublishPage() {
     title: "Your asset",
     price: { credits: 100, money: { unitAmount: 1000, currency: "usd" } },
   });
+
   const refusal = example.ok ? submitPublishIntent(example.value) : null;
   const pipeline = await catalogTestPipelineDemo(CATALOG_SITE_SURFACE);
 
@@ -85,7 +93,7 @@ export default async function PublishPage() {
         <p>{refusal?.message ?? "Marketplace publishing is not activated."}</p>
         <p>
           Nothing here accepts an upload or payout detail. The TEST proof above has no
-          persistent storage or production moderation operator; commerce remains inert.
+          persistent storage or production moderation operator; commerce remains inert. The shared durable TEST intake adapter stores submissions in quarantine, never automatically lists them. This deployment has not configured that private registry or authenticated declarations; no submission was saved by viewing this page.
         </p>
       </StatePanel>
     </div>

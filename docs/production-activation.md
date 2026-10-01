@@ -473,3 +473,12 @@ package publication, editor persistence, Linux signing/update, or any macOS/Wind
 publication without its own authorization and real evidence. If an activation proposal
 includes one of those actions, split it into its owning checklist and obtain a separate
 captain decision.
+
+## Integrated forward migration candidate (not execution authority)
+
+`db/migrations/0008_credit_chain_hosted_budget.sql` adds credit-chain preflight and
+account-serialized insert validation, durable hosted holds, a five-new-attempt/300s
+checkout budget and scoped history indexes. Existing corrupt history refuses; no
+repair or expiry/re-execution of uncertain provider calls is authorized. Review
+the checksum and run isolated migration/race/restore acceptance before the
+separately authorized database step. No production migration was performed.

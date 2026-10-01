@@ -69,6 +69,7 @@ export const ACCOUNT_PANEL_REASONS = Object.freeze({
   ledgerMissing: "PANEL_LEDGER_MISSING",
   ledgerOwnerMismatch: "PANEL_LEDGER_OWNER_MISMATCH",
   sessionRevocationFailed: "PANEL_SESSION_REVOCATION_FAILED",
+  busy: "PANEL_BUSY",
 } as const);
 
 export type AccountPanelReason =
@@ -154,6 +155,7 @@ function capabilityViews(
   return Object.freeze(
     PANEL_CAPABILITIES.map((capability) => {
       const rule = entitlementRuleFor(capability);
+
       const decision = evaluateEntitlement({
         capability,
         now,
@@ -165,6 +167,7 @@ function capabilityViews(
           ? { payWith: "credits" as const }
           : {}),
       });
+
       if (!decision.ok) {
         if (
           decision.reason === BILLING_REFUSE_REASONS.creditAmountRequired &&
@@ -177,8 +180,10 @@ function capabilityViews(
             price: rule.price,
           });
         }
+
         return Object.freeze({ capability, refusedReason: decision.reason });
       }
+
       return Object.freeze(
         decision.value.credits === undefined
           ? { capability, outcome: decision.value.outcome }
@@ -196,6 +201,7 @@ export function createAccountPanel(
   options: CreateAccountPanelOptions,
 ): CreateAccountPanelResult {
   const optionRecord = snapshotPlainRecord(options);
+
   if (
     optionRecord === undefined ||
     !PANEL_SURFACES.includes(optionRecord["surface"] as IdentitySurface)
@@ -206,6 +212,7 @@ export function createAccountPanel(
       message: "The account panel needs a known SceneAxi surface.",
     });
   }
+
   // Kids never shares identity with another surface, so the panel refuses to
   // exist there at all — there is no signed-in state for a renderer to reach.
   if (optionRecord["surface"] === "kids") {
@@ -216,6 +223,7 @@ export function createAccountPanel(
         "Kids never shares identity or commerce with another SceneAxi surface; no account panel is offered.",
     });
   }
+
   if (optionRecord["identityPort"] === undefined) {
     return Object.freeze({
       ok: false,
@@ -223,6 +231,7 @@ export function createAccountPanel(
       message: "The account panel requires an identity port.",
     });
   }
+
   if (optionRecord["credits"] === undefined) {
     return Object.freeze({
       ok: false,
@@ -230,6 +239,7 @@ export function createAccountPanel(
       message: "The account panel requires a credits view.",
     });
   }
+
   if (typeof optionRecord["clock"] !== "function") {
     return Object.freeze({
       ok: false,
@@ -243,6 +253,7 @@ export function createAccountPanel(
   const surface = optionRecord["surface"] as IdentitySurface;
   const clock = optionRecord["clock"] as () => number;
   const adminRecord = snapshotPlainRecord(optionRecord["admin"]);
+
   if (
     adminRecord === undefined ||
     typeof adminRecord["email"] !== "string" ||
@@ -254,11 +265,13 @@ export function createAccountPanel(
       message: "The account panel requires the resolved admin identity.",
     });
   }
+
   const admin = optionRecord["admin"] as AdminIdentity;
   let held: AccountPanelSnapshot;
 
   const anonymous = (): AccountPanelSnapshot => {
     const now = readEpochClock(clock);
+
     if (now === undefined) {
       return Object.freeze({
         phase: "refused" as const,
@@ -270,6 +283,7 @@ export function createAccountPanel(
         ),
       });
     }
+
     return Object.freeze({
       phase: "anonymous" as const,
       surface,
@@ -279,6 +293,7 @@ export function createAccountPanel(
 
   const refused = (value: AccountPanelRefusal): AccountPanelSnapshot => {
     const now = readEpochClock(clock);
+
     return Object.freeze({
       phase: "refused" as const,
       surface,
@@ -295,6 +310,7 @@ export function createAccountPanel(
     principal: Principal,
   ): Promise<AccountPanelSnapshot> => {
     const now = readEpochClock(clock);
+
     if (now === undefined) {
       return refused(
         refusal(
@@ -305,15 +321,18 @@ export function createAccountPanel(
     }
 
     const guarded = requireAuthenticated(principal, { now, surface, admin });
+
     if (!guarded.ok) {
       return refused(refusal(guarded.reason, guarded.message));
     }
 
     const read = await readOwnedLedger(credits, principal.user.userId);
+
     if (!read.ok) {
       if (read.failure === "invalid") {
         return refused(refusal(read.reason, read.message));
       }
+
       if (read.failure === "unavailable") {
         return refused(
           refusal(
@@ -322,6 +341,7 @@ export function createAccountPanel(
           ),
         );
       }
+
       if (read.failure === "missing") {
         return refused(
           refusal(
@@ -330,6 +350,7 @@ export function createAccountPanel(
           ),
         );
       }
+
       return refused(
         refusal(
           ACCOUNT_PANEL_REASONS.ledgerOwnerMismatch,
@@ -364,6 +385,11 @@ export function createAccountPanel(
   const unrevokedPrincipals = new Map<Principal, AccountPanelRefusal>();
   const serializeMutation = createOperationQueue();
 
+  const busy = () => refused(refusal(
+    ACCOUNT_PANEL_REASONS.busy,
+    "The account queue is full; no operation was admitted. Retry explicitly later.",
+  ));
+
   held = anonymous();
 
   const recordRevocationFailure = (
@@ -371,6 +397,7 @@ export function createAccountPanel(
     value: AccountPanelRefusal,
   ): AccountPanelRefusal => {
     unrevokedPrincipals.set(principal, value);
+
     return value;
   };
 
@@ -380,13 +407,16 @@ export function createAccountPanel(
 
   const outstandingRevocationFailure = (): AccountPanelRefusal | undefined => {
     for (const value of unrevokedPrincipals.values()) return value;
+
     return undefined;
   };
 
   const settleRevoked = (principal: Principal): undefined => {
     outstandingPrincipals.delete(principal);
     clearRevocationFailure(principal);
+
     if (heldPrincipal === principal) heldPrincipal = undefined;
+
     return undefined;
   };
 
@@ -395,6 +425,7 @@ export function createAccountPanel(
   ): Promise<AccountPanelRefusal | undefined> => {
     if (!outstandingPrincipals.has(principal)) return undefined;
     let result: AuthResult<null>;
+
     try {
       result = await identityPort.signOut({ principal });
     } catch {
@@ -406,6 +437,7 @@ export function createAccountPanel(
         ),
       );
     }
+
     if (!result.ok) {
       // `principalInvalid` is the port saying this principal no longer names a
       // stored session — it was rotated away or already deleted. Nothing is left
@@ -414,11 +446,13 @@ export function createAccountPanel(
       if (result.reason === AUTH_REFUSE_REASONS.principalInvalid) {
         return settleRevoked(principal);
       }
+
       return recordRevocationFailure(
         principal,
         refusal(result.reason, result.message),
       );
     }
+
     return settleRevoked(principal);
   };
 
@@ -426,11 +460,14 @@ export function createAccountPanel(
     retained: Principal | undefined,
   ): Promise<AccountPanelRefusal | undefined> => {
     let failure: AccountPanelRefusal | undefined;
+
     for (const principal of [...outstandingPrincipals]) {
       if (principal === retained) continue;
       const result = await revokePrincipal(principal);
+
       if (result !== undefined) failure = result;
     }
+
     return failure;
   };
 
@@ -442,14 +479,17 @@ export function createAccountPanel(
         // principal that can still be revoked, so an earlier failure against it
         // no longer describes a session the panel has lost hold of.
         clearRevocationFailure(existing);
+
         if (heldPrincipal === existing) heldPrincipal = undefined;
       }
     }
+
     outstandingPrincipals.add(principal);
   };
 
   const submitCredentials = async (request: unknown) => {
     let result: AuthResult<SignInGrant>;
+
     try {
       result = await identityPort.signIn(request);
     } catch {
@@ -459,8 +499,10 @@ export function createAccountPanel(
           "The identity port failed during sign-in; the prior session remains tracked.",
         ),
       );
+
       return held;
     }
+
     if (result.ok) {
       // The grant's raw session token is deliberately dropped: this panel holds
       // the issued principal itself, so it never needs a re-presentable
@@ -474,6 +516,7 @@ export function createAccountPanel(
     } else {
       held = refused(refusal(result.reason, result.message));
     }
+
     return held;
   };
 
@@ -484,11 +527,13 @@ export function createAccountPanel(
 
     async submitCredentials(credentials) {
       const credentialRecord = snapshotPlainRecord(credentials);
+
       const request =
         credentialRecord === undefined
           ? credentials
           : { ...credentialRecord, surface };
-      return serializeMutation(() => submitCredentials(request));
+
+      return serializeMutation(() => submitCredentials(request), busy);
     },
 
     /**
@@ -504,29 +549,37 @@ export function createAccountPanel(
         // reader asked to end may still be live, and re-rendering them as
         // signed-in would substitute a default for that failure.
         const revocationFailure = outstandingRevocationFailure();
+
         if (revocationFailure !== undefined) {
           held = refused(revocationFailure);
+
           return held;
         }
+
         const principal = heldPrincipal;
         held =
           principal === undefined
             ? anonymous()
             : await authenticated(principal);
+
         return held;
-      });
+      }, busy);
     },
 
     async signOut() {
       return serializeMutation(async () => {
         const failure = await revokeAllExcept(undefined);
+
         if (failure !== undefined) {
           held = refused(failure);
+
           return held;
         }
+
         held = anonymous();
+
         return held;
-      });
+      }, busy);
     },
   });
 

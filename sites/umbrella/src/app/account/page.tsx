@@ -32,6 +32,10 @@ export const metadata: Metadata = {
  * ledger is the only source of truth, so this page reads a balance and never offers to
  * change one.
  */
+type Mutable<Type> = { -readonly [Key in keyof Type]: Type[Key] };
+
+function isSearchString<Value>(value: Value): value is Value & string { return typeof value === "string"; }
+
 export default async function AccountPage({
   searchParams,
 }: {
@@ -57,13 +61,25 @@ export default async function AccountPage({
   const outcome =
     identityRefusal === null ? null : describeSiteAccessState(identityRefusal.reason);
 
+  const cursorRequested = params.beforeAt !== undefined || params.beforeId !== undefined;
+
+  const before = cursorRequested ? {
+    createdAt: isSearchString(params.beforeAt) ? params.beforeAt : "",
+    intentId: isSearchString(params.beforeId) ? params.beforeId : "",
+  } : undefined;
+
+  const historyRequest: Mutable<Parameters<typeof plane.purchaseHistory.read>[0]> = { surface: "site", limit: 50 };
+
+    if (before !== undefined) historyRequest.before = before;
+    const history = resolved.principal === null ? null : await plane.purchaseHistory.read(historyRequest);
+
   return (
     <div className="page">
       <div className="page-head">
         <p className="eyebrow">Account</p>
         <h1>Your SceneAxi account</h1>
         <p className="lede">
-          Signing in unlocks the Minimum E2 web editor and hosted AI. New accounts
+          Signing in can unlock the Minimum E2 web editor. Hosted AI remains disabled. New accounts
           receive {SITE_STARTER_CREDIT_ALLOTMENT} credits once; the sole administrator is
           bootstrapped from a server environment secret and can never be claimed by a
           client.
@@ -134,6 +150,16 @@ export default async function AccountPage({
             </StatePanel>
           )}
 
+          <h2>Purchase and intent history</h2>
+          {history !== null && (history.ok ? <section aria-label="Purchase history">
+            {history.value.purchases.length === 0 ? <p role="status">No purchase intents on this page.</p> : <ul>{history.value.purchases.map(item => <li key={item.intentId}>
+              <code>{item.intentId}</code> — {item.itemId} — <time dateTime={item.createdAt}>{item.createdAt}</time> — {item.mode} — {item.status} — {item.credits} credits
+            </li>)}</ul>}
+            {history.value.reconciliationTruncated && <p role="status">Reconciliation evidence reached its bound; pending is not proof of payment.</p>}
+            {history.value.next !== undefined && <a href={`/account?beforeAt=${encodeURIComponent(history.value.next.createdAt)}&beforeId=${encodeURIComponent(history.value.next.intentId)}`}>Older purchase intents</a>}
+            {cursorRequested && <p><a href="/account">Newest purchase intents</a></p>}
+          </section> : <StatePanel tone="deny" title="Purchase history unavailable" reason={history.reason}><p>{history.message}</p></StatePanel>)}
+
           <h2>Editor access</h2>
           {resolved.entitlement.entitled ? (
             <StatePanel
@@ -188,8 +214,8 @@ export default async function AccountPage({
       )}
 
       {params.checkout === "success" && (
-        <StatePanel tone="warn" title="Payment received, awaiting confirmation">
-          <p>Payment received. Credits appear once confirmed in your ledger.</p>
+        <StatePanel tone="warn" title="Returned from checkout — confirmation pending">
+          <p>This return link is not proof of payment. Credits appear only after a verified payment is persisted in your ledger.</p>
         </StatePanel>
       )}
 

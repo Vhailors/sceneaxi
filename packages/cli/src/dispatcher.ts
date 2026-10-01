@@ -65,21 +65,26 @@ export function parseArgv(argv: readonly string[]): ParsedArgv {
   for (const token of argv) {
     if (token.startsWith("-")) {
       const flag = token.includes("=") ? token.slice(0, token.indexOf("=")) : token;
+
       if (GLOBAL_FLAGS.has(flag)) {
         if (token.includes("=")) {
           valuedGlobalSwitch ??= flag;
           continue;
         }
+
         flags.add(flag);
         continue;
       }
     }
+
     tokens.push(token);
   }
 
   const wantsHelp = flags.has("--help") || flags.has("-h");
+
   const wantsVersion =
     flags.has("--version") || flags.has("-v") || flags.has("-V");
+
   const format: OutputFormat = flags.has("--json") ? "json" : "text";
 
   return {
@@ -136,7 +141,7 @@ export function dispatch(
   }
 
   // Bare version flags (with or without --json).
-  if (wantsVersion && commandPathLength(tokens) === 0) {
+  if (wantsVersion && tokens.length === 0) {
     return {
       outcome: success(
         {
@@ -154,6 +159,7 @@ export function dispatch(
   // Version flag combined with a path is ambiguous / invalid.
   if (wantsVersion && commandPathLength(tokens) > 0) {
     const pathOnly = leadingPath(tokens);
+
     return {
       outcome: failure(
         "AMBIGUOUS_INPUT",
@@ -176,8 +182,10 @@ export function dispatch(
   // Unknown non-global flags with no path refuse (fail-closed).
   if (commandPathLength(tokens) === 0) {
     const stray = tokens.find((t) => t.startsWith("-"));
+
     if (stray !== undefined) {
       const flag = stray.includes("=") ? stray.slice(0, stray.indexOf("=")) : stray;
+
       return {
         outcome: failure("UNKNOWN_FLAG", `Unknown flag: ${flag}`, {
           path: [],
@@ -190,6 +198,7 @@ export function dispatch(
         format,
       };
     }
+
     return {
       outcome: success(topLevelHelpPayload(), [
         "Run `sceneaxi <group> --help` for group verbs",
@@ -209,19 +218,23 @@ export function dispatch(
 /** Count leading non-flag tokens (the command path prefix). */
 function commandPathLength(tokens: readonly string[]): number {
   let n = 0;
+
   for (const t of tokens) {
     if (t.startsWith("-")) break;
     n += 1;
   }
+
   return n;
 }
 
 function leadingPath(tokens: readonly string[]): string[] {
   const path: string[] = [];
+
   for (const t of tokens) {
     if (t.startsWith("-")) break;
     path.push(t);
   }
+
   return path;
 }
 
@@ -238,6 +251,7 @@ function walk(
 
   while (i < tokens.length) {
     const segment = tokens[i];
+
     if (segment === undefined) {
       return failure("INTERNAL", "Empty token segment", { path: walked });
     }
@@ -255,6 +269,7 @@ function walk(
           ],
         });
       }
+
       // Incomplete group path followed by flags.
       return failure(
         "AMBIGUOUS_INPUT",
@@ -270,9 +285,13 @@ function walk(
       );
     }
 
-    const next: CommandNode | undefined = children[segment];
+    const next: CommandNode | undefined = Object.hasOwn(children, segment)
+      ? children[segment]
+      : undefined;
+
     if (next === undefined) {
       const atRoot = walked.length === 0;
+
       return failure(
         "UNKNOWN_COMMAND",
         atRoot
@@ -291,6 +310,7 @@ function walk(
 
     if (next.kind === "verb") {
       const rest = tokens.slice(i);
+
       // Extra non-flag path segments under a leaf without allowing subcommands.
       // Flags are OK and go to the verb; bare positionals that look like
       // subcommands are still refused by the verb (or as unknown path if no flags).
@@ -303,6 +323,7 @@ function walk(
           "Run `sceneaxi protocol inspect` for protocol details",
         ]);
       }
+
       return invokeVerb(walked, next, rest, heldKeys, desktopBridge);
     }
 
@@ -319,6 +340,7 @@ function walk(
     if (wantsHelp) {
       return success(groupHelpPayload(node), groupHelpLines(node, walked));
     }
+
     // Incomplete path: group without verb → USAGE (fail-closed, not exit 0).
     return failure(
       "AMBIGUOUS_INPUT",
@@ -347,9 +369,11 @@ function invokeVerb(
   desktopBridge?: DesktopLocalBridgeClient,
 ): CliOutcome {
   const decision = evaluateHeldKeyGate(path.join(" "), heldKeys);
+
   if (!decision.allow) {
     return heldKeyRefusal(path, decision);
   }
+
   return runVerb(path, node, tokens, desktopBridge);
 }
 
@@ -379,6 +403,7 @@ function runVerb(
     // verbs that parse their own flags refuse unknown ones themselves.
     if (node.takesArgs !== true && tokens.length > 0) {
       const first = tokens[0];
+
       if (first !== undefined && first.startsWith("-")) {
         return failure("UNKNOWN_FLAG", `Unknown flag: ${first}`, {
           path,
@@ -389,6 +414,7 @@ function runVerb(
           ],
         });
       }
+
       return failure(
         "UNKNOWN_COMMAND",
         `Unknown command path: ${[...path, ...tokens.filter((t) => !t.startsWith("-"))].join(" ")}`,
@@ -407,15 +433,18 @@ function runVerb(
       tokens,
       ...(desktopBridge === undefined ? {} : { desktopBridge }),
     });
+
     if (isOutcome(result)) {
       return result;
     }
+
     return success(result, [
       `Run \`sceneaxi ${path.join(" ")} --help\` for this verb`,
       "Run `sceneaxi protocol inspect` for the exit-code map",
     ]);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+
     return failure("INTERNAL", message, { path });
   }
 }
@@ -434,6 +463,7 @@ function unknownCommandHelp(
   children: Readonly<Record<string, CommandNode>>,
 ): string[] {
   const known = Object.keys(children);
+
   if (walked.length === 0) {
     return [
       `Known groups: ${known.join(", ")}`,
@@ -441,6 +471,7 @@ function unknownCommandHelp(
       "Run `sceneaxi protocol inspect` for the exit-code map",
     ];
   }
+
   return [
     `Known under '${walked.join(" ")}': ${known.join(", ") || "(none)"}`,
     `Run \`sceneaxi ${walked.join(" ")} --help\` for usage`,
@@ -449,6 +480,7 @@ function unknownCommandHelp(
 
 function groupHelpLines(node: GroupNode, walked: readonly string[]): string[] {
   const names = childNames(node);
+
   return [
     `Verbs: ${names.join(", ")}`,
     `Run \`sceneaxi ${walked.join(" ")} <verb>\` to invoke a verb`,

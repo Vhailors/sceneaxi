@@ -26,6 +26,7 @@ export function runCli(
   options: DispatchOptions = {},
 ): RunCliResult {
   const { outcome, format } = dispatch(argv, options);
+
   return {
     exitCode: outcome.exitCode,
     envelope: outcome.envelope,
@@ -38,9 +39,14 @@ function watchArguments(argv: readonly string[]):
   | Readonly<{ args: readonly string[]; format: OutputFormat }>
   | null {
   const parsed = parseArgv(argv);
+
+  if (parsed.wantsHelp || parsed.wantsVersion || parsed.valuedGlobalSwitch !== null) return null;
+
   if (parsed.tokens[0] !== "project" || parsed.tokens[1] !== "dev") return null;
   const verbArgs = parseVerbArgs(parsed.tokens.slice(2));
+
   if (!verbArgs.switches.has("--watch")) return null;
+
   return {
     args: Object.freeze(argv.filter((token) => token !== "--watch")),
     format: parsed.format,
@@ -50,16 +56,20 @@ function watchArguments(argv: readonly string[]):
 function watchedFiles(documentPath: string, cwd: string): readonly string[] {
   const absoluteDocument = resolve(cwd, documentPath);
   let assetPaths: readonly string[] = [];
+
   try {
     const parsed = parseDocumentText(
       readFileSync(absoluteDocument, "utf8"),
     );
+
     if (parsed.ok) {
       const assets = projectAssetManifestFromDocumentData(parsed.document.data);
+
       if (assets.ok) {
         assetPaths = assets.value.assets.map((asset) => {
           const path = resolve(cwd, ...asset.relativePath.split("/"));
           const relativePath = relative(resolve(cwd), path);
+
           if (
             relativePath === ".." ||
             relativePath.startsWith(`..${sep}`) ||
@@ -67,6 +77,7 @@ function watchedFiles(documentPath: string, cwd: string): readonly string[] {
           ) {
             throw new Error("PROJECT_ASSET_PATH_OUTSIDE_CWD");
           }
+
           return path;
         });
       }
@@ -74,6 +85,7 @@ function watchedFiles(documentPath: string, cwd: string): readonly string[] {
   } catch {
     assetPaths = [];
   }
+
   return Object.freeze([absoluteDocument, ...assetPaths]);
 }
 
@@ -84,13 +96,17 @@ function watchedFiles(documentPath: string, cwd: string): readonly string[] {
  */
 export function main(argv: readonly string[] = process.argv.slice(2)): number {
   const watchRequest = watchArguments(argv);
+
   if (watchRequest !== null) {
     runWatch(watchRequest.args, watchRequest.format);
+
     return 0;
   }
+
   const result = runCli(argv);
   process.stdout.write(result.stdout);
   process.exitCode = result.exitCode;
+
   return result.exitCode;
 }
 
@@ -98,10 +114,12 @@ function runWatch(argv: readonly string[], format: OutputFormat): void {
   const parsed = parseArgv(argv);
   const args = parseVerbArgs(parsed.tokens.slice(2));
   const document = args.flags.get("--document");
+
   if (document === undefined || document.length === 0) {
     const result = runCli(argv);
     process.stdout.write(format === "json" ? `${JSON.stringify(result.envelope)}\n` : result.stdout);
     process.exitCode = result.exitCode;
+
     return;
   }
 
@@ -119,6 +137,7 @@ function runWatch(argv: readonly string[], format: OutputFormat): void {
     const text = format === "json"
       ? `${JSON.stringify(outcome.envelope)}\n`
       : formatOutcome(outcome, format);
+
     process.stdout.write(text);
   };
 
@@ -126,7 +145,9 @@ function runWatch(argv: readonly string[], format: OutputFormat): void {
     const result = runCli(argv);
     cycle += 1;
     lastExitCode = result.exitCode;
+
     if (!result.envelope.ok) return result;
+
     return success(
       Object.freeze({ ...result.envelope.result, mode: "watch", cycle }),
       result.envelope.help,
@@ -136,29 +157,38 @@ function runWatch(argv: readonly string[], format: OutputFormat): void {
   const syncWatchers = (): void => {
     const paths = watchedFiles(document, cwd);
     const directories = new Map<string, Set<string>>();
+
     for (const path of paths) {
       const directory = dirname(path);
       const names = directories.get(directory) ?? new Set<string>();
       names.add(basename(path));
       directories.set(directory, names);
     }
+
     watchedNames.clear();
+
     for (const [directory, names] of directories) watchedNames.set(directory, names);
+
     for (const [directory, watcher] of watchers) {
       if (!directories.has(directory)) {
         watcher.close();
         watchers.delete(directory);
       }
     }
+
     for (const directory of directories.keys()) {
       if (watchers.has(directory)) continue;
+
       try {
         watchers.set(directory, watch(directory, (_event, filename) => {
           const currentNames = watchedNames.get(directory);
+
           if (filename !== null && !currentNames?.has(filename.toString())) return;
+
           if (debounce !== undefined) clearTimeout(debounce);
           debounce = setTimeout(() => {
             if (closed) return;
+
             try {
               emit(runCycle());
               syncWatchers();
@@ -177,8 +207,10 @@ function runWatch(argv: readonly string[], format: OutputFormat): void {
     if (finalizing) return;
     finalizing = true;
     closed = true;
+
     if (debounce !== undefined) clearTimeout(debounce);
     process.removeListener("SIGINT", stop);
+
     for (const watcher of watchers.values()) watcher.close();
     watchers.clear();
     const reason = error instanceof Error ? error.message : String(error);
@@ -193,7 +225,9 @@ function runWatch(argv: readonly string[], format: OutputFormat): void {
     if (finalizing) return;
     finalizing = true;
     closed = true;
+
     if (debounce !== undefined) clearTimeout(debounce);
+
     for (const watcher of watchers.values()) watcher.close();
     watchers.clear();
     process.removeListener("SIGINT", stop);
@@ -205,8 +239,10 @@ function runWatch(argv: readonly string[], format: OutputFormat): void {
   };
 
   process.once("SIGINT", stop);
+
   try {
     const initial = runCycle();
+
     if (
       !initial.envelope.ok &&
       (initial.envelope.error.code === "UNKNOWN_FLAG" ||
@@ -215,8 +251,10 @@ function runWatch(argv: readonly string[], format: OutputFormat): void {
       emit(initial);
       process.removeListener("SIGINT", stop);
       process.exitCode = initial.exitCode;
+
       return;
     }
+
     // Watchers attach before the first envelope, so a client that sees cycle 1 never loses an edit.
     syncWatchers();
     emit(initial);

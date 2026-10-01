@@ -112,7 +112,7 @@
 
 @media (min-width: 60rem) {
   :root {
-    --gutter: 1.875rem;
+    --gutter: 2rem;
   }
 }
 
@@ -186,7 +186,7 @@ a:hover {
 
 :focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline-offset: 4px;
   border-radius: var(--radius-xs);
 }
 
@@ -201,15 +201,6 @@ pre {
   font-family: var(--store-mono);
 }
 
-@keyframes sa-dot {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.2;
-  }
-}
 
 @keyframes sa-rise {
   from {
@@ -551,7 +542,7 @@ p {
 .hero-copy {
   display: flex;
   flex-direction: column;
-  gap: 1.1rem;
+  gap: 1.25rem;
 }
 
 .kicker {
@@ -574,7 +565,8 @@ p {
   height: 5px;
   border-radius: var(--radius-full);
   background: var(--accent);
-  animation: sa-dot 2s infinite;
+  /* A fixture marker is not live activity: hold it still. */
+    animation: none;
   flex: none;
 }
 
@@ -695,6 +687,107 @@ p {
   font-weight: 600;
 }
 
+/* The GET controls keep their contracts; layout groups labels above their fields.
+ * SAFETY: only presentation changes; no controls are hidden or visually reordered
+ * across tasks. The two price/sort fields regroup on mobile rather than shrink. */
+.results form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas:
+    "search-label search-label"
+    "search search"
+    "price-label sort-label"
+    "price sort"
+    "apply clear";
+  gap: 0.75rem 1rem;
+  padding: 1.25rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  background: var(--bg-panel);
+  align-items: center;
+}
+
+.results form label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--fg-2);
+}
+
+.results label[for="catalog-search"] { grid-area: search-label; }
+.results label[for="catalog-price"] { grid-area: price-label; }
+.results label[for="catalog-sort"] { grid-area: sort-label; }
+#catalog-search { grid-area: search; }
+#catalog-price { grid-area: price; }
+#catalog-sort { grid-area: sort; }
+
+.results form input,
+.results form select {
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.75rem;
+  border: 1px solid var(--fg-2);
+  border-radius: var(--radius-md);
+  background: var(--bg-field);
+  color: var(--fg);
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.results form button {
+  grid-area: apply;
+  min-height: 3rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-md);
+  background: var(--accent);
+  color: var(--bg-base);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.results form > a {
+  grid-area: clear;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3rem;
+  font-size: 0.875rem;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.results > [role="status"] {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 2rem;
+  border: 1px dashed var(--fg-2);
+  border-radius: var(--radius-lg);
+  background: var(--bg-panel);
+}
+
+.results > [role="status"] p { color: var(--fg-2); }
+
+/* A refused query has no shell wrapper in its existing render contract. */
+main > .state {
+  width: min(var(--shell), calc(100% - 2 * var(--gutter)));
+  margin: 2rem auto 4rem;
+  padding: 1.5rem;
+}
+
+.page > h1 { max-width: 22ch; }
+
+.page > .section {
+  padding: 1.5rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  background: var(--bg-panel);
+  gap: 1rem;
+}
+
 /* --- cards --- */
 
 .cards {
@@ -709,8 +802,12 @@ p {
 .card {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.75rem;
   animation: sa-rise 0.2s ease-out;
+  padding: 1rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
 }
 
 .card-link {
@@ -737,7 +834,7 @@ p {
 }
 
 .card-name {
-  font-size: 0.875rem;
+  font-size: 1rem;
   font-weight: 600;
   letter-spacing: -0.01em;
   overflow-wrap: anywhere;
@@ -888,8 +985,8 @@ p {
 .detail {
   display: flex;
   flex-direction: column;
-  gap: 1.6rem;
-  padding-top: 1.6rem;
+  gap: 1.5rem;
+  padding-top: 1.5rem;
   padding-bottom: 4.5rem;
 }
 
@@ -961,10 +1058,11 @@ p {
   gap: 1rem;
 }
 
-/* The design sets the detail title at 24px, below the page-level display size. */
+/* The item title leads its purchase summary; it remains below the hero display. */
 .buy h1 {
-  font-size: clamp(1.25rem, 1.05rem + 0.7vw, 1.5rem);
+  font-size: clamp(1.5rem, 1.25rem + 0.8vw, 2rem);
   line-height: 1.15;
+  text-wrap: balance;
 }
 
 .buy-by {
@@ -1335,6 +1433,31 @@ p {
 
 .bullets li {
   margin-bottom: 0.35rem;
+}
+
+/* Feedback is interaction-driven, never an ambient pulse. */
+@media (prefers-reduced-motion: no-preference) {
+  .button,
+  .results form button,
+  .card-link .sigil {
+    transition: border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+  }
+
+  .button:active:not([aria-disabled="true"]),
+  .results form button:active { transform: translateY(1px); }
+}
+
+@media (min-width: 48rem) {
+  .results form {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "search-label price-label sort-label"
+      "search price sort"
+      "apply clear .";
+  }
+
+  .results form button,
+  .results form > a { justify-self: start; }
 }
 
 /* --- footer --- */

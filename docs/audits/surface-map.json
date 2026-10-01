@@ -6,13 +6,13 @@
     "configuration": "no provider environment (every provider-backed plane is expected to report unconfigured)"
   },
   "totals": {
-    "working": 372,
+    "working": 318,
     "partial": 31,
     "unconfigured": 10,
     "refused": 15,
-    "gap": 3,
+    "gap": 17,
     "parked": 49,
-    "unknown": 4
+    "unknown": 2
   },
   "areas": [
     {
@@ -387,337 +387,351 @@
         {
           "id": "animation-apply",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "animation-evaluate",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "animation-inspect",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "animation-scrub",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "assistant-apply-build",
-          "state": "unknown",
-          "note": "desktop-control accepted; no matching GUI registry-validation golden"
+          "state": "working",
+          "note": "GUI-dispatched"
         },
         {
           "id": "assistant-ask",
-          "state": "unknown",
-          "note": "desktop-control accepted; no matching GUI registry-validation golden"
+          "state": "working",
+          "note": "GUI-dispatched"
         },
         {
           "id": "assistant-byo-build",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "assistant-cancel",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "assistant-local-agent",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "assistant-local-build",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "assistant-status",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "change-review-accept",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "change-review-reject",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "edit-redo",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "edit-undo",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "effect-apply",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "effect-inspect",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "environment-apply",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "environment-inspect",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "extension-inspect",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "extension-start",
-          "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
         },
         {
           "id": "input-action-rebind",
-          "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
         },
         {
           "id": "input-actions-inspect",
-          "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
         },
         {
           "id": "input-actions-reset",
-          "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
         },
         {
           "id": "material-apply",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "material-inspect",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "package-inspect",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "package-install",
-          "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
         },
         {
           "id": "package-remove",
-          "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
         },
         {
           "id": "physics-apply",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "physics-evaluate",
-          "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
         },
         {
           "id": "physics-inspect",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "play-inspect",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "profile-inspect",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "project-build",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "project-git-commit-prepare",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "project-git-diff",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "project-git-stage",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "project-git-status",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "project-inspect",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "project-migration-commit",
-          "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
         },
         {
           "id": "project-migration-propose",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "project-migration-recover",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "project-new",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "project-open",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "project-save",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "run-play",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "run-reset",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "run-stop",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "scene-hierarchy-inspect",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "scene-object-create",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "scene-object-remove",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "scene-object-reparent",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "scene-prefab-define",
-          "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
         },
         {
           "id": "scene-prefab-inspect",
-          "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
         },
         {
           "id": "scene-prefab-instance",
-          "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
         },
         {
           "id": "scene-prefab-override",
-          "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
         },
         {
           "id": "scene-prefab-refresh",
-          "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
         },
         {
           "id": "scene-property-set",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "scene-selection-set",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "scene-transform-apply",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "ship-export-web",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "viewport-source-set",
-          "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "state": "gap",
+          "item": 53,
+          "note": "Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path"
         },
         {
           "id": "workspace-layout-apply",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "workspace-layout-inspect",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         },
         {
           "id": "workspace-layout-reset",
           "state": "working",
-          "note": "GUI dispatch validated by mounted-chrome golden"
+          "note": "GUI-dispatched"
         }
       ],
       "totals": {
-        "working": 64,
-        "unknown": 2
+        "working": 52,
+        "gap": 14
       }
     },
     {
@@ -794,86 +808,6 @@
           "state": "working"
         },
         {
-          "id": "command-field-extension-start-seamId",
-          "state": "working"
-        },
-        {
-          "id": "command-field-input-action-rebind-actionId",
-          "state": "working"
-        },
-        {
-          "id": "command-field-input-action-rebind-binding",
-          "state": "working"
-        },
-        {
-          "id": "command-field-input-action-rebind-scope",
-          "state": "working"
-        },
-        {
-          "id": "command-field-input-actions-reset-scope",
-          "state": "working"
-        },
-        {
-          "id": "command-field-package-install-digest",
-          "state": "working"
-        },
-        {
-          "id": "command-field-package-install-locator",
-          "state": "working"
-        },
-        {
-          "id": "command-field-package-install-manifest",
-          "state": "working"
-        },
-        {
-          "id": "command-field-package-remove-packageId",
-          "state": "working"
-        },
-        {
-          "id": "command-field-physics-evaluate-steps",
-          "state": "working"
-        },
-        {
-          "id": "command-field-scene-prefab-define-definitionId",
-          "state": "working"
-        },
-        {
-          "id": "command-field-scene-prefab-instance-definitionId",
-          "state": "working"
-        },
-        {
-          "id": "command-field-scene-prefab-instance-instanceKey",
-          "state": "working"
-        },
-        {
-          "id": "command-field-scene-prefab-instance-parentInstanceId",
-          "state": "working"
-        },
-        {
-          "id": "command-field-scene-prefab-override-instanceId",
-          "state": "working"
-        },
-        {
-          "id": "command-field-scene-prefab-override-newValue",
-          "state": "working"
-        },
-        {
-          "id": "command-field-scene-prefab-override-propertyId",
-          "state": "working"
-        },
-        {
-          "id": "command-field-scene-prefab-override-sourceInstanceId",
-          "state": "working"
-        },
-        {
-          "id": "command-field-scene-prefab-refresh-definitionId",
-          "state": "working"
-        },
-        {
-          "id": "command-field-viewport-source-set-source",
-          "state": "working"
-        },
-        {
           "id": "dock-assets",
           "state": "working"
         },
@@ -899,70 +833,6 @@
         },
         {
           "id": "drawer-left",
-          "state": "working"
-        },
-        {
-          "id": "editor-command-review-input-action-rebind",
-          "state": "working"
-        },
-        {
-          "id": "editor-command-review-input-actions-reset",
-          "state": "working"
-        },
-        {
-          "id": "editor-command-submit-extension-start",
-          "state": "working"
-        },
-        {
-          "id": "editor-command-submit-input-action-rebind",
-          "state": "working"
-        },
-        {
-          "id": "editor-command-submit-input-actions-inspect",
-          "state": "working"
-        },
-        {
-          "id": "editor-command-submit-input-actions-reset",
-          "state": "working"
-        },
-        {
-          "id": "editor-command-submit-package-install",
-          "state": "working"
-        },
-        {
-          "id": "editor-command-submit-package-remove",
-          "state": "working"
-        },
-        {
-          "id": "editor-command-submit-physics-evaluate",
-          "state": "working"
-        },
-        {
-          "id": "editor-command-submit-project-migration-commit",
-          "state": "working"
-        },
-        {
-          "id": "editor-command-submit-scene-prefab-define",
-          "state": "working"
-        },
-        {
-          "id": "editor-command-submit-scene-prefab-inspect",
-          "state": "working"
-        },
-        {
-          "id": "editor-command-submit-scene-prefab-instance",
-          "state": "working"
-        },
-        {
-          "id": "editor-command-submit-scene-prefab-override",
-          "state": "working"
-        },
-        {
-          "id": "editor-command-submit-scene-prefab-refresh",
-          "state": "working"
-        },
-        {
-          "id": "editor-command-submit-viewport-source-set",
           "state": "working"
         },
         {
@@ -1527,7 +1397,7 @@
         }
       ],
       "totals": {
-        "working": 163,
+        "working": 127,
         "partial": 31,
         "refused": 5
       }
@@ -2142,7 +2012,7 @@
         },
         {
           "id": "#53 Registered editor commands that declare the `desktop-control` client have no desktop GUI dispatch path",
-          "state": "working",
+          "state": "gap",
           "note": "blocker · wave 3"
         },
         {
@@ -2182,7 +2052,7 @@
         },
         {
           "id": "#61 The packaged smoke does not exercise the #254–#270 features.",
-          "state": "working",
+          "state": "gap",
           "note": "medium · wave 3"
         },
         {
@@ -2197,7 +2067,7 @@
         },
         {
           "id": "#64 No audio playback; audio is metadata-only",
-          "state": "working",
+          "state": "gap",
           "note": "high · wave 4"
         },
         {
@@ -2329,40 +2199,10 @@
           "id": "#90 Product viewports do not forward authored environment/material/effect catalogs (effects payload lacks its seed; texture slots need an asset-to-texture binding contract)",
           "state": "working",
           "note": "medium · wave 4"
-        },
-        {
-          "id": "#91 Vitest suites leak mkdtemp fixtures (whole-tree copies, scratch projects) into the shared TMPDIR; repeated gate runs exhausted the host /tmp inodes and failed unrelated work with ENOSPC",
-          "state": "working",
-          "note": "high · wave 5"
-        },
-        {
-          "id": "#92 Importing a model whose instance id sorts before an existing sibling made the project unplayable (Play refused DESKTOP_SCENE_NOT_COMPOSABLE for the rest of the session)",
-          "state": "working",
-          "note": "high · wave 5"
-        },
-        {
-          "id": "#93 After a project switch, profiling reported frame timing and draw calls as PROFILE_FRAME_ABSENT for the rest of the session",
-          "state": "working",
-          "note": "medium · wave 5"
-        },
-        {
-          "id": "#94 After the smoke's full feature flow the chrome refuses a profile switch with DESKTOP_PROFILE_SWITCH_DIRTY while the Changes badge shows no active review",
-          "state": "gap",
-          "note": "low · wave 5"
-        },
-        {
-          "id": "#95 assistant-ask and assistant-apply-build GUI dispatch is not yet proven by a mounted-chrome golden (graphmap: unknown)",
-          "state": "gap",
-          "note": "low · wave 5"
-        },
-        {
-          "id": "#96 Desktop command forms: no test drives the per-project state reset through a real root change, and an inspect answered after a project switch can repopulate the previous project's choices (the host still refuses those ids)",
-          "state": "gap",
-          "note": "low · wave 5"
         }
       ],
       "totals": {
-        "working": 44,
+        "working": 38,
         "gap": 3,
         "parked": 49
       }

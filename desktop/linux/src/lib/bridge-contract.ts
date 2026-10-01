@@ -56,7 +56,6 @@ export const DESKTOP_BRIDGE_ACTIONS = Object.freeze([
   "scene",
   "project-browser-open",
   "open-path",
-  "audio-asset",
   "asset-import",
   "ship",
   "assistant",

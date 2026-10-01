@@ -82,3 +82,50 @@ mounts, and use after dispose.
 Three as the product core is a captain product decision, not a Stage 1 result.
 Stage 1 run authorization and adjudication stay held elsewhere, and the seam
 stays deep so a later renderer change remains behind it.
+
+## Contained texture, animation and solver controls
+
+The numeric `ThreeTriangleAnimationClip` extends the existing STEP/LINEAR
+projection with glTF CUBICSPLINE: each key is [in tangent, value, out tangent],
+Hermite tangents are scaled by segment duration, and quaternion samples/results
+are normalized (derivative tangents need not be unit length). Validation and
+sampling finish before any visible pose changes. `resetTriangleAnimation()`
+restores admitted node defaults. Triangle `skin` carries bounded node joint ids,
+16-value inverse-bind matrices and four joint-index/weight components per vertex;
+weights must sum to one. There is no Three Skeleton/Bone in the public contract.
+Graphs are bounded to 4096 nodes/256 depth, skins to 256 joints and aggregate
+triangle data to 8000000 values. The engine accepts numeric projections only;
+these capabilities do not silently widen the separately owned glTF importer.
+
+`decodeContainedImage({ assetId, bytes })` supports PNG, JPEG and WebP through
+the local browser decoder. It checks contained magic/header dimensions before
+allocation (encoded 8MiB, decoded RGBA 4MiB, dimension 4096), snapshots input
+across awaits and always closes its bitmap. It accepts no URL or host image.
+An absent browser decoder refuses rather than pretending headless pixels.
+`setMaterialOverrides(overrides, textures)` resolves non-null catalog color,
+normal and roughness asset ids against a bounded contained RGBA lookup. Missing
+UVs/ids, duplicate ids and mixed color/data roles refuse before replacing the
+last catalog. Removing overrides restores original maps; the backend owns
+catalog textures and disposes them once at replacement/final teardown.
+
+`setInstancePoses()` forwards validated full quaternion solver poses to mounted
+instances without modifying a kernel or authoring document. Entire batches are
+prevalidated; unknown targets or invalid poses preserve every previous root.
+
+## Canvas lifecycle and local evidence
+
+A surface lease's `dispose()` is remount-safe and retains the one cached renderer
+for its canvas; `releaseThreeCanvas(canvas)` is terminal and only legal after all
+leases have ended. Final canvas owners must call it. Context loss suppresses
+pixel/capture claims; remount during loss does not pretend to draw, and restored
+contexts redraw admitted content. Never patch vendor renderer defaults.
+
+After `pnpm -s build`, owning `test/` suites and the emitted-declaration consumer
+prove numeric/opaque facade boundaries. Explicit `node test/browser-production-proof.mjs`
+and `node test/browser-engine-frontdoors.mjs` from this package prove actual
+Chromium/SwiftShader pixels for PNG/JPEG/WebP, TRS/skin/cubic, catalog bindings,
+material/bloom/vignette/particles, 100 renderer cycles, context restoration and
+terminal release, trusted WebAudio gesture/play/stop/close, and real Rapier WASM
+pose/JSON resume/future pixels. Gamepad samples in this evidence are injected;
+physical GPU, connected controller and audible output remain hardware proofs.
+These library fixtures do not attest every authored site or packaged route.

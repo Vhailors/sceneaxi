@@ -193,6 +193,7 @@ export type CreateInspectorAppOptions = {
 };
 
 const JSON_TYPE = "application/json; charset=utf-8";
+
 const HTML_TYPE = "text/html; charset=utf-8";
 
 function jsonBody(payload: Readonly<Record<string, unknown>>): string {
@@ -291,6 +292,7 @@ export function resolveInsideProjectRoot(
       message: "documentPath must be a non-empty string.",
     };
   }
+
   if (isAbsolute(documentPath)) {
     return {
       ok: false,
@@ -298,8 +300,10 @@ export function resolveInsideProjectRoot(
       message: `documentPath must be relative to the served project root: ${documentPath}`,
     };
   }
+
   const absolute = canonicalPath(resolve(projectRoot, documentPath));
   const rel = relative(projectRoot, absolute);
+
   if (rel === "" || rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel)) {
     return {
       ok: false,
@@ -307,6 +311,7 @@ export function resolveInsideProjectRoot(
       message: `documentPath resolves outside the served project root: ${documentPath}`,
     };
   }
+
   return { ok: true, documentPath, absolute };
 }
 
@@ -316,6 +321,7 @@ function parseJsonObject(
   | { readonly ok: true; readonly value: Readonly<Record<string, unknown>> }
   | ({ readonly ok: false } & RequestRefusal) {
   const text = body ?? "";
+
   if (Buffer.byteLength(text, "utf8") > MAX_REQUEST_BODY_BYTES) {
     return {
       ok: false,
@@ -323,8 +329,10 @@ function parseJsonObject(
       message: `Request body exceeds ${MAX_REQUEST_BODY_BYTES} bytes.`,
     };
   }
+
   if (text.trim() === "") return { ok: true, value: {} };
   let parsed: unknown;
+
   try {
     parsed = JSON.parse(text);
   } catch (error) {
@@ -336,6 +344,7 @@ function parseJsonObject(
       }`,
     };
   }
+
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
     return {
       ok: false,
@@ -343,6 +352,7 @@ function parseJsonObject(
       message: "Request body must be a JSON object.",
     };
   }
+
   return { ok: true, value: parsed as Record<string, unknown> };
 }
 
@@ -360,6 +370,7 @@ function snapshotResponse(
   reviewToken: string | null,
 ): InspectorHttpResponse {
   const payload = { projectRoot, reviewToken, snapshot };
+
   if (snapshot.diagnostics !== null && snapshot.diagnostics.length > 0) {
     return refuse(
       409,
@@ -369,6 +380,7 @@ function snapshotResponse(
       payload,
     );
   }
+
   return okResponse(action, payload);
 }
 
@@ -383,6 +395,7 @@ function assistantSnapshotResponse(
   if (snapshot.refusal === undefined) {
     return okResponse(action, { snapshot });
   }
+
   return refuse(409, action, snapshot.refusal.reason, snapshot.refusal.message, {
     snapshot,
   });
@@ -399,19 +412,24 @@ export function createInspectorApp(
   options: CreateInspectorAppOptions = {},
 ): InspectorApp {
   const projectRoot = canonicalPath(options.projectRoot ?? ".");
+
   const session =
     options.session ?? createInspectorSession({ cwd: projectRoot });
+
   const assistantSetup: CreateAssistantPanelResult =
     options.assistant === undefined
       ? createDefaultAssistantPanel()
       : Object.freeze({ ok: true, panel: options.assistant });
+
   let reviewGeneration = 0;
   let activeReviewToken: string | null = null;
 
   const documentStatus = (path: unknown): InspectorHttpResponse => {
     const resolved = resolveInsideProjectRoot(projectRoot, path);
+
     if (!resolved.ok) return refuseRequest("document", resolved);
     let text: string;
+
     try {
       text = readFileSync(resolved.absolute, "utf8");
     } catch {
@@ -423,7 +441,9 @@ export function createInspectorApp(
         { documentPath: resolved.documentPath },
       );
     }
+
     const validation = parseDocumentText(text);
+
     if (!validation.ok) {
       return refuse(
         422,
@@ -433,6 +453,7 @@ export function createInspectorApp(
         { documentPath: resolved.documentPath },
       );
     }
+
     return okResponse("document", {
       projectRoot,
       documentPath: resolved.documentPath,
@@ -444,13 +465,17 @@ export function createInspectorApp(
 
   const propose = (body: string | undefined): InspectorHttpResponse => {
     const parsed = parseJsonObject(body);
+
     if (!parsed.ok) return refuseRequest("propose", parsed);
+
     const resolved = resolveInsideProjectRoot(
       projectRoot,
       parsed.value["documentPath"],
     );
+
     if (!resolved.ok) return refuseRequest("propose", resolved);
     const jsonPointer = parsed.value["jsonPointer"];
+
     if (typeof jsonPointer !== "string") {
       return refuseRequest("propose", {
         reason: WEB_SHELL_REFUSALS.editFieldInvalid,
@@ -458,12 +483,14 @@ export function createInspectorApp(
           "jsonPointer must be a string (the empty string addresses the whole document).",
       });
     }
+
     if (!Object.hasOwn(parsed.value, "newValue")) {
       return refuseRequest("propose", {
         reason: WEB_SHELL_REFUSALS.editFieldInvalid,
         message: "newValue is required (send null explicitly to set a null value).",
       });
     }
+
     // The session owns cwd resolution; passing the served root keeps a request
     // from selecting a different one.
     const snapshot = session.proposeEdit({
@@ -472,6 +499,7 @@ export function createInspectorApp(
       newValue: parsed.value["newValue"],
       cwd: projectRoot,
     });
+
     if (
       snapshot.phase === "reviewing" &&
       snapshot.proposal !== null &&
@@ -487,6 +515,7 @@ export function createInspectorApp(
     } else {
       activeReviewToken = null;
     }
+
     return snapshotResponse("propose", snapshot, projectRoot, activeReviewToken);
   };
 
@@ -495,8 +524,10 @@ export function createInspectorApp(
     body: string | undefined,
   ): InspectorHttpResponse => {
     const parsed = parseJsonObject(body);
+
     if (!parsed.ok) return refuseRequest(action, parsed);
     const reviewToken = parsed.value["reviewToken"];
+
     if (
       typeof reviewToken !== "string" ||
       activeReviewToken === null ||
@@ -511,9 +542,11 @@ export function createInspectorApp(
     }
 
     const snapshot = action === "accept" ? session.accept() : session.reject();
+
     if (snapshot.phase !== "reviewing" || snapshot.proposal === null) {
       activeReviewToken = null;
     }
+
     return snapshotResponse(action, snapshot, projectRoot, activeReviewToken);
   };
 
@@ -529,13 +562,16 @@ export function createInspectorApp(
         { assistantReason: assistantSetup.reason },
       );
     }
+
     const panel = assistantSetup.panel;
 
     const parsed = parseJsonObject(body);
+
     if (!parsed.ok) return refuseRequest("assistant", parsed);
 
     if (Object.hasOwn(parsed.value, "mode")) {
       const selected = panel.setMode(parsed.value["mode"]);
+
       if (selected.refusal !== undefined) {
         return assistantSnapshotResponse("assistant", selected);
       }
@@ -547,6 +583,7 @@ export function createInspectorApp(
         ? { turnId: parsed.value["turnId"] }
         : {}),
     });
+
     return assistantSnapshotResponse("assistant", snapshot);
   };
 
@@ -564,6 +601,7 @@ export function createInspectorApp(
           `${method} is not allowed on ${path}; use GET.`,
         );
       }
+
       return {
         status: 200,
         contentType: HTML_TYPE,
@@ -574,6 +612,7 @@ export function createInspectorApp(
     const entry = Object.entries(INSPECTOR_ACTIONS).find(
       ([, candidate]) => candidate.path === path,
     );
+
     if (entry === undefined) {
       return refuse(
         404,
@@ -587,10 +626,12 @@ export function createInspectorApp(
         },
       );
     }
+
     const [action, matched] = entry as [
       InspectorAction,
       (typeof INSPECTOR_ACTIONS)[InspectorAction],
     ];
+
     if (method !== matched.method) {
       return refuse(
         405,
@@ -645,14 +686,12 @@ export function createInspectorApp(
   const handleSync = (request: InspectorHttpRequest): InspectorHttpResponse => {
     try {
       return route(request);
-    } catch (error) {
+    } catch {
       return refuse(
         500,
         "unknown",
         WEB_SHELL_REFUSALS.handlerFailed,
-        `The inspector could not serve ${request.url}: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
+        "The inspector could not serve the request. No operation was automatically retried.",
       );
     }
   };
@@ -670,21 +709,21 @@ export function createInspectorApp(
     try {
       const target = new URL(request.url, "http://localhost");
       const method = request.method.toUpperCase();
+
       if (
         target.pathname !== INSPECTOR_ACTIONS.assistant.path ||
         method !== INSPECTOR_ACTIONS.assistant.method
       ) {
         return handleSync(request);
       }
+
       return await assistantTurn(request.body);
-    } catch (error) {
+    } catch {
       return refuse(
         500,
         "assistant",
         WEB_SHELL_REFUSALS.handlerFailed,
-        `The inspector could not serve ${request.url}: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
+        "The inspector could not serve the request. No operation was automatically retried.",
       );
     }
   };
@@ -712,6 +751,7 @@ function escapeHtml(value: string): string {
  */
 export function inspectorPageHtml(projectRoot: string): string {
   const root = escapeHtml(projectRoot);
+
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -744,7 +784,7 @@ export function inspectorPageHtml(projectRoot: string): string {
     <input id="documentPath" value="scene.json" required />
   </label>
   <label>JSON Pointer
-    <input id="jsonPointer" value="/data/entities/0/x" required />
+    <input id="jsonPointer" value="/data/entities/0/x" />
   </label>
   <label>New value (JSON)
     <input id="newValue" value="42" required />
@@ -754,10 +794,11 @@ export function inspectorPageHtml(projectRoot: string): string {
     <button type="button" id="accept" disabled>Accept</button>
     <button type="button" id="reject" disabled>Reject</button>
     <button type="button" id="recover" hidden>Resolve pending apply</button>
+    <button type="button" id="reconcile" hidden>Read authoritative state</button>
   </div>
 </form>
 
-<p>Phase: <span class="phase" id="phase">idle</span> <span id="note"></span></p>
+<p>Phase: <span class="phase" id="phase">idle</span> <span id="note" role="status" aria-live="polite"></span></p>
 <pre id="diff">No proposal yet. Propose an edit to review its diff before anything is written.</pre>
 
 <footer>
@@ -768,29 +809,61 @@ export function inspectorPageHtml(projectRoot: string): string {
 
 <script>
 const $ = (id) => document.getElementById(id);
-const state = { phase: "idle", reviewToken: null };
+const state = { phase: "idle", reviewToken: null, busy: false, uncertain: false };
+
+function controls() {
+  const blocked = state.busy || state.uncertain;
+  const reviewing = state.phase === "reviewing" && typeof state.reviewToken === "string";
+  $("propose").disabled = blocked;
+  $("accept").disabled = blocked || !reviewing;
+  $("reject").disabled = blocked || !reviewing;
+  $("recover").disabled = blocked;
+  $("reconcile").hidden = !state.uncertain;
+  $("reconcile").disabled = state.busy;
+}
 
 function render(payload) {
-  const snapshot = payload.snapshot ?? { phase: state.phase, renderedDiff: null };
-  if (Object.hasOwn(payload, "reviewToken")) state.reviewToken = payload.reviewToken;
-  state.phase = snapshot.phase ?? state.phase;
-  $("phase").textContent = state.phase;
+  const snapshot = payload.snapshot;
+  if (snapshot) {
+    if (Object.hasOwn(payload, "reviewToken")) state.reviewToken = payload.reviewToken;
+    state.phase = snapshot.phase ?? state.phase;
+    $("phase").textContent = state.phase;
+    $("diff").textContent = snapshot.renderedDiff
+      ? (state.phase === "applied" ? "Applied change (history):\\n" : "") + snapshot.renderedDiff
+      : "No current proposal. Propose an edit to review before anything is written.";
+    $("recover").hidden = snapshot.journalRecoveryPending !== true;
+  }
   $("note").textContent = payload.ok ? "" : " — refused: " + payload.message;
   $("note").className = payload.ok ? "" : "refused";
-  if (snapshot.renderedDiff) $("diff").textContent = snapshot.renderedDiff;
-  const reviewing = state.phase === "reviewing" && typeof state.reviewToken === "string";
-  $("accept").disabled = !reviewing;
-  $("reject").disabled = !reviewing;
-  $("recover").hidden = snapshot.journalRecoveryPending !== true;
+  controls();
 }
 
 async function call(path, body) {
-  const response = await fetch(path, {
-    method: body === undefined ? "GET" : "POST",
-    headers: body === undefined ? {} : { "content-type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  render(await response.json());
+  if (state.busy || (state.uncertain && path !== "/api/state")) return;
+  state.busy = true;
+  controls();
+  try {
+    const response = await fetch(path, {
+      method: body === undefined ? "GET" : "POST",
+      headers: body === undefined ? {} : { "content-type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    const payload = await response.json();
+    if (!payload || typeof payload.ok !== "boolean" ||
+        (path === "/api/state" && !payload.snapshot)) throw new Error("Invalid response");
+    if (path === "/api/state") state.uncertain = false;
+    render(payload);
+  } catch {
+    state.uncertain = true;
+    state.reviewToken = null;
+    $("phase").textContent = "unknown";
+    $("diff").textContent = "Current outcome unknown. Read authoritative state before another operation.";
+    $("note").textContent = " — connection or response failed; outcome unknown. No write was retried. Read authoritative state.";
+    $("note").className = "refused";
+  } finally {
+    state.busy = false;
+    controls();
+  }
 }
 
 $("edit").addEventListener("submit", (event) => {
@@ -816,6 +889,7 @@ $("reject").addEventListener("click", () => void call("/api/reject", {
   reviewToken: state.reviewToken,
 }));
 $("recover").addEventListener("click", () => void call("/api/recover", {}));
+$("reconcile").addEventListener("click", () => void call("/api/state"));
 void call("/api/state");
 </script>
 </body>

@@ -8,7 +8,7 @@
  */
 
 import { existsSync } from "node:fs";
-import { basename, relative, sep } from "node:path";
+import { basename, isAbsolute, relative, sep } from "node:path";
 import {
   canonicalPath,
   contentHash,
@@ -19,6 +19,7 @@ import {
   type SceneDocument,
 } from "@sceneaxi/authoring-core";
 import { failure, success, type CliOutcome, type ResultPayload } from "./envelope.js";
+import { workshopTemplate } from "./templates.js";
 import { parseVerbArgs } from "./verb-args.js";
 import {
   diagnosticsToFailure,
@@ -32,6 +33,7 @@ import {
 
 /** Evidence packet kind written by `project capture` and read by `project report`. */
 export const PROJECT_EVIDENCE_KIND = "sceneaxi.project-evidence" as const;
+
 export const PROJECT_EVIDENCE_SCHEMA_VERSION = 1 as const;
 
 /** Filename suffix `evidence list` scans for. */
@@ -55,21 +57,31 @@ export type ProjectEvidenceCheck = {
 };
 
 const NEW_FLAGS = new Set(["--document", "--id", "--title", "--data", "--cwd"]);
+
 const NEW_SWITCHES = new Set(["--force"]);
+
 const DEV_FLAGS = new Set(["--document", "--cwd"]);
+
 const DEV_SWITCHES = new Set(["--watch"]);
+
 const TEST_FLAGS = new Set(["--document", "--cwd"]);
+
 const CAPTURE_FLAGS = new Set(["--document", "--out", "--cwd"]);
+
 const REPORT_FLAGS = new Set(["--evidence", "--cwd"]);
 
 const NEW_USAGE =
   "Usage: sceneaxi project new --document <path> [--id <id>] [--title <text>] [--data <json>] [--cwd <dir>] [--force]";
+
 const DEV_USAGE =
   "Usage: sceneaxi project dev --document <path> [--cwd <dir>] [--watch]";
+
 const TEST_USAGE =
   "Usage: sceneaxi project test --document <path> [--cwd <dir>]";
+
 const CAPTURE_USAGE =
   "Usage: sceneaxi project capture --document <path> --out <evidence.json> [--cwd <dir>]";
+
 const REPORT_USAGE =
   "Usage: sceneaxi project report --evidence <path> [--cwd <dir>]";
 
@@ -82,6 +94,7 @@ function deriveDocumentId(documentPath: string): string | null {
   const stem = basename(documentPath).split(".")[0] ?? "";
   const candidate = stem.toLowerCase().replace(/[^a-z0-9-]+/g, "-");
   const trimmed = candidate.replace(/^-+/, "").replace(/-+$/, "");
+
   return /^[a-z0-9][a-z0-9-]*$/.test(trimmed) ? trimmed : null;
 }
 
@@ -94,6 +107,7 @@ function loadDocument(
   | { readonly ok: true; readonly document: SceneDocument; readonly text: string }
   | { readonly ok: false; readonly outcome: CliOutcome } {
   const absolute = resolveUnderCwd(documentPath, cwd);
+
   return readDocumentOrRefuse(absolute, documentPath, path);
 }
 
@@ -104,9 +118,11 @@ export function runProjectNew(
 ): CliOutcome {
   const args = parseVerbArgs(tokens);
   const unknown = refuseUnknownArgs(args, NEW_FLAGS, path, NEW_SWITCHES);
+
   if (unknown) return unknown;
 
   const documentPath = args.flags.get("--document");
+
   if (documentPath === undefined || documentPath.length === 0) {
     return missingFlag("Missing required flag --document", NEW_USAGE, path);
   }
@@ -131,6 +147,7 @@ export function runProjectNew(
 
   const explicitId = args.flags.get("--id");
   const id = explicitId ?? deriveDocumentId(documentPath);
+
   if (id === null || id.length === 0) {
     return failure(
       "VALIDATION",
@@ -144,9 +161,12 @@ export function runProjectNew(
 
   const rawData = args.flags.get("--data");
   let data: JsonObject = {};
+
   if (rawData !== undefined) {
     const parsed = parseJsonOrRefuse(rawData, "--data", path);
+
     if (!parsed.ok) return parsed.outcome;
+
     if (
       parsed.value === null ||
       typeof parsed.value !== "object" ||
@@ -157,10 +177,12 @@ export function runProjectNew(
         help: [NEW_USAGE],
       });
     }
+
     data = parsed.value as JsonObject;
   }
 
   const title = args.flags.get("--title");
+
   const document = createDocument({
     id,
     data,
@@ -171,6 +193,7 @@ export function runProjectNew(
     cwd: cwd ?? process.cwd(),
     mustBeAbsent: !force,
   });
+
   if (!written.ok) return diagnosticsToFailure(written.diagnostics, path);
 
   return success(
@@ -199,15 +222,18 @@ export function runProjectDev(
 ): CliOutcome {
   const args = parseVerbArgs(tokens);
   const unknown = refuseUnknownArgs(args, DEV_FLAGS, path, DEV_SWITCHES);
+
   if (unknown) return unknown;
 
   const documentPath = args.flags.get("--document");
+
   if (documentPath === undefined || documentPath.length === 0) {
     return missingFlag("Missing required flag --document", DEV_USAGE, path);
   }
 
   const cwd = args.flags.get("--cwd");
   const loaded = loadDocument(documentPath, cwd, path);
+
   if (!loaded.ok) return loaded.outcome;
 
   return success(
@@ -233,19 +259,23 @@ export function runProjectTest(
 ): CliOutcome {
   const args = parseVerbArgs(tokens);
   const unknown = refuseUnknownArgs(args, TEST_FLAGS, path);
+
   if (unknown) return unknown;
 
   const documentPath = args.flags.get("--document");
+
   if (documentPath === undefined || documentPath.length === 0) {
     return missingFlag("Missing required flag --document", TEST_USAGE, path);
   }
 
   const cwd = args.flags.get("--cwd");
   const loaded = loadDocument(documentPath, cwd, path);
+
   if (!loaded.ok) return loaded.outcome;
 
   const checks = documentChecks(loaded.document, loaded.text);
   const refused = checks.filter((check) => check.status === "refuse");
+
   if (refused.length > 0) {
     return failure(
       "VALIDATION",
@@ -296,6 +326,7 @@ function documentChecks(
   text: string,
 ): readonly ProjectEvidenceCheck[] {
   const canonical = serializeDocument(document);
+
   return Object.freeze([
     Object.freeze({
       name: "document-schema",
@@ -320,21 +351,27 @@ export function runProjectCapture(
 ): CliOutcome {
   const args = parseVerbArgs(tokens);
   const unknown = refuseUnknownArgs(args, CAPTURE_FLAGS, path);
+
   if (unknown) return unknown;
 
   const documentPath = args.flags.get("--document");
+
   if (documentPath === undefined || documentPath.length === 0) {
     return missingFlag("Missing required flag --document", CAPTURE_USAGE, path);
   }
+
   const out = args.flags.get("--out");
+
   if (out === undefined || out.length === 0) {
     return missingFlag("Missing required flag --out", CAPTURE_USAGE, path);
   }
 
   const cwd = args.flags.get("--cwd");
   const loaded = loadDocument(documentPath, cwd, path);
+
   if (!loaded.ok) return loaded.outcome;
   const outputPath = resolveUnderCwd(out, cwd);
+
   const aliasRefusal = refusePathAliases(
     [
       {
@@ -345,6 +382,7 @@ export function runProjectCapture(
     [{ absolutePath: outputPath, displayPath: out }],
     path,
   );
+
   if (aliasRefusal) return aliasRefusal;
 
   const packet = buildEvidencePacket(
@@ -360,9 +398,11 @@ export function runProjectCapture(
     title: `Evidence for ${loaded.document.id}`,
     data: packet as unknown as JsonObject,
   });
+
   const written = writeDocumentFile(outputPath, carrier, {
     cwd: cwd ?? process.cwd(),
   });
+
   if (!written.ok) return diagnosticsToFailure(written.diagnostics, path);
 
   return success(
@@ -388,9 +428,11 @@ function projectRelativeDocumentPath(
 ): string {
   const projectRoot = canonicalPath(cwd ?? process.cwd());
   const absoluteDocument = canonicalPath(resolveUnderCwd(documentPath, cwd));
+
   const normalized = relative(projectRoot, absoluteDocument)
     .split(sep)
     .join("/");
+
   return normalized.length === 0 ? "." : normalized;
 }
 
@@ -408,6 +450,7 @@ function buildEvidencePacket(
     dataKeys: Object.freeze(Object.keys(document.data).sort()),
     checks: documentChecks(document, text),
   } as const;
+
   return Object.freeze(
     document.title === undefined ? base : { ...base, documentTitle: document.title },
   );
@@ -423,13 +466,16 @@ export function readEvidencePacket(
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
     return { ok: false, message: "Evidence packet must be a JSON object." };
   }
+
   const raw = value as Record<string, unknown>;
+
   if (raw["kind"] !== PROJECT_EVIDENCE_KIND) {
     return {
       ok: false,
       message: `Evidence packet kind must be '${PROJECT_EVIDENCE_KIND}'; found '${String(raw["kind"])}'.`,
     };
   }
+
   if (raw["schemaVersion"] !== PROJECT_EVIDENCE_SCHEMA_VERSION) {
     return {
       ok: false,
@@ -447,6 +493,7 @@ export function readEvidencePacket(
     "dataKeys",
     "checks",
   ]);
+
   for (const key of Object.keys(raw)) {
     if (!known.has(key)) {
       return {
@@ -457,13 +504,16 @@ export function readEvidencePacket(
   }
 
   const documentPath = raw["documentPath"];
+
   if (typeof documentPath !== "string" || documentPath.length === 0) {
     return {
       ok: false,
       message: "Evidence packet 'documentPath' must be a non-empty string.",
     };
   }
+
   const documentId = raw["documentId"];
+
   if (
     typeof documentId !== "string" ||
     !/^[a-z0-9][a-z0-9-]*$/.test(documentId)
@@ -473,7 +523,9 @@ export function readEvidencePacket(
       message: "Evidence packet 'documentId' must be a valid document id.",
     };
   }
+
   const documentContentHash = raw["documentContentHash"];
+
   if (
     typeof documentContentHash !== "string" ||
     !/^sha256:[0-9a-f]{64}$/.test(documentContentHash)
@@ -484,7 +536,9 @@ export function readEvidencePacket(
         "Evidence packet 'documentContentHash' must be a lowercase sha256 digest.",
     };
   }
+
   const documentTitle = raw["documentTitle"];
+
   if (
     Object.hasOwn(raw, "documentTitle") &&
     typeof documentTitle !== "string"
@@ -496,6 +550,7 @@ export function readEvidencePacket(
   }
 
   const dataKeys = raw["dataKeys"];
+
   if (
     !Array.isArray(dataKeys) ||
     !dataKeys.every((key) => typeof key === "string")
@@ -507,6 +562,7 @@ export function readEvidencePacket(
   }
 
   const rawChecks = raw["checks"];
+
   if (!Array.isArray(rawChecks) || rawChecks.length === 0) {
     return {
       ok: false,
@@ -515,6 +571,7 @@ export function readEvidencePacket(
   }
 
   const checks: ProjectEvidenceCheck[] = [];
+
   for (const [index, value] of rawChecks.entries()) {
     if (value === null || typeof value !== "object" || Array.isArray(value)) {
       return {
@@ -522,7 +579,9 @@ export function readEvidencePacket(
         message: `Evidence packet check ${String(index)} must be an object.`,
       };
     }
+
     const check = value as Record<string, unknown>;
+
     for (const key of Object.keys(check)) {
       if (key !== "name" && key !== "status" && key !== "detail") {
         return {
@@ -531,24 +590,28 @@ export function readEvidencePacket(
         };
       }
     }
+
     if (typeof check["name"] !== "string" || check["name"].length === 0) {
       return {
         ok: false,
         message: `Evidence packet check ${String(index)} requires a non-empty name.`,
       };
     }
+
     if (check["status"] !== "pass" && check["status"] !== "refuse") {
       return {
         ok: false,
         message: `Evidence packet check ${String(index)} has an invalid status.`,
       };
     }
+
     if (typeof check["detail"] !== "string" || check["detail"].length === 0) {
       return {
         ok: false,
         message: `Evidence packet check ${String(index)} requires non-empty detail.`,
       };
     }
+
     checks.push(
       Object.freeze({
         name: check["name"],
@@ -568,6 +631,7 @@ export function readEvidencePacket(
     dataKeys: Object.freeze([...dataKeys]),
     checks: Object.freeze(checks),
   });
+
   return { ok: true, packet };
 }
 
@@ -578,18 +642,22 @@ export function runProjectReport(
 ): CliOutcome {
   const args = parseVerbArgs(tokens);
   const unknown = refuseUnknownArgs(args, REPORT_FLAGS, path);
+
   if (unknown) return unknown;
 
   const evidencePath = args.flags.get("--evidence");
+
   if (evidencePath === undefined || evidencePath.length === 0) {
     return missingFlag("Missing required flag --evidence", REPORT_USAGE, path);
   }
 
   const cwd = args.flags.get("--cwd");
   const loaded = loadDocument(evidencePath, cwd, path);
+
   if (!loaded.ok) return loaded.outcome;
 
   const packet = readEvidencePacket(loaded.document.data);
+
   if (!packet.ok) {
     return failure("VALIDATION", `${evidencePath}: ${packet.message}`, {
       path,
@@ -687,4 +755,126 @@ export function projectReportHelp(): ResultPayload {
       "--cwd": "Working directory for relative paths",
     }),
   });
+}
+
+
+/** Read-only migration admission: no conversion rules exist beyond document v1. */
+export function runProjectMigrate(path: readonly string[], tokens: readonly string[]): CliOutcome {
+  const checked = runProjectTest(path, tokens);
+
+  if (!checked.envelope.ok) return checked;
+
+  return success({ ...checked.envelope.result, status: "already-current", schemaVersion: 1, changed: false },
+    ["Validated current v1 bytes; no file was rewritten", "Unsupported versions require a schema-owned reversible migration"]);
+}
+
+export function projectMigrateHelp(): ResultPayload {
+  return { command: "project migrate", description: "Validate an already-current v1 document without rewriting; unknown versions refuse", flags: { "--document": "Contained document (required)", "--cwd": "Project root" } };
+}
+
+function isContainedProjectPath(name: string, cwd: string): boolean {
+  const rel = relative(canonicalPath(cwd), canonicalPath(resolveUnderCwd(name, cwd)));
+
+  return rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
+}
+
+/** Show captured claims only, retaining the same project containment as verify. */
+export function runEvidenceShow(path: readonly string[], tokens: readonly string[]): CliOutcome {
+  const args = parseVerbArgs(tokens);
+  const unknown = refuseUnknownArgs(args, REPORT_FLAGS, path);
+
+  if (unknown) return unknown;
+  const evidence = args.flags.get("--evidence");
+
+  if (!evidence) return missingFlag("Missing required flag --evidence", "Usage: sceneaxi evidence show --evidence <path> [--cwd <project>]", path);
+  const cwd = args.flags.get("--cwd") ?? process.cwd();
+
+  if (!isContainedProjectPath(evidence, cwd)) return failure("VALIDATION", "EVIDENCE_PATH_OUTSIDE_PROJECT", { path });
+  const report = runProjectReport(path, tokens);
+
+  if (!report.envelope.ok) return report;
+  const documentPath = report.envelope.result["documentPath"];
+
+  if (typeof documentPath !== "string" || !isContainedProjectPath(documentPath, cwd)) return failure("VALIDATION", "EVIDENCE_DOCUMENT_OUTSIDE_PROJECT", { path });
+
+  return success({ ...report.envelope.result, status: "shown", currentDocumentVerified: false, scope: "recorded-local-document-claims" },
+    ["Recorded checks describe captured bytes only; run `sceneaxi evidence verify` against current bytes", "No browser, native, provider, legal, or production readiness is attested"]);
+}
+
+export function evidenceShowHelp(): ResultPayload {
+  return { ...projectReportHelp(), command: "evidence show", description: "Show recorded claims from a contained packet; does not verify current bytes" };
+}
+
+/** A packet's labels are not authority: compare all claims to contained current bytes. */
+export function runEvidenceVerify(path: readonly string[], tokens: readonly string[]): CliOutcome {
+  const args = parseVerbArgs(tokens);
+  const unknown = refuseUnknownArgs(args, REPORT_FLAGS, path);
+
+  if (unknown) return unknown;
+  const evidence = args.flags.get("--evidence");
+
+  if (!evidence) return missingFlag("Missing required flag --evidence", "Usage: sceneaxi evidence verify --evidence <path> [--cwd <project>]", path);
+  const cwd = args.flags.get("--cwd") ?? process.cwd();
+
+  const contained = (name: string): boolean => {
+    return isContainedProjectPath(name, cwd);
+  };
+
+  if (!contained(evidence)) return failure("VALIDATION", "EVIDENCE_PATH_OUTSIDE_PROJECT", { path });
+  const carrier = loadDocument(evidence, cwd, path);
+
+  if (!carrier.ok) return carrier.outcome;
+  const parsed = readEvidencePacket(carrier.document.data);
+
+  if (!parsed.ok) return failure("VALIDATION", parsed.message, { path });
+
+  if (!contained(parsed.packet.documentPath)) return failure("VALIDATION", "EVIDENCE_DOCUMENT_OUTSIDE_PROJECT", { path });
+  const loaded = loadDocument(parsed.packet.documentPath, cwd, path);
+
+  if (!loaded.ok) return loaded.outcome;
+  const expected = buildEvidencePacket(projectRelativeDocumentPath(parsed.packet.documentPath, cwd), loaded.document, loaded.text);
+
+  if (JSON.stringify(parsed.packet) !== JSON.stringify(expected) || expected.checks.some(check => check.status !== "pass")) {
+    return failure("VALIDATION", "EVIDENCE_CURRENT_DOCUMENT_MISMATCH", { path, help: ["Capture evidence again from current canonical bytes; recorded pass labels prove no external surface"] });
+  }
+
+  return success({ status: "verified", evidencePath: evidence, documentContentHash: expected.documentContentHash, scope: "local-document-schema-and-canonical-bytes" },
+    ["No browser, native, provider, legal, or production readiness is attested"]);
+}
+
+export function evidenceVerifyHelp(): ResultPayload {
+  return { command: "evidence verify", description: "Verify captured claims against current contained document bytes, not external proof", flags: { "--evidence": "Packet carrier (required)", "--cwd": "Project root" } };
+}
+
+
+export function runProjectInit(path: readonly string[], tokens: readonly string[]): CliOutcome {
+  const args = parseVerbArgs(tokens);
+  const unknown = refuseUnknownArgs(args, new Set(["--template", "--document", "--cwd"]), path);
+
+  if (unknown) return unknown;
+
+  if (args.flags.get("--template") !== "workshop-bay") return failure("VALIDATION", "TEMPLATE_UNKNOWN: choose workshop-bay", { path });
+  const documentPath = args.flags.get("--document") ?? "scene.json";
+  const cwd = args.flags.get("--cwd") ?? process.cwd();
+  const absolute = resolveUnderCwd(documentPath, cwd);
+  const rel = relative(canonicalPath(cwd), canonicalPath(absolute));
+
+  if (rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel)) return failure("VALIDATION", "TEMPLATE_PATH_OUTSIDE_PROJECT", { path });
+
+  if (existsSync(absolute)) return failure("CONFLICT", "TEMPLATE_DOCUMENT_EXISTS", { path });
+  const id = deriveDocumentId(documentPath);
+
+  if (id === null) return failure("VALIDATION", "TEMPLATE_DOCUMENT_ID_INVALID", { path });
+  const composed = workshopTemplate(id);
+
+  if (!composed.ok) return failure("VALIDATION", `TEMPLATE_COMPOSITION_REFUSED: ${composed.code}`, { path });
+  const written = writeDocumentFile(absolute, composed.document, { cwd, mustBeAbsent: true });
+
+  if (!written.ok) return diagnosticsToFailure(written.diagnostics, path);
+
+  return success({ status: "initialized", template: "workshop-bay", documentPath, contentHash: written.contentHash, sceneDigest: composed.sceneDigest, instanceCount: composed.scene.instances.length }, ["Created an openable composed-scene document offline; existing files were not overwritten", "project new --data is generic document creation, not scene initialization"]);
+}
+
+export function projectInitHelp(): ResultPayload {
+  return { command: "project init", description: "Initialize an admitted openable local template without overwrite", flags: { "--template": "workshop-bay (required)", "--document": "Contained output (default scene.json)", "--cwd": "Project root" } };
 }

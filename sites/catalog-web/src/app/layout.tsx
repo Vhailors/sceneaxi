@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
+
+export const dynamic = "force-dynamic";
+
 import { Archivo, JetBrains_Mono } from "next/font/google";
 import {
   CATALOG_SITE_BRAND,
+  catalogCanonical,
   CATALOG_SITE_FOUNDATION_SURFACE,
   CATALOG_SITE_SURFACE,
   resolveUmbrellaOrigin,
@@ -17,6 +22,7 @@ import "./globals.css";
  * keeps the deployed storefront free of a third-party font request at runtime.
  */
 const archivo = Archivo({ subsets: ["latin"], display: "swap", variable: "--site-font-ui" });
+
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   display: "swap",
@@ -34,10 +40,20 @@ const jetbrainsMono = JetBrains_Mono({
  */
 const foundations = foundationsStylesheet(CATALOG_SITE_FOUNDATION_SURFACE);
 
-export const metadata: Metadata = {
-  title: `${CATALOG_SITE_BRAND.name} — SceneAxi website assets`,
-  description: CATALOG_SITE_BRAND.tagline,
-};
+const metadataOrigin = catalogCanonical(process.env, "/");
+
+export async function generateMetadata(): Promise<Metadata> {
+  const route = (await headers()).get("x-sceneaxi-route") ?? "/";
+  const path = route.startsWith("/") && !route.startsWith("//") && !/[?#\\]/.test(route) ? route : "/";
+  const canonical = catalogCanonical(process.env, path);
+
+  return {
+    ...(metadataOrigin === null ? {} : { metadataBase: new URL(metadataOrigin) }),
+    ...(canonical === null ? {} : { alternates: { canonical } }),
+    title: `${CATALOG_SITE_BRAND.name} — SceneAxi website assets`,
+    description: CATALOG_SITE_BRAND.tagline,
+  };
+}
 
 export default function RootLayout({ children }: { readonly children: React.ReactNode }) {
   // Ordinary cross-links, carrying no identity, session, or telemetry across the surface

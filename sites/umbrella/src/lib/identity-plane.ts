@@ -1,3 +1,4 @@
+import { verifySiteAdminReauthentication, resolveUmbrellaOriginConfiguration } from "@sceneaxi/site-kit";
 /**
  * The single wiring point for the identity plane.
  *
@@ -32,6 +33,8 @@
  */
 import {
   createBillingPlane,
+  createSitePurchaseHistoryPort,
+  type SitePurchaseHistoryPort,
   createCreditsPlane,
   createIdentityPlane,
   createLoginPlane,
@@ -73,6 +76,7 @@ import {
   createCheckoutSessionIntent,
   adjustSupportLedger,
   readSupportLedger,
+  readPurchaseHistory,
   requireLedgerSupportAdmin,
   type LedgerAdjustmentFields,
   type LedgerSupportStore,
@@ -111,6 +115,7 @@ import {
   type DeploymentProviderOverrides,
   type NeonDatabase,
   type ProviderSessionRevoker,
+  type ProviderFetch,
 } from "./provider-adapters.js";
 import { serverLog } from "./server-logger.js";
 import { verifyLoginRequestOrigin } from "./login-flow.js";
@@ -121,15 +126,19 @@ import { verifyLoginRequestOrigin } from "./login-flow.js";
  * wide, and these stay definitionally the shapes those ports actually return.
  */
 type Ok<Result> = Extract<Result, { readonly ok: true }>;
+
 export type AuthPrincipal = Ok<
   Awaited<ReturnType<IdentityPort["verifySession"]>>
 >["value"];
+
 export type CreditPackCatalog = Ok<
   ReturnType<typeof loadCreditPackCatalog>
 >["value"];
+
 export type CheckoutSessionIntent = Ok<
   ReturnType<typeof createCheckoutSessionIntent>
 >["value"];
+
 /** One pack from that catalog. Named so the projection below annotates its own input. */
 export type CreditPackListing = CreditPackCatalog["packs"][number];
 
@@ -178,7 +187,9 @@ function isAuthReason(reason: BillingRefuseReason): reason is AuthRefuseReason {
 /** Map one `@sceneaxi/auth` reason onto the site refusal registry. */
 export function siteReasonForAuthReason(reason: AuthRefuseReason): SiteRefusalReason {
   if (IDENTITY_NOT_WIRED_REASONS.includes(reason)) return "IDENTITY_PLANE_NOT_WIRED";
+
   if (IDENTITY_SIGNED_OUT_REASONS.includes(reason)) return "IDENTITY_SESSION_ABSENT";
+
   switch (reason) {
     case AUTH_REFUSE_REASONS.kidsSurfaceDenied:
       return "KIDS_SURFACE_DENIED";
@@ -237,6 +248,7 @@ const LOGIN_ISSUANCE_FAULT_REASONS: ReadonlyArray<SiteRefusalReason> = Object.fr
 export function siteReasonForLoginAuthReason(reason: AuthRefuseReason): SiteRefusalReason {
   if (reason === AUTH_REFUSE_REASONS.credentialsRejected) return "LOGIN_CREDENTIALS_REJECTED";
   const verified = siteReasonForAuthReason(reason);
+
   return LOGIN_ISSUANCE_FAULT_REASONS.includes(verified)
     ? "LOGIN_SESSION_NOT_ISSUED"
     : verified;
@@ -276,7 +288,9 @@ export function siteReasonForBillingReason(
   plane: BillingReadPlane = "billing",
 ): SiteRefusalReason {
   if (isAuthReason(reason)) return siteReasonForAuthReason(reason);
+
   if (CREDIT_LEDGER_REASONS.includes(reason)) return "CREDIT_ADAPTER_OUTPUT_INVALID";
+
   switch (reason) {
     case BILLING_REFUSE_REASONS.kidsCommerceDenied:
       return "KIDS_SURFACE_DENIED";
@@ -360,13 +374,21 @@ export function toSitePrincipal(principal: AuthPrincipal): SitePrincipal {
  * `<sessionId>.<token>`. The token half is never logged, never rendered, and never put
  * in a URL — `_session.ts` reads it and hands it straight here.
  */
+type Mutable<Type> = { -readonly [Key in keyof Type]: Type[Key] };
+
+function isString<Value>(value: Value): value is Value & string { return typeof value === "string"; }
+
+function isObject<Value>(value: Value): value is Value & object { return typeof value === "object" && value !== null; }
+
 export function parseSessionToken(
   raw: string | null | undefined,
 ): { readonly sessionId: string; readonly token: string } | null {
-  if (typeof raw !== "string") return null;
+  if (!isString(raw)) return null;
   const trimmed = raw.trim();
   const separator = trimmed.indexOf(".");
+
   if (separator <= 0 || separator === trimmed.length - 1) return null;
+
   return Object.freeze({
     sessionId: trimmed.slice(0, separator),
     token: trimmed.slice(separator + 1),
@@ -448,6 +470,7 @@ export type UmbrellaConfigurationReport = Readonly<Record<string, UmbrellaConfig
 
 export type UmbrellaPlaneHandles = {
   readonly configuration: UmbrellaConfigurationReport;
+  readonly adminReauthenticate?: ((credential: string, password: string) => Promise<boolean>) | undefined;
   /** The deployment-issued single-admin evidence. Never resolved from a route argument. */
   readonly admin: AdminIdentity | null;
   /** Billing mode is deployment configuration; `live` still refuses in core. */
@@ -500,6 +523,7 @@ export function createDeploymentPlaneHandles(
   const billingMode = options.billingMode ?? "test";
   const configuration = inspectUmbrellaConfiguration({});
   const database = providers.database;
+
   if (database === undefined) {
     return Object.freeze({ admin, billingMode, clock, configuration });
   }
@@ -527,10 +551,12 @@ export function createDeploymentPlaneHandles(
           admin,
           clock,
         });
+
   const checkoutSessions =
     stripe === undefined
       ? undefined
       : createStripeCheckoutSessionAdapter({ stripe, intents: intentStore });
+
   const checkoutEvidence =
     stripe === undefined
       ? undefined
@@ -555,11 +581,28 @@ export function createDeploymentPlaneHandles(
   });
 }
 
+/** Bind internal service calls to the validated provider origin, never request Host. */
+export function bindProviderOrigin(origin: string, fetcher: ProviderFetch): ProviderFetch {
+  const approved = resolveBetterAuthOrigin(origin);
+
+  if (approved === undefined) throw new Error("IDENTITY_PROVIDER_ORIGIN_INVALID");
+
+  return async (input, init) => {
+    const url = new URL(input);
+
+    if (url.origin !== approved || url.username !== "" || url.password !== "" || !url.pathname.startsWith("/api/auth/")) throw new Error("IDENTITY_PROVIDER_ORIGIN_INVALID");
+    const headers = new Headers(init?.headers); headers.set("origin", approved);
+
+    return fetcher(input, { ...init, headers, redirect: "error" });
+  };
+}
+
 function providerClientsFromEnvironment(
   env: Readonly<Record<string, string | undefined>>,
 ): DeploymentProviderOverrides {
   const databaseUrl = resolveNonEmptyEnv(env, "DATABASE_URL");
   let database: NeonDatabase | undefined;
+
   if (databaseUrl !== undefined) {
     try {
       database = createNeonDatabase(databaseUrl);
@@ -572,9 +615,10 @@ function providerClientsFromEnvironment(
   const authOrigin = resolveBetterAuthOrigin(resolveNonEmptyEnv(env, "BETTER_AUTH_ORIGIN"));
   const fetcher = providerFetch();
   let betterAuth: DeploymentProviderOverrides["betterAuth"];
+
   if (authOrigin !== undefined && fetcher !== undefined) {
     try {
-      betterAuth = createBetterAuthHttpClient({ origin: authOrigin, fetch: fetcher });
+      betterAuth = createBetterAuthHttpClient({ origin: authOrigin, fetch: bindProviderOrigin(authOrigin, fetcher) });
     } catch {
       serverLog("error", "umbrella.provider.construction_failed", { provider: "better-auth" });
     }
@@ -582,6 +626,7 @@ function providerClientsFromEnvironment(
 
   const stripeKey = resolveNonEmptyEnv(env, "STRIPE_SECRET_KEY");
   let stripe: DeploymentProviderOverrides["stripe"];
+
   if (stripeKey !== undefined) {
     try {
       stripe = createStripeClient(stripeKey);
@@ -618,11 +663,13 @@ function buildUmbrellaPlaneHandles(
   env: Readonly<Record<string, string | undefined>>,
 ): UmbrellaPlaneHandles {
   const resolvedAdmin = resolveAdminIdentity(env);
+
   const base = createDeploymentPlaneHandles({
     admin: resolvedAdmin.ok ? resolvedAdmin.value : null,
     billingMode: resolveBillingMode(env),
     providers: providerClientsFromEnvironment(env),
   });
+
   const creditWebhook =
     base.creditStore === undefined || base.checkoutEvidence === undefined
       ? undefined
@@ -636,6 +683,30 @@ function buildUmbrellaPlaneHandles(
   return Object.freeze({
     ...base,
     creditWebhook,
+    adminReauthenticate: async (credential: string, password: string) => {
+      const origin = resolveUmbrellaOriginConfiguration(env).origin;
+
+      if (!origin.ok) return false;
+      const response = await fetch(`${origin.value}/api/auth/account/reauth`, { method: "POST", redirect: "error", signal: AbortSignal.timeout(10_000), headers: { origin: origin.value, "content-type": "application/json", cookie: `sceneaxi.session=${credential}` }, body: JSON.stringify({ password }) });
+      // The endpoint emits one tiny code, but do not trust a proxy's response size.
+      const reader = response.body?.getReader();
+
+ if (reader === undefined) return false;
+      let text = ""; let size = 0;
+
+      try { while (true) { const part = await reader.read();
+
+ if (part.done) break; size += part.value.length;
+
+ if (size > 256) { await reader.cancel();
+
+ return false; }
+
+ text += new TextDecoder().decode(part.value); } }
+      finally { reader.releaseLock(); }
+
+      return response.status === 200 && JSON.parse(text).code === "ACCOUNT_REAUTHENTICATED";
+    },
     verifyFormOrigin: (signals: Omit<SiteFormOriginSignals, "configuredOrigin">) =>
       verifyLoginRequestOrigin(env, signals),
     configuration: inspectUmbrellaConfiguration(env),
@@ -650,6 +721,7 @@ let deploymentHandles: UmbrellaPlaneHandles | undefined;
  */
 export function umbrellaPlaneHandles(): UmbrellaPlaneHandles {
   deploymentHandles ??= buildUmbrellaPlaneHandles(Object.freeze({ ...process.env }));
+
   return deploymentHandles;
 }
 
@@ -671,6 +743,7 @@ const DOCUMENTED_UMBRELLA_ENV = Object.freeze([
 function validPostgresUrl(value: string): boolean {
   try {
     const url = new URL(value.trim());
+
     return (url.protocol === "postgres:" || url.protocol === "postgresql:") && url.hostname !== "" && url.pathname.length > 1;
   } catch {
     return false;
@@ -681,6 +754,7 @@ function validBetterAuthOrigin(value: string): boolean {
   try {
     const url = new URL(value);
     const loopback = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+
     return url.username === "" && url.password === "" && url.pathname === "/" && url.search === "" && url.hash === "" &&
       (url.protocol === "https:" || (loopback && url.protocol === "http:"));
   } catch {
@@ -696,6 +770,7 @@ function validAdminEmail(value: string): boolean {
 function httpsOrigin(value: string): boolean {
   try {
     const url = new URL(value);
+
     return url.protocol === "https:" && url.origin === value && url.pathname === "/" && !url.search && !url.hash;
   } catch {
     return false;
@@ -709,9 +784,13 @@ export function classifyUmbrellaPlane(
   wired: boolean,
 ): "wired" | "absent" | "misconfigured" {
   const states = variables.map((name) => configuration[name]);
+
   if (states.includes("present-malformed")) return "misconfigured";
+
   if (wired) return "wired";
+
   if (states.includes("absent")) return "absent";
+
   return "misconfigured";
 }
 
@@ -721,11 +800,13 @@ export function inspectUmbrellaConfiguration(
   return Object.freeze(Object.fromEntries(
     DOCUMENTED_UMBRELLA_ENV.map(([name, isValid]) => {
       const value = env[name];
+
       const state: UmbrellaConfigurationState = value === undefined
         ? "absent"
         : isValid(value)
           ? "present-valid"
           : "present-malformed";
+
       return [name, state];
     }),
   ));
@@ -768,10 +849,12 @@ export type UmbrellaLedgerSupport = Readonly<{
     readonly surface: SiteIdentityRequest["surface"];
     readonly requestOrigin: SiteResult<string>;
     readonly fields: LedgerAdjustmentFields;
+    readonly adminPassword?: unknown;
   }): Promise<SiteResult<LedgerSupportAdjustment>>;
 }>;
 
 export type UmbrellaIdentityPlane = {
+  readonly purchaseHistory: SitePurchaseHistoryPort;
   readonly ledgerSupport: UmbrellaLedgerSupport;
   readonly identity: SiteIdentityPort;
   readonly credits: SiteCreditsPort;
@@ -823,6 +906,7 @@ async function verifyCarriedSession(options: {
   readonly sessionToken: string | null | undefined;
 }): Promise<SiteResult<AuthPrincipal | null>> {
   const carried = parseSessionToken(options.sessionToken);
+
   // No credential at all is a signed-out visitor, not a failure, and it is answered
   // without touching the store.
   if (carried === null) return ok(null);
@@ -832,7 +916,9 @@ async function verifyCarriedSession(options: {
     sessionId: carried.sessionId,
     token: carried.token,
   });
+
   if (!verified.ok) return refuse(siteReasonForAuthReason(verified.reason));
+
   return ok(verified.value);
 }
 
@@ -849,7 +935,9 @@ export function createAuthIdentityAdapter(options: {
         surface: request.surface,
         sessionToken: request.sessionToken ?? options.sessionToken,
       });
+
       if (!verified.ok) return verified;
+
       return ok(verified.value === null ? null : toSitePrincipal(verified.value));
     },
   });
@@ -882,12 +970,15 @@ export function createAuthLoginAdapter(options: {
         email: request.email,
         password: request.password,
       });
+
       if (!granted.ok) {
         return refuse(siteReasonForLoginAuthReason(granted.reason));
       }
+
       const principal = granted.value.principal;
       const sessionCredential = `${principal.session.sessionId}.${granted.value.sessionToken}`;
       const readBack = parseSessionToken(sessionCredential);
+
       if (
         readBack === null ||
         readBack.sessionId !== principal.session.sessionId ||
@@ -895,6 +986,7 @@ export function createAuthLoginAdapter(options: {
       ) {
         return refuse("LOGIN_SESSION_NOT_ISSUED");
       }
+
       return ok(
         Object.freeze({
           principal: toSitePrincipal(principal),
@@ -913,6 +1005,7 @@ async function readLedgerState(
   userId: string,
 ): Promise<SiteResult<LedgerState>> {
   const account = await store.findAccountByUserId(userId);
+
   // No account is not a zero balance. `CreditStore` exposes no account-creation method;
   // the deployment adapter provisions the account when a user authenticates
   // (`ensureUserAndCreditAccount` in `provider-adapters.ts`). A site may not invent the
@@ -920,7 +1013,9 @@ async function readLedgerState(
   // every dependent surface refuses.
   if (account === undefined) return refuse("CREDITS_PLANE_UNAVAILABLE");
   const state = loadLedgerState(account, await store.listEntries(account.accountId));
+
   if (!state.ok) return refuse(siteReasonForBillingReason(state.reason, "credits"));
+
   return ok(state.value);
 }
 
@@ -953,6 +1048,7 @@ export function createBillingCreditsAdapter(options: {
       readonly userId: string;
     }): Promise<SiteResult<SiteCreditBalance>> {
       const loaded = await readLedgerState(options.store, input.userId);
+
       if (!loaded.ok) return loaded;
 
       const granted = grantStarterCredits({
@@ -960,11 +1056,14 @@ export function createBillingCreditsAdapter(options: {
         userId: input.userId,
         now: options.clock(),
       });
+
       if (!granted.ok) return refuse(siteReasonForBillingReason(granted.reason, "credits"));
       const entry = granted.value.entry;
+
       if (granted.value.replayed || entry === undefined) {
         return ok(balanceOf(granted.value.state, input.userId));
       }
+
       try {
         await options.store.appendEntry(entry);
       } catch {
@@ -972,9 +1071,12 @@ export function createBillingCreditsAdapter(options: {
         // is the source of truth, so re-read rather than assume either outcome; a
         // second grant is impossible by construction.
         const reread = await readLedgerState(options.store, input.userId);
+
         if (!reread.ok) return reread;
+
         return ok(balanceOf(reread.value, input.userId));
       }
+
       return ok(balanceOf(granted.value.state, input.userId));
     },
   });
@@ -1004,7 +1106,9 @@ export function createBillingCheckoutAdapter(options: {
   return Object.freeze({
     async listCreditPacks(): Promise<SiteResult<readonly SiteCreditPack[]>> {
       const catalog = options.catalog();
+
       if (!catalog.ok) return catalog;
+
       return ok(
         Object.freeze(
           catalog.value.packs.map((pack: CreditPackListing) =>
@@ -1025,13 +1129,18 @@ export function createBillingCheckoutAdapter(options: {
       if (options.admin === null || options.verifyBuyer === null) {
         return refuse("IDENTITY_PLANE_NOT_WIRED");
       }
+
       if (options.sessions === null) return refuse("BILLING_PLANE_NOT_WIRED");
       const catalog = options.catalog();
+
       if (!catalog.ok) return catalog;
 
       const buyer = await options.verifyBuyer();
+
       if (!buyer.ok) return buyer;
+
       if (buyer.value === null) return refuse("IDENTITY_SESSION_ABSENT");
+
       // The submitted user id is evidence to check, not an identity to act on.
       if (buyer.value.user.userId !== request.userId) {
         return refuse("BILLING_CHECKOUT_REQUEST_INVALID");
@@ -1051,9 +1160,19 @@ export function createBillingCheckoutAdapter(options: {
         surface: "site",
         mode: options.mode,
       });
+
       if (!intent.ok) return refuse(siteReasonForBillingReason(intent.reason));
 
-      const hosted = await options.sessions.createCheckoutSession(intent.value);
+      let hosted: { readonly redirectUrl: string };
+
+      try { hosted = await options.sessions.createCheckoutSession(intent.value); }
+      catch (error) {
+        if (isObject(error) && "code" in error && error.code === "P0001"
+          && "message" in error && error.message === "BILLING_CHECKOUT_RATE_LIMITED") return refuse("BILLING_CHECKOUT_RATE_LIMITED");
+
+        return refuse("BILLING_PLANE_UNAVAILABLE");
+      }
+
       return ok(
         Object.freeze({
           intentId: intent.value.intentId,
@@ -1072,6 +1191,7 @@ function readCreditPackCatalog(
   return () => {
     if (injected !== undefined) return ok(injected);
     let loaded: BillingOutcome<CreditPackCatalog>;
+
     try {
       loaded = loadCreditPackCatalog();
     } catch {
@@ -1079,7 +1199,9 @@ function readCreditPackCatalog(
       // a throw here is a packaging fault, not an empty or invalid catalog.
       return refuse("BILLING_PLANE_UNAVAILABLE");
     }
+
     if (!loaded.ok) return refuse(siteReasonForBillingReason(loaded.reason));
+
     return ok(loaded.value);
   };
 }
@@ -1100,6 +1222,7 @@ export function createUmbrellaIdentityPlane(
   const billingMode = deployment?.billingMode ?? resolveBillingMode(env);
   const clock = wiring.clock ?? deployment?.clock ?? (() => Date.now());
   const admin = wiring.admin === undefined ? (deployment?.admin ?? null) : wiring.admin;
+
   // Explicit wiring wins over the supplied capability registry. This pure builder never
   // reaches for ambient deployment state; production uses umbrellaRequestAuthority.
   const deploymentHandle = <Key extends keyof UmbrellaPlaneHandles>(
@@ -1107,28 +1230,36 @@ export function createUmbrellaIdentityPlane(
   ): UmbrellaPlaneHandles[Key] | undefined => {
     return deployment?.[key];
   };
+
   const identityPort = (): IdentityPort | undefined =>
     wiring.identityPort ?? deploymentHandle("identityPort");
+
   const checkoutSessions = (): CheckoutSessionAdapter | undefined =>
     wiring.checkoutSessions ?? deploymentHandle("checkoutSessions");
 
   const buildIdentityAdapter = (): SiteIdentityAdapter | undefined => {
     const port = identityPort();
+
     if (port === undefined) return undefined;
-    return createAuthIdentityAdapter({
-      port,
-      ...(wiring.sessionToken === undefined ? {} : { sessionToken: wiring.sessionToken }),
-    });
+
+    const options: Mutable<Parameters<typeof createAuthIdentityAdapter>[0]> = { port };
+
+    if (wiring.sessionToken !== undefined) options.sessionToken = wiring.sessionToken;
+
+    return createAuthIdentityAdapter(options);
   };
 
   const buildCreditsAdapter = (): SiteCreditsAdapter | undefined => {
     const store = wiring.creditStore ?? deploymentHandle("creditStore");
+
     if (store === undefined) return undefined;
+
     return createBillingCreditsAdapter({ store, clock });
   };
 
   const buildBillingAdapter = (): SiteBillingAdapter => {
     const port = identityPort();
+
     return createBillingCheckoutAdapter({
       catalog: readCreditPackCatalog(wiring.creditPacks),
       admin,
@@ -1149,7 +1280,9 @@ export function createUmbrellaIdentityPlane(
 
   const buildLoginAdapter = (): SiteLoginAdapter | undefined => {
     const port = identityPort();
+
     if (port === undefined) return undefined;
+
     return createAuthLoginAdapter({ port });
   };
 
@@ -1163,10 +1296,12 @@ export function createUmbrellaIdentityPlane(
    */
   const signOutBoundSession = async (): Promise<SiteResult<null>> => {
     const port = identityPort();
+
     if (port === undefined) return refuse("IDENTITY_PLANE_NOT_WIRED");
     const carried = parseSessionToken(wiring.sessionToken);
 
     if (carried === null) return ok(null);
+
     const verified = await verifyCarriedSession({
       port,
       surface: "site",
@@ -1194,6 +1329,7 @@ export function createUmbrellaIdentityPlane(
 
     if (!verified.ok || verified.value === null) return ok(null);
     const removed = await port.signOut({ principal: verified.value });
+
     if (!removed.ok) {
       // `principalInvalid` here means the stored session rotated or vanished
       // between the verify and the delete; either way it is provably not the
@@ -1202,6 +1338,7 @@ export function createUmbrellaIdentityPlane(
         ? ok(null)
         : refuse(siteReasonForAuthReason(removed.reason));
     }
+
     return ok(null);
   };
 
@@ -1248,7 +1385,13 @@ export function createUmbrellaIdentityPlane(
       const credits = wiring.creditStore ?? deploymentHandle("creditStore");
 
       if (credits === undefined) return refuse("CREDITS_PLANE_NOT_WIRED");
-      const result = await adjustSupportLedger({ ...access.value, credits, fields: input.fields });
+      const reauthenticated = await verifySiteAdminReauthentication({ credential: wiring.sessionToken, password: input.adminPassword, verify: deploymentHandle("adminReauthenticate") });
+
+      if (!reauthenticated.ok) return reauthenticated;
+      const current = await supportAccess(input.surface);
+
+      if (!current.ok) return current;
+      const result = await adjustSupportLedger({ ...current.value, credits, fields: input.fields });
 
       return result.ok ? ok(result.value) : refuse(siteReasonForSupportReason(result.reason));
     },
@@ -1272,6 +1415,29 @@ export function createUmbrellaIdentityPlane(
     login: createLoginPlane({
       adapter: loginAdapter,
       now: () => new Date(clock()).toISOString(),
+    }),
+    purchaseHistory: createSitePurchaseHistoryPort(async (request) => {
+      const port = identityPort();
+
+      if (port === undefined || admin === null) return refuse("IDENTITY_PLANE_NOT_WIRED");
+      const verified = await verifyCarriedSession({ port, surface: request.surface, sessionToken: wiring.sessionToken });
+
+      if (!verified.ok) return verified;
+
+      if (verified.value === null) return refuse("IDENTITY_SESSION_ABSENT");
+      const credits = wiring.creditStore ?? deploymentHandle("creditStore");
+      const support = wiring.supportStore ?? deploymentHandle("supportStore");
+
+      if (credits === undefined || support === undefined) return refuse("BILLING_PLANE_NOT_WIRED");
+
+      const page: Mutable<NonNullable<Parameters<typeof readPurchaseHistory>[0]["page"]>> = {};
+
+      if (request.limit !== undefined) page.limit = request.limit;
+
+      if (request.before !== undefined) page.before = request.before;
+      const result = await readPurchaseHistory({ principal: verified.value, admin, surface: request.surface, now: clock(), credits, support, page });
+
+      return result.ok ? ok(result.value) : refuse(siteReasonForSupportReason(result.reason));
     }),
     signOut: signOutBoundSession,
     ledgerSupport,

@@ -13,6 +13,7 @@ import {
   validateComposedScene,
   type ComposedScene,
   type FrameClock,
+  type JsonValue,
   type SculptTransform,
 } from "@sceneaxi/schemas";
 import {
@@ -114,8 +115,11 @@ class SceneSessionImpl implements SceneKernelSession {
     this.scene = scene;
     this.options = options;
     this.digest = digest;
+
+    if (scene.instances.length > 4096) throw new KernelSessionError("scene instance capacity exceeded");
     this.instances = scene.instances.map((instance) => {
       const placed = projectSceneInstanceHierarchy(instance);
+
       return {
         instanceId: instance.instanceId,
         artifactId: instance.artifactId,
@@ -142,7 +146,11 @@ class SceneSessionImpl implements SceneKernelSession {
 
   advance(clock: FrameClock) {
     const nextClock = validateSculptClock(clock, this.tick);
-    for (const instance of this.instances) instance.simulation.applyClock(nextClock);
+
+    if (this.advances.length >= 100_000 || !Number.isSafeInteger(this.elapsedMs + nextClock.deltaMs)) throw new KernelSessionError("scene history or elapsed time capacity exceeded");
+    const commits = this.instances.map((instance) => instance.simulation.prepareClock(nextClock));
+
+    for (const commit of commits) commit();
     this.tick = nextClock.tick;
     this.elapsedMs += nextClock.deltaMs;
     this.advances.push(nextClock);
@@ -159,6 +167,7 @@ class SceneSessionImpl implements SceneKernelSession {
         }),
       ),
     );
+
     const payload = Object.freeze({
       sceneId: this.scene.sceneId,
       tick: this.tick,
@@ -170,6 +179,7 @@ class SceneSessionImpl implements SceneKernelSession {
       ),
       instances,
     });
+
     return Object.freeze({
       ...payload,
       digest: digestSnapshot(payload, this.digest),
@@ -195,16 +205,18 @@ class SceneSessionImpl implements SceneKernelSession {
  * projection; artifacts themselves are never rewritten.
  */
 export function openSceneKernelSession(
-  sceneValue: unknown,
+  sceneValue: ComposedScene | JsonValue,
   options: SceneKernelOptions,
   host?: KernelDigestHost,
 ): SceneKernelSession {
   const scene = validateComposedScene(sceneValue);
+
   if (!scene.ok) {
     throw new KernelSessionError(
       scene.diagnostics[0]?.message ?? "invalid ComposedScene",
     );
   }
+
   return new SceneSessionImpl(
     scene.value,
     normalizeSculptKernelOptions(options),
@@ -217,31 +229,42 @@ export function replaySceneKernelSession(
   save: SceneKernelSaveArtifact,
   host?: KernelDigestHost,
 ): SceneKernelSession {
-  if (save === null || typeof save !== "object") {
+  if (save === null || !isObjectValue(save)) {
     throw new KernelSessionError("invalid scene save artifact");
   }
+
   if (save.schemaVersion !== SCENE_COMPOSITION_SCHEMA_VERSION) {
     throw new KernelSessionError(
       `scene save schema major mismatch: ${String(save.schemaVersion)}`,
     );
   }
+
   if (save.kind !== SCENE_KERNEL_SAVE_KIND) {
     throw new KernelSessionError("invalid scene save artifact kind");
   }
+
   if (
-    !Array.isArray(save.advances) ||
-    typeof save.terminalDigest !== "string" ||
+    !Array.isArray(save.advances) || save.advances.length > 100_000 ||
+    !isStringValue(save.terminalDigest) ||
     !DIGEST_RE.test(save.terminalDigest)
   ) {
     throw new KernelSessionError("invalid scene save advances or terminal digest");
   }
+
   const session = openSceneKernelSession(save.scene, save.options, host);
+
   for (const clock of save.advances) session.advance(clock);
   const terminal = session.observe().digest;
+
   if (terminal !== save.terminalDigest) {
     throw new KernelSessionError(
       `scene replay digest mismatch: expected ${save.terminalDigest}, got ${terminal}`,
     );
   }
+
   return session;
 }
+
+function isObjectValue<Value>(value: Value): value is Value & object { return value !== null && typeof value === "object"; }
+
+function isStringValue<Value>(value: Value): value is Value & string { return typeof value === "string"; }

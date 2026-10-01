@@ -41,8 +41,8 @@ pnpm smoke --packaged # the same proof from the electron-builder output
 ```
 
 Headless hosts run the smoke under `xvfb-run -a`; it forces SwiftShader so WebGL
-stays a real software rasterizer rather than a stub. On a green run, `--smoke`
-prints one JSON proof line covering the bridge handshake, a real kernel scene session bootstrapped through
+stays a real software rasterizer rather than a stub. `--smoke` prints one JSON
+line proving: bridge handshake, a real kernel scene session bootstrapped through
 `@sceneaxi/engine-orchestrator` with digests that move across ticks, an
 authoring selection → proposal review → atomic save → fresh-session reopen → Play
 round trip for selected Translation X, Rotation Y, and Scale Z plus bounded
@@ -51,10 +51,25 @@ project-browser listing and selection, digest-bound asset Open with a viewport
 frame acknowledgement, restart selection recovery, confirmation and immutable
 mutation refusals, a static Web export whose source bytes and Delivery Handoff
 digests are verified, and the renderer's real presentation frame report
-(`backend three`, `surface webgl-canvas` where a drawing buffer exists). The
-proof JSON also records `features` keyed `#254`–`#270`. GUI actions cover inspector Stage/Accept with before/after document digests (#254), asset import of a source and then of a revised copy as a second asset with its own manifest digest (#256; stable-id review reload of the same asset is proven by `tests/e2e/asset-pipeline-golden.test.ts`, not by the smoke), animation apply/Accept/evaluation at the accepted content hash (#259), and physics apply/Accept plus a read-only one-step evaluation (#260). The smoke also drives Play/Stop/Reset and viewport-source selection (#258), prefab define/inspect/instance/override/refresh (#255), input-action inspect/rebind/reset (#257), package install/inspect/remove (#262), and the named extension adapter refusal (#269). Git status/diff/stage and migration commit share #263 evidence. The migration proof uses a separate legacy scratch project. Workspace inspect/apply/reset, project build, fixture Agent proposal, and profile evidence remain covered. macOS and Windows artifact targets report unavailable on Linux. The asset picker is stubbed only at Electron's native-dialog boundary. The command forms, the audio controls, the profile and room switches, and Change Review Accept in those steps are clicked with real pointer input (a hit test at the control's centre, then `sendInputEvent`); the older feature steps (#254, #256, #259–#261, #263, #265, #266, #270 and the first Play/Stop/Reset) still click through DOM `click()` calls, which skip hit-testing.
+(`backend three`, `surface webgl-canvas` where a drawing buffer exists).
 
-The audio proof plays an ingested WAV in Game Play, measures the live output level at a pointer-set volume and silence after Stop, and checks that Reset, a switch to Kids, and a project switch stop playback and close the audio context.
+The production-swarm retry ran both the current built runtime and a genuinely
+rebuilt unpacked Linux application under Xvfb. Receipts are
+`dist-build/smoke-runtime-proof.json` and `dist-build/smoke-packaged-proof.json`;
+these prove isolated typed New/Open/Recent dialogs, Save/Undo/Redo, hierarchy and
+transform, import/reload, offline Local Ask/Build/approve/apply, cancel and the real
+poll timeout, Play and Export. They also verify strict CSP enforcement, denied
+permissions, six foreign-sender IPC refusals, exact browser result revisions,
+12 import/reload/Play/Export cycles within the unchanged four-second budget,
+a resource plateau, and pagehide teardown deleting actual GPU buffers/programs.
+The 8 MiB asset golden proves byte-boundary staging and rejection without canonical
+mutation; it is not a claim of maximum-scene rendering or live-provider success.
+
+To preserve an older local candidate, stage `electron-builder --linux dir --publish
+never --config.directories.output=dist-build/retry-package`, then run
+`SCENEAXI_SMOKE_PACKAGED_ROOT=dist-build/retry-package/linux-unpacked xvfb-run -a
+pnpm smoke --packaged`. The override must remain inside this application root.
+No signing, upload, publication, or Windows/macOS native certification is implied.
 
 The bound Build inspector also projects the accepted composition as versioned
 hierarchy v1: distinct stable artifact and object ids, parent/child depth,
@@ -63,9 +78,8 @@ preserve-world or preserve-local reparenting. These commands use the same Change
 Review, transaction history, reopen, and Play paths; the CLI and local assistant
 inspect the same hierarchy through the permission-bound desktop bridge. The
 focused end-to-end proof is `tests/e2e/desktop-hierarchy-golden.test.ts`; the
-Electron smoke above also clicks the #254 gizmo mode control and verifies
-the #258 viewport acknowledgement and viewport-source selection during Play. It
-does not claim persistent Play.
+Electron smoke above remains the packaged-host proof and does not claim the later
+#254 gizmo or #258 Play-lifecycle work.
 
 On Web Experience, **Import GLB/glTF…** opens a native file dialog and stages the
 selected contained asset through that same Change Review. Save owns the accepted
@@ -100,9 +114,19 @@ response likewise adopt and poll the bridge's retained exact job before offering
 fresh work. Assistant **Agent** uses the
 privileged no-network rarity fixture through the same Model Provider Port, then
 stages the canonical result in the existing Change Review; it does not mount a
-second artifact or accept provider entropy. Ask refuses clearly rather than
-pretending it produces build output. The shell visual model owns the manipulator controls
-and tokens; the renderer only binds their Mount API effects.
+second artifact or accept provider entropy. Local **Ask** returns a read-only result;
+**Build** stages an artifact in Change Review and never silently approves a document
+write. Accept and Save are explicit authoring actions. BYOK availability is
+provider-specific: an injected runner for one provider does not make another provider
+ready, and missing secure storage or transport refuses by name. No-network fixtures
+are not live provider or billing proof. The shell visual model owns the manipulator
+controls and tokens; the renderer only binds their Mount API effects.
+
+Current-source serial integration runtime smoke and three freshly packaged
+`linux-unpacked` runs passed (`docs/audits/production-swarm/integration-pass-2-linux-*.log`).
+This supersedes the builder's earlier startup failure only for the exercised paths;
+remaining command/IPC/privacy acceptance is tracked separately in `FINAL.json`.
+These are local unsigned, unpublished artifacts, not release authorization.
 
 Rarity v1 authoring is available only to projects created through **New Project**
 in this release, because that starter owns the required stable product identity

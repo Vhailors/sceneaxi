@@ -11,6 +11,8 @@ import { readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import {
   isCommerceActive,
+  pluginCapabilityRegistrySeed,
+  validatePluginManifest,
   missingMandatoryMetadata,
   openPathSurfaceNotes,
   profileConformanceRegistry,
@@ -34,9 +36,13 @@ import {
 } from "./verb-support.js";
 
 const PROFILE_LIST_FLAGS = new Set<string>([]);
+
 const PROFILE_OPEN_PATH_FLAGS = new Set(["--profile", "--operation"]);
+
 const CATALOG_LIST_FLAGS = new Set(["--dir", "--cwd"]);
+
 const ASSET_LIST_FLAGS = new Set(["--dir", "--cwd"]);
+
 const EVIDENCE_LIST_FLAGS = new Set(["--dir", "--cwd"]);
 
 const CATALOG_ITEM_SUFFIX = ".catalog-item.json";
@@ -46,8 +52,10 @@ const PROFILE_OPEN_PATH_USAGE =
 
 const CATALOG_LIST_USAGE =
   "Usage: sceneaxi catalog list --dir <directory of *.catalog-item.json> [--cwd <dir>]";
+
 const ASSET_LIST_USAGE =
   "Usage: sceneaxi asset list --dir <directory of *.catalog-item.json> [--cwd <dir>]";
+
 const EVIDENCE_LIST_USAGE =
   "Usage: sceneaxi evidence list --dir <directory of *.evidence.json> [--cwd <dir>]";
 
@@ -62,6 +70,7 @@ export function runProfileList(
 ): CliOutcome {
   const args = parseVerbArgs(tokens);
   const unknown = refuseUnknownArgs(args, PROFILE_LIST_FLAGS, path);
+
   if (unknown) return unknown;
 
   const profiles = profileConformanceRegistry.map((entry) =>
@@ -111,6 +120,7 @@ export function runProfileOpenPath(
 ): CliOutcome {
   const args = parseVerbArgs(tokens);
   const unknown = refuseUnknownArgs(args, PROFILE_OPEN_PATH_FLAGS, path);
+
   if (unknown) return unknown;
 
   const outcome = resolveOpenPathSurfaceRequest({
@@ -141,6 +151,7 @@ export function runProfileOpenPath(
   }
 
   const { refusal, operation } = outcome;
+
   return failure(
     outcome.source === "request" ? "AMBIGUOUS_INPUT" : "VALIDATION",
     refusal.message,
@@ -174,16 +185,21 @@ function scanCatalogDir(
   usage: string,
 ): CatalogScan {
   const listed = listDirBySuffix(dir, cwd, CATALOG_ITEM_SUFFIX, path, usage);
+
   if (!listed.ok) return { ok: false, outcome: listed.outcome };
 
   const items: { file: string; item: CatalogItem }[] = [];
+
   for (const file of listed.files) {
     const read = readTextOrRefuse(join(listed.absoluteDir, file), file, path);
+
     if (!read.ok) return { ok: false, outcome: read.outcome };
     const parsed = parseJsonOrRefuse(read.text, file, path);
+
     if (!parsed.ok) return { ok: false, outcome: parsed.outcome };
 
     const shaped = validateCatalogItem(parsed.value);
+
     if (!shaped.ok) {
       return {
         ok: false,
@@ -196,9 +212,12 @@ function scanCatalogDir(
         }),
       };
     }
+
     items.push({ file, item: shaped.item });
   }
+
   items.sort((a, b) => (a.file < b.file ? -1 : a.file > b.file ? 1 : 0));
+
   return { ok: true, items: Object.freeze(items) };
 }
 
@@ -213,18 +232,22 @@ export function runCatalogList(
 ): CliOutcome {
   const args = parseVerbArgs(tokens);
   const unknown = refuseUnknownArgs(args, CATALOG_LIST_FLAGS, path);
+
   if (unknown) return unknown;
 
   const dir = args.flags.get("--dir");
+
   if (dir === undefined || dir.length === 0) {
     return missingFlag("Missing required flag --dir", CATALOG_LIST_USAGE, path);
   }
 
   const scanned = scanCatalogDir(dir, args.flags.get("--cwd"), path, CATALOG_LIST_USAGE);
+
   if (!scanned.ok) return scanned.outcome;
 
   const items = scanned.items.map(({ file, item }) => {
     const missing = missingMandatoryMetadata(item);
+
     return Object.freeze({
       file,
       itemId: item.itemId,
@@ -264,14 +287,17 @@ export function runAssetList(
 ): CliOutcome {
   const args = parseVerbArgs(tokens);
   const unknown = refuseUnknownArgs(args, ASSET_LIST_FLAGS, path);
+
   if (unknown) return unknown;
 
   const dir = args.flags.get("--dir");
+
   if (dir === undefined || dir.length === 0) {
     return missingFlag("Missing required flag --dir", ASSET_LIST_USAGE, path);
   }
 
   const scanned = scanCatalogDir(dir, args.flags.get("--cwd"), path, ASSET_LIST_USAGE);
+
   if (!scanned.ok) return scanned.outcome;
 
   const assets = scanned.items.map(({ file, item }) =>
@@ -304,14 +330,17 @@ export function runEvidenceList(
 ): CliOutcome {
   const args = parseVerbArgs(tokens);
   const unknown = refuseUnknownArgs(args, EVIDENCE_LIST_FLAGS, path);
+
   if (unknown) return unknown;
 
   const dir = args.flags.get("--dir");
+
   if (dir === undefined || dir.length === 0) {
     return missingFlag("Missing required flag --dir", EVIDENCE_LIST_USAGE, path);
   }
 
   const cwd = args.flags.get("--cwd");
+
   const listed = listDirBySuffix(
     dir,
     cwd,
@@ -319,18 +348,22 @@ export function runEvidenceList(
     path,
     EVIDENCE_LIST_USAGE,
   );
+
   if (!listed.ok) return listed.outcome;
 
   const packets: ResultPayload[] = [];
+
   for (const file of listed.files) {
     const loaded = readDocumentOrRefuse(
       join(listed.absoluteDir, file),
       file,
       path,
     );
+
     if (!loaded.ok) return loaded.outcome;
 
     const packet = readEvidencePacket(loaded.document.data);
+
     if (!packet.ok) {
       return failure("VALIDATION", `${file}: ${packet.message}`, {
         path,
@@ -344,6 +377,7 @@ export function runEvidenceList(
     const refused = packet.packet.checks.filter(
       (check) => check.status !== "pass",
     );
+
     packets.push(
       Object.freeze({
         file,
@@ -387,6 +421,7 @@ function listDirBySuffix(
 ): DirListing {
   const absoluteDir = resolveUnderCwd(dir, cwd);
   let entries: readonly string[];
+
   try {
     if (!statSync(absoluteDir).isDirectory()) {
       return {
@@ -397,12 +432,14 @@ function listDirBySuffix(
         }),
       };
     }
+
     entries = readdirSync(absoluteDir);
   } catch (error) {
     const code =
       typeof error === "object" && error !== null && "code" in error
         ? String((error as { code: unknown }).code)
         : "";
+
     if (code === "ENOENT") {
       return {
         ok: false,
@@ -415,7 +452,9 @@ function listDirBySuffix(
         }),
       };
     }
+
     const message = error instanceof Error ? error.message : String(error);
+
     return {
       ok: false,
       outcome: failure("INTERNAL", `Could not read ${dir}: ${message}`, {
@@ -425,6 +464,7 @@ function listDirBySuffix(
   }
 
   const files = entries.filter((entry) => entry.endsWith(suffix)).sort();
+
   return { ok: true, absoluteDir, files: Object.freeze(files) };
 }
 
@@ -483,4 +523,69 @@ export function evidenceListHelp(): ResultPayload {
       "--cwd": "Working directory for relative paths",
     }),
   });
+}
+
+
+export function runPluginList(): ResultPayload {
+  return { status: "listed", registry: pluginCapabilityRegistrySeed(), scope: "capability-contracts", executableLoad: false };
+}
+
+export function pluginValidateHelp(): ResultPayload {
+  return { command: "plugin validate", description: "Offline manifest shape and capability membership only; does not execute or attest isolation", flags: { "--manifest": "Local descriptor (required)", "--cwd": "Working directory" } };
+}
+
+export function runPluginValidate(path: readonly string[], tokens: readonly string[]): CliOutcome {
+  const args = parseVerbArgs(tokens);
+  const unknown = refuseUnknownArgs(args, new Set(["--manifest", "--cwd"]), path);
+
+  if (unknown) return unknown;
+  const manifestPath = args.flags.get("--manifest");
+
+  if (!manifestPath) return missingFlag("Missing required flag --manifest", "Usage: sceneaxi plugin validate --manifest <path> [--cwd <dir>]", path);
+  const read = readTextOrRefuse(resolveUnderCwd(manifestPath, args.flags.get("--cwd")), manifestPath, path);
+
+  if (!read.ok) return read.outcome;
+  const parsed = parseJsonOrRefuse(read.text, manifestPath, path);
+
+  if (!parsed.ok) return parsed.outcome;
+  const validated = validatePluginManifest(parsed.value);
+
+  if (!validated.ok) return failure("VALIDATION", validated.diagnostics.map(d => d.message).join("; "), { path });
+  const registry = pluginCapabilityRegistrySeed();
+
+  if (validated.manifest.registryVersion !== registry.registryVersion || validated.manifest.capabilities.some(id => !registry.entries.some(entry => entry.capabilityId === id))) {
+    return failure("VALIDATION", "PLUGIN_REGISTRY_OR_CAPABILITY_UNKNOWN", { path });
+  }
+
+  return success({ status: "validated", pluginId: validated.manifest.pluginId, scope: "manifest-shape-and-capability-membership", executableLoad: false }, ["Host API compatibility, isolation, trust and executable loading remain host-owned; no code was executed"]);
+}
+
+export function runCatalogSubmit(path: readonly string[], tokens: readonly string[]): CliOutcome {
+  const args = parseVerbArgs(tokens);
+  const unknown = refuseUnknownArgs(args, new Set(["--item", "--cwd"]), path, new Set(["--validate-only"]));
+
+  if (unknown) return unknown;
+  const itemPath = args.flags.get("--item");
+
+  if (!itemPath) return missingFlag("Missing required flag --item", "Usage: sceneaxi catalog submit --item <path> --validate-only [--cwd <dir>]", path);
+  const read = readTextOrRefuse(resolveUnderCwd(itemPath, args.flags.get("--cwd")), itemPath, path);
+
+  if (!read.ok) return read.outcome;
+  const parsed = parseJsonOrRefuse(read.text, itemPath, path);
+
+  if (!parsed.ok) return parsed.outcome;
+  const validated = validateCatalogItem(parsed.value);
+
+  if (!validated.ok) return failure("VALIDATION", validated.message, { path });
+  const missing = missingMandatoryMetadata(validated.item);
+
+  if (missing.length) return failure("VALIDATION", "CATALOG_METADATA_INCOMPLETE", { path, details: { missing } });
+
+  if (!args.switches.has("--validate-only")) return failure("NOT_IMPLEMENTED", "CATALOG_INTAKE_STORAGE_UNAVAILABLE", { path, help: ["Use --validate-only for offline validation; no publication or curation authority is configured"] });
+
+  return success({ status: "validated-offline", itemId: validated.item.itemId, metadataComplete: true, approved: false, submitted: false, commerceActive: false }, ["Metadata completeness is not approval, listing readiness or publication"]);
+}
+
+export function catalogSubmitHelp(): ResultPayload {
+  return { command: "catalog submit", description: "Validate offline candidate metadata; actual submission refuses absent storage/authority", flags: { "--item": "Catalog Item JSON (required)", "--validate-only": "Offline validation only; writes nothing", "--cwd": "Working directory" } };
 }

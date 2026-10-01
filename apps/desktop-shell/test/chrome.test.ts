@@ -15,7 +15,19 @@ import {
   renderDesktopChrome,
   type DesktopVisualState,
 } from "@sceneaxi/desktop-shell";
-import { EDITOR_COMMAND_REGISTRY } from "@sceneaxi/schemas";
+import { EDITOR_COMMAND_REGISTRY, INPUT_ACTION_REGISTRY } from "@sceneaxi/schemas";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { Window as HappyWindow } from "happy-dom";
+
+// Runtime-only acceptance peer: the shell project cannot compile another lane's
+// native sources into its own dist or add a production dependency on that host.
+const nativeEntry = "../../../desktop/linux/src/index.ts";
+
+const nativeInputEntry = "../../../desktop/linux/src/lib/input-action-host.ts";
+
+const DESKTOP_ACTIVE_DOCUMENT_PATH = "scene.json";
 
 /**
  * The emitted Engine Desktop document (sceneaxi#158).
@@ -47,6 +59,162 @@ const ALL_STATES: ReadonlyArray<readonly [string, DesktopVisualState]> = [
     createDesktopVisualState({ window: { width: 800, height: 560 } }),
   ],
 ];
+
+describe("production command forms through the real host", () => {
+  async function mount(profile: "game" | "kids" = "game") {
+    const { createDesktopBridge, seedDesktopProject } = await import(nativeEntry) as {
+      createDesktopBridge(options: Record<string, unknown>): { handle(request: unknown): unknown };
+      seedDesktopProject(root: string): { ok: boolean };
+    };
+
+    const { createDesktopInputActionHost } = await import(nativeInputEntry) as {
+      createDesktopInputActionHost(options: { projectRoot: string; workspaceDirectory: string }): { inspect(): unknown };
+    };
+
+    const root = mkdtempSync(join(tmpdir(), "sceneaxi-shell-controls-"));
+    expect(seedDesktopProject(root).ok).toBe(true);
+    const inputActions = createDesktopInputActionHost({ projectRoot: root, workspaceDirectory: join(root, "workspace") });
+
+    const host = createDesktopBridge({ cwd: root, inputActions, commandCapabilities: [
+      "scene.compose", "authoring.change-review", "authoring.undo", "authoring.redo",
+      "input.actions", "physics.authoring", "play.session", "viewport.source",
+    ] });
+
+    const window = new HappyWindow({ width: 1200, height: 800, settings: { enableJavaScriptEvaluation: true } });
+    const calls: string[] = [];
+    const clone = <T>(value: T): T => window.eval(`(${JSON.stringify(value)})`) as T;
+    Object.defineProperty(window, "structuredClone", { value: clone });
+    Object.defineProperty(window, "sceneaxiDesktopLinux", { value: {
+      project: async () => clone({ ok: true, data: { status: {
+        active: { name: "Owned regression", root, documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH, source: "opened" },
+        recents: [], recovery: null,
+      } } }),
+      inputActions: async () => clone(inputActions.inspect()),
+      request: async (request: unknown) => {
+        const value = JSON.parse(JSON.stringify(request)) as { action: string; payload: unknown };
+
+        if (value.action === "command") calls.push(String((value.payload as { commandId?: string }).commandId));
+
+        return clone(host.handle(value));
+      },
+    } });
+    window.document.write(renderDesktopChrome(desktopVisualView(createDesktopVisualState({ profile }))));
+
+    const settle = async () => {
+      await window.happyDOM.waitUntilComplete();
+
+      for (let tick = 0; tick < 60; tick += 1) await Promise.resolve();
+    };
+
+    await settle();
+
+    const command = async (id: string) => {
+      const button = window.document.querySelector(`[data-command="${id}"]`);
+      expect(button, id).not.toBeNull();
+      (button as unknown as { click(): void }).click();
+      await settle();
+    };
+
+    const field = (name: string) => {
+      const input = window.document.querySelector(`[data-command-field="${name}"]`);
+      expect(input, name).not.toBeNull();
+
+      return input as unknown as { value: string; checked: boolean; dispatchEvent(event: unknown): boolean };
+    };
+
+    const submit = async () => {
+      window.document.querySelector("[data-command-input]")?.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true }));
+      await settle();
+    };
+
+    const cleanup = () => { window.close(); rmSync(root, { recursive: true, force: true }); };
+
+    return { root, window, calls, host, command, field, submit, settle, cleanup };
+  }
+
+  it("defines real prefab content via fields, writes only on Save and rejects invalid references", async () => {
+    const h = await mount();
+
+    try {
+      const path = join(h.root, DESKTOP_ACTIVE_DOCUMENT_PATH);
+      const before = readFileSync(path);
+      await h.command("scene-prefab-define");
+      h.field("definitionId").value = "shell-pair";
+      h.field("instanceIds").value = '["desktop-crate-root","desktop-crate-beside"]';
+      await h.submit();
+      expect(h.calls).toContain("scene-prefab-define");
+      expect(readFileSync(path)).toEqual(before);
+      expect(h.window.document.querySelector("[data-project-state]")?.getAttribute("data-project-state")).toBe("dirty");
+      await h.command("project-save");
+      expect(readFileSync(path, "utf8")).toContain("shell-pair");
+      const after = readFileSync(path);
+      await h.command("scene-prefab-instance");
+      h.field("definitionId").value = "shell-pair";
+      h.field("parentInstanceId").value = "desktop-crate-root";
+      h.field("instanceKey").value = "first";
+      await h.submit();
+      expect(readFileSync(path)).toEqual(after);
+      (h.window.document.querySelector('[data-action="change-reject"]') as unknown as { click(): void }).click();
+      await h.settle();
+      expect(readFileSync(path)).toEqual(after);
+      await h.command("scene-prefab-refresh");
+      h.field("definitionId").value = "unknown-definition";
+      await h.submit();
+      expect(readFileSync(path)).toEqual(after);
+      expect(h.window.document.querySelector("[data-project-state]")?.getAttribute("data-project-state")).not.toBe("dirty");
+    } finally { h.cleanup(); }
+  });
+
+  it("reviews and commits persisted bindings, updates keyboard dispatch, then reviews reset", async () => {
+    const h = await mount();
+
+    try {
+      await h.command("input-action-rebind");
+      const action = INPUT_ACTION_REGISTRY.find((row) => row.commandId === "project-save");
+      expect(action).toBeDefined();
+      h.field("actionId").value = action?.id ?? "";
+      h.field("binding").value = JSON.stringify({ device: "keyboard", code: "F12", modifiers: ["alt", "control", "shift"] });
+      await h.submit();
+      expect(existsSync(join(h.root, ".sceneaxi/input-actions.v1.json"))).toBe(false);
+      expect(h.window.document.querySelector("[data-command-evidence]")?.textContent).toContain('"status": "review"');
+      h.field("approved").checked = true;
+      await h.submit();
+      expect(readFileSync(join(h.root, ".sceneaxi/input-actions.v1.json"), "utf8")).toContain("F12");
+      h.window.document.dispatchEvent(new h.window.KeyboardEvent("keydown", { key: "Escape" }));
+      await h.command("scene-prefab-define");
+      h.field("definitionId").value = "keyboard-save";
+      h.field("instanceIds").value = '["desktop-crate-root"]';
+      await h.submit();
+      expect(readFileSync(join(h.root, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8")).not.toContain("keyboard-save");
+      const before = h.calls.filter((id) => id === "project-save").length;
+      h.window.document.body.focus();
+      h.window.document.dispatchEvent(new h.window.KeyboardEvent("keydown", { key: "F12", code: "F12", ctrlKey: true, altKey: true, shiftKey: true }));
+      await h.settle();
+      expect(h.calls.filter((id) => id === "project-save").length).toBe(before + 1);
+      expect(readFileSync(join(h.root, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8")).toContain("keyboard-save");
+      await h.command("input-actions-reset");
+      await h.submit();
+      h.field("approved").checked = true;
+      await h.submit();
+      expect(readFileSync(join(h.root, ".sceneaxi/input-actions.v1.json"), "utf8")).not.toContain("F12");
+    } finally { h.cleanup(); }
+  });
+
+  it("exposes all eight missing commands and keeps Kids mutation controls refused", async () => {
+    const ids = ["input-actions-inspect", "scene-prefab-inspect", "scene-prefab-define", "scene-prefab-instance", "scene-prefab-override", "scene-prefab-refresh", "viewport-source-set", "physics-evaluate"];
+    expect(DESKTOP_INTERACTION_COMMANDS.map((row) => row.id)).toEqual(expect.arrayContaining(ids));
+    const h = await mount("kids");
+
+    try {
+      for (const id of ids) {
+        await h.command(id);
+        expect(h.window.document.querySelector("[data-command-input]")).toBeNull();
+      }
+
+      expect(h.calls.some((id) => ids.includes(id))).toBe(false);
+    } finally { h.cleanup(); }
+  });
+});
 
 describe("engine desktop chrome — document shape", () => {
   it("emits one complete, dark, generator-labelled document", () => {
@@ -102,6 +270,7 @@ describe("engine desktop chrome — escaping", () => {
     const html = render(
       createDesktopVisualState({ selection: `</script><img onerror=1>` }),
     );
+
     expect(html).not.toContain("<img onerror");
     expect(html.match(/<script>/g)).toHaveLength(1);
     expect(html.match(/<\/script>/g)).toHaveLength(1);
@@ -111,6 +280,7 @@ describe("engine desktop chrome — escaping", () => {
 describe("engine desktop chrome — regions and modes", () => {
   it("carries all seven mode panels so the rail can switch without a reload", () => {
     const html = render();
+
     for (const mode of DESKTOP_MODE_IDS) {
       expect(html).toContain(`data-mode-panel="${mode}"`);
       expect(html).toContain(`data-action="mode" data-value="${mode}"`);
@@ -127,8 +297,10 @@ describe("engine desktop chrome — regions and modes", () => {
   it("renders the dock tabs the active mode has, and no others", () => {
     for (const mode of DESKTOP_MODE_IDS) {
       const html = render(createDesktopVisualState({ mode }));
+
       const rendered = [...html.matchAll(/data-action="dock-tab" data-value="(\w+)"/g)]
         .map((match) => match[1]);
+
       expect(rendered, mode).toEqual([...dockTabsFor(mode)]);
     }
   });
@@ -139,9 +311,11 @@ describe("engine desktop chrome — regions and modes", () => {
     // has no Changes tab at all.
     for (const mode of DESKTOP_MODE_IDS) {
       const html = render(createDesktopVisualState({ mode }));
+
       const visible = [...html.matchAll(/data-dock-panel="(\w+)"( hidden)?>/g)]
         .filter((match) => match[2] === undefined)
         .map((match) => match[1]);
+
       expect(visible, mode).toEqual([defaultDockTabFor(mode)]);
       expect(html, mode).toContain(
         `aria-selected="true" aria-controls="dock-panel-${defaultDockTabFor(mode)}"`,
@@ -174,13 +348,16 @@ describe("engine desktop chrome — regions and modes", () => {
     const html = render();
     const match = /const T = (\{.*?\});\n/s.exec(html);
     expect(match).not.toBeNull();
+
     const tables = JSON.parse(match?.[1] ?? "{}") as {
       dockTabsByMode: Record<string, string[]>;
       dockHeightByMode: Record<string, number>;
     };
+
     for (const mode of DESKTOP_MODE_IDS) {
       expect(tables.dockTabsByMode[mode]).toEqual([...dockTabsFor(mode)]);
     }
+
     expect(tables.dockHeightByMode["animate"]).toBe(252);
     expect(tables.dockHeightByMode["build"]).toBe(228);
   });
@@ -199,6 +376,7 @@ describe("engine desktop chrome — accessibility", () => {
     const html = render(
       createDesktopVisualState({ assistantRuntime: "local" }),
     );
+
     expect(html).toContain(
       '<textarea id="assistant-prompt" data-kind="live"',
     );
@@ -217,6 +395,7 @@ describe("engine desktop chrome — accessibility", () => {
     expect(html).toContain(
       'data-assistant-manipulators="translation rotation scale"',
     );
+
     for (const id of ["move-x", "move-y", "rotate-y", "scale-up"]) {
       expect(html).toContain(
         `id="assistant-manipulator-${id}" data-kind="live"`,
@@ -233,6 +412,7 @@ describe("engine desktop chrome — accessibility", () => {
   });
   it("uses landmarks rather than anonymous divs for every region", () => {
     const html = render();
+
     for (const landmark of [
       "<header class=\"title-bar\">",
       "<nav class=\"menu-bar\"",
@@ -248,6 +428,7 @@ describe("engine desktop chrome — accessibility", () => {
 
   it("labels every landmark", () => {
     const html = render();
+
     for (const label of [
       'aria-label="Application menu"',
       'aria-label="Profile"',
@@ -270,6 +451,7 @@ describe("engine desktop chrome — accessibility", () => {
       // Every button declares its type, so none submits a form by accident.
       const buttons = html.match(/<button\b[^>]*>/g) ?? [];
       expect(buttons.length, label).toBeGreaterThan(0);
+
       for (const button of buttons) {
         expect(button, `${label} ${button}`).toContain('type="button"');
       }
@@ -282,9 +464,11 @@ describe("engine desktop chrome — accessibility", () => {
     expect(html).not.toMatch(/<button[^>]*\sdisabled[\s>]/);
     const inert = [...html.matchAll(/<button[^>]*aria-disabled="true"[^>]*>/g)];
     expect(inert.length).toBeGreaterThan(0);
+
     for (const [tag] of inert) {
       expect(tag).toMatch(/aria-describedby="refusal-[A-Z_]+"/);
     }
+
     // Every referenced reason exists as an element in the same document.
     for (const [, code] of html.matchAll(/aria-describedby="refusal-([A-Z_]+)"/g)) {
       expect(html).toContain(`id="refusal-${code}"`);
@@ -319,6 +503,7 @@ describe("engine desktop chrome — accessibility", () => {
       const ids = [...render(state).matchAll(/\sid="([^"]*)"/g)].map(
         ([, id]) => id ?? "",
       );
+
       expect(ids.length, label).toBeGreaterThan(0);
       expect(ids.filter((id) => /[\s"']/.test(id) || id.length === 0), label).toEqual([]);
       expect(new Set(ids).size, label).toBe(ids.length);
@@ -327,9 +512,11 @@ describe("engine desktop chrome — accessibility", () => {
 
   it("renders File, Edit, and Run with their real command ids", () => {
     const html = render();
+
     for (const id of DESKTOP_MENU_IDS) {
       expect(html).toContain(`id="menu-${id}" data-kind="view"`);
     }
+
     for (const command of DESKTOP_INTERACTION_COMMANDS) {
       expect(html).toContain(`data-command="${command.id}"`);
     }
@@ -342,6 +529,7 @@ describe("engine desktop chrome — accessibility", () => {
     expect(tabs.length).toBeGreaterThan(0);
     expect(tabs.filter((tag) => tag.includes('aria-selected="true"')).length)
       .toBeGreaterThanOrEqual(2);
+
     for (const tag of tabs) {
       expect(tag).toMatch(/tabindex="(0|-1)"/);
     }
@@ -352,9 +540,11 @@ describe("engine desktop chrome — accessibility", () => {
     // an arrow-key handler a keyboard-only operator can never select another dock
     // panel — the attributes alone are not the pattern.
     const script = /<script>(.*)<\/script>/s.exec(render())?.[1] ?? "";
+
     for (const key of ["ArrowRight", "ArrowLeft", "Home", "End"]) {
       expect(script).toContain(`'${key}'`);
     }
+
     expect(script).toContain("moveTab(event)");
     expect(script).toContain(`list.querySelectorAll('[role="tab"]')`);
   });
@@ -362,6 +552,7 @@ describe("engine desktop chrome — accessibility", () => {
   it("renders the atomic proposal decisions through modelled controls", () => {
     const view = desktopVisualView(createDesktopVisualState());
     const html = render();
+
     for (const control of [view.changeReview.accept, view.changeReview.reject]) {
       expect(html).toContain(`id="${control.id}" data-kind="${control.kind}"`);
     }
@@ -384,6 +575,7 @@ describe("engine desktop chrome — accessibility", () => {
     // render seven live-looking buttons.
     const view = desktopVisualView(createDesktopVisualState());
     const html = render();
+
     for (const mode of view.modes) {
       expect(html).toContain(
         `id="${mode.control.id}" data-kind="${mode.control.kind}"`,
@@ -394,6 +586,7 @@ describe("engine desktop chrome — accessibility", () => {
   it("renders every dock tab and viewport source through its modelled control", () => {
     const view = desktopVisualView(createDesktopVisualState());
     const html = render();
+
     for (const control of [
       ...view.dockTabs.map((tab) => tab.control),
       ...view.viewport.sources.map((source) => source.control),
@@ -406,11 +599,13 @@ describe("engine desktop chrome — accessibility", () => {
     // They sit in a tablist that controls nothing, because switching what a
     // viewport shows needs a renderer and this surface mounts none.
     const html = render();
+
     for (const id of ["scene", "game", "sculpt-preview"]) {
       expect(html).toContain(
         `id="viewport-source-${id}" data-kind="inert" aria-disabled="true" data-refusal="${DESKTOP_VISUAL_REFUSALS.noPresentationRuntime}"`,
       );
     }
+
     expect(html).toContain('aria-selected="true"');
   });
 
@@ -418,14 +613,17 @@ describe("engine desktop chrome — accessibility", () => {
     // ARIA restricts a tablist's children to tabs, and `moveTab()` enumerates
     // them, so the structural spacer stays outside it.
     const html = render();
+
     for (const [, inner] of html.matchAll(
       /<div class="(?:dock|view)-tablist" role="tablist"[^>]*>(.*?)<\/div>/gs,
     )) {
       const tags = [...(inner ?? "").matchAll(/<button\b[^>]*>/g)].map(([tag]) => tag);
       expect(tags.length).toBeGreaterThan(0);
+
       for (const tag of tags) expect(tag).toContain('role="tab"');
       expect(inner).not.toContain("spacer");
     }
+
     expect(html).toContain('<div class="dock-tablist" role="tablist" aria-label="Dock panel">');
     expect(html).toContain('<div class="view-tablist" role="tablist" aria-label="Viewport source">');
   });
@@ -437,6 +635,7 @@ describe("engine desktop chrome — accessibility", () => {
     expect(view.overlay.dismissals).toHaveLength(1);
     const ids = view.overlay.dismissals.map((dismissal) => dismissal.control.id);
     expect(new Set(ids).size).toBe(ids.length);
+
     // Kind and action both come from the model's own declaration, so a button
     // that reaches the host is rendered `live` and one that only closes `view`.
     for (const dismissal of view.overlay.dismissals) {
@@ -446,6 +645,7 @@ describe("engine desktop chrome — accessibility", () => {
           : `id="${dismissal.control.id}" data-kind="live" data-product-action data-action="${dismissal.productAction}"`,
       );
     }
+
     // The shipped dialog reports an outcome and decides nothing, so no
     // dismissal on it reaches the host at all.
     expect(
@@ -461,17 +661,21 @@ describe("engine desktop chrome — accessibility", () => {
     // the attribute rather than concatenated into the markup.
     const view = desktopVisualView(createDesktopVisualState());
     const shipped = view.overlay.dismissals[0];
+
     if (shipped === undefined) throw new Error("outcome dismissal missing");
+
     const added = [
       { ...shipped, id: "outcome-explain", productAction: null,
         control: { ...shipped.control, id: "overlay-close-outcome-explain" } },
       { ...shipped, id: "outcome-hostile", productAction: `x" onclick="steal()`,
         control: { ...shipped.control, id: "overlay-close-outcome-hostile" } },
     ];
+
     const html = renderDesktopChrome({
       ...view,
       overlay: { ...view.overlay, dismissals: [...view.overlay.dismissals, ...added] },
     });
+
     expect(html).toContain(
       `id="overlay-close-outcome-explain" data-kind="view" data-action="overlay" data-value="none"`,
     );
@@ -483,6 +687,7 @@ describe("engine desktop chrome — accessibility", () => {
     const running = render(
       createDesktopVisualState({ mode: "sculpt", sculpt: "running" }),
     );
+
     expect(running).toMatch(
       /<div class="sculpt-progress" role="status" data-sculpt-progress>/,
     );
@@ -490,10 +695,12 @@ describe("engine desktop chrome — accessibility", () => {
       `id="sculpt-cancel" data-kind="inert" aria-disabled="true" data-refusal="${DESKTOP_VISUAL_REFUSALS.noPresentationRuntime}"`,
     );
     expect(running).toContain('data-editor-command="assistant-cancel"');
+
     const mounted = render(createDesktopVisualState({
       mode: "sculpt",
       assistantRuntime: "local",
     }));
+
     expect(mounted).toContain(
       'id="sculpt-start" data-kind="live" data-editor-command="assistant-local-build" data-command-schema-version="1"',
     );
@@ -580,10 +787,12 @@ describe("engine desktop chrome — responsive strategy", () => {
 
   it("gives every undocked column an opener", () => {
     const html = render();
+
     for (const drawer of ["left", "inspector"]) {
       expect(html).toContain(`data-action="drawer" data-value="${drawer}"`);
       expect(html).toContain(`aria-controls="${drawer === "left" ? "left-dock" : "inspector"}"`);
     }
+
     // The assistant's opener is the toggle it already had.
     expect(html).toContain('data-action="assistant"');
     expect(html).toContain('id="left-dock"');
@@ -596,6 +805,7 @@ describe("engine desktop chrome — responsive strategy", () => {
     // change tier at the same numbers or one of them is describing a layout the
     // other does not produce.
     const html = render();
+
     for (const tier of WINDOW_TIERS) {
       if (tier.id === "minimum") continue;
       expect(html, tier.id).toContain(
@@ -638,9 +848,11 @@ describe("engine desktop chrome — responsive strategy", () => {
 
     const docked = render(createDesktopVisualState());
     expect(docked).toMatch(/id="assistant-toggle"[^>]*aria-pressed="true"/);
+
     const drawer = render(
       createDesktopVisualState({ window: { width: 1280, height: 800 } }),
     );
+
     expect(drawer).toMatch(/id="assistant-toggle"[^>]*aria-pressed="false"/);
 
     // Which rule lights the toggle is decided on the two complementary media
@@ -713,15 +925,18 @@ describe("engine desktop chrome — honesty", () => {
 
   it("cannot enter a mode from behind the Kids refusal, in the bytes", () => {
     const html = render(createDesktopVisualState({ profile: "kids" }));
+
     for (const mode of DESKTOP_MODE_IDS) {
       const refusal = mode === "compose" || mode === "plugins"
         ? DESKTOP_VISUAL_REFUSALS.noDocumentBound
         : DESKTOP_VISUAL_REFUSALS.kidsRefuseOnly;
+
       expect(html).toContain(
         `id="mode-${mode}" data-kind="inert" aria-disabled="true" data-refusal="${refusal}"`,
       );
       expect(html).toContain(`aria-describedby="refusal-${refusal}"`);
     }
+
     // The click handler's only guard is `aria-disabled`, so the attribute is what
     // stops a server-rendered Kids document from switching mode.
     const script = /<script>(.*)<\/script>/s.exec(html)?.[1] ?? "";
@@ -743,17 +958,21 @@ describe("engine desktop chrome — honesty", () => {
     ]) {
       const at = `${window.width}x${window.height}`;
       const html = render(createDesktopVisualState({ profile: "kids", window }));
+
       for (const drawer of ["left", "inspector"]) {
         expect(html, `${at} ${drawer}`).toContain(
           `id="drawer-${drawer}" data-kind="inert" aria-disabled="true" data-refusal="${DESKTOP_VISUAL_REFUSALS.kidsRefuseOnly}"`,
         );
       }
+
       expect(html, at).toContain(".title-actions .drawer-toggle{display:inline-flex}");
     }
+
     // On a profile that has those panels the same toggles stay live.
     const game = render(
       createDesktopVisualState({ window: { width: 1024, height: 700 } }),
     );
+
     expect(game).toContain('id="drawer-left" data-kind="view"');
     expect(game).toContain('id="drawer-inspector" data-kind="view"');
     // And the browser-side switch reaches them through the same sweep, not a
@@ -773,6 +992,7 @@ describe("engine desktop chrome — honesty", () => {
     expect(kids).toContain(
       `id="assistant-toggle" data-kind="inert" aria-disabled="true" data-refusal="${DESKTOP_VISUAL_REFUSALS.kidsAssistantDenied}"`,
     );
+
     // Both bodies ship in every document and the state chooses, so switching
     // profile in the browser cannot leave a live composer under a Kids badge —
     // nor strand the column once the operator switches back.
@@ -789,8 +1009,10 @@ describe("engine desktop chrome — honesty", () => {
         '.shell[data-assistant="denied"] .assistant-body,\n.shell[data-assistant="denied"] .assistant-composer{display:none}',
       );
     }
+
     // The switch applies the model's own projection for the profile it lands on.
     const script = /<script>(.*)<\/script>/s.exec(render())?.[1] ?? "";
+
     const tables = JSON.parse(/const T = (\{.*?\});\n/s.exec(render())?.[1] ?? "{}") as {
       assistantRuntimeRows: Record<
         string,
@@ -800,23 +1022,28 @@ describe("engine desktop chrome — honesty", () => {
         }
       >;
     };
+
     for (const runtime of ["none", "local"] as const) {
       const view = desktopVisualView(createDesktopVisualState({ assistantRuntime: runtime }));
       const runtimeRows = tables.assistantRuntimeRows[runtime];
       expect(runtimeRows).toBeDefined();
+
       if (runtimeRows === undefined) continue;
+
       for (const chip of view.profiles) {
         expect(runtimeRows.assistantByProfile[chip.id]).toEqual({
           state: chip.assistant.state,
           modelLabel: chip.assistant.modelLabel,
         });
         const seat = runtimeRows.controlsByProfile[chip.id] ?? {};
+
         const projected = desktopVisualView(
           createDesktopVisualState({
             profile: chip.id,
             assistantRuntime: runtime,
           }),
         );
+
         for (const control of projected.controls) {
           expect(seat[control.id], `${runtime} ${chip.id} ${control.id}`).toEqual([
             control.kind,
@@ -825,6 +1052,7 @@ describe("engine desktop chrome — honesty", () => {
         }
       }
     }
+
     expect(script).toContain("setProfile(value)");
     expect(script).toContain("q('[data-kind]').forEach(applyControl)");
   });
@@ -839,17 +1067,22 @@ describe("engine desktop chrome — honesty", () => {
     expect(html).toContain(
       `<span class="status-pin" data-profile-pin>${view.profilePin}</span>`,
     );
+
     const tables = JSON.parse(/const T = (\{.*?\});\n/s.exec(html)?.[1] ?? "{}") as {
       pinByProfile: Record<string, string>;
     };
+
     const pins = new Set<string>();
+
     for (const chip of view.profiles) {
       const projected = desktopVisualView(
         createDesktopVisualState({ profile: chip.id }),
       );
+
       expect(tables.pinByProfile[chip.id], chip.id).toBe(projected.profilePin);
       pins.add(projected.profilePin);
     }
+
     // One pin per profile: a table that froze on a single value would satisfy
     // the identity above only because every profile shares it.
     expect(pins.size).toBe(view.profiles.length);
@@ -866,11 +1099,13 @@ describe("engine desktop chrome — honesty", () => {
     // The legend is the accounting surface for the registry, and it is what every
     // `aria-describedby` resolves to — including one a client switch adds.
     const html = render();
+
     for (const code of Object.values(DESKTOP_VISUAL_REFUSALS)) {
       expect(html).toContain(
         `id="refusal-${code}"><code>${code}</code> ${DESKTOP_REFUSAL_MESSAGES[code]}`,
       );
     }
+
     // One code, one sentence: the viewport's own note is not a second wording
     // of DESKTOP_NO_PRESENTATION_RUNTIME in the legend.
     expect(
@@ -902,10 +1137,12 @@ describe("engine desktop chrome — honesty", () => {
 
   it("keeps the palette honest about which rows this surface can drive", () => {
     const html = render(createDesktopVisualState({ overlay: "palette" }));
+
     for (const command of DESKTOP_INTERACTION_COMMANDS) {
       expect(html).toContain(`id="palette-${command.id}"`);
       expect(html).toContain(`data-command="${command.id}"`);
     }
+
     expect(html).not.toContain("Search commands");
     expect(html).not.toContain("sceneaxi project dev");
   });

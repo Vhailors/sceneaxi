@@ -85,9 +85,6 @@ export default defineConfig({
     // would reopen the identical host-speed failure through the setup path.
     testTimeout: 60_000,
     hookTimeout: 60_000,
-    // One run-owned TMPDIR, removed on teardown, so fixture leaks cannot
-    // accumulate across runs (see the helper).
-    globalSetup: ["./tests/helpers/scoped-tmpdir.ts"],
     include: [
       "packages/*/test/**/*.test.ts",
       "apps/*/test/**/*.test.ts",

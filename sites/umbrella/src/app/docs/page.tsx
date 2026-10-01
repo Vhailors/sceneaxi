@@ -95,6 +95,7 @@ const SECTIONS = [
   { id: "free-path", name: "The free path" },
   { id: "refusals", name: "Why a sculpt is refused" },
   { id: "assets", name: "Asset policy" },
+    { id: "service-status", name: "Service status and support" },
 ] as const;
 
 export default function DocsPage() {
@@ -104,11 +105,11 @@ export default function DocsPage() {
         {RAIL_GROUPS.map((group) => (
           <div className="docs-rail-group" key={group}>
             <p className="docs-rail-title">{group}</p>
-            {CONTRACTS.filter((entry) => entry.group === group).map((entry) => (
+            {CONTRACTS.flatMap((entry) => entry.group === group ? [(
               <a key={entry.id} href={`#${entry.id}`}>
                 {entry.title}
               </a>
-            ))}
+            )] : [])}
           </div>
         ))}
       </nav>
@@ -130,7 +131,13 @@ export default function DocsPage() {
             </a>
           ))}
         </nav>
-        <h2>Engine contracts</h2>
+        <section aria-labelledby="service-status">
+                    <h2 id="service-status">Service status and support</h2>
+                    <p>Live service status is not available here. These local help pages are not an uptime report or confirmation that sign-in, checkout, or hosted AI is operational.</p>
+                    <p>No verified support contact is published yet. Do not send passwords, provider keys, payment details, or private project files to an unverified address.</p>
+                    <p>Reviewed terms, privacy, refund, and legal contact information are not yet published. This notice is not a legal policy or approval for a public paid launch.</p>
+                  </section>
+                  <h2>Engine contracts</h2>
         <p className="lede">
           SceneAxi is specified before it is implemented. These are the documents that
           govern the engine, the CLI, and the profiles — the code follows them, not the

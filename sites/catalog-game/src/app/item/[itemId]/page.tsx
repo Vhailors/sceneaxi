@@ -11,6 +11,7 @@ import {
 } from "@sceneaxi/site-kit";
 import {
   CATALOG_SITE_BRAND,
+  catalogCanonical,
   CATALOG_SITE_SURFACE,
   editorLinkFor,
 } from "../../../lib/site-config.js";
@@ -47,7 +48,10 @@ export async function generateMetadata({
 
   if (!found.ok) return {};
 
+  const canonical = catalogCanonical(process.env, `/item/${encodeURIComponent(itemId)}`);
+
   return {
+    ...(canonical === null ? {} : { alternates: { canonical } }),
     title: found.value.title,
     description: `${found.value.title} by ${found.value.creatorId}.`,
   };
@@ -60,6 +64,7 @@ export default async function ItemPage({
 }) {
   const { itemId } = await params;
   const found = showSiteListing(CATALOG_SITE_SURFACE, itemId);
+
   if (!found.ok) notFound();
 
   const listing = found.value;
@@ -67,6 +72,7 @@ export default async function ItemPage({
   const share = describeCreatorShare(listing.price);
   const link = editorLinkFor(process.env, listing.itemId);
   const record = listingRecord(listing);
+
   const related = sameCreatorListings(
     listSiteCatalog(CATALOG_SITE_SURFACE),
     listing,
@@ -75,6 +81,7 @@ export default async function ItemPage({
   // The storefront reads identity through the shared site-kit port and holds no auth
   // stack of its own; unwired, this is a named refusal rather than an invented viewer.
   const plane = createCatalogIdentityPlane();
+
   const viewer = await resolveCatalogViewer(
     plane,
     plane.wired ? await readSessionToken() : null,
@@ -86,6 +93,7 @@ export default async function ItemPage({
       : listing.price.money === null
         ? "—"
         : formatMoneyPrice(listing.price.money).split(" ")[0];
+
   const headlineUnit =
     listing.price.credits !== null
       ? `credit${listing.price.credits === 1 ? "" : "s"}`

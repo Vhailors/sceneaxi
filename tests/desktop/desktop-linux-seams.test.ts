@@ -53,7 +53,6 @@ describe("desktop-linux seam", () => {
       "scene",
       "project-browser-open",
       "open-path",
-      "audio-asset",
       "asset-import",
       "ship",
       "assistant",

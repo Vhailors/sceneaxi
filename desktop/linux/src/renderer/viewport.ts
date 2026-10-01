@@ -17,12 +17,9 @@
  * the main process only through the preload-exposed bridge global.
  */
 import {
-  createAudioPlaybackPort,
   createSculptMountApi,
   createThreeRenderLoop,
   createThreeSculptPresentationBackend,
-  type AudioContextLike,
-  type AudioNodeLike,
   type SculptPresentationFrame,
   type ThreePresentationCoreOptions,
 } from "@sceneaxi/engine-presentation";
@@ -33,6 +30,7 @@ import {
   resolveInputAction,
   type InputActionContext,
   type InputActionMap,
+  validateInputActionMap,
 } from "@sceneaxi/schemas";
 import { createDesktopAssistantViewportController } from "../lib/assistant-viewport.js";
 import type { DesktopAssistantProfile } from "../lib/bridge.js";
@@ -83,11 +81,32 @@ import {
   resetDesktopSceneAnimations,
   synchronizeViewportScene,
 } from "./viewport-playback.js";
+import type { DesktopInputActionHost } from "../lib/input-action-host.js";
 import { installDesktopByoConfigurationSurface } from "./byo-configuration.js";
 
+/** Values crossing desktop IPC, event, and exception boundaries before field validation. */
+type DesktopBoundaryValue = string | number | boolean | null | undefined | bigint | symbol
+  | DesktopBoundaryObject | readonly DesktopBoundaryValue[] | Error | DesktopBoundaryMethod;
+
+interface DesktopBoundaryObject { readonly [key: string]: DesktopBoundaryValue }
+
+type DesktopBoundaryMethod = (...args: never[]) => DesktopBoundaryValue;
+
+function isDesktopObject<Value>(value: Value): value is Value & (object | null) {
+  return typeof value === "object";
+}
+
+function isDesktopCallable<Value>(value: Value): value is Value & ((...args: never[]) => void) {
+  return typeof value === "function";
+}
+
+function isDesktopText<Value>(value: Value): value is Value & string {
+  return typeof value === "string";
+}
+
 type BridgeGlobal = {
-  request(request: unknown): Promise<DesktopBridgeResponse>;
-  inputActions?(): Promise<unknown>;
+  request<DesktopRequest>(request: DesktopRequest): Promise<DesktopBridgeResponse>;
+  inputActions?(): Promise<ReturnType<DesktopInputActionHost["inspect"]>>;
   configureByo?: (
     request: DesktopByoConfigurationRequest,
   ) => Promise<DesktopByoConfigurationResponse>;
@@ -114,23 +133,30 @@ export function createDesktopGamepadInputPoller(input: {
   readonly onAction: (actionId: string, pressed: boolean, value: number) => void;
 }) {
   const active = new Map<string, number>();
+
   return (context: InputActionContext): void => {
     if (context !== "play") {
       for (const actionId of active.keys()) input.onAction(actionId, false, 0);
       active.clear();
+
       return;
     }
+
     const seen = new Set<string>();
     const gamepads = input.getGamepads();
+
     for (const row of input.map.bindings) {
       const binding = row.binding;
+
       if (binding.device !== "gamepad") continue;
       const gamepad = gamepads[binding.gamepad];
+
       const raw = gamepad?.connected
         ? binding.input === "axis"
           ? gamepad.axes[binding.control] ?? 0
           : gamepad.buttons[binding.control]?.value ?? 0
         : 0;
+
       const value = Math.abs(raw) < binding.deadzone ? 0 : raw;
       const direction = value < 0 ? "negative" : value > 0 ? "positive" : "any";
       const matches = binding.direction === "any" ? value !== 0 : binding.direction === direction;
@@ -139,12 +165,15 @@ export function createDesktopGamepadInputPoller(input: {
       seen.add(key);
       const previous = active.get(key) ?? 0;
       const current = pressed ? value : 0;
+
       if (current !== previous) {
         input.onAction(row.actionId, pressed, current);
+
         if (pressed) active.set(key, current);
         else active.delete(key);
       }
     }
+
     for (const [actionId, value] of active) {
       if (seen.has(actionId)) continue;
       input.onAction(actionId, false, value);
@@ -156,8 +185,8 @@ export function createDesktopGamepadInputPoller(input: {
 export function attachDesktopViewportInputActions(
   canvas: HTMLCanvasElement,
   camera: Readonly<{
-    dragOrbit(deltaX: number, deltaY: number): unknown;
-    wheelZoom(deltaY: number): unknown;
+    dragOrbit(deltaX: number, deltaY: number): void;
+    wheelZoom(deltaY: number): void;
   }>,
   map: InputActionMap,
   context: () => InputActionContext,
@@ -165,40 +194,49 @@ export function attachDesktopViewportInputActions(
   let dragging = false;
   let lastX = 0;
   let lastY = 0;
+
   const pointerBinding = (button: number) => ({
     device: "pointer" as const,
     button,
     gesture: "drag" as const,
   });
+
   const onPointerDown = (event: PointerEvent) => {
     const resolved = resolveInputAction(map, context(), pointerBinding(event.button));
+
     if (!resolved.ok || resolved.action.id !== "viewport.orbit") return;
     dragging = true;
     lastX = event.clientX;
     lastY = event.clientY;
   };
+
   const onPointerMove = (event: PointerEvent) => {
     if (!dragging) return;
     camera.dragOrbit(event.clientX - lastX, event.clientY - lastY);
     lastX = event.clientX;
     lastY = event.clientY;
   };
+
   const stopDragging = () => { dragging = false; };
+
   const onWheel = (event: WheelEvent) => {
     const resolved = resolveInputAction(map, context(), {
       device: "wheel",
       axis: "y",
       direction: event.deltaY < 0 ? "negative" : event.deltaY > 0 ? "positive" : "any",
     });
+
     if (!resolved.ok || resolved.action.id !== "viewport.zoom") return;
     camera.wheelZoom(event.deltaY);
   };
+
   canvas.addEventListener("pointerdown", onPointerDown);
   canvas.addEventListener("pointermove", onPointerMove);
   canvas.addEventListener("pointerup", stopDragging);
   canvas.addEventListener("pointercancel", stopDragging);
   canvas.addEventListener("pointerleave", stopDragging);
   canvas.addEventListener("wheel", onWheel, { passive: true });
+
   return () => {
     canvas.removeEventListener("pointerdown", onPointerDown);
     canvas.removeEventListener("pointermove", onPointerMove);
@@ -216,19 +254,30 @@ export function attachDesktopViewportInputActions(
 const FRAME_REPORT_MAX_ATTEMPTS = 3;
 
 const REPORT_ID = "desktop-live-viewport-report";
+
 const OPEN_PATH_ID = "desktop-live-viewport-open-path";
+
 const FRAME_REPORT_ID = "desktop-live-viewport-frame-report";
+
 const RARITY_EVIDENCE_ID = "desktop-live-viewport-rarity-evidence";
 
+function isDesktopBridge<Value>(value: Value): value is Value & BridgeGlobal {
+  if (!isDesktopObject(value) || value === null) return false;
+  const request: DesktopBoundaryValue = Object.getOwnPropertyDescriptor(value, "request")?.value;
+
+  // The packaged preload owns this named port; check its required entry point before use.
+  return isDesktopCallable(request);
+}
+
 function bridge(): BridgeGlobal | null {
-  const candidate = (globalThis as Record<string, unknown>)[DESKTOP_BRIDGE_GLOBAL];
-  if (typeof candidate !== "object" || candidate === null) return null;
-  const request = (candidate as Record<string, unknown>)["request"];
-  return typeof request === "function" ? (candidate as BridgeGlobal) : null;
+  const candidate: DesktopBoundaryValue = Object.getOwnPropertyDescriptor(globalThis, DESKTOP_BRIDGE_GLOBAL)?.value;
+
+  return isDesktopBridge(candidate) ? candidate : null;
 }
 
 function overlayLine(host: Element, id: string, kind: string, bottom: string, text: string): void {
   let line = document.getElementById(id);
+
   if (line === null) {
     line = document.createElement("p");
     line.id = id;
@@ -250,6 +299,7 @@ function overlayLine(host: Element, id: string, kind: string, bottom: string, te
     line.style.whiteSpace = "pre-wrap";
     host.append(line);
   }
+
   line.textContent = text;
 }
 
@@ -283,12 +333,13 @@ function rarityEvidenceLine(host: Element, text: string): void {
   overlayLine(host, RARITY_EVIDENCE_ID, "rarity-evidence", "140px", text);
 }
 
-function refusalText(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+function refusalText(cause: unknown): string {
+  return cause instanceof Error ? cause.message : String(cause);
 }
 
 function updatePixelsMeta(frame: SculptPresentationFrame): void {
   const content = pixelsMetaContent(frame);
+
   if (content === null) return;
   document
     .querySelector(`meta[name="${PIXELS_META_NAME}"]`)
@@ -311,6 +362,7 @@ function signalAssistantRuntime(
 ): void {
   const shell = document.querySelector<HTMLElement>(".shell");
   const eventName = shell?.dataset.assistantRuntimeEvent;
+
   if (eventName === undefined) return;
   document.dispatchEvent(
     new CustomEvent(eventName, {
@@ -337,8 +389,11 @@ function refuseLiveViewport(stage: Element | null, message: string): void {
 
 function assistantProfile(shell: HTMLElement): DesktopAssistantProfile {
   const id = shell.dataset.profile;
+
   if (id === "web") return "@sceneaxi/profile-web";
+
   if (id === "kids") return "@sceneaxi/profile-kids";
+
   return "@sceneaxi/profile-game";
 }
 
@@ -359,213 +414,6 @@ type RarityReportable = {
  */
 function rarityEvidenceReport(exercise: RarityReportable): string | null {
   return formatSafeRarityEvidence(exercise.rarity, exercise.raritySession);
-}
-
-type AudioClipManifest = Readonly<{
-  assetId: string;
-  mediaType: "audio/wav" | "audio/ogg" | "audio/mpeg";
-  digest: string;
-  byteLength: number;
-}>;
-
-function audioClipManifest(value: unknown): readonly AudioClipManifest[] | null {
-  if (!Array.isArray(value)) return null;
-  const clips: AudioClipManifest[] = [];
-  for (const item of value) {
-    if (typeof item !== "object" || item === null) return null;
-    const clip = item;
-    if (
-      !("assetId" in clip) || !("mediaType" in clip) || !("digest" in clip) || !("byteLength" in clip) ||
-      typeof clip["assetId"] !== "string" || clip["assetId"].length === 0 ||
-      (clip["mediaType"] !== "audio/wav" && clip["mediaType"] !== "audio/ogg" && clip["mediaType"] !== "audio/mpeg") ||
-      typeof clip["digest"] !== "string" || !/^sha256:[0-9a-f]{64}$/.test(clip["digest"]) ||
-      typeof clip["byteLength"] !== "number" || !Number.isSafeInteger(clip["byteLength"]) || clip["byteLength"] < 1 || clip["byteLength"] > 8 * 1024 * 1024
-    ) return null;
-    clips.push({
-      assetId: clip["assetId"],
-      mediaType: clip["mediaType"],
-      digest: clip["digest"],
-      byteLength: clip["byteLength"],
-    });
-  }
-  return clips;
-}
-
-function browserAudioContext(): AudioContextLike {
-  const context = new AudioContext();
-  void context.resume();
-  const nodes = new WeakMap<object, AudioNode>();
-  let analyser: AnalyserNode | null = null;
-  const wrap = (node: AudioNode) => {
-    const facade = { connect: (destination: AudioNodeLike) => node.connect(resolve(destination)) };
-    nodes.set(facade, node);
-    return facade;
-  };
-  const resolve = (facade: object): AudioNode => {
-    const node = nodes.get(facade);
-    if (node === undefined) throw new Error("AUDIO_NODE_INVALID");
-    return node;
-  };
-  return {
-    destination: wrap(context.destination),
-    decodeAudioData: (bytes) => context.decodeAudioData(bytes),
-    observeMasterGain: (gain) => {
-      analyser = context.createAnalyser();
-      resolve(gain).connect(analyser);
-      analyser.connect(context.destination);
-      return wrap(analyser);
-    },
-    measureOutputRms: () => {
-      if (analyser === null) return 0;
-      const samples = new Float32Array(analyser.fftSize);
-      analyser.getFloatTimeDomainData(samples);
-      let energy = 0;
-      for (const sample of samples) energy += sample * sample;
-      return Math.sqrt(energy / samples.length);
-    },
-    createGain: () => {
-      const node = context.createGain();
-      const facade = { gain: node.gain, connect: (destination: AudioNodeLike) => node.connect(resolve(destination)) };
-      nodes.set(facade, node);
-      return facade;
-    },
-    createBufferSource: () => {
-      const node = context.createBufferSource();
-      let buffer: object | null = null;
-      return {
-        get buffer() { return buffer; },
-        set buffer(value) {
-          buffer = value;
-          // SAFETY: playback buffers are returned by this context's decodeAudioData.
-          node.buffer = value as AudioBuffer | null;
-        },
-        get onended() { return node.onended === null ? null : () => node.onended?.(new Event("ended")); },
-        set onended(handler) { node.onended = handler === null ? null : () => handler(); },
-        connect: (destination) => { node.connect(resolve(destination)); },
-        start: () => node.start(),
-        stop: () => node.stop(),
-      };
-    },
-    close: () => context.close(),
-  };
-}
-
-function installAudioControls(
-  host: Element,
-  clips: readonly AudioClipManifest[],
-  port: BridgeGlobal,
-): () => void {
-  if (clips.length === 0) return () => undefined;
-  const controls = host.ownerDocument.createElement("div");
-  controls.dataset.audioPlayback = "true";
-  controls.style.cssText = "position:absolute;top:12px;right:12px;z-index:10;display:flex;gap:6px;pointer-events:auto";
-  controls.setAttribute("aria-label", "Play session audio");
-  const volume = host.ownerDocument.createElement("input");
-  volume.type = "range";
-  volume.min = "0";
-  volume.max = "1";
-  volume.step = "0.01";
-  volume.value = "1";
-  volume.setAttribute("aria-label", "Audio volume");
-  let audio: ReturnType<typeof createAudioPlaybackPort> | null = null;
-  let disposed = false;
-  const buttons: HTMLButtonElement[] = [];
-  volume.addEventListener("input", () => {
-    if (audio !== null) {
-      audio.setVolume(Number(volume.value));
-      controls.dataset.audioVolume = volume.value;
-    }
-  });
-  controls.append(volume);
-  for (const clip of clips) {
-    const button = host.ownerDocument.createElement("button");
-    button.type = "button";
-    button.textContent = `Play ${clip.assetId}`;
-    button.addEventListener("click", () => {
-      try {
-        audio ??= createAudioPlaybackPort(browserAudioContext);
-        audio.setVolume(Number(volume.value));
-        controls.dataset.audioVolume = volume.value;
-      } catch {
-        openPathLine(host, `Audio refused: AUDIO_CONTEXT_UNAVAILABLE ${clip.assetId}`);
-        return;
-      }
-      const playback = audio;
-      void (async () => {
-        const result = await port.request({ action: "audio-asset", payload: { assetId: clip.assetId, documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH } });
-        if (!result.ok || typeof result.data !== "object" || result.data === null) {
-          openPathLine(host, `Audio refused: AUDIO_CLIP_UNKNOWN ${clip.assetId}`);
-          return;
-        }
-        const data = result.data;
-        if (typeof data !== "object" || data === null || !("bytesBase64" in data)) {
-          openPathLine(host, `Audio refused: AUDIO_CLIP_INVALID ${clip.assetId}`);
-          return;
-        }
-        const encoded = data["bytesBase64"];
-        if (
-          !("assetId" in data) || !("mediaType" in data) || !("digest" in data) || !("byteLength" in data) ||
-          data["assetId"] !== clip.assetId || data["mediaType"] !== clip.mediaType ||
-          data["digest"] !== clip.digest || data["byteLength"] !== clip.byteLength ||
-          typeof encoded !== "string" || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(encoded)
-        ) {
-          openPathLine(host, `Audio refused: AUDIO_CLIP_INVALID ${clip.assetId}`);
-          return;
-        }
-        const bytes = Uint8Array.from(atob(encoded), (char) => char.charCodeAt(0));
-        const digest = `sha256:${[...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))].map((byte) => byte.toString(16).padStart(2, "0")).join("")}`;
-        if (bytes.byteLength !== clip.byteLength || digest !== clip.digest) {
-          openPathLine(host, `Audio refused: AUDIO_CLIP_INVALID ${clip.assetId}`);
-          return;
-        }
-        try {
-          await playback.load(clip.assetId, bytes);
-          if (!disposed) {
-            playback.play(clip.assetId);
-            button.dataset.audioState = "started";
-            const updateRms = () => {
-              if (disposed || button.dataset.audioState !== "started") return;
-              controls.dataset.audioRms = String(playback.measureOutputRms());
-              requestAnimationFrame(updateRms);
-            };
-            requestAnimationFrame(updateRms);
-          }
-        } catch {
-          if (!disposed) openPathLine(host, `Audio refused: AUDIO_DECODE_FAILED ${clip.assetId}`);
-        }
-      })().catch(() => {
-        if (!disposed) openPathLine(host, `Audio refused: AUDIO_PLAYBACK_FAILED ${clip.assetId}`);
-      });
-    });
-    buttons.push(button);
-    controls.append(button);
-  }
-  host.append(controls);
-  return () => {
-    if (disposed) return;
-    disposed = true;
-    if (audio === null) controls.dataset.audioContextDisposed = "true";
-    else {
-      const closing = audio;
-      closing.stopAll();
-      // Let the still-running graph render past the stopped sources before
-      // closing: a closed context freezes the analyser on its last buffer, so the
-      // recorded level must be taken first to describe the output after Stop.
-      void new Promise((resolve) => setTimeout(resolve, 100))
-        .then(() => {
-          controls.dataset.audioRms = String(closing.measureOutputRms());
-          return closing.dispose();
-        })
-        .then(
-          () => { controls.dataset.audioContextDisposed = "true"; },
-          () => openPathLine(host, "Audio refused: AUDIO_CONTEXT_CLOSE_FAILED"),
-        );
-    }
-    for (const button of buttons) {
-      if (button.dataset.audioState === "started") button.dataset.audioState = "stopped";
-    }
-    controls.remove();
-  };
 }
 
 export function createDesktopPresentationBackend(
@@ -596,14 +444,17 @@ export function installAssistantProductFlow(
   const sculptProgressLabel = sculptProgress?.querySelector<HTMLElement>(".sculpt-label") ?? null;
   const sculptProgressDetail = sculptProgress?.querySelector<HTMLElement>(".sculpt-detail") ?? null;
   const manipulatorBar = stage.querySelector<HTMLElement>("[data-assistant-manipulators]");
+
   const sendControls = Array.from(
     document.querySelectorAll<HTMLElement>("[data-action='assistant-send']"),
   );
+
   const manipulatorControls = Array.from(
     manipulatorBar?.querySelectorAll<HTMLButtonElement>(
       "[data-action='assistant-manipulator']",
     ) ?? [],
   );
+
   if (
     shell === null ||
     prompt === null ||
@@ -619,6 +470,7 @@ export function installAssistantProductFlow(
   ) {
     return false;
   }
+
   let running = false;
   let assistantRunVersion = 0;
   let recoveryJobId: string | null = null;
@@ -626,8 +478,10 @@ export function installAssistantProductFlow(
   let activeRarityProposalDigest: string | null = null;
   let displayedRarityResultDigest: string | null = null;
   const assistantViewport = createDesktopAssistantViewportController(mounts);
+
   const setSculptCancelActive = (active: boolean): void => {
     if (sculptCancel === null) return;
+
     if (active) {
       sculptProgress?.removeAttribute("hidden");
       sculptCancel.dataset.kind = "live";
@@ -635,8 +489,10 @@ export function installAssistantProductFlow(
       sculptCancel.removeAttribute("aria-describedby");
       sculptCancel.removeAttribute("data-refusal");
       sculptCancel.classList.remove("is-inert");
+
       return;
     }
+
     sculptProgress?.setAttribute("hidden", "");
     sculptCancel.dataset.kind = "inert";
     sculptCancel.setAttribute("aria-disabled", "true");
@@ -649,10 +505,13 @@ export function installAssistantProductFlow(
   };
 
   document.addEventListener(DESKTOP_RARITY_PROPOSAL_EVENT, (event: Event) => {
+      if (!(event instanceof CustomEvent)) return;
+
     const invalidation = assistantRarityInvalidation(
       displayedRarityResultDigest,
-      (event as CustomEvent).detail,
+      event.detail,
     );
+
     if (invalidation !== null) {
       activeRarityProposalDigest = null;
       displayedRarityResultDigest = null;
@@ -661,22 +520,27 @@ export function installAssistantProductFlow(
       retry.removeAttribute("hidden");
       status.textContent = invalidation.status;
       running = false;
+
       return;
     }
+
     const settlement = assistantRaritySettlement(
       activeRarityProposalDigest,
-      (event as CustomEvent).detail,
+      event.detail,
     );
+
     if (settlement === null) return;
     activeRarityProposalDigest = settlement.activeNamespaceDigest;
-    const detail = (event as CustomEvent<{
-      evidence?: { namespaceDigest?: unknown };
-    }>).detail;
-    const settledDigest = detail?.evidence?.namespaceDigest;
-    displayedRarityResultDigest = settlement.evidenceVisible && typeof settledDigest === "string"
+
+    const detail = event.detail;
+    const evidence: DesktopBoundaryValue = isDesktopObject(detail) && detail !== null && "evidence" in detail ? detail.evidence : undefined;
+
+    const settledDigest: DesktopBoundaryValue = isDesktopObject(evidence) && evidence !== null && "namespaceDigest" in evidence ? evidence.namespaceDigest : undefined;
+    displayedRarityResultDigest = settlement.evidenceVisible && isDesktopText(settledDigest)
       ? settledDigest
       : null;
     resultView.textContent = settlement.evidenceText;
+
     if (settlement.evidenceVisible) resultView.removeAttribute("hidden");
     else resultView.setAttribute("hidden", "");
     retry.removeAttribute("hidden");
@@ -694,6 +558,7 @@ export function installAssistantProductFlow(
   const setBusy = (busy: boolean): void => {
     shell.dataset.assistantBusy = busy ? "true" : "false";
     const thinking = document.querySelector<HTMLElement>("[data-assistant-thinking]");
+
     if (thinking !== null) {
       if (busy) thinking.removeAttribute("hidden");
       else thinking.setAttribute("hidden", "");
@@ -703,6 +568,7 @@ export function installAssistantProductFlow(
   const refused = (reason: string, message: string): void => {
     running = false;
     setBusy(false);
+
     const human = reason.includes("KEY_MISSING") || reason.includes("KEY_INVALID")
       ? "Paste your OpenCode key under the prompt, save it, then Send again."
       : reason.includes("KIDS") || message.toLowerCase().includes("kids")
@@ -712,30 +578,40 @@ export function installAssistantProductFlow(
           : reason.includes("STATUS_TIMEOUT") || message.toLowerCase().includes("did not finish in time")
             ? "That took too long, so it was stopped. Send again."
             : message;
+
     status.textContent = human.includes(reason) ? human : `${human} · ${reason}`;
     retry?.removeAttribute("hidden");
   };
 
-  const registeredRequest = (request: unknown): Promise<DesktopBridgeResponse> => {
-    const payload = typeof request === "object" && request !== null && "payload" in request
-      ? (request as { payload?: { op?: unknown; jobId?: unknown } }).payload
+  const registeredRequest = <DesktopRequest>(request: DesktopRequest): Promise<DesktopBridgeResponse> => {
+    const payload = isDesktopObject(request) && request !== null && "payload" in request
+      ? request.payload
       : undefined;
-    if (payload?.op === "status") {
+
+    const op = isDesktopObject(payload) && payload !== null && "op" in payload ? payload.op : undefined;
+
+    if (op === "status") {
       return port.request({
         action: "command",
         payload: createEditorCommandInvocation("assistant-status", "desktop-control", {}),
       });
     }
-    if (payload?.op === "abandon" && typeof payload.jobId === "string") {
-      return port.request({
-        action: "command",
-        payload: createEditorCommandInvocation(
-          "assistant-cancel",
-          "desktop-control",
-          { jobId: payload.jobId },
-        ),
-      });
+
+    if (op === "abandon") {
+      const jobId = isDesktopObject(payload) && payload !== null && "jobId" in payload ? payload.jobId : undefined;
+
+      if (isDesktopText(jobId)) {
+        return port.request({
+          action: "command",
+          payload: createEditorCommandInvocation(
+            "assistant-cancel",
+            "desktop-control",
+            { jobId },
+          ),
+        });
+      }
     }
+
     return port.request(request);
   };
 
@@ -745,31 +621,40 @@ export function installAssistantProductFlow(
       jobId,
       onSnapshot: (job) => {
         const latest = job.latestProgress;
+
         if (latest !== null) {
           status.textContent = `${latest.percent}% · ${latest.message}`;
+
           if (job.commandId !== "assistant-local-agent") {
             sculptProgress?.removeAttribute("hidden");
             sculptProgressBar?.setAttribute("aria-valuenow", String(latest.percent));
+
             if (sculptProgressFill !== null) sculptProgressFill.style.width = `${latest.percent}%`;
+
             if (sculptProgressLabel !== null) sculptProgressLabel.textContent = latest.message;
+
             if (sculptProgressDetail !== null) sculptProgressDetail.textContent = latest.phase;
           }
         }
       },
     });
+
     if (!outcome.ok) {
       recoveryJobId = outcome.retryJobId ?? null;
       refused(outcome.reason, outcome.message);
       activeJobId = null;
       setSculptCancelActive(false);
+
       return false;
     }
+
     recoveryJobId = null;
     activeJobId = null;
     setSculptCancelActive(false);
     const job = outcome.job;
     const result = outcome.result;
     activeRarityProposalDigest = assistantRarityResultDigest(result);
+
     if (isAskAnswerResult(result)) {
       resultView.textContent = assistantInspectionText(job);
       resultView.removeAttribute("hidden");
@@ -777,12 +662,15 @@ export function installAssistantProductFlow(
       status.textContent = "Ask answered from typed project state · no provider and no saved bytes.";
       running = false;
       setBusy(false);
+
       return true;
     }
+
     if (isRarityProposalResult(result)) {
       displayedRarityResultDigest = result.evidence.namespaceDigest;
       const settlement = assistantRarityResultSettlement(result);
       const lifecycleEvent = assistantRarityResultEvent(result);
+
       if (settlement !== null) {
         if (lifecycleEvent !== null) {
           document.dispatchEvent(
@@ -795,16 +683,20 @@ export function installAssistantProductFlow(
             active: () => assistantRunVersion === acknowledgementVersion,
           });
         }
+
         if (!settlement.evidenceVisible) displayedRarityResultDigest = null;
         resultView.textContent = settlement.evidenceText;
+
         if (settlement.evidenceVisible) resultView.removeAttribute("hidden");
         else resultView.setAttribute("hidden", "");
         retry.removeAttribute("hidden");
         status.textContent = settlement.status;
         running = false;
         setBusy(false);
+
         return true;
       }
+
       const replayed = result.replayed;
       resultView.textContent = formatSafeRarityEvidence(result.evidence) ?? "";
       resultView.removeAttribute("hidden");
@@ -819,6 +711,7 @@ export function installAssistantProductFlow(
         : "Rarity proposal staged · review the canonical diff before Accept or Reject.";
       running = false;
       setBusy(false);
+
       if (!replayed) {
         const watchedVersion = assistantRunVersion;
         void watchAssistantRaritySettlement({
@@ -829,6 +722,7 @@ export function installAssistantProductFlow(
         }).then((settled) => {
           if (settled === null || assistantRunVersion !== watchedVersion) return;
           const detail = assistantRarityResultEvent(settled);
+
           if (detail === null) return;
           document.dispatchEvent(
             new CustomEvent(DESKTOP_RARITY_PROPOSAL_EVENT, { detail }),
@@ -840,8 +734,10 @@ export function installAssistantProductFlow(
           });
         });
       }
+
       return true;
     }
+
     assistantViewport.replace(result.mountable);
     displayedRarityResultDigest = null;
     backend.frameMountedContent();
@@ -851,38 +747,45 @@ export function installAssistantProductFlow(
     retry?.setAttribute("hidden", "");
     status.textContent =
       "Mounted in the live center viewport · translate/rotate/scale manipulators active · drag to orbit, wheel to zoom.";
+
     if (persistReadyBuild !== undefined) {
       try {
         status.textContent = await persistReadyBuild();
-      } catch (error: unknown) {
-        status.textContent = `Mounted · apply failed: ${refusalText(error)}`;
+      } catch (cause: unknown) {
+        status.textContent = `Mounted · apply failed: ${refusalText(cause)}`;
       }
     }
+
     running = false;
     setBusy(false);
     activeJobId = null;
     setSculptCancelActive(false);
+
     return true;
   };
 
   const recoverCurrentJob = async (): Promise<boolean> => {
     let response: Awaited<ReturnType<BridgeGlobal["request"]>>;
+
     try {
       response = await registeredRequest({ action: "assistant", payload: { op: "status" } });
     } catch {
       return false;
     }
+
     if (!response.ok) return false;
     const current = response.data;
+
     if (
       current === null ||
-      typeof current !== "object" ||
+      !isDesktopObject(current) ||
       !("jobId" in current) ||
-      typeof current.jobId !== "string" ||
+      !isDesktopText(current.jobId) ||
       current.jobId.length === 0
     ) {
       return false;
     }
+
     assistantRunVersion += 1;
     recoveryJobId = current.jobId;
     activeJobId = current.jobId;
@@ -895,19 +798,23 @@ export function installAssistantProductFlow(
     retry.setAttribute("hidden", "");
     status.textContent = "Recovering retained assistant action…";
     await poll(current.jobId);
+
     return true;
   };
 
   const start = async (forceLocalBuild = false): Promise<void> => {
     if (running) return;
+
     if (recoveryJobId !== null) {
       const jobId = recoveryJobId;
       running = true;
       retry.setAttribute("hidden", "");
       status.textContent = "Recovering assistant action…";
       await poll(jobId);
+
       return;
     }
+
     const decision = decideAssistantStart({
       mode: forceLocalBuild ? "build" : shell.dataset.assistantMode,
       route: forceLocalBuild ? "local" : shell.dataset.assistantRoute,
@@ -916,15 +823,19 @@ export function installAssistantProductFlow(
         ? "Sculpt object"
         : prompt.value,
     });
+
     if (!decision.ok) {
       refused(decision.reason, decision.message);
+
       return;
     }
+
     running = true;
     setBusy(true);
     retry?.setAttribute("hidden", "");
     resultView.setAttribute("hidden", "");
     status.textContent = "Starting assistant action…";
+
     const commandId = decision.payload.route === "byo"
       ? "assistant-byo-build"
       : decision.payload.mode === "ask"
@@ -932,6 +843,7 @@ export function installAssistantProductFlow(
         : decision.payload.mode === "agent"
           ? "assistant-local-agent"
           : "assistant-local-build";
+
     const response = commandId === "assistant-ask"
       ? await port.request({
           action: "assistant",
@@ -959,6 +871,7 @@ export function installAssistantProductFlow(
                 },
           ),
         });
+
     if (!response.ok) {
       if (
         response.reason === DESKTOP_BRIDGE_REFUSALS.assistantBusy &&
@@ -966,28 +879,36 @@ export function installAssistantProductFlow(
       ) {
         return;
       }
+
       refused(response.reason, response.message);
+
       return;
     }
+
+    // SAFETY: the successful response belongs to the exact registered assistant start/cancel command dispatched above; the privileged bridge returns its retained assistant job snapshot for that command.
     const startedJob = response.data as DesktopAssistantJobSnapshot | null;
+
     if (
       startedJob === null ||
-      typeof startedJob !== "object" ||
-      typeof startedJob.jobId !== "string" ||
+      !isDesktopObject(startedJob) ||
+      !isDesktopText(startedJob.jobId) ||
       startedJob.jobId.length === 0
     ) {
       refused(
         DESKTOP_BRIDGE_REFUSALS.assistantJobMissing,
         "The assistant job disappeared; retry the prompt.",
       );
+
       return;
     }
+
     assistantRunVersion += 1;
     activeJobId = startedJob.jobId;
     setSculptCancelActive(commandId !== "assistant-local-agent");
     activeRarityProposalDigest = assistantRarityResultDigest(null);
     displayedRarityResultDigest = null;
     const finished = await poll(startedJob.jobId);
+
     if (!finished && commandId === "assistant-byo-build" && !forceLocalBuild) {
       status.textContent = "Flash did not return a usable object. Making one locally…";
       await start(true);
@@ -997,15 +918,15 @@ export function installAssistantProductFlow(
   sendControls.forEach((control) => {
     control.addEventListener("click", () => {
       if (control.getAttribute("aria-disabled") === "true") return;
-      void start().catch((error: unknown) =>
-        refused(DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed, refusalText(error)),
+      void start().catch((cause: unknown) =>
+        refused(DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed, refusalText(cause)),
       );
     });
   });
   sculptStart?.addEventListener("click", () => {
     if (sculptStart.getAttribute("aria-disabled") === "true") return;
-    void start(true).catch((error: unknown) =>
-      refused(DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed, refusalText(error)),
+    void start(true).catch((cause: unknown) =>
+      refused(DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed, refusalText(cause)),
     );
   });
   sculptCancel?.addEventListener("click", () => {
@@ -1014,8 +935,10 @@ export function installAssistantProductFlow(
         DESKTOP_BRIDGE_REFUSALS.assistantJobMismatch,
         "Cancel refused because no exact active Sculpt command is retained.",
       );
+
       return;
     }
+
     const jobId = activeJobId;
     void registeredRequest({
       action: "assistant",
@@ -1023,22 +946,28 @@ export function installAssistantProductFlow(
     }).then((response) => {
       if (!response.ok) {
         refused(response.reason, response.message);
+
         return;
       }
+
+      // SAFETY: the successful response belongs to the exact registered assistant start/cancel command dispatched above; the privileged bridge returns its retained assistant job snapshot for that command.
       const snapshot = response.data as DesktopAssistantJobSnapshot;
+
       if (snapshot.jobId !== jobId || snapshot.terminal === null) {
         refused(
           DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed,
           "Cancel returned no terminal result for the exact active Sculpt command.",
         );
+
         return;
       }
+
       activeJobId = null;
       setSculptCancelActive(false);
       running = false;
       status.textContent = `${snapshot.terminal.progress.percent}% · ${snapshot.terminal.progress.message}`;
-    }).catch((error: unknown) =>
-      refused(DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed, refusalText(error)),
+    }).catch((cause: unknown) =>
+      refused(DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed, refusalText(cause)),
     );
   });
   running = true;
@@ -1046,38 +975,58 @@ export function installAssistantProductFlow(
     .then((recovered) => {
       if (!recovered) running = false;
     })
-    .catch((error: unknown) =>
-      refused(DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed, refusalText(error)),
+    .catch((cause: unknown) =>
+      refused(DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed, refusalText(cause)),
     );
+
   return true;
 }
 
 async function mountLiveViewport(): Promise<void> {
   const stage = document.querySelector<HTMLElement>(".viewport");
+
   if (stage === null) {
     refuseLiveViewport(null, "the chrome document has no viewport stage.");
+
     return;
   }
 
   const port = bridge();
+
   if (port === null) {
     refuseLiveViewport(stage, "the desktop bridge is not exposed.");
+
     return;
   }
+
   let inputActionMap = DEFAULT_INPUT_ACTION_MAP;
+
   if (port.inputActions !== undefined) {
     const inspection = await port.inputActions();
-    if (typeof inspection !== "object" || inspection === null ||
+
+    if (!isDesktopObject(inspection) || inspection === null ||
       !("ok" in inspection) || inspection.ok !== true || !("data" in inspection) ||
-      typeof inspection.data !== "object" || inspection.data === null ||
+      !isDesktopObject(inspection.data) || inspection.data === null ||
       !("map" in inspection.data)) {
       refuseLiveViewport(stage, "the persisted input-action map was refused.");
+
       return;
     }
-    inputActionMap = inspection.data.map as InputActionMap;
+
+    const parsedMap = validateInputActionMap(inspection.data.map);
+
+    if (parsedMap === null) {
+      refuseLiveViewport(stage, "the persisted input-action map was malformed.");
+
+      return;
+    }
+
+    inputActionMap = parsedMap;
   }
+
   let viewportInputContext: InputActionContext = "editor";
   const byoConfigurationBound = installDesktopByoConfigurationSurface(port);
+
   if (!byoConfigurationBound) {
     openPathLine(
       stage,
@@ -1089,14 +1038,19 @@ async function mountLiveViewport(): Promise<void> {
     action: "scene",
     payload: { documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
   });
+
   if (!sceneResponse.ok) {
     refuseLiveViewport(stage, `${sceneResponse.reason} — ${sceneResponse.message}`);
+
     return;
   }
+
   if (!desktopMountablePayload(sceneResponse.data)) {
     refuseLiveViewport(stage, "the active Scene Document payload is invalid.");
+
     return;
   }
+
   let scene = sceneResponse.data;
   let displayedViewportRarityDigest: string | null = null;
 
@@ -1113,10 +1067,12 @@ async function mountLiveViewport(): Promise<void> {
   // Painted above the decorative backdrop, below the notes and the sculpt
   // progress region — absolute siblings stack in DOM order, so position matters.
   const backdrop = stage.querySelector(".viewport-backdrop");
+
   if (backdrop !== null) backdrop.insertAdjacentElement("afterend", canvas);
   else stage.prepend(canvas);
 
   let backend: ReturnType<typeof createThreeSculptPresentationBackend>;
+
   try {
     backend = createDesktopPresentationBackend({
       canvas,
@@ -1129,24 +1085,33 @@ async function mountLiveViewport(): Promise<void> {
         pixelRatio: Math.min(globalThis.devicePixelRatio || 1, 2),
       },
     });
-  } catch (error) {
+  } catch (cause) {
     canvas.remove();
-    refuseLiveViewport(stage, `no WebGL surface — ${refusalText(error)}`);
+    refuseLiveViewport(stage, `no WebGL surface — ${refusalText(cause)}`);
+
     return;
   }
 
   const mounts = createSculptMountApi(backend);
+  window.addEventListener("pagehide", () => {
+    mounts.dispose();
+    canvas.remove();
+  }, { once: true });
+
   const pollGamepadInput = createDesktopGamepadInputPoller({
     map: inputActionMap,
     getGamepads: () => navigator.getGamepads(),
     onAction: (actionId, pressed, value) =>
       dispatchDesktopPlayInput(canvas, actionId, pressed, value),
   });
+
   try {
     const mounted = mountDesktopScene(mounts, scene, backend);
+
     for (const instanceId of mounted.refusedMaterialOverrides) {
       reportLine(stage, `Material override refused for "${instanceId}": texture asset binding is unresolved (ADR 0026).`);
     }
+
     backend.frameMountedContent();
     attachDesktopViewportInputActions(
       canvas,
@@ -1154,10 +1119,11 @@ async function mountLiveViewport(): Promise<void> {
       inputActionMap,
       () => viewportInputContext,
     );
-  } catch (error) {
+  } catch (cause) {
     mounts.dispose();
     canvas.remove();
-    refuseLiveViewport(stage, `could not mount the composed scene — ${refusalText(error)}`);
+    refuseLiveViewport(stage, `could not mount the composed scene — ${refusalText(cause)}`);
+
     return;
   }
 
@@ -1170,7 +1136,8 @@ async function mountLiveViewport(): Promise<void> {
       Math.min(globalThis.devicePixelRatio || 1, 2),
     );
   };
-  if (typeof ResizeObserver === "function") new ResizeObserver(applyViewport).observe(stage);
+
+  if (isDesktopCallable(ResizeObserver)) new ResizeObserver(applyViewport).observe(stage);
 
   // The chrome's inert note says no renderer is mounted on this surface. That
   // was true until this line, so leaving it visible would be the lie — remove it
@@ -1182,17 +1149,22 @@ async function mountLiveViewport(): Promise<void> {
   let frameReportSettled = false;
   let frameReportInFlight = false;
   let frameReportAttempts = 0;
+
   const loop = createThreeRenderLoop({
     onFrame: () => {
       pollGamepadInput(viewportInputContext);
+
       if (animationStartedAt !== null) playDesktopSceneAnimations({ backend, scene, time: (performance.now() - animationStartedAt) / 1000 });
+
       if (scene.effects !== undefined) backend.sampleEffects(scene.effects, performance.now());
       const frame = mounts.render();
       updatePixelsMeta(frame);
+
       if (!printed || frame.frame % 15 === 0) {
         printed = true;
         reportLine(stage, `${frameText(frame)} · scene ${scene.sceneId}`);
       }
+
       if (!frameReportSettled && !frameReportInFlight) {
         frameReportInFlight = true;
         frameReportAttempts += 1;
@@ -1200,8 +1172,7 @@ async function mountLiveViewport(): Promise<void> {
           (response) => {
             frameReportInFlight = false;
             frameReportSettled = true;
-            // Observable for the product and its proofs: the host now holds this frame.
-            if (response.ok) stage.dataset.frameReported = String(frame.frame);
+
             if (!response.ok) {
               frameReportLine(
                 stage,
@@ -1209,13 +1180,13 @@ async function mountLiveViewport(): Promise<void> {
               );
             }
           },
-          (error: unknown) => {
+          (cause: unknown) => {
             frameReportInFlight = false;
             const exhausted = frameReportAttempts >= FRAME_REPORT_MAX_ATTEMPTS;
             frameReportSettled = exhausted;
             frameReportLine(
               stage,
-              `frame report refused: ${refusalText(error)} — ${
+              `frame report refused: ${refusalText(cause)} — ${
                 exhausted
                   ? `giving up after ${frameReportAttempts} attempts`
                   : `retrying (attempt ${frameReportAttempts} of ${FRAME_REPORT_MAX_ATTEMPTS})`
@@ -1226,15 +1197,21 @@ async function mountLiveViewport(): Promise<void> {
       }
     },
   });
+
   loop.start();
+
   const persistReadyBuild = async (): Promise<string> => {
     const status = await port.request({
       action: "authoring",
       payload: { op: "status", documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
     });
+
     if (!status.ok) return `Mounted · apply skipped: ${status.reason}`;
+    // SAFETY: the successful authoring status response comes from the privileged document owner; contentHash is read as an optional untrusted field and checked as text before use.
     const contentHash = (status.data as { contentHash?: unknown }).contentHash;
-    if (typeof contentHash !== "string") return "Mounted · apply skipped: no content hash.";
+
+    if (!isDesktopText(contentHash)) return "Mounted · apply skipped: no content hash.";
+
     const apply = await port.request({
       action: "command",
       payload: createEditorCommandInvocation(
@@ -1247,37 +1224,19 @@ async function mountLiveViewport(): Promise<void> {
         "game",
       ),
     });
+
     if (!apply.ok) return `Mounted · apply refused: ${apply.reason}`;
+    // SAFETY: the successful registered apply-build response is produced by the privileged authoring transaction; only its optional authoringSnapshot field is forwarded to the settlement event.
     const snapshot = (apply.data as { authoringSnapshot?: unknown }).authoringSnapshot;
     document.dispatchEvent(new CustomEvent(DESKTOP_RARITY_PROPOSAL_EVENT, {
       detail: { snapshot },
     }));
-    const accept = await port.request({
-      action: "command",
-      payload: createEditorCommandInvocation(
-        "change-review-accept",
-        "desktop-control",
-        {},
-        "game",
-      ),
-    });
-    if (!accept.ok) return `Mounted and staged · Accept refused: ${accept.reason}`;
-    const nextScene = await port.request({
-      action: "scene",
-      payload: { documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
-    });
-    if (nextScene.ok) {
-      const synchronized = synchronizeViewportScene({
-        mounts,
-        frameMountedContent: () => backend.frameMountedContent(),
-        current: scene,
-        next: nextScene.data,
-        triangleBackend: backend,
-      });
-      if (synchronized.ok) scene = synchronized.scene;
-    }
-    return "Mounted and saved into the current scene. The assistant artifact is now part of the game.";
+
+    // The generated artifact is only a proposal. Existing Change Review/Save
+    // controls are the user's approval; a successful provider is not approval.
+    return "Mounted and staged for Change Review. Accept or Save to keep this artifact; Reject leaves saved bytes unchanged.";
   };
+
   const assistantBound = installAssistantProductFlow(
     stage,
     port,
@@ -1286,51 +1245,38 @@ async function mountLiveViewport(): Promise<void> {
     pollAssistantJob,
     persistReadyBuild,
   );
+
   signalAssistantRuntime(
     desktopAssistantRuntimeSignal({ status: "mounted", controlsBound: assistantBound }),
   );
 
   document.addEventListener(DESKTOP_RARITY_PROPOSAL_EVENT, (event: Event) => {
-    if (!rarityInvalidationMatches(displayedViewportRarityDigest, (event as CustomEvent).detail)) {
+      if (!(event instanceof CustomEvent)) return;
+
+    if (!rarityInvalidationMatches(displayedViewportRarityDigest, event.detail)) {
       return;
     }
+
     displayedViewportRarityDigest = null;
     clearOverlayLine(RARITY_EVIDENCE_ID);
   });
 
-  let disposeAudioControls: (() => void) | null = null;
-
-  // The host keeps the last frame report per bridge, and a project switch
-  // replaces the bridge; report the next frame again so profiling measures the
-  // frames of the project and Play session that are current.
-  const reportNextFrame = () => {
-    frameReportSettled = false;
-    frameReportAttempts = 0;
-  };
-
   document.addEventListener(DESKTOP_VIEWPORT_PLAY_EVENT, (event: Event) => {
-    if (!(event instanceof CustomEvent)) return;
-    reportNextFrame();
+    if (!(event instanceof CustomEvent) || !isDesktopObject(event.detail) || event.detail === null) return;
+
+    // SAFETY: the event was checked as a CustomEvent with non-null object detail above; these optional acknowledgement fields are written by this handler, and incoming asset fields are validated below.
     const detail = event.detail as {
       accepted?: unknown;
       frame?: unknown;
     } | null;
+
     const playable = playableExercise(event.detail);
+
     if (detail === null || playable === null) return;
     viewportInputContext = "play";
+    // SAFETY: playableExercise above validated the mountable scene and digest sequence; optional rarity metadata originates in the same privileged open-path exercise and is validated by the evidence formatter.
     const exercise = playable as PlayableExercise & RarityReportable;
-    disposeAudioControls?.();
-    disposeAudioControls = null;
-    const mountable = exercise.mountable;
-    const projectedClips = typeof mountable === "object" && mountable !== null && "audioClips" in mountable
-      ? mountable.audioClips
-      : [];
-    const clips = audioClipManifest(projectedClips);
-    if (clips === null) {
-      openPathLine(stage, "Audio refused: AUDIO_CLIP_MANIFEST_INVALID");
-    } else {
-      disposeAudioControls = installAudioControls(stage, clips, port);
-    }
+
     const synchronized = synchronizeViewportScene({
       mounts,
       frameMountedContent: () => backend.frameMountedContent(),
@@ -1338,6 +1284,7 @@ async function mountLiveViewport(): Promise<void> {
       next: exercise.mountable,
       triangleBackend: backend,
     });
+
     if (!synchronized.ok) return;
     scene = synchronized.scene;
     animationStartedAt = performance.now();
@@ -1347,6 +1294,7 @@ async function mountLiveViewport(): Promise<void> {
     detail.accepted = true;
     detail.frame = frame.frame;
     stage.dataset.playback = "acknowledged";
+    stage.dataset.playbackFrame = String(frame.frame);
     openPathLine(
       stage,
       `kernel playback acknowledged: ${exercise.tickDigests.length} ticks advanced · digest ${exercise.initialDigest.slice(0, 18)}… → ${exercise.tickDigests.at(-1)?.slice(0, 18)}… · composed scene redrawn at viewport frame ${frame.frame}`,
@@ -1355,39 +1303,41 @@ async function mountLiveViewport(): Promise<void> {
     displayedViewportRarityDigest = rarity === null || exercise.rarity === undefined
       ? null
       : exercise.rarity.namespaceDigest;
+
     if (rarity === null) clearOverlayLine(RARITY_EVIDENCE_ID);
     else rarityEvidenceLine(stage, rarity);
   });
 
   document.addEventListener(DESKTOP_VIEWPORT_STOP_EVENT, () => {
-    disposeAudioControls?.();
-    disposeAudioControls = null;
     animationStartedAt = null;
     viewportInputContext = "editor";
     resetDesktopSceneAnimations({ backend, scene });
   });
 
   document.addEventListener(DESKTOP_VIEWPORT_SCENE_OPEN_EVENT, (event: Event) => {
-    disposeAudioControls?.();
-    disposeAudioControls = null;
-    if (!(event instanceof CustomEvent)) return;
-    reportNextFrame();
+    if (!(event instanceof CustomEvent) || !isDesktopObject(event.detail) || event.detail === null) return;
+
+    if (!isDesktopObject(event.detail.asset) || event.detail.asset === null) return;
+
+    // SAFETY: CustomEvent detail and its asset field are non-null objects; incoming instanceId, digest, and mountable values remain untrusted until the checks below.
     const detail = event.detail as {
       mountable?: unknown;
       asset?: { instanceId?: unknown; digest?: unknown };
       accepted?: unknown;
       frame?: unknown;
     } | null;
+
     if (
       detail === null ||
-      typeof detail.asset?.instanceId !== "string" ||
-      typeof detail.asset.digest !== "string" ||
+      !isDesktopText(detail.asset?.instanceId) ||
+      !isDesktopText(detail.asset.digest) ||
       !desktopMountablePayload(detail.mountable) ||
       !detail.mountable.instances.some((instance) =>
         instance.instanceId === detail.asset?.instanceId) ||
       !detail.mountable.importedAssets?.some((asset) =>
         asset.instanceId === detail.asset?.instanceId && asset.digest === detail.asset.digest)
     ) return;
+
     const synchronized = synchronizeViewportScene({
       mounts,
       frameMountedContent: () => backend.frameMountedContent(),
@@ -1395,6 +1345,7 @@ async function mountLiveViewport(): Promise<void> {
       next: detail.mountable,
       triangleBackend: backend,
     });
+
     if (!synchronized.ok) return;
     scene = synchronized.scene;
     animationStartedAt = null;
@@ -1418,11 +1369,14 @@ async function mountLiveViewport(): Promise<void> {
       action: "open-path",
       payload: { documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
     });
+
     if (openPath.ok) {
+      // SAFETY: the successful response is for the exact open-path request above; the privileged bridge constructs initialDigest and tickDigests from the live kernel session, with optional validated rarity evidence.
       const exercise = openPath.data as RarityReportable & {
         initialDigest: string;
         tickDigests: string[];
       };
+
       openPathLine(
         stage,
         `kernel open path: ${exercise.tickDigests.length} ticks advanced · digest ${exercise.initialDigest.slice(0, 18)}… → ${exercise.tickDigests[exercise.tickDigests.length - 1]?.slice(0, 18)}… · session closed`,
@@ -1431,13 +1385,14 @@ async function mountLiveViewport(): Promise<void> {
       displayedViewportRarityDigest = rarity === null || exercise.rarity === undefined
         ? null
         : exercise.rarity.namespaceDigest;
+
       if (rarity === null) clearOverlayLine(RARITY_EVIDENCE_ID);
       else rarityEvidenceLine(stage, rarity);
     } else {
       openPathLine(stage, `kernel open path refused: ${openPath.reason} — ${openPath.message}`);
     }
-  } catch (error) {
-    openPathLine(stage, `kernel open path refused: ${refusalText(error)}`);
+  } catch (cause) {
+    openPathLine(stage, `kernel open path refused: ${refusalText(cause)}`);
   }
 }
 
@@ -1445,8 +1400,8 @@ async function mountLiveViewport(): Promise<void> {
 // refusing by name; without this the canvas would already be in the DOM and the
 // only trace would be an unhandled rejection, so the surface names it instead.
 function startLiveViewport(): void {
-  void mountLiveViewport().catch((error: unknown) => {
-    refuseLiveViewport(document.querySelector(".viewport"), refusalText(error));
+  void mountLiveViewport().catch((cause: unknown) => {
+    refuseLiveViewport(document.querySelector(".viewport"), refusalText(cause));
   });
 }
 

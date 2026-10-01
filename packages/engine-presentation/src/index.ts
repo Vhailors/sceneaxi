@@ -13,12 +13,6 @@ export const seam: PackageSeam = Object.freeze({
 });
 
 export {
-  createAudioPlaybackPort,
-  type AudioContextLike,
-  type AudioNodeLike,
-} from "./audio-playback.js";
-
-export {
   PresentationRuntimeError,
   createNullPresentationRuntime,
   type PresentationCaptureResult,
@@ -47,9 +41,13 @@ export {
   THREE_PRESENTATION_CORE_LABEL,
   createThreePresentationCore,
   type ThreePresentationCoreOptions,
+  type ThreePresentationCore,
+  type ThreeDrawnFrame,
   type ThreeSceneEnvironment,
   type ThreeViewport,
 } from "./three-core.js";
+
+export { releaseThreeCanvas } from "./three-surface.js";
 
 export type {
   ThreeCanvasTarget,
@@ -64,6 +62,7 @@ export type {
   OrbitCameraOptions,
   OrbitCameraState,
   OrbitInputTarget,
+  OrbitInputListener,
   OrbitPointerSample,
   OrbitWheelSample,
   Vector3Tuple,
@@ -73,6 +72,9 @@ export {
   createThreeSculptPresentationBackend,
   type ThreeSculptPresentationBackend,
   type ThreeTriangleAssetInput,
+  type ThreeTriangleNodeInput,
+  type ThreeContainedTexture,
+  type ThreeInstancePose,
   type ThreeTrianglePrimitiveInput,
 } from "./three-sculpt.js";
 
@@ -90,3 +92,11 @@ export {
   type ThreeRenderLoop,
   type ThreeRenderLoopOptions,
 } from "./render-loop.js";
+
+export { createAudioPlaybackRuntime, AudioPlaybackError, type AudioPlaybackRuntime, type ContainedAudioAsset, type AudioContextPort, type AudioBufferPort, type AudioSourcePort, type AudioGainPort } from "./audio-playback.js";
+
+// SDK pin: numeric cubic playback contract, never Three animation/loader types.
+export type { ThreeTriangleAnimationClip } from "./triangle-animation.js";
+
+// SDK pin: contained bytes only; format admission does not grant asset provenance.
+export { decodeContainedImage, type ContainedImageInput, type DecodedContainedImage } from "./contained-image.js";

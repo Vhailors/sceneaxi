@@ -8,12 +8,14 @@
  */
 
 export const KIDS_ACTIVITY_VERSION = 1 as const;
+
 export const KIDS_ACTIVITY_PIECE_LIMIT = 6 as const;
 
 function freezeRows<const T extends readonly Readonly<Record<string, unknown>>[]>(
   rows: T,
 ): T {
   for (const row of rows) Object.freeze(row);
+
   return Object.freeze(rows);
 }
 
@@ -55,7 +57,9 @@ export const KIDS_ACTIVITY_ACTIONS = Object.freeze([
 ] as const);
 
 export type KidsActivityWorldId = (typeof KIDS_ACTIVITY_WORLDS)[number]["id"];
+
 export type KidsActivityPieceId = (typeof KIDS_ACTIVITY_PIECES)[number]["id"];
+
 export type KidsActivityAction = (typeof KIDS_ACTIVITY_ACTIONS)[number];
 
 export type KidsActivityRequest =
@@ -81,6 +85,7 @@ export const KIDS_ACTIVITY_REFUSE_REASONS = Object.freeze({
   curatedChoiceRequired: "KIDS_ACTIVITY_CURATED_CHOICE_REQUIRED",
   sceneFull: "KIDS_ACTIVITY_SCENE_FULL",
   sceneEmpty: "KIDS_ACTIVITY_SCENE_EMPTY",
+  noChange: "KIDS_ACTIVITY_NO_CHANGE",
   buildPaused: "KIDS_ACTIVITY_BUILD_PAUSED_WHILE_PLAYING",
   alreadyPlaying: "KIDS_ACTIVITY_ALREADY_PLAYING",
   alreadyStopped: "KIDS_ACTIVITY_ALREADY_STOPPED",
@@ -104,8 +109,11 @@ export type KidsActivityDecision =
     }>;
 
 const worldIds = new Set<string>(KIDS_ACTIVITY_WORLDS.map((world) => world.id));
+
 const pieceIds = new Set<string>(KIDS_ACTIVITY_PIECES.map((piece) => piece.id));
+
 const actionIds = new Set<string>(KIDS_ACTIVITY_ACTIONS);
+
 const issuedStates = new WeakSet<object>();
 
 function issueState(
@@ -121,7 +129,9 @@ function issueState(
     mode,
     revision,
   });
+
   issuedStates.add(state);
+
   return state;
 }
 
@@ -132,8 +142,11 @@ export function createKidsActivityState(): KidsActivityState {
 function ownDataValue(value: object, key: "action" | "worldId" | "pieceId") {
   try {
     const descriptor = Object.getOwnPropertyDescriptor(value, key);
+
     if (descriptor === undefined) return { ok: true as const, value: undefined };
+
     if (!("value" in descriptor)) return { ok: false as const };
+
     return { ok: true as const, value: descriptor.value };
   } catch {
     return { ok: false as const };
@@ -145,8 +158,11 @@ function inspectRequest(request: unknown) {
     if (typeof request !== "object" || request === null || Array.isArray(request)) {
       return undefined;
     }
+
     const action = ownDataValue(request, "action");
+
     if (!action.ok) return undefined;
+
     return { request, action: action.value };
   } catch {
     return undefined;
@@ -188,6 +204,7 @@ export function applyKidsActivityAction(
   }
 
   const inspected = inspectRequest(request);
+
   if (inspected === undefined || typeof inspected.action !== "string") {
     return refuse(
       null,
@@ -197,6 +214,7 @@ export function applyKidsActivityAction(
   }
 
   const action = inspected.action;
+
   if (!actionIds.has(action)) {
     return refuse(
       null,
@@ -213,6 +231,7 @@ export function applyKidsActivityAction(
         "Your world is already playing.",
       );
     }
+
     return accept(
       action,
       issueState(state.worldId, state.pieceIds, "play", state.revision + 1),
@@ -228,6 +247,7 @@ export function applyKidsActivityAction(
         "Your world is already still.",
       );
     }
+
     return accept(
       action,
       issueState(state.worldId, state.pieceIds, "build", state.revision + 1),
@@ -244,6 +264,14 @@ export function applyKidsActivityAction(
   }
 
   if (action === "scene.reset") {
+    if (state.worldId === "meadow" && state.pieceIds.length === 0) {
+      return refuse(
+        action,
+        KIDS_ACTIVITY_REFUSE_REASONS.noChange,
+        "Your fresh world is already ready.",
+      );
+    }
+
     return accept(action, issueState("meadow", [], "build", state.revision + 1), "Fresh world ready.");
   }
 
@@ -255,6 +283,7 @@ export function applyKidsActivityAction(
         "Your world is already clear. Add a piece first.",
       );
     }
+
     return accept(
       action,
       issueState(state.worldId, state.pieceIds.slice(0, -1), "build", state.revision + 1),
@@ -264,6 +293,7 @@ export function applyKidsActivityAction(
 
   if (action === "world.choose") {
     const world = ownDataValue(inspected.request, "worldId");
+
     if (!world.ok || typeof world.value !== "string" || !worldIds.has(world.value)) {
       return refuse(
         action,
@@ -271,6 +301,15 @@ export function applyKidsActivityAction(
         "Pick one of the worlds shown here.",
       );
     }
+
+    if (world.value === state.worldId) {
+      return refuse(
+        action,
+        KIDS_ACTIVITY_REFUSE_REASONS.noChange,
+        "You are already in this world.",
+      );
+    }
+
     return accept(
       action,
       issueState(world.value as KidsActivityWorldId, state.pieceIds, "build", state.revision + 1),
@@ -279,6 +318,7 @@ export function applyKidsActivityAction(
   }
 
   const piece = ownDataValue(inspected.request, "pieceId");
+
   if (!piece.ok || typeof piece.value !== "string" || !pieceIds.has(piece.value)) {
     return refuse(
       action,
@@ -286,6 +326,7 @@ export function applyKidsActivityAction(
       "Pick one of the pieces shown here.",
     );
   }
+
   if (state.pieceIds.length >= KIDS_ACTIVITY_PIECE_LIMIT) {
     return refuse(
       action,
@@ -293,6 +334,7 @@ export function applyKidsActivityAction(
       "Your world is full. Undo one thing to add another.",
     );
   }
+
   return accept(
     action as KidsActivityAction,
     issueState(

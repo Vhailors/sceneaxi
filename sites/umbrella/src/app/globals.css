@@ -565,7 +565,7 @@ p {
 
 .grid {
   display: grid;
-  gap: 14px;
+  gap: 16px;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
 }
 
@@ -587,7 +587,7 @@ p {
   background: var(--bg-panel);
   border: 1px solid var(--line-soft);
   border-radius: var(--radius-lg);
-  padding: 22px 20px;
+  padding: 24px;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -601,7 +601,7 @@ p {
 }
 
 .panel p {
-  font-size: 12.5px;
+  font-size: 14px;
   line-height: 1.6;
   color: var(--fg-2);
 }
@@ -1352,22 +1352,23 @@ p {
   border-left: 2px solid var(--line-strong);
   border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
   background: var(--bg-panel);
-  padding: 18px 20px;
+  padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 16px;
 }
 
 .state h2,
 .state h3 {
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+  font-weight: 600;
 }
 
 .state p {
-  font-size: 13.5px;
+  font-size: 14px;
   line-height: 1.65;
   color: var(--fg-2);
 }
@@ -1846,8 +1847,8 @@ p code {
   margin: 0 auto;
   padding: 0 var(--gutter);
   display: grid;
-  grid-template-columns: 236px minmax(0, 1fr) 200px;
-  gap: 44px;
+  grid-template-columns: 216px minmax(0, 1fr) 176px;
+  gap: 32px;
   align-items: start;
 }
 
@@ -1877,9 +1878,9 @@ p code {
 }
 
 .docs-rail a {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--fg-2);
-  padding: 6px 10px;
+  padding: 8px 12px;
   border-radius: 5px;
   border-left: 2px solid transparent;
 }
@@ -1893,7 +1894,7 @@ p code {
   padding: 40px 0 96px;
   display: flex;
   flex-direction: column;
-  gap: 26px;
+  gap: 24px;
   min-width: 0;
 }
 
@@ -2240,7 +2241,7 @@ footer {
 
 /* Laptop / small desktop: the five- and four-up card rows lose a column. */
 @media (max-width: 1180px) {
-  :root {
+  html:root {
     --band-pad: 84px;
   }
 
@@ -2256,7 +2257,7 @@ footer {
 
 /* Tablet: paired columns collapse, the docs rail becomes a strip above content. */
 @media (max-width: 1024px) {
-  :root {
+  html:root {
     --gutter: 24px;
   }
 
@@ -2315,7 +2316,7 @@ footer {
 
 /* Tablet portrait: paired grids halve, the nav takes its own row, the docs rail strips. */
 @media (max-width: 860px) {
-  :root {
+  html:root {
     --band-pad: 64px;
     --masthead-h: 56px;
   }
@@ -2412,9 +2413,9 @@ footer {
 
 /* Phone: everything is one column and the type scale steps down. */
 @media (max-width: 620px) {
-  :root {
-    --gutter: 18px;
-    --band-pad: 52px;
+  html:root {
+    --gutter: 20px;
+    --band-pad: 48px;
   }
 
   body {
@@ -4410,5 +4411,162 @@ a.ed-tree-label:hover {
   .edshell *::after {
     animation: none !important;
     transition: none !important;
+  }
+}
+
+/* Browser-owned checkpoints are explicit, keyboard-accessible and never under Kids. */
+.ed-local-project { position: relative; font-size: 12px; }
+.ed-local-project summary { cursor: pointer; padding: 6px; }
+.ed-local-project-panel { position: absolute; right: 0; top: 100%; z-index: 100;
+  width: min(360px, 90vw); padding: 16px; background: var(--bg-panel);
+  border: 1px solid var(--line-strong); box-shadow: 0 18px 40px color-mix(in srgb, var(--bg-base) 70%, transparent); }
+.ed-local-project-panel p { margin-bottom: 10px; }
+.ed-local-project-panel button { display: block; padding: 8px; margin-top: 4px; width: 100%; text-align: left; }
+
+/* Visual-loop decisions: preserve Foundations palette and status meanings; use its
+ * 4px spacing rhythm. Specificity keeps composition independent of inline token order.
+ * SAFETY: CSS only; admission, editor minimum and provider contracts are unchanged. */
+html .button {
+  transition: background-color 120ms ease, border-color 120ms ease, transform 120ms ease;
+}
+
+html .button:active:not([aria-disabled="true"]):not(:disabled) {
+  transform: translateY(1px);
+}
+
+html .badge .dot {
+  animation: none;
+}
+
+.docs-main .card-link h2 {
+  margin-top: 0;
+  font-size: 20px;
+  line-height: 1.3;
+}
+
+.docs-main > section {
+  display: grid;
+  gap: 16px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--bg-panel);
+}
+
+.page section[aria-label="Purchase history"] {
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--bg-panel);
+  overflow-wrap: anywhere;
+}
+
+.page section[aria-label="Purchase history"] li {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.ed-local-project summary {
+  border-radius: var(--radius-md);
+}
+
+.ed-local-project summary:hover,
+.ed-local-project-panel button:hover {
+  background: var(--bg-control);
+}
+
+@media (max-width: 860px) {
+  .docs-rail {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+}
+
+@media (max-width: 620px) {
+  .masthead {
+    position: relative;
+  }
+
+  .nav {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .nav a {
+    height: 44px;
+    padding: 0 4px;
+    justify-content: center;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.3;
+  }
+
+  .release-hero .hero-inner {
+    padding-top: 40px;
+    padding-bottom: 48px;
+  }
+
+  .hero-inner-split {
+    gap: 32px;
+  }
+
+  .page {
+    padding-top: 40px;
+    gap: 32px;
+  }
+
+  .state {
+    padding: 20px;
+  }
+
+  .docs-main {
+    padding-top: 24px;
+  }
+
+  .docs-rail a {
+    padding: 8px;
+    line-height: 1.4;
+  }
+}
+
+/* Below the existing minimum, regroup the refusal and notice rail into document
+ * flow instead of stacking a fixed notice over the only readable editor message. */
+@media (max-width: 899px), (max-height: 599px) {
+  main:has(.edshell) {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 24px 20px;
+  }
+
+  .edshell {
+    position: relative;
+    inset: auto;
+    order: -1;
+    overflow: visible;
+  }
+
+  .ed-minimum {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    border-left: 2px solid var(--accent);
+    line-height: 1.6;
+  }
+
+  .ed-minimum p + p {
+    margin-top: 12px;
+    color: var(--fg-2);
+  }
+
+  .ed-overlay-notes {
+    position: static;
+    transform: none;
+    width: 100%;
+    max-height: none;
+    overflow: visible;
+    box-shadow: none;
   }
 }

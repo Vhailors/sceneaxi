@@ -1,0 +1,528 @@
+{
+  "logs": {
+    "integration-pass-2-browser-after.log": {
+      "testSummary": null,
+      "fileSummary": null,
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": "7 passed (29.9s)",
+      "failed": false,
+      "sha256": "ec06708cde6dfb9357bd8c41a6696f96e389eb13cb44029c3d58968d71157eac"
+    },
+    "integration-pass-2-browser.log": {
+      "testSummary": null,
+      "fileSummary": null,
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": "6 passed (33.7s)",
+      "failed": true,
+      "sha256": "63843c979849257b494467a37a09fe3c4058d15e26fea72c7bf011b23bae4a9a"
+    },
+    "integration-pass-2-build-catalog-game.log": {
+      "testSummary": null,
+      "fileSummary": null,
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": null,
+      "failed": false,
+      "sha256": "6faca9c163d8be4fb524e9c3e0770d874b7c979486653fbe2865919afbaebc5e"
+    },
+    "integration-pass-2-build-catalog-web.log": {
+      "testSummary": null,
+      "fileSummary": null,
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": null,
+      "failed": false,
+      "sha256": "dc4dd904edae0ee476f5241f03f6ecf33d5404fa0e8c6b052db762f16cb727df"
+    },
+    "integration-pass-2-build-kids.log": {
+      "testSummary": null,
+      "fileSummary": null,
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": null,
+      "failed": false,
+      "sha256": "9bdaee3d26b3fbe9d6f68150db6f6fc946d07d364ac2cbc9effa049a6fd1c479"
+    },
+    "integration-pass-2-build-umbrella-final.log": {
+      "testSummary": null,
+      "fileSummary": null,
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": null,
+      "failed": false,
+      "sha256": "9e4d3029f0070cd07fb8dad0d260f7c8586b470867517db748d98f3fc2546de5"
+    },
+    "integration-pass-2-build-umbrella.log": {
+      "testSummary": null,
+      "fileSummary": null,
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": null,
+      "failed": false,
+      "sha256": "96ace6eea56b2e9a089e44c716dd910e49fd023dc60ab7cddfb67b61a8ef38d0"
+    },
+    "integration-pass-2-cli-socket.log": {
+      "testSummary": "Tests  6 passed (6)",
+      "fileSummary": "Test Files  3 passed (3)",
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": "3 passed (3)",
+      "failed": false,
+      "sha256": "bf487f3a39869dff24eb71a932b526275adf4e9e228a05c76baae21ea175c1f6"
+    },
+    "integration-pass-2-engine-browser.log": {
+      "testSummary": null,
+      "fileSummary": null,
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": null,
+      "failed": false,
+      "sha256": "2602be31e6e25f088ddbcf5667af7c54b107ddf26de63a9e4b87d8ce865d4444"
+    },
+    "integration-pass-2-focused.log": {
+      "testSummary": "Tests  139 passed (139)",
+      "fileSummary": "Test Files  3 passed (3)",
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": "3 passed (3)",
+      "failed": false,
+      "sha256": "ef2722e7f44125e0a640a41ab874b1ded56f5de59bd258bc479abdee3ad656fe"
+    },
+    "integration-pass-2-gate.log": {
+      "testSummary": "Tests  4297 passed (4297)",
+      "fileSummary": "Test Files  282 passed (282)",
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": "282 passed (282)",
+      "failed": false,
+      "sha256": "02fc00b34271f810cc9fee39570c9c6b1e183af2869aafe8c38b4fdb0e2285df"
+    },
+    "integration-pass-2-golden.log": {
+      "testSummary": "Tests  539 passed (539)",
+      "fileSummary": "Test Files  57 passed (57)",
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": "57 passed (57)",
+      "failed": false,
+      "sha256": "9e051f7fa65fe3feb1db429ce8b8af9c34196dc66d089ec93475e68a457d207d"
+    },
+    "integration-pass-2-linux-dist.log": {
+      "testSummary": null,
+      "fileSummary": null,
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": null,
+      "failed": false,
+      "sha256": "580c748d815d9c90d1162099295044f738716f1e1c3e6efadb6514522723de25"
+    },
+    "integration-pass-2-linux-packaged-1.log": {
+      "testSummary": null,
+      "fileSummary": null,
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": null,
+      "failed": false,
+      "sha256": "195e7b20b44bb84b711ca012121f86ba60940e27919d76b806721c0939e25047"
+    },
+    "integration-pass-2-linux-packaged-2.log": {
+      "testSummary": null,
+      "fileSummary": null,
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": null,
+      "failed": false,
+      "sha256": "79768697d79d74faf696d7d6d4a26656c18dbb50e74ce3421c8107687f1b29ca"
+    },
+    "integration-pass-2-linux-packaged-3.log": {
+      "testSummary": null,
+      "fileSummary": null,
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": null,
+      "failed": false,
+      "sha256": "6c60e4ba58e767c9436b0b1decf8b9f499ecbab5613050eff041a80179980adf"
+    },
+    "integration-pass-2-linux-runtime-final.log": {
+      "testSummary": null,
+      "fileSummary": null,
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": null,
+      "failed": true,
+      "sha256": "f2b42972c1ed9a6619940442bbcfb76e2c7c2ad42e85d41ba263c5556053292d"
+    },
+    "integration-pass-2-linux-runtime.log": {
+      "testSummary": null,
+      "fileSummary": null,
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": null,
+      "failed": false,
+      "sha256": "b1c82360854e44fa4b4a5da5030bc74c70e8732bc08625115b7a11a462a833f7"
+    },
+    "integration-pass-2-persistence.log": {
+      "testSummary": "Tests  7 passed (7)",
+      "fileSummary": "Test Files  1 passed (1)",
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": "1 passed (1)",
+      "failed": false,
+      "sha256": "7f2bd272cee030c3fa73e383f6f3fe813feb72d95272fed69f5cd8c8c39db58f"
+    },
+    "integration-pass-2-provider.log": {
+      "testSummary": "Tests  24 passed (24)",
+      "fileSummary": "Test Files  2 passed (2)",
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": "2 passed (2)",
+      "failed": false,
+      "sha256": "e1122e7eee2622b161fdd08439556997833cf11308615051012f12060468eb41"
+    },
+    "integration-pass-2-sdk.log": {
+      "testSummary": null,
+      "fileSummary": null,
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": null,
+      "failed": false,
+      "sha256": "6795e194cef00057c6ebed9d6d490d81e93cf7a759f372b45c9e5e5af670a215"
+    },
+    "integration-pass-3-api.log": {
+      "testSummary": null,
+      "fileSummary": null,
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": null,
+      "failed": false,
+      "sha256": "131dfb1da955785c33cfecb6438a73d6e1f1e01b05c2105b6f610d7a8d6d2738"
+    },
+    "integration-pass-3-browser-tests.log": {
+      "testSummary": "Tests  39 passed (39)",
+      "fileSummary": "Test Files  4 passed (4)",
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": "4 passed (4)",
+      "failed": false,
+      "sha256": "5ee08664e8926a9e1da68179d547adca2909dfa268529b86ecb51b6347830050"
+    },
+    "integration-pass-3-browser.log": {
+      "testSummary": null,
+      "fileSummary": null,
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": "7 passed (26.6s)",
+      "failed": false,
+      "sha256": "b17def3ce2d98980406a19c5b90e91a1ea1b39fe2d6809bb5347a68d7bb38aa2"
+    },
+    "integration-pass-3-build-catalog-game.log": {
+      "testSummary": null,
+      "fileSummary": null,
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": null,
+      "failed": false,
+      "sha256": "329b630a1c2c15c4d4245095b74b77b27d52684fb0c6825476e95421a7784616"
+    },
+    "integration-pass-3-build-catalog-web.log": {
+      "testSummary": null,
+      "fileSummary": null,
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": null,
+      "failed": false,
+      "sha256": "13ed698dec3257c13da36f4459c395dc3a09bdf3586f26ff877e265845f2edf7"
+    },
+    "integration-pass-3-build-kids.log": {
+      "testSummary": null,
+      "fileSummary": null,
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": null,
+      "failed": false,
+      "sha256": "04f962a8ccc2934bb6fefe478d1aff89f569426f980176b0ed8fe75849ceb592"
+    },
+    "integration-pass-3-build-umbrella.log": {
+      "testSummary": null,
+      "fileSummary": null,
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": null,
+      "failed": false,
+      "sha256": "9e4d3029f0070cd07fb8dad0d260f7c8586b470867517db748d98f3fc2546de5"
+    },
+    "integration-pass-3-gate.log": {
+      "testSummary": "Tests  4297 passed (4297)",
+      "fileSummary": "Test Files  282 passed (282)",
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": "282 passed (282)",
+      "failed": false,
+      "sha256": "819916f9c6bcd1e4a3a8aa85af2c6510fab142351c53e12103bd8a28798eae98"
+    },
+    "integration-pass-3-golden.log": {
+      "testSummary": "Tests  539 passed (539)",
+      "fileSummary": "Test Files  57 passed (57)",
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": "57 passed (57)",
+      "failed": false,
+      "sha256": "225e19c5269faf2ecf9dc51a9c216d439359363955c6b03a16c0817d533581c7"
+    },
+    "integration-pass-3-identity-persistence.log": {
+      "testSummary": "Tests  13 passed (13)",
+      "fileSummary": "Test Files  2 passed (2)",
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": "2 passed (2)",
+      "failed": false,
+      "sha256": "c3c382331ed9dd73feaf530a511fb5eb2f937611f88e83eaf0c50cd7123688ac"
+    },
+    "integration-pass-3-linux-dist.log": {
+      "testSummary": null,
+      "fileSummary": null,
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": null,
+      "failed": false,
+      "sha256": "9c9d05efbd296431af91380db032921186f07e86233fca3222b58181044814e2"
+    },
+    "integration-pass-3-linux-packaged-1.log": {
+      "testSummary": null,
+      "fileSummary": null,
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": null,
+      "failed": false,
+      "sha256": "7e7c640447e3de4f00a1aaf67a44381fc44505de219ca98dfbdb176181037d3e"
+    },
+    "integration-pass-3-linux-packaged-2.log": {
+      "testSummary": null,
+      "fileSummary": null,
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": null,
+      "failed": false,
+      "sha256": "59b79e74d5e56f822b59681c5cf6f0810caa37bc82ccda23974f1f26c2c42766"
+    },
+    "integration-pass-3-linux-packaged-3.log": {
+      "testSummary": null,
+      "fileSummary": null,
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": null,
+      "failed": false,
+      "sha256": "2557bfce6e5d0efd566589bc0c3a04cf05e9d12800ffdb44ca523d5eb588871c"
+    },
+    "integration-pass-3-linux-runtime-final.log": {
+      "testSummary": null,
+      "fileSummary": null,
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": null,
+      "failed": false,
+      "sha256": "38de200e454168d000e9dfeb3109c4f83ce225a861e8a557c35af3939c18bd66"
+    },
+    "integration-pass-3-linux-runtime.log": {
+      "testSummary": null,
+      "fileSummary": null,
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": null,
+      "failed": false,
+      "sha256": "34908e72b7c56536f06bdc700645e2be75c1625ee01f834a4fe828a67b462dc7"
+    },
+    "integration-pass-3-linux-typecheck.log": {
+      "testSummary": null,
+      "fileSummary": null,
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": null,
+      "failed": false,
+      "sha256": "0696f734712cc4ecda5439060836f907da8a17c7c0e5cc410745b83c0535bcb7"
+    },
+    "integration-pass-3-persistence.log": {
+      "testSummary": "Tests  7 passed (7)",
+      "fileSummary": "Test Files  1 passed (1)",
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": "1 passed (1)",
+      "failed": false,
+      "sha256": "7fe7084f01705bc293ddfde82f548dfc0614f0c4f4e2e819b920c0a9520470a8"
+    },
+    "integration-pass-3-provider.log": {
+      "testSummary": "Tests  24 passed (24)",
+      "fileSummary": "Test Files  2 passed (2)",
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": "2 passed (2)",
+      "failed": false,
+      "sha256": "3107b675aa84f9a988226cdea20fac09f33d6c64d492d1e60a8c4751582b9274"
+    },
+    "integration-pass-3-sdk.log": {
+      "testSummary": null,
+      "fileSummary": null,
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": null,
+      "failed": false,
+      "sha256": "6795e194cef00057c6ebed9d6d490d81e93cf7a759f372b45c9e5e5af670a215"
+    },
+    "integration-pass-3-umbrella-typecheck.log": {
+      "testSummary": null,
+      "fileSummary": null,
+      "nodeTests": null,
+      "nodePass": null,
+      "visualSummary": null,
+      "failed": false,
+      "sha256": "0790937694589aa364e324b7e442964dff3626ca72792762208f221d14985a60"
+    }
+  },
+  "screenshots": [
+    {
+      "path": "docs/audits/production-swarm/screenshots/catalog-game-home-1280.png",
+      "bytes": 471195,
+      "width": 1280,
+      "height": 1769,
+      "sha256": "92cf47f9d4547bd388b5766a4b7a0e9290d05813e6a1953906335817ae669d7e",
+      "coverage": "PNG signature/IHDR plus named browser or native assertions; not image-content acceptance alone"
+    },
+    {
+      "path": "docs/audits/production-swarm/screenshots/catalog-game-home-375.png",
+      "bytes": 546729,
+      "width": 375,
+      "height": 4676,
+      "sha256": "1da0cbe0f8b5da545a20df373b7cf1d380fbddf35e018a27484c417ce5a79194",
+      "coverage": "PNG signature/IHDR plus named browser or native assertions; not image-content acceptance alone"
+    },
+    {
+      "path": "docs/audits/production-swarm/screenshots/catalog-web-home-1280.png",
+      "bytes": 487944,
+      "width": 1280,
+      "height": 1921,
+      "sha256": "d0b0fba5712fd8451d22f66c8227767571e319b9dba33ef783ea2319aba8d5dd",
+      "coverage": "PNG signature/IHDR plus named browser or native assertions; not image-content acceptance alone"
+    },
+    {
+      "path": "docs/audits/production-swarm/screenshots/catalog-web-home-375.png",
+      "bytes": 320484,
+      "width": 375,
+      "height": 3270,
+      "sha256": "e81697adfa82aba6ffc7c5babf1f406713d7b4fff4d3bfed4d628e0dec61342e",
+      "coverage": "PNG signature/IHDR plus named browser or native assertions; not image-content acceptance alone"
+    },
+    {
+      "path": "docs/audits/production-swarm/screenshots/kids-home-1280.png",
+      "bytes": 149862,
+      "width": 1280,
+      "height": 900,
+      "sha256": "983842b277cae8d5ea5930fb2b204510bad623868478b59b8a927b56e484e26d",
+      "coverage": "PNG signature/IHDR plus named browser or native assertions; not image-content acceptance alone"
+    },
+    {
+      "path": "docs/audits/production-swarm/screenshots/kids-home-375.png",
+      "bytes": 114786,
+      "width": 375,
+      "height": 1528,
+      "sha256": "e1be57aeb572507188faffe1974ff39cbd009cc7879e9aed4a3652aad7356c13",
+      "coverage": "PNG signature/IHDR plus named browser or native assertions; not image-content acceptance alone"
+    },
+    {
+      "path": "docs/audits/production-swarm/screenshots/linux-packaged.png",
+      "bytes": 261529,
+      "width": 1280,
+      "height": 900,
+      "sha256": "257ac3ac180dd97a8b9f18c7363ab28ecb6127ff4257953b2546aa61a0a11221",
+      "coverage": "PNG signature/IHDR plus named browser or native assertions; not image-content acceptance alone"
+    },
+    {
+      "path": "docs/audits/production-swarm/screenshots/linux-runtime.png",
+      "bytes": 204526,
+      "width": 1280,
+      "height": 900,
+      "sha256": "ad71a030efd516508afbdb0cac4e04a9e009d019496bf6388754d6d37feddfd7",
+      "coverage": "PNG signature/IHDR plus named browser or native assertions; not image-content acceptance alone"
+    },
+    {
+      "path": "docs/audits/production-swarm/screenshots/umbrella-account-1280.png",
+      "bytes": 193872,
+      "width": 1280,
+      "height": 1786,
+      "sha256": "34f872e72801c138fb68afc3079cae9315f0693f942c8ddd17a3e5c84e1f29fb",
+      "coverage": "PNG signature/IHDR plus named browser or native assertions; not image-content acceptance alone"
+    },
+    {
+      "path": "docs/audits/production-swarm/screenshots/umbrella-account-375.png",
+      "bytes": 186298,
+      "width": 375,
+      "height": 3013,
+      "sha256": "888578f54fae56e7fd57977f86e29f45ef1288b6b59a05a08d29ce928e4960d1",
+      "coverage": "PNG signature/IHDR plus named browser or native assertions; not image-content acceptance alone"
+    },
+    {
+      "path": "docs/audits/production-swarm/screenshots/umbrella-editor-1280.png",
+      "bytes": 54104,
+      "width": 1280,
+      "height": 900,
+      "sha256": "036e0d111371fda39416571c6d6fec92f93296809778e298b4488b3041ec0b57",
+      "coverage": "PNG signature/IHDR plus named browser or native assertions; not image-content acceptance alone"
+    },
+    {
+      "path": "docs/audits/production-swarm/screenshots/umbrella-editor-375.png",
+      "bytes": 50485,
+      "width": 375,
+      "height": 900,
+      "sha256": "8c6c7b025504a7c536cf862d900ece797c0447c3a5083c41ae24dda41e550b7c",
+      "coverage": "PNG signature/IHDR plus named browser or native assertions; not image-content acceptance alone"
+    },
+    {
+      "path": "docs/audits/production-swarm/screenshots/umbrella-home-1280.png",
+      "bytes": 437441,
+      "width": 1280,
+      "height": 3258,
+      "sha256": "57700e85c41128e3f10d5f63644c11444600e15326c62d8fc0e20f47c3a73f52",
+      "coverage": "PNG signature/IHDR plus named browser or native assertions; not image-content acceptance alone"
+    },
+    {
+      "path": "docs/audits/production-swarm/screenshots/umbrella-home-375.png",
+      "bytes": 273468,
+      "width": 375,
+      "height": 4775,
+      "sha256": "887156f5558704e1fb007d2adb6fecbaea6db1d88f31ec64451b30460945d4f9",
+      "coverage": "PNG signature/IHDR plus named browser or native assertions; not image-content acceptance alone"
+    },
+    {
+      "path": "docs/audits/production-swarm/screenshots/umbrella-login-1280.png",
+      "bytes": 82122,
+      "width": 1280,
+      "height": 958,
+      "sha256": "63e280b82f8e4040c43044b201fa0cc5956c56ad6f8778dfde98727633c0354b",
+      "coverage": "PNG signature/IHDR plus named browser or native assertions; not image-content acceptance alone"
+    },
+    {
+      "path": "docs/audits/production-swarm/screenshots/umbrella-login-375.png",
+      "bytes": 74169,
+      "width": 375,
+      "height": 1489,
+      "sha256": "44527d22738607b83844d9db276f90046d57a48b8cdc9f918f682ece03514213",
+      "coverage": "PNG signature/IHDR plus named browser or native assertions; not image-content acceptance alone"
+    },
+    {
+      "path": "docs/audits/production-swarm/screenshots/umbrella-open-1280.png",
+      "bytes": 360531,
+      "width": 1280,
+      "height": 3518,
+      "sha256": "52159bcbde2c9c5b98fa36a939858e8e465ce50281210b18407b544a5e112151",
+      "coverage": "PNG signature/IHDR plus named browser or native assertions; not image-content acceptance alone"
+    },
+    {
+      "path": "docs/audits/production-swarm/screenshots/umbrella-open-375.png",
+      "bytes": 272192,
+      "width": 375,
+      "height": 4588,
+      "sha256": "1a563f2e3f9a721bf91a0bd8d77475abd3dde59de81117b09ae1f72914d4604b",
+      "coverage": "PNG signature/IHDR plus named browser or native assertions; not image-content acceptance alone"
+    }
+  ]
+}

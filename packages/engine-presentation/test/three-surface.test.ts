@@ -10,7 +10,9 @@ const rendererState = vi.hoisted(() => ({
 
 vi.mock("three", async (importOriginal) => {
   const actual = await importOriginal<typeof import("three")>();
+
   class TestWebGLRenderer {
+    getContext() { return { isContextLost: () => false }; }
     outputColorSpace = "";
     toneMapping = 0;
     toneMappingExposure = 1;
@@ -25,6 +27,9 @@ vi.mock("three", async (importOriginal) => {
       rendererState.options.push(options);
       rendererState.renderers.push(this);
     }
+
+    readonly renderLists = { dispose() {} };
+    forceContextLoss() {}
 
     setPixelRatio() {}
 
@@ -48,7 +53,7 @@ vi.mock("three", async (importOriginal) => {
 });
 
 import { open, type ProductManifest } from "@sceneaxi/engine-kernel";
-import { createThreePresentationRuntime } from "@sceneaxi/engine-presentation";
+import { createThreePresentationRuntime, releaseThreeCanvas } from "@sceneaxi/engine-presentation";
 
 const manifest: ProductManifest = {
   productId: "three-surface-test",
@@ -58,6 +63,7 @@ const manifest: ProductManifest = {
 
 function eventCanvas() {
   const listeners = new Map<string, Set<() => void>>();
+
   return {
     canvas: {
       width: 320,
@@ -91,12 +97,16 @@ describe("Three canvas surface capture lifecycle", () => {
 
   it("forwards transparent clearing to the WebGL renderer alpha option", () => {
     const { canvas } = eventCanvas();
+
     const transparent = createThreePresentationRuntime({
       canvas,
       background: null,
     });
+
+    const coloredCanvas = eventCanvas().canvas;
+
     const colored = createThreePresentationRuntime({
-      canvas,
+      canvas: coloredCanvas,
       background: "#101318",
     });
 
@@ -110,14 +120,19 @@ describe("Three canvas surface capture lifecycle", () => {
 
     transparent.dispose();
     colored.dispose();
+    releaseThreeCanvas(canvas);
+    releaseThreeCanvas(coloredCanvas);
+    expect(rendererState.disposals).toBe(2);
   });
 
   it("invalidates the captured frame after a resize", () => {
     const { canvas } = eventCanvas();
     const runtime = createThreePresentationRuntime({ canvas });
+
     const snapshot = open(manifest, {
       nowMs: () => 1_753_420_800_000,
     }).observe();
+
     runtime.mount();
     runtime.present(snapshot, [], 1);
 
@@ -132,14 +147,18 @@ describe("Three canvas surface capture lifecycle", () => {
     runtime.resize(640, 480);
     expect(runtime.capture()).toBeNull();
     runtime.dispose();
+    releaseThreeCanvas(canvas);
+    expect(rendererState.disposals).toBe(1);
   });
 
   it("stops claiming pixels while its WebGL context is lost", () => {
     const target = eventCanvas();
     const runtime = createThreePresentationRuntime({ canvas: target.canvas });
+
     const snapshot = open(manifest, {
       nowMs: () => 1_753_420_800_000,
     }).observe();
+
     runtime.mount();
     runtime.present(snapshot, [], 1);
 
@@ -171,6 +190,8 @@ describe("Three canvas surface capture lifecycle", () => {
     runtime.dispose();
     expect(target.listenerCount("webglcontextlost")).toBe(0);
     expect(target.listenerCount("webglcontextrestored")).toBe(0);
+    expect(rendererState.disposals).toBe(0);
+    releaseThreeCanvas(target.canvas);
     expect(rendererState.disposals).toBe(1);
   });
 });

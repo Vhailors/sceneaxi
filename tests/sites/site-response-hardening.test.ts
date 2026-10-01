@@ -17,6 +17,7 @@ const read = (path: string) =>
 type HeaderPolicy = { readonly headers: readonly { key: string; value: string }[] };
 
 describe.each(SITES)("sites/%s response headers", (site) => {
+  // SAFETY: each reviewed repository security policy contains a headers array of string key/value literals, not request-supplied JSON.
   const policy = JSON.parse(read(`${site}/security-headers.json`)) as HeaderPolicy;
   const header = (key: string) => policy.headers.find((entry) => entry.key === key)?.value;
 
@@ -60,6 +61,7 @@ describe("umbrella crawl policy and fallback pages", () => {
         true,
       );
     }
+
     const error = read("umbrella/src/app/error.tsx");
     expect(error.startsWith('"use client";')).toBe(true);
     // Only the digest is shown; the message can carry server detail.
@@ -71,9 +73,11 @@ describe("umbrella crawl policy and fallback pages", () => {
 
   it("keeps signed-in surfaces and API routes out of crawlers", () => {
     const robots = read("umbrella/src/app/robots.ts");
+
     for (const path of ["/api/", "/account", "/editor", "/login"]) {
       expect(robots).toContain(`"${path}"`);
     }
+
     for (const file of ["login/page.tsx", "account/page.tsx", "editor/layout.tsx"]) {
       expect(read(`umbrella/src/app/${file}`)).toContain(
         "robots: { index: false, follow: false }",
@@ -95,7 +99,7 @@ describe("umbrella checkout", () => {
   it("verifies the same-origin form proof before reading the form", () => {
     const route = read("umbrella/src/app/api/checkout/route.ts");
     const proof = route.indexOf("verifyLoginRequestOrigin(");
-    const formRead = route.indexOf("request.formData()");
+    const formRead = route.indexOf("request.body?.getReader()");
     expect(proof).toBeGreaterThan(-1);
     expect(formRead).toBeGreaterThan(proof);
     // A refused proof answers by name before any field is read, like the login flow.

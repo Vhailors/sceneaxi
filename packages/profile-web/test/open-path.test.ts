@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import {
   OPEN_PATH_REFUSE_CODES,
   openPathPolicyRowFor,
+  profileConformanceRegistry,
 } from "@sceneaxi/schemas";
 import {
   evaluateOpenPath,
@@ -27,6 +28,21 @@ describe("@sceneaxi/profile-web open-path policy", () => {
     expect(mvpGoldenPath.status.productSurface).toBe("not-shipped");
   });
 
+  it("keeps the bounded MVP separate from a shared conformance claim", () => {
+    expect(profileConformanceRegistry.find((row) => row.profile === "@sceneaxi/profile-web"))
+      .toMatchObject({ claimStatus: "not-yet-claimed", shippingClaim: false });
+    expect(profileConformanceRegistry.find((row) => row.profile === "@sceneaxi/profile-kids"))
+      .toMatchObject({ claimStatus: "not-yet-claimed", shippingClaim: false });
+    expect(mvpGoldenPath).not.toHaveProperty("claim");
+    expect(mvpGoldenPath).not.toHaveProperty("conformance");
+
+    for (const operation of openPathPolicy.operations) {
+      expect(evaluateOpenPath(operation, true)).toMatchObject({
+        ok: false, code: OPEN_PATH_REFUSE_CODES.shippingClaimForbidden,
+      });
+    }
+  });
+
   it("names committed evidence for the level it reports", () => {
     expect(openPathPolicy.evidence).toBe(
       "tests/e2e/profile-web-golden-path.test.ts",
@@ -37,6 +53,7 @@ describe("@sceneaxi/profile-web open-path policy", () => {
     for (const operation of openPathPolicy.operations) {
       const decision = evaluateOpenPath(operation);
       expect(decision.ok).toBe(true);
+
       if (!decision.ok) continue;
       expect(decision.shippingClaim).toBe(false);
       expect(decision.sessionKind).toBe("kernel-session");
@@ -46,12 +63,14 @@ describe("@sceneaxi/profile-web open-path policy", () => {
   it("refuses an operation outside the policy and any shipping claim", () => {
     const outside = evaluateOpenPath("publish");
     expect(outside.ok).toBe(false);
+
     if (!outside.ok) {
       expect(outside.code).toBe(OPEN_PATH_REFUSE_CODES.operationNotInPolicy);
     }
 
     const shipping = evaluateOpenPath("open", true);
     expect(shipping.ok).toBe(false);
+
     if (!shipping.ok) {
       expect(shipping.code).toBe(
         OPEN_PATH_REFUSE_CODES.shippingClaimForbidden,

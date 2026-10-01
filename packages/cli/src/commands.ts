@@ -8,6 +8,8 @@
 
 import { EXIT_CODE_TABLE } from "./exit-codes.js";
 import {
+  desktopAliasHelp,
+  runDesktopAlias,
   desktopBridgeCallHelp,
   desktopBridgeStatusHelp,
   runDesktopBridgeCall,
@@ -17,6 +19,14 @@ import {
 import type { DesktopLocalBridgeClient } from "./desktop-client.js";
 import type { CliOutcome, ResultPayload } from "./envelope.js";
 import {
+  projectInitHelp,
+  runProjectInit,
+  evidenceShowHelp,
+  runEvidenceShow,
+  evidenceVerifyHelp,
+  runEvidenceVerify,
+  projectMigrateHelp,
+  runProjectMigrate,
   projectCaptureHelp,
   projectDevHelp,
   projectNewHelp,
@@ -35,6 +45,11 @@ import {
   runProjectPropose,
 } from "./project-verbs.js";
 import {
+  catalogSubmitHelp,
+  runCatalogSubmit,
+  pluginValidateHelp,
+  runPluginList,
+  runPluginValidate,
   assetListHelp,
   catalogListHelp,
   evidenceListHelp,
@@ -113,6 +128,8 @@ function group(
 
 /** E1 project verbs (authoring-contracts.md). */
 const projectGroup = group("project", "E1 authoring surface (source-first)", {
+  init: argVerb("init", "Initialize a contained openable local template without overwrite", (ctx) => runProjectInit(ctx.path, ctx.tokens), projectInitHelp),
+  migrate: argVerb("migrate", "Validate v1 without rewriting; unsupported conversions refuse", (ctx) => runProjectMigrate(ctx.path, ctx.tokens), projectMigrateHelp),
   new: argVerb(
     "new",
     "Create a new project document (refuses to overwrite without --force)",
@@ -210,6 +227,7 @@ const catalogGroup = group(
   "catalog",
   "Dormant catalog operations (commerce inert; never activated here)",
   {
+    submit: argVerb("submit", "Offline candidate metadata validation; publication stays refused", (ctx) => runCatalogSubmit(ctx.path, ctx.tokens), catalogSubmitHelp),
     list: argVerb(
       "list",
       "List catalog items with pipeline state and commerce activation",
@@ -220,6 +238,8 @@ const catalogGroup = group(
 );
 
 const evidenceGroup = group("evidence", "Evidence packet operations (read-only)", {
+  show: argVerb("show", "Show recorded packet claims (not current verification)", (ctx) => runEvidenceShow(ctx.path, ctx.tokens), evidenceShowHelp),
+  verify: argVerb("verify", "Compare captured claims to current contained bytes", (ctx) => runEvidenceVerify(ctx.path, ctx.tokens), evidenceVerifyHelp),
   list: argVerb(
     "list",
     "List evidence packets written by `project capture`",
@@ -229,6 +249,8 @@ const evidenceGroup = group("evidence", "Evidence packet operations (read-only)"
 });
 
 const desktopGroup = group("desktop", "Local Engine Desktop bridge", {
+  play: argVerb("play", "Permission-bound isolated Play via the running host", (ctx) => runDesktopAlias(ctx.path, ctx.tokens, "sceneaxi.run.play", ctx.desktopBridge), () => desktopAliasHelp("desktop play", "sceneaxi.run.play")),
+  build: argVerb("build", "Evaluate a host project build; never sign or publish", (ctx) => runDesktopAlias(ctx.path, ctx.tokens, "sceneaxi.project.build", ctx.desktopBridge), () => desktopAliasHelp("desktop build", "sceneaxi.project.build")),
   bridge: group("bridge", "Versioned same-user Unix-socket agent bridge", {
     call: argVerb(
       "call",
@@ -301,9 +323,15 @@ const protocolGroup = group(
   },
 );
 
+const pluginGroup = group("plugin", "Offline plugin contract inspection; no executable loading", {
+  list: verb("list", "List checked-in capability contracts", runPluginList),
+  validate: argVerb("validate", "Validate manifest shape and exact registry membership only", (ctx) => runPluginValidate(ctx.path, ctx.tokens), pluginValidateHelp),
+});
+
 /** Top-level groups exposed by the umbrella CLI. */
 export const ROOT_COMMANDS: Readonly<Record<string, CommandNode>> =
   Object.freeze({
+    plugin: pluginGroup,
     project: projectGroup,
     scene: sceneGroup,
     asset: assetGroup,
@@ -372,6 +400,7 @@ export function verbHelpPayload(
   if (node.helpPayload !== undefined) {
     return node.helpPayload();
   }
+
   return Object.freeze({
     command: path.join(" "),
     description: node.description,

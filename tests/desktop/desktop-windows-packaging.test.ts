@@ -13,6 +13,7 @@ import {
 } from "../../desktop/windows/scripts/release-preflight.mjs";
 
 const root = new URL("../../", import.meta.url);
+
 const read = (rel: string) => readFileSync(new URL(rel, root), "utf8");
 
 describe("desktop-windows packaging", () => {
@@ -56,10 +57,13 @@ describe("desktop-windows packaging", () => {
       commandAvailable: () => false,
       publishing: true,
     });
+
     expect(result.ok).toBe(false);
+
     for (const name of [...WINDOWS_SIGNING_ENV, ...WINDOWS_RELEASE_ENV]) {
       expect(result.reasons).toContain(`WINDOWS_RELEASE_ENV_MISSING:${name}`);
     }
+
     expect(result.reasons).toContain("WINDOWS_RELEASE_TOOL_MISSING:signtool.exe");
     expect(result.reasons).toContain("WINDOWS_RELEASE_TOOL_MISSING:gh.exe");
   });
@@ -74,6 +78,7 @@ describe("desktop-windows packaging", () => {
         WIN_CSC_KEY_PASSWORD: "",
       },
     });
+
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("desktop-windows release preflight refused");
     expect(result.stderr).toContain("WINDOWS_RELEASE_ENV_MISSING:WIN_CSC_LINK");
@@ -83,8 +88,9 @@ describe("desktop-windows packaging", () => {
   it("keeps local distribution non-publishing and publication on an existing draft", () => {
     expect(read("desktop/windows/scripts/dist.mjs")).toContain('publish: "never"');
     const release = read("desktop/windows/scripts/release.mjs");
-    expect(release).toContain('publish: "onTagOrDraft"');
-    expect(release).toContain("the matching GitHub release must already exist as a draft");
+    expect(release).toContain("uploadVerifiedWindowsDraft");
+    expect(release).not.toContain("electron-builder");
+    expect(read("desktop/windows/scripts/package-release.mjs")).toContain("isDraft");
     expect(release).not.toMatch(/release\W+create/);
   });
 
@@ -93,6 +99,7 @@ describe("desktop-windows packaging", () => {
       cwd: new URL("../../", import.meta.url),
       encoding: "utf8",
     });
+
     expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toContain("missing authority refuses");
     expect(result.stdout).toContain("no public artifact is claimed");
@@ -102,6 +109,7 @@ describe("desktop-windows packaging", () => {
 describe("desktop-windows update refusal", () => {
   it("does not reach the updater without generated configuration", async () => {
     let checks = 0;
+
     const result = await runWindowsUpdateCheck({
       packaged: true,
       smokeMode: false,
@@ -110,6 +118,7 @@ describe("desktop-windows update refusal", () => {
         checks += 1;
       },
     });
+
     expect(result).toEqual({
       ok: false,
       reason: WINDOWS_UPDATE_REFUSALS.configurationMissing,
@@ -123,6 +132,8 @@ describe("desktop-windows update refusal", () => {
         packaged: true,
         smokeMode: false,
         configurationExists: true,
+        version: "0.0.0",
+        releasePolicy: { schemaVersion: 1, enabled: true, platform: "windows-x64", version: "0.0.0", sourceCommit: "a".repeat(40), artifactSha256: "b".repeat(64), feedUrl: "https://github.com/Vhailors/sceneaxi/releases" },
         checkForUpdates: async () => {
           throw new Error("offline");
         },

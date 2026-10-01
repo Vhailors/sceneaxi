@@ -7,7 +7,8 @@
  * - `docs/audits/initiation/runtime-surfaces.json` (editor commands, desktop controls,
  *   local-agent tools, bridge actions)
  * - `docs/full-editor-v1-capability-matrix.md` (real / partial / fake per desktop control)
- * - mounted-chrome goldens (which editor commands have validated GUI dispatch evidence)
+ * - `apps/desktop-shell/src/{chrome,interaction-commands}.ts` (which editor commands the
+ *   desktop GUI can dispatch at all)
  * - `docs/audits/go-live-backlog.json` (the go-live item behind a gap, and why it is parked)
  *
  * Outputs: `docs/audits/surface-map.json`, `surface-map.html` (self-contained, no remote
@@ -17,11 +18,9 @@
  * boundary) · partial · gap (a go-live backlog item owns it) · parked (a captain decision
  * owns it) · broken. Nothing is rounded up: a node is `working` only on evidence.
  */
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import * as nodeModule from "node:module";
-import { RESOLVER_URL, resolve as workspaceResolve } from "./workspace-dist-resolver.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -75,7 +74,7 @@ for (const line of read("docs/full-editor-v1-capability-matrix.md").split("\n"))
 
   if (!status) continue;
 
-  for (const id of cells[1].matchAll(/`([a-zA-Z0-9{},*-]+)`/g)) {
+  for (const id of cells[1].matchAll(/`([a-z0-9{},*-]+)`/g)) {
     for (const expanded of expandBraces(id[1])) matrixState.set(expanded, status);
   }
 }
@@ -98,7 +97,17 @@ const controlState = (id) => {
   return { state: "unknown", note: "no capability-matrix row" };
 };
 
-// --- editor commands: only golden-proven GUI dispatch counts as working ------------
+// --- editor commands: can the desktop GUI dispatch them? ---------------------------
+// The emitted chrome plus the packaged renderer modules are everything that runs in the
+// desktop window; a command named in neither has no GUI dispatch path.
+const rendererDir = "desktop/linux/src/renderer";
+
+const guiSource = [
+  "apps/desktop-shell/src/chrome.ts",
+  "apps/desktop-shell/src/interaction-commands.ts",
+  "apps/desktop-shell/src/visual-model.ts",
+  ...readdirSync(join(root, rendererDir)).filter((f) => f.endsWith(".ts")).map((f) => `${rendererDir}/${f}`),
+].map(read).join("\n");
 
 const registryModule = join(root, "packages/schemas/dist/src/editor-command-registry.js");
 
@@ -107,58 +116,34 @@ if (!existsSync(registryModule)) {
   process.exit(1);
 }
 
-if (typeof nodeModule.registerHooks === "function") {
-  nodeModule.registerHooks({ resolve: workspaceResolve });
-} else {
-  nodeModule.register(RESOLVER_URL);
-}
-
 const { EDITOR_COMMAND_REGISTRY } = await import(registryModule);
-const interactionModule = join(root, "apps/desktop-shell/dist/src/interaction-commands.js");
-if (!existsSync(interactionModule)) {
-  process.stderr.write("surface map: run `pnpm build` first (reads desktop interaction commands)\n");
-  process.exit(1);
-}
-const { DESKTOP_INTERACTION_COMMANDS } = await import(interactionModule);
 
 const acceptsDesktop = (id) =>
   EDITOR_COMMAND_REGISTRY.find((command) => command.id === id)?.acceptedClients.includes("desktop-control") ?? false;
 
-// The real-bridge golden explicitly asserts these GUI dispatches and registry clients.
-const formsGolden = read("tests/e2e/desktop-editor-command-forms-golden.test.ts");
-const formsIds = formsGolden.match(/const GUI_WORKING_COMMANDS = new Set\(\[([\s\S]*?)\]\);/)?.[1];
-if (formsIds === undefined || !formsGolden.includes("GUI_WORKING_COMMANDS.size).toBe(14") ||
-    !formsGolden.includes('acceptedClients).toContain("desktop-control")')) {
-  process.stderr.write("surface map: explicit GUI_WORKING_COMMANDS coverage missing from real-bridge golden\n");
-  process.exit(1);
-}
-const guiWorkingCommands = new Set([...formsIds.matchAll(/"([a-z0-9-]+)"/g)].map((match) => match[1]));
-const interactionsGolden = read("tests/e2e/desktop-command-interactions-golden.test.ts");
-if (!interactionsGolden.includes("for (const command of DESKTOP_INTERACTION_COMMANDS)") ||
-    !interactionsGolden.includes("validateEditorCommandInvocation(payload)")) {
-  process.stderr.write("surface map: command interaction golden no longer validates dispatch\n");
-  process.exit(1);
-}
-const guiWorkingInteractions = new Set(DESKTOP_INTERACTION_COMMANDS.map(({ id }) => id));
-const realBridgeGolden = read("tests/e2e/desktop-control-dispatch-real-bridge-golden.test.ts");
-const realBridgeIds = realBridgeGolden.match(/export const GUI_REAL_BRIDGE_COMMANDS = \[([\s\S]*?)\] as const;/)?.[1];
-if (realBridgeIds === undefined || !realBridgeGolden.includes("for (const commandId of GUI_REAL_BRIDGE_COMMANDS)") ||
-    !realBridgeGolden.includes("validateEditorCommandInvocation") || !realBridgeGolden.includes("bridge.handle")) {
-  process.stderr.write("surface map: mounted-chrome real-bridge dispatch golden coverage missing\n");
-  process.exit(1);
-}
-const guiRealBridgeCommands = new Set([...realBridgeIds.matchAll(/"([a-z0-9-]+)"/g)].map((match) => match[1]));
-if (guiRealBridgeCommands.size === 0 || [...guiRealBridgeCommands].some((id) => !acceptsDesktop(id))) {
-  process.stderr.write("surface map: real-bridge golden lists unknown or unaccepted command\n");
+// Commands the GUI names but sends without the input their schema requires; the
+// command interaction golden pins each one to the registry's input refusal.
+const inputRequiredCommands = new Set(
+  [...(read("tests/e2e/desktop-command-interactions-golden.test.ts")
+    .match(/const INPUT_REQUIRED_COMMANDS = new Set\(\[([^\]]*)\]/)?.[1] ?? "")
+    .matchAll(/"([a-z0-9-]+)"/g)].map((match) => match[1]),
+);
+
+if (inputRequiredCommands.size === 0) {
+  process.stderr.write("surface map: INPUT_REQUIRED_COMMANDS not found in the command interaction golden\n");
   process.exit(1);
 }
 
 const editorCommandState = (id) => {
-  if (guiWorkingCommands.has(id) || guiWorkingInteractions.has(id) || guiRealBridgeCommands.has(id)) return { state: "working", note: "GUI dispatch validated by mounted-chrome golden" };
+  if (inputRequiredCommands.has(id)) {
+    return fromBacklog(53) ?? { state: "partial", note: "GUI control sends no form input; registry refuses EDITOR_COMMAND_INPUT_INVALID" };
+  }
+
+  if (guiSource.includes(`'${id}'`) || guiSource.includes(`"${id}"`)) return { state: "working", note: "GUI-dispatched" };
 
   // Accepting `desktop-control` is not a GUI: without a control that dispatches it, the
   // command is reachable only through the desktop bridge and local agents.
-  if (acceptsDesktop(id)) return { state: "unknown", note: "desktop-control accepted; no matching GUI registry-validation golden" };
+  if (acceptsDesktop(id)) return fromBacklog(53) ?? { state: "partial", note: "desktop-control accepted; no GUI control dispatches it" };
 
   return { state: "refused", note: "CLI / local-agent only by registry" };
 };

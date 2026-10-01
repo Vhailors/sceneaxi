@@ -27,7 +27,7 @@
     "@sceneaxi/engine-presentation": "link:../../packages/engine-presentation",
     "@sceneaxi/site-kit": "link:../../packages/site-kit",
     "better-auth": "^1.6.26",
-    "next": "15.5.21",
+    "next": "15.5.24",
     "pg": "^8.22.0",
     "react": "19.1.1",
     "react-dom": "19.1.1",
@@ -41,10 +41,21 @@
     "@types/react": "19.1.9",
     "@types/react-dom": "19.1.7",
     "typescript": "5.9.3",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.11"
   },
   "sceneaxi": {
     "releaseGroup": "sites"
   },
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "packageManager": "pnpm@9.15.0",
+  "pnpm": {
+    "overrides": {
+      "fast-uri@3": "3.1.8",
+      "brace-expansion@5": "5.0.12",
+      "brace-expansion@2": "2.1.7",
+      "brace-expansion@1": "1.1.21",
+      "postcss@8": "8.5.23",
+      "nanoid@3": "3.3.18"
+    }
+  }
 }

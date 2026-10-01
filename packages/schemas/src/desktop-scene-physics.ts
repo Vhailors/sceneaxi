@@ -1,5 +1,5 @@
 /**
- * Bounded physics authoring: bodies, shapes, materials, constraints, gravity,
+ * Bounded physics authoring: bodies, colliders, materials, constraints, gravity,
  * and fixed-step evaluation. Preview and Play never write simulation state
  * back to the authoring catalog.
  */
@@ -12,14 +12,14 @@ export const SCENE_PHYSICS_CATALOG_KIND = "sceneaxi.scene-physics-catalog" as co
 export const SCENE_PHYSICS_CATALOG_KEY = "scenePhysics" as const;
 
 export const SCENE_PHYSICS_BODY_KINDS = Object.freeze(["static", "dynamic", "kinematic"] as const);
-export const SCENE_PHYSICS_SHAPE_KINDS = Object.freeze(["box", "sphere", "capsule"] as const);
+export const SCENE_PHYSICS_COLLIDER_KINDS = Object.freeze(["box", "sphere", "capsule"] as const);
 export const SCENE_PHYSICS_CONSTRAINT_KINDS = Object.freeze(["fixed", "hinge"] as const);
 
 export const SCENE_PHYSICS_REFUSALS = Object.freeze({
   catalogInvalid: "PHYSICS_CATALOG_INVALID",
   bodyUnknown: "PHYSICS_BODY_UNKNOWN",
   targetMissing: "PHYSICS_TARGET_MISSING",
-  shapeInvalid: "PHYSICS_SHAPE_INVALID",
+  colliderInvalid: "PHYSICS_SHAPE_INVALID",
   constraintUnsupported: "PHYSICS_CONSTRAINT_UNSUPPORTED",
   stepUnstable: "PHYSICS_STEP_UNSTABLE",
   assetMissing: "PHYSICS_ASSET_MISSING",
@@ -39,10 +39,10 @@ export type ScenePhysicsBody = Readonly<{
   mass: number;
 }>;
 
-export type ScenePhysicsShape = Readonly<{
-  shapeId: string;
+export type ScenePhysicsCollider = Readonly<{
+  colliderId: string;
   bodyId: string;
-  kind: (typeof SCENE_PHYSICS_SHAPE_KINDS)[number];
+  kind: (typeof SCENE_PHYSICS_COLLIDER_KINDS)[number];
   size: number;
 }>;
 
@@ -74,7 +74,7 @@ export type ScenePhysicsCatalog = Readonly<{
   kind: typeof SCENE_PHYSICS_CATALOG_KIND;
   world: ScenePhysicsWorld;
   bodies: readonly ScenePhysicsBody[];
-  shapes: readonly ScenePhysicsShape[];
+  colliders: readonly ScenePhysicsCollider[];
   materials: readonly ScenePhysicsMaterial[];
   constraints: readonly ScenePhysicsConstraint[];
 }>;
@@ -105,7 +105,7 @@ export function emptyScenePhysicsCatalog(): ScenePhysicsCatalog {
     kind: SCENE_PHYSICS_CATALOG_KIND,
     world: Object.freeze({ gravityY: -9.81, stepMs: 16, seed: 1, engine: "toy" }),
     bodies: Object.freeze([]),
-    shapes: Object.freeze([]),
+    colliders: Object.freeze([]),
     materials: Object.freeze([]),
     constraints: Object.freeze([]),
   });
@@ -135,7 +135,7 @@ export function parseScenePhysicsCatalog(value: unknown): ScenePhysicsCatalog | 
 
 export type ScenePhysicsMutation =
   | Readonly<{ kind: "body-upsert"; bodyId: string; instanceId: string; bodyKind: string; mass: number }>
-  | Readonly<{ kind: "shape-upsert"; shapeId: string; bodyId: string; shapeKind: string; size: number }>
+  | Readonly<{ kind: "shape-upsert"; colliderId: string; bodyId: string; colliderKind: string; size: number }>
   | Readonly<{ kind: "material-upsert"; bodyId: string; friction: number; restitution: number }>
   | Readonly<{ kind: "constraint-upsert"; constraintId: string; constraintKind: string; bodyA: string; bodyB: string }>
   | Readonly<{ kind: "world-set"; gravityY: number; stepMs: number; seed: number; engine?: string }>
@@ -207,25 +207,25 @@ export function applyScenePhysicsMutation(input: Readonly<{
     if (!input.catalog.bodies.some((body) => body.bodyId === mutation.bodyId)) {
       return fail(SCENE_PHYSICS_REFUSALS.bodyUnknown, `Shape body "${mutation.bodyId}" is not authored.`);
     }
-    if (!SCENE_PHYSICS_SHAPE_KINDS.some((kind) => kind === mutation.shapeKind)) {
-      return fail(SCENE_PHYSICS_REFUSALS.shapeInvalid, `Shape kind "${mutation.shapeKind}" is unsupported.`);
+    if (!SCENE_PHYSICS_COLLIDER_KINDS.some((kind) => kind === mutation.colliderKind)) {
+      return fail(SCENE_PHYSICS_REFUSALS.colliderInvalid, `Shape kind "${mutation.colliderKind}" is unsupported.`);
     }
     if (!Number.isFinite(mutation.size) || mutation.size <= 0) {
-      return fail(SCENE_PHYSICS_REFUSALS.shapeInvalid, "A shape size must be a positive finite number.");
+      return fail(SCENE_PHYSICS_REFUSALS.colliderInvalid, "A shape size must be a positive finite number.");
     }
-    const shape: ScenePhysicsShape = Object.freeze({
-      shapeId: mutation.shapeId,
+    const collider: ScenePhysicsCollider = Object.freeze({
+      colliderId: mutation.colliderId,
       bodyId: mutation.bodyId,
-      kind: mutation.shapeKind as ScenePhysicsShape["kind"],
+      kind: mutation.colliderKind as ScenePhysicsCollider["kind"],
       size: mutation.size,
     });
     return Object.freeze({
       ok: true as const,
       catalog: Object.freeze({
         ...input.catalog,
-        shapes: Object.freeze([
-          ...input.catalog.shapes.filter((candidate) => candidate.shapeId !== shape.shapeId),
-          shape,
+        colliders: Object.freeze([
+          ...input.catalog.colliders.filter((candidate) => candidate.colliderId !== collider.colliderId),
+          collider,
         ]),
       }),
     });
@@ -290,7 +290,7 @@ export function applyScenePhysicsMutation(input: Readonly<{
     catalog: Object.freeze({
       ...input.catalog,
       bodies: Object.freeze(input.catalog.bodies.filter((body) => body.bodyId !== mutation.bodyId)),
-      shapes: Object.freeze(input.catalog.shapes.filter((shape) => shape.bodyId !== mutation.bodyId)),
+      colliders: Object.freeze(input.catalog.colliders.filter((collider) => collider.bodyId !== mutation.bodyId)),
       materials: Object.freeze(input.catalog.materials.filter((material) => material.bodyId !== mutation.bodyId)),
       constraints: Object.freeze(
         input.catalog.constraints.filter((constraint) =>
@@ -351,8 +351,8 @@ export function evaluateScenePhysics(input: Readonly<{
   const dt = input.catalog.world.stepMs / 1000;
   const snapshots: ScenePhysicsSnapshot[] = [];
   const state = input.catalog.bodies.map((body, index) => {
-    const shape = input.catalog.shapes.find((candidate) => candidate.bodyId === body.bodyId);
-    const grounded = body.kind === "static" || (shape !== undefined && shape.kind === "box" && shape.size >= 100);
+    const collider = input.catalog.colliders.find((candidate) => candidate.bodyId === body.bodyId);
+    const grounded = body.kind === "static" || (collider !== undefined && collider.kind === "box" && collider.size >= 100);
     return {
       bodyId: body.bodyId,
       y: (input.animationOffsetY ?? 0) + (index + 1) + (input.catalog.world.seed % 3) * 0.01,

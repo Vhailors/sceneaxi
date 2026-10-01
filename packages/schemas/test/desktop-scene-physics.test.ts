@@ -9,7 +9,7 @@ import {
 const hash = `sha256:${"cd".repeat(32)}`;
 
 describe("desktop scene physics catalog", () => {
-  it("refuses missing targets, invalid shapes, unsupported constraints, and unstable steps", () => {
+  it("refuses missing targets, invalid colliders, unsupported constraints, and unstable steps", () => {
     const catalog = emptyScenePhysicsCatalog();
     expect(applyScenePhysicsMutation({
       catalog,
@@ -25,8 +25,8 @@ describe("desktop scene physics catalog", () => {
     expect(applyScenePhysicsMutation({
       catalog: body.catalog,
       instanceIds: ["desktop-crate-beside"],
-      mutation: { kind: "shape-upsert", shapeId: "s1", bodyId: "b1", shapeKind: "mesh", size: 1 },
-    })).toMatchObject({ ok: false, reason: SCENE_PHYSICS_REFUSALS.shapeInvalid });
+      mutation: { kind: "shape-upsert", colliderId: "s1", bodyId: "b1", colliderKind: "mesh", size: 1 },
+    })).toMatchObject({ ok: false, reason: SCENE_PHYSICS_REFUSALS.colliderInvalid });
     expect(applyScenePhysicsMutation({
       catalog: body.catalog,
       instanceIds: ["desktop-crate-beside"],
@@ -48,14 +48,14 @@ describe("desktop scene physics catalog", () => {
     });
     if (!body.ok) throw new Error(body.message);
     catalog = body.catalog;
-    const shape = applyScenePhysicsMutation({
+    const collider = applyScenePhysicsMutation({
       catalog,
       instanceIds: ["desktop-crate-beside"],
-      mutation: { kind: "shape-upsert", shapeId: "s1", bodyId: "b1", shapeKind: "sphere", size: 0.5 },
+      mutation: { kind: "shape-upsert", colliderId: "s1", bodyId: "b1", colliderKind: "sphere", size: 0.5 },
     });
-    if (!shape.ok) throw new Error(shape.message);
-    const first = evaluateScenePhysics({ catalog: shape.catalog, sourceContentHash: hash, steps: 4 });
-    const second = evaluateScenePhysics({ catalog: shape.catalog, sourceContentHash: hash, steps: 4 });
+    if (!collider.ok) throw new Error(collider.message);
+    const first = evaluateScenePhysics({ catalog: collider.catalog, sourceContentHash: hash, steps: 4 });
+    const second = evaluateScenePhysics({ catalog: collider.catalog, sourceContentHash: hash, steps: 4 });
     expect(first).toMatchObject({ ok: true, evaluation: { order: "animation-then-physics", savedBytesWritten: false } });
     expect(second).toEqual(first);
     if (!first.ok) throw new Error(first.message);

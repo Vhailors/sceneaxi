@@ -33,8 +33,8 @@ export function createToyPhysicsWorldHost(): PhysicsWorldHost {
     kind: "toy" as const,
     create(catalog: ScenePhysicsCatalog): PhysicsWorldHandle {
       const state = catalog.bodies.map((body, index) => {
-        const shape = catalog.shapes.find((candidate) => candidate.bodyId === body.bodyId);
-        const grounded = body.kind === "static" || (shape !== undefined && shape.kind === "box" && shape.size >= 100);
+        const collider = catalog.colliders.find((candidate) => candidate.bodyId === body.bodyId);
+        const grounded = body.kind === "static" || (collider !== undefined && collider.kind === "box" && collider.size >= 100);
         return {
           bodyId: body.bodyId,
           y: index + 1 + (catalog.world.seed % 3) * 0.01,

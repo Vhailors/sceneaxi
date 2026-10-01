@@ -5,6 +5,7 @@
  * wired, and stops a reachable refusal from losing its covering case. Adding a key
  * to `SITE_REFUSALS` without a case here fails the gate.
  */
+import { verifySiteAdminReauthentication } from "@sceneaxi/site-kit";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -54,18 +55,22 @@ import type {
 import { proposeMany, serializeDocument } from "@sceneaxi/authoring-core";
 
 const NOW = "2026-07-25T12:00:00.000Z";
+
 const now = () => NOW;
+
 const dirs: string[] = [];
 
 const workspace = (): string => {
   const dir = mkdtempSync(join(tmpdir(), "sceneaxi-refuse-"));
   dirs.push(dir);
+
   return dir;
 };
 
 afterEach(() => {
   while (dirs.length > 0) {
     const dir = dirs.pop();
+
     if (dir !== undefined) rmSync(dir, { recursive: true, force: true });
   }
 });
@@ -126,16 +131,21 @@ const reviewFixture = (): {
   const cwd = workspace();
   const documentPath = "scene.json";
   writeFileSync(join(cwd, documentPath), serializeDocument(REVIEW_DOCUMENT), "utf8");
+
   const proposed = proposeMany([
     { documentPath, jsonPointer: "/data/objects/drone/x", newValue: 1, cwd },
     { documentPath, jsonPointer: "/data/objects/drone/y", newValue: 2, cwd },
   ]);
+
   if (!proposed.ok) throw new Error("fixture proposal failed");
+
   const reviewed = reviewProposal({
     proposal: proposed.proposal,
     documents: new Map([[documentPath, REVIEW_DOCUMENT]]),
   });
+
   if (!reviewed.ok) throw new Error(`fixture review refused: ${reviewed.reason}`);
+
   return { proposal: proposed.proposal, documentPath, review: reviewed.value };
 };
 
@@ -154,6 +164,11 @@ const UMBRELLA_LEDGER_REASONS = [
 type SiteKitReason = Exclude<SiteRefusalReason, (typeof UMBRELLA_LEDGER_REASONS)[number]>;
 
 const CASES: Readonly<Record<SiteKitReason, () => Promise<unknown> | unknown>> = {
+  ADMIN_REAUTHENTICATION_REQUIRED: () => verifySiteAdminReauthentication({ credential: "fixture.token", password: "fixture" }),
+  BILLING_CHECKOUT_RATE_LIMITED: () => createBillingPlane({ adapter: {
+    listCreditPacks: async () => ok([]),
+    createCheckout: async () => refuse("BILLING_CHECKOUT_RATE_LIMITED"),
+  } }).createCheckout({ userId: "user-1", packId: "pack-100", idempotencyKey: "quota-case", successUrl: "https://example.vercel.app/ok", cancelUrl: "https://example.vercel.app/cancel" }),
   IDENTITY_PLANE_NOT_WIRED: () => createIdentityPlane({ now }).resolvePrincipal(umbrella),
   CREDITS_PLANE_NOT_WIRED: () => createCreditsPlane().readBalance({ userId: "user-1" }),
   BILLING_PLANE_NOT_WIRED: () =>
@@ -406,6 +421,7 @@ const CASES: Readonly<Record<SiteKitReason, () => Promise<unknown> | unknown>> =
     const siteRoot = workspace();
     mkdirSync(join(siteRoot, "public", "engine-sdk"), { recursive: true });
     writeFileSync(join(siteRoot, "public", "engine-sdk", "sdk-manifest.json"), "{ not json");
+
     return readEngineSdkOffer(siteRoot);
   },
   DESKTOP_APP_ARTIFACT_UNAVAILABLE: () => resolveDesktopAppOffer(null),
@@ -417,13 +433,16 @@ const CASES: Readonly<Record<SiteKitReason, () => Promise<unknown> | unknown>> =
     }),
   EDITOR_SESSION_DISPOSED: () => {
     const created = createWebEditorSession({ workspaceRoot: workspace(), backend: "null" });
+
     if (!created.ok) return created;
     created.value.dispose();
+
     try {
       created.value.snapshot();
     } catch (error) {
       return error;
     }
+
     return null;
   },
   EDITOR_WORKSPACE_ESCAPE: () =>
@@ -438,9 +457,11 @@ const CASES: Readonly<Record<SiteKitReason, () => Promise<unknown> | unknown>> =
   // refusal rather than an exception the calling route cannot draw.
   EDITOR_WORKSPACE_UNAVAILABLE: () => {
     const state = readEditorState({});
+
     if (!state.ok) return state;
     const previous = process.env["TMPDIR"];
     process.env["TMPDIR"] = join(workspace(), "absent-temporary-root");
+
     try {
       return renderEditorState(state.value);
     } finally {
@@ -455,6 +476,7 @@ const CASES: Readonly<Record<SiteKitReason, () => Promise<unknown> | unknown>> =
     reviewProposal({ proposal: reviewFixture().proposal, documents: new Map() }),
   CHANGE_REVIEW_PROPOSAL_STALE: () => {
     const fixture = reviewFixture();
+
     return reviewProposal({
       proposal: fixture.proposal,
       documents: new Map([[fixture.documentPath, { ...REVIEW_DOCUMENT, title: "moved" }]]),
@@ -463,7 +485,9 @@ const CASES: Readonly<Record<SiteKitReason, () => Promise<unknown> | unknown>> =
   CHANGE_REVIEW_PROJECTION_FAILED: () => {
     const fixture = reviewFixture();
     const first = fixture.proposal.edits[0];
+
     if (first === undefined) return null;
+
     return reviewProposal({
       proposal: { ...fixture.proposal, edits: [{ ...first, jsonPointer: "/data/absent/leaf" }] },
       documents: new Map([[fixture.documentPath, REVIEW_DOCUMENT]]),

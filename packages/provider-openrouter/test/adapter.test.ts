@@ -55,14 +55,17 @@ describe("@sceneaxi/provider-openrouter", () => {
 
   it("runs complete through the Model Provider Port with a pinned no-fallback request", async () => {
     const requests: OpenRouterTransportRequest[] = [];
+
     const adapter = createOpenRouterAdapter({
       model: MODEL,
       eval: EVAL,
       transport(request) {
         requests.push(request);
+
         return attestedFixture("complete");
       },
     });
+
     const port = createModelProviderPort({
       adapter,
       profilePolicies: {
@@ -103,6 +106,7 @@ describe("@sceneaxi/provider-openrouter", () => {
       eval: EVAL,
       transport: () => attestedFixture("tool-call"),
     });
+
     const port = createModelProviderPort({
       adapter,
       profilePolicies: {
@@ -245,11 +249,13 @@ describe("@sceneaxi/provider-openrouter", () => {
 
   it("refuses async tool schemas before transport dispatch", async () => {
     let calls = 0;
+
     const adapter = createOpenRouterAdapter({
       model: MODEL,
       eval: EVAL,
       transport: () => {
         calls += 1;
+
         return attestedFixture("tool-call");
       },
     });
@@ -358,20 +364,24 @@ describe("@sceneaxi/provider-openrouter", () => {
 
   it("cannot bypass the port's non-overridable Kids denial", async () => {
     let calls = 0;
+
     const adapter = createOpenRouterAdapter({
       model: MODEL,
       eval: EVAL,
       transport() {
         calls += 1;
+
         return attestedFixture("complete");
       },
     });
+
     const port = createModelProviderPort({
       adapter,
       profilePolicies: {
         "@sceneaxi/profile-kids": () => ({ ok: true }),
       },
     });
+
     const result = await port.complete({
       schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
       operation: "complete",
@@ -504,6 +514,7 @@ describe("the fixture transport", () => {
       model: MODEL,
       responses: { complete: fixture("complete") },
     });
+
     const request: OpenRouterTransportRequest = {
       schemaVersion: 1,
       operation: "complete",
@@ -514,15 +525,116 @@ describe("the fixture transport", () => {
       temperature: 0,
       seed: EVAL.seed,
     };
+
     expect(transport(request)).toEqual(transport(request));
   });
+
+  it("snapshots nested fixtures and isolates returned payloads", async () => {
+    const recorded = {
+      model: MODEL.model,
+      choices: [{ finish_reason: "stop", message: { content: "before" } }],
+    };
+
+    const transport = createFixtureTransport({
+      model: MODEL,
+      responses: { complete: recorded },
+    });
+
+    const request: OpenRouterTransportRequest = {
+      schemaVersion: 1,
+      operation: "complete",
+      modelDescriptor: MODEL,
+      model: MODEL.model,
+      messages: [{ role: "user", content: "fixture prompt" }],
+      provider: { allow_fallbacks: false },
+      temperature: 0,
+      seed: EVAL.seed,
+    };
+
+    const first = await transport(request);
+    const originalChoice = recorded.choices[0];
+
+    if (originalChoice === undefined) throw new Error("Missing fixture choice.");
+    originalChoice.message.content = "caller mutation";
+    const adapter = createOpenRouterAdapter({ model: MODEL, eval: EVAL, transport });
+
+    const completion = {
+      schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+      operation: "complete" as const,
+      profile: "@sceneaxi/profile-web" as const,
+      model: MODEL,
+      prompt: "fixture prompt",
+    };
+
+    await expect(adapter.complete?.(completion)).resolves.toMatchObject({
+      response: { text: "before" },
+    });
+    const returned = first.response as typeof recorded;
+    const returnedChoice = returned.choices[0];
+
+    if (returnedChoice === undefined) throw new Error("Missing returned choice.");
+    returnedChoice.message.content = "returned mutation";
+    await expect(adapter.complete?.(completion)).resolves.toMatchObject({
+      response: { text: "before" },
+    });
+    expect((await transport(request)).response).toEqual({
+      model: MODEL.model,
+      choices: [{ finish_reason: "stop", message: { content: "before" } }],
+    });
+  });
+
+  it.each([undefined, NaN, Infinity, 1n, () => "not JSON"])(
+    "refuses lossy fixture values at construction: %s",
+    (response) => {
+      expect(() => createFixtureTransport({
+        model: MODEL,
+        responses: { complete: response },
+      })).toThrowError(OpenRouterAdapterError);
+    },
+  );
+
+  it("refuses cyclic fixtures without exposing their contents", () => {
+    const cycle: Record<string, unknown> = {};
+    cycle["self"] = cycle;
+    expect(() => createFixtureTransport({
+      model: MODEL,
+      responses: { complete: cycle },
+    })).toThrowError("Recorded OpenRouter fixtures must be lossless JSON values.");
+  });
+
+  it("admits malformed JSON envelopes without claiming valid completion", async () => {
+    const adapter = createOpenRouterAdapter({
+      model: MODEL,
+      eval: EVAL,
+      transport: createFixtureTransport({ model: MODEL, responses: { complete: null } }),
+    });
+
+    await expect(adapter.complete?.({
+      schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
+      operation: "complete",
+      profile: "@sceneaxi/profile-web",
+      model: MODEL,
+      prompt: "fixture prompt",
+    })).rejects.toMatchObject({ code: OPENROUTER_ADAPTER_ERROR_CODES.responseInvalid });
+  });
+
+  it.each(["toString", "__proto__", "constructor"])(
+    "never treats inherited member %s as a recorded operation",
+    (operation) => {
+      const transport = createFixtureTransport({ model: MODEL, responses: {} });
+      expect(() => transport({ operation } as OpenRouterTransportRequest))
+        .toThrowError(OpenRouterAdapterError);
+    },
+  );
 
   it("refuses an unrecorded operation rather than answering blank", () => {
     const transport = createFixtureTransport({
       model: MODEL,
       responses: { complete: fixture("complete") },
     });
+
     let thrown: unknown;
+
     try {
       transport({
         schemaVersion: 1,
@@ -538,6 +650,7 @@ describe("the fixture transport", () => {
     } catch (error) {
       thrown = error;
     }
+
     expect(thrown).toBeInstanceOf(OpenRouterAdapterError);
     expect(thrown).toMatchObject({
       code: OPENROUTER_ADAPTER_ERROR_CODES.fixtureNotRecorded,
@@ -553,6 +666,7 @@ describe("the fixture transport", () => {
         responses: { complete: fixture("complete") },
       }),
     });
+
     await expect(
       adapter.complete?.({
         schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
