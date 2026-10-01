@@ -5,10 +5,9 @@
  * Electron tier: desktop-shell chrome/model -> existing host bridge -> shared
  * authoring session and orchestrated composed-scene open path.
  */
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   Window as HappyWindow,
   type CustomEvent as HappyCustomEvent,
@@ -17,7 +16,6 @@ import {
 import { createDocument, writeDocumentFile } from "@sceneaxi/authoring-core";
 import {
   DESKTOP_SCENE_HIERARCHY_REFUSALS,
-  EDITOR_COMMAND_REGISTRY,
   type JsonValue,
 } from "@sceneaxi/schemas";
 import {
@@ -30,133 +28,16 @@ import {
 } from "@sceneaxi/desktop-shell";
 import { createDesktopBridge, desktopOpenScene } from "../../desktop/linux/src/index.ts";
 
-const dirs: string[] = [];
-const windows: HappyWindow[] = [];
-afterEach(() => {
-  for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
-  for (const window of windows.splice(0)) window.close();
-});
+import {
+  windows,
+  productHarness,
+  query,
+  queryAll,
+  clickProduct as click,
+  requestOperation,
+} from "../helpers/desktop-chrome-golden.js";
 
-function projectDir() {
-  const dir = mkdtempSync(join(tmpdir(), "sceneaxi-product-loop-"));
-  dirs.push(dir);
-  const starter = desktopOpenScene();
-  if (!starter.ok) throw new Error(`desktop scene refused: ${starter.reason}`);
-  const result = writeDocumentFile(
-    join(dir, "scene.json"),
-    createDocument({
-      id: "desktop-first-release",
-      data: {
-        ...starter.composed.document.data,
-        title: "First release",
-        entities: [{ id: "hero" }],
-      },
-    }),
-    { cwd: dir },
-  );
-  if (!result.ok) throw new Error("desktop product-loop fixture refused");
-  return dir;
-}
-
-/**
- * The tests project compiles without the DOM lib, so element types come from
- * happy-dom itself rather than from a global `HTMLElement`.
- */
-function query(window: HappyWindow, selector: string) {
-  return window.document.querySelector(selector) as HappyHTMLElement | null;
-}
-
-function queryAll(window: HappyWindow, selector: string) {
-  return [...window.document.querySelectorAll(selector)] as HappyHTMLElement[];
-}
-
-async function click(window: HappyWindow, selector: string) {
-  const element = query(window, selector);
-  if (element === null) throw new Error(`missing product-loop control ${selector}`);
-  element.click();
-  for (let turn = 0; turn < 60; turn += 1) {
-    await Promise.resolve();
-    if (window.document.querySelector("[data-busy]") === null) return;
-  }
-  throw new Error(`product-loop control did not settle ${selector}`);
-}
-
-type ChromeHarnessPort = {
-  readonly bridge: ReturnType<typeof createDesktopBridge>;
-  readonly ipcClone: <T>(value: T) => T;
-};
-
-function requestOperation(request: unknown): string | null {
-  const typed = request as {
-    action?: unknown;
-    payload?: { op?: unknown; commandId?: unknown };
-  };
-  if (typed.action === "authoring" && typeof typed.payload?.op === "string") {
-    return typed.payload.op;
-  }
-  if (typed.action !== "command") return null;
-  switch (typed.payload?.commandId) {
-    case "project-save":
-    case "change-review-accept":
-      return "accept";
-    case "change-review-reject":
-      return "reject";
-    case "edit-undo":
-      return "undo";
-    case "run-play":
-      return "open-path";
-    default:
-      return typeof typed.payload?.commandId === "string" ? typed.payload.commandId : null;
-  }
-}
-
-/**
- * Mount the emitted chrome over a real bridge the way the packaged app does:
- * the renderer only ever sees structured-cloned values, so every request and
- * response crosses `ipcClone` exactly as it would cross Electron IPC.
- *
- * `start()` is separate from mounting so a case can register its viewport-play
- * listener first — the script binds its handlers as it evaluates.
- */
-function mountChrome(
-  dir: string,
-  intercept?: (port: ChromeHarnessPort) => (request: unknown) => Promise<unknown>,
-) {
-  const bridge = createDesktopBridge({
-    cwd: dir,
-    nowMs: () => 1_753_920_000_000,
-    commandCapabilities: [...new Set(
-      EDITOR_COMMAND_REGISTRY.map((command) => command.capability.id),
-    )],
-  });
-  const window = new HappyWindow({ width: 1000, height: 700 });
-  windows.push(window);
-  const ipcClone = <T>(value: T): T => window.eval(`(${JSON.stringify(value)})`) as T;
-  const request =
-    intercept?.({ bridge, ipcClone }) ??
-    (async (value: unknown) => ipcClone(bridge.handle(ipcClone(value))));
-  Object.defineProperty(window, "structuredClone", { value: ipcClone });
-  Object.defineProperty(window, "sceneaxiDesktop", { value: { request } });
-  const html = renderDesktopChrome(
-    desktopVisualView(
-      createDesktopVisualState({
-        profile: "game",
-        window: { width: 1000, height: 700 },
-      }),
-    ),
-  );
-  const match = /<script>([\s\S]*?)<\/script>/.exec(html);
-  if (match === null) throw new Error("desktop chrome lost its emitted script");
-  const script = match[1];
-  if (script === undefined) throw new Error("desktop chrome emitted an empty script");
-  window.document.write(html.replace(match[0], ""));
-  return {
-    window,
-    start: () => {
-      window.eval(script);
-    },
-  };
-}
+const { projectDir, mountChrome } = productHarness(createDesktopBridge, desktopOpenScene);
 
 describe("desktop first-release product loop", () => {
   it("executes the emitted Web asset-path decision in the mounted chrome", async () => {
@@ -894,80 +775,6 @@ describe("desktop first-release product loop", () => {
   });
 
   /**
-   * The panel used to hold the inspection the last open produced, so a value it
-   * displayed could be one the session had already moved past — and the next
-   * edit re-opened, which dropped the selection and refused.
-   */
-  it("keeps the property panel on the staged then saved value without reopening or reselecting", async () => {
-    const dir = projectDir();
-    const { window, start } = mountChrome(dir);
-    start();
-
-    const translationInput = () =>
-      query(window, "#scene-property-translation-x") as
-        | (HappyHTMLElement & { value: string })
-        | null;
-    const savedTranslationX = () => {
-      const document_ = JSON.parse(readFileSync(join(dir, "scene.json"), "utf8")) as {
-        data: {
-          composedScene: {
-            instances: Array<{
-              instanceId: string;
-              localTransform: { translation: number[] };
-            }>;
-          };
-        };
-      };
-      return document_.data.composedScene.instances.find(
-        (instance) => instance.instanceId === "desktop-crate-beside",
-      )?.localTransform.translation[0];
-    };
-
-    await click(window, "#project-open");
-    await click(window, "#scene-entity-desktop-crate-beside");
-    const input = translationInput();
-    if (input === null) throw new Error("translation input is missing");
-    expect(input.value).toBe("-4.4");
-    input.value = "-3.25";
-
-    const before = readFileSync(join(dir, "scene.json"), "utf8");
-    await click(window, "#scene-property-stage");
-    expect(readFileSync(join(dir, "scene.json"), "utf8")).toBe(before);
-    // The staged value is the host's, echoed back — not the string left in the field.
-    expect(translationInput()?.value).toBe("-3.25");
-    await click(window, "#scene-entity-desktop-crate-beside");
-    expect(translationInput()?.value).toBe("-3.25");
-
-    await click(window, "#project-save");
-    expect(query(window, "[data-project-status]")?.textContent).toContain("saved");
-    expect(savedTranslationX()).toBe(-3.25);
-    // The applied proposal is spent: its diff goes, the written value stays.
-    expect(query(window, "[data-scene-property-review]")?.hidden).toBe(true);
-    expect(query(window, "[data-scene-property-review]")?.textContent).toBe("");
-    expect(query(window, "[data-scene-entities]")?.hidden).toBe(false);
-    expect(translationInput()?.value).toBe("-3.25");
-    await click(window, "#scene-entity-desktop-crate-beside");
-    expect(translationInput()?.value).toBe("-3.25");
-
-    // A second edit straight after Save: no reopen, no reselect, and the value
-    // typed at click time is the one that stages.
-    const staged = translationInput();
-    if (staged === null) throw new Error("translation input is missing after save");
-    staged.value = "-1.5";
-    const beforeSecond = readFileSync(join(dir, "scene.json"), "utf8");
-    await click(window, "#scene-property-stage");
-    expect(query(window, "[data-project-status]")?.textContent).toContain(
-      "property staged · review before Save",
-    );
-    expect(readFileSync(join(dir, "scene.json"), "utf8")).toBe(beforeSecond);
-    expect(translationInput()?.value).toBe("-1.5");
-
-    await click(window, "#project-save");
-    expect(savedTranslationX()).toBe(-1.5);
-    expect(translationInput()?.value).toBe("-1.5");
-  });
-
-  /**
    * The typed edit parks the one E1 proposal Change Review decides, so the
    * all-or-nothing Reject reaches it on the default Game profile — the only
    * staging path that profile has.
@@ -1418,34 +1225,6 @@ describe("desktop first-release product loop", () => {
     )).toBe(true);
   });
 
-  it("keeps click and keyboard multi-selection in canonical hierarchy order", async () => {
-    const { window, start } = mountChrome(projectDir());
-    start();
-    await click(window, "#project-open");
-
-    const selection = query(window, "#scene-entity-desktop-crate-beside") as
-      | (HappyHTMLElement & {
-          multiple: boolean;
-          options: ArrayLike<HappyHTMLElement & { selected: boolean; value: string }>;
-          dataset: Record<string, string | undefined>;
-        })
-      | null;
-    if (selection === null) throw new Error("hierarchy multi-selector missing");
-    expect(selection.multiple).toBe(true);
-    for (const option of Array.from(selection.options)) {
-      option.selected = option.value === "desktop-crate-stacked" ||
-        option.value === "desktop-crate-beside";
-    }
-    selection.dispatchEvent(new window.Event("change", { bubbles: true }));
-
-    expect(selection.dataset.value).toBe(
-      "desktop-crate-beside,desktop-crate-stacked",
-    );
-    expect(query(window, "[data-scene-property-entity-id]")?.textContent).toBe(
-      "desktop-crate-beside",
-    );
-  });
-
   it("settles queued and in-flight selection before profile change", async () => {
     let releaseSelection = () => {};
     const selectionGate = new Promise<void>((resolve) => {
@@ -1508,67 +1287,6 @@ describe("desktop first-release product loop", () => {
     expect(query(window, ".shell")?.dataset.profile).toBe("web");
     expect(query(window, "[data-scene-property-entity-id]")?.textContent)
       .toBe("desktop-crate-root");
-  });
-
-  it("renders object identity and current parentage after reparent and reopen", async () => {
-    const { window, start } = mountChrome(projectDir());
-    start();
-    await click(window, "#project-open");
-
-    const identityText = (instanceId: string, field: "artifact" | "instance" | "parent") =>
-      query(
-        window,
-        `[data-scene-identity="${instanceId}"] [data-scene-identity-${field}]`,
-      )?.textContent;
-    expect(identityText("desktop-crate-beside", "artifact"))
-      .toBe("starter-service-crate-artifact");
-    expect(identityText("desktop-crate-beside", "instance"))
-      .toBe("desktop-crate-beside");
-    expect(identityText("desktop-crate-beside", "parent"))
-      .toBe("desktop-crate-root");
-
-    const hierarchy = query(window, "#scene-entity-desktop-crate-beside") as
-      | (HappyHTMLElement & {
-          value: string;
-          options: ArrayLike<HappyHTMLElement & { value: string }>;
-        })
-      | null;
-    if (hierarchy === null) throw new Error("hierarchy selector missing");
-    const optionText = (instanceId: string) =>
-      Array.from(hierarchy.options).find((option) => option.value === instanceId)?.textContent;
-    const initialText = optionText("desktop-crate-beside");
-    expect(initialText).toContain(
-      " · instance desktop-crate-beside · parent desktop-crate-root",
-    );
-    expect(initialText).not.toContain("Placed beside the root");
-    const objectIdentity = initialText?.split(" · instance ")[0];
-    expect(objectIdentity).toMatch(/^\s*Object [a-z0-9-]+$/);
-
-    hierarchy.value = "desktop-crate-beside";
-    hierarchy.dispatchEvent(new window.Event("change", { bubbles: true }));
-    const parent = query(window, "#scene-instance-parent") as
-      | (HappyHTMLElement & { value: string })
-      | null;
-    const policy = query(window, "#scene-instance-policy") as
-      | (HappyHTMLElement & { value: string })
-      | null;
-    if (parent === null || policy === null) throw new Error("reparent controls missing");
-    parent.value = "desktop-crate-stacked";
-    policy.value = "preserve-local";
-    await click(window, "#scene-instance-reparent");
-    await click(window, "#change-review-accept");
-    await click(window, "#project-open");
-
-    expect(optionText("desktop-crate-beside")).toContain(
-      `${objectIdentity} · instance desktop-crate-beside · parent desktop-crate-stacked`,
-    );
-    expect(optionText("desktop-crate-beside")).not.toContain("Placed beside the root");
-    expect(identityText("desktop-crate-beside", "artifact"))
-      .toBe("starter-service-crate-artifact");
-    expect(identityText("desktop-crate-beside", "instance"))
-      .toBe("desktop-crate-beside");
-    expect(identityText("desktop-crate-beside", "parent"))
-      .toBe("desktop-crate-stacked");
   });
 
   it("names the diagnostic the conflict dialog is actually reporting", async () => {

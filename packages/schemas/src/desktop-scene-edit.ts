@@ -38,6 +38,9 @@ export const DESKTOP_SCENE_HIERARCHY_REFUSALS = Object.freeze({
   kidsDenied: "SCENE_HIERARCHY_KIDS_DENIED",
   manifestInconsistent: "SCENE_HIERARCHY_MANIFEST_INCONSISTENT",
   inputUnsupported: "SCENE_HIERARCHY_INPUT_UNSUPPORTED",
+  nameInvalid: "SCENE_HIERARCHY_NAME_INVALID",
+  primitiveUnsupported: "SCENE_HIERARCHY_PRIMITIVE_UNSUPPORTED",
+  nodeUnavailable: "SCENE_HIERARCHY_NODE_UNAVAILABLE",
 } as const);
 
 export type DesktopSceneHierarchyRefusal =
@@ -61,6 +64,22 @@ export type DesktopSceneTransformPropertyId =
   DesktopSceneTransformPropertyDefinition["id"];
 
 export type DesktopSceneEditOperation =
+  | Readonly<{
+      kind: "create-node";
+      parentInstanceId: string;
+      name: string;
+    }>
+  | Readonly<{
+      kind: "create-primitive";
+      primitive: "box" | "cylinder" | "sphere";
+      parentInstanceId: string;
+      name: string;
+    }>
+  | Readonly<{
+      kind: "rename-object";
+      instanceId: string;
+      name: string;
+    }>
   | Readonly<{
       kind: "set-transform-component";
       instanceId: string;
@@ -184,6 +203,26 @@ export function isDesktopSceneEditOperation(
   const record = value as Record<string, unknown>;
   if (typeof record["kind"] !== "string") return false;
   const keys = Object.keys(record).sort().join(",");
+
+  if (record["kind"] === "rename-object" || record["kind"] === "create-node" || record["kind"] === "create-primitive") {
+    const name = record["name"];
+
+    if (!(typeof name === "string" && name === name.trim() &&
+      Array.from(name).length >= 1 && Array.from(name).length <= 64 &&
+      !/\p{Cc}/u.test(name))) return false;
+
+    if (record["kind"] === "rename-object") {
+      return keys === "instanceId,kind,name" && isSculptIdentifier(record["instanceId"]);
+    }
+
+    if (!isSculptIdentifier(record["parentInstanceId"])) return false;
+
+    if (record["kind"] === "create-node") return keys === "kind,name,parentInstanceId";
+
+    return keys === "kind,name,parentInstanceId,primitive" &&
+      (record["primitive"] === "box" || record["primitive"] === "cylinder" || record["primitive"] === "sphere");
+  }
+
   if (record["kind"] === "set-transform-component") {
     const definition = desktopSceneTransformProperty(record["propertyId"]);
     const component = record["value"];

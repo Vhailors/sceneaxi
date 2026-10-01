@@ -19,7 +19,41 @@
         "editor.overlay.dismiss",
         "viewport.orbit",
         "viewport.zoom",
-        "play.primary"
+        "play.primary",
+        "editor.run.pause",
+        "editor.run.step",
+        "editor.tool.select",
+        "editor.tool.move",
+        "editor.tool.rotate",
+        "editor.tool.scale",
+        "editor.tool.space",
+        "editor.tool.snap",
+        "editor.selection.frame",
+        "editor.selection.delete",
+        "editor.selection.duplicate",
+        "editor.selection.rename",
+        "editor.selection.all",
+        "editor.asset.import",
+        "editor.workspace.1",
+        "editor.workspace.2",
+        "editor.workspace.3",
+        "editor.workspace.4",
+        "editor.panel.bottom",
+        "editor.panel.assets",
+        "editor.panel.problems",
+        "editor.assistant.focus",
+        "editor.assistant.new",
+        "editor.assistant.ask-about",
+        "editor.assistant.stop",
+        "editor.project.new",
+        "viewport.pan",
+        "viewport.look",
+        "viewport.fly.forward",
+        "viewport.fly.back",
+        "viewport.fly.left",
+        "viewport.fly.right",
+        "viewport.fly.up",
+        "viewport.fly.down"
       ]
     },
     "binding": {
@@ -45,7 +79,12 @@
           "properties": {
             "device": { "const": "pointer" },
             "button": { "type": "integer", "minimum": 0, "maximum": 4 },
-            "gesture": { "enum": ["click", "drag"] }
+            "gesture": { "enum": ["click", "drag"] },
+            "modifiers": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": { "enum": ["alt", "control", "meta", "primary", "shift"] }
+            }
           }
         },
         {
@@ -107,8 +146,8 @@
         "kind": { "const": "sceneaxi.input-action-map" },
         "bindings": {
           "type": "array",
-          "minItems": 11,
-          "maxItems": 11,
+          "minItems": 45,
+          "maxItems": 45,
           "items": { "$ref": "#/$defs/entry" }
         }
       }
@@ -123,7 +162,7 @@
         "scope": { "enum": ["workspace", "project"] },
         "bindings": {
           "type": "array",
-          "maxItems": 11,
+          "maxItems": 45,
           "items": { "$ref": "#/$defs/entry" }
         }
       }

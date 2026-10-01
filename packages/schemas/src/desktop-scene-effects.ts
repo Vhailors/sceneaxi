@@ -5,6 +5,7 @@
  */
 import { digestSculptJson } from "./sculpt-json.js";
 import { isSculptIdentifier } from "./sculpt.js";
+import { isPlainRecord } from "./record-validation.js";
 
 export const SCENE_EFFECTS_SCHEMA_VERSION = 1 as const;
 export const SCENE_EFFECTS_CATALOG_KIND = "sceneaxi.scene-effects-catalog" as const;
@@ -14,6 +15,7 @@ export const SCENE_EFFECT_EMITTER_KINDS = Object.freeze(["point", "box", "cone"]
 
 export const SCENE_EFFECTS_REFUSALS = Object.freeze({
   catalogInvalid: "EFFECTS_CATALOG_INVALID",
+  targetMissing: "EFFECTS_TARGET_MISSING",
   inputUnsupported: "EFFECTS_INPUT_UNSUPPORTED",
   kidsDenied: "EFFECTS_KIDS_DENIED",
   capabilityMissing: "EFFECTS_CAPABILITY_MISSING",
@@ -30,6 +32,9 @@ export type SceneEffectEmitter = Readonly<{
   lifetimeMs: number;
   speed: number;
   spread: number;
+  instanceId?: string;
+  color?: string;
+  size?: number;
 }>;
 
 export type SceneEffectsCatalog = Readonly<{
@@ -42,7 +47,11 @@ export type SceneEffectsCatalog = Readonly<{
 export type SceneEffectSample = Readonly<{
   emitterId: string;
   count: number;
+  /** Local positions; presentation applies the carrier's world transform. */
   positions: readonly (readonly [number, number, number])[];
+  instanceId?: string;
+  color?: string;
+  size?: number;
 }>;
 
 export type SceneEffectsEvaluation = Readonly<{
@@ -74,7 +83,20 @@ export function parseSceneEffectsCatalog(value: unknown): SceneEffectsCatalog | 
   if (record["schemaVersion"] !== 1 || record["kind"] !== SCENE_EFFECTS_CATALOG_KIND) {
     return null;
   }
-  return value as SceneEffectsCatalog;
+
+  // SAFETY: the envelope is checked above and emitter extensions are validated below.
+  const catalog = value as SceneEffectsCatalog;
+
+  return Array.isArray(catalog.emitters) && catalog.emitters.every(validEmitterExtensions) ? catalog : null;
+}
+
+function validEmitterExtensions(emitter: Pick<SceneEffectEmitter, "instanceId" | "color" | "size" | "speed" | "spread">): boolean {
+  return isPlainRecord(emitter)
+    && (emitter.instanceId === undefined || isSculptIdentifier(emitter.instanceId))
+    && (emitter.color === undefined || /^#[0-9a-f]{6}$/i.test(emitter.color))
+    && (emitter.size === undefined || (Number.isFinite(emitter.size) && emitter.size > 0))
+    && Number.isFinite(emitter.speed) && emitter.speed >= 0
+    && Number.isFinite(emitter.spread) && emitter.spread >= 0;
 }
 
 export type SceneEffectsMutation =
@@ -86,6 +108,9 @@ export type SceneEffectsMutation =
       lifetimeMs: number;
       speed: number;
       spread: number;
+      instanceId?: string;
+      color?: string;
+      size?: number;
     }>
   | Readonly<{ kind: "remove"; emitterId: string }>
   | Readonly<{ kind: "seed-set"; seed: number }>;
@@ -93,6 +118,7 @@ export type SceneEffectsMutation =
 export function applySceneEffectsMutation(input: Readonly<{
   catalog: SceneEffectsCatalog;
   mutation: SceneEffectsMutation;
+  instanceIds?: readonly string[];
   profile?: "game" | "web" | "kids";
 }>):
   | Readonly<{ ok: true; catalog: SceneEffectsCatalog }>
@@ -133,6 +159,23 @@ export function applySceneEffectsMutation(input: Readonly<{
   if (!Number.isFinite(mutation.lifetimeMs) || mutation.lifetimeMs < 16 || mutation.lifetimeMs > 8000) {
     return fail(SCENE_EFFECTS_REFUSALS.inputUnsupported, "Lifetime must be in 16..8000 ms.");
   }
+
+  if (!validEmitterExtensions(mutation)) {
+    return fail(SCENE_EFFECTS_REFUSALS.inputUnsupported, "Emitter attachment and colour must be valid; size must be positive, speed and spread non-negative and finite.");
+  }
+
+  if (mutation.instanceId !== undefined && !input.instanceIds?.includes(mutation.instanceId)) {
+    return fail(SCENE_EFFECTS_REFUSALS.targetMissing, "The emitter carrier is absent from the hierarchy.");
+  }
+
+  const appearance: { -readonly [Key in "instanceId" | "color" | "size"]?: SceneEffectEmitter[Key] } = {};
+
+  if (mutation.instanceId !== undefined) appearance.instanceId = mutation.instanceId;
+
+  if (mutation.color !== undefined) appearance.color = mutation.color;
+
+  if (mutation.size !== undefined) appearance.size = mutation.size;
+
   const emitter: SceneEffectEmitter = Object.freeze({
     emitterId: mutation.emitterId,
     kind: mutation.emitterKind as SceneEffectEmitter["kind"],
@@ -140,6 +183,7 @@ export function applySceneEffectsMutation(input: Readonly<{
     lifetimeMs: mutation.lifetimeMs,
     speed: mutation.speed,
     spread: mutation.spread,
+    ...appearance,
   });
   return Object.freeze({
     ok: true as const,
@@ -176,15 +220,32 @@ export function sampleSceneEffects(input: Readonly<{
     const alive = Math.min(32, Math.max(1, Math.floor((emitter.rate * emitter.lifetimeMs) / 1000)));
     const positions = Array.from({ length: alive }, (_, index) => {
       const phase = ((seed + index * 997 + Math.floor(input.timeMs)) % 1000) / 1000;
-      const radius = emitter.spread * (0.25 + phase * 0.75);
-      const angle = phase * Math.PI * 2;
-      return Object.freeze([
-        Math.cos(angle) * radius,
-        (phase * emitter.speed * emitter.lifetimeMs) / 1000,
-        Math.sin(angle) * radius,
-      ] as const);
+      const height = (phase * emitter.speed * emitter.lifetimeMs) / 1000;
+
+      if (emitter.kind === "point") return Object.freeze([0, height, 0] as const);
+
+      if (emitter.kind === "box") {
+        const offset = (axis: string) => (digestUint32(`${seed}:${index}:${axis}`) / 0xffffffff * 2 - 1) * emitter.spread;
+
+        return Object.freeze([offset("x"), offset("y") + height, offset("z")] as const);
+      }
+
+      const radius = emitter.spread * phase;
+      const angle = (digestUint32(`${seed}:${index}:angle`) / 0xffffffff) * Math.PI * 2;
+
+      return Object.freeze([Math.cos(angle) * radius, height, Math.sin(angle) * radius] as const);
     });
+
+    const appearance: { -readonly [Key in "instanceId" | "color" | "size"]?: SceneEffectEmitter[Key] } = {};
+
+    if (emitter.instanceId !== undefined) appearance.instanceId = emitter.instanceId;
+
+    if (emitter.color !== undefined) appearance.color = emitter.color;
+
+    if (emitter.size !== undefined) appearance.size = emitter.size;
+
     return Object.freeze({
+      ...appearance,
       emitterId: emitter.emitterId,
       count: alive,
       positions: Object.freeze(positions),

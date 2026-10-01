@@ -195,6 +195,98 @@ describe("scene composition contracts", () => {
     expect(result.value.placements).toHaveLength(3);
   });
 
+  it("preserves optional names in resolved placements and binds them in digests", () => {
+    const intake = intakeFixture();
+    const named = {
+      ...intake,
+      placements: intake.placements.map((placement, index) => ({
+        ...placement,
+        name: index === 0 ? "World" : `Crate (${index})`,
+      })),
+    };
+    const resolved = resolveScenePlacements(named);
+    expect(resolved.ok).toBe(true);
+    if (!resolved.ok) throw new Error("named intake refused");
+    expect(resolved.value.map((placement) => placement.name)).toEqual([
+      "World", "Crate (1)", "Crate (2)",
+    ]);
+    const legacy = resolveScenePlacements(intake);
+    if (!legacy.ok) throw new Error("legacy intake refused");
+    expect(legacy.value.every((placement) => !Object.hasOwn(placement, "name"))).toBe(true);
+    expect(digestScenePlacements(resolved.value)).not.toBe(digestScenePlacements(legacy.value));
+
+    const scene = composedSceneFixture();
+    const renamed = {
+      ...scene,
+      instances: scene.instances.map((instance) => ({ ...instance, name: "Crate" })),
+    };
+    expect(refusalOf(validateComposedScene(renamed), "unbound names")).toMatchObject({
+      code: "invalid-field", path: "$.evidence.placementDigest",
+    });
+    const rebound = {
+      ...renamed,
+      evidence: { ...renamed.evidence, placementDigest: digestScenePlacements(renamed.instances) },
+    };
+    const valid = { ...rebound, evidence: { ...rebound.evidence, sceneDigest: digestComposedScene(rebound) } };
+    expect(validateComposedScene(valid)).toMatchObject({ ok: true, value: valid });
+  });
+
+  it.each(["A", "a".repeat(64), "\u{1f600}".repeat(64)])("accepts canonical name %j", (name) => {
+    const intake = intakeFixture();
+    expect(validateSceneCompositionIntake({
+      ...intake,
+      placements: intake.placements.map((placement) => ({ ...placement, name })),
+    }).ok).toBe(true);
+  });
+
+  it.each(["", " ", " leading", "trailing ", "a".repeat(65), "a\nb", "a\tb", "a\u0000b", "a\u007fb", "a\u0085b", null, 12])(
+    "refuses invalid name %j in both intake and composed instances",
+    (name) => {
+      const intake = intakeFixture();
+      expect(refusalOf(validateSceneCompositionIntake({
+        ...intake,
+        placements: intake.placements.map((placement) => ({ ...placement, name })),
+      }), "invalid intake name")).toMatchObject({ code: "invalid-field", path: "$.placements[0].name" });
+      const scene = composedSceneFixture();
+      expect(refusalOf(validateComposedScene({
+        ...scene,
+        instances: scene.instances.map((instance) => ({ ...instance, name })),
+      }), "invalid instance name")).toMatchObject({ code: "invalid-field", path: "$.instances[0].name" });
+    },
+  );
+
+  it("resolves mesh-less node parents without requiring an artifact reference", () => {
+    const intake = intakeFixture();
+    const root = intake.placements[0];
+    if (root === undefined) throw new Error("missing root");
+    const nodeRoot = {
+      instanceId: root.instanceId,
+      kind: "node",
+      name: "World",
+      parentInstanceId: null,
+      transform: root.transform,
+    };
+    const input = { ...intake, placements: [nodeRoot, ...intake.placements.slice(1)] };
+    expect(validateSceneCompositionIntake(input)).toMatchObject({ ok: true, value: input });
+    const resolved = resolveScenePlacements(input);
+    if (!resolved.ok) throw new Error("node intake refused");
+    expect(resolved.value[0]).toMatchObject({ kind: "node", name: "World", depth: 0 });
+    expect(resolved.value[1]?.worldTransform.translation).toEqual([1, 2, 2]);
+    for (const invalid of [
+      { ...nodeRoot, artifactId: "crate-artifact" },
+      { ...nodeRoot, kind: "mesh" },
+      { ...nodeRoot, kind: null },
+      { ...nodeRoot, artifact: crateArtifact },
+    ]) {
+      expect(validateSceneCompositionIntake({
+        ...input, placements: [invalid, ...intake.placements.slice(1)],
+      }).ok).toBe(false);
+    }
+    expect(validateSceneCompositionIntake({ ...input, placements: [nodeRoot] })).toMatchObject({
+      ok: false, diagnostics: [{ code: "instance-count-below-minimum" }],
+    });
+  });
+
   it("composes transforms deterministically on the 1e-6 grid", () => {
     const parent = transform([1, 0, 2], [2, 2, 2]);
     const child = transform([0, 1, 0], [0.5, 0.5, 0.5], [0, 350, 0]);

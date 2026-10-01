@@ -187,6 +187,7 @@ export const ACCENT = Object.freeze({
 /** Semantic marks. All are used as text somewhere, so all are contrast-gated. */
 export const SIGNAL = Object.freeze({
   ok: "#5FE3C0",
+  warn: "#F2C94C",
   refuse: "#FF4D5E",
   refuseSurface: "#211316",
   refuseLine: "#5A2B32",
@@ -201,6 +202,45 @@ export const SIGNAL = Object.freeze({
 
 /** World axis colours from the Cinematic Pro brief. */
 export const AXIS = Object.freeze({ x: "#E4655F", y: "#7CC96B", z: "#5B9CFF" });
+
+/** Viewport outlines; selection is distinct from assistant provenance. */
+export const SELECTION = Object.freeze({
+  outline: "#FF9D3D",
+  child: "#5B9CFF",
+  hover: "#FFC58A",
+});
+
+/** Gizmo interaction paint (non-text). */
+export const AXIS_STATE = Object.freeze({
+  hoverX: "#F29590",
+  hoverY: "#A4DD97",
+  hoverZ: "#8DBBFF",
+  active: "#FFD84D",
+});
+
+/** Contrast-gated inspector axis labels. */
+export const AXIS_TEXT = Object.freeze({ x: "#EE7A74", y: "#8AD47A", z: "#74AEFF" });
+
+export const PROPOSED = Object.freeze({ base: "#FF8AD0" });
+
+export const PLAY = Object.freeze({ frame: "#4FB0FF" });
+
+/** Entity-type icons only: these colours never express state. */
+export const CATEGORY = Object.freeze({
+  object: "#8DB4F7",
+  group: "#AEB9CA",
+  light: "#F5D37A",
+  camera: "#B8C4FF",
+  audio: "#86E0A8",
+  effect: "#F2B279",
+  logic: "#D6A8FF",
+});
+
+/** Text-bearing mixes; both backgrounds are contrast-tested after compositing. */
+export const TINT = Object.freeze({
+  play: "color-mix(in srgb, var(--play) 6%, var(--panel))",
+  proposed: "color-mix(in srgb, var(--proposed) 8%, var(--raised))",
+});
 
 /**
  * Profile-switch chip dots.
@@ -414,6 +454,43 @@ export const TYPE = Object.freeze({
   sans:
     '-apple-system, "SF Pro Display", "Segoe UI Variable Display", "Segoe UI", system-ui, "Helvetica Neue", Arial, sans-serif',
   mono: 'ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace',
+});
+
+/** Pixel sizes and line heights; weights are unitless. Font stacks stay in TYPE. */
+export const TYPE_SCALE = Object.freeze({
+  caption: Object.freeze({ size: 11, lineHeight: 16, weight: 400 }),
+  small: Object.freeze({ size: 12, lineHeight: 16, weight: 400 }),
+  body: Object.freeze({ size: 13, lineHeight: 18, weight: 400 }),
+  "body-strong": Object.freeze({ size: 13, lineHeight: 18, weight: 600 }),
+  title: Object.freeze({ size: 14, lineHeight: 20, weight: 600 }),
+  heading: Object.freeze({ size: 16, lineHeight: 22, weight: 600 }),
+  display: Object.freeze({ size: 20, lineHeight: 26, weight: 600 }),
+  hero: Object.freeze({ size: 24, lineHeight: 30, weight: 650 }),
+  mono: Object.freeze({ size: 12, lineHeight: 16, weight: 400, fontVariantNumeric: "tabular-nums" }),
+});
+
+/** Four-pixel spacing grid and radius scale, in pixels. */
+export const SPACE = Object.freeze({ 1: 4, 2: 8, 3: 12, 4: 16, 5: 20, 6: 24, 8: 32 });
+
+export const RADIUS = Object.freeze({ xs: 2, sm: 4, md: 6, lg: 10, pill: 999 });
+
+/** Comfortable is the default; both densities retain 24-pixel interactive targets. */
+export const DENSITY = Object.freeze({
+  comfortable: Object.freeze({
+    row: 28, control: 28, toolbarIcon: 32, panelHeader: 32, panelPadding: 12, body: 13,
+  }),
+  compact: Object.freeze({
+    row: 24, control: 24, toolbarIcon: 28, panelHeader: 28, panelPadding: 8, body: 12,
+  }),
+});
+
+/** Durations in milliseconds. Reduced-motion overrides belong to the stylesheet. */
+export const MOTION = Object.freeze({
+  fast: 100,
+  base: 160,
+  slow: 220,
+  in: "cubic-bezier(.2,0,0,1)",
+  out: "cubic-bezier(.4,0,1,1)",
 });
 
 /**

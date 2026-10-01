@@ -49,7 +49,7 @@ describe("unified input actions golden", () => {
       scope: "workspace",
       expectedBaseVersion: initial.data.baseVersions.workspace,
       actionId: "editor.run.play",
-      binding: { device: "keyboard", code: "KeyL", modifiers: ["primary"] },
+      binding: { device: "keyboard", code: "F8", modifiers: ["primary"] },
       approved: false,
       reviewDigest: null,
     });
@@ -58,7 +58,7 @@ describe("unified input actions golden", () => {
       scope: "workspace",
       expectedBaseVersion: initial.data.baseVersions.workspace,
       actionId: "editor.run.play",
-      binding: { device: "keyboard", code: "KeyL", modifiers: ["primary"] },
+      binding: { device: "keyboard", code: "F8", modifiers: ["primary"] },
       approved: true,
       reviewDigest: workspaceReview.data.reviewDigest,
     })).toMatchObject({ ok: true, data: { status: "committed" } });
@@ -66,14 +66,14 @@ describe("unified input actions golden", () => {
     const workspaceMap = restarted.inspect();
     if (!workspaceMap.ok) throw new Error(workspaceMap.message);
     expect(resolveInputAction(workspaceMap.data.map, "editor", {
-      device: "keyboard", code: "KeyL", modifiers: ["primary"],
+      device: "keyboard", code: "F8", modifiers: ["primary"],
     })).toMatchObject({ ok: true, action: { id: "editor.run.play" } });
 
     const projectReview = restarted.rebind({
       scope: "project",
       expectedBaseVersion: workspaceMap.data.baseVersions.project,
       actionId: "editor.run.play",
-      binding: { device: "keyboard", code: "KeyJ", modifiers: ["primary"] },
+      binding: { device: "keyboard", code: "F9", modifiers: ["primary"] },
       approved: false,
       reviewDigest: null,
     });
@@ -82,17 +82,17 @@ describe("unified input actions golden", () => {
       scope: "project",
       expectedBaseVersion: workspaceMap.data.baseVersions.project,
       actionId: "editor.run.play",
-      binding: { device: "keyboard", code: "KeyJ", modifiers: ["primary"] },
+      binding: { device: "keyboard", code: "F9", modifiers: ["primary"] },
       approved: true,
       reviewDigest: projectReview.data.reviewDigest,
     })).toMatchObject({ ok: true });
     const layered = restarted.inspect();
     if (!layered.ok) throw new Error(layered.message);
     expect(resolveInputAction(layered.data.map, "editor", {
-      device: "keyboard", code: "KeyJ", modifiers: ["primary"],
+      device: "keyboard", code: "F9", modifiers: ["primary"],
     })).toMatchObject({ ok: true, action: { id: "editor.run.play" } });
     expect(resolveInputAction(layered.data.map, "editor", {
-      device: "keyboard", code: "KeyL", modifiers: ["primary"],
+      device: "keyboard", code: "F8", modifiers: ["primary"],
     })).toMatchObject({ ok: false, reason: INPUT_ACTION_REFUSALS.unbound });
   });
 
@@ -213,6 +213,44 @@ describe("unified input actions golden", () => {
       ok: true,
       action: { id: "play.primary" },
     });
+  });
+
+  it("persists modified pointer gestures and isolates fly keys through the real host", () => {
+    const projectRoot = root("sceneaxi-pointer-project-");
+    const workspaceRoot = root("sceneaxi-pointer-workspace-");
+    const host = createDesktopInputActionHost({ projectRoot, workspaceDirectory: workspaceRoot });
+    const initial = host.inspect();
+    if (!initial.ok) throw new Error(initial.message);
+    const binding = { device: "pointer", button: 0, gesture: "drag", modifiers: ["alt"] } as const;
+    const request = {
+      scope: "project",
+      expectedBaseVersion: initial.data.baseVersions.project,
+      actionId: "viewport.orbit",
+      binding,
+      approved: false,
+      reviewDigest: null,
+    } as const;
+    const review = host.rebind(request);
+    if (!review.ok) throw new Error(review.message);
+    expect(host.rebind({ ...request, approved: true, reviewDigest: review.data.reviewDigest })).toMatchObject({
+      ok: true, data: { status: "committed" },
+    });
+    const restored = createDesktopInputActionHost({ projectRoot, workspaceDirectory: workspaceRoot }).inspect();
+    if (!restored.ok) throw new Error(restored.message);
+    expect(resolveInputAction(restored.data.map, "editor", binding)).toMatchObject({
+      ok: true, action: { id: "viewport.orbit" },
+    });
+    const forward = { device: "keyboard", code: "KeyW", modifiers: [] };
+    expect(resolveInputAction(restored.data.map, "viewport-fly", forward)).toMatchObject({
+      ok: true, action: { id: "viewport.fly.forward" },
+    });
+    expect(resolveInputAction(restored.data.map, "editor", forward)).toMatchObject({
+      ok: true, action: { id: "editor.tool.move" },
+    });
+    expect(resolveInputAction(restored.data.map, "play", forward)).toMatchObject({
+      ok: false, reason: INPUT_ACTION_REFUSALS.contextDenied,
+    });
+    expect(readFileSync(join(projectRoot, PROJECT_INPUT_ACTIONS_PATH), "utf8")).toContain('"alt"');
   });
 
   it("refuses conflicts, stale bases, Kids, and missing capabilities before mutation", () => {

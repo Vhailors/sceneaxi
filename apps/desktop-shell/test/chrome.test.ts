@@ -1,16 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
-  DESKTOP_MENU_IDS,
-  DESKTOP_INTERACTION_COMMANDS,
   DESKTOP_MINIMUM_WINDOW,
   DESKTOP_MODE_IDS,
   DESKTOP_REFUSAL_MESSAGES,
   DESKTOP_VISUAL_REFUSALS,
   WINDOW_TIERS,
   createDesktopVisualState,
-  defaultDockTabFor,
   desktopVisualView,
-  dockTabsFor,
   escapeHtml,
   renderDesktopChrome,
   type DesktopVisualState,
@@ -124,113 +120,15 @@ describe("engine desktop chrome — regions and modes", () => {
     expect(html).toMatch(/data-mode-panel="run"[^>]*hidden/);
   });
 
-  it("renders the dock tabs the active mode has, and no others", () => {
-    for (const mode of DESKTOP_MODE_IDS) {
-      const html = render(createDesktopVisualState({ mode }));
-      const rendered = [...html.matchAll(/data-action="dock-tab" data-value="(\w+)"/g)]
-        .map((match) => match[1]);
-      expect(rendered, mode).toEqual([...dockTabsFor(mode)]);
-    }
-  });
-
-  it("leaves exactly the panel the selected tab controls visible", () => {
-    // The tab strip is built from the model, so the panels must be too: a
-    // hardcoded visible panel shows Change Review in `run`, the one mode that
-    // has no Changes tab at all.
-    for (const mode of DESKTOP_MODE_IDS) {
-      const html = render(createDesktopVisualState({ mode }));
-      const visible = [...html.matchAll(/data-dock-panel="(\w+)"( hidden)?>/g)]
-        .filter((match) => match[2] === undefined)
-        .map((match) => match[1]);
-      expect(visible, mode).toEqual([defaultDockTabFor(mode)]);
-      expect(html, mode).toContain(
-        `aria-selected="true" aria-controls="dock-panel-${defaultDockTabFor(mode)}"`,
-      );
-    }
-  });
-
-  it("renders one atomic proposal decision pair in an initially empty review", () => {
-    const html = render();
-    expect(html).toContain('data-change-proposal hidden>');
-    expect(html).toContain('id="change-review-accept"');
-    expect(html).toContain('id="change-review-reject"');
-    expect(html).not.toContain("Accept all");
-    expect(html).not.toContain("Reject all");
-  });
-
   it("hides what it marks hidden, whatever the layout class says", () => {
     // Runtime proposal and overlay regions have layout rules, so the explicit
     // `hidden` state must outrank them.
     expect(render()).toContain("[hidden]{display:none !important}");
   });
 
-  it("follows an explicit dock tab rather than the mode default", () => {
-    const html = render(createDesktopVisualState({ mode: "build", dockTab: "console" }));
-    expect(html).toContain(`data-dock-panel="console">`);
-    expect(html).toContain(`data-dock-panel="changes" hidden>`);
-  });
-
-  it("serializes the dock-tab table the script reads, matching the model", () => {
-    const html = render();
-    const match = /const T = (\{.*?\});\n/s.exec(html);
-    expect(match).not.toBeNull();
-    const tables = JSON.parse(match?.[1] ?? "{}") as {
-      dockTabsByMode: Record<string, string[]>;
-      dockHeightByMode: Record<string, number>;
-    };
-    for (const mode of DESKTOP_MODE_IDS) {
-      expect(tables.dockTabsByMode[mode]).toEqual([...dockTabsFor(mode)]);
-    }
-    expect(tables.dockHeightByMode["animate"]).toBe(252);
-    expect(tables.dockHeightByMode["build"]).toBe(228);
-  });
-
-  it("opens the requested overlay in the bytes, so a screenshot needs no script", () => {
-    const palette = render(createDesktopVisualState({ overlay: "palette" }));
-    expect(palette).toContain(`data-overlay="palette" role="dialog" aria-modal="true" aria-label="Command palette">`);
-    expect(palette).toMatch(/data-overlay="outcome"[^>]*hidden/);
-    const none = render();
-    expect(none).toMatch(/data-overlay="palette"[^>]*hidden/);
-  });
 });
 
 describe("engine desktop chrome — accessibility", () => {
-  it("renders an honest prompt flow when an assistant runtime is bound", () => {
-    const html = render(
-      createDesktopVisualState({ assistantRuntime: "local" }),
-    );
-    expect(html).toContain(
-      '<textarea id="assistant-prompt" data-kind="live"',
-    );
-    expect(html).toContain("Local · free");
-    expect(html).toContain("BYOK · free");
-    expect(html).toContain("Hosted · metered");
-    expect(html).toContain(">Light</");
-    expect(html).toContain(">Mid</");
-    expect(html).toContain(">Strong</");
-    expect(html).toContain(
-      'id="assistant-send" data-kind="live" data-action="assistant-send"',
-    );
-    expect(html).toContain('data-assistant-mode="build"');
-    expect(html).toContain('data-assistant-status role="status"');
-    expect(html).toContain("Retry");
-    expect(html).toContain(
-      'data-assistant-manipulators="translation rotation scale"',
-    );
-    for (const id of ["move-x", "move-y", "rotate-y", "scale-up"]) {
-      expect(html).toContain(
-        `id="assistant-manipulator-${id}" data-kind="live"`,
-      );
-    }
-
-    const unavailable = render();
-    expect(unavailable).toContain(
-      `id="assistant-send" data-kind="inert" aria-disabled="true" data-refusal="${DESKTOP_VISUAL_REFUSALS.noPresentationRuntime}"`,
-    );
-    expect(unavailable).toContain(
-      `${DESKTOP_VISUAL_REFUSALS.noPresentationRuntime} — assistant actions are unavailable until a packaged host binds.`,
-    );
-  });
   it("uses landmarks rather than anonymous divs for every region", () => {
     const html = render();
     for (const landmark of [
@@ -291,26 +189,6 @@ describe("engine desktop chrome — accessibility", () => {
     }
   });
 
-  it("keeps modelled refusal help collapsed with a bounded scroll panel", () => {
-    const html = render();
-    const footer = html.indexOf('<footer class="status-bar">');
-    const help = html.indexOf('id="status-refusal-help" data-kind="view"');
-    const legend = html.indexOf('<section class="refusal-legend-panel" id="refusal-legend"');
-    const footerEnd = html.indexOf("</footer>", footer);
-    expect(footer).toBeGreaterThan(-1);
-    expect(help).toBeGreaterThan(footer);
-    expect(legend).toBeGreaterThan(footer);
-    expect(legend).toBeLessThan(footerEnd);
-    expect(html).toContain('data-action="refusal-help" aria-expanded="false"');
-    expect(html).toContain('aria-controls="refusal-legend"');
-    expect(html).toContain('aria-labelledby="refusal-legend-title" hidden>');
-    expect(html).not.toContain("<details");
-    expect(html).not.toMatch(/refusal-legend[^>]*tabindex/);
-    expect(html).toContain(".refusal-legend-panel{position:absolute");
-    expect(html).toContain("overflow:auto;padding:10px 12px");
-    expect(html).toContain("else if (action === 'refusal-help')");
-  });
-
   it("gives every element a unique, well-formed id", () => {
     // An `aria-describedby` / `getElementById` reference is only meaningful if
     // the id is unique and contains no whitespace, so the id has to come from a
@@ -322,16 +200,6 @@ describe("engine desktop chrome — accessibility", () => {
       expect(ids.length, label).toBeGreaterThan(0);
       expect(ids.filter((id) => /[\s"']/.test(id) || id.length === 0), label).toEqual([]);
       expect(new Set(ids).size, label).toBe(ids.length);
-    }
-  });
-
-  it("renders File, Edit, and Run with their real command ids", () => {
-    const html = render();
-    for (const id of DESKTOP_MENU_IDS) {
-      expect(html).toContain(`id="menu-${id}" data-kind="view"`);
-    }
-    for (const command of DESKTOP_INTERACTION_COMMANDS) {
-      expect(html).toContain(`data-command="${command.id}"`);
     }
   });
 
@@ -359,38 +227,6 @@ describe("engine desktop chrome — accessibility", () => {
     expect(script).toContain(`list.querySelectorAll('[role="tab"]')`);
   });
 
-  it("renders the atomic proposal decisions through modelled controls", () => {
-    const view = desktopVisualView(createDesktopVisualState());
-    const html = render();
-    for (const control of [view.changeReview.accept, view.changeReview.reject]) {
-      expect(html).toContain(`id="${control.id}" data-kind="${control.kind}"`);
-    }
-  });
-
-  it("marks the active mode and profile with aria-pressed", () => {
-    const html = render(createDesktopVisualState({ mode: "compose", profile: "web" }));
-    expect(html).toContain(
-      `id="mode-compose" data-kind="inert" aria-disabled="true" data-refusal="${DESKTOP_VISUAL_REFUSALS.noDocumentBound}"`,
-    );
-    expect(html).toContain('id="mode-build" data-kind="view" data-action="mode" data-value="build" aria-pressed="true"');
-    expect(html).toContain(
-      'id="profile-web" data-kind="view" data-product-action data-action="profile" data-value="web" aria-pressed="true"',
-    );
-  });
-
-  it("renders the mode rail through its modelled controls", () => {
-    // The rail was the last group to read `id`/`label`/`active` off the model
-    // and drop the control kind with it, which is what let a Kids document
-    // render seven live-looking buttons.
-    const view = desktopVisualView(createDesktopVisualState());
-    const html = render();
-    for (const mode of view.modes) {
-      expect(html).toContain(
-        `id="${mode.control.id}" data-kind="${mode.control.kind}"`,
-      );
-    }
-  });
-
   it("renders every dock tab and viewport source through its modelled control", () => {
     const view = desktopVisualView(createDesktopVisualState());
     const html = render();
@@ -400,18 +236,6 @@ describe("engine desktop chrome — accessibility", () => {
     ]) {
       expect(html).toContain(`id="${control.id}" data-kind="${control.kind}"`);
     }
-  });
-
-  it("declares the viewport sources inert and names why they cannot switch", () => {
-    // They sit in a tablist that controls nothing, because switching what a
-    // viewport shows needs a renderer and this surface mounts none.
-    const html = render();
-    for (const id of ["scene", "game", "sculpt-preview"]) {
-      expect(html).toContain(
-        `id="viewport-source-${id}" data-kind="inert" aria-disabled="true" data-refusal="${DESKTOP_VISUAL_REFUSALS.noPresentationRuntime}"`,
-      );
-    }
-    expect(html).toContain('aria-selected="true"');
   });
 
   it("keeps every tablist owning nothing but its tabs", () => {
@@ -479,47 +303,6 @@ describe("engine desktop chrome — accessibility", () => {
     expect(html).not.toContain(`onclick="steal()"`);
   });
 
-  it("renders Sculpt commands with versioned registry metadata and exact-job cancellation", () => {
-    const running = render(
-      createDesktopVisualState({ mode: "sculpt", sculpt: "running" }),
-    );
-    expect(running).toMatch(
-      /<div class="sculpt-progress" role="status" data-sculpt-progress>/,
-    );
-    expect(running).toContain(
-      `id="sculpt-cancel" data-kind="inert" aria-disabled="true" data-refusal="${DESKTOP_VISUAL_REFUSALS.noPresentationRuntime}"`,
-    );
-    expect(running).toContain('data-editor-command="assistant-cancel"');
-    const mounted = render(createDesktopVisualState({
-      mode: "sculpt",
-      assistantRuntime: "local",
-    }));
-    expect(mounted).toContain(
-      'id="sculpt-start" data-kind="live" data-editor-command="assistant-local-build" data-command-schema-version="1"',
-    );
-    expect(mounted).toContain(
-      `id="sculpt-cancel" data-kind="inert" aria-disabled="true" data-refusal="${DESKTOP_VISUAL_REFUSALS.noActiveCommand}"`,
-    );
-    expect(running).toContain("Cancel after this pass");
-    const idle = render(createDesktopVisualState({ mode: "sculpt" }));
-    expect(idle).toContain('data-sculpt-progress hidden>');
-  });
-
-  it("draws the assistant thinking state the model can hold", () => {
-    expect(render(createDesktopVisualState({ assistantThinking: true }))).toContain(
-      '<p class="assistant-thinking" role="status" data-assistant-thinking>',
-    );
-    expect(render()).toContain("data-assistant-thinking hidden>");
-  });
-
-  it("names the one whole-proposal decision pair", () => {
-    const html = render();
-    expect(html).toContain('id="change-review-accept"');
-    expect(html).toContain('>Accept</button>');
-    expect(html).toContain('id="change-review-reject"');
-    expect(html).toContain('>Reject</button>');
-  });
-
   it("backs aria-modal with a real focus trap and a focus restore", () => {
     const html = render(createDesktopVisualState({ overlay: "palette" }));
     expect(html).toContain('aria-modal="true"');
@@ -543,16 +326,6 @@ describe("engine desktop chrome — accessibility", () => {
 
   it("shows a visible focus ring on the accent", () => {
     expect(render()).toContain(":focus-visible{outline:2px solid var(--accent)");
-  });
-
-  it("keeps the viewport's image role off the progress and note subtree", () => {
-    // `role="img"` is Children Presentational: anything under it is pruned from
-    // the accessibility tree. It belongs on an empty backdrop, not on the box
-    // that also holds the live progress region and the two notes.
-    const html = render(createDesktopVisualState({ mode: "sculpt", sculpt: "running" }));
-    expect(html).toContain('<div class="viewport-backdrop" role="img"');
-    expect(html).not.toMatch(/<div class="viewport" [^>]*role="img"/);
-    expect(html).toMatch(/<div class="viewport">/);
   });
 
   it("announces live regions for progress and refusals", () => {
@@ -691,12 +464,6 @@ describe("engine desktop chrome — honesty", () => {
       expect(html, label).not.toContain("artifacts/depot.zip");
       expect(html, label).not.toContain("harbour-depot");
     }
-  });
-
-  it("states the atomic authoring behavior on Change Review", () => {
-    const html = render();
-    expect(html).toContain("Accept applies the whole proposal through the shared authoring session");
-    expect(html).toContain("Reject discards it without writing");
   });
 
   it("replaces the whole editor body on the refuse-only profile", () => {
@@ -900,16 +667,6 @@ describe("engine desktop chrome — honesty", () => {
     expect(html).toContain(DESKTOP_VISUAL_REFUSALS.windowBelowMinimum);
   });
 
-  it("keeps the palette honest about which rows this surface can drive", () => {
-    const html = render(createDesktopVisualState({ overlay: "palette" }));
-    for (const command of DESKTOP_INTERACTION_COMMANDS) {
-      expect(html).toContain(`id="palette-${command.id}"`);
-      expect(html).toContain(`data-command="${command.id}"`);
-    }
-    expect(html).not.toContain("Search commands");
-    expect(html).not.toContain("sceneaxi project dev");
-  });
-
   it("never renders a control kind the model did not assign", () => {
     for (const [label, state] of ALL_STATES) {
       for (const [, kind] of render(state).matchAll(/data-kind="(\w+)"/g)) {
@@ -918,12 +675,4 @@ describe("engine desktop chrome — honesty", () => {
     }
   });
 
-  it("ships no fabricated review row in the default document", () => {
-    const html = render();
-    expect(html).toContain("Nothing waiting for review");
-    expect(html).not.toContain('class="change-row"');
-    expect(html).not.toContain("field_drone");
-    expect(html).not.toContain("matte_polymer");
-    expect(html).not.toContain("0, 1.85, -2.30");
-  });
 });

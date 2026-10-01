@@ -58,6 +58,10 @@ export {
 export {
   ACCENT,
   AXIS,
+  AXIS_STATE,
+  AXIS_TEXT,
+  CATEGORY,
+  DENSITY,
   DEVIATIONS,
   FOUNDATIONS_V2_ALIGNMENT,
   FOUNDATIONS_V2_COLORS,
@@ -66,16 +70,44 @@ export {
   INERT,
   LINE,
   METRICS,
+  MOTION,
+  PLAY,
   PROFILE_DOT,
+  PROPOSED,
+  RADIUS,
   SCRIM,
+  SELECTION,
   SIGNAL,
+  SPACE,
   SUPERSEDED_V1,
   SURFACE,
   TEXT,
+  TINT,
   TYPE,
+  TYPE_SCALE,
   VIEWPORT_GRADIENT,
   VISUAL_SOURCE,
 } from "./visual-tokens.js";
+
+export { icon, iconSprite, type IconId } from "./icons.js";
+
+export {
+  badge,
+  cardHeader,
+  chip,
+  emptyState,
+  iconButton,
+  propertyRow,
+  segmentedControl,
+  splitter,
+  tabs,
+  uiKitStyles,
+  vec3Row,
+  type UiNumberField,
+  type UiSegment,
+  type UiSplitter,
+  type UiTab,
+} from "./ui-kit.js";
 
 export {
   DESKTOP_ASSISTANT_RUNTIME_EVENT,

@@ -2,7 +2,19 @@ import { describe, expect, it } from "vitest";
 import {
   ACCENT,
   AXIS,
+  AXIS_STATE,
+  AXIS_TEXT,
+  CATEGORY,
+  DENSITY,
   DEVIATIONS,
+  MOTION,
+  PLAY,
+  PROPOSED,
+  RADIUS,
+  SELECTION,
+  SPACE,
+  TINT,
+  TYPE_SCALE,
   INERT,
   FOUNDATIONS_V2_ALIGNMENT,
   FOUNDATIONS_V2_COLORS,
@@ -51,6 +63,31 @@ function contrast(a: string, b: string): number {
 }
 
 const SURFACES = Object.values(SURFACE).filter((value) => value !== SURFACE.backdrop);
+const TEXT_TOKENS = [
+  TEXT.primary, TEXT.secondary, TEXT.label, TEXT.dim, TEXT.faint,
+  ACCENT.base, ACCENT.hover, ACCENT.noteText,
+  SIGNAL.ok, SIGNAL.refuse, SIGNAL.info, SIGNAL.scene, SIGNAL.sceneText, SIGNAL.warn,
+  ...Object.values(AXIS_TEXT), PROPOSED.base, INERT.text,
+];
+
+/** Evaluate the shipped sRGB mix, including its declared percentage and operands. */
+function tintColor(css: string): string {
+  const match = /^color-mix\(in srgb, var\((--[a-z]+)\) (\d+)%, var\((--[a-z]+)\)\)$/.exec(css);
+  if (!match) throw new Error(`Unsupported tint: ${css}`);
+  const colors = new Map([
+    ["--play", PLAY.frame], ["--proposed", PROPOSED.base],
+    ["--panel", SURFACE.panel], ["--raised", SURFACE.raised],
+  ]);
+  const foreground = colors.get(match[1] ?? "");
+  const background = colors.get(match[3] ?? "");
+  if (!foreground || !background) throw new Error(`Unknown tint operands: ${css}`);
+  const fraction = Number(match[2]) / 100;
+  return `#${[1, 3, 5].map((offset) => {
+    const front = Number.parseInt(foreground.slice(offset, offset + 2), 16);
+    const back = Number.parseInt(background.slice(offset, offset + 2), 16);
+    return Math.round(front * fraction + back * (1 - fraction)).toString(16).padStart(2, "0");
+  }).join("")}`;
+}
 
 describe("engine desktop visual tokens", () => {
   it("names the canonical archive it was implemented from", () => {
@@ -87,6 +124,7 @@ describe("engine desktop visual tokens", () => {
       SIGNAL.info,
       SIGNAL.scene,
       SIGNAL.sceneText,
+      ...TEXT_TOKENS,
     ];
     const failures = textTokens.flatMap((token) =>
       SURFACES.filter((surface) => contrast(token, surface) < 4.5).map(
@@ -94,6 +132,91 @@ describe("engine desktop visual tokens", () => {
       ),
     );
     expect(failures).toEqual([]);
+  });
+
+  it("keeps every text token above 4.5:1 on the actual Play and proposed mixes", () => {
+    expect(TINT).toEqual({
+      play: "color-mix(in srgb, var(--play) 6%, var(--panel))",
+      proposed: "color-mix(in srgb, var(--proposed) 8%, var(--raised))",
+    });
+    for (const tint of Object.values(TINT)) {
+      const background = tintColor(tint);
+      for (const text of TEXT_TOKENS) {
+        expect(contrast(text, background), `${text} on ${tint}`).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+    // Removed suggestion rows are red; the rejected 10% mix would fail this pairing.
+    expect(contrast(SIGNAL.refuse, tintColor(TINT.proposed.replace("8%", "10%")))).toBeLessThan(4.5);
+  });
+
+  it("keeps non-text state and category tokens above 3:1 on every surface", () => {
+    for (const token of [
+      ...Object.values(SELECTION), ...Object.values(AXIS_STATE),
+      ...Object.values(CATEGORY), ...Object.values(PLAY),
+    ]) {
+      for (const surface of SURFACES) {
+        expect(contrast(token, surface), `${token} on ${surface}`).toBeGreaterThanOrEqual(3);
+      }
+    }
+  });
+
+  it("carries the redesign colour roles exactly", () => {
+    expect(SIGNAL.warn).toBe("#F2C94C");
+    expect(SELECTION).toEqual({ outline: "#FF9D3D", child: "#5B9CFF", hover: "#FFC58A" });
+    expect(AXIS_STATE).toEqual({ hoverX: "#F29590", hoverY: "#A4DD97", hoverZ: "#8DBBFF", active: "#FFD84D" });
+    expect(AXIS_TEXT).toEqual({ x: "#EE7A74", y: "#8AD47A", z: "#74AEFF" });
+    expect(PROPOSED).toEqual({ base: "#FF8AD0" });
+    expect(PLAY).toEqual({ frame: "#4FB0FF" });
+    expect(CATEGORY).toEqual({
+      object: "#8DB4F7", group: "#AEB9CA", light: "#F5D37A", camera: "#B8C4FF",
+      audio: "#86E0A8", effect: "#F2B279", logic: "#D6A8FF",
+    });
+  });
+
+  it("defines the type scale in pixels with tabular numeric fields", () => {
+    expect(TYPE_SCALE).toEqual({
+      caption: { size: 11, lineHeight: 16, weight: 400 },
+      small: { size: 12, lineHeight: 16, weight: 400 },
+      body: { size: 13, lineHeight: 18, weight: 400 },
+      "body-strong": { size: 13, lineHeight: 18, weight: 600 },
+      title: { size: 14, lineHeight: 20, weight: 600 },
+      heading: { size: 16, lineHeight: 22, weight: 600 },
+      display: { size: 20, lineHeight: 26, weight: 600 },
+      hero: { size: 24, lineHeight: 30, weight: 650 },
+      mono: { size: 12, lineHeight: 16, weight: 400, fontVariantNumeric: "tabular-nums" },
+    });
+    for (const token of Object.values(TYPE_SCALE)) {
+      expect(token.size).toBeGreaterThanOrEqual(11);
+      expect(Object.isFrozen(token)).toBe(true);
+    }
+  });
+
+  it("defines the four-pixel spacing grid, radius scale and two densities", () => {
+    expect(SPACE).toEqual({ 1: 4, 2: 8, 3: 12, 4: 16, 5: 20, 6: 24, 8: 32 });
+    expect(RADIUS).toEqual({ xs: 2, sm: 4, md: 6, lg: 10, pill: 999 });
+    expect(DENSITY).toEqual({
+      comfortable: { row: 28, control: 28, toolbarIcon: 32, panelHeader: 32, panelPadding: 12, body: 13 },
+      compact: { row: 24, control: 24, toolbarIcon: 28, panelHeader: 28, panelPadding: 8, body: 12 },
+    });
+    for (const density of Object.values(DENSITY)) {
+      expect(density.row).toBeGreaterThanOrEqual(24);
+      expect(density.control).toBeGreaterThanOrEqual(24);
+      expect(density.toolbarIcon).toBeGreaterThanOrEqual(24);
+      expect(Object.isFrozen(density)).toBe(true);
+    }
+  });
+
+  it("limits motion vocabulary to the three durations and two easings", () => {
+    expect(MOTION).toEqual({
+      fast: 100, base: 160, slow: 220,
+      in: "cubic-bezier(.2,0,0,1)", out: "cubic-bezier(.4,0,1,1)",
+    });
+  });
+
+  it("freezes every new token group", () => {
+    for (const group of [SELECTION, AXIS_STATE, AXIS_TEXT, PROPOSED, PLAY, CATEGORY, TINT, TYPE_SCALE, SPACE, RADIUS, DENSITY, MOTION]) {
+      expect(Object.isFrozen(group)).toBe(true);
+    }
   });
 
   it("keeps text on the accent fill above 4.5:1", () => {
@@ -330,6 +453,12 @@ describe("foundations v2 alignment", () => {
         SIGNAL,
         TEXT,
         INERT,
+        SELECTION,
+        AXIS_STATE,
+        AXIS_TEXT,
+        PROPOSED,
+        PLAY,
+        CATEGORY,
         PROFILE_DOT,
         VIEWPORT_GRADIENT,
       });
@@ -353,6 +482,12 @@ describe("foundations v2 alignment", () => {
         ...Object.values(TEXT),
         ...Object.values(INERT),
         ...Object.values(AXIS),
+        ...Object.values(SELECTION),
+        ...Object.values(AXIS_STATE),
+        ...Object.values(AXIS_TEXT),
+        ...Object.values(PROPOSED),
+        ...Object.values(PLAY),
+        ...Object.values(CATEGORY),
         ...Object.values(PROFILE_DOT),
         ...Object.values(VIEWPORT_GRADIENT),
       ].map((value) => value.toUpperCase()),

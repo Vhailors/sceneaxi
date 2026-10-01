@@ -13,6 +13,9 @@ import {
   SCENE_COMPOSITION_INTAKE_KIND,
   SCENE_COMPOSITION_SCHEMA_VERSION,
   composedSceneFromDocumentData,
+  digestComposedScene,
+  projectSceneInstanceHierarchy,
+  validateSculptArtifact,
   validateComposedScene,
   type SceneCompositionIntake,
 } from "@sceneaxi/schemas";
@@ -83,6 +86,107 @@ describe("scene composition pipeline", () => {
       [1, 6, 2],
     ]);
     expect(validateComposedScene(composed.scene).ok).toBe(true);
+  });
+
+  it("round-trips names without changing artifact bytes or unnamed scene bytes", () => {
+    const intake = intakeFixture();
+    const named = composeScene({
+      ...intake,
+      placements: intake.placements.map((placement) => ({ ...placement, name: "Crate" })),
+    }, artifacts);
+    if (!named.ok) throw new Error(`named scene refused: ${named.message}`);
+    const legacy = composedFixture();
+    expect(named.sceneDigest).not.toBe(legacy.sceneDigest);
+    expect(named.scene.evidence.placementDigest).not.toBe(legacy.scene.evidence.placementDigest);
+    expect(named.scene.evidence.artifactDigests).toEqual(legacy.scene.evidence.artifactDigests);
+    expect(named.scene.instances.map((instance) => instance.artifact)).toEqual(
+      legacy.scene.instances.map((instance) => instance.artifact),
+    );
+    const reopened = composedSceneFromDocumentData(named.document.data);
+    if (!reopened.ok) throw new Error("named document refused");
+    expect(reopened.value.instances).toEqual(named.scene.instances);
+    expect(reopened.value.instances[0]).toMatchObject({ name: "Crate" });
+    const unnamed = composeScene({
+      ...intake,
+      placements: named.scene.instances.map((instance) => ({
+        instanceId: instance.instanceId,
+        artifactId: instance.artifactId,
+        parentInstanceId: instance.parentInstanceId,
+        transform: instance.localTransform,
+      })),
+    }, artifacts);
+    if (!unnamed.ok) throw new Error("unnamed scene refused");
+    expect(unnamed.sceneBytes).toBe(legacy.sceneBytes);
+    expect(unnamed.sceneDigest).toBe(legacy.sceneDigest);
+    expect(unnamed.document).toEqual(legacy.document);
+    expect(legacy.scene.instances.every((instance) => !Object.hasOwn(instance, "name"))).toBe(true);
+  });
+
+  it("composes and reopens canonical node carriers without persisting synthetic artifacts", () => {
+    const intake = intakeFixture();
+    const node = {
+      kind: "node", instanceId: "sun", name: "Sun",
+      parentInstanceId: intake.rootInstanceId, transform: transform([0, 3, 0]),
+    };
+    const input = { ...intake, placements: [...intake.placements, node] };
+    const first = composeScene(input, artifacts);
+    const second = composeScene(input, artifacts);
+    if (!first.ok || !second.ok) throw new Error("node scene refused");
+    expect(second.sceneBytes).toBe(first.sceneBytes);
+    expect(second.sceneDigest).toBe(first.sceneDigest);
+    const carrier = first.scene.instances.find((instance) => instance.instanceId === "sun");
+    if (carrier === undefined) throw new Error("node missing");
+    expect(carrier.artifact.spec.components).toEqual([]);
+    expect(carrier.artifact.runtimeHierarchy.nodes).toHaveLength(1);
+    expect(carrier.worldTransform.translation).toEqual([1, 6, 2]);
+    expect(projectSceneInstanceHierarchy(carrier).nodes[0]?.transform.translation).toEqual([1, 6, 2]);
+    // This is a composition-owned carrier, never an independently valid Sculpt asset.
+    expect(validateSculptArtifact(carrier.artifact).ok).toBe(false);
+    expect(first.sceneBytes).not.toContain(carrier.artifact.artifactId);
+    expect(JSON.stringify(first.document.data)).not.toContain(carrier.artifact.artifactId);
+    const reopened = composedSceneFromDocumentData(first.document.data);
+    if (!reopened.ok) throw new Error("node document refused");
+    expect(reopened.value).toEqual(first.scene);
+    expect(serializeComposedScene(reopened.value)).toBe(first.sceneBytes);
+    expect(digestComposedScene(reopened.value)).toBe(first.sceneDigest);
+    expect(validateComposedScene(JSON.parse(first.sceneBytes))).toEqual({ ok: true, value: first.scene });
+    expect(validateComposedScene(first.scene)).toEqual({ ok: true, value: first.scene });
+    expect(Object.isFrozen(carrier.artifact.spec.components)).toBe(true);
+
+    const tampered = {
+      ...first.scene,
+      instances: first.scene.instances.map((instance) => instance.instanceId === "sun"
+        ? { ...instance, artifact: crateArtifact } : instance),
+    };
+    expect(validateComposedScene(tampered)).toMatchObject({ ok: false, diagnostics: [{ code: "invalid-artifact" }] });
+    expect(validateComposedScene({
+      ...first.scene,
+      instances: first.scene.instances.map((instance) => instance.instanceId === "sun"
+        ? { ...instance, artifactId: "crate-artifact" } : instance),
+    }).ok).toBe(false);
+    expect(validateComposedScene({
+      ...first.scene, evidence: { ...first.scene.evidence, sceneDigest: `sha256:${"f".repeat(64)}` },
+    }).ok).toBe(false);
+    expect(composeScene(input, [...artifacts, carrier.artifact])).toMatchObject({ ok: false, code: "invalid-artifact" });
+    expect(composeScene(input, [crateArtifact])).toMatchObject({ ok: false, code: "unknown-artifact-reference" });
+    expect(composeScene(input, [...artifacts, artifactFixture("spare-artifact")])).toMatchObject({ ok: false, code: "unplaced-artifact" });
+  });
+
+  it("composes two node-only placements with no supplied artifacts and retains the minimum", () => {
+    const intake = {
+      schemaVersion: 1, kind: SCENE_COMPOSITION_INTAKE_KIND, sceneId: "nodes", rootInstanceId: "root",
+      placements: [
+        { kind: "node", instanceId: "root", parentInstanceId: null, transform: identity },
+        { kind: "node", instanceId: "child", parentInstanceId: "root", transform: identity },
+      ],
+    };
+    const result = composeScene(intake, []);
+    if (!result.ok) throw new Error(`node-only scene refused: ${result.message}`);
+    expect(result.scene.instances.map((instance) => instance.artifact.spec.components)).toEqual([[], []]);
+    expect(result.scene.evidence.artifactDigests[0]?.artifactDigest).toBe(result.scene.evidence.artifactDigests[1]?.artifactDigest);
+    expect(composeScene({ ...intake, placements: intake.placements.slice(0, 1) }, [])).toMatchObject({
+      ok: false, code: "instance-count-below-minimum",
+    });
   });
 
   it("treats one artifact placed twice as legal instancing", () => {

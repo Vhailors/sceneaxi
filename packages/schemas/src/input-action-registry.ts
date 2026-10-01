@@ -13,7 +13,7 @@ export const INPUT_ACTION_SCHEMA_VERSION = 1 as const;
 export const INPUT_ACTION_MAP_KIND = "sceneaxi.input-action-map" as const;
 export const INPUT_ACTION_OVERRIDES_KIND = "sceneaxi.input-action-overrides" as const;
 
-export const INPUT_ACTION_CONTEXTS = Object.freeze(["editor", "play"] as const);
+export const INPUT_ACTION_CONTEXTS = Object.freeze(["editor", "play", "viewport-fly"] as const);
 export type InputActionContext = (typeof INPUT_ACTION_CONTEXTS)[number];
 
 export const INPUT_ACTION_SCOPES = Object.freeze(["workspace", "project"] as const);
@@ -58,7 +58,41 @@ export type InputActionId =
   | "editor.overlay.dismiss"
   | "viewport.orbit"
   | "viewport.zoom"
-  | "play.primary";
+  | "play.primary"
+  | "editor.run.pause"
+  | "editor.run.step"
+  | "editor.tool.select"
+  | "editor.tool.move"
+  | "editor.tool.rotate"
+  | "editor.tool.scale"
+  | "editor.tool.space"
+  | "editor.tool.snap"
+  | "editor.selection.frame"
+  | "editor.selection.delete"
+  | "editor.selection.duplicate"
+  | "editor.selection.rename"
+  | "editor.selection.all"
+  | "editor.asset.import"
+  | "editor.workspace.1"
+  | "editor.workspace.2"
+  | "editor.workspace.3"
+  | "editor.workspace.4"
+  | "editor.panel.bottom"
+  | "editor.panel.assets"
+  | "editor.panel.problems"
+  | "editor.assistant.focus"
+  | "editor.assistant.new"
+  | "editor.assistant.ask-about"
+  | "editor.assistant.stop"
+  | "editor.project.new"
+  | "viewport.pan"
+  | "viewport.look"
+  | "viewport.fly.forward"
+  | "viewport.fly.back"
+  | "viewport.fly.left"
+  | "viewport.fly.right"
+  | "viewport.fly.up"
+  | "viewport.fly.down";
 
 export type KeyboardInputBinding = Readonly<{
   device: "keyboard";
@@ -70,6 +104,7 @@ export type PointerInputBinding = Readonly<{
   device: "pointer";
   button: number;
   gesture: "click" | "drag";
+  modifiers?: KeyboardInputBinding["modifiers"];
 }>;
 
 export type WheelInputBinding = Readonly<{
@@ -153,6 +188,24 @@ const wheel = (): WheelInputBinding =>
 const action = (definition: InputActionDefinition): InputActionDefinition => Object.freeze({
   ...definition,
   contexts: Object.freeze([...definition.contexts]),
+});
+
+const keyboardAction = (
+  id: InputActionId,
+  label: string,
+  code: string,
+  modifiers: KeyboardInputBinding["modifiers"] = [],
+  commandId: EditorCommandId | null = null,
+  context: InputActionContext = "editor",
+): InputActionDefinition => action({
+  schemaVersion: INPUT_ACTION_SCHEMA_VERSION,
+  id,
+  label,
+  contexts: [context],
+  commandId,
+  reserved: false,
+  allowInTextEntry: false,
+  defaultBinding: keyboard(code, modifiers),
 });
 
 export const INPUT_ACTION_REGISTRY = Object.freeze([
@@ -273,6 +326,59 @@ export const INPUT_ACTION_REGISTRY = Object.freeze([
       deadzone: 0.2,
     }),
   }),
+  keyboardAction("editor.run.pause", "Pause", "KeyP", ["primary", "shift"]),
+  keyboardAction("editor.run.step", "Step one tick", "KeyP", ["alt", "primary"]),
+  keyboardAction("editor.tool.select", "Select tool", "KeyQ"),
+  keyboardAction("editor.tool.move", "Move tool", "KeyW"),
+  keyboardAction("editor.tool.rotate", "Rotate tool", "KeyE"),
+  keyboardAction("editor.tool.scale", "Scale tool", "KeyR"),
+  keyboardAction("editor.tool.space", "Toggle local/world", "KeyT"),
+  keyboardAction("editor.tool.snap", "Toggle snapping", "KeyY"),
+  keyboardAction("editor.selection.frame", "Frame selection", "KeyF"),
+  keyboardAction("editor.selection.delete", "Delete", "Delete", [], "scene-object-remove"),
+  keyboardAction("editor.selection.duplicate", "Duplicate", "KeyD", ["primary"], "scene-object-create"),
+  keyboardAction("editor.selection.rename", "Rename", "F2"),
+  keyboardAction("editor.selection.all", "Select all", "KeyA", ["primary"], "scene-selection-set"),
+  // The host owns the asset picker; there is no registry command for it.
+  keyboardAction("editor.asset.import", "Import asset", "KeyI", ["primary"]),
+  keyboardAction("editor.workspace.1", "Workspace Scene", "Digit1", ["primary"]),
+  keyboardAction("editor.workspace.2", "Workspace Animate", "Digit2", ["primary"]),
+  keyboardAction("editor.workspace.3", "Workspace Play", "Digit3", ["primary"]),
+  keyboardAction("editor.workspace.4", "Workspace Ship", "Digit4", ["primary"]),
+  keyboardAction("editor.panel.bottom", "Toggle bottom panel", "KeyJ", ["primary"]),
+  keyboardAction("editor.panel.assets", "Assets drawer", "Space", ["primary"]),
+  keyboardAction("editor.panel.problems", "Problems", "KeyM", ["primary", "shift"]),
+  keyboardAction("editor.assistant.focus", "Assistant", "KeyL", ["primary"]),
+  keyboardAction("editor.assistant.new", "New chat", "KeyL", ["primary", "shift"]),
+  keyboardAction("editor.assistant.ask-about", "Ask about this", "F1", [], "assistant-ask"),
+  keyboardAction("editor.assistant.stop", "Stop assistant job", "Backspace", ["primary", "shift"], "assistant-cancel"),
+  keyboardAction("editor.project.new", "New project", "KeyN", ["primary"], "project-new"),
+  action({
+    schemaVersion: 1,
+    id: "viewport.pan",
+    label: "Pan viewport",
+    contexts: ["editor"],
+    commandId: null,
+    reserved: false,
+    allowInTextEntry: false,
+    defaultBinding: Object.freeze({ device: "pointer", button: 1, gesture: "drag" }),
+  }),
+  action({
+    schemaVersion: 1,
+    id: "viewport.look",
+    label: "Look / fly",
+    contexts: ["editor"],
+    commandId: null,
+    reserved: false,
+    allowInTextEntry: false,
+    defaultBinding: Object.freeze({ device: "pointer", button: 2, gesture: "drag" }),
+  }),
+  keyboardAction("viewport.fly.forward", "Fly forward", "KeyW", [], null, "viewport-fly"),
+  keyboardAction("viewport.fly.back", "Fly back", "KeyS", [], null, "viewport-fly"),
+  keyboardAction("viewport.fly.left", "Fly left", "KeyA", [], null, "viewport-fly"),
+  keyboardAction("viewport.fly.right", "Fly right", "KeyD", [], null, "viewport-fly"),
+  keyboardAction("viewport.fly.up", "Fly up", "KeyE", [], null, "viewport-fly"),
+  keyboardAction("viewport.fly.down", "Fly down", "KeyQ", [], null, "viewport-fly"),
 ] as const satisfies readonly InputActionDefinition[]);
 
 const ACTION_BY_ID = new Map<InputActionId, InputActionDefinition>(
@@ -304,23 +410,28 @@ const MODIFIERS = ["alt", "control", "meta", "primary", "shift"] as const;
 
 export function validateInputActionBinding(value: unknown): value is InputActionBinding {
   if (!record(value) || typeof value["device"] !== "string") return false;
+
+  if (value["device"] === "keyboard" || (value["device"] === "pointer" && "modifiers" in value)) {
+    const modifiers = value["modifiers"];
+
+    if (!Array.isArray(modifiers) || modifiers.some((modifier) =>
+      !MODIFIERS.some((allowed) => allowed === modifier))) return false;
+
+    if (new Set(modifiers).size !== modifiers.length ||
+      [...modifiers].sort().some((modifier, index) => modifier !== modifiers[index])) return false;
+
+    if (modifiers.includes("primary") &&
+      (modifiers.includes("control") || modifiers.includes("meta"))) return false;
+  }
+
   switch (value["device"]) {
-    case "keyboard": {
-      if (!exactKeys(value, ["device", "code", "modifiers"]) ||
-        typeof value["code"] !== "string" || !KEYBOARD_CODES.test(value["code"]) ||
-        !Array.isArray(value["modifiers"])) return false;
-      const modifiers = value["modifiers"];
-      if (modifiers.some((modifier) =>
-        typeof modifier !== "string" || !(MODIFIERS as readonly string[]).includes(modifier))) {
-        return false;
-      }
-      if (new Set(modifiers).size !== modifiers.length ||
-        [...modifiers].sort().some((modifier, index) => modifier !== modifiers[index])) return false;
-      return !(modifiers.includes("primary") &&
-        (modifiers.includes("control") || modifiers.includes("meta")));
-    }
+    case "keyboard":
+      return exactKeys(value, ["device", "code", "modifiers"]) &&
+        typeof value["code"] === "string" && KEYBOARD_CODES.test(value["code"]);
     case "pointer":
-      return exactKeys(value, ["device", "button", "gesture"]) &&
+      return exactKeys(value, "modifiers" in value
+        ? ["device", "button", "gesture", "modifiers"]
+        : ["device", "button", "gesture"]) &&
         Number.isInteger(value["button"]) && Number(value["button"]) >= 0 &&
         Number(value["button"]) <= 4 &&
         (value["gesture"] === "click" || value["gesture"] === "drag");
@@ -355,9 +466,11 @@ export function validateInputActionBinding(value: unknown): value is InputAction
 }
 
 function freezeBinding(binding: InputActionBinding): InputActionBinding {
-  return binding.device === "keyboard"
-    ? Object.freeze({ ...binding, modifiers: Object.freeze([...binding.modifiers]) })
-    : Object.freeze({ ...binding });
+  if (binding.device === "keyboard" || (binding.device === "pointer" && binding.modifiers !== undefined)) {
+    return Object.freeze({ ...binding, modifiers: Object.freeze([...(binding.modifiers ?? [])]) });
+  }
+
+  return Object.freeze({ ...binding });
 }
 
 function entry(value: unknown): InputActionMapEntry | null {
@@ -481,6 +594,11 @@ export function inputActionBindingEquals(
   left: InputActionBinding,
   right: InputActionBinding,
 ): boolean {
+  if (left.device === "pointer" && right.device === "pointer") {
+    return left.button === right.button && left.gesture === right.gesture &&
+      JSON.stringify(left.modifiers ?? []) === JSON.stringify(right.modifiers ?? []);
+  }
+
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
