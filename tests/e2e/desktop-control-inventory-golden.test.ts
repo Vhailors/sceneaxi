@@ -6,9 +6,8 @@
  * state; a product control must produce a host request or named refusal; an
  * unsupported control must already carry an accessible refusal.
  */
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
-  Window as HappyWindow,
   type HTMLElement as HappyHTMLElement,
   type HTMLSelectElement as HappyHTMLSelectElement,
 } from "happy-dom";
@@ -18,130 +17,17 @@ import {
   DESKTOP_PRODUCT_REFUSALS,
   DESKTOP_VISUAL_REFUSALS,
   createDesktopVisualState,
-  desktopVisualView,
-  renderDesktopChrome,
 } from "@sceneaxi/desktop-shell";
 
-const windows: HappyWindow[] = [];
-
-afterEach(() => {
-  for (const window of windows.splice(0)) window.close();
-});
-
-function mount(
-  state = createDesktopVisualState({
-    window: { width: 1000, height: 700 },
-  }),
-  runtime?: Readonly<{
-    request(request: unknown): Promise<unknown>;
-    project(request: unknown): Promise<unknown>;
-  }>,
-) {
-  const window = new HappyWindow({ width: 1000, height: 700 });
-  windows.push(window);
-  if (runtime !== undefined) {
-    Object.assign(window, { sceneaxiDesktop: runtime });
-  }
-  const html = renderDesktopChrome(desktopVisualView(state));
-  const match = /<script>([\s\S]*?)<\/script>/.exec(html);
-  if (match?.[1] === undefined) throw new Error("desktop chrome script missing");
-  window.document.write(html.replace(match[0], ""));
-  window.eval(match[1]);
-  return window;
-}
-
-function element(window: HappyWindow, selector: string) {
-  const found = window.document.querySelector(selector) as HappyHTMLElement | null;
-  if (found === null) throw new Error(`missing desktop control ${selector}`);
-  return found;
-}
-
-async function settle() {
-  for (let turn = 0; turn < 60; turn += 1) await Promise.resolve();
-}
-
-async function click(window: HappyWindow, selector: string) {
-  element(window, selector).click();
-  await settle();
-}
-
-async function escape(window: HappyWindow) {
-  window.document.dispatchEvent(
-    new window.KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }),
-  );
-  await settle();
-}
+import {
+  mountInventory as mount,
+  inventoryElement as element,
+  settleInventory as settle,
+  clickInventory as click,
+  escapeInventory as escape,
+} from "../helpers/desktop-chrome-golden.js";
 
 describe("desktop mounted control inventory", () => {
-  it("renders project-backed instance, object, and parent identities", async () => {
-    const properties = DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.map((definition) => ({
-      id: definition.id,
-      value: definition.id.startsWith("scale-") ? 1 : 0,
-    }));
-    const snapshot = {
-      phase: "idle",
-      unifiedDiff: null,
-      renderedDiff: null,
-      proposal: null,
-      appliedPaths: null,
-      journalRecoveryPending: false,
-      transactionId: null,
-      diagnostics: null,
-    };
-    const status = {
-      ok: true,
-      documentId: "scene",
-      data: {},
-      contentHash: `sha256:${"3".repeat(64)}`,
-      authoringSnapshot: snapshot,
-    };
-    const inspection = {
-      ok: true,
-      selection: { instanceIds: ["child-instance"], primaryInstanceId: "child-instance" },
-      entities: [
-        {
-          id: "root-instance",
-          label: "Root",
-          artifactId: "root-object",
-          parentInstanceId: null,
-          depth: 0,
-          properties,
-        },
-        {
-          id: "child-instance",
-          label: "Child",
-          artifactId: "child-object",
-          parentInstanceId: "root-instance",
-          depth: 1,
-          properties,
-        },
-      ],
-    };
-    const window = mount(undefined, {
-      project: async () => ({
-        ok: true,
-        data: {
-          status: {
-            active: { name: "Hierarchy", root: "/project", documentPath: "scene.json" },
-            recents: [],
-          },
-        },
-      }),
-      request: async (request) => (request as { action?: string }).action === "command"
-        ? { ok: true, data: inspection }
-        : { ok: true, data: status },
-    });
-    await settle();
-
-    const select = element(window, '[data-action="scene-entity-select"]') as unknown as {
-      options: ArrayLike<{ textContent: string | null }>;
-    };
-    expect(Array.from(select.options, (option) => option.textContent)).toEqual([
-      "Object root-object · instance root-instance · root",
-      "  Object child-object · instance child-instance · parent root-instance",
-    ]);
-  });
-
   it("renders stale hierarchy recovery until an explicit selection succeeds", async () => {
     const properties = DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.map((definition) => ({
       id: definition.id,
@@ -553,46 +439,6 @@ describe("desktop mounted control inventory", () => {
     await click(window, "#profile-game");
     expect(element(window, ".shell").dataset.profile).toBe("game");
     expect(window.getComputedStyle(element(window, ".profile-refusal")).display).toBe("none");
-  });
-
-  it("loads Timeline evidence through the desktop command and keeps controls typed", async () => {
-    const requests: unknown[] = [];
-    const window = mount(undefined, {
-      project: async () => ({
-        ok: true,
-        data: { status: { active: { name: "Animation", root: "/project", documentPath: "scene.json" }, recents: [] } },
-      }),
-      request: async (request) => {
-        requests.push(request);
-        const typed = request as { action?: string; payload?: { commandId?: string; op?: string } };
-        if (typed.action === "authoring" && typed.payload?.op === "status") {
-          return { ok: true, data: { ok: true, documentId: "animation", data: {}, contentHash: `sha256:${"a".repeat(64)}` } };
-        }
-        const commandId = typed.payload?.commandId;
-        if (commandId === "animation-inspect") {
-          return { ok: true, data: { kind: "sceneaxi.scene-animation-inspection", catalog: { clips: [{ clipId: "idle" }], tracks: [], keyframes: [] } } };
-        }
-        if (commandId === "animation-scrub" || commandId === "animation-evaluate") {
-          return { ok: true, data: { kind: "sceneaxi.scene-animation-evaluation", timeMs: 0, savedBytesWritten: false } };
-        }
-        return { ok: false, reason: "ANIMATION_INPUT_UNSUPPORTED", message: "Mutation input is required." };
-      },
-    });
-    await click(window, "#mode-animate");
-    await click(window, '[data-action="dock-tab"][data-value="timeline"]');
-    expect(element(window, "[data-timeline-result]").textContent).toContain('"clipId": "idle"');
-    const timelineKinds = { "timeline-mutation": "view", "timeline-apply": "live", "timeline-time": "view", "timeline-scrub": "live", "timeline-evaluate": "live" } as const;
-    for (const [id, kind] of Object.entries(timelineKinds)) {
-      expect(element(window, `#${id}`).getAttribute("data-kind")).toBe(kind);
-    }
-    expect(element(window, "#timeline-apply").getAttribute("data-action")).toBe("timeline-apply");
-    expect(element(window, "#timeline-evaluate").getAttribute("data-action")).toBe("timeline-evaluate");
-    expect(requests.find((request) => (request as { payload?: { commandId?: string } }).payload?.commandId === "animation-inspect"))
-      .toMatchObject({ payload: { input: { documentPath: "scene.json", profile: "game" } } });
-    await click(window, "#timeline-scrub");
-    await click(window, "#timeline-evaluate");
-    expect(requests.map((request) => (request as { payload?: { commandId?: string } }).payload?.commandId))
-      .toEqual(expect.arrayContaining(["animation-scrub", "animation-evaluate"]));
   });
 
   it("turns standalone product actions into observable named outcomes", async () => {

@@ -179,6 +179,14 @@ export const EDITOR_SHELL_MODES: ReadonlyArray<EditorShellModeRow> =
     }),
   ]);
 
+/** Desktop workspace segments; the hosted editor keeps the seven-mode table. */
+export const EDITOR_SHELL_DESKTOP_WORKSPACES = Object.freeze([
+  Object.freeze({ id: "build", label: "Scene" } as const),
+  Object.freeze({ id: "animate", label: "Animate" } as const),
+  Object.freeze({ id: "run", label: "Play" } as const),
+  Object.freeze({ id: "ship", label: "Ship" } as const),
+] as const satisfies readonly Readonly<{ id: EditorShellModeId; label: string }>[]);
+
 /** The mode row for an id — total, so a projection cannot miss a mode. */
 export function editorShellModeRow(id: EditorShellModeId): EditorShellModeRow {
   const row = EDITOR_SHELL_MODES.find((mode) => mode.id === id);
@@ -250,6 +258,13 @@ export const EDITOR_SHELL_ASSISTANT_MODE_IDS = Object.freeze([
 ] as const);
 export type EditorShellAssistantModeId =
   (typeof EDITOR_SHELL_ASSISTANT_MODE_IDS)[number];
+
+/** Desktop intent labels; shared hosted strengths remain Light / Mid / Strong. */
+export const EDITOR_SHELL_DESKTOP_ASSISTANT_INTENTS = Object.freeze([
+  Object.freeze({ id: "ask", label: "Ask" } as const),
+  Object.freeze({ id: "build", label: "Propose" } as const),
+  Object.freeze({ id: "agent", label: "Plan" } as const),
+] as const satisfies readonly Readonly<{ id: EditorShellAssistantModeId; label: string }>[]);
 
 export function editorShellAssistantModeLabel(
   id: EditorShellAssistantModeId,
@@ -350,6 +365,25 @@ export const EDITOR_SHELL_METRICS = Object.freeze({
   dockHeight: 228,
   timelineDockHeight: 252,
   statusBarHeight: 27,
+} as const);
+
+/** Desktop layout v2 in CSS pixels; the dock maximum is relative to body height. */
+export const EDITOR_SHELL_DESKTOP_LAYOUT = Object.freeze({
+  titleBarHeight: 36,
+  toolbarHeight: 40,
+  leftDockWidth: 256,
+  inspectorWidth: 320,
+  assistantWidth: 352,
+  viewTabsHeight: 32,
+  dockHeight: 232,
+  timelineDockHeight: 280,
+  statusBarHeight: 27,
+  ranges: Object.freeze({
+    leftDockWidth: Object.freeze({ min: 200, max: 480 }),
+    inspectorWidth: Object.freeze({ min: 280, max: 560 }),
+    assistantWidth: Object.freeze({ min: 320, max: 560 }),
+    dockHeight: Object.freeze({ min: 120, maxBodyFraction: 0.6 }),
+  }),
 } as const);
 
 /**

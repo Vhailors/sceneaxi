@@ -6,6 +6,12 @@
   "$defs": {
     "identifier": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
     "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^(?!\\s)(?![\\s\\S]*[\\u0000-\\u001f\\u007f-\\u009f])[\\s\\S]*\\S$"
+    },
     "boundedNumber": {
       "type": "number",
       "minimum": -9007199254,
@@ -114,8 +120,14 @@
     "placement": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["instanceId", "artifactId", "parentInstanceId", "transform"],
+      "required": ["instanceId", "parentInstanceId", "transform"],
+      "oneOf": [
+        { "required": ["artifactId"], "not": { "required": ["kind"] } },
+        { "required": ["kind"], "not": { "required": ["artifactId"] } }
+      ],
       "properties": {
+        "kind": { "const": "node" },
+        "name": { "$ref": "#/$defs/name" },
         "instanceId": { "$ref": "#/$defs/identifier" },
         "artifactId": {
           "$ref": "#/$defs/identifier",
@@ -154,16 +166,24 @@
     "instance": {
       "type": "object",
       "additionalProperties": false,
+      "description": "Stored instance. Nodes omit synthetic artifact fields; validation hydrates their canonical empty runtime artifact.",
       "required": [
         "instanceId",
-        "artifactId",
         "parentInstanceId",
         "depth",
         "localTransform",
-        "worldTransform",
-        "artifact"
+        "worldTransform"
+      ],
+      "oneOf": [
+        { "required": ["artifactId", "artifact"], "not": { "required": ["kind"] } },
+        {
+          "required": ["kind"],
+          "not": { "anyOf": [{ "required": ["artifactId"] }, { "required": ["artifact"] }] }
+        }
       ],
       "properties": {
+        "kind": { "const": "node" },
+        "name": { "$ref": "#/$defs/name" },
         "instanceId": { "$ref": "#/$defs/identifier" },
         "artifactId": { "$ref": "#/$defs/identifier" },
         "parentInstanceId": {

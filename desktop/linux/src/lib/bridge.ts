@@ -33,19 +33,12 @@
 import { realpathSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, resolve, sep } from "node:path";
 import {
-  ASSISTANT_SCULPT_REFUSALS,
   commitProjectMigration,
   inspectProjectGit,
   inspectProjectModel,
   proposeProjectMigration,
   recoverProjectMigration,
-  runAssistantSculptAction,
   safeRarityEvidenceFromNamespace,
-  stageRarityProviderProposal,
-  type AssistantSculptProgress,
-  type AssistantSculptResult,
-  type RarityKernelResolutionInput,
-  type RarityProviderContributionResult,
 } from "@sceneaxi/authoring-core";
 import {
   createDesktopSession,
@@ -66,7 +59,6 @@ import {
   proposeProjectAssetImport,
   type ProjectAssetManifestEntry,
 } from "@sceneaxi/importers";
-import { bootstrapOpenPath, resumeOpenPath } from "@sceneaxi/engine-orchestrator";
 import {
   DESKTOP_SCENE_HIERARCHY_REFUSALS,
   EDITOR_COMMAND_REFUSALS,
@@ -74,50 +66,32 @@ import {
   EDITOR_COMMAND_SCHEMA_VERSION,
   OPEN_PATH_REFUSE_CODES,
   PROJECT_GIT_DIAGNOSTICS,
-  RARITY_PROVIDER_REQUEST_MAX_CHARS,
   RARITY_REFUSE_CODES,
   digestRarityNamespace,
   editorCommand,
-  editorCommandTerminalResult,
   editorCommandTransactionResult,
   isDesktopSceneEditOperation,
   isDesktopSceneEditProfile,
   isDesktopSceneReparentPolicy,
   resolveDesktopSceneTransform,
-  resetPlaySession,
-  setPlayViewportSource,
-  startPlaySession,
-  stopPlaySession,
   validateEditorCommandInvocation,
-  type PlaySession,
-  type PhysicsWorldHost,
   validateRarityNamespace,
   type EditorCommandId,
-  ASSISTANT_ASK_REFUSALS,
   captureProfileEvidence,
   detectProjectBuildHost,
   evaluateProjectBuild,
   inspectExtensionSeams,
-  isFixtureProviderDescriptor,
   startExtensionSeam,
   isJsonObject,
-  type SceneAssistantBuildEntry,
-  type SculptArtifact,
 } from "@sceneaxi/schemas";
 import {
   DESKTOP_ACTIVE_DOCUMENT_PATH,
   DESKTOP_BRIDGE_ACTIONS,
-  DESKTOP_BRIDGE_ASSISTANT_OPS,
   DESKTOP_BRIDGE_AUTHORING_OPS,
   DESKTOP_BRIDGE_REFUSALS,
-  DESKTOP_ASSISTANT_START_MODE_REFUSAL_MESSAGE,
-  DESKTOP_RARITY_EVENT_ID,
   bridgeOk,
   bridgeRefuse,
-  desktopAssistantStartMode,
   type DesktopBridgeAction,
-  type DesktopBridgeAssistantOp,
-  type DesktopAssistantJobSnapshot,
   type DesktopBridgeAuthoringOp,
   type DesktopBridgeHandshake,
   type DesktopBridgeResponse,
@@ -126,8 +100,6 @@ import {
   type DesktopRarityRetirementReason,
 } from "./bridge-contract.js";
 import {
-  DESKTOP_SCENE_NOT_COMPOSABLE,
-  desktopAssistantScene,
   desktopSceneFromDocumentData,
   evaluateDesktopSceneAnimation,
   evaluateDesktopScenePhysics,
@@ -143,8 +115,6 @@ import {
   stageDesktopSceneEnvironment,
   stageDesktopSceneMaterials,
   stageDesktopScenePhysics,
-  answerDesktopAssistantAsk,
-  stageDesktopAssistantBuild,
   discoverDesktopScenePackage,
   inspectDesktopScenePackages,
   stageDesktopScenePackage,
@@ -153,7 +123,6 @@ import {
   stageDesktopScenePropertyEdit,
   type DesktopSceneResult,
 } from "./desktop-scene.js";
-import { DesktopByoRunnerRefusal } from "./byo-configuration.js";
 import {
   applyDesktopWorkspaceLayout,
   inspectDesktopWorkspaceLayout,
@@ -169,24 +138,23 @@ import {
 } from "./project-browser-contract.js";
 import type { DesktopInputActionHost } from "./input-action-host.js";
 
-export type DesktopBridgeOptions = {
+import { createDesktopAssistantBridge, type DesktopAssistantOptions } from "./bridge/assistant.js";
+import { createDesktopPlayBridge, type DesktopPlayOptions } from "./bridge/play.js";
+import { createRarityResolver, field, SCENE_DOCUMENT_REFUSALS, type DesktopBridgeContext } from "./bridge/context.js";
+
+export type { DesktopAssistantProfile, DesktopAssistantRunRequest, DesktopRarityProviderRunRequest } from "./bridge/assistant.js";
+export { OPEN_PATH_EXERCISE_TICKS, type OpenPathExercise, type OpenPathRaritySession } from "./bridge-contract-play.js";
+
+export type DesktopBridgeOptions = DesktopCoreOptions & DesktopAssistantOptions & DesktopPlayOptions;
+
+export type DesktopCoreOptions = {
   /** Working directory the authoring session binds to. */
   readonly cwd: string;
   /** Already-authorized context, checked before project or journal I/O. */
   readonly commandProfile?: "game" | "web" | "kids";
   readonly commandCapabilities?: readonly string[];
-  /** Integer-millisecond clock for the orchestrator host. Injectable for goldens. */
-  readonly nowMs?: () => number;
-  /** Initialized at the tier boundary; an absent Rapier host refuses rather than using toy. */
-  readonly physicsWorldHost?: PhysicsWorldHost;
   /** Observer for renderer frame reports (the smoke path listens here). */
   readonly onFrameReport?: (report: DesktopFrameReport) => void;
-  /** Optional privileged BYOK runner. Credentials never enter this bridge. */
-  readonly runByoAssistant?: (request: DesktopAssistantRunRequest) => Promise<AssistantSculptResult>;
-  /** Privileged fixture provider. It returns validated input/evidence, never raw output. */
-  readonly runRarityProvider?: (
-    request: DesktopRarityProviderRunRequest,
-  ) => Promise<RarityProviderContributionResult>;
   readonly createAuthoringSession?: () => DesktopSession;
   /** The already-built sole renderer owner copied into static Web exports. */
   readonly webExportRuntime?: Uint8Array;
@@ -199,65 +167,12 @@ export type DesktopBridgeOptions = {
   readonly inputActions?: DesktopInputActionHost;
 };
 
-export type DesktopAssistantProfile =
-  | "@sceneaxi/profile-game"
-  | "@sceneaxi/profile-web"
-  | "@sceneaxi/profile-kids";
-
-export type DesktopAssistantRunRequest = Readonly<{
-  prompt: string;
-  profile: DesktopAssistantProfile;
-  onProgress: (snapshot: AssistantSculptProgress) => void;
-}>;
-
-export type DesktopRarityProviderRunRequest = Readonly<{
-  profile: DesktopAssistantProfile;
-  /**
-   * The operator's own request text, carried to the Model Provider Port beside
-   * the bounded rarity instruction rather than dropped at this boundary. It
-   * reaches the provider only: nothing on this path lets prompt text choose a
-   * tier, a candidate, a weight, or an outcome, and the checked-in fixture
-   * answers the same bytes whatever it says.
-   */
-  prompt: string;
-}>;
-
 export type DesktopBridge = {
   handle(request: unknown): DesktopBridgeResponse;
   activeProfile(): "game" | "web" | "kids";
   /** The most recent renderer frame report, or null before the first one. */
   lastFrameReport(): DesktopFrameReport | null;
   close(): boolean;
-};
-
-/** Ticks the open-path exercise advances: enough to prove digests move. */
-export const OPEN_PATH_EXERCISE_TICKS = 4;
-
-/**
- * The accepted rarity namespace's own kernel evidence.
- *
- * It is reported beside the composed scene's, never in place of it: the product
- * session that verifies a rarity event carries the manifest's rarity namespace
- * and no entities, so its digests describe a different session from the one the
- * viewport draws. Folding them into the scene fields would make the Run report
- * claim the drawn scene advanced through digests it never produced.
- */
-export type OpenPathRaritySession = {
-  readonly bootstrap: unknown;
-  readonly initialDigest: string;
-  readonly tickDigests: readonly string[];
-  readonly replayDigest: string;
-};
-
-export type OpenPathExercise = {
-  readonly bootstrap: unknown;
-  readonly initialDigest: string;
-  readonly tickDigests: readonly string[];
-  readonly instanceCount: number;
-  readonly mountable: Extract<DesktopSceneResult, { readonly ok: true }>["mountable"];
-  readonly closed: true;
-  readonly rarity?: DesktopRarityEvidence;
-  readonly raritySession?: OpenPathRaritySession;
 };
 
 /**
@@ -295,27 +210,6 @@ function isAuthoringOp(value: unknown): value is DesktopBridgeAuthoringOp {
     typeof value === "string" &&
     (DESKTOP_BRIDGE_AUTHORING_OPS as readonly string[]).includes(value)
   );
-}
-
-function isAssistantOp(value: unknown): value is DesktopBridgeAssistantOp {
-  return (
-    typeof value === "string" &&
-    (DESKTOP_BRIDGE_ASSISTANT_OPS as readonly string[]).includes(value)
-  );
-}
-
-function isAssistantProfile(value: unknown): value is DesktopAssistantProfile {
-  return (
-    value === "@sceneaxi/profile-game" ||
-    value === "@sceneaxi/profile-web" ||
-    value === "@sceneaxi/profile-kids"
-  );
-}
-
-function field(value: unknown, name: string): unknown {
-  if (typeof value !== "object" || value === null) return undefined;
-  const descriptor = Object.getOwnPropertyDescriptor(value, name);
-  return descriptor !== undefined && "value" in descriptor ? descriptor.value : undefined;
 }
 
 function hasExactFields(value: unknown, fields: readonly string[]): boolean {
@@ -367,32 +261,10 @@ function frameReportOf(payload: unknown): DesktopFrameReport | null {
 export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridge {
   const nowMs = options.nowMs ?? ((): number => Date.now());
   let activeCommandProfile: "game" | "web" | "kids" = options.commandProfile ?? "game";
-  const rarityRefusalReason = (detail: unknown): string | null => {
-    if (typeof detail !== "string") return null;
-    return Object.values(RARITY_REFUSE_CODES).find(
-      (code) => detail === code || detail.startsWith(`${code} `),
-    ) ?? null;
-  };
+  const resolveRarityWithKernel = createRarityResolver(nowMs);
   let session: DesktopSession | null = null;
   let rarityProposalEvidence: DesktopRarityEvidence | null = null;
   let lastReport: DesktopFrameReport | null = null;
-  let assistantSequence = 0;
-  let assistantJob: {
-    jobId: string;
-    commandId: Extract<EditorCommandId,
-      | "assistant-ask"
-      | "assistant-local-build"
-      | "assistant-byo-build"
-      | "assistant-local-agent">;
-    route: "local" | "byo";
-    status: "running" | "ready" | "refused";
-    latestProgress: AssistantSculptProgress | null;
-    progressCount: number;
-    result?: NonNullable<DesktopAssistantJobSnapshot["result"]>;
-    refusal?: NonNullable<DesktopAssistantJobSnapshot["refusal"]>;
-  } | null = null;
-  let lastReadyBuild: SceneAssistantBuildEntry | null = null;
-  let lastReadyArtifact: SculptArtifact | null = null;
   let pendingAssetImport: Readonly<{
     documentPath: string;
     entry: ProjectAssetManifestEntry;
@@ -404,7 +276,6 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     contentByteLength: number;
   }> | null = null;
   let selectedSceneInstanceIds: readonly string[] = Object.freeze([]);
-  let playSession: PlaySession | null = null;
   let sceneSelectionStale = false;
   let pendingSceneSelection: Readonly<{
     documentPath: string;
@@ -649,51 +520,6 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     return snapshot;
   };
 
-  const currentRarityAssistantResult = () => {
-    const result = assistantJob?.result;
-    return result !== undefined && "kind" in result && result.kind === "rarity-proposal"
-      ? result
-      : null;
-  };
-
-  const updateRarityAssistantAuthoring = (
-    snapshot: DesktopSnapshot,
-    evidence: DesktopRarityEvidence,
-  ) => {
-    const result = currentRarityAssistantResult();
-    if (
-      assistantJob === null ||
-      result === null ||
-      result.evidence.namespaceDigest !== evidence.namespaceDigest
-    ) return;
-    assistantJob = {
-      ...assistantJob,
-      result: Object.freeze({
-        ...result,
-        authoring: Object.freeze({ ...snapshot, rarityEvidence: evidence }),
-      }),
-    };
-  };
-
-  const retireRarityAssistantResult = (
-    evidence: DesktopRarityEvidence,
-    reason: DesktopRarityRetirementReason,
-  ) => {
-    const result = currentRarityAssistantResult();
-    if (
-      assistantJob === null ||
-      result === null ||
-      result.evidence.namespaceDigest !== evidence.namespaceDigest
-    ) return;
-    assistantJob = {
-      ...assistantJob,
-      result: Object.freeze({
-        ...result,
-        retirement: Object.freeze({ reason }),
-      }),
-    };
-  };
-
   const handshake = (): DesktopBridgeHandshake =>
     Object.freeze({
       app: "@sceneaxi/desktop-linux" as const,
@@ -703,279 +529,6 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       commandSchemaVersion: EDITOR_COMMAND_SCHEMA_VERSION,
       commands: EDITOR_COMMAND_REGISTRY,
     });
-
-  const resolveRarityWithKernel = (input: RarityKernelResolutionInput) => {
-    const bootstrapped = bootstrapOpenPath(
-      {
-        kind: "product",
-        productManifest: {
-          productId: input.productId,
-          seed: input.seed,
-          rarity: input.namespace,
-        },
-      },
-      { nowMs },
-    );
-    if (!bootstrapped.ok) {
-      const reason = rarityRefusalReason(bootstrapped.detail);
-      return Object.freeze({
-        ok: false as const,
-        reason: reason ?? bootstrapped.reason,
-        message: reason === null
-          ? bootstrapped.message
-          : bootstrapped.detail ?? bootstrapped.message,
-      });
-    }
-    const handle = bootstrapped.value;
-    const live = handle.session();
-    if (!live.ok) {
-      handle.close();
-      return Object.freeze({ ok: false as const, reason: live.reason, message: live.message });
-    }
-    try {
-      live.value.dispatch({
-        type: "rarity-roll",
-        eventId: input.eventId,
-        request: input.request,
-        providerEvidence: input.providerEvidence,
-      });
-      live.value.advance({ tick: 1, deltaMs: 0 });
-      const rarity = live.value.observe().rarity;
-      if (rarity === undefined) {
-        return Object.freeze({
-          ok: false as const,
-          reason: RARITY_REFUSE_CODES.outcomeMismatch,
-          message: "The authoritative kernel did not expose the resolved rarity namespace.",
-        });
-      }
-      return Object.freeze({ ok: true as const, value: rarity });
-    } catch (error) {
-      const reason = field(error, "code") ?? field(error, "reason");
-      return Object.freeze({
-        ok: false as const,
-        reason: typeof reason === "string" ? reason : RARITY_REFUSE_CODES.outcomeMismatch,
-        message: "The authoritative kernel refused the rarity resolution.",
-      });
-    } finally {
-      handle.close();
-    }
-  };
-
-  /**
-   * Exercise the accepted rarity namespace through its own product session.
-   *
-   * This is additional to the composed scene's open path, never a replacement
-   * for it, so its digests stay in their own record.
-   */
-  const rarityProductExercise = (
-    documentData: Readonly<Record<string, unknown>>,
-    rarityValue: unknown,
-  ):
-    | Readonly<{
-        ok: true;
-        session?: OpenPathRaritySession;
-        evidence?: DesktopRarityEvidence;
-      }>
-    | Readonly<{ ok: false; reason: string; message: string; detail?: string | null }> => {
-    const rarity = validateRarityNamespace(rarityValue);
-    if (!rarity.ok) {
-      return { ok: false, reason: rarity.code, message: rarity.message, detail: rarity.path };
-    }
-    const roll = rarity.value.rolls.at(-1);
-    if (roll === undefined) {
-      return { ok: true };
-    }
-    const productId = documentData.productId;
-    const seed = documentData.seed;
-    if (typeof productId !== "string" || !Number.isSafeInteger(seed)) {
-      return {
-        ok: false,
-        reason: DESKTOP_BRIDGE_REFUSALS.requestMalformed,
-        message: "The active rarity project has no valid ProductManifest identity.",
-      };
-    }
-    const bootstrapped = bootstrapOpenPath(
-      {
-        kind: "product",
-        productManifest: {
-          productId,
-          seed: seed as number,
-          rarity: rarity.value,
-        },
-      },
-      { nowMs },
-    );
-    if (!bootstrapped.ok) {
-      const reason = rarityRefusalReason(bootstrapped.detail);
-      return {
-        ok: false,
-        reason: reason ?? bootstrapped.reason,
-        message: reason === null
-          ? bootstrapped.message
-          : bootstrapped.detail ?? bootstrapped.message,
-        detail: bootstrapped.detail,
-      };
-    }
-    const handle = bootstrapped.value;
-    const live = handle.session();
-    if (!live.ok) {
-      handle.close();
-      const reason = rarityRefusalReason(live.detail);
-      return {
-        ok: false,
-        reason: reason ?? live.reason,
-        message: reason === null ? live.message : live.detail ?? live.message,
-        detail: live.detail,
-      };
-    }
-    let initialDigest: string;
-    let save: ReturnType<typeof live.value.save>;
-    const tickDigests: string[] = [];
-    try {
-      const initial = live.value.observe();
-      initialDigest = initial.digest;
-      live.value.dispatch({
-        type: "rarity-roll",
-        eventId: roll.eventId,
-        request: roll.request,
-        ...(roll.providerEvidence === undefined
-          ? {}
-          : { providerEvidence: roll.providerEvidence }),
-      });
-      for (let tick = 1; tick <= OPEN_PATH_EXERCISE_TICKS; tick += 1) {
-        live.value.advance({ tick, deltaMs: 100 });
-        tickDigests.push(live.value.observe().digest);
-      }
-      save = live.value.save();
-    } catch (error) {
-      const reason = field(error, "code") ?? field(error, "reason");
-      return {
-        ok: false,
-        reason: typeof reason === "string" ? reason : RARITY_REFUSE_CODES.provenanceMismatch,
-        message: "The accepted rarity session could not be replayed exactly.",
-      };
-    } finally {
-      handle.close();
-    }
-    const resumed = resumeOpenPath({ kind: "product", save }, { nowMs });
-    if (!resumed.ok) {
-      const reason = rarityRefusalReason(resumed.detail);
-      return {
-        ok: false,
-        reason: reason ?? resumed.reason,
-        message: reason === null ? resumed.message : resumed.detail ?? resumed.message,
-        detail: resumed.detail,
-      };
-    }
-    const replay = resumed.value.session();
-    if (!replay.ok) {
-      resumed.value.close();
-      const reason = rarityRefusalReason(replay.detail);
-      return {
-        ok: false,
-        reason: reason ?? replay.reason,
-        message: reason === null ? replay.message : replay.detail ?? replay.message,
-        detail: replay.detail,
-      };
-    }
-    let replayDigest: string;
-    try {
-      const snapshot = replay.value.observe();
-      replayDigest = snapshot.digest;
-      if (
-        replayDigest !== save.terminalDigest ||
-        snapshot.rarity === undefined ||
-        digestRarityNamespace(snapshot.rarity) !== digestRarityNamespace(rarity.value)
-      ) {
-        return {
-          ok: false,
-          reason: RARITY_REFUSE_CODES.provenanceMismatch,
-          message:
-            "The resumed rarity session did not reproduce the accepted namespace and terminal digest.",
-        };
-      }
-    } finally {
-      resumed.value.close();
-    }
-    return {
-      ok: true,
-      session: Object.freeze({
-        bootstrap: handle.bootstrap,
-        initialDigest,
-        tickDigests: Object.freeze(tickDigests),
-        replayDigest,
-      }),
-      ...(roll.providerEvidence === undefined
-        ? {}
-        : { evidence: safeRarityEvidenceFromNamespace(rarity.value, roll.eventId, seed as number) }),
-    };
-  };
-
-  const openPathExercise = (payload: unknown): DesktopBridgeResponse => {
-    const read = readActiveDocument(payload, SCENE_DOCUMENT_REFUSALS);
-    if (!read.ok) return bridgeRefuse(read.reason, read.message);
-    const status = read.status;
-    const scene = desktopSceneFromDocumentData(status.data);
-    if (!scene.ok) return bridgeRefuse(scene.reason, scene.message);
-    const recoveryDocumentPath = containedDocumentPath(field(payload, "documentPath"));
-    if (recoveryDocumentPath !== null) {
-      const recovered = materializeProjectAssetCopies({ projectRoot: options.cwd, documentPath: recoveryDocumentPath });
-      if (!recovered.ok) return bridgeRefuse(recovered.reason, recovered.message);
-    }
-
-    let raritySession: OpenPathRaritySession | undefined;
-    let rarityEvidence: DesktopRarityEvidence | undefined;
-    if (status.data.rarity !== undefined) {
-      const exercised = rarityProductExercise(status.data, status.data.rarity);
-      if (!exercised.ok) {
-        return bridgeRefuse(exercised.reason, exercised.message, exercised.detail);
-      }
-      raritySession = exercised.session;
-      if (exercised.evidence !== undefined) rarityEvidence = exercised.evidence;
-    }
-
-    const bootstrapped = bootstrapOpenPath(
-      { kind: "scene", scene: scene.composed.scene, options: { seed: 20260731 } },
-      { nowMs },
-    );
-    if (!bootstrapped.ok) {
-      return bridgeRefuse(bootstrapped.reason, bootstrapped.message, bootstrapped.detail);
-    }
-
-    const handle = bootstrapped.value;
-    const live = handle.session();
-    if (!live.ok) {
-      handle.close();
-      return bridgeRefuse(live.reason, live.message, live.detail);
-    }
-
-    let initialDigest: string;
-    let instanceCount: number;
-    const tickDigests: string[] = [];
-    try {
-      const initial = live.value.observe();
-      initialDigest = initial.digest;
-      instanceCount = initial.instances.length;
-      for (let tick = 1; tick <= OPEN_PATH_EXERCISE_TICKS; tick += 1) {
-        live.value.advance({ tick, deltaMs: 100 });
-        tickDigests.push(live.value.observe().digest);
-      }
-    } finally {
-      handle.close();
-    }
-
-    const exercise: OpenPathExercise = Object.freeze({
-      bootstrap: handle.bootstrap,
-      initialDigest,
-      tickDigests: Object.freeze(tickDigests),
-      instanceCount,
-      mountable: scene.mountable,
-      closed: true as const,
-      ...(rarityEvidence === undefined ? {} : { rarity: rarityEvidence }),
-      ...(raritySession === undefined ? {} : { raritySession }),
-    });
-    return bridgeOk("open-path", exercise);
-  };
 
   /**
    * A document path arrives from the renderer process across IPC, and the authoring
@@ -1043,16 +596,6 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
     }
     return { ok: true, status };
   };
-
-  const SCENE_DOCUMENT_REFUSALS = Object.freeze({
-    missingMessage: "scene playback requires a documentPath string inside the project directory.",
-    unreadableReason: DESKTOP_SCENE_NOT_COMPOSABLE,
-  });
-
-  const RARITY_DOCUMENT_REFUSALS = Object.freeze({
-    missingMessage: "A rarity assistant action requires a documentPath inside the project directory.",
-    unreadableReason: DESKTOP_BRIDGE_REFUSALS.requestMalformed,
-  });
 
   const activeScene = (payload: unknown): DesktopSceneResult => {
     const read = readActiveDocument(payload, SCENE_DOCUMENT_REFUSALS);
@@ -1887,463 +1430,6 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       : bridgeRefuse(exported.reason, exported.message);
   };
 
-  /**
-   * What crosses the seam is bounded: the newest progress entry and how many
-   * have accrued, never the accumulated log. The renderer polls this every 50ms
-   * and renders only the latest entry, while a streaming BYOK route can report one
-   * entry per provider chunk.
-   */
-  const assistantSnapshot = (): DesktopAssistantJobSnapshot | null => {
-    if (assistantJob === null) return null;
-    const terminal = assistantJob.status === "running"
-      ? null
-      : editorCommandTerminalResult({
-          commandId: assistantJob.commandId,
-          jobId: assistantJob.jobId,
-          status: assistantJob.status === "ready"
-            ? "completed"
-            : assistantJob.refusal?.reason === DESKTOP_BRIDGE_REFUSALS.assistantAbandoned
-              ? "cancelled"
-              : "refused",
-          phase: assistantJob.status === "ready"
-            ? "ready"
-            : assistantJob.refusal?.reason === DESKTOP_BRIDGE_REFUSALS.assistantAbandoned
-              ? "cancelled"
-              : "refused",
-          message: assistantJob.status === "ready"
-            ? (assistantJob.latestProgress?.message ?? "The registered assistant command completed.")
-            : (assistantJob.refusal?.message ?? "The registered assistant command refused."),
-          ...(assistantJob.refusal === undefined
-            ? {}
-            : { refusal: assistantJob.refusal.reason }),
-        });
-    return Object.freeze({
-      jobId: assistantJob.jobId,
-      commandId: assistantJob.commandId,
-      route: assistantJob.route,
-      status: assistantJob.status,
-      latestProgress: assistantJob.latestProgress,
-      progressCount: assistantJob.progressCount,
-      terminal,
-      ...(assistantJob.result === undefined ? {} : { result: assistantJob.result }),
-      ...(assistantJob.refusal === undefined ? {} : { refusal: assistantJob.refusal }),
-    });
-  };
-
-  const assistant = (payload: unknown): DesktopBridgeResponse => {
-    const op = field(payload, "op");
-    if (!isAssistantOp(op)) {
-      return bridgeRefuse(
-        DESKTOP_BRIDGE_REFUSALS.assistantOpUnknown,
-        `Unknown assistant operation ${JSON.stringify(op)}. Known: ${DESKTOP_BRIDGE_ASSISTANT_OPS.join(", ")}.`,
-      );
-    }
-    if (op === "status") {
-      return bridgeOk("assistant", assistantSnapshot());
-    }
-    if (op === "abandon") {
-      const acknowledgedJobId = field(payload, "jobId");
-      if (typeof acknowledgedJobId !== "string" || acknowledgedJobId.length === 0) {
-        return bridgeRefuse(
-          DESKTOP_BRIDGE_REFUSALS.requestMalformed,
-          "assistant abandon requires the exact non-empty jobId returned by start.",
-        );
-      }
-      if (assistantJob?.jobId !== acknowledgedJobId) {
-        return bridgeRefuse(
-          EDITOR_COMMAND_REFUSALS.activeJobMismatch,
-          "Cancel refused because the supplied jobId does not identify the exact active assistant command.",
-        );
-      }
-      const result = currentRarityAssistantResult();
-      if (
-        result !== null &&
-        (result.retirement !== undefined ||
-          result.authoring?.phase === "applied" ||
-          result.authoring?.phase === "rejected")
-      ) {
-        const acknowledged = assistantSnapshot();
-        assistantJob = null;
-        return bridgeOk("assistant", acknowledged);
-      }
-      if (assistantJob.status === "running") {
-        assistantJob.status = "refused";
-        assistantJob.refusal = Object.freeze({
-          ok: false as const,
-          reason: DESKTOP_BRIDGE_REFUSALS.assistantAbandoned,
-          message: "The unresolved assistant job was abandoned; Retry may start a fresh job.",
-          recoverable: true,
-        });
-      }
-      return bridgeOk("assistant", assistantSnapshot());
-    }
-
-    const prompt = field(payload, "prompt");
-    const profile = field(payload, "profile");
-    const route = field(payload, "route");
-    const mode = field(payload, "mode");
-    const startMode = mode === undefined ? "build" : desktopAssistantStartMode(mode);
-    if (startMode === null) {
-      return bridgeRefuse(
-        DESKTOP_BRIDGE_REFUSALS.assistantBuildModeRequired,
-        DESKTOP_ASSISTANT_START_MODE_REFUSAL_MESSAGE,
-      );
-    }
-    if (
-      typeof prompt !== "string" ||
-      prompt.trim().length === 0 ||
-      !isAssistantProfile(profile) ||
-      (route !== "local" && route !== "byo" && route !== "hosted")
-    ) {
-      return bridgeRefuse(
-        DESKTOP_BRIDGE_REFUSALS.requestMalformed,
-        "assistant start requires a non-empty prompt, a SceneAxi profile, and route local, byo, or hosted.",
-      );
-    }
-    if (profile === "@sceneaxi/profile-kids") {
-      return bridgeRefuse(
-        ASSISTANT_SCULPT_REFUSALS.kidsDenied,
-        "The desktop assistant is denied for Kids before local generation, BYOK dispatch, or hosted routing.",
-      );
-    }
-    if (route === "hosted" && startMode !== "ask") {
-      return bridgeRefuse(
-        DESKTOP_BRIDGE_REFUSALS.assistantHostedMeteringUnavailable,
-        "Hosted AI is metered through the web-shell assistant panel; the desktop has no identity or credit plane and cannot bypass that gate.",
-      );
-    }
-    const rarityMode = startMode === "agent";
-    const askMode = startMode === "ask";
-    if (rarityMode && (route !== "local" || options.runRarityProvider === undefined)) {
-      return bridgeRefuse(
-        DESKTOP_BRIDGE_REFUSALS.rarityProviderUnavailable,
-        "The checked-in rarity fixture provider is available only through the local privileged host path.",
-      );
-    }
-    if (!rarityMode && !askMode && route === "byo" && options.runByoAssistant === undefined) {
-      return bridgeRefuse(
-        DESKTOP_BRIDGE_REFUSALS.assistantByoUnavailable,
-        "No BYOK Model Provider Port is configured for this desktop session. Local remains free and available.",
-      );
-    }
-    const currentRarityResult = currentRarityAssistantResult();
-    const raritySettlementPending = currentRarityResult !== null &&
-      (currentRarityResult.retirement !== undefined ||
-        currentRarityResult.authoring?.phase === "applied" ||
-        currentRarityResult.authoring?.phase === "rejected");
-    if (
-      assistantJob?.status === "running" ||
-      rarityProposalEvidence !== null ||
-      raritySettlementPending
-    ) {
-      return bridgeRefuse(
-        DESKTOP_BRIDGE_REFUSALS.assistantBusy,
-        rarityProposalEvidence !== null
-          ? "A rarity proposal is still waiting for Accept or Reject; settle it before starting another assistant job."
-          : raritySettlementPending
-            ? "The settled rarity job has not been acknowledged; read and acknowledge it before starting another assistant job."
-            : "An assistant job is already running; poll its status before retrying.",
-      );
-    }
-
-    let rarityDocument:
-      | Readonly<{ documentPath: string; contentHash: string; data: Readonly<Record<string, unknown>> }>
-      | undefined;
-    if (rarityMode) {
-      const read = readActiveDocument(payload, RARITY_DOCUMENT_REFUSALS);
-      if (!read.ok) return bridgeRefuse(read.reason, read.message);
-      rarityDocument = Object.freeze({
-        documentPath: read.status.documentPath,
-        contentHash: read.status.contentHash,
-        data: read.status.data,
-      });
-    }
-
-    // Kept so a runner that never dispatches can be rolled back to it. The job
-    // has to be installed before the runner is called — a local or streaming
-    // runner may report progress synchronously, and `onProgress` only accepts
-    // entries for the installed job — so "running" is claimed one call before
-    // dispatch is known. Without the rollback that claim is permanent: every
-    // later `start` would refuse DESKTOP_ASSISTANT_BUSY for a job that never
-    // ran, and the renderer only abandons from its own poll timeout.
-    const previousJob = assistantJob;
-    assistantSequence += 1;
-    const commandId = askMode
-      ? "assistant-ask"
-      : rarityMode
-        ? "assistant-local-agent"
-        : route === "byo"
-          ? "assistant-byo-build"
-          : "assistant-local-build";
-    assistantJob = {
-      jobId: `desktop-assistant-${String(assistantSequence)}`,
-      commandId,
-      route: route === "byo" && !askMode ? "byo" : "local",
-      status: "running",
-      latestProgress: null,
-      progressCount: 0,
-    };
-    const activeJob = assistantJob;
-    const onProgress = (snapshot: AssistantSculptProgress): void => {
-      if (assistantJob !== activeJob || activeJob.status !== "running") return;
-      activeJob.latestProgress = snapshot;
-      activeJob.progressCount += 1;
-    };
-    const trimmedPrompt = prompt.trim();
-    const request: DesktopAssistantRunRequest = {
-      prompt: rarityMode
-        ? trimmedPrompt.slice(0, RARITY_PROVIDER_REQUEST_MAX_CHARS)
-        : trimmedPrompt,
-      profile,
-      onProgress,
-    };
-    // The one owner of this job's detail policy, for a refusal a runner threw and
-    // one it returned alike. Provider-backed work is deliberately detail-free: an
-    // upstream error may include request headers or credential material, and only
-    // an in-process local run's detail is ours to begin with. The route alone does
-    // not answer that — Agent mode dispatches a Model Provider Port under route
-    // `local` — so this job's own work decides. The renderer and local bridge get
-    // only the named, redacted refusal.
-    const detailIsOurs = route === "local" && !rarityMode && !askMode;
-    const settleRefusal = (refusal: Readonly<{
-      reason: string;
-      message: string;
-      recoverable: boolean;
-      detail?: string;
-    }>): void => {
-      if (assistantJob !== activeJob || activeJob.status !== "running") return;
-      activeJob.status = "refused";
-      activeJob.refusal = Object.freeze({
-        ok: false as const,
-        reason: refusal.reason,
-        message: refusal.message,
-        recoverable: refusal.recoverable,
-        ...(detailIsOurs && refusal.detail !== undefined
-          ? { detail: refusal.detail }
-          : {}),
-      });
-    };
-    const settleRuntimeFailure = (error: unknown): void => {
-      const byoRefusal = route === "byo" && error instanceof DesktopByoRunnerRefusal
-        ? error
-        : null;
-      settleRefusal({
-        reason: byoRefusal?.reason ?? DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed,
-        message: byoRefusal?.message ?? "The configured assistant runner failed.",
-        recoverable: true,
-        detail: error instanceof Error ? error.message : String(error),
-      });
-    };
-    if (askMode) {
-      const read = readActiveDocument(
-        { documentPath: field(payload, "documentPath") ?? DESKTOP_ACTIVE_DOCUMENT_PATH },
-        {
-          missingMessage: "Ask requires a documentPath inside the project directory.",
-          unreadableReason: ASSISTANT_ASK_REFUSALS.staleVersion,
-        },
-      );
-      if (!read.ok) {
-        settleRefusal({
-          reason: read.reason,
-          message: read.message,
-          recoverable: true,
-        });
-        return bridgeOk("assistant", assistantSnapshot());
-      }
-      const asked = answerDesktopAssistantAsk({
-        documentData: read.status.data,
-        sourceContentHash: read.status.contentHash,
-        profile,
-        prompt: trimmedPrompt,
-        scope: field(payload, "scope") ?? "document",
-        playActive: playSession !== null,
-      });
-      if (!asked.ok) {
-        settleRefusal({
-          reason: asked.reason,
-          message: asked.message,
-          recoverable: true,
-        });
-        return bridgeOk("assistant", assistantSnapshot());
-      }
-      onProgress(Object.freeze({
-        phase: "ready",
-        percent: 100,
-        message: "Ask answered from the explicit project inspection scope.",
-      }));
-      activeJob.status = "ready";
-      activeJob.result = Object.freeze({
-        ok: true as const,
-        ...asked.answer,
-      });
-      return bridgeOk("assistant", assistantSnapshot());
-    }
-    if (rarityMode && rarityDocument !== undefined && options.runRarityProvider !== undefined) {
-      onProgress(Object.freeze({
-        phase: "waiting-provider",
-        percent: 20,
-        message:
-          "Requesting bounded rarity policy and candidate input from the fixture provider. Your request is carried to the provider, but the checked-in fixture answers the same bounded input whatever it says.",
-      }));
-      const stageRarity = (contribution: RarityProviderContributionResult): void => {
-        if (assistantJob !== activeJob || activeJob.status !== "running") return;
-        if (!contribution.ok) {
-          settleRefusal({
-            reason: contribution.reason,
-            message: contribution.message,
-            recoverable: true,
-          });
-          return;
-        }
-        onProgress(Object.freeze({
-          phase: "validating-artifact",
-          percent: 70,
-          message: "Validating canonical rarity bytes and authoritative kernel resolution.",
-        }));
-        const current = authoringSession().status(rarityDocument.documentPath);
-        if (!current.ok || current.contentHash !== rarityDocument.contentHash) {
-          settleRefusal({
-            reason: "content-hash-conflict",
-            message: "The Scene Document changed while rarity input was being prepared; reopen and retry.",
-            recoverable: true,
-          });
-          return;
-        }
-        const staged = stageRarityProviderProposal({
-          documentData: current.data,
-          documentPath: rarityDocument.documentPath,
-          expectedContentHash: rarityDocument.contentHash,
-          profile,
-          eventId: DESKTOP_RARITY_EVENT_ID,
-          contribution: contribution.value,
-          resolve: resolveRarityWithKernel,
-        });
-        if (!staged.ok) {
-          settleRefusal({
-            reason: staged.reason,
-            message: staged.message,
-            recoverable: true,
-          });
-          return;
-        }
-        if (staged.replayed) {
-          onProgress(Object.freeze({
-            phase: "ready",
-            percent: 100,
-            message: "The identical rarity event replayed without changing project bytes.",
-          }));
-          activeJob.status = "ready";
-          activeJob.result = Object.freeze({
-            ok: true as const,
-            kind: "rarity-proposal" as const,
-            replayed: true as const,
-            providerClass: "fixture" as const,
-            evidence: staged.evidence,
-          });
-          return;
-        }
-        const snapshot = authoringSession().proposeEdit(staged.edit);
-        if (snapshot.phase !== "reviewing" || (snapshot.diagnostics?.length ?? 0) > 0) {
-          const diagnostic = snapshot.diagnostics?.[0];
-          settleRefusal({
-            reason: diagnostic?.code ?? "RARITY_PROPOSAL_NOT_REVIEWING",
-            message: diagnostic?.message ?? "The rarity proposal did not reach Change Review.",
-            recoverable: true,
-          });
-          return;
-        }
-        rarityProposalEvidence = staged.evidence;
-        onProgress(Object.freeze({
-          phase: "ready",
-          percent: 100,
-          message: "The canonical rarity proposal is waiting in Change Review.",
-        }));
-        activeJob.status = "ready";
-        activeJob.result = Object.freeze({
-          ok: true as const,
-          kind: "rarity-proposal" as const,
-          replayed: false as const,
-          providerClass: "fixture" as const,
-          evidence: staged.evidence,
-          authoring: Object.freeze({ ...snapshot, rarityEvidence: staged.evidence }),
-        });
-      };
-      try {
-        void options.runRarityProvider({ profile, prompt: request.prompt })
-          .then(stageRarity)
-          .catch(settleRuntimeFailure);
-      } catch (error) {
-        settleRuntimeFailure(error);
-      }
-      return bridgeOk("assistant", assistantSnapshot());
-    }
-    let running: Promise<AssistantSculptResult> | undefined;
-    try {
-      running = route === "local"
-        ? runAssistantSculptAction({
-            route: "local",
-            prompt: request.prompt,
-            profile: request.profile,
-            onProgress,
-          })
-        : options.runByoAssistant?.(request);
-    } catch (error) {
-      settleRuntimeFailure(error);
-      return bridgeOk("assistant", assistantSnapshot());
-    }
-    if (running === undefined) {
-      assistantJob = previousJob;
-      return bridgeRefuse(
-        DESKTOP_BRIDGE_REFUSALS.assistantByoUnavailable,
-        "No BYOK Model Provider Port dispatched this desktop assistant job, so no work started. Local remains free and available.",
-      );
-    }
-    void running.then(
-      (result) => {
-        if (assistantJob !== activeJob || activeJob.status !== "running") return;
-        if (result.ok) {
-          if (isFixtureProviderDescriptor(result.providerEvidence?.model ?? {})) {
-            settleRefusal({
-              reason: ASSISTANT_ASK_REFUSALS.fixtureNotCloud,
-              message: "The checked-in rarity fixture cannot stand in for a configured cloud provider.",
-              recoverable: false,
-            });
-            return;
-          }
-          const providerModel = result.providerEvidence?.model;
-          lastReadyBuild = Object.freeze({
-            buildId: activeJob.jobId,
-            artifactDigest: result.artifactDigest,
-            providerClass: result.route === "byo" ? "configured" as const : "none" as const,
-            model: providerModel?.model ?? "sceneaxi-local-compiler",
-            provider: providerModel?.provider ?? "sceneaxi-local",
-            version: providerModel?.version ?? "local",
-            fallbackPolicy: "none" as const,
-          });
-          lastReadyArtifact = result.artifact;
-          activeJob.status = "ready";
-          activeJob.result = Object.freeze({
-            ok: true as const,
-            route: result.route,
-            artifactBytes: result.artifactBytes,
-            artifactDigest: result.artifactDigest,
-            inspection: result.inspection,
-            mountable: desktopAssistantScene(result.artifact),
-            providerClass: lastReadyBuild.providerClass === "configured" ? "configured" as const : "none" as const,
-            fallbackPolicy: "none" as const,
-            ...(result.providerEvidence === undefined
-              ? {}
-              : { providerEvidence: result.providerEvidence }),
-          });
-        } else {
-          settleRefusal(result);
-        }
-      },
-      settleRuntimeFailure,
-    );
-    return bridgeOk("assistant", assistantSnapshot());
-  };
-
   const commandTransaction = (
     commandId: EditorCommandId,
     response: DesktopBridgeResponse,
@@ -2519,6 +1605,16 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       ));
     }
     const input = validated.invocation.input;
+    if (validated.command.id.startsWith("assistant-")) {
+      return assistant.command(validated.command.id, input);
+    }
+    if (
+      validated.command.id.startsWith("run-") ||
+      validated.command.id.startsWith("play-") ||
+      validated.command.id === "viewport-source-set"
+    ) {
+      return play.command(validated.command.id, input);
+    }
     switch (validated.command.id) {
       case "project-new":
       case "project-open":
@@ -2928,63 +2024,6 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           bridgeOk("command", staged.data),
         );
       }
-      case "run-play": {
-        const documentPath = String(input["documentPath"] ?? DESKTOP_ACTIVE_DOCUMENT_PATH);
-        const read = readActiveDocument({ documentPath }, SCENE_DOCUMENT_REFUSALS);
-        if (!read.ok) return bridgeRefuse(read.reason, read.message);
-        const started = startPlaySession({
-          sourceDocumentPath: documentPath,
-          sourceContentHash: read.status.contentHash,
-          document: read.status.data as never,
-        });
-        if (!started.ok) return bridgeRefuse(started.reason, started.message);
-        const exercised = openPathExercise({ documentPath });
-        if (!exercised.ok) return exercised;
-        playSession = started.session;
-        return bridgeOk("command", Object.freeze({
-          ...(typeof exercised.data === "object" && exercised.data !== null
-            ? exercised.data as object
-            : {}),
-          playSession: started.session,
-        }));
-      }
-      case "run-stop": {
-        const stopped = stopPlaySession(playSession);
-        if (!stopped.ok) return bridgeRefuse(stopped.reason, stopped.message);
-        playSession = stopped.session;
-        return bridgeOk("command", stopped.session);
-      }
-      case "run-reset": {
-        if (playSession === null) {
-          return bridgeRefuse("PLAY_SESSION_MISSING", "No Play session is active.");
-        }
-        const read = readActiveDocument(
-          { documentPath: playSession.sourceDocumentPath },
-          SCENE_DOCUMENT_REFUSALS,
-        );
-        if (!read.ok) return bridgeRefuse(read.reason, read.message);
-        if (read.status.contentHash !== playSession.sourceContentHash) {
-          return bridgeRefuse(
-            "PLAY_SESSION_SOURCE_HASH_MISMATCH",
-            "Reset uses the recorded source version; authoring bytes changed after Play started.",
-          );
-        }
-        const reset = resetPlaySession(playSession, read.status.data as never);
-        if (!reset.ok) return bridgeRefuse(reset.reason, reset.message);
-        playSession = reset.session;
-        return bridgeOk("command", reset.session);
-      }
-      case "play-inspect":
-        if (playSession === null) {
-          return bridgeRefuse("PLAY_SESSION_MISSING", "No Play session is active.");
-        }
-        return bridgeOk("command", playSession);
-      case "viewport-source-set": {
-        const switched = setPlayViewportSource(playSession, String(input["source"]));
-        if (!switched.ok) return bridgeRefuse(switched.reason, switched.message);
-        playSession = switched.session;
-        return bridgeOk("command", switched.session);
-      }
       case "animation-inspect": {
         const documentPath = input["documentPath"];
         const read = readActiveDocument({ documentPath }, SCENE_DOCUMENT_REFUSALS);
@@ -3248,8 +2287,8 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           : null;
         const captured = captureProfileEvidence({
           sourceContentHash: read.status.contentHash,
-          playSessionId: playSession?.sessionId ?? null,
-          cloneDigest: playSession?.cloneDigest ?? null,
+          playSessionId: play.session()?.sessionId ?? null,
+          cloneDigest: play.session()?.cloneDigest ?? null,
           profile: input["profile"],
           ...(lastReport === null ? {} : {
             frame: {
@@ -3313,79 +2352,31 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         });
         return commandTransaction(validated.command.id, bridgeRefuse(evaluated.reason, evaluated.message));
       }
-      case "assistant-ask": {
-        const documentPath = String(input["documentPath"]);
-        const read = readActiveDocument({ documentPath }, {
-          missingMessage: "Ask requires a documentPath inside the project directory.",
-          unreadableReason: ASSISTANT_ASK_REFUSALS.staleVersion,
-        });
-        if (!read.ok) return bridgeRefuse(read.reason, read.message);
-        if (read.status.contentHash !== String(input["expectedContentHash"])) {
-          return bridgeRefuse(
-            ASSISTANT_ASK_REFUSALS.staleVersion,
-            "Ask names the exact project version being inspected.",
-          );
-        }
-        const asked = answerDesktopAssistantAsk({
-          documentData: read.status.data,
-          sourceContentHash: read.status.contentHash,
-          profile: input["profile"],
-          prompt: String(input["prompt"]),
-          scope: input["scope"],
-          playActive: playSession !== null,
-        });
-        if (!asked.ok) return commandTransaction(validated.command.id, bridgeRefuse(asked.reason, asked.message));
-        return bridgeOk("command", asked.answer);
-      }
-      case "assistant-apply-build": {
-        const documentPath = String(input["documentPath"]);
-        const read = readActiveDocument({ documentPath }, SCENE_DOCUMENT_REFUSALS);
-        if (!read.ok) return bridgeRefuse(read.reason, read.message);
-        if (lastReadyBuild === null) {
-          return commandTransaction(validated.command.id, bridgeRefuse(
-            DESKTOP_BRIDGE_REFUSALS.assistantJobMissing,
-            "Apply Build requires a validated assistant Build artifact from this session.",
-          ));
-        }
-        if (isFixtureProviderDescriptor(lastReadyBuild)) {
-          return commandTransaction(validated.command.id, bridgeRefuse(
-            ASSISTANT_ASK_REFUSALS.fixtureNotCloud,
-            "The checked-in rarity fixture cannot stand in for a configured cloud provider or a Build artifact.",
-          ));
-        }
-        const staged = stageDesktopAssistantBuild({
-          documentData: read.status.data,
-          contentHash: String(input["expectedContentHash"]),
-          documentPath,
-          entry: lastReadyBuild,
-          ...(lastReadyArtifact === null ? {} : { artifact: lastReadyArtifact }),
-        });
-        if (!staged.ok) {
-          return commandTransaction(validated.command.id, bridgeRefuse(staged.reason, staged.message));
-        }
-        const proposed = reconcilePendingAssetImport(authoringSession().proposeEdit({
-          documentPath,
-          jsonPointer: "/data",
-          expectedContentHash: String(input["expectedContentHash"]),
-          newValue: staged.documentData,
-        }));
-        return commandTransaction(validated.command.id, bridgeOk("command", {
-          catalog: staged.catalog,
-          authoringSnapshot: proposed,
-        }));
-      }
-      case "assistant-local-build":
-        return assistant({ op: "start", route: "local", mode: "build", ...input });
-      case "assistant-byo-build":
-        return assistant({ op: "start", route: "byo", mode: "build", ...input });
-      case "assistant-local-agent":
-        return assistant({ op: "start", route: "local", mode: "agent", ...input });
-      case "assistant-status":
-        return assistant({ op: "status" });
-      case "assistant-cancel":
-        return assistant({ op: "abandon", jobId: input["jobId"] });
+      default:
+        return bridgeRefuse(EDITOR_COMMAND_REFUSALS.capabilityDenied, `${validated.command.id} has no core host implementation.`);
     }
   };
+
+  const context: DesktopBridgeContext = {
+    authoringSession,
+    containedDocumentPath,
+    readActiveDocument,
+    commandTransaction,
+    reconcilePendingAssetImport,
+  };
+  const play = createDesktopPlayBridge(options, context);
+  const assistant = createDesktopAssistantBridge(options, {
+    ...context,
+    get rarityProposalEvidence() { return rarityProposalEvidence; },
+    set rarityProposalEvidence(value) { rarityProposalEvidence = value; },
+    playActive: () => play.session() !== null,
+    resolveRarityWithKernel,
+  });
+  const {
+    currentRarityAssistantResult,
+    updateRarityAssistantAuthoring,
+    retireRarityAssistantResult,
+  } = assistant;
 
   const handle = (request: unknown): DesktopBridgeResponse => {
     try {
@@ -3396,13 +2387,22 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
           "A bridge request is an object with an `action` string.",
         );
       }
+      const payload = field(request, "payload");
+      if (typeof action === "string" && (action === "assistant" || action.startsWith("assistant-"))) {
+        return assistant.handleAction(action, payload);
+      }
+      if (typeof action === "string" && (
+        action === "open-path" || action.startsWith("run-") ||
+        action.startsWith("play-") || action === "viewport-source-set"
+      )) {
+        return play.handleAction(action, payload);
+      }
       if (!isAction(action)) {
         return bridgeRefuse(
           DESKTOP_BRIDGE_REFUSALS.actionUnknown,
           `Unknown bridge action ${JSON.stringify(action)}. Known: ${DESKTOP_BRIDGE_ACTIONS.join(", ")}.`,
         );
       }
-      const payload = field(request, "payload");
 
       switch (action) {
       case "handshake":
@@ -3433,8 +2433,6 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
       }
       case "project-browser-open":
         return projectBrowserOpen(payload);
-      case "open-path":
-        return openPathExercise(payload);
       case "audio-asset": {
         if (activeCommandProfile === "kids") {
           return bridgeRefuse(OPEN_PATH_REFUSE_CODES.kidsRefused, "Kids remains refuse-only for open-path playback.");
@@ -3465,8 +2463,6 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         return assetImport(payload);
       case "ship":
         return ship(payload);
-      case "assistant":
-        return assistant(payload);
       case "authoring":
         return authoring(payload);
       case "frame-report": {
@@ -3481,6 +2477,11 @@ export function createDesktopBridge(options: DesktopBridgeOptions): DesktopBridg
         options.onFrameReport?.(report);
         return bridgeOk("frame-report", { received: true });
       }
+      default:
+        return bridgeRefuse(
+          DESKTOP_BRIDGE_REFUSALS.actionUnknown,
+          `Unknown bridge action ${JSON.stringify(action)}. Known: ${DESKTOP_BRIDGE_ACTIONS.join(", ")}.`,
+        );
       }
     } catch (error) {
       if (error instanceof DesktopProjectMutationOwnerError) {

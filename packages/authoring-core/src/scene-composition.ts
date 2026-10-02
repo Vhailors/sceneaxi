@@ -426,9 +426,19 @@ function remapComposedScenePath(
   return `$.placements[${String(placementIndex)}]`;
 }
 
-/** Byte-canonical form used by scene evidence and golden fixtures. */
+function storedScene(scene: ComposedScene) {
+  return {
+    ...scene,
+    instances: scene.instances.map((instance) => instance.kind === "node"
+      ? Object.fromEntries(Object.entries(instance).filter(([key]) => key !== "artifact" && key !== "artifactId"))
+      : instance),
+  };
+}
+
+/** Byte-canonical stored form; runtime-only node artifacts never reach disk. */
 export function serializeComposedScene(scene: ComposedScene) {
-  return `${canonicalJson(scene as unknown as JsonValue)}\n`;
+  // SAFETY: the typed scene consists entirely of JSON fields; storedScene only omits fields.
+  return `${canonicalJson(storedScene(scene) as JsonValue)}\n`;
 }
 
 /** Project a ComposedScene into the existing text-canonical document contract. */
@@ -442,7 +452,8 @@ export function sceneDocumentFromComposedScene(
   const base = {
     id: normalizedOptions.documentId ?? `${scene.sceneId}-scene`,
     data: {
-      [COMPOSED_SCENE_DOCUMENT_DATA_KEY]: scene as unknown as JsonValue,
+      // SAFETY: the scene has only JSON fields; this projection omits runtime node artifacts.
+      [COMPOSED_SCENE_DOCUMENT_DATA_KEY]: storedScene(scene) as JsonValue,
     },
   } as const;
   const document = normalizedOptions.title === undefined
@@ -570,6 +581,11 @@ export function composeScene(
   );
   const instances: ComposedSceneInstance[] = [];
   for (const placement of resolved.value) {
+    if (placement.kind === "node") {
+      instances.push(placement);
+      continue;
+    }
+
     const artifact = artifacts.get(placement.artifactId);
     if (artifact === undefined) {
       const intakeIndex = intakeIndexByInstanceId.get(placement.instanceId);

@@ -513,6 +513,9 @@ export {
   editorShellAssistantModeLabel,
   EDITOR_SHELL_ASSISTANT_STATES,
   EDITOR_SHELL_CONTROL_KINDS,
+  EDITOR_SHELL_DESKTOP_ASSISTANT_INTENTS,
+  EDITOR_SHELL_DESKTOP_LAYOUT,
+  EDITOR_SHELL_DESKTOP_WORKSPACES,
   EDITOR_SHELL_DISCLOSURE,
   EDITOR_SHELL_DOCK_TAB_GATES,
   EDITOR_SHELL_DOCK_TAB_IDS,
@@ -1116,6 +1119,59 @@ export type {
   ScenePhysicsSnapshot,
   ScenePhysicsWorld,
 } from "./desktop-scene-physics.js";
+export {
+  SCENE_LIGHTS_CATALOG_KEY,
+  SCENE_LIGHTS_CATALOG_KIND,
+  SCENE_LIGHTS_REFUSALS,
+  SCENE_LIGHTS_SCHEMA_VERSION,
+  SCENE_LIGHT_KINDS,
+  applySceneLightsMutation,
+  emptySceneLightsCatalog,
+  inspectSceneLights,
+  parseSceneLightsCatalog,
+  sceneLightsCatalogDigest,
+} from "./desktop-scene-lights.js";
+export type {
+  SceneLight,
+  SceneLightsCatalog,
+  SceneLightsMutation,
+  SceneLightsRefusal,
+} from "./desktop-scene-lights.js";
+export {
+  SCENE_CAMERAS_CATALOG_KEY,
+  SCENE_CAMERAS_CATALOG_KIND,
+  SCENE_CAMERAS_REFUSALS,
+  SCENE_CAMERAS_SCHEMA_VERSION,
+  SCENE_CAMERA_KINDS,
+  applySceneCamerasMutation,
+  emptySceneCamerasCatalog,
+  inspectSceneCameras,
+  parseSceneCamerasCatalog,
+  sceneCamerasCatalogDigest,
+} from "./desktop-scene-cameras.js";
+export type {
+  SceneCamera,
+  SceneCamerasCatalog,
+  SceneCamerasMutation,
+  SceneCamerasRefusal,
+} from "./desktop-scene-cameras.js";
+export {
+  SCENE_AUDIO_CATALOG_KEY,
+  SCENE_AUDIO_CATALOG_KIND,
+  SCENE_AUDIO_REFUSALS,
+  SCENE_AUDIO_SCHEMA_VERSION,
+  applySceneAudioMutation,
+  emptySceneAudioCatalog,
+  inspectSceneAudio,
+  parseSceneAudioCatalog,
+  sceneAudioCatalogDigest,
+} from "./desktop-scene-audio.js";
+export type {
+  SceneAudioSource,
+  SceneAudioCatalog,
+  SceneAudioMutation,
+  SceneAudioRefusal,
+} from "./desktop-scene-audio.js";
 export {
   SCENE_ENVIRONMENT_CATALOG_KEY,
   SCENE_ENVIRONMENT_CATALOG_KIND,

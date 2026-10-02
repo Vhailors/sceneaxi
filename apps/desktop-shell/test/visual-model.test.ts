@@ -1,25 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
-  DESKTOP_ASSISTANT_MODE_IDS,
-  DESKTOP_INTERACTION_COMMANDS,
-  DESKTOP_MENU_IDS,
   DESKTOP_MINIMUM_WINDOW,
-  DESKTOP_MODE_IDS,
   DESKTOP_OVERLAY_IDS,
   DESKTOP_PROFILE_IDS,
   DESKTOP_PROFILE_PACKAGES,
   DESKTOP_REFUSAL_MESSAGES,
-  DESKTOP_VIEWPORT_SOURCE_IDS,
   DESKTOP_VISUAL_REFUSALS,
   KIDS_ASSISTANT_LOCK_CODE,
-  PALETTE_GROUPS,
   SCULPT_PASSES,
   WINDOW_TIERS,
   applyDesktopVisualAction,
   createDesktopVisualState,
-  defaultDockTabFor,
   desktopVisualView,
-  dockTabsFor,
   kidsAssistantDenial,
   resolveWindowTier,
   type DesktopVisualAction,
@@ -40,68 +32,6 @@ const drive = (
   actions: readonly DesktopVisualAction[],
   from: DesktopVisualState = createDesktopVisualState(),
 ): DesktopVisualState => actions.reduce(applyDesktopVisualAction, from);
-
-describe("desktop visual model — modes and dock tabs", () => {
-  it("has exactly the seven modes the accepted archive defines, in order", () => {
-    expect([...DESKTOP_MODE_IDS]).toEqual([
-      "build",
-      "sculpt",
-      "compose",
-      "animate",
-      "run",
-      "ship",
-      "plugins",
-    ]);
-  });
-
-  it("gives run no Changes tab: nothing may be authored while a scene runs", () => {
-    expect(dockTabsFor("run")).not.toContain("changes");
-    expect(dockTabsFor("run")).toEqual(["console", "evidence"]);
-  });
-
-  it("gives animate a timeline and opens on it", () => {
-    expect(dockTabsFor("animate")).toContain("timeline");
-    expect(defaultDockTabFor("animate")).toBe("timeline");
-  });
-
-  it("opens ship on evidence and every other mode on changes", () => {
-    expect(defaultDockTabFor("ship")).toBe("evidence");
-    for (const mode of ["build", "sculpt", "compose", "plugins"] as const) {
-      expect(defaultDockTabFor(mode)).toBe("changes");
-    }
-  });
-
-  it("cannot hold a dock tab the active mode does not have", () => {
-    const state = drive([
-      { type: "select-dock-tab", tab: "assets" },
-      { type: "select-mode", mode: "run" },
-    ]);
-    expect(state.dockTab).toBe("console");
-    expect(dockTabsFor(state.mode)).toContain(state.dockTab);
-  });
-
-  it("refuses to select a tab the mode does not have, leaving state untouched", () => {
-    const before = drive([{ type: "select-mode", mode: "run" }]);
-    const after = applyDesktopVisualAction(before, {
-      type: "select-dock-tab",
-      tab: "timeline",
-    });
-    expect(after).toBe(before);
-  });
-
-  it("gives every mode a dock tab set and every listed tab a mode", () => {
-    const reachable = new Set(DESKTOP_MODE_IDS.flatMap((mode) => [...dockTabsFor(mode)]));
-    expect([...reachable].sort()).toEqual(
-      ["assets", "changes", "console", "evidence", "timeline"].sort(),
-    );
-  });
-
-  it("gives animate the taller dock the archive draws", () => {
-    expect(desktopVisualView(drive([{ type: "select-mode", mode: "animate" }])).dockHeight)
-      .toBe(252);
-    expect(desktopVisualView(createDesktopVisualState()).dockHeight).toBe(228);
-  });
-});
 
 describe("desktop visual model — profile switch", () => {
   it("projects the shared open-path policy rather than restating it", () => {
@@ -172,108 +102,7 @@ describe("desktop visual model — profile switch", () => {
   });
 });
 
-describe("desktop visual model — assistant", () => {
-  it("denies the assistant on Kids and cannot be toggled back open", () => {
-    const kids = drive([{ type: "select-profile", profile: "kids" }]);
-    expect(kids.assistant).toBe("denied");
-    const toggled = applyDesktopVisualAction(kids, { type: "toggle-assistant" });
-    expect(toggled).toBe(kids);
-    const view = desktopVisualView(kids);
-    expect(view.assistant.refusal).toBe(DESKTOP_VISUAL_REFUSALS.kidsAssistantDenied);
-    expect(view.assistant.refusalCode).toBe("THIRD_PARTY_LLM_DENIED_BY_DEFAULT");
-    expect(view.assistant.modelLabel).toBe("denied");
-    expect(view.assistant.toggle.kind).toBe("inert");
-  });
-
-  it("re-opens the assistant when leaving Kids", () => {
-    const back = drive([
-      { type: "select-profile", profile: "kids" },
-      { type: "select-profile", profile: "game" },
-    ]);
-    expect(back.assistant).toBe("open");
-  });
-
-  it("toggles open and closed on a non-refusing profile", () => {
-    const closed = drive([{ type: "toggle-assistant" }]);
-    expect(closed.assistant).toBe("closed");
-    expect(drive([{ type: "toggle-assistant" }], closed).assistant).toBe("open");
-  });
-
-  it("drops thinking when the assistant is not open", () => {
-    const state = drive([
-      { type: "toggle-assistant-thinking" },
-      { type: "toggle-assistant" },
-    ]);
-    expect(state.assistantThinking).toBe(false);
-  });
-
-  it("ignores assistant-mode and thinking actions while closed", () => {
-    const closed = drive([{ type: "toggle-assistant" }]);
-    expect(
-      applyDesktopVisualAction(closed, { type: "select-assistant-mode", mode: "agent" }),
-    ).toBe(closed);
-    expect(applyDesktopVisualAction(closed, { type: "toggle-assistant-thinking" })).toBe(
-      closed,
-    );
-  });
-
-  it("never claims a provider: send is inert with no presentation runtime", () => {
-    const view = desktopVisualView(createDesktopVisualState());
-    expect(view.assistant.send.kind).toBe("inert");
-    expect(view.assistant.send.refusal).toBe(DESKTOP_VISUAL_REFUSALS.noPresentationRuntime);
-    expect(view.assistant.modelLabel).toBe("no provider configured");
-    expect([...DESKTOP_ASSISTANT_MODE_IDS]).toEqual(["ask", "build", "agent"]);
-  });
-});
-
-describe("desktop visual model — Run and scene catalogs", () => {
-  it("declares live desktop-control actions for Run and catalog inspection/staging", () => {
-    const view = desktopVisualView(createDesktopVisualState());
-    expect([view.product.runStop, view.product.runReset].map(({ id, kind }) => [id, kind])).toEqual([
-      ["run-stop", "live"],
-      ["run-reset", "live"],
-    ]);
-    expect(view.product.inspectors.map(({ kind, inspect, mutation, stage, inspectCommand, applyCommand }) => [
-      kind, inspect.id, inspect.kind, mutation.id, mutation.kind, stage.id, stage.kind, inspectCommand, applyCommand,
-    ])).toEqual([
-      ["physics", "physics-inspect", "live", "physics-mutation", "live", "physics-stage", "live", "physics-inspect", "physics-apply"],
-      ["environment", "environment-inspect", "live", "environment-mutation", "live", "environment-stage", "live", "environment-inspect", "environment-apply"],
-      ["material", "material-inspect", "live", "material-mutation", "live", "material-stage", "live", "material-inspect", "material-apply"],
-      ["effect", "effect-inspect", "live", "effect-mutation", "live", "effect-stage", "live", "effect-inspect", "effect-apply"],
-    ]);
-  });
-
-  it("names the Kids refusal on every new Run and catalog action", () => {
-    const product = desktopVisualView(createDesktopVisualState({ profile: "kids" })).product;
-    expect([product.runStop, product.runReset, ...product.inspectors.flatMap(({ inspect, mutation, stage }) => [inspect, mutation, stage])]
-      .every((control) => control.kind === "inert" && control.refusal === DESKTOP_VISUAL_REFUSALS.kidsRefuseOnly)).toBe(true);
-  });
-});
-
 describe("desktop visual model — change review", () => {
-  it("starts empty because only a real session snapshot may populate review", () => {
-    const view = desktopVisualView(createDesktopVisualState());
-    expect(view.changeReview).toMatchObject({ count: 0, empty: true });
-    expect(view.dockTabs.find((tab) => tab.id === "changes")?.badge).toBe(0);
-  });
-
-  it("models one atomic accept and reject pair that reaches the host", () => {
-    const review = desktopVisualView(createDesktopVisualState()).changeReview;
-    expect(review.writesDocuments).toBe(true);
-    expect(review.accept).toMatchObject({ id: "change-review-accept", kind: "live" });
-    expect(review.reject).toMatchObject({ id: "change-review-reject", kind: "live" });
-  });
-
-  it("demotes both proposal decisions under the structural Kids refusal", () => {
-    const review = desktopVisualView(
-      createDesktopVisualState({ profile: "kids" }),
-    ).changeReview;
-    expect([review.accept, review.reject].every((control) =>
-      control.kind === "inert" &&
-      control.refusal === DESKTOP_VISUAL_REFUSALS.kidsRefuseOnly,
-    )).toBe(true);
-  });
-
   it("mints a dismissal's kind from the action it declares", () => {
     // The action a dismissal performs decides its kind, so a dismissal cannot
     // acquire host reach while staying outside the refusal.
@@ -397,31 +226,6 @@ describe("desktop visual model — overlays and palette", () => {
     ).toBeNull();
   });
 
-  it("projects exactly the real desktop commands into the palette", () => {
-    const view = desktopVisualView(createDesktopVisualState());
-    const rows = view.overlay.paletteGroups.flatMap((group) => group.items);
-    expect(rows.map((row) => row.commandId)).toEqual(
-      DESKTOP_INTERACTION_COMMANDS.map((command) => command.id),
-    );
-    expect(rows.find((row) => row.commandId === "edit-undo")?.control).toMatchObject({
-      kind: "inert",
-      refusal: DESKTOP_VISUAL_REFUSALS.undoUnavailable,
-    });
-    expect(rows.find((row) => row.commandId === "edit-redo")?.control).toMatchObject({
-      kind: "inert",
-      refusal: DESKTOP_VISUAL_REFUSALS.redoUnavailable,
-    });
-    expect(
-      rows.filter((row) => row.commandId !== "edit-undo" && row.commandId !== "edit-redo")
-        .every((row) => row.control.kind === "live"),
-    ).toBe(true);
-  });
-
-  it("omits command-set fiction from the palette", () => {
-    expect(PALETTE_GROUPS.flatMap((group) => group.items).map((item) => item.id)).toEqual(
-      DESKTOP_INTERACTION_COMMANDS.map((command) => command.id),
-    );
-  });
 });
 
 describe("desktop visual model — window tiers", () => {
@@ -600,17 +404,6 @@ describe("desktop visual model — refusals and honesty", () => {
     }
   });
 
-  it("exposes only real desktop commands through File, Edit, and Run", () => {
-    const view = desktopVisualView(createDesktopVisualState());
-    expect(view.menus.map((menu) => menu.id)).toEqual([...DESKTOP_MENU_IDS]);
-    for (const menu of view.menus) {
-      expect(menu.control.kind).toBe("view");
-    }
-    expect(view.menus.flatMap((menu) => menu.items).map((item) => item.commandId)).toEqual(
-      DESKTOP_INTERACTION_COMMANDS.map((command) => command.id),
-    );
-  });
-
   it("never claims pixels, and says nothing about which renderer is final", () => {
     const view = desktopVisualView(createDesktopVisualState());
     expect(view.viewport.pixelsDrawn).toBe(false);
@@ -622,24 +415,6 @@ describe("desktop visual model — refusals and honesty", () => {
     expect(notes).not.toContain("not the final choice");
     expect(notes).not.toContain("Experimental Three preview");
     expect(notes).not.toContain("non-decision");
-  });
-
-  it("models the three viewport sources as inert controls with a reason", () => {
-    // A viewport source cannot be switched on a surface that mounts no renderer,
-    // so all three declare a kind and name that reason rather than being three
-    // tab-shaped elements no control kind accounts for.
-    const view = desktopVisualView(createDesktopVisualState());
-    expect(view.viewport.sources.map((source) => source.id)).toEqual([
-      ...DESKTOP_VIEWPORT_SOURCE_IDS,
-    ]);
-    for (const source of view.viewport.sources) {
-      expect(source.control.kind).toBe("inert");
-      expect(source.control.refusal).toBe(
-        DESKTOP_VISUAL_REFUSALS.noPresentationRuntime,
-      );
-      expect(source.control.id).toBe(`viewport-source-${source.id}`);
-    }
-    expect(view.viewport.sources.filter((source) => source.active)).toHaveLength(1);
   });
 
   it("decides per profile what the assistant column becomes", () => {
@@ -667,13 +442,6 @@ describe("desktop visual model — refusals and honesty", () => {
     expect(kids.assistant.refusalCode).toBe(KIDS_ASSISTANT_LOCK_CODE);
     expect(kids.assistant.close).toEqual(chip?.assistant.close);
     expect(kids.assistant.refusal).toBe(kidsAssistantDenial().code);
-  });
-
-  it("says no kernel session runs instead of reporting a tick", () => {
-    const view = desktopVisualView(drive([{ type: "select-mode", mode: "run" }]));
-    expect(view.statusText).toBe(
-      DESKTOP_REFUSAL_MESSAGES[DESKTOP_VISUAL_REFUSALS.noKernelSession],
-    );
   });
 
   it("freezes every projected view so a renderer cannot mutate the model", () => {

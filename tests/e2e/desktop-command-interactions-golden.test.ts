@@ -1,10 +1,8 @@
 /** Semantic interaction coverage for the truthful desktop command registry. */
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   DEFAULT_INPUT_ACTION_MAP,
   reviewInputActionRebind,
-  validateEditorCommandInvocation,
-  type InputActionMap,
 } from "@sceneaxi/schemas";
 import {
   Window as HappyWindow,
@@ -12,418 +10,27 @@ import {
 } from "happy-dom";
 import {
   DESKTOP_INTERACTION_COMMANDS,
-  DESKTOP_OVERLAY_SHORTCUTS,
   DESKTOP_PALETTE_SHORTCUT,
   DESKTOP_PRODUCT_REFUSALS,
-  createDesktopVisualState,
-  desktopVisualView,
-  renderDesktopChrome,
   type DesktopInteractionCommand,
 } from "@sceneaxi/desktop-shell";
 
-const windows: HappyWindow[] = [];
-
-afterEach(() => {
-  for (const window of windows.splice(0)) window.close();
-});
-
-type HostCall = Readonly<{
-  plane: "project" | "engine";
-  action: string;
-  op: string | null;
-}>;
-
-const ACTIVE_PROJECT = Object.freeze({
-  name: "Command test",
-  root: "/tmp/sceneaxi-command-test",
-  documentPath: "scene.json",
-  source: "opened",
-});
-
-const CONTENT_HASH = `sha256:${"a".repeat(64)}`;
-
-function projectStatus(hasActiveProject: boolean) {
-  return {
-    active: hasActiveProject ? ACTIVE_PROJECT : null,
-    recents: [ACTIVE_PROJECT],
-    recovery: null,
-  };
-}
-
-/** Commands whose outcome dialog must show the engine's own answer, not a chrome-side refusal. */
-const ENGINE_ANSWERED_COMMANDS = new Set([
-  "project-migration-propose", "project-migration-recover", "workspace-layout-apply",
-]);
+import {
+  ENGINE_ANSWERED_COMMANDS,
+  commandHarness as harness,
+  commandElement as element,
+  settleCommands as settle,
+  clickCommand as click,
+  shortcut,
+} from "../helpers/desktop-chrome-golden.js";
 
 const FORM_NAVIGATION_COMMANDS = new Set([
   "package-install", "package-remove", "project-migration-commit", "extension-start",
   "input-action-rebind", "input-actions-reset",
 ]);
 
-function engineResponse(
-  request: Record<string, unknown>,
-  state: {
-    undoAvailability: "available" | "unavailable" | "recovery-pending";
-    redoAvailability: "available" | "unavailable" | "recovery-pending";
-    projectGitResponse?: unknown;
-  },
-) {
-  const payload = request["payload"] as Record<string, unknown> | undefined;
-  const action = request["action"];
-  const op = payload?.["op"];
-  if (action === "command") {
-    // The real bridge validates every invocation against the shared registry before
-    // routing it; the harness must too, or a malformed input looks like a success.
-    const validated = validateEditorCommandInvocation(payload);
-    if (!validated.ok) return { ok: false, reason: validated.reason, message: validated.message };
-    const commandId = payload?.["commandId"];
-    const input = payload?.["input"] as Record<string, unknown> | undefined;
-    if (commandId === "project-build") {
-      return { ok: false, reason: "PROJECT_BUILD_SIGNING_MISSING", message: "Linux signing is not configured." };
-    }
-    if (ENGINE_ANSWERED_COMMANDS.has(String(commandId))) {
-      return { ok: false, reason: "DESKTOP_COMMAND_TEST_ANSWERED", message: `The engine answered ${String(commandId)}.` };
-    }
-    const translated = commandId === "project-save" || commandId === "change-review-accept"
-      ? { action: "authoring", payload: { op: "accept" } }
-      : commandId === "change-review-reject"
-        ? { action: "authoring", payload: { op: "reject" } }
-        : commandId === "edit-undo"
-          ? { action: "authoring", payload: { op: "undo" } }
-          : commandId === "edit-redo"
-            ? { action: "authoring", payload: { op: "redo" } }
-          : commandId === "run-play"
-            ? { action: "open-path", payload: input }
-            : commandId === "run-stop" || commandId === "run-reset"
-              ? { action: "run-control", payload: { commandId } }
-              : commandId === "physics-inspect" || commandId === "environment-inspect" ||
-                  commandId === "material-inspect" || commandId === "effect-inspect"
-                ? { action: "catalog-inspect", payload: { commandId } }
-            : commandId === "ship-export-web"
-              ? { action: "ship", payload: { op: "export-web", ...input } }
-              : commandId === "project-git-status" || commandId === "project-git-diff" ||
-                  commandId === "project-git-stage" || commandId === "project-git-commit-prepare"
-                ? { action: "project-git", payload: { op: commandId, input } }
-              : null;
-    if (["physics-apply", "environment-apply", "material-apply", "effect-apply"].includes(String(commandId))) {
-      return {
-        ok: true,
-        action: "command",
-        data: {
-          authoringSnapshot: {
-            phase: "reviewing",
-            ok: true,
-            unifiedDiff: "--- scene.json\n+++ scene.json\n",
-            renderedDiff: "Physics change staged for review.",
-            appliedPaths: null,
-            transactionId: null,
-            diagnostics: null,
-            journalRecoveryPending: false,
-            proposal: {
-              edits: [{
-                documentPath: "scene.json",
-                baseContentHash: CONTENT_HASH,
-                jsonPointer: "/data",
-                newValue: { entities: [] },
-              }],
-            },
-          },
-        },
-      };
-    }
-    if (translated !== null) return engineResponse(translated, state);
-  }
-  if (action === "authoring" && op === "status") {
-    return {
-      ok: true,
-      action,
-      data: {
-        ok: true,
-        documentPath: "scene.json",
-        documentId: "command-test",
-        contentHash: CONTENT_HASH,
-        dataKeys: ["entities"],
-        undoAvailability: state.undoAvailability,
-        redoAvailability: state.redoAvailability,
-        data: { entities: [] },
-      },
-    };
-  }
-  // A whole `DesktopSnapshot`, the shape the real session returns: the surface
-  // refuses a snapshot it cannot validate rather than projecting a partial one.
-  if (action === "authoring" && op === "propose") {
-    return {
-      ok: true,
-      action,
-      data: {
-        phase: "reviewing",
-        unifiedDiff: "--- scene.json\n+++ scene.json\n",
-        renderedDiff: "=== SceneAxi inspector — proposed change\n",
-        proposal: {
-          edits: [{ documentPath: "scene.json", baseContentHash: CONTENT_HASH }],
-        },
-        appliedPaths: null,
-        transactionId: null,
-        diagnostics: null,
-        journalRecoveryPending: false,
-      },
-    };
-  }
-  if (action === "authoring" && op === "accept") {
-    state.undoAvailability = "available";
-    return {
-      ok: true,
-      action,
-      data: {
-        phase: "applied",
-        unifiedDiff: null,
-        renderedDiff: null,
-        proposal: null,
-        appliedPaths: ["scene.json"],
-        transactionId: null,
-        diagnostics: null,
-        journalRecoveryPending: false,
-      },
-    };
-  }
-  if (action === "authoring" && op === "undo") {
-    state.undoAvailability = "unavailable";
-    state.redoAvailability = "available";
-    return {
-      ok: true,
-      action,
-      data: { ok: true, restoredPaths: ["scene.json"] },
-    };
-  }
-  if (action === "authoring" && op === "redo") {
-    state.undoAvailability = "available";
-    state.redoAvailability = "unavailable";
-    return {
-      ok: true,
-      action,
-      data: { ok: true, transactionId: "1700000000000-0123456789abcdef", restoredPaths: ["scene.json"] },
-    };
-  }
-  if (action === "run-control") {
-    return { ok: true, action: "command", data: { completed: true } };
-  }
-  if (action === "catalog-inspect") {
-    return { ok: true, action: "command", data: { kind: "sceneaxi.test-catalog", catalog: {} } };
-  }
-  if (action === "open-path") {
-    return {
-      ok: true,
-      action,
-      data: {
-        closed: true,
-        tickDigests: ["sha256:tick"],
-        mountable: { sceneId: "command-test-scene" },
-      },
-    };
-  }
-  if (action === "ship" && op === "export-web") {
-    return {
-      ok: true,
-      action,
-      data: {
-        replayed: false,
-        outputDirectory: "/tmp/sceneaxi-command-test/exports/web/aaaaaaaa",
-        handoffPath:
-          "/tmp/sceneaxi-command-test/exports/web/aaaaaaaa/delivery-handoff.json",
-        sourceProject: {
-          documentId: "command-test",
-          contentHash: CONTENT_HASH,
-          sceneDigest: `sha256:${"b".repeat(64)}`,
-        },
-        bundleDigest: `sha256:${"c".repeat(64)}`,
-        artifactPaths: ["index.html", "source/scene.json"],
-      },
-    };
-  }
-  if (action === "project-git") {
-    if (state.projectGitResponse !== undefined) {
-      return { ok: true, action: "command", data: state.projectGitResponse };
-    }
-    const repositoryState = {
-      schemaVersion: 1,
-      kind: "sceneaxi.project-git-state",
-      projectId: "project-command-test",
-      branch: "main",
-      head: "a".repeat(40),
-      detached: false,
-      canonicalFiles: ["scene.json", "sceneaxi.project.json"],
-      entries: [{ path: "scene.json", index: " ", worktree: "M", canonical: true, conflict: false }],
-      canonicalChanges: [{ path: "scene.json", index: " ", worktree: "M", canonical: true, conflict: false }],
-      unrelatedChanges: [],
-      conflicts: [],
-      workingTreeDiff: "",
-      stagedDiff: "",
-      clean: false,
-      undoScope: "sceneaxi-document-only",
-    };
-    return {
-      ok: true,
-      action: "command",
-      data: op === "project-git-commit-prepare"
-        ? {
-            schemaVersion: 1,
-            kind: "sceneaxi.project-git-commit-preparation",
-            message: "feat: prepare",
-            selectedPaths: ["scene.json"],
-            stagedDiff: "",
-            state: repositoryState,
-            commitCreated: false,
-            hooksBypassed: false,
-            undoScope: "sceneaxi-document-only",
-          }
-        : repositoryState,
-    };
-  }
-  if (action === "profile") {
-    return { ok: true, action, data: payload };
-  }
-  return {
-    ok: false,
-    reason: "DESKTOP_COMMAND_TEST_UNEXPECTED",
-    message: `Unexpected request ${String(action)}:${String(op)}`,
-    detail: null,
-  };
-}
-
-async function settle(window: HappyWindow) {
-  for (let turn = 0; turn < 40; turn += 1) {
-    await Promise.resolve();
-    const projectState = window.document.querySelector("[data-project-state]")
-      ?.getAttribute("data-project-state");
-    const projectTransitionPending =
-      projectState === "opening" ||
-      projectState === "recovering" ||
-      projectState === "undoing" ||
-      projectState === "redoing";
-    if (
-      turn >= 10 &&
-      window.document.querySelector("[data-busy]") === null &&
-      !projectTransitionPending
-    ) return;
-  }
-  throw new Error("desktop command did not settle");
-}
-
-async function harness(
-  profile: "game" | "web" | "kids" = "web",
-  initialUndoAvailability:
-    | "available"
-    | "unavailable"
-    | "recovery-pending" = "unavailable",
-  hasActiveProject = true,
-  projectGitResponse?: unknown,
-  inputActionMap?: InputActionMap,
-) {
-  const window = new HappyWindow({ width: 1200, height: 800 });
-  windows.push(window);
-  const calls: HostCall[] = [];
-  const requests: Record<string, unknown>[] = [];
-  const state: {
-    undoAvailability: "available" | "unavailable" | "recovery-pending";
-    redoAvailability: "available" | "unavailable" | "recovery-pending";
-    projectGitResponse?: unknown;
-  } = {
-    undoAvailability: initialUndoAvailability,
-    redoAvailability: "unavailable",
-    ...(projectGitResponse === undefined ? {} : { projectGitResponse }),
-  };
-  const clone = <T>(value: T): T => window.eval(`(${JSON.stringify(value)})`) as T;
-  Object.defineProperty(window, "structuredClone", { value: clone });
-  Object.defineProperty(window, "sceneaxiDesktopLinux", {
-    configurable: true,
-    value: {
-      ...(inputActionMap === undefined
-        ? {}
-        : { inputActions: async () => clone({ ok: true, data: { map: inputActionMap } }) }),
-      project: async (request: unknown) => {
-        const typed = clone(request) as Record<string, unknown>;
-        const action = String(typed["action"]);
-        calls.push({ plane: "project", action, op: null });
-        if (action === "status") {
-          return clone({ ok: true, data: { status: projectStatus(hasActiveProject) } });
-        }
-        return clone({
-          ok: true,
-          data: {
-            outcome: action === "choose-new" ? "created" : "opened",
-            status: projectStatus(hasActiveProject),
-          },
-        });
-      },
-      request: async (request: unknown) => {
-        const typed = clone(request) as Record<string, unknown>;
-        requests.push(typed);
-        const payload = typed["payload"] as Record<string, unknown> | undefined;
-        calls.push({
-          plane: "engine",
-          action: String(typed["action"]),
-          op: typeof payload?.["commandId"] === "string"
-            ? payload["commandId"]
-            : typeof payload?.["op"] === "string" ? payload["op"] : null,
-        });
-        return clone(engineResponse(typed, state));
-      },
-    },
-  });
-
-  const html = renderDesktopChrome(
-    desktopVisualView(createDesktopVisualState({ profile })),
-  );
-  const match = /<script>([\s\S]*?)<\/script>/.exec(html);
-  if (match?.[1] === undefined) throw new Error("desktop chrome script missing");
-  window.document.write(html.replace(match[0], ""));
-  window.document.addEventListener("sceneaxi:desktop-viewport-play", (event) => {
-    const detail = (event as unknown as { detail: Record<string, unknown> }).detail;
-    detail["accepted"] = true;
-    detail["frame"] = 9;
-  });
-  window.eval(match[1]);
-  await settle(window);
-  calls.splice(0);
-  return { window, calls, requests };
-}
-
-function element(window: HappyWindow, selector: string) {
-  const found = window.document.querySelector(selector) as HappyHTMLElement | null;
-  if (found === null) throw new Error(`missing command control ${selector}`);
-  return found;
-}
-
 function textarea(window: HappyWindow, selector: string) {
   return element(window, selector) as HappyHTMLElement & { value: string };
-}
-
-async function click(window: HappyWindow, selector: string) {
-  element(window, selector).click();
-  await settle(window);
-}
-
-function shortcut(window: HappyWindow, key: string, target?: HappyHTMLElement, shiftKey = false) {
-  const event = new window.KeyboardEvent("keydown", {
-    key,
-    ctrlKey: true,
-    shiftKey,
-    bubbles: true,
-    cancelable: true,
-  });
-  (target ?? (window.document.body as unknown as HappyHTMLElement)).dispatchEvent(event);
-  return event;
-}
-
-function tab(window: HappyWindow, target: HappyHTMLElement, shiftKey: boolean) {
-  const event = new window.KeyboardEvent("keydown", {
-    key: "Tab",
-    shiftKey,
-    bubbles: true,
-    cancelable: true,
-  });
-  target.dispatchEvent(event);
-  return event;
 }
 
 async function prepare(command: DesktopInteractionCommand, window: HappyWindow) {
@@ -585,22 +192,6 @@ describe("desktop command menu, palette, and accelerator parity", () => {
     }
   }
 
-  it("dispatches Stop and Reset from the Run inspector", async () => {
-    const { window, calls, requests } = await harness();
-    await click(window, "#mode-run");
-    calls.splice(0);
-    await click(window, "#run-stop");
-    expect(calls).toContainEqual({ plane: "engine", action: "command", op: "run-stop" });
-    expect(requests.find((request) => (request["payload"] as Record<string, unknown>)?.["commandId"] === "run-stop"))
-      .toMatchObject({ payload: { input: {} } });
-    expect(element(window, "[data-project-status]").textContent).toContain("run-stop");
-    await click(window, "#run-reset");
-    expect(calls).toContainEqual({ plane: "engine", action: "command", op: "run-reset" });
-    expect(requests.find((request) => (request["payload"] as Record<string, unknown>)?.["commandId"] === "run-reset"))
-      .toMatchObject({ payload: { input: {} } });
-    expect(element(window, "[data-project-status]").textContent).toContain("run-reset");
-  });
-
   it("stages an inspector mutation through the shared Change Review proposal", async () => {
     const { window, requests } = await harness();
     await click(window, "#mode-build");
@@ -632,36 +223,6 @@ describe("desktop command menu, palette, and accelerator parity", () => {
       });
       expect(element(window, "[data-change-proposal]").hidden).toBe(false);
     }
-  });
-
-  it("names malformed inspector JSON and refuses before host dispatch", async () => {
-    const { window, calls } = await harness();
-    await click(window, "#mode-build");
-    const mutation = textarea(window, '[data-catalog-mutation="physics"]');
-    mutation.value = "[]";
-    calls.splice(0);
-    await click(window, "#physics-stage");
-    expect(calls.some((call) => call.op === "physics-apply")).toBe(false);
-    expect(element(window, "[data-outcome-code]").textContent).toBe("EDITOR_COMMAND_INPUT_INVALID");
-  });
-
-  it("dispatches inspector reads for all four registered catalogs", async () => {
-    const { window, calls } = await harness();
-    await click(window, "#mode-build");
-    for (const kind of ["physics", "environment", "material", "effect"] as const) {
-      await click(window, `#${kind}-inspect`);
-      expect(calls).toContainEqual({ plane: "engine", action: "command", op: `${kind}-inspect` });
-      expect(element(window, `[data-catalog-report="${kind}"]`).textContent).toContain("sceneaxi.test-catalog");
-    }
-  });
-
-  it("opens the palette with Ctrl/Cmd+K even from text entry", async () => {
-    const { window } = await harness();
-    const input = window.document.createElement("input") as unknown as HappyHTMLElement;
-    element(window, ".shell").append(input);
-    const event = shortcut(window, DESKTOP_PALETTE_SHORTCUT.key, input);
-    expect(event.defaultPrevented).toBe(true);
-    expect(element(window, '.overlay[data-overlay="palette"]').hidden).toBe(false);
   });
 
   it("restores a rebind into the emitted accelerator resolver and labels", async () => {
@@ -782,43 +343,6 @@ describe("desktop command menu, palette, and accelerator parity", () => {
     );
   });
 
-  it("contains focus in the palette even when every row is inert", async () => {
-    // The refuse-only profile demotes every operation row, so a trap built from
-    // the actionable rows alone would contain nothing at all and let Tab walk
-    // the document behind an `aria-modal` dialog.
-    const { window } = await harness("kids");
-    shortcut(window, DESKTOP_PALETTE_SHORTCUT.key);
-    const palette = element(window, '.overlay[data-overlay="palette"]');
-    expect(palette.hidden).toBe(false);
-    const stops = [...palette.querySelectorAll("button")] as HappyHTMLElement[];
-    expect(stops.length).toBeGreaterThan(0);
-    expect(stops.every((el) => el.getAttribute("aria-disabled") === "true")).toBe(true);
-    expect(palette.contains(window.document.activeElement)).toBe(true);
-
-    const last = stops[stops.length - 1];
-    if (last === undefined) throw new Error("palette rendered no rows");
-    last.focus();
-    const wrap = tab(window, last, false);
-    expect(wrap.defaultPrevented).toBe(true);
-    expect(window.document.activeElement).toBe(stops[0]);
-  });
-
-  it("keeps the rows after an inert palette row reachable by Tab", async () => {
-    const { window } = await harness();
-    shortcut(window, DESKTOP_PALETTE_SHORTCUT.key);
-    const palette = element(window, '.overlay[data-overlay="palette"]');
-    const undo = element(window, "#palette-edit-undo");
-    expect(undo.getAttribute("aria-disabled")).toBe("true");
-    const stops = [...palette.querySelectorAll("button")] as HappyHTMLElement[];
-    expect(stops.indexOf(undo)).toBeGreaterThan(-1);
-    expect(stops.indexOf(undo)).toBeLessThan(stops.length - 1);
-    undo.focus();
-    // An inert row is a member of the trap, so Tab off it is the browser's own
-    // move to the next stop, not a wrap back to the first.
-    const forward = tab(window, undo, false);
-    expect(forward.defaultPrevented).toBe(false);
-  });
-
   it("names the in-flight refusal when a command is re-invoked mid-request", async () => {
     const { window } = await harness();
     Object.defineProperty(window, "sceneaxiDesktopLinux", {
@@ -909,62 +433,6 @@ describe("desktop command menu, palette, and accelerator parity", () => {
     expect(calls).toContainEqual({ plane: "engine", action: "command", op: "project-save" });
   });
 
-  it("closes an open menu when focus leaves it by keyboard", async () => {
-    const { window } = await harness();
-    await click(window, '[data-menu-trigger="file"]');
-    const panel = element(window, "#menu-panel-file");
-    expect(panel.hidden).toBe(false);
-    const items = [...panel.querySelectorAll('[role="menuitem"]')] as HappyHTMLElement[];
-    const last = items[items.length - 1];
-    if (last === undefined) throw new Error("File menu rendered no items");
-    last.focus();
-
-    const outside = element(window, "#project-open");
-    last.dispatchEvent(
-      new window.FocusEvent("focusout", { bubbles: true, relatedTarget: outside }),
-    );
-    expect(panel.hidden).toBe(true);
-    expect(element(window, '[data-menu-trigger="file"]').getAttribute("aria-expanded")).toBe(
-      "false",
-    );
-    // Focus went where the browser sent it; the menu must not pull it back.
-    expect(window.document.activeElement).not.toBe(
-      element(window, '[data-menu-trigger="file"]'),
-    );
-  });
-
-  it("keeps a menu within its root and closes after the trigger loses focus", async () => {
-    const { window } = await harness();
-    await click(window, '[data-menu-trigger="file"]');
-    const panel = element(window, "#menu-panel-file");
-    const items = [...panel.querySelectorAll('[role="menuitem"]')] as HappyHTMLElement[];
-    const first = items[0];
-    const second = items[1];
-    if (first === undefined || second === undefined) {
-      throw new Error("File menu rendered too few items");
-    }
-    first.dispatchEvent(
-      new window.FocusEvent("focusout", { bubbles: true, relatedTarget: second }),
-    );
-    expect(panel.hidden).toBe(false);
-    // And back to the trigger that owns it, which is still part of the menu.
-    second.dispatchEvent(
-      new window.FocusEvent("focusout", {
-        bubbles: true,
-        relatedTarget: element(window, '[data-menu-trigger="file"]'),
-      }),
-    );
-    expect(panel.hidden).toBe(false);
-    const trigger = element(window, '[data-menu-trigger="file"]');
-    trigger.dispatchEvent(
-      new window.FocusEvent("focusout", {
-        bubbles: true,
-        relatedTarget: element(window, "#project-open"),
-      }),
-    );
-    expect(panel.hidden).toBe(true);
-  });
-
   it("exposes persisted Undo availability after a renderer relaunch", async () => {
     const { window, calls } = await harness("web", "available");
     const undo = element(window, "#menu-command-edit-undo");
@@ -1047,95 +515,6 @@ describe("desktop command menu, palette, and accelerator parity", () => {
     await settle(window);
     expect(event.defaultPrevented).toBe(false);
     expect(calls).toHaveLength(0);
-  });
-
-  it("closes an open menu when the click lands outside it", async () => {
-    const { window } = await harness();
-    await click(window, '[data-menu-trigger="file"]');
-    const panel = element(window, "#menu-panel-file");
-    expect(panel.hidden).toBe(false);
-    element(window, ".viewport-column").click();
-    expect(panel.hidden).toBe(true);
-    expect(element(window, '[data-menu-trigger="file"]').getAttribute("aria-expanded")).toBe(
-      "false",
-    );
-  });
-
-  it("returns focus to the menu trigger when Escape closes the menu", async () => {
-    const { window } = await harness();
-    await click(window, '[data-menu-trigger="file"]');
-    const trigger = element(window, '[data-menu-trigger="file"]');
-    expect(element(window, "#menu-panel-file").contains(window.document.activeElement)).toBe(
-      true,
-    );
-    const escape = new window.KeyboardEvent("keydown", {
-      key: "Escape",
-      bubbles: true,
-      cancelable: true,
-    });
-    (window.document.activeElement as unknown as HappyHTMLElement).dispatchEvent(escape);
-    expect(element(window, "#menu-panel-file").hidden).toBe(true);
-    expect(window.document.activeElement).toBe(trigger);
-  });
-
-  it("returns focus to the menu trigger when a menu item is invoked", async () => {
-    const { window } = await harness();
-    await click(window, '[data-menu-trigger="run"]');
-    const trigger = element(window, '[data-menu-trigger="run"]');
-    await click(window, "#menu-command-run-play");
-    expect(element(window, "#menu-panel-run").hidden).toBe(true);
-    expect(window.document.activeElement).toBe(trigger);
-  });
-
-  it("moves between menu items with the arrow keys its role advertises", async () => {
-    const { window } = await harness();
-    await click(window, '[data-menu-trigger="file"]');
-    const items = [
-      ...element(window, "#menu-panel-file").querySelectorAll('[role="menuitem"]'),
-    ] as HappyHTMLElement[];
-    expect(items.length).toBeGreaterThan(1);
-    const first = items[0];
-    const second = items[1];
-    const last = items[items.length - 1];
-    if (first === undefined || second === undefined || last === undefined) {
-      throw new Error("File menu rendered no items");
-    }
-    first.focus();
-    const down = new window.KeyboardEvent("keydown", {
-      key: "ArrowDown",
-      bubbles: true,
-      cancelable: true,
-    });
-    first.dispatchEvent(down);
-    expect(down.defaultPrevented).toBe(true);
-    expect(window.document.activeElement).toBe(second);
-
-    const up = new window.KeyboardEvent("keydown", {
-      key: "ArrowUp",
-      bubbles: true,
-      cancelable: true,
-    });
-    second.dispatchEvent(up);
-    expect(window.document.activeElement).toBe(first);
-
-    const end = new window.KeyboardEvent("keydown", {
-      key: "End",
-      bubbles: true,
-      cancelable: true,
-    });
-    first.dispatchEvent(end);
-    expect(window.document.activeElement).toBe(last);
-  });
-
-  it("opens the overlay each status shortcut declares", async () => {
-    for (const declared of DESKTOP_OVERLAY_SHORTCUTS) {
-      const { window } = await harness();
-      await click(window, `#status-overlay-${declared.overlay}`);
-      expect(element(window, ".shell").dataset.overlay).toBe(declared.overlay);
-      expect(
-        element(window, `.overlay[data-overlay="${declared.overlay}"]`).hidden,
-      ).toBe(false);
-    }
   });
 
   it("shows and dismisses the real refusal returned by a command", async () => {

@@ -3,6 +3,7 @@
  * and never a kernel digest. Kids is refused independently on every mutation.
  */
 import { digestSculptJson } from "./sculpt-json.js";
+import { isPlainRecord } from "./record-validation.js";
 
 export const SCENE_ENVIRONMENT_SCHEMA_VERSION = 1 as const;
 export const SCENE_ENVIRONMENT_CATALOG_KIND = "sceneaxi.scene-environment-catalog" as const;
@@ -41,6 +42,9 @@ export type SceneEnvironmentCatalog = Readonly<{
   shadows: boolean;
   fog: Readonly<{ enabled: boolean; color: string; near: number; far: number }>;
   effects: readonly (typeof SCENE_ENVIRONMENT_EFFECTS)[number][];
+  sky?: Readonly<{ top: string; horizon: string; ground: string }>;
+  shadowBudget?: Readonly<{ mapSize: 1024 | 2048; maxDistance: number }>;
+  bloom?: Readonly<{ strength: number; threshold: number; radius: number }>;
 }>;
 
 type Failure = Readonly<{ ok: false; reason: SceneEnvironmentRefusal; message: string }>;
@@ -75,7 +79,11 @@ export function parseSceneEnvironmentCatalog(value: unknown): SceneEnvironmentCa
   if (record["schemaVersion"] !== 1 || record["kind"] !== SCENE_ENVIRONMENT_CATALOG_KIND) {
     return null;
   }
-  return value as SceneEnvironmentCatalog;
+
+  // SAFETY: the catalog envelope was checked above; extensions are validated below.
+  const catalog = value as SceneEnvironmentCatalog;
+
+  return validEnvironmentExtensions(catalog) ? catalog : null;
 }
 
 export type SceneEnvironmentMutation = Readonly<{
@@ -92,7 +100,23 @@ export type SceneEnvironmentMutation = Readonly<{
   shadows?: boolean;
   fog?: Readonly<{ enabled: boolean; color: string; near: number; far: number }>;
   effects?: readonly string[];
+  sky?: NonNullable<SceneEnvironmentCatalog["sky"]>;
+  shadowBudget?: NonNullable<SceneEnvironmentCatalog["shadowBudget"]>;
+  bloom?: NonNullable<SceneEnvironmentCatalog["bloom"]>;
 }>;
+
+function validEnvironmentExtensions(fields: Pick<SceneEnvironmentCatalog, "sky" | "shadowBudget" | "bloom">): boolean {
+  const { sky, shadowBudget, bloom } = fields;
+
+  return (sky === undefined || (isPlainRecord(sky) && HEX.test(sky.top) && HEX.test(sky.horizon) && HEX.test(sky.ground)))
+    && (shadowBudget === undefined || (isPlainRecord(shadowBudget)
+      && (shadowBudget.mapSize === 1024 || shadowBudget.mapSize === 2048)
+      && Number.isFinite(shadowBudget.maxDistance) && shadowBudget.maxDistance > 0))
+    && (bloom === undefined || (isPlainRecord(bloom)
+      && Number.isFinite(bloom.strength) && bloom.strength >= 0
+      && Number.isFinite(bloom.threshold) && bloom.threshold >= 0 && bloom.threshold <= 1
+      && Number.isFinite(bloom.radius) && bloom.radius >= 0 && bloom.radius <= 1));
+}
 
 export function applySceneEnvironmentMutation(input: Readonly<{
   catalog: SceneEnvironmentCatalog;
@@ -106,6 +130,17 @@ export function applySceneEnvironmentMutation(input: Readonly<{
   }
   const next = { ...input.catalog };
   const mutation = input.mutation;
+
+  if (!validEnvironmentExtensions(mutation)) {
+    return fail(SCENE_ENVIRONMENT_REFUSALS.inputUnsupported, "Sky requires hex colours; shadows require 1024/2048 and a positive distance; bloom requires finite strength >= 0 and threshold/radius in 0..1.");
+  }
+
+  if (mutation.sky !== undefined) next.sky = Object.freeze({ ...mutation.sky });
+
+  if (mutation.shadowBudget !== undefined) next.shadowBudget = Object.freeze({ ...mutation.shadowBudget });
+
+  if (mutation.bloom !== undefined) next.bloom = Object.freeze({ ...mutation.bloom });
+
   if (mutation.background !== undefined) {
     if (!HEX.test(mutation.background)) {
       return fail(SCENE_ENVIRONMENT_REFUSALS.inputUnsupported, "Background must be a #rrggbb colour.");

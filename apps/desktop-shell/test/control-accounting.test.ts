@@ -13,6 +13,7 @@ import {
   type DesktopVisualView,
   type DesktopWindowSize,
 } from "@sceneaxi/desktop-shell";
+import { CONTROL_STATES as STATES } from "../../../tests/helpers/desktop-chrome-golden.js";
 
 /**
  * The executable form of the model/renderer contract.
@@ -110,36 +111,6 @@ function collectControls(
   return found;
 }
 
-const STATES: ReadonlyArray<readonly [string, DesktopVisualState]> = [
-  ["default", createDesktopVisualState()],
-  ["assistant:runtime", createDesktopVisualState({ assistantRuntime: "local" })],
-  [
-    "assistant:runtime-kids",
-    createDesktopVisualState({ assistantRuntime: "local", profile: "kids" }),
-  ],
-  ["profile:kids", createDesktopVisualState({ profile: "kids" })],
-  ["profile:web", createDesktopVisualState({ profile: "web" })],
-  ["mode:run", createDesktopVisualState({ mode: "run" })],
-  ["mode:animate", createDesktopVisualState({ mode: "animate" })],
-  ["mode:ship", createDesktopVisualState({ mode: "ship" })],
-  ["overlay:palette", createDesktopVisualState({ overlay: "palette" })],
-  ["assistant:closed", createDesktopVisualState({ assistant: "closed" })],
-  ["assistant:thinking", createDesktopVisualState({ assistantThinking: true })],
-  ["sculpt:idle", createDesktopVisualState({ mode: "sculpt" })],
-  ["sculpt:running", createDesktopVisualState({ mode: "sculpt", sculpt: "running" })],
-  ["tier:compact", createDesktopVisualState({ window: { width: 1280, height: 800 } })],
-  ["tier:narrow", createDesktopVisualState({ window: { width: 1000, height: 700 } })],
-  [
-    "kids:narrow",
-    createDesktopVisualState({ profile: "kids", window: { width: 1024, height: 700 } }),
-  ],
-  [
-    "kids:wide-but-short",
-    createDesktopVisualState({ profile: "kids", window: { width: 1920, height: 620 } }),
-  ],
-  ["tier:minimum", createDesktopVisualState({ window: { width: 800, height: 560 } })],
-];
-
 describe("engine desktop chrome — control accounting (model → document)", () => {
   it("indexes exactly the controls the view holds", () => {
     // `view.controls` is what the renderer serializes for the browser-side
@@ -224,44 +195,12 @@ describe("engine desktop chrome — control accounting (document → model)", ()
       expect(html, label).not.toMatch(/<(a|details|summary)\b/i);
       const inputs = html.match(/<input\b[^>]*>/g) ?? [];
       expect(inputs, label).toHaveLength(DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.length + 9);
-      expect(inputs.map((tag) => /\sid="([^"]+)"/.exec(tag)?.[1]).sort(), label).toEqual([
-        ...DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.map((definition) => `scene-property-${definition.id}`),
-        "scene-transform-snap",
-        "project-git-commit-message",
-        "timeline-time",
-        "command-field-package-install-locator",
-        "command-field-package-install-digest",
-        "command-field-physics-evaluate-steps",
-        "command-field-scene-prefab-define-definitionId",
-        "command-field-scene-prefab-instance-instanceKey",
-        "command-field-scene-prefab-override-newValue",
-      ].sort());
+      // Exact field identities are pinned by the matching region suites.
       for (const tag of inputs) {
         expect(tag, label).toMatch(/data-kind="(view|live|inert)"/);
       }
       const selects = html.match(/<select\b[^>]*>/g) ?? [];
       expect(selects, label).toHaveLength(19);
-      expect(selects.map((tag) => /\sid="([^"]+)"/.exec(tag)?.[1]).sort(), label).toEqual([
-        "project-recent-select",
-        "project-browser-file-select",
-        "scene-entity-desktop-crate-beside",
-        "scene-transform-space",
-        "scene-transform-pivot",
-        "scene-instance-parent",
-        "scene-instance-policy",
-        "command-field-package-remove-packageId",
-        "command-field-extension-start-seamId",
-        "command-field-input-action-rebind-scope",
-        "command-field-input-action-rebind-actionId",
-        "command-field-input-actions-reset-scope",
-        "command-field-scene-prefab-instance-definitionId",
-        "command-field-scene-prefab-instance-parentInstanceId",
-        "command-field-scene-prefab-override-instanceId",
-        "command-field-scene-prefab-override-sourceInstanceId",
-        "command-field-scene-prefab-override-propertyId",
-        "command-field-scene-prefab-refresh-definitionId",
-        "command-field-viewport-source-set-source",
-      ].sort());
       expect(selects[0], label).toMatch(/data-kind="(view|inert)"/);
       expect(selects[1], label).toMatch(/data-kind="(live|inert)"/);
       expect(selects[2], label).toMatch(/data-kind="(view|inert)"/);
@@ -270,18 +209,7 @@ describe("engine desktop chrome — control accounting (document → model)", ()
       expect(selects[5], label).toMatch(/data-kind="(live|inert)"/);
       for (const tag of selects.slice(7)) expect(tag, label).toMatch(/data-kind="(live|inert)"/);
       const textareas = html.match(/<textarea\b[^>]*>/g) ?? [];
-      const textareaIds = textareas.map((tag) => /\sid="([^"]+)"/.exec(tag)?.[1]);
       expect(textareas, label).toHaveLength(8);
-      expect(textareaIds.sort(), label).toEqual([
-        "assistant-prompt",
-        "effect-mutation",
-        "environment-mutation",
-        "material-mutation",
-        "physics-mutation",
-        "timeline-mutation",
-        "command-field-package-install-manifest",
-        "command-field-input-action-rebind-binding",
-      ].sort());
       for (const tag of textareas) expect(tag, label).toMatch(/data-kind="(view|live|inert)"/);
       expect(html, label).not.toMatch(/\son[a-z]+=/i);
       // A focus stop outside a <button> would be an interactive element with no

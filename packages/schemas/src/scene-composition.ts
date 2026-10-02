@@ -11,6 +11,7 @@ import {
   digestSculptJson,
   exactContractFields,
   isDenseArray,
+  sculptJsonEqual,
   snapshotSculptJson,
 } from "./sculpt-json.js";
 import {
@@ -41,9 +42,13 @@ export const SCENE_MAXIMUM_DEPTH = 8 as const;
 export const SCENE_MINIMUM_SCALE = 0.000001 as const;
 export const SCENE_MAXIMUM_COMPONENT_MAGNITUDE = 9_007_199_254 as const;
 
-export type ScenePlacement = {
+type SceneSource =
+  | { readonly kind?: never; readonly artifactId: string }
+  | { readonly kind: "node"; readonly artifactId?: never };
+
+export type ScenePlacement = SceneSource & {
+  readonly name?: string;
   readonly instanceId: string;
-  readonly artifactId: string;
   readonly parentInstanceId: string | null;
   readonly transform: SculptTransform;
 };
@@ -56,15 +61,18 @@ export type SceneCompositionIntake = {
   readonly placements: ReadonlyArray<ScenePlacement>;
 };
 
-/** A placement with its resolved depth and world transform. */
+/** Runtime projection: nodes carry a canonical, composition-owned empty artifact. */
 export type ResolvedScenePlacement = {
+  readonly name?: string;
   readonly instanceId: string;
-  readonly artifactId: string;
   readonly parentInstanceId: string | null;
   readonly depth: number;
   readonly localTransform: SculptTransform;
   readonly worldTransform: SculptTransform;
-};
+} & (
+  | { readonly kind?: never; readonly artifactId: string }
+  | { readonly kind: "node"; readonly artifactId: string; readonly artifact: SculptArtifact }
+);
 
 export type ComposedSceneInstance = ResolvedScenePlacement & {
   readonly artifact: SculptArtifact;
@@ -317,13 +325,64 @@ function byDepthThenId(
       : 0;
 }
 
-type PlacementShape = {
-  readonly instanceId: string;
-  readonly artifactId: string;
-  readonly parentInstanceId: string | null;
-  readonly transform: SculptTransform;
-  readonly sourceIndex: number;
-};
+function sceneName(name: string | undefined) {
+  return name === undefined ? {} : { name };
+}
+
+function isSceneName(value: unknown): value is string {
+  return typeof value === "string" && value === value.trim() &&
+    Array.from(value).length >= 1 && Array.from(value).length <= 64 &&
+    !/\p{Cc}/u.test(value);
+}
+
+type PlacementShape = ScenePlacement & { readonly sourceIndex: number };
+
+// D12's empty carrier is not a standalone Sculpt asset. Only this exact value
+// may bypass Sculpt's non-empty-component rule, and it is never persisted.
+const NODE_SPEC = snapshotSculptJson({
+  schemaVersion: 1,
+  kind: "sceneaxi.object-sculpt-spec",
+  id: "sceneaxi-empty-node-spec",
+  rootNodeId: "sceneaxi-empty-node-root",
+  components: [],
+  materials: [],
+  sockets: [],
+  hierarchy: [{
+    id: "sceneaxi-empty-node-root",
+    parentId: null,
+    componentId: "sceneaxi-empty-node",
+    transform: IDENTITY_TRANSFORM,
+  }],
+} as const);
+
+const NODE_SPEC_DIGEST = digestSculptJson(NODE_SPEC);
+
+const NODE_ARTIFACT: SculptArtifact = snapshotSculptJson({
+  schemaVersion: 1,
+  kind: "sceneaxi.sculpt-artifact",
+  artifactId: "sceneaxi-empty-node",
+  spec: NODE_SPEC,
+  // An inert identity, never a module to load or execute.
+  proceduralModule: {
+    moduleId: "sceneaxi/empty-node",
+    exportName: "emptyNode",
+    sourceDigest: NODE_SPEC_DIGEST,
+  },
+  runtimeHierarchy: { rootNodeId: NODE_SPEC.rootNodeId, nodes: NODE_SPEC.hierarchy },
+  evidence: {
+    method: "structured-fixture",
+    intakeDigest: NODE_SPEC_DIGEST,
+    specDigest: NODE_SPEC_DIGEST,
+    proceduralModuleDigest: NODE_SPEC_DIGEST,
+    qualityGates: [{ id: "scene-node", status: "passed", digest: NODE_SPEC_DIGEST }],
+  },
+});
+
+function sceneSource(placement: SceneSource | ResolvedScenePlacement): SceneSource {
+  if (placement.kind === "node") return { kind: "node" };
+
+  return { artifactId: placement.artifactId };
+}
 
 function validateSceneTransform(
   value: unknown,
@@ -372,11 +431,19 @@ function validatePlacementEntries(
     }
     const fields = exactContractFields(
       placement,
-      ["instanceId", "artifactId", "parentInstanceId", "transform"],
-      [],
+      placement["kind"] === "node"
+        ? ["instanceId", "kind", "parentInstanceId", "transform"]
+        : ["instanceId", "artifactId", "parentInstanceId", "transform"],
+      ["name"],
       entryPath,
     );
     if (fields !== null) return { ok: false, diagnostics: [fields] };
+    const name = placement["name"];
+
+    if (Object.hasOwn(placement, "name") && !isSceneName(name)) {
+      return refuse("invalid-field", `${entryPath}.name`, "name must be trimmed, contain 1-64 characters and no control characters.");
+    }
+
     if (!isSculptIdentifier(placement["instanceId"])) {
       return refuse(
         "invalid-field",
@@ -384,7 +451,7 @@ function validatePlacementEntries(
         "instanceId must be a lowercase slug.",
       );
     }
-    if (!isSculptIdentifier(placement["artifactId"])) {
+    if (placement["kind"] !== "node" && !isSculptIdentifier(placement["artifactId"])) {
       return refuse(
         "invalid-field",
         `${entryPath}.artifactId`,
@@ -405,8 +472,10 @@ function validatePlacementEntries(
     );
     if (!transform.ok) return transform;
     entries.push({
+      ...sceneName(isSceneName(name) ? name : undefined),
+      ...sceneSource(placement["kind"] === "node"
+        ? { kind: "node" } : { artifactId: String(placement["artifactId"]) }),
       instanceId: placement["instanceId"],
-      artifactId: placement["artifactId"],
       parentInstanceId,
       transform: transform.value,
       sourceIndex: index,
@@ -571,8 +640,11 @@ function resolveGraph(
     world.set(entry.placement.instanceId, worldTransform.value);
     resolved.push(
       snapshotSculptJson({
+        ...sceneName(entry.placement.name),
         instanceId: entry.placement.instanceId,
-        artifactId: entry.placement.artifactId,
+        ...(entry.placement.kind === "node"
+          ? { kind: "node" as const, artifactId: NODE_ARTIFACT.artifactId, artifact: NODE_ARTIFACT }
+          : { artifactId: entry.placement.artifactId }),
         parentInstanceId,
         depth: entry.depth,
         localTransform: entry.placement.transform,
@@ -692,8 +764,9 @@ export function digestScenePlacements(
 ): string {
   return digestSculptJson(
     placements.map((placement) => ({
+      ...sceneName(placement.name),
       instanceId: placement.instanceId,
-      artifactId: placement.artifactId,
+      ...sceneSource(placement),
       parentInstanceId: placement.parentInstanceId,
       depth: placement.depth,
       localTransform: placement.localTransform,
@@ -717,7 +790,17 @@ export function digestComposedScene(scene: ComposedScene): string {
     kind: scene.kind,
     sceneId: scene.sceneId,
     rootInstanceId: scene.rootInstanceId,
-    instances: scene.instances,
+    instances: scene.instances.map((instance) => instance.kind === "node"
+      ? {
+          ...sceneName(instance.name),
+          kind: instance.kind,
+          instanceId: instance.instanceId,
+          parentInstanceId: instance.parentInstanceId,
+          depth: instance.depth,
+          localTransform: instance.localTransform,
+          worldTransform: instance.worldTransform,
+        }
+      : instance),
     evidence: {
       intakeDigest: scene.evidence.intakeDigest,
       placementDigest: scene.evidence.placementDigest,
@@ -767,17 +850,22 @@ function validateInstanceEntries(
       instance,
       [
         "instanceId",
-        "artifactId",
         "parentInstanceId",
         "depth",
         "localTransform",
         "worldTransform",
-        "artifact",
+        ...(instance["kind"] === "node" ? ["kind"] : ["artifactId", "artifact"]),
       ],
-      [],
+      instance["kind"] === "node" ? ["name", "artifactId", "artifact"] : ["name"],
       path,
     );
     if (fields !== null) return { ok: false, diagnostics: [fields] };
+    const name = instance["name"];
+
+    if (Object.hasOwn(instance, "name") && !isSceneName(name)) {
+      return refuse("invalid-field", `${path}.name`, "name must be trimmed, contain 1-64 characters and no control characters.");
+    }
+
     if (!isSculptIdentifier(instance["instanceId"])) {
       return refuse(
         "invalid-field",
@@ -785,7 +873,7 @@ function validateInstanceEntries(
         "instanceId must be a lowercase slug.",
       );
     }
-    if (!isSculptIdentifier(instance["artifactId"])) {
+    if (instance["kind"] !== "node" && !isSculptIdentifier(instance["artifactId"])) {
       return refuse(
         "invalid-field",
         `${path}.artifactId`,
@@ -818,7 +906,19 @@ function validateInstanceEntries(
       if (!transform.ok) return transform;
       transforms.set(key, transform.value);
     }
-    const artifact = validateSculptArtifact(instance["artifact"]);
+    const node = instance["kind"] === "node";
+
+    if (node && (
+      (Object.hasOwn(instance, "artifactId") && instance["artifactId"] !== NODE_ARTIFACT.artifactId) ||
+      (Object.hasOwn(instance, "artifact") && !sculptJsonEqual(instance["artifact"], NODE_ARTIFACT))
+    )) {
+      return refuse("invalid-artifact", `${path}.artifact`, "A node may carry only the canonical empty runtime artifact.");
+    }
+
+    const artifact = node
+      ? { ok: true as const, value: NODE_ARTIFACT }
+      : validateSculptArtifact(instance["artifact"]);
+
     if (!artifact.ok) {
       return refuse(
         "invalid-artifact",
@@ -827,7 +927,7 @@ function validateInstanceEntries(
           "Scene instance Sculpt Artifact refused.",
       );
     }
-    if (artifact.value.artifactId !== instance["artifactId"]) {
+    if (!node && artifact.value.artifactId !== instance["artifactId"]) {
       return refuse(
         "unknown-artifact-reference",
         `${path}.artifactId`,
@@ -835,7 +935,7 @@ function validateInstanceEntries(
       );
     }
     const artifactDigest = digestSceneArtifact(artifact.value);
-    const priorArtifactDigest = digestByArtifactId.get(artifact.value.artifactId);
+    const priorArtifactDigest = node ? undefined : digestByArtifactId.get(artifact.value.artifactId);
     if (
       priorArtifactDigest !== undefined &&
       priorArtifactDigest !== artifactDigest
@@ -846,7 +946,7 @@ function validateInstanceEntries(
         `Every instance of Sculpt Artifact "${artifact.value.artifactId}" must embed the same artifact bytes.`,
       );
     }
-    digestByArtifactId.set(artifact.value.artifactId, artifactDigest);
+    if (!node) digestByArtifactId.set(artifact.value.artifactId, artifactDigest);
     const localTransform = transforms.get("localTransform");
     const worldTransform = transforms.get("worldTransform");
     if (localTransform === undefined || worldTransform === undefined) {
@@ -870,15 +970,18 @@ function validateInstanceEntries(
         "Artifact root transform cannot be represented after scene projection.",
       );
     }
-    entries.push({
+    const entry = {
+      ...sceneName(isSceneName(name) ? name : undefined),
       instanceId: instance["instanceId"],
-      artifactId: instance["artifactId"],
+      artifactId: artifact.value.artifactId,
       parentInstanceId,
       depth: Number(depth),
       localTransform,
       worldTransform,
       artifact: artifact.value,
-    });
+    };
+
+    entries.push(node ? { ...entry, kind: "node" } : entry);
   }
   return { ok: true, value: entries };
 }
@@ -1024,8 +1127,9 @@ export function validateComposedScene(
 
   const resolved = resolveGraph(
     instances.value.map((instance, sourceIndex) => ({
+      ...sceneName(instance.name),
       instanceId: instance.instanceId,
-      artifactId: instance.artifactId,
+      ...sceneSource(instance),
       parentInstanceId: instance.parentInstanceId,
       transform: instance.localTransform,
       sourceIndex,
@@ -1075,7 +1179,9 @@ export function validateComposedScene(
   const evidence = validateSceneEvidence(value["evidence"], instances.value);
   if (!evidence.ok) return evidence;
 
-  const scene = value as unknown as ComposedScene;
+  // SAFETY: all envelope fields and hydrated instances have been checked above.
+  const scene = { ...value, instances: instances.value } as ComposedScene;
+
   if (evidence.value.sceneDigest !== digestComposedScene(scene)) {
     return refuse(
       "invalid-field",
