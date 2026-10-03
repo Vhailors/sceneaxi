@@ -1,0 +1,333 @@
+[
+  {
+    "id": "EF-ASSET",
+    "title": "Six-family v2 asset pipeline with v1 compatibility and stable reload",
+    "sourceSHA": "62e84cbee60471bd2cdd5f2e0e26a8c45f598928",
+    "mainSHA": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+    "disposition": "INCORPORATED_WITH_MODERN_EQUIVALENT",
+    "proof": [
+      {
+        "sha": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+        "path": "packages/importers/src/contained-gltf.ts",
+        "lines": [
+          73,
+          95
+        ],
+        "symbol": "manifest v2, legacy v1, six families, 8 MiB/16 assets, Game/Web only"
+      },
+      {
+        "sha": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+        "path": "packages/importers/src/contained-gltf.ts",
+        "lines": [
+          473,
+          666
+        ],
+        "symbol": "image/audio/font/JSON admission"
+      },
+      {
+        "sha": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+        "path": "packages/importers/src/contained-gltf.ts",
+        "lines": [
+          1407,
+          1465
+        ],
+        "symbol": "manifestFrom compatibility validation"
+      },
+      {
+        "sha": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+        "path": "packages/importers/src/contained-gltf.ts",
+        "lines": [
+          1733,
+          2211
+        ],
+        "symbol": "stage/propose/import, stable reload, materialize/verify copies"
+      },
+      {
+        "sha": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+        "path": "desktop/linux/src/electron/main.ts",
+        "lines": [
+          765,
+          783
+        ],
+        "symbol": "native picker retains all 14 extension strings"
+      },
+      {
+        "sha": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+        "path": "packages/schemas/src/project-manifest.ts",
+        "lines": [
+          15,
+          35
+        ],
+        "symbol": "capability union includes Git/input additions"
+      },
+      {
+        "sha": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+        "path": "packages/importers/src/index.ts",
+        "lines": [
+          30,
+          55
+        ],
+        "symbol": "exports preserve old functions plus ContainedGltfNode"
+      }
+    ],
+    "canonicalTargets": [
+      "packages/importers/src/contained-gltf.ts",
+      "packages/cli/src/asset-verbs.ts",
+      "desktop/linux/src/lib/{bridge,desktop-scene,project-browser}.ts",
+      "desktop/linux/src/renderer/assistant-inspection.ts",
+      "packages/schemas/contracts/project-asset-manifest.schema.json"
+    ],
+    "patchInstructions": [
+      "Seven source files are byte/mode identical to main (inventory). Retain modern importer extensions for PNG CRC/bounded inflate, textures/nodes/animations and AssetRenderMesh alias; never restore old whole importer.",
+      "Retain manifest-v1 admission, v2 family metadata/provenance/preview, digest identity, relative contained copies, no ambient source-path identity and reload unchanged-until-review semantics.",
+      "Retain asset import/reload CLI registrations and shipped held-key treatment; do not reopen held actions. Keep modern test:golden superset and packageManager pin, not historical root package.json."
+    ],
+    "acceptance": [
+      "Retain all five asset-pipeline named tests: family admission, malformed/oversize/missing/duplicate/traversal/symlink refusal, stable reload, CLI parity, canonical-byte Play.",
+      "Retain non-model Web-export test and project-browser rows; add legacy-v1 roundtrip alongside current importer hardening tests.",
+      "No browser/native asset proof run here; descriptors and audio tests depend on EF-AUDIO-LIFECYCLE/EF-AUDIO-API."
+    ],
+    "dependencies": [
+      "EF-GIT",
+      "EF-CLOSURE"
+    ],
+    "execution": "NOT_RUN_SOURCE_REVIEW_ONLY",
+    "applicationPatchReady": false,
+    "patchForm": "Semantic hunk packet with exact immutable source diff receipts; not a blindly applicable whole-file patch."
+  },
+  {
+    "id": "EF-AUDIO-LIFECYCLE",
+    "title": "Unique per-clip Stop, decode/request generation and Kids-safe allocation",
+    "sourceSHA": "db8afa68c18e46b426e0c9ac2a846fc8a7d3fdba",
+    "mainSHA": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+    "disposition": "NEEDS_EXPLICIT_RESOLUTION",
+    "proof": [
+      {
+        "sha": "db8afa68c18e46b426e0c9ac2a846fc8a7d3fdba",
+        "path": "desktop/linux/src/renderer/viewport.ts",
+        "lines": [
+          455,
+          528
+        ],
+        "symbol": "generation map, Play, Stop, disposal"
+      },
+      {
+        "sha": "db8afa68c18e46b426e0c9ac2a846fc8a7d3fdba",
+        "path": "tests/e2e/desktop-linux-bridge-golden.test.ts",
+        "lines": [
+          3915,
+          3990
+        ],
+        "symbol": "deferred decode cancelled by Stop and Play scene change"
+      },
+      {
+        "sha": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+        "path": "desktop/linux/src/renderer/features/audio-controls.ts",
+        "lines": [
+          125,
+          183
+        ],
+        "symbol": "modern Play only; async descriptor fetch/digest/decode with disposed guard"
+      },
+      {
+        "sha": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+        "path": "desktop/linux/src/renderer/features/audio-controls.ts",
+        "lines": [
+          185,
+          232
+        ],
+        "symbol": "modern stopAll/RMS/disposal lifecycle"
+      },
+      {
+        "sha": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+        "path": "desktop/linux/src/lib/bridge.ts",
+        "lines": [
+          2436,
+          2460
+        ],
+        "symbol": "Kids denial before active manifest read and descriptor bytes response"
+      },
+      {
+        "sha": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+        "path": "desktop/linux/src/renderer/features/play-loop.ts",
+        "lines": [
+          43,
+          79
+        ],
+        "symbol": "Play mounts audio; global Stop releases"
+      },
+      {
+        "sha": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+        "path": "desktop/linux/src/renderer/features/scene-sync.ts",
+        "lines": [
+          29,
+          36
+        ],
+        "symbol": "scene-open stops audio first"
+      }
+    ],
+    "canonicalTargets": [
+      "desktop/linux/src/renderer/features/audio-controls.ts",
+      "desktop/linux/src/renderer/features/{play-loop,scene-sync}.ts",
+      "desktop/linux/src/lib/desktop-scene.ts",
+      "desktop/linux/src/lib/bridge.ts",
+      "tests/e2e/desktop-linux-bridge-golden.test.ts"
+    ],
+    "patchInstructions": [
+      "Keep main audioClips descriptor-only {assetId,mediaType,digest,byteLength}; retain audio-asset request, exact field/base64 validation and SHA-256 recomputation before decode. Do not restore inline bytesBase64 in MountableScene.",
+      "Add per-asset generation map and Stop button in mountAudioControls. Increment token at Play, per-clip Stop and teardown; check token/disposed after EVERY await (request, digest, decode/unlock) and before play/update.",
+      "Avoid stale load overwriting latest named buffer: cache decoded bytes by assetId+digest/generation or enforce generation within compatible load adapter, not only a then() playback check. Preserve post-decode live() and source.onended identity checks.",
+      "Retain lazy user-click context, profile refusal before allocation, context disposal on Stop/reset/scene/project/Kids; old standalone stopDesktopAudioOnKidsProfile export needs compatible wrapper or explicit internal-API disposition, not raw viewport resurrection.",
+      "Preserve RMS/gain instrumentation and context-close error reporting; do not replace with historical port that allows decoded buffer insertion after disposal."
+    ],
+    "acceptance": [
+      "Port deferred-decode/Stop/scene-change golden to modular services and validated descriptor responses (real digest), not invalid AQ== inline fixture.",
+      "Add out-of-order Play/Play completion, Stop-before-fetch, Stop-before-digest, Stop-before-decode, rejected request/decode/close, double dispose, profile switch before allocation and no audio in Kids tests.",
+      "Retain real native trusted gesture/RMS Stop/reset/Kids/project switch checks but do not claim this source review executes them."
+    ],
+    "dependencies": [
+      "EF-ASSET",
+      "EF-AUDIO-API",
+      "EF-CLOSURE"
+    ],
+    "execution": "NOT_RUN_SOURCE_REVIEW_ONLY",
+    "applicationPatchReady": false,
+    "patchForm": "Semantic hunk packet with exact immutable source diff receipts; not a blindly applicable whole-file patch."
+  },
+  {
+    "id": "EF-AUDIO-API",
+    "title": "Preserve main public port plus safer current PCM runtime and old public API compatibility",
+    "sourceSHA": "db8afa68c18e46b426e0c9ac2a846fc8a7d3fdba",
+    "mainSHA": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+    "disposition": "NEEDS_EXPLICIT_RESOLUTION",
+    "proof": [
+      {
+        "sha": "db8afa68c18e46b426e0c9ac2a846fc8a7d3fdba",
+        "path": "packages/engine-presentation/src/audio-playback.ts",
+        "lines": [
+          1,
+          96
+        ],
+        "symbol": "historical object-argument factory, AudioPlaybackPort, setMasterVolume, AUDIO_KIDS_DENIED"
+      },
+      {
+        "sha": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+        "path": "packages/engine-presentation/src/audio-playback.ts",
+        "lines": [
+          1,
+          79
+        ],
+        "symbol": "main function-argument createAudioPlaybackPort, setVolume/stopAll/RMS, post-decode live guard"
+      },
+      {
+        "sha": "346933c105305224d575bf9319256301c1eeabfa",
+        "path": "packages/engine-presentation/src/audio-playback.ts",
+        "lines": [
+          31,
+          77
+        ],
+        "symbol": "strict bounded PCM16 WAV decode before allocation"
+      },
+      {
+        "sha": "346933c105305224d575bf9319256301c1eeabfa",
+        "path": "packages/engine-presentation/src/audio-playback.ts",
+        "lines": [
+          87,
+          215
+        ],
+        "symbol": "createAudioPlaybackRuntime: Kids pre-allocation, gesture unlock, source cap/cleanup/visibility"
+      },
+      {
+        "sha": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+        "path": "packages/engine-presentation/src/index.ts",
+        "lines": [
+          15,
+          19
+        ],
+        "symbol": "main exports AudioContextLike/AudioNodeLike + factory"
+      },
+      {
+        "sha": "346933c105305224d575bf9319256301c1eeabfa",
+        "path": "packages/engine-presentation/test/audio-playback.test.ts",
+        "lines": [
+          29,
+          122
+        ],
+        "symbol": "four modern runtime tests: gesture/PCM/volume/hide, failed start cleanup, malformed/capacity/Kids, cleanup errors"
+      },
+      {
+        "sha": "346933c105305224d575bf9319256301c1eeabfa",
+        "path": "packages/engine-presentation/src/index.ts",
+        "lines": [
+          96,
+          96
+        ],
+        "symbol": "modern runtime public exports"
+      }
+    ],
+    "canonicalTargets": [
+      "packages/engine-presentation/src/audio-playback.ts",
+      "packages/engine-presentation/src/index.ts",
+      "packages/engine-presentation/test/audio-playback.test.ts",
+      "packages/engine-presentation/test/seam.test.ts",
+      "scripts/engine-sdk-files.json"
+    ],
+    "patchInstructions": [
+      "Three APIs are not interchangeable. Keep main factory callable shape and AudioContextLike/AudioNodeLike exports; keep modern snapshot createAudioPlaybackRuntime and its strict decoder. Introduce reviewed overload/adapter for historical object input, AudioPlaybackPort/types and setMasterVolume alias if that branch public API is accepted. Never erase either modern API with an old snapshot.",
+      "Adapter must deny Kids before context construction; preserve existing main error compatibility or explicitly version/refusal-map it. Keep await-compatible play and deterministic stop/replacement/dispose.",
+      "Do not turn strict WAV runtime into an unbounded ambient browser decoder. Main descriptor pipeline also advertises OGG/MP3; choose explicit contained codec adapter or named unsupported-format policy with backward-compatibility acceptance, not silently pretend PCM supports all three.",
+      "Preserve SDK source inventory plus public declaration/import closure for both port/runtime and any adapter. Missing snapshot tree files are not intentional deletions.",
+      "Snapshot already has packages/engine-presentation/test/audio-playback.test.ts with FOUR strict-runtime tests. Union the two historical port tests with these four; main absence of this file is not permission to discard snapshot tests.",
+      "Historical and main AudioContextLike exports have different structural contracts under the same name. Do not duplicate or silently widen that public name; an overload with explicit legacy context adapter/types or versioned compatibility namespace needs public-consumer type fixtures. Preserve modern factory and runtime interfaces unchanged."
+    ],
+    "acceptance": [
+      "Restore/adapt two audio-playback tests and seam factory export assertion; direct API imports must typecheck under historical, main and snapshot consumer shapes.",
+      "Retain modern strict RIFF envelope, PCM channels/rates/duration/byte limit, source cap, user gesture, hidden stop, unlock-dispose race and transactional node cleanup tests.",
+      "Explicit compatibility test matrix: WAV accepted; OGG/MP3 codec/refusal contract; Kids zero constructor/decode/network calls; wrong digest no decode; main RMS feature retained.",
+      "Public test source set: db8afa68 audio-playback.test.ts:5,31 + seam:26 + delayed Stop golden:3915; 346933c runtime tests:30,41,92,104; retain all as distinct assertions."
+    ],
+    "dependencies": [
+      "EF-CLOSURE"
+    ],
+    "execution": "NOT_RUN_SOURCE_REVIEW_ONLY",
+    "applicationPatchReady": false,
+    "patchForm": "Semantic hunk packet with exact immutable source diff receipts; not a blindly applicable whole-file patch."
+  },
+  {
+    "id": "EF-AUDIO-LIFECYCLE",
+    "reason": "Unique per-clip Stop, decode/request generation and Kids-safe allocation",
+    "targets": [
+      "desktop/linux/src/renderer/features/audio-controls.ts",
+      "desktop/linux/src/renderer/features/{play-loop,scene-sync}.ts",
+      "desktop/linux/src/lib/desktop-scene.ts",
+      "desktop/linux/src/lib/bridge.ts",
+      "tests/e2e/desktop-linux-bridge-golden.test.ts"
+    ],
+    "requiredDecisionOrProof": [
+      "Keep main audioClips descriptor-only {assetId,mediaType,digest,byteLength}; retain audio-asset request, exact field/base64 validation and SHA-256 recomputation before decode. Do not restore inline bytesBase64 in MountableScene.",
+      "Add per-asset generation map and Stop button in mountAudioControls. Increment token at Play, per-clip Stop and teardown; check token/disposed after EVERY await (request, digest, decode/unlock) and before play/update.",
+      "Avoid stale load overwriting latest named buffer: cache decoded bytes by assetId+digest/generation or enforce generation within compatible load adapter, not only a then() playback check. Preserve post-decode live() and source.onended identity checks.",
+      "Retain lazy user-click context, profile refusal before allocation, context disposal on Stop/reset/scene/project/Kids; old standalone stopDesktopAudioOnKidsProfile export needs compatible wrapper or explicit internal-API disposition, not raw viewport resurrection.",
+      "Preserve RMS/gain instrumentation and context-close error reporting; do not replace with historical port that allows decoded buffer insertion after disposal."
+    ]
+  },
+  {
+    "id": "EF-AUDIO-API",
+    "reason": "Preserve main public port plus safer current PCM runtime and old public API compatibility",
+    "targets": [
+      "packages/engine-presentation/src/audio-playback.ts",
+      "packages/engine-presentation/src/index.ts",
+      "packages/engine-presentation/test/audio-playback.test.ts",
+      "packages/engine-presentation/test/seam.test.ts",
+      "scripts/engine-sdk-files.json"
+    ],
+    "requiredDecisionOrProof": [
+      "Three APIs are not interchangeable. Keep main factory callable shape and AudioContextLike/AudioNodeLike exports; keep modern snapshot createAudioPlaybackRuntime and its strict decoder. Introduce reviewed overload/adapter for historical object input, AudioPlaybackPort/types and setMasterVolume alias if that branch public API is accepted. Never erase either modern API with an old snapshot.",
+      "Adapter must deny Kids before context construction; preserve existing main error compatibility or explicitly version/refusal-map it. Keep await-compatible play and deterministic stop/replacement/dispose.",
+      "Do not turn strict WAV runtime into an unbounded ambient browser decoder. Main descriptor pipeline also advertises OGG/MP3; choose explicit contained codec adapter or named unsupported-format policy with backward-compatibility acceptance, not silently pretend PCM supports all three.",
+      "Preserve SDK source inventory plus public declaration/import closure for both port/runtime and any adapter. Missing snapshot tree files are not intentional deletions.",
+      "Snapshot already has packages/engine-presentation/test/audio-playback.test.ts with FOUR strict-runtime tests. Union the two historical port tests with these four; main absence of this file is not permission to discard snapshot tests.",
+      "Historical and main AudioContextLike exports have different structural contracts under the same name. Do not duplicate or silently widen that public name; an overload with explicit legacy context adapter/types or versioned compatibility namespace needs public-consumer type fixtures. Preserve modern factory and runtime interfaces unchanged."
+    ]
+  }
+]

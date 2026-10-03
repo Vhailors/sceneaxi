@@ -1,0 +1,12 @@
+src/electron/main.ts(759,111): error TS2339: Property 'runLocalAssistant' does not exist on type 'DesktopBridgeOptions'.
+src/lib/bridge.ts(79,8): error TS2724: '"@sceneaxi/desktop-shell"' has no exported member named 'DesktopDocumentData'. Did you mean 'DesktopDocumentStatus'?
+src/lib/desktop-scene.ts(1158,55): error TS2339: Property 'instanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }> | Readonly<{ kind: "create-primitive"; primitive: "box" | "cylinder" | "sphere"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.
+  Property 'instanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }>'.
+src/lib/desktop-scene.ts(1163,51): error TS2339: Property 'instanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }> | Readonly<{ kind: "create-primitive"; primitive: "box" | "cylinder" | "sphere"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.
+  Property 'instanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }>'.
+src/lib/desktop-scene.ts(1175,55): error TS2339: Property 'parentInstanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }> | Readonly<{ kind: "create-primitive"; primitive: "box" | "cylinder" | "sphere"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.
+  Property 'parentInstanceId' does not exist on type 'Readonly<{ kind: "rename-object"; instanceId: string; name: string; }>'.
+src/lib/desktop-scene.ts(1180,55): error TS2339: Property 'parentInstanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }> | Readonly<{ kind: "create-primitive"; primitive: "box" | "cylinder" | "sphere"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.
+  Property 'parentInstanceId' does not exist on type 'Readonly<{ kind: "rename-object"; instanceId: string; name: string; }>'.
+src/lib/desktop-scene.ts(1199,31): error TS2339: Property 'transformPolicy' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }> | Readonly<{ kind: "create-primitive"; primitive: "box" | "cylinder" | "sphere"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.
+  Property 'transformPolicy' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }>'.

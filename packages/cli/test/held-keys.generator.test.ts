@@ -14,17 +14,21 @@ const fixturesDir = join(
   "fixtures",
   "held-keys",
 );
-const loadFixture = (name: string): unknown =>
-  JSON.parse(readFileSync(join(fixturesDir, name), "utf8"));
+
+const loadFixture = (name: string): FirstMateBacklogExport => {
+  // SAFETY: these checked-in generator fixtures are authored against the FirstMate export contract; malformed policy fields are intentionally exercised below.
+  return JSON.parse(readFileSync(join(fixturesDir, name), "utf8")) as FirstMateBacklogExport;
+};
 
 const epoch2Export = loadFixture(
   "firstmate-export.epoch2.json",
-) as FirstMateBacklogExport;
+);
 
 describe("registry snapshot generator (fixture-driven)", () => {
   it("emits a schema-valid snapshot from a structured backlog export", () => {
     const generated = generateRegistrySnapshot(epoch2Export);
     expect(generated.ok).toBe(true);
+
     if (!generated.ok) return;
 
     const snapshot = generated.value;
@@ -42,6 +46,7 @@ describe("registry snapshot generator (fixture-driven)", () => {
   it("derives origin and key from FirstMate hold identities (<origin>-decision-<key>)", () => {
     const generated = generateRegistrySnapshot(epoch2Export);
     expect(generated.ok).toBe(true);
+
     if (!generated.ok) return;
 
     const byKey = new Map(generated.value.keys.map((k) => [k.key, k]));
@@ -55,6 +60,7 @@ describe("registry snapshot generator (fixture-driven)", () => {
   it("emits keys in canonical (key-sorted) order so the digest is deterministic", () => {
     const generated = generateRegistrySnapshot(epoch2Export);
     expect(generated.ok).toBe(true);
+
     if (!generated.ok) return;
     const keys = generated.value.keys.map((k) => k.key);
     expect(keys).toEqual([...keys].sort());
@@ -63,6 +69,7 @@ describe("registry snapshot generator (fixture-driven)", () => {
   it("sourceDigest is verified: recomputable from the key set", () => {
     const generated = generateRegistrySnapshot(epoch2Export);
     expect(generated.ok).toBe(true);
+
     if (!generated.ok) return;
     expect(computeSourceDigest(generated.value.keys)).toBe(
       generated.value.sourceDigest,
@@ -72,16 +79,21 @@ describe("registry snapshot generator (fixture-driven)", () => {
   it("a tampered snapshot fails digest verification", () => {
     const generated = generateRegistrySnapshot(epoch2Export);
     expect(generated.ok).toBe(true);
+
     if (!generated.ok) return;
     const [first, ...rest] = generated.value.keys;
     expect(first).toBeDefined();
+
     if (first === undefined) return;
+
     const tampered = {
       ...generated.value,
       keys: [{ ...first, state: "resolved" as const, resolvedAt: first.registeredAt, decisionRecord: "tampered" }, ...rest],
     };
+
     const validation = validateRegistrySnapshot(tampered);
     expect(validation.ok).toBe(false);
+
     if (!validation.ok) {
       expect(validation.errors.join("\n")).toMatch(/digest/i);
     }
@@ -91,6 +103,7 @@ describe("registry snapshot generator (fixture-driven)", () => {
     const markdownSource = loadFixture("firstmate-export.markdown-source.json");
     const generated = generateRegistrySnapshot(markdownSource);
     expect(generated.ok).toBe(false);
+
     if (!generated.ok) {
       expect(generated.errors.join("\n")).toMatch(/markdown/i);
     }
@@ -100,12 +113,13 @@ describe("registry snapshot generator (fixture-driven)", () => {
     const generated = generateRegistrySnapshot(
       "# Decision-key registry\n\n- widget-color: open\n",
     );
+
     expect(generated.ok).toBe(false);
   });
 
   it("refuses an export without the structured-backlog format discriminator", () => {
-    const withoutFormat: Record<string, unknown> = { ...epoch2Export };
-    delete withoutFormat["format"];
+    const withoutFormat: Omit<FirstMateBacklogExport, "format"> & { format?: FirstMateBacklogExport["format"] } = { ...epoch2Export };
+    delete withoutFormat.format;
     expect(generateRegistrySnapshot(withoutFormat).ok).toBe(false);
     expect(
       generateRegistrySnapshot({ ...epoch2Export, format: "markdown-registry" })
@@ -117,7 +131,9 @@ describe("registry snapshot generator (fixture-driven)", () => {
     const regressed = generateRegistrySnapshot(epoch2Export, {
       previousRegistryEpoch: 3,
     });
+
     expect(regressed.ok).toBe(false);
+
     if (!regressed.ok) {
       expect(regressed.errors.join("\n")).toMatch(/monotonic|epoch/i);
     }
@@ -140,6 +156,7 @@ describe("registry snapshot generator (fixture-driven)", () => {
         },
       ],
     };
+
     expect(generateRegistrySnapshot(bad).ok).toBe(false);
   });
 
@@ -161,6 +178,7 @@ describe("registry snapshot generator (fixture-driven)", () => {
         },
       ],
     };
+
     expect(generateRegistrySnapshot(dup).ok).toBe(false);
   });
 
@@ -176,6 +194,7 @@ describe("registry snapshot generator (fixture-driven)", () => {
         },
       ],
     };
+
     expect(generateRegistrySnapshot(bad).ok).toBe(false);
   });
 
@@ -239,6 +258,7 @@ describe("snapshot validator (fail-closed)", () => {
   it("refuses unknown extra properties (additionalProperties: false)", () => {
     const generated = generateRegistrySnapshot(epoch2Export);
     expect(generated.ok).toBe(true);
+
     if (!generated.ok) return;
     const extended = { ...generated.value, vendorExtension: true };
     expect(validateRegistrySnapshot(extended).ok).toBe(false);

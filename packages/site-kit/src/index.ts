@@ -33,6 +33,7 @@ export const seam: PackageSeam = Object.freeze({
  * `@sceneaxi/schemas` and `@sceneaxi/authoring-core` directly.
  */
 export { COMMERCE_ACTIVATION_GATE } from "@sceneaxi/schemas";
+
 export type {
   AiGenerationDisclosure,
   AssetPackageRef,
@@ -51,6 +52,7 @@ export type {
   TransitionRecord,
   Vector3,
 } from "@sceneaxi/schemas";
+
 export type {
   MinimumE2Inspector,
   MinimumE2SaveResult,
@@ -330,45 +332,7 @@ export {
   type WebEditorOperation,
 } from "./editor-shell.js";
 
-export {
-  FOUNDATIONS_SOURCE,
-  FOUNDATIONS_VERSION,
-  FOUNDATION_ACCENT_RULE,
-  FOUNDATION_BUTTON_SIZES,
-  FOUNDATION_COLORS,
-  FOUNDATION_COLOR_LAWS,
-  FOUNDATION_CONTRAST_MINIMUMS,
-  FOUNDATION_CONTRAST_ROLES,
-  FOUNDATION_FONT_STACKS,
-  FOUNDATION_NEUTRAL_TOKENS,
-  FOUNDATION_RADII,
-  FOUNDATION_SPACING,
-  FOUNDATION_SPACING_RULE,
-  FOUNDATION_STATUSES,
-  FOUNDATION_SURFACES,
-  FOUNDATION_SURFACE_ACCENTS,
-  FOUNDATION_SURFACE_RULE,
-  FOUNDATION_TYPE_SCALE,
-  contrastRatio,
-  foundationsBaseCss,
-  foundationsCss,
-  foundationsStatusCss,
-  foundationsSurfacesCss,
-  foundationsVariablesCss,
-  meetsContrast,
-  resolveSurfaceAccent,
-  type FoundationColor,
-  type FoundationColorGroup,
-  type FoundationContrastRole,
-  type FoundationFamily,
-  type FoundationStatus,
-  type FoundationStatusId,
-  type FoundationSurface,
-  type FoundationSurfaceAccent,
-  type FoundationSurfaceAccentId,
-  type FoundationTypeStep,
-  type FoundationsCssOptions,
-} from "./design-tokens.js";
+export { FOUNDATIONS_SOURCE, FOUNDATIONS_VERSION, FOUNDATION_ACCENT_RULE, FOUNDATION_BUTTON_SIZES, FOUNDATION_COLORS, FOUNDATION_COLOR_LAWS, FOUNDATION_CONTRAST_MINIMUMS, FOUNDATION_CONTRAST_ROLES, FOUNDATION_FONT_STACKS, FOUNDATION_MOTION, FOUNDATION_NEUTRAL_TOKENS, FOUNDATION_RADII, FOUNDATION_SPACING, FOUNDATION_SPACING_RULE, FOUNDATION_STATUSES, FOUNDATION_SURFACES, FOUNDATION_SURFACE_ACCENTS, FOUNDATION_SURFACE_RULE, FOUNDATION_TYPE_SCALE, contrastRatio, foundationsBaseCss, foundationsCss, foundationsStatusCss, foundationsSurfacesCss, foundationsVariablesCss, meetsContrast, resolveSurfaceAccent, type FoundationColor, type FoundationColorGroup, type FoundationContrastRole, type FoundationFamily, type FoundationStatus, type FoundationStatusId, type FoundationSurface, type FoundationSurfaceAccent, type FoundationSurfaceAccentId, type FoundationTypeStep, type FoundationsCssOptions } from "./design-tokens.js";
 
 export {
   el,
@@ -443,3 +407,16 @@ export {
   type ChangeReviewResolution,
   type ChangeReviewRow,
 } from "./change-review.js";
+
+/** Canonical export uses the schema serializer, not a view-layer JSON encoder. */
+export { serializeDocument as serializeEditorDocument } from "@sceneaxi/schemas";
+
+export { buildOfflineWebExport, type OfflineWebExport } from "./offline-web-export.js";
+
+export { browseSiteCatalog } from "./catalog-browse.js";
+
+export { verifySiteAdminReauthentication } from "./admin-reauth.js";
+
+export { createSitePurchaseHistoryPort, type SitePurchaseHistoryPort, type SitePurchaseHistoryRequest, type SitePurchaseHistory, type SitePurchaseHistoryItem } from "./purchase-history.js";
+
+export { createDurableCatalogTestPipelineProvider, CATALOG_REGISTRY_MAX_BYTES, CATALOG_REGISTRY_MAX_EVENTS } from "./catalog-durable.js";

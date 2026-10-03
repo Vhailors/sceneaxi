@@ -1,0 +1,237 @@
+{
+  "taskid": "advisory-surface",
+  "generatedAt": "2026-10-02T11:20:20.098077+00:00",
+  "status": "FAIL",
+  "failures": [
+    "umbrella: installed Next probe failed: AssertionError [ERR_ASSERTION]: benign-SVG-decoder-blocked: undefined\n    at refusal ([eval]:39:5)\n    at async [eval]:53:3\n",
+    "catalog-game: installed Next probe failed: AssertionError [ERR_ASSERTION]: benign-SVG-decoder-blocked: undefined\n    at refusal ([eval]:39:5)\n    at async [eval]:53:3\n",
+    "catalog-web: installed Next probe failed: AssertionError [ERR_ASSERTION]: benign-SVG-decoder-blocked: undefined\n    at refusal ([eval]:39:5)\n    at async [eval]:53:3\n",
+    "kids: installed Next probe failed: AssertionError [ERR_ASSERTION]: benign-SVG-decoder-blocked: undefined\n    at refusal ([eval]:39:5)\n    at async [eval]:53:3\n"
+  ],
+  "root": "/home/devuser/Documents/Projects/sceneaxi",
+  "head": "4e532e2fbf43e9948741578ab6208a3277870405",
+  "inputFingerprint": "4f8879ecc3539d31d779b0851e97b4ca9f989a6e6dfa1d1e405659947383cc4c",
+  "inputHashes": {
+    "sites/umbrella/package.json": "8e42267c87dc22cf8b35b490b9ca17aa04b3407e275f6f1cd5cabfe2773e613b",
+    "sites/umbrella/pnpm-lock.yaml": "5933b436ba4c65f858f96fee774e48f705b7752815008794a22259abde5be75f",
+    "sites/umbrella/next.config.ts": "5986105b3f051f44bf7ba6359453238e69cdacc2336eebb035754b51c52e96f7",
+    "sites/umbrella/security-headers.json": "7b9968c37f8101213157df5d2813157ea51ae11a839c6568aff4110fa96a2b10",
+    "sites/catalog-game/package.json": "3a0ad5757a73310f8b5ff75f38c0e8184a8351ceda20d1a6ca137b934f8db9be",
+    "sites/catalog-game/pnpm-lock.yaml": "2ef913d76cb3d4fad105419214a8cb648fc6f1775ddd2fab3f29fd8876307729",
+    "sites/catalog-game/next.config.ts": "afd50a0fd2afc9cbb9f4c853b04f630c301cc92e0407e8a7b4cf1a92b56908b3",
+    "sites/catalog-game/security-headers.json": "7b9968c37f8101213157df5d2813157ea51ae11a839c6568aff4110fa96a2b10",
+    "sites/catalog-web/package.json": "a54b0f3cdeebed2d63831b61fbb06e2af1a9d5c4d4974c3518f025d91f03efa3",
+    "sites/catalog-web/pnpm-lock.yaml": "2ef913d76cb3d4fad105419214a8cb648fc6f1775ddd2fab3f29fd8876307729",
+    "sites/catalog-web/next.config.ts": "afd50a0fd2afc9cbb9f4c853b04f630c301cc92e0407e8a7b4cf1a92b56908b3",
+    "sites/catalog-web/security-headers.json": "7b9968c37f8101213157df5d2813157ea51ae11a839c6568aff4110fa96a2b10",
+    "sites/kids/package.json": "69e17388c1d89faea7d8aa406a6dd9d4e34601b7d81fbac612ced0b6d5a03979",
+    "sites/kids/pnpm-lock.yaml": "a4e118cd7edf359285b4fc604d5804787a80c85561e004a33041c146a1aeb3fb",
+    "sites/kids/next.config.ts": "d22cd720166c42474129a63293514b8334bf664c663aabc2141e4708b56635c6",
+    "sites/kids/security-headers.json": "29216d016f68a9b21d7b69e681926fbea45d3ed2cecc24b7009af6bc5a13bade"
+  },
+  "official": {
+    "url": "https://api.github.com/repos/lovell/sharp/security-advisories",
+    "sha256": "e932e645d29bcabead6bcf36ece6b6c565e636102e76b9b34adf7f2c2b53445c",
+    "freshFetchThisRun": false,
+    "ranges": [
+      {
+        "id": "GHSA-wq5f-xc86-pv6w",
+        "url": "https://github.com/lovell/sharp/security/advisories/GHSA-wq5f-xc86-pv6w",
+        "affected": "< 0.35.5",
+        "fixed": ">= 0.35.5"
+      },
+      {
+        "id": "GHSA-rgj7-g3m4-5g8c",
+        "url": "https://github.com/lovell/sharp/security/advisories/GHSA-rgj7-g3m4-5g8c",
+        "affected": "< 0.35.4",
+        "fixed": ">= 0.35.4"
+      },
+      {
+        "id": "GHSA-f88m-g3jw-g9cj",
+        "url": "https://github.com/lovell/sharp/security/advisories/GHSA-f88m-g3jw-g9cj",
+        "affected": "< 0.35.0",
+        "fixed": ">= 0.35.0"
+      },
+      {
+        "id": "GHSA-54xq-cgqr-rpm3",
+        "url": "https://github.com/lovell/sharp/security/advisories/GHSA-54xq-cgqr-rpm3",
+        "affected": "< 0.32.6",
+        "fixed": ">= 0.32.6"
+      },
+      {
+        "id": "GHSA-gp95-ppv5-3jc5",
+        "url": "https://github.com/lovell/sharp/security/advisories/GHSA-gp95-ppv5-3jc5",
+        "affected": "<= 0.30.4",
+        "fixed": ">= 0.30.5"
+      }
+    ]
+  },
+  "negativeControls": [
+    {
+      "input": "0.34.5",
+      "id": "GHSA-wq5f-xc86-pv6w",
+      "affected": true
+    },
+    {
+      "input": "0.34.5",
+      "id": "GHSA-rgj7-g3m4-5g8c",
+      "affected": true
+    },
+    {
+      "input": "0.34.5",
+      "id": "GHSA-f88m-g3jw-g9cj",
+      "affected": true
+    },
+    {
+      "input": "0.34.5",
+      "id": "GHSA-54xq-cgqr-rpm3",
+      "affected": false
+    },
+    {
+      "input": "0.34.5",
+      "id": "GHSA-gp95-ppv5-3jc5",
+      "affected": false
+    }
+  ],
+  "sites": [
+    {
+      "site": "umbrella",
+      "locked": [
+        "0.35.5"
+      ],
+      "affected": [],
+      "runtime": null,
+      "probeExit": 1,
+      "probeStderr": "AssertionError [ERR_ASSERTION]: benign-SVG-decoder-blocked: undefined\n    at refusal ([eval]:39:5)\n    at async [eval]:53:3\n",
+      "sourceImageUses": [
+        {
+          "path": "sites/umbrella/src/middleware.ts",
+          "line": 26,
+          "text": "export const config = { matcher: [\"/((?!_next/static|_next/image|favicon.ico).*)\"] };"
+        }
+      ],
+      "configImageMention": false,
+      "historicalPublishedLock": {
+        "command": [
+          "git",
+          "show",
+          "346933c105305224d575bf9319256301c1eeabfa:sites/umbrella/pnpm-lock.yaml"
+        ],
+        "exit": 0,
+        "stderr": "",
+        "sha256": "c5d308a5361af63cbfcca9268aabf601d04dceef7878560dfeb0a4ec10c9ee12",
+        "sharpVersions": [
+          "0.34.5"
+        ]
+      }
+    },
+    {
+      "site": "catalog-game",
+      "locked": [
+        "0.35.5"
+      ],
+      "affected": [],
+      "runtime": null,
+      "probeExit": 1,
+      "probeStderr": "AssertionError [ERR_ASSERTION]: benign-SVG-decoder-blocked: undefined\n    at refusal ([eval]:39:5)\n    at async [eval]:53:3\n",
+      "sourceImageUses": [
+        {
+          "path": "sites/catalog-game/src/middleware.ts",
+          "line": 26,
+          "text": "export const config = { matcher: [\"/((?!_next/static|_next/image|favicon.ico).*)\"] };"
+        }
+      ],
+      "configImageMention": false,
+      "historicalPublishedLock": {
+        "command": [
+          "git",
+          "show",
+          "346933c105305224d575bf9319256301c1eeabfa:sites/catalog-game/pnpm-lock.yaml"
+        ],
+        "exit": 0,
+        "stderr": "",
+        "sha256": "287bec5a2b9ea2b2500e339f2f57449fa2946214d79bbfc79167f81ffbfdf3d1",
+        "sharpVersions": [
+          "0.34.5"
+        ]
+      }
+    },
+    {
+      "site": "catalog-web",
+      "locked": [
+        "0.35.5"
+      ],
+      "affected": [],
+      "runtime": null,
+      "probeExit": 1,
+      "probeStderr": "AssertionError [ERR_ASSERTION]: benign-SVG-decoder-blocked: undefined\n    at refusal ([eval]:39:5)\n    at async [eval]:53:3\n",
+      "sourceImageUses": [
+        {
+          "path": "sites/catalog-web/src/middleware.ts",
+          "line": 26,
+          "text": "export const config = { matcher: [\"/((?!_next/static|_next/image|favicon.ico).*)\"] };"
+        }
+      ],
+      "configImageMention": false,
+      "historicalPublishedLock": {
+        "command": [
+          "git",
+          "show",
+          "346933c105305224d575bf9319256301c1eeabfa:sites/catalog-web/pnpm-lock.yaml"
+        ],
+        "exit": 0,
+        "stderr": "",
+        "sha256": "287bec5a2b9ea2b2500e339f2f57449fa2946214d79bbfc79167f81ffbfdf3d1",
+        "sharpVersions": [
+          "0.34.5"
+        ]
+      }
+    },
+    {
+      "site": "kids",
+      "locked": [
+        "0.35.5"
+      ],
+      "affected": [],
+      "runtime": null,
+      "probeExit": 1,
+      "probeStderr": "AssertionError [ERR_ASSERTION]: benign-SVG-decoder-blocked: undefined\n    at refusal ([eval]:39:5)\n    at async [eval]:53:3\n",
+      "sourceImageUses": [],
+      "configImageMention": false,
+      "historicalPublishedLock": {
+        "command": [
+          "git",
+          "show",
+          "346933c105305224d575bf9319256301c1eeabfa:sites/kids/pnpm-lock.yaml"
+        ],
+        "exit": 0,
+        "stderr": "",
+        "sha256": "c3d1e1c07cd7cb5b2a9ce3046959aaf2eb363cd877d3341a2e9088b3c247f7c3",
+        "sharpVersions": [
+          "0.34.5"
+        ]
+      }
+    }
+  ],
+  "executed": [
+    "official range comparison",
+    "locked/installed version compatibility",
+    "installed Next optimizer raster/refusal/URL validation",
+    "historical exact-SHA lock inspection"
+  ],
+  "deferred": [
+    {
+      "check": "production HTTP /_next/image and tracing of rebuilt exact candidate",
+      "status": "NOTRUN",
+      "reason": "heavy jobs forbidden; no existing server assumed source-matched"
+    },
+    {
+      "check": "full gate/build/browser/production exploitability",
+      "status": "NOTRUN"
+    }
+  ],
+  "subject": "Installed dependency JS/native artifacts (hashed); no site dist used; product source only statically inspected.",
+  "cleanup": "No files outside exclusive auxiliary directory, no services/ports/temp fixtures allocated.",
+  "owner": "serial integration after explicit handoff; manifests/locks security-delivery; site config sites owner",
+  "fullReviewClaim": false
+}

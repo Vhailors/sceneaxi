@@ -1,0 +1,27 @@
+[
+  {
+    "name": "build-umbrella-after",
+    "command": "pnpm --dir sites/umbrella build",
+    "exitCode": 0
+  },
+  {
+    "name": "build-catalog-game-after",
+    "command": "pnpm --dir sites/catalog-game build",
+    "exitCode": 0
+  },
+  {
+    "name": "build-catalog-web-after",
+    "command": "pnpm --dir sites/catalog-web build",
+    "exitCode": 0
+  },
+  {
+    "name": "build-kids-after",
+    "command": "pnpm --dir sites/kids build",
+    "exitCode": 0
+  },
+  {
+    "name": "owning-tests",
+    "command": "pnpm exec vitest run tests/sites/umbrella-visual.test.ts tests/sites/catalog-storefronts.test.ts tests/sites/kids-surface.test.ts tests/sites/site-seams.test.ts tests/sites/site-kit-component-collapse.test.ts packages/profile-kids/test/activity.test.ts packages/site-kit/test/design-tokens.test.ts packages/site-kit/test/final-sites-acceptance.test.ts --reporter=dot",
+    "exitCode": 0
+  }
+]

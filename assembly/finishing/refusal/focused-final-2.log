@@ -1,0 +1,75 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/tmp/sceneaxi-comprehensive-owned-xd4gdfl1[39m
+
+ [32m✓[39m apps/desktop-shell/test/visual-refinement.test.ts[2m > [22mdesktop visual refinement invariants[2m > [22muses one four-pixel content rhythm without changing structural metrics[32m 3[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-refinement.test.ts[2m > [22mdesktop visual refinement invariants[2m > [22mmakes long identities readable without losing their full text[32m 0[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-refinement.test.ts[2m > [22mdesktop visual refinement invariants[2m > [22mkeeps keyboard rings inside clipped rows and clear of filled controls[32m 1[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-refinement.test.ts[2m > [22mdesktop visual refinement invariants[2m > [22mcontains tall assistant controls and wraps unbroken result evidence[32m 0[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-refinement.test.ts[2m > [22mdesktop visual refinement invariants[2m > [22mconfirms work without painting an animated wash over the viewport[32m 6[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-refinement.test.ts[2m > [22mdesktop visual refinement invariants[2m > [22mkeeps disabled BYOK labels readable rather than compositing their opacity[32m 0[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-refinement.test.ts[2m > [22mdesktop visual refinement invariants[2m > [22mkeeps popover rings inset and scroll targets clear of clipped edges[32m 0[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-refinement.test.ts[2m > [22mdesktop visual refinement invariants[2m > [22mseparates dense evidence rows without abbreviating hashes[32m 1[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-refinement.test.ts[2m > [22mdesktop visual refinement invariants[2m > [22mdistinguishes empty guidance, stable work status and returned evidence[32m 1[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-refinement.test.ts[2m > [22mdesktop visual refinement invariants[2m > [22mconfirms pressed controls without changing inert controls or moving glyphs[32m 0[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-refinement.test.ts[2m > [22mdesktop visual refinement invariants[2m > [22mframes BYOK refusal details and keeps reduced-motion feedback still[32m 5[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-model.test.ts[2m > [22mdesktop visual model — profile switch[2m > [22mprojects the shared open-path policy rather than restating it[32m 7[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-model.test.ts[2m > [22mdesktop visual model — profile switch[2m > [22mmarks exactly one profile refuse-only, and it is Kids[32m 2[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-model.test.ts[2m > [22mdesktop visual model — profile switch[2m > [22mrefuses the whole editor body on Kids, with the policy's own sentence[32m 3[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-model.test.ts[2m > [22mdesktop visual model — profile switch[2m > [22mkeeps Game and Website driveable[32m 4[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-model.test.ts[2m > [22mdesktop visual model — profile switch[2m > [22mcovers every declared profile id[32m 1[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-model.test.ts[2m > [22mdesktop visual model — change review[2m > [22mmints a dismissal's kind from the action it declares[32m 2[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-model.test.ts[2m > [22mdesktop visual model — change review[2m > [22mdemotes every acting dismissal under the structural Kids refusal[32m 1[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-model.test.ts[2m > [22mdesktop visual model — sculpt run[2m > [22mstarts a run in sculpt mode at pass one[32m 1[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-model.test.ts[2m > [22mdesktop visual model — sculpt run[2m > [22madvances within a pass and rolls into the next[32m 3[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-model.test.ts[2m > [22mdesktop visual model — sculpt run[2m > [22mclamps the pass index to the five-pass plan[32m 1[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-model.test.ts[2m > [22mdesktop visual model — sculpt run[2m > [22mignores advance while idle[32m 0[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-model.test.ts[2m > [22mdesktop visual model — sculpt run[2m > [22mkeeps the pure preview state action separate from the inert UI control[32m 1[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-model.test.ts[2m > [22mdesktop visual model — sculpt run[2m > [22mactivates Sculpt only for the mounted runtime and keeps Cancel exact-job gated[32m 2[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-model.test.ts[2m > [22mdesktop visual model — overlays and palette[2m > [22mopens and closes each overlay[32m 1[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-model.test.ts[2m > [22mdesktop visual model — overlays and palette[2m > [22mcloses an overlay when the mode changes[32m 0[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-model.test.ts[2m > [22mdesktop visual model — overlays and palette[2m > [22mkeeps outcome UI outside constructible visual state[32m 0[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-model.test.ts[2m > [22mdesktop visual model — window tiers[2m > [22mresolves each tier at its own minimum[32m 0[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-model.test.ts[2m > [22mdesktop visual model — window tiers[2m > [22mrefuses below the declared minimum rather than laying out[32m 0[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-model.test.ts[2m > [22mdesktop visual model — window tiers[2m > [22mundocks columns outside-in, and every undocked column becomes a drawer[32m 2[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-model.test.ts[2m > [22mdesktop visual model — window tiers[2m > [22mdeclares the minimum the tier table itself uses[32m 0[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-model.test.ts[2m > [22mdesktop visual model — refusals and honesty[2m > [22mreaches every refusal in the registry from some state[32m 2[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-model.test.ts[2m > [22mdesktop visual model — refusals and honesty[2m > [22mgives every refusal a sentence[32m 0[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-model.test.ts[2m > [22mdesktop visual model — refusals and honesty[2m > [22mgives an inert control a refusal and a live control none[32m 7[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-model.test.ts[2m > [22mdesktop visual model — refusals and honesty[2m > [22mgives every control a unique id that is a legal HTML id[32m 7[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-model.test.ts[2m > [22mdesktop visual model — refusals and honesty[2m > [22mnever claims pixels, and says nothing about which renderer is final[32m 1[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-model.test.ts[2m > [22mdesktop visual model — refusals and honesty[2m > [22mdecides per profile what the assistant column becomes[32m 4[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-model.test.ts[2m > [22mdesktop visual model — refusals and honesty[2m > [22mfreezes every projected view so a renderer cannot mutate the model[32m 3[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/visual-model.test.ts[2m > [22mdesktop visual model — refusals and honesty[2m > [22mis deterministic: the same state always projects the same view[32m 5[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/legacy-editor-compat.test.ts[2m > [22mreconciled keyboard modifier matching[2m > [22madmits explicit Ctrl/Alt/Shift F12, including key fallback[32m 5[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/legacy-editor-compat.test.ts[2m > [22mreconciled keyboard modifier matching[2m > [22mrefuses missing modifiers, extra Meta, wrong key and unmodified bindings with Ctrl[32m 0[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/legacy-editor-compat.test.ts[2m > [22mreconciled keyboard modifier matching[2m > [22mpreserves primary Ctrl/Cmd and single-letter fallback without undeclared Alt/Shift[32m 0[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/legacy-editor-compat.test.ts[2m > [22mgenerated chrome audio authority boundary (not native audio)[2m > [22mconfirms only approved current game replies after synchronous denial[32m 251[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/legacy-editor-compat.test.ts[2m > [22mgenerated chrome audio authority boundary (not native audio)[2m > [22mconfirms only approved current web replies after synchronous denial[32m 160[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/minimum-window.test.ts[2m > [22mminimum-window refusal client lifecycle (DOM, not pixels)[2m > [22mfocuses the real named refusal when opened below minimum and falls back safely on restore[32m 227[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/legacy-editor-compat.test.ts[2m > [22mgenerated chrome audio authority boundary (not native audio)[2m > [22mconfirms only approved current kids replies after synchronous denial[32m 113[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/minimum-window.test.ts[2m > [22mminimum-window refusal client lifecycle (DOM, not pixels)[2m > [22mdoes not return focus to a removed opener[32m 179[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/minimum-window.test.ts[2m > [22mminimum-window refusal client lifecycle (DOM, not pixels)[2m > [22mdismisses a menu on refusal and returns to its trigger only after resizing[32m 162[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/control-accounting.test.ts[2m > [22mengine desktop chrome — control accounting (model → document)[2m > [22mindexes exactly the controls the view holds[32m 25[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/legacy-editor-compat.test.ts[2m > [22mgenerated chrome audio authority boundary (not native audio)[2m > [22mdenies refused, mismatching and cancelled project requests without restoration[33m 507[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/minimum-window.test.ts[2m > [22mminimum-window refusal client lifecycle (DOM, not pixels)[2m > [22mdismisses dialogs without reopening them and restores their original opener[32m 176[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/minimum-window.test.ts[2m > [22mminimum-window refusal client lifecycle (DOM, not pixels)[2m > [22muses either dimension, allows the exact minimum and does not steal moved focus[33m 403[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/legacy-editor-compat.test.ts[2m > [22mgenerated chrome audio authority boundary (not native audio)[2m > [22mrejects stale root, profile and generation approvals[32m 257[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/control-accounting.test.ts[2m > [22mengine desktop chrome — control accounting (model → document)[2m > [22mrenders every control the view builds, with the kind it declares[33m 402[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/control-accounting.test.ts[2m > [22mengine desktop chrome — control accounting (model → document)[2m > [22mkeeps an inert control's reason resolvable wherever it is rendered[33m 712[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/control-accounting.test.ts[2m > [22mengine desktop chrome — control accounting (document → model)[2m > [22mroutes every action button through the one button helper[33m 377[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/control-accounting.test.ts[2m > [22mengine desktop chrome — control accounting (document → model)[2m > [22mmints every rendered control id in the model[32m 283[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/control-accounting.test.ts[2m > [22mengine desktop chrome — control accounting (document → model)[2m > [22madds no interactive element the button helper cannot own[33m 326[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/control-accounting.test.ts[2m > [22mengine desktop chrome — refusal reachability at every tier[2m > [22mresolves a hidden region as hidden, so the check is not vacuous[32m 37[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/control-accounting.test.ts[2m > [22mengine desktop chrome — refusal reachability at every tier[2m > [22mkeeps the Kids lock screen and refusal region on screen at every tier[32m 111[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/control-accounting.test.ts[2m > [22mengine desktop chrome — refusal reachability at every tier[2m > [22mkeeps the product loop's own status on screen at every tier[32m 260[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/control-accounting.test.ts[2m > [22mengine desktop chrome — refusal reachability at every tier[2m > [22mrefuses the whole chrome below the minimum, and shows that refusal[32m 8[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/control-accounting.test.ts[2m > [22mengine desktop chrome — refusal reachability at every tier[2m > [22mkeeps the named refusal visible for either undersized dimension on every profile[32m 32[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/control-accounting.test.ts[2m > [22mengine desktop chrome — refusal reachability at every tier[2m > [22mhides only the size refusal at the exact minimum[32m 9[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/control-accounting.test.ts[2m > [22mengine desktop chrome — a declared kind tells the truth[2m > [22mnever declares a control live over a region its profile keeps shut[32m 235[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/control-accounting.test.ts[2m > [22mengine desktop chrome — a declared kind tells the truth[2m > [22mnever lights or presses the assistant toggle over a hidden column[32m 73[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m5 passed[39m[22m[90m (5)[39m
+[2m      Tests [22m [1m[32m66 passed[39m[22m[90m (66)[39m
+[2m   Start at [22m 13:16:31
+[2m   Duration [22m 7.76s[2m (transform 15.29s, setup 0ms, import 21.02s, tests 5.43s, environment 0ms)[22m
+

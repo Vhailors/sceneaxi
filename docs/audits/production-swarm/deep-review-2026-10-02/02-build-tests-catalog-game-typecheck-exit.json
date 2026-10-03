@@ -1,0 +1,1 @@
+{"command": "pnpm exec tsc --noEmit --incremental false -p /home/devuser/Documents/Projects/sceneaxi/sites/catalog-game/tsconfig.json", "exit": 2, "timeoutSeconds": 24}

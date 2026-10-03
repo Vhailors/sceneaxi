@@ -5,7 +5,7 @@ import type {
   SculptMountApi,
   ThreeSculptPresentationBackend,
 } from "@sceneaxi/engine-presentation";
-import type { InputActionContext, InputActionMap } from "@sceneaxi/schemas";
+import type { InputActionContext, InputActionMap, isJsonObject } from "@sceneaxi/schemas";
 import type { DesktopBridgeResponse } from "../../lib/bridge-contract.js";
 import type {
   DesktopByoConfigurationRequest,
@@ -15,8 +15,8 @@ import type { DesktopMountablePayload } from "../viewport-playback.js";
 import type { installOverlayReport } from "./overlay-report.js";
 
 export type BridgeGlobal = {
-  request(request: unknown): Promise<DesktopBridgeResponse>;
-  inputActions?(): Promise<unknown>;
+  request(request: Parameters<typeof isJsonObject>[0]): Promise<DesktopBridgeResponse>;
+  inputActions?(): Promise<DesktopBridgeResponse>;
   configureByo?: (
     request: DesktopByoConfigurationRequest,
   ) => Promise<DesktopByoConfigurationResponse>;
@@ -24,6 +24,7 @@ export type BridgeGlobal = {
 
 /** Values enter presentation only at viewport.ts; features receive its factories. */
 export type ViewportServices = {
+  readonly signal?: AbortSignal;
   readonly stage: HTMLElement;
   readonly canvas: HTMLCanvasElement;
   readonly backend: ThreeSculptPresentationBackend;

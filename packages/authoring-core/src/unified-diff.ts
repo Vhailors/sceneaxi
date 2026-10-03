@@ -6,14 +6,18 @@
 function lcsTable(a: readonly string[], b: readonly string[]): number[][] {
   const rows = a.length + 1;
   const cols = b.length + 1;
+
   const table: number[][] = Array.from({ length: rows }, () =>
     Array.from({ length: cols }, () => 0),
   );
+
   for (let i = 1; i < rows; i++) {
     const ai = a[i - 1];
     const row = table[i];
     const prev = table[i - 1];
+
     if (row === undefined || prev === undefined) continue;
+
     for (let j = 1; j < cols; j++) {
       if (ai === b[j - 1]) {
         row[j] = (prev[j - 1] ?? 0) + 1;
@@ -22,6 +26,7 @@ function lcsTable(a: readonly string[], b: readonly string[]): number[][] {
       }
     }
   }
+
   return table;
 }
 
@@ -31,13 +36,35 @@ type DiffOp =
   | { readonly kind: "add"; readonly line: string };
 
 function diffOps(a: readonly string[], b: readonly string[]): DiffOp[] {
+  // Keep historical exact LCS/tie behavior for small reviews. A quadratic
+  // table is unsafe for admitted asset documents (thousands of numeric lines).
+  // Large reviews use a complete, deterministic replacement of the changed
+  // middle; this is still a lossless unified diff, not an omitted/truncated edit.
+  if ((a.length + 1) * (b.length + 1) > 1_000_000) {
+    let prefix = 0;
+
+    while (prefix < a.length && prefix < b.length && a[prefix] === b[prefix]) prefix += 1;
+    let suffix = 0;
+
+    while (suffix < a.length - prefix && suffix < b.length - prefix && a[a.length - suffix - 1] === b[b.length - suffix - 1]) suffix += 1;
+
+    return [
+      ...a.slice(0, prefix).map((line): DiffOp => ({ kind: "equal", line })),
+      ...a.slice(prefix, a.length - suffix).map((line): DiffOp => ({ kind: "remove", line })),
+      ...b.slice(prefix, b.length - suffix).map((line): DiffOp => ({ kind: "add", line })),
+      ...a.slice(a.length - suffix).map((line): DiffOp => ({ kind: "equal", line })),
+    ];
+  }
+
   const table = lcsTable(a, b);
   const ops: DiffOp[] = [];
   let i = a.length;
   let j = b.length;
+
   while (i > 0 || j > 0) {
     const aLine = i > 0 ? a[i - 1] : undefined;
     const bLine = j > 0 ? b[j - 1] : undefined;
+
     if (i > 0 && j > 0 && aLine === bLine && aLine !== undefined) {
       ops.push({ kind: "equal", line: aLine });
       i -= 1;
@@ -56,7 +83,9 @@ function diffOps(a: readonly string[], b: readonly string[]): DiffOp[] {
       break;
     }
   }
+
   ops.reverse();
+
   return ops;
 }
 
@@ -89,14 +118,18 @@ export function unifiedDiff(
 
   const ops = diffOps(a, b);
   const hunks: string[] = [];
+
   // Single full-file hunk (simple, deterministic).
   const removeCount = ops.filter((o) => o.kind === "remove" || o.kind === "equal")
     .length;
+
   const addCount = ops.filter((o) => o.kind === "add" || o.kind === "equal")
     .length;
+
   const oldStart = a.length === 0 ? 0 : 1;
   const newStart = b.length === 0 ? 0 : 1;
   hunks.push(`@@ -${oldStart},${removeCount} +${newStart},${addCount} @@`);
+
   for (const op of ops) {
     if (op.kind === "equal") hunks.push(` ${op.line}`);
     else if (op.kind === "remove") hunks.push(`-${op.line}`);
@@ -114,5 +147,6 @@ function stripTrailingEmpty(lines: string[]): string[] {
   if (lines.length > 0 && lines[lines.length - 1] === "") {
     return lines.slice(0, -1);
   }
+
   return lines;
 }

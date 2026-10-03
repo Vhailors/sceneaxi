@@ -1,0 +1,43 @@
+{
+  "task": "web-catalog-ui",
+  "root": "/home/devuser/Documents/Projects/sceneaxi",
+  "owner": "bg-119",
+  "status": "IMPLEMENTED_SCOPED_PROOF_PASS",
+  "sourceHandback": true,
+  "handbackTo": ["parent", "bg-109"],
+  "furtherSourceEdits": false,
+  "files": [
+    {"path": "sites/catalog-web/src/app/page.tsx", "beforeSha256": "4678f5b6de751070888cfda6aab396cfda9ba5e1d6e590c9e1d4692ae706a719", "afterSha256": "c563ff3961fccf4057e7ccf4c94f43181c397aafd5437c8b4444e37906c4ac36", "symbols": ["renderSearchControls:20-49 (new local helper)", "ShowroomPage:69-213", "isSearchText:15-17 (unchanged)", "generateMetadata:51-55 (unchanged implementation)"], "change": "Bounded scalar-safe recovery GET form and descriptive/invalid state; only named invalid query caught, unexpected errors propagate; full-inventory facet context and differentiated empty statuses; Web-specific metadata-only preview/intake help using actual existing publish route"},
+    {"path": "sites/catalog-web/src/app/globals.css", "beforeSha256": "a6b2238ee1e56f52edbedaa3604adbc39d4bf7d4012ba83698e352d291cbe9e3", "afterSha256": "713f178671a25599f46e4b837a7dd6b75da12baf648b24271c85c865df30d4aa", "selectors": [".catalog-controls", "#catalog-search-help", ".card-head", ".card-price", "@media (min-width: 30rem)", "@media (forced-colors: active) :focus-visible"], "change": "Exact peer-coordinated Game suffix; mobile-first full-width recovery/browse controls in DOM order, min-width regrouping, wrapping card prices, forced-colors focus; unchanged Web identity prefix"},
+    {"path": "sites/catalog-web/src/app/_components/listing-card.tsx", "beforeSha256": "dca2bc47524bd82238188774e4fe0e02ceb8ad4e8a4e2a94080ccf2b0b92bfc8", "afterSha256": "e2f52a6349e33e971d5f2e0e703c0fd94d0eca2d815a7b49c49655eb6019956e", "symbols": ["ListingCard:20-64"], "change": "Exact Game component mirror; regular and compact cards conditionally describe current refused purchase availability"},
+    {"path": "sites/catalog-web/test/catalog-ux-regression.test.ts", "new": true, "afterSha256": "8a67a9c54f737ea47ad6ed355efbb6cd6efc0539f55a8fe920ac2f0b9bdbe8a4", "change": "17 executable Node source-backed SSR/public helper oracles; loader reused from capacity harness pattern with no evidence writes/mocks/provider calls"}
+  ],
+  "confirmedGaps": ["invalid query removed editable recovery controls", "filtered inventory facets disappeared on no match", "empty inventory was mislabeled as search no-match", "search help/results IDREF association absent", "metadata-only preview/intake guidance absent beside browse", "regular/compact cards lacked clear purchase-unavailable action copy", "mobile selects shared half-width tracks; forced-colors focus not explicit"],
+  "preserved": ["readonly scalar guard", "configured canonical origins", "semantic GET and query field names", "public helper rejection of arrays/unknown keys/oversize", "TEST-only unavailable purchase and no asset payload", "shared Foundations scale/colors", "component/CSS parity", "no new assets or network dependencies"],
+  "parity": {"status": "PASS", "cssSuffixSha256": "622d478c36f32a4e1f970682e6e1b437a2ef068fa5bdf83dfe3716ebeea4cd15", "cardExactGameMatch": true, "gameFilesEditedByThisOwner": false},
+  "tests": {
+    "command": "node --test sites/catalog-web/test/catalog-ux-regression.test.ts",
+    "before": {"exit": 1, "passed": 3, "failed": 10, "tests": 13, "log": "before-corrected.log"},
+    "after": {"exit": 0, "passed": 17, "failed": 0, "skipped": 0, "tests": 17, "durationMs": 7565.220724, "log": "after-final.log"},
+    "intermediate": [{"log": "before.log", "passed": 1, "failed": 12, "note": "Initial test-harness errors: React SSR attribute order and shared configured HTTPS origin-path normalization expectations corrected before implementation; not product defects"}, {"log": "page-after.log", "passed": 10, "failed": 3}, {"log": "after.log", "passed": 15, "failed": 1, "note": "CSS declaration-order-only regex corrected; required overflow-wrap remains asserted"}],
+    "oracleEvolution": "Final suite adds four tests; CSS mechanism changed from proposed max-width override to stronger mobile-first plus min-width oracle to obey existing source gate. No existing repository assertions edited or weakened.",
+    "positiveNegativeCoverage": ["actual GET/value persistence and immutable readonly input", "no-match retains stable rail", "real schema-backed fixture without Web records distinguishes empty inventory", "readonly duplicate, 4096-character URL, unsupported price/sort and unknown key refusals retain safe editable form", "unique nonblank help/error IDREFs and per-field aria-invalid", "100-character acceptance and array rejection/public duplicate URL preservation", "exact current canonical configured-only behavior", "unexpected failure propagates into real error boundary and swallowed-error in-memory negative control fails the rejection oracle", "compact/full actual cards, long escaped title and honest unavailable entitlement", "real loading busy status and recoverable error link with private error message absent", "mobile-first DOM-order CSS, price wrapping, forced-colors Highlight and no overflow suppression"],
+    "ownedDiffCheck": "PASS",
+    "rootGate": "NOT_RUN",
+    "siteBuild": "NOT_RUN",
+    "typecheck": "NOT_RUN",
+    "browser": "NOT_RUN"
+  },
+  "serialRequests": [
+    {"owner": "bg-109", "request": "Execute/register new Node suite explicitly in serial acceptance; root Vitest include currently excludes sites test paths", "command": "node --test sites/catalog-web/test/catalog-ux-regression.test.ts"},
+    {"owner": "bg-109", "request": "Run owning site typecheck/build, unchanged storefront/source/identity/security suites and full gate on frozen integrated source; do not promote scoped SSR into Next/browser acceptance"},
+    {"owner": "bg-109", "request": "Use rebuilt Web site at 390px with actual Tab/Shift+Tab/Enter: 4096-character URL refusal offers editable nonoverflowing GET fields, valid unrelated fields retained, error IDREFs resolve, clear/filter apply recovers; controls have nonzero unclipped/unobscured geometry and visible Highlight focus in forced colors; long title/price readability and document scrollWidth<=innerWidth; verify real search/price/sort GET results and empty status without fake entitlement"}
+  ],
+  "ledger": {"VS-05": "PARTIAL: UI implementation and SSR negative/positive proof only; actual browser geometry/contrast not run", "UI-001": "Configured canonical behavior preserved and tested; no new metadata implementation or full route coverage claim", "UI-002": "CSP untouched, no closure claimed"},
+  "exportRequests": [],
+  "dependencies": [],
+  "resources": "No temporary fixtures/services/ports/browsers/providers/subprocess daemons created. Only owned persistent report/log evidence remains; no cleanup required.",
+  "forbiddenActions": "No stage/commit/push/merge/deploy/install/spend/provider account/production database or secrets access",
+  "priorVisualPass": "FAILED; not relabeled",
+  "productionStatus": "NOT_CERTIFIED"
+}

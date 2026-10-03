@@ -1,0 +1,708 @@
+{
+  "sourceSHA": "16f312c61435e3d379a0e54525ac8115e35fee86",
+  "status": "TITLE_COMPARISON_NOT_SEMANTIC_ACCEPTANCE",
+  "rows": [
+    {
+      "path": "apps/catalog-game/test/seam.test.ts",
+      "original": [
+        "identifies itself exactly as its manifest does",
+        "is immutable",
+        "depends only on @sceneaxi/schemas (matrix allow list)",
+        "exposes a dormant, topology-neutral surface citing #47/#48 with inert commerce",
+        "runs the shared pipeline stub without activating commerce"
+      ],
+      "modern": [
+        "identifies itself exactly as its manifest does",
+        "is immutable",
+        "depends only on @sceneaxi/schemas (matrix allow list)",
+        "exposes a dormant, topology-neutral surface citing #47/#48 with inert commerce",
+        "runs the shared pipeline stub without activating commerce"
+      ],
+      "missing": []
+    },
+    {
+      "path": "apps/catalog-web/test/seam.test.ts",
+      "original": [
+        "identifies itself exactly as its manifest does",
+        "is immutable",
+        "depends only on @sceneaxi/schemas (matrix allow list)",
+        "exposes a dormant, topology-neutral surface citing #47/#48 with inert commerce",
+        "runs the shared pipeline stub without activating commerce"
+      ],
+      "modern": [
+        "identifies itself exactly as its manifest does",
+        "is immutable",
+        "depends only on @sceneaxi/schemas (matrix allow list)",
+        "exposes a dormant, topology-neutral surface citing #47/#48 with inert commerce",
+        "runs the shared pipeline stub without activating commerce"
+      ],
+      "missing": []
+    },
+    {
+      "path": "apps/desktop-shell/test/protocol-client.test.ts",
+      "original": [
+        "propose → apply round-trip mutates via authoring-core only",
+        "propose alone does not write the document"
+      ],
+      "modern": [
+        "propose → apply round-trip mutates via authoring-core only",
+        "propose alone does not write the document",
+        "refuses staging against a document changed after open",
+        "distinguishes a missing document from one that cannot be read"
+      ],
+      "missing": []
+    },
+    {
+      "path": "apps/desktop-shell/test/seam.test.ts",
+      "original": [
+        "identifies itself exactly as its manifest does",
+        "is immutable"
+      ],
+      "modern": [
+        "identifies itself exactly as its manifest does",
+        "is immutable",
+        "does not expose Git mutation authority helpers"
+      ],
+      "missing": []
+    },
+    {
+      "path": "apps/web-shell/test/inspector.test.ts",
+      "original": [
+        "propose returns a unified diff and a rendered inspector surface",
+        "inspector proposeEdit → review renderedDiff → accept applies",
+        "inspector reject discards without writing",
+        "shellProposeAndApply completes a full round-trip"
+      ],
+      "modern": [
+        "propose returns a unified diff and a rendered inspector surface",
+        "inspector proposeEdit → review renderedDiff → accept applies",
+        "inspector reject discards without writing",
+        "accepts in the working directory used for the pending proposal",
+        "freezes a relative working directory while a proposal is reviewed",
+        "freezes the canonical project root while a proposal is reviewed",
+        "shellProposeAndApply completes a full round-trip"
+      ],
+      "missing": []
+    },
+    {
+      "path": "apps/web-shell/test/seam.test.ts",
+      "original": [
+        "identifies itself exactly as its manifest does",
+        "is immutable"
+      ],
+      "modern": [
+        "identifies itself exactly as its manifest does",
+        "is immutable"
+      ],
+      "missing": []
+    },
+    {
+      "path": "packages/authoring-core/test/seam.test.ts",
+      "original": [
+        "identifies itself exactly as its manifest does",
+        "is immutable"
+      ],
+      "modern": [
+        "identifies itself exactly as its manifest does",
+        "is immutable"
+      ],
+      "missing": []
+    },
+    {
+      "path": "packages/cli/test/envelope.snapshot.test.ts",
+      "original": [
+        "stamps schemaVersion and cliVersion on success",
+        "stamps schemaVersion and cliVersion on failure",
+        "success envelope snapshot (versioned with CLI)",
+        "error envelope snapshot (versioned with CLI)",
+        "protocol inspect exposes exit-code map in result"
+      ],
+      "modern": [
+        "stamps schemaVersion and cliVersion on success",
+        "stamps schemaVersion and cliVersion on failure",
+        "success envelope snapshot (versioned with CLI)",
+        "error envelope snapshot (versioned with CLI)",
+        "protocol inspect exposes exit-code map in result"
+      ],
+      "missing": []
+    },
+    {
+      "path": "packages/cli/test/exit-codes.golden.test.ts",
+      "original": [
+        "matches the golden failure-class table",
+        "documents OK/ERROR/USAGE/HELD_KEY exactly once each",
+        "unknown top-level command → USAGE (2), never 0",
+        "unknown subcommand under a known group → USAGE (2), never 0",
+        "unknown sub-subcommand under a leaf verb → USAGE (2), never 0",
+        "unknown under every command group is non-zero",
+        "incomplete group path (no verb) → USAGE, never 0",
+        "registered skeleton verbs exit 0",
+        "top-level --help and bare invocation exit 0"
+      ],
+      "modern": [
+        "matches the golden failure-class table",
+        "documents OK/ERROR/USAGE/HELD_KEY exactly once each",
+        "unknown top-level command → USAGE (2), never 0",
+        "unknown subcommand under a known group → USAGE (2), never 0",
+        "unknown sub-subcommand under an argument-less leaf verb → USAGE (2), never 0",
+        "stray positional under a flag-parsing leaf verb → USAGE (2), never 0",
+        "unknown under every command group is non-zero",
+        "incomplete group path (no verb) → USAGE, never 0",
+        "verbs that need no input exit 0",
+        "verbs that need input refuse with USAGE when it is missing — never 0",
+        "top-level --help and bare invocation exit 0"
+      ],
+      "missing": [
+        "unknown sub-subcommand under a leaf verb → USAGE (2), never 0",
+        "registered skeleton verbs exit 0"
+      ]
+    },
+    {
+      "path": "packages/cli/test/held-keys.command-map.test.ts",
+      "original": [
+        "is schema-valid",
+        "declares every verb in the live command tree (undeclared verb = refuse)",
+        "gates the demo verb with synthetic keys only",
+        "declares every non-demo verb explicitly ungated (heldKeys: []) — skeletons encode no product policy",
+        "accepts a well-formed map",
+        "refuses non-object inputs and missing required fields",
+        "refuses duplicate command declarations",
+        "refuses malformed held-key names",
+        "refuses composedOf references to undeclared verbs",
+        "refuses a composed verb whose heldKeys are not a superset of its parts (dependency closure)",
+        "refuses unknown extra properties (additionalProperties: false)"
+      ],
+      "modern": [
+        "is schema-valid",
+        "declares every verb in the live command tree (undeclared verb = refuse)",
+        "gates the demo verb with synthetic keys only",
+        "declares every non-demo verb explicitly ungated (heldKeys: []) — no shipped verb encodes product policy",
+        "accepts a well-formed map",
+        "refuses non-object inputs and missing required fields",
+        "refuses duplicate command declarations",
+        "refuses malformed held-key names",
+        "refuses composedOf references to undeclared verbs",
+        "refuses a composed verb whose heldKeys are not a superset of its parts (dependency closure)",
+        "refuses unknown extra properties (additionalProperties: false)"
+      ],
+      "missing": [
+        "declares every non-demo verb explicitly ungated (heldKeys: []) — skeletons encode no product policy"
+      ]
+    },
+    {
+      "path": "packages/cli/test/held-keys.generator.test.ts",
+      "original": [
+        "emits a schema-valid snapshot from a structured backlog export",
+        "derives origin and key from FirstMate hold identities (<origin>-decision-<key>)",
+        "emits keys in canonical (key-sorted) order so the digest is deterministic",
+        "sourceDigest is verified: recomputable from the key set",
+        "a tampered snapshot fails digest verification",
+        "refuses to generate from a Markdown-document source",
+        "refuses raw Markdown text outright (never a structured export)",
+        "refuses an export without the structured-backlog format discriminator",
+        "refuses a non-monotonic registry epoch (export older than what we already saw)",
+        "refuses malformed hold identities",
+        "refuses duplicate derived keys",
+        "refuses a resolved hold without resolvedAt + decisionRecord",
+        "refuses epoch below 1 and non-integer epochs",
+        "refuses the schema-invalid fixture (missing sourceDigest)",
+        "refuses non-object inputs",
+        "refuses unknown extra properties (additionalProperties: false)"
+      ],
+      "modern": [
+        "emits a schema-valid snapshot from a structured backlog export",
+        "derives origin and key from FirstMate hold identities (<origin>-decision-<key>)",
+        "emits keys in canonical (key-sorted) order so the digest is deterministic",
+        "sourceDigest is verified: recomputable from the key set",
+        "a tampered snapshot fails digest verification",
+        "refuses to generate from a Markdown-document source",
+        "refuses raw Markdown text outright (never a structured export)",
+        "refuses an export without the structured-backlog format discriminator",
+        "refuses a non-monotonic registry epoch (export older than what we already saw)",
+        "refuses malformed hold identities",
+        "refuses duplicate derived keys",
+        "refuses a resolved hold without resolvedAt + decisionRecord",
+        "refuses epoch below 1 and non-integer epochs",
+        "enforces RFC 3339 timestamps before emitting a snapshot",
+        "refuses the schema-invalid fixture (missing sourceDigest)",
+        "refuses non-object inputs",
+        "refuses unknown extra properties (additionalProperties: false)"
+      ],
+      "missing": []
+    },
+    {
+      "path": "packages/cli/test/held-keys.refusal-table.test.ts",
+      "original": [
+        "currency check unavailable → refuse",
+        "authoritative epoch ≠ local map/snapshot epoch → refuse (stale client)",
+        "snapshot missing → refuse",
+        "snapshot schema-invalid → refuse",
+        "snapshot older than the 24h freshness budget → refuse, even with currency OK",
+        "map epoch ≠ snapshot epoch → refuse",
+        "verb undeclared in command map → refuse",
+        "command map invalid → refuse (fail closed; cannot even establish gatedness)",
+        "verb gated by an open key → refuse and NAME the key in the machine-readable envelope",
+        "verb gated by a key unknown to the snapshot → refuse",
+        "all gating keys resolved and currency OK → allow",
+        "ungated verbs (explicit heldKeys: []) skip the currency check entirely",
+        "the default runtime is fail-closed: demo gated refuses out of the box (no sentinel wired)",
+        "held-key refusals honor strict --json equivalence",
+        "--help on a gated verb is introspection, not invocation — no refusal"
+      ],
+      "modern": [
+        "currency check unavailable → refuse",
+        "establishes currency before evaluating the local snapshot",
+        "authoritative epoch ≠ local map/snapshot epoch → refuse (stale client)",
+        "snapshot missing → refuse",
+        "snapshot schema-invalid → refuse",
+        "snapshot older than the 24h freshness budget → refuse, even with currency OK",
+        "map epoch ≠ snapshot epoch → refuse",
+        "verb undeclared in command map → refuse",
+        "command map invalid → refuse (fail closed; cannot even establish gatedness)",
+        "verb gated by an open key → refuse and NAME the key in the machine-readable envelope",
+        "verb gated by a key unknown to the snapshot → refuse",
+        "all gating keys resolved and currency OK → allow",
+        "ungated verbs (explicit heldKeys: []) skip the currency check entirely",
+        "the default runtime is fail-closed: demo gated refuses out of the box (no sentinel wired)",
+        "held-key refusals honor strict --json equivalence",
+        "--help on a gated verb is introspection, not invocation — no refusal",
+        "refuses future snapshots and unavailable clocks",
+        "accepts the exact 24-hour boundary but refuses one millisecond beyond"
+      ],
+      "missing": []
+    },
+    {
+      "path": "packages/cli/test/held-keys.regressions.test.ts",
+      "original": [
+        "client with fresh snapshot N + map N refuses when the authority is at N+1",
+        "sanity: the same client is allowed when the authority still reports N",
+        "matching local snapshot N + map N is NEVER sufficient when the authority is unreachable"
+      ],
+      "modern": [
+        "client with fresh snapshot N + map N refuses when the authority is at N+1",
+        "sanity: the same client is allowed when the authority still reports N",
+        "matching local snapshot N + map N is NEVER sufficient when the authority is unreachable"
+      ],
+      "missing": []
+    },
+    {
+      "path": "packages/cli/test/json-equivalence.test.ts",
+      "original": [
+        "--json may appear before the command path",
+        "--json may appear between group and verb"
+      ],
+      "modern": [
+        "--json may appear before the command path",
+        "--json may appear between group and verb"
+      ],
+      "missing": []
+    },
+    {
+      "path": "packages/cli/test/project-propose-apply.test.ts",
+      "original": [
+        "propose → unified diff + exit 0",
+        "apply succeeds atomically and updates the document",
+        "concurrent content-hash conflict → CONFLICT + re-read hint + non-zero exit",
+        "byte-identical: direct edit vs propose+apply for the same change",
+        "all-or-nothing multi-document: conflict on second doc leaves both unchanged",
+        "schema major-mismatch refuses on propose and apply",
+        "missing required flags → VALIDATION (USAGE exit)",
+        "project propose --help documents flags",
+        "rejects the same invalid post-edit document on both paths",
+        "serializeDocument is the sole text form (canonical)"
+      ],
+      "modern": [
+        "propose → unified diff + exit 0",
+        "apply succeeds atomically and updates the document",
+        "concurrent content-hash conflict → CONFLICT + re-read hint + non-zero exit",
+        "byte-identical: direct edit vs propose+apply for the same change",
+        "all-or-nothing multi-document: conflict on second doc leaves both unchanged",
+        "schema major-mismatch refuses on propose and apply",
+        "missing required flags → VALIDATION (USAGE exit)",
+        "project propose --help documents flags",
+        "rejects the same invalid post-edit document on both paths",
+        "serializeDocument is the sole text form (canonical)"
+      ],
+      "missing": []
+    },
+    {
+      "path": "packages/cli/test/refusal.test.ts",
+      "original": [
+        "refuses unknown long flags",
+        "refuses unknown short flags",
+        "refuses unknown flags after a valid path",
+        "refuses unknown flags with =value form",
+        "refuses incomplete group as ambiguous input",
+        "refuses --version combined with a command path",
+        "does not best-effort accept partial unknown paths"
+      ],
+      "modern": [
+        "refuses unknown long flags",
+        "refuses unknown short flags",
+        "refuses unknown flags after a valid path",
+        "refuses unknown flags with =value form",
+        "refuses incomplete group as ambiguous input",
+        "refuses --version combined with a command path",
+        "does not best-effort accept partial unknown paths",
+        "refuses inherited names at every group depth",
+        "refuses leftover version flags but preserves legal aliases"
+      ],
+      "missing": []
+    },
+    {
+      "path": "packages/cli/test/seam.test.ts",
+      "original": [
+        "identifies itself exactly as its manifest does",
+        "is immutable"
+      ],
+      "modern": [
+        "identifies itself exactly as its manifest does",
+        "is immutable"
+      ],
+      "missing": []
+    },
+    {
+      "path": "packages/engine-kernel/test/seam.test.ts",
+      "original": [
+        "identifies itself exactly as its manifest does",
+        "is immutable"
+      ],
+      "modern": [
+        "identifies itself exactly as its manifest does",
+        "is immutable",
+        "keeps canonical digest computation behind the command/snapshot seam"
+      ],
+      "missing": []
+    },
+    {
+      "path": "packages/engine-kernel/test/session.test.ts",
+      "original": [
+        "opens from a product manifest and exposes the initial snapshot",
+        "only advance mutates authoritative state; dispatch is queue-only",
+        "observe returns a deeply frozen read-only snapshot",
+        "rejects invalid commands on dispatch without mutating state",
+        "produces identical digests across independent runs of the same sequence",
+        "save stamps schema + kernel/BOM versions and terminal digest",
+        "save → replay yields an identical terminal digest",
+        "refuses save artifacts with a schema major mismatch",
+        "digest is a canonical sha256 over sorted entity state"
+      ],
+      "modern": [
+        "opens from a product manifest and exposes the initial snapshot",
+        "only advance mutates authoritative state; dispatch is queue-only",
+        "observe returns a deeply frozen read-only snapshot",
+        "rejects invalid commands on dispatch without mutating state",
+        "refuses spawn actor IDs outside the manifest entity vocabulary",
+        "validates actor state across the pending batch at dispatch",
+        "produces identical digests across independent runs of the same sequence",
+        "save stamps schema + kernel/BOM versions and terminal digest",
+        "save → replay yields an identical terminal digest",
+        "refuses save artifacts with a schema major mismatch",
+        "refuses replay artifacts with invalid required integrity fields",
+        "refuses replay artifacts with unadvanced dispatch commands",
+        "digest is a canonical sha256 over sorted entity state"
+      ],
+      "missing": []
+    },
+    {
+      "path": "packages/engine-orchestrator/test/seam.test.ts",
+      "original": [
+        "identifies itself exactly as its manifest does",
+        "is immutable"
+      ],
+      "modern": [
+        "identifies itself exactly as its manifest does",
+        "is immutable"
+      ],
+      "missing": []
+    },
+    {
+      "path": "packages/engine-presentation/test/seam.test.ts",
+      "original": [
+        "identifies itself exactly as its manifest does",
+        "is immutable"
+      ],
+      "modern": [
+        "identifies itself exactly as its manifest does",
+        "is immutable",
+        "exports the null Presentation Runtime factory",
+        "keeps capture results backend-neutral and nullable"
+      ],
+      "missing": []
+    },
+    {
+      "path": "packages/importers/test/seam.test.ts",
+      "original": [
+        "identifies itself exactly as its manifest does",
+        "is immutable"
+      ],
+      "modern": [
+        "identifies itself exactly as its manifest does",
+        "is immutable",
+        "exports a real external-content adapter beyond the package seam"
+      ],
+      "missing": []
+    },
+    {
+      "path": "packages/profile-game/test/conformance.test.ts",
+      "original": [
+        "passes the shared suite with no suite modifications",
+        "pins a real core range matching the package manifest and seam",
+        "stamps releaseGroup profile (boundary checker + seam)",
+        "depends on the pinned core packages (kernel + authoring) and not other profiles",
+        "cites profile-rollout-order as open and makes no shipping claim"
+      ],
+      "modern": [
+        "passes the shared suite with no suite modifications",
+        "pins a real core range matching the package manifest and seam",
+        "stamps releaseGroup profile (boundary checker + seam)",
+        "depends on the pinned core packages (kernel + authoring) and not other profiles",
+        "cites profile-rollout-order as open and makes no shipping claim"
+      ],
+      "missing": []
+    },
+    {
+      "path": "packages/profile-game/test/seam.test.ts",
+      "original": [
+        "identifies itself exactly as its manifest does",
+        "is immutable",
+        "pins the core train exactly as its manifest does"
+      ],
+      "modern": [
+        "identifies itself exactly as its manifest does",
+        "is immutable",
+        "pins the core train exactly as its manifest does"
+      ],
+      "missing": []
+    },
+    {
+      "path": "packages/profile-kids/test/seam.test.ts",
+      "original": [
+        "identifies itself exactly as its manifest does",
+        "is immutable",
+        "pins the core train exactly as its manifest does"
+      ],
+      "modern": [
+        "identifies itself exactly as its manifest does",
+        "is immutable",
+        "pins the core train exactly as its manifest does"
+      ],
+      "missing": []
+    },
+    {
+      "path": "packages/profile-web/test/seam.test.ts",
+      "original": [
+        "identifies itself exactly as its manifest does",
+        "is immutable",
+        "pins the core train exactly as its manifest does"
+      ],
+      "modern": [
+        "identifies itself exactly as its manifest does",
+        "is immutable",
+        "pins the core train exactly as its manifest does"
+      ],
+      "missing": []
+    },
+    {
+      "path": "packages/schemas/test/catalog-pipeline.test.ts",
+      "original": [
+        "versions the Catalog Item contract and cites factories-helpers #47 and #48",
+        "starts at intake (quarantine) with empty history and inert commerce",
+        "carries rights, provenance, mandatory AI disclosure, compatibility, moderation",
+        "moves a synthetic asset intake → screening → curation → listed → delisted with recorded reasons",
+        "refuses illegal transitions (fail-closed)",
+        "refuses transitions without a reason",
+        "refuses listing without a human curation verdict (never simulated)",
+        "refuses when mandatory metadata is missing",
+        "exposes only legal successors per state",
+        "refuses commerce activation for listed items with price fields populated",
+        "cannot flip activation through item shape alone",
+        "does not encode a storefront topology in the item contract"
+      ],
+      "modern": [
+        "versions the Catalog Item contract and cites factories-helpers #47 and #48",
+        "ships the Catalog Item JSON Schema through the public package export",
+        "ships an explicit metadata-unavailable tombstone contract",
+        "starts at intake (quarantine) with empty history and inert commerce",
+        "carries rights, provenance, mandatory AI disclosure, compatibility, moderation",
+        "moves a synthetic asset intake → screening → curation → listed → delisted with recorded reasons",
+        "refuses illegal transitions (fail-closed)",
+        "refuses transitions without a reason",
+        "refuses missing and non-string reasons without throwing",
+        "normalizes transition inputs and indexed history once",
+        "refuses moderation history supplied through inherited array slots",
+        "enforces the shared Catalog date-time definition at runtime",
+        "refuses listing without a human curation verdict (never simulated)",
+        "refuses structurally invalid human verdicts without throwing",
+        "refuses a human verdict outside the listing transition",
+        "refuses listing when curation history is missing",
+        "rechecks mandatory metadata at the listing boundary",
+        "refuses when mandatory metadata is missing",
+        "refuses malformed nested metadata without throwing",
+        "requires runtime rights and AI disclosure booleans",
+        "returns deep-normalized metadata snapshots",
+        "refuses non-v1 runtime catalog items",
+        "refuses digests with trailing line terminators",
+        "refuses non-string and true-end-invalid compatibility profiles",
+        "captures compatibility profile slots exactly once",
+        "exposes only legal successors per state",
+        "forces intake commerce activation to inert",
+        "keeps takedown available and forces commerce inert",
+        "normalizes commerce-only drift without discarding catalog metadata",
+        "refuses commerce activation for listed items with price fields populated",
+        "cannot flip activation through item shape alone",
+        "does not encode a storefront topology in the item contract"
+      ],
+      "missing": []
+    },
+    {
+      "path": "packages/schemas/test/document-proposal.test.ts",
+      "original": [
+        "accepts a valid v1 document and serializes canonically",
+        "refuses major schema mismatch",
+        "refuses invalid id and unexpected properties",
+        "accepts a valid v1 proposal",
+        "refuses major schema mismatch and bad hashes",
+        "registers document and proposal contracts on the public contracts map"
+      ],
+      "modern": [
+        "accepts a valid v1 document and serializes canonically",
+        "refuses major schema mismatch",
+        "refuses invalid id and unexpected properties",
+        "refuses non-JSON values and cycles anywhere in document data",
+        "accepts a valid v1 proposal",
+        "refuses major schema mismatch and bad hashes",
+        "refuses proposal edit values outside the JSON domain",
+        "registers document and proposal contracts on the public contracts map"
+      ],
+      "missing": []
+    },
+    {
+      "path": "packages/schemas/test/profile-conformance.test.ts",
+      "original": [
+        "is registered in the contracts inventory with a versioned JSON Schema",
+        "accepts a valid development-consumer claim",
+        "refuses major schema mismatch",
+        "refuses shippingClaim true (no publication authority)",
+        "refuses claims that omit the open profile-rollout-order hold",
+        "lists Game as the first development consumer and Web/Kids as not-yet-claimed",
+        "never records a shipping claim; always cites profile-rollout-order as open",
+        "does not treat not-yet-claimed profiles as suite failures by presence alone"
+      ],
+      "modern": [
+        "is registered in the contracts inventory with a versioned JSON Schema",
+        "accepts a valid development-consumer claim",
+        "refuses major schema mismatch",
+        "refuses shippingClaim true (no publication authority)",
+        "refuses claims that omit the open profile-rollout-order hold",
+        "lists Game as the first development consumer and Web/Kids as not-yet-claimed",
+        "never records a shipping claim; always cites profile-rollout-order as open",
+        "does not treat not-yet-claimed profiles as suite failures by presence alone"
+      ],
+      "missing": []
+    },
+    {
+      "path": "packages/schemas/test/seam.test.ts",
+      "original": [
+        "identifies itself exactly as its manifest does",
+        "is immutable",
+        "ships every declared contract as versioned JSON Schema"
+      ],
+      "modern": [
+        "identifies itself exactly as its manifest does",
+        "is immutable",
+        "keeps the Node-only conformance suite off the browser-facing root",
+        "exposes only control kinds a shared editor surface mints",
+        "ships every declared contract as versioned JSON Schema"
+      ],
+      "missing": []
+    },
+    {
+      "path": "scripts/check-contracts.test.mjs",
+      "original": [],
+      "modern": [],
+      "missing": []
+    },
+    {
+      "path": "tests/boundary/injected-violations.test.ts",
+      "original": [
+        "control: the unmodified tree passes",
+        "fails on a forbidden manifest dependency edge (cli -> engine-kernel)",
+        "fails on a forbidden source import (cli src imports engine-kernel)",
+        "fails the Kids boundary on a manifest dependency (catalog-web -> profile-kids)",
+        "fails the Kids boundary on a source import (catalog-web imports profile-kids)",
+        "fails on a release-group stamp mismatch",
+        "fails when a profile drops its core pin",
+        "fails on a shared-prefix sibling escape (cli reaching into cli-shadow)"
+      ],
+      "modern": [
+        "control: the unmodified tree passes",
+        "fails on a forbidden manifest dependency edge (cli -> engine-kernel)",
+        "fails on a forbidden manifest dependency edge (plugin-host -> engine-kernel)",
+        "fails on a forbidden source import (cli src imports engine-kernel)",
+        "fails on a forbidden source import (plugin-host src imports engine-kernel)",
+        "fails on a forbidden source import (plugin-host src imports another plugin package)",
+        "fails the Kids boundary on a manifest dependency (catalog-web -> profile-kids)",
+        "fails the Kids boundary on a source import (catalog-web imports profile-kids)",
+        "fails on a release-group stamp mismatch",
+        "fails when a profile drops its core pin",
+        "fails when production source imports a test-only testing/ subpath (billing src)",
+        "fails when an app's production source imports a test-only testing/ subpath",
+        "fails when production source imports the DesktopSession Git authority",
+        "fails when production source imports the bridge-owned Git mutation helper",
+        "fails when a package's own production source reaches its src/testing seam relatively",
+        "allows a test-only seam to name a sibling inside the same src/testing tree",
+        "fails on a shared-prefix sibling escape (cli reaching into cli-shadow)"
+      ],
+      "missing": []
+    },
+    {
+      "path": "tests/helpers/fixture.ts",
+      "original": [],
+      "modern": [],
+      "missing": []
+    },
+    {
+      "path": "tests/parity/shell-cli-parity.test.ts",
+      "original": [
+        "web-shell, desktop-shell, and CLI produce byte-identical documents",
+        "web-shell inspector accept matches CLI apply for the same edit",
+        "web-shell and desktop-shell src never import cli or engine packages",
+        "shell package manifests do not declare cli or engine dependencies"
+      ],
+      "modern": [
+        "web-shell, desktop-shell, and CLI produce byte-identical documents",
+        "the runnable desktop command layer matches CLI bytes and hash",
+        "web-shell inspector propose → diff → apply matches CLI hash/content",
+        "the started dev server matches CLI bytes and content hash",
+        "web-shell and desktop-shell src never import cli or engine packages",
+        "shell package manifests do not declare cli or engine dependencies"
+      ],
+      "missing": [
+        "web-shell inspector accept matches CLI apply for the same edit"
+      ]
+    },
+    {
+      "path": "tests/syntax/check-syntax.test.ts",
+      "original": [
+        "control: the unmodified tree passes",
+        "accepts TypeScript-only syntax in sources",
+        "fails when a source file does not parse",
+        "refuses to pass on an empty source surface"
+      ],
+      "modern": [
+        "control: the unmodified tree passes",
+        "accepts TypeScript-only syntax in sources",
+        "fails when a source file does not parse",
+        "refuses to pass on an empty source surface"
+      ],
+      "missing": []
+    },
+    {
+      "path": "vitest.config.ts",
+      "original": [],
+      "modern": [],
+      "missing": []
+    }
+  ]
+}

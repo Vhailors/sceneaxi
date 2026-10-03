@@ -11,6 +11,7 @@ import {
   SCULPT_SCHEMA_VERSION,
   validateSculptArtifact,
   type FrameClock,
+  type JsonValue,
   type SculptArtifact,
   type SculptComponent,
   type SculptHierarchyNode,
@@ -100,13 +101,19 @@ export function normalizeSculptKernelOptions(
 function normalizeOptions(options: SculptKernelOptions): Required<SculptKernelOptions> {
   const gravity = options.gravity ?? -9.8;
   const restitution = options.restitution ?? 0.5;
-  if (!Number.isInteger(options.seed)) throw new KernelSessionError("sculpt options.seed must be an integer");
-  if (!finite(gravity) || gravity > 0) throw new KernelSessionError("sculpt options.gravity must be a finite non-positive number");
+
+  if (!Number.isSafeInteger(options.seed)) throw new KernelSessionError("sculpt options.seed must be an integer");
+
+  if (!finite(gravity) || gravity > 0 || gravity < -1_000_000) throw new KernelSessionError("sculpt options.gravity must be a finite non-positive number");
+
   if (!finite(restitution) || restitution < 0 || restitution > 1) throw new KernelSessionError("sculpt options.restitution must be between 0 and 1");
+
   return Object.freeze({ seed: options.seed, gravity, restitution });
 }
 
 function round(value: number) {
+  if (!Number.isFinite(value) || Math.abs(value) > 1_000_000_000) throw new KernelSessionError("sculpt simulation result exceeds numeric range");
+
   return Math.round(value * 1_000_000) / 1_000_000;
 }
 
@@ -123,7 +130,7 @@ function cloneTransform(transform: SculptTransform): MutableNode["transform"] {
 }
 
 function freezeVector(vector: Vector3): Vector3 {
-  return Object.freeze([...vector] as [number, number, number]);
+  return Object.freeze([vector[0], vector[1], vector[2]]);
 }
 
 function freezeTransform(transform: MutableNode["transform"]): SculptTransform {
@@ -152,9 +159,12 @@ function digestSnapshot(
 }
 
 export function validateSculptClock(clock: FrameClock, tick: number) {
-  if (clock === null || typeof clock !== "object") throw new KernelSessionError("sculpt advance frame clock is required");
-  if (!Number.isInteger(clock.tick) || clock.tick <= tick) throw new KernelSessionError(`sculpt advance.tick must be an integer greater than current tick ${tick}`);
-  if (!Number.isInteger(clock.deltaMs) || clock.deltaMs < 0) throw new KernelSessionError("sculpt advance.deltaMs must be a non-negative integer");
+  if (clock === null || !isObjectValue(clock)) throw new KernelSessionError("sculpt advance frame clock is required");
+
+  if (!Number.isSafeInteger(clock.tick) || clock.tick <= tick) throw new KernelSessionError(`sculpt advance.tick must be an integer greater than current tick ${tick}`);
+
+  if (!Number.isSafeInteger(clock.deltaMs) || clock.deltaMs < 0 || clock.deltaMs > 60_000) throw new KernelSessionError("sculpt advance.deltaMs must be a non-negative integer");
+
   return Object.freeze({ tick: clock.tick, deltaMs: clock.deltaMs });
 }
 
@@ -166,7 +176,7 @@ export class SculptNodeSimulation {
   private readonly input: SculptSimulationInput;
   private readonly options: Required<SculptKernelOptions>;
   private readonly digest: KernelDigest;
-  private readonly nodes: MutableNode[];
+  private nodes: MutableNode[];
   private tick = 0;
   private elapsedMs = 0;
   private collisionCount = 0;
@@ -179,11 +189,14 @@ export class SculptNodeSimulation {
     this.input = input;
     this.options = options;
     this.digest = digest;
+
+    if (input.nodes.length > 4096 || input.components.length > 4096 || input.sockets.length > 4096) throw new KernelSessionError("sculpt simulation capacity exceeded");
     this.nodes = input.nodes.map((node) => {
       const drift =
         node.parentId === null
           ? (seededUnit(options.seed, node.id, digest) - 0.5) * 0.4
           : 0;
+
       return {
         id: node.id,
         parentId: node.parentId,
@@ -204,44 +217,75 @@ export class SculptNodeSimulation {
 
   /** Apply an already-validated clock; scene sessions validate once for all instances. */
   applyClock(nextClock: FrameClock) {
+    this.prepareClock(nextClock)();
+  }
+
+  /** Prepare every scene instance before committing any authoritative state. */
+  prepareClock(clock: FrameClock): () => void {
+    const nextClock = validateSculptClock(clock, this.tick);
+    const elapsedMs = this.elapsedMs + nextClock.deltaMs;
+
+    if (!Number.isSafeInteger(elapsedMs)) throw new KernelSessionError("sculpt elapsed time exceeds safe range");
+    const nextNodes = this.nodes.map((node): MutableNode => ({ ...node, transform: cloneTransform(node.transform), velocity: [node.velocity[0], node.velocity[1], node.velocity[2]] }));
+    let collisionCount = this.collisionCount;
     const seconds = nextClock.deltaMs / 1_000;
     const components = new Map(this.input.components.map((component) => [component.id, component]));
-    for (const node of this.nodes) {
+
+    for (const node of nextNodes) {
       if (node.parentId !== null) continue;
       const component = components.get(node.componentId);
+
       if (component === undefined) throw new KernelSessionError(`sculpt component "${node.componentId}" disappeared`);
       node.velocity[1] = round(node.velocity[1] + this.options.gravity * seconds);
+
       for (const axis of [0, 1, 2] as const) {
         node.transform.translation[axis] = round(node.transform.translation[axis] + node.velocity[axis] * seconds);
       }
+
       const halfHeight = (component.dimensions[1] * node.transform.scale[1]) / 2;
+
       if (node.transform.translation[1] < halfHeight) {
         node.transform.translation[1] = round(halfHeight);
+
         if (node.velocity[1] < 0) {
           node.velocity[1] = round(-node.velocity[1] * this.options.restitution);
-          this.collisionCount += 1;
+          collisionCount += 1;
         }
       }
     }
-    this.tick = nextClock.tick;
-    this.elapsedMs += nextClock.deltaMs;
+
+    for (const socket of this.input.sockets) {
+      const phase = seededUnit(this.options.seed, socket.id, this.digest) * Math.PI * 2;
+      round(socket.kind === "animation" ? socket.amplitude * Math.sin(Math.PI * 2 * socket.frequencyHz * elapsedMs / 1_000 + phase) : 0);
+    }
+
+    return () => {
+      this.nodes = nextNodes;
+      this.tick = nextClock.tick;
+      this.elapsedMs = elapsedMs;
+      this.collisionCount = collisionCount;
+    };
   }
 
   observe(): SculptKernelSnapshot {
     const nodes = Object.freeze(this.nodes.map(snapshotNode).sort((left, right) => left.id.localeCompare(right.id)));
     const seconds = this.elapsedMs / 1_000;
+
     const sockets = Object.freeze(
       this.input.sockets
         .map((socket) => {
           const phase =
             seededUnit(this.options.seed, socket.id, this.digest) * Math.PI * 2;
+
           const value = socket.kind === "animation"
             ? round(socket.amplitude * Math.sin(Math.PI * 2 * socket.frequencyHz * seconds + phase))
             : 0;
+
           return Object.freeze({ id: socket.id, nodeId: socket.nodeId, value });
         })
         .sort((left, right) => left.id.localeCompare(right.id)),
     );
+
     const payload = Object.freeze({
       tick: this.tick,
       seed: this.options.seed,
@@ -250,6 +294,7 @@ export class SculptNodeSimulation {
       nodes,
       sockets,
     });
+
     return Object.freeze({
       ...payload,
       digest: digestSnapshot(payload, this.digest),
@@ -282,6 +327,7 @@ class SculptSessionImpl implements SculptKernelSession {
   }
 
   advance(clock: FrameClock) {
+    if (this.advances.length >= 100_000) throw new KernelSessionError("sculpt history capacity exceeded");
     const nextClock = validateSculptClock(clock, this.simulation.currentTick);
     this.simulation.applyClock(nextClock);
     this.advances.push(nextClock);
@@ -305,12 +351,14 @@ class SculptSessionImpl implements SculptKernelSession {
 
 /** Project a validated Sculpt Artifact hierarchy into kernel-owned state. */
 export function openSculptKernelSession(
-  artifactValue: unknown,
+  artifactValue: SculptArtifact | JsonValue,
   options: SculptKernelOptions,
   host?: KernelDigestHost,
 ): SculptKernelSession {
   const artifact = validateSculptArtifact(artifactValue);
+
   if (!artifact.ok) throw new KernelSessionError(artifact.diagnostics[0]?.message ?? "invalid Sculpt Artifact");
+
   return new SculptSessionImpl(
     artifact.value,
     normalizeOptions(options),
@@ -323,15 +371,26 @@ export function replaySculptKernelSession(
   save: SculptKernelSaveArtifact,
   host?: KernelDigestHost,
 ): SculptKernelSession {
-  if (save === null || typeof save !== "object") throw new KernelSessionError("invalid sculpt save artifact");
+  if (save === null || !isObjectValue(save)) throw new KernelSessionError("invalid sculpt save artifact");
+
   if (save.schemaVersion !== SCULPT_SCHEMA_VERSION) throw new KernelSessionError(`sculpt save schema major mismatch: ${save.schemaVersion}`);
+
   if (save.kind !== SCULPT_KERNEL_SAVE_KIND) throw new KernelSessionError("invalid sculpt save artifact kind");
-  if (!Array.isArray(save.advances) || typeof save.terminalDigest !== "string" || !DIGEST_RE.test(save.terminalDigest)) {
+
+  if (!Array.isArray(save.advances) || save.advances.length > 100_000 || !isStringValue(save.terminalDigest) || !DIGEST_RE.test(save.terminalDigest)) {
     throw new KernelSessionError("invalid sculpt save advances or terminal digest");
   }
+
   const session = openSculptKernelSession(save.artifact, save.options, host);
+
   for (const clock of save.advances) session.advance(clock);
   const terminal = session.observe().digest;
+
   if (terminal !== save.terminalDigest) throw new KernelSessionError(`sculpt replay digest mismatch: expected ${save.terminalDigest}, got ${terminal}`);
+
   return session;
 }
+
+function isObjectValue<Value>(value: Value): value is Value & object { return value !== null && typeof value === "object"; }
+
+function isStringValue(value: unknown): value is string { return typeof value === "string"; }

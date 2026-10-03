@@ -1,0 +1,26 @@
+[
+  {
+    "site": "umbrella",
+    "exitCode": 0,
+    "seconds": 85.97,
+    "log": "docs/audits/production-swarm/visual/build-umbrella.log"
+  },
+  {
+    "site": "catalog-game",
+    "exitCode": 0,
+    "seconds": 55.73,
+    "log": "docs/audits/production-swarm/visual/build-catalog-game.log"
+  },
+  {
+    "site": "catalog-web",
+    "exitCode": 0,
+    "seconds": 55.79,
+    "log": "docs/audits/production-swarm/visual/build-catalog-web.log"
+  },
+  {
+    "site": "kids",
+    "exitCode": 0,
+    "seconds": 24.39,
+    "log": "docs/audits/production-swarm/visual/build-kids.log"
+  }
+]

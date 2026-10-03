@@ -13,7 +13,7 @@
  * and navigation away from the packaged document is refused.
  */
 import { createHash } from "node:crypto";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import {
   existsSync,
   mkdtempSync,
@@ -25,15 +25,19 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, sep } from "node:path";
+import { pathToFileURL } from "node:url";
+import { types } from "node:util";
 import { BrowserWindow, Menu, app, crashReporter, dialog, ipcMain, shell } from "electron";
 import { DESKTOP_MINIMUM_WINDOW } from "@sceneaxi/desktop-shell";
-import { inspectProjectModel } from "@sceneaxi/authoring-core";
+import { runAssistantSculptAction, inspectProjectModel } from "@sceneaxi/authoring-core";
 import {
   createEditorCommandInvocation,
   EXTENSION_SEAM_REFUSALS,
   parseDeliveryHandoffText,
   PROJECT_MANIFEST_PATH,
 } from "@sceneaxi/schemas";
+import { CONTAINED_GLTF_REFUSALS, PROJECT_ASSET_MAX_BYTES,
+  ASSET_PREPARATION_REFUSALS } from "@sceneaxi/importers";
 import { DESKTOP_BYO_CONFIGURATION_CHANNEL } from "../lib/byo-configuration-contract.js";
 import {
   DESKTOP_ACTIVE_DOCUMENT_PATH,
@@ -41,10 +45,12 @@ import {
   DESKTOP_BRIDGE_CHANNEL,
   DESKTOP_VIEWPORT_STOP_EVENT,
   bridgeRefuse,
+  bridgeOk,
+  type DesktopBridgeResponse,
+  type DesktopFrameReport,
 } from "../lib/bridge-contract.js";
 import { createDesktopBridge, type DesktopBridge } from "../lib/bridge.js";
 import { initializeDesktopScenePhysics } from "../lib/desktop-scene.js";
-import { createDesktopAssetPickerHost } from "../lib/asset-picker-host.js";
 import { DESKTOP_SCENE_TRANSLATION_X_PROPERTY } from "../lib/desktop-scene.js";
 import {
   resolveDesktopLocalBridgePaths,
@@ -89,11 +95,39 @@ import {
   createPrivilegedDesktopByoRuntime,
 } from "./provider-runtime.js";
 
+/** Mutable, presence-sensitive fields retain their owner types without present undefined values. */
+type DesktopOptionalFields<Value> = { -readonly [Key in keyof Value]?: Exclude<Value[Key], undefined> };
+
+/** Values crossing desktop IPC, event, and exception boundaries before field validation. */
+type NativePerformanceProof = {
+  samples: readonly Record<"Buffer" | "Texture" | "Program" | "Framebuffer" | "Renderbuffer", number>[];
+  latencyMs: readonly number[];
+  maximumAssetBytes: number;
+  oversizeRefusal: string;
+  importReloadCycles: number;
+  canvases: number;
+};
+
+/** The bridge owns validation of raw native IPC and script proof payloads. */
+type DesktopBoundaryValue = Parameters<ReturnType<typeof createDesktopBridge>["handle"]>[0];
+
+function isDesktopText<Value>(value: Value): value is Value & string {
+  return typeof value === "string";
+}
+
+function isDesktopNumber<Value>(value: Value): value is Value & number {
+  return typeof value === "number";
+}
+
 // The bundle is CJS (Electron's main entry), so the native `__dirname` is real.
 declare const __dirname: string;
 
 const SMOKE = process.argv.includes("--smoke");
+
 const DIAGNOSTICS_SMOKE = process.argv.includes("--diagnostics-smoke");
+
+const ASSET_CAPACITY_SMOKE = SMOKE && (process.argv.includes("--asset-capacity") || process.env["SCENEAXI_SMOKE_ASSET_CAPACITY"] === "1");
+
 const SMOKE_TIMEOUT_MS = 45_000;
 
 if (process.platform === "linux") {
@@ -130,15 +164,20 @@ app.setAppLogsPath(logsDirectory);
 
 app.setPath("crashDumps", crashDumpsDirectory);
 
-pruneDesktopCrashDumps(crashDumpsDirectory);
+// Raw minidumps can contain decrypted credentials. Explicit local diagnostic consent
+// is the only opt-in; structured redacted crash/recovery events remain default-on.
+const sensitiveDumpConsent = process.env["SCENEAXI_LOCAL_CRASH_DUMPS"] === "1";
 
-crashReporter.start({ uploadToServer: false });
+pruneDesktopCrashDumps(crashDumpsDirectory, sensitiveDumpConsent ? 5 : 0);
+
+if (sensitiveDumpConsent) crashReporter.start({ uploadToServer: false });
 
 /** Active document name shared by explicit projects and the isolated smoke. */
 const SAMPLE_DOCUMENT = DESKTOP_ACTIVE_DOCUMENT_PATH;
 
 function seedProject(dir: string): void {
   const seeded = seedDesktopProject(dir);
+
   if (!seeded.ok) console.error("desktop-linux: could not seed the sample document", seeded);
 }
 
@@ -165,12 +204,14 @@ function smokeProjectDir(): string {
     "-c", "user.email=smoke@sceneaxi.invalid",
     "commit", "--allow-empty", "--quiet", "-m", "smoke fixture baseline",
   ], { stdio: "ignore" });
+
   return dir;
 }
 
 function smokeUndecodableOggBytes(): Buffer {
   const bytes = Buffer.alloc(27);
   bytes.write("OggS", 0, "ascii");
+
   return bytes;
 }
 
@@ -190,9 +231,11 @@ function smokeAudioBytes(): Buffer {
   bytes.writeUInt16LE(16, 34);
   bytes.write("data", 36, "ascii");
   bytes.writeUInt32LE(frames * 2, 40);
+
   for (let frame = 0; frame < frames; frame += 1) {
     bytes.writeInt16LE(Math.round(Math.sin((2 * Math.PI * 440 * frame) / sampleRate) * 12_000), 44 + frame * 2);
   }
+
   return bytes;
 }
 
@@ -217,6 +260,7 @@ async function clickRendererControl(
     const hit = document.elementFromPoint(x, y);
     return { x, y, hit: hit === element || element.contains(hit), hitTag: hit?.tagName ?? null };
   })()`);
+
   if (target === null || target.hit !== true) {
     const candidates = await window.webContents.executeJavaScript(`(() => [...document.querySelectorAll(${JSON.stringify(selector)})].map((element) => ({
       tag: element.tagName,
@@ -227,12 +271,15 @@ async function clickRendererControl(
       mode: document.querySelector('.shell')?.dataset.mode,
       inspectorVisible: getComputedStyle(document.querySelector('.inspector')).display,
     })))()`);
+
     throw new Error(`Electron pointer hit-test failed for ${selector}: ${JSON.stringify({ target, candidates })}`);
   }
+
   const point = { x: target.x, y: target.y };
   window.webContents.sendInputEvent({ type: "mouseMove", ...point });
   window.webContents.sendInputEvent({ type: "mouseDown", ...point, button: "left", clickCount: 1 });
   window.webContents.sendInputEvent({ type: "mouseUp", ...point, button: "left", clickCount: 1 });
+
   return true;
 }
 
@@ -281,8 +328,10 @@ async function rendererOutcome(window: BrowserWindow) {
 
 async function dismissRendererOutcome(window: BrowserWindow): Promise<void> {
   const outcome = await rendererOutcome(window);
+
   if (!outcome.visible) return;
   await clickRendererControl(window, '[data-overlay="outcome"] [data-action="overlay"][data-value="none"]');
+
   if (!await waitForRenderer(window, "document.querySelector('[data-overlay=\"outcome\"]')?.hidden === true")) {
     throw new Error("the outcome dialog did not close through its own GUI control");
   }
@@ -290,8 +339,10 @@ async function dismissRendererOutcome(window: BrowserWindow): Promise<void> {
 
 async function runAudioResetSmokeProof(window: BrowserWindow): Promise<boolean> {
   await clickRendererControl(window, '[data-command="run-play"]');
+
   if (!await waitForRenderer(window, "document.querySelector('[data-audio-playback]') !== null")) return false;
   await clickRendererControl(window, '[data-audio-playback] button', 'Play tone');
+
   if (!await waitForRenderer(window, "document.querySelector('[data-audio-playback] button')?.dataset.audioState === 'started'")) return false;
   await window.webContents.executeJavaScript(`(() => {
     const button = [...document.querySelectorAll('[data-audio-playback] button')].find((item) => item.textContent === 'Play tone');
@@ -299,13 +350,16 @@ async function runAudioResetSmokeProof(window: BrowserWindow): Promise<boolean> 
     globalThis.__sceneaxiAudioResetControls = button?.closest('[data-audio-playback]');
   })()`);
   await clickRendererControl(window, '[data-command="run-reset"]');
+
   return await waitForRenderer(window, "globalThis.__sceneaxiAudioResetButton?.dataset.audioState === 'stopped' && globalThis.__sceneaxiAudioResetControls?.dataset.audioContextDisposed === 'true' && document.querySelector('[data-audio-playback]') === null");
 }
 
 async function runAudioDecodeRefusalSmokeProof(window: BrowserWindow): Promise<boolean> {
   await clickRendererControl(window, '[data-command="run-play"]');
+
   if (!await waitForRenderer(window, "document.querySelector('[data-audio-playback]') !== null")) return false;
   await clickRendererControl(window, '[data-audio-playback] button', 'Play undecodable');
+
   if (!await waitForRenderer(window, "document.getElementById('desktop-live-viewport-open-path')?.textContent?.includes('AUDIO_DECODE_FAILED undecodable') === true")) return false;
   await window.webContents.executeJavaScript(`(() => {
     const button = [...document.querySelectorAll('[data-audio-playback] button')].find((item) => item.textContent === 'Play undecodable');
@@ -313,6 +367,7 @@ async function runAudioDecodeRefusalSmokeProof(window: BrowserWindow): Promise<b
     globalThis.__sceneaxiAudioDecodeControls = button?.closest('[data-audio-playback]');
   })()`);
   await clickRendererControl(window, '[data-command="run-stop"]');
+
   return await waitForRenderer(window, "globalThis.__sceneaxiAudioDecodeControls?.dataset.audioContextDisposed === 'true'");
 }
 
@@ -323,20 +378,26 @@ async function runAudioDecodeRefusalSmokeProof(window: BrowserWindow): Promise<b
 async function prepareAudioPlay(window: BrowserWindow, gameRunRoom = true): Promise<void> {
   if (await window.webContents.executeJavaScript(`document.querySelector('.shell')?.dataset.overlay === 'outcome'`)) {
     await clickRendererControl(window, '[data-overlay="outcome"] [data-action="overlay"][data-value="none"]');
+
     if (!await waitForRenderer(window, "document.querySelector('.shell')?.dataset.overlay === 'none'")) {
       throw new Error("the outcome dialog did not close before audio Play");
     }
   }
+
   if (!gameRunRoom) return;
+
   // Stop and Reset live in the Game profile's Run room.
   if (await window.webContents.executeJavaScript(`document.querySelector('.shell')?.dataset.profile !== 'game'`)) {
     await clickRendererControl(window, '.profile-chip[data-value="game"]');
+
     if (!await waitForRenderer(window, "document.querySelector('.shell')?.dataset.profile === 'game'")) {
       throw new Error("the Game profile did not open before audio Play");
     }
   }
+
   if (await window.webContents.executeJavaScript(`document.querySelector('.shell')?.dataset.mode !== 'run'`)) {
     await clickRendererControl(window, '[data-action="mode"][data-value="run"]');
+
     if (!await waitForRenderer(window, "document.querySelector('.shell')?.dataset.mode === 'run'")) {
       throw new Error("the Run room did not open before audio Play");
     }
@@ -345,8 +406,10 @@ async function prepareAudioPlay(window: BrowserWindow, gameRunRoom = true): Prom
 
 async function runAudioKidsProfileSmokeProof(window: BrowserWindow): Promise<boolean> {
   await clickRendererControl(window, '[data-command="run-play"]');
+
   if (!await waitForRenderer(window, "document.querySelector('[data-audio-playback]') !== null")) return false;
   await clickRendererControl(window, '[data-audio-playback] button', 'Play tone');
+
   if (!await waitForRenderer(window, "document.querySelector('[data-audio-playback] button')?.dataset.audioState === 'started'")) return false;
   await window.webContents.executeJavaScript(`(() => {
     const button = [...document.querySelectorAll('[data-audio-playback] button')].find((item) => item.textContent === 'Play tone');
@@ -356,6 +419,7 @@ async function runAudioKidsProfileSmokeProof(window: BrowserWindow): Promise<boo
   await clickRendererControl(window, '.profile-chip[data-value="kids"]');
   const stopped = await waitForRenderer(window, "document.querySelector('.shell')?.dataset.profile === 'kids' && globalThis.__sceneaxiAudioKidsButton?.dataset.audioState === 'stopped' && globalThis.__sceneaxiAudioKidsControls?.dataset.audioContextDisposed === 'true' && document.querySelector('.profile-refusal[role=alert]')?.textContent?.includes('OPEN_PATH_KIDS_REFUSED') === true && document.querySelector('[data-audio-playback]') === null");
   await clickRendererControl(window, '.profile-chip[data-value="game"]');
+
   return stopped && await waitForRenderer(window, "document.querySelector('.shell')?.dataset.profile === 'game'");
 }
 
@@ -365,23 +429,29 @@ async function runAudioProjectSwitchSmokeProof(
 ): Promise<boolean> {
   await prepareAudioPlay(window);
   await clickRendererControl(window, '[data-command="run-play"]');
+
   if (!await waitForRenderer(window, "document.querySelector('[data-audio-playback]') !== null")) {
     throw new Error(`project-switch audio: Play mounted no audio controls: ${await window.webContents.executeJavaScript("document.querySelector('[data-product-run-report]')?.textContent ?? document.querySelector('[data-project-status]')?.textContent ?? ''")}`);
   }
+
   await clickRendererControl(window, '[data-audio-playback] button', 'Play tone');
   let toneStarted = false;
+
   for (let attempt = 0; attempt < 3 && !toneStarted; attempt += 1) {
     toneStarted = await waitForRenderer(window, "document.querySelector('[data-audio-playback] button')?.dataset.audioState === 'started'");
   }
+
   if (!toneStarted) {
     throw new Error(`project-switch audio: the tone did not start: ${await window.webContents.executeJavaScript("[document.getElementById('desktop-live-viewport-open-path')?.textContent, [...document.querySelectorAll('[data-audio-playback] button')].map((b) => b.textContent + '=' + (b.dataset.audioState ?? '')).join(','), document.querySelector('.shell')?.dataset.profile].join(' | ')")}`);
   }
+
   await window.webContents.executeJavaScript(`(() => {
     const button = [...document.querySelectorAll('[data-audio-playback] button')].find((item) => item.textContent === 'Play tone');
     globalThis.__sceneaxiAudioSmokeButton = button;
     globalThis.__sceneaxiAudioSmokeControls = button?.closest('[data-audio-playback]');
   })()`);
   await switchProject();
+
   return await waitForRenderer(window, "globalThis.__sceneaxiAudioSmokeButton?.dataset.audioState === 'stopped' && globalThis.__sceneaxiAudioSmokeControls?.dataset.audioContextDisposed === 'true' && document.querySelector('[data-audio-playback]') === null");
 }
 
@@ -402,31 +472,40 @@ async function runAudioSmokeProof(window: BrowserWindow): Promise<{
   // The feature proofs end with Stop and Reset, which dispose the audio controls;
   await prepareAudioPlay(window);
   await clickRendererControl(window, '[data-command="run-play"]');
+
   if (!await waitForRenderer(window, "document.querySelector('[data-audio-playback]') !== null")) {
     const status = await window.webContents.executeJavaScript(
       `[document.querySelector('[data-product-status]')?.textContent, document.querySelector('[data-product-run-report]')?.textContent, document.querySelector('.viewport')?.dataset.playback, document.querySelector('[data-outcome-message]')?.textContent, document.querySelector('[data-run-live-report]')?.textContent].join(' | ')`,
     );
+
     throw new Error(`Play did not mount the session audio controls: ${status}`);
   }
+
   // The pointer sets the level: a click at 35% of the slider's width, nothing written from script.
   const volumePointerHit = await clickRendererControl(window, '[aria-label="Audio volume"]', undefined, 0.35);
+
   if (!await waitForRenderer(window, "document.querySelector('[aria-label=\"Audio volume\"]')?.value !== '1'")) {
     throw new Error("the pointer did not move the audio volume slider");
   }
+
   const volume = await window.webContents.executeJavaScript(`document.querySelector('[aria-label="Audio volume"]').value`);
   const controlsBeforePlay = await window.webContents.executeJavaScript(`document.querySelector('[data-audio-playback]') !== null`);
   const playPointerHit = await clickRendererControl(window, '[data-audio-playback] button', 'Play tone');
+
   if (!await waitForRenderer(window, "document.querySelector('[data-audio-playback] button')?.dataset.audioState === 'started'")) {
     throw new Error('real Electron pointer did not start the selected clip');
   }
+
   if (!await waitForRenderer(window, "Number(document.querySelector('[data-audio-playback]')?.dataset.audioRms) >= 0.07 && Number(document.querySelector('[data-audio-playback]')?.dataset.audioRms) <= 0.11")) {
     throw new Error('live playback graph RMS did not reach the expected volume-scaled signal');
   }
+
   // Read the live level while the tone is still playing, before the slower
   // offline decode below.
   const liveRmsWhilePlaying = await window.webContents.executeJavaScript(
     "Number(document.querySelector('[data-audio-playback]')?.dataset.audioRms)",
   );
+
   const playback = await window.webContents.executeJavaScript(`(async () => {
     const audioButton = [...document.querySelectorAll('[data-audio-playback] button')].find((button) => button.textContent === 'Play tone');
     const response = await globalThis.sceneaxiDesktopLinux.request({ action: 'audio-asset', payload: { assetId: 'tone', documentPath: 'scene.json' } });
@@ -461,9 +540,11 @@ async function runAudioSmokeProof(window: BrowserWindow): Promise<{
     await decodeContext.close();
     return result;
   })()`);
+
   await clickRendererControl(window, '[data-command="run-stop"]');
   const stopped = await waitForRenderer(window, "globalThis.__sceneaxiAudioSmokeButton?.dataset.audioState === 'stopped' && globalThis.__sceneaxiAudioSmokeControls?.dataset.audioContextDisposed === 'true' && document.querySelector('[data-audio-playback]') === null");
   const stoppedRms = await window.webContents.executeJavaScript("Number(globalThis.__sceneaxiAudioSmokeControls?.dataset.audioRms)");
+
   return {
     ...playback,
     stoppedRms,
@@ -474,12 +555,13 @@ async function runAudioSmokeProof(window: BrowserWindow): Promise<{
   };
 }
 
-function smokeAssetBytes(): Buffer {
+function smokeAssetBytes(height = 1): Buffer {
   const positions = Buffer.from(new Float32Array([
     -1, 0, 0,
     1, 0, 0,
-    0, 1, 0,
+    0, height, 0,
   ]).buffer);
+
   return Buffer.from(JSON.stringify({
     asset: { version: "2.0" },
     buffers: [{
@@ -496,15 +578,20 @@ function smokeAssetBytes(): Buffer {
 }
 
 /** Read one own property off an unknown bridge payload, without asserting a shape. */
-function payloadField(value: unknown, name: string): unknown {
-  if (typeof value !== "object" || value === null) return undefined;
+function payloadField(value: DesktopBoundaryValue, name: string): DesktopBoundaryValue {
+  if (!isProtocolObject(value) || value === null) return undefined;
   const descriptor = Object.getOwnPropertyDescriptor(value, name);
+
   return descriptor !== undefined && "value" in descriptor ? descriptor.value : undefined;
 }
 
 let reportedFailure = false;
+
 let localBridgeServer: DesktopLocalBridgeServer | null = null;
+
 let closeActiveDesktopBridge: (() => boolean) | null = null;
+
+let cancelActiveAssetPreparation: (() => Promise<void>) | null = null;
 
 /** Print the one `{ok:false}` proof line and exit; later callers stay silent. */
 function reportFailure(message: string): void {
@@ -521,39 +608,67 @@ function fail(message: string): never {
 
 async function start(): Promise<void> {
   await app.whenReady();
-  const physicsWorldHost = await initializeDesktopScenePhysics().catch((error: unknown) => {
-    console.error("PHYSICS_HOST_NOT_READY", error instanceof Error ? error.message : "Rapier initialization failed.");
+
+  const physicsWorldHost = await initializeDesktopScenePhysics().catch((cause: unknown) => {
+    console.error("PHYSICS_HOST_NOT_READY", cause instanceof Error ? cause.message : "Rapier initialization failed.");
+
     return undefined;
   });
 
-  let frameReported: ((report: unknown) => void) | null = null;
-  const firstFrameReport = new Promise((resolve) => {
+  let frameReported: ((report: DesktopFrameReport) => void) | null = null;
+
+  const firstFrameReport = new Promise<DesktopFrameReport>((resolve) => {
     frameReported = resolve;
   });
 
   const smokeRoot = SMOKE ? smokeProjectDir() : null;
+
   const smokeGuiAssetPath = smokeRoot === null
     ? null
     : join(smokeRoot, ".sceneaxi-runtime", "smoke-gui-source.gltf");
+
   const smokeGuiAssetRevisionPath = smokeRoot === null
     ? null
     : join(smokeRoot, ".sceneaxi-runtime", "smoke-gui-source-revision-2.gltf");
+
   let smokeGuiAssetPickerPath = smokeGuiAssetPath;
+  const smokeNewRoot = SMOKE ? mkdtempSync(join(tmpdir(), "sceneaxi-desktop-new-")) : null;
+  const smokeAssetSource = smokeNewRoot === null ? null : join(smokeNewRoot, "gui-smoke-source.gltf");
+
+  if (smokeAssetSource !== null) {
+    const asset = smokeAssetBytes();
+    writeFileSync(smokeAssetSource, ASSET_CAPACITY_SMOKE ? Buffer.concat([asset, Buffer.alloc(PROJECT_ASSET_MAX_BYTES - asset.byteLength, 0x20)]) : asset);
+  }
+
+  const heldLocalExecutors: Array<() => Promise<void>> = [];
+
+  const smokeLocalExecutor = SMOKE ? (request: import("../lib/bridge.js").DesktopAssistantRunRequest) => {
+    if (!request.prompt.startsWith("SCENEAXI_SMOKE_")) return runAssistantSculptAction({ ...request, route: "local" });
+
+    return new Promise<Awaited<ReturnType<typeof runAssistantSculptAction>>>((resolve) => {
+      heldLocalExecutors.push(async () => resolve(await runAssistantSculptAction({ ...request, prompt: "a stone arch", route: "local" })));
+    });
+  } : undefined;
+
   const providerKeyStore = createElectronProviderKeyStore(app.getPath("userData"));
+
   const byoRuntime = createPrivilegedDesktopByoRuntime({
     keyStore: providerKeyStore,
     provider: "opencode",
     createProviderSession: createDesktopOpenCodeProviderSession(),
   });
+
   const runRarityProvider = createDesktopRarityFixtureProvider();
   let webExportRuntime: Uint8Array | undefined;
   let webExportPublisherExecutable: string | undefined;
+
   if (process.platform === "linux") {
     try {
       webExportRuntime = readFileSync(join(__dirname, "renderer.js"));
     } catch {
       webExportRuntime = undefined;
     }
+
     webExportPublisherExecutable = app.isPackaged
       ? join(
           process.resourcesPath,
@@ -563,6 +678,7 @@ async function start(): Promise<void> {
         )
       : join(__dirname, "sceneaxi-publish-no-replace");
   }
+
   let bridge: DesktopBridge | null = null;
   const activeFrameReport = () => bridge?.lastFrameReport() ?? null;
   let desktopWindow: BrowserWindow | null = null;
@@ -571,16 +687,52 @@ async function start(): Promise<void> {
   let projectBrowser: DesktopProjectBrowser | null = null;
   let activeRoot: string | null = null;
 
+  let pendingPreparation: Readonly<{ job: ReturnType<DesktopBridge["prepareAssetImport"]>; bridge: DesktopBridge; root: string }> | null = null;
+  let assetGeneration = 0;
+
+  const cancelPreparation = async () => {
+    assetGeneration += 1; // Fence before awaiting exit or allowing the old picker to resolve.
+    const pending = pendingPreparation;
+    pendingPreparation = null;
+
+    if (pending !== null) await pending.job.cancel();
+  };
+
+  cancelActiveAssetPreparation = cancelPreparation;
+
+  const prepareAssetImport = async (selectedBridge: DesktopBridge, root: string,
+    input: Readonly<{ profile: "game" | "web"; documentPath: string; sourcePath: string; assetId?: string; hotReload?: boolean }>): Promise<DesktopBridgeResponse> => {
+    if (pendingPreparation !== null) return bridgeRefuse(ASSET_PREPARATION_REFUSALS.busy, "One asset preparation is already pending.");
+    const token = ++assetGeneration;
+    const job = selectedBridge.prepareAssetImport(input);
+    const pending = Object.freeze({ job, bridge: selectedBridge, root });
+    pendingPreparation = pending;
+    const outcome = await job.result;
+
+    if (pendingPreparation !== pending || assetGeneration !== token || bridge !== selectedBridge || activeRoot !== root || window.isDestroyed()) {
+      return bridgeRefuse(ASSET_PREPARATION_REFUSALS.cancelled, "The asset preparation generation was retired.");
+    }
+
+    pendingPreparation = null;
+
+    return outcome;
+  };
+
   const activateProject = async (root: string): Promise<DesktopBridge> => {
     if (bridge !== null && activeRoot === root) return bridge;
+
     if (bridge !== null && desktopWindow !== null) {
       void desktopWindow.webContents.executeJavaScript(
         `document.dispatchEvent(new CustomEvent(${JSON.stringify(DESKTOP_VIEWPORT_STOP_EVENT)}))`,
       ).catch(() => undefined);
     }
+
+    await cancelPreparation();
+
     if (bridge !== null && !bridge.close()) {
       throw new Error("The active project's desktop mutation-owner lease could not be released.");
     }
+
     bridge = null;
     inputActions = null;
     projectBrowser = null;
@@ -588,6 +740,7 @@ async function start(): Promise<void> {
     await localBridgeServer?.close();
     localBridgeServer = null;
     let activeBridgeForDirtyCheck: DesktopBridge | null = null;
+
     const nextProjectBrowser = createDesktopProjectBrowser({
       root,
       stateDirectory: SMOKE
@@ -598,52 +751,118 @@ async function start(): Promise<void> {
           action: "authoring",
           payload: { op: "status", documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
         });
+
         if (response === undefined || !response.ok) return true;
         const snapshot = payloadField(response.data, "authoringSnapshot");
         const phase = payloadField(snapshot, "phase");
+
         return phase === "reviewing" || phase === "pending" ||
           payloadField(snapshot, "journalRecoveryPending") === true;
       },
     });
+
     const inspectedProject = inspectProjectModel(root);
+
     const commandCapabilities = inspectedProject.ok && inspectedProject.inspection.state === "native"
       ? inspectedProject.inspection.capabilities.map((grant) => grant.id)
       : undefined;
+
     const nextInputActions = createDesktopInputActionHost({
       projectRoot: root,
       workspaceDirectory: join(app.getPath("userData"), "input-actions"),
     });
+
     const next = createDesktopBridge({
       cwd: root,
-      ...(physicsWorldHost === undefined ? {} : { physicsWorldHost }),
-      ...(commandCapabilities === undefined ? {} : { commandCapabilities }),
+      ...(() => {
+        const optional: DesktopOptionalFields<{ physicsWorldHost?: Parameters<typeof createDesktopBridge>[0]["physicsWorldHost"] }> = {};
+
+        if (!(physicsWorldHost === undefined)) {
+          optional.physicsWorldHost = physicsWorldHost;
+        }
+
+        return optional;
+      })(),
+      ...(() => {
+        const optional: DesktopOptionalFields<{ commandCapabilities?: Parameters<typeof createDesktopBridge>[0]["commandCapabilities"] }> = {};
+
+        if (!(commandCapabilities === undefined)) {
+          optional.commandCapabilities = commandCapabilities;
+        }
+
+        return optional;
+      })(),
       inputActions: nextInputActions,
       projectBrowser: nextProjectBrowser,
       onFrameReport: (report) => frameReported?.(report),
-      ...(byoRuntime.runByoAssistant === undefined
-        ? {}
-        : { runByoAssistant: byoRuntime.runByoAssistant }),
+      ...(() => {
+        const optional: DesktopOptionalFields<{ runByoAssistant?: Parameters<typeof createDesktopBridge>[0]["runByoAssistant"] }> = {};
+
+        if (!(byoRuntime.runByoAssistant === undefined)) {
+          optional.runByoAssistant = byoRuntime.runByoAssistant;
+        }
+
+        return optional;
+      })(),
       runRarityProvider,
+      ...(() => {
+        const optional: DesktopOptionalFields<{ runLocalAssistant?: Parameters<typeof createDesktopBridge>[0]["runLocalAssistant"] }> = {};
+
+        if (!(smokeLocalExecutor === undefined)) {
+          optional.runLocalAssistant = smokeLocalExecutor;
+        }
+
+        return optional;
+      })(),
       webExportPlatform: process.platform,
-      ...(webExportPublisherExecutable === undefined
-        ? {}
-        : { webExportPublisherExecutable }),
-      ...(webExportRuntime === undefined ? {} : { webExportRuntime }),
+      ...(() => {
+        const optional: DesktopOptionalFields<{ webExportPublisherExecutable?: Parameters<typeof createDesktopBridge>[0]["webExportPublisherExecutable"] }> = {};
+
+        if (!(webExportPublisherExecutable === undefined)) {
+          optional.webExportPublisherExecutable = webExportPublisherExecutable;
+        }
+
+        return optional;
+      })(),
+      ...(() => {
+        const optional: DesktopOptionalFields<{ webExportRuntime?: Parameters<typeof createDesktopBridge>[0]["webExportRuntime"] }> = {};
+
+        if (!(webExportRuntime === undefined)) {
+          optional.webExportRuntime = webExportRuntime;
+        }
+
+        return optional;
+      })(),
     });
+
     activeBridgeForDirtyCheck = next;
+
     const localPaths = SMOKE
       ? {
           socketPath: join(root, ".sceneaxi-runtime", "desktop-v1.sock"),
           discoveryPath: join(root, ".sceneaxi-config", "desktop-bridge-v1.json"),
         }
       : resolveDesktopLocalBridgePaths({
-        ...(process.env["XDG_RUNTIME_DIR"] === undefined
-          ? {}
-          : { runtimeDir: process.env["XDG_RUNTIME_DIR"] }),
-        ...(process.env["XDG_CONFIG_HOME"] === undefined
-          ? {}
-          : { configDir: process.env["XDG_CONFIG_HOME"] }),
+        ...(() => {
+          const optional: DesktopOptionalFields<{ runtimeDir?: string }> = {};
+
+          if (!(process.env["XDG_RUNTIME_DIR"] === undefined)) {
+            optional.runtimeDir = process.env["XDG_RUNTIME_DIR"];
+          }
+
+          return optional;
+        })(),
+        ...(() => {
+          const optional: DesktopOptionalFields<{ configDir?: string }> = {};
+
+          if (!(process.env["XDG_CONFIG_HOME"] === undefined)) {
+            optional.configDir = process.env["XDG_CONFIG_HOME"];
+          }
+
+          return optional;
+        })(),
       });
+
     // The local agent bridge is an attachment point, not the application: a
     // refused socket costs the operator that attachment, never the selected root.
     try {
@@ -652,18 +871,20 @@ async function start(): Promise<void> {
         projectRoot: root,
         ...localPaths,
       });
-    } catch (error) {
-      if (SMOKE) throw error;
+    } catch (cause) {
+      if (SMOKE) throw cause;
       localBridgeServer = null;
       console.error(
         "desktop-linux: the local agent bridge did not start; Engine Desktop continues without CLI attachment:",
-        error instanceof Error ? error.message : String(error),
+        cause instanceof Error ? cause.message : String(cause),
       );
     }
+
     bridge = next;
     inputActions = nextInputActions;
     projectBrowser = nextProjectBrowser;
     activeRoot = root;
+
     return next;
   };
 
@@ -672,16 +893,20 @@ async function start(): Promise<void> {
       ? join(app.getPath("userData"), "project-lifecycle")
       : join(smokeRoot, ".sceneaxi-runtime"),
   });
-  let smokeBridge: DesktopBridge | null = null;
+
+  let smokeBridge: DesktopBridge | null;
+
   if (smokeRoot !== null) {
     smokeBridge = await activateProject(smokeRoot);
     const sourcePath = join(smokeRoot, "smoke-source.gltf");
     mkdirSync(join(smokeRoot, ".sceneaxi-runtime"), { recursive: true });
+
     if (smokeGuiAssetPath === null) fail("GUI import fixture path was not configured");
     const guiAssetSource = JSON.parse(smokeAssetBytes().toString("utf8"));
     guiAssetSource.extras = { sceneaxiSmokeRevision: 1 };
     writeFileSync(smokeGuiAssetPath, JSON.stringify(guiAssetSource));
     writeFileSync(sourcePath, smokeAssetBytes());
+
     const stagedAsset = smokeBridge.handle({
       action: "asset-import",
       payload: {
@@ -690,64 +915,123 @@ async function start(): Promise<void> {
         sourcePath,
       },
     });
+
     if (!stagedAsset.ok || payloadField(stagedAsset.data, "outcome") !== "reviewing") {
       fail("smoke asset did not reach Change Review");
     }
+
     const acceptedAsset = smokeBridge.handle({
       action: "authoring",
       payload: { op: "accept" },
     });
+
     if (!acceptedAsset.ok || payloadField(acceptedAsset.data, "phase") !== "applied") {
       fail("smoke asset did not apply through the existing authoring bridge");
     }
+
     unlinkSync(sourcePath);
     const audioSourcePath = join(smokeRoot, "tone.wav");
     writeFileSync(audioSourcePath, smokeAudioBytes());
+
     const stagedAudio = smokeBridge.handle({
       action: "asset-import",
       payload: { profile: "game", documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH, sourcePath: audioSourcePath },
     });
+
     if (!stagedAudio.ok || payloadField(stagedAudio.data, "outcome") !== "reviewing") {
       fail("deterministic WAV did not enter the existing asset-import review");
     }
+
     const acceptedAudio = smokeBridge.handle({ action: "authoring", payload: { op: "accept" } });
+
     if (!acceptedAudio.ok || payloadField(acceptedAudio.data, "phase") !== "applied") {
       fail("deterministic WAV did not apply through the existing asset-import bridge");
     }
+
     unlinkSync(audioSourcePath);
     const invalidAudioPath = join(smokeRoot, "undecodable.ogg");
     writeFileSync(invalidAudioPath, smokeUndecodableOggBytes());
+
     const stagedInvalidAudio = smokeBridge.handle({
       action: "asset-import",
       payload: { profile: "game", documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH, sourcePath: invalidAudioPath },
     });
+
     if (!stagedInvalidAudio.ok || payloadField(stagedInvalidAudio.data, "outcome") !== "reviewing") {
       fail("metadata-valid Ogg fixture did not enter asset review");
     }
+
     const acceptedInvalidAudio = smokeBridge.handle({ action: "authoring", payload: { op: "accept" } });
+
     if (!acceptedInvalidAudio.ok || payloadField(acceptedInvalidAudio.data, "phase") !== "applied") {
       fail("metadata-valid Ogg fixture did not apply through the asset-import bridge");
     }
+
     unlinkSync(invalidAudioPath);
     const openedSmokeProject = lifecycle.openProject(smokeRoot);
+
     if (!openedSmokeProject.ok) {
       fail(`smoke project lifecycle did not bind the contained root: ${openedSmokeProject.reason}`);
     }
   } else {
     const startup = lifecycle.startup();
+
     if (startup.ok && startup.data.status.active !== null) {
       await activateProject(startup.data.status.active.root);
     }
   }
 
-  ipcMain.handle(DESKTOP_BRIDGE_CHANNEL, (_event, request: unknown) =>
-    bridge?.handle(request) ??
-      bridgeRefuse(
-        DESKTOP_PROJECT_REFUSALS.projectRequired,
-        "Choose New Project, Open Project, or a validated recent project before using the engine bridge.",
-      ),
-  );
-  ipcMain.handle(DESKTOP_INPUT_ACTIONS_CHANNEL, () =>
+  const documentUrl = pathToFileURL(join(__dirname, "index.html")).href;
+
+  const trustedHandle = <Result>(channel: string, handler: (event: Electron.IpcMainInvokeEvent, request: DesktopBoundaryValue) => Result) => {
+    ipcMain.handle(channel, (event, request: DesktopBoundaryValue) => {
+      if (window.isDestroyed() || event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame ||
+          event.senderFrame.url !== documentUrl) {
+        return bridgeRefuse("DESKTOP_BRIDGE_REQUEST_MALFORMED", "Only the packaged main document may use the desktop bridge.");
+      }
+
+      return handler(event, request);
+    });
+  };
+
+  trustedHandle(DESKTOP_BRIDGE_CHANNEL, async (_event, request: DesktopBoundaryValue) => {
+    const action = payloadField(request, "action");
+    const payload = payloadField(request, "payload");
+
+    if (action === "profile" || (action === "authoring" && payloadField(payload, "op") === "reject") || action === "project-browser-open") await cancelPreparation();
+
+    if (action === "asset-import") {
+      if (bridge === null || activeRoot === null) return bridgeRefuse(DESKTOP_PROJECT_REFUSALS.projectRequired, "Choose a validated project before importing an asset.");
+
+      if (payload === null || !isProtocolObject(payload) || Array.isArray(payload) || types.isProxy(payload)) return bridgeRefuse(ASSET_PREPARATION_REFUSALS.inputInvalid, "Invalid asset preparation envelope.");
+      const descriptors = Object.getOwnPropertyDescriptors(payload);
+
+      if (Reflect.ownKeys(descriptors).some(key => !isProtocolText(key) || !["profile", "documentPath", "sourcePath", "assetId", "hotReload"].includes(key)) ||
+        Object.values(descriptors).some(descriptor => !("value" in descriptor))) return bridgeRefuse(ASSET_PREPARATION_REFUSALS.inputInvalid, "Invalid asset preparation fields.");
+      const profile: unknown = descriptors["profile"]?.value;
+      const documentPath: unknown = descriptors["documentPath"]?.value;
+      const sourcePath: unknown = descriptors["sourcePath"]?.value;
+      const assetId: unknown = descriptors["assetId"]?.value;
+      const hotReload: unknown = descriptors["hotReload"]?.value;
+
+      if (profile === "kids") return bridgeRefuse(ASSET_PREPARATION_REFUSALS.kidsDenied, "Kids asset work is denied before allocation.");
+
+      if ((profile !== "game" && profile !== "web") || !isProtocolText(documentPath) || !isProtocolText(sourcePath) ||
+        (assetId !== undefined && !isProtocolText(assetId)) || (hotReload !== undefined && !isProtocolBoolean(hotReload))) return bridgeRefuse(ASSET_PREPARATION_REFUSALS.inputInvalid, "Invalid asset preparation scalars.");
+
+      const preparationInput: MutableNativeFields<Parameters<typeof prepareAssetImport>[2]> = { profile, documentPath, sourcePath };
+
+      if (assetId !== undefined) preparationInput.assetId = assetId;
+
+      if (hotReload !== undefined) preparationInput.hotReload = hotReload;
+
+      return prepareAssetImport(bridge, activeRoot, preparationInput);
+    }
+
+    return bridge?.handle(request) ?? bridgeRefuse(DESKTOP_PROJECT_REFUSALS.projectRequired,
+      "Choose New Project, Open Project, or a validated recent project before using the engine bridge.");
+  });
+  trustedHandle(DESKTOP_INPUT_ACTIONS_CHANNEL, () =>
     inputActions?.inspect() ?? {
       ok: false,
       reason: DESKTOP_PROJECT_REFUSALS.projectRequired,
@@ -755,40 +1039,62 @@ async function start(): Promise<void> {
       detail: null,
     },
   );
-  ipcMain.handle(DESKTOP_ASSET_IMPORT_CHANNEL, async (_event, request: unknown) => {
-    if (bridge === null || activeRoot === null) {
-      return bridgeRefuse(
-        DESKTOP_PROJECT_REFUSALS.projectRequired,
-        "Choose a validated project before importing an asset.",
-      );
+  trustedHandle(DESKTOP_ASSET_IMPORT_CHANNEL, async (_event, request: DesktopBoundaryValue) => {
+    // Descriptor-only route admission precedes even a profile read.
+    if (request === null || !isProtocolObject(request) || Array.isArray(request) || types.isProxy(request)) return bridgeRefuse(ASSET_PREPARATION_REFUSALS.inputInvalid, "Invalid asset picker envelope.");
+    const descriptors = Object.getOwnPropertyDescriptors(request);
+
+    if (Reflect.ownKeys(descriptors).some(key => !isProtocolText(key) || !["profile", "op", "generation"].includes(key)) ||
+      Object.values(descriptors).some(descriptor => !("value" in descriptor))) return bridgeRefuse(ASSET_PREPARATION_REFUSALS.inputInvalid, "Invalid asset picker fields.");
+    const profile: unknown = descriptors["profile"]?.value;
+    const operation: unknown = descriptors["op"]?.value;
+
+    if (profile !== "game" && profile !== "web") return bridgeRefuse(profile === "kids" ? ASSET_PREPARATION_REFUSALS.kidsDenied : ASSET_PREPARATION_REFUSALS.inputInvalid,
+      "Asset picker admission requires an allowed profile.");
+
+    if (operation === "status") {
+      if (payloadField(request, "generation") !== undefined) return bridgeRefuse(ASSET_PREPARATION_REFUSALS.inputInvalid, "Status cannot supply a generation.");
+
+      return bridgeOk("asset-import", Object.freeze({ outcome: pendingPreparation === null ? "idle" : "preparing", generation: pendingPreparation?.job.generation ?? null }));
     }
-    const picker = createDesktopAssetPickerHost({
-      chooseFile: () => SMOKE && smokeGuiAssetPickerPath !== null
-        ? Promise.resolve({ canceled: false, filePaths: [smokeGuiAssetPickerPath] })
-        : dialog.showOpenDialog(window, {
-            title: "Import validated project asset",
-            buttonLabel: "Stage Import",
-            properties: ["openFile"],
-            filters: [{
-              name: "SceneAxi project assets",
-              extensions: ["glb", "gltf", "json", "png", "jpg", "jpeg", "webp", "wav", "ogg", "mp3", "woff2", "woff", "ttf", "otf"],
-            }],
-          }),
-      stage: (selection) => bridge?.handle(selection) ?? bridgeRefuse(
-        DESKTOP_PROJECT_REFUSALS.projectRequired,
-        "The selected project was closed before the asset could be staged.",
-      ),
+
+    if (operation === "cancel") {
+      const generation = payloadField(request, "generation");
+
+      if (pendingPreparation === null || generation !== pendingPreparation.job.generation) return bridgeRefuse(ASSET_PREPARATION_REFUSALS.inputInvalid, "Only the active generation may be cancelled.");
+      await cancelPreparation();
+
+      return bridgeOk("asset-import", Object.freeze({ outcome: "cancelled", generation }));
+    }
+
+    if (operation !== undefined || payloadField(request, "generation") !== undefined) return bridgeRefuse(ASSET_PREPARATION_REFUSALS.inputInvalid, "Unknown asset picker operation.");
+
+    if (bridge === null || activeRoot === null) return bridgeRefuse(DESKTOP_PROJECT_REFUSALS.projectRequired, "Choose a validated project before importing an asset.");
+
+    if (pendingPreparation !== null) return bridgeRefuse(ASSET_PREPARATION_REFUSALS.busy, "One asset preparation is already pending.");
+    const selectedBridge = bridge;
+    const root = activeRoot;
+    const token = assetGeneration;
+
+    const selected = SMOKE ? { canceled: false, filePaths: smokeGuiAssetPickerPath === null ? [] : [smokeGuiAssetPickerPath] } : await dialog.showOpenDialog(window, {
+      title: "Import validated project asset", buttonLabel: "Stage Import", properties: ["openFile"],
+      filters: [{ name: "SceneAxi project assets", extensions: ["glb", "gltf", "json", "png", "jpg", "jpeg", "webp", "wav", "ogg", "mp3", "woff2", "woff", "ttf", "otf"] }],
     });
-    return picker.chooseAndStage(payloadField(request, "profile"));
+
+    if (selected.canceled || selected.filePaths[0] === undefined) return bridgeOk("asset-import", Object.freeze({ outcome: "cancelled" }));
+
+    if (bridge !== selectedBridge || activeRoot !== root || assetGeneration !== token || window.isDestroyed()) return bridgeRefuse(ASSET_PREPARATION_REFUSALS.cancelled, "The picker project was retired before selection.");
+
+    return prepareAssetImport(selectedBridge, root, { profile, documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH, sourcePath: selected.filePaths[0] });
   });
-  ipcMain.handle(DESKTOP_PROJECT_BROWSER_CHANNEL, (_event, request: unknown) =>
+  trustedHandle(DESKTOP_PROJECT_BROWSER_CHANNEL, (_event, request: DesktopBoundaryValue) =>
     projectBrowser?.handle(request) ??
       projectBrowserRefuse(
         DESKTOP_PROJECT_BROWSER_REFUSALS.projectRequired,
         "Choose New Project, Open Project, or a validated recent project before browsing project files.",
       ),
   );
-  ipcMain.handle(DESKTOP_BYO_CONFIGURATION_CHANNEL, (_event, request: unknown) =>
+  trustedHandle(DESKTOP_BYO_CONFIGURATION_CHANNEL, (_event, request: DesktopBoundaryValue) =>
     byoRuntime.configuration.handle(request),
   );
 
@@ -814,10 +1120,17 @@ async function start(): Promise<void> {
       nodeIntegration: false,
     },
   });
+
   desktopWindow = window;
 
+  if (SMOKE) window.webContents.on("console-message", (details) => {
+    // Smoke's own fixed labels only, never arbitrary provider/script messages.
+    if (/^SMOKE_(WAIT|CONTROL|MENU)_FAILED /.test(details.message)) console.error(details.message);
+  });
   window.webContents.on("will-navigate", (event) => event.preventDefault());
   window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  window.webContents.session.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
+  window.webContents.session.setPermissionCheckHandler(() => false);
 
   Menu.setApplicationMenu(Menu.buildFromTemplate([
     { role: "editMenu" },
@@ -893,34 +1206,43 @@ async function start(): Promise<void> {
     lifecycle,
     dialogs: {
       async chooseNewProjectRoot() {
-        if (SMOKE) return null;
+        if (SMOKE) return smokeNewRoot;
+
         const selected = await dialog.showOpenDialog(window, {
           title: "New SceneAxi Project",
           buttonLabel: "Create starter project here",
           properties: ["openDirectory", "createDirectory"],
         });
+
         return selected.canceled ? null : (selected.filePaths[0] ?? null);
       },
       async chooseOpenProjectRoot() {
-        if (SMOKE) return null;
+        if (SMOKE) return smokeRoot;
+
         const selected = await dialog.showOpenDialog(window, {
           title: "Open SceneAxi Project",
           buttonLabel: "Open Project",
           properties: ["openDirectory"],
         });
+
         return selected.canceled ? null : (selected.filePaths[0] ?? null);
       },
     },
     activate: activateProject,
   });
-  ipcMain.handle(DESKTOP_PROJECT_CHANNEL, async (_event, request: unknown) => {
+
+  trustedHandle(DESKTOP_PROJECT_CHANNEL, async (_event, request: DesktopBoundaryValue) => {
     const before = activeRoot;
+
+    if (payloadField(request, "action") !== "status") await cancelPreparation();
     const response = await projectHost.handle(request);
+
     if (desktopProjectReloadRequired(before, response)) {
       // Let the invoke response cross the preload boundary, then reload the
       // unforked chrome so its one renderer owner mounts the newly active root.
       setTimeout(() => window.webContents.reload(), 0);
     }
+
     return response;
   });
 
@@ -952,10 +1274,371 @@ async function start(): Promise<void> {
 
   if (!SMOKE) return;
 
+  // --- native front-door coverage: the existing typed dialog port gets isolated
+  // fixture choices in smoke only; no renderer path/credential bypass is exposed.
+  const gui = async (body: string): Promise<DesktopBoundaryValue> => window.webContents.executeJavaScript(`(async () => {
+    const wait = async (predicate, label) => {
+      for (let attempt = 0; attempt < 400; attempt += 1) {
+        if (predicate()) return;
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+      const shell = document.querySelector('.shell');
+      console.error('SMOKE_WAIT_FAILED', label, JSON.stringify({ browserRevision: shell?.dataset.projectBrowserRevision, selectedPath: shell?.dataset.projectBrowserSelectedPath, playback: document.querySelector('.viewport')?.dataset.playback, playbackFrame: document.querySelector('.viewport')?.dataset.playbackFrame }));
+      throw new Error('SMOKE_WAIT_FAILED');
+    };
+    const click = async (selector) => {
+      await wait(() => {
+        const candidate = document.querySelector(selector);
+        return candidate instanceof HTMLButtonElement && !candidate.disabled && candidate.getAttribute('aria-disabled') !== 'true';
+      }, 'admitted control ' + selector);
+      const element = document.querySelector(selector);
+      if (!(element instanceof HTMLButtonElement) || element.disabled || element.getAttribute('aria-disabled') === 'true') { console.error('SMOKE_CONTROL_FAILED', selector); throw new Error('SMOKE_CONTROL_FAILED'); }
+      element.click();
+    };
+    const menuCommand = async (id) => {
+      const command = document.querySelector('.menu-panel [data-command="' + id + '"]');
+      await wait(() => command instanceof HTMLButtonElement && command.getAttribute('aria-disabled') !== 'true', 'menu ready ' + id);
+      const root = command?.closest('[data-menu-root]');
+      root?.querySelector('[data-menu-trigger]')?.click();
+      if (!(command instanceof HTMLButtonElement) || command.closest('[hidden]') !== null || command.getAttribute('aria-disabled') === 'true') { console.error('SMOKE_MENU_FAILED', id); throw new Error('SMOKE_MENU_FAILED'); }
+      command.click();
+    };
+    ${body}
+  })()`);
+
+  // The smoke executes through the real BrowserWindow: observe enforced CSP,
+  // not only a generated policy string. All injected probes are synthetic.
+  let blockedProbeRequests = 0;
+  window.webContents.session.webRequest.onBeforeRequest(
+    { urls: ['https://sceneaxi-blocked.invalid/*'] },
+    (_details, callback) => { blockedProbeRequests += 1; callback({ cancel: true }); },
+  );
+  await gui(`
+    const violations = [];
+    const onViolation = (event) => violations.push(event.effectiveDirective);
+    document.addEventListener('securitypolicyviolation', onViolation);
+    globalThis.__sceneaxiBlockedScript = false;
+    const inline = document.createElement('script');
+    inline.textContent = 'globalThis.__sceneaxiBlockedScript = true';
+    document.body.append(inline);
+    const remote = document.createElement('script');
+    remote.src = 'https://sceneaxi-blocked.invalid/probe.js';
+    document.body.append(remote);
+    const frame = document.createElement('iframe');
+    frame.src = 'https://sceneaxi-blocked.invalid/';
+    document.body.append(frame);
+    await wait(() => violations.filter(directive => directive.startsWith('script-src')).length >= 2, 'enforced inline and remote script refusals');
+    if (globalThis.__sceneaxiBlockedScript !== false) throw new Error('SMOKE_CSP_INLINE_EXECUTED');
+    if (await Notification.requestPermission() !== 'denied') throw new Error('SMOKE_PERMISSION_NOT_DENIED');
+    document.removeEventListener('securitypolicyviolation', onViolation);
+    inline.remove(); remote.remove(); frame.remove();
+    delete globalThis.__sceneaxiBlockedScript;
+    return true;
+  `);
+  window.webContents.session.webRequest.onBeforeRequest(null);
+
+  if (blockedProbeRequests !== 0) fail('CSP allowed a remote script/frame network request.');
+
+  // Genuine foreign WebContents carries the same packaged document and preload,
+  // yet no privileged handler may run for that sender (all six actual channels).
+  const foreign = new BrowserWindow({ show: false, webPreferences: {
+    preload: join(__dirname, "preload.cjs"), contextIsolation: true, sandbox: true, nodeIntegration: false,
+  } });
+
+  await foreign.loadFile(join(__dirname, "index.html"));
+
+  const foreignRefusals = await foreign.webContents.executeJavaScript(`Promise.all([
+    globalThis.sceneaxiDesktopLinux.request({action:'handshake'}),
+    globalThis.sceneaxiDesktopLinux.project({action:'status'}),
+    globalThis.sceneaxiDesktopLinux.browseProject({action:'status', profile:'web'}),
+    globalThis.sceneaxiDesktopLinux.inputActions(),
+    globalThis.sceneaxiDesktopLinux.importAsset({profile:'web'}),
+    globalThis.sceneaxiDesktopLinux.configureByo({action:'status', provider:'opencode', profile:'@sceneaxi/profile-game'})
+  ])`);
+
+  foreign.destroy();
+
+  if (!Array.isArray(foreignRefusals) || foreignRefusals.length !== 6 ||
+      foreignRefusals.some((response) => payloadField(response, "ok") !== false ||
+        payloadField(response, "reason") !== "DESKTOP_BRIDGE_REQUEST_MALFORMED")) fail("Foreign packaged-document IPC sender was not refused on every privileged channel.");
+
+  const waitForRoot = async (root: string) => {
+    for (let attempt = 0; attempt < 400; attempt += 1) {
+      try {
+        const ready = await window.webContents.executeJavaScript(`document.querySelector('[data-project-root]')?.textContent === ${JSON.stringify(root)} && document.querySelector('select[data-action="scene-entity-select"]')?.options.length > 0`);
+
+        if (ready === true) return;
+      } catch { /* A committed project rebind reloads the document. */ }
+
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+
+    const observed = await window.webContents.executeJavaScript(`({ root: document.querySelector('[data-project-root]')?.textContent, options: document.querySelector('select[data-action="scene-entity-select"]')?.options.length, status: document.querySelector('[data-project-status]')?.textContent })`);
+    fail(`The native window did not mount the exact rebound project: ${JSON.stringify(observed)}`);
+  };
+
+  if (smokeRoot === null || smokeNewRoot === null) fail("Native GUI smoke lost isolated dialog choices.");
+  await waitForRoot(smokeRoot);
+  await gui(`await menuCommand('project-new'); return true;`);
+  await waitForRoot(smokeNewRoot);
+
+  if (existsSync(join(smokeRoot, ".sceneaxi-config", "desktop-bridge-v1.json")) ||
+      !existsSync(join(smokeNewRoot, ".sceneaxi-config", "desktop-bridge-v1.json"))) {
+    fail("Project New did not retire old CLI discovery and publish the new bound root.");
+  }
+
+  console.error("SMOKE_PHASE maximum-asset boundary");
+  const guiDocument = join(smokeNewRoot, SAMPLE_DOCUMENT);
+  // SAFETY: the awaited native New Project action rebound the bridge through activateProject above; the callback assignment is not visible to TypeScript control flow, and the null guard follows immediately.
+  const guiBridge = bridge as DesktopBridge | null;
+
+  if (guiBridge === null || smokeAssetSource === null) fail("Maximum-asset smoke lost its bound bridge.");
+  const oversizeSource = join(smokeNewRoot, "oversize-smoke-source.gltf");
+  const beforeOversize = readFileSync(guiDocument, "utf8");
+  writeFileSync(oversizeSource, Buffer.alloc(PROJECT_ASSET_MAX_BYTES + 1, 0x20));
+  const oversize = guiBridge.handle({ action: "asset-import", payload: { profile: "web", documentPath: SAMPLE_DOCUMENT, sourcePath: oversizeSource } });
+
+  if (oversize.ok || oversize.reason !== CONTAINED_GLTF_REFUSALS.oversize || readFileSync(guiDocument, "utf8") !== beforeOversize) {
+    fail("Maximum-plus-one asset was not refused without canonical mutation.");
+  }
+
+  unlinkSync(oversizeSource);
+  // Maximum-byte admission has its own contained golden project. Keep the GUI
+  // fixture small: this receipt is byte-boundary admission, not a maximum-scene render claim.
+  const maximumRoot = smokeProjectDir();
+  const maximumBridge = createDesktopBridge({ cwd: maximumRoot });
+
+  try {
+    const maximumSource = join(maximumRoot, "maximum-source.gltf");
+    const asset = smokeAssetBytes();
+    writeFileSync(maximumSource, Buffer.concat([asset, Buffer.alloc(PROJECT_ASSET_MAX_BYTES - asset.byteLength, 0x20)]));
+    const before = readFileSync(join(maximumRoot, SAMPLE_DOCUMENT), "utf8");
+    const started = Date.now();
+    const maximum = maximumBridge.handle({ action: "asset-import", payload: { profile: "web", documentPath: SAMPLE_DOCUMENT, sourcePath: maximumSource } });
+
+    if (!maximum.ok || payloadField(maximum.data, "outcome") !== "reviewing" || Date.now() - started > 4000) fail("Maximum-byte source was not admitted within the existing latency budget.");
+    const rejected = maximumBridge.handle({ action: "authoring", payload: { op: "reject" } });
+
+    if (!rejected.ok || readFileSync(join(maximumRoot, SAMPLE_DOCUMENT), "utf8") !== before) fail("Maximum-byte rejection changed canonical bytes.");
+  } finally {
+    if (!maximumBridge.close()) fail("Maximum-byte golden retained its mutation-owner lease.");
+    rmSync(maximumRoot, { recursive: true, force: true });
+  }
+
+  const guiBefore = readFileSync(guiDocument, "utf8");
+  await gui(`
+    const select = document.querySelector('select[data-action="scene-entity-select"]');
+    select.value = ${JSON.stringify(DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId)};
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    await wait(() => !document.querySelector('[data-scene-property-editor]')?.hidden, 'selected hierarchy');
+    const input = document.querySelector('#scene-property-translation-x');
+    input.value = '-3.5'; input.dispatchEvent(new Event('input', { bubbles: true }));
+    await click('[data-action="scene-property-stage"]');
+    await wait(() => !document.querySelector('[data-change-proposal]')?.hidden, 'transform review');
+    return true;
+  `);
+
+  if (readFileSync(guiDocument, "utf8") !== guiBefore) fail("GUI transform staging wrote before Save.");
+  await gui(`await click('.title-actions [data-command="project-save"]'); await wait(() => document.querySelector('[data-change-proposal]')?.hidden === true, 'Save apply'); return true;`);
+  console.error("SMOKE_PHASE maximum-asset native import");
+  const guiSaved = readFileSync(guiDocument, "utf8");
+
+  if (guiSaved === guiBefore || !guiSaved.includes('-3.5')) fail("GUI Save did not persist the typed transform.");
+  await gui(`await menuCommand('edit-undo'); return true;`);
+
+  for (let n = 0; n < 400 && readFileSync(guiDocument, "utf8") !== guiBefore; n += 1) await new Promise(resolve => setTimeout(resolve, 10));
+
+  if (readFileSync(guiDocument, "utf8") !== guiBefore) fail("GUI Undo did not restore exact prior bytes.");
+  await gui(`await menuCommand('edit-redo'); return true;`);
+
+  for (let n = 0; n < 400 && readFileSync(guiDocument, "utf8") !== guiSaved; n += 1) await new Promise(resolve => setTimeout(resolve, 10));
+
+  if (readFileSync(guiDocument, "utf8") !== guiSaved) fail("GUI Redo did not restore exact saved bytes.");
+
+  const nativeResidentBytes = () => {
+      const metrics = app.getAppMetrics();
+
+      if (metrics.length === 0 || metrics.some(metric => !Number.isFinite(metric.memory.workingSetSize) || metric.memory.workingSetSize <= 0)) fail("Native process RSS observation missing.");
+
+      return metrics.reduce((sum, metric) => sum + metric.memory.workingSetSize * 1024, 0);
+    };
+
+    const capacityRss: number[] = [];
+    const capacityReloadMs: number[] = [];
+    const capacityReloadRss: number[] = [];
+
+    const assetCapacity = { enabled: ASSET_CAPACITY_SMOKE, sourceBytes: ASSET_CAPACITY_SMOKE ? PROJECT_ASSET_MAX_BYTES : smokeAssetBytes().byteLength,
+      phaseMs: { import: 0, apply: 0, reload: 0, hotReload: 0, cancel: 0 }, mainHeartbeatMs: 0, rendererHeartbeatMs: 0 };
+
+    let capacityPrevious = performance.now();
+
+    const capacityHeartbeat = ASSET_CAPACITY_SMOKE ? setInterval(() => {
+      const now = performance.now(); assetCapacity.mainHeartbeatMs = Math.max(assetCapacity.mainHeartbeatMs, now - capacityPrevious); capacityPrevious = now;
+      capacityRss.push(nativeResidentBytes());
+    }, 10) : null;
+
+    if (ASSET_CAPACITY_SMOKE) {
+      capacityRss.push(nativeResidentBytes());
+      await gui(`globalThis.__sceneaxiAssetHeartbeat = { max: 0, previous: performance.now(), timer: null };
+        const sample = globalThis.__sceneaxiAssetHeartbeat;
+        sample.timer = setInterval(() => { const now = performance.now(); sample.max = Math.max(sample.max, now - sample.previous); sample.previous = now; }, 10); return true;`);
+    }
+
+    let capacityStarted = performance.now();
+    await gui(`await wait(() => document.querySelector('[data-action="profile"][data-value="web"]')?.getAttribute('aria-disabled') !== 'true', 'profile switch admitted'); await click('[data-action="profile"][data-value="web"]'); await wait(() => document.querySelector('[data-action="web-inject-asset"]')?.getAttribute('aria-disabled') !== 'true', 'Web import admitted'); await click('[data-action="web-inject-asset"]'); await wait(() => document.querySelector('[data-change-proposal]')?.hidden === false, 'GUI import review'); return true;`);
+
+  assetCapacity.phaseMs.import = performance.now() - capacityStarted;
+
+    if (readFileSync(guiDocument, "utf8") !== guiSaved) fail("GUI import wrote before approval.");
+    capacityStarted = performance.now();
+  await gui(`await click('[data-action="change-accept"]'); await wait(() => document.querySelector('[data-change-proposal]')?.hidden === true, 'import apply'); return true;`);
+  assetCapacity.phaseMs.apply = performance.now() - capacityStarted;
+    console.error("SMOKE_PHASE maximum-asset canonical reload");
+  let guiImported = readFileSync(guiDocument, "utf8");
+
+  if (guiImported === guiSaved || !guiImported.includes('gui-smoke-source')) fail("Native fixture dialog did not apply a real manifest asset.");
+  capacityStarted = performance.now();
+    await gui(`const revision = Number(document.querySelector('.shell')?.dataset.projectBrowserRevision || 0); await click('[data-action="document-reload"]'); await wait(() => Number(document.querySelector('.shell')?.dataset.projectBrowserRevision) > revision && document.querySelector('.shell')?.dataset.projectBrowserSelectedPath === 'scene.json', 'import reload canonical document revision'); return true;`);
+
+  assetCapacity.phaseMs.reload = performance.now() - capacityStarted;
+
+    if (readFileSync(guiDocument, "utf8") !== guiImported) fail("GUI reload rewrote canonical import bytes.");
+
+    if (ASSET_CAPACITY_SMOKE) {
+      // Change original bytes without changing source/path/identity or the 8MiB budget.
+      const changedSource = readFileSync(smokeAssetSource);
+      changedSource[changedSource.byteLength - 1] = 0x09;
+      writeFileSync(smokeAssetSource, changedSource);
+      const changedDigest = `sha256:${createHash("sha256").update(changedSource).digest("hex")}`;
+      const hotReloadStarted = performance.now();
+      await gui(`const stage = await globalThis.sceneaxiDesktopLinux.request({ action: 'asset-import', payload: {
+        profile: 'web', documentPath: ${JSON.stringify(SAMPLE_DOCUMENT)}, sourcePath: ${JSON.stringify(smokeAssetSource)}, hotReload: true } });
+        if (!stage.ok || stage.data.outcome !== 'reviewing' || stage.data.hotReload !== true || stage.data.entry.digest !== ${JSON.stringify(changedDigest)}) throw new Error('SMOKE_ASSET_HOT_RELOAD_NOT_REVIEWED');
+        const accepted = await globalThis.sceneaxiDesktopLinux.request({ action: 'authoring', payload: { op: 'accept' } });
+        if (!accepted.ok || accepted.data.phase !== 'applied') throw new Error('SMOKE_ASSET_HOT_RELOAD_NOT_APPLIED'); return true;`);
+      assetCapacity.phaseMs.hotReload = performance.now() - hotReloadStarted;
+      const hotReloadCanonical = readFileSync(guiDocument, "utf8");
+
+      if (hotReloadCanonical === guiImported || !hotReloadCanonical.includes(changedDigest)) fail("Native changed-source hot reload did not persist original byte digest.");
+      guiImported = hotReloadCanonical;
+
+      for (let cycle = 0; cycle < 3; cycle += 1) {
+        const started = performance.now();
+        await gui(`const revision = Number(document.querySelector('.shell')?.dataset.projectBrowserRevision || 0); await click('[data-action="document-reload"]'); await wait(() => Number(document.querySelector('.shell')?.dataset.projectBrowserRevision) > revision, 'capacity canonical reload'); return true;`);
+        capacityReloadMs.push(performance.now() - started); capacityReloadRss.push(nativeResidentBytes()); capacityRss.push(nativeResidentBytes());
+      }
+
+      const cancellationStarted = performance.now();
+      const cancelledPreparation = prepareAssetImport(guiBridge, smokeNewRoot, { profile: "web", documentPath: SAMPLE_DOCUMENT, sourcePath: smokeAssetSource });
+      await gui(`const status = await globalThis.sceneaxiDesktopLinux.importAsset({ profile: 'web', op: 'status' });
+        if (!status.ok || status.data.outcome !== 'preparing' || !Number.isSafeInteger(status.data.generation)) throw new Error('SMOKE_ASSET_CANCEL_GENERATION_ABSENT');
+        const cancelled = await globalThis.sceneaxiDesktopLinux.importAsset({ profile: 'web', op: 'cancel', generation: status.data.generation });
+        if (!cancelled.ok || cancelled.data.outcome !== 'cancelled') throw new Error('SMOKE_ASSET_CANCEL_NOT_TERMINAL'); return true;`);
+      const cancelled = await cancelledPreparation;
+      assetCapacity.phaseMs.cancel = performance.now() - cancellationStarted;
+
+      if (cancelled.ok || cancelled.reason !== ASSET_PREPARATION_REFUSALS.cancelled) fail("Cancelled asset generation published late work.");
+      const rendererHeartbeat = await gui(`const sample = globalThis.__sceneaxiAssetHeartbeat; clearInterval(sample.timer); delete globalThis.__sceneaxiAssetHeartbeat; return sample.max;`);
+
+      if (!isDesktopNumber(rendererHeartbeat)) fail("Renderer capacity heartbeat observation missing.");
+      assetCapacity.rendererHeartbeatMs = rendererHeartbeat;
+
+      if (capacityHeartbeat !== null) clearInterval(capacityHeartbeat);
+      console.error("ASSET_CAPACITY_METRICS", JSON.stringify({ ...assetCapacity, rssBytes: capacityRss, warmedReloadRssBytes: capacityReloadRss, reloadMs: capacityReloadMs }));
+
+      if (Object.entries(assetCapacity.phaseMs).some(([phase, ms]) => ms > (phase === "cancel" ? 500 : 4000)) || capacityReloadMs.some(ms => ms > 4000) ||
+        assetCapacity.mainHeartbeatMs > 100 || assetCapacity.rendererHeartbeatMs > 100 ||
+        Math.max(...capacityRss) - (capacityRss[0] ?? 0) > 256 * 1024 * 1024 || (capacityReloadRss.at(-1) ?? 0) - (capacityReloadRss[0] ?? 0) > 32 * 1024 * 1024) fail("Native asset capacity exceeded unchanged phase/heartbeat/RSS budgets.");
+
+      if (readFileSync(guiDocument, "utf8") !== hotReloadCanonical) fail("Cancelled capacity generation changed canonical bytes.");
+    }
+
+  await gui(`await wait(() => document.querySelector('[data-action="profile"][data-value="game"]')?.getAttribute('aria-disabled') !== 'true', 'profile restored'); await click('[data-action="profile"][data-value="game"]'); return true;`);
+  await gui(`
+    await click('[data-action="assistant-route"][data-value="local"]');
+    await click('[data-action="assistant-mode"][data-value="ask"]');
+    const prompt = document.querySelector('.assistant-prompt'); prompt.value = 'What is in this scene?';
+    await click('[aria-label="Send"]');
+    await wait(() => document.querySelector('[data-assistant-result]')?.hidden === false, 'Local Ask result');
+    return true;
+  `);
+
+  if (readFileSync(guiDocument, "utf8") !== guiImported) fail("Local Ask mutated the document.");
+  await gui(`
+    await click('[data-action="assistant-mode"][data-value="build"]');
+    document.querySelector('.assistant-prompt').value = 'a stone arch';
+    await click('[aria-label="Send"]');
+    await wait(() => document.querySelector('[data-assistant-manipulators]')?.hidden === false && document.querySelector('[data-assistant-result]')?.hidden === false && document.querySelector('[data-change-proposal]')?.hidden === false && document.querySelector('.shell')?.dataset.assistantBusy === 'false', 'Local Build mount');
+    return true;
+  `);
+
+  if (readFileSync(guiDocument, "utf8") !== guiImported) fail("Assistant Build wrote bytes without review approval.");
+  await gui(`await click('[data-action="change-accept"]'); await wait(() => document.querySelector('[data-change-proposal]')?.hidden === true, 'assistant approved apply'); return true;`);
+
+  for (let n = 0; n < 400 && readFileSync(guiDocument, "utf8") === guiImported; n += 1) await new Promise(resolve => setTimeout(resolve, 10));
+
+  if (readFileSync(guiDocument, "utf8") === guiImported) fail("Assistant approval did not apply the actual artifact bytes.");
+  const beforeCancelled = readFileSync(guiDocument, "utf8");
+  await gui(`
+    document.querySelector('.assistant-prompt').value = 'SCENEAXI_SMOKE_CANCEL'; await click('[aria-label="Send"]');
+    await wait(() => document.querySelector('.shell')?.dataset.assistantBusy === 'true' && document.querySelector('[data-action="sculpt-cancel"]')?.getAttribute('aria-disabled') !== 'true', 'exact cancellable job');
+    await click('[data-action="sculpt-cancel"]');
+    await wait(() => document.querySelector('[data-assistant-status]')?.textContent.includes('abandoned'), 'cancel acknowledged'); return true;
+  `);
+  await gui(`
+    await wait(() => document.querySelector('.shell')?.dataset.assistantBusy === 'false', 'cancelled poll settled');
+    document.querySelector('.assistant-prompt').value = 'SCENEAXI_SMOKE_TIMEOUT'; await click('[aria-label="Send"]');
+    const deadline = performance.now() + 65000;
+    while (!document.querySelector('[data-assistant-status]')?.textContent.includes('DESKTOP_ASSISTANT_STATUS_TIMEOUT')) {
+      if (performance.now() > deadline) throw new Error('SMOKE_REAL_POLL_TIMEOUT_NOT_REPORTED');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    return true;
+  `);
+
+  for (const release of heldLocalExecutors.splice(0)) await release();
+  await gui(`await wait(() => document.querySelector('.shell')?.dataset.assistantBusy === 'false', 'late jobs retired'); return true;`);
+
+  if (readFileSync(guiDocument, "utf8") !== beforeCancelled) fail("Cancelled/timed-out late work changed canonical bytes.");
+  await gui(`await menuCommand('run-play'); await wait(() => document.querySelector('.viewport')?.dataset.playback === 'acknowledged', 'GUI Play frame'); return true;`);
+  await gui(`await click('[data-action="mode"][data-value="ship"]'); await click('[data-command="ship-export-web"]'); await wait(() => document.querySelector('[data-ship-export-evidence]')?.hidden === false, 'GUI Web export'); return true;`);
+  const guiExport = await gui(`return document.querySelector('[data-ship-output]')?.textContent;`);
+
+  if (!isDesktopText(guiExport) || !guiExport.startsWith(join(smokeNewRoot, "exports", "web") + sep) || !existsSync(join(guiExport, "delivery-handoff.json"))) fail("GUI Export did not write a contained handoff.");
+  const capturePath = process.env["SCENEAXI_SMOKE_CAPTURE_PATH"];
+
+  if (capturePath !== undefined) {
+    window.show();
+    await gui(`return new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));`);
+    const capture = await window.webContents.capturePage();
+
+    if (capture.isEmpty()) fail("Native smoke screenshot was empty.");
+    writeFileSync(capturePath, capture.toPNG());
+  }
+
+  await gui(`await menuCommand('project-open'); return true;`);
+  await waitForRoot(smokeRoot);
+
+  if (!existsSync(join(smokeRoot, ".sceneaxi-config", "desktop-bridge-v1.json")) || existsSync(join(smokeNewRoot, ".sceneaxi-config", "desktop-bridge-v1.json"))) fail("GUI Open did not rebind CLI discovery.");
+  await gui(`
+    const recent = document.querySelector('#project-recent-select');
+    await wait(() => Array.from(recent.options).some(option => option.value === ${JSON.stringify(smokeNewRoot)}), 'validated Recent root');
+    recent.value = ${JSON.stringify(smokeNewRoot)}; recent.dispatchEvent(new Event('change', { bubbles: true }));
+    await click('[data-action="project-open-recent"]'); return true;
+  `);
+  await waitForRoot(smokeNewRoot);
+
+  if (readFileSync(guiDocument, "utf8") !== beforeCancelled) fail("Recent did not preserve approved bytes.");
+  await gui(`await menuCommand('project-open'); return true;`);
+  await waitForRoot(smokeRoot);
+  smokeBridge = await activateProject(smokeRoot);
+  const nativeGui = { newProject: true, openProject: true, recentProject: true, assetImport: true, documentReload: true, cancel: true, timeout: true, lateWorkRetired: true, hierarchySelection: true, transform: -3.5, save: true, undo: true, redo: true, localAsk: true, localBuild: true, approvedApply: true, play: true, exportWeb: true, bridgeRebind: true, dialogTransport: "isolated-typed-fixture", providerTransport: "offline-local" };
+
   // --- packaged-app smoke proof ---
   if (smokeBridge === null || smokeRoot === null) fail("smoke project bridge is unavailable");
   const proofBridge = smokeBridge;
   const handshake = proofBridge.handle({ action: "handshake" });
+
   if (!handshake.ok) fail(`handshake refused: ${handshake.reason}`);
 
   // Isolation is observed, not declared: the proof owns the document it reports on
@@ -964,6 +1647,7 @@ async function start(): Promise<void> {
   const persistent = retiredImplicitProjectDir();
   const cwd = smokeRoot;
   const scratchProject = cwd !== persistent && !cwd.startsWith(`${persistent}${sep}`);
+
   if (!scratchProject) fail(`authoring proof would run on the retired implicit project ${cwd}`);
 
   // The envelope only says the bridge answered; a refused proposal or failed apply
@@ -972,12 +1656,15 @@ async function start(): Promise<void> {
   // re-read.
   const documentFile = join(cwd, SAMPLE_DOCUMENT);
   const seededBytes = readFileSync(documentFile, "utf8");
+
   const opened = proofBridge.handle({
     action: "authoring",
     payload: { op: "status", documentPath: SAMPLE_DOCUMENT },
   });
+
   if (!opened.ok) fail(`authoring status refused: ${opened.reason}`);
   const openedHash = payloadField(opened.data, "contentHash");
+
   const openedHierarchy = proofBridge.handle({
     action: "command",
     payload: createEditorCommandInvocation("scene-hierarchy-inspect", "desktop-control", {
@@ -985,24 +1672,30 @@ async function start(): Promise<void> {
       profile: "game",
     }),
   });
+
   if (!openedHierarchy.ok) fail(`hierarchy inspection refused: ${openedHierarchy.reason}`);
   const editableScene = openedHierarchy.data;
   const editableEntities = payloadField(editableScene, "entities");
+
   const editableEntity = Array.isArray(editableEntities)
     ? editableEntities.find(
         (entity) =>
           payloadField(entity, "id") === DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
       )
     : undefined;
+
   const editableProperties = payloadField(editableEntity, "properties");
+
   const editableProperty = Array.isArray(editableProperties)
     ? editableProperties.find(
         (property) =>
           payloadField(property, "id") === DESKTOP_SCENE_TRANSLATION_X_PROPERTY.id,
       )
     : undefined;
+
   const initialPropertyValue = payloadField(editableProperty, "value");
-  if (typeof openedHash !== "string" || initialPropertyValue !== -4.4) {
+
+  if (!isDesktopText(openedHash) || initialPropertyValue !== -4.4) {
     fail("authoring status did not expose the typed starter translation");
   }
 
@@ -1018,21 +1711,27 @@ async function start(): Promise<void> {
       newValue: -3.25,
     },
   });
+
   if (!proposed.ok) fail(`authoring propose refused: ${proposed.reason}`);
   const proposedPhase = payloadField(proposed.data, "phase");
+
   if (proposedPhase !== "reviewing") {
     fail(`authoring propose did not open a review: phase ${JSON.stringify(proposedPhase)}`);
   }
+
   if (readFileSync(documentFile, "utf8") !== seededBytes) {
     fail("authoring propose wrote to the document before it was accepted");
   }
 
   const accepted = proofBridge.handle({ action: "authoring", payload: { op: "accept" } });
+
   if (!accepted.ok) fail(`authoring accept refused: ${accepted.reason}`);
   const acceptedPhase = payloadField(accepted.data, "phase");
+
   if (acceptedPhase !== "applied") {
     fail(`authoring accept did not apply: phase ${JSON.stringify(acceptedPhase)}`);
   }
+
   if (readFileSync(documentFile, "utf8") === seededBytes) {
     fail("authoring accept reported applied but the document is unchanged");
   }
@@ -1042,12 +1741,16 @@ async function start(): Promise<void> {
       action: "authoring",
       payload: { op: "status", documentPath: SAMPLE_DOCUMENT },
     });
+
     if (!response.ok) fail(`authoring status refused: ${response.reason}`);
     const contentHash = payloadField(response.data, "contentHash");
-    if (typeof contentHash !== "string") fail("authoring status returned no content hash");
+
+    if (!isDesktopText(contentHash)) fail("authoring status returned no content hash");
+
     return contentHash;
   };
-  const stageSceneOperation = (operation: unknown) => {
+
+  const stageSceneOperation = <Input>(operation: Input) => {
     const response = proofBridge.handle({
       action: "authoring",
       payload: {
@@ -1058,18 +1761,220 @@ async function start(): Promise<void> {
         operation,
       },
     });
+
     if (!response.ok) fail(`selected-instance edit refused: ${response.reason}`);
+
     if (payloadField(response.data, "phase") !== "reviewing") {
       fail("selected-instance edit did not reach Change Review");
     }
+
     return response;
   };
+
   const acceptSceneOperation = () => {
     const response = proofBridge.handle({ action: "authoring", payload: { op: "accept" } });
+
     if (!response.ok || payloadField(response.data, "phase") !== "applied") {
       fail("selected-instance edit did not apply atomically");
     }
   };
+
+  const smokeCommand = (id: Parameters<typeof createEditorCommandInvocation>[0], input: Parameters<typeof createEditorCommandInvocation>[2] = {}) => {
+    const document: SmokeCommandDocument = {};
+
+    if (id !== "run-stop" && id !== "run-reset") document.documentPath = SAMPLE_DOCUMENT;
+
+    return proofBridge.handle({
+      action: "command",
+      payload: createEditorCommandInvocation(id, "desktop-control", { ...document, ...input }),
+    });
+  };
+
+  const hierarchySourceId = "desktop-crate-beside";
+
+  const created = smokeCommand("scene-object-create", {
+    expectedContentHash: currentContentHash(),
+    profile: "game",
+    sourceInstanceId: hierarchySourceId,
+    parentInstanceId: "desktop-crate-root",
+  });
+
+  const hierarchyCopyId = `${hierarchySourceId}-copy-1`;
+
+  if (!created.ok || payloadField(created.data, "phase") !== "reviewing") {
+    fail("hierarchy create did not stage through Change Review");
+  }
+
+  acceptSceneOperation();
+
+  const reparented = smokeCommand("scene-object-reparent", {
+    expectedContentHash: currentContentHash(),
+    profile: "game",
+    instanceId: hierarchyCopyId,
+    parentInstanceId: "desktop-crate-stacked",
+    transformPolicy: "preserve-local",
+  });
+
+  if (!reparented.ok || payloadField(reparented.data, "phase") !== "reviewing") {
+    fail("hierarchy reparent did not stage through Change Review");
+  }
+
+  acceptSceneOperation();
+  const verifiedHierarchy = smokeCommand("scene-hierarchy-inspect", { profile: "game" });
+
+  if (!verifiedHierarchy.ok) fail(`hierarchy inspection refused: ${verifiedHierarchy.reason}`);
+  const verifiedHierarchyObjects = payloadField(payloadField(verifiedHierarchy.data, "hierarchy"), "objects");
+
+  if (
+    !verifiedHierarchy.ok || !Array.isArray(verifiedHierarchyObjects) ||
+    !verifiedHierarchyObjects.some((item) =>
+      payloadField(item, "id") === hierarchyCopyId &&
+      payloadField(item, "parentId") === "desktop-crate-stacked")
+  ) fail("hierarchy create/reparent outcome was not visible in bridge inspection");
+
+  const initialYProperty = Array.isArray(editableProperties) ? editableProperties.find(property => payloadField(property, "id") === "translation-y") : undefined;
+  const initialY = payloadField(initialYProperty, "value");
+
+  if (!isDesktopNumber(initialY)) fail("selected instance has no initial Y transform");
+
+  const transformed = smokeCommand("scene-transform-apply", {
+    expectedContentHash: currentContentHash(),
+    profile: "game",
+    instanceIds: [DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId],
+    mode: "translate",
+    space: "local",
+    pivot: "individual",
+    axes: "y",
+    snapIncrement: null,
+    valueKind: "delta",
+    values: [0, 0.5, 0],
+  });
+
+  if (!transformed.ok || payloadField(transformed.data, "affectedIds") === undefined) {
+    fail("transform command did not affect the selected packaged scene instance");
+  }
+
+  acceptSceneOperation();
+
+  const animation = smokeCommand("animation-apply", {
+    expectedContentHash: currentContentHash(),
+    profile: "game",
+    mutation: { kind: "clip-upsert", clipId: "smoke-idle", name: "Smoke idle", startMs: 0, durationMs: 1000 },
+  });
+
+  if (!animation.ok || payloadField(payloadField(animation.data, "authoringSnapshot"), "phase") !== "reviewing") {
+    fail("animation apply did not stage through Change Review");
+  }
+
+  acceptSceneOperation();
+  const inspectedAnimation = smokeCommand("animation-inspect", { profile: "game" });
+
+  if (!inspectedAnimation.ok) fail(`animation inspection refused: ${inspectedAnimation.reason}`);
+  const animationCatalog = payloadField(inspectedAnimation.data, "catalog");
+  const animationClips = payloadField(animationCatalog, "clips");
+
+  if (!inspectedAnimation.ok || !Array.isArray(animationClips) ||
+      !animationClips.some((clip) => payloadField(clip, "clipId") === "smoke-idle")) {
+    fail("animation apply did not persist the named clip");
+  }
+
+  const physics = smokeCommand("physics-apply", {
+    expectedContentHash: currentContentHash(),
+    profile: "game",
+    mutation: {
+      kind: "body-upsert",
+      bodyId: "smoke-body",
+      instanceId: DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
+      bodyKind: "dynamic",
+      mass: 1,
+    },
+  });
+
+  if (!physics.ok || payloadField(payloadField(physics.data, "authoringSnapshot"), "phase") !== "reviewing") {
+    fail("physics apply did not stage through Change Review");
+  }
+
+  acceptSceneOperation();
+  const inspectedPhysics = smokeCommand("physics-inspect", { profile: "game" });
+
+  if (!inspectedPhysics.ok) fail(`physics inspection refused: ${inspectedPhysics.reason}`);
+  const physicsBodies = payloadField(payloadField(inspectedPhysics.data, "catalog"), "bodies");
+
+  if (!inspectedPhysics.ok || !Array.isArray(physicsBodies) ||
+      !physicsBodies.some((body) => payloadField(body, "bodyId") === "smoke-body")) {
+    fail("physics apply did not persist the named body");
+  }
+
+  const play = smokeCommand("run-play");
+
+  if (!play.ok) fail(`run-play refused: ${play.reason}`);
+  const playSession = payloadField(play.data, "playSession");
+
+  if (payloadField(playSession, "state") !== "playing") {
+    fail("run-play did not start an isolated Play session");
+  }
+
+  const stoppedPlay = smokeCommand("run-stop");
+
+  if (!stoppedPlay.ok || payloadField(stoppedPlay.data, "state") !== "stopped") {
+    fail("run-stop did not stop the Play session");
+  }
+
+  const resetPlay = smokeCommand("run-reset");
+
+  if (!resetPlay.ok || payloadField(resetPlay.data, "state") !== "playing") {
+    fail("run-reset did not restore the isolated Play session");
+  }
+
+  const finalStoppedPlay = smokeCommand("run-stop");
+
+  if (!finalStoppedPlay.ok || payloadField(finalStoppedPlay.data, "state") !== "stopped") {
+    fail("Play session did not stop after reset");
+  }
+
+  const cliEntry = process.env["SCENEAXI_CLI_ENTRYPOINT"];
+
+  if (!isProtocolText(cliEntry)) fail("smoke launcher did not provide the built CLI entrypoint");
+
+  const cliHandshake = await new Promise<{ status: number | null; stdout: string; stderr: string }>((resolveResult) => {
+    const child = spawn("node", [
+      cliEntry,
+      "desktop", "bridge", "status", "--descriptor", join(cwd, ".sceneaxi-config", "desktop-bridge-v1.json"), "--json",
+    ], { cwd, env: process.env });
+
+    let stdout = "";
+    let stderr = "";
+    const timer = setTimeout(() => child.kill("SIGKILL"), 10_000);
+    child.stdout.setEncoding("utf8").on("data", (chunk: string) => { stdout += chunk; });
+    child.stderr.setEncoding("utf8").on("data", (chunk: string) => { stderr += chunk; });
+    child.on("error", (error: Error) => {
+      clearTimeout(timer);
+      resolveResult({ status: null, stdout, stderr: `${stderr}${error.message}` });
+    });
+    child.on("close", (status) => {
+      clearTimeout(timer);
+      resolveResult({ status, stdout, stderr });
+    });
+  });
+
+  let cliHandshakeProof: unknown;
+
+  try {
+    cliHandshakeProof = JSON.parse(cliHandshake.stdout.trim());
+  } catch {
+    fail(`local CLI bridge handshake returned invalid JSON: ${cliHandshake.stderr}`);
+  }
+
+  const cliResult = payloadField(cliHandshakeProof, "result");
+  const cliResponse = payloadField(cliResult, "response");
+
+  if (cliHandshake.status !== 0 || cliHandshake.stderr !== "" || payloadField(cliHandshakeProof, "ok") !== true ||
+      payloadField(cliResult, "connected") !== true || payloadField(cliResult, "tool") !== "sceneaxi.bridge.handshake" ||
+      payloadField(cliResponse, "app") !== "@sceneaxi/desktop-linux" || payloadField(cliResponse, "localProtocolVersion") !== 1 ||
+      payloadField(cliResponse, "creditRoute") !== "none") {
+    fail(`local CLI bridge handshake failed: ${cliHandshake.stdout} ${cliHandshake.stderr}`);
+  }
+
 
   stageSceneOperation({
     kind: "set-transform-component",
@@ -1091,13 +1996,15 @@ async function start(): Promise<void> {
   });
   acceptSceneOperation();
   const afterAddBytes = readFileSync(documentFile, "utf8");
-  const copiedInstanceId = `${DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId}-copy-1`;
+  const copiedInstanceId = `${DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId}-copy-${DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId === hierarchySourceId ? 2 : 1}`;
 
   stageSceneOperation({ kind: "remove-instance", instanceId: copiedInstanceId });
+
   const rejectedRemove = proofBridge.handle({
     action: "authoring",
     payload: { op: "reject" },
   });
+
   if (
     !rejectedRemove.ok ||
     payloadField(rejectedRemove.data, "phase") !== "rejected" ||
@@ -1105,12 +2012,16 @@ async function start(): Promise<void> {
   ) {
     fail("Remove Reject changed project bytes");
   }
+
   stageSceneOperation({ kind: "remove-instance", instanceId: copiedInstanceId });
   acceptSceneOperation();
+
   if (readFileSync(documentFile, "utf8") === afterAddBytes) {
     fail("accepted Remove left project bytes unchanged");
   }
+
   const undoneRemove = proofBridge.handle({ action: "authoring", payload: { op: "undo" } });
+
   if (
     !undoneRemove.ok ||
     payloadField(undoneRemove.data, "ok") !== true ||
@@ -1118,6 +2029,7 @@ async function start(): Promise<void> {
   ) {
     fail("Undo did not restore the accepted local instance bytes");
   }
+
   const malformed = proofBridge.handle({
     action: "authoring",
     payload: {
@@ -1133,6 +2045,7 @@ async function start(): Promise<void> {
       },
     },
   });
+
   if (
     malformed.ok ||
     malformed.reason !== "SCENE_HIERARCHY_INPUT_UNSUPPORTED"
@@ -1141,11 +2054,14 @@ async function start(): Promise<void> {
   }
 
   const savedBytes = readFileSync(documentFile, "utf8");
+
   const reopened = proofBridge.handle({
     action: "authoring",
     payload: { op: "restart", documentPath: SAMPLE_DOCUMENT },
   });
+
   if (!reopened.ok) fail(`authoring reopen refused: ${reopened.reason}`);
+
   const reopenedHierarchy = proofBridge.handle({
     action: "command",
     payload: createEditorCommandInvocation("scene-hierarchy-inspect", "desktop-control", {
@@ -1153,54 +2069,76 @@ async function start(): Promise<void> {
       profile: "game",
     }),
   });
+
   if (!reopenedHierarchy.ok) fail(`reopened hierarchy inspection refused: ${reopenedHierarchy.reason}`);
   const reopenedScene = reopenedHierarchy.data;
   const reopenedEntities = payloadField(reopenedScene, "entities");
+
   const reopenedEntity = Array.isArray(reopenedEntities)
     ? reopenedEntities.find(
         (entity) =>
           payloadField(entity, "id") === DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
       )
     : undefined;
+
   const reopenedProperties = payloadField(reopenedEntity, "properties");
+
   const reopenedProperty = Array.isArray(reopenedProperties)
     ? reopenedProperties.find(
         (property) =>
           payloadField(property, "id") === DESKTOP_SCENE_TRANSLATION_X_PROPERTY.id,
       )
     : undefined;
+
   const reopenedValue = payloadField(reopenedProperty, "value");
+  const reopenedY = Array.isArray(reopenedProperties) ? payloadField(reopenedProperties.find(property => payloadField(property, "id") === "translation-y"), "value") : undefined;
+  const persistedHierarchyObjects = payloadField(payloadField(reopenedScene, "hierarchy"), "objects");
+  const persistedParent = Array.isArray(persistedHierarchyObjects) ? payloadField(persistedHierarchyObjects.find(object => payloadField(object, "id") === hierarchyCopyId), "parentId") : undefined;
+
+  if (reopenedY !== initialY + 0.5 || persistedParent !== "desktop-crate-stacked") fail("fresh-session reopen lost persisted Y transform or nonroot parent");
+  const persistedPhysics = smokeCommand("physics-inspect", { profile: "game" });
+  const persistedBodies = persistedPhysics.ok ? payloadField(payloadField(persistedPhysics.data, "catalog"), "bodies") : undefined;
+
+  if (!Array.isArray(persistedBodies) || !persistedBodies.some(body => payloadField(body, "bodyId") === "smoke-body")) fail("fresh-session reopen lost named smoke-body");
+
   if (reopenedValue !== -3.25 || readFileSync(documentFile, "utf8") !== savedBytes) {
     fail("authoring reopen did not prove the saved translation bytes");
   }
 
-  const invokeProjectBrowser = async (request: unknown) =>
+  const invokeProjectBrowser = async <DesktopRequest>(request: DesktopRequest) =>
     await window.webContents.executeJavaScript(
       `globalThis.sceneaxiDesktopLinux.browseProject(${JSON.stringify(request)})`,
     );
+
   const browserListed: unknown = await invokeProjectBrowser({
     action: "status",
     profile: "web",
   });
+
   const browserListedData = payloadField(browserListed, "data");
   const browserListedStatus = payloadField(browserListedData, "status");
   const browserFiles = payloadField(browserListedStatus, "files");
+
   const browserAsset = Array.isArray(browserFiles)
     ? browserFiles.find((file) => payloadField(file, "kind") === "asset")
     : undefined;
+
   const browserAssetPath = payloadField(browserAsset, "path");
   const browserAssetInstanceId = payloadField(browserAsset, "instanceId");
   const browserAssetDigest = payloadField(browserAsset, "digest");
+
   if (
     payloadField(browserListed, "ok") !== true ||
     payloadField(browserListedStatus, "activeDocumentPath") !== SAMPLE_DOCUMENT ||
     !Array.isArray(browserFiles) ||
-    typeof browserAssetPath !== "string" ||
-    typeof browserAssetInstanceId !== "string" ||
-    typeof browserAssetDigest !== "string"
+    !isDesktopText(browserAssetPath) ||
+    !isDesktopText(browserAssetInstanceId) ||
+    !isDesktopText(browserAssetDigest)
   ) {
     fail("project browser preload channel did not list the canonical document and asset");
   }
+
+  // SAFETY: the isolated packaged-document script constructs these acknowledgement/frame/DOM-state fields; the native smoke checks the returned acknowledgement and redraw before publishing proof.
   const browserUiOpen = (await window.webContents.executeJavaScript(
     `(async () => {
       const waitFor = async (predicate) => {
@@ -1220,6 +2158,7 @@ async function start(): Promise<void> {
       if (!selectorReady || !(selector instanceof HTMLSelectElement) || !(opener instanceof HTMLButtonElement)) {
         return { selected: false, opened: false, frame: null, instanceId: null, digest: null };
       }
+      const revision = Number(document.querySelector('.shell')?.dataset.projectBrowserRevision);
       selector.value = ${JSON.stringify(browserAssetPath)};
       selector.dispatchEvent(new Event('change', { bubbles: true }));
       const selected = await waitFor(() =>
@@ -1229,7 +2168,7 @@ async function start(): Promise<void> {
       if (!selected) return { selected, opened: false, frame: null, instanceId: null, digest: null };
       opener.click();
       const opened = await waitFor(() =>
-        document.querySelector('[data-busy]') === null &&
+        Number(document.querySelector('.shell')?.dataset.projectBrowserRevision) > revision + 1 &&
         document.querySelector('.viewport')?.dataset.assetOpen === ${JSON.stringify(browserAssetInstanceId)} &&
         document.querySelector('.viewport')?.dataset.assetDigest === ${JSON.stringify(browserAssetDigest)});
       const status = document.querySelector('[data-project-status]')?.textContent ?? '';
@@ -1249,25 +2188,29 @@ async function start(): Promise<void> {
     instanceId: string | null;
     digest: string | null;
   };
+
   const browserUnconfirmed: unknown = await invokeProjectBrowser({
     action: "delete",
     profile: "web",
     path: browserAssetPath,
   });
+
   const browserProtected: unknown = await invokeProjectBrowser({
     action: "delete",
     profile: "web",
     path: browserAssetPath,
     confirmed: true,
   });
+
   const restartedBrowser = createDesktopProjectBrowser({
     root: cwd,
     stateDirectory: join(cwd, ".sceneaxi-runtime"),
   }).handle({ action: "status", profile: "web" });
+
   if (
     browserUiOpen.selected !== true ||
     browserUiOpen.opened !== true ||
-    typeof browserUiOpen.frame !== "number" ||
+    !isDesktopNumber(browserUiOpen.frame) ||
     browserUiOpen.instanceId !== browserAssetInstanceId ||
     browserUiOpen.digest !== browserAssetDigest ||
     payloadField(browserUnconfirmed, "ok") !== false ||
@@ -1289,13 +2232,74 @@ async function start(): Promise<void> {
       documentBytesPreserved: readFileSync(documentFile, "utf8") === savedBytes,
     })}`);
   }
+
   const browserConfirmationRefusal = payloadField(browserUnconfirmed, "reason");
   const browserProtectedRefusal = payloadField(browserProtected, "reason");
+
+  console.error("SMOKE_PHASE repeated import/reload/play/export plateau");
+  const plateauSource = join(cwd, "smoke-source.gltf");
+  writeFileSync(plateauSource, smokeAssetBytes());
+
+  const plateau = await gui(`
+    const canvas = document.querySelector('[data-live-viewport="canvas"]');
+    const gl = canvas?.getContext('webgl2');
+    if (!gl) throw new Error('SMOKE_RESOURCE_CONTEXT_ABSENT');
+    const resources = new Map();
+    const originals = [];
+    for (const kind of ['Buffer', 'Texture', 'Program', 'Framebuffer', 'Renderbuffer']) {
+      const live = new Set(); resources.set(kind, live);
+      const create = gl['create' + kind].bind(gl); const dispose = gl['delete' + kind].bind(gl);
+      originals.push(['create' + kind, gl['create' + kind]], ['delete' + kind, gl['delete' + kind]]);
+      gl['create' + kind] = (...args) => { const handle = create(...args); if (handle) live.add(handle); return handle; };
+      gl['delete' + kind] = (handle) => { live.delete(handle); return dispose(handle); };
+    }
+    const samples = []; const latencyMs = [];
+    try {
+      for (let cycle = 0; cycle < 12; cycle += 1) {
+        const start = performance.now();
+        const imported = await globalThis.sceneaxiDesktopLinux.request({ action: 'asset-import', payload: { profile: 'game', documentPath: 'scene.json', sourcePath: ${JSON.stringify(plateauSource)} } });
+        if (!imported?.ok) throw new Error('SMOKE_REPEAT_IMPORT_REFUSED ' + imported?.reason);
+        if (imported.data.outcome === 'reviewing') {
+          const applied = await globalThis.sceneaxiDesktopLinux.request({ action: 'authoring', payload: { op: 'accept' } });
+          if (!applied?.ok || applied.data.phase !== 'applied') throw new Error('SMOKE_REPEAT_IMPORT_NOT_APPLIED');
+        } else if (imported.data.outcome !== 'replayed') throw new Error('SMOKE_REPEAT_IMPORT_NO_RESULT');
+        if (document.querySelector('.shell')?.dataset.projectBrowserSelectedPath !== 'scene.json') {
+          const selectedRevision = Number(document.querySelector('.shell')?.dataset.projectBrowserRevision || 0);
+          const selector = document.querySelector('#project-browser-file-select');
+          if (!selector) throw new Error('SMOKE_REPEAT_DOCUMENT_SELECTOR_ABSENT');
+          selector.value = 'scene.json'; selector.dispatchEvent(new Event('change', { bubbles: true }));
+          await wait(() => Number(document.querySelector('.shell')?.dataset.projectBrowserRevision) > selectedRevision && document.querySelector('.shell')?.dataset.projectBrowserSelectedPath === 'scene.json', 'plateau selected canonical document revision');
+        }
+        const revision = Number(document.querySelector('.shell')?.dataset.projectBrowserRevision || 0);
+        await click('[data-action="document-reload"]');
+        await wait(() => Number(document.querySelector('.shell')?.dataset.projectBrowserRevision) > revision && document.querySelector('.shell')?.dataset.projectBrowserSelectedPath === 'scene.json', 'plateau import/reload exact revision');
+        const frameBefore = Number(document.querySelector('.viewport')?.dataset.playbackFrame || 0);
+        await menuCommand('run-play');
+        await wait(() => document.querySelector('.viewport')?.dataset.playback === 'acknowledged' && Number(document.querySelector('.viewport')?.dataset.playbackFrame) > frameBefore, 'plateau Play new frame');
+        await click('[data-action="mode"][data-value="ship"]');
+        await click('[data-command="ship-export-web"]');
+        await wait(() => document.querySelector('[data-ship-export-evidence]')?.hidden === false && document.querySelector('[data-command="ship-export-web"]')?.getAttribute('aria-disabled') !== 'true', 'plateau export completed');
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        samples.push(Object.fromEntries(Array.from(resources, ([kind, live]) => [kind, live.size])));
+        latencyMs.push(performance.now() - start);
+      }
+    } finally { for (const [name, original] of originals) gl[name] = original; }
+    return { samples, latencyMs, maximumAssetBytes: ${PROJECT_ASSET_MAX_BYTES}, oversizeRefusal: ${JSON.stringify(CONTAINED_GLTF_REFUSALS.oversize)}, importReloadCycles: samples.length, canvases: document.querySelectorAll('[data-live-viewport="canvas"]').length };
+  `);
+
+  const plateauSamples = payloadField(plateau, "samples");
+  const plateauLatencies = payloadField(plateau, "latencyMs");
+
+  if (!Array.isArray(plateauSamples) || plateauSamples.length !== 12 || !Array.isArray(plateauLatencies) ||
+      plateauLatencies.length !== 12 || plateauLatencies.some(ms => !isDesktopNumber(ms) || !Number.isFinite(ms) || ms > 4000) ||
+      payloadField(plateau, "canvases") !== 1 ||
+      plateauSamples.slice(3).some(sample => JSON.stringify(sample) !== JSON.stringify(plateauSamples[3]))) fail("Repeated actual Play/export did not plateau within the existing 4-second per-control budget.");
 
   const openPath = proofBridge.handle({
     action: "open-path",
     payload: { documentPath: SAMPLE_DOCUMENT },
   });
+
   if (!openPath.ok) fail(`saved open-path refused: ${openPath.reason}`);
 
   const shipped = proofBridge.handle({
@@ -1306,37 +2310,47 @@ async function start(): Promise<void> {
       expectedContentHash: currentContentHash(),
     },
   });
-  let exportDirectory: unknown = null;
-  let bundleDigest: unknown = null;
-  let sourceDigest: unknown = null;
+
+  let exportDirectory: string | null = null;
+  let bundleDigest: string | null = null;
+  let sourceDigest: string | null = null;
+
   if (process.platform === "linux") {
     if (!shipped.ok) fail(`Web export refused: ${shipped.reason}`);
-    exportDirectory = payloadField(shipped.data, "outputDirectory");
+    const exportDirectoryField = payloadField(shipped.data, "outputDirectory");
+      exportDirectory = isDesktopText(exportDirectoryField) ? exportDirectoryField : null;
     const handoffPath = payloadField(shipped.data, "handoffPath");
-    bundleDigest = payloadField(shipped.data, "bundleDigest");
+    const bundleDigestField = payloadField(shipped.data, "bundleDigest");
+      bundleDigest = isDesktopText(bundleDigestField) ? bundleDigestField : null;
     const sourceProject = payloadField(shipped.data, "sourceProject");
-    sourceDigest = payloadField(sourceProject, "contentHash");
-    const parsedHandoff = typeof handoffPath === "string" && existsSync(handoffPath)
+    const sourceDigestField = payloadField(sourceProject, "contentHash");
+      sourceDigest = isDesktopText(sourceDigestField) ? sourceDigestField : null;
+
+    const parsedHandoff = isDesktopText(handoffPath) && existsSync(handoffPath)
       ? parseDeliveryHandoffText(readFileSync(handoffPath, "utf8"))
       : null;
-    const verifiedExportDirectory = typeof exportDirectory === "string"
+
+    const verifiedExportDirectory = isDesktopText(exportDirectory)
       ? exportDirectory
       : null;
+
     const handoffArtifactsMatch = verifiedExportDirectory !== null &&
       parsedHandoff?.ok === true &&
       Object.entries(parsedHandoff.handoff.artifacts).every(([path, artifact]) => {
         const artifactPath = join(verifiedExportDirectory, ...path.split("/"));
+
         return existsSync(artifactPath) &&
           `sha256:${createHash("sha256").update(readFileSync(artifactPath)).digest("hex")}` ===
             artifact.digest;
       });
+
     if (
-      typeof exportDirectory !== "string" ||
+      !isDesktopText(exportDirectory) ||
       !exportDirectory.startsWith(`${cwd}${sep}exports${sep}web${sep}`) ||
-      typeof handoffPath !== "string" ||
+      !isDesktopText(handoffPath) ||
       !existsSync(handoffPath) ||
-      typeof bundleDigest !== "string" ||
-      typeof sourceDigest !== "string" ||
+      !isDesktopText(bundleDigest) ||
+      !isDesktopText(sourceDigest) ||
       readFileSync(join(exportDirectory, "source", SAMPLE_DOCUMENT), "utf8") !== savedBytes ||
       !readFileSync(join(exportDirectory, "index.html"), "utf8").includes("sceneaxi-web.js") ||
       parsedHandoff?.ok !== true ||
@@ -1353,8 +2367,10 @@ async function start(): Promise<void> {
   ) {
     fail("Non-Linux Web export did not refuse its unsupported platform by name");
   }
+
   const mountable = payloadField(openPath.data, "mountable");
   const mountedInstances = payloadField(mountable, "instances");
+
   const playedEntity = Array.isArray(mountedInstances)
     ? mountedInstances.find(
         (instance) =>
@@ -1362,15 +2378,18 @@ async function start(): Promise<void> {
           DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
       )
     : undefined;
+
   const playedTransform = payloadField(playedEntity, "worldTransform");
   const playedTranslation = payloadField(playedTransform, "translation");
   const playedRotation = payloadField(playedTransform, "rotationEulerDegrees");
   const playedScale = payloadField(playedTransform, "scale");
+
   const playedCopy = Array.isArray(mountedInstances)
     ? mountedInstances.find(
         (instance) => payloadField(instance, "instanceId") === copiedInstanceId,
       )
     : undefined;
+
   if (
     !Array.isArray(playedTranslation) || playedTranslation[0] !== -3.25 ||
     !Array.isArray(playedRotation) || playedRotation[1] !== 45 ||
@@ -1384,8 +2403,10 @@ async function start(): Promise<void> {
     firstFrameReport,
     new Promise((resolve) => setTimeout(() => resolve(null), SMOKE_TIMEOUT_MS)),
   ]);
+
   if (frameReport === null) fail("no renderer frame report within the smoke timeout");
 
+  // SAFETY: the isolated packaged-document script constructs these acknowledgement/frame/DOM-state fields; the native smoke checks the returned acknowledgement and redraw before publishing proof.
   const playbackDom = (await window.webContents.executeJavaScript(
     `(async () => {
       const waitFor = async (predicate) => {
@@ -1431,11 +2452,12 @@ async function start(): Promise<void> {
     stop: string;
     reset: string;
   };
+
   if (
     playbackDom.clicked !== true ||
     playbackDom.accepted !== true ||
     playbackDom.state !== "acknowledged" ||
-    typeof playbackDom.frame !== "number"
+    !isDesktopNumber(playbackDom.frame)
   ) {
     fail(`Play did not redraw the saved composition in the packaged viewport: ${JSON.stringify(playbackDom)}`);
   }
@@ -1449,19 +2471,23 @@ async function start(): Promise<void> {
   const audioKidsSwitchStopped = await runAudioKidsProfileSmokeProof(window);
   const audioSwitchRoot = mkdtempSync(join(tmpdir(), "sceneaxi-audio-switch-"));
   seedProject(audioSwitchRoot);
+
   const audioProjectSwitchStopped = await runAudioProjectSwitchSmokeProof(
     window,
     async () => { await activateProject(audioSwitchRoot); },
   );
+
   // Rebind the smoke project for the feature proofs. The chrome never saw the
   // switch (the host only stopped its viewport), and the smoke bytes are unchanged.
   if (cwd === null) fail("smoke project root missing");
   await activateProject(cwd);
   const audioStatusBeforeRestore = await window.webContents.executeJavaScript(`document.querySelector('[data-project-status]')?.textContent ?? ''`);
   await clickRendererControl(window, '[data-action="document-reload"]');
+
   if (!await waitForRenderer(window, `document.querySelector('[data-project-status]')?.textContent !== ${JSON.stringify(audioStatusBeforeRestore)} && document.querySelector('[data-project-state]')?.getAttribute('data-project-state') === 'open' && document.querySelector('[data-product-action][data-busy="true"]') === null`)) {
     fail("GUI Reload did not restore the smoke document after the audio project switch");
   }
+
   if (
     audioProof.duration !== 2 || audioProof.sampleRate !== 44_100 ||
     audioProof.channels !== 1 || audioProof.volume < 0.3 || audioProof.volume > 0.4 || audioProof.gain < 0.3 || audioProof.gain > 0.4 || audioProof.sourceStarted !== true || audioProof.pointerTargets.volume !== true || audioProof.pointerTargets.play !== true ||
@@ -1473,12 +2499,14 @@ async function start(): Promise<void> {
 
   // The window's own DOM must agree with the frame report: one live canvas, the
   // inert note gone, the report line printed. Asserted by scripts/smoke.mjs.
+  // SAFETY: the isolated packaged-document script constructs exactly the canvas count, boolean inert-note flag, and nullable DOM text fields returned here.
   const viewportDom = (await window.webContents.executeJavaScript(
     `({ canvases: document.querySelectorAll('[data-live-viewport="canvas"]').length,
         inertNotePresent: document.querySelector('.viewport-note-inert') !== null,
         reportText: document.getElementById('desktop-live-viewport-report')?.textContent ?? null })`,
   )) as { canvases: number; inertNotePresent: boolean; reportText: string | null };
 
+  // SAFETY: This main-process-only smoke script is defined here and constructs the asserted proof fields from the isolated packaged document; the resulting values are checked by the smoke assertions below.
   const waitForGui = async <T>(script: string) =>
     await window.webContents.executeJavaScript(script) as T;
 
@@ -1553,13 +2581,16 @@ async function start(): Promise<void> {
       snapIncrement: snap instanceof HTMLInputElement ? snap.value : '',
     };
   })()`);
+
   const sceneStageBytes = readFileSync(documentFile, "utf8");
   const sceneStageDigest = createHash("sha256").update(sceneStageBytes).digest("hex");
+
   if (!guiTransformProof.gui || !guiTransformProof.staged ||
       guiTransformProof.transformMode !== "rotate" ||
       guiTransformProof.stagedValue === guiTransformProof.valueBefore) {
     fail(`GUI transform/property staging did not reach review: ${JSON.stringify(guiTransformProof)}`);
   }
+
   const guiStageUnchangedBytes = readFileSync(documentFile, "utf8") === sceneStageBytes;
   await waitForGui<boolean>(`(async () => {
     const waitFor = async (predicate) => {
@@ -1578,10 +2609,13 @@ async function start(): Promise<void> {
   const sceneAcceptedBytes = readFileSync(documentFile, "utf8");
   const sceneAcceptedDigest = createHash("sha256").update(sceneAcceptedBytes).digest("hex");
   const acceptedSceneDocument = JSON.parse(sceneAcceptedBytes);
+
   const acceptedSceneEntity = acceptedSceneDocument.data?.composedScene?.instances?.find(
     (entity: { instanceId?: string }) => entity.instanceId === DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId,
   );
+
   const acceptedSceneValue = acceptedSceneEntity?.localTransform?.translation?.[0];
+
   if (!guiStageUnchangedBytes || sceneAcceptedBytes === sceneStageBytes ||
       acceptedSceneValue !== guiTransformProof.stagedValue) {
     fail(`GUI scene property Accept did not preserve-before-accept and persist the expected value: ${JSON.stringify({
@@ -1616,6 +2650,7 @@ async function start(): Promise<void> {
       diagnostic: document.querySelector('[data-project-status]')?.textContent ?? '',
     };
   })()`);
+
   const physicsBeforeAccept = readFileSync(documentFile, "utf8");
   const physicsUnchangedBeforeAccept = physicsBeforeAccept === sceneAcceptedBytes;
   await waitForGui<boolean>(`(async () => {
@@ -1634,6 +2669,7 @@ async function start(): Promise<void> {
   })()`);
   const physicsAcceptedBytes = readFileSync(documentFile, "utf8");
   const physicsAcceptedDigest = createHash("sha256").update(physicsAcceptedBytes).digest("hex");
+
   if (!guiPhysicsStage.staged || !physicsUnchangedBeforeAccept || physicsAcceptedBytes === physicsBeforeAccept ||
       !physicsAcceptedBytes.includes('"gravityY": -10.25')) {
     fail(`GUI physics proposal did not stage without writes and persist on Accept: ${JSON.stringify({
@@ -1691,6 +2727,7 @@ async function start(): Promise<void> {
       outcomeCode: document.querySelector('[data-outcome-code]')?.textContent ?? '',
     };
   })()`);
+
   const animationBeforeAccept = readFileSync(documentFile, "utf8");
   const animationUnchangedBeforeAccept = animationBeforeAccept === physicsAcceptedBytes;
   await waitForGui<boolean>(`(async () => {
@@ -1709,6 +2746,7 @@ async function start(): Promise<void> {
   })()`);
   const animationAcceptedBytes = readFileSync(documentFile, "utf8");
   const animationAcceptedDigest = createHash("sha256").update(animationAcceptedBytes).digest("hex");
+
   if (!guiAnimationStage.staged || !animationUnchangedBeforeAccept || animationAcceptedBytes === animationBeforeAccept ||
       !animationAcceptedBytes.includes('"clipId": "smoke-idle"') ||
       !animationAcceptedBytes.includes('"name": "Smoke Idle"') ||
@@ -1719,6 +2757,7 @@ async function start(): Promise<void> {
       changedAfterAccept: animationAcceptedBytes !== animationBeforeAccept,
     })}`);
   }
+
   const guiAnimationEvaluation = await waitForGui<string>(`(async () => {
     const waitFor = async (predicate) => {
       for (let attempt = 0; attempt < 700; attempt += 1) {
@@ -1747,7 +2786,9 @@ async function start(): Promise<void> {
       buttonDisabled: evaluateButton instanceof HTMLButtonElement ? evaluateButton.disabled : null,
     });
   })()`);
+
   const animationEvaluationProof = JSON.parse(guiAnimationEvaluation);
+
   if (animationEvaluationProof.evaluated !== true ||
       !animationEvaluationProof.output.includes('sceneaxi.scene-animation-evaluation') ||
       animationEvaluationProof.output.includes('ANIMATION_STALE_VERSION')) {
@@ -1757,77 +2798,105 @@ async function start(): Promise<void> {
   const guiCommandFormProofs = new Map<string, object>();
   const fileBytes = () => readFileSync(documentFile, "utf8");
   const digestBytes = (value: string) => `sha256:${createHash("sha256").update(value).digest("hex")}`;
+
   const readCommandFieldOptions = async (commandId: string, fieldName: string) =>
     await window.webContents.executeJavaScript(`(() => {
       const field = document.querySelector('[data-editor-command-form="${commandId}"] [data-command-field="${fieldName}"]');
       return field instanceof HTMLSelectElement ? [...field.options].map((option) => option.value).filter(Boolean) : [];
     })()`);
+
   const readGuiOutcomeAfter = async () => {
     if (!await waitForRenderer(window, "document.querySelector('[data-overlay=\"outcome\"]')?.hidden === false")) {
       fail("GUI command did not open its outcome dialog");
     }
+
     const outcome = await rendererOutcome(window);
+
     if (!await waitForRenderer(window, "document.querySelector('[data-product-action][data-busy=\"true\"]') === null")) {
       fail(`GUI command action did not settle after its outcome: ${JSON.stringify(outcome)}`);
     }
+
     return outcome;
   };
+
   const submitGuiForm = async (commandId: string) => {
     await dismissRendererOutcome(window);
+
     const ready = await window.webContents.executeJavaScript(`(() => {
       const button = document.querySelector('[data-editor-command-submit="${commandId}"]');
       return button instanceof HTMLButtonElement && !button.disabled;
     })()`);
+
     if (!ready) fail(`${commandId} form is not enabled after its GUI prerequisites`);
     await clickRendererControl(window, `[data-editor-command-submit="${commandId}"]`);
+
     return await readGuiOutcomeAfter();
   };
+
   const runGuiMenuCommand = async (commandId: string) => {
     await dismissRendererOutcome(window);
     await clickRendererControl(window, '[data-menu-trigger="file"]');
+
     if (!await waitForRenderer(window, "document.querySelector('#menu-panel-file')?.hidden === false")) fail("File menu did not open through the GUI");
     await clickRendererControl(window, `#menu-command-${commandId}`);
+
     return await readGuiOutcomeAfter();
   };
+
   const acceptGuiSceneReview = async (label = "scene command") => {
     await dismissRendererOutcome(window);
     await clickRendererControl(window, '[data-action="dock-tab"][data-value="changes"]');
+
     if (!await waitForRenderer(window, "document.querySelector('[data-change-proposal]')?.hidden === false")) {
       fail("GUI Change Review did not show the staged proposal");
     }
+
     await clickRendererControl(window, '[data-action="change-accept"]');
+
     if (!await waitForRenderer(window, "document.querySelector('[data-change-badge]')?.textContent === '0' && document.querySelector('[data-project-status]')?.textContent?.includes('saved') && document.querySelector('[data-product-action][data-busy=\"true\"]') === null")) {
       const state = await window.webContents.executeJavaScript(`({ badge: document.querySelector('[data-change-badge]')?.textContent, status: document.querySelector('[data-project-status]')?.textContent, outcome: document.querySelector('[data-outcome-code]')?.textContent, proposalHidden: document.querySelector('[data-change-proposal]')?.hidden })`);
       fail(`GUI Change Review Accept did not save ${label}: ${JSON.stringify(state)}`);
     }
+
     await dismissRendererOutcome(window);
   };
+
   const setProfileAndMode = async () => {
     await dismissRendererOutcome(window);
     await clickRendererControl(window, '[data-action="profile"][data-value="game"]');
+
     if (!await waitForRenderer(window, "document.querySelector('.shell')?.dataset.profile === 'game'")) fail("Game profile did not open for command forms");
     await clickRendererControl(window, '[data-action="mode"][data-value="build"]');
+
     if (!await waitForRenderer(window, "document.querySelector('[data-mode-panel=\"build\"]')?.hidden === false")) fail("Build mode did not open for command forms");
   };
+
   const submitAndAcceptMutation = async (commandId: string) => {
     const before = fileBytes();
     const result = await submitGuiForm(commandId);
+
     if (result.code !== "COMMAND_COMPLETED") fail(`${commandId} did not stage through its GUI form: ${JSON.stringify(result)}`);
     const unchangedBeforeAccept = fileBytes() === before;
     await acceptGuiSceneReview(commandId);
     const after = fileBytes();
+
     if (!unchangedBeforeAccept || after === before) fail(`${commandId} did not defer persisted bytes until GUI Accept`);
+
     return { result, unchangedBeforeAccept, digestBefore: digestBytes(before), digestAfter: digestBytes(after), changed: after !== before };
   };
+
   await setProfileAndMode();
 
   const viewportBefore = fileBytes();
   await dismissRendererOutcome(window);
   await clickRendererControl(window, '[data-command="run-play"]');
+
   if (!await waitForRenderer(window, "document.querySelector('.viewport')?.dataset.playback === 'acknowledged'")) fail("Play did not create a viewport session for viewport-source-set");
+
   if (!await fillRendererCommandField(window, "viewport-source-set", "source", "scene")) fail("viewport-source-set source field was not available through the GUI");
   const viewportSourceResult = await submitGuiForm("viewport-source-set");
   const viewportAfter = fileBytes();
+
   if (viewportSourceResult.code !== "COMMAND_COMPLETED" || viewportAfter !== viewportBefore) fail(`viewport-source-set changed authoring bytes or refused: ${JSON.stringify(viewportSourceResult)}`);
   guiCommandFormProofs.set("#258", {
     gui: true,
@@ -1840,22 +2909,28 @@ async function start(): Promise<void> {
   await dismissRendererOutcome(window);
   await clickRendererControl(window, '[data-action="mode"][data-value="run"]');
   await clickRendererControl(window, '[data-command="run-stop"]');
+
   if (!await waitForRenderer(window, "(document.querySelector('[data-product-run-report]')?.textContent ?? '').startsWith('Stopped ·')")) fail("viewport-source smoke Play did not stop through the GUI");
   await setProfileAndMode();
 
   await clickRendererControl(window, '[data-command="physics-inspect"]');
+
   if (!await waitForRenderer(window, "document.querySelector('[data-catalog-report=\"physics\"]')?.textContent !== ''")) fail("physics inspection did not render its GUI catalog");
   const physicsInspectionMessage = await window.webContents.executeJavaScript(`document.querySelector('[data-catalog-report="physics"]')?.textContent ?? ''`);
+
   if (!physicsInspectionMessage.includes('"physicsHostReady": true')) fail(`physics inspection did not ready the evaluator: ${physicsInspectionMessage}`);
   const physicsBeforeEvaluate = fileBytes();
+
   if (!await fillRendererCommandField(window, "physics-evaluate", "steps", "1")) fail("physics-evaluate steps field was unavailable");
   const physicsEvaluation = await submitGuiForm("physics-evaluate");
   const physicsAfterEvaluate = fileBytes();
   const physicsReport = JSON.parse(physicsEvaluation.message);
   const physicsEvaluatedSteps = physicsReport.snapshots?.length ?? 0;
+
   if (physicsEvaluation.code !== "COMMAND_COMPLETED" || physicsReport.kind !== "sceneaxi.scene-physics-evaluation" || physicsEvaluatedSteps !== 1 || physicsReport.snapshots[0]?.step !== 1 || physicsAfterEvaluate !== physicsBeforeEvaluate) {
     fail(`physics-evaluate did not return a read-only one-step evaluation: ${JSON.stringify({ physicsEvaluation, authoringUnchanged: physicsAfterEvaluate === physicsBeforeEvaluate })}`);
   }
+
   guiCommandFormProofs.set("#260", {
     evaluate: { gui: true, code: physicsEvaluation.code, kind: physicsReport.kind, steps: physicsEvaluatedSteps, finalStep: physicsReport.snapshots[0].step, authoringBytesUnchanged: physicsAfterEvaluate === physicsBeforeEvaluate, digest: digestBytes(physicsAfterEvaluate) },
   });
@@ -1864,40 +2939,53 @@ async function start(): Promise<void> {
   if (!await fillRendererCommandField(window, "scene-prefab-define", "definitionId", "smoke-prefab")) fail("prefab definition ID field was unavailable");
   const prefabDefine = await submitAndAcceptMutation("scene-prefab-define");
   const prefabAfterDefine = fileBytes();
+
   if (!prefabAfterDefine.includes("smoke-prefab")) fail("accepted prefab definition was not persisted");
   const prefabInspect = await submitGuiForm("scene-prefab-inspect");
   const prefabCatalog = JSON.parse(prefabInspect.message);
+
   if (prefabInspect.code !== "COMMAND_COMPLETED" || prefabCatalog.kind !== "sceneaxi.scene-prefab-inspection" || !prefabCatalog.catalog?.definitions?.some((definition: { definitionId?: string }) => definition.definitionId === "smoke-prefab")) {
     fail(`GUI prefab inspection did not return the accepted definition: ${JSON.stringify(prefabInspect)}`);
   }
+
   await dismissRendererOutcome(window);
   const prefabDefinitionOptions = await readCommandFieldOptions("scene-prefab-instance", "definitionId");
   const prefabParentOptions = await readCommandFieldOptions("scene-prefab-instance", "parentInstanceId");
+
   if (!prefabDefinitionOptions.includes("smoke-prefab") || prefabParentOptions.length === 0) fail("GUI prefab instance prerequisites were not populated by inspection");
+
   for (const [fieldName, value] of [["definitionId", "smoke-prefab"], ["parentInstanceId", prefabParentOptions[0]], ["instanceKey", "smoke-copy"]]) {
     if (!await fillRendererCommandField(window, "scene-prefab-instance", fieldName, value)) fail(`could not fill prefab instance field ${fieldName}`);
   }
+
   const prefabInstance = await submitAndAcceptMutation("scene-prefab-instance");
   const prefabAfterInstance = fileBytes();
+
   if (!prefabAfterInstance.includes("smoke-copy")) fail("accepted prefab instance was not persisted");
   const inspectForOverride = await submitGuiForm("scene-prefab-inspect");
   const instanceOptions = await readCommandFieldOptions("scene-prefab-override", "instanceId");
   const sourceOptions = await readCommandFieldOptions("scene-prefab-override", "sourceInstanceId");
+
   if (inspectForOverride.code !== "COMMAND_COMPLETED" || instanceOptions.length === 0 || sourceOptions.length === 0) fail("GUI prefab inspection did not populate override prerequisites");
   await dismissRendererOutcome(window);
+
   const overrideValues: ReadonlyArray<readonly [string, string]> = [
     ["instanceId", instanceOptions.at(-1) ?? ""],
     ["sourceInstanceId", DESKTOP_SCENE_TRANSLATION_X_PROPERTY.entityId],
     ["propertyId", "translation-x"],
     ["newValue", "2.75"],
   ];
+
   for (const [fieldName, value] of overrideValues) {
     if (!await fillRendererCommandField(window, "scene-prefab-override", fieldName, value)) fail(`could not fill prefab override field ${fieldName}`);
   }
+
   const prefabOverride = await submitAndAcceptMutation("scene-prefab-override");
+
   if (!fileBytes().includes('"value": 2.75')) fail("accepted prefab override did not persist its exact value");
   const prefabRefreshInspect = await submitGuiForm("scene-prefab-inspect");
   await dismissRendererOutcome(window);
+
   const sourceProperty = await waitForGui<boolean>(`(() => {
     const field = document.querySelector('#scene-property-translation-x');
     if (!(field instanceof HTMLInputElement)) return false;
@@ -1905,17 +2993,21 @@ async function start(): Promise<void> {
     field.dispatchEvent(new Event('input', { bubbles: true }));
     return true;
   })()`);
+
   if (!sourceProperty) fail("could not edit prefab source through the scene inspector");
   await clickRendererControl(window, '[data-action="scene-property-stage"]');
   await acceptGuiSceneReview("prefab source edit");
   const refreshDefinitionOptions = await readCommandFieldOptions("scene-prefab-refresh", "definitionId");
+
   if (prefabRefreshInspect.code !== "COMMAND_COMPLETED" || !refreshDefinitionOptions.includes("smoke-prefab")) fail("GUI prefab refresh prerequisite was not available");
+
   if (!await fillRendererCommandField(window, "scene-prefab-refresh", "definitionId", "smoke-prefab")) fail("could not fill prefab refresh definition");
   const prefabRefresh = await submitAndAcceptMutation("scene-prefab-refresh");
   const prefabFinalBytes = fileBytes();
   const prefabFinalInspection = await submitGuiForm("scene-prefab-inspect");
   const finalPrefabReport = JSON.parse(prefabFinalInspection.message);
   const refreshedPrefab = finalPrefabReport.resolved?.find((item: { definitionId: string; stale: boolean }) => item.definitionId === "smoke-prefab");
+
   if (!prefabFinalBytes.includes("smoke-prefab") || prefabFinalInspection.code !== "COMMAND_COMPLETED" || refreshedPrefab === undefined || refreshedPrefab.stale) fail("prefab refresh did not update the stale definition");
   await dismissRendererOutcome(window);
   guiCommandFormProofs.set("#255", {
@@ -1930,19 +3022,24 @@ async function start(): Promise<void> {
 
   const packageDigest = `sha256:${createHash("sha256").update("contained-package-lock").digest("hex")}`;
   const packageManifest = { pluginId: "dev.sceneaxi.sample.intake-source", pluginVersion: "0.1.0", capabilities: ["sceneaxi.sculpt.intake-source.v1"] };
+
   if (!await fillRendererCommandField(window, "package-install", "locator", "fixtures/plugin-host/sculpt-intake-source") ||
       !await fillRendererCommandField(window, "package-install", "manifest", JSON.stringify(packageManifest)) ||
       !await fillRendererCommandField(window, "package-install", "digest", packageDigest)) fail("could not fill contained package install form");
   const packageInstall = await submitAndAcceptMutation("package-install");
   const packageAfterInstall = fileBytes();
+
   if (!packageAfterInstall.includes(packageManifest.pluginId)) fail("accepted package install was not persisted");
   const packageInspection = await runGuiMenuCommand("package-inspect");
   const packageOptions = await readCommandFieldOptions("package-remove", "packageId");
+
   if (packageInspection.code !== "COMMAND_COMPLETED" || !packageInspection.message.includes(packageManifest.pluginId) || !packageOptions.includes(packageManifest.pluginId)) fail("package inspection did not enable GUI removal of the installed package");
   await dismissRendererOutcome(window);
+
   if (!await fillRendererCommandField(window, "package-remove", "packageId", packageManifest.pluginId)) fail("could not select the inspected package for removal");
   const packageRemove = await submitAndAcceptMutation("package-remove");
   const packageAfterRemove = fileBytes();
+
   if (packageAfterRemove.includes(packageManifest.pluginId)) fail("accepted package removal left the package in project bytes");
   guiCommandFormProofs.set("#262", {
     gui: true,
@@ -1955,11 +3052,14 @@ async function start(): Promise<void> {
   const extensionBytesBefore = fileBytes();
   const extensionInspection = await runGuiMenuCommand("extension-inspect");
   const seamOptions = await readCommandFieldOptions("extension-start", "seamId");
+
   if (extensionInspection.code !== "COMMAND_COMPLETED" || !extensionInspection.message.includes("networking") || !seamOptions.includes("networking")) fail("extension inspect did not populate the networking seam in the GUI");
   await dismissRendererOutcome(window);
+
   if (!await fillRendererCommandField(window, "extension-start", "seamId", "networking")) fail("could not select inspected extension seam");
   const extensionStart = await submitGuiForm("extension-start");
   const extensionBytesAfter = fileBytes();
+
   if (extensionStart.code !== EXTENSION_SEAM_REFUSALS.adapterAbsent || extensionBytesAfter !== extensionBytesBefore) fail(`extension-start did not show its named adapter-absent refusal without writing project bytes: ${JSON.stringify(extensionStart)}`);
   guiCommandFormProofs.set("#269", {
     gui: true,
@@ -1975,37 +3075,47 @@ async function start(): Promise<void> {
   const actionsPath = join(cwd, ".sceneaxi/input-actions.v1.json");
   const inputBytesBefore = existsSync(actionsPath) ? readFileSync(actionsPath, "utf8") : null;
   const inputInspect = await submitGuiForm("input-actions-inspect");
+
   if (inputInspect.code !== "COMMAND_COMPLETED" || !inputInspect.message.includes("baseVersions") || !inputInspect.message.includes("editor.project.save")) fail("GUI input-action inspection did not return base versions and the save action");
   await dismissRendererOutcome(window);
+
   const rebindFields: ReadonlyArray<readonly [string, string]> = [
     ["scope", "project"],
     ["actionId", "editor.project.save"],
     ["binding", JSON.stringify({ device: "keyboard", code: "KeyB", modifiers: ["primary"] })],
   ];
+
   for (const [fieldName, value] of rebindFields) {
     if (!await fillRendererCommandField(window, "input-action-rebind", fieldName, value)) fail(`could not fill input-action rebind field ${fieldName}`);
   }
+
   const rebindStage = await submitGuiForm("input-action-rebind");
   const rebindBeforeReview = existsSync(actionsPath) ? readFileSync(actionsPath, "utf8") : null;
   const rebindUnchanged = rebindBeforeReview === inputBytesBefore;
+
   if (rebindStage.code !== "INPUT_ACTION_REVIEW_REQUIRED" || !rebindUnchanged) fail(`input-action rebind wrote before its GUI review or used an unexpected result: ${JSON.stringify(rebindStage)}`);
   await dismissRendererOutcome(window);
   await clickRendererControl(window, '[data-editor-command-review="input-action-rebind"]');
   const rebindReview = await readGuiOutcomeAfter();
   const inputBytesAfterRebind = existsSync(actionsPath) ? readFileSync(actionsPath, "utf8") : null;
+
   if (rebindReview.code !== "COMMAND_COMPLETED" || inputBytesAfterRebind === null || !inputBytesAfterRebind.includes('"code": "KeyB"')) fail("GUI input-action review did not persist the selected binding");
   await dismissRendererOutcome(window);
   const resetInspect = await submitGuiForm("input-actions-inspect");
+
   if (resetInspect.code !== "COMMAND_COMPLETED") fail("GUI input-action reinspection failed before reset");
   await dismissRendererOutcome(window);
+
   if (!await fillRendererCommandField(window, "input-actions-reset", "scope", "project")) fail("could not fill input-actions reset scope");
   const resetStage = await submitGuiForm("input-actions-reset");
   const inputBytesBeforeReset = existsSync(actionsPath) ? readFileSync(actionsPath, "utf8") : null;
+
   if (resetStage.code !== "INPUT_ACTION_REVIEW_REQUIRED" || inputBytesBeforeReset !== inputBytesAfterRebind) fail(`input-actions reset was not held for review: ${JSON.stringify(resetStage)}`);
   await dismissRendererOutcome(window);
   await clickRendererControl(window, '[data-editor-command-review="input-actions-reset"]');
   const resetReview = await readGuiOutcomeAfter();
   const inputBytesAfterReset = existsSync(actionsPath) ? readFileSync(actionsPath, "utf8") : null;
+
   if (resetReview.code !== "COMMAND_COMPLETED" || inputBytesAfterReset === null || inputBytesAfterReset === inputBytesBeforeReset || !inputBytesAfterReset.includes('"schemaVersion"')) fail("GUI input-action reset did not persist the reviewed default map");
   guiCommandFormProofs.set("#257", {
     gui: true,
@@ -2031,14 +3141,17 @@ async function start(): Promise<void> {
   await dismissRendererOutcome(window);
   const migrationStatusBeforeReload = await window.webContents.executeJavaScript(`document.querySelector('[data-project-status]')?.textContent ?? ''`);
   await clickRendererControl(window, '[data-action="document-reload"]');
+
   if (!await waitForRenderer(window, `document.querySelector('[data-project-status]')?.textContent !== ${JSON.stringify(migrationStatusBeforeReload)} && document.querySelector('[data-project-state]')?.getAttribute('data-project-state') === 'open' && document.querySelector('[data-product-action][data-busy="true"]') === null`)) fail("GUI Reload did not reopen the migration scratch document");
   const migrationBefore = readFileSync(migrationDocument, "utf8");
   const migrationProposal = await runGuiMenuCommand("project-migration-propose");
+
   if (migrationProposal.code !== "COMMAND_COMPLETED" || !existsSync(join(migrationRoot, ".sceneaxi/project-migration-proposal.json"))) fail(`GUI migration proposal did not persist its review artifact: ${JSON.stringify(migrationProposal)}`);
   await dismissRendererOutcome(window);
   const migrationCommit = await submitGuiForm("project-migration-commit");
   const migrationAfter = readFileSync(migrationDocument, "utf8");
   const migrationManifestBytes = readFileSync(migrationManifest, "utf8");
+
   if (migrationCommit.code !== "COMMAND_COMPLETED" || migrationAfter !== migrationBefore || !migrationManifestBytes.includes('"schemaVersion"')) fail(`GUI migration commit did not persist a native manifest without rewriting source bytes: ${JSON.stringify(migrationCommit)}`);
   guiCommandFormProofs.set("#263", {
     migration: { gui: true, state: "legacy-project-migrated", proposalCode: migrationProposal.code, commitCode: migrationCommit.code, sourceBytesUnchanged: migrationAfter === migrationBefore, manifestPersisted: migrationManifestBytes.includes('"schemaVersion"'), digest: digestBytes(migrationManifestBytes) },
@@ -2047,6 +3160,7 @@ async function start(): Promise<void> {
   await activateProject(cwd);
   const migrationStatusBeforeRestore = await window.webContents.executeJavaScript(`document.querySelector('[data-project-status]')?.textContent ?? ''`);
   await clickRendererControl(window, '[data-action="document-reload"]');
+
   if (!await waitForRenderer(window, `document.querySelector('[data-project-status]')?.textContent !== ${JSON.stringify(migrationStatusBeforeRestore)} && document.querySelector('[data-project-state]')?.getAttribute('data-project-state') === 'open' && document.querySelector('[data-product-action][data-busy="true"]') === null`)) fail("GUI Reload did not restore the main smoke document after migration proof");
   rmSync(migrationRoot, { recursive: true, force: true });
 
@@ -2069,6 +3183,7 @@ async function start(): Promise<void> {
       status: document.querySelector('[data-project-status]')?.textContent ?? '',
     };
   })()`);
+
   const guiAssetAccept = async () => await waitForGui<boolean>(`(async () => {
     const waitFor = async (predicate) => {
       for (let attempt = 0; attempt < 800; attempt += 1) {
@@ -2083,6 +3198,7 @@ async function start(): Promise<void> {
       document.querySelector('[data-project-status]')?.textContent?.includes('saved') &&
       document.querySelector('[data-product-action][data-busy="true"]') === null);
   })()`);
+
   const guiAssetDigest = async (path: string) => await waitForGui<string>(`(async () => {
     const waitFor = async (predicate) => {
       for (let attempt = 0; attempt < 800; attempt += 1) {
@@ -2129,6 +3245,7 @@ async function start(): Promise<void> {
   editedSource.extras = { sceneaxiSmokeRevision: 2 };
   writeFileSync(smokeGuiAssetPath ?? "", JSON.stringify(editedSource));
   const statusBeforeGuiReload = await waitForGui<string>(`document.querySelector('[data-project-status]')?.textContent ?? ''`);
+
   const guiReloadCompleted = await waitForGui<boolean>(`(async () => {
     const waitFor = async (predicate) => {
       for (let attempt = 0; attempt < 800; attempt += 1) {
@@ -2142,6 +3259,7 @@ async function start(): Promise<void> {
       document.querySelector('[data-project-state]')?.getAttribute('data-project-state') === 'open' &&
       document.querySelector('[data-product-action][data-busy="true"]') === null);
   })()`);
+
   if (smokeGuiAssetRevisionPath === null || smokeGuiAssetPath === null) fail("GUI asset revision fixture path was not configured");
   writeFileSync(smokeGuiAssetRevisionPath, readFileSync(smokeGuiAssetPath));
   smokeGuiAssetPickerPath = smokeGuiAssetRevisionPath;
@@ -2151,6 +3269,7 @@ async function start(): Promise<void> {
   const guiAssetSecondAccepted = await guiAssetAccept();
   const guiAssetSecondDigest = await guiAssetDigest(guiAssetRevisionPath);
   const guiAssetFinalProjectDigest = createHash("sha256").update(readFileSync(documentFile, "utf8")).digest("hex");
+
   if (!guiAssetFirstStage.staged || !assetFirstStagedUnchanged || !guiAssetFirstAccepted ||
       !/^sha256:[0-9a-f]{64}$/.test(guiAssetFirstDigest) || !guiReloadCompleted ||
       !guiAssetSecondStage.staged || !assetSecondStagedUnchanged || !guiAssetSecondAccepted ||
@@ -2162,6 +3281,7 @@ async function start(): Promise<void> {
     })}`);
   }
 
+  // SAFETY: This main-process-only smoke script is defined here and constructs the asserted proof fields from the isolated packaged document; the resulting values are checked by the smoke assertions below.
   const guiFeatures = (await window.webContents.executeJavaScript(
     `(async () => {
       const waitFor = async (predicate) => {
@@ -2294,6 +3414,7 @@ async function start(): Promise<void> {
     message?: string;
     result?: string;
   }>;
+
   // Profiling measured the project as it stood after every edit above.
   const projectDigestAtProfile = `sha256:${createHash("sha256").update(readFileSync(documentFile)).digest("hex")}`;
   const frameReportAtProfile = activeFrameReport();
@@ -2302,6 +3423,7 @@ async function start(): Promise<void> {
   // Optional visual evidence: capture the real window once the live frame exists.
   const shotPath = process.env["SCENEAXI_SMOKE_SHOT"];
   let screenshotBytes = 0;
+
   if (shotPath !== undefined && shotPath.length > 0) {
     // A headless compositor can lag the DOM; force a repaint and let it settle
     // so the capture shows the frame the report described.
@@ -2316,17 +3438,54 @@ async function start(): Promise<void> {
 
   await localBridgeServer?.close();
   localBridgeServer = null;
+
   if (closeActiveDesktopBridge !== null && !closeActiveDesktopBridge()) {
     fail("The desktop mutation-owner lease could not be released after smoke verification.");
   }
+
+  const teardown = await gui(`
+    const canvas = document.querySelector('[data-live-viewport="canvas"]');
+    const gl = canvas?.getContext('webgl2');
+    if (!gl) throw new Error('SMOKE_TEARDOWN_CONTEXT_ABSENT');
+    const deleted = { Buffer: 0, Program: 0, Texture: 0 };
+    const originals = [];
+    for (const kind of Object.keys(deleted)) {
+      const name = 'delete' + kind;
+      originals.push([name, gl[name]]);
+      const dispose = gl[name].bind(gl);
+      gl[name] = (handle) => { if (handle) deleted[kind] += 1; return dispose(handle); };
+    }
+    try {
+      window.dispatchEvent(new PageTransitionEvent('pagehide'));
+      await wait(() => document.querySelectorAll('[data-live-viewport="canvas"]').length === 0, 'viewport teardown removed canvas');
+      if (deleted.Buffer === 0 || deleted.Program === 0) throw new Error('SMOKE_TEARDOWN_GPU_RESOURCES_RETAINED');
+      // Removing a canvas or deleting some handles does not release its WebGL context.
+      await wait(() => gl.isContextLost(), 'viewport teardown released WebGL context');
+      return { canvases: 0, deleted, contextLost: gl.isContextLost() };
+    } finally { for (const [name, original] of originals) gl[name] = original; }
+  `);
+
   bridge = null;
   rmSync(cwd, { recursive: true, force: true });
   rmSync(audioSwitchRoot, { recursive: true, force: true });
+  rmSync(smokeNewRoot, { recursive: true, force: true });
 
+  // SAFETY: the isolated packaged-window probe above constructs these resource-count and latency fields; the twelve samples, latency budget, canvas count, and resource plateau were checked before publication.
   console.log(
     JSON.stringify({
       ok: true,
       handshake: handshake.data,
+      newerEditor: {
+        hierarchyCreated: true, hierarchyReparented: true, transformApplied: true,
+        playStarted: true, playStopped: true, playReset: true,
+        physicsReviewed: true, animationReviewed: true, cliHandshake: true,
+        hierarchySourceId, hierarchyCopyId, persistedParent, initialY, reopenedY,
+        physicsBodyId: "smoke-body", cli: cliResult,
+      },
+      nativeGui,
+        assetCapacity: { ...assetCapacity, rssBytes: capacityRss, warmedReloadRssBytes: capacityReloadRss, reloadMs: capacityReloadMs, hotReloadTransport: "actual trusted bridge IPC; dedicated GUI hot-reload control not certified", rssScope: "sum of actual Electron process resident working sets, including main Worker isolates, renderer and GPU; shared pages conservatively counted per process" },
+      security: { cspEnforced: true, permissionDenied: true, foreignSenderChannelsDenied: foreignRefusals.length, rawDumpConsent: sensitiveDumpConsent },
+      performance: { ...(plateau as NativePerformanceProof), teardown },
       openPath: openPath.data,
       authoring: {
         selected: true,
@@ -2436,27 +3595,65 @@ async function start(): Promise<void> {
       playbackDom,
       audioProof: { ...audioProof, resetStopped: audioResetStopped, decodeRefused: audioDecodeRefused, kidsSwitchStopped: audioKidsSwitchStopped, projectSwitchStopped: audioProjectSwitchStopped },
       viewportDom,
-      ...(screenshotBytes > 0 ? { screenshotBytes } : {}),
+      ...(() => {
+        const optional: DesktopOptionalFields<{ screenshotBytes?: number }> = {};
+
+        if (screenshotBytes > 0) {
+          optional.screenshotBytes = screenshotBytes;
+        }
+
+        return optional;
+      })(),
     }),
   );
   app.exit(0);
 }
 
-const errorName = (error: unknown) => (error instanceof Error ? error.name : typeof error);
+type DesktopDiagnosticTypes = {
+  string: string;
+  number: number;
+  boolean: boolean;
+  undefined: undefined;
+  bigint: bigint;
+  symbol: symbol;
+  function: (...args: never[]) => void;
+  object: object | null;
+};
 
-process.on("uncaughtException", (error) => {
-  recordDesktopDiagnostic(logsDirectory, "main-exception", { errorName: errorName(error) });
+function isDiagnosticPrimitive<Kind extends keyof DesktopDiagnosticTypes>(value: DesktopBoundaryValue, kind: Kind): value is DesktopDiagnosticTypes[Kind] {
+  return (
+    (kind === "string" && isBoundaryTextValue(value)) ||
+    (kind === "number" && isBoundaryNumericValue(value)) ||
+    (kind === "boolean" && isBoundaryBooleanValue(value)) ||
+    (kind === "bigint" && isBoundaryBigIntValue(value)) ||
+    (kind === "symbol" && isBoundarySymbolValue(value)) ||
+    (kind === "object" && isBoundaryObjectValue(value)) ||
+    (kind === "function" && isBoundaryCallableValue(value)) ||
+    (kind === "undefined" && isBoundaryUndefinedValue(value))
+  );
+}
+
+const errorName = (cause: unknown) => cause instanceof Error
+  ? cause.name
+  : (["string", "number", "boolean", "undefined", "bigint", "symbol", "function", "object"] as const)
+      .find((kind) => isDiagnosticPrimitive(cause, kind)) ?? "undefined";
+
+process.on("uncaughtException", (cause) => {
+  recordDesktopDiagnostic(logsDirectory, "main-exception", { errorName: errorName(cause) });
+
   // A blocking dialog would hang a headless smoke until its launcher timeout.
   if (SMOKE) {
     reportFailure("An uncaught exception stopped the packaged smoke. See local logs.");
+
     return;
   }
+
   dialog.showErrorBox("Desktop stopped", "A local error occurred. Open Help → Reveal logs after restarting.");
   app.exit(1);
 });
 
 // Normal startup never echoes an exception; the smoke names the failing step.
-void start().catch((error: unknown) => {
+void start().catch((error: DesktopBoundaryValue) => {
   recordDesktopDiagnostic(logsDirectory, "main-exception", { errorName: errorName(error) });
   // The smoke runs on a scratch project with no user data, so its proof line may
   // name the failing step; a user's startup still echoes nothing.
@@ -2472,9 +3669,63 @@ app.on("window-all-closed", () => {
     !closeActiveDesktopBridge()
   ) {
     reportFailure("The desktop mutation-owner lease could not be released during shutdown.");
+
     return;
   }
-  const closing = localBridgeServer?.close() ?? Promise.resolve();
+
+  const closing = Promise.all([localBridgeServer?.close() ?? Promise.resolve(), cancelActiveAssetPreparation?.() ?? Promise.resolve()]);
   localBridgeServer = null;
   void closing.finally(() => app.quit());
 });
+
+function isProtocolObject<Value>(value: Value): value is Value & (object | null) {
+  return isBoundaryObjectValue(value);
+}
+
+function isProtocolText<Value>(value: Value): value is Value & (string) {
+  return typeof value === "string";
+}
+
+function isProtocolBoolean<Value>(value: Value): value is Value & (boolean) {
+  return typeof value === "boolean";
+}
+
+type MutableNativeFields<Owner> = { -readonly [Key in keyof Owner]: Owner[Key] };
+
+type SmokeCommandDocument = { documentPath?: string };
+
+type BoundaryObjectValue = object | null;
+
+type BoundaryCallableValue = (...args: never[]) => void;
+
+function isBoundaryTextValue<Input>(value: Input): value is Input & string {
+  return typeof value === "string";
+}
+
+function isBoundaryNumericValue<Input>(value: Input): value is Input & number {
+  return typeof value === "number";
+}
+
+function isBoundaryBooleanValue<Input>(value: Input): value is Input & boolean {
+  return typeof value === "boolean";
+}
+
+function isBoundaryBigIntValue<Input>(value: Input): value is Input & bigint {
+  return typeof value === "bigint";
+}
+
+function isBoundarySymbolValue<Input>(value: Input): value is Input & symbol {
+  return typeof value === "symbol";
+}
+
+function isBoundaryObjectValue<Input>(value: Input): value is Input & Readonly<BoundaryObjectValue> {
+  return typeof value === "object";
+}
+
+function isBoundaryCallableValue<Input>(value: Input): value is Input & BoundaryCallableValue & object {
+  return typeof value === "function";
+}
+
+function isBoundaryUndefinedValue<Input>(value: Input): value is Input & undefined {
+  return typeof value === "undefined";
+}

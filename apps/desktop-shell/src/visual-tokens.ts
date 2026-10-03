@@ -493,6 +493,9 @@ export const MOTION = Object.freeze({
   out: "cubic-bezier(.4,0,1,1)",
 });
 
+/** A 4px rhythm for panel content; structural archive metrics stay separate. */
+export const SPACING = Object.freeze({ unit: 4, small: 8, medium: 12, large: 16, section: 24 });
+
 /**
  * Region metrics, in archive pixels at the reference width.
  * The chrome scales these with one CSS custom property rather than a transform.

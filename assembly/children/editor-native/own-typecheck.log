@@ -1,0 +1,98 @@
+desktop/linux/src/electron/main.ts(30,81): error TS2307: Cannot find module 'electron' or its corresponding type declarations.
+desktop/linux/src/electron/main.ts(31,40): error TS2307: Cannot find module '@sceneaxi/desktop-shell' or its corresponding type declarations.
+desktop/linux/src/electron/main.ts(40,37): error TS2307: Cannot find module '@sceneaxi/importers' or its corresponding type declarations.
+desktop/linux/src/electron/main.ts(632,19): error TS2339: Property 'resourcesPath' does not exist on type 'Process'.
+desktop/linux/src/electron/main.ts(759,111): error TS2339: Property 'runLocalAssistant' does not exist on type 'DesktopBridgeOptions'.
+desktop/linux/src/electron/main.ts(925,68): error TS2503: Cannot find namespace 'Electron'.
+desktop/linux/src/electron/main.ts(926,30): error TS7006: Parameter 'event' implicitly has an 'any' type.
+desktop/linux/src/electron/main.ts(1037,56): error TS7006: Parameter 'details' implicitly has an 'any' type.
+desktop/linux/src/electron/main.ts(1041,43): error TS7006: Parameter 'event' implicitly has an 'any' type.
+desktop/linux/src/electron/main.ts(1043,59): error TS7006: Parameter '_contents' implicitly has an 'any' type.
+desktop/linux/src/electron/main.ts(1043,70): error TS7006: Parameter '_permission' implicitly has an 'any' type.
+desktop/linux/src/electron/main.ts(1043,83): error TS7006: Parameter 'callback' implicitly has an 'any' type.
+desktop/linux/src/electron/main.ts(1055,52): error TS7006: Parameter 'failure' implicitly has an 'any' type.
+desktop/linux/src/electron/main.ts(1083,16): error TS7031: Binding element 'response' implicitly has an 'any' type.
+desktop/linux/src/electron/main.ts(1090,49): error TS7006: Parameter '_event' implicitly has an 'any' type.
+desktop/linux/src/electron/main.ts(1090,57): error TS7006: Parameter 'details' implicitly has an 'any' type.
+desktop/linux/src/electron/main.ts(1106,33): error TS7006: Parameter '_event' implicitly has an 'any' type.
+desktop/linux/src/electron/main.ts(1106,41): error TS7006: Parameter 'details' implicitly has an 'any' type.
+desktop/linux/src/electron/main.ts(1171,57): error TS7006: Parameter 'item' implicitly has an 'any' type.
+desktop/linux/src/electron/main.ts(1172,47): error TS7006: Parameter 'item' implicitly has an 'any' type.
+desktop/linux/src/electron/main.ts(1224,6): error TS7006: Parameter '_details' implicitly has an 'any' type.
+desktop/linux/src/electron/main.ts(1224,16): error TS7006: Parameter 'callback' implicitly has an 'any' type.
+desktop/linux/src/electron/main.ts(1369,48): error TS7006: Parameter 'metric' implicitly has an 'any' type.
+desktop/linux/src/electron/main.ts(1370,30): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+desktop/linux/src/electron/main.ts(1370,35): error TS7006: Parameter 'metric' implicitly has an 'any' type.
+desktop/linux/src/electron/preload.ts(6,44): error TS2307: Cannot find module 'electron' or its corresponding type declarations.
+desktop/linux/src/electron/provider-key-store.ts(3,29): error TS2307: Cannot find module 'electron' or its corresponding type declarations.
+desktop/linux/src/lib/assistant-viewport.ts(1,37): error TS2307: Cannot find module '@sceneaxi/engine-presentation' or its corresponding type declarations.
+desktop/linux/src/lib/assistant-viewport.ts(3,37): error TS2307: Cannot find module '@sceneaxi/site-kit' or its corresponding type declarations.
+desktop/linux/src/lib/bridge-contract-assistant.ts(8,37): error TS2307: Cannot find module '@sceneaxi/site-kit' or its corresponding type declarations.
+desktop/linux/src/lib/bridge-contract-assistant.ts(9,38): error TS2307: Cannot find module '@sceneaxi/desktop-shell' or its corresponding type declarations.
+desktop/linux/src/lib/bridge.ts(79,8): error TS2307: Cannot find module '@sceneaxi/desktop-shell' or its corresponding type declarations.
+desktop/linux/src/lib/bridge.ts(96,8): error TS2307: Cannot find module '@sceneaxi/importers' or its corresponding type declarations.
+desktop/linux/src/lib/bridge.ts(390,19): error TS2304: Cannot find name 'DesktopDocumentData'.
+desktop/linux/src/lib/bridge.ts(466,36): error TS7006: Parameter 'edit' implicitly has an 'any' type.
+desktop/linux/src/lib/bridge.ts(544,62): error TS7006: Parameter 'edit' implicitly has an 'any' type.
+desktop/linux/src/lib/bridge.ts(552,30): error TS7006: Parameter 'edit' implicitly has an 'any' type.
+desktop/linux/src/lib/bridge.ts(568,53): error TS7006: Parameter 'edit' implicitly has an 'any' type.
+desktop/linux/src/lib/bridge.ts(576,25): error TS7006: Parameter 'edit' implicitly has an 'any' type.
+desktop/linux/src/lib/bridge.ts(618,56): error TS2304: Cannot find name 'DesktopDocumentData'.
+desktop/linux/src/lib/bridge.ts(817,45): error TS7006: Parameter 'outcome' implicitly has an 'any' type.
+desktop/linux/src/lib/bridge.ts(1090,33): error TS2304: Cannot find name 'DesktopDocumentData'.
+desktop/linux/src/lib/bridge.ts(1317,49): error TS7006: Parameter 'edit' implicitly has an 'any' type.
+desktop/linux/src/lib/bridge.ts(1769,55): error TS7006: Parameter 'candidate' implicitly has an 'any' type.
+desktop/linux/src/lib/bridge.ts(2703,72): error TS2304: Cannot find name 'PhysicsWorldHost'.
+desktop/linux/src/lib/bridge.ts(3178,41): error TS7006: Parameter 'asset' implicitly has an 'any' type.
+desktop/linux/src/lib/bridge/assistant.ts(9,38): error TS2307: Cannot find module '@sceneaxi/desktop-shell' or its corresponding type declarations.
+desktop/linux/src/lib/bridge/context.ts(1,77): error TS2307: Cannot find module '@sceneaxi/desktop-shell' or its corresponding type declarations.
+desktop/linux/src/lib/bridge/context.ts(3,35): error TS2307: Cannot find module '@sceneaxi/engine-orchestrator' or its corresponding type declarations.
+desktop/linux/src/lib/bridge/play.ts(2,47): error TS2307: Cannot find module '@sceneaxi/importers' or its corresponding type declarations.
+desktop/linux/src/lib/bridge/play.ts(3,51): error TS2307: Cannot find module '@sceneaxi/engine-orchestrator' or its corresponding type declarations.
+desktop/linux/src/lib/chrome-document.ts(25,8): error TS2307: Cannot find module '@sceneaxi/desktop-shell' or its corresponding type declarations.
+desktop/linux/src/lib/desktop-scene.ts(122,8): error TS2307: Cannot find module '@sceneaxi/site-kit' or its corresponding type declarations.
+desktop/linux/src/lib/desktop-scene.ts(130,8): error TS2307: Cannot find module '@sceneaxi/importers' or its corresponding type declarations.
+desktop/linux/src/lib/desktop-scene.ts(379,53): error TS7006: Parameter 'candidate' implicitly has an 'any' type.
+desktop/linux/src/lib/desktop-scene.ts(1158,55): error TS2339: Property 'instanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }> | Readonly<{ kind: "create-primitive"; primitive: "box" | "cylinder" | "sphere"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.
+  Property 'instanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }>'.
+desktop/linux/src/lib/desktop-scene.ts(1163,51): error TS2339: Property 'instanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }> | Readonly<{ kind: "create-primitive"; primitive: "box" | "cylinder" | "sphere"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.
+  Property 'instanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }>'.
+desktop/linux/src/lib/desktop-scene.ts(1175,55): error TS2339: Property 'parentInstanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }> | Readonly<{ kind: "create-primitive"; primitive: "box" | "cylinder" | "sphere"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.
+  Property 'parentInstanceId' does not exist on type 'Readonly<{ kind: "rename-object"; instanceId: string; name: string; }>'.
+desktop/linux/src/lib/desktop-scene.ts(1180,55): error TS2339: Property 'parentInstanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }> | Readonly<{ kind: "create-primitive"; primitive: "box" | "cylinder" | "sphere"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.
+  Property 'parentInstanceId' does not exist on type 'Readonly<{ kind: "rename-object"; instanceId: string; name: string; }>'.
+desktop/linux/src/lib/desktop-scene.ts(1199,31): error TS2339: Property 'transformPolicy' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }> | Readonly<{ kind: "create-primitive"; primitive: "box" | "cylinder" | "sphere"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.
+  Property 'transformPolicy' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }>'.
+desktop/linux/src/lib/desktop-scene.ts(1532,37): error TS7006: Parameter 'asset' implicitly has an 'any' type.
+desktop/linux/src/lib/desktop-scene.ts(1532,82): error TS7006: Parameter 'asset' implicitly has an 'any' type.
+desktop/linux/src/lib/desktop-scene.ts(1563,57): error TS2307: Cannot find module '@sceneaxi/physics-rapier' or its corresponding type declarations.
+desktop/linux/src/lib/desktop-scene.ts(1800,32): error TS7006: Parameter 'entry' implicitly has an 'any' type.
+desktop/linux/src/lib/project-browser.ts(27,8): error TS2307: Cannot find module '@sceneaxi/importers' or its corresponding type declarations.
+desktop/linux/src/lib/project-browser.ts(393,74): error TS7006: Parameter 'entry' implicitly has an 'any' type.
+desktop/linux/src/lib/web-export.ts(32,8): error TS2307: Cannot find module '@sceneaxi/desktop-shell' or its corresponding type declarations.
+desktop/linux/src/lib/web-export.ts(37,8): error TS2307: Cannot find module '@sceneaxi/importers' or its corresponding type declarations.
+desktop/linux/src/lib/web-export.ts(1268,32): error TS7006: Parameter 'entry' implicitly has an 'any' type.
+desktop/linux/src/lib/web-export.ts(1271,35): error TS7006: Parameter 'entry' implicitly has an 'any' type.
+desktop/linux/src/lib/web-export.ts(1427,66): error TS2345: Argument of type 'Map<unknown, unknown>' is not assignable to parameter of type 'ReadonlyMap<string, ProjectAssetManifestEntry>'.
+  Types of property 'forEach' are incompatible.
+    Type '(callbackfn: (value: unknown, key: unknown, map: Map<unknown, unknown>) => void, thisArg?: any) => void' is not assignable to type '(callbackfn: (value: ProjectAssetManifestEntry, key: string, map: ReadonlyMap<string, ProjectAssetManifestEntry>) => void, thisArg?: any) => void'.
+      Types of parameters 'callbackfn' and 'callbackfn' are incompatible.
+        Types of parameters 'key' and 'key' are incompatible.
+          Type 'unknown' is not assignable to type 'string'.
+desktop/linux/src/renderer/assistant-inspection.ts(13,48): error TS2307: Cannot find module '@sceneaxi/importers' or its corresponding type declarations.
+desktop/linux/src/renderer/features/assistant-flow.ts(1,69): error TS2307: Cannot find module '@sceneaxi/engine-presentation' or its corresponding type declarations.
+desktop/linux/src/renderer/features/audio-controls.ts(1,54): error TS2307: Cannot find module '@sceneaxi/engine-presentation' or its corresponding type declarations.
+desktop/linux/src/renderer/features/audio-controls.ts(52,23): error TS7006: Parameter 'bytes' implicitly has an 'any' type.
+desktop/linux/src/renderer/features/audio-controls.ts(53,25): error TS7006: Parameter 'gain' implicitly has an 'any' type.
+desktop/linux/src/renderer/features/audio-controls.ts(85,19): error TS7006: Parameter 'destination' implicitly has an 'any' type.
+desktop/linux/src/renderer/features/audio-playback.ts(1,110): error TS2307: Cannot find module '@sceneaxi/engine-presentation' or its corresponding type declarations.
+desktop/linux/src/renderer/features/audio-playback.ts(52,33): error TS7006: Parameter 'bytes' implicitly has an 'any' type.
+desktop/linux/src/renderer/features/audio-playback.ts(53,29): error TS7006: Parameter 'gain' implicitly has an 'any' type.
+desktop/linux/src/renderer/features/audio-playback.ts(87,27): error TS7006: Parameter 'destination' implicitly has an 'any' type.
+desktop/linux/src/renderer/features/overlay-report.ts(1,46): error TS2307: Cannot find module '@sceneaxi/engine-presentation' or its corresponding type declarations.
+desktop/linux/src/renderer/features/services.ts(7,8): error TS2307: Cannot find module '@sceneaxi/engine-presentation' or its corresponding type declarations.
+desktop/linux/src/renderer/playback-report.ts(9,46): error TS2307: Cannot find module '@sceneaxi/engine-presentation' or its corresponding type declarations.
+desktop/linux/src/renderer/viewport-playback.ts(17,8): error TS2307: Cannot find module '@sceneaxi/engine-presentation' or its corresponding type declarations.
+desktop/linux/src/renderer/viewport.ts(15,8): error TS2307: Cannot find module '@sceneaxi/engine-presentation' or its corresponding type declarations.
+packages/schemas/src/scene-composition.ts(1460,76): error TS2379: Argument of type '{ kind: "node"; artifactId: string; artifact: SculptArtifact; instanceId: string; parentInstanceId: string | null; depth: number; localTransform: SculptTransform; worldMatrix: SceneMatrixV2; name?: never; } | { ...; }' is not assignable to parameter of type 'ResolvedScenePlacementV2' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Object literal may only specify known properties, but 'artifact' does not exist in type 'ResolvedScenePlacementV2'. Did you mean to write 'artifactId'?

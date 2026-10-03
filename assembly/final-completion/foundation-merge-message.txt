@@ -1,0 +1,12 @@
+Merge foundation lineage with 105 semantic conflict resolutions
+
+Conclude the native merge of 16f312c into current main ancestry.
+Preserve modern desktop renderer, transport and bridge hardening; historical
+input-map migration, three-argument digest and legacy-v1 asset adapters;
+modern audio with Stop/decode-generation/terminal lifecycle cleanup;
+reviewed editor scene mutations and package/refusal invariants; current
+site security/commerce paths plus restored motion/proof-media features.
+
+Record all 105 original conflict stages, final selected blobs/modes, explicit
+candidate paths and truthful oxlint/build/gate verification in assembly
+reports. Frontier ancestry and authorized PR disposal follow separately.

@@ -11,9 +11,11 @@ export const DOCUMENT_SCHEMA_VERSION = 1 as const;
 export const DOCUMENT_KIND = "sceneaxi.document" as const;
 
 export type JsonPrimitive = null | boolean | number | string;
+
 export interface JsonObject {
   readonly [key: string]: JsonValue;
 }
+
 export type JsonValue = JsonPrimitive | JsonObject | readonly JsonValue[];
 
 export type SceneDocument = {
@@ -53,73 +55,94 @@ export function isJsonValue(value: unknown): value is JsonValue {
 export function isJsonObject(value: unknown): value is JsonObject {
   return (
     value !== null &&
-    typeof value === "object" &&
+    isBoundaryObjectValue(value) &&
     !Array.isArray(value) &&
     isJsonValue(value)
   );
 }
 
-function isJsonValueInner(
-  value: unknown,
-  ancestors: Set<object>,
-): value is JsonValue {
-  if (value === null || typeof value === "string" || typeof value === "boolean") {
-    return true;
-  }
-  if (typeof value === "number") return Number.isFinite(value);
-  if (typeof value !== "object") return false;
-  if (ancestors.has(value)) return false;
+/** A document is bounded to depth 64 (root zero), 250000 values. Accessors
+ * are never evaluated. Ancestor-only tracking permits repeated acyclic objects. */
+function isJsonValueInner(value: unknown, ancestors: Set<object>): value is JsonValue {
+  type Work = { value: unknown; depth: number; exit?: boolean };
 
-  ancestors.add(value);
+  const work: Work[] = [{ value, depth: 0 }];
+  let visited = 0;
+
   try {
-    if (Array.isArray(value)) {
-      const ownKeys = Reflect.ownKeys(value);
-      if (
-        ownKeys.some(
-          (key) =>
-            key !== "length" &&
-            (typeof key !== "string" || !/^(0|[1-9][0-9]*)$/.test(key)),
-        )
-      ) {
-        return false;
-      }
-      for (let index = 0; index < value.length; index += 1) {
-        if (
-          !Object.hasOwn(value, index) ||
-          !isJsonValueInner(value[index], ancestors)
-        ) {
-          return false;
+    while (work.length > 0) {
+      const item = work.pop();
+
+      if (item === undefined) return false;
+      const current = item.value;
+
+      if (item.exit) {
+          // SAFETY: exit work items are queued only after current has been checked as an object below.
+          ancestors.delete(current as object); continue;
+        }
+
+      if (++visited > 250000 || item.depth > 64) return false;
+
+      if (current === null || isBoundaryTextValue(current) || isBoundaryBooleanValue(current)) continue;
+
+      if (isBoundaryNumericValue(current)) { if (!Number.isFinite(current)) return false; continue; }
+
+      if (!(isBoundaryObjectValue(current)) || ancestors.has(current)) return false;
+      const children: unknown[] = [];
+
+      if (Array.isArray(current)) {
+        if (current.length > 250000 || Reflect.ownKeys(current).some(key => key !== "length" && (!isString(key) || !/^(0|[1-9][0-9]*)$/.test(key)))) return false;
+
+        for (let i = 0; i < current.length; i++) {
+          const descriptor = Object.getOwnPropertyDescriptor(current, String(i));
+
+          if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) return false;
+          children.push(descriptor.value);
+        }
+      } else {
+        const prototype: unknown = Object.getPrototypeOf(current);
+
+        if (prototype !== Object.prototype && prototype !== null) return false;
+        const keys = Reflect.ownKeys(current);
+
+        if (keys.length > 250000) return false;
+
+        for (const key of keys) {
+          if (!isString(key)) return false;
+          const descriptor = Object.getOwnPropertyDescriptor(current, key);
+
+          if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) return false;
+          children.push(descriptor.value);
         }
       }
-      return true;
+
+      if (work.length + children.length > 250000) return false;
+      ancestors.add(current);
+      work.push({ value: current, depth: item.depth, exit: true });
+
+      for (let i = children.length - 1; i >= 0; i--) work.push({ value: children[i], depth: item.depth + 1 });
     }
 
-    const prototype = Object.getPrototypeOf(value) as unknown;
-    if (prototype !== Object.prototype && prototype !== null) return false;
-    for (const key of Reflect.ownKeys(value)) {
-      if (typeof key !== "string") return false;
-      const descriptor = Object.getOwnPropertyDescriptor(value, key);
-      if (
-        descriptor === undefined ||
-        !descriptor.enumerable ||
-        !("value" in descriptor) ||
-        !isJsonValueInner(descriptor.value, ancestors)
-      ) {
-        return false;
-      }
-    }
     return true;
-  } finally {
-    ancestors.delete(value);
-  }
+  } catch { return false; } finally { ancestors.clear(); }
 }
 
 /**
  * Validate an unknown value as a SceneAxi document.
  * Single shared validator entry used by direct edits and propose/apply.
  */
-export function validateDocument(value: unknown): DocumentValidationResult {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+type DocumentCandidate = { schemaVersion?: unknown; kind?: unknown; id?: unknown; title?: unknown; data?: unknown };
+
+function isDocumentCandidate<Input>(value: Input): value is Input & DocumentCandidate {
+  return value !== null && isBoundaryObjectValue(value) && !Array.isArray(value);
+}
+
+function isString(value: unknown): value is string { return typeof value === "string"; }
+
+function isNumber(value: unknown): value is number { return typeof value === "number"; }
+
+export function validateDocument<Input>(value: Input): DocumentValidationResult {
+  if (!isDocumentCandidate(value)) {
     return {
       ok: false,
       code: "not-object",
@@ -127,7 +150,7 @@ export function validateDocument(value: unknown): DocumentValidationResult {
     };
   }
 
-  const raw = value as Record<string, unknown>;
+  const raw = value;
 
   if (!Object.hasOwn(raw, "schemaVersion")) {
     return {
@@ -138,7 +161,8 @@ export function validateDocument(value: unknown): DocumentValidationResult {
   }
 
   const schemaVersion = raw["schemaVersion"];
-  if (typeof schemaVersion !== "number" || !Number.isInteger(schemaVersion)) {
+
+  if (!isNumber(schemaVersion) || !Number.isInteger(schemaVersion)) {
     return {
       ok: false,
       code: "invalid-document",
@@ -164,7 +188,8 @@ export function validateDocument(value: unknown): DocumentValidationResult {
   }
 
   const id = raw["id"];
-  if (typeof id !== "string" || !ID_RE.test(id)) {
+
+  if (!isString(id) || !ID_RE.test(id)) {
     return {
       ok: false,
       code: "invalid-document",
@@ -173,6 +198,7 @@ export function validateDocument(value: unknown): DocumentValidationResult {
   }
 
   const data = raw["data"];
+
   if (!isJsonObject(data)) {
     return {
       ok: false,
@@ -182,6 +208,7 @@ export function validateDocument(value: unknown): DocumentValidationResult {
   }
 
   const known = new Set(["schemaVersion", "kind", "id", "title", "data"]);
+
   for (const key of Object.keys(raw)) {
     if (!known.has(key)) {
       return {
@@ -192,7 +219,7 @@ export function validateDocument(value: unknown): DocumentValidationResult {
     }
   }
 
-  if (Object.hasOwn(raw, "title") && typeof raw["title"] !== "string") {
+  if (Object.hasOwn(raw, "title") && !isString(raw["title"])) {
     return {
       ok: false,
       code: "invalid-document",
@@ -201,7 +228,7 @@ export function validateDocument(value: unknown): DocumentValidationResult {
   }
 
   const document: SceneDocument =
-    typeof raw["title"] === "string"
+    isString(raw["title"])
       ? {
           schemaVersion: DOCUMENT_SCHEMA_VERSION,
           kind: DOCUMENT_KIND,
@@ -222,16 +249,19 @@ export function validateDocument(value: unknown): DocumentValidationResult {
 /** Parse JSON text then validate as a document. */
 export function parseDocumentText(text: string): DocumentValidationResult {
   let value: unknown;
+
   try {
-    value = JSON.parse(text) as unknown;
+    value = JSON.parse(text);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+
     return {
       ok: false,
       code: "parse-error",
       message: `Document JSON parse failed: ${message}`,
     };
   }
+
   return validateDocument(value);
 }
 
@@ -263,4 +293,22 @@ export function createDocument(input: {
         title: input.title,
         data: input.data ?? {},
       };
+}
+
+type BoundaryObjectValue = object | null;
+
+function isBoundaryObjectValue<Input>(value: Input): value is Input & Readonly<BoundaryObjectValue> {
+  return typeof value === "object";
+}
+
+function isBoundaryTextValue<Input>(value: Input): value is Input & string {
+  return typeof value === "string";
+}
+
+function isBoundaryBooleanValue<Input>(value: Input): value is Input & boolean {
+  return typeof value === "boolean";
+}
+
+function isBoundaryNumericValue<Input>(value: Input): value is Input & number {
+  return typeof value === "number";
 }

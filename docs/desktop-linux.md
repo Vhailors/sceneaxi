@@ -20,6 +20,21 @@ blocked by no ADR: it reuses the repository's own TypeScript surfaces in both
 processes and needs no second UI implementation. The window is locked down —
 context isolation on, sandbox on, no node integration, navigation refused.
 
+Raw crash dumps are disabled by default. `SCENEAXI_LOCAL_CRASH_DUMPS=1` is
+explicit local opt-in, not consent to upload or share: dumps may contain project
+or credential material. Keep them in the local user-data crash directory, apply
+the local retention policy, and review/redact before any separately authorized
+sharing. A diagnostics event is not a promise that a raw dump was retained.
+Configured BYOK/default-session dump absence and opt-in retention still require
+actual acceptance evidence; synthetic purge tests alone do not close that gate.
+
+Serial integration pass 2 rebuilt the runtime and unsigned local packages, then
+passed runtime smoke plus three consecutive `linux-unpacked` runs. Durable logs
+under `docs/audits/production-swarm/integration-pass-2-linux-*.log` assert exact
+Save/reopen bytes, staged changes, project-browser refusals, contained Web export
+and real Three frame reporting. These do not certify every GUI/IPC path, hardware,
+secure keyring/provider operation, signing, publication or production readiness.
+
 One bridge, mirrored on web-shell's transport-free inspector app; the renderer's
 IPC channel and the local socket adapter are two transports over that one
 `handle()`, never a second authoring implementation:
@@ -47,8 +62,8 @@ Bridge actions and what each reaches — only through public seams:
 | `open-path` | the same requested document's composition — `documentPath` required exactly as for `scene` — through `bootstrapOpenPath()` from `@sceneaxi/engine-orchestrator`: a real kernel scene session opened, advanced, observed, closed, with its mountable payload returned for viewport synchronization. An accepted rarity namespace additionally opens a product session, verifies the accepted event through dispatch/advance/save/resume, and returns its safe result for Run and viewport presentation |
 | `asset-import` | the one manifest-backed asset authority for bounded SceneAxi JSON, contained GLB/glTF, raster images, audio, fonts, and animation data. The native picker supplies a local path; validation stages `/data` through E1, optional `hotReload: true` binds a stable-id digest replacement, Accept materializes the project copy, and Reject writes nothing. Exact limits: [`asset-ingestion.md`](asset-ingestion.md) |
 | `ship` | `export-web` validates the current exact `scene.json` bytes and composed scene, verifies every accepted/referenced asset, reuses the packaged renderer bytes, and writes one content-addressed static Web directory plus a validated Delivery Handoff. It is offline and owns no deployment adapter or authority |
-| `assistant` | Build uses `runAssistantSculptAction()` in `@sceneaxi/authoring-core`: deterministic local compilation by default, or an explicitly injected BYOK runner. Agent uses the privileged no-network rarity fixture through the same Model Provider Port and stages its result in the existing DesktopSession review. Hosted refuses here because this tier has no identity/credit authority |
-| `authoring` | `createDesktopSession()` from `@sceneaxi/desktop-shell` — the same propose/accept protocol as the CLI and web-shell. A `documentPath` arrives from the renderer over IPC — here, and on `scene` and `open-path` alike — and the authoring core resolves it against `cwd` without a containment check of its own, so the bridge owns that constraint for every action that takes one: an absolute path, one escaping the project directory, or one whose **canonical** path leaves it through a symlink refuses `DESKTOP_BRIDGE_REQUEST_MALFORMED`. Containment is judged after symlink resolution because that is where the bytes land; a missing leaf still resolves, so this is containment and not an existence check |
+| `assistant` | Local Ask returns a read-only result. Build uses `runAssistantSculptAction()` in `@sceneaxi/authoring-core`: deterministic local compilation by default, or an explicitly injected, provider-specific BYOK runner; its artifact is staged for explicit Change Review, never silently accepted. Agent uses the privileged no-network rarity fixture through the same Model Provider Port and stages its result in the existing DesktopSession review. Fixtures do not prove live providers. Hosted refuses here because this tier has no identity/credit authority |
+| `authoring` | `createDesktopSession()` from `@sceneaxi/desktop-shell` — the same propose/accept protocol as the CLI and web-shell. A `documentPath` arrives from the renderer over IPC — here, and on `scene` and `open-path` alike — and both the authoring core and bridge enforce canonical containment against `cwd` for every action that takes one: an absolute path, one escaping the project directory, or one whose **canonical** path leaves it through a symlink refuses `DESKTOP_BRIDGE_REQUEST_MALFORMED`. Containment is judged after symlink resolution because that is where the bytes land; a missing leaf still resolves, so this is containment and not an existence check |
 | `frame-report` | nothing: it *accepts* the renderer's real presentation frame so main and the smoke can see what was claimed |
 
 Input-action commands use the bridge's registered `command` action. `inspect`
@@ -68,8 +83,9 @@ Play context is active. Gamepad button/axis bindings resolve through the shared
 map and emit `sceneaxi:play-input` on the viewport canvas with `{ actionId,
 pressed, value }`; consumers can listen on that canvas. The desktop viewport has
 no game-specific `play.primary` handler, so this is an input handoff rather than
-an invented gameplay effect. Choosing built-in semantics for that action remains
-an open product decision.
+an invented gameplay effect. Bounded offline gameplay semantics are now implemented
+in the kernel; connecting admitted primary input to dispatch/advance/save remains
+local integration work, not a request for provider authority or human product approval.
 
 ### Ship → Export Web
 

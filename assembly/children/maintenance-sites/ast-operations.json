@@ -1,0 +1,317 @@
+[
+  {
+    "path": "packages/site-kit/src/design-tokens.ts",
+    "retainedStatements": 39,
+    "replacedOrAddedStatements": 3,
+    "deletedOrReplacedStatements": 2,
+    "sha256": "30be55fe26f38d0dabb16f26d4cd2be2da13566961e6817511093f4342f117c9"
+  },
+  {
+    "path": "packages/site-kit/test/design-tokens.test.ts",
+    "retainedStatements": 9,
+    "replacedOrAddedStatements": 1,
+    "deletedOrReplacedStatements": 0,
+    "sha256": "92db8863f801bfa8bdea589867d842f2a82d76d3ce167c3544482e573ce53871"
+  },
+  {
+    "path": "sites/umbrella/src/lib/site-content.ts",
+    "retainedStatements": 19,
+    "replacedOrAddedStatements": 2,
+    "deletedOrReplacedStatements": 0,
+    "sha256": "2cfa6bb8735539f2f6f466658d8b64c8c9483474138d0ddfbc5297fb6ed83ade"
+  },
+  {
+    "path": "sites/catalog-game/src/app/_components/commerce-notice.tsx",
+    "retainedStatements": 3,
+    "replacedOrAddedStatements": 1,
+    "deletedOrReplacedStatements": 1,
+    "sha256": "92fc318f652617fcead3a0f9489be4236ff716d4419c5fe7707771b87da644d3"
+  },
+  {
+    "path": "sites/catalog-game/src/app/_components/digest-figure.tsx",
+    "retainedStatements": 1,
+    "replacedOrAddedStatements": 1,
+    "deletedOrReplacedStatements": 1,
+    "sha256": "ab91359420416bb46244c2d6c80902d80774421c69727c728ae180d1d23a6a3e"
+  },
+  {
+    "path": "sites/catalog-game/src/app/_components/family-bar.tsx",
+    "retainedStatements": 1,
+    "replacedOrAddedStatements": 1,
+    "deletedOrReplacedStatements": 1,
+    "sha256": "4f85f8a88725c042b0d38a5fce751b909247ba6b6ce08d6745748da252328bb1"
+  },
+  {
+    "path": "sites/catalog-game/src/app/_components/listing-card.tsx",
+    "retainedStatements": 1,
+    "replacedOrAddedStatements": 3,
+    "deletedOrReplacedStatements": 2,
+    "sha256": "2ec17bf0dc382c2f3841f47bf12ef3f1bd999835c096762c41710c54fa37ec52"
+  },
+  {
+    "path": "sites/catalog-game/src/app/_components/listing-tile.tsx",
+    "retainedStatements": 2,
+    "replacedOrAddedStatements": 3,
+    "deletedOrReplacedStatements": 1,
+    "sha256": "d985902ea1afcfc608973955a1ff9eace7bb2df97308e38dc8c470f848a240ec"
+  },
+  {
+    "path": "sites/catalog-game/src/app/_components/publish-slot.tsx",
+    "retainedStatements": 0,
+    "replacedOrAddedStatements": 1,
+    "deletedOrReplacedStatements": 0,
+    "sha256": "7c9d4da7d19cc03887c0660647e532b038e868b0249f9ed925d2924fbd5ebf16"
+  },
+  {
+    "path": "sites/catalog-game/src/app/_components/state-panel.tsx",
+    "retainedStatements": 1,
+    "replacedOrAddedStatements": 2,
+    "deletedOrReplacedStatements": 2,
+    "sha256": "4f5ba0fae1f10fe8cd13c40b83a595280a3b7a9dc142df671f4c12ab83219742"
+  },
+  {
+    "path": "sites/catalog-game/src/app/_components/store-nav.tsx",
+    "retainedStatements": 0,
+    "replacedOrAddedStatements": 3,
+    "deletedOrReplacedStatements": 0,
+    "sha256": "e469c26ae6f11eef3a38048a3bf6318f9e99396429f4c9e5a9e8bcdea41a5b68"
+  },
+  {
+    "path": "sites/catalog-game/src/app/_components/test-pipeline-proof.tsx",
+    "retainedStatements": 0,
+    "replacedOrAddedStatements": 3,
+    "deletedOrReplacedStatements": 2,
+    "sha256": "0ec179b06ddd90f6738d512bade56275c16b9e04315cff3b7214b5a0c875f771"
+  },
+  {
+    "path": "sites/catalog-game/src/app/item/[itemId]/page.tsx",
+    "retainedStatements": 12,
+    "replacedOrAddedStatements": 2,
+    "deletedOrReplacedStatements": 2,
+    "sha256": "a3a021e4eaf28cda5bee854712943024240c75a6acd07685cece1bd7675f5d34"
+  },
+  {
+    "path": "sites/catalog-game/src/app/layout.tsx",
+    "retainedStatements": 12,
+    "replacedOrAddedStatements": 5,
+    "deletedOrReplacedStatements": 3,
+    "sha256": "778f5dd86d8fb398119a0f540ee836248fedd7e00e33de9a950051076a68cf2a"
+  },
+  {
+    "path": "sites/catalog-game/src/app/not-found.tsx",
+    "retainedStatements": 0,
+    "replacedOrAddedStatements": 2,
+    "deletedOrReplacedStatements": 1,
+    "sha256": "4fbaf152e9b8d5375107675140e9dbbcab487b07538527f63ee0fb5c97c47054"
+  },
+  {
+    "path": "sites/catalog-game/src/app/page.tsx",
+    "retainedStatements": 8,
+    "replacedOrAddedStatements": 4,
+    "deletedOrReplacedStatements": 3,
+    "sha256": "4f2ffb7d11cd756dae30c1ad2052e810b6c1924297b1c3ab3620c78d7655fa7b"
+  },
+  {
+    "path": "sites/catalog-game/src/app/publish/page.tsx",
+    "retainedStatements": 6,
+    "replacedOrAddedStatements": 2,
+    "deletedOrReplacedStatements": 1,
+    "sha256": "e67ac6d8884cbc99752aebe735ad21ebed2c25e55a6ffbd7c2716bb986bd0aa4"
+  },
+  {
+    "path": "sites/catalog-web/src/app/_components/commerce-notice.tsx",
+    "retainedStatements": 3,
+    "replacedOrAddedStatements": 1,
+    "deletedOrReplacedStatements": 1,
+    "sha256": "92fc318f652617fcead3a0f9489be4236ff716d4419c5fe7707771b87da644d3"
+  },
+  {
+    "path": "sites/catalog-web/src/app/_components/digest-figure.tsx",
+    "retainedStatements": 1,
+    "replacedOrAddedStatements": 1,
+    "deletedOrReplacedStatements": 1,
+    "sha256": "ab91359420416bb46244c2d6c80902d80774421c69727c728ae180d1d23a6a3e"
+  },
+  {
+    "path": "sites/catalog-web/src/app/_components/family-bar.tsx",
+    "retainedStatements": 1,
+    "replacedOrAddedStatements": 1,
+    "deletedOrReplacedStatements": 1,
+    "sha256": "4f85f8a88725c042b0d38a5fce751b909247ba6b6ce08d6745748da252328bb1"
+  },
+  {
+    "path": "sites/catalog-web/src/app/_components/listing-card.tsx",
+    "retainedStatements": 1,
+    "replacedOrAddedStatements": 3,
+    "deletedOrReplacedStatements": 2,
+    "sha256": "2ec17bf0dc382c2f3841f47bf12ef3f1bd999835c096762c41710c54fa37ec52"
+  },
+  {
+    "path": "sites/catalog-web/src/app/_components/listing-tile.tsx",
+    "retainedStatements": 2,
+    "replacedOrAddedStatements": 3,
+    "deletedOrReplacedStatements": 1,
+    "sha256": "d985902ea1afcfc608973955a1ff9eace7bb2df97308e38dc8c470f848a240ec"
+  },
+  {
+    "path": "sites/catalog-web/src/app/_components/publish-slot.tsx",
+    "retainedStatements": 0,
+    "replacedOrAddedStatements": 1,
+    "deletedOrReplacedStatements": 0,
+    "sha256": "7c9d4da7d19cc03887c0660647e532b038e868b0249f9ed925d2924fbd5ebf16"
+  },
+  {
+    "path": "sites/catalog-web/src/app/_components/state-panel.tsx",
+    "retainedStatements": 1,
+    "replacedOrAddedStatements": 2,
+    "deletedOrReplacedStatements": 2,
+    "sha256": "4f5ba0fae1f10fe8cd13c40b83a595280a3b7a9dc142df671f4c12ab83219742"
+  },
+  {
+    "path": "sites/catalog-web/src/app/_components/store-nav.tsx",
+    "retainedStatements": 0,
+    "replacedOrAddedStatements": 3,
+    "deletedOrReplacedStatements": 0,
+    "sha256": "e469c26ae6f11eef3a38048a3bf6318f9e99396429f4c9e5a9e8bcdea41a5b68"
+  },
+  {
+    "path": "sites/catalog-web/src/app/_components/test-pipeline-proof.tsx",
+    "retainedStatements": 0,
+    "replacedOrAddedStatements": 3,
+    "deletedOrReplacedStatements": 2,
+    "sha256": "0ec179b06ddd90f6738d512bade56275c16b9e04315cff3b7214b5a0c875f771"
+  },
+  {
+    "path": "sites/catalog-web/src/app/item/[itemId]/page.tsx",
+    "retainedStatements": 12,
+    "replacedOrAddedStatements": 2,
+    "deletedOrReplacedStatements": 2,
+    "sha256": "a3a021e4eaf28cda5bee854712943024240c75a6acd07685cece1bd7675f5d34"
+  },
+  {
+    "path": "sites/catalog-web/src/app/layout.tsx",
+    "retainedStatements": 12,
+    "replacedOrAddedStatements": 5,
+    "deletedOrReplacedStatements": 3,
+    "sha256": "cd6129a979c761f332b8f873a958a736ba324729aad8716f2c4968ef549a3b5a"
+  },
+  {
+    "path": "sites/catalog-web/src/app/not-found.tsx",
+    "retainedStatements": 0,
+    "replacedOrAddedStatements": 2,
+    "deletedOrReplacedStatements": 1,
+    "sha256": "4fbaf152e9b8d5375107675140e9dbbcab487b07538527f63ee0fb5c97c47054"
+  },
+  {
+    "path": "sites/catalog-web/src/app/page.tsx",
+    "retainedStatements": 9,
+    "replacedOrAddedStatements": 4,
+    "deletedOrReplacedStatements": 3,
+    "sha256": "3b2c3c4e99eff307b811ea15b31043015875a5220717b26fc99f7b390dc61b00"
+  },
+  {
+    "path": "sites/catalog-web/src/app/publish/page.tsx",
+    "retainedStatements": 6,
+    "replacedOrAddedStatements": 2,
+    "deletedOrReplacedStatements": 1,
+    "sha256": "46427a81e49bd0d23ba9cf27795a33d2b369e99b5345285e844ea85b55f63478"
+  },
+  {
+    "path": "sites/umbrella/src/app/_components/hero-viewport.tsx",
+    "retainedStatements": 4,
+    "replacedOrAddedStatements": 1,
+    "deletedOrReplacedStatements": 1,
+    "sha256": "0d2eb63ec107b5f88146a0db22d0ff6a5a11d29754671892bb08178b3b924995"
+  },
+  {
+    "path": "sites/umbrella/src/app/_components/proof-figure.tsx",
+    "retainedStatements": 0,
+    "replacedOrAddedStatements": 3,
+    "deletedOrReplacedStatements": 0,
+    "sha256": "92d1da458a752b8c1a3f564fa884b6098204fbfb0dbbf575db6058bbcfbdd2cd"
+  },
+  {
+    "path": "sites/umbrella/src/app/docs/_components/help-doc-page.tsx",
+    "retainedStatements": 1,
+    "replacedOrAddedStatements": 1,
+    "deletedOrReplacedStatements": 1,
+    "sha256": "3dd30cf7cd2b85297b703ace3259befd0a967bbdeeffb6ae3c90aed5addcea71"
+  },
+  {
+    "path": "sites/umbrella/src/app/docs/page.tsx",
+    "retainedStatements": 8,
+    "replacedOrAddedStatements": 1,
+    "deletedOrReplacedStatements": 1,
+    "sha256": "b4ff1739345afc3a830befe6c40f197decb141f34d98b1db0aeb7fd9f228af35"
+  },
+  {
+    "path": "sites/umbrella/src/app/engine/page.tsx",
+    "retainedStatements": 3,
+    "replacedOrAddedStatements": 3,
+    "deletedOrReplacedStatements": 2,
+    "sha256": "4557a7b360777b8bbb4da0ffcb3a25c54556ad2f76d134dcc8a4d8469b5ab708"
+  },
+  {
+    "path": "sites/umbrella/src/app/layout.tsx",
+    "retainedStatements": 16,
+    "replacedOrAddedStatements": 1,
+    "deletedOrReplacedStatements": 1,
+    "sha256": "defad4836880ae251d0f5e3e7bbff74cebe44b7833c02370a798772704162444"
+  },
+  {
+    "path": "sites/umbrella/src/app/login/page.tsx",
+    "retainedStatements": 8,
+    "replacedOrAddedStatements": 1,
+    "deletedOrReplacedStatements": 1,
+    "sha256": "d5a747063e8d18932ed6c5063223bcffe3ac0e38d2c81016dc0cadfb04d7e2c2"
+  },
+  {
+    "path": "sites/umbrella/src/app/open/page.tsx",
+    "retainedStatements": 5,
+    "replacedOrAddedStatements": 1,
+    "deletedOrReplacedStatements": 1,
+    "sha256": "6619c8b7b14072576e1f08ccca97d88ca6404154729b7e1842be00676d0db90d"
+  },
+  {
+    "path": "sites/umbrella/src/app/page.tsx",
+    "retainedStatements": 6,
+    "replacedOrAddedStatements": 4,
+    "deletedOrReplacedStatements": 2,
+    "sha256": "bf9ed9f9ec243f5f5bdfef769e8130c9f0b15d031c518ef6e8160f86381e01e3"
+  },
+  {
+    "path": "sites/umbrella/src/app/pricing/page.tsx",
+    "retainedStatements": 8,
+    "replacedOrAddedStatements": 1,
+    "deletedOrReplacedStatements": 1,
+    "sha256": "824d397399fd560a5741964e89ad77b1d6ad2616cdd06554e836e6cb20ca01e5"
+  },
+  {
+    "path": "sites/umbrella/src/app/profiles/page.tsx",
+    "retainedStatements": 7,
+    "replacedOrAddedStatements": 1,
+    "deletedOrReplacedStatements": 1,
+    "sha256": "7367d0943ecc38373fd20488c751d2135ee67bd55fc48ff3a111d2889dde0ee1"
+  },
+  {
+    "path": "sites/umbrella/test/first-release.visual.spec.ts",
+    "retainedStatements": 12,
+    "replacedOrAddedStatements": 6,
+    "deletedOrReplacedStatements": 1,
+    "sha256": "fffeb17d0b9212abfb4808ec50f0f37e154a36a1d531c828bd18c0a5de48ca11"
+  },
+  {
+    "path": "tests/sites/catalog-storefronts.test.ts",
+    "retainedStatements": 38,
+    "replacedOrAddedStatements": 1,
+    "deletedOrReplacedStatements": 1,
+    "sha256": "b1fbd986c7a7e5d34163177b6fc0c9f8f6adb8b59324b0b01fdbf498c56331f8"
+  },
+  {
+    "path": "tests/sites/umbrella-visual.test.ts",
+    "retainedStatements": 35,
+    "replacedOrAddedStatements": 4,
+    "deletedOrReplacedStatements": 2,
+    "sha256": "aac01b77d2c0b32c88f42b53bfa696dfcc362f13d85344509d26efed2657e323"
+  }
+]

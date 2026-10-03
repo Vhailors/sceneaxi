@@ -1,0 +1,165 @@
+{
+  "taskid": "keyboard-ux",
+  "status": "PARTIAL_NOT_ACCEPTED",
+  "sourceHtmlSha256": "960f5a4dbe4ee0d02a3150d9acc483235019ed6d1d3e2a8f1c6379f12a629f5b",
+  "currentSourceStaticInertControls": 23,
+  "uniqueAcceptanceCriteria": [
+    "artifact identity",
+    "inert sequential keyboard reachability",
+    "description target resolution",
+    "inert Enter/Space no action",
+    "real refusal diagnostic with nonzero geometry",
+    "dismissal and restored usable focus",
+    "forward/reverse modal containment",
+    "visible focus outline",
+    "minimum-window ancestor clipping",
+    "minimum-window five-point occlusion"
+  ],
+  "criteriaCount": 10,
+  "historicalCountCorrection": "1795 = 581 repeated samples * 3 checks + 52 state predicates; not unique requirements. Original unique requirement count cannot be reconstructed from aggregate. This extension defines 10 unique predicates, not 10 passing claims.",
+  "receipts": [
+    {
+      "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/repair-pass2.json",
+      "sha256": "09afe3a738dab5e75b639c917a51bf517b8e2df342b1e646212bbdc59edd2fb3",
+      "scenarios": 14,
+      "samples": 980,
+      "uniqueScenarioControls": 505,
+      "invalidSamples": [
+        {
+          "scenario": "long-evidence",
+          "id": "scene-entity-desktop-crate-beside",
+          "direction": "Tab",
+          "clipped": false,
+          "occluded": true
+        },
+        {
+          "scenario": "long-evidence",
+          "id": "scene-entity-desktop-crate-beside",
+          "direction": "Shift+Tab",
+          "clipped": false,
+          "occluded": true
+        },
+        {
+          "scenario": "selected",
+          "id": "scene-entity-desktop-crate-beside",
+          "direction": "Tab",
+          "clipped": false,
+          "occluded": true
+        },
+        {
+          "scenario": "selected",
+          "id": "scene-entity-desktop-crate-beside",
+          "direction": "Shift+Tab",
+          "clipped": false,
+          "occluded": true
+        },
+        {
+          "scenario": "narrow",
+          "id": "scene-entity-desktop-crate-beside",
+          "direction": "Tab",
+          "clipped": false,
+          "occluded": true
+        },
+        {
+          "scenario": "narrow",
+          "id": "viewport-source-scene",
+          "direction": "Tab",
+          "clipped": false,
+          "occluded": true
+        },
+        {
+          "scenario": "narrow",
+          "id": "dock-changes",
+          "direction": "Tab",
+          "clipped": false,
+          "occluded": true
+        },
+        {
+          "scenario": "narrow",
+          "id": "dock-changes",
+          "direction": "Shift+Tab",
+          "clipped": false,
+          "occluded": true
+        },
+        {
+          "scenario": "narrow",
+          "id": "viewport-source-scene",
+          "direction": "Shift+Tab",
+          "clipped": false,
+          "occluded": true
+        },
+        {
+          "scenario": "narrow",
+          "id": "scene-entity-desktop-crate-beside",
+          "direction": "Shift+Tab",
+          "clipped": false,
+          "occluded": true
+        },
+        {
+          "scenario": "byok-narrow",
+          "id": "scene-play",
+          "direction": "Tab",
+          "clipped": false,
+          "occluded": true
+        },
+        {
+          "scenario": "byok-narrow",
+          "id": "scene-play",
+          "direction": "Shift+Tab",
+          "clipped": false,
+          "occluded": true
+        },
+        {
+          "scenario": "menu-pressed",
+          "id": "effect-mutation",
+          "direction": "Tab",
+          "clipped": true,
+          "occluded": true
+        },
+        {
+          "scenario": "menu-pressed",
+          "id": "effect-stage",
+          "direction": "Tab",
+          "clipped": false,
+          "occluded": true
+        },
+        {
+          "scenario": "menu-pressed",
+          "id": "effect-stage",
+          "direction": "Shift+Tab",
+          "clipped": false,
+          "occluded": true
+        }
+      ],
+      "artifactBinding": "historical receipt; current source equivalence NOT established"
+    },
+    {
+      "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/repair-pass1-inspector.json",
+      "sha256": "7f504a757f5c4dc56cd0f7a5419d946711bb1eb3b0462c3d2a9fa003440959cf",
+      "scenarios": 6,
+      "samples": 48,
+      "uniqueScenarioControls": 24,
+      "invalidSamples": [],
+      "artifactBinding": "historical receipt; current source equivalence NOT established"
+    }
+  ],
+  "negativeControls": {
+    "missingDescriptionTarget": "REJECTED",
+    "zeroGeometry": "REJECTED",
+    "occlusion": "REJECTED",
+    "sourceFingerprint": "REJECTED",
+    "htmlFingerprint": "REJECTED",
+    "refusalStatus": "REJECTED"
+  },
+  "browserChecks": "NOT RUN; source DOM cannot prove tab order, focus, geometry or modal behavior",
+  "artifactBinding": {
+    "status": "MATCH",
+    "sourceFiles": 132,
+    "receiptSha256": "c439fdc5d5315235101006037d406e590e118b8de2c8f65b03a127b2a7707c11",
+    "htmlHashes": {
+      "desktop": "960f5a4dbe4ee0d02a3150d9acc483235019ed6d1d3e2a8f1c6379f12a629f5b",
+      "inspector": "b54bf2fa3e4a6cb3ae1f7d165320356dff5c5ac75a757fedd1ed7b1dfdbc53ad"
+    },
+    "responseStatus": 403
+  }
+}

@@ -1,6 +1,7 @@
 import { desktopLinuxAppOffer, formatByteSize, readEngineSdkOffer } from "@sceneaxi/site-kit";
 import { LIVE_OPEN_PRESENTATION } from "../../lib/live-open.js";
-import { ENGINE_NOTES, PIPELINE, RELEASE_MARKER } from "../../lib/site-content.js";
+import { ENGINE_NOTES, PIPELINE, PROOF_MEDIA, RELEASE_MARKER } from "../../lib/site-content.js";
+import { ProofFigure } from "../_components/proof-figure.js";
 import { StatePanel } from "../_components/state-panel.js";
 
 /**
@@ -31,11 +32,14 @@ export default function EnginePage() {
   const sdk = offer.ok ? offer.value : null;
   const sdkRefusal = offer.ok ? null : { reason: offer.reason, message: offer.message };
   const desktopApp = desktopOffer.ok ? desktopOffer.value : null;
+
   const desktopRefusal = desktopOffer.ok
     ? null
     : { reason: desktopOffer.reason, message: desktopOffer.message };
+
   const appImage = desktopApp?.artifacts.find((artifact) => artifact.kind === "AppImage") ?? null;
   const debPackage = desktopApp?.artifacts.find((artifact) => artifact.kind === "deb") ?? null;
+  const windowCapture = PROOF_MEDIA.find((media) => media.placement === "engine") ?? null;
 
   return (
     <div className="page">
@@ -47,6 +51,20 @@ export default function EnginePage() {
             ? "The SDK archive is not in this build, so there is nothing to download here. The packaged Linux desktop application below is a separate artifact and is unaffected."
             : "The public package surface as source, with the consumption contract. Everything in the archive runs locally. This is not an npm publish and not a dump of the monorepo."}
         </p>
+        {desktopApp !== null && (
+          <ul className="platform-availability" aria-label="Desktop availability">
+            <li data-availability="recorded-build">
+              <span>{desktopApp.platform}</span>
+              <span>Recorded build</span>
+            </li>
+            {desktopApp.unavailablePlatforms.map((platform) => (
+              <li data-availability="coming-soon" key={platform.platform}>
+                <span>{platform.platform}</span>
+                <span>Coming soon</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {sdkRefusal !== null ? (
@@ -60,10 +78,10 @@ export default function EnginePage() {
         </StatePanel>
       ) : sdk !== null ? (
         <div className="grid grid-2">
-          <article className="panel panel-roomy tone-accent">
+          <article className="panel panel-roomy">
             <div className="panel-head">
               <span className="family-mark" aria-hidden="true" />
-              <span className="tag tag-accent">This build</span>
+              <span className="chip chip-dormant">This build</span>
             </div>
             <h2 className="card-title">{sdk.fileName}</h2>
             <p className="meta">
@@ -137,12 +155,20 @@ export default function EnginePage() {
             </p>
           </div>
 
-          <article className="panel panel-roomy tone-accent">
+          {windowCapture !== null && (
+            <ProofFigure
+              media={windowCapture}
+              variant="wide"
+              sizes="(max-width: 1180px) calc(100vw - 48px), 880px"
+            />
+          )}
+
+          <article className="panel panel-roomy">
             <div className="panel-head">
               <span className="family-mark" aria-hidden="true" />
-              <span className="tag tag-accent">Linux available</span>
+              <span className="chip chip-validated">Recorded Linux build</span>
             </div>
-            <h3 className="card-title">Download the verified Linux bundle</h3>
+            <h3 className="card-title">Inspect the recorded Linux workflow artifact</h3>
             <p className="body-copy">
               The repository workflow run contains{" "}
               <code>{desktopApp.ciArtifactName}</code>: both installers plus{" "}
@@ -151,7 +177,7 @@ export default function EnginePage() {
               <strong>Artifacts</strong>.
             </p>
             <a className="button button-block" href={desktopApp.downloadHref}>
-              Open Linux download
+              Open Linux download record
             </a>
             <p className="meta">
               Version {desktopApp.version} · workflow run {desktopApp.workflowRunId} ·
@@ -159,7 +185,7 @@ export default function EnginePage() {
               {desktopApp.artifactRetentionDays} days
             </p>
             <p className="note">
-              Workflow artifacts expire, so this download is gone on or before{" "}
+              This historical record is not proof of a current public release. Artifact access and checksums must be verified before use. Workflow artifacts expire on or before{" "}
               <strong>{desktopApp.artifactExpiresBy}</strong>.{" "}
               {desktopApp.retentionNote}
             </p>
@@ -170,7 +196,7 @@ export default function EnginePage() {
               <article className="panel panel-roomy" key={artifact.kind}>
                 <div className="panel-head">
                   <span className="family-mark" aria-hidden="true" />
-                  <span className="tag">{artifact.kind}</span>
+                  <span className="chip chip-dormant">{artifact.kind}</span>
                 </div>
                 <h3 className="card-title">{artifact.kind}</h3>
                 <dl className="dl">
@@ -255,8 +281,8 @@ export default function EnginePage() {
 
           <StatePanel tone="warn" title="Other platforms are coming soon">
             <p>
-              Linux is the only available first-party desktop artifact. macOS and
-              Windows remain unavailable until their packaging and signing work lands.{" "}
+              Linux is the only first-party desktop artifact so far. macOS and Windows
+              are coming soon, once their packaging and signing work lands.{" "}
               {sdk === null
                 ? "The SDK archive is not in this build either, so there is no cross-platform download to fall back on here — build from source."
                 : "The free SDK archive above remains the supported download for every platform."}
@@ -313,17 +339,22 @@ export default function EnginePage() {
 
       <div className="stack">
         <h2>How a change travels</h2>
-        <div className="scroll-x pipeline">
-          <div className="pipeline-grid">
+        <div
+          className="scroll-x pipeline"
+          role="region"
+          tabIndex={0}
+          aria-label="Change pipeline, scrollable"
+        >
+          <ol className="pipeline-grid">
             {PIPELINE.map((stage) => (
-              <div className={`stack stack-tight tone-${stage.bar}`} key={stage.n}>
+              <li className={`pipeline-step tone-${stage.bar}`} key={stage.n}>
                 <span className="pipeline-rail" aria-hidden="true" />
                 <p className="pipeline-num">{stage.n}</p>
                 <h3>{stage.name}</h3>
                 <p className="note">{stage.desc}</p>
-              </div>
+              </li>
             ))}
-          </div>
+          </ol>
         </div>
       </div>
 

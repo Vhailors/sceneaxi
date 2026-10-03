@@ -1,0 +1,102 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/tmp/sceneaxi-comprehensive-owned-xd4gdfl1[39m
+
+[90mstderr[2m | desktop/linux/test/legacy-linux-smoke.test.ts[2m > [22m[2mprivate modal migration to canonical Submit/Approve forms through the real host[2m > [22m[2mdefines real prefab content via fields, writes only on Save and rejects invalid references
+[22m[39m
+Warning! Happy DOM has JavaScript evaluation enabled and is running in an insecure environment.
+
+A VM Context is not an isolated environment, and if you run untrusted code you are at risk of RCE (Remote Code Execution) attacks. The attacker can escape the VM and run code at process level.
+
+It is recommended to disable code generation and freeze all builtins at process level by running node with the flags "--disallow-code-generation-from-strings" and "--frozen-intrinsics". You can suppress this warning by setting "suppressInsecureJavaScriptEnvironmentWarning" to "true" at your own risk.
+
+For more information, see https://github.com/capricorn86/happy-dom/wiki/JavaScript-Evaluation-Warning
+
+
+
+[33m[39m[32m·[39m[90mstderr[2m | desktop/linux/test/legacy-linux-smoke.test.ts[2m > [22m[2mprivate modal migration to canonical Submit/Approve forms through the real host[2m > [22m[2mreviews and commits persisted bindings, updates keyboard dispatch, then reviews reset
+[22m[39m
+Warning! Happy DOM has JavaScript evaluation enabled and is running in an insecure environment.
+
+A VM Context is not an isolated environment, and if you run untrusted code you are at risk of RCE (Remote Code Execution) attacks. The attacker can escape the VM and run code at process level.
+
+It is recommended to disable code generation and freeze all builtins at process level by running node with the flags "--disallow-code-generation-from-strings" and "--frozen-intrinsics". You can suppress this warning by setting "suppressInsecureJavaScriptEnvironmentWarning" to "true" at your own risk.
+
+For more information, see https://github.com/capricorn86/happy-dom/wiki/JavaScript-Evaluation-Warning
+
+
+
+[33m[39m[32m·[39m[90mstderr[2m | desktop/linux/test/legacy-linux-smoke.test.ts[2m > [22m[2mprivate modal migration to canonical Submit/Approve forms through the real host[2m > [22m[2mrefuses empty scope, malformed JSON and edited/stale approvals without writing settings
+[22m[39m
+Warning! Happy DOM has JavaScript evaluation enabled and is running in an insecure environment.
+
+A VM Context is not an isolated environment, and if you run untrusted code you are at risk of RCE (Remote Code Execution) attacks. The attacker can escape the VM and run code at process level.
+
+It is recommended to disable code generation and freeze all builtins at process level by running node with the flags "--disallow-code-generation-from-strings" and "--frozen-intrinsics". You can suppress this warning by setting "suppressInsecureJavaScriptEnvironmentWarning" to "true" at your own risk.
+
+For more information, see https://github.com/capricorn86/happy-dom/wiki/JavaScript-Evaluation-Warning
+
+
+
+[90mstderr[2m | desktop/linux/test/legacy-linux-smoke.test.ts[2m > [22m[2mprivate modal migration to canonical Submit/Approve forms through the real host[2m > [22m[2mexposes all eight missing commands and keeps Kids mutation controls refused
+[22m[39m
+Warning! Happy DOM has JavaScript evaluation enabled and is running in an insecure environment.
+
+A VM Context is not an isolated environment, and if you run untrusted code you are at risk of RCE (Remote Code Execution) attacks. The attacker can escape the VM and run code at process level.
+
+It is recommended to disable code generation and freeze all builtins at process level by running node with the flags "--disallow-code-generation-from-strings" and "--frozen-intrinsics". You can suppress this warning by setting "suppressInsecureJavaScriptEnvironmentWarning" to "true" at your own risk.
+
+For more information, see https://github.com/capricorn86/happy-dom/wiki/JavaScript-Evaluation-Warning
+
+
+
+[33m[39m[31mx[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[31mx[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 2 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m desktop/linux/test/legacy-linux-smoke.test.ts[2m > [22mprivate modal migration to canonical Submit/Approve forms through the real host[2m > [22mrefuses empty scope, malformed JSON and edited/stale approvals without writing settings
+[31m[1mAssertionError[22m: expected 'Inspect the relevant catalog and prov…' to contain 'INPUT_ACTION_REVIEW_REQUIRED'[39m
+
+Expected: [32m"I[7mNPUT_ACTION_REVIEW_REQUIRED[27m"[39m
+Received: [31m"I[7mnspect the relevant catalog and provide all required values before submitting.[27m"[39m
+
+[36m [2m❯[22m desktop/linux/test/legacy-linux-smoke.test.ts:[2m223:86[22m[39m
+    [90m221|[39m       [35mconst[39m calls [33m=[39m h[33m.[39mcalls[33m.[39mlength[33m;[39m approve[33m.[39m[34mclick[39m()[33m;[39m [35mawait[39m h[33m.[39m[34msettle[39m()[33m;[39m
+    [90m222|[39m       [34mexpect[39m(h[33m.[39mcalls[33m.[39mlength)[33m.[39m[34mtoBe[39m(calls)[33m;[39m
+    [90m223|[39m       expect(h.window.document.querySelector('[data-outcome-message]')…
+    [90m   |[39m                                                                                      [31m^[39m
+    [90m224|[39m       expect(existsSync(join(h.root, '.sceneaxi/input-actions.v1.json'…
+    [90m225|[39m       [35mawait[39m h[33m.[39m[34msubmit[39m()[33m;[39m [35mawait[39m h[33m.[39m[34msubmit[39m([35mtrue[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m desktop/linux/test/legacy-linux-smoke.test.ts[2m > [22mhistorical Linux smoke obligations through actual owning bridge[2m > [22mexecutes the actual built child CLI handshake and rejects a missing descriptor, without skips
+[31m[1mAssertionError[22m: file:///tmp/sceneaxi-comprehensive-owned-xd4gdfl1/packages/engine-presentation/dist/src/index.js:14
+export { createAudioPlaybackRuntime, AudioPlaybackError } from "./audio-playback.js";
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+SyntaxError: The requested module './audio-playback.js' does not provide an export named 'createAudioPlaybackRuntime'
+    at #asyncInstantiate (node:internal/modules/esm/module_job:455:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:553:5)
+    at async node:internal/modules/esm/loader:647:26
+    at async file:///tmp/sceneaxi-comprehensive-owned-xd4gdfl1/packages/cli/bin/sceneaxi.mjs:74:18
+
+Node.js v24.21.0
+: expected 1 to be +0 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 0[39m
+[31m+ 1[39m
+
+[90m [2m❯[22m packages/cli/bin/sceneaxi.mjs:[2m74:18[22m[39m
+[36m [2m❯[22m desktop/linux/test/legacy-linux-smoke.test.ts:[2m308:69[22m[39m
+
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m4 passed[39m[22m[90m (6)[39m
+[2m   Start at [22m 12:09:01
+[2m   Duration [22m 9.03s[2m (transform 3.09s, setup 0ms, import 4.03s, tests 4.77s, environment 0ms)[22m
+

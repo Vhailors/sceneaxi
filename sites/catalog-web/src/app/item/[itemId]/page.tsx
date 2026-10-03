@@ -11,6 +11,7 @@ import {
 } from "@sceneaxi/site-kit";
 import {
   CATALOG_SITE_BRAND,
+  catalogCanonical,
   CATALOG_SITE_SURFACE,
   editorLinkFor,
 } from "../../../lib/site-config.js";
@@ -20,9 +21,9 @@ import {
 } from "../../../lib/catalog-facts.js";
 import { shortenDigest } from "../../../lib/digest-sigil.js";
 import {
-  createCatalogIdentityPlane,
+  createCatalogRequestIdentityPlane,
   resolveCatalogViewer,
-} from "@sceneaxi/site-kit/catalog-identity";
+} from "../../../lib/identity-plane.js";
 import { readSessionToken } from "../../_session.js";
 import { CommerceNotice } from "../../_components/commerce-notice.js";
 import { DigestFigure } from "../../_components/digest-figure.js";
@@ -35,6 +36,10 @@ import { StatePanel } from "../../_components/state-panel.js";
  * The record contains seller, title, price mode, prices, and publication time. It
  * contains no asset payload or payment evidence, so the page names those absences
  * and never fills the design with invented package, licence, preview, or delivery data.
+ *
+ * The buy column comes first in source order, which is what a phone and a screen reader
+ * want: title, price, options and the one working action, then the inert purchase notice
+ * in the slot a cart button would take, then the record itself.
  */
 export async function generateMetadata({
   params,
@@ -47,10 +52,16 @@ export async function generateMetadata({
 
   if (!found.ok) return {};
 
-  return {
+  const canonical = catalogCanonical(process.env, `/item/${encodeURIComponent(itemId)}`);
+
+  const metadata: Metadata = {
     title: found.value.title,
     description: `${found.value.title} by ${found.value.creatorId}.`,
   };
+
+  if (canonical !== null) metadata.alternates = { canonical };
+
+  return metadata;
 }
 
 export default async function ItemPage({
@@ -60,6 +71,7 @@ export default async function ItemPage({
 }) {
   const { itemId } = await params;
   const found = showSiteListing(CATALOG_SITE_SURFACE, itemId);
+
   if (!found.ok) notFound();
 
   const listing = found.value;
@@ -67,6 +79,7 @@ export default async function ItemPage({
   const share = describeCreatorShare(listing.price);
   const link = editorLinkFor(process.env, listing.itemId);
   const record = listingRecord(listing);
+
   const related = sameCreatorListings(
     listSiteCatalog(CATALOG_SITE_SURFACE),
     listing,
@@ -74,7 +87,13 @@ export default async function ItemPage({
 
   // The storefront reads identity through the shared site-kit port and holds no auth
   // stack of its own; unwired, this is a named refusal rather than an invented viewer.
-  const plane = createCatalogIdentityPlane();
+  const plane = createCatalogRequestIdentityPlane({
+      // Explicit server-only approval and RAW configured origin; never request Host.
+      approved: process.env.SCENEAXI_CATALOG_OWN_SESSION_APPROVED === "true",
+      configuredOrigin: process.env.NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN ?? null,
+      allowLoopbackDevelopment: process.env.NODE_ENV === "development",
+    });
+
   const viewer = await resolveCatalogViewer(
     plane,
     plane.wired ? await readSessionToken() : null,
@@ -86,6 +105,7 @@ export default async function ItemPage({
       : listing.price.money === null
         ? "—"
         : formatMoneyPrice(listing.price.money).split(" ")[0];
+
   const headlineUnit =
     listing.price.credits !== null
       ? `credit${listing.price.credits === 1 ? "" : "s"}`
@@ -95,8 +115,10 @@ export default async function ItemPage({
     <div className="shell detail">
       <nav className="crumbs" aria-label="Breadcrumb">
         <a href="/">{CATALOG_SITE_BRAND.catalogueWord}</a>
-        <span aria-hidden="true">/</span>
-        <span>{listing.title}</span>
+        <span className="glyph" aria-hidden="true">
+          ›
+        </span>
+        <span aria-current="page">{listing.title}</span>
       </nav>
 
       <div className="detail-grid">
@@ -108,9 +130,11 @@ export default async function ItemPage({
         >
           <div className="buy">
             <div className="buy-body">
-              <div>
+              <div className="buy-title">
                 <h1>{listing.title}</h1>
-                <p className="buy-by">by {listing.creatorId}</p>
+                <p className="buy-by">
+                  by <span className="creator-chip">{listing.creatorId}</span>
+                </p>
               </div>
 
               <p className="buy-price">
@@ -118,7 +142,7 @@ export default async function ItemPage({
                 <span className="buy-price-unit">{headlineUnit}</span>
               </p>
 
-              <div className="section">
+              <div className="buy-block">
                 <h2 className="micro">Committed TEST price</h2>
                 <ul className="buy-options">
                   <li className="buy-option">
@@ -146,122 +170,100 @@ export default async function ItemPage({
                     </span>
                   </li>
                 </ul>
-                <p className="reason">{CREATOR_SHARE_ROUNDING_NOTE}</p>
+                <p className="mono-note">{CREATOR_SHARE_ROUNDING_NOTE}</p>
               </div>
 
               <div className="buy-actions">
                 {link.ok ? (
-                  <a className="button" href={link.value}>
+                  <a className="button button-xl button-block" href={link.value}>
                     Open in the SceneAxi editor
+                    <span className="glyph glyph-nudge" aria-hidden="true">
+                      ↗
+                    </span>
                   </a>
                 ) : (
-                  <span className="button" aria-disabled="true" title={link.message}>
+                  <span
+                    className="button button-xl button-block"
+                    aria-disabled="true"
+                    title={link.message}
+                  >
                     Editor link unavailable
                   </span>
                 )}
-                <p className="reason">
+                <p className="note">
                   The link carries this listing id and source catalog only. It is a
                   reference for the umbrella editor, not a claim that this fixture
                   includes an asset payload.
                 </p>
+                {!link.ok && (
+                  <StatePanel
+                    tone="deny"
+                    title="No editor link for this deployment"
+                    reason={link.reason}
+                  >
+                    <p>{link.message}</p>
+                  </StatePanel>
+                )}
+                <CommerceNotice
+                  surface={CATALOG_SITE_SURFACE}
+                  itemId={listing.itemId}
+                  viewer={viewer}
+                />
               </div>
             </div>
 
             <dl className="buy-spec">
-              <div className="spec-row">
-                <dt>Listing id</dt>
-                <dd>{listing.itemId}</dd>
-              </div>
-              <div className="spec-row">
-                <dt>Contract</dt>
-                <dd>{listing.listing.kind}</dd>
-              </div>
-              <div className="spec-row">
-                <dt>Record digest</dt>
-                <dd title={listing.recordDigest}>
-                  {shortenDigest(listing.recordDigest)}
-                </dd>
-              </div>
-              <div className="spec-row">
-                <dt>Published</dt>
-                <dd>{listing.publishedAt}</dd>
-              </div>
-              <div className="spec-row">
-                <dt>Mode</dt>
-                <dd>{listing.availability.mode.toUpperCase()}</dd>
-              </div>
+              <dt>Listing id</dt>
+              <dd>{listing.itemId}</dd>
+              <dt>Contract</dt>
+              <dd>{listing.listing.kind}</dd>
+              <dt>Record digest</dt>
+              <dd title={listing.recordDigest}>{shortenDigest(listing.recordDigest)}</dd>
+              <dt>Published</dt>
+              <dd>{listing.publishedAt}</dd>
+              <dt>Mode</dt>
+              <dd>{listing.availability.mode.toUpperCase()}</dd>
+              <dt>Availability</dt>
+              <dd>
+                browse {listing.availability.browse} · asset {listing.availability.asset} ·
+                purchase {listing.availability.purchase}
+              </dd>
             </dl>
-          </div>
-
-          {!link.ok && (
-            <StatePanel
-              tone="deny"
-              title="No editor link for this deployment"
-              reason={link.reason}
-            >
-              <p>{link.message}</p>
-            </StatePanel>
-          )}
-
-          <CommerceNotice
-            surface={CATALOG_SITE_SURFACE}
-            itemId={listing.itemId}
-            viewer={viewer}
-          />
-
-          <div className="side-panel">
-            <h2 className="micro">Availability</h2>
-            <ul className="side-list">
-              <li className="side-row">
-                <span className="included-check" aria-hidden="true">
-                  ✓
-                </span>
-                <span>Browse and detail</span>
-                <span className="side-row-note">{listing.availability.browse}</span>
-              </li>
-              <li className="side-row">
-                <span aria-hidden="true">—</span>
-                <span>Asset payload</span>
-                <span className="side-row-note">{listing.availability.asset}</span>
-              </li>
-              <li className="side-row">
-                <span aria-hidden="true">—</span>
-                <span>Purchase</span>
-                <span className="side-row-note">{listing.availability.purchase}</span>
-              </li>
-            </ul>
           </div>
         </div>
 
         <div className="detail-main">
-          <DigestFigure
-            digest={listing.recordDigest}
-            large
-            chips={[
-              {
-                key: "mode",
-                label: listing.availability.mode.toUpperCase(),
-                tone: "accent" as const,
-              },
-              { key: "availability", label: listing.availability.asset },
-            ]}
-            stats={[
-              { key: "record", value: shortenDigest(listing.recordDigest) },
-              { key: "catalog", value: listing.listing.catalog },
-              { key: "price mode", value: listing.priceMode },
-            ]}
-          />
-          <p className="reason">
-            A mark derived from the validated listing record. It is not a render of
-            an asset, and the digest is not presented as an asset content hash.
-          </p>
+          <figure className="detail-figure" id="record-mark">
+            <DigestFigure
+              digest={listing.recordDigest}
+              variant="detail"
+              chips={[
+                {
+                  key: "mode",
+                  label: listing.availability.mode.toUpperCase(),
+                  tone: "accent" as const,
+                },
+                { key: "availability", label: listing.availability.asset },
+              ]}
+              stats={[
+                { key: "catalog", value: listing.listing.catalog },
+                { key: "price mode", value: listing.priceMode },
+              ]}
+            />
+            <figcaption className="mono-note">
+              A mark derived from the validated listing record. It is not a render of
+              an asset, and the digest is not presented as an asset content hash.
+            </figcaption>
+          </figure>
 
-          <section className="section">
-            <h2>Fixture listing record</h2>
-            <p className="prose">
-              This page presents every non-price field the committed listing contract
-              carries. The canonical source is <code>{SITE_CATALOG_FIXTURE_PATH}</code>.
-            </p>
+          <section className="section" id="record">
+            <div className="section-head">
+              <h2>Fixture listing record</h2>
+              <p className="prose">
+                This page presents every non-price field the committed listing contract
+                carries. The canonical source is <code>{SITE_CATALOG_FIXTURE_PATH}</code>.
+              </p>
+            </div>
             <ul className="included">
               {record.map((row) => (
                 <li className="included-row" key={row.label}>
@@ -288,9 +290,11 @@ export default async function ItemPage({
           </StatePanel>
 
           {related.length > 0 && (
-            <section className="section">
-              <h2>From the same creator</h2>
-              <ul className="cards">
+            <section className="section" id="related">
+              <div className="section-head">
+                <h2>From the same creator</h2>
+              </div>
+              <ul className="cards cards-compact">
                 {related.map((other) => (
                   <ListingCard listing={other} key={other.itemId} compact />
                 ))}

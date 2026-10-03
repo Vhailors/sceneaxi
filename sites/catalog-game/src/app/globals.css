@@ -18,20 +18,19 @@
  *         masked by it.
  *   Q-03  The archive's micro type is 8.5px mono in `--fg-4` on `--bg-panel`, which
  *         measures about 2.1:1. `--fg-4` is not used for text anywhere here, and no rule
- *         below sets *text* smaller than `--micro`, 11px — the only sizes under that
- *         floor are `aria-hidden` marks, named and reasoned one by one in
- *         `tests/sites/catalog-storefronts.test.ts`, which reads the shipped `font-size`
- *         declarations for that floor and computes the contrast of every text pairing.
+ *         below sets text smaller than `--micro`, 11px. The gate reads the shipped
+ *         `font-size` declarations for that floor and computes the contrast of every text
+ *         pairing in `tests/sites/catalog-storefronts.test.ts`.
  *
  * The palette is dark only, as the archive is. There is no light variant anywhere in the
  * accepted source, and inventing one would be designing rather than implementing.
  *
  * This sheet declares no Foundations v2 token. The palette, the type scale, the radii,
- * the surfaces and the status vocabulary are emitted by `@sceneaxi/site-kit` and served
- * by `layout.tsx` (`src/lib/foundations.ts`), which is the single home the captain's D2
- * decision gives the shared token layer. What remains below is what this storefront
- * itself owns: the per-store accent derivations marked STORE IDENTITY, the layout
- * measures its own `:root` block below declares, and its own components.
+ * the surfaces, the motion timings and the status vocabulary are emitted by
+ * `@sceneaxi/site-kit` and served by `layout.tsx` (`src/lib/foundations.ts`), which is the
+ * single home the captain's D2 decision gives the shared token layer. What remains below
+ * is what this storefront itself owns: the per-store derivations marked STORE IDENTITY,
+ * the layout measures its own `:root` block declares, and its own components.
  */
 
 /* --- STORE IDENTITY — the only block that differs between the two storefronts --- */
@@ -52,6 +51,14 @@
   --hero-wash: linear-gradient(100deg, #120a09 0%, #0a0c0e 62%);
   --media-wash: radial-gradient(120% 100% at 50% 8%, #1e1512, var(--bg-field));
   --mark-radius: 1px;
+
+  /*
+   * Density, recorded as DEC-10 of the redesign ("warmer, denser"). The archive calls the
+   * game store the denser of the two, so its shelf packs narrower cells on a tighter gap:
+   * three listings and the publish slot share one row at 1440px.
+   */
+  --card-min: 14rem;
+  --grid-gap: 16px;
 }
 
 /* --- END STORE IDENTITY --- */
@@ -73,8 +80,11 @@
 
   --measure: 64ch;
   --shell: 1340px;
-  --gutter: 1.25rem;
+  --gutter: var(--space-4);
   --micro: 0.6875rem;
+
+  /* The vertical rhythm of a page band: 44px on a phone and a tablet, 72px on a desktop. */
+  --section-pad: var(--space-11);
 
   /*
    * How far below the sticky masthead a sticky column pins and a fragment target lands,
@@ -82,27 +92,18 @@
    * the offset and the height that depends on it cannot drift apart into a column that
    * clips its own tail.
    *
-   * The masthead it compensates for is content-driven, not a fixed bar: `.masthead-inner`
-   * wraps the nav onto a second row once the storemark and the links stop fitting on one,
-   * which measures 105px against 60px for a single row. This is the wrapped value, so the
-   * narrow case — the one where an anchor would otherwise land behind the masthead — is
-   * the default rather than the exception.
+   * Below 36rem the masthead is two rows, the storemark over one scrolling nav line, and
+   * measures at most 96px. This is the two-row value, so the narrow case (the one where
+   * an anchor would otherwise land behind the masthead) is the default rather than the
+   * exception.
    */
   --sticky-top: 8rem;
 }
 
 /*
- * Where the nav genuinely fits on one row, back to the one-row offset: a wrapped-masthead
- * offset held at every width would charge every anchor destination, on every viewport,
- * dead space no masthead is occupying.
- *
- * Measured in Chrome against the served pages with the self-hosted Archivo and the full
- * three-link nav: the game storefront's masthead is one row at 521px and wider, the web
- * storefront's — whose store name is longer — at 538px and wider. 36rem is the nearest
- * round breakpoint above both, so this shared skeleton keeps one value and neither store
- * reaches it while its own masthead is still two rows. The nav is left free to wrap where
- * it genuinely does not fit: suppressing the wrap would only trade this for clipped or
- * overflowing navigation.
+ * From 36rem the storemark and the nav share one 64px row, so the offset returns to the
+ * one-row value: a two-row offset held at every width would charge every anchor
+ * destination, on every viewport, dead space no masthead is occupying.
  */
 @media (min-width: 36rem) {
   :root {
@@ -112,7 +113,7 @@
 
 @media (min-width: 60rem) {
   :root {
-    --gutter: 1.875rem;
+    --gutter: var(--space-8);
   }
 }
 
@@ -147,10 +148,13 @@ html {
  * and lands after this file, and it also sets `body { font-family: var(--font-ui) }`. One
  * extra element in the selector makes this rule win by specificity instead of by load
  * order, so the self-hosted faces are used whichever sheet the framework emits first.
+ *
+ * The body size is the dense-copy step, 14px, so text that no component sizes still lands
+ * on the page's type ramp instead of adding a size to it.
  */
 html body {
   font-family: var(--store-ui);
-  font-size: 1rem;
+  font-size: 0.875rem;
   line-height: 1.6;
   /*
    * No `overflow-x: hidden`. Horizontal overflow is a layout defect, and hiding it here
@@ -161,33 +165,45 @@ html body {
 /*
  * Foundations prints `--accent-hi` for signal orange only, and site-kit refuses to invent
  * a lighter tint for a storefront accent (`resolveSurfaceAccent`, recorded as D-3 in
- * `docs/design-foundations.md`). An inline link therefore answers hover with an underline
- * rather than a hue this design system does not publish. Every link that is really a
- * card, tab, or button opts back out of that underline below, and all but one answer
- * hover with a surface change of their own — a row fill, a sigil border, a button ring,
- * a text level. The storemark is the exception: it holds its colour, because the archive
- * gives the masthead wordmark no hover state and this sheet does not invent one.
+ * `docs/design-foundations.md`). Accent is also reserved for the primary action, the
+ * current nav item, pending chips and the store mark, so a plain inline link is set in
+ * the text colour and carries an underline that brightens on hover: colour is never the
+ * only cue, and no hover hue is minted.
+ *
+ * Every link that is really a card, tab, crumb or button sets its own rest and hover
+ * state below with a class selector, which outranks both this rule and site-kit's
+ * `a:hover` whatever order the two sheets load in.
  */
-a:hover {
-  text-decoration: underline;
-  text-underline-offset: 0.18em;
+html body a {
+  color: var(--fg);
+  text-decoration-line: underline;
+  text-decoration-color: var(--line-strong);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+  transition:
+    color var(--motion-fast) var(--ease-standard),
+    text-decoration-color var(--motion-fast) var(--ease-standard);
 }
 
-.nav a:hover,
-.storemark:hover,
-.card-link:hover,
-.tile:hover,
-.button:hover,
-.footer-col a:hover,
-.family-item:hover,
-.skip-link:focus {
-  text-decoration: none;
+html body a:hover {
+  color: var(--fg);
+  text-decoration-color: currentColor;
 }
 
+/*
+ * One ring for every focusable element, drawn outside it. No `border-radius` override:
+ * an outline follows the radius of the element it belongs to, so the ring is square on
+ * a square control and rounded on a card.
+ */
 :focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: 2px;
-  border-radius: var(--radius-xs);
+  outline-offset: 4px;
+}
+
+@media (forced-colors: active) {
+  :focus-visible {
+    outline-color: Highlight;
+  }
 }
 
 img,
@@ -201,15 +217,6 @@ pre {
   font-family: var(--store-mono);
 }
 
-@keyframes sa-dot {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.2;
-  }
-}
 
 @keyframes sa-rise {
   from {
@@ -222,24 +229,6 @@ pre {
   }
 }
 
-/*
- * WCAG 2.3.3. The archive defines a pulsing dot and a card rise with no reduced-motion
- * alternative anywhere in its seven screens; this is the alternative.
- */
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-  }
-}
-
 /* --- shell --- */
 
 .shell {
@@ -249,13 +238,14 @@ pre {
   width: 100%;
 }
 
-/* A plain document page: the prose routes that are not the browse or detail layouts. */
+/* A plain document page: the 404 and the error boundary. */
 .page {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  padding-top: 2.25rem;
-  padding-bottom: 4.5rem;
+  align-items: flex-start;
+  gap: var(--space-6);
+  padding-top: var(--section-pad);
+  padding-bottom: var(--section-pad);
 }
 
 .skip-link {
@@ -265,13 +255,15 @@ pre {
   z-index: 100;
   background: var(--accent);
   color: var(--bg-base);
-  padding: 0.6rem 1rem;
+  padding: var(--space-3) var(--space-4);
+  font-size: 0.875rem;
   font-weight: 600;
 }
 
 .skip-link:focus {
   left: 0;
   color: var(--bg-base);
+  text-decoration: none;
 }
 
 /* Available to assistive technology, absent from the visual composition. */
@@ -287,36 +279,72 @@ pre {
   border: 0;
 }
 
+/*
+ * A text glyph: `→` for an action, `↗` for a link that leaves this origin, `›` between
+ * crumbs, `✓` on a record row. Always `aria-hidden` in markup (D-7), so a glyph repeats
+ * what the words say and never carries a fact alone. The one that moves is the action
+ * arrow, 3px to the right, which is the whole of the transform budget D-4 gives it.
+ */
+.glyph {
+  font-style: normal;
+  line-height: 1;
+}
+
+/*
+ * Only the moving arrow is an inline block, because a transform needs one. A plain glyph
+ * stays inline, so no line can break between it and the word it follows.
+ */
+.glyph-nudge {
+  display: inline-block;
+  transition: transform var(--motion-base) var(--ease-standard);
+}
+
 /* --- family bar --- */
 
 .family {
   background: #0a0c0e;
   border-bottom: 1px solid var(--line-soft);
-  font-size: 0.75rem;
 }
 
+/*
+ * One row at every width. On a phone it scrolls inside itself rather than wrapping into
+ * a three-line strip, and the domain line, which is the one entry nobody navigates by,
+ * waits for 36rem.
+ */
 .family-inner {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 0.35rem 1rem;
-  padding-top: 0.4rem;
-  padding-bottom: 0.4rem;
-  min-height: 34px;
+  gap: var(--space-3);
+  min-height: 1.6875rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  mask-image: linear-gradient(90deg, #000 calc(100% - 2rem), transparent);
+}
+
+.family-inner::-webkit-scrollbar {
+  display: none;
 }
 
 .family-brand {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
+  flex: none;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1;
   color: var(--fg-2);
 }
 
+/* The SceneAxi family mark, in the neutral text colour: the bar belongs to the family,
+ * not to this store, so the store accent stays on the storemark below it. */
 .family-glyph {
   width: 14px;
   height: 14px;
-  border-radius: 4px;
-  background: var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--fg-2);
   display: grid;
   place-items: center;
   flex: none;
@@ -326,26 +354,42 @@ pre {
   content: "";
   width: 5px;
   height: 5px;
-  border: 1.5px solid var(--bg-base);
+  border: 1.5px solid #0a0c0e;
   transform: rotate(45deg);
+}
+
+.family nav {
+  flex: none;
 }
 
 .family-list {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 0.35rem 0.9rem;
+  gap: var(--space-3);
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
 .family-item {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: var(--space-2);
+  min-height: 1.6875rem;
+  font-size: 0.8125rem;
+  line-height: 1;
+  white-space: nowrap;
   color: var(--fg-2);
-  padding: 0.2rem 0;
+}
+
+html body a.family-item {
+  color: var(--fg-2);
+  text-decoration-color: transparent;
+}
+
+html body a.family-item:hover {
+  color: var(--fg);
+  text-decoration-color: currentColor;
 }
 
 .family-item.is-current {
@@ -354,22 +398,25 @@ pre {
 }
 
 .family-dot {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
   border-radius: var(--radius-full);
   flex: none;
 }
 
-.family-unlinked {
+.family-out {
   color: var(--fg-2);
 }
 
 .family-domain {
+  display: none;
+  flex: none;
+  margin-left: auto;
   font-family: var(--store-mono);
   font-size: var(--micro);
+  letter-spacing: 0.02em;
   color: var(--fg-2);
-  margin-left: auto;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
 }
 
 /* --- masthead --- */
@@ -383,20 +430,26 @@ pre {
   border-bottom: 1px solid var(--line-soft);
 }
 
+/*
+ * A phone gets two rows, the storemark and then one scrolling nav line of 44px targets,
+ * 93px in all. From 36rem both share one 64px row.
+ */
 .masthead-inner {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.6rem 1.25rem;
-  padding-top: 0.7rem;
-  padding-bottom: 0.7rem;
+  column-gap: var(--space-6);
+  padding-top: var(--space-2);
 }
 
-.storemark {
-  display: flex;
+html body .storemark {
+  display: inline-flex;
   align-items: center;
-  gap: 0.7rem;
+  gap: var(--space-3);
+  min-height: 2.5rem;
+  border-radius: var(--radius-md);
   color: var(--fg);
+  text-decoration: none;
 }
 
 /*
@@ -406,14 +459,19 @@ pre {
  * `--fg` at higher specificity suppresses that inherited change instead of minting a
  * hover this design system does not publish. Do not delete it as redundant.
  */
-.storemark:hover {
+html body .storemark:hover {
   color: var(--fg);
 }
 
+/*
+ * The store mark is a shape, not a colour: the tile and its knock-out both take the
+ * store's `--mark-radius`, a square on the game store and a circle on the web store, at
+ * every size it is drawn (32px here, 20px in the footer).
+ */
 .storemark-glyph {
-  width: 28px;
-  height: 28px;
-  border-radius: 7px;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--mark-radius);
   background: var(--accent);
   display: grid;
   place-items: center;
@@ -423,8 +481,8 @@ pre {
 
 .storemark-glyph::after {
   content: "";
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   border: 2px solid var(--bg-base);
   border-radius: var(--mark-radius);
 }
@@ -432,11 +490,11 @@ pre {
 .storemark-text {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
 }
 
 .storename {
-  font-size: 0.9375rem;
+  font-size: 1.0625rem;
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.1;
@@ -445,56 +503,105 @@ pre {
 .storetag {
   font-family: var(--store-mono);
   font-size: var(--micro);
-  letter-spacing: 0.1em;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  line-height: 1.2;
   color: var(--accent);
 }
 
 .nav {
+  flex: 1 0 calc(100% + 20px);
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 0.25rem;
-  margin-left: auto;
+  gap: var(--space-1);
+  margin-inline: -10px;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 
-.nav a {
-  color: var(--fg-2);
-  font-size: 0.8125rem;
-  padding: 0.5rem 0.7rem;
+.nav::-webkit-scrollbar {
+  display: none;
+}
+
+html body .nav a {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex: none;
+  min-height: 2.75rem;
+  padding: 0 10px;
   border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--fg-2);
+  text-decoration: none;
+  transition:
+    color var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard);
 }
 
-.nav a:hover {
+html body .nav a:hover {
   color: var(--fg);
   background: var(--bg-row);
 }
 
-.nav a[aria-current="page"] {
+/* The current section: the text level steps up and a 2px accent bar sits under it, so it
+ * reads without colour as well as with it. */
+html body .nav a[aria-current="page"] {
   color: var(--fg);
+}
+
+.nav a[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 4px;
+  height: 2px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
 }
 
 /* --- typography --- */
 
-h1 {
+h1,
+h2,
+h3 {
   margin: 0;
-  font-size: clamp(1.75rem, 1.15rem + 2.4vw, 2.625rem);
-  line-height: 1.08;
-  letter-spacing: -0.032em;
-  font-weight: 700;
   text-wrap: balance;
 }
 
+/*
+ * Route display type: 52px at 1440, 36px on a phone, on the width axis the Foundations
+ * display step is specified at (104), which `layout.tsx` loads Archivo with.
+ */
+h1 {
+  font-size: clamp(2.25rem, 1.55rem + 1.95vw, 3.25rem);
+  font-variation-settings: "wdth" 104;
+  line-height: 1.04;
+  letter-spacing: -0.03em;
+  font-weight: 700;
+}
+
+/*
+ * Section headings: 36px at 1440 and 28px on a phone. The ceiling sits below the 42px
+ * display step on purpose, because a page heading has to stay at least 1.4 times its
+ * section headings and the route H1 is 52px.
+ */
 h2 {
-  margin: 0;
-  font-size: clamp(1.125rem, 1rem + 0.6vw, 1.375rem);
-  letter-spacing: -0.02em;
+  font-size: clamp(1.75rem, 1.2rem + 1.7vw, 2.25rem);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
   font-weight: 700;
 }
 
 h3 {
-  margin: 0;
   font-size: 0.9375rem;
   font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
 }
 
 p {
@@ -502,26 +609,47 @@ p {
 }
 
 .lede {
-  font-size: 0.9375rem;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  color: var(--fg-2);
+  max-width: 52ch;
+  text-wrap: pretty;
+}
+
+.prose {
+  font-size: 0.875rem;
   line-height: 1.65;
   color: var(--fg-2);
   max-width: var(--measure);
   text-wrap: pretty;
 }
 
-.prose {
-  font-size: 0.875rem;
-  line-height: 1.7;
+.note {
+  font-size: 0.8125rem;
+  line-height: 1.6;
   color: var(--fg-2);
   max-width: var(--measure);
   text-wrap: pretty;
+}
+
+/* Evidence read out of a contract: a rounding rule, a reference, a timestamp. */
+.mono-note {
+  font-family: var(--store-mono);
+  font-size: 0.75rem;
+  line-height: 1.6;
+  letter-spacing: 0.02em;
+  color: var(--fg-2);
+  max-width: var(--measure);
+  overflow-wrap: anywhere;
 }
 
 .eyebrow,
 .micro {
   font-family: var(--store-mono);
   font-size: var(--micro);
-  letter-spacing: 0.14em;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--fg-2);
 }
@@ -529,735 +657,84 @@ p {
 .section {
   display: flex;
   flex-direction: column;
-  gap: 0.9rem;
+  gap: var(--space-8);
 }
 
-/* --- hero --- */
-
-.hero {
-  background: var(--hero-wash);
-  border-bottom: 1px solid var(--line-soft);
-}
-
-.hero-inner {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 2rem;
-  align-items: center;
-  padding-top: 2.25rem;
-  padding-bottom: 2.25rem;
-}
-
-.hero-copy {
+.section-head {
   display: flex;
   flex-direction: column;
-  gap: 1.1rem;
+  gap: var(--space-3);
 }
 
-.kicker {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
-  padding: 0.25rem 0.7rem;
-  border: 1px solid var(--accent-line);
-  background: var(--accent-bg);
-  border-radius: var(--radius-full);
-  width: fit-content;
-  font-family: var(--store-mono);
-  font-size: var(--micro);
-  letter-spacing: 0.1em;
-  color: var(--accent);
-}
-
-.kicker-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: var(--radius-full);
-  background: var(--accent);
-  animation: sa-dot 2s infinite;
-  flex: none;
-}
-
-.hero h1 {
-  max-width: 18ch;
-}
-
-.hero-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-  padding-top: 0.25rem;
-}
-
-.hero-tiles {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.5rem), 1fr));
-  gap: 0.75rem;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-/* --- browse --- */
-
-.browse {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 2rem;
-  align-items: start;
-  padding-top: 1.75rem;
-  padding-bottom: 4.5rem;
-}
-
-.rail {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.rail-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
-}
-
-.rail-title {
-  font-family: var(--store-mono);
-  font-size: var(--micro);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--fg-2);
-}
-
-.rail-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.rail-row {
-  display: flex;
-  align-items: baseline;
-  gap: 0.6rem;
-  font-size: 0.8125rem;
-  color: var(--fg);
-}
-
-.rail-name {
-  flex: 1;
-  overflow-wrap: anywhere;
-}
-
-.rail-count {
-  font-family: var(--store-mono);
-  font-size: 0.6875rem;
-  color: var(--fg-2);
-  flex: none;
-}
-
-.rail-note {
-  padding: 0.9rem;
-  background: var(--bg-panel);
-  border: 1px solid var(--line-soft);
-  border-radius: var(--radius-lg);
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.rail-note p {
-  font-size: 0.75rem;
-  line-height: 1.6;
-  color: var(--fg-2);
-  text-wrap: pretty;
-}
-
-.results {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-.results-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.5rem 0.9rem;
-  font-size: 0.875rem;
-  color: var(--fg-2);
-}
-
-.results-count {
-  color: var(--fg);
-  font-weight: 600;
-}
-
-/* --- cards --- */
-
-.cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
-  gap: 1rem;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.card {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  animation: sa-rise 0.2s ease-out;
-}
-
-.card-link {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  color: var(--fg);
-}
-
-.card-link:hover {
-  color: var(--fg);
-}
-
-.card-link:hover .sigil {
-  border-color: var(--line-strong);
-}
-
-.card-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.15rem 0.6rem;
-}
-
-.card-name {
-  font-size: 0.875rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  overflow-wrap: anywhere;
-  flex: 1 1 auto;
-}
-
-/*
- * A dual price reads "40 credits or 4.00 USD", four times longer than the design ever
- * had to fit. It shares the title row when there is room and takes its own line when
- * there is not, rather than crushing the title into three words per line.
- */
-.card-price {
-  font-family: var(--store-mono);
-  font-size: 0.75rem;
-  color: var(--fg);
-  flex: 0 1 auto;
-}
-
-.card-meta {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-  font-size: 0.75rem;
-  color: var(--fg-2);
-}
-
-.card-author {
-  flex: 1;
-  overflow-wrap: anywhere;
-}
-
-.card-licence {
-  font-family: var(--store-mono);
-  font-size: 0.6875rem;
-  color: var(--fg-2);
-  flex: none;
-}
-
-/* --- digest sigil: the card figure, drawn from a listing's real content hash --- */
-
-.sigil {
-  position: relative;
-  aspect-ratio: 4 / 3;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--line);
-  background: radial-gradient(120% 100% at 50% 12%, #191e25, var(--bg-field));
-  overflow: hidden;
-}
-
-.sigil-lg {
-  aspect-ratio: 16 / 10;
-  border-radius: 12px;
-  background: var(--media-wash);
-}
-
-.sigil-grid {
-  position: absolute;
-  inset: 0;
-  background-image: linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.028) 1px, transparent 1px);
-  background-size: 44px 44px;
-}
-
-.sigil-chip {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: var(--chip-w);
-  height: var(--chip-h);
-  border-radius: 4px;
-  background: linear-gradient(155deg, var(--chip-from), var(--chip-to));
-  box-shadow: 0 16px 30px -14px #000;
-  transform: translate(-50%, -50%) rotate(var(--chip-rot)) skewX(var(--chip-skew));
-}
-
-.sigil-scrim {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(transparent 58%, color-mix(in srgb, var(--bg-base) 78%, transparent));
-}
-
-.sigil-tl {
-  position: absolute;
-  left: 8px;
-  top: 8px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-}
-
-.sigil-br {
-  position: absolute;
-  right: 8px;
-  bottom: 8px;
-  font-family: var(--store-mono);
-  font-size: 0.6875rem;
-  color: var(--fg-2);
-  background: color-mix(in srgb, var(--bg-base) 78%, transparent);
-  border-radius: var(--radius-sm);
-  padding: 1px 5px;
-}
-
-.sigil-empty {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  font-family: var(--store-mono);
-  font-size: var(--micro);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--fg-2);
-  padding: 1rem;
-  text-align: center;
-}
-
-/* --- tiles (hero) --- */
-
-.tile {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  color: var(--fg);
-}
-
-.tile:hover {
-  color: var(--fg);
-}
-
-.tile:hover .sigil {
-  border-color: var(--line-strong);
-}
-
-.tile-name {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
-
-.tile-meta {
-  font-family: var(--store-mono);
-  font-size: 0.6875rem;
-  color: var(--fg-2);
-}
-
-/* --- detail --- */
-
-.detail {
-  display: flex;
-  flex-direction: column;
-  gap: 1.6rem;
-  padding-top: 1.6rem;
-  padding-bottom: 4.5rem;
-}
-
-.crumbs {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.75rem;
-  color: var(--fg-2);
-}
-
-.detail-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 1.75rem;
-  align-items: start;
-}
-
-.detail-main {
-  display: flex;
-  flex-direction: column;
-  gap: 1.75rem;
-}
-
-.detail-side {
-  display: flex;
-  flex-direction: column;
-  gap: 0.9rem;
-}
-
-.detail-stats {
-  position: absolute;
-  left: 14px;
-  right: 14px;
-  bottom: 13px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.detail-stat {
-  padding: 4px 8px;
-  background: color-mix(in srgb, var(--bg-panel) 72%, transparent);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  font-family: var(--store-mono);
-  font-size: 0.6875rem;
-  color: var(--fg-2);
-  overflow-wrap: anywhere;
-}
-
-.detail-stat strong {
-  color: var(--fg);
-  font-weight: 500;
-}
-
-.buy {
-  background: var(--bg-panel);
-  border: 1px solid var(--line);
-  border-radius: 11px;
-  overflow: hidden;
-}
-
-.buy-body {
-  padding: 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-/* The design sets the detail title at 24px, below the page-level display size. */
-.buy h1 {
-  font-size: clamp(1.25rem, 1.05rem + 0.7vw, 1.5rem);
-  line-height: 1.15;
-}
-
-.buy-by {
-  font-size: 0.8125rem;
-  color: var(--fg-2);
-}
-
-.buy-price {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.6rem;
-}
-
-.buy-price-num {
-  font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2rem);
-  font-weight: 700;
-  letter-spacing: -0.035em;
-  overflow-wrap: anywhere;
-}
-
-.buy-price-unit {
-  font-size: 0.8125rem;
-  color: var(--fg-2);
-}
-
-.buy-options {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.buy-option {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.4rem 0.7rem;
-  padding: 0.7rem 0.8rem;
-  background: var(--bg-raised);
-  border: 1px solid var(--line);
-  border-radius: 7px;
-}
-
-.buy-option-name {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  /* Grows to push the value to the right edge, but never shrinks: the base reset above
-   * drops the `min-width: auto` floor, so a `flex: 1` basis of 0 collapses this label
-   * under a long value and its text overlaps. `auto` basis makes the row wrap instead. */
-  flex: 1 0 auto;
-}
-
-.buy-option-value {
-  font-family: var(--store-mono);
-  font-size: 0.75rem;
-  color: var(--fg);
-  overflow-wrap: anywhere;
-}
-
-.buy-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.buy-spec {
-  border-top: 1px solid var(--line-soft);
-  background: var(--bg-field);
-  padding: 1rem 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  margin: 0;
-}
-
-.spec-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.25rem 0.75rem;
-}
-
-.spec-row dt {
-  font-size: 0.75rem;
-  color: var(--fg-2);
-}
-
-.spec-row dd {
-  margin: 0;
-  font-family: var(--store-mono);
-  font-size: 0.6875rem;
-  color: var(--fg);
-  overflow-wrap: anywhere;
-  text-align: right;
-}
-
-.side-panel {
-  background: var(--bg-panel);
-  border: 1px solid var(--line-soft);
-  border-radius: 11px;
-  padding: 1.1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.7rem;
-}
-
-.side-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
-}
-
-.side-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.6rem;
-  font-size: 0.8125rem;
-}
-
-.side-row-note {
-  font-family: var(--store-mono);
-  font-size: 0.6875rem;
-  color: var(--fg-2);
-  margin-left: auto;
-  overflow-wrap: anywhere;
-}
-
-/* --- the included grid --- */
-
-.included {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
-  gap: 0.6rem;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-/*
- * The design pairs a short key with a short value on one line. Real contract values are
- * package ids and digests, so the value takes its own line under the key rather than
- * competing with it for width — the check mark still spans both.
- */
-.included-row {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 0.15rem 0.6rem;
-  align-items: baseline;
-  padding: 0.7rem 0.8rem;
-  background: var(--bg-panel);
-  border: 1px solid var(--line-soft);
-  border-radius: 7px;
-  font-size: 0.8125rem;
-}
-
-.included-check {
-  grid-row: span 2;
-  width: 14px;
-  height: 14px;
-  border-radius: var(--radius-sm);
-  background: var(--status-validated-bg);
-  border: 1px solid var(--status-validated-line);
-  color: var(--ok);
-  display: grid;
-  place-items: center;
-  font-size: 0.5rem;
-  font-weight: 700;
-  flex: none;
-}
-
-.included-key {
-  color: var(--fg);
-}
-
-.included-value {
-  font-family: var(--store-mono);
-  font-size: 0.6875rem;
-  color: var(--fg-2);
-  overflow-wrap: anywhere;
-}
-
-/* --- chips, states, actions --- */
+/* --- chips --- */
 
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  font-family: var(--store-mono);
-  font-size: 0.6875rem;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  padding: 0.15rem 0.45rem;
+  gap: var(--space-1);
+  min-height: 1.25rem;
+  padding: 0 6px;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--bg-base) 78%, transparent);
+  background: color-mix(in srgb, var(--bg-base) 88%, transparent);
+  font-family: var(--store-mono);
+  font-size: var(--micro);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
   color: var(--fg-2);
 }
 
+/* `TEST` is the one pending chip, so it is the one that carries the accent. */
 .chip-accent {
   color: var(--accent);
   border-color: var(--accent-line);
   background: var(--accent-bg);
 }
 
-.chip-ok {
-  color: var(--ok);
-  border-color: var(--status-validated-line);
-  background: var(--status-validated-bg);
-}
+/* --- actions --- */
 
-.state {
-  border: 1px solid var(--line);
-  border-left-width: 3px;
-  border-radius: var(--radius-md);
-  padding: 0.9rem 1.1rem;
-  background: var(--bg-panel);
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.state h3 {
-  font-family: var(--store-mono);
-  font-size: 0.8125rem;
-  letter-spacing: 0.04em;
-}
-
-.state p {
-  color: var(--fg-2);
-  font-size: 0.8125rem;
-  line-height: 1.65;
-  max-width: var(--measure);
-  text-wrap: pretty;
-}
-
-.state-deny {
-  border-left-color: var(--danger);
-  background: var(--status-refused-bg);
-}
-
-.state-deny h3 {
-  color: var(--danger);
-}
-
-.state-warn {
-  border-left-color: var(--status-needs-review-fg);
-  background: var(--status-needs-review-bg);
-}
-
-.state-warn h3 {
-  color: var(--status-needs-review-fg);
-}
-
-.state-ok {
-  border-left-color: var(--ok);
-  background: var(--status-validated-bg);
-}
-
-.state-ok h3 {
-  color: var(--ok);
-}
-
-.reason {
-  font-family: var(--store-mono);
-  font-size: 0.75rem;
-  color: var(--fg-2);
-  overflow-wrap: anywhere;
-}
-
-.button {
+/*
+ * Two sizes from the Foundations button table and no others: lg 38/13/5 and xl 46/15/6.
+ * `.button` is lg; `.button-xl` steps it up.
+ */
+html body .button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 2.75rem;
-  padding: 0.55rem 1.1rem;
-  border-radius: 7px;
+  gap: var(--space-2);
+  min-height: 2.375rem;
+  padding: 0 18px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--accent);
   background: var(--accent);
   color: var(--bg-base);
   font: inherit;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 600;
+  line-height: 1.2;
   text-align: center;
+  text-decoration: none;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
   cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard);
+}
+
+html body .button-xl {
+  min-height: 2.875rem;
+  padding: 0 24px;
+  border-radius: 6px;
+  font-size: 0.9375rem;
+}
+
+html body .button-block {
+  width: 100%;
 }
 
 /*
@@ -1266,29 +743,30 @@ p {
  * so the state change is a ring in the store's own `--accent-line` and a stronger top
  * highlight — both values this storefront already owns — rather than an invented tint.
  */
-.button:hover {
+html body .button:hover {
+  color: var(--bg-base);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.45),
     0 0 0 3px var(--accent-bg),
     0 0 0 4px var(--accent-line);
-  color: var(--bg-base);
 }
 
-.button-quiet {
+html body .button-quiet {
   background: transparent;
   border-color: var(--line-strong);
   color: var(--fg);
   box-shadow: none;
 }
 
-.button-quiet:hover {
+html body .button-quiet:hover {
   background: var(--bg-control);
   border-color: var(--fg-2);
   color: var(--fg);
+  box-shadow: none;
 }
 
-.button[aria-disabled="true"],
-.button[aria-disabled="true"]:hover {
+html body .button[aria-disabled="true"],
+html body .button[aria-disabled="true"]:hover {
   background: transparent;
   border-color: var(--line-strong);
   color: var(--fg-2);
@@ -1296,45 +774,969 @@ p {
   cursor: not-allowed;
 }
 
+.button:hover .glyph-nudge,
+.slot-link:hover .glyph-nudge {
+  transform: translateX(3px);
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.6rem;
+  gap: var(--space-3);
   align-items: center;
 }
 
-.dl {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0.3rem 1rem;
-  font-size: 0.8125rem;
-  margin: 0;
+/* --- hero --- */
+
+/*
+ * The archived wash, lit by one neutral light where the lead record sits and settling
+ * toward the page's own base along the lower edge. Every stop is a palette neutral (D-5):
+ * the light is `--bg-raised` itself, so the brightest point of the band is exactly that
+ * surface's luminance and every text pairing on it is one the gate already measures; the
+ * store accent, which means pending here, takes no part in it.
+ */
+.hero {
+  --spot-at: 50% 82%;
+  background:
+    linear-gradient(to bottom, transparent 55%, color-mix(in srgb, var(--bg-base) 70%, transparent)),
+    radial-gradient(36rem 28rem at var(--spot-at), var(--bg-raised) 55%, transparent),
+    var(--hero-wash);
+  border-bottom: 1px solid var(--line-soft);
 }
 
-.dl dt {
+.hero-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: center;
+  padding-top: var(--section-pad);
+  padding-bottom: var(--section-pad);
+}
+
+.hero-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 1.625rem;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--accent-line);
+  background: var(--accent-bg);
+  border-radius: var(--radius-full);
   font-family: var(--store-mono);
   font-size: var(--micro);
-  letter-spacing: 0.08em;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  line-height: 1.2;
+  color: var(--fg-2);
+}
+
+.kicker-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  /* A fixture marker is not live activity: hold it still. */
+  animation: none;
+  flex: none;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+/* On a phone the primary action takes the full width and the quiet one keeps its own,
+ * so the two never read as equals. */
+.hero-actions .button:first-child {
+  flex: 1 0 100%;
+}
+
+.hero-plate {
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- record plates: the card, hero and detail figure --- */
+
+/*
+ * Everything drawn on a plate is either a pure function of the validated listing record's
+ * own digest (the mark) or a real fact printed on it (the chips, the legend). Nothing
+ * depicts an asset, which is why the plate carries a legend that names what it is.
+ */
+.plate {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  isolation: isolate;
+  background: radial-gradient(120% 100% at 50% 12%, #191e25, var(--bg-field));
+}
+
+.plate-lead,
+.plate-detail {
+  background: var(--media-wash);
+}
+
+/* The detail figure is framed on its own; the lead plate is framed by the link around it. */
+.plate-detail {
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-float-shadow);
+}
+
+.plate-media {
+  position: absolute;
+  inset: 0;
+  transition: transform var(--motion-base) var(--ease-standard);
+}
+
+.plate-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.028) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-position: center;
+}
+
+/*
+ * The mark itself. Its greys come from the digest; the store accent is mixed in at 20%,
+ * the most D-5 lets a record mark take, as identity rather than meaning. No text sits on
+ * it: every label on a plate carries its own backing.
+ */
+.plate-mark {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--chip-w);
+  height: var(--chip-h);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    155deg,
+    color-mix(in srgb, var(--chip-from) 80%, var(--accent)),
+    color-mix(in srgb, var(--chip-to) 80%, var(--accent))
+  );
+  box-shadow: 0 16px 30px -14px #000;
+  transform: translate(-50%, -50%) rotate(var(--chip-rot)) skewX(var(--chip-skew));
+}
+
+.plate-chips {
+  position: absolute;
+  left: var(--space-3);
+  top: var(--space-3);
+  right: var(--space-3);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.plate-legend,
+.plate-digest,
+.plate-stat {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 1.375rem;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--bg-base) 88%, transparent);
+  font-family: var(--store-mono);
+  font-size: var(--micro);
+  letter-spacing: 0.04em;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--fg-2);
+}
+
+.plate-legend strong,
+.plate-stat strong {
+  color: var(--fg);
+  font-weight: 500;
+}
+
+.plate-digest {
+  right: var(--space-3);
+  bottom: var(--space-3);
+}
+
+.plate-legend {
+  left: var(--space-3);
+  bottom: var(--space-3);
+}
+
+.plate-detail .plate-chips {
+  left: var(--space-4);
+  top: var(--space-4);
+  right: auto;
+}
+
+.plate-stats {
+  position: absolute;
+  left: var(--space-4);
+  right: var(--space-4);
+  bottom: var(--space-4);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.plate-stats .plate-legend,
+.plate-stat {
+  position: static;
+  font-size: 0.75rem;
+  min-height: 1.5rem;
+}
+
+.plate-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  text-align: center;
+  font-family: var(--store-mono);
+  font-size: var(--micro);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--fg-2);
 }
 
-.dl dd {
-  margin: 0 0 0.5rem;
+/* The lead plate: the first listing, framed as a float surface (D-6) with a caption bar. */
+html body .lead {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  background: var(--bg-raised);
+  box-shadow: var(--surface-float-shadow);
+  color: var(--fg);
+  text-decoration: none;
+  transition: border-color var(--motion-fast) var(--ease-standard);
+}
+
+html body .lead:hover {
+  color: var(--fg);
+  border-color: var(--fg-2);
+}
+
+.lead-caption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-4);
+  padding: 10px var(--space-4);
+  border-top: 1px solid var(--line);
+}
+
+.lead-title {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  text-decoration-line: underline;
+  text-decoration-color: transparent;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+  transition: text-decoration-color var(--motion-fast) var(--ease-standard);
+}
+
+/* --- price, as the card, the lead plate and the related cards print it --- */
+
+.price {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--space-1);
+  line-height: 1.3;
+}
+
+.price-num {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--fg);
+}
+
+.price-unit,
+.price-or {
+  font-size: 0.75rem;
+  color: var(--fg-2);
+}
+
+.price-or {
+  margin-left: var(--space-1);
+}
+
+.price-alt {
+  font-family: var(--store-mono);
+  font-size: 0.75rem;
+  color: var(--fg);
+}
+
+/* --- facts strip --- */
+
+.facts {
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.facts-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.fact {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3) var(--space-2) 0;
+}
+
+/*
+ * On a phone the two short facts (count, share) share the first row and the two longer
+ * ones the second; the list keeps its reading order, and 48rem restores it on screen.
+ */
+.fact:nth-child(1) {
+  order: 1;
+}
+
+.fact:nth-child(3) {
+  order: 2;
+}
+
+.fact:nth-child(2) {
+  order: 3;
+}
+
+.fact:nth-child(4) {
+  order: 4;
+}
+
+.fact:nth-child(3),
+.fact:nth-child(4) {
+  padding: var(--space-2) 0 var(--space-2) var(--space-3);
+  border-left: 1px solid var(--line-soft);
+}
+
+.fact:nth-child(2),
+.fact:nth-child(4) {
+  border-top: 1px solid var(--line-soft);
+}
+
+.fact-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--fg);
+}
+
+.fact-label {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--fg-2);
+}
+
+/* --- browse --- */
+
+.browse {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+  padding-top: var(--section-pad);
+  padding-bottom: var(--section-pad);
+}
+
+/*
+ * The rail is a tally of what the page holds, not a filter: no checkbox, no fill, no
+ * pointer. On a phone and a tablet it is one row of group cards that scrolls inside
+ * itself and is focusable, so the listings arrive within a screen and a half.
+ */
+.rail {
+  display: flex;
+  gap: var(--space-3);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+  padding-bottom: var(--space-1);
+}
+
+.rail-group,
+.rail-note {
+  flex: 0 0 15rem;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 10px var(--space-3);
+  background: var(--bg-panel);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-lg);
+}
+
+.rail-title {
+  font-family: var(--store-mono);
+  font-size: var(--micro);
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg);
+}
+
+.rail-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.rail-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  column-gap: var(--space-3);
+  row-gap: var(--space-1);
+  font-size: 0.875rem;
+  line-height: 1.35;
+  color: var(--fg);
+}
+
+.rail-name {
   overflow-wrap: anywhere;
 }
 
-.bullets {
-  margin: 0;
-  padding-left: 1.1rem;
-  font-size: 0.875rem;
-  line-height: 1.7;
+.rail-count {
+  font-family: var(--store-mono);
+  font-size: 0.75rem;
   color: var(--fg-2);
-  max-width: var(--measure);
 }
 
-.bullets li {
-  margin-bottom: 0.35rem;
+/* The row's share of the page, as a 2px bar: count over total, never a control. */
+.rail-bar {
+  grid-column: 1 / -1;
+  position: relative;
+  height: 2px;
+  border-radius: var(--radius-full);
+  background: var(--line-soft);
+  overflow: hidden;
+}
+
+.rail-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--share, 0) * 100%);
+  border-radius: inherit;
+  background: var(--fg-2);
+}
+
+.rail-note {
+  flex-basis: 24rem;
+}
+
+.rail-note p {
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--fg-2);
+  text-wrap: pretty;
+}
+
+.rail-note p:first-child {
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.results-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.results-count {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--fg);
+}
+
+.results-word {
+  font-weight: 400;
+  color: var(--fg-2);
+}
+
+.results-surface {
+  font-size: 0.875rem;
+  color: var(--fg-2);
+}
+
+/* The GET controls keep their contracts; layout groups labels above their fields.
+ * SAFETY: only presentation changes; no controls are hidden or visually reordered
+ * across tasks. The two price/sort fields regroup on mobile rather than shrink. */
+.catalog-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "search-label"
+    "search"
+    "search-help"
+    "price-label"
+    "price"
+    "sort-label"
+    "sort"
+    "apply"
+    "clear";
+  gap: 0.75rem 1rem;
+  padding: 1.25rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  background: var(--bg-panel);
+  align-items: center;
+}
+
+.catalog-controls label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--fg-2);
+}
+
+.catalog-controls label[for="catalog-search"] { grid-area: search-label; }
+.catalog-controls label[for="catalog-price"] { grid-area: price-label; }
+.catalog-controls label[for="catalog-sort"] { grid-area: sort-label; }
+#catalog-search { grid-area: search; }
+#catalog-search-help {
+  grid-area: search-help;
+  font-size: 0.8125rem;
+  color: var(--fg-2);
+  overflow-wrap: anywhere;
+}
+#catalog-price { grid-area: price; }
+#catalog-sort { grid-area: sort; }
+
+.catalog-controls input,
+.catalog-controls select {
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.75rem;
+  border: 1px solid var(--fg-2);
+  border-radius: var(--radius-md);
+  background: var(--bg-field);
+  color: var(--fg);
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.catalog-controls button {
+  grid-area: apply;
+  min-height: 3rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-md);
+  background: var(--accent);
+  color: var(--bg-base);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.catalog-controls > a {
+  grid-area: clear;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3rem;
+  font-size: 0.875rem;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.results > [role="status"] {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 2rem;
+  border: 1px dashed var(--fg-2);
+  border-radius: var(--radius-lg);
+  background: var(--bg-panel);
+}
+
+.results > [role="status"] p { color: var(--fg-2); }
+
+/* A refused query has no shell wrapper in its existing render contract. */
+main > .state {
+  width: min(var(--shell), calc(100% - 2 * var(--gutter)));
+  margin: 2rem auto 4rem;
+  padding: 1.5rem;
+}
+
+.page > h1 { max-width: 22ch; }
+
+.page > .section {
+  padding: 1.5rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  background: var(--bg-panel);
+  gap: 1rem;
+}
+
+/* --- cards --- */
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--card-min)), 1fr));
+  gap: var(--space-4);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.cards-compact {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr));
+}
+
+.card {
+  display: flex;
+  animation: sa-rise var(--motion-base) var(--ease-standard);
+}
+
+/*
+ * One hover verb for every card: the edge steps up a level, the plate's media scales
+ * inside its own clip, and the title underlines. No lift, no shadow, no tint.
+ */
+html body .card-link {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--bg-panel);
+  color: var(--fg);
+  text-decoration: none;
+  transition: border-color var(--motion-fast) var(--ease-standard);
+}
+
+html body .card-link:hover {
+  color: var(--fg);
+  border-color: var(--line-strong);
+}
+
+.card-link:hover .plate-media,
+.lead:hover .plate-media {
+  transform: scale(1.015);
+}
+
+.card-link:hover .card-name,
+.lead:hover .lead-title,
+.slot-link:hover .slot-title {
+  text-decoration-color: currentColor;
+}
+
+.card .plate {
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.card-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4) var(--space-4);
+}
+
+.card-name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  text-decoration-line: underline;
+  text-decoration-color: transparent;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+  transition: text-decoration-color var(--motion-fast) var(--ease-standard);
+}
+
+.card-foot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line-soft);
+}
+
+.card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-2);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--fg-2);
+}
+
+.card-author {
+  overflow-wrap: anywhere;
+}
+
+.card-share {
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--fg-2);
+}
+
+/*
+ * The publish slot: the shelf's last cell, so neither store shows an empty track. It is
+ * drawn as an open outline, not a card, because it holds no listing: no plate, no price,
+ * no TEST chip, only the route that explains how listing will work.
+ */
+html body .slot-link {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-lg);
+  color: var(--fg);
+  text-decoration: none;
+  transition:
+    border-color var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard);
+}
+
+html body .slot-link:hover {
+  color: var(--fg);
+  border-color: var(--fg-2);
+  background: var(--bg-row);
+}
+
+/* The empty frame where a record's plate would sit: ruled, with nothing drawn on it. */
+.slot-plate {
+  aspect-ratio: 16 / 10;
+  border-bottom: 1px dashed var(--line);
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-position: center;
+}
+
+.slot-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4) var(--space-4);
+}
+
+.slot-title {
+  display: block;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  text-decoration-line: underline;
+  text-decoration-color: transparent;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+  transition: text-decoration-color var(--motion-fast) var(--ease-standard);
+}
+
+/* An inline-block glyph is outside the title's underline, so only the words underline. */
+.slot-title .glyph {
+  margin-left: var(--space-2);
+}
+
+.slot-text {
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--fg-2);
+  text-wrap: pretty;
+}
+
+.grid-note {
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--fg-2);
+  max-width: var(--measure);
+  text-wrap: pretty;
+}
+
+/* --- pricing callout --- */
+
+.pricing {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-8);
+  padding: var(--space-6);
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-raised-shadow);
+}
+
+.pricing-copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.pricing-copy .lede {
+  max-width: 46ch;
+}
+
+.share {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: var(--space-4);
+}
+
+/* The one number the share rule rests on, the loudest thing in the callout. */
+.share-figure {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-left: var(--space-4);
+  border-left: 2px solid var(--accent);
+}
+
+.share-num {
+  font-size: clamp(2.25rem, 1.55rem + 1.95vw, 3.25rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1;
+  color: var(--fg);
+}
+
+.share-label {
+  font-size: 0.8125rem;
+  color: var(--fg-2);
+}
+
+/* --- named states --- */
+
+/*
+ * The quiet register: a neutral panel, a 3px rail in the state's own colour, the title in
+ * the text colour, and the reason key as a chip in the tone. The key is the easiest thing
+ * in the panel to read and copy, and the panel is never the loudest thing on its page.
+ */
+.state {
+  --tone: var(--fg-2);
+  --tone-bg: var(--bg-row);
+  --tone-line: var(--line);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-4) var(--space-4) var(--space-6);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--bg-panel);
+}
+
+.state::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--tone);
+}
+
+.state-warn {
+  --tone: var(--status-needs-review-fg);
+  --tone-bg: var(--status-needs-review-bg);
+  --tone-line: var(--status-needs-review-line);
+}
+
+.state-deny {
+  --tone: var(--danger);
+  --tone-bg: var(--status-refused-bg);
+  --tone-line: var(--status-refused-line);
+}
+
+.state-ok {
+  --tone: var(--ok);
+  --tone-bg: var(--status-validated-bg);
+  --tone-line: var(--status-validated-line);
+}
+
+.state-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+}
+
+.state h3 {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.state p {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--fg-2);
+  max-width: var(--measure);
+  text-wrap: pretty;
+}
+
+/* The reason key, as a chip on the chip system's 11px mono step, in the state's tone. */
+.state .reason {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.375rem;
+  padding: 0 6px;
+  border: 1px solid var(--tone-line);
+  border-radius: var(--radius-sm);
+  background: var(--tone-bg);
+  font-size: var(--micro);
+  letter-spacing: 0.02em;
+  color: var(--tone);
+  overflow-wrap: anywhere;
 }
 
 /* --- footer --- */
@@ -1347,24 +1749,24 @@ p {
 .footer-inner {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 1.75rem;
-  padding-top: 2.5rem;
-  padding-bottom: 1.5rem;
+  gap: var(--space-8);
   align-items: start;
+  padding-top: var(--section-pad);
+  padding-bottom: var(--space-8);
 }
 
 .footer-brand {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: var(--space-3);
   max-width: 36ch;
 }
 
 .footer-brand-row {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
-  font-size: 0.875rem;
+  gap: var(--space-3);
+  font-size: 1.0625rem;
   font-weight: 700;
   letter-spacing: -0.02em;
 }
@@ -1372,7 +1774,7 @@ p {
 .footer-glyph {
   width: 20px;
   height: 20px;
-  border-radius: 5px;
+  border-radius: var(--mark-radius);
   background: var(--accent);
   display: grid;
   place-items: center;
@@ -1381,15 +1783,15 @@ p {
 
 .footer-glyph::after {
   content: "";
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
   border: 2px solid var(--bg-base);
   border-radius: var(--mark-radius);
 }
 
 .footer-blurb,
 .footer-note {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   line-height: 1.6;
   color: var(--fg-2);
   text-wrap: pretty;
@@ -1397,14 +1799,14 @@ p {
 
 .footer-cols {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
-  gap: 1.5rem;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-6);
 }
 
 .footer-col {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .footer-col ul {
@@ -1413,58 +1815,799 @@ p {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
 }
 
-.footer-col a,
-.footer-col span {
-  font-size: 0.8125rem;
+html body .footer-col a,
+.footer-col li > span {
+  display: block;
+  padding: 10px 0;
+  font-size: 0.875rem;
+  line-height: 1.45;
   color: var(--fg-2);
 }
 
-.footer-col a:hover {
+.footer-col .glyph {
+  margin-left: var(--space-1);
+}
+
+html body .footer-col a {
+  text-decoration-color: transparent;
+}
+
+html body .footer-col a:hover {
   color: var(--fg);
+  text-decoration-color: currentColor;
 }
 
 .footer-card {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
-  padding: 1rem;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-6);
   background: var(--bg-panel);
-  border: 1px solid var(--line-soft);
+  border: 1px solid var(--line);
   border-radius: var(--radius-lg);
+}
+
+.footer-card-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--fg);
 }
 
 .footer-base {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 1rem;
-  align-items: baseline;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: var(--space-2);
   border-top: 1px solid var(--line-soft);
-  padding-top: 1.25rem;
-  padding-bottom: 2.25rem;
-  font-size: 0.75rem;
+  padding-top: var(--space-6);
+  padding-bottom: var(--space-8);
+  font-size: 0.8125rem;
   color: var(--fg-2);
+}
+
+/* --- detail --- */
+
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding-top: var(--space-6);
+  padding-bottom: var(--section-pad);
+}
+
+.crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--fg-2);
+}
+
+html body .crumbs a {
+  color: var(--fg-2);
+  text-decoration-color: transparent;
+}
+
+html body .crumbs a:hover {
+  color: var(--fg);
+  text-decoration-color: currentColor;
+}
+
+.crumbs [aria-current="page"] {
+  color: var(--fg);
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-8);
+  align-items: start;
+}
+
+.detail-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.detail-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+.detail-figure {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+/*
+ * The detail page's section headings sit a step under the 42px title, so the title keeps
+ * its 1.4 lead over them; the mono labels inside the buy column are not section headings.
+ */
+.detail .section-head h2 {
+  font-size: 1.75rem;
+}
+
+.buy {
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.buy-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.buy-title {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Detail title and price share the 42px display step: the title leads the column. */
+.buy h1 {
+  font-size: clamp(2rem, 1.55rem + 1.3vw, 2.625rem);
+  line-height: 1.04;
+  letter-spacing: -0.02em;
+}
+
+.buy-by {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.875rem;
+  color: var(--fg-2);
+}
+
+.creator-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.5rem;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+  font-family: var(--store-mono);
+  font-size: 0.75rem;
+  color: var(--fg);
+  overflow-wrap: anywhere;
+}
+
+.buy-price {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.buy-price-num {
+  font-size: clamp(2rem, 1.55rem + 1.3vw, 2.625rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+
+.buy-price-unit {
+  font-size: 0.875rem;
+  color: var(--fg-2);
+}
+
+.buy-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.buy-options {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.buy-option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 10px;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+.buy-option-name {
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--fg-2);
+}
+
+.buy-option-value {
+  font-family: var(--store-mono);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--fg);
+  overflow-wrap: anywhere;
+}
+
+.buy-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.buy-actions .note {
+  line-height: 1.5;
+}
+
+/*
+ * The inert purchase notice sits in the slot a cart button would take, directly under the
+ * one working action, inset a level so it reads as a slot rather than an alarm.
+ */
+.buy .state {
+  gap: var(--space-2);
+  background: var(--bg-field);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+}
+
+.buy .state p {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+/*
+ * The four labelled facts as a two-column grid of label-value pairs, so the two short
+ * ones share a row and the long viewer and registry lines take their own.
+ */
+.notice-facts {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--line-soft);
+  font-family: var(--store-mono);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.notice-fact {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 6px;
+}
+
+.notice-fact-wide {
+  grid-column: 1 / -1;
+}
+
+.notice-facts dt {
+  color: var(--fg-2);
+}
+
+.notice-facts dd {
+  margin: 0;
+  color: var(--fg);
+  overflow-wrap: anywhere;
+}
+
+.buy-spec {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-1) var(--space-4);
+  margin: 0;
+  padding: 10px var(--space-4);
+  border-top: 1px solid var(--line-soft);
+  background: var(--bg-field);
+}
+
+.buy-spec dt {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--fg-2);
+}
+
+.buy-spec dd {
+  margin: 0;
+  font-family: var(--store-mono);
+  font-size: 0.75rem;
+  line-height: 1.55;
+  color: var(--fg);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+/* --- the fixture listing record --- */
+
+.included {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/*
+ * A spec sheet row: the key in the secondary level and the value, a contract string, in
+ * mono under it, so a package id or a timestamp never competes with its label for width.
+ */
+.included-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  column-gap: var(--space-3);
+  row-gap: 2px;
+  padding: var(--space-3);
+  background: var(--bg-panel);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+}
+
+.included-check {
+  grid-row: span 2;
+  align-self: start;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-sm);
+  background: var(--status-validated-bg);
+  border: 1px solid var(--status-validated-line);
+  color: var(--ok);
+  display: grid;
+  place-items: center;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.included-key {
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--fg-2);
+}
+
+.included-value {
+  font-family: var(--store-mono);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--fg);
+  overflow-wrap: anywhere;
+}
+
+/* --- publish --- */
+
+.publish-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-8);
+  align-items: start;
+  padding-top: var(--section-pad);
+  padding-bottom: var(--section-pad);
+}
+
+.publish-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-6);
+}
+
+.publish-copy h1 {
+  max-width: 16ch;
+}
+
+.publish-band {
+  padding-bottom: var(--section-pad);
+}
+
+.publish-flow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--section-pad);
+  padding-bottom: var(--section-pad);
+}
+
+/* The earnings callout: three derived figures, and the creator's is the lead. */
+.earn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-raised-shadow);
+}
+
+.earn-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0;
+}
+
+.earn-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-left: var(--space-4);
+  border-left: 2px solid var(--line);
+}
+
+.earn-row dt {
+  font-family: var(--store-mono);
+  font-size: var(--micro);
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+
+.earn-row dd {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.earn-num {
+  font-size: clamp(2rem, 1.55rem + 1.3vw, 2.625rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--fg-2);
+}
+
+.earn-unit {
+  font-size: 0.875rem;
+  color: var(--fg-2);
+}
+
+.earn-lead {
+  border-left-color: var(--accent);
+}
+
+/* Feedback is interaction-driven, never an ambient pulse. */
+@media (prefers-reduced-motion: no-preference) {
+  .button,
+  .catalog-controls button,
+  .card-link .plate {
+    transition: border-color var(--motion-fast) var(--ease-standard), box-shadow var(--motion-fast) var(--ease-standard), transform var(--motion-fast) var(--ease-standard);
+  }
+
+  .button:active:not([aria-disabled="true"]),
+  .catalog-controls button:active { transform: translateY(1px); }
+}
+
+/* At 390px the controls use the full-width base layout. Only regroup once
+ * two readable selects fit; keyboard order remains search, price, sort, apply. */
+@media (min-width: 30rem) {
+  .catalog-controls {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "search-label search-label"
+      "search search"
+      "search-help search-help"
+      "price-label sort-label"
+      "price sort"
+      "apply clear";
+  }
+
+  .card-head { flex-direction: row; align-items: baseline; }
+}
+
+@media (min-width: 48rem) {
+  .catalog-controls {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "search-label price-label sort-label"
+      "search price sort"
+      "search-help search-help search-help"
+      "apply clear .";
+  }
+
+  .catalog-controls button,
+  .catalog-controls > a { justify-self: start; }
+}
+
+/* --- footer --- */
+
+.earn-lead .earn-num {
+  color: var(--fg);
+}
+
+/* Numbered requirement rows, drawn as one path: the ordinal comes from the list itself. */
+.req-list {
+  counter-reset: req;
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* The line that joins the requirements, running behind their ordinals. */
+.req-list::before {
+  content: "";
+  position: absolute;
+  left: calc(1rem - 0.5px);
+  top: 1.75rem;
+  bottom: 1.75rem;
+  width: 1px;
+  background: var(--line-strong);
+}
+
+.req-row {
+  counter-increment: req;
+  position: relative;
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--space-4);
+  min-height: 3.5rem;
+  padding: var(--space-2) 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--fg);
+}
+
+.req-row::before {
+  content: counter(req, decimal-leading-zero) / "";
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-full);
+  background: var(--bg-raised);
+  font-family: var(--store-mono);
+  font-size: var(--micro);
+  font-weight: 500;
+  color: var(--fg);
+  position: relative;
+  z-index: 1;
+}
+
+/* The TEST pipeline as step cards, intake → screening → curation → listed. */
+.flow {
+  counter-reset: flow;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.flow-step {
+  counter-increment: flow;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+
+.flow-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.flow-num::before {
+  content: "Step " counter(flow, decimal-leading-zero) / "";
+}
+
+.flow-num {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.5rem;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-full);
+  background: var(--bg-raised);
+  font-family: var(--store-mono);
+  font-size: var(--micro);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg);
+}
+
+.flow-state {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--fg);
+}
+
+.flow-note {
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--fg-2);
+  text-wrap: pretty;
+}
+
+.flow-at {
+  margin-top: auto;
+  font-family: var(--store-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  color: var(--fg-2);
+  overflow-wrap: anywhere;
+}
+
+.dl {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-1) var(--space-6);
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.dl dt {
+  font-family: var(--store-mono);
+  font-size: var(--micro);
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+
+.dl dd {
+  margin: 0 0 var(--space-3);
+  color: var(--fg);
+  overflow-wrap: anywhere;
+}
+
+.dl code {
+  font-size: 0.75rem;
 }
 
 /*
  * --- responsive ---
  *
- * Every multi-column layout is declared single-column above and widened here. Tablet
- * (>=48rem) splits the hero and the detail page; desktop (>=64rem) adds the browse rail,
- * the sticky panels, and the footer's three-part band. Nothing below is a max-width
- * override, so a viewport narrower than a breakpoint always gets the simpler layout
- * rather than a squashed one.
+ * Every multi-column layout is declared single-column above and widened here. 36rem puts
+ * the masthead on one row, tablet (48rem) splits the hero, the facts and the detail page,
+ * and desktop (64rem) adds the browse rail, the sticky panels and the 72px band rhythm.
+ * Nothing below is a narrowing override, so a viewport under a breakpoint always gets the
+ * simpler layout rather than a squashed one.
  */
 
+@media (min-width: 36rem) {
+  .family-inner {
+    gap: var(--space-4);
+    min-height: 2.1875rem;
+    mask-image: none;
+  }
+
+  /* From 36rem there is room to set the family name off from the three surfaces. */
+  .family-brand {
+    padding-right: var(--space-4);
+    border-right: 1px solid var(--line);
+  }
+
+  .family-list {
+    gap: var(--space-4);
+  }
+
+  /* One 64px row, hairline included, well inside the 88px the anchor offset clears. */
+  .masthead-inner {
+    column-gap: var(--space-4);
+    flex-wrap: nowrap;
+    min-height: 63px;
+    padding-top: 0;
+  }
+
+  .nav {
+    flex: 0 1 auto;
+    margin-left: auto;
+    margin-right: -10px;
+  }
+
+  html body .nav a {
+    min-height: 2.25rem;
+  }
+
+  .hero-actions {
+    width: auto;
+  }
+
+  .hero-actions .button:first-child {
+    flex: 0 0 auto;
+  }
+
+  .footer-cols {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .footer-base {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+}
+
 @media (min-width: 48rem) {
+  /* The domain line joins the family bar once it and the three surfaces share a row. */
+  .family-domain {
+    display: block;
+  }
+
+  .masthead-inner {
+    column-gap: var(--space-6);
+  }
+
   .hero-inner {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 3rem;
-    padding-top: 2.75rem;
-    padding-bottom: 2.75rem;
+    gap: var(--space-8);
+  }
+
+  .hero-copy {
+    gap: var(--space-6);
+  }
+
+  .browse,
+  .results {
+    gap: var(--space-6);
+  }
+
+  .results-head {
+    padding-bottom: var(--space-4);
+  }
+
+  .lead-caption {
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .facts-list {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .facts-list .fact {
+    order: 0;
+    padding: var(--space-4) var(--space-6);
+    border-top: 0;
+  }
+
+  .facts-list .fact:first-child {
+    padding-left: 0;
+  }
+
+  .fact + .fact {
+    border-left: 1px solid var(--line-soft);
+  }
+
+  .cards {
+    gap: var(--grid-gap);
+  }
+
+  .pricing {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    padding: var(--space-8);
   }
 
   .detail-grid {
@@ -1483,67 +2626,91 @@ p {
     order: 1;
   }
 
+  .included {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
   .dl {
-    grid-template-columns: minmax(8rem, max-content) minmax(0, 1fr);
+    grid-template-columns: minmax(10rem, max-content) minmax(0, 1fr);
   }
 
   .dl dd {
     margin-bottom: 0;
   }
 
-  /*
-   * Between the two breakpoints the rail is full width, so its groups sit side by side
-   * rather than as one tall column of short lists. Desktop puts it back into a column.
-   */
-  .rail {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
-    align-items: start;
+  .flow {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
 
-  .rail-note {
-    grid-column: 1 / -1;
+  .footer-cols {
+    gap: var(--space-8);
   }
 
+  html body .footer-col a,
+  .footer-col li > span {
+    padding: 6px 0;
+  }
 }
 
 @media (min-width: 64rem) {
+  :root {
+    --section-pad: var(--space-18);
+  }
+
+  .hero {
+    --spot-at: 76% 50%;
+  }
+
   .hero-inner {
-    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    gap: 48px;
   }
 
   .browse {
     grid-template-columns: 216px minmax(0, 1fr);
-    gap: 2.125rem;
-    padding-top: 1.75rem;
-    padding-bottom: 5.5rem;
+    gap: var(--space-8);
   }
 
   /*
    * Both columns pin below the masthead, and both are bounded by the space that leaves.
    * A sticky box taller than its scrollport stops moving once its top reaches the offset,
    * so everything past the bottom edge would be unreachable at any short desktop height —
-   * on the detail page that is the end of the commerce notice and the whole "Works with"
-   * panel, and the deny state adds a refusal panel above them. Bounding the column and
-   * letting it scroll inside itself keeps the archive's sticky intent without hiding its
-   * own tail. `tabindex` is what makes that inner scroll reachable from the keyboard:
-   * neither column ends in a focusable element, so tabbing through the page alone would
-   * never bring the bottom into view.
+   * on the detail page that is the end of the purchase notice and the record, and the
+   * refused state adds a panel above them. Bounding the column and letting it scroll
+   * inside itself keeps the archive's sticky intent without hiding its own tail.
+   * `tabindex` is what makes that inner scroll reachable from the keyboard: neither
+   * column ends in a focusable element, so tabbing through the page alone would never
+   * bring the bottom into view.
    */
   .rail {
-    display: flex;
     flex-direction: column;
     /*
-     * Back to the base cross-axis behaviour: the 48rem rule's `align-items: start` is the
-     * only declaration of that property once this rule turns the rail back into a column,
-     * and in a column flex container it would size every group to its own content instead
-     * of to the 216px track `.browse` gives it.
+     * Back to a stretched column: the phone rail is a scrolling row of fixed-width cards,
+     * and in a column flex container a fixed basis would size every group to its own
+     * content instead of to the rail track `.browse` gives it.
      */
     align-items: stretch;
+    gap: var(--space-6);
+    padding-bottom: 0;
+    scroll-snap-type: none;
     position: sticky;
     top: var(--sticky-top);
     max-height: calc(100dvh - var(--sticky-top));
     overflow-y: auto;
+  }
+
+  .rail-group {
+    flex: none;
+    padding: 0;
+    background: none;
+    border: 0;
+    border-radius: 0;
+    gap: var(--space-3);
+  }
+
+  .rail-note {
+    flex: none;
+    padding: var(--space-4);
   }
 
   .detail-side {
@@ -1564,8 +2731,170 @@ p {
     flex-shrink: 0;
   }
 
+  .publish-head {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    gap: 48px;
+    align-items: center;
+  }
+
+  /* The rules read as a path: the heading and its notes on the left, the path on the right. */
+  .req-section {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: 48px;
+    align-items: start;
+  }
+
+  .flow {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .flow-step + .flow-step::before {
+    content: "→" / "";
+    position: absolute;
+    left: calc(-1 * var(--space-4));
+    top: var(--space-6);
+    width: var(--space-4);
+    text-align: center;
+    font-size: 0.8125rem;
+    line-height: 1;
+    color: var(--fg-2);
+  }
+
   .footer-inner {
-    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.6fr) minmax(0, 0.9fr);
-    gap: 2.75rem;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr);
+    gap: var(--space-11);
   }
 }
+
+/*
+ * WCAG 2.3.3. The archive defines a pulsing dot and a card rise with no reduced-motion
+ * alternative anywhere in its seven screens; this is the alternative. Every duration
+ * collapses, and the two hover transforms are withdrawn outright, so a state change
+ * still shows (the edge, the underline, the fill) without anything moving.
+ */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+
+  .card-link:hover .plate-media,
+  .lead:hover .plate-media,
+  .button:hover .glyph-nudge,
+  .slot-link:hover .glyph-nudge {
+    transform: none;
+  }
+}
+
+/* SAFETY: post-PR presentation only; values, GET controls and refusal keys are intact. */
+html :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* Sticky columns clip their contents; keep their own keyboard ring inside. */
+html :is(.rail, .detail-side):focus-visible {
+  outline-offset: -2px;
+}
+
+:is(.rail, .detail-side) {
+  scrollbar-color: var(--line-strong) var(--bg-panel);
+}
+
+.spec-row {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 8px 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.spec-row:last-child {
+  border-bottom: 0;
+}
+
+.spec-row dd {
+  font-size: 0.75rem;
+  line-height: 1.5;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+
+.included-row {
+  align-items: start;
+  gap: 4px 12px;
+  padding: 12px;
+}
+
+.included-check {
+  margin-top: 4px;
+  line-height: 1;
+}
+
+.included-value {
+  font-size: 0.75rem;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+.side-row {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.side-row:last-child {
+  border-bottom: 0;
+}
+
+.state {
+  min-width: 0;
+  gap: 12px;
+  overflow-wrap: anywhere;
+}
+
+.results > [role="status"] {
+  border-style: solid;
+  border-color: var(--line-strong);
+  border-left: 3px solid var(--accent);
+}
+
+.results > [role="status"] > p {
+  max-width: var(--measure);
+}
+
+.results form button:hover:not(:disabled) {
+  box-shadow: inset 0 0 0 2px var(--bg-base);
+}
+
+.results form :is(input, select):hover:not(:disabled) {
+  border-color: var(--fg);
+}
+
+.card:has(.card-link:hover),
+.card:focus-within {
+  border-color: var(--accent-line);
+}
+
+.card-link:active .plate {
+  border-color: var(--accent);
+}
+
+html .button:hover:not([aria-disabled="true"]):not(:disabled) {
+  box-shadow: inset 0 0 0 2px var(--bg-base);
+}
+
+html .button-quiet:hover:not([aria-disabled="true"]):not(:disabled) {
+  box-shadow: none;
+}
+
+/* Multiple real featured records, never fabricated collections. */
+.hero-plates { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); list-style: none; margin: 0; padding: 0; }
+@media (min-width: 620px) { .hero-plates { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }

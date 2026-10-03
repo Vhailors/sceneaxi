@@ -104,18 +104,45 @@ this same JSON encoding, so it cannot move.
 - The existing golden suites (`pnpm test:golden`) still pass on their checked-in
   digests, which is the real proof that digest bytes did not move.
 
-## Known residual (not owned by this ship)
+## Legacy compatibility and the Node-only conformance suite
 
-`@sceneaxi/schemas` still statically imports `node:fs` / `node:os` / `node:path`
-in one module: `src/profile-conformance-suite.ts`, a Node-only test harness that
-writes temp files. It is never on a session path — no kernel session module
-imports anything from it — but because the package barrel re-exports it, a
-browser bundler will externalize those specifiers (a warning, not a runtime
-failure, as long as the suite is never called).
+The original `computeDigest(tick, seed, entities)` helper is available from
+`@sceneaxi/engine-kernel`. It uses portable sha256 and preserves the original
+JSON key order, caller entity order, `id`/`x`/`y` projection, and `sha256:` prefix.
+It is not the modern rarity-aware session digest: rarity-bearing sessions still
+own their existing digest path. Fixed legacy vectors and no-rarity public
+session/save/replay assertions live in `test/legacy-digest.test.ts`.
 
-`browser-open-play.test.ts` pins that residual: the set of contract-package
-modules importing a Node builtin must stay exactly
-`["profile-conformance-suite.ts"]`, so it cannot silently grow. Moving the suite
-behind the existing `@sceneaxi/schemas/testing/*` subpath would remove it
-entirely; that is a schemas-owned follow-up, outside this ship's ownership of
-`packages/engine-kernel`.
+The browser/default schemas root retains `ConformanceCheckResult` and
+`ConformanceSuiteResult` as **type-only** exports, with no Node runtime edge.
+The **Node condition** restores the original synchronous **root runtime**
+`runProfileConformanceSuite` through `src/node-index.ts`, executing the complete
+existing kernel, document filesystem, evidence and authority checks. The explicit
+canonical Node subpath remains available:
+
+```ts
+import type { ConformanceSuiteResult } from "@sceneaxi/schemas";
+import { runProfileConformanceSuite } from "@sceneaxi/schemas/node/profile-conformance-suite";
+```
+
+The browser/default condition deliberately does not export this filesystem
+harness: the historical API required Node and cannot synchronously exercise
+file-backed authoring in a browser. This is conditional Node runtime recovery,
+not browser filesystem conformance, not type-only recovery, and not an async
+wrapper. Browser hosts continue using the portable contracts root. Bundlers must
+select the browser/default condition, not force Node resolution.
+
+`browser-open-play.test.ts` still pins the sole Node-bearing schemas source
+module to `profile-conformance-suite.ts`; that is a source inventory constraint,
+not a claim that the browser runtime graph reaches it. The root type-export
+and canonical Node-subpath policy are asserted in
+`packages/schemas/test/legacy-import-compat.test.ts` (LF-02/LF-05).
+
+Full input maps with the exact original eleven-action v1 shape are normalized
+by the schemas input registry, preserving controller bindings and adding modern
+defaults. Other truncations, wrong order, invalid bindings, and collisions with
+newly introduced defaults refuse. Desktop settings reads migrate these maps to
+minimal scoped overrides in memory, leaving original bytes untouched until an
+exact reviewed atomic rebind/reset commit. Modern default maps still use gamepad
+bindings with explicit deadzones; legacy controller bindings are not narrowed
+or silently converted.

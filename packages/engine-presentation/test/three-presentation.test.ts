@@ -47,6 +47,7 @@ function fixtureArtifact(): SculptQualityArtifact {
       transform: { ...transform, translation: [0, 1.25, 0] },
     },
   ] as const;
+
   const spec = {
     schemaVersion: SCULPT_SCHEMA_VERSION,
     kind: OBJECT_SCULPT_SPEC_KIND,
@@ -76,8 +77,10 @@ function fixtureArtifact(): SculptQualityArtifact {
       },
     ],
   };
+
   const emitDigest =
     "sha256:5398cb8d19235d0c393c9d56f3958bd9c2700a90d2c0a03689753663a1192e08";
+
   return {
     schemaVersion: SCULPT_SCHEMA_VERSION,
     kind: SCULPT_ARTIFACT_KIND,
@@ -119,6 +122,7 @@ function recordingSurface(drawCalls = 3) {
   const resizes: Array<readonly [number, number, number]> = [];
   let disposed = false;
   let captured: Uint8Array | null = null;
+
   const surface: ThreePresentationSurface = {
     kind: "webgl-canvas",
     resize(width, height, pixelRatio) {
@@ -127,6 +131,7 @@ function recordingSurface(drawCalls = 3) {
     draw(scene, camera) {
       draws.push({ scene, camera });
       captured = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
+
       return { drawCalls, pixelsDrawn: true };
     },
     capture() {
@@ -136,6 +141,7 @@ function recordingSurface(drawCalls = 3) {
       disposed = true;
     },
   };
+
   return {
     surface,
     draws,
@@ -146,16 +152,19 @@ function recordingSurface(drawCalls = 3) {
 
 function sceneOf(draw: RecordedDraw | undefined) {
   if (!(draw?.scene instanceof Object3D)) throw new Error("surface received no scene");
+
   return draw.scene;
 }
 
 describe("Three presentation core — sculpt backend", () => {
   it("draws mounted artifacts through the injected canvas surface", () => {
     const recorder = recordingSurface(4);
+
     const backend = createThreeSculptPresentationBackend({
       surface: recorder.surface,
       viewport: { width: 800, height: 600, pixelRatio: 2 },
     });
+
     const mounts = createSculptMountApi(backend);
     mounts.mount({ instanceId: "crate-one", artifact: fixtureArtifact() });
 
@@ -184,17 +193,20 @@ describe("Three presentation core — sculpt backend", () => {
 
   it("exposes orbit/zoom controls as plain numbers and frames mounted content", () => {
     const recorder = recordingSurface();
+
     const backend = createThreeSculptPresentationBackend({
       surface: recorder.surface,
       camera: { distance: 8, minDistance: 2, maxDistance: 20 },
     });
+
     const mounts = createSculptMountApi(backend);
     mounts.mount({ instanceId: "crate-one", artifact: fixtureArtifact() });
 
     const start = backend.camera.state();
     expect(start.distance).toBe(8);
     expect(start.position).toHaveLength(3);
-    for (const component of start.position) expect(typeof component).toBe("number");
+
+    for (const component of start.position) expect(isCameraCoordinate(component)).toBe(true);
 
     const orbited = backend.camera.orbit(Math.PI / 2, 0);
     expect(orbited.azimuthRadians).toBeCloseTo(start.azimuthRadians + Math.PI / 2, 10);
@@ -220,6 +232,7 @@ describe("Three presentation core — sculpt backend", () => {
         effects: ["bloom", "vignette"],
       },
     });
+
     const frame = core.draw();
     expect(frame.pixelsDrawn).toBe(false);
     expect(frame.environmentBackground).toBe("#0A0F1A");
@@ -379,7 +392,8 @@ describe("Three presentation core — sculpt backend", () => {
     // renderer would have silently succeeded.
     expect(() =>
       createThreeSculptPresentationBackend({
-        canvas: {
+        // SAFETY: this negative fixture intentionally supplies a canvas without WebGL; the test asserts refusal, never successful rendering.
+      canvas: {
           width: 320,
           height: 240,
           getContext: () => null,
@@ -393,7 +407,8 @@ describe("Three presentation core — sculpt backend", () => {
   it("validates camera options before allocating a WebGL surface", () => {
     expect(() =>
       createThreeSculptPresentationBackend({
-        canvas: {
+        // SAFETY: this negative fixture intentionally supplies a canvas without WebGL; the test asserts refusal, never successful rendering.
+      canvas: {
           width: 320,
           height: 240,
           getContext: () => null,
@@ -424,6 +439,7 @@ describe("Three presentation core — sculpt backend", () => {
   });
 
   it("refuses an invalid canvas and an invalid viewport", () => {
+    // SAFETY: deliberate invalid canvas fixture; the assertion below requires runtime refusal before allocation.
     expect(() => createThreeSculptPresentationBackend({ canvas: null as never })).toThrow(
       ThreePresentationError,
     );
@@ -435,15 +451,19 @@ describe("Three presentation core — sculpt backend", () => {
 
 describe("Three presentation core — camera input wiring", () => {
   it("orbits on pointer drag and zooms on wheel through an attached target", () => {
-    const listeners = new Map<string, (event: unknown) => void>();
+    type CameraEventFixture = { clientX?: number; clientY?: number; deltaY?: number };
+
+    const listeners = new Map<string, (event: CameraEventFixture) => void>();
+
     const target = {
-      addEventListener: vi.fn((type: string, listener: (event: unknown) => void) => {
+      addEventListener: vi.fn((type: string, listener: (event: CameraEventFixture) => void) => {
         listeners.set(type, listener);
       }),
       removeEventListener: vi.fn((type: string) => {
         listeners.delete(type);
       }),
     };
+
     const backend = createThreeSculptPresentationBackend({
       surface: recordingSurface().surface,
       camera: { distance: 10, minDistance: 1, maxDistance: 100 },
@@ -472,21 +492,28 @@ describe("Three presentation core — camera input wiring", () => {
 
   it("refuses an attach target that cannot register listeners", () => {
     const backend = createThreeSculptPresentationBackend();
+    // SAFETY: deliberate invalid listener target; this negative test requires attach to reject it.
     expect(() => backend.camera.attach({} as never)).toThrow(ThreePresentationError);
     backend.dispose();
   });
 
   it("mounts shared UV and decoded PNG payloads as an sRGB Three texture and disposes it", () => {
-    let scene: ThreeRenderableHandle | null = null;
+    type RecordedRender = { scene: ThreeRenderableHandle | null };
+
+    const rendered: RecordedRender = { scene: null };
+
     const backend = createThreeSculptPresentationBackend({
       surface: {
         kind: "headless",
         resize() {},
-        draw(value) { scene = value; return { drawCalls: 1, pixelsDrawn: false }; },
+        draw(value) { rendered.scene = value;
+
+ return { drawCalls: 1, pixelsDrawn: false }; },
         capture() { return null; },
         dispose() {},
       },
     });
+
     const meshPayload = {
       meshId: "textured-triangle",
       nodeIndex: 0,
@@ -499,10 +526,13 @@ describe("Three presentation core — camera input wiring", () => {
       roughness: 1,
       baseColorTexture: { width: 1, height: 1, rgba: [255, 32, 8, 255] },
     };
+
     backend.mountTriangleAsset({ instanceId: "textured", transform, meshes: [meshPayload], nodes: [{ node: 0, parent: null, matrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1], matrixAuthored: false, translation: [0, 0, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] }] });
     backend.playTriangleAnimation("textured", { name: "move", duration: 1, channels: [{ node: 0, path: "translation", interpolation: "LINEAR", times: [0, 1], values: [0, 0, 0, 2, 1, 0] }] }, 0.5);
     expect(backend.render(["textured"]).pixelsDrawn).toBe(false);
+    const scene = rendered.scene;
     expect(scene).toBeInstanceOf(Object3D);
+
     if (!(scene instanceof Object3D)) return;
     const animatedNode = scene.getObjectByName("gltf-node-0");
     expect(animatedNode?.position.toArray()).toEqual([1, 0.5, 0]);
@@ -510,12 +540,15 @@ describe("Three presentation core — camera input wiring", () => {
     expect(animatedNode?.position.toArray()).toEqual([0, 0, 0]);
     const mesh = scene.getObjectByName("textured-triangle");
     expect(mesh).toBeInstanceOf(Mesh);
+
     if (!(mesh instanceof Mesh)) return;
     expect(mesh.geometry.getAttribute("uv").array).toEqual(new Float32Array([0, 0, 1, 0, 0.5, 1]));
     expect(mesh.material).toBeInstanceOf(MeshStandardMaterial);
+
     if (!(mesh.material instanceof MeshStandardMaterial)) return;
     expect(mesh.material.map).toBeInstanceOf(DataTexture);
     const texture = mesh.material.map;
+
     if (!(texture instanceof DataTexture)) return;
     expect(texture.colorSpace).toBe("srgb");
     expect(texture.image.data).toEqual(new Uint8Array([255, 32, 8, 255]));
@@ -622,6 +655,7 @@ describe("Three Presentation Runtime (ADR 0002 seam)", () => {
         { id: "crate", x: 4, y: 2 },
       ],
     };
+
     const frozen = JSON.stringify(moved);
     runtime.present(moved, [], 0.5);
 
@@ -636,6 +670,7 @@ describe("Three Presentation Runtime (ADR 0002 seam)", () => {
     const recorder = recordingSurface();
     const runtime = createThreePresentationRuntime({ surface: recorder.surface });
     const first = open(manifest, { nowMs: () => 1_753_420_800_000 }).observe();
+
     const moved = {
       ...first,
       tick: first.tick + 1,
@@ -644,6 +679,7 @@ describe("Three Presentation Runtime (ADR 0002 seam)", () => {
         { id: "crate", x: 4, y: 2 },
       ],
     };
+
     runtime.mount();
     runtime.present(first, [], 1);
     runtime.present(moved, [], 0.25);
@@ -700,6 +736,7 @@ describe("Three Presentation Runtime (ADR 0002 seam)", () => {
       new ThreePresentationError("already-mounted", "Three presentation runtime is already mounted."),
     );
     expect(() => runtime.present(snapshot, [], 1.5)).toThrow(ThreePresentationError);
+    // SAFETY: intentionally incomplete snapshot in a negative test; present must reject it before rendering.
     expect(() => runtime.present({ tick: 0 } as never, [], 0)).toThrow(ThreePresentationError);
     expect(runtime.camera().state().distance).toBeGreaterThan(0);
     runtime.dispose();
@@ -722,25 +759,30 @@ describe("Three render loop", () => {
   function fakeScheduler() {
     const pending = new Map<number, (timeMs: number) => void>();
     let next = 1;
+
     const scheduler: FrameScheduler = {
       request(callback) {
         const handle = next;
         next += 1;
         pending.set(handle, callback);
+
         return handle;
       },
       cancel(handle) {
         pending.delete(handle);
       },
     };
+
     return {
       scheduler,
       pendingCount: () => pending.size,
       tick(timeMs: number) {
         const entry = [...pending.entries()][0];
+
         if (entry === undefined) return false;
         pending.delete(entry[0]);
         entry[1](timeMs);
+
         return true;
       },
     };
@@ -749,6 +791,7 @@ describe("Three render loop", () => {
   it("drives frames until stopped and reports elapsed time", () => {
     const host = fakeScheduler();
     const deltas: number[] = [];
+
     const loop = createThreeRenderLoop({
       scheduler: host.scheduler,
       onFrame: (deltaMs) => deltas.push(deltaMs),
@@ -773,10 +816,12 @@ describe("Three render loop", () => {
 
   it("stops cleanly when stopped from inside a frame", () => {
     const host = fakeScheduler();
+
     const loop = createThreeRenderLoop({
       scheduler: host.scheduler,
       onFrame: () => loop.stop(),
     });
+
     loop.start();
     host.tick(0);
 
@@ -787,12 +832,14 @@ describe("Three render loop", () => {
   it("stops and can restart after a frame callback throws", () => {
     const host = fakeScheduler();
     let shouldThrow = true;
+
     const loop = createThreeRenderLoop({
       scheduler: host.scheduler,
       onFrame: () => {
         if (shouldThrow) throw new Error("frame failed");
       },
     });
+
     loop.start();
 
     expect(() => host.tick(0)).toThrow("frame failed");
@@ -809,6 +856,7 @@ describe("Three render loop", () => {
   it("keeps one scheduled frame when restarted inside a callback", () => {
     const host = fakeScheduler();
     let restart = true;
+
     const loop = createThreeRenderLoop({
       scheduler: host.scheduler,
       onFrame: () => {
@@ -818,6 +866,7 @@ describe("Three render loop", () => {
         loop.start();
       },
     });
+
     loop.start();
 
     host.tick(0);
@@ -833,21 +882,26 @@ describe("Three render loop", () => {
   it("stops when scheduling the next frame fails", () => {
     let callback: ((timeMs: number) => void) | null = null;
     let requests = 0;
+
     const scheduler: FrameScheduler = {
       request(next) {
         requests += 1;
+
         if (requests > 1) throw new Error("schedule failed");
         callback = next;
+
         return requests;
       },
       cancel() {
         callback = null;
       },
     };
+
     const loop = createThreeRenderLoop({
       scheduler,
       onFrame: () => {},
     });
+
     loop.start();
 
     expect(() => callback?.(0)).toThrow("schedule failed");
@@ -864,3 +918,5 @@ describe("Three render loop", () => {
     );
   });
 });
+
+function isCameraCoordinate(value: unknown): value is number { return typeof value === "number"; }

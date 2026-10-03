@@ -96,6 +96,20 @@ credential shape. The exact ordering, replay behavior, refusal ownership, and ca
 translation of provider refusals are owned by
 [`docs/auth-credits.md`](../../docs/auth-credits.md#hosted-ai-sceneaxi139).
 
+Paid hosted answers use **bounded JSON value semantics**, not an arbitrary generic
+JavaScript response type. `snapshotHostedResponse()` reads data descriptors into an
+owned frozen snapshot and emits at most 262144 UTF-8 bytes, 32768 values and depth
+64. Map, Date, BigInt, undefined, accessors/toJSON functions, symbols, hidden
+properties, sparse/custom arrays, cycles, non-finite numbers, negative zero and
+PostgreSQL-jsonb-incompatible Unicode refuse without serialization hooks or a debit.
+An unsupported result leaves its reservation held: retry never dispatches the
+provider again. The store boundary validates both saves and response-ready recovery;
+recovery exposes validated `JsonValue`, never a cast back to a caller's arbitrary
+`Response`. Free BYO/admin calls retain their original provider value. Callers must
+validate their domain response shape before consuming a paid/recovered JSON answer.
+A retained response can resume a failed debit; an already committed debit replays
+its ledger evidence without inventing a provider answer.
+
 **An offer is a closed enumeration, not a value a caller hands in.** The primitives beneath
 `fixture-commerce.ts` take a `CatalogListing` value, which is right for a mechanism and wrong
 for an offer — a hand-built listing would transact against a SKU nobody published. No

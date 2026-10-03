@@ -6,36 +6,47 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+
 const docRelativePath = join("docs", "authoring-contracts.md");
+
 const fixturesRelativePath = join("packages", "schemas", "contracts", "authoring-jobs.fixtures.json");
+
 const schemaRelativePath = join("packages", "schemas", "contracts", "authoring-jobs.schema.json");
+
 const pluginRegistrySchemaRelativePath = join(
   "packages",
   "schemas",
   "contracts",
   "plugin-capability-registry.schema.json",
 );
+
 const pluginRegistrySeedRelativePath = join(
   "packages",
   "schemas",
   "contracts",
   "plugin-capability-registry.1.0.0.json",
 );
+
 const pluginsDocRelativePath = join("docs", "plugins.md");
+
 const schemasReadmeRelativePath = join("packages", "schemas", "README.md");
+
 const pluginManifestSchemaRelativePath = join(
   "packages",
   "schemas",
   "contracts",
   "plugin-manifest.schema.json",
 );
+
 const pluginManifestInertExampleRelativePath = join(
   "packages",
   "schemas",
   "contracts",
   "plugin-manifest.inert.example.json",
 );
+
 const checkerRelativePath = join("scripts", "check-contracts.mjs");
+
 const sourcePaths = [
   docRelativePath,
   fixturesRelativePath,
@@ -70,11 +81,13 @@ const sourcePaths = [
 
 const createSandbox = () => {
   const sandbox = mkdtempSync(join(root, ".check-contracts-test-"));
+
   for (const relativePath of sourcePaths) {
     const destination = join(sandbox, relativePath);
     mkdirSync(dirname(destination), { recursive: true });
     copyFileSync(join(root, relativePath), destination);
   }
+
   return sandbox;
 };
 
@@ -85,40 +98,58 @@ const runChecker = (sandbox) =>
   });
 
 const readDoc = (sandbox) => readFileSync(join(sandbox, docRelativePath), "utf8");
+
 const writeDoc = (sandbox, doc) => writeFileSync(join(sandbox, docRelativePath), doc);
+
 const readSchema = (sandbox) => JSON.parse(readFileSync(join(sandbox, schemaRelativePath), "utf8"));
+
 const readFixtures = (sandbox) => JSON.parse(readFileSync(join(sandbox, fixturesRelativePath), "utf8"));
+
 const writeFixtures = (sandbox, fixtures) =>
   writeFileSync(join(sandbox, fixturesRelativePath), `${JSON.stringify(fixtures, null, 2)}\n`);
+
 const writeRawJson = (sandbox, relativePath, value) =>
   writeFileSync(join(sandbox, relativePath), `${JSON.stringify(value)}\n`);
+
 const readPluginRegistrySeed = (sandbox) =>
   JSON.parse(readFileSync(join(sandbox, pluginRegistrySeedRelativePath), "utf8"));
+
 const writePluginRegistrySeed = (sandbox, seed) =>
   writeFileSync(join(sandbox, pluginRegistrySeedRelativePath), `${JSON.stringify(seed, null, 2)}\n`);
+
 const readPluginsDoc = (sandbox) => readFileSync(join(sandbox, pluginsDocRelativePath), "utf8");
+
 const writePluginsDoc = (sandbox, doc) => writeFileSync(join(sandbox, pluginsDocRelativePath), doc);
+
 const readSchemasReadme = (sandbox) =>
   readFileSync(join(sandbox, schemasReadmeRelativePath), "utf8");
+
 const writeSchemasReadme = (sandbox, doc) =>
   writeFileSync(join(sandbox, schemasReadmeRelativePath), doc);
+
 const readPluginManifestInertExample = (sandbox) =>
   JSON.parse(readFileSync(join(sandbox, pluginManifestInertExampleRelativePath), "utf8"));
+
 const writePluginManifestInertExample = (sandbox, example) =>
   writeFileSync(
     join(sandbox, pluginManifestInertExampleRelativePath),
     `${JSON.stringify(example, null, 2)}\n`,
   );
+
 const readPluginManifestSchema = (sandbox) =>
   JSON.parse(readFileSync(join(sandbox, pluginManifestSchemaRelativePath), "utf8"));
+
 const writePluginManifestSchema = (sandbox, schema) =>
   writeFileSync(
     join(sandbox, pluginManifestSchemaRelativePath),
     `${JSON.stringify(schema, null, 2)}\n`,
   );
+
 const registrySeedState =
   "Registry seed state: `registryVersion` is `1.0.0`; `entries` holds exactly 1 reviewed capability ID: `sceneaxi.sculpt.intake-source.v1`.";
+
 const inertExampleStart = "<!-- plugin-manifest:inert-example -->";
+
 const inertExampleEnd = "<!-- /plugin-manifest:inert-example -->";
 
 const cases = [
@@ -419,10 +450,12 @@ const cases = [
     name: "rejects docs/plugins.md inert example drift from the checked-in fixture",
     mutate(sandbox) {
       const doc = readPluginsDoc(sandbox);
+
       const drifted = doc.replace(
         '"pluginId": "dev.sceneaxi.example.noop"',
         '"pluginId": "dev.sceneaxi.example.docs-drift"',
       );
+
       writePluginsDoc(sandbox, drifted);
     },
     expectedOutput:

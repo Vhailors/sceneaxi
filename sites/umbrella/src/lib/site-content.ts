@@ -351,3 +351,91 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = Object.freeze([
 
 /** The shared early-access marker shown in the hero badge and the footer. */
 export const RELEASE_MARKER = "Early access · 0.0.0";
+
+/** One real Engine Desktop capture used as marketing media (decision DEC-05). */
+export interface ProofMedia {
+  readonly id: string;
+  /** The route that renders it: the home proof gallery or the `/engine` desktop section. */
+  readonly placement: "home" | "engine";
+  /** Served from `public/proof/`; the file is a pixel-identical crop of its capture. */
+  readonly src: string;
+  readonly width: number;
+  readonly height: number;
+  readonly alt: string;
+  /** The `docs/runnable-surfaces.md` level the capture evidences, or `null` for no level chip. */
+  readonly level: "startable" | "partial" | null;
+  readonly title: string;
+  readonly claim: string;
+  /** What the image may not be read as. Every image carries at least one chip. */
+  readonly limitation: readonly string[];
+  readonly proofHref: string | null;
+  readonly proofLabel: string | null;
+}
+
+/**
+ * The umbrella's only raster product imagery.
+ *
+ * Every string below is copied from the `PROOF_MEDIA` values block of
+ * `MEDIA-PROVENANCE.md`, which records each image's source capture, crop, hashes, and
+ * the INDEX line its caption relies on. A caption says what the capture shows and no
+ * more: the limitation chips are part of the record, not decoration, so no surface may
+ * render an image without them.
+ */
+export const PROOF_MEDIA: readonly ProofMedia[] = Object.freeze([
+  Object.freeze({
+    id: "desktop-run-viewport",
+    placement: "home" as const,
+    src: "/proof/desktop-run-viewport.png",
+    width: 920,
+    height: 575,
+    alt: "Engine Desktop viewport on the Linux developer build after one Play: crates and magenta objects on a grid, with the app's own playback and frame lines below.",
+    level: "partial" as const,
+    title: "Play runs the saved scene",
+    claim: "One kernel session opens over the composed scene; the viewport redraws and prints the engine's own frame line.",
+    limitation: Object.freeze(["Partial · one-shot Play", "Developer build · software rasterizer"]),
+    proofHref: "/engine",
+    proofLabel: "See the recorded Linux build",
+  }),
+  Object.freeze({
+    id: "desktop-change-review",
+    placement: "home" as const,
+    src: "/proof/desktop-change-review.png",
+    width: 920,
+    height: 575,
+    alt: "Change Review dock in Engine Desktop with one staged proposal: document scene.json, its base content hash, the proposed diff, and Reject and Accept buttons. The status line reads rarity proposal staged, review before Save.",
+    level: "startable" as const,
+    title: "Changes wait for review",
+    claim: "An edit is staged as one proposal with its base hash; Accept applies it whole, Reject discards it.",
+    limitation: Object.freeze(["Staged, not applied"]),
+    proofHref: "/docs",
+    proofLabel: "Read the propose and apply verbs",
+  }),
+  Object.freeze({
+    id: "desktop-local-build",
+    placement: "home" as const,
+    src: "/proof/desktop-local-build.png",
+    width: 670,
+    height: 419,
+    alt: "Engine Desktop inspector and assistant panels after a Local Build: the assistant artifact is selected in the inspector, and the result card lists read-only materials, a box collider and authoring-core settings.",
+    level: "startable" as const,
+    title: "Local Build without a provider",
+    claim: "The assistant's Local route compiles a typed sculpt and mounts it; materials and collider stay read-only.",
+    limitation: Object.freeze(["Local route · no provider"]),
+    proofHref: "/engine",
+    proofLabel: "See the recorded Linux build",
+  }),
+  Object.freeze({
+    id: "desktop-run-window",
+    placement: "engine" as const,
+    src: "/proof/desktop-run-window.png",
+    width: 1920,
+    height: 1200,
+    alt: "The whole Engine Desktop window on the Linux developer build, in the Run room after one Play: object list, viewport with crates, console output, and side panels showing the build's own refusal lines.",
+    level: null,
+    title: "Engine Desktop, Linux developer build, Run room after Play",
+    claim: "The whole developer-build window in the Run room after Play. Refusal lines visible in its panels are the build's own.",
+    limitation: Object.freeze(["Developer build", "Software rasterizer", "Linux only"]),
+    proofHref: null,
+    proofLabel: null,
+  }),
+]);

@@ -1,0 +1,930 @@
+{
+  "status": "NATIVE_FOUNDATION_MERGE_IN_PROGRESS_NO_HISTORY_STAMP",
+  "head": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+  "mergeHead": "16f312c61435e3d379a0e54525ac8115e35fee86",
+  "refs": [
+    {
+      "original": "refs/heads/bb/luna-repository-sceneaxi-sceneaxi-monorepo-read-thr_7svfbah827",
+      "owned": "refs/captured/heads/bb/luna-repository-sceneaxi-sceneaxi-monorepo-read-thr_7svfbah827",
+      "sha": "1e5ea6043946afbdddeac049ee01d7019dceec03"
+    },
+    {
+      "original": "refs/heads/bb/luna-repository-sceneaxi-sceneaxi-monorepo-read-thr_rww6kh273z",
+      "owned": "refs/captured/heads/bb/luna-repository-sceneaxi-sceneaxi-monorepo-read-thr_rww6kh273z",
+      "sha": "db8afa68c18e46b426e0c9ac2a846fc8a7d3fdba"
+    },
+    {
+      "original": "refs/heads/bb/opus-go-live-loop-2-for-sceneaxi-the-previous-lo-thr_cgpu4vbkib",
+      "owned": "refs/captured/heads/bb/opus-go-live-loop-2-for-sceneaxi-the-previous-lo-thr_cgpu4vbkib",
+      "sha": "45866fc43f1d45920bbbfc32274685d61cf061c9"
+    },
+    {
+      "original": "refs/heads/go-live-loop",
+      "owned": "refs/captured/heads/go-live-loop",
+      "sha": "4e532e2fbf43e9948741578ab6208a3277870405"
+    },
+    {
+      "original": "refs/heads/production-swarm",
+      "owned": "refs/captured/heads/production-swarm",
+      "sha": "4e532e2fbf43e9948741578ab6208a3277870405"
+    },
+    {
+      "original": "refs/heads/maestro/product-quality-loop-2",
+      "owned": "refs/captured/heads/maestro/product-quality-loop-2",
+      "sha": "fed05a766f1277b23ebf1757022067837d00621e"
+    },
+    {
+      "original": "refs/remotes/origin/maestro/product-quality-loop-2",
+      "owned": "refs/captured/remotes/origin/maestro/product-quality-loop-2",
+      "sha": "fed05a766f1277b23ebf1757022067837d00621e"
+    },
+    {
+      "original": "refs/heads/main",
+      "owned": "refs/captured/heads/main",
+      "sha": "5698f78d5bff24513ee53ec181d28bfebbdf0a83"
+    },
+    {
+      "original": "refs/heads/rescue/sceneaxi-release-dd77cc9",
+      "owned": "refs/captured/heads/rescue/sceneaxi-release-dd77cc9",
+      "sha": "e26f30bca3b4800cd7301606c7271244c1d6ea29"
+    },
+    {
+      "original": "refs/remotes/origin/rescue/sceneaxi-release-dd77cc9",
+      "owned": "refs/captured/remotes/origin/rescue/sceneaxi-release-dd77cc9",
+      "sha": "e26f30bca3b4800cd7301606c7271244c1d6ea29"
+    },
+    {
+      "original": "refs/remotes/origin/HEAD",
+      "owned": "refs/captured/remotes/origin/HEAD",
+      "sha": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16"
+    },
+    {
+      "original": "refs/remotes/origin/main",
+      "owned": "refs/captured/remotes/origin/main",
+      "sha": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16"
+    },
+    {
+      "original": "refs/remotes/origin/cursor/setup-dev-environment-e97a",
+      "owned": "refs/captured/remotes/origin/cursor/setup-dev-environment-e97a",
+      "sha": "1d2fe8aa089772c87271580deb158d87dd68cb64"
+    },
+    {
+      "original": "refs/remotes/origin/engine-redesign",
+      "owned": "refs/captured/remotes/origin/engine-redesign",
+      "sha": "907d1d5db146189b0e50db49450feb3d635abc72"
+    },
+    {
+      "original": "refs/remotes/origin/fm/sceneaxi-contracts-e1e2-v1",
+      "owned": "refs/captured/remotes/origin/fm/sceneaxi-contracts-e1e2-v1",
+      "sha": "60cd238d0fafa427c0bd1b363f6cc21e1a885727"
+    },
+    {
+      "original": "refs/remotes/origin/fm/sceneaxi-docs-adr-v1",
+      "owned": "refs/captured/remotes/origin/fm/sceneaxi-docs-adr-v1",
+      "sha": "d1a676ea53bd4e8f368f027fb80f6b0097ab6aa3"
+    },
+    {
+      "original": "refs/remotes/origin/fm/sceneaxi-docs-program-v1",
+      "owned": "refs/captured/remotes/origin/fm/sceneaxi-docs-program-v1",
+      "sha": "9b2fd5d6ff24f08855c2669c011d7aba79e0211b"
+    },
+    {
+      "original": "refs/remotes/origin/fm/sceneaxi-full-editor-asset-pipeline-20260812",
+      "owned": "refs/captured/remotes/origin/fm/sceneaxi-full-editor-asset-pipeline-20260812",
+      "sha": "62e84cbee60471bd2cdd5f2e0e26a8c45f598928"
+    },
+    {
+      "original": "refs/remotes/origin/fm/sceneaxi-full-editor-contained-git-20260812",
+      "owned": "refs/captured/remotes/origin/fm/sceneaxi-full-editor-contained-git-20260812",
+      "sha": "f1b468fa6b319ffede42f6d8d6bb40480818c08e"
+    },
+    {
+      "original": "refs/remotes/origin/fm/sceneaxi-full-editor-input-actions-20260812",
+      "owned": "refs/captured/remotes/origin/fm/sceneaxi-full-editor-input-actions-20260812",
+      "sha": "740c7e950cf5eb6528e6629ee6f7041ef50dde5c"
+    },
+    {
+      "original": "refs/remotes/origin/fm/sceneaxi-wave2-catalogs-v1",
+      "owned": "refs/captured/remotes/origin/fm/sceneaxi-wave2-catalogs-v1",
+      "sha": "21c135b3eb671a79c37444513fe775dc5ff6cefd"
+    },
+    {
+      "original": "refs/remotes/origin/fm/sceneaxi-wave2-cli-v1",
+      "owned": "refs/captured/remotes/origin/fm/sceneaxi-wave2-cli-v1",
+      "sha": "1471150caeda3db7624f206753c566851182c688"
+    },
+    {
+      "original": "refs/remotes/origin/fm/sceneaxi-wave2-kernel-v1",
+      "owned": "refs/captured/remotes/origin/fm/sceneaxi-wave2-kernel-v1",
+      "sha": "136fee1103d650baf3dc40ebbc4fc3d3f6fb2f45"
+    },
+    {
+      "original": "refs/remotes/origin/fm/sceneaxi-wave3-authoring-v1",
+      "owned": "refs/captured/remotes/origin/fm/sceneaxi-wave3-authoring-v1",
+      "sha": "ac1440670a8ad4eb8532cb20b4b85a9fbd0458df"
+    },
+    {
+      "original": "refs/remotes/origin/fm/sceneaxi-wave3-heldkeys-v1",
+      "owned": "refs/captured/remotes/origin/fm/sceneaxi-wave3-heldkeys-v1",
+      "sha": "7e7767a44c7ab20942b93469295c97aa972ba54d"
+    },
+    {
+      "original": "refs/remotes/origin/fm/sceneaxi-wave3-proof0-v1",
+      "owned": "refs/captured/remotes/origin/fm/sceneaxi-wave3-proof0-v1",
+      "sha": "d53d180beccfd11e1178fbc9abf3b08282d2ed44"
+    },
+    {
+      "original": "refs/remotes/origin/fm/sceneaxi-wave4-profile-v1",
+      "owned": "refs/captured/remotes/origin/fm/sceneaxi-wave4-profile-v1",
+      "sha": "07f0a3e8b27d2c6deb76856c3376243df490b822"
+    },
+    {
+      "original": "refs/remotes/origin/fm/sceneaxi-wave4-proof1-v1",
+      "owned": "refs/captured/remotes/origin/fm/sceneaxi-wave4-proof1-v1",
+      "sha": "b63dc23d61e883332f85d272c980a404530b70a7"
+    },
+    {
+      "original": "refs/remotes/origin/fm/sceneaxi-wave4-shells-v1",
+      "owned": "refs/captured/remotes/origin/fm/sceneaxi-wave4-shells-v1",
+      "sha": "8729660a5cdaed2e5ced97124ac85311f3cef7ba"
+    },
+    {
+      "original": "refs/remotes/origin/fm/sceneaxi-wave5-proof15-v1",
+      "owned": "refs/captured/remotes/origin/fm/sceneaxi-wave5-proof15-v1",
+      "sha": "16f312c61435e3d379a0e54525ac8115e35fee86"
+    },
+    {
+      "original": "refs/remotes/origin/maestro/phase-01-toolchain",
+      "owned": "refs/captured/remotes/origin/maestro/phase-01-toolchain",
+      "sha": "89c7aa5e9fbaa7e31b9c7e879841684651426d07"
+    },
+    {
+      "original": "refs/remotes/origin/maestro/phase-02-audit-baseline",
+      "owned": "refs/captured/remotes/origin/maestro/phase-02-audit-baseline",
+      "sha": "94a4503050def7641f78faa24ae756497ceb3292"
+    },
+    {
+      "original": "refs/remotes/origin/maintenance/checkpoint-20260929",
+      "owned": "refs/captured/remotes/origin/maintenance/checkpoint-20260929",
+      "sha": "23413eb7889ad2cdb41ab8d729c32c7512917394"
+    },
+    {
+      "original": "refs/remotes/origin/production-swarm",
+      "owned": "refs/captured/remotes/origin/production-swarm",
+      "sha": "346933c105305224d575bf9319256301c1eeabfa"
+    }
+  ],
+  "tips": [
+    {
+      "sha": "1e5ea6043946afbdddeac049ee01d7019dceec03",
+      "refs": [
+        "refs/heads/bb/luna-repository-sceneaxi-sceneaxi-monorepo-read-thr_7svfbah827"
+      ],
+      "alreadyInMain": false,
+      "coveredByFrontiers": [
+        "1e5ea6043946afbdddeac049ee01d7019dceec03"
+      ],
+      "nativeCandidateAncestor": false,
+      "handling": "CAPTURED_NORMAL_MERGE_PENDING_SEMANTIC_RESOLUTION",
+      "actualAncestorOfHead": false
+    },
+    {
+      "sha": "db8afa68c18e46b426e0c9ac2a846fc8a7d3fdba",
+      "refs": [
+        "refs/heads/bb/luna-repository-sceneaxi-sceneaxi-monorepo-read-thr_rww6kh273z"
+      ],
+      "alreadyInMain": false,
+      "coveredByFrontiers": [
+        "db8afa68c18e46b426e0c9ac2a846fc8a7d3fdba"
+      ],
+      "nativeCandidateAncestor": false,
+      "handling": "CAPTURED_NORMAL_MERGE_PENDING_SEMANTIC_RESOLUTION",
+      "actualAncestorOfHead": false
+    },
+    {
+      "sha": "45866fc43f1d45920bbbfc32274685d61cf061c9",
+      "refs": [
+        "refs/heads/bb/opus-go-live-loop-2-for-sceneaxi-the-previous-lo-thr_cgpu4vbkib"
+      ],
+      "alreadyInMain": true,
+      "coveredByFrontiers": [
+        "23413eb7889ad2cdb41ab8d729c32c7512917394",
+        "346933c105305224d575bf9319256301c1eeabfa"
+      ],
+      "nativeCandidateAncestor": true,
+      "handling": "CURRENT_MAIN_ANCESTOR",
+      "actualAncestorOfHead": true
+    },
+    {
+      "sha": "4e532e2fbf43e9948741578ab6208a3277870405",
+      "refs": [
+        "refs/heads/go-live-loop",
+        "refs/heads/production-swarm"
+      ],
+      "alreadyInMain": true,
+      "coveredByFrontiers": [
+        "23413eb7889ad2cdb41ab8d729c32c7512917394",
+        "346933c105305224d575bf9319256301c1eeabfa"
+      ],
+      "nativeCandidateAncestor": true,
+      "handling": "CURRENT_MAIN_ANCESTOR",
+      "actualAncestorOfHead": true
+    },
+    {
+      "sha": "fed05a766f1277b23ebf1757022067837d00621e",
+      "refs": [
+        "refs/heads/maestro/product-quality-loop-2",
+        "refs/remotes/origin/maestro/product-quality-loop-2"
+      ],
+      "alreadyInMain": false,
+      "coveredByFrontiers": [
+        "fed05a766f1277b23ebf1757022067837d00621e"
+      ],
+      "nativeCandidateAncestor": false,
+      "handling": "CAPTURED_NORMAL_MERGE_PENDING_SEMANTIC_RESOLUTION",
+      "actualAncestorOfHead": false
+    },
+    {
+      "sha": "5698f78d5bff24513ee53ec181d28bfebbdf0a83",
+      "refs": [
+        "refs/heads/main"
+      ],
+      "alreadyInMain": true,
+      "coveredByFrontiers": [
+        "1e5ea6043946afbdddeac049ee01d7019dceec03",
+        "db8afa68c18e46b426e0c9ac2a846fc8a7d3fdba",
+        "23413eb7889ad2cdb41ab8d729c32c7512917394",
+        "346933c105305224d575bf9319256301c1eeabfa"
+      ],
+      "nativeCandidateAncestor": true,
+      "handling": "CURRENT_MAIN_ANCESTOR",
+      "actualAncestorOfHead": true
+    },
+    {
+      "sha": "e26f30bca3b4800cd7301606c7271244c1d6ea29",
+      "refs": [
+        "refs/heads/rescue/sceneaxi-release-dd77cc9",
+        "refs/remotes/origin/rescue/sceneaxi-release-dd77cc9"
+      ],
+      "alreadyInMain": true,
+      "coveredByFrontiers": [],
+      "nativeCandidateAncestor": true,
+      "handling": "CURRENT_MAIN_ANCESTOR",
+      "actualAncestorOfHead": true
+    },
+    {
+      "sha": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+      "refs": [
+        "refs/remotes/origin/HEAD",
+        "refs/remotes/origin/main"
+      ],
+      "alreadyInMain": true,
+      "coveredByFrontiers": [],
+      "nativeCandidateAncestor": true,
+      "handling": "CURRENT_MAIN_ANCESTOR",
+      "actualAncestorOfHead": true
+    },
+    {
+      "sha": "1d2fe8aa089772c87271580deb158d87dd68cb64",
+      "refs": [
+        "refs/remotes/origin/cursor/setup-dev-environment-e97a"
+      ],
+      "alreadyInMain": false,
+      "coveredByFrontiers": [
+        "1d2fe8aa089772c87271580deb158d87dd68cb64"
+      ],
+      "nativeCandidateAncestor": false,
+      "handling": "CAPTURED_NORMAL_MERGE_PENDING_SEMANTIC_RESOLUTION",
+      "actualAncestorOfHead": false
+    },
+    {
+      "sha": "907d1d5db146189b0e50db49450feb3d635abc72",
+      "refs": [
+        "refs/remotes/origin/engine-redesign"
+      ],
+      "alreadyInMain": true,
+      "coveredByFrontiers": [],
+      "nativeCandidateAncestor": true,
+      "handling": "CURRENT_MAIN_ANCESTOR",
+      "actualAncestorOfHead": true
+    },
+    {
+      "sha": "60cd238d0fafa427c0bd1b363f6cc21e1a885727",
+      "refs": [
+        "refs/remotes/origin/fm/sceneaxi-contracts-e1e2-v1"
+      ],
+      "alreadyInMain": false,
+      "coveredByFrontiers": [
+        "16f312c61435e3d379a0e54525ac8115e35fee86"
+      ],
+      "nativeCandidateAncestor": false,
+      "handling": "CAPTURED_NORMAL_MERGE_PENDING_SEMANTIC_RESOLUTION",
+      "actualAncestorOfHead": false
+    },
+    {
+      "sha": "d1a676ea53bd4e8f368f027fb80f6b0097ab6aa3",
+      "refs": [
+        "refs/remotes/origin/fm/sceneaxi-docs-adr-v1"
+      ],
+      "alreadyInMain": false,
+      "coveredByFrontiers": [
+        "16f312c61435e3d379a0e54525ac8115e35fee86"
+      ],
+      "nativeCandidateAncestor": false,
+      "handling": "CAPTURED_NORMAL_MERGE_PENDING_SEMANTIC_RESOLUTION",
+      "actualAncestorOfHead": false
+    },
+    {
+      "sha": "9b2fd5d6ff24f08855c2669c011d7aba79e0211b",
+      "refs": [
+        "refs/remotes/origin/fm/sceneaxi-docs-program-v1"
+      ],
+      "alreadyInMain": false,
+      "coveredByFrontiers": [
+        "16f312c61435e3d379a0e54525ac8115e35fee86"
+      ],
+      "nativeCandidateAncestor": false,
+      "handling": "CAPTURED_NORMAL_MERGE_PENDING_SEMANTIC_RESOLUTION",
+      "actualAncestorOfHead": false
+    },
+    {
+      "sha": "62e84cbee60471bd2cdd5f2e0e26a8c45f598928",
+      "refs": [
+        "refs/remotes/origin/fm/sceneaxi-full-editor-asset-pipeline-20260812"
+      ],
+      "alreadyInMain": false,
+      "coveredByFrontiers": [
+        "62e84cbee60471bd2cdd5f2e0e26a8c45f598928"
+      ],
+      "nativeCandidateAncestor": false,
+      "handling": "CAPTURED_NORMAL_MERGE_PENDING_SEMANTIC_RESOLUTION",
+      "actualAncestorOfHead": false
+    },
+    {
+      "sha": "f1b468fa6b319ffede42f6d8d6bb40480818c08e",
+      "refs": [
+        "refs/remotes/origin/fm/sceneaxi-full-editor-contained-git-20260812"
+      ],
+      "alreadyInMain": false,
+      "coveredByFrontiers": [
+        "f1b468fa6b319ffede42f6d8d6bb40480818c08e"
+      ],
+      "nativeCandidateAncestor": false,
+      "handling": "CAPTURED_NORMAL_MERGE_PENDING_SEMANTIC_RESOLUTION",
+      "actualAncestorOfHead": false
+    },
+    {
+      "sha": "740c7e950cf5eb6528e6629ee6f7041ef50dde5c",
+      "refs": [
+        "refs/remotes/origin/fm/sceneaxi-full-editor-input-actions-20260812"
+      ],
+      "alreadyInMain": false,
+      "coveredByFrontiers": [
+        "740c7e950cf5eb6528e6629ee6f7041ef50dde5c"
+      ],
+      "nativeCandidateAncestor": false,
+      "handling": "CAPTURED_NORMAL_MERGE_PENDING_SEMANTIC_RESOLUTION",
+      "actualAncestorOfHead": false
+    },
+    {
+      "sha": "21c135b3eb671a79c37444513fe775dc5ff6cefd",
+      "refs": [
+        "refs/remotes/origin/fm/sceneaxi-wave2-catalogs-v1"
+      ],
+      "alreadyInMain": false,
+      "coveredByFrontiers": [
+        "16f312c61435e3d379a0e54525ac8115e35fee86"
+      ],
+      "nativeCandidateAncestor": false,
+      "handling": "CAPTURED_NORMAL_MERGE_PENDING_SEMANTIC_RESOLUTION",
+      "actualAncestorOfHead": false
+    },
+    {
+      "sha": "1471150caeda3db7624f206753c566851182c688",
+      "refs": [
+        "refs/remotes/origin/fm/sceneaxi-wave2-cli-v1"
+      ],
+      "alreadyInMain": false,
+      "coveredByFrontiers": [
+        "16f312c61435e3d379a0e54525ac8115e35fee86"
+      ],
+      "nativeCandidateAncestor": false,
+      "handling": "CAPTURED_NORMAL_MERGE_PENDING_SEMANTIC_RESOLUTION",
+      "actualAncestorOfHead": false
+    },
+    {
+      "sha": "136fee1103d650baf3dc40ebbc4fc3d3f6fb2f45",
+      "refs": [
+        "refs/remotes/origin/fm/sceneaxi-wave2-kernel-v1"
+      ],
+      "alreadyInMain": false,
+      "coveredByFrontiers": [
+        "16f312c61435e3d379a0e54525ac8115e35fee86"
+      ],
+      "nativeCandidateAncestor": false,
+      "handling": "CAPTURED_NORMAL_MERGE_PENDING_SEMANTIC_RESOLUTION",
+      "actualAncestorOfHead": false
+    },
+    {
+      "sha": "ac1440670a8ad4eb8532cb20b4b85a9fbd0458df",
+      "refs": [
+        "refs/remotes/origin/fm/sceneaxi-wave3-authoring-v1"
+      ],
+      "alreadyInMain": false,
+      "coveredByFrontiers": [
+        "16f312c61435e3d379a0e54525ac8115e35fee86"
+      ],
+      "nativeCandidateAncestor": false,
+      "handling": "CAPTURED_NORMAL_MERGE_PENDING_SEMANTIC_RESOLUTION",
+      "actualAncestorOfHead": false
+    },
+    {
+      "sha": "7e7767a44c7ab20942b93469295c97aa972ba54d",
+      "refs": [
+        "refs/remotes/origin/fm/sceneaxi-wave3-heldkeys-v1"
+      ],
+      "alreadyInMain": false,
+      "coveredByFrontiers": [
+        "16f312c61435e3d379a0e54525ac8115e35fee86"
+      ],
+      "nativeCandidateAncestor": false,
+      "handling": "CAPTURED_NORMAL_MERGE_PENDING_SEMANTIC_RESOLUTION",
+      "actualAncestorOfHead": false
+    },
+    {
+      "sha": "d53d180beccfd11e1178fbc9abf3b08282d2ed44",
+      "refs": [
+        "refs/remotes/origin/fm/sceneaxi-wave3-proof0-v1"
+      ],
+      "alreadyInMain": false,
+      "coveredByFrontiers": [
+        "16f312c61435e3d379a0e54525ac8115e35fee86"
+      ],
+      "nativeCandidateAncestor": false,
+      "handling": "CAPTURED_NORMAL_MERGE_PENDING_SEMANTIC_RESOLUTION",
+      "actualAncestorOfHead": false
+    },
+    {
+      "sha": "07f0a3e8b27d2c6deb76856c3376243df490b822",
+      "refs": [
+        "refs/remotes/origin/fm/sceneaxi-wave4-profile-v1"
+      ],
+      "alreadyInMain": false,
+      "coveredByFrontiers": [
+        "16f312c61435e3d379a0e54525ac8115e35fee86"
+      ],
+      "nativeCandidateAncestor": false,
+      "handling": "CAPTURED_NORMAL_MERGE_PENDING_SEMANTIC_RESOLUTION",
+      "actualAncestorOfHead": false
+    },
+    {
+      "sha": "b63dc23d61e883332f85d272c980a404530b70a7",
+      "refs": [
+        "refs/remotes/origin/fm/sceneaxi-wave4-proof1-v1"
+      ],
+      "alreadyInMain": false,
+      "coveredByFrontiers": [
+        "16f312c61435e3d379a0e54525ac8115e35fee86"
+      ],
+      "nativeCandidateAncestor": false,
+      "handling": "CAPTURED_NORMAL_MERGE_PENDING_SEMANTIC_RESOLUTION",
+      "actualAncestorOfHead": false
+    },
+    {
+      "sha": "8729660a5cdaed2e5ced97124ac85311f3cef7ba",
+      "refs": [
+        "refs/remotes/origin/fm/sceneaxi-wave4-shells-v1"
+      ],
+      "alreadyInMain": false,
+      "coveredByFrontiers": [
+        "16f312c61435e3d379a0e54525ac8115e35fee86"
+      ],
+      "nativeCandidateAncestor": false,
+      "handling": "CAPTURED_NORMAL_MERGE_PENDING_SEMANTIC_RESOLUTION",
+      "actualAncestorOfHead": false
+    },
+    {
+      "sha": "16f312c61435e3d379a0e54525ac8115e35fee86",
+      "refs": [
+        "refs/remotes/origin/fm/sceneaxi-wave5-proof15-v1"
+      ],
+      "alreadyInMain": false,
+      "coveredByFrontiers": [
+        "16f312c61435e3d379a0e54525ac8115e35fee86"
+      ],
+      "nativeCandidateAncestor": false,
+      "handling": "CAPTURED_NORMAL_MERGE_PENDING_SEMANTIC_RESOLUTION",
+      "actualAncestorOfHead": false
+    },
+    {
+      "sha": "89c7aa5e9fbaa7e31b9c7e879841684651426d07",
+      "refs": [
+        "refs/remotes/origin/maestro/phase-01-toolchain"
+      ],
+      "alreadyInMain": false,
+      "coveredByFrontiers": [
+        "94a4503050def7641f78faa24ae756497ceb3292"
+      ],
+      "nativeCandidateAncestor": false,
+      "handling": "CAPTURED_NORMAL_MERGE_PENDING_SEMANTIC_RESOLUTION",
+      "actualAncestorOfHead": false
+    },
+    {
+      "sha": "94a4503050def7641f78faa24ae756497ceb3292",
+      "refs": [
+        "refs/remotes/origin/maestro/phase-02-audit-baseline"
+      ],
+      "alreadyInMain": false,
+      "coveredByFrontiers": [
+        "94a4503050def7641f78faa24ae756497ceb3292"
+      ],
+      "nativeCandidateAncestor": false,
+      "handling": "CAPTURED_NORMAL_MERGE_PENDING_SEMANTIC_RESOLUTION",
+      "actualAncestorOfHead": false
+    },
+    {
+      "sha": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+      "refs": [
+        "refs/remotes/origin/maintenance/checkpoint-20260929"
+      ],
+      "alreadyInMain": false,
+      "coveredByFrontiers": [
+        "23413eb7889ad2cdb41ab8d729c32c7512917394"
+      ],
+      "nativeCandidateAncestor": false,
+      "handling": "CAPTURED_NORMAL_MERGE_PENDING_SEMANTIC_RESOLUTION",
+      "actualAncestorOfHead": false
+    },
+    {
+      "sha": "346933c105305224d575bf9319256301c1eeabfa",
+      "refs": [
+        "refs/remotes/origin/production-swarm"
+      ],
+      "alreadyInMain": false,
+      "coveredByFrontiers": [
+        "346933c105305224d575bf9319256301c1eeabfa"
+      ],
+      "nativeCandidateAncestor": false,
+      "handling": "CAPTURED_NORMAL_MERGE_PENDING_SEMANTIC_RESOLUTION",
+      "actualAncestorOfHead": false
+    }
+  ],
+  "frontiers": [
+    {
+      "sha": "1e5ea6043946afbdddeac049ee01d7019dceec03",
+      "refs": [
+        "refs/heads/bb/luna-repository-sceneaxi-sceneaxi-monorepo-read-thr_7svfbah827"
+      ],
+      "headSubject": "fix: expand packaged Linux editor smoke coverage",
+      "uniqueCommits": 1,
+      "changedPaths": 5,
+      "dryMergeExit": 1,
+      "dryTree": "5223a44c4456d7aaaaf5268501f346c70913cd05",
+      "conflicts": [
+        "desktop/linux/scripts/smoke.mjs",
+        "desktop/linux/src/electron/main.ts",
+        "docs/full-editor-v1-capability-matrix.md"
+      ]
+    },
+    {
+      "sha": "db8afa68c18e46b426e0c9ac2a846fc8a7d3fdba",
+      "refs": [
+        "refs/heads/bb/luna-repository-sceneaxi-sceneaxi-monorepo-read-thr_rww6kh273z"
+      ],
+      "headSubject": "feat: play ingested audio assets in desktop sessions",
+      "uniqueCommits": 1,
+      "changedPaths": 13,
+      "dryMergeExit": 1,
+      "dryTree": "64d1e4ff4f419e33d85e16588dd05969b501bd2a",
+      "conflicts": [
+        "desktop/linux/src/lib/desktop-scene.ts",
+        "desktop/linux/src/renderer/viewport.ts",
+        "docs/asset-ingestion.md",
+        "docs/full-editor-v1-capability-matrix.md",
+        "packages/engine-presentation/src/audio-playback.ts",
+        "packages/engine-presentation/src/index.ts",
+        "tests/e2e/desktop-linux-bridge-golden.test.ts"
+      ]
+    },
+    {
+      "sha": "fed05a766f1277b23ebf1757022067837d00621e",
+      "refs": [
+        "refs/heads/maestro/product-quality-loop-2",
+        "refs/remotes/origin/maestro/product-quality-loop-2"
+      ],
+      "headSubject": "feat(desktop): tighten scene-package contracts and product-quality loop",
+      "uniqueCommits": 1,
+      "changedPaths": 24,
+      "dryMergeExit": 1,
+      "dryTree": "64194c35e8ea34c965fd403a4a24830af16b8971",
+      "conflicts": [
+        "docs/audits/initiation/requirements.json",
+        "docs/runnable-surfaces.md",
+        "package.json",
+        "scripts/check-contracts.test.mjs"
+      ]
+    },
+    {
+      "sha": "1d2fe8aa089772c87271580deb158d87dd68cb64",
+      "refs": [
+        "refs/remotes/origin/cursor/setup-dev-environment-e97a"
+      ],
+      "headSubject": "docs(agents): add Cursor Cloud dev environment setup notes",
+      "uniqueCommits": 1,
+      "changedPaths": 1,
+      "dryMergeExit": 1,
+      "dryTree": "f60de6e0c6237b71c6b5cb94ef056e3207d75d17",
+      "conflicts": [
+        "AGENTS.md"
+      ]
+    },
+    {
+      "sha": "62e84cbee60471bd2cdd5f2e0e26a8c45f598928",
+      "refs": [
+        "refs/remotes/origin/fm/sceneaxi-full-editor-asset-pipeline-20260812"
+      ],
+      "headSubject": "feat: add first-class asset pipeline",
+      "uniqueCommits": 1,
+      "changedPaths": 25,
+      "dryMergeExit": 1,
+      "dryTree": "f8d822c7ae676219a038c2434f600576ac59b682",
+      "conflicts": [
+        "desktop/linux/src/electron/main.ts",
+        "desktop/linux/src/lib/bridge.ts",
+        "desktop/linux/src/lib/desktop-scene.ts",
+        "docs/asset-ingestion.md",
+        "docs/full-editor-v1-capability-matrix.md",
+        "docs/runnable-surfaces.md",
+        "package.json",
+        "packages/importers/src/contained-gltf.ts",
+        "packages/importers/src/index.ts",
+        "tests/e2e/asset-pipeline-golden.test.ts"
+      ]
+    },
+    {
+      "sha": "f1b468fa6b319ffede42f6d8d6bb40480818c08e",
+      "refs": [
+        "refs/remotes/origin/fm/sceneaxi-full-editor-contained-git-20260812"
+      ],
+      "headSubject": "no-mistakes(review): Harden contained Git evidence and atomic publication",
+      "uniqueCommits": 17,
+      "changedPaths": 45,
+      "dryMergeExit": 1,
+      "dryTree": "bfec051cec83fa5e352f7e58a606f3de0289df81",
+      "conflicts": [
+        "apps/desktop-shell/src/chrome.ts",
+        "apps/desktop-shell/src/session.ts",
+        "desktop/linux/src/electron/main.ts",
+        "desktop/linux/src/lib/bridge.ts",
+        "desktop/linux/src/lib/local-rpc.ts",
+        "desktop/linux/tsconfig.json",
+        "docs/desktop-local-bridge.md",
+        "docs/full-editor-v1-capability-matrix.md",
+        "packages/authoring-core/internal/project-git-authority.ts",
+        "packages/authoring-core/src/project-git.ts",
+        "packages/authoring-core/test/project-git.test.ts",
+        "packages/schemas/contracts/desktop-local-bridge.schema.json",
+        "packages/schemas/contracts/editor-command-registry.schema.json",
+        "packages/schemas/contracts/project-manifest.schema.json",
+        "packages/schemas/src/desktop-local-bridge.ts",
+        "packages/schemas/src/editor-command-registry.ts",
+        "packages/schemas/test/desktop-local-bridge.test.ts",
+        "tests/e2e/desktop-command-interactions-golden.test.ts"
+      ]
+    },
+    {
+      "sha": "740c7e950cf5eb6528e6629ee6f7041ef50dde5c",
+      "refs": [
+        "refs/remotes/origin/fm/sceneaxi-full-editor-input-actions-20260812"
+      ],
+      "headSubject": "feat: add unified input actions",
+      "uniqueCommits": 1,
+      "changedPaths": 32,
+      "dryMergeExit": 1,
+      "dryTree": "be6a529a3684f385a8cf231de96fdb4da968936b",
+      "conflicts": [
+        "apps/desktop-shell/src/chrome.ts",
+        "apps/desktop-shell/src/interaction-commands.ts",
+        "apps/desktop-shell/src/visual-model.ts",
+        "desktop/linux/src/electron/main.ts",
+        "desktop/linux/src/electron/preload.ts",
+        "desktop/linux/src/lib/bridge.ts",
+        "desktop/linux/src/lib/input-action-host.ts",
+        "desktop/linux/src/lib/local-rpc.ts",
+        "desktop/linux/src/renderer/viewport.ts",
+        "desktop/linux/test/viewport-input-actions.test.ts",
+        "docs/desktop-linux.md",
+        "docs/desktop-local-bridge.md",
+        "docs/full-editor-v1-capability-matrix.md",
+        "packages/schemas/README.md",
+        "packages/schemas/contracts/desktop-local-bridge.schema.json",
+        "packages/schemas/contracts/editor-command-registry.schema.json",
+        "packages/schemas/contracts/input-action-map.schema.json",
+        "packages/schemas/contracts/project-manifest.schema.json",
+        "packages/schemas/src/desktop-local-bridge.ts",
+        "packages/schemas/src/editor-command-registry.ts",
+        "packages/schemas/src/index.ts",
+        "packages/schemas/src/input-action-registry.ts",
+        "packages/schemas/test/desktop-local-bridge.test.ts",
+        "packages/schemas/test/input-action-registry.test.ts",
+        "tests/e2e/desktop-command-interactions-golden.test.ts",
+        "tests/e2e/input-actions-golden.test.ts"
+      ]
+    },
+    {
+      "sha": "16f312c61435e3d379a0e54525ac8115e35fee86",
+      "refs": [
+        "refs/remotes/origin/fm/sceneaxi-wave5-proof15-v1"
+      ],
+      "headSubject": "docs(proof): Stage 1 paired-replicate run-sheet + pinned-config manifest (#15)",
+      "uniqueCommits": 42,
+      "changedPaths": 146,
+      "dryMergeExit": 1,
+      "dryTree": "dcde4dfccbaec0881bdc604f46f66921d3a411e1",
+      "conflicts": [
+        ".github/workflows/gate.yml",
+        "AGENTS.md",
+        "MANIFEST.md",
+        "README.md",
+        "apps/catalog-game/README.md",
+        "apps/catalog-game/src/index.ts",
+        "apps/catalog-web/README.md",
+        "apps/catalog-web/src/index.ts",
+        "apps/desktop-shell/README.md",
+        "apps/desktop-shell/package.json",
+        "apps/desktop-shell/src/index.ts",
+        "apps/desktop-shell/src/protocol-client.ts",
+        "apps/desktop-shell/test/protocol-client.test.ts",
+        "apps/desktop-shell/test/seam.test.ts",
+        "apps/desktop-shell/tsconfig.json",
+        "apps/web-shell/README.md",
+        "apps/web-shell/package.json",
+        "apps/web-shell/src/index.ts",
+        "apps/web-shell/src/inspector.ts",
+        "apps/web-shell/src/protocol-client.ts",
+        "apps/web-shell/test/inspector.test.ts",
+        "apps/web-shell/tsconfig.json",
+        "docs/adr/0002-presentation-runtime-deep-seam.md",
+        "docs/adr/0003-editor-sequencing-e1-first-e2-specified.md",
+        "docs/adr/0004-no-plugin-ports-before-two-adapters.md",
+        "docs/adr/README.md",
+        "docs/authoring-contracts.md",
+        "docs/program/SPEC.md",
+        "docs/program/spec-41.md",
+        "docs/proof/stage-0-acceptance-contract-template.md",
+        "docs/proof/stage-1-counting-adjudication-worksheet.md",
+        "docs/proof/stage-1-paired-replicate-run-sheet.md",
+        "eslint.config.mjs",
+        "package.json",
+        "packages/authoring-core/README.md",
+        "packages/authoring-core/src/atomic-write.ts",
+        "packages/authoring-core/src/index.ts",
+        "packages/authoring-core/src/json-pointer.ts",
+        "packages/authoring-core/src/propose-apply.ts",
+        "packages/authoring-core/tsconfig.json",
+        "packages/cli/README.md",
+        "packages/cli/src/commands.ts",
+        "packages/cli/src/dispatcher.ts",
+        "packages/cli/src/envelope.ts",
+        "packages/cli/src/exit-codes.ts",
+        "packages/cli/src/held-keys/gate.ts",
+        "packages/cli/src/held-keys/registry.ts",
+        "packages/cli/src/held-keys/shipped.ts",
+        "packages/cli/src/index.ts",
+        "packages/cli/src/project-verbs.ts",
+        "packages/cli/src/run.ts",
+        "packages/cli/src/verb-args.ts",
+        "packages/cli/test/exit-codes.golden.test.ts",
+        "packages/cli/test/held-keys.command-map.test.ts",
+        "packages/cli/test/held-keys.generator.test.ts",
+        "packages/cli/test/held-keys.refusal-table.test.ts",
+        "packages/cli/test/json-equivalence.test.ts",
+        "packages/cli/test/project-propose-apply.test.ts",
+        "packages/cli/test/refusal.test.ts",
+        "packages/cli/tsconfig.json",
+        "packages/engine-kernel/README.md",
+        "packages/engine-kernel/src/index.ts",
+        "packages/engine-kernel/src/session.ts",
+        "packages/engine-kernel/test/seam.test.ts",
+        "packages/engine-kernel/test/session.test.ts",
+        "packages/engine-orchestrator/src/index.ts",
+        "packages/engine-orchestrator/tsconfig.json",
+        "packages/engine-presentation/src/index.ts",
+        "packages/engine-presentation/test/seam.test.ts",
+        "packages/engine-presentation/tsconfig.json",
+        "packages/importers/src/index.ts",
+        "packages/importers/test/seam.test.ts",
+        "packages/importers/tsconfig.json",
+        "packages/profile-game/README.md",
+        "packages/profile-game/src/index.ts",
+        "packages/profile-game/test/conformance.test.ts",
+        "packages/profile-game/tsconfig.json",
+        "packages/profile-kids/src/index.ts",
+        "packages/profile-web/src/index.ts",
+        "packages/profile-web/tsconfig.json",
+        "packages/schemas/README.md",
+        "packages/schemas/contracts/catalog-item.schema.json",
+        "packages/schemas/contracts/cli-protocol-envelope.schema.json",
+        "packages/schemas/contracts/kernel-session.schema.json",
+        "packages/schemas/contracts/profile-conformance.schema.json",
+        "packages/schemas/src/catalog.ts",
+        "packages/schemas/src/document.ts",
+        "packages/schemas/src/index.ts",
+        "packages/schemas/src/kernel-session.ts",
+        "packages/schemas/src/profile-conformance-suite.ts",
+        "packages/schemas/src/profile-conformance.ts",
+        "packages/schemas/src/proposal.ts",
+        "packages/schemas/test/catalog-pipeline.test.ts",
+        "packages/schemas/test/document-proposal.test.ts",
+        "packages/schemas/test/seam.test.ts",
+        "pnpm-lock.yaml",
+        "scripts/check-contracts.mjs",
+        "scripts/check-contracts.test.mjs",
+        "tests/boundary/injected-violations.test.ts",
+        "tests/helpers/fixture.ts",
+        "tests/parity/shell-cli-parity.test.ts",
+        "tests/syntax/check-syntax.test.ts",
+        "tsconfig.json",
+        "tsconfig.tests.json",
+        "vitest.config.ts"
+      ]
+    },
+    {
+      "sha": "94a4503050def7641f78faa24ae756497ceb3292",
+      "refs": [
+        "refs/remotes/origin/maestro/phase-02-audit-baseline"
+      ],
+      "headSubject": "MAESTRO: establish Phase 02 audit baseline",
+      "uniqueCommits": 3,
+      "changedPaths": 6,
+      "dryMergeExit": 1,
+      "dryTree": "d423adffed61a6f39509843ebbd2ee20f7c80f34",
+      "conflicts": [
+        ".maestro/playbooks/Initiation/Phase-01-Trusted-Baseline-and-Live-Prototype.md",
+        ".maestro/playbooks/Initiation/Phase-02-Executable-Spec-Traceability-Audit.md",
+        ".maestro/playbooks/Initiation/Working/Phase-01/Baseline.md",
+        "docs/audits/initiation/Initiation-Audit.md"
+      ]
+    },
+    {
+      "sha": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+      "refs": [
+        "refs/remotes/origin/maintenance/checkpoint-20260929"
+      ],
+      "headSubject": "chore: checkpoint outstanding work before maintenance (2026-09-29)",
+      "uniqueCommits": 2,
+      "changedPaths": 78,
+      "dryMergeExit": 0,
+      "dryTree": "4e9a3347ec2d0ee2dd1de68b4e0236ceafcf9ce1",
+      "conflicts": []
+    },
+    {
+      "sha": "346933c105305224d575bf9319256301c1eeabfa",
+      "refs": [
+        "refs/remotes/origin/production-swarm"
+      ],
+      "headSubject": "fix(editor): restore the aria-disabled literal oracle and record post-PR visual-loop sequence evidence",
+      "uniqueCommits": 3,
+      "changedPaths": 1210,
+      "dryMergeExit": 1,
+      "dryTree": "accd19c42864a894434aaccf5c6720fa3839550a",
+      "conflicts": [
+        "apps/desktop-shell/src/chrome.ts",
+        "apps/desktop-shell/src/index.ts",
+        "apps/desktop-shell/src/visual-model.ts",
+        "apps/desktop-shell/src/visual-tokens.ts",
+        "apps/desktop-shell/test/chrome.test.ts",
+        "apps/desktop-shell/test/control-accounting.test.ts",
+        "apps/desktop-shell/test/visual-model.test.ts",
+        "apps/desktop-shell/test/visual-tokens.test.ts",
+        "desktop/linux/src/electron/main.ts",
+        "desktop/linux/src/lib/bridge.ts",
+        "desktop/linux/src/renderer/viewport.ts",
+        "packages/authoring-core/src/scene-composition.ts",
+        "packages/authoring-core/test/project-git.test.ts",
+        "packages/authoring-core/test/scene-composition.test.ts",
+        "packages/schemas/contracts/input-action-map.schema.json",
+        "packages/schemas/contracts/scene-composition.schema.json",
+        "packages/schemas/src/desktop-scene-edit.ts",
+        "packages/schemas/src/desktop-scene-effects.ts",
+        "packages/schemas/src/desktop-scene-environment.ts",
+        "packages/schemas/src/desktop-scene-materials.ts",
+        "packages/schemas/src/editor-shell.ts",
+        "packages/schemas/src/input-action-registry.ts",
+        "packages/schemas/src/scene-composition.ts",
+        "packages/schemas/test/desktop-scene-edit.test.ts",
+        "packages/schemas/test/desktop-scene-effects.test.ts",
+        "packages/schemas/test/desktop-scene-environment.test.ts",
+        "packages/schemas/test/desktop-scene-materials.test.ts",
+        "packages/schemas/test/input-action-registry.test.ts",
+        "packages/schemas/test/scene-composition.test.ts",
+        "tests/e2e/desktop-command-interactions-golden.test.ts",
+        "tests/e2e/desktop-control-inventory-golden.test.ts",
+        "tests/e2e/desktop-linux-bridge-golden.test.ts",
+        "tests/e2e/input-actions-golden.test.ts"
+      ]
+    }
+  ],
+  "uniqueCommits": 73,
+  "nativeUnmergedPaths": 105
+}

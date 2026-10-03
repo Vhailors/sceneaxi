@@ -53,6 +53,17 @@ import {
   desktopOpenCodeCompleteResponse,
 } from "./live-transport.js";
 
+/** Mutable, presence-sensitive fields retain their owner types without present undefined values. */
+type DesktopOptionalFields<Value> = { -readonly [Key in keyof Value]?: Exclude<Value[Key], undefined> };
+
+function isDesktopObject<Value>(value: Value): value is Value & (object | null) {
+  return isBoundaryObjectValue(value);
+}
+
+function isDesktopCallable<Value>(value: Value): value is Value & ((...args: never[]) => void) {
+  return isBoundaryCallableValue(value);
+}
+
 export type DesktopOpenRouterTransportSession = Readonly<{
   transport: OpenRouterTransport;
   close?: () => void | Promise<void>;
@@ -80,6 +91,7 @@ export type CreateDesktopOpenRouterProviderSessionOptions = Readonly<{
  */
 function rendererSafeResult(result: AssistantSculptResult): AssistantSculptResult {
   if (result.ok) return result;
+
   return Object.freeze({
     ok: false as const,
     reason: result.reason,
@@ -113,32 +125,37 @@ export function createDesktopOpenRouterProviderSession(
     // transport lives under one guard, so a malformed session is closed on the way
     // out exactly like a mis-pinned adapter is.
     let closed = false;
+
     const closeTransport = async () => {
       if (closed) return;
       closed = true;
-      const close: unknown =
-        transportSession === null || typeof transportSession !== "object"
+
+      const close =
+        transportSession === null || !isDesktopObject(transportSession)
           ? undefined
-          : (transportSession as { close?: unknown }).close;
-      if (typeof close === "function") {
-        await (close as () => void | Promise<void>).call(transportSession);
+          : transportSession.close;
+
+      if (isDesktopCallable(close)) {
+        await close.call(transportSession);
       }
     };
 
     let port: ReturnType<typeof createModelProviderPort>;
+
     try {
       if (
-        typeof transportSession !== "object" ||
+        !isDesktopObject(transportSession) ||
         transportSession === null ||
-        typeof transportSession.transport !== "function" ||
+        !isDesktopCallable(transportSession.transport) ||
         (transportSession.close !== undefined &&
-          typeof transportSession.close !== "function")
+          !isDesktopCallable(transportSession.close))
       ) {
         throw new DesktopByoRunnerRefusal(
           DESKTOP_BYO_CONFIGURATION_REFUSALS.providerSessionFailed,
           "The privileged OpenRouter transport session is invalid.",
         );
       }
+
       port = createModelProviderPort({
         adapter: createOpenRouterAdapter({
           model,
@@ -163,6 +180,7 @@ export function createDesktopOpenRouterProviderSession(
             "The privileged OpenRouter provider session is closed.",
           );
         }
+
         return rendererSafeResult(
           await runAssistantSculptAction({
             ...request,
@@ -205,17 +223,21 @@ export type CreatePrivilegedDesktopByoRuntimeOptions = Readonly<{
 export function createPrivilegedDesktopByoRuntime(
   options: CreatePrivilegedDesktopByoRuntimeOptions,
 ): PrivilegedDesktopByoRuntime {
-  const configuration = createDesktopByoConfiguration({
-    keyStore: options.keyStore,
-    providerRuntimeAvailable: options.createProviderSession !== undefined,
-  });
-  if (options.createProviderSession === undefined) {
-    return Object.freeze({ configuration });
-  }
   const provider = options.provider ??
     (DESKTOP_BYO_PROVIDERS.includes(OPENROUTER_PROVIDER_ID)
       ? OPENROUTER_PROVIDER_ID
       : DESKTOP_BYO_PROVIDERS[0]);
+
+  const configuration = createDesktopByoConfiguration({
+    keyStore: options.keyStore,
+    providerRuntimeAvailable: options.createProviderSession !== undefined,
+    runtimeProvider: provider,
+  });
+
+  if (options.createProviderSession === undefined) {
+    return Object.freeze({ configuration });
+  }
+
   return Object.freeze({
     configuration,
     runByoAssistant: createSecureDesktopByoAssistantRunner({
@@ -239,6 +261,7 @@ export function createDesktopOpenCodeProviderSession(
   }> = {},
 ): CreateDesktopByoProviderSession {
   const model = Object.freeze({ ...(options.model ?? DESKTOP_DEEPSEEK_MODEL) });
+
   return ({ provider, key }) => {
     if (provider !== "opencode") {
       throw new DesktopByoRunnerRefusal(
@@ -246,11 +269,29 @@ export function createDesktopOpenCodeProviderSession(
         "The privileged DeepSeek session received an unsupported provider.",
       );
     }
+
     const transport = createDesktopOpenCodeLiveTransport({
       credential: key,
-      ...(options.apiBase === undefined ? {} : { apiBase: options.apiBase }),
-      ...(options.fetchImpl === undefined ? {} : { fetchImpl: options.fetchImpl }),
+      ...(() => {
+        const optional: DesktopOptionalFields<{ apiBase?: string }> = {};
+
+        if (!(options.apiBase === undefined)) {
+          optional.apiBase = options.apiBase;
+        }
+
+        return optional;
+      })(),
+      ...(() => {
+        const optional: DesktopOptionalFields<{ fetchImpl?: typeof fetch }> = {};
+
+        if (!(options.fetchImpl === undefined)) {
+          optional.fetchImpl = options.fetchImpl;
+        }
+
+        return optional;
+      })(),
     });
+
     const port = createModelProviderPort({
       adapter: Object.freeze({
         routeKind: "third-party" as const,
@@ -260,6 +301,7 @@ export function createDesktopOpenCodeProviderSession(
         }),
         complete: async (request) => {
           const text = await transport.complete(request.prompt, model);
+
           return Object.freeze({
             response: desktopOpenCodeCompleteResponse(text),
             executedModel: model,
@@ -271,6 +313,7 @@ export function createDesktopOpenCodeProviderSession(
         "@sceneaxi/profile-web": () => Object.freeze({ ok: true as const }),
       }),
     });
+
     return Object.freeze({
       async run(request: DesktopAssistantRunRequest) {
         return rendererSafeResult(
@@ -329,7 +372,7 @@ export type CreateDesktopRarityFixtureProviderOptions = Readonly<{
   arguments?: JsonObject;
   executedModel?: ModelDescriptor;
   /** Observes the exact envelope the port dispatched, for no-network vectors. */
-  onDispatch?: (request: unknown) => void;
+  onDispatch?: <DesktopRequest>(request: DesktopRequest) => void;
 }>;
 
 /**
@@ -344,6 +387,7 @@ export function createDesktopRarityFixtureProvider(
   const executedModel = Object.freeze({
     ...(options.executedModel ?? DESKTOP_RARITY_FIXTURE_MODEL),
   });
+
   const port = createModelProviderPort({
     adapter: Object.freeze({
       routeKind: "third-party" as const,
@@ -353,6 +397,7 @@ export function createDesktopRarityFixtureProvider(
       }),
       toolCall: (dispatched) => {
         options.onDispatch?.(dispatched);
+
         return Object.freeze({
           response: Object.freeze({
             schemaVersion: MODEL_PROVIDER_PORT_SCHEMA_VERSION,
@@ -361,7 +406,7 @@ export function createDesktopRarityFixtureProvider(
               Object.freeze({
                 name: "propose_rarity",
                 arguments: options.arguments ??
-                  (DESKTOP_RARITY_FIXTURE_INPUT as unknown as JsonObject),
+                  DESKTOP_RARITY_FIXTURE_INPUT,
               }),
             ]),
           }),
@@ -374,6 +419,7 @@ export function createDesktopRarityFixtureProvider(
       "@sceneaxi/profile-web": () => Object.freeze({ ok: true as const }),
     }),
   });
+
   return (request) =>
     requestRarityProviderContribution({
       port,
@@ -387,3 +433,15 @@ export const SCENEAXI_PROVIDER_ENTRYPOINT_CATALOG = Object.freeze({
   "desktop/linux/src/electron/provider-runtime.ts": createPrivilegedDesktopByoRuntime,
   "desktop/linux/src/electron/live-transport.ts": createDesktopOpenCodeLiveTransport,
 });
+
+type BoundaryObjectValue = object | null;
+
+type BoundaryCallableValue = (...args: never[]) => void;
+
+function isBoundaryObjectValue<Input>(value: Input): value is Input & Readonly<BoundaryObjectValue> {
+  return typeof value === "object";
+}
+
+function isBoundaryCallableValue<Input>(value: Input): value is Input & BoundaryCallableValue & object {
+  return typeof value === "function";
+}

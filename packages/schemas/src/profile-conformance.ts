@@ -15,6 +15,7 @@ import type {
   KernelSnapshot,
   ProductManifest,
 } from "./kernel-session.js";
+import { isJsonValue } from "./document.js";
 import type { JsonObject, SceneDocument } from "./document.js";
 import type { ApplyResult, Proposal } from "./proposal.js";
 
@@ -191,8 +192,11 @@ export type ClaimValidationRefuse = {
 export type ClaimValidationResult = ClaimValidationOk | ClaimValidationRefuse;
 
 const PROFILE_NAME_RE = /^@sceneaxi\/profile-[a-z][a-z0-9-]*$/;
+
 const CORE_PIN_RE = /^[\^~>=<0-9xX*.\s|-]+$/;
+
 const HOOK_NAME_RE = /^[a-z][a-z0-9-]*$/;
+
 const HELD_KEY_RE = /^[a-z][a-z0-9-]*$/;
 
 /**
@@ -200,10 +204,18 @@ const HELD_KEY_RE = /^[a-z][a-z0-9-]*$/;
  * Fail-closed: shippingClaim true, missing profile-rollout-order citation,
  * and major mismatches all refuse.
  */
+type ProfileClaimInput = Parameters<typeof isJsonValue>[0];
+
+type RawProfileClaim = { schemaVersion?: unknown; kind?: unknown; profile?: unknown; claimStatus?: unknown; corePin?: unknown; suiteVersion?: unknown; shippingClaim?: unknown; heldKeysCited?: unknown; evidenceHooks?: unknown };
+
+type RawEvidenceHooks = { present?: unknown; hooks?: unknown };
+
+type RawEvidenceHook = { name?: unknown; status?: unknown };
+
 export function validateProfileConformanceClaim(
-  value: unknown,
+  value: ProfileClaimInput,
 ): ClaimValidationResult {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+  if (value === null || !isBoundaryObjectOrNull(value) || Array.isArray(value)) {
     return {
       ok: false,
       code: "not-object",
@@ -211,7 +223,8 @@ export function validateProfileConformanceClaim(
     };
   }
 
-  const raw = value as Record<string, unknown>;
+  // SAFETY: value is a non-null, non-array object; raw optional fields are validated below.
+  const raw = value as RawProfileClaim;
 
   if (!Object.hasOwn(raw, "schemaVersion")) {
     return {
@@ -222,7 +235,8 @@ export function validateProfileConformanceClaim(
   }
 
   const schemaVersion = raw["schemaVersion"];
-  if (typeof schemaVersion !== "number" || !Number.isInteger(schemaVersion)) {
+
+  if (!isBoundaryNumber(schemaVersion) || !Number.isInteger(schemaVersion)) {
     return {
       ok: false,
       code: "invalid-claim",
@@ -248,7 +262,8 @@ export function validateProfileConformanceClaim(
   }
 
   const profile = raw["profile"];
-  if (typeof profile !== "string" || !PROFILE_NAME_RE.test(profile)) {
+
+  if (!isBoundaryString(profile) || !PROFILE_NAME_RE.test(profile)) {
     return {
       ok: false,
       code: "invalid-claim",
@@ -257,6 +272,7 @@ export function validateProfileConformanceClaim(
   }
 
   const claimStatus = raw["claimStatus"];
+
   if (
     claimStatus !== "development-consumer" &&
     claimStatus !== "not-yet-claimed"
@@ -270,8 +286,9 @@ export function validateProfileConformanceClaim(
   }
 
   const corePin = raw["corePin"];
+
   if (
-    typeof corePin !== "string" ||
+    !isBoundaryString(corePin) ||
     corePin.length === 0 ||
     !CORE_PIN_RE.test(corePin)
   ) {
@@ -300,6 +317,7 @@ export function validateProfileConformanceClaim(
   }
 
   const heldKeysCited = raw["heldKeysCited"];
+
   if (!Array.isArray(heldKeysCited) || heldKeysCited.length === 0) {
     return {
       ok: false,
@@ -307,8 +325,9 @@ export function validateProfileConformanceClaim(
       message: "Claim heldKeysCited must be a non-empty array.",
     };
   }
+
   for (const key of heldKeysCited) {
-    if (typeof key !== "string" || !HELD_KEY_RE.test(key)) {
+    if (!isBoundaryString(key) || !HELD_KEY_RE.test(key)) {
       return {
         ok: false,
         code: "invalid-claim",
@@ -316,6 +335,7 @@ export function validateProfileConformanceClaim(
       };
     }
   }
+
   if (!heldKeysCited.includes(PROFILE_ROLLOUT_ORDER_HELD_KEY)) {
     return {
       ok: false,
@@ -325,9 +345,10 @@ export function validateProfileConformanceClaim(
   }
 
   const evidenceHooks = raw["evidenceHooks"];
+
   if (
     evidenceHooks === null ||
-    typeof evidenceHooks !== "object" ||
+    !isBoundaryObjectOrNull(evidenceHooks) ||
     Array.isArray(evidenceHooks)
   ) {
     return {
@@ -336,7 +357,10 @@ export function validateProfileConformanceClaim(
       message: "Claim evidenceHooks must be an object.",
     };
   }
-  const hooksObj = evidenceHooks as Record<string, unknown>;
+
+  // SAFETY: evidenceHooks is a non-null, non-array object; present and hooks are still untrusted.
+  const hooksObj = evidenceHooks as RawEvidenceHooks;
+
   if (hooksObj["present"] !== true) {
     return {
       ok: false,
@@ -344,7 +368,9 @@ export function validateProfileConformanceClaim(
       message: "Claim evidenceHooks.present must be true.",
     };
   }
+
   const hooks = hooksObj["hooks"];
+
   if (!Array.isArray(hooks) || hooks.length === 0) {
     return {
       ok: false,
@@ -352,23 +378,29 @@ export function validateProfileConformanceClaim(
       message: "Claim evidenceHooks.hooks must be a non-empty array.",
     };
   }
+
   const normalizedHooks: ProfileEvidenceHook[] = [];
+
   for (const hook of hooks) {
-    if (hook === null || typeof hook !== "object" || Array.isArray(hook)) {
+    if (hook === null || !isBoundaryObjectOrNull(hook) || Array.isArray(hook)) {
       return {
         ok: false,
         code: "invalid-claim",
         message: "Each evidence hook must be an object.",
       };
     }
-    const h = hook as Record<string, unknown>;
-    if (typeof h["name"] !== "string" || !HOOK_NAME_RE.test(h["name"])) {
+
+    // SAFETY: each hook passed the non-null, non-array object check; its name and status are checked next.
+    const h = hook as RawEvidenceHook;
+
+    if (!isBoundaryString(h["name"]) || !HOOK_NAME_RE.test(h["name"])) {
       return {
         ok: false,
         code: "invalid-claim",
         message: "Evidence hook name must be a lowercase slug.",
       };
     }
+
     if (h["status"] !== "declared") {
       return {
         ok: false,
@@ -377,6 +409,7 @@ export function validateProfileConformanceClaim(
           'Evidence hook status must be "declared" in this suite version.',
       };
     }
+
     normalizedHooks.push({ name: h["name"], status: "declared" });
   }
 
@@ -391,6 +424,7 @@ export function validateProfileConformanceClaim(
     "heldKeysCited",
     "shippingClaim",
   ]);
+
   for (const key of Object.keys(raw)) {
     if (!known.has(key)) {
       return {
@@ -401,6 +435,7 @@ export function validateProfileConformanceClaim(
     }
   }
 
+  // SAFETY: PROFILE_NAME_RE established the profile prefix; every cited key was checked as a string slug above.
   const claim: ProfileConformanceClaim = {
     schemaVersion: PROFILE_CONFORMANCE_SCHEMA_VERSION,
     kind: PROFILE_CONFORMANCE_KIND,
@@ -457,4 +492,22 @@ export function registryEntryFor(
   profile: string,
 ): ProfileConformanceRegistryEntry | undefined {
   return profileConformanceRegistry.find((e) => e.profile === profile);
+}
+
+function isBoundaryNumber(value: ProfileClaimInput): value is number {
+  return typeof value === "number";
+}
+
+function isBoundaryString(value: ProfileClaimInput): value is string {
+  return typeof value === "string";
+}
+
+function isBoundaryObjectOrNull(value: ProfileClaimInput): value is object | null {
+  return isBoundaryObjectValue(value);
+}
+
+type BoundaryObjectValue = object | null;
+
+function isBoundaryObjectValue<Input>(value: Input): value is Input & Readonly<BoundaryObjectValue> {
+  return typeof value === "object";
 }

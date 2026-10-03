@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { EDITOR_COMMAND_REGISTRY } from "@sceneaxi/schemas";
 import {
   DESKTOP_MINIMUM_WINDOW,
   DESKTOP_MODE_IDS,
@@ -11,7 +12,6 @@ import {
   renderDesktopChrome,
   type DesktopVisualState,
 } from "@sceneaxi/desktop-shell";
-import { EDITOR_COMMAND_REGISTRY } from "@sceneaxi/schemas";
 
 /**
  * The emitted Engine Desktop document (sceneaxi#158).
@@ -57,6 +57,7 @@ describe("engine desktop chrome — document shape", () => {
   it("emits the shared versioned registry without a desktop-only command copy", () => {
     const match = /const T = (\{.*\});\nconst shell =/s.exec(render());
     expect(match?.[1]).toBeDefined();
+    // SAFETY: these JSON bytes come from renderDesktopChrome's own closed runtime tables; the assertions below compare their fields against the owning model.
     const tables = JSON.parse(match?.[1] ?? "{}") as { editorCommands?: unknown };
     expect(tables.editorCommands).toEqual(EDITOR_COMMAND_REGISTRY);
   });
@@ -98,6 +99,7 @@ describe("engine desktop chrome — escaping", () => {
     const html = render(
       createDesktopVisualState({ selection: `</script><img onerror=1>` }),
     );
+
     expect(html).not.toContain("<img onerror");
     expect(html.match(/<script>/g)).toHaveLength(1);
     expect(html.match(/<\/script>/g)).toHaveLength(1);
@@ -107,6 +109,7 @@ describe("engine desktop chrome — escaping", () => {
 describe("engine desktop chrome — regions and modes", () => {
   it("carries all seven mode panels so the rail can switch without a reload", () => {
     const html = render();
+
     for (const mode of DESKTOP_MODE_IDS) {
       expect(html).toContain(`data-mode-panel="${mode}"`);
       expect(html).toContain(`data-action="mode" data-value="${mode}"`);
@@ -131,6 +134,7 @@ describe("engine desktop chrome — regions and modes", () => {
 describe("engine desktop chrome — accessibility", () => {
   it("uses landmarks rather than anonymous divs for every region", () => {
     const html = render();
+
     for (const landmark of [
       "<header class=\"title-bar\">",
       "<nav class=\"menu-bar\"",
@@ -146,6 +150,7 @@ describe("engine desktop chrome — accessibility", () => {
 
   it("labels every landmark", () => {
     const html = render();
+
     for (const label of [
       'aria-label="Application menu"',
       'aria-label="Profile"',
@@ -168,6 +173,7 @@ describe("engine desktop chrome — accessibility", () => {
       // Every button declares its type, so none submits a form by accident.
       const buttons = html.match(/<button\b[^>]*>/g) ?? [];
       expect(buttons.length, label).toBeGreaterThan(0);
+
       for (const button of buttons) {
         expect(button, `${label} ${button}`).toContain('type="button"');
       }
@@ -180,9 +186,11 @@ describe("engine desktop chrome — accessibility", () => {
     expect(html).not.toMatch(/<button[^>]*\sdisabled[\s>]/);
     const inert = [...html.matchAll(/<button[^>]*aria-disabled="true"[^>]*>/g)];
     expect(inert.length).toBeGreaterThan(0);
+
     for (const [tag] of inert) {
       expect(tag).toMatch(/aria-describedby="refusal-[A-Z_]+"/);
     }
+
     // Every referenced reason exists as an element in the same document.
     for (const [, code] of html.matchAll(/aria-describedby="refusal-([A-Z_]+)"/g)) {
       expect(html).toContain(`id="refusal-${code}"`);
@@ -197,6 +205,7 @@ describe("engine desktop chrome — accessibility", () => {
       const ids = [...render(state).matchAll(/\sid="([^"]*)"/g)].map(
         ([, id]) => id ?? "",
       );
+
       expect(ids.length, label).toBeGreaterThan(0);
       expect(ids.filter((id) => /[\s"']/.test(id) || id.length === 0), label).toEqual([]);
       expect(new Set(ids).size, label).toBe(ids.length);
@@ -210,6 +219,7 @@ describe("engine desktop chrome — accessibility", () => {
     expect(tabs.length).toBeGreaterThan(0);
     expect(tabs.filter((tag) => tag.includes('aria-selected="true"')).length)
       .toBeGreaterThanOrEqual(2);
+
     for (const tag of tabs) {
       expect(tag).toMatch(/tabindex="(0|-1)"/);
     }
@@ -220,9 +230,11 @@ describe("engine desktop chrome — accessibility", () => {
     // an arrow-key handler a keyboard-only operator can never select another dock
     // panel — the attributes alone are not the pattern.
     const script = /<script>(.*)<\/script>/s.exec(render())?.[1] ?? "";
+
     for (const key of ["ArrowRight", "ArrowLeft", "Home", "End"]) {
       expect(script).toContain(`'${key}'`);
     }
+
     expect(script).toContain("moveTab(event)");
     expect(script).toContain(`list.querySelectorAll('[role="tab"]')`);
   });
@@ -230,6 +242,7 @@ describe("engine desktop chrome — accessibility", () => {
   it("renders every dock tab and viewport source through its modelled control", () => {
     const view = desktopVisualView(createDesktopVisualState());
     const html = render();
+
     for (const control of [
       ...view.dockTabs.map((tab) => tab.control),
       ...view.viewport.sources.map((source) => source.control),
@@ -242,14 +255,17 @@ describe("engine desktop chrome — accessibility", () => {
     // ARIA restricts a tablist's children to tabs, and `moveTab()` enumerates
     // them, so the structural spacer stays outside it.
     const html = render();
+
     for (const [, inner] of html.matchAll(
       /<div class="(?:dock|view)-tablist" role="tablist"[^>]*>(.*?)<\/div>/gs,
     )) {
       const tags = [...(inner ?? "").matchAll(/<button\b[^>]*>/g)].map(([tag]) => tag);
       expect(tags.length).toBeGreaterThan(0);
+
       for (const tag of tags) expect(tag).toContain('role="tab"');
       expect(inner).not.toContain("spacer");
     }
+
     expect(html).toContain('<div class="dock-tablist" role="tablist" aria-label="Dock panel">');
     expect(html).toContain('<div class="view-tablist" role="tablist" aria-label="Viewport source">');
   });
@@ -261,6 +277,7 @@ describe("engine desktop chrome — accessibility", () => {
     expect(view.overlay.dismissals).toHaveLength(1);
     const ids = view.overlay.dismissals.map((dismissal) => dismissal.control.id);
     expect(new Set(ids).size).toBe(ids.length);
+
     // Kind and action both come from the model's own declaration, so a button
     // that reaches the host is rendered `live` and one that only closes `view`.
     for (const dismissal of view.overlay.dismissals) {
@@ -270,6 +287,7 @@ describe("engine desktop chrome — accessibility", () => {
           : `id="${dismissal.control.id}" data-kind="live" data-product-action data-action="${dismissal.productAction}"`,
       );
     }
+
     // The shipped dialog reports an outcome and decides nothing, so no
     // dismissal on it reaches the host at all.
     expect(
@@ -285,17 +303,21 @@ describe("engine desktop chrome — accessibility", () => {
     // the attribute rather than concatenated into the markup.
     const view = desktopVisualView(createDesktopVisualState());
     const shipped = view.overlay.dismissals[0];
+
     if (shipped === undefined) throw new Error("outcome dismissal missing");
+
     const added = [
       { ...shipped, id: "outcome-explain", productAction: null,
         control: { ...shipped.control, id: "overlay-close-outcome-explain" } },
       { ...shipped, id: "outcome-hostile", productAction: `x" onclick="steal()`,
         control: { ...shipped.control, id: "overlay-close-outcome-hostile" } },
     ];
+
     const html = renderDesktopChrome({
       ...view,
       overlay: { ...view.overlay, dismissals: [...view.overlay.dismissals, ...added] },
     });
+
     expect(html).toContain(
       `id="overlay-close-outcome-explain" data-kind="view" data-action="overlay" data-value="none"`,
     );
@@ -353,10 +375,12 @@ describe("engine desktop chrome — responsive strategy", () => {
 
   it("gives every undocked column an opener", () => {
     const html = render();
+
     for (const drawer of ["left", "inspector"]) {
       expect(html).toContain(`data-action="drawer" data-value="${drawer}"`);
       expect(html).toContain(`aria-controls="${drawer === "left" ? "left-dock" : "inspector"}"`);
     }
+
     // The assistant's opener is the toggle it already had.
     expect(html).toContain('data-action="assistant"');
     expect(html).toContain('id="left-dock"');
@@ -369,6 +393,7 @@ describe("engine desktop chrome — responsive strategy", () => {
     // change tier at the same numbers or one of them is describing a layout the
     // other does not produce.
     const html = render();
+
     for (const tier of WINDOW_TIERS) {
       if (tier.id === "minimum") continue;
       expect(html, tier.id).toContain(
@@ -411,9 +436,11 @@ describe("engine desktop chrome — responsive strategy", () => {
 
     const docked = render(createDesktopVisualState());
     expect(docked).toMatch(/id="assistant-toggle"[^>]*aria-pressed="true"/);
+
     const drawer = render(
       createDesktopVisualState({ window: { width: 1280, height: 800 } }),
     );
+
     expect(drawer).toMatch(/id="assistant-toggle"[^>]*aria-pressed="false"/);
 
     // Which rule lights the toggle is decided on the two complementary media
@@ -480,15 +507,18 @@ describe("engine desktop chrome — honesty", () => {
 
   it("cannot enter a mode from behind the Kids refusal, in the bytes", () => {
     const html = render(createDesktopVisualState({ profile: "kids" }));
+
     for (const mode of DESKTOP_MODE_IDS) {
       const refusal = mode === "compose" || mode === "plugins"
         ? DESKTOP_VISUAL_REFUSALS.noDocumentBound
         : DESKTOP_VISUAL_REFUSALS.kidsRefuseOnly;
+
       expect(html).toContain(
         `id="mode-${mode}" data-kind="inert" aria-disabled="true" data-refusal="${refusal}"`,
       );
       expect(html).toContain(`aria-describedby="refusal-${refusal}"`);
     }
+
     // The click handler's only guard is `aria-disabled`, so the attribute is what
     // stops a server-rendered Kids document from switching mode.
     const script = /<script>(.*)<\/script>/s.exec(html)?.[1] ?? "";
@@ -510,17 +540,21 @@ describe("engine desktop chrome — honesty", () => {
     ]) {
       const at = `${window.width}x${window.height}`;
       const html = render(createDesktopVisualState({ profile: "kids", window }));
+
       for (const drawer of ["left", "inspector"]) {
         expect(html, `${at} ${drawer}`).toContain(
           `id="drawer-${drawer}" data-kind="inert" aria-disabled="true" data-refusal="${DESKTOP_VISUAL_REFUSALS.kidsRefuseOnly}"`,
         );
       }
+
       expect(html, at).toContain(".title-actions .drawer-toggle{display:inline-flex}");
     }
+
     // On a profile that has those panels the same toggles stay live.
     const game = render(
       createDesktopVisualState({ window: { width: 1024, height: 700 } }),
     );
+
     expect(game).toContain('id="drawer-left" data-kind="view"');
     expect(game).toContain('id="drawer-inspector" data-kind="view"');
     // And the browser-side switch reaches them through the same sweep, not a
@@ -540,6 +574,7 @@ describe("engine desktop chrome — honesty", () => {
     expect(kids).toContain(
       `id="assistant-toggle" data-kind="inert" aria-disabled="true" data-refusal="${DESKTOP_VISUAL_REFUSALS.kidsAssistantDenied}"`,
     );
+
     // Both bodies ship in every document and the state chooses, so switching
     // profile in the browser cannot leave a live composer under a Kids badge —
     // nor strand the column once the operator switches back.
@@ -556,8 +591,11 @@ describe("engine desktop chrome — honesty", () => {
         '.shell[data-assistant="denied"] .assistant-body,\n.shell[data-assistant="denied"] .assistant-composer{display:none}',
       );
     }
+
     // The switch applies the model's own projection for the profile it lands on.
     const script = /<script>(.*)<\/script>/s.exec(render())?.[1] ?? "";
+
+    // SAFETY: these JSON bytes come from renderDesktopChrome's own closed runtime tables; the assertions below compare their fields against the owning model.
     const tables = JSON.parse(/const T = (\{.*?\});\n/s.exec(render())?.[1] ?? "{}") as {
       assistantRuntimeRows: Record<
         string,
@@ -567,23 +605,28 @@ describe("engine desktop chrome — honesty", () => {
         }
       >;
     };
+
     for (const runtime of ["none", "local"] as const) {
       const view = desktopVisualView(createDesktopVisualState({ assistantRuntime: runtime }));
       const runtimeRows = tables.assistantRuntimeRows[runtime];
       expect(runtimeRows).toBeDefined();
+
       if (runtimeRows === undefined) continue;
+
       for (const chip of view.profiles) {
         expect(runtimeRows.assistantByProfile[chip.id]).toEqual({
           state: chip.assistant.state,
           modelLabel: chip.assistant.modelLabel,
         });
         const seat = runtimeRows.controlsByProfile[chip.id] ?? {};
+
         const projected = desktopVisualView(
           createDesktopVisualState({
             profile: chip.id,
             assistantRuntime: runtime,
           }),
         );
+
         for (const control of projected.controls) {
           expect(seat[control.id], `${runtime} ${chip.id} ${control.id}`).toEqual([
             control.kind,
@@ -592,6 +635,7 @@ describe("engine desktop chrome — honesty", () => {
         }
       }
     }
+
     expect(script).toContain("setProfile(value)");
     expect(script).toContain("q('[data-kind]').forEach(applyControl)");
   });
@@ -606,17 +650,23 @@ describe("engine desktop chrome — honesty", () => {
     expect(html).toContain(
       `<span class="status-pin" data-profile-pin>${view.profilePin}</span>`,
     );
+
+    // SAFETY: these JSON bytes come from renderDesktopChrome's own closed runtime tables; the assertions below compare their fields against the owning model.
     const tables = JSON.parse(/const T = (\{.*?\});\n/s.exec(html)?.[1] ?? "{}") as {
       pinByProfile: Record<string, string>;
     };
+
     const pins = new Set<string>();
+
     for (const chip of view.profiles) {
       const projected = desktopVisualView(
         createDesktopVisualState({ profile: chip.id }),
       );
+
       expect(tables.pinByProfile[chip.id], chip.id).toBe(projected.profilePin);
       pins.add(projected.profilePin);
     }
+
     // One pin per profile: a table that froze on a single value would satisfy
     // the identity above only because every profile shares it.
     expect(pins.size).toBe(view.profiles.length);
@@ -633,11 +683,13 @@ describe("engine desktop chrome — honesty", () => {
     // The legend is the accounting surface for the registry, and it is what every
     // `aria-describedby` resolves to — including one a client switch adds.
     const html = render();
+
     for (const code of Object.values(DESKTOP_VISUAL_REFUSALS)) {
       expect(html).toContain(
         `id="refusal-${code}"><code>${code}</code> ${DESKTOP_REFUSAL_MESSAGES[code]}`,
       );
     }
+
     // One code, one sentence: the viewport's own note is not a second wording
     // of DESKTOP_NO_PRESENTATION_RUNTIME in the legend.
     expect(

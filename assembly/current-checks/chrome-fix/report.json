@@ -1,0 +1,163 @@
+{
+  "status": "SOURCE_VERIFIED_FOCUSED",
+  "sourceVerified": true,
+  "root": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1",
+  "baseline": "gate-current.log records22 total failures; chrome focused reproducer11fail174pass2unhandled",
+  "editedSources": {
+    "apps/desktop-shell/src/chrome/core/script.ts": {
+      "sha256": "645684aa0f8dd528a09e575a0a103c590aeab6a5ccfa9566c100c76403e1f373",
+      "bytes": 115591
+    },
+    "apps/desktop-shell/test/helpers/desktop-chrome-golden.ts": {
+      "sha256": "2ae58a249c7b41b5793b6ba21ee8b91dc1fd438ea99f5eef68406cee321c5a12",
+      "bytes": 24382
+    },
+    "apps/desktop-shell/test/chrome-frame.test.ts": {
+      "sha256": "04f6425c7982e9ae4dc91cc0c311f40bb422ae56e1aa830b334832132eaab7a2",
+      "bytes": 3211
+    },
+    "tests/e2e/desktop-command-interactions-golden.test.ts": {
+      "sha256": "d4635da4696d1c6f96c9f8836276b30c5cb30439ad4d934ce9ecbdce6ee9e56c",
+      "bytes": 26200
+    },
+    "tests/e2e/desktop-linux-bridge-golden.test.ts": {
+      "sha256": "5f5f7356cfbd3eba011b454d92b983f4c4f231e3c22999ee932087fe5db45abc",
+      "bytes": 133614
+    },
+    "tests/e2e/desktop-product-loop-golden.test.ts": {
+      "sha256": "b7e21b5b12d8cee00852a00badb33203a80426a2bccbfa1e3bb058fbfad5cfd9",
+      "bytes": 59400
+    }
+  },
+  "facade": {
+    "path": "tests/helpers/desktop-chrome-golden.ts",
+    "edited": false,
+    "sha256": "6bad967e004742d924a2c6865eb235c7ad0e912f2ef2c33eb31836fa20cc0d75",
+    "bytes": 245
+  },
+  "verification": {
+    "testCommand": "pnpm exec vitest run tests/e2e/desktop-command-interactions-golden.test.ts tests/e2e/desktop-linux-bridge-golden.test.ts tests/e2e/desktop-product-loop-golden.test.ts apps/desktop-shell/test/chrome-frame.test.ts desktop/linux/test/audio-lifecycle-compat.test.ts apps/desktop-shell/test/keyboard-geometry.test.ts apps/desktop-shell/test/minimum-window.test.ts apps/desktop-shell/test/legacy-editor-compat.test.ts tests/e2e/desktop-hierarchy-golden.test.ts tests/e2e/desktop-control-inventory-golden.test.ts --reporter=dot",
+    "tests": 232,
+    "files": 10,
+    "failed": 0,
+    "skipped": 0,
+    "unhandled": 0,
+    "exitCode": 0,
+    "log": "focused-final.log",
+    "lintCommand": "pnpm exec eslint apps/desktop-shell/src/chrome/core/script.ts apps/desktop-shell/test/helpers/desktop-chrome-golden.ts apps/desktop-shell/test/chrome-frame.test.ts tests/e2e/desktop-command-interactions-golden.test.ts tests/e2e/desktop-linux-bridge-golden.test.ts tests/e2e/desktop-product-loop-golden.test.ts",
+    "lintExitCode": 0,
+    "lintLog": "lint.log"
+  },
+  "evidence": {
+    "after-1.log": {
+      "sha256": "4cf68e6818d3042f858b6d2ac6855b088631e1aecff0db2d8bafba9f315caffc",
+      "bytes": 120208,
+      "summary": [
+        "Test Files  4 failed | 1 passed (5)",
+        "Tests  9 failed | 176 passed (185)",
+        "Errors  2 errors",
+        "Duration  51.95s (transform 27.87s, setup 0ms, import 36.09s, tests 76.52s, environment 1ms)"
+      ]
+    },
+    "after-2.log": {
+      "sha256": "2481758106915824037a20e39f35dbbcf6922362bacbba7c3f74542df4f3895c",
+      "bytes": 120208,
+      "summary": [
+        "Test Files  4 failed | 1 passed (5)",
+        "Tests  9 failed | 176 passed (185)",
+        "Errors  2 errors",
+        "Duration  29.25s (transform 28.12s, setup 0ms, import 38.65s, tests 42.14s, environment 0ms)"
+      ]
+    },
+    "after-3.log": {
+      "sha256": "849230bd38da8aec7ed046e6b0a274dffc472199304c19e34d92ef0488a436bc",
+      "bytes": 515279,
+      "summary": [
+        "Test Files  2 failed | 3 passed (5)",
+        "Tests  7 failed | 178 passed (185)",
+        "Duration  22.50s (transform 13.99s, setup 0ms, import 19.76s, tests 31.87s, environment 1ms)"
+      ]
+    },
+    "after-4.log": {
+      "sha256": "f841ff06dc9f83874ee59b81c8cc87069f2feca16e220becb31b21f129f3511a",
+      "bytes": 8055,
+      "summary": [
+        "Test Files  1 failed | 4 passed (5)",
+        "Tests  2 failed | 183 passed (185)",
+        "Duration  28.42s (transform 20.39s, setup 0ms, import 30.18s, tests 43.09s, environment 1ms)"
+      ]
+    },
+    "after-5.log": {
+      "sha256": "39f8527a32cad6645cabbe5264fa266d4fe4239ed609e1993ae85605ec3c4131",
+      "bytes": 4766,
+      "summary": [
+        "Test Files  5 passed (5)",
+        "Tests  185 passed (185)",
+        "Duration  35.96s (transform 16.38s, setup 0ms, import 23.70s, tests 48.49s, environment 1ms)"
+      ]
+    },
+    "before.log": {
+      "sha256": "77fef85c79112a01a79c00e20e52c5fe17f8faebcdc99d4eef4acef577eeafb4",
+      "bytes": 121676,
+      "summary": [
+        "Test Files  4 failed | 1 passed (5)",
+        "Tests  11 failed | 174 passed (185)",
+        "Errors  2 errors",
+        "Duration  26.90s (transform 14.70s, setup 0ms, import 20.96s, tests 36.65s, environment 0ms)"
+      ]
+    },
+    "focused-final.log": {
+      "sha256": "4dd8e93347efedbc179be117b03244ac836f8beaa5104fc44b870f1618b8cf51",
+      "bytes": 5802,
+      "summary": [
+        "Test Files  10 passed (10)",
+        "Tests  232 passed (232)",
+        "Duration  18.86s (transform 27.10s, setup 0ms, import 41.12s, tests 32.60s, environment 1ms)"
+      ]
+    },
+    "lint.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "summary": []
+    }
+  },
+  "preservedAssertions": [
+    "content-hash-conflict",
+    "Web asset-path proposal value",
+    "atomic accept/reject/stale hash",
+    "Undo recovery inert",
+    "unavailable accelerator inert",
+    "Kids accelerator inert",
+    "unadvertised Shift inert",
+    "profile dirty/recovery refusal",
+    "open/save/play",
+    "queued and in-flight selection",
+    "audio generation/root/profile fence",
+    "non-null root audio grant",
+    "real CustomEvent audio invalidation"
+  ],
+  "addedOracles": [
+    "bound profile exact business call and real DOM audio confirm",
+    "rootless profile exact business call and null-only audio fence",
+    "host-refused profile keeps prior business profile and audio null fence"
+  ],
+  "scopeNotes": [
+    "No original shared or foreign worktree edited.",
+    "No bridge/root/policy/index/manifests/source changes outside owned chrome script.",
+    "Other gate failures belong to separate owners; no whole merge PASS claim.",
+    "Stale ignored emitted tests/helpers .js shadowed the source facade: selected goldens import .ts explicitly.",
+    "Only exact validated startup transcript consumed; later profile and business calls remain observable."
+  ],
+  "notRun": [
+    "install",
+    "fullgate",
+    "build",
+    "browser",
+    "Docker",
+    "native",
+    "staging",
+    "commit",
+    "push",
+    "typecheck"
+  ]
+}

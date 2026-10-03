@@ -1,0 +1,12 @@
+[
+  {
+    "path": "desktop/linux/src/lib/bridge/assistant.ts",
+    "before": "ee3d4f155687588d5b9e83ecabdd10595c2d05d34c41ff1336df9e4bd4c260e1",
+    "after": "e6657c5d071ba83c5b4750d34fef9d739e42977b05a242f4f6228139a514ca0d"
+  },
+  {
+    "path": "desktop/linux/src/lib/desktop-scene.ts",
+    "before": "694f2f6b24441deebe4ffc5cf8e076ca87f91f4ba52420b265aa87ec2009feab",
+    "after": "db3081f0c84ca63ee3df8feecf7a13e4a772a3f7f3566a5734bc3358e94d0fbb"
+  }
+]

@@ -1,0 +1,363 @@
+
+  x anti-slop(no-unknown-parameters): Parameter `request` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.
+    ,-[desktop/linux/src/renderer/features/services.ts:18:20]
+ 17 | export type BridgeGlobal = {
+ 18 |   request(request: unknown): Promise<DesktopBridgeResponse>;
+    :                    ^^^^^^^
+ 19 |   inputActions?(): Promise<unknown>;
+    `----
+
+  x anti-slop(no-unknown-returns): This function exposes `unknown` to its caller. Parse the value at its boundary and return a named domain type.
+    ,-[desktop/linux/src/renderer/features/services.ts:19:20]
+ 18 |   request(request: unknown): Promise<DesktopBridgeResponse>;
+ 19 |   inputActions?(): Promise<unknown>;
+    :                    ^^^^^^^^^^^^^^^^
+ 20 |   configureByo?: (
+    `----
+
+  x anti-slop(no-unknown-parameters): Parameter `error` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.
+    ,-[desktop/linux/src/renderer/features/overlay-report.ts:45:36]
+ 44 | 
+ 45 | export function refusalText(error: unknown): string {
+    :                                    ^^^^^^^
+ 46 |   return error instanceof Error ? error.message : String(error);
+    `----
+
+  x anti-slop(no-unknown-parameters): Parameter `error` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.
+     ,-[desktop/linux/src/renderer/features/overlay-report.ts:109:19]
+ 108 |           },
+ 109 |           (error: unknown) => {
+     :                   ^^^^^^^
+ 110 |             frameReportInFlight = false;
+     `----
+
+  x anti-slop(require-safety-comment-for-type-assertion): This type assertion has no `SAFETY:` justification. State the checked invariant immediately before the assertion or its containing statement.
+    ,-[desktop/linux/src/renderer/viewport.ts:46:22]
+ 45 | function bridge(): BridgeGlobal | null {
+ 46 |   const candidate = (globalThis as Record<string, unknown>)[DESKTOP_BRIDGE_GLOBAL];
+    :                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 47 |   if (typeof candidate !== "object" || candidate === null) return null;
+    `----
+
+  x anti-slop(no-unsafe-dictionary-type): This dictionary's unknown value type gives callers no concrete value contract. Use an owner/schema-derived value type; parse external payloads before insertion.
+    ,-[desktop/linux/src/renderer/viewport.ts:46:36]
+ 45 | function bridge(): BridgeGlobal | null {
+ 46 |   const candidate = (globalThis as Record<string, unknown>)[DESKTOP_BRIDGE_GLOBAL];
+    :                                    ^^^^^^^^^^^^^^^^^^^^^^^
+ 47 |   if (typeof candidate !== "object" || candidate === null) return null;
+    `----
+
+  x anti-slop(no-runtime-typeof): A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.
+    ,-[desktop/linux/src/renderer/viewport.ts:47:7]
+ 46 |   const candidate = (globalThis as Record<string, unknown>)[DESKTOP_BRIDGE_GLOBAL];
+ 47 |   if (typeof candidate !== "object" || candidate === null) return null;
+    :       ^^^^^^^^^^^^^^^^
+ 48 |   const request = (candidate as Record<string, unknown>)["request"];
+    `----
+
+  x anti-slop(require-safety-comment-for-type-assertion): This type assertion has no `SAFETY:` justification. State the checked invariant immediately before the assertion or its containing statement.
+    ,-[desktop/linux/src/renderer/viewport.ts:48:20]
+ 47 |   if (typeof candidate !== "object" || candidate === null) return null;
+ 48 |   const request = (candidate as Record<string, unknown>)["request"];
+    :                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 49 |   return typeof request === "function" ? (candidate as BridgeGlobal) : null;
+    `----
+
+  x anti-slop(no-unsafe-dictionary-type): This dictionary's unknown value type gives callers no concrete value contract. Use an owner/schema-derived value type; parse external payloads before insertion.
+    ,-[desktop/linux/src/renderer/viewport.ts:48:33]
+ 47 |   if (typeof candidate !== "object" || candidate === null) return null;
+ 48 |   const request = (candidate as Record<string, unknown>)["request"];
+    :                                 ^^^^^^^^^^^^^^^^^^^^^^^
+ 49 |   return typeof request === "function" ? (candidate as BridgeGlobal) : null;
+    `----
+
+  x anti-slop(no-runtime-typeof): A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.
+    ,-[desktop/linux/src/renderer/viewport.ts:49:10]
+ 48 |   const request = (candidate as Record<string, unknown>)["request"];
+ 49 |   return typeof request === "function" ? (candidate as BridgeGlobal) : null;
+    :          ^^^^^^^^^^^^^^
+ 50 | }
+    `----
+
+  x anti-slop(require-safety-comment-for-type-assertion): This type assertion has no `SAFETY:` justification. State the checked invariant immediately before the assertion or its containing statement.
+    ,-[desktop/linux/src/renderer/viewport.ts:49:43]
+ 48 |   const request = (candidate as Record<string, unknown>)["request"];
+ 49 |   return typeof request === "function" ? (candidate as BridgeGlobal) : null;
+    :                                           ^^^^^^^^^^^^^^^^^^^^^^^^^
+ 50 | }
+    `----
+
+  x anti-slop(no-runtime-typeof): A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.
+     ,-[desktop/linux/src/renderer/viewport.ts:104:11]
+ 103 |       if (lifetime.signal.aborted) return;
+ 104 |       if (typeof inspection !== "object" || inspection === null ||
+     :           ^^^^^^^^^^^^^^^^^
+ 105 |         !("ok" in inspection) || inspection.ok !== true || !("data" in inspection) ||
+     `----
+
+  x anti-slop(no-runtime-typeof): A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.
+     ,-[desktop/linux/src/renderer/viewport.ts:106:9]
+ 105 |         !("ok" in inspection) || inspection.ok !== true || !("data" in inspection) ||
+ 106 |         typeof inspection.data !== "object" || inspection.data === null || !("map" in inspection.data)) {
+     :         ^^^^^^^^^^^^^^^^^^^^^^
+ 107 |         refuseLiveViewport(stage, "the persisted input-action map was refused.");
+     `----
+
+  x anti-slop(require-safety-comment-for-type-assertion): This type assertion has no `SAFETY:` justification. State the checked invariant immediately before the assertion or its containing statement.
+     ,-[desktop/linux/src/renderer/viewport.ts:110:24]
+ 109 |       }
+ 110 |       inputActionMap = inspection.data.map as InputActionMap;
+     :                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 111 |     }
+     `----
+
+  x anti-slop(no-runtime-typeof): A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.
+     ,-[desktop/linux/src/renderer/viewport.ts:186:9]
+ 185 |     };
+ 186 |     if (typeof ResizeObserver === "function") {
+     :         ^^^^^^^^^^^^^^^^^^^^^
+ 187 |       const observer = new ResizeObserver(applyViewport);
+     `----
+
+  x anti-slop(no-unknown-parameters): Parameter `error` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.
+     ,-[desktop/linux/src/renderer/viewport.ts:220:42]
+ 219 | function startLiveViewport(): void {
+ 220 |   void mountLiveViewport().catch((error: unknown) => {
+     :                                          ^^^^^^^
+ 221 |     refuseLiveViewport(document.querySelector(".viewport"), refusalText(error));
+     `----
+
+  x anti-slop(no-unknown-parameters): Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.
+    ,-[desktop/linux/src/renderer/features/audio-playback.ts:10:35]
+  9 | }>;
+ 10 | function audioClipManifest(value: unknown): readonly AudioClipManifest[] | null {
+    :                                   ^^^^^^^
+ 11 |     if (!Array.isArray(value))
+    `----
+
+  x anti-slop(no-runtime-typeof): A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.
+    ,-[desktop/linux/src/renderer/features/audio-playback.ts:15:13]
+ 14 |     for (const item of value) {
+ 15 |         if (typeof item !== "object" || item === null)
+    :             ^^^^^^^^^^^
+ 16 |             return null;
+    `----
+
+  x anti-slop(no-runtime-typeof): A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.
+    ,-[desktop/linux/src/renderer/features/audio-playback.ts:19:13]
+ 18 |         if (!("assetId" in clip) || !("mediaType" in clip) || !("digest" in clip) || !("byteLength" in clip) ||
+ 19 |             typeof clip["assetId"] !== "string" || clip["assetId"].length === 0 ||
+    :             ^^^^^^^^^^^^^^^^^^^^^^
+ 20 |             (clip["mediaType"] !== "audio/wav" && clip["mediaType"] !== "audio/ogg" && clip["mediaType"] !== "audio/mpeg") ||
+    `----
+
+  x anti-slop(no-runtime-typeof): A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.
+    ,-[desktop/linux/src/renderer/features/audio-playback.ts:21:13]
+ 20 |             (clip["mediaType"] !== "audio/wav" && clip["mediaType"] !== "audio/ogg" && clip["mediaType"] !== "audio/mpeg") ||
+ 21 |             typeof clip["digest"] !== "string" || !/^sha256:[0-9a-f]{64}$/.test(clip["digest"]) ||
+    :             ^^^^^^^^^^^^^^^^^^^^^
+ 22 |             typeof clip["byteLength"] !== "number" || !Number.isSafeInteger(clip["byteLength"]) || clip["byteLength"] < 1 || clip["byteLength"] > 8 * 1024 * 1024)
+    `----
+
+  x anti-slop(no-runtime-typeof): A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.
+    ,-[desktop/linux/src/renderer/features/audio-playback.ts:22:13]
+ 21 |             typeof clip["digest"] !== "string" || !/^sha256:[0-9a-f]{64}$/.test(clip["digest"]) ||
+ 22 |             typeof clip["byteLength"] !== "number" || !Number.isSafeInteger(clip["byteLength"]) || clip["byteLength"] < 1 || clip["byteLength"] > 8 * 1024 * 1024)
+    :             ^^^^^^^^^^^^^^^^^^^^^^^^^
+ 23 |             return null;
+    `----
+
+  x anti-slop(no-object-parameters): Parameter `facade` uses the broad `object` type. Accept a named owner type; parse external input at its boundary before calling this function.
+    ,-[desktop/linux/src/renderer/features/audio-playback.ts:46:30]
+ 45 |     };
+ 46 |     const resolve = (facade: object): AudioNode => {
+    :                              ^^^^^^
+ 47 |         const node = nodes.get(facade);
+    `----
+
+  x anti-slop(no-runtime-typeof): A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.
+     ,-[desktop/linux/src/renderer/features/audio-playback.ts:112:37]
+ 111 |         stop();
+ 112 |         if (!("detail" in event) || typeof event.detail !== "object" || event.detail === null || !("profile" in event.detail))
+     :                                     ^^^^^^^^^^^^^^^^^^^
+ 113 |             return;
+     `----
+
+  x anti-slop(no-unknown-parameters): Parameter `request` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.
+     ,-[desktop/linux/src/renderer/features/audio-playback.ts:128:24]
+ 127 |     createContext: () => ModernAudioContextLike;
+ 128 |     request: (request: unknown) => Promise<unknown>;
+     :                        ^^^^^^^
+ 129 |     digest: (bytes: Uint8Array) => Promise<string>;
+     `----
+
+  x anti-slop(no-unknown-returns): This function exposes `unknown` to its caller. Parse the value at its boundary and return a named domain type.
+     ,-[desktop/linux/src/renderer/features/audio-playback.ts:128:36]
+ 127 |     createContext: () => ModernAudioContextLike;
+ 128 |     request: (request: unknown) => Promise<unknown>;
+     :                                    ^^^^^^^^^^^^^^^^
+ 129 |     digest: (bytes: Uint8Array) => Promise<string>;
+     `----
+
+  x anti-slop(no-unknown-returns): This function exposes `unknown` to its caller. Parse the value at its boundary and return a named domain type.
+     ,-[desktop/linux/src/renderer/features/audio-playback.ts:130:23]
+ 129 |     digest: (bytes: Uint8Array) => Promise<string>;
+ 130 |     getProfile: () => unknown;
+     :                       ^^^^^^^
+ 131 |     report: (message: string) => void;
+     `----
+
+  x anti-slop(no-unknown-parameters): Parameter `value` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.
+     ,-[desktop/linux/src/renderer/features/audio-playback.ts:142:27]
+ 141 |     return Object.freeze({
+ 142 |         async play(value: unknown): Promise<boolean> {
+     :                           ^^^^^^^
+ 143 |             const clips = audioClipManifest([value]), clip = clips?.[0];
+     `----
+
+  x anti-slop(no-runtime-typeof): A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.
+     ,-[desktop/linux/src/renderer/features/audio-playback.ts:161:21]
+ 160 |                     return false;
+ 161 |                 if (typeof result !== "object" || result === null || !("ok" in result) || result.ok !== true || !("data" in result) || typeof result.data !== "object" || result.data === null) {
+     :                     ^^^^^^^^^^^^^
+ 162 |                     report("AUDIO_CLIP_UNKNOWN", clip.assetId);
+     `----
+
+  x anti-slop(no-runtime-typeof): A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.
+     ,-[desktop/linux/src/renderer/features/audio-playback.ts:161:136]
+ 160 |                     return false;
+ 161 |                 if (typeof result !== "object" || result === null || !("ok" in result) || result.ok !== true || !("data" in result) || typeof result.data !== "object" || result.data === null) {
+     :                                                                                                                                        ^^^^^^^^^^^^^^^^^^
+ 162 |                     report("AUDIO_CLIP_UNKNOWN", clip.assetId);
+     `----
+
+  x anti-slop(no-runtime-typeof): A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.
+     ,-[desktop/linux/src/renderer/features/audio-playback.ts:166:289]
+ 165 |                 const data = result.data;
+ 166 |                 if (!("assetId" in data) || !("mediaType" in data) || !("digest" in data) || !("byteLength" in data) || !("bytesBase64" in data) || data.assetId !== clip.assetId || data.mediaType !== clip.mediaType || data.digest !== clip.digest || data.byteLength !== clip.byteLength || typeof data.bytesBase64 !== "string" || data.bytesBase64.length !== 4 * Math.ceil(clip.byteLength / 3) || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(data.bytesBase64)) {
+     :                                                                                                                                                                                                                                                                                                 ^^^^^^^^^^^^^^^^^^^^^^^
+ 167 |                     report("AUDIO_CLIP_INVALID", clip.assetId);
+     `----
+
+  x anti-slop(no-unknown-returns): This function exposes `unknown` to its caller. Parse the value at its boundary and return a named domain type.
+     ,-[desktop/linux/src/renderer/features/audio-playback.ts:248:112]
+ 247 | }
+ 248 | function mountAudioControls(services: ViewportServices, clips: readonly AudioClipManifest[], getProfile: () => unknown): () => void {
+     :                                                                                                                ^^^^^^^
+ 249 |     const { stage: host, report } = services;
+     `----
+
+  x anti-slop(no-unknown-returns): This function exposes `unknown` to its caller. Parse the value at its boundary and return a named domain type.
+     ,-[desktop/linux/src/renderer/features/audio-playback.ts:336:23]
+ 335 | export function installAudioControls(services: ViewportServices, options: Readonly<{
+ 336 |     getProfile: () => unknown;
+     :                       ^^^^^^^
+ 337 | }>) {
+     `----
+
+  x anti-slop(no-unknown-parameters): Parameter `mountable` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.
+     ,-[desktop/linux/src/renderer/features/audio-playback.ts:340:36]
+ 339 |     const stop = () => { disposeAudioControls?.(); disposeAudioControls = null; };
+ 340 |     return { stop, play(mountable: unknown) {
+     :                                    ^^^^^^^
+ 341 |             if (services.signal?.aborted) return;
+     `----
+
+  x anti-slop(no-runtime-typeof): A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.
+     ,-[desktop/linux/src/renderer/features/audio-playback.ts:347:31]
+ 346 |             }
+ 347 |             const projected = typeof mountable === "object" && mountable !== null && "audioClips" in mountable ? mountable.audioClips : [];
+     :                               ^^^^^^^^^^^^^^^^
+ 348 |             const clips = audioClipManifest(projected);
+     `----
+
+  x anti-slop(require-safety-comment-for-type-assertion): This type assertion has no `SAFETY:` justification. State the checked invariant immediately before the assertion or its containing statement.
+    ,-[desktop/linux/src/renderer/features/play-loop.ts:38:68]
+ 37 |     if (services.signal?.aborted) return;
+ 38 |     if (!rarityInvalidationMatches(displayedViewportRarityDigest, (event as CustomEvent).detail)) {
+    :                                                                    ^^^^^^^^^^^^^^^^^^^^
+ 39 |       return;
+    `----
+
+  x anti-slop(require-safety-comment-for-type-assertion): This type assertion has no `SAFETY:` justification. State the checked invariant immediately before the assertion or its containing statement.
+    ,-[desktop/linux/src/renderer/features/play-loop.ts:49:20]
+ 48 |         report.reportNextFrame();
+ 49 | ,->     const detail = event.detail as {
+ 50 | |         accepted?: unknown;
+ 51 | |         frame?: unknown;
+ 52 | `->     } | null;
+ 53 |         const playable = playableExercise(event.detail);
+    `----
+
+  x anti-slop(require-safety-comment-for-type-assertion): This type assertion has no `SAFETY:` justification. State the checked invariant immediately before the assertion or its containing statement.
+    ,-[desktop/linux/src/renderer/features/play-loop.ts:56:22]
+ 55 |     services.inputContext = "play";
+ 56 |     const exercise = playable as PlayableExercise & RarityReportable;
+    :                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 57 |     audio.play(exercise.mountable);
+    `----
+
+  x anti-slop(require-safety-comment-for-type-assertion): This type assertion has no `SAFETY:` justification. State the checked invariant immediately before the assertion or its containing statement.
+     ,-[desktop/linux/src/renderer/features/play-loop.ts:96:28]
+  95 |               if (openPath.ok) {
+  96 | ,->           const exercise = openPath.data as RarityReportable & {
+  97 | |               initialDigest: string;
+  98 | |               tickDigests: string[];
+  99 | `->           };
+ 100 |               report.openPathLine(
+     `----
+
+  x anti-slop(no-unknown-parameters): Parameter `next` leaves input unparsed. Accept a named domain type; run the expected schema or parser at the I/O boundary before calling this function.
+   ,-[desktop/linux/src/renderer/features/scene-sync.ts:8:68]
+ 7 | 
+ 8 | export function synchronizeScene(services: ViewportServices, next: unknown): boolean {
+   :                                                                    ^^^^^^^
+ 9 |     if (services.signal?.aborted) return false;
+   `----
+
+  x anti-slop(require-safety-comment-for-type-assertion): This type assertion has no `SAFETY:` justification. State the checked invariant immediately before the assertion or its containing statement.
+    ,-[desktop/linux/src/renderer/features/scene-sync.ts:42:20]
+ 41 |         services.report.reportNextFrame();
+ 42 | ,->     const detail = event.detail as {
+ 43 | |         mountable?: unknown;
+ 44 | |         asset?: { instanceId?: unknown; digest?: unknown };
+ 45 | |         accepted?: unknown;
+ 46 | |         frame?: unknown;
+ 47 | `->     } | null;
+ 48 |         if (
+    `----
+
+  x anti-slop(no-runtime-typeof): A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.
+    ,-[desktop/linux/src/renderer/features/scene-sync.ts:50:7]
+ 49 |       detail === null ||
+ 50 |       typeof detail.asset?.instanceId !== "string" ||
+    :       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 51 |       typeof detail.asset.digest !== "string" ||
+    `----
+
+  x anti-slop(no-runtime-typeof): A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.
+    ,-[desktop/linux/src/renderer/features/scene-sync.ts:51:7]
+ 50 |       typeof detail.asset?.instanceId !== "string" ||
+ 51 |       typeof detail.asset.digest !== "string" ||
+    :       ^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 52 |       !desktopMountablePayload(detail.mountable) ||
+    `----
+
+  x anti-slop(no-runtime-typeof): A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.
+     ,-[tests/e2e/desktop-web-export-golden.test.ts:102:49]
+ 101 |         exportCommit.beforeMkdtemp?.(prefix);
+ 102 |         if (options === "buffer" || (options && typeof options === "object" && options.encoding === "buffer")) {
+     :                                                 ^^^^^^^^^^^^^^
+ 103 |             return actual.mkdtempSync(prefix, options);
+     `----
+
+  x anti-slop(no-runtime-typeof): A `typeof` check narrows a representation without establishing its contract. Parse input at its I/O boundary, then branch on the domain value.
+     ,-[tests/e2e/desktop-web-export-golden.test.ts:120:49]
+ 119 |     function hookedRealpath(path: Parameters<typeof actual.realpathSync>[0], options?: nodeFileSystem.EncodingOption | nodeFileSystem.BufferEncodingOption): string | Buffer<ArrayBuffer> {
+ 120 |         if (options === "buffer" || (options && typeof options === "object" && options.encoding === "buffer")) {
+     :                                                 ^^^^^^^^^^^^^^
+ 121 |             return actual.realpathSync(path, options);
+     `----
+
+Found 0 warnings and 44 errors.
+Finished in 632ms on 9 files with 115 rules using 12 threads.

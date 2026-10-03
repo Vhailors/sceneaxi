@@ -1,0 +1,12 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/tmp/sceneaxi-comprehensive-owned-xd4gdfl1[39m
+
+ [32m✓[39m apps/desktop-shell/test/minimum-window.test.ts[2m > [22mminimum-window refusal client lifecycle (DOM, not pixels)[2m > [22mdismisses a menu on refusal and returns to its trigger only after resizing[32m 181[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/minimum-window.test.ts[2m > [22mminimum-window refusal client lifecycle (DOM, not pixels)[2m > [22mdismisses dialogs without reopening them and restores their original opener[32m 102[2mms[22m[39m
+ [32m✓[39m apps/desktop-shell/test/minimum-window.test.ts[2m > [22mminimum-window refusal client lifecycle (DOM, not pixels)[2m > [22muses either dimension, allows the exact minimum and does not steal moved focus[32m 88[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m3 passed[39m[22m[90m (3)[39m
+[2m   Start at [22m 13:13:01
+[2m   Duration [22m 4.22s[2m (transform 2.77s, setup 0ms, import 3.61s, tests 373ms, environment 0ms)[22m
+

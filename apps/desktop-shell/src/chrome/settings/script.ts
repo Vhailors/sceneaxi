@@ -251,6 +251,9 @@ export function settingsScript(): string {
     }
     if (commandId === 'input-action-rebind' || commandId === 'input-actions-reset') {
       const current = editorInputActionReview;
+      if (approve && (!current || current.commandId !== commandId || typeof current.reviewDigest !== 'string')) {
+        throw new Error('INPUT_ACTION_REVIEW_REQUIRED');
+      }
       input.expectedBaseVersion = current?.baseVersion || editorInputActionBaseVersions?.[input.scope];
       if (!input.expectedBaseVersion) throw new Error('INPUT_ACTION_INSPECTION_REQUIRED');
       // Only the Approve control approves; Submit always asks for a fresh review.
@@ -294,6 +297,11 @@ export function settingsScript(): string {
       const code = error instanceof Error ? error.message : 'EDITOR_COMMAND_INPUT_INVALID';
       showOutcome(commandId + ' refused', code, 'Inspect the relevant catalog and provide all required values before submitting.');
       productStatus('refused', commandId + ' refused · ' + code);
+      return;
+    }
+    const definition = T.editorCommands.find((row) => row.id === commandId);
+    if (definition?.mutation === 'stages-change' && definition.inputSchema.properties.expectedContentHash) {
+      await stageSceneCommand(commandId, input, definition.label, { authoringSnapshot: true });
       return;
     }
     const response = await commandRequest(commandId, input);

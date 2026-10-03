@@ -1,0 +1,1499 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-02T14:21:07.058129+00:00",
+  "verdict": "NOTREADY",
+  "root": "/home/devuser/Documents/Projects/sceneaxi",
+  "sourceReadOnly": true,
+  "productionCertified": false,
+  "scope": "Serial integration packet, not behavioral rerun or whole-checkout freeze",
+  "lanes": [
+    {
+      "lane": "own-session-endpoint",
+      "builder": "bg-110",
+      "report": "docs/audits/production-swarm/implementation-expansion-2026-10-02/own-session-endpoint/report.md",
+      "reportJsonSha256": "4bb5f6492c53e89bfcb3afd04f265c3d7e001053fb9cc1b492931fa3735b28ed",
+      "reportMarkdownSha256": "8efb1088bf038bf6311525d019be1c5b85040349856065e25974903cceb72cac",
+      "builderStatus": "IMPLEMENTED_FOCUSED_VERIFIED",
+      "sourceHandbackComplete": true,
+      "sourceCount": 3,
+      "requestsVerbatim": {
+        "exactExportRequests": [],
+        "sharedRequests": [
+          {
+            "owner": "shared facade owner / serial integrator",
+            "path": "sites/umbrella/src/lib/login-flow.ts and its deployment-origin resolver",
+            "evidence": "bg-111 reports raw origin configuration path/userinfo is stripped before verification; not independently re-read or reproduced in this retry",
+            "request": "Reproduce then reject noncanonical raw configured deployment origin before normalization, or expose raw value for strict validation. Add permanent path/userinfo/query/hash/whitespace negatives.",
+            "status": "NOT_IMPLEMENTED_OUTSIDE_OWNERSHIP",
+            "productionBlocking": true
+          }
+        ],
+        "serialAcceptanceRequests": [
+          "Rebuild umbrella site from handed-back source; assert actual GET /api/auth/own-session reaches specific route instead of unchanged catchall 404, with positive synthetic verified identity fixture and origin/method/role/Kids/expiry/no-store negatives",
+          "Run real catalogue server-adapter to this endpoint on separate local origins with explicit synthetic carried credential; inspect no credential/provider leak; no browser SSO claim",
+          "Run complete gate and shared source-parsed inventories on frozen combined source; no matrix widening or skip"
+        ]
+      },
+      "acceptance": "NOTREADY; scoped builder results are not integrated acceptance"
+    },
+    {
+      "lane": "catalog-session-adapter",
+      "builder": "bg-111",
+      "report": "docs/audits/production-swarm/implementation-expansion-2026-10-02/catalog-session-adapter/report.md",
+      "reportJsonSha256": "1bb191951cf29814b66db120adf2d99e76b87a7d74fbcc0fcef79def93cd1d66",
+      "reportMarkdownSha256": "64533e33cbdc72037f3754683cf1e347050a6300383d5a579183e3800a43a252",
+      "builderStatus": "IMPLEMENTED_FOCUSED_VERIFIED_PENDING_SERIAL_WIRING",
+      "sourceHandbackComplete": true,
+      "sourceCount": 4,
+      "requestsVerbatim": {
+        "integrationRequests": [
+          {
+            "owner": "serial shared-manifest owner via bg-109/parent",
+            "path": "packages/site-kit/package.json",
+            "change": "Add export './catalog-server-fetch':'./src/catalog-server-fetch.ts'. No root barrel/port/matrix change required.",
+            "state": "REQUESTED; owning package resolution/export acceptance delegated"
+          },
+          {
+            "owner": "bg-109",
+            "paths": [
+              "vitest.config.ts",
+              "tsconfig.tests.json"
+            ],
+            "change": "Add narrow @sceneaxi/site-kit/catalog-server-fetch alias before root prefix and matching test tsconfig path.",
+            "state": "Owner reports aliases applied; real dynamic storefront tests resolve the narrow import."
+          },
+          {
+            "owner": "serial item-page integration owner",
+            "paths": [
+              "sites/catalog-game/src/app/item/[itemId]/page.tsx:23-26,86",
+              "sites/catalog-web/src/app/item/[itemId]/page.tsx:23-26,86"
+            ],
+            "change": "Import createCatalogRequestIdentityPlane/resolveCatalogViewer from '../../../lib/identity-plane.js'; use createCatalogRequestIdentityPlane with explicit approved server configuration. Keep existing readSessionToken explicit carry and commerce holds untouched.",
+            "state": "ACKNOWLEDGED bg-109; deferred until source handback"
+          },
+          {
+            "owner": "shared configured-origin owner via parent",
+            "path": "packages/site-kit/src/deep-link.ts:177",
+            "change": "Expose raw configuredValue additively, or otherwise validate canonical raw config before any normalization. Existing resolver NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN normalizes userinfo/path/query/hash through .origin; adapter must not accept a sanitized unsafe URL. Preserve existing public v1 semantics; no Host fallback. Separate explicit server approval flag (proposed SCENEAXI_CATALOG_OWN_SESSION_APPROVED=true) must be wired/documented by owner; default false.",
+            "state": "REQUESTED; no additional environment name actually read by child source"
+          }
+        ]
+      },
+      "acceptance": "NOTREADY; scoped builder results are not integrated acceptance"
+    },
+    {
+      "lane": "checkout-deadline",
+      "builder": "bg-112",
+      "report": "docs/audits/production-swarm/implementation-expansion-2026-10-02/checkout-deadline/report.md",
+      "reportJsonSha256": "00d5bafbdda00743bd2250e5e687522acb9455e00925ef14a1d65d2bd02623fc",
+      "reportMarkdownSha256": "dc1dafe585cd0422357adba85dba9a5ea4ff2fd476accd0c053fe9e012519af0",
+      "builderStatus": "IMPLEMENTED_FOCUSED_VERIFIED",
+      "sourceHandbackComplete": true,
+      "sourceCount": 2,
+      "requestsVerbatim": {
+        "publicExportRequests": [],
+        "serialAcceptanceRequest": "Run exact new test command in umbrella install root; explicit existing provider script does not automatically discover this file. Then serial full checks/current HTTP artifact proof. No earlier failed pass promoted."
+      },
+      "acceptance": "NOTREADY; scoped builder results are not integrated acceptance"
+    },
+    {
+      "lane": "desktop-keyboard",
+      "builder": "bg-113",
+      "report": "docs/audits/production-swarm/implementation-expansion-2026-10-02/desktop-keyboard/report.md",
+      "reportJsonSha256": "c80f9c9c28cb8a0c5c3caf14dbfe6fb6f49d29e31edb891068a00e65b572245a",
+      "reportMarkdownSha256": "428157716039c0b732d48f23e8adbec07f374e532206c82df7128cf8987fbcae",
+      "builderStatus": "SOURCE_READY_BROWSER_NOT_RUN",
+      "sourceHandbackComplete": true,
+      "sourceCount": 3,
+      "requestsVerbatim": {
+        "serialAcceptance": {
+          "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+          "owner": "bg-109",
+          "command": "node apps/desktop-shell/test/visual-postpr-evidence/retry/capture.mjs expansion-desktop-keyboard --keyboard-only",
+          "prerequisites": [
+            "All child source handbacks/frozen candidate",
+            "Serial owner rebuilt workspace dist (external schemas/authoring host runtime modules)",
+            "Existing desktop Linux esbuild, umbrella Playwright and existing Chromium1223 executable"
+          ]
+        }
+      },
+      "acceptance": "NOTREADY; scoped builder results are not integrated acceptance"
+    },
+    {
+      "lane": "web-inspector-ux",
+      "builder": "bg-114",
+      "report": "docs/audits/production-swarm/implementation-expansion-2026-10-02/web-inspector-ux/report.md",
+      "reportJsonSha256": "87d182299717cf4859854602273ed2fa3f4b5eef0683993b09852ab2c3219fd1",
+      "reportMarkdownSha256": "d534a2c0ca67fdfeedeb45cbcb862893555b03f9d25a85a85fc15fcbe06734fe",
+      "builderStatus": "IMPLEMENTED_BOUNDED_PROOF_PASS_BROWSER_NOT_RUN",
+      "sourceHandbackComplete": true,
+      "sourceCount": 2,
+      "requestsVerbatim": {
+        "exportRequests": []
+      },
+      "acceptance": "NOTREADY; scoped builder results are not integrated acceptance"
+    },
+    {
+      "lane": "versioned-transforms",
+      "builder": "bg-115",
+      "report": "docs/audits/production-swarm/implementation-expansion-2026-10-02/versioned-transforms/report.md",
+      "reportJsonSha256": "5dd1f19aa037bb9ab60435eff5a38de29cb140e24f8ed9e5d369f6fc3d039632",
+      "reportMarkdownSha256": "b91bf223e7236f76b21db5892a928831523f137a1a19c093a10738586c189ada",
+      "builderStatus": "OWNED_IMPLEMENTATION_VERIFIED_WITH_EXPORT_PROBE; SHARED_INTEGRATION_NOT_READY",
+      "sourceHandbackComplete": true,
+      "sourceCount": 5,
+      "requestsVerbatim": {
+        "exportRequests": {
+          "packages/schemas/src/index.ts": {
+            "from": "./scene-composition.js",
+            "values": [
+              "SCENE_COMPOSITION_SCHEMA_VERSION_V2",
+              "SCENE_MATRIX_CONVENTION_V2",
+              "multiplySceneMatricesV2",
+              "sceneMatrixFromSculptTransformV2",
+              "validateSceneCompositionIntakeV2",
+              "resolveScenePlacementsV2",
+              "migrateSceneCompositionIntakeV1ToV2",
+              "digestScenePlacementsV2",
+              "digestComposedSceneV2",
+              "projectSceneInstanceHierarchyV2",
+              "validateComposedSceneV2",
+              "composedSceneV2FromDocumentData"
+            ],
+            "types": [
+              "SceneMatrixV2",
+              "SceneCompositionIntakeV2",
+              "ResolvedScenePlacementV2",
+              "SceneBoundsV2",
+              "ComposedSceneInstanceV2",
+              "ComposedSceneV2",
+              "PlacedSceneInstanceHierarchyV2"
+            ]
+          },
+          "packages/authoring-core/src/index.ts": {
+            "from": "./scene-composition.js",
+            "values": [
+              "composeSceneV2",
+              "serializeComposedSceneV2",
+              "sceneDocumentFromComposedSceneV2",
+              "migrateComposedSceneV1ToV2"
+            ],
+            "types": [
+              "SceneCompositionResultV2"
+            ]
+          },
+          "packages/engine-presentation/src/index.ts": {
+            "from": "./scene-transforms.js",
+            "values": [
+              "resolveScenePresentationV2"
+            ],
+            "types": [
+              "ScenePresentationSourceV2"
+            ]
+          }
+        },
+        "contractRequest": {
+          "path": "packages/schemas/contracts/scene-composition-v2.schema.json",
+          "proposal": "docs/audits/production-swarm/implementation-expansion-2026-10-02/versioned-transforms/scene-composition-v2.schema.proposal.json",
+          "v1ContractUnchanged": true
+        },
+        "integrationRequests": [
+          "Add exact schema/authoring/presentation public exports above without modifying v1 exports.",
+          "Install proposed v2 JSON schema additively; update contract fixture/checker/docs inventory under serial ownership, not v1 schema/version/golden bytes.",
+          "Add explicit openSceneKernelSessionV2/replaySceneKernelSessionV2 or equivalent schema2-only dispatch; v1 API/save shape remain unchanged. Save schema2 carries full validated scene matrix/evidence; replay recomputes matrices/bounds and terminal digest, rejects wrong majors/tampering.",
+          "Kernel must simulate artifact-local driver transforms and recompute node world matrices with multiplySceneMatricesV2 before flattening; never decompose shear matrices or send them to v1 additive-Euler simulation. Rest-pose helper output is not animated/runtime-physics proof.",
+          "Presentation: use resolveScenePresentationV2 validation before allocation. Reuse existing buildInstance with identity placement, set independent instance root.matrix from validated worldMatrix and matrixAutoUpdate=false, retaining unchanged local artifact hierarchy. Do not apply already absolute node world matrices again under worldMatrix parent. Add transactional all-instance cleanup/live guard.",
+          "Use explicit v2 authoring intake dispatch to composeSceneV2; legacy composeScene continues rejecting schema2. Document/save uses the existing composedScene data key; branch explicitly to composedSceneV2FromDocumentData on schema2.",
+          "Run regular (no probe aliases) owned tests after shared exports, then unchanged full build/gate, declarations/contracts, real kernel v2 rotated/sheared advance/save-replay negative oracles and browser pixels/cleanup. No v2 runtime success claimed before these."
+        ]
+      },
+      "acceptance": "NOTREADY; scoped builder results are not integrated acceptance"
+    },
+    {
+      "lane": "unsigned-project-build",
+      "builder": "bg-116",
+      "report": "docs/audits/production-swarm/implementation-expansion-2026-10-02/unsigned-project-build/report.md",
+      "reportJsonSha256": "8b9c7825dea7038608a0f5a968adb62aa69f7632558f10ab792e237c6b938cf9",
+      "reportMarkdownSha256": "a93cdb1036aadf6c97901637f2209f5402d93195e652609d13777c47c0b3aa7c",
+      "builderStatus": "SOURCE_HANDBACK_IMPLEMENTED_NOT_INTEGRATED",
+      "sourceHandbackComplete": true,
+      "sourceCount": 4,
+      "requestsVerbatim": {
+        "exportRequests": {
+          "packages/schemas/src/index.ts": "Add evaluateLocalProjectBuild to existing desktop-project-build.js named export block.",
+          "packages/authoring-core/src/index.ts": "export { LOCAL_PROJECT_BUILD_LIMITS, LOCAL_PROJECT_BUILD_REFUSALS, buildLocalProject, verifyLocalProjectBuild, launchLocalProjectBuild, type LocalProjectBuildRefusal, type LocalProjectBuildReceipt, type LocalProjectBuildSuccess, type LocalProjectBuildResult, type LocalProjectBuildInput, type LocalProjectLaunchInput, type LocalProjectLaunchSuccess } from \"./local-project-build.js\";"
+        },
+        "integrationRequest": {
+          "owner": "bg-109 only",
+          "source": "desktop/linux existing exportDesktopWebProject / CLI / desktop action",
+          "instruction": "Expose an explicitly local-unsigned action under existing held-key/profile authority: produce existing saved-project Web export; call buildLocalProject({projectRoot,exportPath:relative(projectRoot,export.outputDirectory),name,profile:trustedSessionProfile,purpose:\"local-unsigned\",target:\"linux\"}); call verifyLocalProjectBuild before launch; launchLocalProjectBuild({projectRoot,name,executable:approvedSymlinkFreeElectronBinary}); expose receipt/PNG smoke proof with releaseReady:false. Do not repurpose signed evaluateProjectBuild, mark published/signed, or infer readiness from child creation."
+        }
+      },
+      "acceptance": "NOTREADY; scoped builder results are not integrated acceptance"
+    },
+    {
+      "lane": "importer-capacity",
+      "builder": "bg-117",
+      "report": "docs/audits/production-swarm/implementation-expansion-2026-10-02/importer-capacity/report.md",
+      "reportJsonSha256": "8b9935b9ef8b9dfd725f8715e78e12f2744589c0936f32bbcf8121b38ebf203b",
+      "reportMarkdownSha256": "2ac34c4f8907d8855a8e0e86b729ba078a743a2d302c676ad3759190a3603e7a",
+      "builderStatus": "IMPLEMENTED_SHARED_EXPORT_BLOCKED",
+      "sourceHandbackComplete": true,
+      "sourceCount": 3,
+      "requestsVerbatim": {
+        "exportRequest": {
+          "from": "./asset-preparation-worker.js",
+          "values": [
+            "startProjectAssetPreparation",
+            "ASSET_PREPARATION_REFUSALS",
+            "ASSET_PREPARATION_DEADLINE_MS"
+          ],
+          "types": [
+            "ProjectAssetPreparationInput",
+            "ProjectAssetPreparationOutcome",
+            "ProjectAssetPreparationJob"
+          ],
+          "packageManifest": "No new subpath required. Helpers in contained-gltf.ts are internal sibling exports; do not add to root API unless desired."
+        },
+        "desktopIntegrationRequests": [
+          "Retain existing native picker/profile/Kids/project-root/document/lease admission; begin exactly one startProjectAssetPreparation job rather than sync assetImport; retain generation and cancel capability per active bridge/project.",
+          "Await job.result; refuse named !ok; for successful result install the exact prepared E1 proposal/diff into existing authoring review without re-running synchronous importer/propose; recheck current project/lease/profile and job generation before publication.",
+          "Cancel on explicit in-flight cancel, project switch, bridge close; await cancel() for terminal acknowledgment; ignore all retired generation results; no cancelling atomic apply mid-write.",
+          "Add typed generation-bound cancel command/control through serialowned schemas/maps/bridge/preload. Picker cancel/review rejection are not in-flight acknowledgement.",
+          "Ship dist/src/asset-preparation-worker.js beside importer dist/src/contained-gltf.js; preserve workspace resolver inheritance in Worker and include sibling entry in native packaging.",
+          "Profile accept/materialization/canonical reload and IPC separately. Worker implementation addresses preparation only; no canonical base64 compaction/version change. Instrument bytes/generation/timings only, never bodies/credentials."
+        ]
+      },
+      "acceptance": "NOTREADY; scoped builder results are not integrated acceptance"
+    },
+    {
+      "lane": "catalog-ui-polish",
+      "builder": "bg-118",
+      "report": "docs/audits/production-swarm/implementation-expansion-2026-10-02/catalog-ui-polish/report.md",
+      "reportJsonSha256": "47844416254bdd9d84fde813f9da7df72663ebad9102e9f9df2d2371821d6135",
+      "reportMarkdownSha256": "33a4259f213b81a63b1033bedd307af489551b0213ec2da430b322443816512d",
+      "builderStatus": "PASS_SCOPED_SOURCE_HANDED_BACK",
+      "sourceHandbackComplete": true,
+      "sourceCount": 4,
+      "requestsVerbatim": {
+        "exportRequests": [],
+        "testRegistrationRequest": "Root Vitest include excludes sites tests. Explicit serial/CI command: node --test sites/catalog-game/test/catalog-ux-regression.test.ts; no install or manifest edit performed by builder."
+      },
+      "acceptance": "NOTREADY; scoped builder results are not integrated acceptance"
+    },
+    {
+      "lane": "web-catalog-ui",
+      "builder": "bg-119",
+      "report": "docs/audits/production-swarm/implementation-expansion-2026-10-02/web-catalog-ui/report.md",
+      "reportJsonSha256": "f68f393edda40e9246636ebb7352f94973f483c19ac37f8eb9954bd91dadd9b8",
+      "reportMarkdownSha256": "45db5e75cf7a1124affa723153b337c76c3d11c73a00699c8650f7c83f694628",
+      "builderStatus": "IMPLEMENTED_SCOPED_PROOF_PASS",
+      "sourceHandbackComplete": true,
+      "sourceCount": 4,
+      "requestsVerbatim": {
+        "exportRequests": []
+      },
+      "acceptance": "NOTREADY; scoped builder results are not integrated acceptance"
+    }
+  ],
+  "sourceInventory": [
+    {
+      "path": "sites/umbrella/src/provider/own-session.ts",
+      "builder": "bg-110",
+      "lane": "own-session-endpoint",
+      "sha256": "6132cefa4127131d8371858ad25388015eeb6196044957da8fee35cf33439d87",
+      "matchesDigestInReceipt": true,
+      "nextWriter": "bg-109 only after explicit release"
+    },
+    {
+      "path": "sites/umbrella/src/app/api/auth/own-session/route.ts",
+      "builder": "bg-110",
+      "lane": "own-session-endpoint",
+      "sha256": "931dfdfb8208ecba18fb58b5323b29beadba0b61819155ee362a57dcfd716173",
+      "matchesDigestInReceipt": true,
+      "nextWriter": "bg-109 only after explicit release"
+    },
+    {
+      "path": "sites/umbrella/test/own-session.test.ts",
+      "builder": "bg-110",
+      "lane": "own-session-endpoint",
+      "sha256": "5678030d8fd8de59094dfcc374d8d9fc81a8d5025d21bff2d2362141f3091cc5",
+      "matchesDigestInReceipt": true,
+      "nextWriter": "bg-109 only after explicit release"
+    },
+    {
+      "path": "packages/site-kit/src/catalog-server-fetch.ts",
+      "builder": "bg-111",
+      "lane": "catalog-session-adapter",
+      "sha256": "d902013c74c02b02bb524f82adb49aa4f09a31586d2289e9f460d602f94274e0",
+      "matchesDigestInReceipt": true,
+      "nextWriter": "bg-109 only after explicit release"
+    },
+    {
+      "path": "packages/site-kit/test/catalog-server-fetch.test.ts",
+      "builder": "bg-111",
+      "lane": "catalog-session-adapter",
+      "sha256": "6c329da70feab86dca1fa8ca80e51270ed11c95cb81a93317f9db3cb663417db",
+      "matchesDigestInReceipt": true,
+      "nextWriter": "bg-109 only after explicit release"
+    },
+    {
+      "path": "sites/catalog-game/src/lib/identity-plane.ts",
+      "builder": "bg-111",
+      "lane": "catalog-session-adapter",
+      "sha256": "efde73461c78226a9640f63cef13706e00c1e23bf66dba6bea4a0344e9362cf3",
+      "matchesDigestInReceipt": true,
+      "nextWriter": "bg-109 only after explicit release"
+    },
+    {
+      "path": "sites/catalog-web/src/lib/identity-plane.ts",
+      "builder": "bg-111",
+      "lane": "catalog-session-adapter",
+      "sha256": "efde73461c78226a9640f63cef13706e00c1e23bf66dba6bea4a0344e9362cf3",
+      "matchesDigestInReceipt": true,
+      "nextWriter": "bg-109 only after explicit release"
+    },
+    {
+      "path": "sites/umbrella/src/app/api/checkout/checkout-handler.ts",
+      "builder": "bg-112",
+      "lane": "checkout-deadline",
+      "sha256": "4377d08acb85c83db2014634dfe25458e9b2dbe4034c863faf6c23c656475675",
+      "matchesDigestInReceipt": true,
+      "nextWriter": "bg-109 only after explicit release"
+    },
+    {
+      "path": "sites/umbrella/test/checkout-reader-bounds.test.ts",
+      "builder": "bg-112",
+      "lane": "checkout-deadline",
+      "sha256": "08f11c8b54ad2c7ab12a1bcd2b36bed68c8b61c785abe8f5bdcfb8c2d56f8edf",
+      "matchesDigestInReceipt": true,
+      "nextWriter": "bg-109 only after explicit release"
+    },
+    {
+      "path": "apps/desktop-shell/src/chrome.ts",
+      "builder": "bg-113",
+      "lane": "desktop-keyboard",
+      "sha256": "4187b4378cc9535eb9194c57445856dd455e1adf6d8ec9196428c942c73aea8a",
+      "matchesDigestInReceipt": true,
+      "nextWriter": "bg-109 only after explicit release"
+    },
+    {
+      "path": "apps/desktop-shell/test/keyboard-geometry.test.ts",
+      "builder": "bg-113",
+      "lane": "desktop-keyboard",
+      "sha256": "61ab39549b7b86ca8c93c4bb5c5b762560d010f406856661078a73f63c2f705f",
+      "matchesDigestInReceipt": true,
+      "nextWriter": "bg-109 only after explicit release"
+    },
+    {
+      "path": "apps/desktop-shell/test/visual-postpr-evidence/retry/capture.mjs",
+      "builder": "bg-113",
+      "lane": "desktop-keyboard",
+      "sha256": "0c552d679c94f361a96c4ccd10a072b31067912e2f750b3ba617409b0b0163f5",
+      "matchesDigestInReceipt": true,
+      "nextWriter": "bg-109 only after explicit release"
+    },
+    {
+      "path": "apps/web-shell/src/inspector-app.ts",
+      "builder": "bg-114",
+      "lane": "web-inspector-ux",
+      "sha256": "30e2ae5c6fb5f893aee29027103211d9095ba5fbc3160050b9373b7edddf8d29",
+      "matchesDigestInReceipt": true,
+      "nextWriter": "bg-109 only after explicit release"
+    },
+    {
+      "path": "apps/web-shell/test/inspector-accessibility.test.ts",
+      "builder": "bg-114",
+      "lane": "web-inspector-ux",
+      "sha256": "391e27c3a5b524d27cc5f0463e2f995046c8553c466391cb60c18dc25cc2369e",
+      "matchesDigestInReceipt": true,
+      "nextWriter": "bg-109 only after explicit release"
+    },
+    {
+      "path": "packages/schemas/src/scene-composition.ts",
+      "builder": "bg-115",
+      "lane": "versioned-transforms",
+      "sha256": "3ffd88fa60166409acc381fc921e7bd1bd81adab2060b7b9b384d2822ae573aa",
+      "matchesDigestInReceipt": true,
+      "nextWriter": "bg-109 only after explicit release"
+    },
+    {
+      "path": "packages/authoring-core/src/scene-composition.ts",
+      "builder": "bg-115",
+      "lane": "versioned-transforms",
+      "sha256": "509f85a54af188f993aa7cbe615b04ee6c2ed0f6b8104ee57e81bfd4133b2383",
+      "matchesDigestInReceipt": true,
+      "nextWriter": "bg-109 only after explicit release"
+    },
+    {
+      "path": "packages/engine-presentation/src/scene-transforms.ts",
+      "builder": "bg-115",
+      "lane": "versioned-transforms",
+      "sha256": "c77e395f2a50b4a7f46c46e5e640d6ef664b65f213d04a19489f64dceec22a04",
+      "matchesDigestInReceipt": true,
+      "nextWriter": "bg-109 only after explicit release"
+    },
+    {
+      "path": "packages/schemas/test/scene-transform-v2.test.ts",
+      "builder": "bg-115",
+      "lane": "versioned-transforms",
+      "sha256": "373e313d4421d951089c6d46def343ce846f88608230942c723f44ba30e3fae7",
+      "matchesDigestInReceipt": true,
+      "nextWriter": "bg-109 only after explicit release"
+    },
+    {
+      "path": "packages/authoring-core/test/scene-transform-v2.test.ts",
+      "builder": "bg-115",
+      "lane": "versioned-transforms",
+      "sha256": "521683c6ba8ba28715bfa531746d36255d72a253f8b0bac366513f15829e5702",
+      "matchesDigestInReceipt": true,
+      "nextWriter": "bg-109 only after explicit release"
+    },
+    {
+      "path": "packages/schemas/src/desktop-project-build.ts",
+      "builder": "bg-116",
+      "lane": "unsigned-project-build",
+      "sha256": "9493b82e88d6eea649be33a91b3d133d5daddc2bc160744b9599a5750dd8cff5",
+      "matchesDigestInReceipt": true,
+      "nextWriter": "bg-109 only after explicit release"
+    },
+    {
+      "path": "packages/authoring-core/src/local-project-build.ts",
+      "builder": "bg-116",
+      "lane": "unsigned-project-build",
+      "sha256": "6465dba1a3d3e4a0bf42af916b882cc938c19d1a5f52ca5b86a5a753233342f0",
+      "matchesDigestInReceipt": true,
+      "nextWriter": "bg-109 only after explicit release"
+    },
+    {
+      "path": "packages/schemas/test/local-project-build.test.ts",
+      "builder": "bg-116",
+      "lane": "unsigned-project-build",
+      "sha256": "5a71f3f7e718a900a3fa3965fd530e7dd18444551b37f6c54df5ed7531a617dd",
+      "matchesDigestInReceipt": true,
+      "nextWriter": "bg-109 only after explicit release"
+    },
+    {
+      "path": "packages/authoring-core/test/local-project-build.test.ts",
+      "builder": "bg-116",
+      "lane": "unsigned-project-build",
+      "sha256": "72af6656f72870e608af20c0b8128c0950a7f769902621bf78f086035ae5f404",
+      "matchesDigestInReceipt": true,
+      "nextWriter": "bg-109 only after explicit release"
+    },
+    {
+      "path": "packages/importers/src/contained-gltf.ts",
+      "builder": "bg-117",
+      "lane": "importer-capacity",
+      "sha256": "72c8b5a140f0252ee2bad11b2b367c6ecc7c7c8b476f9eb1d9e8bd6c0e8b46a1",
+      "matchesDigestInReceipt": true,
+      "nextWriter": "bg-109 only after explicit release"
+    },
+    {
+      "path": "packages/importers/src/asset-preparation-worker.ts",
+      "builder": "bg-117",
+      "lane": "importer-capacity",
+      "sha256": "4d05057f457ac0a76510e270163285d480f18510362c8a6b65fcd61d41a42746",
+      "matchesDigestInReceipt": true,
+      "nextWriter": "bg-109 only after explicit release"
+    },
+    {
+      "path": "packages/importers/test/asset-preparation-bounds.test.ts",
+      "builder": "bg-117",
+      "lane": "importer-capacity",
+      "sha256": "8f88d2a91bba560733a117bcf094e8571e17deb457dd71f8f04332e0ff21ef4d",
+      "matchesDigestInReceipt": true,
+      "nextWriter": "bg-109 only after explicit release"
+    },
+    {
+      "path": "sites/catalog-game/src/app/globals.css",
+      "builder": "bg-118",
+      "lane": "catalog-ui-polish",
+      "sha256": "ee98fef25a7ae0a2042e257da69e347177d9babd8350652de46b4af2dab998ec",
+      "matchesDigestInReceipt": true,
+      "nextWriter": "bg-109 only after explicit release"
+    },
+    {
+      "path": "sites/catalog-game/src/app/_components/listing-card.tsx",
+      "builder": "bg-118",
+      "lane": "catalog-ui-polish",
+      "sha256": "e2f52a6349e33e971d5f2e0e703c0fd94d0eca2d815a7b49c49655eb6019956e",
+      "matchesDigestInReceipt": true,
+      "nextWriter": "bg-109 only after explicit release"
+    },
+    {
+      "path": "sites/catalog-game/src/app/page.tsx",
+      "builder": "bg-118",
+      "lane": "catalog-ui-polish",
+      "sha256": "952bc1d2f33ccbf48931561dfcb9652ac677f4acbeb3e9413f8b7615992c9150",
+      "matchesDigestInReceipt": true,
+      "nextWriter": "bg-109 only after explicit release"
+    },
+    {
+      "path": "sites/catalog-game/test/catalog-ux-regression.test.ts",
+      "builder": "bg-118",
+      "lane": "catalog-ui-polish",
+      "sha256": "c000ad7b6c1b0eb8a615be76041482e1cd238c6e6860d53806934c570aee238b",
+      "matchesDigestInReceipt": true,
+      "nextWriter": "bg-109 only after explicit release"
+    },
+    {
+      "path": "sites/catalog-web/src/app/globals.css",
+      "builder": "bg-119",
+      "lane": "web-catalog-ui",
+      "sha256": "713f178671a25599f46e4b837a7dd6b75da12baf648b24271c85c865df30d4aa",
+      "matchesDigestInReceipt": true,
+      "nextWriter": "bg-109 only after explicit release"
+    },
+    {
+      "path": "sites/catalog-web/src/app/_components/listing-card.tsx",
+      "builder": "bg-119",
+      "lane": "web-catalog-ui",
+      "sha256": "e2f52a6349e33e971d5f2e0e703c0fd94d0eca2d815a7b49c49655eb6019956e",
+      "matchesDigestInReceipt": true,
+      "nextWriter": "bg-109 only after explicit release"
+    },
+    {
+      "path": "sites/catalog-web/src/app/page.tsx",
+      "builder": "bg-119",
+      "lane": "web-catalog-ui",
+      "sha256": "c563ff3961fccf4057e7ccf4c94f43181c397aafd5437c8b4444e37906c4ac36",
+      "matchesDigestInReceipt": true,
+      "nextWriter": "bg-109 only after explicit release"
+    },
+    {
+      "path": "sites/catalog-web/test/catalog-ux-regression.test.ts",
+      "builder": "bg-119",
+      "lane": "web-catalog-ui",
+      "sha256": "8a67a9c54f737ea47ad6ed355efbb6cd6efc0539f55a8fe920ac2f0b9bdbe8a4",
+      "matchesDigestInReceipt": true,
+      "nextWriter": "bg-109 only after explicit release"
+    }
+  ],
+  "overlappingWriterPaths": [],
+  "sharedOwner": "bg-109 remains sole index/manifest/contract/integration owner; controller owns ledger/publication",
+  "sharedSnapshotBefore": {
+    "package.json": "bce43243c26a815cacde0c4237313703515ece1d0cd6566a1b442784d2c70c80",
+    "pnpm-lock.yaml": "dfed15a8df610f9f1c3112aad33c5009bb3b7f74a180fded5b8ea84beafbb564",
+    "pnpm-workspace.yaml": "316f2a0038d464f103abd64d7338dacefc35d0d09e57c8296defa0d5ddb898fe",
+    "docs/dependency-matrix.json": "22d41e989e089fc34f15d854f9b33a159c987b2c62f451ee89c17c715d73d47c",
+    "packages/site-kit/package.json": "938e00f032e50b139d5e47c18a4716d6a436e8cebc572697c2e51b669fd16aeb",
+    "packages/site-kit/src/ports.ts": "9604969fbec4594dd8bab4b9fd26d65fb02c9666b8fc73b533aac447b317b00d",
+    "packages/site-kit/src/deep-link.ts": "3bdde6d2e7d3a8cbb760c982b1abebf8086e7347aba7ea1432cfab242776b6ef",
+    "packages/site-kit/src/index.ts": "e2e04ca903eea55313480a1997721d33b58cb54246132b97e9ee7460296e6198",
+    "packages/schemas/src/index.ts": "70d2d830c403c6f8f55191f277f13cf875714b0fa9c7e9556ecdf368801984c2",
+    "packages/authoring-core/src/index.ts": "b8cdb0319d78dd2930c5d7072b7ab1ba48ba5c459c97a43c43de2329d0f5acf4",
+    "packages/engine-presentation/src/index.ts": "71ccdda8f1ad02b2dc05d091d107f7d71995782816e6d19ddb8817b062782936",
+    "packages/importers/src/index.ts": "16168577c7d8a1e14a55fcfa615e56e25875d9ff6d056c06f0b9eb5b16cdf508",
+    "vitest.config.ts": "fc37bb4f76c6f57159ce3e2afd7345686839e26efb63fbda291cfca3a9e19326"
+  },
+  "sharedSnapshotAfter": {
+    "package.json": "bce43243c26a815cacde0c4237313703515ece1d0cd6566a1b442784d2c70c80",
+    "pnpm-lock.yaml": "dfed15a8df610f9f1c3112aad33c5009bb3b7f74a180fded5b8ea84beafbb564",
+    "pnpm-workspace.yaml": "316f2a0038d464f103abd64d7338dacefc35d0d09e57c8296defa0d5ddb898fe",
+    "docs/dependency-matrix.json": "22d41e989e089fc34f15d854f9b33a159c987b2c62f451ee89c17c715d73d47c",
+    "packages/site-kit/package.json": "938e00f032e50b139d5e47c18a4716d6a436e8cebc572697c2e51b669fd16aeb",
+    "packages/site-kit/src/ports.ts": "9604969fbec4594dd8bab4b9fd26d65fb02c9666b8fc73b533aac447b317b00d",
+    "packages/site-kit/src/deep-link.ts": "3bdde6d2e7d3a8cbb760c982b1abebf8086e7347aba7ea1432cfab242776b6ef",
+    "packages/site-kit/src/index.ts": "e2e04ca903eea55313480a1997721d33b58cb54246132b97e9ee7460296e6198",
+    "packages/schemas/src/index.ts": "70d2d830c403c6f8f55191f277f13cf875714b0fa9c7e9556ecdf368801984c2",
+    "packages/authoring-core/src/index.ts": "b8cdb0319d78dd2930c5d7072b7ab1ba48ba5c459c97a43c43de2329d0f5acf4",
+    "packages/engine-presentation/src/index.ts": "71ccdda8f1ad02b2dc05d091d107f7d71995782816e6d19ddb8817b062782936",
+    "packages/importers/src/index.ts": "16168577c7d8a1e14a55fcfa615e56e25875d9ff6d056c06f0b9eb5b16cdf508",
+    "vitest.config.ts": "fc37bb4f76c6f57159ce3e2afd7345686839e26efb63fbda291cfca3a9e19326"
+  },
+  "sharedChangedDuringSnapshot": [],
+  "sourceChangedDuringSnapshot": [],
+  "reportChangedDuringSnapshot": [],
+  "ledger": {
+    "path": "docs/audits/production-swarm/repair-review-2026-10-02/ledger.json",
+    "sha256Before": "0f584a0894cbfee38c2c0490015a73cf8a1960ae3897b7a2b06d59cfc530068c",
+    "sha256After": "0f584a0894cbfee38c2c0490015a73cf8a1960ae3897b7a2b06d59cfc530068c",
+    "writes": 0,
+    "rows": [
+      {
+        "id": "SITE-CATALOG-IDENTITY",
+        "jsonPointer": "/rows/96",
+        "lanes": [
+          "own-session-endpoint",
+          "catalog-session-adapter"
+        ],
+        "rootCause": null,
+        "existingStatus": "NEEDS_LOCAL_FIX",
+        "existingOwner": "missing-capabilities",
+        "nextWriter": "serial controller only; no ledger mutation by reviewer",
+        "disposition": "NOTREADY_PENDING_INTEGRATED_PREDICATES"
+      },
+      {
+        "id": "BD-002",
+        "jsonPointer": "/rows/74",
+        "lanes": [
+          "checkout-deadline"
+        ],
+        "rootCause": null,
+        "existingStatus": "NEEDS_LOCAL_FIX",
+        "existingOwner": "missing-capabilities",
+        "nextWriter": "serial controller only; no ledger mutation by reviewer",
+        "disposition": "NOTREADY_PENDING_INTEGRATED_PREDICATES"
+      },
+      {
+        "id": "BD-003",
+        "jsonPointer": "/rows/75",
+        "lanes": [
+          "checkout-deadline"
+        ],
+        "rootCause": null,
+        "existingStatus": "NEEDS_LOCAL_FIX",
+        "existingOwner": "missing-capabilities",
+        "nextWriter": "serial controller only; no ledger mutation by reviewer",
+        "disposition": "PRESERVATION_ONLY"
+      },
+      {
+        "id": "BD-004",
+        "jsonPointer": "/rows/76",
+        "lanes": [
+          "checkout-deadline"
+        ],
+        "rootCause": null,
+        "existingStatus": "NEEDS_LOCAL_FIX",
+        "existingOwner": "missing-capabilities",
+        "nextWriter": "serial controller only; no ledger mutation by reviewer",
+        "disposition": "PRESERVATION_ONLY"
+      },
+      {
+        "id": "VD-03",
+        "jsonPointer": "/rows/328",
+        "lanes": [
+          "desktop-keyboard"
+        ],
+        "rootCause": null,
+        "existingStatus": "NEEDS_LOCAL_FIX",
+        "existingOwner": "desktop-cli",
+        "nextWriter": "serial controller only; no ledger mutation by reviewer",
+        "disposition": "NOTREADY_PENDING_INTEGRATED_PREDICATES"
+      },
+      {
+        "id": "VD-04",
+        "jsonPointer": "/rows/329",
+        "lanes": [
+          "desktop-keyboard"
+        ],
+        "rootCause": null,
+        "existingStatus": "NEEDS_LOCAL_FIX",
+        "existingOwner": "desktop-cli",
+        "nextWriter": "serial controller only; no ledger mutation by reviewer",
+        "disposition": "NOTREADY_PENDING_INTEGRATED_PREDICATES"
+      },
+      {
+        "id": "VD-05",
+        "jsonPointer": "/rows/330",
+        "lanes": [
+          "desktop-keyboard",
+          "web-inspector-ux"
+        ],
+        "rootCause": null,
+        "existingStatus": "NEEDS_LOCAL_FIX",
+        "existingOwner": "desktop-cli",
+        "nextWriter": "serial controller only; no ledger mutation by reviewer",
+        "disposition": "NOTREADY_PENDING_INTEGRATED_PREDICATES"
+      },
+      {
+        "id": "VD-02",
+        "jsonPointer": "/rows/327",
+        "lanes": [
+          "web-inspector-ux"
+        ],
+        "rootCause": null,
+        "existingStatus": "NEEDS_LOCAL_FIX",
+        "existingOwner": "desktop-cli",
+        "nextWriter": "serial controller only; no ledger mutation by reviewer",
+        "disposition": "NOTREADY_PENDING_INTEGRATED_PREDICATES"
+      },
+      {
+        "id": "SH-T02",
+        "jsonPointer": "/rows/45",
+        "lanes": [
+          "web-inspector-ux"
+        ],
+        "rootCause": null,
+        "existingStatus": "NEEDS_LOCAL_FIX",
+        "existingOwner": "missing-capabilities",
+        "nextWriter": "serial controller only; no ledger mutation by reviewer",
+        "disposition": "NOTREADY_PENDING_INTEGRATED_PREDICATES"
+      },
+      {
+        "id": "VS-05",
+        "jsonPointer": "/rows/325",
+        "lanes": [
+          "desktop-keyboard",
+          "catalog-ui-polish",
+          "web-catalog-ui"
+        ],
+        "rootCause": null,
+        "existingStatus": "NEEDS_LOCAL_FIX",
+        "existingOwner": "sites-accessibility",
+        "nextWriter": "serial controller only; no ledger mutation by reviewer",
+        "disposition": "NOTREADY_PENDING_INTEGRATED_PREDICATES"
+      },
+      {
+        "id": "UI-001",
+        "jsonPointer": "/rows/67",
+        "lanes": [
+          "catalog-ui-polish",
+          "web-catalog-ui"
+        ],
+        "rootCause": null,
+        "existingStatus": "NEEDS_LOCAL_FIX",
+        "existingOwner": "missing-capabilities",
+        "nextWriter": "serial controller only; no ledger mutation by reviewer",
+        "disposition": "PRESERVATION_ONLY"
+      },
+      {
+        "id": "UI-002",
+        "jsonPointer": "/rows/68",
+        "lanes": [
+          "catalog-ui-polish",
+          "web-catalog-ui"
+        ],
+        "rootCause": null,
+        "existingStatus": "NEEDS_LOCAL_FIX",
+        "existingOwner": "missing-capabilities",
+        "nextWriter": "serial controller only; no ledger mutation by reviewer",
+        "disposition": "PRESERVATION_ONLY"
+      },
+      {
+        "id": "LOCAL-070",
+        "jsonPointer": "/rows/100",
+        "lanes": [
+          "versioned-transforms"
+        ],
+        "rootCause": null,
+        "existingStatus": "NEEDS_LOCAL_FIX",
+        "existingOwner": "missing-capabilities",
+        "nextWriter": "serial controller only; no ledger mutation by reviewer",
+        "disposition": "NOTREADY_PENDING_INTEGRATED_PREDICATES"
+      },
+      {
+        "id": "DR-006",
+        "jsonPointer": "/rows/65",
+        "lanes": [
+          "unsigned-project-build"
+        ],
+        "rootCause": null,
+        "existingStatus": "NEEDS_LOCAL_FIX",
+        "existingOwner": "desktop-cli",
+        "nextWriter": "serial controller only; no ledger mutation by reviewer",
+        "disposition": "NOTREADY_PENDING_INTEGRATED_PREDICATES"
+      },
+      {
+        "id": "GA-005",
+        "jsonPointer": "/rows/345",
+        "lanes": [
+          "unsigned-project-build"
+        ],
+        "rootCause": null,
+        "existingStatus": "NEEDS_LOCAL_FIX",
+        "existingOwner": "missing-capabilities",
+        "nextWriter": "serial controller only; no ledger mutation by reviewer",
+        "disposition": "NOTREADY_PENDING_INTEGRATED_PREDICATES"
+      },
+      {
+        "id": "AP-PERF",
+        "jsonPointer": "/rows/95",
+        "lanes": [
+          "importer-capacity"
+        ],
+        "rootCause": null,
+        "existingStatus": "NEEDS_LOCAL_FIX",
+        "existingOwner": "authoring-assets",
+        "nextWriter": "serial controller only; no ledger mutation by reviewer",
+        "disposition": "NOTREADY_PENDING_INTEGRATED_PREDICATES"
+      },
+      {
+        "id": "DL-PERF-08",
+        "jsonPointer": "/rows/59",
+        "lanes": [
+          "importer-capacity"
+        ],
+        "rootCause": null,
+        "existingStatus": "NEEDS_LOCAL_FIX",
+        "existingOwner": "desktop-cli",
+        "nextWriter": "serial controller only; no ledger mutation by reviewer",
+        "disposition": "NOTREADY_PENDING_INTEGRATED_PREDICATES"
+      },
+      {
+        "id": "06-04",
+        "jsonPointer": "/rows/339",
+        "lanes": [
+          "importer-capacity"
+        ],
+        "rootCause": null,
+        "existingStatus": "NEEDS_LOCAL_FIX",
+        "existingOwner": "authoring-assets",
+        "nextWriter": "serial controller only; no ledger mutation by reviewer",
+        "disposition": "NOTREADY_PENDING_INTEGRATED_PREDICATES"
+      }
+    ],
+    "unmappedAliases": [
+      {
+        "id": "IR-06",
+        "lanes": [
+          "desktop-keyboard"
+        ],
+        "disposition": "Child alias/subject absent as exact ledger row id; no new row or fabricated closure"
+      },
+      {
+        "id": "IR-07",
+        "lanes": [
+          "unsigned-project-build"
+        ],
+        "disposition": "Child alias/subject absent as exact ledger row id; no new row or fabricated closure"
+      }
+    ]
+  },
+  "deduplicatedExports": {
+    "packages/schemas/src/index.ts": {
+      "./scene-composition.js": {
+        "values": [
+          "SCENE_COMPOSITION_SCHEMA_VERSION_V2",
+          "SCENE_MATRIX_CONVENTION_V2",
+          "multiplySceneMatricesV2",
+          "sceneMatrixFromSculptTransformV2",
+          "validateSceneCompositionIntakeV2",
+          "resolveScenePlacementsV2",
+          "migrateSceneCompositionIntakeV1ToV2",
+          "digestScenePlacementsV2",
+          "digestComposedSceneV2",
+          "projectSceneInstanceHierarchyV2",
+          "validateComposedSceneV2",
+          "composedSceneV2FromDocumentData"
+        ],
+        "types": [
+          "SceneMatrixV2",
+          "SceneCompositionIntakeV2",
+          "ResolvedScenePlacementV2",
+          "SceneBoundsV2",
+          "ComposedSceneInstanceV2",
+          "ComposedSceneV2",
+          "PlacedSceneInstanceHierarchyV2"
+        ]
+      },
+      "./desktop-project-build.js": {
+        "values": [
+          "evaluateLocalProjectBuild"
+        ],
+        "types": []
+      }
+    },
+    "packages/authoring-core/src/index.ts": {
+      "./scene-composition.js": {
+        "values": [
+          "composeSceneV2",
+          "serializeComposedSceneV2",
+          "sceneDocumentFromComposedSceneV2",
+          "migrateComposedSceneV1ToV2"
+        ],
+        "types": [
+          "SceneCompositionResultV2"
+        ]
+      },
+      "./local-project-build.js": {
+        "values": [
+          "LOCAL_PROJECT_BUILD_LIMITS",
+          "LOCAL_PROJECT_BUILD_REFUSALS",
+          "buildLocalProject",
+          "verifyLocalProjectBuild",
+          "launchLocalProjectBuild"
+        ],
+        "types": [
+          "LocalProjectBuildRefusal",
+          "LocalProjectBuildReceipt",
+          "LocalProjectBuildSuccess",
+          "LocalProjectBuildResult",
+          "LocalProjectBuildInput",
+          "LocalProjectLaunchInput",
+          "LocalProjectLaunchSuccess"
+        ]
+      }
+    },
+    "packages/engine-presentation/src/index.ts": {
+      "./scene-transforms.js": {
+        "values": [
+          "resolveScenePresentationV2"
+        ],
+        "types": [
+          "ScenePresentationSourceV2"
+        ]
+      }
+    },
+    "packages/importers/src/index.ts": {
+      "./asset-preparation-worker.js": {
+        "values": [
+          "startProjectAssetPreparation",
+          "ASSET_PREPARATION_REFUSALS",
+          "ASSET_PREPARATION_DEADLINE_MS"
+        ],
+        "types": [
+          "ProjectAssetPreparationInput",
+          "ProjectAssetPreparationOutcome",
+          "ProjectAssetPreparationJob"
+        ]
+      }
+    }
+  },
+  "exportPresenceEvidence": [
+    {
+      "path": "packages/schemas/src/index.ts",
+      "module": "./scene-composition.js",
+      "kind": "values",
+      "symbol": "SCENE_COMPOSITION_SCHEMA_VERSION_V2",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/schemas/src/index.ts",
+      "module": "./scene-composition.js",
+      "kind": "values",
+      "symbol": "SCENE_MATRIX_CONVENTION_V2",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/schemas/src/index.ts",
+      "module": "./scene-composition.js",
+      "kind": "values",
+      "symbol": "multiplySceneMatricesV2",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/schemas/src/index.ts",
+      "module": "./scene-composition.js",
+      "kind": "values",
+      "symbol": "sceneMatrixFromSculptTransformV2",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/schemas/src/index.ts",
+      "module": "./scene-composition.js",
+      "kind": "values",
+      "symbol": "validateSceneCompositionIntakeV2",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/schemas/src/index.ts",
+      "module": "./scene-composition.js",
+      "kind": "values",
+      "symbol": "resolveScenePlacementsV2",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/schemas/src/index.ts",
+      "module": "./scene-composition.js",
+      "kind": "values",
+      "symbol": "migrateSceneCompositionIntakeV1ToV2",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/schemas/src/index.ts",
+      "module": "./scene-composition.js",
+      "kind": "values",
+      "symbol": "digestScenePlacementsV2",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/schemas/src/index.ts",
+      "module": "./scene-composition.js",
+      "kind": "values",
+      "symbol": "digestComposedSceneV2",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/schemas/src/index.ts",
+      "module": "./scene-composition.js",
+      "kind": "values",
+      "symbol": "projectSceneInstanceHierarchyV2",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/schemas/src/index.ts",
+      "module": "./scene-composition.js",
+      "kind": "values",
+      "symbol": "validateComposedSceneV2",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/schemas/src/index.ts",
+      "module": "./scene-composition.js",
+      "kind": "values",
+      "symbol": "composedSceneV2FromDocumentData",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/schemas/src/index.ts",
+      "module": "./scene-composition.js",
+      "kind": "types",
+      "symbol": "SceneMatrixV2",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/schemas/src/index.ts",
+      "module": "./scene-composition.js",
+      "kind": "types",
+      "symbol": "SceneCompositionIntakeV2",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/schemas/src/index.ts",
+      "module": "./scene-composition.js",
+      "kind": "types",
+      "symbol": "ResolvedScenePlacementV2",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/schemas/src/index.ts",
+      "module": "./scene-composition.js",
+      "kind": "types",
+      "symbol": "SceneBoundsV2",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/schemas/src/index.ts",
+      "module": "./scene-composition.js",
+      "kind": "types",
+      "symbol": "ComposedSceneInstanceV2",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/schemas/src/index.ts",
+      "module": "./scene-composition.js",
+      "kind": "types",
+      "symbol": "ComposedSceneV2",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/schemas/src/index.ts",
+      "module": "./scene-composition.js",
+      "kind": "types",
+      "symbol": "PlacedSceneInstanceHierarchyV2",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/schemas/src/index.ts",
+      "module": "./desktop-project-build.js",
+      "kind": "values",
+      "symbol": "evaluateLocalProjectBuild",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/authoring-core/src/index.ts",
+      "module": "./scene-composition.js",
+      "kind": "values",
+      "symbol": "composeSceneV2",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/authoring-core/src/index.ts",
+      "module": "./scene-composition.js",
+      "kind": "values",
+      "symbol": "serializeComposedSceneV2",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/authoring-core/src/index.ts",
+      "module": "./scene-composition.js",
+      "kind": "values",
+      "symbol": "sceneDocumentFromComposedSceneV2",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/authoring-core/src/index.ts",
+      "module": "./scene-composition.js",
+      "kind": "values",
+      "symbol": "migrateComposedSceneV1ToV2",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/authoring-core/src/index.ts",
+      "module": "./scene-composition.js",
+      "kind": "types",
+      "symbol": "SceneCompositionResultV2",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/authoring-core/src/index.ts",
+      "module": "./local-project-build.js",
+      "kind": "values",
+      "symbol": "LOCAL_PROJECT_BUILD_LIMITS",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/authoring-core/src/index.ts",
+      "module": "./local-project-build.js",
+      "kind": "values",
+      "symbol": "LOCAL_PROJECT_BUILD_REFUSALS",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/authoring-core/src/index.ts",
+      "module": "./local-project-build.js",
+      "kind": "values",
+      "symbol": "buildLocalProject",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/authoring-core/src/index.ts",
+      "module": "./local-project-build.js",
+      "kind": "values",
+      "symbol": "verifyLocalProjectBuild",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/authoring-core/src/index.ts",
+      "module": "./local-project-build.js",
+      "kind": "values",
+      "symbol": "launchLocalProjectBuild",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/authoring-core/src/index.ts",
+      "module": "./local-project-build.js",
+      "kind": "types",
+      "symbol": "LocalProjectBuildRefusal",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/authoring-core/src/index.ts",
+      "module": "./local-project-build.js",
+      "kind": "types",
+      "symbol": "LocalProjectBuildReceipt",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/authoring-core/src/index.ts",
+      "module": "./local-project-build.js",
+      "kind": "types",
+      "symbol": "LocalProjectBuildSuccess",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/authoring-core/src/index.ts",
+      "module": "./local-project-build.js",
+      "kind": "types",
+      "symbol": "LocalProjectBuildResult",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/authoring-core/src/index.ts",
+      "module": "./local-project-build.js",
+      "kind": "types",
+      "symbol": "LocalProjectBuildInput",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/authoring-core/src/index.ts",
+      "module": "./local-project-build.js",
+      "kind": "types",
+      "symbol": "LocalProjectLaunchInput",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/authoring-core/src/index.ts",
+      "module": "./local-project-build.js",
+      "kind": "types",
+      "symbol": "LocalProjectLaunchSuccess",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/engine-presentation/src/index.ts",
+      "module": "./scene-transforms.js",
+      "kind": "values",
+      "symbol": "resolveScenePresentationV2",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/engine-presentation/src/index.ts",
+      "module": "./scene-transforms.js",
+      "kind": "types",
+      "symbol": "ScenePresentationSourceV2",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/importers/src/index.ts",
+      "module": "./asset-preparation-worker.js",
+      "kind": "values",
+      "symbol": "startProjectAssetPreparation",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/importers/src/index.ts",
+      "module": "./asset-preparation-worker.js",
+      "kind": "values",
+      "symbol": "ASSET_PREPARATION_REFUSALS",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/importers/src/index.ts",
+      "module": "./asset-preparation-worker.js",
+      "kind": "values",
+      "symbol": "ASSET_PREPARATION_DEADLINE_MS",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/importers/src/index.ts",
+      "module": "./asset-preparation-worker.js",
+      "kind": "types",
+      "symbol": "ProjectAssetPreparationInput",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/importers/src/index.ts",
+      "module": "./asset-preparation-worker.js",
+      "kind": "types",
+      "symbol": "ProjectAssetPreparationOutcome",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    },
+    {
+      "path": "packages/importers/src/index.ts",
+      "module": "./asset-preparation-worker.js",
+      "kind": "types",
+      "symbol": "ProjectAssetPreparationJob",
+      "identifierPresent": false,
+      "owner": "bg-109",
+      "proofLimit": "lexical presence only; public compilation still required"
+    }
+  ],
+  "companionReviews": [
+    {
+      "lane": "review-endpoints",
+      "sha256": "d5b4f725de8806e77727a062323362d4c4f4b632c73ed327570dc7ffd141dc2d",
+      "verdict": "FAIL",
+      "report": "docs/audits/production-swarm/implementation-expansion-2026-10-02/review-endpoints/report.json"
+    },
+    {
+      "lane": "review-ux",
+      "sha256": "6eeec997fea1551969d3c682f900004d153def2317edc8fb21bff7edc01560fe",
+      "verdict": "NOTREADY",
+      "report": "docs/audits/production-swarm/implementation-expansion-2026-10-02/review-ux/report.json"
+    },
+    {
+      "lane": "review-capabilities",
+      "sha256": "abfe5347c9d66eca2bb4e3e53e46a55e009fcefa75f981ed40ec59c3e7895e15",
+      "verdict": "FAIL",
+      "report": "docs/audits/production-swarm/implementation-expansion-2026-10-02/review-capabilities/report.json"
+    }
+  ],
+  "behavioralTestsRunByThisReviewer": [],
+  "notRun": [
+    "root build/gate",
+    "site builds",
+    "browser/native/container",
+    "provider/network/DB",
+    "independent behavioral reruns"
+  ],
+  "receiptInterpretation": "All reported suite counts remain attributed to original builder/reviewer; no totals added across overlapping suites. Missing exports/aliases do not prove deployed wiring. Historical failed visual passes stay failed.",
+  "blockingPredicates": [
+    {
+      "id": "H-01",
+      "status": "FAIL_FROM_INDEPENDENT_RECEIPT",
+      "anchor": "packages/site-kit/src/deep-link.ts:180-188",
+      "predicate": "Unsafe raw configured origin must refuse403 before any principal read; peer observed200/read1 for path/query/fragment/userinfo/whitespace",
+      "fix": "Validate raw value before normalization in authoritative shared seam; canonical positives and explicit development policy must remain"
+    },
+    {
+      "id": "H-02",
+      "status": "FAIL_FROM_INDEPENDENT_RECEIPT",
+      "anchor": "packages/site-kit/src/ports.ts:314",
+      "predicate": "Composed catalog request must not invoke sessionToken getter; peer observed getterCalls1",
+      "fix": "Descriptor-only bounded validation before outer plane field access; preserve Kids/roles/refusal ordering"
+    },
+    {
+      "id": "H-03",
+      "status": "NOTREADY",
+      "anchor": "sites/catalog-game/src/app/item/[itemId]/page.tsx:23-26,86; sites/catalog-web/src/app/item/[itemId]/page.tsx:23-26,86",
+      "predicate": "Real pages must consume approved new transport, not old default-unwired factory",
+      "fix": "Serial owner wires local identity-plane factories with explicit carried credential and approved raw canonical config; add site-kit ./catalog-server-fetch export"
+    },
+    {
+      "id": "H-04",
+      "status": "NOTREADY",
+      "anchor": "packages/authoring-core/src/scene-composition.ts:33",
+      "predicate": "Regular public-index no-alias transform/local-build/worker tests must execute; importer receipt5pass5fail missing v2 exports",
+      "fix": "Apply grouped index requests exactly once, build in serial, rerun unmodified no-alias tests; no export-only probe as product PASS"
+    },
+    {
+      "id": "H-05",
+      "status": "NOTREADY",
+      "anchor": "packages/engine-presentation/src/scene-transforms.ts:11",
+      "predicate": "V2 requires real dispatch/kernel advance/save/replay/presentation, not rest-pose helper alone",
+      "fix": "Use explicit schema2 branch, parent-times-child matrices retaining shear, preserve v1 bytes/caps and transaction/dispose guards; contract proposal promoted only by serial owner"
+    },
+    {
+      "id": "H-06",
+      "status": "NOTREADY",
+      "anchor": "packages/authoring-core/src/local-project-build.ts:1",
+      "predicate": "Local unsigned user-document runtime must be wired and prove loaded digest/pixels/exact exit",
+      "fix": "Wire existing desktop/CLI through trusted profile/held-key authority; keep signed-release gate unchanged; run approved fixture native smoke"
+    },
+    {
+      "id": "H-07",
+      "status": "NOTREADY",
+      "anchor": "packages/importers/src/asset-preparation-worker.ts:48",
+      "predicate": "Worker must install exact returned E1 proposal under generation/project/lease fence; native120s cause and original resource budgets still unverified",
+      "fix": "Serial desktop cancellation/control/bridge integration, ship built sibling worker; measure preparation/materialization/IPC/reload without budget increases"
+    },
+    {
+      "id": "H-08",
+      "status": "NOTREADY",
+      "anchor": "apps/desktop-shell/src/chrome.ts:1253-1262; apps/web-shell/src/inspector-app.ts:838-997",
+      "predicate": "Actual keyboard geometry/contrast/refusal/focus recovery remains unexecuted",
+      "fix": "Rebuild frozen candidate then real desktop900/1100/1280 and web390/1440 light/dark/forced-colors browser predicates; retain inert and no-write-retry negatives"
+    },
+    {
+      "id": "H-09",
+      "status": "NOTREADY",
+      "anchor": "sites/catalog-game/src/app/page.tsx:43; sites/catalog-web/src/app/page.tsx:20",
+      "predicate": "Catalog final handbacks are newer than review-ux catalog observations; current render and390px browser proof needs review",
+      "fix": "Execute both explicitly registered node:test suites plus unchanged storefront82-test regression, site typechecks/builds, GET/URL/empty/refusal/focus geometry"
+    },
+    {
+      "id": "H-10",
+      "status": "CONDITIONAL_POLICY_FAIL_FROM_PEER",
+      "anchor": "apps/web-shell/src/dev-server.ts:299-300",
+      "predicate": "Existing unsafe-inline CSP is not strict nonce/hash-only CSP; not a new inspector regression",
+      "fix": "If strict CSP required, shared host owner supplies matching nonce/hash or same-origin assets with enforced browser negative tests; do not certify preservation as strict compliance"
+    },
+    {
+      "id": "CAP-01",
+      "status": "FAIL_FROM_INDEPENDENT_RECEIPT",
+      "anchor": "packages/authoring-core/src/local-project-build.ts:264,275,279,304",
+      "predicate": "Verified artifact path is mutable before spawn; actual replacement runtime executed and wrote marker before LAUNCH_UNVERIFIED refusal; assertion expected true to be false",
+      "fix": "Execute pinned trusted bootstrap outside mutable project artifacts and retain descriptor-contained resource identity through use; permanent runtime/directory/symlink substitution negatives before launch, not only post-execution hashes",
+      "evidence": "review-capabilities/launch-race.log"
+    },
+    {
+      "id": "CAP-02",
+      "status": "NOTREADY",
+      "anchor": "packages/importers/src/asset-preparation-worker.ts:113; packages/importers/src/contained-gltf.ts:2490-2492",
+      "predicate": "Main-thread publication still synchronously reads/hashes full document/source without document byte cap",
+      "fix": "Measure completion/publication/IPC/reload on pre-populated capacity document against unchanged budgets; do not claim proposal offload closes GUI responsiveness"
+    }
+  ],
+  "serialIntegrationOrder": [
+    "Take exclusive serial ownership only of released paths; no child writer resumes without controller authorization.",
+    "Repair H-01/H-02/CAP-01 and apply each grouped index export, site-kit subpath and v2 contract once; root manifests/index ownership unchanged.",
+    "Wire item pages/raw approved config, explicit v2 runtime dispatch/kernel/presentation, unsigned local build action, and generation-fenced importer async/cancel integration. These are local work, not signer/provider blockers.",
+    "Explicitly include own-session60, checkout20 and catalog Node13/17 tests omitted by generic scripts; rerun no-alias capability suites and unchanged negative oracles.",
+    "Controller freezes exact post-integration source/artifact/dependency fingerprint; serial owner runs bounded fullbuild/gate and deferred browser/native/HTTP predicates. Do not transfer this pre-integration snapshot PASS to changed source.",
+    "Only controller maps predicate evidence to existing ledger IDs and publication SHA; independent PASS requires stable exact fingerprint and preserved negatives. Historical failed pass remains failed."
+  ],
+  "wireContract": {
+    "method": "GET",
+    "path": "/api/auth/own-session",
+    "credential": "explicit x-sceneaxi-session only; no ambient Cookie/Authorization/SSO",
+    "origin": "approved raw canonical configured HTTPS DNS or explicit HTTP loopback development; no Host fallback",
+    "envelope": "{version:1,ok:true,value:SitePrincipal} | {version:1,ok:false,reason:SiteRefusalReason}",
+    "bounds": "credential4096 chars; response16384 bytes; catalog total2000ms; checkout8192 bytes/5000ms total",
+    "headers": "no-store; redirect refusal; Kids/client role claims denied before networking/identity dispatch",
+    "limits": "Provider provenance, own-session pending-authority timeout/disconnect and actual fresh Next route precedence remain unverified"
+  },
+  "manifestRequest": {
+    "owner": "bg-109",
+    "path": "packages/site-kit/package.json",
+    "subpath": "./catalog-server-fetch",
+    "target": "./src/catalog-server-fetch.ts",
+    "matrixChange": false,
+    "rootBarrelChange": false
+  },
+  "contractRequest": {
+    "owner": "bg-109",
+    "target": "packages/schemas/contracts/scene-composition-v2.schema.json",
+    "sourceProposal": "docs/audits/production-swarm/implementation-expansion-2026-10-02/versioned-transforms/scene-composition-v2.schema.proposal.json",
+    "preserve": "v1 contract/bytes/caps; update actual inventory/docs without suppression"
+  }
+}

@@ -1,0 +1,60 @@
+# Engine implementation — sceneaxi-production-swarm
+
+Status: **PARTIAL** (local SDK fixes pass; full-product/shared/device gaps remain). Real root `/home/devuser/Documents/Projects/sceneaxi`; HEAD `4e532e2fbf43e9948741578ab6208a3277870405`; Linux x64, Node v24.21.0. Source was already modified on retry entry, including gameplay/audio/posed Rapier and hardening tests. Preserved that work and all other lanes. No commits, resets, deploys, spending, credentials, provider/device/signing proof or configuration changes.
+
+## Implementation and reproducible defects
+
+Six regression failures were reproduced before their fixes using public package APIs:
+
+- **ENG-009 / ENG-001, P1:** `packages/engine-kernel/src/session.ts:380`, `withoutGeneratedRarityRolls`, omitted gameplay when replay removed generated rarity rolls from an entity manifest. Public mixed action+rarity JSON replay threw `unknown or unavailable gameplay action`. Preserve every manifest field when replacing only rarity; `test/rarity.test.ts` now proves exact replay. Existing same-major compatibility table and original golden digests remain passing.
+- **ENG-003, P1:** `three-core.ts:128`, `resolveViewport`, and `three-surface.ts:181`, `requireFramebuffer`, admitted physical width 32768 and zero-pixel buffers. Enforce physical dimensions 1..8192 and 16777216-pixel maximum before resizing. `three-runtime.ts:76`, `requireSnapshot`, now also rejects unsafe seed and absent/oversized digest metadata before changing the last good frame. Existing digest labels remain accepted; presentation does not authenticate a digest.
+- **ENG-005, P1:** `three-sculpt.ts`, `finiteArray`/`validateTriangleMesh`, skipped sparse entries, producing NaN GPU geometry. Dense value checks reject sparse positions, indices and RGBA. Prevalidation and allocation-error cleanup retain the previous visible root. Direct proxy mount/update validate admitted artifact and renderer-range transforms before allocation/mutation; stale animation maps are cleared on proxy replacement. Five refused replacements and injected allocation failure have cleanup assertions; post-dispose mutations refuse.
+- **ENG-013, P1:** `three-sculpt.ts`, `playTriangleAnimation`, reset visible nodes before rejecting invalid time/unknown targets. Validate the entire bounded STEP/LINEAR clip, targets, samples and normalized quaternions; evaluate candidate poses before any reset/write. NaN, unsupported CUBICSPLINE, duplicate targets and missing nodes refuse without resetting the previous pose.
+- **ENG-011, P1:** `audio-playback.ts:66`, `createAudioPlaybackRuntime`, stopped cleanup at the first throwing host source. Release all sources/gains, then emit bounded named cleanup failure; close context even on failure. Two-source hostile stop/disconnect oracle now reaches zero owned sources.
+- **ENG-006, P1:** `three-surface.ts`, `createWebGLCanvasSurface`, assumed a retained renderer's remounted context was available. Consult actual context loss at creation/draw. Preserve the existing one-renderer-per-canvas lease/cache and explicit terminal `releaseThreeCanvas` semantics.
+
+Preserved source implementations: safe bounded product/sculpt clocks, candidate product mutation, scene-wide prepare/commit (`scene-session.ts:144`, `sculpt-session.ts:213`), history/queue/entity budgets, same-major replay policy, private core facade, accessor-safe orchestrator diagnostics (`open-path.ts:194`), offline declarative actions/state/timers, contained PCM16 WAV adapter, posed Rapier/joint-frame replay and indexed shape/material construction. The new scene rollback oracle uses a valid composed scene: later numeric failure leaves all snapshots/history unchanged twice; smaller retry JSON-replays exactly.
+
+## Evidence
+
+- Project routing returned `No test command detected`; recovered using exact pnpm commands with the real root cwd. No check was altered.
+- `pnpm exec vitest run packages/engine-kernel/test packages/engine-orchestrator/test packages/engine-presentation/test packages/physics-rapier/test`: **180 tests passed**, exit 0. Initial preserved baseline:172; six new failing-before tests were fixed. Node canvas negative test prints expected `THREE.WebGLRenderer: Error creating WebGL context`; real browser evidence is separate.
+- Four `pnpm exec tsc -p packages/<engine-kernel|engine-presentation|engine-orchestrator|physics-rapier>/tsconfig.json --noEmit`: exit 0. Initial TS7006 failure corrected. Owned eslint trees: exit 0;18 non-null assertion failures, including preserved tests, fixed with explicit required-value guards, no lint suppression.
+- `node packages/engine-presentation/test/browser-production-proof.mjs`: exit 0,5448ms; current public source bundled in memory using existing desktop esbuild/umbrella Playwright, installed Chromium ANGLE SwiftShader. **100 same-canvas create/draw/dispose rounds:** actual `gl.isTexture` stays4; explicit terminal context loss leaves0 live textures. PNG10772 bytes. Actual readPixels changed pixels: checker3981, LINEAR4051, STEP early0/late4051, reset0, emissive/opacity3981, bloom16384, vignette16384, particles222. Resize160x120. Lost/remount-during-loss pixels false/capture null; restored frame true/PNG10772. Trusted browser click unlocks real AudioContext: running/source1 → stop0 → dispose0/contextclosed. Zero page errors. Synthetic admitted SDK projections/catalogs, **not** authored GLB intake, actual site/packaged routes, physical GPU or audible-device proof.
+- Focused existing input/play/physics/animation/scene/Kids goldens: **27 passed**, exit 0. `pnpm check:boundaries`:27 packages; `pnpm check:contracts`: exit0 unchanged assertions. Scoped `git diff --check`: exit0.
+- Current source-bundled public kernel maximum100000-event history: three limit/limit+1/no-mutation/JSON-replay runs; save5389113 bytes;266/197/156ms. Heap before/after9.17→72.70/72.70→89.13/89.13→66.26MB; RSS170.12/217.95/230.79MB. **Not** a GC plateau,4096-entity maximum workload, multi-hour soak or capacity SLA.
+- Recorded failed probes: initial browser event wait timed out120s; bounded event waits/delayed restore corrected it. Initial particle fixture produced0 changed pixels (outside useful view); a visible512px/1s-lifetime fixture produces222 without reducing the >100 assertion. Scene rollback fixture initially violated deterministic world composition, then used matching local/world transforms and recomputed evidence. New check initially failed JS global lint; qualified globals rather than disabling lint.
+
+## Per-item outcome
+
+| Task | Outcome / remaining acceptance |
+|---|---|
+| ENG-001 | Local implementation+compatibility/replay assertions done; integration must update normative schema/docs. |
+| ENG-002 | Local safe numeric/transactional rollback/retry/JSON golden assertions done. |
+| ENG-003 | Local snapshot/environment/framebuffer bounds and no-mutation assertions done. |
+| ENG-004 | Public runtime facade hides content; partial until independent emitted-declaration consumer type oracle. |
+| ENG-005 | Local malformed-batch/direct-mutator/cleanup/retained-root/dispose assertions done. |
+| ENG-006 | Local100-round actual WebGL plateau, remount/loss/restoration and terminal release done; host final-canvas release wiring belongs integration. |
+| ENG-007 | Preserved bounded accessor-safe helper; hostile bootstrap/resume tests pass. |
+| ENG-008 | Budgets/indexing and100000-history/100-GPU-round measurements implemented; aggregate maximum workloads/multi-hour SLA remain local integration work. |
+| ENG-009 | Declarative actions/state/timers+mixed rarity replay implemented/tested; packaged primary-action→kernel/save wiring requires schemas/desktop owner. |
+| ENG-010 | Public posed Rapier collision/resume/animation-event replay implemented/tested; composed scene persistence/constraint frame rotations and renderer/packaged pose wiring require shared contract/desktop integration. |
+| ENG-011 | Real gesture/PCM play/stop/dispose tested; asset admission and visibility/play controls require importer/schema/desktop integration; audibility is device gate. |
+| ENG-012 | SDK checker pixels/resource proof done; actual contained glTF/GLB intake/packaged checker and JPEG/WebP projection are importer/integration work. |
+| ENG-013 | STEP/LINEAR pixels, reset, transactional refusal done; skin/CUBICSPLINE explicitly unsupported, actual imported/packaged pixels remain integration. |
+| ENG-014 | Actual SDK bloom/vignette/particle/material pixel comparisons done; authored route fixture and long-lived switching/performance remain integration. |
+| ENG-015 | Kernel consumes bounded play.primary action; actual desktop/controller binding requires shared wiring; genuine physical controller evidence remains external. |
+| ENG-016 | Intentional offline/WebGL defaults unchanged; expanded renderer/network scope not implemented or silently excluded from production totals. |
+| ENG-017 | Non-null catalog texture slots remain refused; contained binding contract/importer/site-kit/desktop integration not replaced with fake null binding. |
+| COVERAGE-ENGINE / GATE-DEVICES | Partial: missing actual full-product routes, physical devices/platforms, production authorization/hosts. |
+
+## Exact serial integration requests
+
+1. `packages/schemas/src/kernel-session.ts`, `contracts/kernel-session.schema.json`: align safe seed/tick/time/coordinate/entity/queue/history and same-major replay limits with source; expose gameplay profile/actions/effects/timers/snapshot and action dispatch union. Current no-gameplay saves keep byte-identical digests. Add schema/contract negatives for Kids/eval/unknown input. `input-action-registry.ts`+desktop bridge/viewport must map admitted play.primary to `{type:'action',actionId:'play.primary'}` only in isolated play, never authoring/Kids.
+2. `physics-world-host.ts`, `desktop-scene-physics.ts`, desktop scene/bridge/viewport: standardize full body pose and joint frames (including fixed-joint orientation), queued animation-before-step and replay artifact semantics; project validated scene world poses rather than index-derived defaults. Preserve nonzero legacy animation-offset refusal until wired; present solver poses without writing authoring bytes. Test actual posed multi-object joint/collision save/resume+pixels.
+3. Schema/importer contained PCM16 WAV admission → `ContainedAudioAsset` bytes/id → existing exported audio runtime. Desktop/site owners wire real gesture unlock, play/stop/volume/visibility and final close, no URLs/autoplay/provider. Device proof remains separate.
+4. `desktop-scene-materials.ts`, glTF asset contracts/importer, `site-kit/src/mountable-scene.ts`, site/desktop viewport: define contained texture asset lookup, UV set/color space/sampler/decoded bounded RGBA transport; resolve non-null slots before engine mutation, preserve independent Kids refusal. Texture binding remains refused until the whole contract works; no URL loader.
+5. Site/desktop owners call `releaseThreeCanvas(canvas)` only at final canvas teardown after every lease is disposed; normal same-canvas remount reuses renderer. Re-run browser script, actual authored /open/editor and packaged Linux feature proof. Do not use headless counts as pixels.
+6. Integration owns emitted public type oracle, updated owning API/capability docs, registration of the explicit browser check if desired, unchanged full gate/build and actual package/site/device front doors serially. Full-tree build/gate intentionally not run concurrently by this lane. Three-pass integration repair routing remains parent-owned.
+
+All remaining local shared tasks stay **local**, not credential blockers. Exact external inputs: supported connected controller/audio output and physical GPU/platform browsers; authorized deployment/entitled editor/native release hosts and genuine action-specific proof/signing material where claimed. No secret values. Browser/context/audio/WASM resources and child browser are disposed/closed by assertions/finally. No server retained. Reports are this pair only; integration owns FINAL.md/FINAL.json.

@@ -11,6 +11,7 @@ import {
 /** Walk the live command tree and collect every full verb path. */
 function collectVerbPaths(): string[] {
   const paths: string[] = [];
+
   const walk = (
     children: Readonly<Record<string, CommandNode>>,
     prefix: string[],
@@ -23,7 +24,9 @@ function collectVerbPaths(): string[] {
       }
     }
   };
+
   walk(ROOT_COMMANDS, []);
+
   return paths.sort();
 }
 
@@ -31,6 +34,7 @@ describe("shipped CLI command map", () => {
   it("is schema-valid", () => {
     const validation = validateCommandMap(SHIPPED_COMMAND_MAP);
     expect(validation.ok).toBe(true);
+
     if (!validation.ok) {
       expect.fail(validation.errors.join("\n"));
     }
@@ -45,9 +49,11 @@ describe("shipped CLI command map", () => {
     const demo = SHIPPED_COMMAND_MAP.commands.find(
       (c) => c.command === "demo gated",
     );
+
     expect(demo).toBeDefined();
     expect(demo?.heldKeys).toEqual(SYNTHETIC_DEMO_KEYS);
     expect(SYNTHETIC_DEMO_KEYS.length).toBeGreaterThan(0);
+
     for (const key of SYNTHETIC_DEMO_KEYS) {
       // Fixtures use synthetic keys; no real captain hold may be named here.
       expect(key).toMatch(/^synthetic-/);
@@ -80,7 +86,7 @@ describe("command map validator (fail-closed)", () => {
   it("refuses non-object inputs and missing required fields", () => {
     expect(validateCommandMap(undefined).ok).toBe(false);
     expect(validateCommandMap("map").ok).toBe(false);
-    const withoutEpoch: Record<string, unknown> = { ...base };
+    const withoutEpoch: Omit<CliCommandMap, "builtForRegistryEpoch"> & { builtForRegistryEpoch?: number } = { ...base };
     delete withoutEpoch["builtForRegistryEpoch"];
     expect(validateCommandMap(withoutEpoch).ok).toBe(false);
   });
@@ -90,6 +96,7 @@ describe("command map validator (fail-closed)", () => {
       ...base,
       commands: [...base.commands, { command: "demo gated", heldKeys: [] }],
     };
+
     expect(validateCommandMap(dup).ok).toBe(false);
   });
 
@@ -98,6 +105,7 @@ describe("command map validator (fail-closed)", () => {
       ...base,
       commands: [{ command: "demo gated", heldKeys: ["Not-A-Valid-Key!"] }],
     };
+
     expect(validateCommandMap(bad).ok).toBe(false);
   });
 
@@ -112,6 +120,7 @@ describe("command map validator (fail-closed)", () => {
         },
       ],
     };
+
     expect(validateCommandMap(bad).ok).toBe(false);
   });
 
@@ -124,8 +133,10 @@ describe("command map validator (fail-closed)", () => {
         { command: "demo all", heldKeys: [], composedOf: ["demo gated"] },
       ],
     };
+
     const validation = validateCommandMap(bad);
     expect(validation.ok).toBe(false);
+
     if (!validation.ok) {
       expect(validation.errors.join("\n")).toMatch(/superset|composed/i);
     }
@@ -141,6 +152,7 @@ describe("command map validator (fail-closed)", () => {
         },
       ],
     };
+
     expect(validateCommandMap(good).ok).toBe(true);
   });
 

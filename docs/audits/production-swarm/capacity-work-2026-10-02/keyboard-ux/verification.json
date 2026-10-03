@@ -1,0 +1,16 @@
+{
+  "sourceHashesUnchanged": 132,
+  "syntax": "PASS",
+  "checker": "PASS",
+  "acceptanceGateExit": 1,
+  "acceptanceGateOutput": "{\"status\": \"PARTIAL_NOT_ACCEPTED\", \"staticInertControls\": 23, \"receipts\": [[980, 15], [48, 0]], \"negativeControls\": {\"missingDescriptionTarget\": \"REJECTED\", \"zeroGeometry\": \"REJECTED\", \"occlusion\": \"REJECTED\", \"sourceFingerprint\": \"REJECTED\", \"htmlFingerprint\": \"REJECTED\", \"refusalStatus\": \"REJECTED\"}}\n",
+  "negativeControls": {
+    "missingDescriptionTarget": "REJECTED",
+    "zeroGeometry": "REJECTED",
+    "occlusion": "REJECTED",
+    "sourceFingerprint": "REJECTED",
+    "htmlFingerprint": "REJECTED",
+    "refusalStatus": "REJECTED"
+  },
+  "browser": "NOT RUN"
+}

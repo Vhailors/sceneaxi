@@ -1,0 +1,306 @@
+[
+  {
+    "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/children/audio-assets/RETRY-FINAL.json",
+    "sha256": "41ee44da7dc11ac60681d37b4afb126355e005d1febff1ffd9241ebc6b1c2245",
+    "bytes": 5743,
+    "keys": [
+      "owner",
+      "state",
+      "handback",
+      "ownedClone",
+      "base",
+      "approvedSnapshot",
+      "exactFileReceipts",
+      "features",
+      "checks",
+      "redBeforeGreenAfter",
+      "remainingParentWork",
+      "unrunHeavyCriteria",
+      "publication",
+      "allCodeMerged"
+    ],
+    "status": null
+  },
+  {
+    "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/children/foundation-input/FINAL.json",
+    "sha256": "5f3fe0407b15b113c263ed9c8cbe02f841ce2e36d1b1ebb70fb8eaf11a4d5cf8",
+    "bytes": 14433,
+    "keys": [
+      "status",
+      "readiness",
+      "owner",
+      "ownedClone",
+      "baseline",
+      "frozenInitialApprovedTree",
+      "sourceInputsRead",
+      "editingMethod",
+      "featureResolutions",
+      "verification",
+      "paths",
+      "preservation",
+      "parentRequests",
+      "unrunHeavyCriteria",
+      "publication",
+      "sourceHANDBACK",
+      "coordination"
+    ],
+    "status": "ASSIGNED_CODE_IMPLEMENTED_SCOPED_VERIFIED"
+  },
+  {
+    "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/children/maintenance-sites/FINAL.json",
+    "sha256": "54477ab9586693cca2221b3c9a01e7826ba8dc15e49e32b49e8fcc77722631d4",
+    "bytes": 275163,
+    "keys": [
+      "status",
+      "allCodeMerged",
+      "ownedClone",
+      "sourceHANDBACK",
+      "features",
+      "paths",
+      "additionalOwnedTest",
+      "commands",
+      "parentRequests",
+      "unrunHeavyCriteria",
+      "safety",
+      "logs",
+      "reportInvariantChecks"
+    ],
+    "status": "ASSIGNED_SOURCE_RECONCILED_SCOPED_ACCEPTED_HEAVY_ACCEPTANCE_PENDING"
+  },
+  {
+    "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/current-checks/chrome-fix/report.json",
+    "sha256": "6584008caa94caba541fa7209bd41551b934c17378251070fbdb3bee2033ba65",
+    "bytes": 377,
+    "keys": [
+      "status",
+      "sourceVerified",
+      "root",
+      "baseline",
+      "scope",
+      "excluded"
+    ],
+    "status": "IN_PROGRESS"
+  },
+  {
+    "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/final-execution/editor-native-recovered-receipt.json",
+    "sha256": "dc114f2c1e6137decf0ebc5c66985a8b751589c0021a2d897d5d714d44368173",
+    "bytes": 29590,
+    "keys": [
+      "status",
+      "finalReceiptMissing",
+      "priorWriterEnded",
+      "paths",
+      "checks",
+      "newLeases"
+    ],
+    "status": "RECOVERED_ACTUAL_CODE_AND_EXISTING_LOGS_NOT_CHILD_FINAL_PASS"
+  },
+  {
+    "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/finishing/native/compat-integration-receipts.json",
+    "sha256": "0de4ee88006749536d95775aa0fadaf3eae4938927c5a27945bb0bd209b8641c",
+    "bytes": 456,
+    "keys": null,
+    "status": null
+  },
+  {
+    "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/finishing/native/parser-integration-receipts.json",
+    "sha256": "ff0a6b56730125cde53355d0822312e611578e57da544a98a2f8211e9e745021",
+    "bytes": 2320,
+    "keys": null,
+    "status": null
+  },
+  {
+    "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/finishing/native/report.json",
+    "sha256": "7bdeea4d211acfebdaa15c550b9d44e7687dc1921626f909d8f7fc65190fe95c",
+    "bytes": 16976,
+    "keys": [
+      "owner",
+      "status",
+      "checkout",
+      "sourceHandback",
+      "furtherSourceWrites",
+      "scopeApproval",
+      "sourceFiles",
+      "sourceFingerprintAlgorithm",
+      "sourceFingerprintSha256",
+      "indexSeparateHandback",
+      "inputEvidence",
+      "implemented",
+      "checks",
+      "failuresAndFixtureCorrections",
+      "logs",
+      "unrun",
+      "claims"
+    ],
+    "status": "SOURCE_RELEASED_FOCUSED_CHECKS_PASS_INDEPENDENT_REVIEW_REQUIRED"
+  },
+  {
+    "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/finishing/refusal/handback.json",
+    "sha256": "ad17b10c5257b116cec08c067515025cd7ec55a338cd0a7f0a728ad260bbd35c",
+    "bytes": 2508,
+    "keys": [
+      "status",
+      "checkout",
+      "files",
+      "tests",
+      "reports"
+    ],
+    "status": "DONE_IMPLEMENTED_VERIFIED_FOCUSED"
+  },
+  {
+    "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/finishing/refusal/report.json",
+    "sha256": "c5a6dd6f6e47ec7d8d951546dff0733d0567de03e7f084e62b6748ef9b86efaf",
+    "bytes": 7212,
+    "keys": [
+      "status",
+      "productionStatus",
+      "checkout",
+      "finishedAt",
+      "retryBaseline",
+      "sourceHandback",
+      "sourceHashes",
+      "retainedAssertion",
+      "changes",
+      "preserved",
+      "verification",
+      "limitations",
+      "evidence",
+      "safety"
+    ],
+    "status": "DONE_IMPLEMENTED_VERIFIED_FOCUSED"
+  },
+  {
+    "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/packet-review/report.json",
+    "sha256": "57afd3b46e5a33baf4c6898179acd3f125d7b9f38479ae70717bf995415efbf5",
+    "bytes": 5576,
+    "keys": [
+      "reviewer",
+      "scope",
+      "candidate",
+      "verifiedExecutionTree",
+      "hashVerification",
+      "PolicyPatch",
+      "MutationPatch",
+      "CandidateCompatibility",
+      "SOURCEGUARDZERO",
+      "fullMerge",
+      "fullCandidatePass",
+      "assemblyMutable",
+      "verificationFailures",
+      "skipped",
+      "writes",
+      "sourceOrConfigEdits",
+      "stageCommitPushProtectionActions",
+      "delivery",
+      "evidence"
+    ],
+    "status": null
+  },
+  {
+    "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/packet-review/verification-receipt.json",
+    "sha256": "1fee2fa48bfe76322e6234cc4adeca4ddb1924a11c9ca0111403cb3e7f2539f2",
+    "bytes": 3532,
+    "keys": [
+      "manifestCheckOutput",
+      "postimageHashesReverified",
+      "reportJsonValid",
+      "approvedHash",
+      "candidateMutable"
+    ],
+    "status": null
+  },
+  {
+    "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/packets/mutations-149/report.json",
+    "sha256": "5fdd44212ec8bd47ba7c29c348681994c247ecd8d6ba30b4f318cdb38899d340",
+    "bytes": 16622,
+    "keys": [
+      "status",
+      "retryVerification",
+      "clone",
+      "beforeHashes",
+      "beforeUncheckedMutationCasts",
+      "targetUncheckedMutationCasts",
+      "api50",
+      "executed",
+      "deferred",
+      "currentHashes",
+      "currentUncheckedMutationCasts",
+      "ownedFiles",
+      "schemaPublicApi",
+      "targetCasts",
+      "checks",
+      "historicalFailures",
+      "handback",
+      "constraints"
+    ],
+    "status": "SOURCE_IMPLEMENTED_NATIVE_GUARD_BLOCKED"
+  },
+  {
+    "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/packets/policy-148/report.json",
+    "sha256": "3bec03283e95fe5be30f147b9ff4565921df55e26185242422142187ff692407",
+    "bytes": 6620,
+    "keys": [
+      "status",
+      "clone",
+      "changedFiles",
+      "indexWrites",
+      "commit",
+      "productParserWrites",
+      "configChange",
+      "independentReview",
+      "verification",
+      "historicalFailures",
+      "blockers",
+      "skipped",
+      "handback",
+      "patchSha256",
+      "hashes"
+    ],
+    "status": "BLOCKED_SEMANTIC_PROOF_PARTIAL_PATCH"
+  },
+  {
+    "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/packets/policy-148-replacement/receipt.json",
+    "sha256": "c6b14ff5020d531a340f024703460acc3a343f99b0d2fafa446a931f276a0dd2",
+    "bytes": 1211,
+    "keys": [
+      "status",
+      "sourceOrigin",
+      "paths",
+      "patchSha256",
+      "priorFailedPatch",
+      "change",
+      "checks"
+    ],
+    "status": "NEW_FROZEN_REPLACEMENT_NOT_APPROVED"
+  },
+  {
+    "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/report.json",
+    "sha256": "c1425241772659c52a5c96ca1c1edb9b2a16c61e5fa13e9325aa9c4bbd03bc06",
+    "bytes": 6827,
+    "keys": [
+      "status",
+      "owner",
+      "takeoverStatus",
+      "takeoverAt",
+      "sourceHandbacks",
+      "policyApproval",
+      "publicationOwner",
+      "clone",
+      "createdAt",
+      "baseline",
+      "commitsCreated",
+      "publication",
+      "semanticAcceptance",
+      "foreignUncommitted",
+      "checkpoints",
+      "reconstructedSnapshotTree",
+      "snapshotIsCommit",
+      "nativeMergeHead",
+      "nativeMergeConflicts",
+      "privateSourceConflicts",
+      "assembledPaths",
+      "checks"
+    ],
+    "status": "MERGE_IN_PROGRESS"
+  }
+]

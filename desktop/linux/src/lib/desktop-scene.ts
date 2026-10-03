@@ -9,7 +9,7 @@
  * reconstructed through `@sceneaxi/authoring-core` and never rewritten to place it,
  * because its evidence binds its exact spec bytes.
  */
-import { composeScene, type ApplyDiagnostic } from "@sceneaxi/authoring-core";
+import { composeScene, reconstructSculpt, type ApplyDiagnostic } from "@sceneaxi/authoring-core";
 import {
   COMPOSED_SCENE_DOCUMENT_DATA_KEY,
   DESKTOP_SCENE_HIERARCHY_KIND,
@@ -17,6 +17,9 @@ import {
   DESKTOP_SCENE_HIERARCHY_SCHEMA_VERSION,
   DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS,
   SCENE_COMPOSITION_INTAKE_KIND,
+  SCULPT_INTAKE_KIND,
+  SCULPT_SCHEMA_VERSION,
+  OBJECT_SCULPT_SPEC_KIND,
   SCENE_COMPOSITION_SCHEMA_VERSION,
   SCENE_MAXIMUM_INSTANCES,
   SCENE_MINIMUM_INSTANCES,
@@ -46,6 +49,7 @@ import {
   evaluateSceneAnimation,
   inspectSceneAnimation,
   parseSceneAnimationCatalog,
+  parseSceneAnimationMutation,
   SCENE_PHYSICS_CATALOG_KEY,
   SCENE_PHYSICS_REFUSALS,
   applyScenePhysicsMutation,
@@ -53,24 +57,28 @@ import {
   evaluateScenePhysics,
   inspectScenePhysics,
   parseScenePhysicsCatalog,
+  parseScenePhysicsMutation,
   SCENE_ENVIRONMENT_CATALOG_KEY,
   SCENE_ENVIRONMENT_REFUSALS,
   applySceneEnvironmentMutation,
   emptySceneEnvironmentCatalog,
   inspectSceneEnvironment,
   parseSceneEnvironmentCatalog,
+  parseSceneEnvironmentMutation,
   SCENE_MATERIALS_CATALOG_KEY,
   SCENE_MATERIALS_REFUSALS,
   applySceneMaterialsMutation,
   emptySceneMaterialsCatalog,
   inspectSceneMaterials,
   parseSceneMaterialsCatalog,
+  parseSceneMaterialsMutation,
   SCENE_EFFECTS_CATALOG_KEY,
   SCENE_EFFECTS_REFUSALS,
   applySceneEffectsMutation,
   emptySceneEffectsCatalog,
   inspectSceneEffects,
   parseSceneEffectsCatalog,
+  parseSceneEffectsMutation,
   ASSISTANT_ASK_REFUSALS,
   SCENE_ASSISTANT_BUILD_CATALOG_KEY,
   answerAssistantAsk,
@@ -89,17 +97,13 @@ import {
   parseScenePackageCatalog,
   type ScenePackageMutation,
   type ComposedScene,
+  type JsonObject,
   type PhysicsWorldHost,
   type ScenePhysicsCatalog,
-  type ScenePhysicsMutation,
   type SceneEnvironmentCatalog,
-  type SceneEnvironmentMutation,
   type SceneMaterialsCatalog,
-  type SceneMaterialsMutation,
   type SceneEffectsCatalog,
-  type SceneEffectsMutation,
   type SceneAnimationCatalog,
-  type SceneAnimationMutation,
   type ScenePrefabCatalog,
   type ComposedSceneInstance,
   type DesktopSceneEditOperation,
@@ -127,6 +131,10 @@ import {
   type ContainedGltfNode,
   type ProjectAssetManifestEntry,
 } from "@sceneaxi/importers";
+/** Raw document/edit inputs retain the schema owner’s boundary contract before validation. */
+
+type DesktopSceneRawInput = Parameters<typeof isJsonObject>[0];
+
 import { DESKTOP_ACTIVE_DOCUMENT_PATH } from "./bridge-contract.js";
 
 /** Document id of the composed scene the desktop app opens. */
@@ -138,6 +146,7 @@ export const DESKTOP_ASSISTANT_INSTANCE_ID = "assistant-live-output";
 
 /** Existing ProductManifest identity carried by the canonical Scene Document. */
 export const DESKTOP_RARITY_PRODUCT_ID = "desktop-linux-rarity" as const;
+
 export const DESKTOP_RARITY_PROJECT_SEED = 20260809 as const;
 
 /** Refusal minted when the pipeline rejects the desktop composition. */
@@ -293,7 +302,7 @@ export type DesktopMountableScene = MountableScene & Readonly<{
 }>;
 
 function consistentProjectAssetManifest(
-  data: unknown,
+  data: JsonObject,
   stored: ComposedScene,
 ):
   | Readonly<{
@@ -303,6 +312,7 @@ function consistentProjectAssetManifest(
     }>
   | Readonly<{ ok: false; reason: DesktopSceneHierarchyRefusal; message: string }> {
   const manifest = projectAssetManifestFromDocumentData(data);
+
   if (!manifest.ok) {
     return Object.freeze({
       ok: false as const,
@@ -310,12 +320,16 @@ function consistentProjectAssetManifest(
       message: manifest.message,
     });
   }
+
   const instanceIds = new Set<string>();
+
   for (const entry of manifest.value.assets) {
     if (entry.instanceId === null && entry.artifactId === null) continue;
+
     const instance = stored.instances.find(
       (candidate) => candidate.instanceId === entry.instanceId,
     );
+
     if (instance?.artifactId !== entry.artifactId) {
       return Object.freeze({
         ok: false as const,
@@ -323,8 +337,10 @@ function consistentProjectAssetManifest(
         message: `Asset manifest instance "${entry.instanceId}" does not match the accepted composition.`,
       });
     }
+
     if (entry.instanceId !== null) instanceIds.add(entry.instanceId);
   }
+
   return Object.freeze({
     ok: true as const,
     assets: manifest.value.assets,
@@ -333,7 +349,7 @@ function consistentProjectAssetManifest(
 }
 
 function withImportedAssets(
-  data: unknown,
+  data: DesktopSceneRawInput,
   composed: ComposedSceneOk,
 ): DesktopSceneResult {
   if (!isJsonObject(data)) {
@@ -343,7 +359,9 @@ function withImportedAssets(
       message: "Scene presentation catalogs are invalid.",
     });
   }
+
   const mountable = mountableSceneFromDocumentData(composed, data);
+
   if (mountable === null) {
     return Object.freeze({
       ok: false as const,
@@ -351,12 +369,16 @@ function withImportedAssets(
       message: "Scene presentation catalogs are invalid.",
     });
   }
+
   const manifest = consistentProjectAssetManifest(data, composed.scene);
+
   if (!manifest.ok) {
     return Object.freeze({ ok: false as const, reason: manifest.reason, message: manifest.message });
   }
+
   const importedAssets: DesktopImportedAsset[] = [];
   const audioClips: DesktopAudioClip[] = [];
+
   for (const entry of manifest.assets) {
     if (entry.family === "audio") {
       audioClips.push(Object.freeze({
@@ -367,7 +389,9 @@ function withImportedAssets(
       }));
       continue;
     }
+
     if (entry.family !== "model") continue;
+
     if (entry.instanceId === null || entry.artifactId === null) {
       return Object.freeze({
         ok: false as const,
@@ -375,7 +399,9 @@ function withImportedAssets(
         message: `Model asset manifest entry "${entry.assetId}" has no stable composition identities.`,
       });
     }
+
     const instance = composed.scene.instances.find((candidate) => candidate.instanceId === entry.instanceId);
+
     if (instance?.artifactId !== entry.artifactId) {
       return Object.freeze({
         ok: false as const,
@@ -383,11 +409,15 @@ function withImportedAssets(
         message: `Asset manifest instance "${entry.instanceId}" is absent from the accepted composition.`,
       });
     }
+
     const projected = projectAssetManifestEntry(entry);
+
     if (!projected.ok) return Object.freeze({ ok: false as const, reason: projected.reason, message: projected.message });
+
     if (!("meshes" in projected.value)) {
       return Object.freeze({ ok: false as const, reason: DESKTOP_SCENE_NOT_COMPOSABLE, message: `Model asset "${entry.assetId}" produced no geometry projection.` });
     }
+
     importedAssets.push(Object.freeze({
       instanceId: entry.instanceId,
       digest: entry.digest,
@@ -396,16 +426,19 @@ function withImportedAssets(
       animations: projected.value.animations,
     }));
   }
+
+  const projectedMountable: MutableSceneFields<DesktopMountableScene> = { ...mountable };
+
+  if (importedAssets.length !== 0) projectedMountable.importedAssets = Object.freeze(importedAssets);
+
+  if (audioClips.length !== 0) projectedMountable.audioClips = Object.freeze(audioClips);
+
   return Object.freeze({
     ok: true as const,
     composed,
     mountable: importedAssets.length === 0 && audioClips.length === 0
       ? mountable
-      : Object.freeze({
-          ...mountable,
-          ...(importedAssets.length === 0 ? {} : { importedAssets: Object.freeze(importedAssets) }),
-          ...(audioClips.length === 0 ? {} : { audioClips: Object.freeze(audioClips) }),
-        }),
+      : Object.freeze(projectedMountable),
   });
 }
 
@@ -446,13 +479,15 @@ export const DESKTOP_SCENE_TRANSLATION_X_PROPERTY = Object.freeze({
 
 function placementTransform(translation: Vector3): SculptTransform {
   const placed: Vector3 = [translation[0], translation[1], translation[2]];
+
   return Object.freeze({ ...identitySculptTransform(), translation: Object.freeze(placed) });
 }
 
-function artifactIdOf(value: unknown): string {
-  if (typeof value !== "object" || value === null) return "";
+function artifactIdOf(value: DesktopSceneRawInput): string {
+  if (!isProtocolObject(value) || value === null) return "";
   const descriptor = Object.getOwnPropertyDescriptor(value, "artifactId");
-  return descriptor !== undefined && "value" in descriptor && typeof descriptor.value === "string"
+
+  return descriptor !== undefined && "value" in descriptor && isProtocolText(descriptor.value)
     ? descriptor.value
     : "";
 }
@@ -467,7 +502,9 @@ function artifactIdOf(value: unknown): string {
  */
 type DesktopStoredPlacement = Readonly<{
   instanceId: string;
-  artifactId: string;
+  artifactId?: string;
+  kind?: "node";
+  name?: string;
   parentInstanceId: string | null;
   transform: unknown;
 }>;
@@ -477,37 +514,74 @@ function composeStoredPlacements(
   placements: readonly DesktopStoredPlacement[],
   extraArtifacts: readonly SculptArtifact[] = [],
 ) {
+  // Preserve composition-owned node/name metadata on every existing edit path.
+  const sourceById = new Map(stored.instances.map((instance) => [instance.instanceId, instance]));
+
+  const normalizedPlacements = placements.map((placement) => {
+    const source = sourceById.get(placement.instanceId);
+    const name = placement.name ?? source?.name;
+
+    const optionalName: PlacementName = {};
+
+    if (name !== undefined) optionalName.name = name;
+
+    return {
+      instanceId: placement.instanceId,
+      parentInstanceId: placement.parentInstanceId,
+      transform: placement.transform,
+      ...optionalName,
+      ...(placement.kind === "node" || source?.kind === "node"
+        ? { kind: "node" as const }
+        : { artifactId: placement.artifactId }),
+    };
+  });
+
   const intake = {
     schemaVersion: SCENE_COMPOSITION_SCHEMA_VERSION,
     kind: SCENE_COMPOSITION_INTAKE_KIND,
     sceneId: stored.sceneId,
     rootInstanceId: stored.rootInstanceId,
-    placements,
+    placements: normalizedPlacements,
   };
-  const placedArtifactIds = new Set(placements.map((placement) => placement.artifactId));
+
+  const placedArtifactIds = new Set(normalizedPlacements.flatMap((placement) =>
+    "artifactId" in placement && placement.artifactId !== undefined ? [placement.artifactId] : []
+  ));
+
   const artifacts = new Map<string, SculptArtifact>();
+
   for (const instance of stored.instances) {
-    if (!placedArtifactIds.has(instance.artifactId)) continue;
+    if (instance.kind === "node" || !placedArtifactIds.has(instance.artifactId)) continue;
     artifacts.set(instance.artifactId, instance.artifact);
   }
+
   for (const artifact of extraArtifacts) {
     const artifactId = artifactIdOf(artifact);
+
     if (placedArtifactIds.has(artifactId)) artifacts.set(artifactId, artifact);
   }
+
   const composed = composeScene(intake, [...artifacts.values()]);
+
   if (!composed.ok) return composed;
-  // The composition evidence binds intake order. Persist the same depth/id
-  // traversal the accepted scene exposes so save/reopen recomputes identical
-  // canonical bytes even when reparenting changes depths.
+
+  // Canonical traversal keeps save/reopen evidence stable after reparenting.
   return composeScene(
     {
       ...intake,
-      placements: composed.scene.instances.map((instance) => ({
-        instanceId: instance.instanceId,
-        artifactId: instance.artifactId,
-        parentInstanceId: instance.parentInstanceId,
-        transform: instance.localTransform,
-      })),
+      placements: composed.scene.instances.map((instance) => {
+        const optionalName: PlacementName = {};
+
+        if (instance.name !== undefined) optionalName.name = instance.name;
+
+        return {
+          instanceId: instance.instanceId,
+          ...(instance.kind === "node" ? { kind: "node" as const } : { artifactId: instance.artifactId }),
+          ...optionalName,
+          parentInstanceId: instance.parentInstanceId,
+          transform: instance.localTransform,
+        };
+      }),
     },
     [...artifacts.values()],
   );
@@ -515,7 +589,7 @@ function composeStoredPlacements(
 
 function recomposeStoredScene(
   stored: ComposedScene,
-  transformFor: (instance: ComposedSceneInstance) => unknown,
+  transformFor: (instance: ComposedSceneInstance) => DesktopStoredPlacement["transform"],
 ) {
   return composeStoredPlacements(
     stored,
@@ -536,6 +610,7 @@ function recomposeStoredScene(
  */
 export function desktopOpenScene(): DesktopSceneResult {
   const artifact = webEditorStarterArtifact();
+
   if (!artifact.ok) {
     return Object.freeze({
       ok: false as const,
@@ -545,6 +620,7 @@ export function desktopOpenScene(): DesktopSceneResult {
   }
 
   const artifactId = artifactIdOf(artifact.value);
+
   const intake: SceneCompositionIntake = {
     schemaVersion: SCENE_COMPOSITION_SCHEMA_VERSION,
     kind: SCENE_COMPOSITION_INTAKE_KIND,
@@ -559,6 +635,7 @@ export function desktopOpenScene(): DesktopSceneResult {
   };
 
   const composed = composeScene(intake, [artifact.value]);
+
   if (!composed.ok) {
     return Object.freeze({
       ok: false as const,
@@ -570,7 +647,7 @@ export function desktopOpenScene(): DesktopSceneResult {
   return withImportedAssets({}, composed);
 }
 
-export function desktopSceneFromDocumentData(data: unknown): DesktopSceneResult {
+export function desktopSceneFromDocumentData(data: DesktopSceneRawInput): DesktopSceneResult {
   if (!isJsonObject(data)) {
     return Object.freeze({
       ok: false as const,
@@ -578,9 +655,12 @@ export function desktopSceneFromDocumentData(data: unknown): DesktopSceneResult 
       message: "The active Scene Document data is not a JSON object.",
     });
   }
+
   const stored = composedSceneFromDocumentData(data);
+
   if (!stored.ok) {
     const diagnostic = stored.diagnostics[0];
+
     return Object.freeze({
       ok: false as const,
       reason: DESKTOP_SCENE_NOT_COMPOSABLE,
@@ -592,6 +672,7 @@ export function desktopSceneFromDocumentData(data: unknown): DesktopSceneResult 
     stored.value,
     (instance) => instance.localTransform,
   );
+
   if (!composed.ok || composed.sceneDigest !== stored.value.evidence.sceneDigest) {
     return Object.freeze({
       ok: false as const,
@@ -599,6 +680,7 @@ export function desktopSceneFromDocumentData(data: unknown): DesktopSceneResult 
       message: "The active Scene Document composition could not be reproduced.",
     });
   }
+
   return withImportedAssets(data, composed);
 }
 
@@ -617,7 +699,7 @@ type DesktopEditableCompositionRead =
  * which document they accept.
  */
 function readEditableComposition(
-  documentData: unknown,
+  documentData: DesktopSceneRawInput,
   contentHash: string,
   documentPath: string,
 ): DesktopEditableCompositionRead {
@@ -627,24 +709,31 @@ function readEditableComposition(
       documentPath,
     );
   }
+
   if (!isJsonObject(documentData)) {
     return propertyDiagnostic(
       "The active Scene Document data is not a JSON object.",
       documentPath,
     );
   }
+
   const stored = composedSceneFromDocumentData(documentData);
+
   if (!stored.ok) {
     const diagnostic = stored.diagnostics[0];
+
     return propertyDiagnostic(
       `${diagnostic?.path ?? `$.${COMPOSED_SCENE_DOCUMENT_DATA_KEY}`}: ${diagnostic?.message ?? "The active Scene Document has no valid composition."}`,
       documentPath,
     );
   }
+
   const manifest = consistentProjectAssetManifest(documentData, stored.value);
+
   if (!manifest.ok) {
     return hierarchyDiagnostic(manifest.reason, manifest.message, documentPath);
   }
+
   return Object.freeze({
     ok: true as const,
     stored: stored.value,
@@ -658,7 +747,7 @@ function editableEntityOf(
 ): DesktopSceneEditableEntity {
   return Object.freeze({
     id: instance.instanceId,
-    label: `Object ${instance.artifactId} · Instance ${instance.instanceId}`,
+    label: instance.name ?? `Object ${instance.artifactId} · Instance ${instance.instanceId}`,
     artifactId: instance.artifactId,
     parentInstanceId: instance.parentInstanceId,
     depth: instance.depth,
@@ -712,16 +801,19 @@ export function desktopSceneHierarchySnapshot(
 export function desktopScenePropertyInspection(
   contentHash: string,
   stored: ComposedScene,
-  requestedSelection?: unknown,
+  requestedSelection?: Parameters<typeof resolveDesktopSceneSelection>[0],
 ): DesktopScenePropertyInspection {
   const hierarchy = desktopSceneHierarchySnapshot(stored);
+
   const defaultSelection = stored.instances.find(
     (instance) => instance.instanceId !== stored.rootInstanceId,
   )?.instanceId ?? stored.rootInstanceId;
+
   const selected = resolveDesktopSceneSelection(
     requestedSelection ?? [defaultSelection],
     hierarchy.objects.map((object) => object.id),
   );
+
   if (!selected.ok) {
     return Object.freeze({
       ...hierarchyDiagnostic(
@@ -736,6 +828,7 @@ export function desktopScenePropertyInspection(
       hierarchy,
     });
   }
+
   return Object.freeze({
     ok: true as const,
     contentHash,
@@ -756,7 +849,7 @@ export function desktopScenePropertyInspection(
  * an accepted Save.
  */
 export function inspectDesktopSceneProperties(input: Readonly<{
-  documentData: unknown;
+  documentData: DesktopSceneRawInput;
   contentHash: string;
   documentPath?: string;
   selection?: unknown;
@@ -766,7 +859,9 @@ export function inspectDesktopSceneProperties(input: Readonly<{
     input.contentHash,
     input.documentPath ?? DESKTOP_ACTIVE_DOCUMENT_PATH,
   );
+
   if (!read.ok) return read;
+
   return desktopScenePropertyInspection(
     input.contentHash,
     read.stored,
@@ -776,10 +871,13 @@ export function inspectDesktopSceneProperties(input: Readonly<{
 
 function nextCopyInstanceId(stored: ComposedScene, sourceInstanceId: string) {
   const used = new Set(stored.instances.map((instance) => instance.instanceId));
+
   for (let sequence = 1; sequence <= stored.instances.length + 1; sequence += 1) {
     const candidate = `${sourceInstanceId}-copy-${String(sequence)}`;
+
     if (!used.has(candidate)) return candidate;
   }
+
   return null;
 }
 
@@ -792,21 +890,23 @@ function nextCopyInstanceId(stored: ComposedScene, sourceInstanceId: string) {
  * policy. The legacy add/remove forms remain for compatible callers.
  */
 export function stageDesktopSceneEdit(input: Readonly<{
-  documentData: unknown;
+  documentData: DesktopSceneRawInput;
   contentHash: string;
   documentPath?: string;
   profile: unknown;
   operation: unknown;
 }>): DesktopSceneEditStageResult {
   const documentPath = input.documentPath ?? DESKTOP_ACTIVE_DOCUMENT_PATH;
+
   if (!isDesktopSceneEditProfile(input.profile)) {
     return propertyRequestDiagnostic(
       "Selected-instance editing is supported only by the Game and Web desktop profiles.",
       documentPath,
     );
   }
+
   if (
-    typeof input.operation === "object" && input.operation !== null &&
+    isProtocolObject(input.operation) && input.operation !== null &&
     Object.getOwnPropertyDescriptor(input.operation, "kind")?.value === "reparent-object" &&
     !isDesktopSceneReparentPolicy(
       Object.getOwnPropertyDescriptor(input.operation, "transformPolicy")?.value,
@@ -818,14 +918,18 @@ export function stageDesktopSceneEdit(input: Readonly<{
       documentPath,
     );
   }
+
   if (!isDesktopSceneEditOperation(input.operation)) {
     return propertyRequestDiagnostic(
       "The selected-instance edit operation is malformed or outside its numeric range.",
       documentPath,
     );
   }
+
+  // SAFETY: isDesktopSceneEditOperation accepted the complete operation above; the shallow frozen copy retains that validated discriminated union.
   const operation = Object.freeze({ ...input.operation }) as DesktopSceneEditOperation;
   const read = readEditableComposition(input.documentData, input.contentHash, documentPath);
+
   if (!read.ok) return read;
   const manifestInstanceIds = read.manifestInstanceIds;
   let selectedInstanceId: string;
@@ -836,7 +940,9 @@ export function stageDesktopSceneEdit(input: Readonly<{
     const selected = read.stored.instances.find(
       (instance) => instance.instanceId === operation.instanceId,
     );
+
     const definition = desktopSceneTransformProperty(operation.propertyId);
+
     if (selected === undefined) {
       return hierarchyDiagnostic(
         DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
@@ -844,16 +950,20 @@ export function stageDesktopSceneEdit(input: Readonly<{
         documentPath,
       );
     }
+
     if (definition === null) {
       return propertyRequestDiagnostic(
         `The selected transform property is unsupported: ${operation.instanceId}.${operation.propertyId}.`,
         documentPath,
       );
     }
+
     composed = recomposeStoredScene(read.stored, (instance) => {
       if (instance.instanceId !== operation.instanceId) return instance.localTransform;
+      // SAFETY: The stored composition has validated three-component numeric transforms; copying one component vector preserves its exact length and numeric entries.
       const vector = [...instance.localTransform[definition.field]] as [number, number, number];
       vector[definition.axis] = operation.value;
+
       return {
         ...instance.localTransform,
         [definition.field]: Object.freeze(vector),
@@ -867,14 +977,19 @@ export function stageDesktopSceneEdit(input: Readonly<{
         (candidate) => candidate.instanceId === component.instanceId &&
           candidate.propertyId === component.propertyId,
       );
+
       return [`${component.instanceId}:${component.propertyId}`, current[current.length - 1]];
     }));
+
     const values = new Map<string, Map<string, number>>();
+
     for (const component of byId.values()) {
       if (component === undefined) continue;
+
       const selected = read.stored.instances.find(
         (instance) => instance.instanceId === component.instanceId,
       );
+
       if (selected === undefined) {
         return hierarchyDiagnostic(
           DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
@@ -882,30 +997,40 @@ export function stageDesktopSceneEdit(input: Readonly<{
           documentPath,
         );
       }
+
       const definition = desktopSceneTransformProperty(component.propertyId);
+
       if (definition === null) {
         return propertyRequestDiagnostic(
           `The selected transform property is unsupported: ${component.instanceId}.${component.propertyId}.`,
           documentPath,
         );
       }
+
       const instanceValues = values.get(component.instanceId) ?? new Map<string, number>();
       instanceValues.set(component.propertyId, component.value);
       values.set(component.instanceId, instanceValues);
     }
+
     composed = recomposeStoredScene(read.stored, (instance) => {
       const instanceValues = values.get(instance.instanceId);
+
       if (instanceValues === undefined) return instance.localTransform;
+
+      // SAFETY: The stored composition has validated three-component numeric transforms; copying one component vector preserves its exact length and numeric entries.
       const next = {
         translation: [...instance.localTransform.translation] as [number, number, number],
         rotationEulerDegrees: [...instance.localTransform.rotationEulerDegrees] as [number, number, number],
         scale: [...instance.localTransform.scale] as [number, number, number],
       };
+
       for (const definition of DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS) {
         const value = instanceValues.get(definition.id);
+
         if (value === undefined) continue;
         next[definition.field][definition.axis] = value;
       }
+
       return Object.freeze({
         translation: Object.freeze(next.translation),
         rotationEulerDegrees: Object.freeze(next.rotationEulerDegrees),
@@ -918,12 +1043,14 @@ export function stageDesktopSceneEdit(input: Readonly<{
     const source = read.stored.instances.find(
       (instance) => instance.instanceId === operation.sourceInstanceId,
     );
+
     if (source === undefined) {
       return propertyRequestDiagnostic(
         `The selected local artifact source is missing: ${operation.sourceInstanceId}.`,
         documentPath,
       );
     }
+
     if (manifestInstanceIds.has(source.instanceId)) {
       return hierarchyDiagnostic(
         DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
@@ -931,6 +1058,7 @@ export function stageDesktopSceneEdit(input: Readonly<{
         documentPath,
       );
     }
+
     if (read.stored.instances.length >= SCENE_MAXIMUM_INSTANCES) {
       return hierarchyDiagnostic(
         DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
@@ -938,13 +1066,16 @@ export function stageDesktopSceneEdit(input: Readonly<{
         documentPath,
       );
     }
+
     const addedInstanceId = nextCopyInstanceId(read.stored, source.instanceId);
+
     if (addedInstanceId === null) {
       return propertyRequestDiagnostic(
         "No canonical instance identifier is available for the selected local artifact.",
         documentPath,
       );
     }
+
     const placements = [
       ...read.stored.instances.map((instance) => ({
         instanceId: instance.instanceId,
@@ -969,6 +1100,7 @@ export function stageDesktopSceneEdit(input: Readonly<{
             ? 1
             : 0),
     );
+
     composed = composeStoredPlacements(
       read.stored,
       placements.map((placement) => ({
@@ -984,12 +1116,14 @@ export function stageDesktopSceneEdit(input: Readonly<{
     const selected = read.stored.instances.find(
       (instance) => instance.instanceId === operation.instanceId,
     );
+
     if (selected === undefined) {
       const stale = desktopScenePropertyInspection(
         input.contentHash,
         read.stored,
         [operation.instanceId],
       );
+
       return stale.ok
         ? hierarchyDiagnostic(
             DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
@@ -998,6 +1132,7 @@ export function stageDesktopSceneEdit(input: Readonly<{
           )
         : stale;
     }
+
     if (manifestInstanceIds.has(selected.instanceId)) {
       return hierarchyDiagnostic(
         DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
@@ -1005,6 +1140,7 @@ export function stageDesktopSceneEdit(input: Readonly<{
         documentPath,
       );
     }
+
     if (selected.instanceId === read.stored.rootInstanceId) {
       return hierarchyDiagnostic(
         DESKTOP_SCENE_HIERARCHY_REFUSALS.protectedRoot,
@@ -1012,6 +1148,7 @@ export function stageDesktopSceneEdit(input: Readonly<{
         documentPath,
       );
     }
+
     if (
       read.stored.instances.length <= SCENE_MINIMUM_INSTANCES ||
       read.stored.instances.some(
@@ -1023,6 +1160,7 @@ export function stageDesktopSceneEdit(input: Readonly<{
         documentPath,
       );
     }
+
     composed = composeStoredPlacements(
       read.stored,
       read.stored.instances
@@ -1040,6 +1178,7 @@ export function stageDesktopSceneEdit(input: Readonly<{
     const source = read.stored.instances.find(
       (instance) => instance.instanceId === operation.sourceInstanceId,
     );
+
     if (source === undefined) {
       return hierarchyDiagnostic(
         DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
@@ -1047,6 +1186,7 @@ export function stageDesktopSceneEdit(input: Readonly<{
         documentPath,
       );
     }
+
     if (manifestInstanceIds.has(source.instanceId)) {
       return hierarchyDiagnostic(
         DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
@@ -1054,9 +1194,11 @@ export function stageDesktopSceneEdit(input: Readonly<{
         documentPath,
       );
     }
+
     const parent = read.stored.instances.find(
       (instance) => instance.instanceId === operation.parentInstanceId,
     );
+
     if (parent === undefined) {
       return hierarchyDiagnostic(
         DESKTOP_SCENE_HIERARCHY_REFUSALS.parentMissing,
@@ -1064,6 +1206,7 @@ export function stageDesktopSceneEdit(input: Readonly<{
         documentPath,
       );
     }
+
     if (read.stored.instances.length >= SCENE_MAXIMUM_INSTANCES) {
       return hierarchyDiagnostic(
         DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
@@ -1071,7 +1214,9 @@ export function stageDesktopSceneEdit(input: Readonly<{
         documentPath,
       );
     }
+
     const addedInstanceId = nextCopyInstanceId(read.stored, source.instanceId);
+
     if (addedInstanceId === null) {
       return hierarchyDiagnostic(
         DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
@@ -1079,6 +1224,7 @@ export function stageDesktopSceneEdit(input: Readonly<{
         documentPath,
       );
     }
+
     composed = composeStoredPlacements(read.stored, [
       ...read.stored.instances.map((instance) => ({
         instanceId: instance.instanceId,
@@ -1100,13 +1246,17 @@ export function stageDesktopSceneEdit(input: Readonly<{
       operation.instanceIds,
       read.stored.instances.map((instance) => instance.instanceId),
     );
+
     if (!selection.ok) {
       return hierarchyDiagnostic(selection.reason, selection.message, documentPath);
     }
+
     const removed = new Set(selection.selection.instanceIds);
+
     const imported = selection.selection.instanceIds.find((instanceId) =>
       manifestInstanceIds.has(instanceId)
     );
+
     if (imported !== undefined) {
       return hierarchyDiagnostic(
         DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
@@ -1114,6 +1264,7 @@ export function stageDesktopSceneEdit(input: Readonly<{
         documentPath,
       );
     }
+
     if (removed.has(read.stored.rootInstanceId)) {
       return hierarchyDiagnostic(
         DESKTOP_SCENE_HIERARCHY_REFUSALS.protectedRoot,
@@ -1121,6 +1272,7 @@ export function stageDesktopSceneEdit(input: Readonly<{
         documentPath,
       );
     }
+
     if (read.stored.instances.length - removed.size < SCENE_MINIMUM_INSTANCES) {
       return hierarchyDiagnostic(
         DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
@@ -1128,10 +1280,12 @@ export function stageDesktopSceneEdit(input: Readonly<{
         documentPath,
       );
     }
+
     const orphan = read.stored.instances.find(
       (instance) => instance.parentInstanceId !== null &&
         removed.has(instance.parentInstanceId) && !removed.has(instance.instanceId),
     );
+
     if (orphan !== undefined) {
       return hierarchyDiagnostic(
         DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
@@ -1139,6 +1293,7 @@ export function stageDesktopSceneEdit(input: Readonly<{
         documentPath,
       );
     }
+
     composed = composeStoredPlacements(
       read.stored,
       read.stored.instances.filter((instance) => !removed.has(instance.instanceId)).map(
@@ -1152,27 +1307,9 @@ export function stageDesktopSceneEdit(input: Readonly<{
     );
     selectedInstanceId = read.stored.rootInstanceId;
     selectedInstanceIds = Object.freeze([selectedInstanceId]);
-  } else {
-    const child = read.stored.instances.find(
-      (instance) => instance.instanceId === operation.instanceId,
-    );
-    if (child === undefined) {
-      return hierarchyDiagnostic(
-        DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
-        `The selected child is stale: ${operation.instanceId}.`,
-        documentPath,
-      );
-    }
-    if (child.instanceId === read.stored.rootInstanceId) {
-      return hierarchyDiagnostic(
-        DESKTOP_SCENE_HIERARCHY_REFUSALS.protectedRoot,
-        "The project hierarchy root is protected and cannot be reparented.",
-        documentPath,
-      );
-    }
-    const parent = read.stored.instances.find(
-      (instance) => instance.instanceId === operation.parentInstanceId,
-    );
+  } else if (operation.kind === "create-node" || operation.kind === "create-primitive") {
+    const parent = read.stored.instances.find((instance) => instance.instanceId === operation.parentInstanceId);
+
     if (parent === undefined) {
       return hierarchyDiagnostic(
         DESKTOP_SCENE_HIERARCHY_REFUSALS.parentMissing,
@@ -1180,7 +1317,133 @@ export function stageDesktopSceneEdit(input: Readonly<{
         documentPath,
       );
     }
+
+    if (read.stored.instances.length >= SCENE_MAXIMUM_INSTANCES) {
+      return hierarchyDiagnostic(
+        DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+        `Object creation cannot exceed the v1 maximum of ${String(SCENE_MAXIMUM_INSTANCES)} instances.`,
+        documentPath,
+      );
+    }
+
+    const addedInstanceId = nextCopyInstanceId(read.stored, operation.kind === "create-node" ? "node" : operation.primitive);
+
+    if (addedInstanceId === null) {
+      return hierarchyDiagnostic(
+        DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
+        "No canonical object identifier is available.",
+        documentPath,
+      );
+    }
+
+    let artifact: SculptArtifact | undefined;
+
+    if (operation.kind === "create-primitive") {
+      const reconstructed = reconstructSculpt({
+        schemaVersion: SCULPT_SCHEMA_VERSION,
+        kind: SCULPT_INTAKE_KIND,
+        intakeId: addedInstanceId,
+        mode: "structured-spec",
+        structuredSpec: {
+          schemaVersion: SCULPT_SCHEMA_VERSION,
+          kind: OBJECT_SCULPT_SPEC_KIND,
+          id: `${addedInstanceId}-spec`,
+          rootNodeId: `${addedInstanceId}-root`,
+          components: [{ id: "body", primitive: operation.primitive, dimensions: [1, 1, 1], materialId: "surface" }],
+          materials: [{ id: "surface", baseColor: "#808080", metallic: 0, roughness: 0.7 }],
+          hierarchy: [{ id: `${addedInstanceId}-root`, parentId: null, componentId: "body", transform: identitySculptTransform() }],
+          sockets: [],
+        },
+      });
+
+      if (!reconstructed.ok) {
+        return hierarchyDiagnostic(
+          DESKTOP_SCENE_HIERARCHY_REFUSALS.primitiveUnsupported,
+          reconstructed.message,
+          documentPath,
+        );
+      }
+
+      artifact = reconstructed.artifact;
+    }
+
+    composed = composeStoredPlacements(read.stored, [
+      ...read.stored.instances.map((instance) => ({
+        instanceId: instance.instanceId,
+        artifactId: instance.artifactId,
+        parentInstanceId: instance.parentInstanceId,
+        transform: instance.localTransform,
+      })),
+      {
+        instanceId: addedInstanceId,
+        ...(artifact === undefined ? { kind: "node" as const } : { artifactId: artifactIdOf(artifact) }),
+        name: operation.name,
+        parentInstanceId: parent.instanceId,
+        transform: identitySculptTransform(),
+      },
+    ], artifact === undefined ? [] : [artifact]);
+    selectedInstanceId = addedInstanceId;
+    selectedInstanceIds = Object.freeze([addedInstanceId]);
+  } else if (operation.kind === "rename-object") {
+    const selected = read.stored.instances.find((instance) => instance.instanceId === operation.instanceId);
+
+    if (selected === undefined) {
+      return hierarchyDiagnostic(
+        DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+        `The selected instance is stale: ${operation.instanceId}.`,
+        documentPath,
+      );
+    }
+
+    composed = composeStoredPlacements(read.stored, read.stored.instances.map((instance) => {
+      const placement: MutableSceneFields<DesktopStoredPlacement> = {
+        instanceId: instance.instanceId,
+        artifactId: instance.artifactId,
+        parentInstanceId: instance.parentInstanceId,
+        transform: instance.localTransform,
+      };
+
+      if (instance.instanceId === selected.instanceId) placement.name = operation.name;
+
+      return placement;
+    }));
+    selectedInstanceId = selected.instanceId;
+    selectedInstanceIds = Object.freeze([selected.instanceId]);
+  } else {
+    const child = read.stored.instances.find(
+      (instance) => instance.instanceId === operation.instanceId,
+    );
+
+    if (child === undefined) {
+      return hierarchyDiagnostic(
+        DESKTOP_SCENE_HIERARCHY_REFUSALS.selectionStale,
+        `The selected child is stale: ${operation.instanceId}.`,
+        documentPath,
+      );
+    }
+
+    if (child.instanceId === read.stored.rootInstanceId) {
+      return hierarchyDiagnostic(
+        DESKTOP_SCENE_HIERARCHY_REFUSALS.protectedRoot,
+        "The project hierarchy root is protected and cannot be reparented.",
+        documentPath,
+      );
+    }
+
+    const parent = read.stored.instances.find(
+      (instance) => instance.instanceId === operation.parentInstanceId,
+    );
+
+    if (parent === undefined) {
+      return hierarchyDiagnostic(
+        DESKTOP_SCENE_HIERARCHY_REFUSALS.parentMissing,
+        `The requested parent is missing: ${operation.parentInstanceId}.`,
+        documentPath,
+      );
+    }
+
     let ancestor: ComposedSceneInstance | undefined = parent;
+
     while (ancestor !== undefined) {
       if (ancestor.instanceId === child.instanceId) {
         return hierarchyDiagnostic(
@@ -1189,15 +1452,18 @@ export function stageDesktopSceneEdit(input: Readonly<{
           documentPath,
         );
       }
+
       ancestor = ancestor.parentInstanceId === null
         ? undefined
         : read.stored.instances.find(
             (instance) => instance.instanceId === ancestor?.parentInstanceId,
           );
     }
+
     const derived = operation.transformPolicy === "preserve-world"
       ? deriveCanonicalLocalSculptTransform(parent.worldTransform, child.worldTransform)
       : null;
+
     if (derived !== null && !derived.ok) {
       return hierarchyDiagnostic(
         DESKTOP_SCENE_HIERARCHY_REFUSALS.inputUnsupported,
@@ -1205,6 +1471,7 @@ export function stageDesktopSceneEdit(input: Readonly<{
         documentPath,
       );
     }
+
     const localTransform = derived?.ok === true ? derived.value : child.localTransform;
     composed = composeStoredPlacements(
       read.stored,
@@ -1225,6 +1492,9 @@ export function stageDesktopSceneEdit(input: Readonly<{
 
   if (!composed.ok) {
     return operation.kind === "reparent-object" ||
+      operation.kind === "create-node" ||
+      operation.kind === "create-primitive" ||
+      operation.kind === "rename-object" ||
       operation.kind === "create-object" ||
       operation.kind === "add-instance"
       ? hierarchyDiagnostic(
@@ -1234,6 +1504,7 @@ export function stageDesktopSceneEdit(input: Readonly<{
         )
       : propertyDiagnostic(`${composed.path}: ${composed.message}`, documentPath);
   }
+
   const editedDocumentData = isJsonObject(input.documentData) &&
       Object.hasOwn(input.documentData, PROJECT_ASSET_MANIFEST_KEY)
     ? Object.freeze({
@@ -1241,15 +1512,20 @@ export function stageDesktopSceneEdit(input: Readonly<{
         [PROJECT_ASSET_MANIFEST_KEY]: input.documentData[PROJECT_ASSET_MANIFEST_KEY],
       })
     : composed.document.data;
+
   const edited = readEditableComposition(editedDocumentData, input.contentHash, documentPath);
+
   if (!edited.ok) return edited;
+
   if (operation.kind === "add-instance" || operation.kind === "create-object") {
     const sourceArtifact = read.stored.instances.find(
       (instance) => instance.instanceId === operation.sourceInstanceId,
     )?.artifact;
+
     const addedArtifact = edited.stored.instances.find(
       (instance) => instance.instanceId === selectedInstanceId,
     )?.artifact;
+
     if (
       sourceArtifact === undefined ||
       addedArtifact === undefined ||
@@ -1261,11 +1537,13 @@ export function stageDesktopSceneEdit(input: Readonly<{
       );
     }
   }
+
   const inspection = desktopScenePropertyInspection(
     input.contentHash,
     edited.stored,
     selectedInstanceIds,
   );
+
   return Object.freeze({
     ok: true as const,
     operation,
@@ -1287,7 +1565,7 @@ export type DesktopScenePrefabStageResult =
       ok: true;
       catalog: ScenePrefabCatalog;
       inspection: ReturnType<typeof inspectScenePrefab>;
-      documentData: Record<string, unknown>;
+      documentData: JsonObject;
     }>
   | Readonly<{ ok: false; reason: string; message: string }>;
 
@@ -1300,13 +1578,14 @@ function prefabSources(stored: ComposedScene) {
   }));
 }
 
-function catalogFromData(documentData: unknown): ScenePrefabCatalog | null {
+function catalogFromData(documentData: DesktopSceneRawInput): ScenePrefabCatalog | null {
   if (!isJsonObject(documentData)) return null;
+
   return parseScenePrefabCatalog(documentData[SCENE_PREFAB_CATALOG_KEY]);
 }
 
 function mergePrefabDocument(
-  documentData: unknown,
+  documentData: DesktopSceneRawInput,
   stored: ComposedScene,
   catalog: ScenePrefabCatalog,
   placements?: readonly Readonly<{
@@ -1339,7 +1618,9 @@ function mergePrefabDocument(
           transform: placement.localTransform,
         })),
       ];
+
   const composed = composeStoredPlacements(stored, nextPlacements);
+
   if (!composed.ok) {
     return Object.freeze({
       ok: false as const,
@@ -1347,12 +1628,15 @@ function mergePrefabDocument(
       message: `${composed.path}: ${composed.message}`,
     });
   }
+
   const base = isJsonObject(documentData) ? documentData : {};
+
   const nextData = Object.freeze({
     ...base,
     [COMPOSED_SCENE_DOCUMENT_DATA_KEY]: composed.scene,
     [SCENE_PREFAB_CATALOG_KEY]: catalog,
   });
+
   return Object.freeze({
     ok: true as const,
     catalog,
@@ -1361,13 +1645,14 @@ function mergePrefabDocument(
   });
 }
 
-export function inspectDesktopScenePrefabs(documentData: unknown) {
+export function inspectDesktopScenePrefabs(documentData: DesktopSceneRawInput) {
   const catalog = catalogFromData(documentData) ?? emptyScenePrefabCatalog();
+
   return inspectScenePrefab(catalog);
 }
 
 export function stageDesktopScenePrefab(input: Readonly<{
-  documentData: unknown;
+  documentData: DesktopSceneRawInput;
   contentHash: string;
   documentPath?: string;
   operation:
@@ -1384,6 +1669,7 @@ export function stageDesktopScenePrefab(input: Readonly<{
 }>): DesktopScenePrefabStageResult {
   const documentPath = input.documentPath ?? DESKTOP_ACTIVE_DOCUMENT_PATH;
   const read = readEditableComposition(input.documentData, input.contentHash, documentPath);
+
   if (!read.ok) {
     return Object.freeze({
       ok: false as const,
@@ -1391,7 +1677,9 @@ export function stageDesktopScenePrefab(input: Readonly<{
       message: read.diagnostics[0]?.message ?? "The Scene Document could not be read.",
     });
   }
+
   const catalog = catalogFromData(input.documentData);
+
   if (catalog === null) {
     return Object.freeze({
       ok: false as const,
@@ -1399,7 +1687,9 @@ export function stageDesktopScenePrefab(input: Readonly<{
       message: "The reusable-content catalog is not a valid versioned document.",
     });
   }
+
   const sources = prefabSources(read.stored);
+
   if (input.operation.kind === "define") {
     const defined = defineScenePrefab({
       catalog,
@@ -1407,9 +1697,12 @@ export function stageDesktopScenePrefab(input: Readonly<{
       selectedIds: input.operation.instanceIds,
       definitionId: input.operation.definitionId,
     });
+
     if (!defined.ok) return defined;
+
     return mergePrefabDocument(input.documentData, read.stored, defined.catalog);
   }
+
   if (input.operation.kind === "instance") {
     const instanced = instanceScenePrefab({
       catalog,
@@ -1418,11 +1711,15 @@ export function stageDesktopScenePrefab(input: Readonly<{
       parentInstanceId: input.operation.parentInstanceId,
       instanceKey: input.operation.instanceKey,
     });
+
     if (!instanced.ok) return instanced;
+
     return mergePrefabDocument(input.documentData, read.stored, instanced.catalog, instanced.placements);
   }
+
   if (input.operation.kind === "override") {
     const operation = input.operation;
+
     const overridden = overrideScenePrefab({
       catalog,
       instanceId: operation.instanceId,
@@ -1430,14 +1727,18 @@ export function stageDesktopScenePrefab(input: Readonly<{
       propertyId: operation.propertyId,
       value: operation.value,
     });
+
     if (!overridden.ok) return overridden;
+
     const parent = read.stored.instances.find(
       (instance) => instance.instanceId === operation.instanceId,
     )?.parentInstanceId;
+
     const resolved = inspectScenePrefab(
       overridden.catalog,
-      typeof parent === "string" ? { [operation.instanceId]: parent } : {},
+      isProtocolText(parent) ? { [operation.instanceId]: parent } : {},
     ).resolved[0];
+
     return mergePrefabDocument(
       input.documentData,
       read.stored,
@@ -1445,12 +1746,15 @@ export function stageDesktopScenePrefab(input: Readonly<{
       resolved?.placements,
     );
   }
+
   const refreshed = refreshScenePrefab({
     catalog,
     sources,
     definitionId: input.operation.definitionId,
   });
+
   if (!refreshed.ok) return refreshed;
+
   return mergePrefabDocument(input.documentData, read.stored, refreshed.catalog);
 }
 
@@ -1459,26 +1763,28 @@ export type DesktopSceneAnimationStageResult =
       ok: true;
       catalog: SceneAnimationCatalog;
       inspection: ReturnType<typeof inspectSceneAnimation>;
-      documentData: Record<string, unknown>;
+      documentData: JsonObject;
     }>
   | Readonly<{ ok: false; reason: string; message: string }>;
 
-function animationCatalogFromData(documentData: unknown): SceneAnimationCatalog | null {
+function animationCatalogFromData(documentData: DesktopSceneRawInput): SceneAnimationCatalog | null {
   if (!isJsonObject(documentData)) return null;
+
   return parseSceneAnimationCatalog(documentData[SCENE_ANIMATION_CATALOG_KEY]);
 }
 
-export function inspectDesktopSceneAnimation(documentData: unknown) {
+export function inspectDesktopSceneAnimation(documentData: DesktopSceneRawInput) {
   return inspectSceneAnimation(animationCatalogFromData(documentData) ?? emptySceneAnimationCatalog());
 }
 
 export function evaluateDesktopSceneAnimation(input: Readonly<{
-  documentData: unknown;
+  documentData: DesktopSceneRawInput;
   sourceContentHash: string;
   timeMs: number;
   requireBoundAsset?: boolean;
 }>) {
   const catalog = animationCatalogFromData(input.documentData);
+
   if (catalog === null) {
     return Object.freeze({
       ok: false as const,
@@ -1486,22 +1792,25 @@ export function evaluateDesktopSceneAnimation(input: Readonly<{
       message: "The animation catalog is not a valid versioned document.",
     });
   }
-  return evaluateSceneAnimation({
-    catalog,
-    timeMs: input.timeMs,
-    sourceContentHash: input.sourceContentHash,
-    ...(input.requireBoundAsset === undefined ? {} : { requireBoundAsset: input.requireBoundAsset }),
-  });
+
+  const evaluation: MutableSceneFields<Parameters<typeof evaluateSceneAnimation>[0]> = {
+    catalog, timeMs: input.timeMs, sourceContentHash: input.sourceContentHash,
+  };
+
+  if (input.requireBoundAsset !== undefined) evaluation.requireBoundAsset = input.requireBoundAsset;
+
+  return evaluateSceneAnimation(evaluation);
 }
 
 export function stageDesktopSceneAnimation(input: Readonly<{
-  documentData: unknown;
+  documentData: DesktopSceneRawInput;
   contentHash: string;
   documentPath?: string;
   mutation: unknown;
 }>): DesktopSceneAnimationStageResult {
   const documentPath = input.documentPath ?? DESKTOP_ACTIVE_DOCUMENT_PATH;
   const read = readEditableComposition(input.documentData, input.contentHash, documentPath);
+
   if (!read.ok) {
     return Object.freeze({
       ok: false as const,
@@ -1509,7 +1818,9 @@ export function stageDesktopSceneAnimation(input: Readonly<{
       message: read.diagnostics[0]?.message ?? "The Scene Document could not be read.",
     });
   }
+
   const catalog = animationCatalogFromData(input.documentData);
+
   if (catalog === null) {
     return Object.freeze({
       ok: false as const,
@@ -1517,27 +1828,35 @@ export function stageDesktopSceneAnimation(input: Readonly<{
       message: "The animation catalog is not a valid versioned document.",
     });
   }
-  if (typeof input.mutation !== "object" || input.mutation === null || Array.isArray(input.mutation)) {
+
+  const mutation = parseSceneAnimationMutation(input.mutation);
+
+  if (mutation === null) {
     return Object.freeze({
       ok: false as const,
       reason: SCENE_ANIMATION_REFUSALS.inputUnsupported,
       message: "An animation mutation must be an object.",
     });
   }
+
   const manifest = isJsonObject(input.documentData)
     ? projectAssetManifestFromDocumentData(input.documentData)
     : { ok: false as const };
+
   const animationAssetIds = manifest.ok
     ? manifest.value.assets.filter((asset) => asset.family === "animation").map((asset) => asset.assetId)
     : [];
+
   const applied = applySceneAnimationMutation({
     catalog,
     instanceIds: read.stored.instances.map((instance) => instance.instanceId),
     animationAssetIds,
-    mutation: input.mutation as SceneAnimationMutation,
+    mutation,
   });
+
   if (!applied.ok) return applied;
   const base = isJsonObject(input.documentData) ? input.documentData : {};
+
   return Object.freeze({
     ok: true as const,
     catalog: applied.catalog,
@@ -1549,28 +1868,31 @@ export function stageDesktopSceneAnimation(input: Readonly<{
   });
 }
 
-function physicsCatalogFromData(documentData: unknown): ScenePhysicsCatalog | null {
+function physicsCatalogFromData(documentData: DesktopSceneRawInput): ScenePhysicsCatalog | null {
   if (!isJsonObject(documentData)) return null;
+
   return parseScenePhysicsCatalog(documentData[SCENE_PHYSICS_CATALOG_KEY]);
 }
 
-export function inspectDesktopScenePhysics(documentData: unknown) {
+export function inspectDesktopScenePhysics(documentData: DesktopSceneRawInput) {
   return inspectScenePhysics(physicsCatalogFromData(documentData) ?? emptyScenePhysicsCatalog());
 }
 
 export async function initializeDesktopScenePhysics() {
   const { createRapierPhysicsWorldHost } = await import("@sceneaxi/physics-rapier");
+
   return createRapierPhysicsWorldHost();
 }
 
 export function evaluateDesktopScenePhysics(input: Readonly<{
-  documentData: unknown;
+  documentData: DesktopSceneRawInput;
   sourceContentHash: string;
   steps: number;
   animationOffsetY?: number;
   physicsWorldHost?: PhysicsWorldHost;
 }>) {
   const catalog = physicsCatalogFromData(input.documentData);
+
   if (catalog === null) {
     return Object.freeze({
       ok: false as const,
@@ -1578,23 +1900,27 @@ export function evaluateDesktopScenePhysics(input: Readonly<{
       message: "The physics catalog is not a valid versioned document.",
     });
   }
-  return evaluateScenePhysics({
-    catalog,
-    sourceContentHash: input.sourceContentHash,
-    steps: input.steps,
-    ...(input.physicsWorldHost === undefined ? {} : { host: input.physicsWorldHost }),
-    ...(input.animationOffsetY === undefined ? {} : { animationOffsetY: input.animationOffsetY }),
-  });
+
+  const evaluation: MutableSceneFields<Parameters<typeof evaluateScenePhysics>[0]> = {
+    catalog, sourceContentHash: input.sourceContentHash, steps: input.steps,
+  };
+
+  if (input.physicsWorldHost !== undefined) evaluation.host = input.physicsWorldHost;
+
+  if (input.animationOffsetY !== undefined) evaluation.animationOffsetY = input.animationOffsetY;
+
+  return evaluateScenePhysics(evaluation);
 }
 
 export function stageDesktopScenePhysics(input: Readonly<{
-  documentData: unknown;
+  documentData: DesktopSceneRawInput;
   contentHash: string;
   documentPath?: string;
   mutation: unknown;
 }>) {
   const documentPath = input.documentPath ?? DESKTOP_ACTIVE_DOCUMENT_PATH;
   const read = readEditableComposition(input.documentData, input.contentHash, documentPath);
+
   if (!read.ok) {
     return Object.freeze({
       ok: false as const,
@@ -1602,7 +1928,9 @@ export function stageDesktopScenePhysics(input: Readonly<{
       message: read.diagnostics[0]?.message ?? "The Scene Document could not be read.",
     });
   }
+
   const catalog = physicsCatalogFromData(input.documentData);
+
   if (catalog === null) {
     return Object.freeze({
       ok: false as const,
@@ -1610,20 +1938,26 @@ export function stageDesktopScenePhysics(input: Readonly<{
       message: "The physics catalog is not a valid versioned document.",
     });
   }
-  if (typeof input.mutation !== "object" || input.mutation === null || Array.isArray(input.mutation)) {
+
+  const mutation = parseScenePhysicsMutation(input.mutation);
+
+  if (mutation === null) {
     return Object.freeze({
       ok: false as const,
       reason: SCENE_PHYSICS_REFUSALS.inputUnsupported,
       message: "A physics mutation must be an object.",
     });
   }
+
   const applied = applyScenePhysicsMutation({
     catalog,
     instanceIds: read.stored.instances.map((instance) => instance.instanceId),
-    mutation: input.mutation as ScenePhysicsMutation,
+    mutation,
   });
+
   if (!applied.ok) return applied;
   const base = isJsonObject(input.documentData) ? input.documentData : {};
+
   return Object.freeze({
     ok: true as const,
     catalog: applied.catalog,
@@ -1635,22 +1969,24 @@ export function stageDesktopScenePhysics(input: Readonly<{
   });
 }
 
-function environmentCatalogFromData(documentData: unknown): SceneEnvironmentCatalog | null {
+function environmentCatalogFromData(documentData: DesktopSceneRawInput): SceneEnvironmentCatalog | null {
   if (!isJsonObject(documentData)) return null;
+
   return parseSceneEnvironmentCatalog(documentData[SCENE_ENVIRONMENT_CATALOG_KEY]);
 }
 
-export function inspectDesktopSceneEnvironment(documentData: unknown) {
+export function inspectDesktopSceneEnvironment(documentData: DesktopSceneRawInput) {
   return inspectSceneEnvironment(environmentCatalogFromData(documentData) ?? emptySceneEnvironmentCatalog());
 }
 
 export function stageDesktopSceneEnvironment(input: Readonly<{
-  documentData: unknown;
+  documentData: DesktopSceneRawInput;
   contentHash: string;
   documentPath?: string;
   mutation: unknown;
 }>) {
   const catalog = environmentCatalogFromData(input.documentData);
+
   if (catalog === null) {
     return Object.freeze({
       ok: false as const,
@@ -1658,19 +1994,25 @@ export function stageDesktopSceneEnvironment(input: Readonly<{
       message: "The environment catalog is not a valid versioned document.",
     });
   }
-  if (typeof input.mutation !== "object" || input.mutation === null || Array.isArray(input.mutation)) {
+
+  const mutation = parseSceneEnvironmentMutation(input.mutation);
+
+  if (mutation === null) {
     return Object.freeze({
       ok: false as const,
       reason: SCENE_ENVIRONMENT_REFUSALS.inputUnsupported,
       message: "An environment mutation must be an object.",
     });
   }
+
   const applied = applySceneEnvironmentMutation({
     catalog,
-    mutation: input.mutation as SceneEnvironmentMutation,
+    mutation,
   });
+
   if (!applied.ok) return applied;
   const base = isJsonObject(input.documentData) ? input.documentData : {};
+
   return Object.freeze({
     ok: true as const,
     catalog: applied.catalog,
@@ -1682,23 +2024,25 @@ export function stageDesktopSceneEnvironment(input: Readonly<{
   });
 }
 
-function materialsCatalogFromData(documentData: unknown): SceneMaterialsCatalog | null {
+function materialsCatalogFromData(documentData: DesktopSceneRawInput): SceneMaterialsCatalog | null {
   if (!isJsonObject(documentData)) return null;
+
   return parseSceneMaterialsCatalog(documentData[SCENE_MATERIALS_CATALOG_KEY]);
 }
 
-export function inspectDesktopSceneMaterials(documentData: unknown) {
+export function inspectDesktopSceneMaterials(documentData: DesktopSceneRawInput) {
   return inspectSceneMaterials(materialsCatalogFromData(documentData) ?? emptySceneMaterialsCatalog());
 }
 
 export function stageDesktopSceneMaterials(input: Readonly<{
-  documentData: unknown;
+  documentData: DesktopSceneRawInput;
   contentHash: string;
   documentPath?: string;
   mutation: unknown;
 }>) {
   const documentPath = input.documentPath ?? DESKTOP_ACTIVE_DOCUMENT_PATH;
   const read = readEditableComposition(input.documentData, input.contentHash, documentPath);
+
   if (!read.ok) {
     return Object.freeze({
       ok: false as const,
@@ -1706,7 +2050,9 @@ export function stageDesktopSceneMaterials(input: Readonly<{
       message: read.diagnostics[0]?.message ?? "The Scene Document could not be read.",
     });
   }
+
   const catalog = materialsCatalogFromData(input.documentData);
+
   if (catalog === null) {
     return Object.freeze({
       ok: false as const,
@@ -1714,20 +2060,26 @@ export function stageDesktopSceneMaterials(input: Readonly<{
       message: "The materials catalog is not a valid versioned document.",
     });
   }
-  if (typeof input.mutation !== "object" || input.mutation === null || Array.isArray(input.mutation)) {
+
+  const mutation = parseSceneMaterialsMutation(input.mutation);
+
+  if (mutation === null) {
     return Object.freeze({
       ok: false as const,
       reason: SCENE_MATERIALS_REFUSALS.inputUnsupported,
       message: "A material mutation must be an object.",
     });
   }
+
   const applied = applySceneMaterialsMutation({
     catalog,
     instanceIds: read.stored.instances.map((instance) => instance.instanceId),
-    mutation: input.mutation as SceneMaterialsMutation,
+    mutation,
   });
+
   if (!applied.ok) return applied;
   const base = isJsonObject(input.documentData) ? input.documentData : {};
+
   return Object.freeze({
     ok: true as const,
     catalog: applied.catalog,
@@ -1739,22 +2091,24 @@ export function stageDesktopSceneMaterials(input: Readonly<{
   });
 }
 
-function effectsCatalogFromData(documentData: unknown): SceneEffectsCatalog | null {
+function effectsCatalogFromData(documentData: DesktopSceneRawInput): SceneEffectsCatalog | null {
   if (!isJsonObject(documentData)) return null;
+
   return parseSceneEffectsCatalog(documentData[SCENE_EFFECTS_CATALOG_KEY]);
 }
 
-export function inspectDesktopSceneEffects(documentData: unknown) {
+export function inspectDesktopSceneEffects(documentData: DesktopSceneRawInput) {
   return inspectSceneEffects(effectsCatalogFromData(documentData) ?? emptySceneEffectsCatalog());
 }
 
 export function stageDesktopSceneEffects(input: Readonly<{
-  documentData: unknown;
+  documentData: DesktopSceneRawInput;
   contentHash: string;
   documentPath?: string;
   mutation: unknown;
 }>) {
   const catalog = effectsCatalogFromData(input.documentData);
+
   if (catalog === null) {
     return Object.freeze({
       ok: false as const,
@@ -1762,19 +2116,25 @@ export function stageDesktopSceneEffects(input: Readonly<{
       message: "The effects catalog is not a valid versioned document.",
     });
   }
-  if (typeof input.mutation !== "object" || input.mutation === null || Array.isArray(input.mutation)) {
+
+  const mutation = parseSceneEffectsMutation(input.mutation);
+
+  if (mutation === null) {
     return Object.freeze({
       ok: false as const,
       reason: SCENE_EFFECTS_REFUSALS.inputUnsupported,
       message: "An effect mutation must be an object.",
     });
   }
+
   const applied = applySceneEffectsMutation({
     catalog,
-    mutation: input.mutation as SceneEffectsMutation,
+    mutation,
   });
+
   if (!applied.ok) return applied;
   const base = isJsonObject(input.documentData) ? input.documentData : {};
+
   return Object.freeze({
     ok: true as const,
     catalog: applied.catalog,
@@ -1787,7 +2147,7 @@ export function stageDesktopSceneEffects(input: Readonly<{
 }
 
 export function collectDesktopAssistantAskState(input: Readonly<{
-  documentData: unknown;
+  documentData: DesktopSceneRawInput;
   playActive: boolean;
 }>) {
   const documentData = isJsonObject(input.documentData) ? input.documentData : {};
@@ -1795,9 +2155,11 @@ export function collectDesktopAssistantAskState(input: Readonly<{
   const animation = parseSceneAnimationCatalog(documentData[SCENE_ANIMATION_CATALOG_KEY]);
   const physics = parseScenePhysicsCatalog(documentData[SCENE_PHYSICS_CATALOG_KEY]);
   const assets = projectAssetManifestFromDocumentData(documentData);
+
   const assetIds = assets.ok
     ? assets.value.assets.map((entry) => entry.assetId)
     : [];
+
   return Object.freeze({
     instanceIds: Object.freeze(stored.ok ? stored.value.instances.map((instance) => instance.instanceId) : []),
     assetIds: Object.freeze(assetIds),
@@ -1808,7 +2170,7 @@ export function collectDesktopAssistantAskState(input: Readonly<{
 }
 
 export function answerDesktopAssistantAsk(input: Readonly<{
-  documentData: unknown;
+  documentData: DesktopSceneRawInput;
   sourceContentHash: string;
   profile: unknown;
   prompt: string;
@@ -1830,16 +2192,20 @@ export function answerDesktopAssistantAsk(input: Readonly<{
 function nextAssistantInstanceId(stored: ComposedScene, artifactId: string) {
   const used = new Set(stored.instances.map((instance) => instance.instanceId));
   const base = `assistant-${artifactId.replace(/[^a-z0-9-]+/gi, "").slice(0, 24) || "build"}`;
+
   if (!used.has(base)) return base;
+
   for (let sequence = 2; sequence <= stored.instances.length + 2; sequence += 1) {
     const candidate = `${base}-${String(sequence)}`;
+
     if (!used.has(candidate)) return candidate;
   }
+
   return null;
 }
 
 export function stageDesktopAssistantBuild(input: Readonly<{
-  documentData: unknown;
+  documentData: DesktopSceneRawInput;
   contentHash: string;
   documentPath?: string;
   entry: SceneAssistantBuildEntry;
@@ -1847,6 +2213,7 @@ export function stageDesktopAssistantBuild(input: Readonly<{
 }>) {
   const documentPath = input.documentPath ?? DESKTOP_ACTIVE_DOCUMENT_PATH;
   const read = readEditableComposition(input.documentData, input.contentHash, documentPath);
+
   if (!read.ok) {
     return Object.freeze({
       ok: false as const,
@@ -1854,9 +2221,11 @@ export function stageDesktopAssistantBuild(input: Readonly<{
       message: read.diagnostics[0]?.message ?? "The Scene Document could not be read.",
     });
   }
+
   const catalog = parseSceneAssistantBuildCatalog(
     isJsonObject(input.documentData) ? input.documentData[SCENE_ASSISTANT_BUILD_CATALOG_KEY] : undefined,
   );
+
   if (catalog === null) {
     return Object.freeze({
       ok: false as const,
@@ -1864,8 +2233,10 @@ export function stageDesktopAssistantBuild(input: Readonly<{
       message: "The assistant Build catalog is not a valid versioned document.",
     });
   }
+
   const next = applyAssistantBuildEntry({ catalog, entry: input.entry });
   const base = isJsonObject(input.documentData) ? input.documentData : {};
+
   if (input.artifact === undefined) {
     return Object.freeze({
       ok: true as const,
@@ -1876,7 +2247,9 @@ export function stageDesktopAssistantBuild(input: Readonly<{
       }),
     });
   }
+
   const artifactId = artifactIdOf(input.artifact);
+
   if (artifactId.length === 0) {
     return Object.freeze({
       ok: false as const,
@@ -1884,9 +2257,11 @@ export function stageDesktopAssistantBuild(input: Readonly<{
       message: "The retained assistant Build artifact has no artifact identity.",
     });
   }
+
   const alreadyPlaced = read.stored.instances.some(
     (instance) => instance.artifactId === artifactId,
   );
+
   if (alreadyPlaced) {
     return Object.freeze({
       ok: true as const,
@@ -1897,6 +2272,7 @@ export function stageDesktopAssistantBuild(input: Readonly<{
       }),
     });
   }
+
   if (read.stored.instances.length >= SCENE_MAXIMUM_INSTANCES) {
     return Object.freeze({
       ok: false as const,
@@ -1904,7 +2280,9 @@ export function stageDesktopAssistantBuild(input: Readonly<{
       message: `Assistant apply cannot exceed the v1 maximum of ${String(SCENE_MAXIMUM_INSTANCES)} instances.`,
     });
   }
+
   const addedInstanceId = nextAssistantInstanceId(read.stored, artifactId);
+
   if (addedInstanceId === null) {
     return Object.freeze({
       ok: false as const,
@@ -1912,6 +2290,7 @@ export function stageDesktopAssistantBuild(input: Readonly<{
       message: "No canonical object identifier is available for the assistant Build artifact.",
     });
   }
+
   const composed = composeStoredPlacements(
     read.stored,
     [
@@ -1930,6 +2309,7 @@ export function stageDesktopAssistantBuild(input: Readonly<{
     ],
     [input.artifact],
   );
+
   if (!composed.ok) {
     return Object.freeze({
       ok: false as const,
@@ -1937,6 +2317,7 @@ export function stageDesktopAssistantBuild(input: Readonly<{
       message: `${composed.path}: ${composed.message}`,
     });
   }
+
   return Object.freeze({
     ok: true as const,
     catalog: next,
@@ -1948,34 +2329,22 @@ export function stageDesktopAssistantBuild(input: Readonly<{
   });
 }
 
-function packageCatalogFromData(documentData: unknown) {
+function packageCatalogFromData(documentData: DesktopSceneRawInput) {
   if (!isJsonObject(documentData)) return null;
-  return parseScenePackageCatalog(documentData[SCENE_PACKAGE_CATALOG_KEY]);
+  const value = documentData[SCENE_PACKAGE_CATALOG_KEY];
+
+  if (value === undefined) return emptyScenePackageCatalog();
+
+  if (value === null) return null;
+
+  return parseScenePackageCatalog(value);
 }
 
-export function inspectDesktopScenePackages(documentData: unknown) {
-  return inspectScenePackages({
-    catalog: packageCatalogFromData(documentData) ?? emptyScenePackageCatalog(),
-  });
-}
+export function inspectDesktopScenePackages(documentData: DesktopSceneRawInput):
+  | ReturnType<typeof inspectScenePackages>
+  | Readonly<{ ok: false; reason: string; message: string }> {
+  const catalog = packageCatalogFromData(documentData);
 
-export function stageDesktopScenePackage(input: Readonly<{
-  documentData: unknown;
-  contentHash: string;
-  documentPath?: string;
-  profile: unknown;
-  mutation: ScenePackageMutation;
-}>) {
-  const documentPath = input.documentPath ?? DESKTOP_ACTIVE_DOCUMENT_PATH;
-  const read = readEditableComposition(input.documentData, input.contentHash, documentPath);
-  if (!read.ok) {
-    return Object.freeze({
-      ok: false as const,
-      reason: SCENE_PACKAGE_REFUSALS.staleVersion,
-      message: read.diagnostics[0]?.message ?? "The Scene Document could not be read.",
-    });
-  }
-  const catalog = packageCatalogFromData(input.documentData);
   if (catalog === null) {
     return Object.freeze({
       ok: false as const,
@@ -1983,13 +2352,47 @@ export function stageDesktopScenePackage(input: Readonly<{
       message: "The package catalog is not a valid versioned document.",
     });
   }
+
+  return inspectScenePackages({ catalog });
+}
+
+export function stageDesktopScenePackage(input: Readonly<{
+  documentData: DesktopSceneRawInput;
+  contentHash: string;
+  documentPath?: string;
+  profile: unknown;
+  mutation: ScenePackageMutation;
+}>) {
+  const documentPath = input.documentPath ?? DESKTOP_ACTIVE_DOCUMENT_PATH;
+  const read = readEditableComposition(input.documentData, input.contentHash, documentPath);
+
+  if (!read.ok) {
+    return Object.freeze({
+      ok: false as const,
+      reason: SCENE_PACKAGE_REFUSALS.staleVersion,
+      message: read.diagnostics[0]?.message ?? "The Scene Document could not be read.",
+    });
+  }
+
+  const catalog = packageCatalogFromData(input.documentData);
+
+  if (catalog === null) {
+    return Object.freeze({
+      ok: false as const,
+      reason: SCENE_PACKAGE_REFUSALS.catalogInvalid,
+      message: "The package catalog is not a valid versioned document.",
+    });
+  }
+
   const applied = applyScenePackageMutation({
     catalog,
     mutation: input.mutation,
     profile: input.profile,
   });
+
   if (!applied.ok) return applied;
   const base = isJsonObject(input.documentData) ? input.documentData : {};
+
   return Object.freeze({
     ok: true as const,
     catalog: applied.catalog,
@@ -2006,15 +2409,19 @@ export function discoverDesktopScenePackage(input: Readonly<{
   manifest: unknown;
   digest: string;
 }>) {
-  const capabilities = typeof input.manifest === "object" && input.manifest !== null && !Array.isArray(input.manifest)
+  // SAFETY: The preceding non-null, non-array object check permits reading the optional capabilities field; its untrusted contents are inspected below.
+  const capabilities = isProtocolObject(input.manifest) && input.manifest !== null && !Array.isArray(input.manifest)
     ? (input.manifest as { capabilities?: unknown }).capabilities
     : undefined;
+
   if (Array.isArray(capabilities)) {
     const undeclared = capabilities.find((capability): capability is string =>
       typeof capability === "string" && isDeclaredExtensionCapability(capability),
     );
+
     if (undeclared !== undefined) return refuseUndeclaredExtensionGrant(undeclared);
   }
+
   return discoverScenePackage({
     locator: input.locator,
     manifest: input.manifest,
@@ -2025,7 +2432,7 @@ export function discoverDesktopScenePackage(input: Readonly<{
 
 /** Backward-compatible property facade over the canonical operation. */
 export function stageDesktopScenePropertyEdit(input: Readonly<{
-  documentData: unknown;
+  documentData: DesktopSceneRawInput;
   contentHash: string;
   documentPath?: string;
   entityId: unknown;
@@ -2033,12 +2440,14 @@ export function stageDesktopScenePropertyEdit(input: Readonly<{
   newValue: unknown;
 }>): DesktopScenePropertyStageResult {
   const documentPath = input.documentPath ?? DESKTOP_ACTIVE_DOCUMENT_PATH;
-  if (typeof input.newValue !== "number" || !Number.isFinite(input.newValue)) {
+
+  if (!isProtocolNumber(input.newValue) || !Number.isFinite(input.newValue)) {
     return propertyDiagnostic(
       "$.placements[1].transform: Placement transform is invalid.",
       documentPath,
     );
   }
+
   const staged = stageDesktopSceneEdit({
     documentData: input.documentData,
     contentHash: input.contentHash,
@@ -2051,14 +2460,19 @@ export function stageDesktopScenePropertyEdit(input: Readonly<{
       value: input.newValue,
     },
   });
+
   if (!staged.ok) return staged;
+
   if (!staged.inspection.ok) return staged.inspection;
+
   const entity = staged.inspection.entities.find(
     (candidate) => candidate.id === staged.selectedInstanceId,
   );
+
   if (entity === undefined) {
     return propertyRequestDiagnostic("The edited instance is no longer selectable.", documentPath);
   }
+
   return Object.freeze({
     ok: true as const,
     edit: staged.edit,
@@ -2099,4 +2513,26 @@ export function desktopAssistantScene(artifact: SculptArtifact): MountableScene 
       }),
     ]),
   });
+}
+
+function isProtocolObject<Value>(value: Value): value is Value & (object | null) {
+  return isBoundaryObjectValue(value);
+}
+
+function isProtocolText<Value>(value: Value): value is Value & (string) {
+  return typeof value === "string";
+}
+
+function isProtocolNumber<Value>(value: Value): value is Value & (number) {
+  return typeof value === "number";
+}
+
+type MutableSceneFields<Owner> = { -readonly [Key in keyof Owner]: Owner[Key] };
+
+type PlacementName = { name?: string };
+
+type BoundaryObjectValue = object | null;
+
+function isBoundaryObjectValue<Input>(value: Input): value is Input & Readonly<BoundaryObjectValue> {
+  return typeof value === "object";
 }

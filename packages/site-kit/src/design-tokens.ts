@@ -7,7 +7,9 @@
  * archive is the authority for purely visual facts; nothing here invents a
  * colour, a size, or a hover shade the sheet does not state. Where the sheet is
  * silent, this module is silent too — see `docs/design-foundations.md` for the
- * two recorded gaps (`--fg-3`, storefront hover accents).
+ * two recorded gaps (`--fg-3`, storefront hover accents). The one visual fact it
+ * states anyway is motion: `FOUNDATION_MOTION` is recorded decision D-4 in the same
+ * document, stated rather than transcribed.
  *
  * This is the S-1 seam: three sites currently carry near-identical copies of one
  * stylesheet, and ADR 0018 makes each of them a separate install root, so the one
@@ -24,6 +26,7 @@ import { refuse, ok, type SiteResult } from "./refusals.js";
 /** Freeze a table and every row in it, preserving the declared element type. */
 function freezeAll<T>(rows: readonly T[]): readonly T[] {
   for (const row of rows) Object.freeze(row);
+
   return Object.freeze(rows);
 }
 
@@ -363,11 +366,36 @@ export function resolveSurfaceAccent(
 ): SiteResult<{ readonly accent: string; readonly accentHi: string }> {
   if (surface === "kids") return refuse("KIDS_SURFACE_DENIED");
   const found = FOUNDATION_SURFACE_ACCENTS.find((entry) => entry.id === surface);
+
   if (found === undefined) return refuse("FOUNDATION_SURFACE_UNKNOWN");
+
   // The sheet states no hover shade outside signal orange. Repeating the accent is
   // the honest fallback; inventing a lighter tint would be a new visual fact.
   return ok(Object.freeze({ accent: found.accent, accentHi: found.accentHi ?? found.accent }));
 }
+
+// ---------------------------------------------------------------------------
+// D-4 — MOTION (stated, not transcribed)
+// ---------------------------------------------------------------------------
+
+/**
+ * The only durations and easing a site-sheet transition may read.
+ *
+ * The sheet states no motion, so these values are recorded decision D-4 in
+ * `docs/design-foundations.md` rather than a transcription: changing one changes
+ * that decision. D-4 also caps transforms at `translateX(3px)` and `scale(1.015)`
+ * and zeroes every duration under `prefers-reduced-motion`; the site sheets own
+ * those rules, because they own every transition.
+ */
+export const FOUNDATION_MOTION: readonly {
+  readonly token: string;
+  readonly value: string;
+  readonly use: string;
+}[] = freezeAll([
+  { token: "--motion-fast", value: "120ms", use: "colour, background, border, opacity, box-shadow" },
+  { token: "--motion-base", value: "200ms", use: "transform" },
+  { token: "--ease-standard", value: "cubic-bezier(0.2, 0, 0, 1)", use: "the easing for both" },
+]);
 
 // ---------------------------------------------------------------------------
 // Accessibility — measured, not asserted
@@ -375,6 +403,7 @@ export function resolveSurfaceAccent(
 
 function channel(hex: string, offset: number): number {
   const value = Number.parseInt(hex.slice(offset, offset + 2), 16) / 255;
+
   return value <= 0.03928 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4);
 }
 
@@ -391,6 +420,7 @@ function relativeLuminance(hex: string): number {
 export function contrastRatio(foreground: string, background: string): number {
   const a = relativeLuminance(foreground);
   const b = relativeLuminance(background);
+
   return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 }
 
@@ -429,25 +459,34 @@ export type FoundationsCssOptions = {
  */
 export function foundationsVariablesCss(options: FoundationsCssOptions = {}): SiteResult<string> {
   const lines: string[] = [];
+
   for (const color of FOUNDATION_COLORS) lines.push(`  ${color.token}: ${color.hex};`);
+
   for (const step of FOUNDATION_SPACING) lines.push(`  --${step.token}: ${`${step.px}px`};`);
+
   for (const radius of FOUNDATION_RADII) {
     lines.push(`  --${radius.token}: ${`${radius.px}px`};`);
   }
+
   lines.push(`  --font-ui: ${FOUNDATION_FONT_STACKS.archivo};`);
   lines.push(`  --font-mono: ${FOUNDATION_FONT_STACKS.mono};`);
+
   for (const step of FOUNDATION_TYPE_SCALE) {
     lines.push(`  --type-${step.token}-size: ${`${step.sizePx}px`};`);
     lines.push(`  --type-${step.token}-weight: ${step.weight};`);
   }
+
   for (const surface of FOUNDATION_SURFACES) {
     lines.push(`  --surface-${surface.id}-bg: ${surface.bg};`);
     lines.push(`  --surface-${surface.id}-line: ${surface.line};`);
     lines.push(`  --surface-${surface.id}-shadow: ${surface.shadow};`);
   }
 
+  for (const motion of FOUNDATION_MOTION) lines.push(`  ${motion.token}: ${motion.value};`);
+
   if (options.surface !== undefined) {
     const accent = resolveSurfaceAccent(options.surface);
+
     if (!accent.ok) return accent;
     lines.push(`  --accent: ${accent.value.accent};`);
     lines.push(`  --accent-hi: ${accent.value.accentHi};`);
@@ -489,6 +528,7 @@ export function foundationsStatusCss(): string {
   const base =
     ".sx-status { display: inline-flex; align-items: center; gap: 6px; border-radius: var(--radius-sm); padding: 4px 9px; font-size: 11px; font-weight: 500; }\n" +
     ".sx-status-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex: none; }\n";
+
   return `${base}${FOUNDATION_STATUSES.map(
     (status) =>
       `.sx-status-${status.id} { color: ${status.fg}; background: ${status.bg}; border: 1px solid ${status.line}; }`,
@@ -502,7 +542,9 @@ export function foundationsStatusCss(): string {
  */
 export function foundationsCss(options: FoundationsCssOptions = {}): SiteResult<string> {
   const variables = foundationsVariablesCss(options);
+
   if (!variables.ok) return variables;
+
   return ok(
     [
       `/* SceneAxi Foundations ${FOUNDATIONS_VERSION} — generated by @sceneaxi/site-kit. */`,

@@ -1,0 +1,12 @@
+{
+  "mutation": {
+    "kind": "shape-upsert",
+    "colliderId": "s1",
+    "bodyId": "b1",
+    "colliderKind": "box",
+    "size": 1
+  },
+  "candidateAccepted": true,
+  "frozenParserResult": null,
+  "verdict": "RECONCILIATION_REQUIRED"
+}

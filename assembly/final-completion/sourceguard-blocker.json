@@ -1,0 +1,38 @@
+{
+  "status": "FAIL_NOT_STAGED_NOT_FROZEN",
+  "exit": 1,
+  "paths": 406,
+  "diagnostics": 7258,
+  "bySeverity": {
+    "error": 7237,
+    "warning": 21
+  },
+  "byRule": {
+    "anti-slop(require-readable-spacing)": 5792,
+    "anti-slop(no-conditional-empty-object-spread)": 61,
+    "anti-slop(no-runtime-typeof)": 488,
+    "anti-slop(no-unknown-parameters)": 204,
+    "anti-slop(no-unknown-returns)": 35,
+    "anti-slop(require-safety-comment-for-type-assertion)": 366,
+    "anti-slop(no-unsafe-dictionary-type)": 72,
+    "anti-slop(no-known-value-widening)": 37,
+    "anti-slop(no-chained-type-assertions)": 50,
+    "unicorn(no-new-array)": 5,
+    "anti-slop(no-object-parameters)": 10,
+    "anti-slop(no-reflect-apply)": 13,
+    "anti-slop(no-shape-in-symbol-names)": 91,
+    "anti-slop(no-array-filter-map)": 5,
+    "anti-slop(no-module-mocking)": 10,
+    "eslint(no-unused-vars)": 10,
+    "anti-slop(no-unknown-type-aliases)": 2,
+    "eslint(no-sparse-arrays)": 1,
+    "unicorn(no-useless-spread)": 3,
+    "unicorn(no-invalid-fetch-options)": 1,
+    "eslint(no-unused-expressions)": 1,
+    "oxc(no-accumulating-spread)": 1
+  },
+  "sourceGuardZero": false,
+  "approvedPolicySha256": "5059b62c799b7be9bbeb9dd98187d317f4e2005b31dbdc0c5f62371c688ef9d7",
+  "waivers": false,
+  "ignoredRulesChanged": false
+}

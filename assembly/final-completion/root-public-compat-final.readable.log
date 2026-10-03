@@ -1,0 +1,10 @@
+
+ RUN  v4.1.11 /tmp/sceneaxi-comprehensive-owned-xd4gdfl1
+
+····················
+
+ Test Files  4 passed (4)
+      Tests  20 passed (20)
+   Start at  17:13:21
+   Duration  10.18s (transform 20.74s, setup 0ms, import 22.89s, tests 2.39s, environment 1ms)
+

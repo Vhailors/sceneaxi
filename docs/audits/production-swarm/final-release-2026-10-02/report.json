@@ -1,0 +1,221 @@
+{
+  "status": "BLOCKED_NOT_MERGE_READY",
+  "retry": {
+    "operator": "bg-135",
+    "timestamp": "2026-10-02T21:16:00Z",
+    "sourceHashesSha256": {
+      "apps/desktop-shell/src/chrome.ts": "f07abc48cc9fbbe26eb1a04f21bff236c7fde77f2e2a54fe1233a9cb92ee793b",
+      "desktop/linux/src/electron/main.ts": "824843b6f67890e6d3c36f83f1117a401639911e60c179d1d05943b5bf30e656",
+      "desktop/linux/src/renderer/viewport.ts": "66c5fffbb05da3cfd0a86d2453d3f5ddc1bd63f562b487a01cbeb0bbfb19bbc2",
+      "desktop/macos/scripts/build.mjs": "1857f4cdcf8d0f3c26c011a902490610f6adb1534744cd013edeff2ddc055158"
+    },
+    "changedSource": {
+      "apps/desktop-shell/src/chrome.ts": "Unwrap animation authoringSnapshot; queue identity-button bridge selections with existing generation fence.",
+      "desktop/linux/src/renderer/viewport.ts": "Terminal pagehide stops loop, disconnects observer, unbinds inputs, disposes mounts, explicitly releases retained canvas context; ignore late scene/play/stop events.",
+      "desktop/macos/scripts/build.mjs": "Strict copied-runtime inventory requires and verifies asset-preparation-worker.cjs sibling."
+    },
+    "mainPreparationWiring": "Already present on entry: bridge-owned ReturnType job, direct DesktopBridgeResponse return, existing busy/root/window/bridge/generation/cancel fences. No redundant edit.",
+    "receipts": [
+      {"command": "pnpm build", "exit": 0},
+      {"command": "pnpm gate (before source fixes)", "exit": 1, "passedFiles": 311, "failedFiles": 2, "passedTests": 4861, "failedTests": 18, "log": "/home/devuser/.local/share/empryo/tee/2026-10-02T20-50-13-780Z_shell-full.txt"},
+      {"command": "pnpm exec vitest run tests/e2e/desktop-control-dispatch-real-bridge-golden.test.ts", "exit": 0, "passedTests": 31, "assertionsChanged": false},
+      {"command": "pnpm test:golden", "exit": 0, "passedFiles": 57, "passedTests": 545, "log": "/home/devuser/.local/share/empryo/tee/2026-10-02T20-55-06-414Z_shell-full.txt"},
+      {"command": "pnpm build:sdk && pnpm docs:api", "exit": 0, "sdkEntries": 167, "sdkBytes": 470961, "sdkSha256": "6b680df1c677635dc241653c160894f17b46c9c3fb8d58e52a36fd7d84960494"},
+      {"command": "pnpm --dir <site> typecheck && pnpm --dir <site> build, serially", "exit": 0, "sites": ["sites/umbrella", "sites/catalog-game", "sites/catalog-web", "sites/kids"]},
+      {"command": "pnpm lint", "exit": 1, "errors": 255, "warnings": 0, "files": 17, "log": "/home/devuser/.local/share/rtk/tee/1790974769_lint.log"},
+      {"command": "pnpm lint:anti-slop", "exit": 1, "failure": "Broad configured policy collisions; no rules disabled or public contracts broken to hide them.", "log": "/home/devuser/.local/share/empryo/tee/2026-10-02T21-10-39-567Z_shell.txt"},
+      {"command": "pnpm --dir desktop/linux build", "exit": 0, "workerSiblingEmitted": true},
+      {"command": "pnpm --dir desktop/linux smoke, without Xvfb", "exit": 1, "failure": "Electron SIGSEGV; no proof line."},
+      {"command": "xvfb-run -a pnpm --dir desktop/linux smoke, before teardown fix", "exit": 1, "failure": "Disposed mount rendered again; viewport teardown released WebGL context wait failed."},
+      {"command": "pnpm build && pnpm --dir desktop/linux build", "exit": 0, "afterTeardownFix": true},
+      {"command": "xvfb-run -a pnpm --dir desktop/linux smoke, after teardown fix, first attempt", "exit": 1, "failure": "No proof line; stopped at maximum-asset boundary within unchanged smoke timeout."},
+      {"command": "xvfb-run -a pnpm --dir desktop/linux smoke, after teardown fix, retry", "exit": 1, "failure": "SMOKE_WAIT_FAILED GUI Web export; browserRevision=8, selectedPath=scene.json, playback=acknowledged, playbackFrame=3047; no successful native acceptance or terminal teardown receipt."},
+      {"command": "pnpm --dir desktop/macos build, before inventory fix", "exit": 1, "failure": "Strict runtime list omitted the newly emitted worker sibling."},
+      {"command": "pnpm --dir desktop/macos build && xvfb-run -a pnpm --dir desktop/macos smoke", "exit": 0, "proofKind": "staging-and-config-refusals-only-not-native-macOS"},
+      {"command": "pnpm --dir desktop/windows build && xvfb-run -a pnpm --dir desktop/windows smoke", "exit": 0, "proofKind": "staging-and-config-refusals-only-not-native-Windows"},
+      {"command": "focused seven-file integration run", "exit": 1, "passedTests": 85, "failedTests": 16, "log": "/home/devuser/.local/share/rtk/tee/1790975258_vitest_run.log"},
+      {"command": "pnpm gate (after all source edits)", "exit": 1, "passedFiles": 312, "failedFiles": 1, "passedTests": 4863, "failedTests": 16, "lintReached": false, "log": "/home/devuser/.local/share/empryo/tee/2026-10-02T21-15-29-856Z_shell-full.txt"},
+      {"command": "git diff --check -- <three changed source paths>", "exit": 0}
+    ],
+    "inventory": {
+      "localBaseline": "4e532e2fbf43e9948741578ab6208a3277870405",
+      "localBaselineTrackedPaths": 1096,
+      "remoteHead": "346933c105305224d575bf9319256301c1eeabfa",
+      "remoteHeadTrackedPaths": 456,
+      "remoteOmissionsRelativeToThisLocalBaseline": 824,
+      "note": "User reports 825 omissions against the intended baseline. The 824 count here is the native git diff against the exact recorded local baseline, not an approved deletion list.",
+      "intentionalDeletionsApproved": [],
+      "candidate": null,
+      "candidatePathBlobModeReceipt": null,
+      "porcelainRowsIncludingAllUntrackedAfterRuns": 1511,
+      "originalWorktreeIndexMutatedByReleaseCommands": false
+    },
+    "independentReview": {"requestedFrom": "Astra parent tab", "receipt": null},
+    "push": null,
+    "merge": null,
+    "remaining": [
+      "16 command-form goldens target absent static forms; preserve prerequisite, approval-invalidation and no-write guarantees when reconciling with production registry dialogs.",
+      "Resolve root ESLint failures without suppressions; reconcile optional anti-slop baseline collisions honestly.",
+      "Linux native GUI Web export wait failure; fresh successful terminal teardown/context release acceptance still missing.",
+      "Source-bound actual 8MiB native heartbeat/cancel/GUI and browser focus/CSP acceptance receipts remain incomplete.",
+      "Actual macOS/Windows native runtime acceptance is not established by staging/config smoke on Linux.",
+      "Reviewed complete candidate tree restoring accidental omissions, retaining every basepath/mode and explicit intentional deletions, is not constructed.",
+      "Independent source/candidate review and all required checks on a complete candidate head must pass before normal merge."
+    ]
+  },
+  "timestamp": "2026-10-02T20:17:47.197524+00:00",
+  "pr": {
+    "baseRefName": "main",
+    "headRefName": "production-swarm",
+    "headRefOid": "346933c105305224d575bf9319256301c1eeabfa",
+    "mergeStateStatus": "BLOCKED",
+    "statusCheckRollup": [
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T21:53:56Z",
+        "conclusion": "FAILURE",
+        "detailsUrl": "https://github.com/Vhailors/sceneaxi/actions/runs/36931652103/job/110602098831",
+        "name": "desktop-linux",
+        "startedAt": "2026-10-01T21:53:43Z",
+        "status": "COMPLETED",
+        "workflowName": "desktop-linux"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T21:53:55Z",
+        "conclusion": "FAILURE",
+        "detailsUrl": "https://github.com/Vhailors/sceneaxi/actions/runs/36931652105/job/110602099911",
+        "name": "desktop-macos",
+        "startedAt": "2026-10-01T21:53:43Z",
+        "status": "COMPLETED",
+        "workflowName": "desktop-macos"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T21:54:17Z",
+        "conclusion": "FAILURE",
+        "detailsUrl": "https://github.com/Vhailors/sceneaxi/actions/runs/36931652104/job/110602098989",
+        "name": "static-staging",
+        "startedAt": "2026-10-01T21:53:45Z",
+        "status": "COMPLETED",
+        "workflowName": "desktop-windows"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T21:53:50Z",
+        "conclusion": "FAILURE",
+        "detailsUrl": "https://github.com/Vhailors/sceneaxi/actions/runs/36931652102/job/110602098929",
+        "name": "engine-sdk",
+        "startedAt": "2026-10-01T21:53:43Z",
+        "status": "COMPLETED",
+        "workflowName": "engine-sdk"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T21:53:55Z",
+        "conclusion": "FAILURE",
+        "detailsUrl": "https://github.com/Vhailors/sceneaxi/actions/runs/36931652198/job/110602099368",
+        "name": "gate",
+        "startedAt": "2026-10-01T21:53:43Z",
+        "status": "COMPLETED",
+        "workflowName": "gate"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T21:53:54Z",
+        "conclusion": "FAILURE",
+        "detailsUrl": "https://github.com/Vhailors/sceneaxi/actions/runs/36931652198/job/110602099454",
+        "name": "sites-build (umbrella)",
+        "startedAt": "2026-10-01T21:53:42Z",
+        "status": "COMPLETED",
+        "workflowName": "gate"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T21:53:40Z",
+        "conclusion": "SKIPPED",
+        "detailsUrl": "https://github.com/Vhailors/sceneaxi/actions/runs/36931652104/job/110602157273",
+        "name": "native-runtime",
+        "startedAt": "2026-10-01T21:53:49Z",
+        "status": "COMPLETED",
+        "workflowName": "desktop-windows"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T21:53:53Z",
+        "conclusion": "FAILURE",
+        "detailsUrl": "https://github.com/Vhailors/sceneaxi/actions/runs/36931652198/job/110602099406",
+        "name": "sites-build (catalog-game)",
+        "startedAt": "2026-10-01T21:53:42Z",
+        "status": "COMPLETED",
+        "workflowName": "gate"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T21:53:53Z",
+        "conclusion": "FAILURE",
+        "detailsUrl": "https://github.com/Vhailors/sceneaxi/actions/runs/36931652198/job/110602099285",
+        "name": "sites-build (catalog-web)",
+        "startedAt": "2026-10-01T21:53:42Z",
+        "status": "COMPLETED",
+        "workflowName": "gate"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T21:53:55Z",
+        "conclusion": "FAILURE",
+        "detailsUrl": "https://github.com/Vhailors/sceneaxi/actions/runs/36931652198/job/110602099217",
+        "name": "kids-build",
+        "startedAt": "2026-10-01T21:53:42Z",
+        "status": "COMPLETED",
+        "workflowName": "gate"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-01T21:53:40Z",
+        "conclusion": "SKIPPED",
+        "detailsUrl": "https://github.com/Vhailors/sceneaxi/actions/runs/36931652104/job/110602100572",
+        "name": "native-candidate",
+        "startedAt": "2026-10-01T21:53:40Z",
+        "status": "COMPLETED",
+        "workflowName": "desktop-windows"
+      }
+    ],
+    "url": "https://github.com/Vhailors/sceneaxi/pull/312"
+  },
+  "baseline": "4e532e2fbf43e9948741578ab6208a3277870405",
+  "originalPorcelainRows": 510,
+  "sourceChanges": {
+    "desktop/linux/src/electron/main.ts": "734986d459a548105efd51a61e5fe081fdfaad9502945ad9e6118934787a3394",
+    "tests/e2e/full-editor-transactions-golden.test.ts": "24e0ec650cbf160a4c7f4ce18ae39fa6f6687e799b6ffc76056f63ff04c96c3d"
+  },
+  "receipts": [
+    {
+      "command": "pnpm -s build",
+      "exit": 1,
+      "log": "build.log",
+      "failure": "TS2741 mock missing stagePreparedProposal"
+    },
+    {
+      "command": "pnpm -s build",
+      "exit": 0,
+      "log": "build-after.log"
+    }
+  ],
+  "candidate": null,
+  "merge": null,
+  "pending": [
+    "root gate",
+    "goldens",
+    "SDK/docsAPI",
+    "four fresh site typechecks/builds",
+    "default worker emission",
+    "three native smokes",
+    "8MiB native heartbeat/cancel/GUI",
+    "focus/browser CSP",
+    "complete native Git candidate inventory",
+    "independent parent review",
+    "exact candidate required CI"
+  ],
+  "milestone": "Retry applied three integration source fixes. Final unchanged gate:4863 pass/16 fail; source/candidate review requested. Native acceptance, lint and complete candidate inventory remain blocked; no push or merge."
+}

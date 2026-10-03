@@ -1,0 +1,63 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/tmp/sceneaxi-comprehensive-owned-xd4gdfl1[39m
+
+[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[90mstderr[2m | desktop/linux/test/legacy-linux-smoke.test.ts[2m > [22m[2mprivate modal migration to canonical Submit/Approve forms through the real host[2m > [22m[2mdefines real prefab content via fields, writes only on Save and rejects invalid references
+[22m[39m
+Warning! Happy DOM has JavaScript evaluation enabled and is running in an insecure environment.
+
+A VM Context is not an isolated environment, and if you run untrusted code you are at risk of RCE (Remote Code Execution) attacks. The attacker can escape the VM and run code at process level.
+
+It is recommended to disable code generation and freeze all builtins at process level by running node with the flags "--disallow-code-generation-from-strings" and "--frozen-intrinsics". You can suppress this warning by setting "suppressInsecureJavaScriptEnvironmentWarning" to "true" at your own risk.
+
+For more information, see https://github.com/capricorn86/happy-dom/wiki/JavaScript-Evaluation-Warning
+
+
+
+[33m[39m[32m·[39m[90mstderr[2m | desktop/linux/test/legacy-linux-smoke.test.ts[2m > [22m[2mprivate modal migration to canonical Submit/Approve forms through the real host[2m > [22m[2mreviews and commits persisted bindings, updates keyboard dispatch, then reviews reset
+[22m[39m
+Warning! Happy DOM has JavaScript evaluation enabled and is running in an insecure environment.
+
+A VM Context is not an isolated environment, and if you run untrusted code you are at risk of RCE (Remote Code Execution) attacks. The attacker can escape the VM and run code at process level.
+
+It is recommended to disable code generation and freeze all builtins at process level by running node with the flags "--disallow-code-generation-from-strings" and "--frozen-intrinsics". You can suppress this warning by setting "suppressInsecureJavaScriptEnvironmentWarning" to "true" at your own risk.
+
+For more information, see https://github.com/capricorn86/happy-dom/wiki/JavaScript-Evaluation-Warning
+
+
+
+[33m[39m[32m·[39m[90mstderr[2m | desktop/linux/test/legacy-linux-smoke.test.ts[2m > [22m[2mprivate modal migration to canonical Submit/Approve forms through the real host[2m > [22m[2mexposes all eight missing commands and keeps Kids mutation controls refused
+[22m[39m
+Warning! Happy DOM has JavaScript evaluation enabled and is running in an insecure environment.
+
+A VM Context is not an isolated environment, and if you run untrusted code you are at risk of RCE (Remote Code Execution) attacks. The attacker can escape the VM and run code at process level.
+
+It is recommended to disable code generation and freeze all builtins at process level by running node with the flags "--disallow-code-generation-from-strings" and "--frozen-intrinsics". You can suppress this warning by setting "suppressInsecureJavaScriptEnvironmentWarning" to "true" at your own risk.
+
+For more information, see https://github.com/capricorn86/happy-dom/wiki/JavaScript-Evaluation-Warning
+
+
+
+[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[31mx[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 1 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m desktop/linux/test/legacy-linux-smoke.test.ts[2m > [22mhistorical Linux smoke obligations through actual owning bridge[2m > [22mexecutes the actual built child CLI handshake and rejects a missing descriptor, without skips
+[31m[1mAssertionError[22m: expected 1 to be +0 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 0[39m
+[31m+ 1[39m
+
+[36m [2m❯[22m desktop/linux/test/legacy-linux-smoke.test.ts:[2m273:32[22m[39m
+
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m1 passed[39m[22m[90m (2)[39m
+[2m      Tests [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m12 passed[39m[22m[90m (13)[39m
+[2m   Start at [22m 12:08:07
+[2m   Duration [22m 9.57s[2m (transform 6.25s, setup 0ms, import 8.28s, tests 5.62s, environment 0ms)[22m
+

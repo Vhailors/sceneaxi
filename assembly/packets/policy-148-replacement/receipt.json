@@ -1,0 +1,21 @@
+{
+  "status": "NEW_FROZEN_REPLACEMENT_NOT_APPROVED",
+  "sourceOrigin": "read-only corrected origin",
+  "paths": {
+    ".oxlintrc.json": "f815dd07e6a8d7e50b8ed37736baa1da63d9baab3be4edb3a31b86140459f0c5",
+    "tools/oxlint/anti-slop/rules/no-runtime-typeof.ts": "bbfe2c0c3398b95a3e663d9c6d54720cd5d4b41eb9edef086af6c4565e28f41c",
+    "tools/oxlint/anti-slop/rules/no-unknown-parameters.ts": "4c58e709c90e8ad9d645dc0c791bb8e7dcdb82e3cdaabe0ae3387ef73d8106d4",
+    "tools/oxlint/anti-slop/shared/checked-boundaries.ts": "5a525a750624db4be8aea6d87a73e2eb12e6f4ea405d9c8c2745429e711ebce0",
+    "tools/oxlint/anti-slop/tests/checked-boundaries.test.mjs": "a49c8f2570f28731c618837a7f77418734740feb72f1ebe5e794be3f8ff3e082"
+  },
+  "patchSha256": "5059b62c799b7be9bbeb9dd98187d317f4e2005b31dbdc0c5f62371c688ef9d7",
+  "priorFailedPatch": "c5bb51cbf0d963c80b301271cf4dbcb9d18daf20050391fdc7c0fc63afcaf2d9",
+  "change": "Both predicate and decoder eligibility reject async/generator. No rule disabled.",
+  "checks": {
+    "nativeHarness": "46 PASS",
+    "independentPriorFailControls": "11 PASS",
+    "sourceBeforeAfterHashesIdentical": true,
+    "approval": "REQUESTED_NOT_RECEIVED",
+    "appliedToCandidate": false
+  }
+}

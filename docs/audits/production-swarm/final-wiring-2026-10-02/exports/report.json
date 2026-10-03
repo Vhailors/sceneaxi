@@ -1,0 +1,281 @@
+{
+  "owner": "bg-127",
+  "root": "/home/devuser/Documents/Projects/sceneaxi",
+  "status": "SCOPED_EXPORT_WIRING_VERIFIED_DEPENDENT_SECURITY_AND_DECLARATIONS_PENDING",
+  "sourceHandback": true,
+  "sourcePaths": [
+    "packages/schemas/src/index.ts",
+    "packages/authoring-core/src/index.ts",
+    "packages/engine-presentation/src/index.ts",
+    "packages/site-kit/src/index.ts",
+    "packages/site-kit/package.json",
+    "scripts/engine-sdk-files.json",
+    "packages/schemas/src/scene-composition.ts",
+    "packages/authoring-core/src/scene-composition.ts",
+    "packages/engine-presentation/src/scene-transforms.ts",
+    "packages/schemas/src/desktop-project-build.ts",
+    "packages/authoring-core/src/local-project-build.ts",
+    "packages/site-kit/src/catalog-server-fetch.ts"
+  ],
+  "beforeSha256": {
+    "packages/schemas/src/index.ts": "70d2d830c403c6f8f55191f277f13cf875714b0fa9c7e9556ecdf368801984c2",
+    "packages/authoring-core/src/index.ts": "b8cdb0319d78dd2930c5d7072b7ab1ba48ba5c459c97a43c43de2329d0f5acf4",
+    "packages/engine-presentation/src/index.ts": "71ccdda8f1ad02b2dc05d091d107f7d71995782816e6d19ddb8817b062782936",
+    "packages/site-kit/src/index.ts": "e2e04ca903eea55313480a1997721d33b58cb54246132b97e9ee7460296e6198",
+    "packages/site-kit/package.json": "938e00f032e50b139d5e47c18a4716d6a436e8cebc572697c2e51b669fd16aeb",
+    "scripts/engine-sdk-files.json": "9c39157de5c6f4ebc6db43deb258e74b257fa8c8115e3f85271da66cefccf1ac",
+    "packages/schemas/src/scene-composition.ts": "3ffd88fa60166409acc381fc921e7bd1bd81adab2060b7b9b384d2822ae573aa",
+    "packages/authoring-core/src/scene-composition.ts": "509f85a54af188f993aa7cbe615b04ee6c2ed0f6b8104ee57e81bfd4133b2383",
+    "packages/engine-presentation/src/scene-transforms.ts": "c77e395f2a50b4a7f46c46e5e640d6ef664b65f213d04a19489f64dceec22a04",
+    "packages/schemas/src/desktop-project-build.ts": "9493b82e88d6eea649be33a91b3d133d5daddc2bc160744b9599a5750dd8cff5",
+    "packages/authoring-core/src/local-project-build.ts": "6465dba1a3d3e4a0bf42af916b882cc938c19d1a5f52ca5b86a5a753233342f0",
+    "packages/site-kit/src/catalog-server-fetch.ts": "d902013c74c02b02bb524f82adb49aa4f09a31586d2289e9f460d602f94274e0"
+  },
+  "redBefore": {
+    "command": "pnpm exec vitest run packages/schemas/test/scene-transform-v2.test.ts packages/authoring-core/test/scene-transform-v2.test.ts packages/schemas/test/local-project-build.test.ts packages/authoring-core/test/local-project-build.test.ts packages/schemas/test/scene-composition.test.ts packages/authoring-core/test/scene-composition.test.ts tests/e2e/scene-composition-golden.test.ts --reporter=dot",
+    "exit": 1,
+    "files": 7,
+    "passed": 65,
+    "failed": 31,
+    "log": "default-before.log",
+    "output": "31 failed | 65 passed; buildLocalProject/validateSceneCompositionIntakeV2 not functions. Actual existing public export gap independently reproduced."
+  },
+  "greenAfter": [
+    {
+      "command": "pnpm exec vitest run packages/schemas/test/scene-transform-v2.test.ts packages/authoring-core/test/scene-transform-v2.test.ts packages/schemas/test/local-project-build.test.ts packages/authoring-core/test/local-project-build.test.ts packages/schemas/test/scene-composition.test.ts packages/authoring-core/test/scene-composition.test.ts tests/e2e/scene-composition-golden.test.ts --reporter=dot",
+      "exit": 0,
+      "files": 7,
+      "passed": 106,
+      "failed": 0,
+      "log": "default-post-launcher-repair.log",
+      "durationSeconds": 3.47,
+      "meaning": "Independent default no-bridge/no-probe rerun after launcher peer repair: actual public exports consumed, v1/v2/local security regressions green. Scope fingerprint at observation only; peer continues other hardening."
+    },
+    {
+      "command": "pnpm exec vitest run packages/schemas/test/scene-transform-v2.test.ts packages/authoring-core/test/scene-transform-v2.test.ts packages/schemas/test/local-project-build.test.ts packages/schemas/test/scene-composition.test.ts packages/authoring-core/test/scene-composition.test.ts tests/e2e/scene-composition-golden.test.ts --reporter=dot",
+      "exit": 0,
+      "files": 6,
+      "passed": 78,
+      "failed": 0,
+      "log": "default-export-regressions.log",
+      "meaning": "Default root configuration, no export probe/bridge config. Legacy composition/golden bytes and v2 public schema dependencies pass."
+    },
+    {
+      "command": "node --experimental-transform-types --test docs/audits/production-swarm/final-wiring-2026-10-02/exports/public-consumers.test.mjs",
+      "exit": 0,
+      "passed": 4,
+      "failed": 0,
+      "log": "public-consumers.log",
+      "meaning": "Clean temporary consumer node_modules symlinks to actual four package roots. Node resolves actual manifests. Missing relative .js extensions map to actual .ts source only; no package-export or namespace substitution. Every requested runtime value, rotated/sheared-helper flow, v1/Kids/signed refusal and SDK pins asserted."
+    },
+    {
+      "command": "pnpm exec eslint packages/schemas/src/index.ts packages/authoring-core/src/index.ts packages/engine-presentation/src/index.ts",
+      "exit": 0,
+      "log": "lint.log"
+    },
+    {
+      "command": "pnpm -s check:boundaries",
+      "exit": 0,
+      "log": "boundaries.log",
+      "result": "27 packages, unchanged dependency matrix"
+    },
+    {
+      "command": "pnpm -s check:publish-ready",
+      "exit": 0,
+      "log": "publish-ready.log",
+      "result": "17 structural checks; no publication"
+    },
+    {
+      "command": "pnpm exec tsc -p packages/schemas/tsconfig.json --noEmit",
+      "exit": 0,
+      "log": "schemas-typecheck.log"
+    }
+  ],
+  "assertions": [
+    "No export-only bridge configuration used for current acceptance",
+    "Preserve existing exports and source-module bytes; peers own repairs in source modules",
+    "No dependency matrix, v1 contract, signed release, Kids, held-key or LIVE authority change",
+    "Original three index prefixes byte-identical to before hashes",
+    "Original SDK entries byte-identical after removing two deliberate additions; 164 targets and 298 local module edges complete",
+    "True Node consumers resolve actual package export maps; historical auxiliary bridges retained only as historical evidence",
+    "Permanent schema and authoring transform tests still contain direct internal imports at schema test:4/authoring test:5; owner requested narrow import-only change, not performed outside exclusive scope. Native public-consumer proof covers public roots independently."
+  ],
+  "resources": {
+    "projection": "Focused Vitest recorded 8.29s before, 4.71s combined after, 5.26s exports regressions; Node package consumer 1.91s. SDK source additions observed30564bytes; archive size and peak RSS NOT measured. No root/site/build/native jobs. No 16x8MiB capacity workload executed by this worker. Latest default seven-suite run:106pass,3.47s. New test/source hashes observed at acceptance are recorded; no global candidate freeze asserted.",
+    "cleanup": "All executed test/check processes exited. Temporary real-consumer node_modules fixture removed in finally before assertions. No service, browser, native app, container or provider started. Existing launcher suite owns temporary projects/process-group negative cleanup; independent terminal group liveness not certified."
+  },
+  "remainingRisks": [
+    "CAP-01 launch substitution negatives now pass in independent default106-test rerun after bg-129 repair; native pixel/exact-exit and further source hardening still peer/serial-owned. Export worker does not certify future source changes or native launcher success.",
+    "Stale referenced declarations need serial owner ordered build; no custom alias-green or typecheck weakening.",
+    "V2 helper/public exports are not kernel advance/save-replay/physics/rendered pixels; bg-130 owns runtime changes and serial browser proof.",
+    "Raw canonical origins, accessor capture and both item-page approval/default-unwired wiring are bg-128 owned. Map existence does not certify provider/security wiring.",
+    "Importer worker hook/public integration owned bg-131; this worker did not run or certify worker resource/native responsiveness acceptance.",
+    "Actual SDK zip/materialized declarations are not built; added source dependency closure static-only.",
+    "Type symbol presence verified against owning source AST; cross-package consumer declarations await ordered build."
+  ],
+  "deferredChecks": [
+    "serial full build/gate/declaration/SDK archive",
+    "site builds/browser/native/http",
+    "resource acceptance complete publication/IPC/reload/memory plateau"
+  ],
+  "publication": {
+    "commit": false,
+    "push": false,
+    "deploy": false,
+    "productionPass": false
+  },
+  "sourceEditsComplete": true,
+  "sourceOwnershipReleasedTo": "parent serial integrator",
+  "ownedSourcePaths": [
+    "packages/schemas/src/index.ts",
+    "packages/authoring-core/src/index.ts",
+    "packages/engine-presentation/src/index.ts",
+    "packages/site-kit/package.json",
+    "scripts/engine-sdk-files.json"
+  ],
+  "afterSha256": {
+    "packages/schemas/src/index.ts": "731450d29115a05bbf1913be14fa59900a7e6b704b15fe6123c875d8ad723813",
+    "packages/authoring-core/src/index.ts": "69c80fe35ff9200000a896550d3a6d339491cef42827d32dee63db6c5f284f46",
+    "packages/engine-presentation/src/index.ts": "e3b7ce5de1a7414ae420295da6235938aaee4ef8985d530d11697aa98cb0ec7e",
+    "packages/site-kit/package.json": "04257952a1a6d13cfff8b8308dec661176d62d212bc47285d64bd9194ff429bf",
+    "scripts/engine-sdk-files.json": "a2d6b011b956a4af6de4b2fd622698719ac300b28346c0bc2c9df41cd27d886d"
+  },
+  "untouchedInExclusiveScope": [
+    "packages/site-kit/src/index.ts",
+    "packages/schemas/package.json",
+    "packages/authoring-core/package.json",
+    "packages/engine-presentation/package.json"
+  ],
+  "changes": {
+    "schemaExports": {
+      "from": "./scene-composition.js",
+      "values": 12,
+      "types": 7,
+      "additionalEvaluator": "evaluateLocalProjectBuild from ./desktop-project-build.js"
+    },
+    "authoringExports": {
+      "from": "./scene-composition.js",
+      "values": 4,
+      "types": 1,
+      "localProjectBuildValues": 5,
+      "localProjectBuildTypes": 7
+    },
+    "presentationExports": {
+      "from": "./scene-transforms.js",
+      "values": [
+        "resolveScenePresentationV2"
+      ],
+      "types": [
+        "ScenePresentationSourceV2"
+      ]
+    },
+    "catalogExport": "./catalog-server-fetch -> ./src/catalog-server-fetch.ts; root barrel deliberately unchanged to retain narrow server-only boundary",
+    "sdkAdded": [
+      "packages/authoring-core/src/local-project-build.ts",
+      "packages/engine-presentation/src/scene-transforms.ts"
+    ],
+    "valueTypeVerification": "verified-symbols.json; all39 requested exports exist with correct value/type kinds in actual source AST"
+  },
+  "preservation": {
+    "preserved": {
+      "packages/schemas/src/index.ts": {
+        "beforeSha256": "70d2d830c403c6f8f55191f277f13cf875714b0fa9c7e9556ecdf368801984c2",
+        "originalPrefixByteIdentical": true
+      },
+      "packages/authoring-core/src/index.ts": {
+        "beforeSha256": "b8cdb0319d78dd2930c5d7072b7ab1ba48ba5c459c97a43c43de2329d0f5acf4",
+        "originalPrefixByteIdentical": true
+      },
+      "packages/engine-presentation/src/index.ts": {
+        "beforeSha256": "71ccdda8f1ad02b2dc05d091d107f7d71995782816e6d19ddb8817b062782936",
+        "originalPrefixByteIdentical": true
+      }
+    },
+    "inventory": {
+      "entries": 164,
+      "duplicateFree": true,
+      "checkedLocalEdges": 298,
+      "missing": [],
+      "existingEntriesByteIdentical": true,
+      "addedFiles": [
+        "packages/authoring-core/src/local-project-build.ts",
+        "packages/engine-presentation/src/scene-transforms.ts"
+      ],
+      "addedSourceBytes": 30564,
+      "archiveBytes": "not measured; serial SDK build deferred"
+    },
+    "sourceModuleChangesByThisWorker": 0
+  },
+  "sourceHandbackStatement": "SOURCE HANDED BACK: five listed owned source files are final for bg-127. Parent owns serial integration and post-peer current-source acceptance. No additional source changes planned without explicit authorization.",
+  "logSha256": {
+    "default-before.log": "fd3ac3760a716f45321d9c8a861508d89ae337f1e3c0075316930b4d87cf357c",
+    "lint.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "publish-ready.log": "59ae6308747d4f73ee6f8a4b52e5c18d4697ca4c5af822a60cef989c47a47612",
+    "default-post-launcher-repair.log": "e675c3d41935d201b3652b682d22e38846ea140ba399e31a883f9fa86e99c5f8",
+    "authoring-typecheck-post-launcher.log": "3271b747383de1e77e3a2cee0597c19f741a2df02e9612dec86972302ee15e70",
+    "schemas-typecheck.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "default-after.log": "df1cf9f33ef606ad13dba1fbeac5415254466d6880e9e75a3442d3f2b4fa0719",
+    "public-consumers-initial.log": "e82fe0699b57cdbdc305d669326686f3cde739ca7f57741d35eef17587aaaf31",
+    "public-consumers.log": "f7de5709c33104c32a43458ba7d360f56d1741ebe6b559dacc9bd448f2d3ca7a",
+    "boundaries.log": "3b17aa4cc14dd9b4b41bb33991161ac2fb61c3d19642faf961d533b2a64ac92d",
+    "authoring-typecheck.log": "9c3c95f89a192c4ebf66bd8bd72c9f129e6d6f5023f238433c1fd96c6dd8a24f",
+    "default-export-regressions.log": "29e5552f4dd2d1a14a8fb67afb916104a21d8cbd308dc30199f26325cfe1a5b7"
+  },
+  "proofSha256": {
+    "default-before.log": "fd3ac3760a716f45321d9c8a861508d89ae337f1e3c0075316930b4d87cf357c",
+    "lint.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "publish-ready.log": "59ae6308747d4f73ee6f8a4b52e5c18d4697ca4c5af822a60cef989c47a47612",
+    "default-post-launcher-repair.log": "e675c3d41935d201b3652b682d22e38846ea140ba399e31a883f9fa86e99c5f8",
+    "source-extension-resolver.mjs": "8c738bd34730c44ab83e378b19db2e94099039dc774a9e09694a6033b6061e65",
+    "authoring-typecheck-post-launcher.log": "3271b747383de1e77e3a2cee0597c19f741a2df02e9612dec86972302ee15e70",
+    "schemas-typecheck.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "preservation-sdk-proof.json": "baceb9dbd0a0a9b7b49104d68a4d353baaeab100a0401cdec272b47df618a613",
+    "verified-symbols.json": "bcd690c7ecfab3234696c5749e37188cbffd3f1623f6b7dce24e0894ddb8c52f",
+    "default-after.log": "df1cf9f33ef606ad13dba1fbeac5415254466d6880e9e75a3442d3f2b4fa0719",
+    "public-consumers-initial.log": "e82fe0699b57cdbdc305d669326686f3cde739ca7f57741d35eef17587aaaf31",
+    "public-consumers.log": "f7de5709c33104c32a43458ba7d360f56d1741ebe6b559dacc9bd448f2d3ca7a",
+    "boundaries.log": "3b17aa4cc14dd9b4b41bb33991161ac2fb61c3d19642faf961d533b2a64ac92d",
+    "authoring-typecheck.log": "9c3c95f89a192c4ebf66bd8bd72c9f129e6d6f5023f238433c1fd96c6dd8a24f",
+    "public-consumers.test.mjs": "a356ef3243920062aaa4b199ed1577c63db40364f20d77ea445be76e7a84e0a8",
+    "default-export-regressions.log": "29e5552f4dd2d1a14a8fb67afb916104a21d8cbd308dc30199f26325cfe1a5b7"
+  },
+  "historicalFailedChecksRetained": [
+    {
+      "command": "pnpm exec vitest run packages/schemas/test/scene-transform-v2.test.ts packages/authoring-core/test/scene-transform-v2.test.ts packages/schemas/test/local-project-build.test.ts packages/authoring-core/test/local-project-build.test.ts packages/schemas/test/scene-composition.test.ts packages/authoring-core/test/scene-composition.test.ts tests/e2e/scene-composition-golden.test.ts --reporter=dot",
+      "exit": 1,
+      "files": 7,
+      "passed": 96,
+      "failed": 4,
+      "log": "default-after.log",
+      "output": "4 failed | 96 passed; remaining local-project-build security tests include marker true at test:152. New bg-129 race assertions added while source repair active. Existing missing-export failures cleared, but full launcher suite NOT certified."
+    },
+    {
+      "command": "pnpm exec tsc -p packages/authoring-core/tsconfig.json --noEmit",
+      "exit": 2,
+      "log": "authoring-typecheck.log",
+      "output": "Referenced schemas dist declarations still lack new exports; no build or alias workaround. Cascaded TS2724/TS7006 retained. Independently test/local-project-build.test.ts:30 TS2412 undefined hook assignments reported to bg-129 owner."
+    },
+    {
+      "command": "node --experimental-transform-types --test .../public-consumers.test.mjs (initial launcher)",
+      "exit": 1,
+      "log": "public-consumers-initial.log",
+      "output": "Root intentionally lacks @sceneaxi/engine-presentation node_modules. Repaired proof by real temporary consumer node_modules symlinks and actual package maps; no install or package alias."
+    }
+  ],
+  "remainingFailedChecks": [
+    {
+      "command": "pnpm exec tsc -p packages/authoring-core/tsconfig.json --noEmit",
+      "exit": 2,
+      "log": "authoring-typecheck-post-launcher.log",
+      "output": "TS2724 new schema values/types absent from referenced stale dist declarations, cascaded TS7006. Exact-optional hook errors are no longer present. No fullbuild permitted, no alias/cast/check weakening."
+    }
+  ],
+  "observedDependencyHashesAt106TestPass": {
+    "packages/schemas/src/scene-composition.ts": "3ffd88fa60166409acc381fc921e7bd1bd81adab2060b7b9b384d2822ae573aa",
+    "packages/authoring-core/src/scene-composition.ts": "509f85a54af188f993aa7cbe615b04ee6c2ed0f6b8104ee57e81bfd4133b2383",
+    "packages/authoring-core/src/local-project-build.ts": "ce266a26a0f143d04782d4525393e4f39656fd1b0810ef56c8d317c14e5c6b0c",
+    "packages/authoring-core/test/local-project-build.test.ts": "565bf948c3c1bd8bfea72f958439d63afb3e22ce678928c6735f0e196844ea5b",
+    "packages/engine-presentation/src/scene-transforms.ts": "c77e395f2a50b4a7f46c46e5e640d6ef664b65f213d04a19489f64dceec22a04",
+    "packages/schemas/src/desktop-project-build.ts": "9493b82e88d6eea649be33a91b3d133d5daddc2bc160744b9599a5750dd8cff5"
+  }
+}

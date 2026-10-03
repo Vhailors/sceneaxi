@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { CONTROL_STATES, regionControls } from "../../../tests/helpers/desktop-chrome-golden.js";
+import { CONTROL_STATES, regionControls } from "./helpers/desktop-chrome-golden.js";
 
 it("pins the viewport source field and declares every viewport control", () => {
   for (const [label, state] of CONTROL_STATES) {

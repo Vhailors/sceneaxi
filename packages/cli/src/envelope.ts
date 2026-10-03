@@ -13,6 +13,11 @@ import type { HeldKeyRefusalReason } from "./held-keys/gate.js";
 import { CLI_VERSION, PROTOCOL_SCHEMA_VERSION } from "./version.js";
 
 /** Machine payload for a successful command. */
+/**
+ * Raw CLI envelope transport contract: payload values cross the process/stdout boundary
+ * before command-specific decoding. Frozen public ABI; dictionary shape is the contract.
+ * @rawTransportContract
+ */
 export type ResultPayload = Readonly<Record<string, unknown>>;
 
 export interface CliErrorBody {
@@ -85,23 +90,28 @@ export function failure(
   } = {},
 ): CliOutcome {
   const path = Object.freeze([...(options.path ?? [])]);
+
   const help = Object.freeze([
     ...(options.help ?? defaultHelpForFailure(code, path)),
   ]);
 
   let error: CliErrorBody = { code, message, path };
+
   if (options.heldKey !== undefined) {
     error = { ...error, heldKey: options.heldKey };
   }
+
   if (options.heldKeyReason !== undefined) {
     error = { ...error, heldKeyReason: options.heldKeyReason };
   }
+
   if (options.diagnostics !== undefined) {
     error = {
       ...error,
       diagnostics: Object.freeze([...options.diagnostics]),
     };
   }
+
   if (options.details !== undefined) {
     error = { ...error, details: Object.freeze({ ...options.details }) };
   }
@@ -123,6 +133,7 @@ function defaultHelpForFailure(
   path: readonly string[],
 ): string[] {
   const joined = path.length > 0 ? path.join(" ") : "";
+
   switch (code) {
     case "UNKNOWN_COMMAND":
       return [

@@ -1,73 +1,10 @@
 import { describe, expect, it } from "vitest";
-import {
-  ADMIN_EMAIL_ENV_VAR,
-  AUTH_REFUSE_REASONS,
-  createIdentityPort,
-  createInMemoryIdentityStore,
-  digestSessionToken,
-  planAdminBootstrap,
-  requireRole,
-  resolveAdminIdentity,
-  type AuthRefuseReason,
-  type IdentityAdapter,
-  type IdentityStore,
-} from "@sceneaxi/auth";
-import {
-  BILLING_REFUSE_REASONS,
-  CHECKOUT_METADATA_KEYS,
-  HOSTED_AI_DEFAULT_CONFIG,
-  appendCreditEntry,
-  adjustSupportLedger,
-  readSupportLedger,
-  applyCheckoutCompletedGrant,
-  applyCreditsSale,
-  assertCurrencyListed,
-  assertModeAuthorized,
-  createCheckoutSessionIntent,
-  createInMemoryConnectStore,
-  createInMemoryCreditStore,
-  createLedgerState,
-  createListingCheckoutIntent,
-  deriveBalance,
-  deriveIntentId,
-  evaluateEntitlement,
-  grantStarterCredits,
-  LISTING_SALE_IDEMPOTENCY_PREFIX,
-  loadCatalogListings,
-  loadCreditPackCatalog,
-  lookupCatalogListing,
-  lookupCreditPack,
-  meterCredits,
-  parseCheckoutCompletedEvent,
-  parseCreditPackRefundEvent,
-  persistCreditPackChargeEvent,
-  persistCreditsSale,
-  purchaseListingWithCredits,
-  refreshConnectStatus,
-  recordMoneySale,
-  resolveCreditPackRevision,
-  resolveFixtureCommerceListing,
-  runMeteredModelCall,
-  requestCreatorPayout,
-  signStripeWebhookPayload,
-  splitCredits,
-  startConnectOnboarding,
-  verifyStripeWebhookSignature,
-  type BillingRefuseReason,
-  type CreditStore,
-  type ConnectProviderReadiness,
-  type StripeConnectProvider,
-  type LedgerState,
-} from "@sceneaxi/billing";
-import type {
-  CatalogListing,
-  CheckoutSessionIntent,
-  CreditAccount,
-} from "@sceneaxi/schemas";
+import { ADMIN_EMAIL_ENV_VAR, AUTH_REFUSE_REASONS, createIdentityPort, createInMemoryIdentityStore, digestSessionToken, planAdminBootstrap, requireRole, resolveAdminIdentity, type AuthRefuseReason, type IdentityAdapter, type IdentityStore, } from "@sceneaxi/auth";
+import { BILLING_REFUSE_REASONS, CHECKOUT_METADATA_KEYS, HOSTED_AI_DEFAULT_CONFIG, createHostedAiPricingPolicy, appendCreditEntry, adjustSupportLedger, readSupportLedger, applyCheckoutCompletedGrant, applyCreditsSale, assertCurrencyListed, assertModeAuthorized, createCheckoutSessionIntent, createInMemoryConnectStore, createInMemoryCreditStore, createLedgerState, createListingCheckoutIntent, deriveBalance, deriveIntentId, evaluateEntitlement, grantStarterCredits, LISTING_SALE_IDEMPOTENCY_PREFIX, loadCatalogListings, loadCreditPackCatalog, lookupCatalogListing, lookupCreditPack, meterCredits, parseCheckoutCompletedEvent, parseCreditPackRefundEvent, persistCreditPackChargeEvent, persistCreditsSale, purchaseListingWithCredits, refreshConnectStatus, recordMoneySale, resolveCreditPackRevision, resolveFixtureCommerceListing, runMeteredModelCall, requestCreatorPayout, signStripeWebhookPayload, splitCredits, startConnectOnboarding, verifyStripeWebhookSignature, type BillingRefuseReason, type CreditStore, type ConnectProviderReadiness, type StripeConnectProvider, type LedgerState, } from "@sceneaxi/billing";
+import type { CatalogListing, CheckoutSessionIntent, CreditAccount, } from "@sceneaxi/schemas";
 import { issuePrincipalForTest } from "@sceneaxi/auth/testing/principal-issuance";
 import { createUmbrellaIdentityPlane } from "../../sites/umbrella/src/lib/identity-plane.ts";
 import { verifyLoginRequestOrigin } from "../../sites/umbrella/src/lib/login-flow.ts";
-
 /**
  * The refuse matrix.
  *
@@ -81,62 +18,85 @@ import { verifyLoginRequestOrigin } from "../../sites/umbrella/src/lib/login-flo
  * a guarantee.
  */
 
+type JsonValue = string | number | boolean | null | undefined | readonly JsonValue[] | JsonObject;
+
+type JsonObject = {
+    readonly [key: string]: JsonValue;
+};
+
+type RefusalOverrideValue = JsonValue | ReturnType<typeof principal> | LedgerState | typeof admin | typeof HOSTED_AI_DEFAULT_CONFIG | (() => never);
+
+type RefusalOverrides = {
+    readonly [key: string]: RefusalOverrideValue;
+};
+
+function isObject(value: unknown): value is object {
+    return typeof value === "object" && value !== null;
+}
+
 const NOW = Date.parse("2026-07-25T10:00:00Z");
+
 const NOW_SECONDS = Math.floor(NOW / 1000);
+
 const clock = () => NOW;
+
 const CAPTAIN_EMAIL = "captain@example.com";
+
 const adminResolution = resolveAdminIdentity({
-  [ADMIN_EMAIL_ENV_VAR]: CAPTAIN_EMAIL,
+    [ADMIN_EMAIL_ENV_VAR]: CAPTAIN_EMAIL,
 });
-if (!adminResolution.ok) throw new Error(adminResolution.message);
+
+if (!adminResolution.ok)
+    throw new Error(adminResolution.message);
+
 // Resolved, never hand-built: guards check the identity's runtime provenance,
 // so a structurally identical `{ email, source }` literal is refused.
 const admin = adminResolution.value;
 
 const verifyBody = (body: string) => {
-  const result = verifyStripeWebhookSignature({
-    payload: body,
-    header: signStripeWebhookPayload({
-      payload: body,
-      secret: SECRET,
-      timestamp: NOW_SECONDS,
-    }),
-    secret: SECRET,
-    now: NOW,
-  });
-  if (!result.ok) throw new Error(`verify fixture failed: ${result.message}`);
-  return result.value;
-};
+    const result = verifyStripeWebhookSignature({
+        payload: body,
+        header: signStripeWebhookPayload({
+            payload: body,
+            secret: SECRET,
+            timestamp: NOW_SECONDS,
+        }),
+        secret: SECRET,
+        now: NOW,
+    });
 
+    if (!result.ok)
+        throw new Error(`verify fixture failed: ${result.message}`);
+
+    return result.value;
+};
 /** Every fixture event body below stamps its session id from the intent it settles. */
+
 const sessionIdFor = (intent: CheckoutSessionIntent) => `cs_${intent.intentId}`;
 
 const settlementFor = (intent: CheckoutSessionIntent) => ({
-  sessionId: sessionIdFor(intent),
-  paymentStatus: "paid" as const,
-  amountTotal: intent.unitAmount,
-  currency: intent.currency,
-  quantity: 1,
-  stripePriceId: intent.stripePriceId,
+    sessionId: sessionIdFor(intent),
+    paymentStatus: "paid" as const,
+    amountTotal: intent.unitAmount,
+    currency: intent.currency,
+    quantity: 1,
+    stripePriceId: intent.stripePriceId,
 });
+
 const SECRET = "whsec_refuse_matrix_fixture";
 
 const observed = new Set<AuthRefuseReason | BillingRefuseReason>();
-
 /** Record whatever reason a refusing call produced. */
+
 const record = (result: {
-  readonly ok: boolean;
-  readonly reason?: AuthRefuseReason | BillingRefuseReason;
+    readonly ok: boolean;
+    readonly reason?: AuthRefuseReason | BillingRefuseReason;
 }): void => {
-  if (!result.ok && result.reason !== undefined) observed.add(result.reason);
+    if (!result.ok && result.reason !== undefined)
+        observed.add(result.reason);
 };
 
-const user = (
-  userId: string,
-  email: string,
-  disabled = false,
-): never =>
-  ({
+const user = (userId: string, email: string, disabled = false) => ({
     schemaVersion: 1,
     kind: "sceneaxi.user",
     userId,
@@ -144,92 +104,102 @@ const user = (
     emailVerified: true,
     disabled,
     createdAt: "2026-07-25T09:00:00Z",
-  }) as never;
+}) as const;
 
 const CREW = user("usr_crew", "crew@example.com");
+
 const GONE = user("usr_gone", "gone@example.com", true);
 
-const account = (userId: string): CreditAccount =>
-  Object.freeze({
+const account = (userId: string): CreditAccount => Object.freeze({
     schemaVersion: 1,
     kind: "sceneaxi.credit-account",
     accountId: `acc_${userId}`,
     userId,
     createdAt: "2026-07-25T09:00:00Z",
-  }) as CreditAccount;
+});
 
-const principal = (
-  overrides: {
+const principal = (overrides: {
     userId?: string;
     role?: "admin" | "user";
     source?: string;
     surface?: string;
     disabled?: boolean;
     expiresAt?: string;
-  } = {},
-): unknown => {
-  const userId = overrides.userId ?? "usr_crew";
-  const role = overrides.role ?? "user";
-  return issuePrincipalForTest({
-    user: {
-      schemaVersion: 1,
-      kind: "sceneaxi.user",
-      userId,
-      email: role === "admin" ? CAPTAIN_EMAIL : "crew@example.com",
-      emailVerified: true,
-      disabled: overrides.disabled ?? false,
-      createdAt: "2026-07-25T09:00:00Z",
-    },
-    role: {
-      schemaVersion: 1,
-      kind: "sceneaxi.role-assignment",
-      userId,
-      role,
-      source:
-        overrides.source ?? (role === "admin" ? "admin-env" : "default-user"),
-      assignedAt: "2026-07-25T09:30:00Z",
-    },
-    session: {
-      schemaVersion: 1,
-      kind: "sceneaxi.session",
-      sessionId: "ses_01",
-      userId,
-      surface: overrides.surface ?? "web-shell",
-      issuedAt: "2026-07-25T09:00:00Z",
-      expiresAt: overrides.expiresAt ?? "2026-07-26T10:00:00Z",
-      tokenDigest: digestSessionToken("tok"),
-    },
-  });
+} = {}) => {
+    const userId = overrides.userId ?? "usr_crew";
+    const role = overrides.role ?? "user";
+
+    return issuePrincipalForTest({
+        user: {
+            schemaVersion: 1,
+            kind: "sceneaxi.user",
+            userId,
+            email: role === "admin" ? CAPTAIN_EMAIL : "crew@example.com",
+            emailVerified: true,
+            disabled: overrides.disabled ?? false,
+            createdAt: "2026-07-25T09:00:00Z",
+        },
+        role: {
+            schemaVersion: 1,
+            kind: "sceneaxi.role-assignment",
+            userId,
+            role,
+            source: overrides.source ?? (role === "admin" ? "admin-env" : "default-user"),
+            assignedAt: "2026-07-25T09:30:00Z",
+        },
+        session: {
+            schemaVersion: 1,
+            kind: "sceneaxi.session",
+            sessionId: "ses_01",
+            userId,
+            surface: overrides.surface ?? "web-shell",
+            issuedAt: "2026-07-25T09:00:00Z",
+            expiresAt: overrides.expiresAt ?? "2026-07-26T10:00:00Z",
+            tokenDigest: digestSessionToken("tok"),
+        },
+    });
 };
 
 const funded = (credits: number, forAccount = account("usr_crew")): LedgerState => {
-  if (credits === 0) return createLedgerState(forAccount);
-  const appended = appendCreditEntry(createLedgerState(forAccount), {
-    entryId: "ent_fund",
-    movement: "grant",
-    delta: credits,
-    reason: "fixture funding",
-    idempotencyKey: "fixture:fund",
-    now: NOW,
-  });
-  if (!appended.ok) throw new Error("fixture funding failed");
-  return appended.value.state;
+    if (credits === 0)
+        return createLedgerState(forAccount);
+
+    const appended = appendCreditEntry(createLedgerState(forAccount), {
+        entryId: "ent_fund",
+        movement: "grant",
+        delta: credits,
+        reason: "fixture funding",
+        idempotencyKey: "fixture:fund",
+        now: NOW,
+    });
+
+    if (!appended.ok)
+        throw new Error("fixture funding failed");
+
+    return appended.value.state;
 };
 
 const packCatalog = () => {
-  const loaded = loadCreditPackCatalog();
-  if (!loaded.ok) throw new Error("catalog load failed");
-  return loaded.value;
+    const loaded = loadCreditPackCatalog();
+
+    if (!loaded.ok)
+        throw new Error("catalog load failed");
+
+    return loaded.value;
 };
 
 const listing = (listingId: string): CatalogListing => {
-  const loaded = loadCatalogListings();
-  if (!loaded.ok) throw new Error("listing load failed");
-  const found = lookupCatalogListing(loaded.value, listingId);
-  if (!found.ok) throw new Error(`missing fixture listing ${listingId}`);
-  return found.value;
-};
+    const loaded = loadCatalogListings();
 
+    if (!loaded.ok)
+        throw new Error("listing load failed");
+    const found = lookupCatalogListing(loaded.value, listingId);
+
+    if (!found.ok)
+        throw new Error(`missing fixture listing ${listingId}`);
+
+    return found.value;
+};
 /**
  * A persisted listing intent, keyed the way a real listing checkout keys it.
  *
@@ -238,1424 +208,1258 @@ const listing = (listingId: string): CatalogListing => {
  * credits-only listing, a seller buying their own SKU — and the money-sale path
  * must still refuse each of them on its own evidence rather than by luck.
  */
-const listingIntentFor = (
-  listingId: string,
-  userId: string,
-): CheckoutSessionIntent => {
-  const held = listing(listingId);
-  const price = held.moneyPrice ?? {
-    unitAmount: 1200,
-    currency: "usd",
-    stripePriceId: "price_test_unlisted",
-  };
-  const idempotencyKey = `${LISTING_SALE_IDEMPOTENCY_PREFIX}sale_case_${listingId}`;
-  return {
-    schemaVersion: 1,
-    kind: "sceneaxi.checkout-session-intent",
-    intentId: deriveIntentId(idempotencyKey),
-    userId,
-    purpose: "catalog-listing",
-    itemId: listingId,
-    unitAmount: price.unitAmount,
-    currency: price.currency,
-    stripePriceId: price.stripePriceId,
-    mode: "test",
-    successUrl: "https://sceneaxi.example/ok",
-    cancelUrl: "https://sceneaxi.example/no",
-    idempotencyKey,
-    createdAt: new Date(NOW).toISOString(),
-  };
-};
 
-/** A genuinely settled listing completion, signed and parsed like a real one. */
-const listingCompletion = (
-  overrides: { readonly listingId?: string; readonly userId?: string } = {},
-) => {
-  const listingId = overrides.listingId ?? "harbour-diorama";
-  const intent = listingIntentFor(listingId, overrides.userId ?? "usr_crew");
-  const parsed = parseCheckoutCompletedEvent({
-    verified: verifyBody(
-      JSON.stringify({
-        id: `evt_case_${listingId}`,
-        type: "checkout.session.completed",
-        created: NOW_SECONDS,
-        livemode: false,
-        data: {
-          object: {
-            id: sessionIdFor(intent),
-            metadata: {
-              [CHECKOUT_METADATA_KEYS.userId]: intent.userId,
-              [CHECKOUT_METADATA_KEYS.purpose]: intent.purpose,
-              [CHECKOUT_METADATA_KEYS.itemId]: intent.itemId,
-              [CHECKOUT_METADATA_KEYS.intentId]: intent.intentId,
-            },
-          },
-        },
-      }),
-    ),
-    intent,
-    settlement: settlementFor(intent),
-  });
-  if (!parsed.ok) {
-    throw new Error(`fixture completion failed: ${parsed.message}`);
-  }
-  return parsed.value;
-};
+const listingIntentFor = (listingId: string, userId: string): CheckoutSessionIntent => {
+    const held = listing(listingId);
 
-const ADAPTER: IdentityAdapter = Object.freeze({
-  authenticate({ email, password }) {
-    if (password !== "pw") return undefined;
-    const userId = email === "gone@example.com" ? "usr_gone" : "usr_crew";
+    const price = held.moneyPrice ?? {
+        unitAmount: 1200,
+        currency: "usd",
+        stripePriceId: "price_test_unlisted",
+    };
+
+    const idempotencyKey = `${LISTING_SALE_IDEMPOTENCY_PREFIX}sale_case_${listingId}`;
+
     return {
-      user: { id: userId, email, emailVerified: true },
-      session: {
-        id: `ses_${userId}`,
-        token: "tok",
+        schemaVersion: 1,
+        kind: "sceneaxi.checkout-session-intent",
+        intentId: deriveIntentId(idempotencyKey),
         userId,
-        expiresAt: "2026-07-26T10:00:00Z",
-      },
+        purpose: "catalog-listing",
+        itemId: listingId,
+        unitAmount: price.unitAmount,
+        currency: price.currency,
+        stripePriceId: price.stripePriceId,
+        mode: "test",
+        successUrl: "https://sceneaxi.example/ok",
+        cancelUrl: "https://sceneaxi.example/no",
+        idempotencyKey,
+        createdAt: new Date(NOW).toISOString(),
     };
-  },
-});
+};
+/** A genuinely settled listing completion, signed and parsed like a real one. */
 
-const port = (
-  overrides: Partial<Parameters<typeof createIdentityPort>[0]> = {},
-  store: IdentityStore = createInMemoryIdentityStore({ users: [CREW, GONE] }),
-) =>
-  createIdentityPort({ adapter: ADAPTER, store, admin, clock, ...overrides });
+const listingCompletion = (overrides: {
+    readonly listingId?: string;
+    readonly userId?: string;
+} = {}) => {
+    const listingId = overrides.listingId ?? "harbour-diorama";
+    const intent = listingIntentFor(listingId, overrides.userId ?? "usr_crew");
 
-const CREDENTIALS = {
-  surface: "web-shell",
-  email: "crew@example.com",
-  password: "pw",
-} as const;
-
-const throwingStore: IdentityStore = Object.freeze({
-  findUserByEmail() {
-    throw new Error("db down");
-  },
-  findUserById: () => undefined,
-  putSession: () => undefined,
-  findSession: () => undefined,
-  deleteSession: () => true,
-});
-
-describe("auth refuse matrix", () => {
-  it("reaches every admin-resolution refusal", () => {
-    record(resolveAdminIdentity({}));
-    record(resolveAdminIdentity({ [ADMIN_EMAIL_ENV_VAR]: "  " }));
-    record(resolveAdminIdentity({ [ADMIN_EMAIL_ENV_VAR]: "nope" }));
-    record(
-      resolveAdminIdentity({ [ADMIN_EMAIL_ENV_VAR]: "a@b.co,c@d.co" }),
-    );
-    record(
-      resolveAdminIdentity({
-        [ADMIN_EMAIL_ENV_VAR]: CAPTAIN_EMAIL,
-        SCENEAXI_ADMIN_EMAILS: CAPTAIN_EMAIL,
-      }),
-    );
-    expect(observed.size).toBeGreaterThan(0);
-  });
-
-  it("reaches every wiring and request refusal", async () => {
-    record(await port({ adapter: undefined }).signIn(CREDENTIALS));
-    record(await port({ store: undefined }).signIn(CREDENTIALS));
-    record(await port({ admin: undefined }).signIn(CREDENTIALS));
-    record(await port({ clock: undefined }).signIn(CREDENTIALS));
-    record(await port().signIn({ ...CREDENTIALS, extra: 1 }));
-    record(await port().signIn({ ...CREDENTIALS, role: "admin" }));
-    record(await port().signIn({ ...CREDENTIALS, surface: "mobile" }));
-    record(await port().signIn({ ...CREDENTIALS, surface: "kids" }));
-    expect(observed.size).toBeGreaterThan(5);
-  });
-
-  it("reaches every adapter and store refusal", async () => {
-    record(await port().signIn({ ...CREDENTIALS, password: "wrong" }));
-    record(
-      await port({
-        adapter: Object.freeze({
-          authenticate() {
-            throw new Error("provider down");
-          },
-        }),
-      }).signIn(CREDENTIALS),
-    );
-    record(
-      await port({
-        adapter: Object.freeze({ authenticate: () => ({}) as never }),
-      }).signIn(CREDENTIALS),
-    );
-    record(
-      await port({
-        adapter: Object.freeze({
-          authenticate: () => ({
-            user: {
-              id: "usr_imposter",
-              email: "crew@example.com",
-              emailVerified: true,
-            },
-            session: {
-              id: "ses_x",
-              token: "t",
-              userId: "usr_imposter",
-              expiresAt: "2026-07-26T10:00:00Z",
-            },
-          }),
-        }),
-      }).signIn(CREDENTIALS),
-    );
-    record(
-      await port(
-        {},
-        Object.freeze({
-          findUserByEmail: () => user("usr_crew", CAPTAIN_EMAIL),
-          findUserById: () => undefined,
-          putSession: () => undefined,
-          findSession: () => undefined,
-          deleteSession: () => true,
-        }),
-      ).signIn(CREDENTIALS),
-    );
-    record(await port({}, throwingStore).signIn(CREDENTIALS));
-    record(
-      await port({}, createInMemoryIdentityStore({ users: [] })).signIn(
-        CREDENTIALS,
-      ),
-    );
-    record(
-      await port().signIn({ ...CREDENTIALS, email: "gone@example.com" }),
-    );
-    record(
-      await port(
-        {
-          adapter: Object.freeze({
-            authenticate: () => ({
-              user: {
-                id: "usr_captain",
-                email: CAPTAIN_EMAIL,
-                emailVerified: false,
-              },
-              session: {
-                id: "ses_unverified_admin",
-                token: "tok",
-                userId: "usr_captain",
-                expiresAt: "2026-07-26T10:00:00Z",
-              },
-            }),
-          }),
-        },
-        createInMemoryIdentityStore({
-          users: [user("usr_captain", CAPTAIN_EMAIL)],
-        }),
-      ).signIn({
-        surface: "web-shell",
-        email: CAPTAIN_EMAIL,
-        password: "pw",
-      }),
-    );
-  });
-
-  it("reaches every session-verification refusal", async () => {
-    const store = createInMemoryIdentityStore({ users: [CREW] });
-    const live = port({}, store);
-    const signedIn = await live.signIn(CREDENTIALS);
-    expect(signedIn.ok).toBe(true);
-    if (!signedIn.ok) return;
-    const sessionId = signedIn.value.principal.session.sessionId;
-
-    record(
-      await live.verifySession({
-        surface: "web-shell",
-        sessionId: "ses_missing",
-        token: "tok",
-      }),
-    );
-    record(
-      await live.verifySession({
-        surface: "web-shell",
-        sessionId,
-        token: "wrong",
-      }),
-    );
-    record(
-      await live.verifySession({ surface: "site", sessionId, token: "tok" }),
-    );
-    record(
-      await port(
-        { clock: () => Date.parse("2026-07-28T10:00:00Z") },
-        store,
-      ).verifySession({ surface: "web-shell", sessionId, token: "tok" }),
-    );
-
-    const corrupt: IdentityStore = Object.freeze({
-      findUserByEmail: () => undefined,
-      findUserById: () => CREW,
-      putSession: () => undefined,
-      findSession: () => ({ sessionId: "ses_bad" }) as never,
-      deleteSession: () => true,
-    });
-    record(
-      await port({}, corrupt).verifySession({
-        surface: "web-shell",
-        sessionId: "ses_bad",
-        token: "tok",
-      }),
-    );
-
-    const kidsStore = createInMemoryIdentityStore({
-      users: [CREW],
-      sessions: [
-        {
-          schemaVersion: 1,
-          kind: "sceneaxi.session",
-          sessionId: "ses_kids",
-          userId: "usr_crew",
-          surface: "kids",
-          issuedAt: "2026-07-25T09:00:00Z",
-          expiresAt: "2026-07-26T10:00:00Z",
-          tokenDigest: digestSessionToken("tok"),
-        } as never,
-      ],
-    });
-    record(
-      await port({}, kidsStore).verifySession({
-        surface: "web-shell",
-        sessionId: "ses_kids",
-        token: "tok",
-      }),
-    );
-
-    const badUserStore: IdentityStore = Object.freeze({
-      findUserByEmail: () => undefined,
-      findUserById: () => ({ userId: "usr_crew" }) as never,
-      putSession: () => undefined,
-      findSession: () =>
-        ({
-          schemaVersion: 1,
-          kind: "sceneaxi.session",
-          sessionId: "ses_01",
-          userId: "usr_crew",
-          surface: "web-shell",
-          issuedAt: "2026-07-25T09:00:00Z",
-          expiresAt: "2026-07-26T10:00:00Z",
-          tokenDigest: digestSessionToken("tok"),
-        }) as never,
-      deleteSession: () => true,
-    });
-    record(
-      await port({}, badUserStore).verifySession({
-        surface: "web-shell",
-        sessionId: "ses_01",
-        token: "tok",
-      }),
-    );
-  });
-
-  it("reaches every guard refusal", () => {
-    record(requireRole(undefined, "admin", { now: NOW, admin }));
-    const issued = principal();
-    if (typeof issued !== "object" || issued === null) throw new Error("fixture");
-    record(requireRole({ ...issued }, "user", { now: NOW, admin }));
-    record(requireRole(principal(), "superadmin" as never, { now: NOW, admin }));
-    record(requireRole(principal(), "admin", { now: NOW, admin }));
-    record(requireRole(principal({ disabled: true }), "user", { now: NOW, admin }));
-    record(
-      requireRole(principal({ expiresAt: "2026-07-25T09:30:00Z" }), "user", {
-        now: NOW,
-        admin,
-      }),
-    );
-    record(
-      requireRole(principal({ surface: "site" }), "user", {
-        now: NOW,
-        surface: "web-shell",
-        admin,
-      }),
-    );
-    record(requireRole(principal({ surface: "kids" }), "user", { now: NOW, admin }));
-    record(requireRole(principal(), "user", { now: Number.NaN, admin }));
-    record(
-      requireRole(principal(), "user", {
-        now: NOW,
-        admin: undefined as never,
-      }),
-    );
-    // Right shape, wrong provenance: a copy of the resolved identity is a
-    // different object, so it cannot decide who is admin.
-    record(
-      requireRole(principal(), "admin", { now: NOW, admin: { ...admin } }),
-    );
-  });
-
-  it("reaches the bootstrap refusals", () => {
-    record(
-      planAdminBootstrap({
-        env: { [ADMIN_EMAIL_ENV_VAR]: CAPTAIN_EMAIL },
-        users: [],
-        now: NOW,
-      }),
-    );
-    record(
-      planAdminBootstrap({
-        env: { [ADMIN_EMAIL_ENV_VAR]: CAPTAIN_EMAIL },
-        users: [
-          user("usr_a", CAPTAIN_EMAIL),
-          user("usr_b", CAPTAIN_EMAIL),
-        ],
-        now: NOW,
-      }),
-    );
-    record(
-      planAdminBootstrap({
-        env: { [ADMIN_EMAIL_ENV_VAR]: CAPTAIN_EMAIL },
-        users: [user("usr_a", CAPTAIN_EMAIL, true)],
-        now: NOW,
-      }),
-    );
-  });
-});
-
-describe("billing refuse matrix", () => {
-  it("reaches every ledger refusal", () => {
-    const state = funded(100);
-    const base = {
-      entryId: "ent_x",
-      movement: "grant" as const,
-      delta: 10,
-      reason: "case",
-      idempotencyKey: "case:1",
-      now: NOW,
-    };
-    record(appendCreditEntry(null, base));
-    record(appendCreditEntry(state, null));
-    record(appendCreditEntry(state, { ...base, now: Number.NaN }));
-    record(appendCreditEntry(state, { ...base, delta: -1 }));
-    record(
-      appendCreditEntry(state, {
-        ...base,
-        movement: "debit",
-        delta: -1_000,
-        idempotencyKey: "case:over",
-      }),
-    );
-    record(
-      appendCreditEntry(state, {
-        ...base,
-        idempotencyKey: "fixture:fund",
-        delta: 999,
-      }),
-    );
-    record(deriveBalance("not an array"));
-    record(deriveBalance([{ nope: true }]));
-    const first = state.entries[0];
-    if (first !== undefined) {
-      record(deriveBalance([{ ...first, sequence: 9 }]));
-    }
-  });
-
-  it("reaches every metering refusal", async () => {
-    const state = funded(10);
-    const store = createInMemoryCreditStore({
-      accounts: [state.account],
-      entries: state.entries,
-    });
-    const meter = async (overrides: Record<string, unknown>) =>
-      record(
-        await meterCredits({
-          principal: principal(),
-          admin,
-          store,
-          state,
-          amount: 1,
-          reason: "case",
-          idempotencyKey: "case:meter",
-          now: NOW,
-          ...overrides,
-        } as never),
-      );
-    await meter({ now: Number.NaN, admin });
-    await meter({ amount: 0 });
-    await meter({ reason: "" });
-    await meter({ state: { entries: [] } });
-    await meter({ principal: principal({ userId: "usr_other" }) });
-    await meter({ amount: 1_000 });
-  });
-
-  it("reaches every hosted-AI routing refusal", async () => {
-    const state = funded(100);
-    const hosted = async (overrides: Record<string, unknown>) =>
-      record(
-        await runMeteredModelCall({
-          route: "hosted",
-          capability: "hosted-ai-assistant",
-          call: () => ({ text: "case" }),
-          now: NOW,
-          hostedAi: { enabled: true },
-          admin,
-          principal: principal(),
-          state,
-          store: createInMemoryCreditStore({
-            accounts: [state.account],
-            entries: state.entries,
-          }),
-          creditAmount: 1,
-          reason: "case",
-          idempotencyKey: "case:hosted",
-          ...overrides,
-        } as never),
-      );
-    await hosted({ route: "not-a-route" });
-    await hosted({ hostedAi: HOSTED_AI_DEFAULT_CONFIG });
-    await hosted({
-      call: () => {
-        throw new Error("provider down");
-      },
-    });
-  });
-
-  it("reaches every entitlement refusal", () => {
-    record(evaluateEntitlement({ capability: "nope", now: NOW }));
-    record(evaluateEntitlement({ capability: "cli-authoring", now: Number.NaN }));
-    record(
-      evaluateEntitlement({
-        capability: "engine-sdk-download",
-        now: NOW,
-        surface: "kids",
-      }),
-    );
-    record(evaluateEntitlement({ capability: "hosted-ai-assistant", now: NOW }));
-    record(
-      evaluateEntitlement({
-        capability: "catalog-asset-purchase",
-        now: NOW,
-        principal: principal(),
-        admin,
-      }),
-    );
-    record(
-      evaluateEntitlement({
-        capability: "hosted-ai-assistant",
-        now: NOW,
-        principal: principal(),
-        admin,
-        state: funded(10),
-      }),
-    );
-    record(
-      evaluateEntitlement({
-        capability: "hosted-ai-assistant",
-        now: NOW,
-        principal: principal(),
-        admin,
-        creditAmount: 5,
-      }),
-    );
-    record(
-      evaluateEntitlement({
-        capability: "hosted-ai-assistant",
-        now: NOW,
-        principal: principal({ userId: "usr_other" }),
-        admin,
-        state: funded(100),
-        creditAmount: 5,
-      }),
-    );
-    record(
-      grantStarterCredits({
-        state: funded(0),
-        userId: "usr_other",
-        now: NOW,
-      }),
-    );
-    record(
-      grantStarterCredits({ state: funded(0), userId: "", now: NOW }),
-    );
-  });
-
-  it("reaches every credit-pack and checkout refusal", () => {
-    record(lookupCreditPack({ packs: [] }, "starter"));
-    record(lookupCreditPack(packCatalog(), "platinum"));
-    record(resolveCreditPackRevision("starter", "price_test_unknown", 500));
-    record(assertModeAuthorized("barter" as never, true));
-
-    const request = {
-      principal: principal(),
-      admin,
-      catalog: packCatalog(),
-      packId: "starter",
-      successUrl: "https://sceneaxi.example/ok",
-      cancelUrl: "https://sceneaxi.example/no",
-      idempotencyKey: "checkout:case",
-      now: NOW,
-    };
-    record(createCheckoutSessionIntent({ ...request, now: Number.NaN }));
-    record(createCheckoutSessionIntent({ ...request, principal: null }));
-    record(
-      createCheckoutSessionIntent({
-        ...request,
-        successUrl: "http://sceneaxi.example/ok",
-      }),
-    );
-    record(createCheckoutSessionIntent({ ...request, mode: "live" }));
-    record(createCheckoutSessionIntent(null as never));
-  });
-
-  it("reaches every webhook refusal", async () => {
-    const packIntent = createCheckoutSessionIntent({
-      principal: principal(),
-      admin,
-      catalog: packCatalog(),
-      packId: "starter",
-      successUrl: "https://sceneaxi.example/ok",
-      cancelUrl: "https://sceneaxi.example/no",
-      idempotencyKey: "checkout:case",
-      now: NOW,
-    });
-    expect(packIntent.ok).toBe(true);
-    if (!packIntent.ok) return;
-    const body = JSON.stringify({
-      id: "evt_case",
-      type: "checkout.session.completed",
-      created: NOW_SECONDS,
-      livemode: false,
-      data: {
-        object: {
-          id: sessionIdFor(packIntent.value),
-          payment_status: "paid",
-          amount_total: packIntent.value.unitAmount,
-          currency: packIntent.value.currency,
-          line_items: {
-            data: [
-              {
-                quantity: 1,
-                price: { id: packIntent.value.stripePriceId },
-              },
-            ],
-          },
-          metadata: {
-            [CHECKOUT_METADATA_KEYS.userId]: "usr_crew",
-            [CHECKOUT_METADATA_KEYS.purpose]: "credit-pack",
-            [CHECKOUT_METADATA_KEYS.itemId]: "starter",
-            [CHECKOUT_METADATA_KEYS.intentId]: packIntent.value.intentId,
-          },
-        },
-      },
-    });
-    const header = signStripeWebhookPayload({
-      payload: body,
-      secret: SECRET,
-      timestamp: NOW_SECONDS,
-    });
-
-    record(
-      verifyStripeWebhookSignature({
-        payload: body,
-        header,
-        secret: "",
-        now: NOW,
-      }),
-    );
-    record(
-      verifyStripeWebhookSignature({
-        payload: body,
-        header,
-        secret: SECRET,
-        now: Number.NaN,
-      }),
-    );
-    record(
-      verifyStripeWebhookSignature({
-        payload: body,
-        header: "",
-        secret: SECRET,
-        now: NOW,
-      }),
-    );
-    record(
-      verifyStripeWebhookSignature({
-        payload: body,
-        header: "garbage",
-        secret: SECRET,
-        now: NOW,
-      }),
-    );
-    record(
-      verifyStripeWebhookSignature({
-        payload: body,
-        header: `t=${NOW_SECONDS},v0=abc`,
-        secret: SECRET,
-        now: NOW,
-      }),
-    );
-    record(
-      verifyStripeWebhookSignature({
-        payload: body,
-        header: signStripeWebhookPayload({
-          payload: body,
-          secret: SECRET,
-          timestamp: NOW_SECONDS - 10_000,
-        }),
-        secret: SECRET,
-        now: NOW,
-      }),
-    );
-    record(
-      verifyStripeWebhookSignature({
-        payload: body,
-        header: signStripeWebhookPayload({
-          payload: body,
-          secret: SECRET,
-          timestamp: NOW_SECONDS + 10_000,
-        }),
-        secret: SECRET,
-        now: NOW,
-      }),
-    );
-    record(
-      verifyStripeWebhookSignature({
-        payload: `${body} `,
-        header,
-        secret: SECRET,
-        now: NOW,
-      }),
-    );
-    record(
-      verifyStripeWebhookSignature({
-        payload: { id: "evt" } as never,
-        header,
-        secret: SECRET,
-        now: NOW,
-      }),
-    );
-
-    record(
-      parseCheckoutCompletedEvent({
-        verified: verifyBody("not json"),
-        intent: packIntent.value,
-        settlement: settlementFor(packIntent.value),
-      }),
-    );
-    record(
-      parseCheckoutCompletedEvent({
-        verified: verifyBody(
-          JSON.stringify({ type: "payment_intent.succeeded" }),
-        ),
-        intent: packIntent.value,
-        settlement: settlementFor(packIntent.value),
-      }),
-    );
-
-    // The session object carries no id, so nothing can say which paid session
-    // this event is about.
-    record(
-      parseCheckoutCompletedEvent({
-        verified: verifyBody(
-          JSON.stringify({
-            id: "evt_no_session",
+    const parsed = parseCheckoutCompletedEvent({
+        verified: verifyBody(JSON.stringify({
+            id: `evt_case_${listingId}`,
             type: "checkout.session.completed",
             created: NOW_SECONDS,
             livemode: false,
-            data: { object: { metadata: {} } },
-          }),
-        ),
-        intent: packIntent.value,
-        settlement: settlementFor(packIntent.value),
-      }),
-    );
-    // Settlement for a *different* paid session, matching on every other field.
-    record(
-      parseCheckoutCompletedEvent({
-        verified: verifyBody(body),
-        intent: packIntent.value,
-        settlement: {
-          ...settlementFor(packIntent.value),
-          sessionId: "cs_some_other_paid_session",
-        },
-      }),
-    );
+            data: {
+                object: {
+                    id: sessionIdFor(intent),
+                    metadata: {
+                        [CHECKOUT_METADATA_KEYS.userId]: intent.userId,
+                        [CHECKOUT_METADATA_KEYS.purpose]: intent.purpose,
+                        [CHECKOUT_METADATA_KEYS.itemId]: intent.itemId,
+                        [CHECKOUT_METADATA_KEYS.intentId]: intent.intentId,
+                    },
+                },
+            },
+        })),
+        intent,
+        settlement: settlementFor(intent),
+    });
 
-    record(await persistCreditPackChargeEvent({
-      verified: verifyBody(JSON.stringify({
-        id: "evt_dispute_mismatch", type: "charge.dispute.created", created: NOW_SECONDS, livemode: false,
-        data: { object: { id: "dp_case", charge: "ch_expected", amount: 500, currency: "usd", status: "needs_response" } },
-      })),
-      intent: packIntent.value,
-      charge: { id: "ch_other" },
-      store: createInMemoryCreditStore(),
-      now: NOW,
-    }));
+    if (!parsed.ok) {
+        throw new Error(`fixture completion failed: ${parsed.message}`);
+    }
 
-    // A refund bound to this exact intent that returns only part of the price. It is
-    // well-formed, so it is not a payload refusal; the ledger simply never partially
-    // reverses a grant.
-    record(
-      parseCreditPackRefundEvent({
-        verified: verifyBody(
-          JSON.stringify({
-            id: "evt_partial_refund",
-            type: "charge.refunded",
+    return parsed.value;
+};
+
+const ADAPTER: IdentityAdapter = Object.freeze({
+    authenticate({ email, password }) {
+        if (password !== "pw")
+            return undefined;
+        const userId = email === "gone@example.com" ? "usr_gone" : "usr_crew";
+
+        return {
+            user: { id: userId, email, emailVerified: true },
+            session: {
+                id: `ses_${userId}`,
+                token: "tok",
+                userId,
+                expiresAt: "2026-07-26T10:00:00Z",
+            },
+        };
+    },
+});
+
+const port = (overrides: Partial<Parameters<typeof createIdentityPort>[0]> = {}, store: IdentityStore = createInMemoryIdentityStore({ users: [CREW, GONE] })) => createIdentityPort({ adapter: ADAPTER, store, admin, clock, ...overrides });
+
+const CREDENTIALS = {
+    surface: "web-shell",
+    email: "crew@example.com",
+    password: "pw",
+} as const;
+
+const throwingStore: IdentityStore = Object.freeze({
+    findUserByEmail() {
+        throw new Error("db down");
+    },
+    findUserById: () => undefined,
+    putSession: () => undefined,
+    findSession: () => undefined,
+    deleteSession: () => true,
+});
+
+describe("auth refuse matrix", () => {
+    it("reaches every admin-resolution refusal", () => {
+        record(resolveAdminIdentity({}));
+        record(resolveAdminIdentity({ [ADMIN_EMAIL_ENV_VAR]: "  " }));
+        record(resolveAdminIdentity({ [ADMIN_EMAIL_ENV_VAR]: "nope" }));
+        record(resolveAdminIdentity({ [ADMIN_EMAIL_ENV_VAR]: "a@b.co,c@d.co" }));
+        record(resolveAdminIdentity({
+            [ADMIN_EMAIL_ENV_VAR]: CAPTAIN_EMAIL,
+            SCENEAXI_ADMIN_EMAILS: CAPTAIN_EMAIL,
+        }));
+        expect(observed.size).toBeGreaterThan(0);
+    });
+    it("reaches every wiring and request refusal", async () => {
+        record(await port({ adapter: undefined }).signIn(CREDENTIALS));
+        record(await port({ store: undefined }).signIn(CREDENTIALS));
+        record(await port({ admin: undefined }).signIn(CREDENTIALS));
+        record(await port({ clock: undefined }).signIn(CREDENTIALS));
+        record(await port().signIn({ ...CREDENTIALS, extra: 1 }));
+        record(await port().signIn({ ...CREDENTIALS, role: "admin" }));
+        record(await port().signIn({ ...CREDENTIALS, surface: "mobile" }));
+        record(await port().signIn({ ...CREDENTIALS, surface: "kids" }));
+        expect(observed.size).toBeGreaterThan(5);
+    });
+    it("reaches every adapter and store refusal", async () => {
+        record(await port().signIn({ ...CREDENTIALS, password: "wrong" }));
+        record(await port({
+            adapter: Object.freeze({
+                authenticate() {
+                    throw new Error("provider down");
+                },
+            }),
+        }).signIn(CREDENTIALS));
+        // SAFETY: This faithful failing provider/store returns the deliberately malformed literal constructed here; the real identity port validates its response and must record the named refusal.
+        record(await port({
+            adapter: Object.freeze({ authenticate: () => ({}) as never }),
+        }).signIn(CREDENTIALS));
+        record(await port({
+            adapter: Object.freeze({
+                authenticate: () => ({
+                    user: {
+                        id: "usr_imposter",
+                        email: "crew@example.com",
+                        emailVerified: true,
+                    },
+                    session: {
+                        id: "ses_x",
+                        token: "t",
+                        userId: "usr_imposter",
+                        expiresAt: "2026-07-26T10:00:00Z",
+                    },
+                }),
+            }),
+        }).signIn(CREDENTIALS));
+        record(await port({}, Object.freeze({
+            findUserByEmail: () => user("usr_crew", CAPTAIN_EMAIL),
+            findUserById: () => undefined,
+            putSession: () => undefined,
+            findSession: () => undefined,
+            deleteSession: () => true,
+        })).signIn(CREDENTIALS));
+        record(await port({}, throwingStore).signIn(CREDENTIALS));
+        record(await port({}, createInMemoryIdentityStore({ users: [] })).signIn(CREDENTIALS));
+        record(await port().signIn({ ...CREDENTIALS, email: "gone@example.com" }));
+        record(await port({
+            adapter: Object.freeze({
+                authenticate: () => ({
+                    user: {
+                        id: "usr_captain",
+                        email: CAPTAIN_EMAIL,
+                        emailVerified: false,
+                    },
+                    session: {
+                        id: "ses_unverified_admin",
+                        token: "tok",
+                        userId: "usr_captain",
+                        expiresAt: "2026-07-26T10:00:00Z",
+                    },
+                }),
+            }),
+        }, createInMemoryIdentityStore({
+            users: [user("usr_captain", CAPTAIN_EMAIL)],
+        })).signIn({
+            surface: "web-shell",
+            email: CAPTAIN_EMAIL,
+            password: "pw",
+        }));
+    });
+    it("reaches every session-verification refusal", async () => {
+        const store = createInMemoryIdentityStore({ users: [CREW] });
+        const live = port({}, store);
+        const signedIn = await live.signIn(CREDENTIALS);
+        expect(signedIn.ok).toBe(true);
+
+        if (!signedIn.ok)
+            return;
+        const sessionId = signedIn.value.principal.session.sessionId;
+        record(await live.verifySession({
+            surface: "web-shell",
+            sessionId: "ses_missing",
+            token: "tok",
+        }));
+        record(await live.verifySession({
+            surface: "web-shell",
+            sessionId,
+            token: "wrong",
+        }));
+        record(await live.verifySession({ surface: "site", sessionId, token: "tok" }));
+        record(await port({ clock: () => Date.parse("2026-07-28T10:00:00Z") }, store).verifySession({ surface: "web-shell", sessionId, token: "tok" }));
+
+        // SAFETY: This faithful failing provider/store returns the deliberately malformed literal constructed here; the real identity port validates its response and must record the named refusal.
+        const corrupt: IdentityStore = Object.freeze({
+            findUserByEmail: () => undefined,
+            findUserById: () => CREW,
+            putSession: () => undefined,
+            findSession: () => ({ sessionId: "ses_bad" }) as never,
+            deleteSession: () => true,
+        });
+
+        record(await port({}, corrupt).verifySession({
+            surface: "web-shell",
+            sessionId: "ses_bad",
+            token: "tok",
+        }));
+
+        // SAFETY: The session literal intentionally names the forbidden Kids surface so the real identity port exercises its surface refusal before issuing a principal.
+        const kidsStore = createInMemoryIdentityStore({
+            users: [CREW],
+            sessions: [
+                {
+                    schemaVersion: 1,
+                    kind: "sceneaxi.session",
+                    sessionId: "ses_kids",
+                    userId: "usr_crew",
+                    surface: "kids",
+                    issuedAt: "2026-07-25T09:00:00Z",
+                    expiresAt: "2026-07-26T10:00:00Z",
+                    tokenDigest: digestSessionToken("tok"),
+                } as never,
+            ],
+        });
+
+        record(await port({}, kidsStore).verifySession({
+            surface: "web-shell",
+            sessionId: "ses_kids",
+            token: "tok",
+        }));
+
+        // SAFETY: This faithful failing provider/store returns the deliberately malformed literal constructed here; the real identity port validates its response and must record the named refusal.
+        const badUserStore: IdentityStore = Object.freeze({
+            findUserByEmail: () => undefined,
+            findUserById: () => ({ userId: "usr_crew" }) as never,
+            putSession: () => undefined,
+            findSession: () => ({
+                schemaVersion: 1,
+                kind: "sceneaxi.session",
+                sessionId: "ses_01",
+                userId: "usr_crew",
+                surface: "web-shell",
+                issuedAt: "2026-07-25T09:00:00Z",
+                expiresAt: "2026-07-26T10:00:00Z",
+                tokenDigest: digestSessionToken("tok"),
+            }) as never,
+            deleteSession: () => true,
+        });
+
+        record(await port({}, badUserStore).verifySession({
+            surface: "web-shell",
+            sessionId: "ses_01",
+            token: "tok",
+        }));
+    });
+    it("reaches every guard refusal", () => {
+        record(requireRole(undefined, "admin", { now: NOW, admin }));
+        const issued = principal();
+
+        if (!isObject(issued))
+            throw new Error("fixture");
+        record(requireRole({ ...issued }, "user", { now: NOW, admin }));
+        // SAFETY: The literal "superadmin" is deliberately outside the allowed contract for this refusal case; it is only passed to the runtime validation boundary, not used as an accepted domain value.
+        record(requireRole(principal(), "superadmin" as never, { now: NOW, admin }));
+        record(requireRole(principal(), "admin", { now: NOW, admin }));
+        record(requireRole(principal({ disabled: true }), "user", { now: NOW, admin }));
+        record(requireRole(principal({ expiresAt: "2026-07-25T09:30:00Z" }), "user", {
+            now: NOW,
+            admin,
+        }));
+        record(requireRole(principal({ surface: "site" }), "user", {
+            now: NOW,
+            surface: "web-shell",
+            admin,
+        }));
+        record(requireRole(principal({ surface: "kids" }), "user", { now: NOW, admin }));
+        record(requireRole(principal(), "user", { now: Number.NaN, admin }));
+        // SAFETY: This case deliberately injects undefined into a required input; the runtime boundary must return the named refusal recorded below.
+        record(requireRole(principal(), "user", {
+            now: NOW,
+            admin: undefined as never,
+        }));
+        // Right shape, wrong provenance: a copy of the resolved identity is a
+        // different object, so it cannot decide who is admin.
+        record(requireRole(principal(), "admin", { now: NOW, admin: { ...admin } }));
+    });
+    it("reaches the bootstrap refusals", () => {
+        record(planAdminBootstrap({
+            env: { [ADMIN_EMAIL_ENV_VAR]: CAPTAIN_EMAIL },
+            users: [],
+            now: NOW,
+        }));
+        record(planAdminBootstrap({
+            env: { [ADMIN_EMAIL_ENV_VAR]: CAPTAIN_EMAIL },
+            users: [
+                user("usr_a", CAPTAIN_EMAIL),
+                user("usr_b", CAPTAIN_EMAIL),
+            ],
+            now: NOW,
+        }));
+        record(planAdminBootstrap({
+            env: { [ADMIN_EMAIL_ENV_VAR]: CAPTAIN_EMAIL },
+            users: [user("usr_a", CAPTAIN_EMAIL, true)],
+            now: NOW,
+        }));
+    });
+});
+
+describe("billing refuse matrix", () => {
+    it("reaches every ledger refusal", () => {
+        const state = funded(100);
+
+        const base = {
+            entryId: "ent_x",
+            movement: "grant" as const,
+            delta: 10,
+            reason: "case",
+            idempotencyKey: "case:1",
+            now: NOW,
+        };
+
+        record(appendCreditEntry(null, base));
+        record(appendCreditEntry(state, null));
+        record(appendCreditEntry(state, { ...base, now: Number.NaN }));
+        record(appendCreditEntry(state, { ...base, delta: -1 }));
+        record(appendCreditEntry(state, {
+            ...base,
+            movement: "debit",
+            delta: -1000,
+            idempotencyKey: "case:over",
+        }));
+        record(appendCreditEntry(state, {
+            ...base,
+            idempotencyKey: "fixture:fund",
+            delta: 999,
+        }));
+        record(deriveBalance("not an array"));
+        record(deriveBalance([{ nope: true }]));
+        const first = state.entries[0];
+
+        if (first !== undefined) {
+            record(deriveBalance([{ ...first, sequence: 9 }]));
+        }
+    });
+    it("reaches every metering refusal", async () => {
+        const state = funded(10);
+
+        const store = createInMemoryCreditStore({
+            accounts: [state.account],
+            entries: state.entries,
+        });
+
+        // SAFETY: The fixture starts with a real principal, admin and funded ledger; the explicit table overrides deliberately invalidate one metering input so meterCredits can record its refusal.
+        const meter = async (overrides: RefusalOverrides) => record(await meterCredits({
+            principal: principal(),
+            admin,
+            store,
+            state,
+            amount: 1,
+            reason: "case",
+            idempotencyKey: "case:meter",
+            now: NOW,
+            ...overrides,
+        } as never));
+
+        await meter({ now: Number.NaN, admin });
+        await meter({ amount: 0 });
+        await meter({ reason: "" });
+        await meter({ state: { entries: [] } });
+        await meter({ principal: principal({ userId: "usr_other" }) });
+        await meter({ amount: 1000 });
+    });
+    it("reaches every hosted-AI routing refusal", async () => {
+        const state = funded(100);
+
+        // SAFETY: The fixture starts with a real principal, admin and configured pricing policy; each explicit override exercises runMeteredModelCall runtime refusal without trusting the invalid field.
+        const hosted = async (overrides: RefusalOverrides) => record(await runMeteredModelCall({
+            route: "hosted",
+            capability: "hosted-ai-assistant",
+            call: () => ({ text: "case" }),
+            now: NOW,
+            hostedAi: { enabled: true, pricing: createHostedAiPricingPolicy([{ model: "fixture/model", operation: "complete", capability: "hosted-ai-assistant", credits: 1 }]) },
+            model: "fixture/model",
+            operation: "complete",
+            admin,
+            principal: principal(),
+            state,
+            store: createInMemoryCreditStore({
+                accounts: [state.account],
+                entries: state.entries,
+            }),
+            creditAmount: 1,
+            reason: "case",
+            idempotencyKey: "case:hosted",
+            ...overrides,
+        } as never));
+
+        await hosted({ route: "not-a-route" });
+        await hosted({ hostedAi: HOSTED_AI_DEFAULT_CONFIG });
+        await hosted({
+            call: () => {
+                throw new Error("provider down");
+            },
+        });
+    });
+    it("reaches every entitlement refusal", () => {
+        record(evaluateEntitlement({ capability: "nope", now: NOW }));
+        record(evaluateEntitlement({ capability: "cli-authoring", now: Number.NaN }));
+        record(evaluateEntitlement({
+            capability: "engine-sdk-download",
+            now: NOW,
+            surface: "kids",
+        }));
+        record(evaluateEntitlement({ capability: "hosted-ai-assistant", now: NOW }));
+        record(evaluateEntitlement({
+            capability: "catalog-asset-purchase",
+            now: NOW,
+            principal: principal(),
+            admin,
+        }));
+        record(evaluateEntitlement({
+            capability: "hosted-ai-assistant",
+            now: NOW,
+            principal: principal(),
+            admin,
+            state: funded(10),
+        }));
+        record(evaluateEntitlement({
+            capability: "hosted-ai-assistant",
+            now: NOW,
+            principal: principal(),
+            admin,
+            creditAmount: 5,
+        }));
+        record(evaluateEntitlement({
+            capability: "hosted-ai-assistant",
+            now: NOW,
+            principal: principal({ userId: "usr_other" }),
+            admin,
+            state: funded(100),
+            creditAmount: 5,
+        }));
+        record(grantStarterCredits({
+            state: funded(0),
+            userId: "usr_other",
+            now: NOW,
+        }));
+        record(grantStarterCredits({ state: funded(0), userId: "", now: NOW }));
+    });
+    it("reaches every credit-pack and checkout refusal", () => {
+        record(lookupCreditPack({ packs: [] }, "starter"));
+        record(lookupCreditPack(packCatalog(), "platinum"));
+        record(resolveCreditPackRevision("starter", "price_test_unknown", 500));
+        // SAFETY: The literal "barter" is deliberately outside the allowed contract for this refusal case; it is only passed to the runtime validation boundary, not used as an accepted domain value.
+        record(assertModeAuthorized("barter" as never, true));
+
+        const request = {
+            principal: principal(),
+            admin,
+            catalog: packCatalog(),
+            packId: "starter",
+            successUrl: "https://sceneaxi.example/ok",
+            cancelUrl: "https://sceneaxi.example/no",
+            idempotencyKey: "checkout:case",
+            now: NOW,
+        };
+
+        record(createCheckoutSessionIntent({ ...request, now: Number.NaN }));
+        record(createCheckoutSessionIntent({ ...request, principal: null }));
+        record(createCheckoutSessionIntent({
+            ...request,
+            successUrl: "http://sceneaxi.example/ok",
+        }));
+        record(createCheckoutSessionIntent({ ...request, mode: "live" }));
+        // SAFETY: This case deliberately injects null into a required input; the runtime boundary must return the named refusal recorded below.
+        record(createCheckoutSessionIntent(null as never));
+    });
+    it("reaches every webhook refusal", async () => {
+        const packIntent = createCheckoutSessionIntent({
+            principal: principal(),
+            admin,
+            catalog: packCatalog(),
+            packId: "starter",
+            successUrl: "https://sceneaxi.example/ok",
+            cancelUrl: "https://sceneaxi.example/no",
+            idempotencyKey: "checkout:case",
+            now: NOW,
+        });
+
+        expect(packIntent.ok).toBe(true);
+
+        if (!packIntent.ok)
+            return;
+
+        const body = JSON.stringify({
+            id: "evt_case",
+            type: "checkout.session.completed",
             created: NOW_SECONDS,
             livemode: false,
             data: {
-              object: {
-                id: "ch_case",
-                refunded: false,
-                amount_refunded: packIntent.value.unitAmount - 1,
-                currency: packIntent.value.currency,
-                metadata: {
-                  [CHECKOUT_METADATA_KEYS.userId]: packIntent.value.userId,
-                  [CHECKOUT_METADATA_KEYS.purpose]: packIntent.value.purpose,
-                  [CHECKOUT_METADATA_KEYS.itemId]: packIntent.value.itemId,
-                  [CHECKOUT_METADATA_KEYS.intentId]: packIntent.value.intentId,
+                object: {
+                    id: sessionIdFor(packIntent.value),
+                    payment_status: "paid",
+                    amount_total: packIntent.value.unitAmount,
+                    currency: packIntent.value.currency,
+                    line_items: {
+                        data: [
+                            {
+                                quantity: 1,
+                                price: { id: packIntent.value.stripePriceId },
+                            },
+                        ],
+                    },
+                    metadata: {
+                        [CHECKOUT_METADATA_KEYS.userId]: "usr_crew",
+                        [CHECKOUT_METADATA_KEYS.purpose]: "credit-pack",
+                        [CHECKOUT_METADATA_KEYS.itemId]: "starter",
+                        [CHECKOUT_METADATA_KEYS.intentId]: packIntent.value.intentId,
+                    },
                 },
-              },
             },
-          }),
-        ),
-        intent: packIntent.value,
-      }),
-    );
+        });
 
-    const harbour = listing("harbour-diorama");
-    const moneyPrice = harbour.moneyPrice;
-    if (moneyPrice === undefined) throw new Error("listing price missing");
-    const listingIntent: CheckoutSessionIntent = {
-      schemaVersion: 1,
-      kind: "sceneaxi.checkout-session-intent",
-      intentId: "int_listing",
-      userId: "usr_crew",
-      purpose: "catalog-listing",
-      itemId: harbour.listingId,
-      unitAmount: moneyPrice.unitAmount,
-      currency: moneyPrice.currency,
-      stripePriceId: moneyPrice.stripePriceId,
-      mode: "test",
-      successUrl: "https://sceneaxi.example/ok",
-      cancelUrl: "https://sceneaxi.example/no",
-      idempotencyKey: "checkout:listing",
-      createdAt: new Date(NOW).toISOString(),
-    };
-    const listingEvent = parseCheckoutCompletedEvent({
-      verified: verifyBody(
-        JSON.stringify({
-          id: "evt_listing",
-          type: "checkout.session.completed",
-          created: NOW_SECONDS,
-          livemode: false,
-          data: {
-            object: {
-              id: sessionIdFor(listingIntent),
-              metadata: {
-                [CHECKOUT_METADATA_KEYS.userId]: "usr_crew",
-                [CHECKOUT_METADATA_KEYS.purpose]: "catalog-listing",
-                [CHECKOUT_METADATA_KEYS.itemId]: "harbour-diorama",
-                [CHECKOUT_METADATA_KEYS.intentId]: "int_listing",
-              },
+        const header = signStripeWebhookPayload({
+            payload: body,
+            secret: SECRET,
+            timestamp: NOW_SECONDS,
+        });
+
+        record(verifyStripeWebhookSignature({
+            payload: body,
+            header,
+            secret: "",
+            now: NOW,
+        }));
+        record(verifyStripeWebhookSignature({
+            payload: body,
+            header,
+            secret: SECRET,
+            now: Number.NaN,
+        }));
+        record(verifyStripeWebhookSignature({
+            payload: body,
+            header: "",
+            secret: SECRET,
+            now: NOW,
+        }));
+        record(verifyStripeWebhookSignature({
+            payload: body,
+            header: "garbage",
+            secret: SECRET,
+            now: NOW,
+        }));
+        record(verifyStripeWebhookSignature({
+            payload: body,
+            header: `t=${NOW_SECONDS},v0=abc`,
+            secret: SECRET,
+            now: NOW,
+        }));
+        record(verifyStripeWebhookSignature({
+            payload: body,
+            header: signStripeWebhookPayload({
+                payload: body,
+                secret: SECRET,
+                timestamp: NOW_SECONDS - 10000,
+            }),
+            secret: SECRET,
+            now: NOW,
+        }));
+        record(verifyStripeWebhookSignature({
+            payload: body,
+            header: signStripeWebhookPayload({
+                payload: body,
+                secret: SECRET,
+                timestamp: NOW_SECONDS + 10000,
+            }),
+            secret: SECRET,
+            now: NOW,
+        }));
+        record(verifyStripeWebhookSignature({
+            payload: `${body} `,
+            header,
+            secret: SECRET,
+            now: NOW,
+        }));
+        // SAFETY: This case deliberately supplies a non-string payload literal to verifyStripeWebhookSignature, which must validate and refuse it rather than interpret it as verified bytes.
+        record(verifyStripeWebhookSignature({
+            payload: { id: "evt" } as never,
+            header,
+            secret: SECRET,
+            now: NOW,
+        }));
+        record(parseCheckoutCompletedEvent({
+            verified: verifyBody("not json"),
+            intent: packIntent.value,
+            settlement: settlementFor(packIntent.value),
+        }));
+        record(parseCheckoutCompletedEvent({
+            verified: verifyBody(JSON.stringify({ type: "payment_intent.succeeded" })),
+            intent: packIntent.value,
+            settlement: settlementFor(packIntent.value),
+        }));
+        // The session object carries no id, so nothing can say which paid session
+        // this event is about.
+        record(parseCheckoutCompletedEvent({
+            verified: verifyBody(JSON.stringify({
+                id: "evt_no_session",
+                type: "checkout.session.completed",
+                created: NOW_SECONDS,
+                livemode: false,
+                data: { object: { metadata: {} } },
+            })),
+            intent: packIntent.value,
+            settlement: settlementFor(packIntent.value),
+        }));
+        // Settlement for a *different* paid session, matching on every other field.
+        record(parseCheckoutCompletedEvent({
+            verified: verifyBody(body),
+            intent: packIntent.value,
+            settlement: {
+                ...settlementFor(packIntent.value),
+                sessionId: "cs_some_other_paid_session",
             },
-          },
-        }),
-      ),
-      intent: listingIntent,
-      settlement: settlementFor(listingIntent),
-    });
-    expect(listingEvent.ok).toBe(true);
-    if (listingEvent.ok) {
-      // A listing completion grants no credits, so routing it into the grant
-      // path must refuse rather than mint credits nobody bought.
-      record(
-        applyCheckoutCompletedGrant({
-          state: funded(0),
-          completion: listingEvent.value,
-          now: NOW,
-        }),
-      );
-    }
+        }));
+        record(await persistCreditPackChargeEvent({
+            verified: verifyBody(JSON.stringify({
+                id: "evt_dispute_mismatch", type: "charge.dispute.created", created: NOW_SECONDS, livemode: false,
+                data: { object: { id: "dp_case", charge: "ch_expected", amount: 500, currency: "usd", status: "needs_response" } },
+            })),
+            intent: packIntent.value,
+            charge: { id: "ch_other" },
+            store: createInMemoryCreditStore(),
+            now: NOW,
+        }));
+        // A refund bound to this exact intent that returns only part of the price. It is
+        // well-formed, so it is not a payload refusal; the ledger simply never partially
+        // reverses a grant.
+        record(parseCreditPackRefundEvent({
+            verified: verifyBody(JSON.stringify({
+                id: "evt_partial_refund",
+                type: "charge.refunded",
+                created: NOW_SECONDS,
+                livemode: false,
+                data: {
+                    object: {
+                        id: "ch_case",
+                        refunded: false,
+                        amount_refunded: packIntent.value.unitAmount - 1,
+                        currency: packIntent.value.currency,
+                        metadata: {
+                            [CHECKOUT_METADATA_KEYS.userId]: packIntent.value.userId,
+                            [CHECKOUT_METADATA_KEYS.purpose]: packIntent.value.purpose,
+                            [CHECKOUT_METADATA_KEYS.itemId]: packIntent.value.itemId,
+                            [CHECKOUT_METADATA_KEYS.intentId]: packIntent.value.intentId,
+                        },
+                    },
+                },
+            })),
+            intent: packIntent.value,
+        }));
+        const harbour = listing("harbour-diorama");
+        const moneyPrice = harbour.moneyPrice;
 
-    const packEvent = parseCheckoutCompletedEvent({
-      verified: verifyBody(body),
-      intent: packIntent.value,
-      settlement: settlementFor(packIntent.value),
-    });
-    expect(packEvent.ok).toBe(true);
-    if (packEvent.ok) {
-      record(
-        applyCheckoutCompletedGrant({
-          state: funded(0, account("usr_other")),
-          completion: packEvent.value,
-          now: NOW,
-        }),
-      );
-      record(
-        applyCheckoutCompletedGrant({
-          state: { entries: [] } as never,
-          completion: packEvent.value,
-          now: NOW,
-        }),
-      );
-      // A *copy* of a verified completion is not a verified completion, so the
-      // live-mode gate has to be reached with a genuinely parsed live one.
-      record(
-        applyCheckoutCompletedGrant({
-          state: funded(0),
-          completion: { ...packEvent.value } as never,
-          now: NOW,
-        }),
-      );
-    }
+        if (moneyPrice === undefined)
+            throw new Error("listing price missing");
 
-    // The body is genuinely signed and its settlement is bound to the exact
-    // session, but the persisted intent claims an amount the committed archive
-    // never issued. D2 must refuse before the ledger sees an append.
-    const inflatedIntent: CheckoutSessionIntent = {
-      ...packIntent.value,
-      credits: 1_000_000,
-    };
-    const inflatedEvent = parseCheckoutCompletedEvent({
-      verified: verifyBody(body),
-      intent: inflatedIntent,
-      settlement: settlementFor(inflatedIntent),
-    });
-    expect(inflatedEvent.ok).toBe(true);
-    if (inflatedEvent.ok) {
-      record(
-        applyCheckoutCompletedGrant({
-          state: funded(0),
-          completion: inflatedEvent.value,
-          now: NOW,
-        }),
-      );
-    }
+        const listingIntent: CheckoutSessionIntent = {
+            schemaVersion: 1,
+            kind: "sceneaxi.checkout-session-intent",
+            intentId: "int_listing",
+            userId: "usr_crew",
+            purpose: "catalog-listing",
+            itemId: harbour.listingId,
+            unitAmount: moneyPrice.unitAmount,
+            currency: moneyPrice.currency,
+            stripePriceId: moneyPrice.stripePriceId,
+            mode: "test",
+            successUrl: "https://sceneaxi.example/ok",
+            cancelUrl: "https://sceneaxi.example/no",
+            idempotencyKey: "checkout:listing",
+            createdAt: new Date(NOW).toISOString(),
+        };
 
-    const liveIntent: CheckoutSessionIntent = {
-      ...packIntent.value,
-      intentId: "int_live",
-      mode: "live",
-      idempotencyKey: "checkout:live",
-    };
-    const liveEvent = parseCheckoutCompletedEvent({
-      verified: verifyBody(
-        JSON.stringify({
-          id: "evt_live",
-          type: "checkout.session.completed",
-          created: NOW_SECONDS,
-          livemode: true,
-          data: {
-            object: {
-              id: sessionIdFor(liveIntent),
-              metadata: {
-                [CHECKOUT_METADATA_KEYS.userId]: "usr_crew",
-                [CHECKOUT_METADATA_KEYS.purpose]: "credit-pack",
-                [CHECKOUT_METADATA_KEYS.itemId]: "starter",
-                [CHECKOUT_METADATA_KEYS.intentId]: "int_live",
-              },
+        const listingEvent = parseCheckoutCompletedEvent({
+            verified: verifyBody(JSON.stringify({
+                id: "evt_listing",
+                type: "checkout.session.completed",
+                created: NOW_SECONDS,
+                livemode: false,
+                data: {
+                    object: {
+                        id: sessionIdFor(listingIntent),
+                        metadata: {
+                            [CHECKOUT_METADATA_KEYS.userId]: "usr_crew",
+                            [CHECKOUT_METADATA_KEYS.purpose]: "catalog-listing",
+                            [CHECKOUT_METADATA_KEYS.itemId]: "harbour-diorama",
+                            [CHECKOUT_METADATA_KEYS.intentId]: "int_listing",
+                        },
+                    },
+                },
+            })),
+            intent: listingIntent,
+            settlement: settlementFor(listingIntent),
+        });
+
+        expect(listingEvent.ok).toBe(true);
+
+        if (listingEvent.ok) {
+            // A listing completion grants no credits, so routing it into the grant
+            // path must refuse rather than mint credits nobody bought.
+            record(applyCheckoutCompletedGrant({
+                state: funded(0),
+                completion: listingEvent.value,
+                now: NOW,
+            }));
+        }
+
+        const packEvent = parseCheckoutCompletedEvent({
+            verified: verifyBody(body),
+            intent: packIntent.value,
+            settlement: settlementFor(packIntent.value),
+        });
+
+        expect(packEvent.ok).toBe(true);
+
+        if (packEvent.ok) {
+            record(applyCheckoutCompletedGrant({
+                state: funded(0, account("usr_other")),
+                completion: packEvent.value,
+                now: NOW,
+            }));
+            // SAFETY: This case deliberately injects an incomplete or copied non-issued completion/state fixture; applyCheckoutCompletedGrant validates structure and provenance and must refuse it.
+            record(applyCheckoutCompletedGrant({
+                state: { entries: [] } as never,
+                completion: packEvent.value,
+                now: NOW,
+            }));
+            // A *copy* of a verified completion is not a verified completion, so the
+            // live-mode gate has to be reached with a genuinely parsed live one.
+            // SAFETY: This case deliberately injects an incomplete or copied non-issued completion/state fixture; applyCheckoutCompletedGrant validates structure and provenance and must refuse it.
+            record(applyCheckoutCompletedGrant({
+                state: funded(0),
+                completion: { ...packEvent.value } as never,
+                now: NOW,
+            }));
+        }
+
+        // The body is genuinely signed and its settlement is bound to the exact
+        // session, but the persisted intent claims an amount the committed archive
+        // never issued. D2 must refuse before the ledger sees an append.
+        const inflatedIntent: CheckoutSessionIntent = {
+            ...packIntent.value,
+            credits: 1000000,
+        };
+
+        const inflatedEvent = parseCheckoutCompletedEvent({
+            verified: verifyBody(body),
+            intent: inflatedIntent,
+            settlement: settlementFor(inflatedIntent),
+        });
+
+        expect(inflatedEvent.ok).toBe(true);
+
+        if (inflatedEvent.ok) {
+            record(applyCheckoutCompletedGrant({
+                state: funded(0),
+                completion: inflatedEvent.value,
+                now: NOW,
+            }));
+        }
+
+        const liveIntent: CheckoutSessionIntent = {
+            ...packIntent.value,
+            intentId: "int_live",
+            mode: "live",
+            idempotencyKey: "checkout:live",
+        };
+
+        const liveEvent = parseCheckoutCompletedEvent({
+            verified: verifyBody(JSON.stringify({
+                id: "evt_live",
+                type: "checkout.session.completed",
+                created: NOW_SECONDS,
+                livemode: true,
+                data: {
+                    object: {
+                        id: sessionIdFor(liveIntent),
+                        metadata: {
+                            [CHECKOUT_METADATA_KEYS.userId]: "usr_crew",
+                            [CHECKOUT_METADATA_KEYS.purpose]: "credit-pack",
+                            [CHECKOUT_METADATA_KEYS.itemId]: "starter",
+                            [CHECKOUT_METADATA_KEYS.intentId]: "int_live",
+                        },
+                    },
+                },
+            })),
+            intent: liveIntent,
+            settlement: settlementFor(liveIntent),
+        });
+
+        expect(liveEvent.ok).toBe(true);
+
+        if (liveEvent.ok) {
+            record(applyCheckoutCompletedGrant({
+                state: funded(0),
+                completion: liveEvent.value,
+                now: NOW,
+            }));
+        }
+
+        // SAFETY: This case deliberately injects an incomplete or copied non-issued completion/state fixture; applyCheckoutCompletedGrant validates structure and provenance and must refuse it.
+        record(applyCheckoutCompletedGrant({
+            state: funded(0),
+            completion: { eventId: "evt" } as never,
+            now: NOW,
+        }));
+        // SAFETY: This deliberately hand-built verified-event lookalike lacks verifier provenance; parseCheckoutCompletedEvent checks that provenance and the test records its refusal.
+        record(parseCheckoutCompletedEvent({
+            verified: { timestamp: NOW_SECONDS, payload: body } as never,
+            intent: packIntent.value,
+            settlement: settlementFor(packIntent.value),
+        }));
+    });
+    it("reaches every listing refusal", () => {
+        // A listing that exists in the committed set but is not enabled for the
+        // bounded fixture-commerce path (sceneaxi#138).
+        record(resolveFixtureCommerceListing("lantern-prop"));
+        record(lookupCatalogListing({ listings: [] }, "lantern-prop"));
+        // SAFETY: The literal "barter" is deliberately outside the allowed contract for this refusal case; it is only passed to the runtime validation boundary, not used as an accepted domain value.
+        record(assertCurrencyListed(listing("lantern-prop"), "barter" as never));
+        const loaded = loadCatalogListings();
+        expect(loaded.ok).toBe(true);
+
+        if (loaded.ok)
+            record(lookupCatalogListing(loaded.value, "nope"));
+
+        // SAFETY: The fixture supplies a resolved listing and funded ledger, with explicit table overrides to exercise the purchase runtime validator; no result is used as a successful purchase.
+        const buy = (overrides: RefusalOverrides) => record(purchaseListingWithCredits({
+            principal: principal(),
+            admin,
+            listing: listing("lantern-prop"),
+            buyerState: funded(100),
+            now: NOW,
+            saleId: "sale_case",
+            ...overrides,
+        } as never));
+
+        buy({ now: Number.NaN, admin });
+        buy({ saleId: "" });
+        buy({ surface: "kids" });
+        buy({ listing: listing("harbour-diorama") });
+        // A listing that claims a credits mode but carries no credit price.
+        buy({
+            listing: Object.fromEntries(Object.entries(listing("lantern-prop")).filter(([name]) => name !== "creditPrice")),
+        });
+        buy({
+            principal: principal({ userId: listing("lantern-prop").sellerUserId }),
+            admin,
+            buyerState: funded(100, account(listing("lantern-prop").sellerUserId)),
+        });
+        buy({ principal: principal({ userId: "usr_other" }) });
+        record(createListingCheckoutIntent({
+            principal: principal(),
+            admin,
+            listing: listing("lantern-prop"),
+            successUrl: "https://sceneaxi.example/ok",
+            cancelUrl: "https://sceneaxi.example/no",
+            now: NOW,
+            saleId: "sale_case_money",
+        }));
+        record(createListingCheckoutIntent({
+            principal: principal(),
+            admin,
+            listing: listing("harbour-diorama"),
+            successUrl: "https://sceneaxi.example/ok",
+            cancelUrl: "https://sceneaxi.example/no",
+            now: NOW,
+            saleId: "sale_case_money",
+            surface: "kids",
+        }));
+        // SAFETY: The locally built checkout fixture deliberately overrides an invalid field; createListingCheckoutIntent validates the input before an intent can be accepted.
+        record(createListingCheckoutIntent({
+            principal: principal(),
+            admin,
+            listing: listing("harbour-diorama"),
+            successUrl: "https://sceneaxi.example/ok",
+            cancelUrl: "https://sceneaxi.example/no",
+            now: NOW,
+            saleId: "sale_case_money",
+            mode: "live",
+        } as never));
+    });
+    it("reaches every revenue-share refusal", async () => {
+        record(splitCredits(0));
+        const target = listing("lantern-prop");
+        record(applyCreditsSale({
+            principal: principal(),
+            admin,
+            listing: target,
+            buyerState: funded(100),
+            creatorState: createLedgerState(account("usr_wrong")),
+            now: NOW,
+            saleId: "sale_case_share",
+        }));
+
+        const failedStore: CreditStore = Object.freeze({
+            ...createInMemoryCreditStore(),
+            findAccountByUserId: () => undefined,
+            findAccountById: () => undefined,
+            listEntries: () => [],
+            appendEntry: () => undefined,
+            appendOrReplayEntry: (entry) => ({ entry, replayed: false }),
+            settleCreditsSale() {
+                throw new Error("transaction failed");
             },
-          },
-        }),
-      ),
-      intent: liveIntent,
-      settlement: settlementFor(liveIntent),
+        });
+
+        record(await persistCreditsSale({
+            store: failedStore,
+            principal: principal(),
+            admin,
+            listing: target,
+            buyerState: funded(100),
+            creatorState: createLedgerState(account(target.sellerUserId)),
+            now: NOW,
+            saleId: "sale_case_store",
+        }));
+        // Money bookkeeping accepts no listing, gross, buyer, or mode, so each of
+        // its refusals is reached by settling a real webhook whose evidence is wrong
+        // in exactly one way.
+        // SAFETY: The copied completion intentionally loses runtime issuance provenance; recordMoneySale must refuse it, and the test never treats it as a verified completion.
+        record(recordMoneySale({
+            completion: { ...listingCompletion() } as never,
+            intent: listingIntentFor("harbour-diorama", "usr_crew"),
+        }));
+        record(recordMoneySale({
+            completion: listingCompletion(),
+            intent: listingIntentFor("harbour-diorama", "usr_other"),
+        }));
+        // A settled purchase of a listing the seller never priced in money.
+        record(recordMoneySale({
+            completion: listingCompletion({ listingId: target.listingId }),
+            intent: listingIntentFor(target.listingId, "usr_crew"),
+        }));
+        // Buyer and seller are the same person, which the record contract rejects.
+        record(recordMoneySale({
+            completion: listingCompletion({ userId: "usr_creator_ben" }),
+            intent: listingIntentFor("harbour-diorama", "usr_creator_ben"),
+        }));
+        // An entitlement decision the contract rejects.
+        record(evaluateEntitlement({
+            capability: "hosted-ai-assistant",
+            now: NOW,
+            principal: principal(),
+            admin,
+            state: funded(100),
+            creditAmount: Number.MAX_SAFE_INTEGER,
+        }));
     });
-    expect(liveEvent.ok).toBe(true);
-    if (liveEvent.ok) {
-      record(
-        applyCheckoutCompletedGrant({
-          state: funded(0),
-          completion: liveEvent.value,
-          now: NOW,
-        }),
-      );
-    }
+    it("reaches every Stripe Connect refusal", async () => {
+        const readiness: ConnectProviderReadiness = Object.freeze({
+            mode: "test" as const,
+            testOperationsEnabled: true,
+            dashboardConfigured: true,
+            secretConfigured: true,
+        });
 
-    record(
-      applyCheckoutCompletedGrant({
-        state: funded(0),
-        completion: { eventId: "evt" } as never,
-        now: NOW,
-      }),
-    );
-    record(
-      parseCheckoutCompletedEvent({
-        verified: { timestamp: NOW_SECONDS, payload: body } as never,
-        intent: packIntent.value,
-        settlement: settlementFor(packIntent.value),
-      }),
-    );
-  });
+        const provider = (readinessOverride: Partial<typeof readiness> = {}, methods: Partial<StripeConnectProvider> = {}): StripeConnectProvider => {
+            const base: StripeConnectProvider = {
+                readiness: Object.freeze({ ...readiness, ...readinessOverride }),
+                createOnboarding: ({ creatorUserId }: {
+                    creatorUserId: string;
+                }) => ({
+                    ok: true,
+                    value: {
+                        stripeAccountId: `acct_${creatorUserId}`,
+                        onboardingUrl: "https://connect.stripe.example/test/onboard",
+                        expiresAt: "2026-07-25T11:00:00Z",
+                        accountRequestId: `req_account_${creatorUserId}`,
+                        accountCreatedAt: "2026-07-25T09:59:00Z",
+                        onboardingRequestId: `req_onboard_${creatorUserId}`,
+                        onboardingCreatedAt: "2026-07-25T10:00:00Z",
+                    },
+                }),
+                retrieveStatus: ({ stripeAccountId }: {
+                    stripeAccountId: string;
+                }) => ({
+                    ok: true,
+                    value: {
+                        stripeAccountId,
+                        onboardingComplete: true,
+                        payoutsEnabled: true,
+                        requirementsDue: [],
+                        requestId: `req_status_${stripeAccountId}`,
+                        observedAt: "2026-07-25T10:01:00Z",
+                    },
+                }),
+                createPayout: () => ({
+                    ok: true,
+                    value: {
+                        payoutId: "po_matrix",
+                        evidenceId: "evt_matrix_payout",
+                        message: "test payout",
+                        paidAt: "2026-07-25T10:02:00Z",
+                    },
+                }),
+            };
 
-  it("reaches every listing refusal", () => {
-    // A listing that exists in the committed set but is not enabled for the
-    // bounded fixture-commerce path (sceneaxi#138).
-    record(resolveFixtureCommerceListing("lantern-prop"));
-    record(lookupCatalogListing({ listings: [] }, "lantern-prop"));
-    record(assertCurrencyListed(listing("lantern-prop"), "barter" as never));
-    const loaded = loadCatalogListings();
-    expect(loaded.ok).toBe(true);
-    if (loaded.ok) record(lookupCatalogListing(loaded.value, "nope"));
+            return Object.freeze({ ...base, ...methods });
+        };
 
-    const buy = (overrides: Record<string, unknown>) =>
-      record(
-        purchaseListingWithCredits({
-          principal: principal(),
-          admin,
-          listing: listing("lantern-prop"),
-          buyerState: funded(100),
-          now: NOW,
-          saleId: "sale_case",
-          ...overrides,
-        } as never),
-      );
-    buy({ now: Number.NaN, admin });
-    buy({ saleId: "" });
-    buy({ surface: "kids" });
-    buy({ listing: listing("harbour-diorama") });
-    // A listing that claims a credits mode but carries no credit price.
-    buy({
-      listing: Object.fromEntries(
-        Object.entries(listing("lantern-prop")).filter(
-          ([name]) => name !== "creditPrice",
-        ),
-      ),
+        const onboard = (store: ReturnType<typeof createInMemoryConnectStore>, connectProvider: StripeConnectProvider | undefined, overrides: RefusalOverrides = {}) => startConnectOnboarding({
+            principal: principal(),
+            admin,
+            creatorUserId: "usr_crew",
+            idempotencyKey: "connect-onboarding:usr_crew",
+            now: NOW,
+            store,
+            provider: connectProvider,
+            ...overrides,
+        });
+
+        const moneySplit = Object.freeze({
+            schemaVersion: 1 as const,
+            kind: "sceneaxi.money-split-record" as const,
+            saleId: "sale_matrix_connect",
+            listingId: "harbour-diorama",
+            buyerUserId: "usr_buyer",
+            creatorUserId: "usr_crew",
+            grossMinor: 2500,
+            creatorMinor: 1250,
+            platformMinor: 1250,
+            currency: "usd",
+            basisPoints: 5000,
+            mode: "test" as const,
+            occurredAt: "2026-07-25T10:00:00Z",
+        });
+
+        record(await onboard(createInMemoryConnectStore(), undefined));
+        // SAFETY: The literal "live" is deliberately outside the allowed contract for this refusal case; it is only passed to the runtime validation boundary, not used as an accepted domain value.
+        record(await onboard(createInMemoryConnectStore(), provider({ mode: "live" as never })));
+        record(await onboard(createInMemoryConnectStore(), provider({ testOperationsEnabled: false })));
+        record(await onboard(createInMemoryConnectStore(), provider({ dashboardConfigured: false })));
+        record(await onboard(createInMemoryConnectStore(), provider({ secretConfigured: false })));
+        record(await onboard(createInMemoryConnectStore(), provider({}, {
+            createOnboarding: () => ({
+                ok: false,
+                code: "refused",
+                message: "provider refused",
+            }),
+        })));
+        // SAFETY: This failing provider intentionally returns an empty onboarding value; the real onboarding boundary validates it and the test records refusal.
+        record(await onboard(createInMemoryConnectStore(), provider({}, { createOnboarding: () => ({ ok: true, value: {} as never }) })));
+        const failedBase = createInMemoryConnectStore();
+
+        const failedStore = Object.freeze({
+            ...failedBase,
+            findOnboardingIntent() {
+                throw new Error("store unavailable");
+            },
+        });
+
+        record(await onboard(failedStore, provider()));
+        const conflictStore = createInMemoryConnectStore();
+        await onboard(conflictStore, provider());
+        record(await onboard(conflictStore, provider(), {
+            principal: principal({ userId: "usr_other" }),
+            creatorUserId: "usr_other",
+        }));
+        const expiredStore = createInMemoryConnectStore();
+        await onboard(expiredStore, provider());
+        record(await onboard(expiredStore, provider(), {
+            now: Date.parse("2026-07-25T12:00:00Z"),
+        }));
+        record(await refreshConnectStatus({
+            principal: principal(),
+            admin,
+            creatorUserId: "usr_crew",
+            now: NOW,
+            store: createInMemoryConnectStore(),
+            provider: provider(),
+        }));
+        const missingStatusStore = createInMemoryConnectStore();
+        await onboard(missingStatusStore, provider());
+        record(await requestCreatorPayout({
+            principal: principal(),
+            admin,
+            creatorUserId: "usr_crew",
+            moneySplit,
+            idempotencyKey: "connect-payout:sale_matrix_connect",
+            now: NOW,
+            store: missingStatusStore,
+            provider: provider(),
+        }));
+
+        const disabledProvider = provider({}, {
+            retrieveStatus: ({ stripeAccountId }) => ({
+                ok: true,
+                value: {
+                    stripeAccountId,
+                    onboardingComplete: true,
+                    payoutsEnabled: false,
+                    requirementsDue: ["external_account"],
+                    requestId: "req_status_disabled",
+                    observedAt: "2026-07-25T10:01:00Z",
+                },
+            }),
+        });
+
+        const disabledStore = createInMemoryConnectStore();
+        await onboard(disabledStore, disabledProvider);
+        await refreshConnectStatus({
+            principal: principal(),
+            admin,
+            creatorUserId: "usr_crew",
+            now: NOW,
+            store: disabledStore,
+            provider: disabledProvider,
+        });
+        record(await requestCreatorPayout({
+            principal: principal(),
+            admin,
+            creatorUserId: "usr_crew",
+            moneySplit,
+            idempotencyKey: "connect-payout:sale_matrix_connect",
+            now: NOW,
+            store: disabledStore,
+            provider: disabledProvider,
+        }));
     });
-    buy({
-      principal: principal({ userId: listing("lantern-prop").sellerUserId }),
-      admin,
-      buyerState: funded(
-        100,
-        account(listing("lantern-prop").sellerUserId),
-      ),
-    });
-    buy({ principal: principal({ userId: "usr_other" }) });
-
-    record(
-      createListingCheckoutIntent({
-        principal: principal(),
-        admin,
-        listing: listing("lantern-prop"),
-        successUrl: "https://sceneaxi.example/ok",
-        cancelUrl: "https://sceneaxi.example/no",
-        now: NOW,
-        saleId: "sale_case_money",
-      }),
-    );
-    record(
-      createListingCheckoutIntent({
-        principal: principal(),
-        admin,
-        listing: listing("harbour-diorama"),
-        successUrl: "https://sceneaxi.example/ok",
-        cancelUrl: "https://sceneaxi.example/no",
-        now: NOW,
-        saleId: "sale_case_money",
-        surface: "kids",
-      }),
-    );
-    record(
-      createListingCheckoutIntent({
-        principal: principal(),
-        admin,
-        listing: listing("harbour-diorama"),
-        successUrl: "https://sceneaxi.example/ok",
-        cancelUrl: "https://sceneaxi.example/no",
-        now: NOW,
-        saleId: "sale_case_money",
-        mode: "live",
-      } as never),
-    );
-  });
-
-  it("reaches every revenue-share refusal", async () => {
-    record(splitCredits(0));
-    const target = listing("lantern-prop");
-    record(
-      applyCreditsSale({
-        principal: principal(),
-        admin,
-        listing: target,
-        buyerState: funded(100),
-        creatorState: createLedgerState(account("usr_wrong")),
-        now: NOW,
-        saleId: "sale_case_share",
-      }),
-    );
-    const failedStore: CreditStore = Object.freeze({
-      ...createInMemoryCreditStore(),
-      findAccountByUserId: () => undefined,
-      findAccountById: () => undefined,
-      listEntries: () => [],
-      appendEntry: () => undefined,
-      appendOrReplayEntry: (entry) => ({ entry, replayed: false }),
-      settleCreditsSale() {
-        throw new Error("transaction failed");
-      },
-    });
-    record(
-      await persistCreditsSale({
-        store: failedStore,
-        principal: principal(),
-        admin,
-        listing: target,
-        buyerState: funded(100),
-        creatorState: createLedgerState(account(target.sellerUserId)),
-        now: NOW,
-        saleId: "sale_case_store",
-      }),
-    );
-    // Money bookkeeping accepts no listing, gross, buyer, or mode, so each of
-    // its refusals is reached by settling a real webhook whose evidence is wrong
-    // in exactly one way.
-    record(
-      recordMoneySale({
-        completion: { ...(listingCompletion() as object) } as never,
-        intent: listingIntentFor("harbour-diorama", "usr_crew"),
-      }),
-    );
-    record(
-      recordMoneySale({
-        completion: listingCompletion(),
-        intent: listingIntentFor("harbour-diorama", "usr_other"),
-      }),
-    );
-    // A settled purchase of a listing the seller never priced in money.
-    record(
-      recordMoneySale({
-        completion: listingCompletion({ listingId: target.listingId }),
-        intent: listingIntentFor(target.listingId, "usr_crew"),
-      }),
-    );
-    // Buyer and seller are the same person, which the record contract rejects.
-    record(
-      recordMoneySale({
-        completion: listingCompletion({ userId: "usr_creator_ben" }),
-        intent: listingIntentFor("harbour-diorama", "usr_creator_ben"),
-      }),
-    );
-    // An entitlement decision the contract rejects.
-    record(
-      evaluateEntitlement({
-        capability: "hosted-ai-assistant",
-        now: NOW,
-        principal: principal(),
-        admin,
-        state: funded(100),
-        creditAmount: Number.MAX_SAFE_INTEGER,
-      }),
-    );
-  });
-
-  it("reaches every Stripe Connect refusal", async () => {
-    const readiness: ConnectProviderReadiness = Object.freeze({
-      mode: "test" as const,
-      testOperationsEnabled: true,
-      dashboardConfigured: true,
-      secretConfigured: true,
-    });
-    const provider = (
-      readinessOverride: Partial<typeof readiness> = {},
-      methods: Partial<StripeConnectProvider> = {},
-    ): StripeConnectProvider => {
-      const base: StripeConnectProvider = {
-        readiness: Object.freeze({ ...readiness, ...readinessOverride }),
-        createOnboarding: ({ creatorUserId }: { creatorUserId: string }) => ({
-          ok: true,
-          value: {
-            stripeAccountId: `acct_${creatorUserId}`,
-            onboardingUrl: "https://connect.stripe.example/test/onboard",
-            expiresAt: "2026-07-25T11:00:00Z",
-            accountRequestId: `req_account_${creatorUserId}`,
-            accountCreatedAt: "2026-07-25T09:59:00Z",
-            onboardingRequestId: `req_onboard_${creatorUserId}`,
-            onboardingCreatedAt: "2026-07-25T10:00:00Z",
-          },
-        }),
-        retrieveStatus: ({ stripeAccountId }: { stripeAccountId: string }) => ({
-          ok: true,
-          value: {
-            stripeAccountId,
-            onboardingComplete: true,
-            payoutsEnabled: true,
-            requirementsDue: [],
-            requestId: `req_status_${stripeAccountId}`,
-            observedAt: "2026-07-25T10:01:00Z",
-          },
-        }),
-        createPayout: () => ({
-          ok: true,
-          value: {
-            payoutId: "po_matrix",
-            evidenceId: "evt_matrix_payout",
-            message: "test payout",
-            paidAt: "2026-07-25T10:02:00Z",
-          },
-        }),
-      };
-      return Object.freeze({ ...base, ...methods });
-    };
-    const onboard = (
-      store: ReturnType<typeof createInMemoryConnectStore>,
-      connectProvider: StripeConnectProvider | undefined,
-      overrides: Record<string, unknown> = {},
-    ) =>
-      startConnectOnboarding({
-        principal: principal(),
-        admin,
-        creatorUserId: "usr_crew",
-        idempotencyKey: "connect-onboarding:usr_crew",
-        now: NOW,
-        store,
-        provider: connectProvider,
-        ...overrides,
-      });
-    const moneySplit = Object.freeze({
-      schemaVersion: 1 as const,
-      kind: "sceneaxi.money-split-record" as const,
-      saleId: "sale_matrix_connect",
-      listingId: "harbour-diorama",
-      buyerUserId: "usr_buyer",
-      creatorUserId: "usr_crew",
-      grossMinor: 2500,
-      creatorMinor: 1250,
-      platformMinor: 1250,
-      currency: "usd",
-      basisPoints: 5000,
-      mode: "test" as const,
-      occurredAt: "2026-07-25T10:00:00Z",
-    });
-
-    record(await onboard(createInMemoryConnectStore(), undefined));
-    record(await onboard(createInMemoryConnectStore(), provider({ mode: "live" as never })));
-    record(
-      await onboard(
-        createInMemoryConnectStore(),
-        provider({ testOperationsEnabled: false }),
-      ),
-    );
-    record(
-      await onboard(
-        createInMemoryConnectStore(),
-        provider({ dashboardConfigured: false }),
-      ),
-    );
-    record(
-      await onboard(
-        createInMemoryConnectStore(),
-        provider({ secretConfigured: false }),
-      ),
-    );
-    record(
-      await onboard(
-        createInMemoryConnectStore(),
-        provider({}, {
-          createOnboarding: () => ({
-            ok: false,
-            code: "refused",
-            message: "provider refused",
-          }),
-        }),
-      ),
-    );
-    record(
-      await onboard(
-        createInMemoryConnectStore(),
-        provider({}, { createOnboarding: () => ({ ok: true, value: {} as never }) }),
-      ),
-    );
-    const failedBase = createInMemoryConnectStore();
-    const failedStore = Object.freeze({
-      ...failedBase,
-      findOnboardingIntent() {
-        throw new Error("store unavailable");
-      },
-    });
-    record(await onboard(failedStore, provider()));
-
-    const conflictStore = createInMemoryConnectStore();
-    await onboard(conflictStore, provider());
-    record(
-      await onboard(conflictStore, provider(), {
-        principal: principal({ userId: "usr_other" }),
-        creatorUserId: "usr_other",
-      }),
-    );
-
-    const expiredStore = createInMemoryConnectStore();
-    await onboard(expiredStore, provider());
-    record(
-      await onboard(expiredStore, provider(), {
-        now: Date.parse("2026-07-25T12:00:00Z"),
-      }),
-    );
-
-    record(
-      await refreshConnectStatus({
-        principal: principal(),
-        admin,
-        creatorUserId: "usr_crew",
-        now: NOW,
-        store: createInMemoryConnectStore(),
-        provider: provider(),
-      }),
-    );
-
-    const missingStatusStore = createInMemoryConnectStore();
-    await onboard(missingStatusStore, provider());
-    record(
-      await requestCreatorPayout({
-        principal: principal(),
-        admin,
-        creatorUserId: "usr_crew",
-        moneySplit,
-        idempotencyKey: "connect-payout:sale_matrix_connect",
-        now: NOW,
-        store: missingStatusStore,
-        provider: provider(),
-      }),
-    );
-
-    const disabledProvider = provider({}, {
-      retrieveStatus: ({ stripeAccountId }) => ({
-        ok: true,
-        value: {
-          stripeAccountId,
-          onboardingComplete: true,
-          payoutsEnabled: false,
-          requirementsDue: ["external_account"],
-          requestId: "req_status_disabled",
-          observedAt: "2026-07-25T10:01:00Z",
-        },
-      }),
-    });
-    const disabledStore = createInMemoryConnectStore();
-    await onboard(disabledStore, disabledProvider);
-    await refreshConnectStatus({
-      principal: principal(),
-      admin,
-      creatorUserId: "usr_crew",
-      now: NOW,
-      store: disabledStore,
-      provider: disabledProvider,
-    });
-    record(
-      await requestCreatorPayout({
-        principal: principal(),
-        admin,
-        creatorUserId: "usr_crew",
-        moneySplit,
-        idempotencyKey: "connect-payout:sale_matrix_connect",
-        now: NOW,
-        store: disabledStore,
-        provider: disabledProvider,
-      }),
-    );
-  });
 });
 
 describe("administrator support refusal paths", () => {
-  it("guards provenance and role before any support read or append", async () => {
-    const credits = createInMemoryCreditStore({ accounts: [account("usr_crew")] });
-    const reads: string[] = [];
+    it("guards provenance and role before any support read or append", async () => {
+        const credits = createInMemoryCreditStore({ accounts: [account("usr_crew")] });
+        const reads: string[] = [];
 
-    const store = { ...credits, findAccountByUserId(id: string) {
-      reads.push(id);
+        const store = { ...credits, findAccountByUserId(id: string) {
+                reads.push(id);
 
-      return credits.findAccountByUserId(id);
-    } };
+                return credits.findAccountByUserId(id);
+            } };
 
-    const users = createInMemoryIdentityStore({ users: [CREW] });
+        const users = createInMemoryIdentityStore({ users: [CREW] });
 
-    const support = { users: {
-      findUserById(id: string) {
-        reads.push(id);
+        const support = { users: {
+                findUserById(id: string) {
+                    reads.push(id);
 
-        return users.findUserById(id);
-      },
-      findUserByEmail(email: string) {
-        reads.push(email);
+                    return users.findUserById(id);
+                },
+                findUserByEmail(email: string) {
+                    reads.push(email);
 
-        return users.findUserByEmail(email);
-      },
-    }, async listCheckoutIntents() {
-      reads.push("intents");
+                    return users.findUserByEmail(email);
+                },
+            }, async listCheckoutIntents() {
+                reads.push("intents");
 
-      return [];
-    } };
+                return [];
+            } };
 
-    const fields = { userId: "usr_crew", delta: "5", reason: "Support case", idempotencyKey: "matrix-support" };
-    const issued = principal({ role: "admin", surface: "site" });
-    const copied = JSON.parse(JSON.stringify(issued));
+        const fields = { userId: "usr_crew", delta: "5", reason: "Support case", idempotencyKey: "matrix-support" };
+        const issued = principal({ role: "admin", surface: "site" });
+        const copied = JSON.parse(JSON.stringify(issued));
 
-    for (const [actor, surface, expected] of [
-      [principal({ surface: "site" }), "site", AUTH_REFUSE_REASONS.roleNotPermitted],
-      [copied, "site", AUTH_REFUSE_REASONS.principalUnproven],
-      [issued, "kids", BILLING_REFUSE_REASONS.kidsCommerceDenied],
-    ] as const) {
-      const access = { principal: actor, admin, surface, now: NOW, credits: store };
-      const lookup = await readSupportLedger({ ...access, support, target: { kind: "userId", value: "usr_crew" } });
-      const adjustment = await adjustSupportLedger({ ...access, fields });
-      expect(lookup).toMatchObject({ ok: false, reason: expected });
-      expect(adjustment).toMatchObject({ ok: false, reason: expected });
-      record(lookup);
-      record(adjustment);
-    }
+        for (const [actor, surface, expected] of [
+            [principal({ surface: "site" }), "site", AUTH_REFUSE_REASONS.roleNotPermitted],
+            [copied, "site", AUTH_REFUSE_REASONS.principalUnproven],
+            [issued, "kids", BILLING_REFUSE_REASONS.kidsCommerceDenied],
+        ] as const) {
+            const access = { principal: actor, admin, surface, now: NOW, credits: store };
+            const lookup = await readSupportLedger({ ...access, support, target: { kind: "userId", value: "usr_crew" } });
+            const adjustment = await adjustSupportLedger({ ...access, fields });
+            expect(lookup).toMatchObject({ ok: false, reason: expected });
+            expect(adjustment).toMatchObject({ ok: false, reason: expected });
+            record(lookup);
+            record(adjustment);
+        }
 
-    expect(reads).toEqual([]);
-    const absent = await readSupportLedger({ principal: issued, admin, surface: "site", now: NOW, credits, support, target: { kind: "userId", value: "absent" } });
-    expect(absent).toMatchObject({ ok: false, reason: BILLING_REFUSE_REASONS.supportTargetNotFound });
-    record(absent);
-  });
+        expect(reads).toEqual([]);
+        const absent = await readSupportLedger({ principal: issued, admin, surface: "site", now: NOW, credits, support, target: { kind: "userId", value: "absent" } });
+        expect(absent).toMatchObject({ ok: false, reason: BILLING_REFUSE_REASONS.supportTargetNotFound });
+        record(absent);
+    });
+    it("reaches every new site support refusal through the witnessed identity port", async () => {
+        const users = createInMemoryIdentityStore({ users: [CREW, user("usr_captain", CAPTAIN_EMAIL)] });
+        const credits = createInMemoryCreditStore({ accounts: [account("usr_crew")] });
 
-  it("reaches every new site support refusal through the witnessed identity port", async () => {
-    const users = createInMemoryIdentityStore({ users: [CREW, user("usr_captain", CAPTAIN_EMAIL)] });
-    const credits = createInMemoryCreditStore({ accounts: [account("usr_crew")] });
+        const port = createIdentityPort({ admin, store: users, clock, adapter: {
+                authenticate({ email }) {
+                    const id = email === CAPTAIN_EMAIL ? "usr_captain" : "usr_crew";
 
-    const port = createIdentityPort({ admin, store: users, clock, adapter: {
-      authenticate({ email }) {
-        const id = email === CAPTAIN_EMAIL ? "usr_captain" : "usr_crew";
+                    return { user: { id, email, emailVerified: true }, session: { id: `support-${id}`, token: `token-${id}`, userId: id, expiresAt: new Date(NOW + 3600000).toISOString() } };
+                },
+            } });
 
-        return { user: { id, email, emailVerified: true }, session: { id: `support-${id}`, token: `token-${id}`, userId: id, expiresAt: new Date(NOW + 3600000).toISOString() } };
-      },
-    } });
+        const requestOrigin = verifyLoginRequestOrigin({}, { requestUrl: "https://sceneaxi.test/api/admin/ledger", origin: "https://sceneaxi.test" });
+        const fields = { userId: "usr_crew", delta: "10", reason: "Case matrix", idempotencyKey: "matrix-site" };
 
-    const requestOrigin = verifyLoginRequestOrigin({}, { requestUrl: "https://sceneaxi.test/api/admin/ledger", origin: "https://sceneaxi.test" });
-    const fields = { userId: "usr_crew", delta: "10", reason: "Case matrix", idempotencyKey: "matrix-site" };
+        for (const email of ["crew@example.com", CAPTAIN_EMAIL]) {
+            const signedIn = await port.signIn({ surface: "site", email, password: "fixture" });
 
-    for (const email of ["crew@example.com", CAPTAIN_EMAIL]) {
-      const signedIn = await port.signIn({ surface: "site", email, password: "fixture" });
+            if (!signedIn.ok)
+                throw new Error(signedIn.message);
+            const plane = createUmbrellaIdentityPlane({}, { admin, identityPort: port, creditStore: credits, supportStore: { users, async listCheckoutIntents() { return []; } }, deployment: { admin, billingMode: "test", clock, configuration: {}, adminReauthenticate: async (_credential, password) => password === "fixture" }, clock, sessionToken: `${signedIn.value.principal.session.sessionId}.${signedIn.value.sessionToken}` });
 
-      if (!signedIn.ok) throw new Error(signedIn.message);
-      const plane = createUmbrellaIdentityPlane({}, { admin, identityPort: port, creditStore: credits, supportStore: { users, async listCheckoutIntents() { return []; } }, clock, sessionToken: `${signedIn.value.principal.session.sessionId}.${signedIn.value.sessionToken}` });
+            if (email !== CAPTAIN_EMAIL) {
+                expect(await plane.ledgerSupport.lookup({ surface: "site", target: null })).toMatchObject({ ok: false, reason: "ADMIN_ROLE_REQUIRED" });
+                continue;
+            }
 
-      if (email !== CAPTAIN_EMAIL) {
-        expect(await plane.ledgerSupport.lookup({ surface: "site", target: null })).toMatchObject({ ok: false, reason: "ADMIN_ROLE_REQUIRED" });
-        continue;
-      }
-
-      expect(await plane.ledgerSupport.lookup({ surface: "site", target: { kind: "userId", value: "missing" } })).toMatchObject({ ok: false, reason: "CREDIT_SUPPORT_TARGET_NOT_FOUND" });
-      expect(await plane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields: { ...fields, delta: "-1" } })).toMatchObject({ ok: false, reason: "CREDIT_BALANCE_INSUFFICIENT" });
-      expect((await plane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields })).ok).toBe(true);
-      expect(await plane.ledgerSupport.adjust({ surface: "site", requestOrigin, fields: { ...fields, delta: "11" } })).toMatchObject({ ok: false, reason: "CREDIT_IDEMPOTENCY_KEY_CONFLICT" });
-    }
-  });
+            expect(await plane.ledgerSupport.lookup({ surface: "site", target: { kind: "userId", value: "missing" } })).toMatchObject({ ok: false, reason: "CREDIT_SUPPORT_TARGET_NOT_FOUND" });
+            expect(await plane.ledgerSupport.adjust({ surface: "site", requestOrigin, adminPassword: "fixture", fields: { ...fields, delta: "-1" } })).toMatchObject({ ok: false, reason: "CREDIT_BALANCE_INSUFFICIENT" });
+            expect((await plane.ledgerSupport.adjust({ surface: "site", requestOrigin, adminPassword: "fixture", fields })).ok).toBe(true);
+            expect(await plane.ledgerSupport.adjust({ surface: "site", requestOrigin, adminPassword: "fixture", fields: { ...fields, delta: "11" } })).toMatchObject({ ok: false, reason: "CREDIT_IDEMPOTENCY_KEY_CONFLICT" });
+        }
+    });
 });
 
 describe("the reason maps are honest in both directions", () => {
-  it("has no duplicate reason string in either map", () => {
-    for (const map of [AUTH_REFUSE_REASONS, BILLING_REFUSE_REASONS]) {
-      const values = Object.values(map);
-      expect(new Set(values).size).toBe(values.length);
-    }
-  });
-
-  it("reaches every auth reason with a concrete case", () => {
-    const unreached = Object.values(AUTH_REFUSE_REASONS).filter(
-      (reason) => !observed.has(reason),
-    );
-    expect(unreached).toEqual([]);
-  });
-
-  it("reaches every billing reason with a concrete case", () => {
-    const unreached = Object.values(BILLING_REFUSE_REASONS).filter(
-      (reason) => !observed.has(reason),
-    );
-    expect(unreached).toEqual([]);
-  });
+    it("has no duplicate reason string in either map", () => {
+        for (const map of [AUTH_REFUSE_REASONS, BILLING_REFUSE_REASONS]) {
+            const values = Object.values(map);
+            expect(new Set(values).size).toBe(values.length);
+        }
+    });
+    it("reaches every auth reason with a concrete case", () => {
+        const unreached = Object.values(AUTH_REFUSE_REASONS).filter((reason) => !observed.has(reason));
+        expect(unreached).toEqual([]);
+    });
+    it("reaches every billing reason with a concrete case", () => {
+        const unreached = Object.values(BILLING_REFUSE_REASONS).filter((reason) => !observed.has(reason));
+        expect(unreached).toEqual([]);
+    });
 });

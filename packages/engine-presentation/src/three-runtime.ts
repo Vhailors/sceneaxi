@@ -21,9 +21,9 @@ import type {
   PresentationRuntime,
 } from "./runtime.js";
 import {
-  createThreePresentationCore,
+  createInternalThreePresentationCore,
   disposeSubtree,
-  type ThreePresentationCore,
+  type InternalThreePresentationCore,
   type ThreePresentationCoreOptions,
 } from "./three-core.js";
 import { ThreePresentationError } from "./three-presentation-error.js";
@@ -76,14 +76,26 @@ function requireAlpha(alpha: number) {
 function requireSnapshot(snapshot: KernelSnapshot) {
   if (
     snapshot === null ||
-    typeof snapshot !== "object" ||
+    !isSnapshotRecord(snapshot) ||
     !Array.isArray(snapshot.entities) ||
-    !Number.isInteger(snapshot.tick)
+    !Number.isSafeInteger(snapshot.tick) || snapshot.tick < 0 || snapshot.entities.length > 4096 ||
+      !Number.isSafeInteger(snapshot.seed) || !isSnapshotText(snapshot.digest) || snapshot.digest.length === 0 || snapshot.digest.length > 128
   ) {
     throw new ThreePresentationError(
       "invalid-renderable",
       "present requires a kernel snapshot with entities and an integer tick.",
     );
+  }
+
+  const ids = new Set<string>();
+
+  for (const entity of snapshot.entities) {
+    if (!entity || !isSnapshotText(entity.id) || !/^[a-z0-9][a-z0-9-]{0,127}$/.test(entity.id) || ids.has(entity.id) ||
+        !Number.isFinite(entity.x) || !Number.isFinite(entity.y) || Math.abs(entity.x) > 1_000_000 || Math.abs(entity.y) > 1_000_000) {
+      throw new ThreePresentationError("invalid-renderable", "Snapshot requires unique bounded ids and finite bounded coordinates.");
+    }
+
+    ids.add(entity.id);
   }
 }
 
@@ -100,15 +112,17 @@ export function createThreePresentationRuntime(
 ): ThreePresentationRuntime {
   const entitySize = options.entitySize ?? 1;
   const entityColor = options.entityColor ?? "#7fd1ff";
-  if (!Number.isFinite(entitySize) || entitySize <= 0) {
+
+  if (!Number.isFinite(entitySize) || entitySize <= 0 || entitySize > 1_000_000) {
     throw new ThreePresentationError(
       "invalid-renderable",
       "entitySize must be a finite positive number.",
     );
   }
 
-  let core: ThreePresentationCore | null = null;
+  let core: InternalThreePresentationCore | null = null;
   let entities: Group | null = null;
+  const markers = new Map<string, Object3D>();
   let previous = new Map<string, { x: number; y: number }>();
   let current = new Map<string, { x: number; y: number }>();
   let currentTick: number | null = null;
@@ -121,19 +135,25 @@ export function createThreePresentationRuntime(
         "Three presentation runtime is not mounted.",
       );
     }
+
     return { core, entities };
   }
 
   function markerFor(parent: Group, id: string): Object3D {
     const name = `${ENTITY_PREFIX}${id}`;
-    const existing = parent.getObjectByName(name);
+    const existing = markers.get(id);
+
     if (existing !== undefined) return existing;
+
     const marker = new Mesh(
       new BoxGeometry(entitySize, entitySize, entitySize),
       new MeshStandardMaterial({ color: entityColor, roughness: 0.5, metalness: 0.1 }),
     );
+
     marker.name = name;
     parent.add(marker);
+    markers.set(id, marker);
+
     return marker;
   }
 
@@ -149,7 +169,8 @@ export function createThreePresentationRuntime(
           "Three presentation runtime is already mounted.",
         );
       }
-      core = createThreePresentationCore(options);
+
+      core = createInternalThreePresentationCore(options);
       entities = new Group();
       entities.name = "kernel-entities";
       core.content.add(entities);
@@ -168,15 +189,18 @@ export function createThreePresentationRuntime(
       const incoming = new Map(
         snapshot.entities.map((entity) => [entity.id, { x: entity.x, y: entity.y }]),
       );
+
       if (currentTick === null) {
         previous = incoming;
       } else if (snapshot.tick !== currentTick) {
         previous = current;
       }
+
       current = incoming;
       currentTick = snapshot.tick;
 
       const seen = new Set<string>();
+
       for (const entity of snapshot.entities) {
         seen.add(entity.id);
         const marker = markerFor(live.entities, entity.id);
@@ -188,12 +212,19 @@ export function createThreePresentationRuntime(
           lerp(from.y, target.y, alpha),
         );
       }
-      for (const child of [...live.entities.children]) {
+
+      // Snapshot the child list because remove mutates it during traversal.
+      const previousChildren = [...live.entities.children];
+
+      for (const child of previousChildren) {
         const id = child.name.startsWith(ENTITY_PREFIX)
           ? child.name.slice(ENTITY_PREFIX.length)
           : null;
+
         if (id === null || seen.has(id)) continue;
         live.entities.remove(child);
+
+          if (id !== null) markers.delete(id);
         disposeSubtree(child);
       }
 
@@ -212,7 +243,9 @@ export function createThreePresentationRuntime(
     capture(): PresentationCaptureResult | null {
       const live = requireMounted();
       const bytes = live.core.capture();
+
       if (bytes === null) return null;
+
       return Object.freeze({ contentType: "image/png", bytes });
     },
 
@@ -221,6 +254,7 @@ export function createThreePresentationRuntime(
       live.core.dispose();
       core = null;
       entities = null;
+      markers.clear();
       previous = new Map();
       current = new Map();
       currentTick = null;
@@ -242,4 +276,12 @@ export function createThreePresentationRuntime(
       requireMounted().core.resize(width, height, pixelRatio);
     },
   };
+}
+
+function isSnapshotRecord(value: KernelSnapshot): value is KernelSnapshot {
+  return typeof value === "object";
+}
+
+function isSnapshotText(value: unknown): value is string {
+  return typeof value === "string";
 }

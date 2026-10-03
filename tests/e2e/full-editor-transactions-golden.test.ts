@@ -28,9 +28,11 @@ function appliedSession(transactionId: string): DesktopSession {
     transactionId,
     diagnostics: null,
   });
+
   return Object.freeze({
     snapshot: () => snapshot,
     proposeEdit: () => snapshot,
+    stagePreparedProposal: () => { throw new Error("transaction result must not stage an asset"); },
     accept: () => snapshot,
     reject: () => snapshot,
     refreshRecovery: () => snapshot,
@@ -43,6 +45,7 @@ function appliedSession(transactionId: string): DesktopSession {
 describe("full-editor transaction client parity", () => {
   it("returns one command-registry transaction id, progress, evidence, and refusal shape to every client", () => {
     const transactionId = "1700000000000-0123456789abcdef";
+
     const results = clients.map((client) => createDesktopBridge({
       cwd: "/not-read",
       createAuthoringSession: () => appliedSession(transactionId),
@@ -74,11 +77,13 @@ describe("full-editor transaction client parity", () => {
   it("refuses Kids and missing capabilities before session, journal, or project I/O", () => {
     const createAuthoringSession = vi.fn(() => { throw new Error("must not execute"); });
     const invocation = createEditorCommandInvocation("edit-redo", "desktop-control", {});
+
     const kids = createDesktopBridge({
       cwd: "/does-not-exist",
       commandProfile: "kids",
       createAuthoringSession,
     }).handle({ action: "command", payload: invocation });
+
     const missing = createDesktopBridge({
       cwd: "/does-not-exist",
       commandProfile: "game",
@@ -97,10 +102,12 @@ describe("full-editor transaction client parity", () => {
       ok: true,
       data: { profile: "kids" },
     });
+
     const result = bridge.handle({
       action: "command",
       payload: createEditorCommandInvocation("project-git-status", "desktop-control", {}, "game"),
     });
+
     expect(result).toMatchObject({ ok: false, reason: "EDITOR_COMMAND_KIDS_DENIED" });
     expect(bridge.activeProfile()).toBe("kids");
   });
@@ -111,6 +118,7 @@ describe("full-editor transaction client parity", () => {
     expect(writeDocumentFile(path, createDocument({ id: "scene", data: { value: 0 } }), { cwd }).ok).toBe(true);
     const first = propose({ cwd, documentPath: "scene.json", jsonPointer: "/data/value", newValue: 1 });
     expect(first.ok).toBe(true);
+
     if (!first.ok) return;
     expect(apply({ cwd, proposal: first.proposal }).ok).toBe(true);
     const session = createDesktopSession({ cwd });

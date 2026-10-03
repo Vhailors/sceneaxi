@@ -1,0 +1,21 @@
+{
+  "owner": "bg-152",
+  "ownedClone": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1",
+  "snapshotTree": "3f25ffea22f19d01ef9a484f317d8b8ca4cde397",
+  "base": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+  "state": "SOURCE_EDITED_VERIFICATION_IN_PROGRESS_NO_HANDBACK",
+  "parent": "bg-156 (bg-150 no longer reachable)",
+  "featureIDs": ["EF-ASSET", "EF-AUDIO-LIFECYCLE", "EF-AUDIO-API", "PR310-desktop-scene"],
+  "appliedRetryEdits": [
+    "Checked decoded browser AudioBuffer provenance instead of an unchecked assertion",
+    "Removed duplicate gain-to-analyser connection",
+    "Preserved main AudioContextLike structure; legacy tagged host confined to compatible object adapter",
+    "Removed open-path-to-game fallback; installed synchronous null-profile event fence before bridge awaits",
+    "Added two actual EventTarget/lifecycle public-seam authority and stale-response tests"
+  ],
+  "scopedVitest": {"command":"pnpm exec vitest run desktop/linux/test/audio-lifecycle-compat.test.ts packages/engine-presentation/test/audio-playback.test.ts packages/engine-presentation/test/legacy-audio-compat.test.ts packages/importers/test/legacy-asset-v1.test.ts tests/e2e/asset-pipeline-golden.test.ts", "pass":31,"fail":0},
+  "engineTypecheck": {"command":"pnpm exec tsc -p packages/engine-presentation/tsconfig.json --noEmit", "exitCode":0},
+  "nativeTypecheck": {"command":"pnpm exec tsc -p desktop/linux/tsconfig.json --noEmit --ignoreDeprecations 6.0", "exitCode":2,"errors":11,"pendingParentDecision":"desktop-scene hierarchy expanded operations handled by reviewed parent post-handback mutation pack?"},
+  "heavyVerification":"NOT_RUN: browser/native runtime/full builds/install/Docker reserved to parent",
+  "publication":"NO_STAGE_COMMIT_PUSH_OR_GIT_INDEX_EDITS"
+}

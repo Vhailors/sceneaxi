@@ -1,0 +1,37 @@
+$ tsc --build && tsc -p tsconfig.tests.json
+packages/schemas/test/input-action-registry.test.ts(133,20): error TS1355: A 'const' assertions can only be applied to references to enum members, or string, number, boolean, array, or object literals.
+apps/desktop-shell/test/chrome-inspector.test.ts(2,32): error TS6059: File '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/tests/helpers/desktop-chrome-golden.ts' is not under 'rootDir' '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell'. 'rootDir' is expected to contain all source files.
+  The file is in the program because:
+    Imported via "../../../tests/helpers/desktop-chrome-golden.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell/test/chrome-inspector.test.ts'
+    Imported via "../../../tests/helpers/desktop-chrome-golden.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell/test/chrome-settings.test.ts'
+    Imported via "../../../tests/helpers/desktop-chrome-golden.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell/test/chrome-tree.test.ts'
+    Imported via "../../../tests/helpers/desktop-chrome-golden.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell/test/control-accounting-assistant.test.ts'
+    Imported via "../../../tests/helpers/desktop-chrome-golden.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell/test/control-accounting-dock.test.ts'
+    Imported via "../../../tests/helpers/desktop-chrome-golden.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell/test/control-accounting-frame.test.ts'
+    Imported via "../../../tests/helpers/desktop-chrome-golden.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell/test/control-accounting-inspector.test.ts'
+    Imported via "../../../tests/helpers/desktop-chrome-golden.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell/test/control-accounting-palette.test.ts'
+    Imported via "../../../tests/helpers/desktop-chrome-golden.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell/test/control-accounting-settings.test.ts'
+    Imported via "../../../tests/helpers/desktop-chrome-golden.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell/test/control-accounting-tree.test.ts'
+    Imported via "../../../tests/helpers/desktop-chrome-golden.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell/test/control-accounting-viewport.test.ts'
+    Imported via "../../../tests/helpers/desktop-chrome-golden.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell/test/control-accounting.test.ts'
+    Imported via "../../../tests/helpers/desktop-chrome-golden.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell/test/visual-model-settings.test.ts'
+    Imported via "../../../tests/helpers/desktop-chrome-golden.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell/test/visual-model-tree.test.ts'
+  File is ECMAScript module because '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/package.json' has field "type" with value "module"
+apps/desktop-shell/test/chrome-inspector.test.ts(2,32): error TS6307: File '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/tests/helpers/desktop-chrome-golden.ts' is not listed within the file list of project '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell/tsconfig.json'. Projects must list all files or use an 'include' pattern.
+  The file is in the program because:
+    Imported via "../../../tests/helpers/desktop-chrome-golden.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell/test/chrome-inspector.test.ts'
+    Imported via "../../../tests/helpers/desktop-chrome-golden.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell/test/chrome-settings.test.ts'
+    Imported via "../../../tests/helpers/desktop-chrome-golden.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell/test/chrome-tree.test.ts'
+    Imported via "../../../tests/helpers/desktop-chrome-golden.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell/test/control-accounting-assistant.test.ts'
+    Imported via "../../../tests/helpers/desktop-chrome-golden.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell/test/control-accounting-dock.test.ts'
+    Imported via "../../../tests/helpers/desktop-chrome-golden.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell/test/control-accounting-frame.test.ts'
+    Imported via "../../../tests/helpers/desktop-chrome-golden.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell/test/control-accounting-inspector.test.ts'
+    Imported via "../../../tests/helpers/desktop-chrome-golden.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell/test/control-accounting-palette.test.ts'
+    Imported via "../../../tests/helpers/desktop-chrome-golden.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell/test/control-accounting-settings.test.ts'
+    Imported via "../../../tests/helpers/desktop-chrome-golden.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell/test/control-accounting-tree.test.ts'
+    Imported via "../../../tests/helpers/desktop-chrome-golden.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell/test/control-accounting-viewport.test.ts'
+    Imported via "../../../tests/helpers/desktop-chrome-golden.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell/test/control-accounting.test.ts'
+    Imported via "../../../tests/helpers/desktop-chrome-golden.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell/test/visual-model-settings.test.ts'
+    Imported via "../../../tests/helpers/desktop-chrome-golden.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell/test/visual-model-tree.test.ts'
+  File is ECMAScript module because '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/package.json' has field "type" with value "module"
+[ELIFECYCLE] Command failed with exit code 2.

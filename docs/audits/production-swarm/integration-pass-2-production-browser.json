@@ -1,0 +1,264 @@
+{
+  "productionReady": false,
+  "platform": "Linux Chromium",
+  "mode": "rebuilt production Next servers; unconfigured identity/provider boundaries",
+  "pages": [
+    {
+      "site": "umbrella",
+      "route": "/",
+      "width": 375,
+      "status": 200,
+      "finalPath": "/",
+      "overflow": {
+        "client": 375,
+        "scroll": 375
+      },
+      "focus": {
+        "tag": "A",
+        "outline": "solid"
+      },
+      "screenshot": "screenshots/umbrella-home-375.png"
+    },
+    {
+      "site": "umbrella",
+      "route": "/",
+      "width": 1280,
+      "status": 200,
+      "finalPath": "/",
+      "overflow": {
+        "client": 1280,
+        "scroll": 1280
+      },
+      "focus": {
+        "tag": "A",
+        "outline": "solid"
+      },
+      "screenshot": "screenshots/umbrella-home-1280.png"
+    },
+    {
+      "site": "umbrella",
+      "route": "/open",
+      "width": 375,
+      "status": 200,
+      "finalPath": "/open",
+      "overflow": {
+        "client": 375,
+        "scroll": 375
+      },
+      "focus": {
+        "tag": "A",
+        "outline": "solid"
+      },
+      "screenshot": "screenshots/umbrella-open-375.png"
+    },
+    {
+      "site": "umbrella",
+      "route": "/open",
+      "width": 1280,
+      "status": 200,
+      "finalPath": "/open",
+      "overflow": {
+        "client": 1280,
+        "scroll": 1280
+      },
+      "focus": {
+        "tag": "A",
+        "outline": "solid"
+      },
+      "screenshot": "screenshots/umbrella-open-1280.png"
+    },
+    {
+      "site": "umbrella",
+      "route": "/login",
+      "width": 375,
+      "status": 200,
+      "finalPath": "/login",
+      "overflow": {
+        "client": 375,
+        "scroll": 375
+      },
+      "focus": {
+        "tag": "A",
+        "outline": "solid"
+      },
+      "screenshot": "screenshots/umbrella-login-375.png"
+    },
+    {
+      "site": "umbrella",
+      "route": "/login",
+      "width": 1280,
+      "status": 200,
+      "finalPath": "/login",
+      "overflow": {
+        "client": 1280,
+        "scroll": 1280
+      },
+      "focus": {
+        "tag": "A",
+        "outline": "solid"
+      },
+      "screenshot": "screenshots/umbrella-login-1280.png"
+    },
+    {
+      "site": "umbrella",
+      "route": "/account",
+      "width": 375,
+      "status": 200,
+      "finalPath": "/account",
+      "overflow": {
+        "client": 375,
+        "scroll": 375
+      },
+      "focus": {
+        "tag": "A",
+        "outline": "solid"
+      },
+      "screenshot": "screenshots/umbrella-account-375.png"
+    },
+    {
+      "site": "umbrella",
+      "route": "/account",
+      "width": 1280,
+      "status": 200,
+      "finalPath": "/account",
+      "overflow": {
+        "client": 1280,
+        "scroll": 1280
+      },
+      "focus": {
+        "tag": "A",
+        "outline": "solid"
+      },
+      "screenshot": "screenshots/umbrella-account-1280.png"
+    },
+    {
+      "site": "umbrella",
+      "route": "/editor",
+      "width": 375,
+      "status": 200,
+      "finalPath": "/editor",
+      "overflow": {
+        "client": 375,
+        "scroll": 375
+      },
+      "focus": {
+        "tag": "A",
+        "outline": "solid"
+      },
+      "screenshot": "screenshots/umbrella-editor-375.png"
+    },
+    {
+      "site": "umbrella",
+      "route": "/editor",
+      "width": 1280,
+      "status": 200,
+      "finalPath": "/editor",
+      "overflow": {
+        "client": 1280,
+        "scroll": 1280
+      },
+      "focus": {
+        "tag": "A",
+        "outline": "solid"
+      },
+      "screenshot": "screenshots/umbrella-editor-1280.png"
+    },
+    {
+      "site": "catalog-game",
+      "route": "/",
+      "width": 375,
+      "status": 200,
+      "finalPath": "/",
+      "overflow": {
+        "client": 375,
+        "scroll": 375
+      },
+      "focus": {
+        "tag": "A",
+        "outline": "solid"
+      },
+      "screenshot": "screenshots/catalog-game-home-375.png"
+    },
+    {
+      "site": "catalog-game",
+      "route": "/",
+      "width": 1280,
+      "status": 200,
+      "finalPath": "/",
+      "overflow": {
+        "client": 1280,
+        "scroll": 1280
+      },
+      "focus": {
+        "tag": "A",
+        "outline": "solid"
+      },
+      "screenshot": "screenshots/catalog-game-home-1280.png"
+    },
+    {
+      "site": "catalog-web",
+      "route": "/",
+      "width": 375,
+      "status": 200,
+      "finalPath": "/",
+      "overflow": {
+        "client": 375,
+        "scroll": 375
+      },
+      "focus": {
+        "tag": "A",
+        "outline": "solid"
+      },
+      "screenshot": "screenshots/catalog-web-home-375.png"
+    },
+    {
+      "site": "catalog-web",
+      "route": "/",
+      "width": 1280,
+      "status": 200,
+      "finalPath": "/",
+      "overflow": {
+        "client": 1280,
+        "scroll": 1280
+      },
+      "focus": {
+        "tag": "A",
+        "outline": "solid"
+      },
+      "screenshot": "screenshots/catalog-web-home-1280.png"
+    },
+    {
+      "site": "kids",
+      "route": "/",
+      "width": 375,
+      "status": 200,
+      "finalPath": "/",
+      "overflow": {
+        "client": 375,
+        "scroll": 375
+      },
+      "focus": {
+        "tag": "BUTTON",
+        "outline": "solid"
+      },
+      "screenshot": "screenshots/kids-home-375.png"
+    },
+    {
+      "site": "kids",
+      "route": "/",
+      "width": 1280,
+      "status": 200,
+      "finalPath": "/",
+      "overflow": {
+        "client": 1280,
+        "scroll": 1280
+      },
+      "focus": {
+        "tag": "BUTTON",
+        "outline": "solid"
+      },
+      "screenshot": "screenshots/kids-home-1280.png"
+    }
+  ],
+  "errors": []
+}

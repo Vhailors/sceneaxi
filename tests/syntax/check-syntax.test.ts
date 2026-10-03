@@ -50,6 +50,7 @@ describe("syntax check", () => {
     for (const tier of ["packages", "apps", "sites", "desktop"]) {
       rmSync(join(fx, tier), { recursive: true, force: true });
     }
+
     const res = runCheck(fx, "check-syntax.mjs");
     expect(res.status).toBe(1);
     expect(res.stderr).toContain("found zero source files");

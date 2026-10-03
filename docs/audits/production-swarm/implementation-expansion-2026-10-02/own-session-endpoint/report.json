@@ -1,0 +1,290 @@
+{
+  "task": "SITE-CATALOG-IDENTITY own-session endpoint",
+  "owner": "bg-110",
+  "status": "IMPLEMENTED_FOCUSED_VERIFIED",
+  "productionStatus": "NOT_CERTIFIED",
+  "historicalReview": "Previous failed/exhausted reviews remain failed; this is new explicit scoped implementation authorization.",
+  "sourceHandback": true,
+  "ownedSource": [
+    {
+      "path": "sites/umbrella/src/provider/own-session.ts",
+      "sha256": "6132cefa4127131d8371858ad25388015eeb6196044957da8fee35cf33439d87"
+    },
+    {
+      "path": "sites/umbrella/src/app/api/auth/own-session/route.ts",
+      "sha256": "931dfdfb8208ecba18fb58b5323b29beadba0b61819155ee362a57dcfd716173"
+    },
+    {
+      "path": "sites/umbrella/test/own-session.test.ts",
+      "sha256": "5678030d8fd8de59094dfcc374d8d9fc81a8d5025d21bff2d2362141f3091cc5"
+    }
+  ],
+  "unchanged": [
+    "sites/umbrella/src/app/api/auth/[...all]/route.ts",
+    "sites/umbrella/src/provider/better-auth-provider.ts",
+    "sites/umbrella/src/lib/identity-plane.ts",
+    "sites/umbrella/src/lib/request-authority.ts",
+    "all shared schemas/index/manifests/locks/checkers"
+  ],
+  "exports": [
+    {
+      "path": "sites/umbrella/src/provider/own-session.ts",
+      "symbols": [
+        "OWN_SESSION_PATH",
+        "OWN_SESSION_RESPONSE_MAX_BYTES",
+        "OWN_SESSION_CREDENTIAL_MAX_LENGTH",
+        "OwnSessionAuthority",
+        "OwnSessionEnvelope",
+        "createOwnSessionHandler"
+      ]
+    },
+    {
+      "path": "sites/umbrella/src/app/api/auth/own-session/route.ts",
+      "symbols": [
+        "runtime",
+        "dynamic",
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE",
+        "HEAD",
+        "OPTIONS"
+      ]
+    }
+  ],
+  "exactExportRequests": [],
+  "dependencies": [
+    "Existing umbrellaRequestAuthority().verifyFormOrigin with ONLY {origin}, no requestUrl/fetchSite fallback",
+    "Existing umbrellaRequestAuthority().plane({sessionToken}).identity.resolvePrincipal({surface:\"site\",sessionToken})",
+    "Existing site-kit named refusal registry/SiteIdentityPort/SitePrincipal/SITE_SESSION_HEADER/SITE_COOKIE_OCTET_RE/CLIENT_ROLE_CLAIM_KEYS",
+    "bg-111 catalog server adapter uses flat v1 wire, explicit x-sceneaxi-session, strict fixed target and bounded response"
+  ],
+  "wire": {
+    "path": "/api/auth/own-session",
+    "method": "GET",
+    "credentialHeader": "x-sceneaxi-session",
+    "origin": "Exactly deployment configured umbrella origin; mandatory canonical Origin and request URL origin match; production HTTPS dotted DNS only, no IP/local/pseudo/trailing-dot/single-label hosts; canonical HTTP loopback only explicit NODE_ENV development",
+    "success": {
+      "version": 1,
+      "ok": true,
+      "value": "Public SitePrincipal only"
+    },
+    "refusal": {
+      "version": 1,
+      "ok": false,
+      "reason": "Existing SiteRefusalReason only"
+    },
+    "bounds": {
+      "credentialChars": 4096,
+      "responseBytes": 16384,
+      "identifierChars": 256,
+      "emailChars": 320
+    },
+    "status": {
+      "success": 200,
+      "method": 405,
+      "malformed": 400,
+      "absentExpiredFuture": 401,
+      "originKidsRoleDisabledSurface": 403,
+      "unwiredUnavailableInvalidOutput": 503
+    },
+    "headers": {
+      "cache-control": "no-store",
+      "pragma": "no-cache",
+      "vary": "Origin, x-sceneaxi-session",
+      "x-content-type-options": "nosniff"
+    },
+    "forbidden": [
+      "implicit cookie/Authorization fallback",
+      "credential/user/role query",
+      "private provider objects or failure messages",
+      "CORS access grants",
+      "arbitrary URL target",
+      "token mint/login/SSO/second store"
+    ]
+  },
+  "failBefore": [
+    {
+      "kind": "current exact-source harness",
+      "execution": "Run unchanged contract-check.py SCRIPT via AST extraction without writing historical harness directory; log before-harness.log",
+      "result": {
+        "name": "own-session endpoint genuinely missing",
+        "input": {
+          "url": "https://umbrella.example.invalid/api/auth/own-session"
+        },
+        "observed": {
+          "status": 404,
+          "headers": {
+            "cache-control": "no-store",
+            "content-type": "application/json"
+          },
+          "body": {
+            "code": "NOT_FOUND"
+          }
+        },
+        "assertions": [
+          "404 NOT_FOUND",
+          "zero provider calls",
+          "cache-control no-store"
+        ],
+        "status": "MISSING_ENDPOINT",
+        "observedSha256": "e7adf32f501a0693fc72ab232f04a79b35006396428fdc655232db54619a02ca"
+      }
+    },
+    {
+      "kind": "new permanent regression test before implementation",
+      "command": "pnpm exec vitest run --config vitest.config.ts test/own-session.test.ts --reporter=dot",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi/sites/umbrella",
+      "exit": 1,
+      "output": "Cannot find module '../src/provider/own-session.js' imported from sites/umbrella/test/own-session.test.ts",
+      "log": "/home/devuser/.local/share/rtk/tee/1790944832_vitest_run.log"
+    }
+  ],
+  "passAfter": [
+    {
+      "command": "pnpm exec vitest run --config vitest.config.ts test/own-session.test.ts --reporter=json",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi/sites/umbrella",
+      "exit": 0,
+      "passed": 42,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0,
+      "log": "test-after.json",
+      "assertions": [
+        "authoritative own-session transport returns only bounded versioned public identity using explicit carry and site surface",
+        "authoritative own-session transport refuses missing/hostile/noncanonical Origin null before identity",
+        "authoritative own-session transport refuses missing/hostile/noncanonical Origin https://hostile.example.invalid before identity",
+        "authoritative own-session transport refuses missing/hostile/noncanonical Origin https://umbrella.example.invalid/path before identity",
+        "authoritative own-session transport refuses missing/hostile/noncanonical Origin https://umbrella.example.invalid, https://hostile.example.invalid before identity",
+        "authoritative own-session transport refuses unconfigured origin despite same-origin fetch hint and request URL",
+        "authoritative own-session transport refuses URL aliases and forwarded host spoofing",
+        "authoritative own-session transport refuses POST with no-store and Allow GET before origin/identity",
+        "authoritative own-session transport refuses HEAD with no-store and Allow GET before origin/identity",
+        "authoritative own-session transport refuses PUT with no-store and Allow GET before origin/identity",
+        "authoritative own-session transport refuses OPTIONS with no-store and Allow GET before origin/identity",
+        "authoritative own-session transport refuses DELETE with no-store and Allow GET before origin/identity",
+        "authoritative own-session transport denies client claim ?role=admin",
+        "authoritative own-session transport denies client claim ?roles=user",
+        "authoritative own-session transport denies client claim ?isAdmin=true",
+        "authoritative own-session transport denies client claim ?admin=true",
+        "authoritative own-session transport refuses unsolicited query ?userId=someone-else",
+        "authoritative own-session transport refuses unsolicited query ?sessionToken=forged",
+        "authoritative own-session transport refuses unsolicited query ?target=https://hostile.example.invalid",
+        "authoritative own-session transport refuses unsolicited query ?surface=site",
+        "authoritative own-session transport independently denies Kids before dispatch {\"query\":\"?surface=kids\"}",
+        "authoritative own-session transport independently denies Kids before dispatch {\"headers\":{\"x-sceneaxi-surface\":\"kids\"}}",
+        "authoritative own-session transport denies client role headers",
+        "authoritative own-session transport never uses cookies or Authorization as implicit credentials",
+        "authoritative own-session transport refuses malformed/oversize carry without verification",
+        "authoritative own-session transport refuses malformed/oversize carry without verification",
+        "authoritative own-session transport refuses malformed/oversize carry without verification",
+        "authoritative own-session transport refuses malformed/oversize carry without verification",
+        "authoritative own-session transport refuses malformed/oversize carry without verification",
+        "authoritative own-session transport preserves named expired refusal but never provider message or secrets",
+        "authoritative own-session transport keeps signed-out and unwired distinct",
+        "authoritative own-session transport catches real verifier exceptions into named unavailable with no private text",
+        "authoritative own-session transport refuses cross-user output through the existing validator",
+        "authoritative own-session transport binds returned session id to explicit carry",
+        "authoritative own-session transport projects away private provider fields instead of exposing the identity object",
+        "authoritative own-session transport preserves only server-derived admin role",
+        "authoritative own-session transport refuses oversized public fields instead of returning an unbounded principal",
+        "authoritative own-session transport requires explicit development-only HTTP loopback permission",
+        "real own-session route registration dispatches the real GET route through the existing configured facade with no URL fallback",
+        "real own-session route registration requires actual deployment origin even though the request URL and Origin agree",
+        "real own-session route registration keeps thrown facade errors named and private on the real route",
+        "real own-session route registration exports explicit POST/HEAD/OPTIONS/PATCH/PUT/DELETE refusals instead of provider fallback"
+      ]
+    },
+    {
+      "command": "pnpm exec tsc --noEmit -p tsconfig.test.json",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi/sites/umbrella",
+      "exit": 0,
+      "log": "typecheck-after.log"
+    },
+    {
+      "command": "pnpm exec eslint sites/umbrella/src/provider/own-session.ts sites/umbrella/src/app/api/auth/own-session/route.ts sites/umbrella/test/own-session.test.ts",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "exit": 0,
+      "log": "lint.log"
+    },
+    {
+      "command": "pnpm -s check:boundaries",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "exit": 0,
+      "log": "boundaries.log",
+      "result": "27 packages verified, no widening"
+    },
+    {
+      "command": "git diff --check -- sites/umbrella/src/provider/own-session.ts sites/umbrella/src/app/api/auth/own-session/route.ts sites/umbrella/test/own-session.test.ts",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "exit": 0,
+      "additionalAssertion": "All owned new files checked for trailing whitespace"
+    }
+  ],
+  "otherFailures": [
+    {
+      "command": "root vitest filter test/own-session.test.ts",
+      "exit": 1,
+      "output": "No test files found; corrected owning-site cwd, no empty success claimed"
+    },
+    {
+      "command": "initial umbrella test typecheck",
+      "exit": 2,
+      "output": "Foreign checkout-reader-bounds.test.ts(32,55) TS2379 signal undefined; reported owner bg-112; owner fixed omission, final rerun exit0",
+      "log": "typecheck.log"
+    },
+    {
+      "command": "initial owned ESLint",
+      "exit": 1,
+      "output": "no-control-regex boundedText regex; replaced with char-code validation without disable/weakening; final rerun exit0"
+    }
+  ],
+  "notRun": [
+    "Full gate/build/site build/browser/native/Docker/install: delegated exclusively serial owner",
+    "Actual HTTP Next specific-route registration/fresh built artifact (factory and actual route module tested, not network)",
+    "Real Better Auth/Neon/provider credential provenance/lifecycle",
+    "Catalogue-to-umbrella multi-origin socket integration/cookie host isolation: serial owner plus bg-111",
+    "Production/deploy/publication: no authority, not performed"
+  ],
+  "originHardeningRetry": {
+      "sourceHandback": true,
+      "filesChanged": ["sites/umbrella/src/provider/own-session.ts", "sites/umbrella/test/own-session.test.ts"],
+      "policy": "Canonical HTTPS dotted DNS, no IP literal, trailing dot, single-label or localhost/local/internal suffix. Exact localhost/127.0.0.1/[::1] permitted only HTTP with explicit development policy. Matches bg-111 transport.",
+      "newPermanentCases": 18,
+      "failBefore": { "passed": 48, "failed": 12, "output": "AssertionError: expected 200 to be 403", "log": "origin-test-before.json" },
+      "passAfter": { "passed": 60, "failed": 0, "pending": 0, "log": "origin-test-after.json" },
+      "commands": [
+        { "command": "pnpm exec vitest run --config vitest.config.ts test/own-session.test.ts --reporter=json", "cwd": "sites/umbrella", "exit": 0 },
+        { "command": "pnpm exec tsc --noEmit -p tsconfig.test.json", "cwd": "sites/umbrella", "exit": 0, "log": "origin-typecheck.log" },
+        { "command": "pnpm exec eslint sites/umbrella/src/provider/own-session.ts sites/umbrella/src/app/api/auth/own-session/route.ts sites/umbrella/test/own-session.test.ts", "cwd": "repo root", "exit": 0, "log": "origin-lint.log" }
+      ],
+      "tooling": "Dedicated project test returned No test command detected; explicit owning-site commands used.",
+      "preserved": ["first-dot carry session-ID binding", "private projection", "existing verified identity facade", "42 historical tests", "catchall unchanged"],
+      "historicalProof": "Original passAfter array is retained as earlier evidence, not the current source hash test proof."
+    },
+    "sharedRequests": [
+      {
+        "owner": "shared facade owner / serial integrator",
+        "path": "sites/umbrella/src/lib/login-flow.ts and its deployment-origin resolver",
+        "evidence": "bg-111 reports raw origin configuration path/userinfo is stripped before verification; not independently re-read or reproduced in this retry",
+        "request": "Reproduce then reject noncanonical raw configured deployment origin before normalization, or expose raw value for strict validation. Add permanent path/userinfo/query/hash/whitespace negatives.",
+        "status": "NOT_IMPLEMENTED_OUTSIDE_OWNERSHIP",
+        "productionBlocking": true
+      }
+    ],
+  "serialAcceptanceRequests": [
+    "Rebuild umbrella site from handed-back source; assert actual GET /api/auth/own-session reaches specific route instead of unchanged catchall 404, with positive synthetic verified identity fixture and origin/method/role/Kids/expiry/no-store negatives",
+    "Run real catalogue server-adapter to this endpoint on separate local origins with explicit synthetic carried credential; inspect no credential/provider leak; no browser SSO claim",
+    "Run complete gate and shared source-parsed inventories on frozen combined source; no matrix widening or skip"
+  ],
+  "resources": {
+    "services": 0,
+    "ports": 0,
+    "containers": 0,
+    "installs": 0,
+    "providerCredentials": 0,
+    "secretsExposed": false,
+    "cleanup": "No running resources created. Only owned source/test/report/log paths written; lightweight tsc may maintain normal ignored incremental cache."
+  }
+}

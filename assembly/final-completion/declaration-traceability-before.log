@@ -1,0 +1,42 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/tmp/sceneaxi-comprehensive-owned-xd4gdfl1[39m
+
+[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[31mx[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 1 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m packages/engine-presentation/test/declaration-consumer.test.ts[2m > [22memitted public declaration consumer[2m > [22maccepts numeric controls but rejects content/scene/renderer authority using actual emitted declarations
+[31m[1mAssertionError[22m: expected [ …(2) ] to deeply equal [][39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- [][39m
+[31m+ [[39m
+[31m+   "Argument of type '{ schemaVersion: 2; kind: \"sceneaxi.composed-scene\"; sceneId: string; rootInstanceId: string; instances: readonly ComposedSceneInstanceV2[]; evidence: { intakeDigest: string; placementDigest: string; artifactDigests: readonly ComposedSceneArtifactDigest[]; }; }' is not assignable to parameter of type 'JsonValue'.[39m
+[31m+   Types of property 'instances' are incompatible.[39m
+[31m+     Type 'readonly ComposedSceneInstanceV2[]' is not assignable to type 'JsonValue | undefined'.[39m
+[31m+       Type 'readonly ComposedSceneInstanceV2[]' is not assignable to type 'readonly JsonValue[]'.[39m
+[31m+         Type 'ComposedSceneInstanceV2' is not assignable to type 'JsonValue'.[39m
+[31m+           Type 'Omit<{ readonly name?: string | undefined; readonly instanceId: string; readonly parentInstanceId: string | null; readonly depth: number; readonly localTransform: SculptTransform; readonly worldTransform: SculptTransform; } & { ...; }, \"worldTransform\"> & { ...; } & { ...; }' is not assignable to type 'JsonValue'.[39m
+[31m+             Type 'Omit<{ readonly name?: string | undefined; readonly instanceId: string; readonly parentInstanceId: string | null; readonly depth: number; readonly localTransform: SculptTransform; readonly worldTransform: SculptTransform; } & { ...; }, \"worldTransform\"> & { ...; } & { ...; }' is not assignable to type 'JsonObject'.[39m
+[31m+               Property 'kind' is incompatible with index signature.[39m
+[31m+                 Type 'undefined' is not assignable to type 'JsonValue'.",[39m
+[31m+   "Argument of type '{ artifact: SculptArtifact; bounds: SceneBoundsV2; kind?: undefined; name?: string | undefined; artifactId: string; instanceId: string; parentInstanceId: string | null; localTransform: SculptTransform; depth: number; worldMatrix: SceneMatrixV2; } | { ...; }' is not assignable to parameter of type 'JsonValue'.[39m
+[31m+   Type '{ artifact: SculptArtifact; bounds: SceneBoundsV2; kind?: never; name?: string; artifactId: string; instanceId: string; parentInstanceId: string | null; localTransform: SculptTransform; depth: number; worldMatrix: SceneMatrixV2; }' is not assignable to type 'JsonValue'.[39m
+[31m+     Type '{ artifact: SculptArtifact; bounds: SceneBoundsV2; kind?: never; name?: string; artifactId: string; instanceId: string; parentInstanceId: string | null; localTransform: SculptTransform; depth: number; worldMatrix: SceneMatrixV2; }' is not assignable to type 'JsonObject'.[39m
+[31m+       Property 'kind' is incompatible with index signature.[39m
+[31m+         Type 'undefined' is not assignable to type 'JsonValue'.",[39m
+[31m+ ][39m
+
+[36m [2m❯[22m packages/engine-presentation/test/declaration-consumer.test.ts:[2m28:112[22m[39m
+
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m1 passed[39m[22m[90m (2)[39m
+[2m      Tests [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m2 passed[39m[22m[90m (3)[39m
+[2m   Start at [22m 16:55:19
+[2m   Duration [22m 7.53s[2m (transform 1.37s, setup 0ms, import 2.51s, tests 6.39s, environment 0ms)[22m
+

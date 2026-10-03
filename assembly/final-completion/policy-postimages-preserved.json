@@ -1,0 +1,38 @@
+{
+  "status": "EXACT_APPROVED_FIVE_POSTIMAGES_UNCHANGED",
+  "patchSha256": "5059b62c799b7be9bbeb9dd98187d317f4e2005b31dbdc0c5f62371c688ef9d7",
+  "reviewControls": 69,
+  "sourceGuardZero": false,
+  "rows": [
+    {
+      "path": ".oxlintrc.json",
+      "expected": "f815dd07e6a8d7e50b8ed37736baa1da63d9baab3be4edb3a31b86140459f0c5",
+      "actual": "f815dd07e6a8d7e50b8ed37736baa1da63d9baab3be4edb3a31b86140459f0c5",
+      "match": true
+    },
+    {
+      "path": "tools/oxlint/anti-slop/rules/no-runtime-typeof.ts",
+      "expected": "bbfe2c0c3398b95a3e663d9c6d54720cd5d4b41eb9edef086af6c4565e28f41c",
+      "actual": "bbfe2c0c3398b95a3e663d9c6d54720cd5d4b41eb9edef086af6c4565e28f41c",
+      "match": true
+    },
+    {
+      "path": "tools/oxlint/anti-slop/rules/no-unknown-parameters.ts",
+      "expected": "4c58e709c90e8ad9d645dc0c791bb8e7dcdb82e3cdaabe0ae3387ef73d8106d4",
+      "actual": "4c58e709c90e8ad9d645dc0c791bb8e7dcdb82e3cdaabe0ae3387ef73d8106d4",
+      "match": true
+    },
+    {
+      "path": "tools/oxlint/anti-slop/shared/checked-boundaries.ts",
+      "expected": "5a525a750624db4be8aea6d87a73e2eb12e6f4ea405d9c8c2745429e711ebce0",
+      "actual": "5a525a750624db4be8aea6d87a73e2eb12e6f4ea405d9c8c2745429e711ebce0",
+      "match": true
+    },
+    {
+      "path": "tools/oxlint/anti-slop/tests/checked-boundaries.test.mjs",
+      "expected": "a49c8f2570f28731c618837a7f77418734740feb72f1ebe5e794be3f8ff3e082",
+      "actual": "a49c8f2570f28731c618837a7f77418734740feb72f1ebe5e794be3f8ff3e082",
+      "match": true
+    }
+  ]
+}

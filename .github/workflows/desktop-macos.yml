@@ -15,6 +15,9 @@ on:
         default: false
         required: false
 
+permissions:
+  contents: read
+
 jobs:
   desktop-macos:
     # Only the release-candidate steps below need a macOS host, and macOS minutes bill
@@ -23,9 +26,9 @@ jobs:
     # repository gate — so every run except an explicit release candidate uses ubuntu.
     runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.release_candidate == true && 'macos-latest' || 'ubuntu-latest' }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4 — official upstream commit verified by git ls-remote
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4 — official upstream commit verified by git ls-remote
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4 — official upstream commit verified by git ls-remote
         with:
           node-version: 24
           cache: pnpm
@@ -80,7 +83,7 @@ jobs:
 
       # This is a verified workflow artifact, not a public release or an update
       # upload. Download IA remains unchanged until a durable release is recorded.
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4 — official upstream commit verified by git ls-remote
         if: github.event_name == 'workflow_dispatch' && inputs.release_candidate == true
         with:
           name: sceneaxi-desktop-macos

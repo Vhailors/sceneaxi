@@ -22,6 +22,7 @@ describe("document contract", () => {
       title: "Demo",
       data: { entities: [{ id: "a", x: 1 }] },
     });
+
     const v = validateDocument(doc);
     expect(v.ok).toBe(true);
     expect(doc.schemaVersion).toBe(DOCUMENT_SCHEMA_VERSION);
@@ -40,7 +41,9 @@ describe("document contract", () => {
       id: "x",
       data: {},
     });
+
     expect(r.ok).toBe(false);
+
     if (!r.ok) {
       expect(r.code).toBe("schema-major-mismatch");
       expect(r.foundSchemaVersion).toBe(2);
@@ -68,8 +71,11 @@ describe("document contract", () => {
   });
 
   it("refuses non-JSON values and cycles anywhere in document data", () => {
-    const cyclic: Record<string, unknown> = {};
+    type CyclicFixture = { self?: CyclicFixture };
+
+    const cyclic: CyclicFixture = {};
     cyclic["self"] = cyclic;
+
     const invalidValues: unknown[] = [
       { value: undefined },
       { value: 1n },
@@ -85,6 +91,7 @@ describe("document contract", () => {
         id: "invalid-json",
         data,
       });
+
       expect(result.ok).toBe(false);
     }
   });
@@ -110,6 +117,7 @@ describe("proposal contract", () => {
         },
       ],
     });
+
     const v = validateProposal(proposal);
     expect(v.ok).toBe(true);
     expect(proposal.schemaVersion).toBe(PROPOSAL_SCHEMA_VERSION);
@@ -134,7 +142,9 @@ describe("proposal contract", () => {
       ],
       diffs: [{ documentPath: "a.json", unifiedDiff: "" }],
     });
+
     expect(mismatch.ok).toBe(false);
+
     if (!mismatch.ok) expect(mismatch.code).toBe("schema-major-mismatch");
 
     const badHash = validateProposal({
@@ -151,6 +161,7 @@ describe("proposal contract", () => {
       ],
       diffs: [{ documentPath: "a.json", unifiedDiff: "" }],
     });
+
     expect(badHash.ok).toBe(false);
   });
 

@@ -13,7 +13,9 @@ export const SCENEAXI_REFUSAL_REGISTRY_CATALOG = Object.freeze({
 });
 
 export type { AssetRenderMesh, BaseColorTexture } from "./asset-render-mesh.js";
+
 export { evaluateGltfAnimation } from "./gltf-animation.js";
+
 export type { GltfAnimationChannel, GltfAnimationClip, GltfAnimationEvaluation, GltfAnimationInterpolation, GltfAnimationPath, GltfAnimationPose } from "./gltf-animation.js";
 
 export {
@@ -31,6 +33,7 @@ export {
   transitionCatalogItem,
   validateCatalogItem,
 } from "./catalog.js";
+
 export type {
   AiGenerationDisclosure,
   AssetPackageRef,
@@ -87,6 +90,7 @@ export {
   validateSession,
   validateUser,
 } from "./identity.js";
+
 export type {
   IdentityRefuseCode,
   IdentityRole,
@@ -111,6 +115,7 @@ export {
   validateCreditAccount,
   validateCreditLedgerEntry,
 } from "./credits.js";
+
 export type {
   CreditAccount,
   CreditLedgerEntry,
@@ -143,7 +148,9 @@ export {
   validateCreditPackCatalogArchive,
   validateStripeCustomerLink,
 } from "./billing.js";
+
 export { CREDIT_PACK_CATALOG_DATA } from "./credit-packs.data.js";
+
 export type {
   BillingMode,
   BillingRefuseCode,
@@ -175,6 +182,7 @@ export {
   isEntitlementOutcome,
   validateEntitlementDecision,
 } from "./entitlements.js";
+
 export type {
   EntitlementCapability,
   EntitlementDecision,
@@ -201,7 +209,9 @@ export {
   validateCatalogListing,
   validateCatalogListingSet,
 } from "./catalog-listing.js";
+
 export { CATALOG_LISTINGS_DATA } from "./catalog-listings.data.js";
+
 export type {
   CatalogListing,
   CatalogListingRefuseCode,
@@ -225,6 +235,7 @@ export {
   validateCreatorShareRecord,
   validateMoneySplitRecord,
 } from "./revenue-share.js";
+
 export type {
   CreatorShareRecord,
   MoneySplitRecord,
@@ -252,6 +263,7 @@ export {
 } from "./stripe-connect.js";
 
 export { validateCreditReconciliationRecord, type CreditReconciliationRecord } from "./credit-reconciliation.js";
+
 export type {
   ConnectAccountRecord,
   ConnectOnboardingIntent,
@@ -272,10 +284,13 @@ export {
 } from "./record-validation.js";
 
 export { createProvenanceWitness } from "./provenance.js";
+
 export type { ProvenanceWitness } from "./provenance.js";
 
 export { parseUnambiguousJson } from "./unambiguous-json.js";
+
 export type { UnambiguousJsonParseResult } from "./unambiguous-json.js";
+
 export type {
   DocumentValidationOk,
   DocumentValidationRefuse,
@@ -293,6 +308,7 @@ export {
   WEB_EXPERIENCE_SANDBOX_POLICY,
   evaluateWebExperienceAuthoringOperation,
 } from "./web-experience-authoring.js";
+
 export type {
   WebExperienceAuthoringDecision,
   WebExperienceAuthoringOperation,
@@ -350,6 +366,7 @@ export {
   validateInputActionMap,
   validateInputActionOverrides,
 } from "./input-action-registry.js";
+
 export type {
   ControllerInputBinding,
   GamepadInputBinding,
@@ -368,6 +385,7 @@ export type {
   PointerInputBinding,
   WheelInputBinding,
 } from "./input-action-registry.js";
+
 export type {
   EditorCommandClient,
   EditorCommandDefinition,
@@ -410,6 +428,7 @@ export {
   PROJECT_GIT_EVIDENCE_MAX_BYTES,
   PROJECT_GIT_SCHEMA_VERSION,
 } from "./project-git.js";
+
 export type {
   ProjectGitCommitPreparation,
   ProjectGitCommitPreparationResult,
@@ -419,6 +438,7 @@ export type {
   ProjectGitRepositoryState,
   ProjectGitStateResult,
 } from "./project-git.js";
+
 export type {
   ProjectAssetIdentity,
   ProjectCapability,
@@ -462,6 +482,7 @@ export {
   parseDesktopLocalBridgeDiscovery,
   validateDesktopLocalBridgeToolInput,
 } from "./desktop-local-bridge.js";
+
 export type {
   DesktopLocalBridgeDiscovery,
   DesktopLocalBridgeErrorCode,
@@ -473,6 +494,7 @@ export type {
   DesktopLocalBridgeTool,
   DesktopLocalBridgeToolName,
 } from "./desktop-local-bridge.js";
+
 export type {
   ModelCapabilityDescriptor,
   ModelCompleteRequest,
@@ -491,6 +513,7 @@ export type {
   ModelToolCallResponse,
   ModelToolDescriptor,
 } from "./model-provider.js";
+
 export type {
   DeliveryArtifactRole,
   DeliveryBuildMetadata,
@@ -536,6 +559,7 @@ export {
   editorShellModeSurface,
   editorShellPrimaryDockTabs,
 } from "./editor-shell.js";
+
 export type {
   EditorShellAssistantModeId,
   EditorShellAssistantState,
@@ -560,6 +584,7 @@ export {
   parsePluginManifestText,
   validatePluginManifest,
 } from "./plugin.js";
+
 export type {
   PluginManifest,
   PluginManifestDiagnostic,
@@ -582,6 +607,7 @@ export {
   pluginCapabilityRegistrySeed,
   validatePluginCapabilityRegistry,
 } from "./plugin-capability-registry.js";
+
 export type {
   PluginCapabilityLookupHit,
   PluginCapabilityLookupMiss,
@@ -604,6 +630,7 @@ export {
   checkSculptIntakeSourceImplementation,
   requestSculptIntake,
 } from "./plugin-capability-sculpt-intake.js";
+
 export type {
   SculptIntakeSource,
   SculptIntakeSourceContractCheckOk,
@@ -615,6 +642,7 @@ export type {
   SculptIntakeSourceRequest,
   SculptIntakeSourceResult,
 } from "./plugin-capability-sculpt-intake.js";
+
 export type {
   ApplyDiagnostic,
   ApplyDiagnosticCode,
@@ -759,6 +787,7 @@ export {
   validateRarityProvenance,
   validateRarityRollRequest,
 } from "./rarity.js";
+
 export type {
   RarityCandidate,
   RarityNamespace,
@@ -785,6 +814,7 @@ export {
   registryEntryFor,
   validateProfileConformanceClaim,
 } from "./profile-conformance.js";
+
 export type {
   ClaimValidationOk,
   ClaimValidationRefuse,
@@ -821,6 +851,7 @@ export {
   resolveOpenPathSurfaceRequest,
   validateOpenPathDemoDecision,
 } from "./open-path-policy.js";
+
 export type {
   OpenPathDemoAllowed,
   OpenPathDemoDecision,
@@ -861,6 +892,7 @@ export {
   validateSculptQualityArtifact,
   validateSculptQualityObjectSculptSpec,
 } from "./sculpt.js";
+
 export type {
   ObjectSculptSpec,
   LegacyObjectSculptSpec,
@@ -938,6 +970,7 @@ export {
   isDesktopSceneReparentPolicy,
   resolveDesktopSceneSelection,
 } from "./desktop-scene-edit.js";
+
 export {
   DESKTOP_SCENE_TRANSFORM_AXES,
   DESKTOP_SCENE_TRANSFORM_MODES,
@@ -949,6 +982,7 @@ export {
   isDesktopSceneTransformRequest,
   resolveDesktopSceneTransform,
 } from "./desktop-scene-transform.js";
+
 export type {
   DesktopSceneTransformAxis,
   DesktopSceneTransformComponent,
@@ -962,6 +996,7 @@ export type {
   DesktopSceneTransformValueKind,
   DesktopSceneTransformVector,
 } from "./desktop-scene-transform.js";
+
 export {
   SCENE_PREFAB_CATALOG_KEY,
   SCENE_PREFAB_CATALOG_KIND,
@@ -978,6 +1013,7 @@ export {
   scenePrefabDefinitionDigest,
   scenePrefabRootInstanceId,
 } from "./desktop-scene-prefab.js";
+
 export {
   SCENE_ANIMATION_CATALOG_KEY,
   SCENE_ANIMATION_CATALOG_KIND,
@@ -989,8 +1025,10 @@ export {
   evaluateSceneAnimation,
   inspectSceneAnimation,
   parseSceneAnimationCatalog,
+  parseSceneAnimationMutation,
   sceneAnimationCatalogDigest,
 } from "./desktop-scene-animation.js";
+
 export {
   SCENE_PHYSICS_BODY_KINDS,
   SCENE_PHYSICS_CATALOG_KEY,
@@ -999,13 +1037,17 @@ export {
   SCENE_PHYSICS_ENGINES,
   SCENE_PHYSICS_REFUSALS,
   SCENE_PHYSICS_SCHEMA_VERSION,
-  SCENE_PHYSICS_SHAPE_KINDS,
+  SCENE_PHYSICS_COLLIDER_KINDS,
   applyScenePhysicsMutation,
   emptyScenePhysicsCatalog,
   evaluateScenePhysics,
   inspectScenePhysics,
   parseScenePhysicsCatalog,
+  parseScenePhysicsMutation,
+  requireScenePhysicsCatalog,
+  SCENE_PHYSICS_COLLIDER_KINDS as "SCENE_PHYSICS_SHAPE_KINDS",
 } from "./desktop-scene-physics.js";
+
 export {
   ASSISTANT_ASK_ANSWER_KIND,
   ASSISTANT_ASK_REFUSALS,
@@ -1021,6 +1063,7 @@ export {
   isFixtureProviderDescriptor,
   parseSceneAssistantBuildCatalog,
 } from "./desktop-assistant-ask.js";
+
 export {
   SCENE_PACKAGE_CATALOG_KEY,
   SCENE_PACKAGE_CATALOG_KIND,
@@ -1032,6 +1075,7 @@ export {
   inspectScenePackages,
   parseScenePackageCatalog,
 } from "./desktop-scene-package.js";
+
 export {
   PROFILE_EVIDENCE_KIND,
   PROFILE_EVIDENCE_SCHEMA_VERSION,
@@ -1039,6 +1083,7 @@ export {
   PROFILE_REFUSALS,
   captureProfileEvidence,
 } from "./desktop-profile-evidence.js";
+
 export {
   WORKSPACE_LAYOUT_DEFAULT_ID,
   WORKSPACE_LAYOUT_KIND,
@@ -1049,6 +1094,7 @@ export {
   inspectWorkspaceLayout,
   parseWorkspaceLayout,
 } from "./desktop-workspace-layout.js";
+
 export {
   EXTENSION_SEAM_CAPABILITY_IDS,
   EXTENSION_SEAM_IDS,
@@ -1060,6 +1106,7 @@ export {
   refuseUndeclaredExtensionGrant,
   startExtensionSeam,
 } from "./desktop-extension-seams.js";
+
 export {
   PROJECT_BUILD_KIND,
   PROJECT_BUILD_PLATFORMS,
@@ -1069,26 +1116,31 @@ export {
   evaluateProjectBuild,
   isProjectBuildPlatform,
 } from "./desktop-project-build.js";
+
 export type {
   ProjectBuildHost,
   ProjectBuildPlatform,
   ProjectBuildRefusal,
 } from "./desktop-project-build.js";
+
 export type {
   ExtensionSeam,
   ExtensionSeamId,
   ExtensionSeamRefusal,
 } from "./desktop-extension-seams.js";
+
 export type {
   WorkspaceLayout,
   WorkspaceLayoutRefusal,
 } from "./desktop-workspace-layout.js";
+
 export type {
   ProfileEvidence,
   ProfileMetric,
   ProfileMetricId,
   ProfileRefusal,
 } from "./desktop-profile-evidence.js";
+
 export type {
   ScenePackageCatalog,
   ScenePackageDiscovery,
@@ -1097,6 +1149,7 @@ export type {
   ScenePackageMutation,
   ScenePackageRefusal,
 } from "./desktop-scene-package.js";
+
 export type {
   AssistantAskAnswer,
   AssistantAskRefusal,
@@ -1106,6 +1159,7 @@ export type {
   SceneAssistantBuildCatalog,
   SceneAssistantBuildEntry,
 } from "./desktop-assistant-ask.js";
+
 export type {
   ScenePhysicsBody,
   ScenePhysicsCatalog,
@@ -1115,10 +1169,21 @@ export type {
   ScenePhysicsMaterial,
   ScenePhysicsMutation,
   ScenePhysicsRefusal,
-  ScenePhysicsShape,
+  ScenePhysicsCollider,
   ScenePhysicsSnapshot,
   ScenePhysicsWorld,
+
+  ScenePhysicsLegacyCatalog,
+  ScenePhysicsColliderCatalog,
+  ScenePhysicsNormalizedCatalog,
+  ScenePhysicsCatalogInput,
 } from "./desktop-scene-physics.js";
+
+/** Schema-v1 wire geometry retains its shipped export name without owning a legacy symbol. */
+type ScenePhysicsLegacyGeometry = import("./desktop-scene-physics.js").ScenePhysicsLegacyCatalog["shapes"][number];
+
+export type { ScenePhysicsLegacyGeometry as "ScenePhysicsShape" };
+
 export {
   SCENE_LIGHTS_CATALOG_KEY,
   SCENE_LIGHTS_CATALOG_KIND,
@@ -1131,12 +1196,14 @@ export {
   parseSceneLightsCatalog,
   sceneLightsCatalogDigest,
 } from "./desktop-scene-lights.js";
+
 export type {
   SceneLight,
   SceneLightsCatalog,
   SceneLightsMutation,
   SceneLightsRefusal,
 } from "./desktop-scene-lights.js";
+
 export {
   SCENE_CAMERAS_CATALOG_KEY,
   SCENE_CAMERAS_CATALOG_KIND,
@@ -1149,12 +1216,14 @@ export {
   parseSceneCamerasCatalog,
   sceneCamerasCatalogDigest,
 } from "./desktop-scene-cameras.js";
+
 export type {
   SceneCamera,
   SceneCamerasCatalog,
   SceneCamerasMutation,
   SceneCamerasRefusal,
 } from "./desktop-scene-cameras.js";
+
 export {
   SCENE_AUDIO_CATALOG_KEY,
   SCENE_AUDIO_CATALOG_KIND,
@@ -1166,12 +1235,14 @@ export {
   parseSceneAudioCatalog,
   sceneAudioCatalogDigest,
 } from "./desktop-scene-audio.js";
+
 export type {
   SceneAudioSource,
   SceneAudioCatalog,
   SceneAudioMutation,
   SceneAudioRefusal,
 } from "./desktop-scene-audio.js";
+
 export {
   SCENE_ENVIRONMENT_CATALOG_KEY,
   SCENE_ENVIRONMENT_CATALOG_KIND,
@@ -1183,13 +1254,16 @@ export {
   emptySceneEnvironmentCatalog,
   inspectSceneEnvironment,
   parseSceneEnvironmentCatalog,
+  parseSceneEnvironmentMutation,
   sceneEnvironmentCatalogDigest,
 } from "./desktop-scene-environment.js";
+
 export type {
   SceneEnvironmentCatalog,
   SceneEnvironmentMutation,
   SceneEnvironmentRefusal,
 } from "./desktop-scene-environment.js";
+
 export {
   SCENE_MATERIALS_CATALOG_KEY,
   SCENE_MATERIALS_CATALOG_KIND,
@@ -1200,14 +1274,17 @@ export {
   emptySceneMaterialsCatalog,
   inspectSceneMaterials,
   parseSceneMaterialsCatalog,
+  parseSceneMaterialsMutation,
   sceneMaterialsCatalogDigest,
 } from "./desktop-scene-materials.js";
+
 export type {
   SceneMaterialOverride,
   SceneMaterialsCatalog,
   SceneMaterialsMutation,
   SceneMaterialsRefusal,
 } from "./desktop-scene-materials.js";
+
 export {
   SCENE_EFFECTS_CATALOG_KEY,
   SCENE_EFFECTS_CATALOG_KIND,
@@ -1218,8 +1295,10 @@ export {
   emptySceneEffectsCatalog,
   inspectSceneEffects,
   parseSceneEffectsCatalog,
+  parseSceneEffectsMutation,
   sampleSceneEffects,
 } from "./desktop-scene-effects.js";
+
 export type {
   SceneEffectEmitter,
   SceneEffectSample,
@@ -1228,17 +1307,20 @@ export type {
   SceneEffectsMutation,
   SceneEffectsRefusal,
 } from "./desktop-scene-effects.js";
+
 export {
   PHYSICS_HOST_PROBE_STEPS,
   PHYSICS_WORLD_HOST_KINDS,
   PHYSICS_WORLD_HOST_REFUSALS,
   createToyPhysicsWorldHost,
 } from "./physics-world-host.js";
+
 export type {
   PhysicsWorldHandle,
   PhysicsWorldHost,
   PhysicsWorldHostKind,
 } from "./physics-world-host.js";
+
 export type {
   SceneAnimationBinding,
   SceneAnimationCatalog,
@@ -1251,6 +1333,7 @@ export type {
   SceneAnimationSample,
   SceneAnimationTrack,
 } from "./desktop-scene-animation.js";
+
 export {
   PLAY_SESSION_KIND,
   PLAY_SESSION_REFUSALS,
@@ -1264,12 +1347,14 @@ export {
   startPlaySession,
   stopPlaySession,
 } from "./desktop-play-session.js";
+
 export type {
   PlaySession,
   PlaySessionRefusal,
   PlaySessionState,
   PlayViewportSource,
 } from "./desktop-play-session.js";
+
 export type {
   ScenePrefabCatalog,
   ScenePrefabDefinition,
@@ -1281,6 +1366,7 @@ export type {
   ScenePrefabRefusal,
   ScenePrefabSourceNode,
 } from "./desktop-scene-prefab.js";
+
 export type {
   DesktopSceneEditOperation,
   DesktopSceneEditProfile,
@@ -1291,6 +1377,7 @@ export type {
   DesktopSceneTransformPropertyDefinition,
   DesktopSceneTransformPropertyId,
 } from "./desktop-scene-edit.js";
+
 export type {
   ComposedScene,
   ComposedSceneArtifactDigest,
@@ -1312,9 +1399,41 @@ export {
   SCULPT_PROCEDURAL_MODULE_ID,
   SCULPT_PROCEDURAL_SOURCE_DIGEST,
 } from "./sculpt-procedural.js";
+
 export type {
   SculptProceduralEmit,
   SculptProceduralGeometry,
   SculptProceduralMaterial,
   SculptProceduralNode,
 } from "./sculpt-procedural.js";
+
+export type { GameplayEffect, GameplayDefinition, GameplayActionCommand, GameplaySnapshot } from "./kernel-session.js";
+
+export {
+  SCENE_COMPOSITION_SCHEMA_VERSION_V2,
+  SCENE_MATRIX_CONVENTION_V2,
+  multiplySceneMatricesV2,
+  sceneMatrixFromSculptTransformV2,
+  validateSceneCompositionIntakeV2,
+  resolveScenePlacementsV2,
+  migrateSceneCompositionIntakeV1ToV2,
+  digestScenePlacementsV2,
+  digestComposedSceneV2,
+  projectSceneInstanceHierarchyV2,
+  validateComposedSceneV2,
+  composedSceneV2FromDocumentData,
+  type SceneMatrixV2,
+  type SceneCompositionIntakeV2,
+  type ResolvedScenePlacementV2,
+  type SceneBoundsV2,
+  type ComposedSceneInstanceV2,
+  type ComposedSceneV2,
+  type PlacedSceneInstanceHierarchyV2,
+} from "./scene-composition.js";
+
+export {
+  evaluateLocalProjectBuild,
+} from "./desktop-project-build.js";
+
+// Legacy type compatibility only: Node runtime remains at the explicit node subpath.
+export type { ConformanceCheckResult, ConformanceSuiteResult } from "./profile-conformance-suite.js";

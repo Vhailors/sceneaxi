@@ -1,0 +1,58 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/tmp/sceneaxi-comprehensive-owned-xd4gdfl1[39m
+
+[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[31mx[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[31mx[39m[33m[39m[31mx[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 3 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m desktop/linux/test/viewport-input-actions.test.ts[2m > [22mdesktop Play-facing viewport input actions[2m > [22mdrives pointer and wheel controls only through the effective shared map
+[31m[1mError[22m: pointer fixture refused[39m
+[36m [2m❯[22m desktop/linux/test/viewport-input-actions.test.ts:[2m119:51[22m[39m
+    [90m117|[39m       { device[33m:[39m [32m"pointer"[39m[33m,[39m button[33m:[39m [34m2[39m[33m,[39m gesture[33m:[39m [32m"drag"[39m }[33m,[39m
+    [90m118|[39m     )[33m;[39m
+    [90m119|[39m     if (!rebound.ok || !("map" in rebound)) throw new Error("pointer f…
+    [90m   |[39m                                                   [31m^[39m
+    [90m120|[39m     [35mconst[39m window [33m=[39m [35mnew[39m [33mWindow[39m()[33m;[39m
+    [90m121|[39m     windows[33m.[39m[34mpush[39m(window)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m packages/engine-kernel/test/seam.test.ts[2m > [22m@sceneaxi/engine-kernel public seam[2m > [22mrestores the v1 digest consumer without changing the modern session seam
+[31m[1mAssertionError[22m: expected 'sha256:cf7807ad994648ab609cd7a4ced59d…' to be 'sha256:cda0711dbb7d296bdd0db3c2d7539e…' // Object.is equality[39m
+
+Expected: [32m"sha256:c[7mda0711dbb7d296bdd0db3c2d7539eb412a93128e819dcd7ac997f7c664b1355[27m"[39m
+Received: [31m"sha256:c[7mf7807ad994648ab609cd7a4ced59dc5fd6efbb9ef511ae88a7fbc52ac3d8867[27m"[39m
+
+[36m [2m❯[22m packages/engine-kernel/test/seam.test.ts:[2m26:38[22m[39m
+    [90m 24|[39m     )[33m;[39m
+    [90m 25|[39m     const session = kernel.open({ productId: "digest-seam", seed: 0, e…
+    [90m 26|[39m     expect(session.observe().digest).toBe(kernel.computeDigest(0, 0, […
+    [90m   |[39m                                      [31m^[39m
+    [90m 27|[39m     [34mexpect[39m(session[33m.[39m[34mobserve[39m()[33m.[39mtick)[33m.[39m[34mtoBe[39m([34m0[39m)[33m;[39m
+    [90m 28|[39m   })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m packages/engine-presentation/test/declaration-consumer.test.ts[2m > [22memitted public declaration consumer[2m > [22maccepts numeric controls but rejects content/scene/renderer authority using actual emitted declarations
+[31m[1mAssertionError[22m: expected [ …(2) ] to deeply equal [][39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- [][39m
+[31m+ [[39m
+[31m+   "Index signature in type 'JsonObject' only permits reading.",[39m
+[31m+   "Index signature in type 'JsonObject' only permits reading.",[39m
+[31m+ ][39m
+
+[36m [2m❯[22m packages/engine-presentation/test/declaration-consumer.test.ts:[2m28:112[22m[39m
+
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m3 failed[39m[22m[2m | [22m[1m[32m4 passed[39m[22m[90m (7)[39m
+[2m      Tests [22m [1m[31m3 failed[39m[22m[2m | [22m[1m[32m45 passed[39m[22m[90m (48)[39m
+[2m   Start at [22m 16:58:13
+[2m   Duration [22m 7.01s[2m (transform 14.43s, setup 0ms, import 20.95s, tests 5.75s, environment 1ms)[22m
+

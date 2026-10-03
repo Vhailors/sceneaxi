@@ -1,0 +1,675 @@
+{
+  "schemaVersion": 1,
+  "method": "Current manifests + existing exportEntries walker; index frozen seam text check. Source presence and metadata only, not runtime behavior or npm/release compatibility.",
+  "packages": [
+    {
+      "path": "/home/devuser/Documents/Projects/sceneaxi/packages/auth",
+      "name": "@sceneaxi/auth",
+      "version": "0.0.0",
+      "private": true,
+      "license": "UNLICENSED",
+      "releaseGroup": "identity",
+      "exports": [
+        {
+          "subpath": ".",
+          "target": "./src/index.ts",
+          "present": true
+        },
+        {
+          "subpath": "./testing/principal-issuance",
+          "target": "./src/testing/principal-issuance.ts",
+          "present": true
+        }
+      ],
+      "frozenPublicSeam": true,
+      "seamSource": "/home/devuser/Documents/Projects/sceneaxi/packages/auth/src/index.ts",
+      "seamLine": 14,
+      "installRootAvailable": true
+    },
+    {
+      "path": "/home/devuser/Documents/Projects/sceneaxi/packages/authoring-core",
+      "name": "@sceneaxi/authoring-core",
+      "version": "0.0.0",
+      "private": true,
+      "license": "UNLICENSED",
+      "releaseGroup": "core-train",
+      "exports": [
+        {
+          "subpath": ".",
+          "target": "./src/index.ts",
+          "present": true
+        },
+        {
+          "subpath": "./rarity-evidence",
+          "target": "./src/rarity-evidence.ts",
+          "present": true
+        }
+      ],
+      "frozenPublicSeam": true,
+      "seamSource": "/home/devuser/Documents/Projects/sceneaxi/packages/authoring-core/src/index.ts",
+      "seamLine": 15,
+      "installRootAvailable": true
+    },
+    {
+      "path": "/home/devuser/Documents/Projects/sceneaxi/packages/billing",
+      "name": "@sceneaxi/billing",
+      "version": "0.0.0",
+      "private": true,
+      "license": "UNLICENSED",
+      "releaseGroup": "identity",
+      "exports": [
+        {
+          "subpath": ".",
+          "target": "./src/index.ts",
+          "present": true
+        }
+      ],
+      "frozenPublicSeam": true,
+      "seamSource": "/home/devuser/Documents/Projects/sceneaxi/packages/billing/src/index.ts",
+      "seamLine": 19,
+      "installRootAvailable": true
+    },
+    {
+      "path": "/home/devuser/Documents/Projects/sceneaxi/packages/cli",
+      "name": "@sceneaxi/cli",
+      "version": "0.0.0",
+      "private": true,
+      "license": "UNLICENSED",
+      "releaseGroup": "cli-protocol",
+      "exports": [
+        {
+          "subpath": ".",
+          "target": "./src/index.ts",
+          "present": true
+        }
+      ],
+      "frozenPublicSeam": true,
+      "seamSource": "/home/devuser/Documents/Projects/sceneaxi/packages/cli/src/index.ts",
+      "seamLine": 13,
+      "installRootAvailable": true
+    },
+    {
+      "path": "/home/devuser/Documents/Projects/sceneaxi/packages/engine-kernel",
+      "name": "@sceneaxi/engine-kernel",
+      "version": "0.0.0",
+      "private": true,
+      "license": "UNLICENSED",
+      "releaseGroup": "core-train",
+      "exports": [
+        {
+          "subpath": ".",
+          "target": "./src/index.ts",
+          "present": true
+        }
+      ],
+      "frozenPublicSeam": true,
+      "seamSource": "/home/devuser/Documents/Projects/sceneaxi/packages/engine-kernel/src/index.ts",
+      "seamLine": 17,
+      "installRootAvailable": true
+    },
+    {
+      "path": "/home/devuser/Documents/Projects/sceneaxi/packages/engine-orchestrator",
+      "name": "@sceneaxi/engine-orchestrator",
+      "version": "0.0.0",
+      "private": true,
+      "license": "UNLICENSED",
+      "releaseGroup": "core-train",
+      "exports": [
+        {
+          "subpath": ".",
+          "target": "./src/index.ts",
+          "present": true
+        }
+      ],
+      "frozenPublicSeam": true,
+      "seamSource": "/home/devuser/Documents/Projects/sceneaxi/packages/engine-orchestrator/src/index.ts",
+      "seamLine": 16,
+      "installRootAvailable": true
+    },
+    {
+      "path": "/home/devuser/Documents/Projects/sceneaxi/packages/engine-presentation",
+      "name": "@sceneaxi/engine-presentation",
+      "version": "0.0.0",
+      "private": true,
+      "license": "UNLICENSED",
+      "releaseGroup": "core-train",
+      "exports": [
+        {
+          "subpath": ".",
+          "target": "./src/index.ts",
+          "present": true
+        }
+      ],
+      "frozenPublicSeam": true,
+      "seamSource": "/home/devuser/Documents/Projects/sceneaxi/packages/engine-presentation/src/index.ts",
+      "seamLine": 10,
+      "installRootAvailable": true
+    },
+    {
+      "path": "/home/devuser/Documents/Projects/sceneaxi/packages/importers",
+      "name": "@sceneaxi/importers",
+      "version": "0.0.0",
+      "private": true,
+      "license": "UNLICENSED",
+      "releaseGroup": "importers",
+      "exports": [
+        {
+          "subpath": ".",
+          "target": "./src/index.ts",
+          "present": true
+        }
+      ],
+      "frozenPublicSeam": true,
+      "seamSource": "/home/devuser/Documents/Projects/sceneaxi/packages/importers/src/index.ts",
+      "seamLine": 19,
+      "installRootAvailable": true
+    },
+    {
+      "path": "/home/devuser/Documents/Projects/sceneaxi/packages/physics-rapier",
+      "name": "@sceneaxi/physics-rapier",
+      "version": "0.0.0",
+      "private": true,
+      "license": "UNLICENSED",
+      "releaseGroup": "core-train",
+      "exports": [
+        {
+          "subpath": ".",
+          "target": "./src/index.ts",
+          "present": true
+        }
+      ],
+      "frozenPublicSeam": true,
+      "seamSource": "/home/devuser/Documents/Projects/sceneaxi/packages/physics-rapier/src/index.ts",
+      "seamLine": 12,
+      "installRootAvailable": true
+    },
+    {
+      "path": "/home/devuser/Documents/Projects/sceneaxi/packages/plugin-host",
+      "name": "@sceneaxi/plugin-host",
+      "version": "0.0.0",
+      "private": true,
+      "license": "UNLICENSED",
+      "releaseGroup": "plugin-host",
+      "exports": [
+        {
+          "subpath": ".",
+          "target": "./src/index.ts",
+          "present": true
+        }
+      ],
+      "frozenPublicSeam": true,
+      "seamSource": "/home/devuser/Documents/Projects/sceneaxi/packages/plugin-host/src/index.ts",
+      "seamLine": 10,
+      "installRootAvailable": true
+    },
+    {
+      "path": "/home/devuser/Documents/Projects/sceneaxi/packages/profile-game",
+      "name": "@sceneaxi/profile-game",
+      "version": "0.0.0",
+      "private": true,
+      "license": "UNLICENSED",
+      "releaseGroup": "profile",
+      "exports": [
+        {
+          "subpath": ".",
+          "target": "./src/index.ts",
+          "present": true
+        }
+      ],
+      "frozenPublicSeam": true,
+      "seamSource": "/home/devuser/Documents/Projects/sceneaxi/packages/profile-game/src/index.ts",
+      "seamLine": 46,
+      "installRootAvailable": true
+    },
+    {
+      "path": "/home/devuser/Documents/Projects/sceneaxi/packages/profile-kids",
+      "name": "@sceneaxi/profile-kids",
+      "version": "0.0.0",
+      "private": true,
+      "license": "UNLICENSED",
+      "releaseGroup": "profile",
+      "exports": [
+        {
+          "subpath": ".",
+          "target": "./src/index.ts",
+          "present": true
+        }
+      ],
+      "frozenPublicSeam": true,
+      "seamSource": "/home/devuser/Documents/Projects/sceneaxi/packages/profile-kids/src/index.ts",
+      "seamLine": 281,
+      "installRootAvailable": true
+    },
+    {
+      "path": "/home/devuser/Documents/Projects/sceneaxi/packages/profile-web",
+      "name": "@sceneaxi/profile-web",
+      "version": "0.0.0",
+      "private": true,
+      "license": "UNLICENSED",
+      "releaseGroup": "profile",
+      "exports": [
+        {
+          "subpath": ".",
+          "target": "./src/index.ts",
+          "present": true
+        }
+      ],
+      "frozenPublicSeam": true,
+      "seamSource": "/home/devuser/Documents/Projects/sceneaxi/packages/profile-web/src/index.ts",
+      "seamLine": 128,
+      "installRootAvailable": true
+    },
+    {
+      "path": "/home/devuser/Documents/Projects/sceneaxi/packages/provider-openrouter",
+      "name": "@sceneaxi/provider-openrouter",
+      "version": "0.0.0",
+      "private": true,
+      "license": "UNLICENSED",
+      "releaseGroup": "importers",
+      "exports": [
+        {
+          "subpath": ".",
+          "target": "./src/index.ts",
+          "present": true
+        }
+      ],
+      "frozenPublicSeam": true,
+      "seamSource": "/home/devuser/Documents/Projects/sceneaxi/packages/provider-openrouter/src/index.ts",
+      "seamLine": 30,
+      "installRootAvailable": true
+    },
+    {
+      "path": "/home/devuser/Documents/Projects/sceneaxi/packages/schemas",
+      "name": "@sceneaxi/schemas",
+      "version": "0.0.0",
+      "private": true,
+      "license": "UNLICENSED",
+      "releaseGroup": "contracts",
+      "exports": [
+        {
+          "subpath": ".",
+          "target": "./src/index.ts",
+          "present": true
+        },
+        {
+          "subpath": "./node/profile-conformance-suite",
+          "target": "./src/profile-conformance-suite.ts",
+          "present": true
+        },
+        {
+          "subpath": "./testing/scene-composition",
+          "target": "./src/testing/scene-composition.ts",
+          "present": true
+        },
+        {
+          "subpath": "./contracts/catalog-item.schema.json",
+          "target": "./contracts/catalog-item.schema.json",
+          "present": true
+        },
+        {
+          "subpath": "./contracts/catalog-metadata-unavailable-tombstone.schema.json",
+          "target": "./contracts/catalog-metadata-unavailable-tombstone.schema.json",
+          "present": true
+        },
+        {
+          "subpath": "./contracts/delivery-handoff.schema.json",
+          "target": "./contracts/delivery-handoff.schema.json",
+          "present": true
+        },
+        {
+          "subpath": "./contracts/identity.schema.json",
+          "target": "./contracts/identity.schema.json",
+          "present": true
+        },
+        {
+          "subpath": "./contracts/credit-ledger.schema.json",
+          "target": "./contracts/credit-ledger.schema.json",
+          "present": true
+        },
+        {
+          "subpath": "./contracts/billing-checkout.schema.json",
+          "target": "./contracts/billing-checkout.schema.json",
+          "present": true
+        },
+        {
+          "subpath": "./contracts/credit-packs.schema.json",
+          "target": "./contracts/credit-packs.schema.json",
+          "present": true
+        },
+        {
+          "subpath": "./contracts/credit-packs.fixtures.json",
+          "target": "./contracts/credit-packs.fixtures.json",
+          "present": true
+        },
+        {
+          "subpath": "./contracts/entitlement-matrix.schema.json",
+          "target": "./contracts/entitlement-matrix.schema.json",
+          "present": true
+        },
+        {
+          "subpath": "./contracts/entitlement-decision.schema.json",
+          "target": "./contracts/entitlement-decision.schema.json",
+          "present": true
+        },
+        {
+          "subpath": "./contracts/entitlement-matrix.fixtures.json",
+          "target": "./contracts/entitlement-matrix.fixtures.json",
+          "present": true
+        },
+        {
+          "subpath": "./contracts/catalog-listings.schema.json",
+          "target": "./contracts/catalog-listings.schema.json",
+          "present": true
+        },
+        {
+          "subpath": "./contracts/catalog-listings.fixtures.json",
+          "target": "./contracts/catalog-listings.fixtures.json",
+          "present": true
+        },
+        {
+          "subpath": "./contracts/revenue-share.schema.json",
+          "target": "./contracts/revenue-share.schema.json",
+          "present": true
+        },
+        {
+          "subpath": "./contracts/model-provider-port.schema.json",
+          "target": "./contracts/model-provider-port.schema.json",
+          "present": true
+        },
+        {
+          "subpath": "./contracts/rarity.schema.json",
+          "target": "./contracts/rarity.schema.json",
+          "present": true
+        },
+        {
+          "subpath": "./contracts/rarity.fixtures.json",
+          "target": "./contracts/rarity.fixtures.json",
+          "present": true
+        },
+        {
+          "subpath": "./contracts/sculpt-intake.schema.json",
+          "target": "./contracts/sculpt-intake.schema.json",
+          "present": true
+        },
+        {
+          "subpath": "./contracts/object-sculpt-spec.schema.json",
+          "target": "./contracts/object-sculpt-spec.schema.json",
+          "present": true
+        },
+        {
+          "subpath": "./contracts/sculpt-artifact.schema.json",
+          "target": "./contracts/sculpt-artifact.schema.json",
+          "present": true
+        },
+        {
+          "subpath": "./contracts/scene-composition.schema.json",
+          "target": "./contracts/scene-composition.schema.json",
+          "present": true
+        },
+        {
+          "subpath": "./contracts/plugin-manifest.schema.json",
+          "target": "./contracts/plugin-manifest.schema.json",
+          "present": true
+        },
+        {
+          "subpath": "./contracts/plugin-manifest.inert.example.json",
+          "target": "./contracts/plugin-manifest.inert.example.json",
+          "present": true
+        },
+        {
+          "subpath": "./contracts/plugin-capability-registry.schema.json",
+          "target": "./contracts/plugin-capability-registry.schema.json",
+          "present": true
+        },
+        {
+          "subpath": "./contracts/plugin-capability-registry.1.0.0.json",
+          "target": "./contracts/plugin-capability-registry.1.0.0.json",
+          "present": true
+        },
+        {
+          "subpath": "./contracts/input-action-map.schema.json",
+          "target": "./contracts/input-action-map.schema.json",
+          "present": true
+        }
+      ],
+      "frozenPublicSeam": true,
+      "seamSource": "/home/devuser/Documents/Projects/sceneaxi/packages/schemas/src/index.ts",
+      "seamLine": 705,
+      "installRootAvailable": false
+    },
+    {
+      "path": "/home/devuser/Documents/Projects/sceneaxi/packages/site-kit",
+      "name": "@sceneaxi/site-kit",
+      "version": "0.0.0",
+      "private": true,
+      "license": "UNLICENSED",
+      "releaseGroup": "sites",
+      "exports": [
+        {
+          "subpath": ".",
+          "target": "./src/index.ts",
+          "present": true
+        },
+        {
+          "subpath": "./catalog-identity",
+          "target": "./src/catalog-identity.ts",
+          "present": true
+        },
+        {
+          "subpath": "./commerce-notice",
+          "target": "./src/commerce-notice.ts",
+          "present": true
+        },
+        {
+          "subpath": "./profile-contracts",
+          "target": "./src/profile-contracts.ts",
+          "present": true
+        },
+        {
+          "subpath": "./site-session",
+          "target": "./src/site-session.ts",
+          "present": true
+        },
+        {
+          "subpath": "./state-panel",
+          "target": "./src/state-panel.ts",
+          "present": true
+        }
+      ],
+      "frozenPublicSeam": true,
+      "seamSource": "/home/devuser/Documents/Projects/sceneaxi/packages/site-kit/src/index.ts",
+      "seamLine": 23,
+      "installRootAvailable": true
+    },
+    {
+      "path": "/home/devuser/Documents/Projects/sceneaxi/apps/catalog-game",
+      "name": "@sceneaxi/catalog-game",
+      "version": "0.0.0",
+      "private": true,
+      "license": "UNLICENSED",
+      "releaseGroup": "apps",
+      "exports": [
+        {
+          "subpath": ".",
+          "target": "./src/index.ts",
+          "present": true
+        }
+      ],
+      "frozenPublicSeam": true,
+      "seamSource": "/home/devuser/Documents/Projects/sceneaxi/apps/catalog-game/src/index.ts",
+      "seamLine": 21,
+      "installRootAvailable": true
+    },
+    {
+      "path": "/home/devuser/Documents/Projects/sceneaxi/apps/catalog-web",
+      "name": "@sceneaxi/catalog-web",
+      "version": "0.0.0",
+      "private": true,
+      "license": "UNLICENSED",
+      "releaseGroup": "apps",
+      "exports": [
+        {
+          "subpath": ".",
+          "target": "./src/index.ts",
+          "present": true
+        }
+      ],
+      "frozenPublicSeam": true,
+      "seamSource": "/home/devuser/Documents/Projects/sceneaxi/apps/catalog-web/src/index.ts",
+      "seamLine": 25,
+      "installRootAvailable": true
+    },
+    {
+      "path": "/home/devuser/Documents/Projects/sceneaxi/apps/desktop-shell",
+      "name": "@sceneaxi/desktop-shell",
+      "version": "0.0.0",
+      "private": true,
+      "license": "UNLICENSED",
+      "releaseGroup": "apps",
+      "exports": [
+        {
+          "subpath": ".",
+          "target": "./src/index.ts",
+          "present": true
+        }
+      ],
+      "frozenPublicSeam": true,
+      "seamSource": "/home/devuser/Documents/Projects/sceneaxi/apps/desktop-shell/src/index.ts",
+      "seamLine": 15,
+      "installRootAvailable": true
+    },
+    {
+      "path": "/home/devuser/Documents/Projects/sceneaxi/apps/web-shell",
+      "name": "@sceneaxi/web-shell",
+      "version": "0.0.0",
+      "private": true,
+      "license": "UNLICENSED",
+      "releaseGroup": "apps",
+      "exports": [
+        {
+          "subpath": ".",
+          "target": "./src/index.ts",
+          "present": true
+        }
+      ],
+      "frozenPublicSeam": true,
+      "seamSource": "/home/devuser/Documents/Projects/sceneaxi/apps/web-shell/src/index.ts",
+      "seamLine": 15,
+      "installRootAvailable": true
+    },
+    {
+      "path": "/home/devuser/Documents/Projects/sceneaxi/sites/catalog-game",
+      "name": "@sceneaxi/site-catalog-game",
+      "version": "0.0.0",
+      "private": true,
+      "license": "UNLICENSED",
+      "releaseGroup": "sites",
+      "exports": [],
+      "frozenPublicSeam": true,
+      "seamSource": "/home/devuser/Documents/Projects/sceneaxi/sites/catalog-game/src/index.ts",
+      "seamLine": 11,
+      "installRootAvailable": true
+    },
+    {
+      "path": "/home/devuser/Documents/Projects/sceneaxi/sites/catalog-web",
+      "name": "@sceneaxi/site-catalog-web",
+      "version": "0.0.0",
+      "private": true,
+      "license": "UNLICENSED",
+      "releaseGroup": "sites",
+      "exports": [],
+      "frozenPublicSeam": true,
+      "seamSource": "/home/devuser/Documents/Projects/sceneaxi/sites/catalog-web/src/index.ts",
+      "seamLine": 11,
+      "installRootAvailable": false
+    },
+    {
+      "path": "/home/devuser/Documents/Projects/sceneaxi/sites/kids",
+      "name": "@sceneaxi/site-kids",
+      "version": "0.0.0",
+      "private": true,
+      "license": "UNLICENSED",
+      "releaseGroup": "sites",
+      "exports": [],
+      "frozenPublicSeam": true,
+      "seamSource": "/home/devuser/Documents/Projects/sceneaxi/sites/kids/src/index.ts",
+      "seamLine": 6,
+      "installRootAvailable": false
+    },
+    {
+      "path": "/home/devuser/Documents/Projects/sceneaxi/sites/umbrella",
+      "name": "@sceneaxi/site-umbrella",
+      "version": "0.0.0",
+      "private": true,
+      "license": "UNLICENSED",
+      "releaseGroup": "sites",
+      "exports": [],
+      "frozenPublicSeam": true,
+      "seamSource": "/home/devuser/Documents/Projects/sceneaxi/sites/umbrella/src/index.ts",
+      "seamLine": 18,
+      "installRootAvailable": true
+    },
+    {
+      "path": "/home/devuser/Documents/Projects/sceneaxi/desktop/linux",
+      "name": "@sceneaxi/desktop-linux",
+      "version": "0.0.0",
+      "private": true,
+      "license": "UNLICENSED",
+      "releaseGroup": "desktop",
+      "exports": [
+        {
+          "subpath": ".",
+          "target": "./src/index.ts",
+          "present": true
+        },
+        {
+          "subpath": "./electron/provider-runtime",
+          "target": "./src/electron/provider-runtime.ts",
+          "present": true
+        }
+      ],
+      "frozenPublicSeam": true,
+      "seamSource": "/home/devuser/Documents/Projects/sceneaxi/desktop/linux/src/index.ts",
+      "seamLine": 17,
+      "installRootAvailable": true
+    },
+    {
+      "path": "/home/devuser/Documents/Projects/sceneaxi/desktop/macos",
+      "name": "@sceneaxi/desktop-macos",
+      "version": "0.0.0",
+      "private": true,
+      "license": "UNLICENSED",
+      "releaseGroup": "desktop",
+      "exports": [
+        {
+          "subpath": ".",
+          "target": "./src/index.ts",
+          "present": true
+        }
+      ],
+      "frozenPublicSeam": true,
+      "seamSource": "/home/devuser/Documents/Projects/sceneaxi/desktop/macos/src/index.ts",
+      "seamLine": 4,
+      "installRootAvailable": false
+    },
+    {
+      "path": "/home/devuser/Documents/Projects/sceneaxi/desktop/windows",
+      "name": "@sceneaxi/desktop-windows",
+      "version": "0.0.0",
+      "private": true,
+      "license": "UNLICENSED",
+      "releaseGroup": "desktop",
+      "exports": [
+        {
+          "subpath": ".",
+          "target": "./src/index.ts",
+          "present": true
+        }
+      ],
+      "frozenPublicSeam": false,
+      "seamSource": "/home/devuser/Documents/Projects/sceneaxi/desktop/windows/src/index.ts",
+      "seamLine": 9,
+      "installRootAvailable": false
+    }
+  ]
+}

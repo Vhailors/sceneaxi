@@ -1,0 +1,3132 @@
+[
+  {
+    "site": "umbrella",
+    "route": "/editor",
+    "name": "editor-preview",
+    "viewport": "desktop",
+    "httpStatus": 200,
+    "metrics": {
+      "width": 1440,
+      "scrollWidth": 1440,
+      "overlaps": [],
+      "minimum": null,
+      "notes": {
+        "x": 380,
+        "y": 650.5625,
+        "width": 680,
+        "height": 311.4375
+      },
+      "spacing": [
+        {
+          "selector": "",
+          "padding": "0px",
+          "gap": "normal"
+        },
+        {
+          "selector": "ed-overlay-notes",
+          "padding": "8px",
+          "gap": "8px"
+        }
+      ],
+      "background": "rgb(7, 8, 10)",
+      "h1": "SceneAxi Engine Desktop editor"
+    },
+    "contrast": {
+      "samples": [
+        {
+          "text": "Preview — the server-side editor preview flag is set, nothing is attributed to an account, and no cr",
+          "ratio": 5.9,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11
+        },
+        {
+          "text": "Refused",
+          "ratio": 5.71,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10
+        },
+        {
+          "text": "Catalog intake is not open on this deployment",
+          "ratio": 5.71,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 16
+        },
+        {
+          "text": "reasonCATALOG_INTAKE_STORAGE_UNAVAILABLE",
+          "ratio": 5.89,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "reason",
+          "ratio": 5.89,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 9
+        },
+        {
+          "text": "The injected TEST catalog intake storage is unavailable, so nothing was written.",
+          "ratio": 5.89,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 14
+        },
+        {
+          "text": "No intake record was built or read for this render, and this page submits nothing. This deployment i",
+          "ratio": 5.89,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 14
+        },
+        {
+          "text": "SceneAxi Engine Desktop editor",
+          "ratio": 17.39,
+          "floor": 3,
+          "disabled": false,
+          "fontSize": 52
+        },
+        {
+          "text": "File",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 12
+        },
+        {
+          "text": "Edit",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 12
+        },
+        {
+          "text": "Scene",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 12
+        },
+        {
+          "text": "Object",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 12
+        },
+        {
+          "text": "Sculpt",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 12
+        },
+        {
+          "text": "Run",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 12
+        },
+        {
+          "text": "Window",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 12
+        },
+        {
+          "text": "Help",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 12
+        },
+        {
+          "text": "Game",
+          "ratio": 14.69,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11
+        },
+        {
+          "text": "Website",
+          "ratio": 6.33,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11
+        },
+        {
+          "text": "Kids",
+          "ratio": 6.33,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11
+        },
+        {
+          "text": "umbrella-web-editorscene.sceneaxi.json",
+          "ratio": 15.88,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11
+        },
+        {
+          "text": "scene.sceneaxi.json",
+          "ratio": 5.81,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10
+        },
+        {
+          "text": "applied in session · scene.sceneaxi.json",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10
+        },
+        {
+          "text": "Local project",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 12
+        },
+        {
+          "text": "Local checkpoints are saved only when you choose Save locally; no cloud sync.",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 12
+        },
+        {
+          "text": "One checkpoint per profile and owner in this browser. Export before clearing browser data. Import re",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 12
+        },
+        {
+          "text": "Save locally",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 12
+        },
+        {
+          "text": "Reopen local",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 12
+        },
+        {
+          "text": "Export checkpoint",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 12
+        },
+        {
+          "text": "Export canonical document",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 12
+        },
+        {
+          "text": "Import checkpoint",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 12
+        },
+        {
+          "text": "Forget checkpoint",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 12
+        },
+        {
+          "text": "Search ⌘K",
+          "ratio": 5.81,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11
+        },
+        {
+          "text": "⌘K",
+          "ratio": 6.33,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 9
+        },
+        {
+          "text": "Assistant",
+          "ratio": 15.88,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11
+        },
+        {
+          "text": "BUILD",
+          "ratio": 15.88,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 7.5
+        },
+        {
+          "text": "SCULPT",
+          "ratio": 6.33,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 7.5
+        },
+        {
+          "text": "SCENE",
+          "ratio": 6.33,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 7.5
+        },
+        {
+          "text": "ANIM",
+          "ratio": 6.33,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 7.5
+        },
+        {
+          "text": "RUN",
+          "ratio": 6.33,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 7.5
+        },
+        {
+          "text": "SHIP",
+          "ratio": 6.33,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 7.5
+        },
+        {
+          "text": "PLUG",
+          "ratio": 6.33,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 7.5
+        },
+        {
+          "text": "SCENE",
+          "ratio": 5.81,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 8.5
+        },
+        {
+          "text": "12",
+          "ratio": 5.81,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 8.5
+        },
+        {
+          "text": "starter-service-crate-artifact",
+          "ratio": 18.21,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 12
+        },
+        {
+          "text": "sculpt",
+          "ratio": 6.67,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 8.5
+        },
+        {
+          "text": "crate-body-node",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 12
+        },
+        {
+          "text": "node",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 8.5
+        },
+        {
+          "text": "crate-lid-node",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 12
+        },
+        {
+          "text": "node",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 8.5
+        },
+        {
+          "text": "crate-latch-node",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 12
+        },
+        {
+          "text": "node",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 8.5
+        },
+        {
+          "text": "crate-left-handle-node",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 12
+        },
+        {
+          "text": "node",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 8.5
+        },
+        {
+          "text": "crate-right-handle-node",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 12
+        },
+        {
+          "text": "node",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 8.5
+        },
+        {
+          "text": "starter-service-crate-artifact",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 12
+        },
+        {
+          "text": "sculpt",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 8.5
+        },
+        {
+          "text": "crate-body-node",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 12
+        },
+        {
+          "text": "node",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 8.5
+        },
+        {
+          "text": "crate-lid-node",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 12
+        },
+        {
+          "text": "node",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 8.5
+        },
+        {
+          "text": "crate-latch-node",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 12
+        },
+        {
+          "text": "node",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 8.5
+        },
+        {
+          "text": "crate-left-handle-node",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 12
+        },
+        {
+          "text": "node",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 8.5
+        },
+        {
+          "text": "crate-right-handle-node",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 12
+        },
+        {
+          "text": "node",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 8.5
+        },
+        {
+          "text": "LAYERS",
+          "ratio": 5.81,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 8.5
+        },
+        {
+          "text": "2",
+          "ratio": 5.81,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 8.5
+        },
+        {
+          "text": "Geometry",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "2 objects",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10
+        },
+        {
+          "text": "Sockets",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "2 on selection",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10
+        },
+        {
+          "text": "Scene",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "Game",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 11.5
+        },
+        {
+          "text": "Sculpt preview",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 11.5
+        },
+        {
+          "text": "umbrella-web-editor",
+          "ratio": 6.61,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10.5
+        },
+        {
+          "text": "2 objects",
+          "ratio": 6.61,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10.5
+        },
+        {
+          "text": "object-1",
+          "ratio": 7.33,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10.5
+        },
+        {
+          "text": "Reset view",
+          "ratio": 17.39,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11
+        },
+        {
+          "text": "Show only object-1",
+          "ratio": 17.39,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11
+        },
+        {
+          "text": "Browser session frame",
+          "ratio": 6.37,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 8.5
+        },
+        {
+          "text": "Backend",
+          "ratio": 6.37,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 8.5
+        },
+        {
+          "text": "three",
+          "ratio": 6.37,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 9
+        },
+        {
+          "text": "Label",
+          "ratio": 6.37,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 8.5
+        },
+        {
+          "text": "Three presentation core",
+          "ratio": 17.39,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10
+        },
+        {
+          "text": "Draw surface",
+          "ratio": 6.37,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 8.5
+        },
+        {
+          "text": "webgl-canvas",
+          "ratio": 6.37,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 9
+        },
+        {
+          "text": "Pixels drawn",
+          "ratio": 6.37,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 8.5
+        },
+        {
+          "text": "true",
+          "ratio": 6.37,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 9
+        },
+        {
+          "text": "Frame",
+          "ratio": 6.37,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 8.5
+        },
+        {
+          "text": "3",
+          "ratio": 17.39,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10
+        },
+        {
+          "text": "Draw calls",
+          "ratio": 6.37,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 8.5
+        },
+        {
+          "text": "11",
+          "ratio": 17.39,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10
+        },
+        {
+          "text": "Mounted",
+          "ratio": 6.37,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 8.5
+        },
+        {
+          "text": "object-1, object-2",
+          "ratio": 6.37,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 9
+        },
+        {
+          "text": "Your composed scene, drawn in your browser by the Three presentation core. Drag to orbit, scroll to ",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10.5
+        },
+        {
+          "text": "The canvas draws the session's composition projection and nothing else: the same instances, the same",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10.5
+        },
+        {
+          "text": "Changes1",
+          "ratio": 14.69,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "1",
+          "ratio": 7.05,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 9.5
+        },
+        {
+          "text": "Assets",
+          "ratio": 5.81,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "Console",
+          "ratio": 5.81,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "Evidence",
+          "ratio": 5.81,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "Reject all",
+          "ratio": 5.81,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 11.5
+        },
+        {
+          "text": "Accept all",
+          "ratio": 5.38,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 11.5
+        },
+        {
+          "text": "This render saved through propose/apply. Apply is E1 and all-or-nothing: the whole proposal below wa",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "This render applied the proposal to a workspace it created and removed inside the request: nothing i",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "PROPERTY",
+          "ratio": 5.81,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 8.5
+        },
+        {
+          "text": "CURRENT",
+          "ratio": 5.81,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 8.5
+        },
+        {
+          "text": "PROPOSED",
+          "ratio": 5.81,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 8.5
+        },
+        {
+          "text": "STATE",
+          "ratio": 5.81,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 8.5
+        },
+        {
+          "text": "M",
+          "ratio": 5.95,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 9
+        },
+        {
+          "text": "/data",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11
+        },
+        {
+          "text": "{}",
+          "ratio": 3.42,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11
+        },
+        {
+          "text": "{\"minimumE2\":{\"schemaVersion\":1,\"selectedInstanceId\":\"object-1\",\"instances\":[{\"instanceId\":\"object-1",
+          "ratio": 12.97,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11
+        },
+        {
+          "text": "applied",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11
+        },
+        {
+          "text": "✕",
+          "ratio": 5.38,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 10
+        },
+        {
+          "text": "Reject /data",
+          "ratio": 5.38,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 10
+        },
+        {
+          "text": "✓",
+          "ratio": 5.38,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 10
+        },
+        {
+          "text": "Accept /data",
+          "ratio": 5.38,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 10
+        },
+        {
+          "text": "PROPOSED BY session save · Minimum E2 session · propose/apply",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10
+        },
+        {
+          "text": "PROPERTIES",
+          "ratio": 5.81,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 8.5
+        },
+        {
+          "text": "1 selected",
+          "ratio": 5.81,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 8.5
+        },
+        {
+          "text": "INSTANCE",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 8.5
+        },
+        {
+          "text": "Instance",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "object-1",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "Artifact",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "starter-service-crate-artifact",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "Components",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "5",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "Sockets",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "2",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "TRANSFORM local",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 8.5
+        },
+        {
+          "text": "local",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 8.5
+        },
+        {
+          "text": "Position",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "0, 0, 0",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "Rotation",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "0, 0, 0",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "Scale",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "1, 1, 1",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "SESSION kernel",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 8.5
+        },
+        {
+          "text": "kernel",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 8.5
+        },
+        {
+          "text": "Tick",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "0",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "Collisions",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "0",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "Digest",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "1ccc…de5c",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "Selection",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10.5
+        },
+        {
+          "text": "Translation (x,y,z)",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10.5
+        },
+        {
+          "text": "Objects",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10.5
+        },
+        {
+          "text": "Apply",
+          "ratio": 7.05,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "Assistant",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 12.5
+        },
+        {
+          "text": "no provider configured",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10
+        },
+        {
+          "text": "No model provider adapter is configured on this surface, so nothing composes and nothing is sent. Ev",
+          "ratio": 5.81,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "umbrella-web-editor",
+          "ratio": 6.56,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10.5
+        },
+        {
+          "text": "2 objects",
+          "ratio": 6.56,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10.5
+        },
+        {
+          "text": "1 selection",
+          "ratio": 6.56,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10.5
+        },
+        {
+          "text": "Ask, or describe what to build…",
+          "ratio": 6.33,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 12
+        },
+        {
+          "text": "Light",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11
+        },
+        {
+          "text": "Mid",
+          "ratio": 7.05,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11
+        },
+        {
+          "text": "Strong",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11
+        },
+        {
+          "text": "Send",
+          "ratio": 5.38,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 11.5
+        },
+        {
+          "text": "Ready",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10.5
+        },
+        {
+          "text": "game profile · core 0.0.0",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10
+        },
+        {
+          "text": "ephemeral workspace · nothing stored between requests",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10
+        },
+        {
+          "text": "doc 05d2…6dd1",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10
+        },
+        {
+          "text": "preview session",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10
+        }
+      ],
+      "failures": [
+        {
+          "text": "{}",
+          "ratio": 3.42,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11
+        }
+      ],
+      "unresolved": []
+    },
+    "focus": [
+      {
+        "text": "",
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 107, 44)"
+      },
+      {
+        "text": "File",
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 107, 44)"
+      },
+      {
+        "text": "Edit",
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 107, 44)"
+      },
+      {
+        "text": "Scene",
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 107, 44)"
+      },
+      {
+        "text": "Object",
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 107, 44)"
+      }
+    ],
+    "pageErrors": [],
+    "screenshot": {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-editor-preview-desktop.png",
+      "bytes": 235868,
+      "sha256": "cff403ecd542a7551c7245ef75c5def61403521e3d94323bed243e993118b804"
+    }
+  },
+  {
+    "site": "umbrella",
+    "route": "/editor?profile=web",
+    "name": "editor-web-preview",
+    "viewport": "desktop",
+    "httpStatus": 200,
+    "metrics": {
+      "width": 1440,
+      "scrollWidth": 1440,
+      "overlaps": [
+        {
+          "a": "Export canonical document",
+          "b": "sculpt.editWEB_EXPERIENCE_DESKTOP_ONLY_OPERATION",
+          "width": 75.671875,
+          "height": 6.40625
+        },
+        {
+          "a": "Export offline HTML PWA",
+          "b": "sculpt.editWEB_EXPERIENCE_DESKTOP_ONLY_OPERATION",
+          "width": 75.671875,
+          "height": 35.1875
+        },
+        {
+          "a": "Import checkpoint",
+          "b": "sculpt.editWEB_EXPERIENCE_DESKTOP_ONLY_OPERATION",
+          "width": 75.671875,
+          "height": 5
+        },
+        {
+          "a": "Import checkpoint",
+          "b": "scene.composeWEB_EXPERIENCE_DESKTOP_ONLY_OPERATION",
+          "width": 75.671875,
+          "height": 25.1875
+        },
+        {
+          "a": "Forget checkpoint",
+          "b": "scene.composeWEB_EXPERIENCE_DESKTOP_ONLY_OPERATION",
+          "width": 75.671875,
+          "height": 25.40625
+        },
+        {
+          "a": "Forget checkpoint",
+          "b": "runtime.advanceWEB_EXPERIENCE_DESKTOP_ONLY_OPERATION",
+          "width": 75.671875,
+          "height": 4.78125
+        }
+      ],
+      "minimum": null,
+      "notes": {
+        "x": 380,
+        "y": 650.5625,
+        "width": 680,
+        "height": 311.4375
+      },
+      "spacing": [
+        {
+          "selector": "",
+          "padding": "0px",
+          "gap": "normal"
+        },
+        {
+          "selector": "ed-overlay-notes",
+          "padding": "8px",
+          "gap": "8px"
+        }
+      ],
+      "background": "rgb(7, 8, 10)",
+      "h1": "SceneAxi Engine Desktop editor"
+    },
+    "contrast": {
+      "samples": [
+        {
+          "text": "Preview — the server-side editor preview flag is set, nothing is attributed to an account, and no cr",
+          "ratio": 5.9,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11
+        },
+        {
+          "text": "Refused",
+          "ratio": 5.71,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10
+        },
+        {
+          "text": "Catalog intake is not open on this deployment",
+          "ratio": 5.71,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 16
+        },
+        {
+          "text": "reasonCATALOG_INTAKE_STORAGE_UNAVAILABLE",
+          "ratio": 5.89,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "reason",
+          "ratio": 5.89,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 9
+        },
+        {
+          "text": "The injected TEST catalog intake storage is unavailable, so nothing was written.",
+          "ratio": 5.89,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 14
+        },
+        {
+          "text": "No intake record was built or read for this render, and this page submits nothing. This deployment i",
+          "ratio": 5.89,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 14
+        },
+        {
+          "text": "SceneAxi Engine Desktop editor",
+          "ratio": 17.39,
+          "floor": 3,
+          "disabled": false,
+          "fontSize": 52
+        },
+        {
+          "text": "File",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 12
+        },
+        {
+          "text": "Edit",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 12
+        },
+        {
+          "text": "Scene",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 12
+        },
+        {
+          "text": "Object",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 12
+        },
+        {
+          "text": "Sculpt",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 12
+        },
+        {
+          "text": "Run",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 12
+        },
+        {
+          "text": "Window",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 12
+        },
+        {
+          "text": "Help",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 12
+        },
+        {
+          "text": "Game",
+          "ratio": 6.33,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11
+        },
+        {
+          "text": "Website",
+          "ratio": 14.69,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11
+        },
+        {
+          "text": "Kids",
+          "ratio": 6.33,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11
+        },
+        {
+          "text": "umbrella-web-editorscene.sceneaxi.json",
+          "ratio": 15.88,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11
+        },
+        {
+          "text": "scene.sceneaxi.json",
+          "ratio": 5.81,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10
+        },
+        {
+          "text": "applied in session · scene.sceneaxi.json",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10
+        },
+        {
+          "text": "Local project",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 12
+        },
+        {
+          "text": "Local checkpoints are saved only when you choose Save locally; no cloud sync.",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 12
+        },
+        {
+          "text": "One checkpoint per profile and owner in this browser. Export before clearing browser data. Import re",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 12
+        },
+        {
+          "text": "Save locally",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 12
+        },
+        {
+          "text": "Reopen local",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 12
+        },
+        {
+          "text": "Export checkpoint",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 12
+        },
+        {
+          "text": "Export canonical document",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 12
+        },
+        {
+          "text": "Export offline HTML PWA",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 12
+        },
+        {
+          "text": "Import checkpoint",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 12
+        },
+        {
+          "text": "Forget checkpoint",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 12
+        },
+        {
+          "text": "Search ⌘K",
+          "ratio": 5.81,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 11
+        },
+        {
+          "text": "⌘K",
+          "ratio": 6.33,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 9
+        },
+        {
+          "text": "Assistant",
+          "ratio": 5.81,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 11
+        },
+        {
+          "text": "BUILD",
+          "ratio": 5.81,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 7.5
+        },
+        {
+          "text": "SCULPT",
+          "ratio": 6.33,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 7.5
+        },
+        {
+          "text": "SCENE",
+          "ratio": 6.33,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 7.5
+        },
+        {
+          "text": "ANIM",
+          "ratio": 6.33,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 7.5
+        },
+        {
+          "text": "RUN",
+          "ratio": 6.33,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 7.5
+        },
+        {
+          "text": "SHIP",
+          "ratio": 6.33,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 7.5
+        },
+        {
+          "text": "PLUG",
+          "ratio": 6.33,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 7.5
+        },
+        {
+          "text": "Web Experience profile",
+          "ratio": 7.05,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10
+        },
+        {
+          "text": "Page canvas",
+          "ratio": 17.39,
+          "floor": 3,
+          "disabled": false,
+          "fontSize": 24
+        },
+        {
+          "text": "Page and HTML authoring, one site canvas, known asset injection, and a safe Three embed. Desktop eng",
+          "ratio": 6.37,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 13
+        },
+        {
+          "text": "Session",
+          "ratio": 6.37,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10
+        },
+        {
+          "text": "web-experience:sha256:7db677f69ed7bd025055e33efbe19bb167981f465c593038f2dc802d04b96ef7",
+          "ratio": 17.39,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10
+        },
+        {
+          "text": "Persistence",
+          "ratio": 6.37,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10
+        },
+        {
+          "text": "v1 text-canonical / URL-carried",
+          "ratio": 17.39,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10
+        },
+        {
+          "text": "Document",
+          "ratio": 6.37,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10
+        },
+        {
+          "text": "sha256:7db677f69ed7bd025055e33efbe19bb167981f465c593038f2dc802d04b96ef7",
+          "ratio": 17.39,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10
+        },
+        {
+          "text": "page.set-html",
+          "ratio": 6.61,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10.5
+        },
+        {
+          "text": "site-canvas.configure",
+          "ratio": 6.61,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10.5
+        },
+        {
+          "text": "asset.inject",
+          "ratio": 6.61,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10.5
+        },
+        {
+          "text": "three.embed",
+          "ratio": 6.61,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10.5
+        },
+        {
+          "text": "Page title",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 9
+        },
+        {
+          "text": "Site canvas",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 9
+        },
+        {
+          "text": "Page HTML",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 9
+        },
+        {
+          "text": "<main><p>Shape one focused interactive page, then add a safe scene or asset.</p></main>",
+          "ratio": 17.29,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11
+        },
+        {
+          "text": "Inject the known starter asset",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11
+        },
+        {
+          "text": "Embed the safe Three scene",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11
+        },
+        {
+          "text": "Apply web page state",
+          "ratio": 7.05,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "sandboxed page / srcDoc",
+          "ratio": 5.81,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 8
+        },
+        {
+          "text": "Safe Three embed",
+          "ratio": 6.76,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10
+        },
+        {
+          "text": "Presentation seam",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 13
+        },
+        {
+          "text": "draw-only",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 13
+        },
+        {
+          "text": "Enable the safe Three embed to mount the session scene outside authored HTML.",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 13
+        },
+        {
+          "text": "Injected assets",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 9
+        },
+        {
+          "text": "None. Arbitrary URLs and scripts are never accepted as assets.",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 13
+        },
+        {
+          "text": "Desktop-only actions",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 9
+        },
+        {
+          "text": "sculpt.edit",
+          "ratio": 17.29,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 13
+        },
+        {
+          "text": "WEB_EXPERIENCE_DESKTOP_ONLY_OPERATION",
+          "ratio": 6.14,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 8
+        },
+        {
+          "text": "scene.compose",
+          "ratio": 17.29,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 13
+        },
+        {
+          "text": "WEB_EXPERIENCE_DESKTOP_ONLY_OPERATION",
+          "ratio": 6.14,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 8
+        },
+        {
+          "text": "runtime.advance",
+          "ratio": 17.29,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 13
+        },
+        {
+          "text": "WEB_EXPERIENCE_DESKTOP_ONLY_OPERATION",
+          "ratio": 6.14,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 8
+        },
+        {
+          "text": "animation.timeline",
+          "ratio": 17.29,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 13
+        },
+        {
+          "text": "WEB_EXPERIENCE_DESKTOP_ONLY_OPERATION",
+          "ratio": 6.14,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 8
+        },
+        {
+          "text": "plugin.load",
+          "ratio": 17.29,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 13
+        },
+        {
+          "text": "WEB_EXPERIENCE_DESKTOP_ONLY_OPERATION",
+          "ratio": 6.14,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 8
+        },
+        {
+          "text": "native.export",
+          "ratio": 17.29,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 13
+        },
+        {
+          "text": "WEB_EXPERIENCE_DESKTOP_ONLY_OPERATION",
+          "ratio": 6.14,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 8
+        },
+        {
+          "text": "Ready",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10.5
+        },
+        {
+          "text": "web profile · core 0.0.0",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10
+        },
+        {
+          "text": "ephemeral workspace · nothing stored between requests",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10
+        },
+        {
+          "text": "doc 05d2…6dd1",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10
+        },
+        {
+          "text": "preview session",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10
+        }
+      ],
+      "failures": [],
+      "unresolved": []
+    },
+    "focus": [
+      {
+        "text": "",
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 107, 44)"
+      },
+      {
+        "text": "File",
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 107, 44)"
+      },
+      {
+        "text": "Edit",
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 107, 44)"
+      },
+      {
+        "text": "Scene",
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 107, 44)"
+      },
+      {
+        "text": "Object",
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 107, 44)"
+      }
+    ],
+    "pageErrors": [],
+    "screenshot": {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-editor-web-preview-desktop.png",
+      "bytes": 165758,
+      "sha256": "0ce2114d337521effd70f71ae0eb18e92c3c9e86ea235300ff21f14e1c495bc2"
+    }
+  },
+  {
+    "site": "umbrella",
+    "route": "/editor?profile=kids",
+    "name": "editor-kids-refusal",
+    "viewport": "desktop",
+    "httpStatus": 200,
+    "metrics": {
+      "width": 1440,
+      "scrollWidth": 1440,
+      "overlaps": [],
+      "minimum": null,
+      "notes": null,
+      "spacing": [
+        {
+          "selector": "",
+          "padding": "0px",
+          "gap": "normal"
+        }
+      ],
+      "background": "rgb(7, 8, 10)",
+      "h1": "That editor link was refused"
+    },
+    "contrast": {
+      "samples": [
+        {
+          "text": "Engine Desktop editor",
+          "ratio": 7.05,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10
+        },
+        {
+          "text": "That editor link was refused",
+          "ratio": 17.39,
+          "floor": 3,
+          "disabled": false,
+          "fontSize": 52
+        },
+        {
+          "text": "Refused",
+          "ratio": 5.71,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10
+        },
+        {
+          "text": "Link refused",
+          "ratio": 5.71,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 16
+        },
+        {
+          "text": "reasonSITE_REQUEST_MALFORMED",
+          "ratio": 5.89,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "reason",
+          "ratio": 5.89,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 9
+        },
+        {
+          "text": "The identity request is malformed.",
+          "ratio": 5.89,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 14
+        },
+        {
+          "text": "Catalog deep links carry a source, an item, and an optional artifact reference — nothing else. A lin",
+          "ratio": 5.89,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 14
+        },
+        {
+          "text": "Open the editor without a link · Back to SceneAxi",
+          "ratio": 5.89,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 14
+        },
+        {
+          "text": "Open the editor without a link",
+          "ratio": 6.52,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 14
+        },
+        {
+          "text": "Back to SceneAxi",
+          "ratio": 6.52,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 14
+        }
+      ],
+      "failures": [],
+      "unresolved": []
+    },
+    "focus": [
+      {
+        "text": "Open the editor without a link",
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 138, 84)"
+      },
+      {
+        "text": "Back to SceneAxi",
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 138, 84)"
+      }
+    ],
+    "pageErrors": [],
+    "screenshot": {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-editor-kids-refusal-desktop.png",
+      "bytes": 39829,
+      "sha256": "4ca6944d1bfae1a8070e51044cbb36ea458b9c03f9368e39afd0c9dadde66b42"
+    }
+  },
+  {
+    "site": "umbrella",
+    "route": "/editor",
+    "name": "editor-preview",
+    "viewport": "mobile",
+    "httpStatus": 200,
+    "metrics": {
+      "width": 390,
+      "scrollWidth": 390,
+      "overlaps": [],
+      "minimum": null,
+      "notes": {
+        "x": 20,
+        "y": 185.1875,
+        "width": 350,
+        "height": 464.890625
+      },
+      "spacing": [
+        {
+          "selector": "",
+          "padding": "24px 20px",
+          "gap": "16px"
+        },
+        {
+          "selector": "ed-overlay-notes",
+          "padding": "8px",
+          "gap": "8px"
+        }
+      ],
+      "background": "rgb(7, 8, 10)",
+      "h1": "SceneAxi Engine Desktop editor"
+    },
+    "contrast": {
+      "samples": [
+        {
+          "text": "Preview — the server-side editor preview flag is set, nothing is attributed to an account, and no cr",
+          "ratio": 5.9,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11
+        },
+        {
+          "text": "Refused",
+          "ratio": 5.71,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10
+        },
+        {
+          "text": "Catalog intake is not open on this deployment",
+          "ratio": 5.71,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 16
+        },
+        {
+          "text": "reasonCATALOG_INTAKE_STORAGE_UNAVAILABLE",
+          "ratio": 5.89,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "reason",
+          "ratio": 5.89,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 9
+        },
+        {
+          "text": "The injected TEST catalog intake storage is unavailable, so nothing was written.",
+          "ratio": 5.89,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 14
+        },
+        {
+          "text": "No intake record was built or read for this render, and this page submits nothing. This deployment i",
+          "ratio": 5.89,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 14
+        },
+        {
+          "text": "SceneAxi Engine Desktop editor",
+          "ratio": 17.39,
+          "floor": 3,
+          "disabled": false,
+          "fontSize": 36
+        },
+        {
+          "text": "EDITOR_WINDOW_BELOW_MINIMUM",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "The editor chrome refuses below 900×600 rather than rendering an unusable layout. Enlarge the window",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 13
+        }
+      ],
+      "failures": [],
+      "unresolved": []
+    },
+    "focus": [],
+    "pageErrors": [],
+    "screenshot": {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-editor-preview-mobile.png",
+      "bytes": 53406,
+      "sha256": "1ee6ede6a3d737d54deda79a351e51b3d2e483dfb66e5d932d84b884afc07207"
+    }
+  },
+  {
+    "site": "umbrella",
+    "route": "/editor?profile=web",
+    "name": "editor-web-preview",
+    "viewport": "mobile",
+    "httpStatus": 200,
+    "metrics": {
+      "width": 390,
+      "scrollWidth": 390,
+      "overlaps": [],
+      "minimum": null,
+      "notes": {
+        "x": 20,
+        "y": 185.1875,
+        "width": 350,
+        "height": 464.890625
+      },
+      "spacing": [
+        {
+          "selector": "",
+          "padding": "24px 20px",
+          "gap": "16px"
+        },
+        {
+          "selector": "ed-overlay-notes",
+          "padding": "8px",
+          "gap": "8px"
+        }
+      ],
+      "background": "rgb(7, 8, 10)",
+      "h1": "SceneAxi Engine Desktop editor"
+    },
+    "contrast": {
+      "samples": [
+        {
+          "text": "Preview — the server-side editor preview flag is set, nothing is attributed to an account, and no cr",
+          "ratio": 5.9,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11
+        },
+        {
+          "text": "Refused",
+          "ratio": 5.71,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10
+        },
+        {
+          "text": "Catalog intake is not open on this deployment",
+          "ratio": 5.71,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 16
+        },
+        {
+          "text": "reasonCATALOG_INTAKE_STORAGE_UNAVAILABLE",
+          "ratio": 5.89,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "reason",
+          "ratio": 5.89,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 9
+        },
+        {
+          "text": "The injected TEST catalog intake storage is unavailable, so nothing was written.",
+          "ratio": 5.89,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 14
+        },
+        {
+          "text": "No intake record was built or read for this render, and this page submits nothing. This deployment i",
+          "ratio": 5.89,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 14
+        },
+        {
+          "text": "SceneAxi Engine Desktop editor",
+          "ratio": 17.39,
+          "floor": 3,
+          "disabled": false,
+          "fontSize": 36
+        },
+        {
+          "text": "EDITOR_WINDOW_BELOW_MINIMUM",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "The editor chrome refuses below 900×600 rather than rendering an unusable layout. Enlarge the window",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 13
+        }
+      ],
+      "failures": [],
+      "unresolved": []
+    },
+    "focus": [],
+    "pageErrors": [],
+    "screenshot": {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-editor-web-preview-mobile.png",
+      "bytes": 53406,
+      "sha256": "1ee6ede6a3d737d54deda79a351e51b3d2e483dfb66e5d932d84b884afc07207"
+    }
+  },
+  {
+    "site": "umbrella",
+    "route": "/editor?profile=kids",
+    "name": "editor-kids-refusal",
+    "viewport": "mobile",
+    "httpStatus": 200,
+    "metrics": {
+      "width": 390,
+      "scrollWidth": 390,
+      "overlaps": [],
+      "minimum": null,
+      "notes": null,
+      "spacing": [
+        {
+          "selector": "",
+          "padding": "0px",
+          "gap": "normal"
+        }
+      ],
+      "background": "rgb(7, 8, 10)",
+      "h1": "That editor link was refused"
+    },
+    "contrast": {
+      "samples": [
+        {
+          "text": "Engine Desktop editor",
+          "ratio": 7.05,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10
+        },
+        {
+          "text": "That editor link was refused",
+          "ratio": 17.39,
+          "floor": 3,
+          "disabled": false,
+          "fontSize": 36
+        },
+        {
+          "text": "Refused",
+          "ratio": 5.71,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 10
+        },
+        {
+          "text": "Link refused",
+          "ratio": 5.71,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 16
+        },
+        {
+          "text": "reasonSITE_REQUEST_MALFORMED",
+          "ratio": 5.89,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 11.5
+        },
+        {
+          "text": "reason",
+          "ratio": 5.89,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 9
+        },
+        {
+          "text": "The identity request is malformed.",
+          "ratio": 5.89,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 14
+        },
+        {
+          "text": "Catalog deep links carry a source, an item, and an optional artifact reference — nothing else. A lin",
+          "ratio": 5.89,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 14
+        },
+        {
+          "text": "Open the editor without a link · Back to SceneAxi",
+          "ratio": 5.89,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 14
+        },
+        {
+          "text": "Open the editor without a link",
+          "ratio": 6.52,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 14
+        },
+        {
+          "text": "Back to SceneAxi",
+          "ratio": 6.52,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 14
+        }
+      ],
+      "failures": [],
+      "unresolved": []
+    },
+    "focus": [
+      {
+        "text": "Open the editor without a link",
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 138, 84)"
+      },
+      {
+        "text": "Back to SceneAxi",
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 138, 84)"
+      }
+    ],
+    "pageErrors": [],
+    "screenshot": {
+      "path": "docs/audits/production-swarm/visual/qa-umbrella-editor-kids-refusal-mobile.png",
+      "bytes": 35035,
+      "sha256": "16569dad4d031a182ad376e444e1dc7a70a92fc73e40dab236b23f4b7cb3aea6"
+    }
+  },
+  {
+    "site": "kids",
+    "route": "/",
+    "name": "activity-playing",
+    "viewport": "desktop",
+    "httpStatus": 200,
+    "metrics": {
+      "width": 1440,
+      "scrollWidth": 1440,
+      "overlaps": [],
+      "minimum": null,
+      "notes": null,
+      "spacing": [
+        {
+          "selector": "",
+          "padding": "44px 0px 64px",
+          "gap": "normal"
+        }
+      ],
+      "background": "rgb(7, 8, 10)",
+      "h1": "Make a tiny world"
+    },
+    "contrast": {
+      "samples": [],
+      "failures": [],
+      "unresolved": [
+        {
+          "text": "✦ SceneAxi Kids",
+          "ratio": 7.36,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 16
+        },
+        {
+          "text": "✦",
+          "ratio": 7.36,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 16
+        },
+        {
+          "text": "Make a tiny world",
+          "ratio": 17.39,
+          "floor": 3,
+          "disabled": false,
+          "fontSize": 72
+        },
+        {
+          "text": "Pick a place. Add a few things. Press Play when it feels ready.",
+          "ratio": 6.37,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 18.88
+        },
+        {
+          "text": "☀️",
+          "ratio": 17.39,
+          "floor": 3,
+          "disabled": false,
+          "fontSize": 64
+        },
+        {
+          "text": "🌳",
+          "ratio": 17.39,
+          "floor": 3,
+          "disabled": false,
+          "fontSize": 84
+        },
+        {
+          "text": "Playing",
+          "ratio": 7.36,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 14.08
+        },
+        {
+          "text": "■Stop",
+          "ratio": 7.36,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 16
+        },
+        {
+          "text": "■",
+          "ratio": 7.36,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 16
+        },
+        {
+          "text": "Your world is playing!",
+          "ratio": 6.37,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 15.68
+        },
+        {
+          "text": "1. Pick a place",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 16.8
+        },
+        {
+          "text": "☀️",
+          "ratio": 7.36,
+          "floor": 3,
+          "disabled": true,
+          "fontSize": 28.8
+        },
+        {
+          "text": "Sunny meadow",
+          "ratio": 7.36,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 13.12
+        },
+        {
+          "text": "🌙",
+          "ratio": 5.38,
+          "floor": 3,
+          "disabled": true,
+          "fontSize": 28.8
+        },
+        {
+          "text": "Moon camp",
+          "ratio": 5.38,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 13.12
+        },
+        {
+          "text": "🌊",
+          "ratio": 5.38,
+          "floor": 3,
+          "disabled": true,
+          "fontSize": 28.8
+        },
+        {
+          "text": "Coral cove",
+          "ratio": 5.38,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 13.12
+        },
+        {
+          "text": "2. Add something",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 16.8
+        },
+        {
+          "text": "🐙",
+          "ratio": 5.38,
+          "floor": 3,
+          "disabled": true,
+          "fontSize": 28.8
+        },
+        {
+          "text": "Friend",
+          "ratio": 5.38,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 13.12
+        },
+        {
+          "text": "🌳",
+          "ratio": 5.38,
+          "floor": 3,
+          "disabled": true,
+          "fontSize": 28.8
+        },
+        {
+          "text": "Tree",
+          "ratio": 5.38,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 13.12
+        },
+        {
+          "text": "⭐",
+          "ratio": 5.38,
+          "floor": 3,
+          "disabled": true,
+          "fontSize": 28.8
+        },
+        {
+          "text": "Star",
+          "ratio": 5.38,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 13.12
+        },
+        {
+          "text": "🚀",
+          "ratio": 5.38,
+          "floor": 3,
+          "disabled": true,
+          "fontSize": 28.8
+        },
+        {
+          "text": "Rocket",
+          "ratio": 5.38,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 13.12
+        },
+        {
+          "text": "1 of 6 pieces",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 13.76
+        },
+        {
+          "text": "Undo last",
+          "ratio": 5.38,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 16
+        },
+        {
+          "text": "Start over",
+          "ratio": 5.38,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 16
+        },
+        {
+          "text": "For grown-ups",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 16
+        },
+        {
+          "text": "This first activity works only in this browser tab. It does not ask for a name, save a project, or s",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 14.72
+        }
+      ]
+    },
+    "focus": [
+      {
+        "text": "For grown-ups",
+        "outline": "solid",
+        "width": "3px",
+        "color": "rgb(237, 239, 242)",
+        "focusVisible": true,
+        "visible": true
+      },
+      {
+        "text": "✦ SceneAxi KidsMake a tiny worldPick a place. Add a few thin",
+        "outline": "none",
+        "width": "3px",
+        "color": "rgb(237, 239, 242)",
+        "focusVisible": false,
+        "visible": true
+      },
+      {
+        "text": "■Stop",
+        "outline": "solid",
+        "width": "3px",
+        "color": "rgb(237, 239, 242)",
+        "focusVisible": true,
+        "visible": true
+      },
+      {
+        "text": "For grown-ups",
+        "outline": "solid",
+        "width": "3px",
+        "color": "rgb(237, 239, 242)",
+        "focusVisible": true,
+        "visible": true
+      },
+      {
+        "text": "✦ SceneAxi KidsMake a tiny worldPick a place. Add a few thin",
+        "outline": "none",
+        "width": "3px",
+        "color": "rgb(237, 239, 242)",
+        "focusVisible": false,
+        "visible": true
+      }
+    ],
+    "pageErrors": [],
+    "screenshot": {
+      "path": "docs/audits/production-swarm/visual/qa-kids-activity-playing-desktop.png",
+      "bytes": 163311,
+      "sha256": "f11cb234ea341511d67a23ac43eced54f369308cce43dadbbb9a9a62d989c6bf"
+    },
+    "programmaticPointerFocus": [
+      {
+        "text": "■Stop",
+        "outline": "none",
+        "width": "3px",
+        "color": "rgb(7, 8, 10)"
+      },
+      {
+        "text": "☀️Sunny meadow",
+        "outline": "none",
+        "width": "3px",
+        "color": "rgb(7, 8, 10)"
+      },
+      {
+        "text": "🌙Moon camp",
+        "outline": "none",
+        "width": "3px",
+        "color": "rgb(138, 146, 156)"
+      },
+      {
+        "text": "🌊Coral cove",
+        "outline": "none",
+        "width": "3px",
+        "color": "rgb(138, 146, 156)"
+      },
+      {
+        "text": "🐙Friend",
+        "outline": "none",
+        "width": "3px",
+        "color": "rgb(138, 146, 156)"
+      }
+    ],
+    "focusScreenshot": {
+      "path": "docs/audits/production-swarm/visual/qa-kids-activity-playing-desktop-focus.png",
+      "bytes": 163311,
+      "sha256": "f11cb234ea341511d67a23ac43eced54f369308cce43dadbbb9a9a62d989c6bf"
+    }
+  },
+  {
+    "site": "kids",
+    "route": "/",
+    "name": "activity-playing",
+    "viewport": "mobile",
+    "httpStatus": 200,
+    "metrics": {
+      "width": 390,
+      "scrollWidth": 390,
+      "overlaps": [],
+      "minimum": null,
+      "notes": null,
+      "spacing": [
+        {
+          "selector": "",
+          "padding": "28px 0px 64px",
+          "gap": "normal"
+        }
+      ],
+      "background": "rgb(7, 8, 10)",
+      "h1": "Make a tiny world"
+    },
+    "contrast": {
+      "samples": [],
+      "failures": [],
+      "unresolved": [
+        {
+          "text": "✦ SceneAxi Kids",
+          "ratio": 7.36,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 16
+        },
+        {
+          "text": "✦",
+          "ratio": 7.36,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 16
+        },
+        {
+          "text": "Make a tiny world",
+          "ratio": 17.39,
+          "floor": 3,
+          "disabled": false,
+          "fontSize": 36
+        },
+        {
+          "text": "Pick a place. Add a few things. Press Play when it feels ready.",
+          "ratio": 6.37,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 18.88
+        },
+        {
+          "text": "☀️",
+          "ratio": 17.39,
+          "floor": 3,
+          "disabled": false,
+          "fontSize": 64
+        },
+        {
+          "text": "🌳",
+          "ratio": 17.39,
+          "floor": 3,
+          "disabled": false,
+          "fontSize": 52
+        },
+        {
+          "text": "Playing",
+          "ratio": 7.36,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 14.08
+        },
+        {
+          "text": "■Stop",
+          "ratio": 7.36,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 16
+        },
+        {
+          "text": "■",
+          "ratio": 7.36,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 16
+        },
+        {
+          "text": "Your world is playing!",
+          "ratio": 6.37,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 15.68
+        },
+        {
+          "text": "1. Pick a place",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 16.8
+        },
+        {
+          "text": "☀️",
+          "ratio": 7.36,
+          "floor": 3,
+          "disabled": true,
+          "fontSize": 28.8
+        },
+        {
+          "text": "Sunny meadow",
+          "ratio": 7.36,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 13.12
+        },
+        {
+          "text": "🌙",
+          "ratio": 5.38,
+          "floor": 3,
+          "disabled": true,
+          "fontSize": 28.8
+        },
+        {
+          "text": "Moon camp",
+          "ratio": 5.38,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 13.12
+        },
+        {
+          "text": "🌊",
+          "ratio": 5.38,
+          "floor": 3,
+          "disabled": true,
+          "fontSize": 28.8
+        },
+        {
+          "text": "Coral cove",
+          "ratio": 5.38,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 13.12
+        },
+        {
+          "text": "2. Add something",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 16.8
+        },
+        {
+          "text": "🐙",
+          "ratio": 5.38,
+          "floor": 3,
+          "disabled": true,
+          "fontSize": 28.8
+        },
+        {
+          "text": "Friend",
+          "ratio": 5.38,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 13.12
+        },
+        {
+          "text": "🌳",
+          "ratio": 5.38,
+          "floor": 3,
+          "disabled": true,
+          "fontSize": 28.8
+        },
+        {
+          "text": "Tree",
+          "ratio": 5.38,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 13.12
+        },
+        {
+          "text": "⭐",
+          "ratio": 5.38,
+          "floor": 3,
+          "disabled": true,
+          "fontSize": 28.8
+        },
+        {
+          "text": "Star",
+          "ratio": 5.38,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 13.12
+        },
+        {
+          "text": "🚀",
+          "ratio": 5.38,
+          "floor": 3,
+          "disabled": true,
+          "fontSize": 28.8
+        },
+        {
+          "text": "Rocket",
+          "ratio": 5.38,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 13.12
+        },
+        {
+          "text": "1 of 6 pieces",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 13.76
+        },
+        {
+          "text": "Undo last",
+          "ratio": 5.38,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 16
+        },
+        {
+          "text": "Start over",
+          "ratio": 5.38,
+          "floor": 4.5,
+          "disabled": true,
+          "fontSize": 16
+        },
+        {
+          "text": "For grown-ups",
+          "ratio": 16.66,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 16
+        },
+        {
+          "text": "This first activity works only in this browser tab. It does not ask for a name, save a project, or s",
+          "ratio": 6.1,
+          "floor": 4.5,
+          "disabled": false,
+          "fontSize": 14.72
+        }
+      ]
+    },
+    "focus": [
+      {
+        "text": "For grown-ups",
+        "outline": "solid",
+        "width": "3px",
+        "color": "rgb(237, 239, 242)",
+        "focusVisible": true,
+        "visible": true
+      },
+      {
+        "text": "✦ SceneAxi KidsMake a tiny worldPick a place. Add a few thin",
+        "outline": "none",
+        "width": "3px",
+        "color": "rgb(237, 239, 242)",
+        "focusVisible": false,
+        "visible": true
+      },
+      {
+        "text": "■Stop",
+        "outline": "solid",
+        "width": "3px",
+        "color": "rgb(237, 239, 242)",
+        "focusVisible": true,
+        "visible": true
+      },
+      {
+        "text": "For grown-ups",
+        "outline": "solid",
+        "width": "3px",
+        "color": "rgb(237, 239, 242)",
+        "focusVisible": true,
+        "visible": true
+      },
+      {
+        "text": "✦ SceneAxi KidsMake a tiny worldPick a place. Add a few thin",
+        "outline": "none",
+        "width": "3px",
+        "color": "rgb(237, 239, 242)",
+        "focusVisible": false,
+        "visible": true
+      }
+    ],
+    "pageErrors": [],
+    "screenshot": {
+      "path": "docs/audits/production-swarm/visual/qa-kids-activity-playing-mobile.png",
+      "bytes": 107881,
+      "sha256": "b32538afb23d9ef8989026d99c50b5252cbe9c9e393eac63e94d57022b4d1b90"
+    },
+    "programmaticPointerFocus": [
+      {
+        "text": "■Stop",
+        "outline": "none",
+        "width": "3px",
+        "color": "rgb(7, 8, 10)"
+      },
+      {
+        "text": "☀️Sunny meadow",
+        "outline": "none",
+        "width": "3px",
+        "color": "rgb(7, 8, 10)"
+      },
+      {
+        "text": "🌙Moon camp",
+        "outline": "none",
+        "width": "3px",
+        "color": "rgb(138, 146, 156)"
+      },
+      {
+        "text": "🌊Coral cove",
+        "outline": "none",
+        "width": "3px",
+        "color": "rgb(138, 146, 156)"
+      },
+      {
+        "text": "🐙Friend",
+        "outline": "none",
+        "width": "3px",
+        "color": "rgb(138, 146, 156)"
+      }
+    ],
+    "focusScreenshot": {
+      "path": "docs/audits/production-swarm/visual/qa-kids-activity-playing-mobile-focus.png",
+      "bytes": 40279,
+      "sha256": "fc9a3dfb2a490598a6f8189c1593ad5b9bb08aceb016f3c440629cdcb40885c4"
+    }
+  }
+]

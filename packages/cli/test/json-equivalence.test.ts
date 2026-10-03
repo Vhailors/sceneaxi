@@ -49,11 +49,12 @@ describe("strict --json equivalence", () => {
       expect(text.envelope).toEqual(json.envelope);
 
       // JSON stdout is parseable and equals the envelope.
-      const parsed = JSON.parse(json.stdout) as unknown;
+      const parsed: unknown = JSON.parse(json.stdout);
       expect(parsed).toEqual(json.envelope);
 
       // Text stdout is non-empty and not JSON (unless envelope is trivial).
       expect(text.stdout.length).toBeGreaterThan(0);
+
       if (text.format === "text") {
         expect(text.stdout.startsWith("{")).toBe(false);
         expect(text.stdout).toContain("ok:");

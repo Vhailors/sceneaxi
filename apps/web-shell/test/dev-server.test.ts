@@ -5,7 +5,9 @@
  * against a real loopback server on an ephemeral port, which is the cheapest
  * honest proof that "startable" is not just an exported function.
  */
-import { mkdirSync, mkdtempSync, readFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { Window } from "happy-dom";
 import { request } from "node:http";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -29,9 +31,14 @@ import {
   type InspectorDevServer,
 } from "@sceneaxi/web-shell";
 
+const fixtureRoots: string[] = [];
+
 function fixtureDir(): string {
-  const dir = join(mkdtempSync(join(tmpdir(), "sceneaxi-web-shell-serve-")), "root");
+  const root = mkdtempSync(join(tmpdir(), "sceneaxi-web-shell-serve-"));
+  fixtureRoots.push(root);
+  const dir = join(root, "root");
   mkdirSync(dir);
+
   return dir;
 }
 
@@ -41,6 +48,7 @@ function writeScene(dir: string, name: string, data: JsonObject): void {
     createDocument({ id: name.replace(/\.json$/, ""), data }),
     { cwd: dir },
   );
+
   expect(result.ok).toBe(true);
 }
 
@@ -52,7 +60,9 @@ async function serve(projectRoot: string): Promise<InspectorDevServer> {
     port: 0,
     projectRoot,
   });
+
   running.push(server);
+
   return server;
 }
 
@@ -85,7 +95,9 @@ function rawRequest(
         });
       },
     );
+
     outgoing.on("error", rejectResponse);
+
     if (options.body !== undefined) outgoing.write(options.body);
     outgoing.end();
   });
@@ -93,12 +105,15 @@ function rawRequest(
 
 afterEach(async () => {
   while (running.length > 0) await running.pop()?.close();
+
+  for (const root of fixtureRoots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
 describe("dev command arguments", () => {
   it("defaults to loopback, the default port, and the current directory", () => {
     const parsed = parseDevServerArgs([]);
     expect(parsed.ok && parsed.mode).toBe("serve");
+
     if (!parsed.ok || parsed.mode !== "serve") return;
     expect(parsed.options.host).toBe(DEFAULT_HOST);
     expect(parsed.options.port).toBe(DEFAULT_PORT);
@@ -120,6 +135,7 @@ describe("dev command arguments", () => {
     for (const host of ["0.0.0.0", "::", "192.168.1.20", "127.0.0.1.example.com"]) {
       const parsed = parseDevServerArgs(["--host", host]);
       expect(parsed.ok, host).toBe(false);
+
       if (parsed.ok) continue;
       expect(parsed.reason).toBe(WEB_SHELL_REFUSALS.hostNotLoopback);
       expect(parsed.exitCode).toBe(WebShellExit.USAGE);
@@ -138,6 +154,7 @@ describe("dev command arguments", () => {
     ]) {
       const parsed = parseDevServerArgs(argv);
       expect(parsed.ok, argv.join(" ")).toBe(false);
+
       if (parsed.ok) continue;
       expect(parsed.reason).toBe(WEB_SHELL_REFUSALS.argumentInvalid);
       expect(parsed.exitCode).toBe(WebShellExit.USAGE);
@@ -150,12 +167,14 @@ describe("dev command arguments", () => {
 
     const absent = parseDevServerArgs(["--cwd", join(dir, "nowhere")]);
     expect(absent.ok).toBe(false);
+
     if (!absent.ok) {
       expect(absent.reason).toBe(WEB_SHELL_REFUSALS.projectRootUnusable);
     }
 
     const file = parseDevServerArgs(["--cwd", join(dir, "scene.json")]);
     expect(file.ok).toBe(false);
+
     if (!file.ok) {
       expect(file.reason).toBe(WEB_SHELL_REFUSALS.projectRootUnusable);
     }
@@ -191,6 +210,134 @@ describe("the started server serves the inspector", () => {
     expect(page.headers.get("content-type")).toContain("text/html");
     expect(page.headers.get("cache-control")).toBe("no-store");
     expect(await page.text()).toContain("SceneAxi inspector");
+  });
+
+  it("authorizes only exact static UTF8 script/style hashes independent of escaped root", async () => {
+    const policies: string[] = [];
+
+    for (const name of ["plain", "<&script>é"]) {
+      const dir = join(fixtureDir(), name);
+      mkdirSync(dir);
+      const server = await serve(dir);
+      const response = await fetch(server.url);
+      const html = await response.text();
+      const policy = response.headers.get("content-security-policy") ?? "";
+      policies.push(policy);
+
+      for (const tag of ["script", "style"]) {
+        const blocks = [...html.matchAll(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`, "g"))];
+        expect(blocks).toHaveLength(1);
+        const bytes = blocks[0]?.[1];
+
+        if (bytes === undefined) throw new Error("Missing trusted chrome bytes");
+        const hash = createHash("sha256").update(bytes, "utf8").digest("base64");
+        expect(policy.split("; ").find((rule) => rule.startsWith(`${tag}-src `)))
+          .toBe(`${tag}-src 'sha256-${hash}'`);
+
+        for (const changed of [bytes + " ", bytes.replace(/\n/, "\r\n"), bytes + "/* injected */"]) {
+          expect(policy).not.toContain(createHash("sha256").update(changed, "utf8").digest("base64"));
+        }
+      }
+
+      for (const rule of ["default-src 'none'", "connect-src 'self'", "base-uri 'none'", "form-action 'none'", "frame-ancestors 'none'", "script-src-attr 'none'", "style-src-attr 'none'"]) expect(policy).toContain(rule);
+
+      for (const allowance of ["unsafe-inline", "unsafe-eval", "https:", "http:", "*"]) expect(policy).not.toContain(allowance);
+      const head = await fetch(server.url, { method: "HEAD" });
+      expect(head.headers.get("content-security-policy")).toBe(policy);
+      expect(await head.text()).toBe("");
+    }
+
+    expect(policies[0]).toBe(policies[1]);
+  });
+
+  for (const mutation of [
+    { name: "script whitespace", apply: (html: string) => html.replace("<script>", "<script> ") },
+    { name: "style byte", apply: (html: string) => html.replace("<style>", "<style> ") },
+    { name: "extra script", apply: (html: string) => html.replace("</body>", "<script>throw 1</script></body>") },
+    { name: "extra style", apply: (html: string) => html.replace("</head>", "<style>body{display:none}</style></head>") },
+    { name: "external script", apply: (html: string) => html.replace("</body>", '<script src="https://invalid.example/"></script></body>') },
+    { name: "event handler", apply: (html: string) => html.replace("<body>", '<body onload="throw 1">') },
+  ]) it(`refuses changed chrome before delivery: ${mutation.name}`, async () => {
+    const server = await serve(fixtureDir());
+    const trusted = await fetch(server.url);
+    const policy = trusted.headers.get("content-security-policy");
+    const html = await trusted.text();
+    server.app.handleAsync = async () => ({ status: 200, contentType: "text/html; charset=utf-8", body: mutation.apply(html) });
+    const refused = await fetch(server.url);
+    expect(refused.status).toBe(500);
+    expect(refused.headers.get("content-type")).toContain("application/json");
+    expect(refused.headers.get("content-security-policy")).toBe(policy);
+    expect(await refused.json()).toMatchObject({ ok: false, reason: "WEB_SHELL_CHROME_INTEGRITY_INVALID" });
+  });
+
+  it("does not bypass chrome refusal with MIME case or optional whitespace", async () => {
+    const server = await serve(fixtureDir());
+    const html = await (await fetch(server.url)).text();
+
+    for (const contentType of ["TEXT/HTML; charset=utf-8", "text/html ; charset=utf-8"]) {
+      server.app.handleAsync = async () => ({ status: 200, contentType, body: html + "<script>throw 1</script>" });
+      const refused = await fetch(server.url);
+      expect(refused.status).toBe(500);
+      expect(await refused.json()).toMatchObject({ ok: false, reason: "WEB_SHELL_CHROME_INTEGRITY_INVALID" });
+    }
+  });
+
+  it("keeps the hash-authorized served inspector interactive with invalid/reject focus return and no write", async () => {
+    const dir = fixtureDir();
+    writeScene(dir, "scene.json", { entities: [{ id: "hero", x: 1 }] });
+    const before = readFileSync(join(dir, "scene.json"));
+    const server = await serve(dir);
+    const response = await fetch(server.url);
+    const html = await response.text();
+    const script = /<script>([\s\S]*?)<\/script>/.exec(html)?.[1];
+
+    if (script === undefined) throw new Error("Missing inspector script");
+    expect(response.headers.get("content-security-policy")).toContain(
+      `'sha256-${createHash("sha256").update(script, "utf8").digest("base64")}'`,
+    );
+    // Interaction only: Happy DOM does NOT enforce browser CSP or prove geometry.
+    const window = new Window({ url: server.url, settings: { enableJavaScriptEvaluation: true } });
+
+    try {
+      window.fetch = async (url, options) => {
+        const init: RequestInit = { method: options?.method ?? "GET" };
+
+          if (isProtocolText(options?.body)) init.body = options.body;
+          const result = await fetch(new URL(String(url), server.url), init);
+
+        return new window.Response(await result.text(), { status: result.status });
+      };
+
+      window.document.write(html);
+      await window.happyDOM.waitUntilComplete();
+      await expect.poll(() => window.document.getElementById("edit")?.getAttribute("aria-busy")).toBe("false");
+      const field = window.document.getElementById("newValue");
+      const propose = window.document.getElementById("propose");
+      const form = window.document.getElementById("edit");
+      const reject = window.document.getElementById("reject");
+
+      if (!(field instanceof window.HTMLInputElement) || !(propose instanceof window.HTMLButtonElement) ||
+          !(reject instanceof window.HTMLButtonElement) || form === null) throw new Error("Missing controls");
+      field.value = "{broken";
+      propose.focus();
+      form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true }));
+      await window.happyDOM.waitUntilComplete();
+      expect(window.document.activeElement).toBe(field);
+      expect(field.getAttribute("aria-invalid")).toBe("true");
+      field.value = "12";
+      field.dispatchEvent(new window.Event("input", { bubbles: true }));
+      propose.focus();
+      form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true }));
+      await window.happyDOM.waitUntilComplete();
+      await expect.poll(() => window.document.getElementById("phase")?.textContent).toBe("reviewing");
+      expect(window.document.getElementById("diff")?.textContent).toContain('"x": 12');
+      reject.focus();
+      reject.click();
+      await window.happyDOM.waitUntilComplete();
+      await expect.poll(() => window.document.getElementById("phase")?.textContent).toBe("rejected");
+      expect(window.document.activeElement).toBe(propose);
+      expect(readFileSync(join(dir, "scene.json"))).toEqual(before);
+    } finally { window.close(); }
   });
 
   it("denies framing on every response, page and API alike", async () => {
@@ -237,11 +384,15 @@ describe("the started server serves the inspector", () => {
         newValue: 12,
       }),
     });
+
     expect(proposed.status).toBe(200);
+
+    // SAFETY: The response comes from this test’s own loopback inspector server and the asserted status selects its success/state or registered refusal envelope; the following assertions verify the expected fields.
     const review = (await proposed.json()) as {
       reviewToken: string;
       snapshot: { phase: string; renderedDiff: string };
     };
+
     expect(review.snapshot.phase).toBe("reviewing");
     expect(review.snapshot.renderedDiff).toContain('"x": 12');
     expect(readFileSync(join(dir, "scene.json")).equals(before)).toBe(true);
@@ -251,7 +402,9 @@ describe("the started server serves the inspector", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ reviewToken: review.reviewToken }),
     });
+
     expect(accepted.status).toBe(200);
+    // SAFETY: The response comes from this test’s own loopback inspector server and the asserted status selects its success/state or registered refusal envelope; the following assertions verify the expected fields.
     expect(
       ((await accepted.json()) as { snapshot: { phase: string } }).snapshot.phase,
     ).toBe("applied");
@@ -270,6 +423,7 @@ describe("the started server serves the inspector", () => {
     });
 
     expect(response.status).toBe(403);
+    // SAFETY: The response comes from this test’s own loopback inspector server and the asserted status selects its success/state or registered refusal envelope; the following assertions verify the expected fields.
     expect((JSON.parse(response.body) as { reason: string }).reason).toBe(
       WEB_SHELL_REFUSALS.requestHostInvalid,
     );
@@ -293,18 +447,22 @@ describe("the started server serves the inspector", () => {
         newValue: 12,
       }),
     });
+
     expect(proposed.status).toBe(200);
 
     const refused = await fetch(`${server.url}api/accept`, {
       method: "POST",
       headers: { origin: "https://attacker.example" },
     });
+
     expect(refused.status).toBe(403);
+    // SAFETY: The response comes from this test’s own loopback inspector server and the asserted status selects its success/state or registered refusal envelope; the following assertions verify the expected fields.
     expect(((await refused.json()) as { reason: string }).reason).toBe(
       WEB_SHELL_REFUSALS.requestOriginInvalid,
     );
 
     const state = await fetch(`${server.url}api/state`);
+    // SAFETY: The response comes from this test’s own loopback inspector server and the asserted status selects its success/state or registered refusal envelope; the following assertions verify the expected fields.
     expect(
       ((await state.json()) as { snapshot: { phase: string } }).snapshot.phase,
     ).toBe("reviewing");
@@ -326,7 +484,9 @@ describe("the started server serves the inspector", () => {
         newValue: 2,
       }),
     });
+
     expect(response.status).toBe(403);
+    // SAFETY: The response comes from this test’s own loopback inspector server and the asserted status selects its success/state or registered refusal envelope; the following assertions verify the expected fields.
     expect(((await response.json()) as { reason: string }).reason).toBe(
       WEB_SHELL_REFUSALS.documentOutsideProjectRoot,
     );
@@ -342,7 +502,9 @@ describe("the started server serves the inspector", () => {
       headers: { "content-type": "application/json" },
       body: "x".repeat(256 * 1024),
     });
+
     expect(response.status).toBe(413);
+    // SAFETY: The response comes from this test’s own loopback inspector server and the asserted status selects its success/state or registered refusal envelope; the following assertions verify the expected fields.
     expect(((await response.json()) as { reason: string }).reason).toBe(
       WEB_SHELL_REFUSALS.requestBodyTooLarge,
     );
@@ -359,3 +521,7 @@ describe("the started server serves the inspector", () => {
     expect(await response.text()).toBe("");
   });
 });
+
+function isProtocolText<Value>(value: Value): value is Value & (string) {
+  return typeof value === "string";
+}

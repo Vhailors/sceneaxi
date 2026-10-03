@@ -25,17 +25,32 @@ import { readFileSync } from "node:fs";
 
 import { exportEntries } from "./lib/package-exports.mjs";
 
-const REPO_ROOT = new URL("../", import.meta.url);
+/** @returns {value is string} */
+function isSourceExportPath(value) {
+  try {
+    // Intrinsic string branding plus identity rejects boxed strings.
+    return String.prototype.valueOf.call(value) === value;
+  } catch {
+    return false;
+  }
+}
+
+// Manifest exports originate in JSON, so object values cannot be callable.
+function isConditionalExport(value) {
+  return value !== null && Object(value) === value;
+}
+
+const REPO_ROOT = new globalThis.URL("../", import.meta.url);
 
 const matrix = JSON.parse(
-  readFileSync(new URL("docs/dependency-matrix.json", REPO_ROOT), "utf8"),
+  readFileSync(new globalThis.URL("docs/dependency-matrix.json", REPO_ROOT), "utf8"),
 );
 
 /** package name → absolute file URL of its built entrypoint. */
 const BUILT_ENTRYPOINTS = new Map(
   Object.entries(matrix.packages).map(([name, entry]) => [
     name,
-    new URL(`${entry.dir}/dist/src/index.js`, REPO_ROOT).href,
+    new globalThis.URL(`${entry.dir}/dist/src/index.js`, REPO_ROOT).href,
   ]),
 );
 
@@ -53,34 +68,46 @@ const BUILT_ENTRYPOINTS = new Map(
  * are left to Node, which can already load them from the path the map names.
  */
 const BUILT_SUBPATHS = new Map();
+
 const BUILT_INTERNALS = new Map([
   [
     "@sceneaxi-internal/desktop-session-project-git",
-    new URL("apps/desktop-shell/dist/src/session.js", REPO_ROOT).href,
+    new globalThis.URL("apps/desktop-shell/dist/src/session.js", REPO_ROOT).href,
   ],
   [
     "@sceneaxi-internal/project-git-authority",
-    new URL("packages/authoring-core/dist/internal/project-git-authority.js", REPO_ROOT).href,
+    new globalThis.URL("packages/authoring-core/dist/internal/project-git-authority.js", REPO_ROOT).href,
   ],
 ]);
 
 for (const [name, entry] of Object.entries(matrix.packages)) {
   let manifest;
+
   try {
     manifest = JSON.parse(
-      readFileSync(new URL(`${entry.dir}/package.json`, REPO_ROOT), "utf8"),
+      readFileSync(new globalThis.URL(`${entry.dir}/package.json`, REPO_ROOT), "utf8"),
     );
   } catch {
     continue;
   }
+
+  // Follow the same Node conditional root as the source-backed package manifest.
+  const rootTarget = manifest.exports?.["."];
+
+  if (isConditionalExport(rootTarget) &&
+      isSourceExportPath(rootTarget.node) && rootTarget.node.startsWith("./src/")) {
+    BUILT_ENTRYPOINTS.set(name, new globalThis.URL(`${entry.dir}/${rootTarget.node.replace(/^\.\/src\//, "dist/src/").replace(/\.tsx?$/, ".js")}`, REPO_ROOT).href);
+  }
+
   for (const [subpath, target] of exportEntries(manifest.exports)) {
     if (subpath === "." || !target.startsWith("./src/") || !/\.tsx?$/.test(target)) {
       continue;
     }
+
     const built = target.replace(/^\.\/src\//, "dist/src/").replace(/\.tsx?$/, ".js");
     BUILT_SUBPATHS.set(
       `${name}/${subpath.slice(2)}`,
-      new URL(`${entry.dir}/${built}`, REPO_ROOT).href,
+      new globalThis.URL(`${entry.dir}/${built}`, REPO_ROOT).href,
     );
   }
 }
@@ -89,9 +116,11 @@ export function resolve(specifier, context, nextResolve) {
   const built = BUILT_ENTRYPOINTS.get(specifier) ??
     BUILT_SUBPATHS.get(specifier) ??
     BUILT_INTERNALS.get(specifier);
+
   if (built !== undefined) {
     return { url: built, shortCircuit: true };
   }
+
   return nextResolve(specifier, context);
 }
 

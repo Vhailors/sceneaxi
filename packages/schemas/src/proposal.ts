@@ -61,53 +61,67 @@ export type ProposalValidationResult =
   | ProposalValidationRefuse;
 
 const HASH_RE = /^sha256:[0-9a-f]{64}$/;
+
 // Empty string (whole doc) or slash-prefixed RFC 6901 segments.
 const POINTER_RE = /^(\/([^/~]|~[01])*)*$/;
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
+type ProposalInput = Parameters<typeof isJsonValue>[0];
+
+type RawProposal = { documentPath?: unknown; baseContentHash?: unknown; jsonPointer?: unknown; oldValue?: unknown; newValue?: unknown; unifiedDiff?: unknown; schemaVersion?: unknown; kind?: unknown; edits?: unknown; diffs?: unknown };
+
+function isPlainObject(value: ProposalInput): value is RawProposal {
+  return value !== null && isBoundaryObjectOrNull(value) && !Array.isArray(value);
 }
 
 function validateEdit(
-  value: unknown,
+  value: ProposalInput,
   index: number,
 ): { ok: true; edit: ProposalEdit } | { ok: false; message: string } {
   if (!isPlainObject(value)) {
     return { ok: false, message: `edits[${index}] must be an object.` };
   }
+
   const documentPath = value["documentPath"];
-  if (typeof documentPath !== "string" || documentPath.length === 0) {
+
+  if (!isBoundaryString(documentPath) || documentPath.length === 0) {
     return {
       ok: false,
       message: `edits[${index}].documentPath must be a non-empty string.`,
     };
   }
+
   const baseContentHash = value["baseContentHash"];
-  if (typeof baseContentHash !== "string" || !HASH_RE.test(baseContentHash)) {
+
+  if (!isBoundaryString(baseContentHash) || !HASH_RE.test(baseContentHash)) {
     return {
       ok: false,
       message: `edits[${index}].baseContentHash must match ^sha256:[0-9a-f]{64}$.`,
     };
   }
+
   const jsonPointer = value["jsonPointer"];
-  if (typeof jsonPointer !== "string" || !POINTER_RE.test(jsonPointer)) {
+
+  if (!isBoundaryString(jsonPointer) || !POINTER_RE.test(jsonPointer)) {
     return {
       ok: false,
       message: `edits[${index}].jsonPointer must be a valid RFC 6901 pointer.`,
     };
   }
+
   if (!Object.hasOwn(value, "oldValue") || !Object.hasOwn(value, "newValue")) {
     return {
       ok: false,
       message: `edits[${index}] requires oldValue and newValue.`,
     };
   }
+
   if (!isJsonValue(value["oldValue"]) || !isJsonValue(value["newValue"])) {
     return {
       ok: false,
       message: `edits[${index}].oldValue and newValue must be JSON values.`,
     };
   }
+
   const known = new Set([
     "documentPath",
     "baseContentHash",
@@ -115,6 +129,7 @@ function validateEdit(
     "oldValue",
     "newValue",
   ]);
+
   for (const key of Object.keys(value)) {
     if (!known.has(key)) {
       return {
@@ -123,6 +138,7 @@ function validateEdit(
       };
     }
   }
+
   return {
     ok: true,
     edit: {
@@ -136,27 +152,33 @@ function validateEdit(
 }
 
 function validateDiff(
-  value: unknown,
+  value: ProposalInput,
   index: number,
 ): { ok: true; diff: ProposalDiff } | { ok: false; message: string } {
   if (!isPlainObject(value)) {
     return { ok: false, message: `diffs[${index}] must be an object.` };
   }
+
   const documentPath = value["documentPath"];
-  if (typeof documentPath !== "string" || documentPath.length === 0) {
+
+  if (!isBoundaryString(documentPath) || documentPath.length === 0) {
     return {
       ok: false,
       message: `diffs[${index}].documentPath must be a non-empty string.`,
     };
   }
+
   const unifiedDiff = value["unifiedDiff"];
-  if (typeof unifiedDiff !== "string") {
+
+  if (!isBoundaryString(unifiedDiff)) {
     return {
       ok: false,
       message: `diffs[${index}].unifiedDiff must be a string.`,
     };
   }
+
   const known = new Set(["documentPath", "unifiedDiff"]);
+
   for (const key of Object.keys(value)) {
     if (!known.has(key)) {
       return {
@@ -165,11 +187,12 @@ function validateDiff(
       };
     }
   }
+
   return { ok: true, diff: { documentPath, unifiedDiff } };
 }
 
 /** Validate an unknown value as a proposal. */
-export function validateProposal(value: unknown): ProposalValidationResult {
+export function validateProposal(value: ProposalInput): ProposalValidationResult {
   if (!isPlainObject(value)) {
     return {
       ok: false,
@@ -187,7 +210,8 @@ export function validateProposal(value: unknown): ProposalValidationResult {
   }
 
   const schemaVersion = value["schemaVersion"];
-  if (typeof schemaVersion !== "number" || !Number.isInteger(schemaVersion)) {
+
+  if (!isBoundaryNumber(schemaVersion) || !Number.isInteger(schemaVersion)) {
     return {
       ok: false,
       code: "invalid-proposal",
@@ -213,6 +237,7 @@ export function validateProposal(value: unknown): ProposalValidationResult {
   }
 
   const editsRaw = value["edits"];
+
   if (!Array.isArray(editsRaw) || editsRaw.length === 0) {
     return {
       ok: false,
@@ -222,15 +247,19 @@ export function validateProposal(value: unknown): ProposalValidationResult {
   }
 
   const edits: ProposalEdit[] = [];
+
   for (let i = 0; i < editsRaw.length; i++) {
     const checked = validateEdit(editsRaw[i], i);
+
     if (!checked.ok) {
       return { ok: false, code: "invalid-proposal", message: checked.message };
     }
+
     edits.push(checked.edit);
   }
 
   const diffsRaw = value["diffs"];
+
   if (!Array.isArray(diffsRaw) || diffsRaw.length === 0) {
     return {
       ok: false,
@@ -240,15 +269,19 @@ export function validateProposal(value: unknown): ProposalValidationResult {
   }
 
   const diffs: ProposalDiff[] = [];
+
   for (let i = 0; i < diffsRaw.length; i++) {
     const checked = validateDiff(diffsRaw[i], i);
+
     if (!checked.ok) {
       return { ok: false, code: "invalid-proposal", message: checked.message };
     }
+
     diffs.push(checked.diff);
   }
 
   const known = new Set(["schemaVersion", "kind", "edits", "diffs"]);
+
   for (const key of Object.keys(value)) {
     if (!known.has(key)) {
       return {
@@ -272,17 +305,20 @@ export function validateProposal(value: unknown): ProposalValidationResult {
 
 /** Parse JSON text then validate as a proposal. */
 export function parseProposalText(text: string): ProposalValidationResult {
-  let value: unknown;
+  let value: ProposalInput;
+
   try {
-    value = JSON.parse(text) as unknown;
+    value = JSON.parse(text);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+
     return {
       ok: false,
       code: "parse-error",
       message: `Proposal JSON parse failed: ${message}`,
     };
   }
+
   return validateProposal(value);
 }
 
@@ -366,3 +402,21 @@ export { DOCUMENT_SCHEMA_VERSION };
 
 /** Type alias helper for proposal consumers that need the document type. */
 export type { SceneDocument };
+
+function isBoundaryString(value: ProposalInput): value is string {
+  return typeof value === "string";
+}
+
+function isBoundaryNumber(value: ProposalInput): value is number {
+  return typeof value === "number";
+}
+
+function isBoundaryObjectOrNull(value: ProposalInput): value is object | null {
+  return isBoundaryObjectValue(value);
+}
+
+type BoundaryObjectValue = object | null;
+
+function isBoundaryObjectValue<Input>(value: Input): value is Input & Readonly<BoundaryObjectValue> {
+  return typeof value === "object";
+}

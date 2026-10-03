@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "graphId": "sceneaxi-production-swarm",
+  "nodeId": "fix-desktop-linux",
+  "role": "code",
+  "root": "/home/devuser/Documents/Projects/sceneaxi",
+  "baselineHead": "4e532e2fbf43e9948741578ab6208a3277870405",
+  "productionStatus": "PARTIAL",
+  "integrationDisposition": "FAIL: repair current native smoke within serial integration; do not promote earlier passing artifacts as current full acceptance",
+  "baseline": "HEAD rechecked; checkout already contained multi-lane work and eight modified Linux source/script files plus production-hardening.test.ts. Preserved all existing work; no clean-tree claim.",
+  "platform": "Linux x64, kernel 6.12.86+deb13-amd64, Electron 43.2.0, electron-builder 26.15.3, D-Bus session and Xvfb",
+  "currentTurnEdits": [
+    {"path": "desktop/linux/src/electron/main.ts", "symbols": ["start.gui", "native Play smoke", "CSP negative probes", "native screenshot capture"], "changes": "Play dispatch opens actual run-play menu with existing enabled/visible assertions; observe enforced inline/remote-script CSP violations, assert zero remote probe requests, request denied Notification permission, inject blocked frame; capture real native PNG after explicit window visibility and compositor frames."},
+    {"path": "desktop/linux/scripts/smoke.mjs", "symbols": ["spawnSync environment", "capturePath", "failure inventory"], "changes": "Pass synthetic smoke-only capture path resolved from script location into dist-build; require PNG magic bytes alongside all existing GUI/engine/authoring assertions."}
+  ],
+  "preservedPriorLaneImplementation": [
+    "desktop/linux/src/electron/live-transport.ts: exact approved HTTPS origin/port, no userinfo, redirect:error, bounded response streaming/timeout/refusal",
+    "desktop/linux/src/electron/provider-runtime.ts and src/lib/byo-configuration.ts: provider-specific runtime readiness",
+    "desktop/linux/src/lib/chrome-document.ts: deterministic inline-script hashes and local-only CSP",
+    "desktop/linux/src/renderer/byo-configuration.ts: retain selected Local route instead of forcing BYOK",
+    "desktop/linux/src/renderer/viewport.ts: assistant mount stages review instead of silently approving document writes",
+    "desktop/linux/src/electron/main.ts: IPC sender/main-frame/document verification, permission denial, explicit sensitive minidump opt-in and isolated native New/Open smoke dialogs",
+    "desktop/linux/test/production-hardening.test.ts: 13 synthetic transport/readiness/CSP/route/retention regressions"
+  ],
+  "tasks": [
+    {"id": "DL-SEC-01", "severity": "high", "owner": "desktop-linux", "status": "DONE_BOUNDED_LOCAL", "source": "desktop/linux/src/electron/live-transport.ts:createDesktopOpenCodeLiveTransport", "before": "Synthesis identified unsafe origin/redirect/body handling.", "after": "Synthetic tests reject HTTP/userinfo/nonapproved origin/port/subdomain before credential reads or fetch, require redirect:error, cancel oversize/stalled streams, redact malformed responses; 13-test production-hardening suite passed.", "limits": "No live provider traffic, credentials or billing proof."},
+    {"id": "DL-BYOK-02", "severity": "high", "owner": "desktop-linux", "status": "DONE_BOUNDED_LOCAL", "source": "desktop/linux/src/electron/provider-runtime.ts:createPrivilegedDesktopByoRuntime; desktop/linux/src/lib/byo-configuration.ts:createDesktopByoConfiguration", "before": "An injected runner could incorrectly mark both providers available.", "after": "Synthetic key store and injected opencode runner prove only its provider ready; unsupported openrouter reports unavailable while remove works; absent runner unavailable; Kids refused; Local route remains selected.", "limits": "Real Linux keyring/provider credentials not proved; Libsecret initialization warning observed."},
+    {"id": "DL-COV-03", "severity": "high", "owner": "desktop-linux", "status": "PARTIAL_LOCAL_FAIL", "source": "desktop/linux/src/electron/main.ts:start; desktop/linux/scripts/smoke.mjs", "before": "First D-Bus/Xvfb native smoke failed SMOKE_CONTROL_FAILED [data-command=run-play].", "after": "Fixed Play selector; before capture extension, real runtime and three consecutive freshly packaged linux-unpacked runs proved New/Open, bridge rebind, hierarchy/typed -3.5 transform, Save/Undo/Redo exact bytes, Local Ask nonmutation, Build staging, explicit approved apply, Play acknowledged frame and contained Web export.", "remaining": ["Latest screenshot-enabled runtime fails before proof line; three bounded capture/visibility/path attempts exhausted", "Independent final packaged reruns and successful real PNG capture", "Native Recent, import/reload, cancel/timeout and every newly registered typed GUI action coverage"]},
+    {"id": "DL-COV-04", "severity": "medium", "owner": "desktop-linux", "status": "PARTIAL", "source": "desktop/linux/src/electron/main.ts:browserUiOpen waitFor", "after": "Exact rebound-root and hierarchy readiness waits added by prior lane work; pre-capture repeated package runs passed browser list/select/open/restart and WebGL pixels.", "remaining": ["Original browserUiOpen revision/readiness repair not independently demonstrated", "Final current-source repeated documented paths after native capture repair"]},
+    {"id": "DL-HARD-05", "severity": "medium", "owner": "desktop-linux", "status": "PARTIAL", "source": "desktop/linux/src/lib/chrome-document.ts:desktopLinuxIndexHtml; desktop/linux/src/electron/main.ts:trustedHandle", "after": "Deterministic CSP/hash tests and 92-input renderer graph pass; actual runtime observed blocked inline/remote scripts and frame; probe request count and Notification denial assertions passed before capture extension.", "remaining": ["Actual hostile non-main/document IPC negative oracle", "Final successful current-source native gate"]},
+    {"id": "DL-PRIV-06", "severity": "medium", "owner": "desktop-linux", "status": "PARTIAL", "source": "desktop/linux/src/electron/main.ts:sensitiveDumpConsent", "after": "Default raw crash reporter disabled; explicit SCENEAXI_LOCAL_CRASH_DUMPS=1 enables local-only reporter; synthetic zero-retention purge preserves diagnostics log; real renderer crash/reload smoke passed.", "remaining": ["Full real BYOK/default session dump absence and explicit-consent retention acceptance", "Integration-owned consent/retention/sharing documentation"]},
+    {"id": "DL-DOC-07", "severity": "medium", "owner": "integration", "status": "SHARED_CHANGE_REQUEST", "source": "desktop/linux/README.md:99 assistant Ask description", "request": "Reconcile Local Ask (read-only result) and Build (staged artifact, explicit Accept/Save required), provider-specific availability, fixtures versus live proof, current native capture failure, and unsigned/unpublished local packages. Update docs/desktop-linux.md, docs/desktop-local-bridge.md, docs/full-editor-v1-capability-matrix.md and docs/runnable-surfaces.md only by their owner."}
+  ],
+  "verification": [
+    {"command": "project test absolute desktop/linux/test/production-hardening.test.ts", "result": "No test command detected; recovered via exact pnpm command in real app cwd"},
+    {"command": "pnpm exec vitest run desktop/linux/test/production-hardening.test.ts", "exit": 0, "result": "13 passed, 0 failed"},
+    {"command": "pnpm --filter @sceneaxi/desktop-linux typecheck", "exit": 0, "result": "No projects matched; NOT verification; corrected to pnpm -C desktop/linux typecheck"},
+    {"command": "pnpm -C desktop/linux typecheck", "exit": 0, "result": "Passed after final main.ts edit"},
+    {"command": "pnpm exec vitest run desktop/linux/test tests/desktop/desktop-opencode-live-transport.test.ts tests/boundary/injected-desktop-violations.test.ts", "exit": 0, "result": "59 passed, 0 failed before final capture visibility edit"},
+    {"command": "pnpm -C desktop/linux check:renderer", "exit": 0, "result": "92 browser graph inputs; one presentation owner"},
+    {"command": "pnpm exec vitest run tests/desktop tests/boundary/injected-desktop-violations.test.ts", "exit": 1, "result": "131 passed, 2 Windows failures: tests/desktop/desktop-windows-packaging.test.ts:86 expected publish: onTagOrDraft; :130 update transport refusal mismatch", "owner": "desktop-release/integration"},
+    {"command": "pnpm -C desktop/linux smoke", "exit": 1, "result": "Initial unwrapped host: Electron SIGSEGV; no proof line"},
+    {"command": "dbus-run-session -- xvfb-run -a pnpm -C desktop/linux smoke", "exit": 0, "result": "Before screenshot extension: native GUI and exact document bytes; Three WebGL pixelsDrawn=true, drawCalls=17, 4 deterministic tick digests"},
+    {"command": "dbus-run-session -- xvfb-run -a node desktop/linux/scripts/smoke-diagnostics.mjs", "exit": 0, "result": "renderer reloaded; local event recorded"},
+    {"command": "pnpm -C desktop/linux dist", "exit": 0, "result": "Latest owned local build packaged unsigned .deb/AppImage without publication; default-icon/desktopName warnings remain", "hashes": {"SceneAxi-Engine-Desktop-0.0.0-linux-amd64.deb": "b512dcf664147189bc9993ac401301d4c79fce7955f607bf661116b56b7be786", "SceneAxi-Engine-Desktop-0.0.0-linux-x86_64.AppImage": "ffabd6652616caeea458fa634a5c18258d10fba77a91d8d41959237df15084f9"}},
+    {"command": "dbus-run-session -- xvfb-run -a pnpm -C desktop/linux smoke --packaged (three consecutive runs)", "exit": 0, "result": "All three pre-screenshot linux-unpacked runs passed; not final current-source acceptance"},
+    {"command": "dbus-run-session -- xvfb-run -a pnpm -C desktop/linux smoke", "exit": 1, "result": "Latest current-source capture gate: smoke FAILED — the packaged app did not print its proof line; JSON ok:false, message:Desktop startup failed. See local logs. Expected blocked script/frame CSP messages preceded failure. Capture failure cause remains unproven; do not label external."},
+    {"command": "final three packaged runs plus file/sha256 screenshot verification", "result": "Not executed: chained command stopped on failed current runtime smoke. No PNG or screenshot success claim."},
+    {"command": "whole-tree gate/contracts/traceability", "result": "Deferred to serial integration; deliberately not run concurrently under lane ownership mandate"}
+  ],
+  "remainingRequests": [
+    "Integration: diagnose current screenshot-enabled runtime startup failure with isolated redacted logs, preserve all earlier bytes/frame and new security/PNG assertions, then independently rerun runtime and three fresh packaged runs",
+    "Integration: verify remaining GUI input coverage, hostile frame/document IPC rejection and current browser readiness",
+    "Desktop-release owner: repair two Windows test mismatches without weakening publication/update protections",
+    "Docs owner: DL-DOC-07 parity and explicit local raw dump consent/retention/sharing guidance",
+    "Serial integration: final shared boundary/contracts/traceability/gate checks after all lanes settle",
+    "Full release still needs authorized real provider/keyring/model evidence, supported platform hosts and applicable legal/signing/publication inputs; no artificial proof"
+  ],
+  "cleanup": {
+    "driverConfig": "smoke.mjs removes its isolated XDG_CONFIG_HOME after child returns",
+    "ownedArtifacts": "desktop/linux/dist, dist-build and release generated locally; retained for integration, not published",
+    "screenshotPaths": ["desktop/linux/dist-build/smoke-runtime.png", "desktop/linux/dist-build/smoke-packaged.png"],
+    "screenshotStatus": "Unverified; no captured-image or hash claim",
+    "temporaryProjectRoots": "Native smoke uses sceneaxi-desktop-* isolated roots; latest failed startup cleanup and smokeNewRoot removal require integration inspection. No broad prefix deletion performed.",
+    "processes": "No background jobs started; Electron/Xvfb invoked synchronously by existing bounded smoke driver",
+    "sharedWork": "No stash/reset/clean/commit/push/deploy/publish or production-data modification"
+  }
+}

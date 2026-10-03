@@ -1,0 +1,358 @@
+{
+  "status": "SCOPED_VERIFIED_REVIEW_HOLD",
+  "ownedRoot": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1",
+  "recordedAtUtc": "2026-10-03T17:11:03.007014+00:00",
+  "scope": [
+    "desktop/linux/src/renderer/byo-configuration.ts",
+    "desktop/linux/src/renderer/viewport.ts",
+    "desktop/linux/test/byo-terminal-lifecycle.test.ts"
+  ],
+  "primaryAndForeignWorktreesReadOrWritten": false,
+  "gitOperations": false,
+  "priorHistoryPreserved": [
+    "report.md",
+    "report.json",
+    "handback.sha256",
+    "before.log",
+    "readiness-before.log"
+  ],
+  "rootCleanupRefutation": "Root teardown already existed; missing-root-cleanup claim remains refuted. This repair adds BYOK participation, not root teardown from scratch.",
+  "priorReportCorrection": "The previous report historical49 command was then unidentified; user now supplied the exact six-file command. It was executed unchanged, current result 49/49. Earlier 58 (40 existing +18 terminal) is historical, not the 49 suite.",
+  "confirmedRepairedGaps": [
+    "BYOK was separately installed on raw port with no lifetime signal",
+    "Actual BYOK click/change/document listeners and route ARIA bindings survived root abort",
+    "Deferred configureByo completion could render after abort, including generic rejection and save finally key clear",
+    "Queued route microtask could start new configureByo after abort"
+  ],
+  "changes": {
+    "installer": "Optional second {signal?:AbortSignal} argument, same boolean return/no-options API. Fence before and after await, before render, in callbacks/queued visibility and save finally. Abort synchronously clears key, physically removes 4 event listeners, removes its abort listener/surface and restores prior route ARIA attributes. Shared page stylesheet retained.",
+    "root": "Only installer call at viewport.ts:112 now passes lifetime.signal. Original full typed preload object passed unchanged, no proxy/narrowing/capability removal."
+  },
+  "proof": {
+    "actualModules": [
+      "desktop/linux/src/renderer/byo-configuration.ts (normal import and real transitive contract/view)",
+      "desktop/linux/src/renderer/viewport.ts (transpiled source in six BYOK root readiness cases)",
+      "prior actual viewport/audio/play/overlay modules in unchanged 18-test ownership suite"
+    ],
+    "actualInstallerMocked": false,
+    "copiedTeardownAlgorithm": false,
+    "DOM": "happy-dom actual event dispatch, listener-removal spies and MutationObserver on retained disposed surface",
+    "externalPorts": "Deferred configureByo and root scene readiness IPC; no GPU work reached in BYOK root harness. Other root feature dependencies stubbed/unused there; prior 18-test ownership proof separately exercises allocated resources.",
+    "pendingMatrix": "status/save/remove x success/rejection x direct abort/root pagehide =12 cases; deferred IPC settles once, disposed DOM/input unchanged, no later IPC, repeated abort/pagehide",
+    "remaining6Tests": [
+      "physical listener removal + queued microtask",
+      "pre-aborted installation",
+      "original boolean/no-options normal provider/status/save/remove",
+      "same-turn Kids key denial",
+      "live sanitized failure",
+      "missing privileged channel"
+    ],
+    "neverSettlingCancellationPromise": false,
+    "noGlobalNoLateCallbackClaim": true,
+    "browserOrNativeProcesses": 0,
+    "hardwarePixelsOrAudioClaimed": false
+  },
+  "redEvidence": [
+    {
+      "log": "BYOK-before.log",
+      "passed": 4,
+      "failed": 14,
+      "actualDefectFailures": 13,
+      "fixtureFailure": "Spying Window.EventTarget prototype captured zero listeners; corrected to actual happy-dom EventTarget base without weakening assertion."
+    },
+    {
+      "log": "BYOK-before-corrected-fixture.log",
+      "passed": 4,
+      "failed": 14,
+      "actualDefectFailures": 14,
+      "failureOutput": [
+        "expected true to be false (disposed surface and pre-aborted admission)",
+        "expected false to be true (actual removeEventListener matching)"
+      ]
+    }
+  ],
+  "verification": [
+    {
+      "command": "pnpm exec vitest run desktop/linux/test/audio-lifecycle-compat.test.ts packages/engine-presentation/test/audio-playback.test.ts packages/engine-presentation/test/legacy-audio-compat.test.ts packages/importers/test/legacy-asset-v1.test.ts packages/importers/test/contained-gltf.test.ts tests/e2e/asset-pipeline-golden.test.ts",
+      "exit": 0,
+      "log": "BYOK-exact-prior-suite.log",
+      "passed": 49,
+      "files": 6,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "command": "pnpm exec vitest run desktop/linux/test/viewport-terminal-lifecycle.test.ts desktop/linux/test/byo-terminal-lifecycle.test.ts desktop/linux/test/audio-lifecycle-compat.test.ts desktop/linux/test/native-assistant-scene-compat.test.ts desktop/linux/test/viewport-input-actions.test.ts packages/engine-presentation/test/audio-playback.test.ts packages/engine-presentation/test/legacy-audio-compat.test.ts --reporter=verbose",
+      "exit": 0,
+      "log": "BYOK-current-terminal-compat.log",
+      "passed": 76,
+      "files": 7,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "command": "pnpm exec vitest run desktop/linux/test/audio-lifecycle-compat.test.ts packages/engine-presentation/test/audio-playback.test.ts packages/engine-presentation/test/legacy-audio-compat.test.ts packages/importers/test/legacy-asset-v1.test.ts packages/importers/test/contained-gltf.test.ts tests/e2e/asset-pipeline-golden.test.ts desktop/linux/test/viewport-terminal-lifecycle.test.ts desktop/linux/test/byo-terminal-lifecycle.test.ts desktop/linux/test/native-assistant-scene-compat.test.ts desktop/linux/test/viewport-input-actions.test.ts",
+      "exit": 0,
+      "log": "BYOK-final-combined.log",
+      "passed": 104,
+      "files": 10,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "command": "pnpm exec vitest run desktop/linux/test/byo-terminal-lifecycle.test.ts --reporter=verbose",
+      "exit": 0,
+      "log": "BYOK-final-tests.log",
+      "passed": 18,
+      "files": 1,
+      "pending": 0,
+      "todo": 0
+    },
+    {
+      "command": "pnpm --dir desktop/linux typecheck",
+      "exit": 0,
+      "log": "BYOK-typecheck.log"
+    },
+    {
+      "command": "pnpm exec eslint desktop/linux/src/renderer/byo-configuration.ts desktop/linux/src/renderer/viewport.ts desktop/linux/src/renderer/features/audio-playback.ts desktop/linux/src/renderer/features/overlay-report.ts desktop/linux/test/byo-terminal-lifecycle.test.ts desktop/linux/test/viewport-terminal-lifecycle.test.ts",
+      "exit": 0,
+      "log": "BYOK-lint-after.log"
+    },
+    {
+      "command": "pnpm exec tsc -p assembly/goal-repair/viewport/BYOK-test-tsconfig.json --noEmit",
+      "exit": 0,
+      "log": "BYOK-test-native-typecheck.log"
+    }
+  ],
+  "additionalVerificationFailureHistory": [
+    {
+      "command": "pnpm exec eslint desktop/linux/src/renderer/byo-configuration.ts desktop/linux/src/renderer/viewport.ts desktop/linux/src/renderer/features/audio-playback.ts desktop/linux/src/renderer/features/overlay-report.ts desktop/linux/test/byo-terminal-lifecycle.test.ts desktop/linux/test/viewport-terminal-lifecycle.test.ts",
+      "log": "BYOK-lint.log",
+      "exit": 1,
+      "output": "Five no-unused-vars test callback parameters; replaced with typed vi.fn generics, same assertions. Final owned lint exit0."
+    },
+    {
+      "command": "pnpm exec tsc --noEmit --target ES2022 --module NodeNext --moduleResolution NodeNext --strict --skipLibCheck desktop/linux/test/byo-terminal-lifecycle.test.ts desktop/linux/test/viewport-terminal-lifecycle.test.ts",
+      "log": "BYOK-test-typecheck.log",
+      "exit": 2,
+      "output": "Ad-hoc NodeNext lacks native internal aliases/exactOptionalPropertyTypes: TS2307 internal modules, downstream TS18046/TS2345; one owning test Element.click TS2339 fixed by real dispatchEvent. Both tests then pass native project settings via BYOK-test-tsconfig.json, no application/config weakening."
+    }
+  ],
+  "counts": {
+    "exactSuppliedPriorSuiteCurrent": 49,
+    "previousExistingCompatCurrent": 40,
+    "unchangedPriorTerminalTestsCurrent": 18,
+    "newActualBYOKTestsCurrent": 18,
+    "overlapExactPriorAndExistingCompat": 21,
+    "distinctExistingTestsCurrent": 68,
+    "distinctPassedTestsCurrent": 104,
+    "sumFormula": "49+40+18+18-21=104",
+    "finalCombinedFiles": 10
+  },
+  "unchangedVerified": [
+    "previous audio-playback.ts/overlay-report.ts/services.ts/prior terminal test hashes match handback",
+    "existing abort/audio/renderloop/camera remover/observer/listener cleanup and repeated teardown tests unchanged",
+    "normal stop retains 100ms silence measurement",
+    "modern/legacy audio factories and generation fences",
+    "provider membership/default and key clearing, same-turn Kids denial, sanitized provider errors",
+    "full preload capabilities remain intact"
+  ],
+  "sourceHandback": [
+    {
+      "path": "desktop/linux/src/renderer/byo-configuration.ts",
+      "mode": "0644",
+      "bytes": 12917,
+      "sha256": "514a1d2fb308da0e4e40ccc7ff1f19f35adaeb817c2d036d9fe3dc72f61aca2a",
+      "changedThisRepair": true
+    },
+    {
+      "path": "desktop/linux/src/renderer/viewport.ts",
+      "mode": "0644",
+      "bytes": 10338,
+      "sha256": "970979375f3aa919769abbf8b0aa1fe06aef197c8775d51e531692d6230d766a",
+      "changedThisRepair": true
+    },
+    {
+      "path": "desktop/linux/test/byo-terminal-lifecycle.test.ts",
+      "mode": "0664",
+      "bytes": 11037,
+      "sha256": "fc7f814eaa5f5d267afc837cd71a2f92577c4a71704ae8aed40622bfef34b3ee",
+      "changedThisRepair": true
+    },
+    {
+      "path": "desktop/linux/src/renderer/features/audio-playback.ts",
+      "mode": "0664",
+      "bytes": 17090,
+      "sha256": "06fd1c3001f4e10fc8a4828465d1bcc49a2ef11d80db4a6f7f9f6524cbe91a7d",
+      "changedThisRepair": false,
+      "unchangedFromPreviousViewportHandback": true
+    },
+    {
+      "path": "desktop/linux/src/renderer/features/overlay-report.ts",
+      "mode": "0664",
+      "bytes": 5162,
+      "sha256": "d28f34c04ae7993712e6630744e5f6d51de6d58f5bb0fad23e4d43042d995e09",
+      "changedThisRepair": false,
+      "unchangedFromPreviousViewportHandback": true
+    },
+    {
+      "path": "desktop/linux/src/renderer/features/services.ts",
+      "mode": "0664",
+      "bytes": 1668,
+      "sha256": "5bacd9aaff7d1cc3c096eb1c283dbd9c06eed133a65598ea515d93818598a4c5",
+      "changedThisRepair": false,
+      "unchangedFromPreviousViewportHandback": true
+    },
+    {
+      "path": "desktop/linux/test/viewport-terminal-lifecycle.test.ts",
+      "mode": "0664",
+      "bytes": 17398,
+      "sha256": "dbb03059e472ec1b4a11632b4fecc0170afed7984b3f000c451efe381c77534c",
+      "changedThisRepair": false,
+      "unchangedFromPreviousViewportHandback": true
+    }
+  ],
+  "currentSuiteTestHashes": [
+    {
+      "path": "desktop/linux/test/audio-lifecycle-compat.test.ts",
+      "mode": "0664",
+      "bytes": 10295,
+      "sha256": "ecfad22827d71e96b20fa93293fb3e73b0939f678322e6c5de69065cd27808d3"
+    },
+    {
+      "path": "packages/engine-presentation/test/audio-playback.test.ts",
+      "mode": "0644",
+      "bytes": 9295,
+      "sha256": "1ead8a56fd0eccd3e283e4d99ea58d121d209f69191ab89cf0e09c1408f0f2c4"
+    },
+    {
+      "path": "packages/engine-presentation/test/legacy-audio-compat.test.ts",
+      "mode": "0664",
+      "bytes": 4904,
+      "sha256": "7fb0128fbaa0a496de4f31e45434e387152b0f89b6bee20bf2a88377102ffde0"
+    },
+    {
+      "path": "packages/importers/test/legacy-asset-v1.test.ts",
+      "mode": "0664",
+      "bytes": 8860,
+      "sha256": "fe45e4cbdf9c3755f61c42511e5a8185eb309516664cd491d3c154217610f15f"
+    },
+    {
+      "path": "packages/importers/test/contained-gltf.test.ts",
+      "mode": "0644",
+      "bytes": 49324,
+      "sha256": "a316cfb5e142a91be92f40c5114a9388fbc58766b72d257e8da81703892cb5bc"
+    },
+    {
+      "path": "tests/e2e/asset-pipeline-golden.test.ts",
+      "mode": "0644",
+      "bytes": 18867,
+      "sha256": "2f7fb0b823e3d3485cc1f07d4281e897f5d47418c703d2badac4b6471d774a5f"
+    },
+    {
+      "path": "desktop/linux/test/viewport-terminal-lifecycle.test.ts",
+      "mode": "0664",
+      "bytes": 17398,
+      "sha256": "dbb03059e472ec1b4a11632b4fecc0170afed7984b3f000c451efe381c77534c"
+    },
+    {
+      "path": "desktop/linux/test/byo-terminal-lifecycle.test.ts",
+      "mode": "0664",
+      "bytes": 11037,
+      "sha256": "fc7f814eaa5f5d267afc837cd71a2f92577c4a71704ae8aed40622bfef34b3ee"
+    },
+    {
+      "path": "desktop/linux/test/native-assistant-scene-compat.test.ts",
+      "mode": "0664",
+      "bytes": 13935,
+      "sha256": "8337e7a0df6dfe6a79df4a10413cc5d1fec346fd7a6d234ba743d42cea6ef0e5"
+    },
+    {
+      "path": "desktop/linux/test/viewport-input-actions.test.ts",
+      "mode": "0644",
+      "bytes": 5342,
+      "sha256": "e20db9f887e2ebbd30bde60e8b835ba7588adcc2bbff755a51fa42b326f2ed32"
+    }
+  ],
+  "logHashes": [
+    {
+      "path": "assembly/goal-repair/viewport/BYOK-after.log",
+      "mode": "0664",
+      "bytes": 4413,
+      "sha256": "7649e4a5cc5f4428c733d85448a9dcc925d54ca48f341570ba3bded6c1f9cd1f"
+    },
+    {
+      "path": "assembly/goal-repair/viewport/BYOK-before-corrected-fixture.log",
+      "mode": "0664",
+      "bytes": 11308,
+      "sha256": "6b9e4b3f3dd6228769700cf71d59e4ac15b1e3c60bc1c6e0164833836b6016cd"
+    },
+    {
+      "path": "assembly/goal-repair/viewport/BYOK-before.log",
+      "mode": "0664",
+      "bytes": 11136,
+      "sha256": "2d30d70482b465f4ed1fa56dfae8bf9468f938e3a4dd30fb0d480a62cf9b7e17"
+    },
+    {
+      "path": "assembly/goal-repair/viewport/BYOK-current-terminal-compat.log",
+      "mode": "0664",
+      "bytes": 17128,
+      "sha256": "6e4480f298e76c2467c8f39fbd5ed617830a97c46f5ebf8c3a1dbfe4830d0b72"
+    },
+    {
+      "path": "assembly/goal-repair/viewport/BYOK-exact-prior-suite.log",
+      "mode": "0664",
+      "bytes": 3088,
+      "sha256": "ce840dca7cda701c76a5a63b99757506964284b037fa6af0dc7078181e342d9c"
+    },
+    {
+      "path": "assembly/goal-repair/viewport/BYOK-final-combined.log",
+      "mode": "0664",
+      "bytes": 3070,
+      "sha256": "9a21b221eb4e946d5a3e9012d68556d2cbc145b702d50696d54e9421d48c9ef7"
+    },
+    {
+      "path": "assembly/goal-repair/viewport/BYOK-final-tests.log",
+      "mode": "0664",
+      "bytes": 4410,
+      "sha256": "7804c6c5cc826407a993c25044b2dd4710149c1dd42e688a35030b8329fffe55"
+    },
+    {
+      "path": "assembly/goal-repair/viewport/BYOK-lint-after.log",
+      "mode": "0664",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "assembly/goal-repair/viewport/BYOK-lint.log",
+      "mode": "0664",
+      "bytes": 569,
+      "sha256": "a35d5b750aa43c3092c2d872d964ba5388e0213cba59efcf6c05f309be0b6ef6"
+    },
+    {
+      "path": "assembly/goal-repair/viewport/BYOK-test-native-typecheck.log",
+      "mode": "0664",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "assembly/goal-repair/viewport/BYOK-test-typecheck.log",
+      "mode": "0664",
+      "bytes": 7309,
+      "sha256": "0faf7b76245b954371a036d913523a3efe7e547eaa5154003abb58287319d911"
+    },
+    {
+      "path": "assembly/goal-repair/viewport/BYOK-typecheck.log",
+      "mode": "0664",
+      "bytes": 32,
+      "sha256": "38ac890c60e7f38d59ddfb410325cdfb5fca83c9411765c5481754e01c021630"
+    }
+  ],
+  "limitations": [
+    "No exhaustive browser/chrome listener certification; BYOK and existing scoped ownership ports only",
+    "No physical hardware audio, native Electron, browser, Docker, full-root build or production acceptance run",
+    "Original first reviewer commit/main/PR receipts remain absent; controller owns native Git/final merge/publication"
+  ],
+  "productionPass": false,
+  "parentHandoff": "Apply only changed source/test files atop existing viewport repair; unchanged audio/overlay/services/terminal hashes asserted. Preserve report.md/report.json and red failure history. Controller performs final native Git/merge."
+}

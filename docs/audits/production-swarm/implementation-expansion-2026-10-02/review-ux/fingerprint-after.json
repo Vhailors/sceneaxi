@@ -1,0 +1,69 @@
+{
+  "capturedAt": "2026-10-02T13:48:52.141400+00:00",
+  "files": {
+    "apps/desktop-shell/src/chrome.ts": "4187b4378cc9535eb9194c57445856dd455e1adf6d8ec9196428c942c73aea8a",
+    "apps/desktop-shell/src/visual-tokens.ts": "a23536b1f566347ccccd7d23d40e1e9849f403021fcdedd27b26798d5f4740e7",
+    "apps/desktop-shell/test/keyboard-geometry.test.ts": "61ab39549b7b86ca8c93c4bb5c5b762560d010f406856661078a73f63c2f705f",
+    "apps/desktop-shell/test/chrome.test.ts": "b1b22f1f2037dc57ff44226c7cc4b30e4a94edbe778b47fdead1eb1ef3dfaaa3",
+    "apps/desktop-shell/test/visual-refinement.test.ts": "e52181e9ee87d2bad397b71bf3f2f315c72f45361cf27d5038aeaac4470af4ed",
+    "apps/desktop-shell/test/visual-postpr-evidence/retry/capture.mjs": "0c552d679c94f361a96c4ccd10a072b31067912e2f750b3ba617409b0b0163f5",
+    "apps/web-shell/src/inspector-app.ts": "30e2ae5c6fb5f893aee29027103211d9095ba5fbc3160050b9373b7edddf8d29",
+    "apps/web-shell/test/inspector-accessibility.test.ts": "391e27c3a5b524d27cc5f0463e2f995046c8553c466391cb60c18dc25cc2369e",
+    "apps/web-shell/test/inspector-app.test.ts": "07ae548ba59f2a6bd55bbcc57e1e784c0d2fb5ce29ce1a96a1b2685fb6509318",
+    "apps/web-shell/test/inspector-refusal-ux.test.ts": null,
+    "apps/web-shell/test/visual-refinement.test.ts": null,
+    "docs/audits/production-swarm/implementation-expansion-2026-10-02/desktop-keyboard/report.md": "428157716039c0b732d48f23e8adbec07f374e532206c82df7128cf8987fbcae",
+    "docs/audits/production-swarm/implementation-expansion-2026-10-02/desktop-keyboard/report.json": "c80f9c9c28cb8a0c5c3caf14dbfe6fb6f49d29e31edb891068a00e65b572245a",
+    "docs/audits/production-swarm/implementation-expansion-2026-10-02/web-inspector-ux/report.md": "d534a2c0ca67fdfeedeb45cbcb862893555b03f9d25a85a85fc15fcbe06734fe",
+    "docs/audits/production-swarm/implementation-expansion-2026-10-02/web-inspector-ux/report.json": "87d182299717cf4859854602273ed2fa3f4b5eef0683993b09852ab2c3219fd1",
+    "docs/audits/production-swarm/implementation-expansion-2026-10-02/catalog-ui-polish/report.md": "b3a755d349b482c7a7d8382a0821b75a2717211178e9dc763dbefee2dc264f39",
+    "docs/audits/production-swarm/implementation-expansion-2026-10-02/catalog-ui-polish/report.json": "cbe6eddf7b217cfe984c4e510113c565d377d412a6e8aabb53061dd25d584b18",
+    "docs/audits/production-swarm/implementation-expansion-2026-10-02/web-catalog-ui/report.md": "3972a31fd0ef0b6480e71cdb80c5818abfada391f5925d20a4336da182c66801",
+    "docs/audits/production-swarm/implementation-expansion-2026-10-02/web-catalog-ui/report.json": "bf158c4bbf376321c4a3127398783684eebcdfce563319ed81979efd97fc9bae",
+    "sites/catalog-game/src/app/page.tsx": "952bc1d2f33ccbf48931561dfcb9652ac677f4acbeb3e9413f8b7615992c9150",
+    "sites/catalog-game/src/app/globals.css": "ee98fef25a7ae0a2042e257da69e347177d9babd8350652de46b4af2dab998ec",
+    "sites/catalog-game/src/app/_components/listing-card.tsx": "e2f52a6349e33e971d5f2e0e703c0fd94d0eca2d815a7b49c49655eb6019956e",
+    "sites/catalog-game/test/catalog-ux-regression.test.ts": "a353ada7d70fb181e5d19ae644ac5af52ef9896da417148de5c09b9823fd0675",
+    "sites/catalog-web/src/app/page.tsx": "c563ff3961fccf4057e7ccf4c94f43181c397aafd5437c8b4444e37906c4ac36",
+    "sites/catalog-web/src/app/globals.css": "713f178671a25599f46e4b837a7dd6b75da12baf648b24271c85c865df30d4aa",
+    "sites/catalog-web/src/app/_components/listing-card.tsx": "e2f52a6349e33e971d5f2e0e703c0fd94d0eca2d815a7b49c49655eb6019956e",
+    "sites/catalog-web/test/catalog-ux-regression.test.ts": "6bbef888b5ceb19da8104a4825ace6484ea36bd6a5f02d07ccfa185a0ba901d5",
+    "apps/web-shell/test/refuse-matrix.test.ts": "122a1131b1f48390bca336c70e0c05d4a2cd4bcae4faef33028f73d430d1444e",
+    "apps/web-shell/test/visual-postpr.test.ts": "862fbb2f64ee452a2a50dce45630aec724532ce11a95803b4d9d2fa43044f1ca",
+    "apps/web-shell/src/dev-server.ts": "2f86e8bed0355719d2fc9bb68436305569c7bacef14b64c98a57b4f8986b93d4",
+    "tests/e2e/desktop-control-inventory-golden.test.ts": "a805ddd2f271fe299320807c6f0301c82ce23ba0e0518230b893e8704c869dde"
+  },
+  "changesDuringReview": [
+    {
+      "path": "sites/catalog-game/src/app/globals.css",
+      "before": "c5d87635a6f706faeb2a7ca524ea62345ca173f4c0ddb22d6f7252382c6d0d8d",
+      "after": "ee98fef25a7ae0a2042e257da69e347177d9babd8350652de46b4af2dab998ec"
+    },
+    {
+      "path": "sites/catalog-game/test/catalog-ux-regression.test.ts",
+      "before": "4e82e0016a489f82ea52bf76c4f966058ba99dc69670f05b457c2136af1360e2",
+      "after": "a353ada7d70fb181e5d19ae644ac5af52ef9896da417148de5c09b9823fd0675"
+    },
+    {
+      "path": "sites/catalog-web/src/app/page.tsx",
+      "before": "6d9d898290a4790fef753f4368d28726e75d6679b333ca1b0955e754d994c89a",
+      "after": "c563ff3961fccf4057e7ccf4c94f43181c397aafd5437c8b4444e37906c4ac36"
+    },
+    {
+      "path": "sites/catalog-web/src/app/globals.css",
+      "before": "a6b2238ee1e56f52edbedaa3604adbc39d4bf7d4012ba83698e352d291cbe9e3",
+      "after": "713f178671a25599f46e4b837a7dd6b75da12baf648b24271c85c865df30d4aa"
+    },
+    {
+      "path": "sites/catalog-web/src/app/_components/listing-card.tsx",
+      "before": "dca2bc47524bd82238188774e4fe0e02ceb8ad4e8a4e2a94080ccf2b0b92bfc8",
+      "after": "e2f52a6349e33e971d5f2e0e703c0fd94d0eca2d815a7b49c49655eb6019956e"
+    },
+    {
+      "path": "sites/catalog-web/test/catalog-ux-regression.test.ts",
+      "before": "391ce651b06bce918f788614c419b2a9ea688d20dd1870f5cfaf879089a36c52",
+      "after": "6bbef888b5ceb19da8104a4825ace6484ea36bd6a5f02d07ccfa185a0ba901d5"
+    }
+  ],
+  "scope": "Scoped files only; not a frozen whole-repository or runtime-dependency fingerprint"
+}

@@ -1,3 +1,4 @@
+import type { JsonObject } from "@sceneaxi/schemas";
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -17,6 +18,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
  * so the artifacts exist by the time this runs.
  */
 const BIN = fileURLToPath(new URL("../bin/sceneaxi.mjs", import.meta.url));
+
 const BUILT_ENTRY = fileURLToPath(
   new URL("../dist/src/run.js", import.meta.url),
 );
@@ -25,7 +27,9 @@ function sceneaxi(args: readonly string[], cwd: string) {
   const result = spawnSync(process.execPath, [BIN, ...args], {
     cwd,
     encoding: "utf8",
+    timeout: 10000,
   });
+
   return {
     status: result.status,
     stdout: result.stdout,
@@ -33,8 +37,9 @@ function sceneaxi(args: readonly string[], cwd: string) {
   };
 }
 
-function envelopeOf(stdout: string): Record<string, unknown> {
-  return JSON.parse(stdout) as Record<string, unknown>;
+function envelopeOf(stdout: string): JsonObject {
+  // SAFETY: stdout is the real binary's --json protocol envelope, a serialized JSON object.
+  return JSON.parse(stdout) as JsonObject;
 }
 
 describe("sceneaxi binary", () => {
@@ -46,6 +51,40 @@ describe("sceneaxi binary", () => {
 
   afterEach(() => {
     rmSync(cwd, { recursive: true, force: true });
+  });
+
+  it("refuses prototype paths and malformed version invocations through the binary", () => {
+    for (const prefix of [[], ["project"], ["desktop"], ["desktop", "bridge"]]) {
+      for (const name of ["constructor", "__proto__", "toString"]) {
+        const result = sceneaxi([...prefix, name, "x", "--json"], cwd);
+        expect(result.status).toBe(2);
+        expect(result.stderr).toBe("");
+        expect(envelopeOf(result.stdout)).toMatchObject({ schemaVersion: 1, ok: false, error: { code: "UNKNOWN_COMMAND" } });
+      }
+    }
+
+    for (const args of [["--version", "--nonsense"], ["--version", "--document", "x"]]) {
+      const result = sceneaxi([...args, "--json"], cwd);
+      expect(result.status).toBe(2);
+      expect(result.stderr).toBe("");
+      expect(envelopeOf(result.stdout)).toMatchObject({ ok: false, error: { code: "UNKNOWN_FLAG" } });
+    }
+  });
+
+  it("help/watch and malformed global switches naturally exit without watch ownership", () => {
+    expect(sceneaxi(["project", "new", "--document", "scene.json"], cwd).status).toBe(0);
+
+    for (const flag of ["--help", "-h", "--version", "--help=false", "--json=false"]) {
+      const result = sceneaxi(["project", "dev", "--document", "scene.json", "--watch", flag, "--json"], cwd);
+      expect(result.status).toBe(flag === "--help" || flag === "-h" ? 0 : 2);
+      expect(result.stderr).toBe("");
+      const envelope = envelopeOf(result.stdout);
+
+      if (envelope["ok"]) {
+        expect(envelope["result"]).not.toHaveProperty("mode");
+        expect(envelope["result"]).not.toHaveProperty("cycle");
+      }
+    }
   });
 
   it("has build output to run (pnpm build ran before pnpm test in the gate)", () => {
@@ -80,12 +119,14 @@ describe("sceneaxi binary", () => {
       ["project", "new", "--document", "scene.json", "--json"],
       cwd,
     );
+
     expect(created.status).toBe(0);
 
     const tested = sceneaxi(
       ["project", "test", "--document", "scene.json", "--json"],
       cwd,
     );
+
     expect(tested.status).toBe(0);
     expect(envelopeOf(tested.stdout)["result"]).toMatchObject({
       status: "passed",
@@ -104,6 +145,7 @@ describe("sceneaxi binary", () => {
       ],
       cwd,
     );
+
     expect(captured.status).toBe(0);
 
     const listed = sceneaxi(["evidence", "list", "--dir", ".", "--json"], cwd);
@@ -115,6 +157,7 @@ describe("sceneaxi binary", () => {
 
   it("watches canonical documents, streams versioned cycles, and stops on SIGINT", async () => {
     sceneaxi(["project", "new", "--document", "scene.json", "--json"], cwd);
+
     const child = spawn(process.execPath, [
       BIN,
       "project",
@@ -124,17 +167,22 @@ describe("sceneaxi binary", () => {
       "--watch",
       "--json",
     ], { cwd, stdio: ["ignore", "pipe", "pipe"] });
+
     const lines = createInterface({ input: child.stdout });
     const pending: string[] = [];
     const waiters: ((line: string) => void)[] = [];
     lines.on("line", (line) => {
       const waiter = waiters.shift();
+
       if (waiter) waiter(line);
       else pending.push(line);
     });
+
     const nextLine = () => {
       const line = pending.shift();
+
       if (line !== undefined) return Promise.resolve(line);
+
       return new Promise<string>((resolveLine, reject) => {
         const timer = setTimeout(() => reject(new Error("watch envelope timeout")), 5000);
         waiters.push((value) => {
@@ -143,8 +191,9 @@ describe("sceneaxi binary", () => {
         });
       });
     };
+
     try {
-      const initial = JSON.parse(await nextLine()) as Record<string, unknown>;
+      const initial = envelopeOf(await nextLine());
       expect(initial).toMatchObject({ schemaVersion: 1, ok: true });
       expect(initial["result"]).toMatchObject({ mode: "watch", cycle: 1 });
 
@@ -154,11 +203,11 @@ describe("sceneaxi binary", () => {
         id: "scene",
         data: { edited: true },
       }, null, 2)}\n`);
-      const changed = JSON.parse(await nextLine()) as Record<string, unknown>;
+      const changed = envelopeOf(await nextLine());
       expect(changed["result"]).toMatchObject({ mode: "watch", cycle: 2, dataKeys: ["edited"] });
 
       child.kill("SIGINT");
-      const stopped = JSON.parse(await nextLine()) as Record<string, unknown>;
+      const stopped = envelopeOf(await nextLine());
       expect(stopped["result"]).toMatchObject({ status: "stopped", mode: "watch", cycle: 2 });
       expect(await new Promise<number | null>((resolveClose) => child.once("close", resolveClose))).toBe(0);
     } finally {
@@ -177,18 +226,22 @@ describe("sceneaxi binary", () => {
       received.push(line);
       waiters.shift()?.();
     });
+
     const lineCount = (count: number) => received.length >= count
       ? Promise.resolve()
       : new Promise<void>((resolveCount, reject) => {
         const timer = setTimeout(() => reject(new Error("watch envelope timeout")), 5000);
+
         const check = () => {
           if (received.length >= count) {
             clearTimeout(timer);
             resolveCount();
           } else waiters.push(check);
         };
+
         waiters.push(check);
       });
+
     try {
       await lineCount(1);
       expect(JSON.parse(received[0] ?? "")).toMatchObject({ ok: true });

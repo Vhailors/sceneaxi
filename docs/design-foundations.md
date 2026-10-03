@@ -167,6 +167,133 @@ Foundations sheet is a fixed 1560px canvas and shows no mobile Change Review, so
 single-column stack is a decision taken to keep the panel free of horizontal overflow
 at the 390px reference width the umbrella mockup does honour.
 
+## Recorded visual decisions
+
+The three-site redesign needs four visual facts that no transcribed token table holds,
+so each is a decision rather than a transcription, recorded here as
+[Extending this](#extending-this) requires. They come from the redesign's decision
+register (`.omo/redesign/design-spec.md` §2.2, DEC-01 to DEC-04) and govern the
+umbrella and both catalogs, not the Kids origin. DEC-05 to DEC-10 are site-level and
+belong with the sites they change, not here.
+
+**Status (D-4 to D-7):** Accepted 2026-09-28 by the repository owner, who directed implementation of .omo/redesign/design-spec.md with the instruction 'Please use mass ulw with opus agent to implement changes'.
+
+The spec and the comparison captures cited below are working files outside the tracked
+tree, like the archive itself; capture paths are relative to
+`.omo/redesign/benchmarks/`. A capture is a comparison, never a mandate.
+
+### D-4 · Motion (stated, not transcribed)
+
+Until this decision the in-scope site sheets declared no `transition` outside their
+reduced-motion overrides, so every hover and focus change snapped in 0ms. Besides
+smooth anchor scrolling, which each sheet resets to `auto` under reduced motion, their
+only motion was three archived keyframes: `sa-dot` and `sa-rise` on the catalogs, and
+`sa-pulse` on the umbrella badge.
+
+| Token | Value | Carries |
+|---|---|---|
+| `--motion-fast` | `120ms` | colour, background, border, opacity, box-shadow |
+| `--motion-base` | `200ms` | transform |
+| `--ease-standard` | `cubic-bezier(0.2, 0, 0, 1)` | the easing for both |
+
+- Outside the reduced-motion overrides, every `transition` in the three site sheets
+  reads only these variables, and no transition runs longer than 200ms.
+- A transform stops at `translateX(3px)`, the `→` nudge, or at `scale(1.015)`, media
+  scaling inside its own clip. The caps govern state changes; `sa-rise` keeps its
+  archived 8px rise.
+- Nothing is scroll-linked, and nothing animates on entrance beyond `sa-dot`,
+  `sa-pulse` and `sa-rise`.
+- Reduced motion zeroes everything: under `prefers-reduced-motion: reduce`, every
+  computed transition and animation duration is at most `0.001ms`, the override all
+  three sheets already declare. A state change still shows; it just does not move.
+
+For comparison, Unreal snaps its primary button's colour in 0.1s
+(`unreal/btn-primary-hover.png`), Fab steps a tile fill over 250ms
+(`fab/tile-hover.png`), and Godot lifts a showcase card over 100ms
+(`godot/showcase-card-hover-2x.png`).
+
+**Code home:** a `FOUNDATION_MOTION` group in `packages/site-kit/src/design-tokens.ts`,
+emitted with the other `:root` variables and pinned value for value in
+`packages/site-kit/test/design-tokens.test.ts`. It is the only group in that module
+that is stated rather than transcribed, so changing one of its values changes this
+decision.
+
+**If withdrawn:** state changes stay instant, and every one of them stays visible.
+
+### D-5 · Marketing atmosphere
+
+Depth on marketing surfaces comes from neutral light, never from hue. Accent means
+pending, and an orange glow would read as work waiting on the visitor, so the umbrella
+gets no accent atmosphere at all.
+
+- Atmosphere gradients use only `--bg-base`, `--bg-panel`, `--bg-raised`, or
+  `color-mix(in srgb, var(--fg) N%, transparent)` with N at most 6 (at 0 that is plain
+  `transparent`).
+- Composited, the brightest stop stays at or below `--bg-raised` luminance, so text
+  stays inside pairs the gate already measures.
+- A catalog record plate's mark may mix the store `--accent` at up to 20%. That tint
+  is identity, like the storemark, and no plate text sits on it.
+- No new hex. The umbrella writes its atmosphere in its `globals.css`. The catalogs
+  write theirs once, in the shared skeleton below `END STORE IDENTITY`, and lay it over
+  each store's archived washes, which stay as they are.
+
+The luminance cap binds before the 6% ceiling does. Composited over `--bg-base`, a 6%
+`--fg` mix gives `rgb(21, 22, 24)`, relative luminance 0.0080 against `--bg-raised`'s
+0.0074; the largest mix inside the cap measures 5.43% over `--bg-base` and 2.45% over
+`--bg-panel`. A 20% store-accent mark over `--bg-base` measures 0.014 (`--store-game`)
+and 0.021 (`--store-web`), brighter than `--bg-control` (0.012), the brightest neutral
+the site-kit token test measures text on, which is why text stays off it. All figures
+use `contrastRatio()`'s relative-luminance formula on the 8-bit composite.
+
+The comparison captures are Unity's glow sampled from its hero media
+(`unity/home-d-hero-media.png`), Unreal's WebGL glow (`unreal/home-desktop-fold.png`)
+and Godot's spotlight (`godot/features-hero-desktop-dark.png`).
+
+**If withdrawn:** flat `--bg-base`.
+
+### D-6 · Media frames are float surfaces
+
+The surface ladder lets only floating layers cast shadow, and none of its five rungs
+names framed media. This decision puts four kinds of frame on the float tier: the
+umbrella hero stage, its desktop proof captures and its `/open` viewport, and the
+catalogs' digest record plates.
+
+| Property | Value | From |
+|---|---|---|
+| Radius | `var(--radius-lg)`, 9px | the radius scale's "cards, dialogs, panels" step |
+| Edge | `1px solid var(--line-strong)` | the palette's "floating layer edge" |
+| Shadow | `var(--surface-float-shadow)`, `0 24px 60px -16px rgba(0,0,0,.9)` | the float row of `FOUNDATION_SURFACES` |
+
+That shadow replaces the umbrella's earlier ad-hoc `.viewport` shadow,
+`0 30px 70px -24px`. No frame takes a 16, 24 or 32px radius: 16 stays Kids-only, and
+the scale has no 24 or 32. Docked surfaces keep the hairline and 3% inset of
+`FOUNDATION_SURFACE_RULE`, which leaves the float shadow to these frames and to menus.
+The umbrella's `globals.css` and the catalogs' shared skeleton apply the three
+variables directly instead of using `.sx-surface-float`, since that utility also paints
+the float fill and carries the surface table's 8px radius.
+
+Unreal grades radius by importance across its feature blocks
+(`unreal/home-features-block.png`); Unity frames real editor screens flat at 8px
+(`unity/home-d-feature-develop.png`).
+
+**If withdrawn:** each site keeps its current framing.
+
+### D-7 · Glyphs are text, not an icon family
+
+The sites use four text glyphs, all `aria-hidden`: `→` for an action, `↗` for a
+cross-origin link, `›` between crumbs, and the existing `✓` mark. There is no icon
+family and no platform or brand logo. In markup a glyph is a
+`<span aria-hidden="true">`; drawn with `::after`, it needs the empty alternative,
+`content: "→" / ""`, because generated content otherwise joins the element's
+accessible name. Because it is hidden, a glyph may only repeat what the words or the
+link target already say, and it never carries a fact alone.
+
+Unity moves its arrow on primary hover (`unity/home-d-cta-primary-hover.png`), the
+comparison for the 3px nudge in D-4; the icon family on Unreal's community cards
+(`unreal/home-community-cards.png`) is not adopted.
+
+**If withdrawn:** the existing `→` only.
+
 ## Kids
 
 `--kids` (`#A78BFA`) is transcribed, because the sheet also assigns it to scene

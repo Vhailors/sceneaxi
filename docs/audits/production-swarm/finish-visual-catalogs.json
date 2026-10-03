@@ -1,0 +1,88 @@
+{
+  "root": "/home/devuser/Documents/Projects/sceneaxi",
+  "scope": "visual-only catalogs and isolated Kids",
+  "status": "PASS_BOUNDED_VISUAL_LOOP",
+  "productionCertification": false,
+  "changedApplicationFiles": [
+    "sites/catalog-game/src/app/globals.css",
+    "sites/catalog-web/src/app/globals.css",
+    "sites/kids/src/app/globals.css"
+  ],
+  "helper": "sites/catalog-game/test/visual-evidence/capture.mjs",
+  "preserved": ["existing uncommitted work", "contracts", "GET filter behavior", "TEST/inert commerce", "publish refusal", "Kids isolation", "byte-identical reducer twins", "Foundations palette", "no dependencies added", "no commits or pushes"],
+  "screenshots": {
+    "engine": "installed Playwright with /usr/bin/chromium",
+    "dedicatedBrowserToolAvailable": false,
+    "desktop": {"width": 1440, "height": 1000},
+    "mobile": {"width": 390, "height": 844},
+    "fullPage": true,
+    "count": 48,
+    "before": {
+      "count": 24,
+      "manifest": "sites/catalog-game/test/visual-evidence/before.json",
+      "sha256": "87f9bba72427ee006f46a23f828e040b50c7a407033785ce7e7561f0b9a79269"
+    },
+    "after": {
+      "count": 24,
+      "manifest": "sites/catalog-game/test/visual-evidence/after.json",
+      "sha256": "a6f71086ee8d5df1a5b6ba29a84487acb67a106b34c95fa1db87f35101f79d3d"
+    },
+    "surfaces": [
+      {"site": "catalog-game", "surfaces": ["home", "detail", "publish", "empty", "refused"], "directory": "sites/catalog-game/test/visual-evidence"},
+      {"site": "catalog-web", "surfaces": ["home", "detail", "publish", "empty", "refused"], "directory": "sites/catalog-web/test/visual-evidence"},
+      {"site": "kids", "surfaces": ["activity", "playing"], "directory": "sites/kids/test/visual-evidence"}
+    ],
+    "filenamePattern": "{before|after}-{surface}-{desktop|mobile}.png",
+    "horizontalOverflowCases": 0,
+    "pageErrors": 0,
+    "manualImageReviewClaimed": false
+  },
+  "contrast": {
+    "method": "WCAG sRGB relative luminance",
+    "normalTextFloor": 4.5,
+    "pairs": [
+      {"name": "primary text/panel", "foreground": "#edeff2", "background": "#0d0f12", "ratio": 16.66},
+      {"name": "secondary labels/panel", "foreground": "#8a929c", "background": "#0d0f12", "ratio": 6.10},
+      {"name": "field text", "foreground": "#edeff2", "background": "#08090b", "ratio": 17.29},
+      {"name": "field boundary", "foreground": "#8a929c", "background": "#08090b", "ratio": 6.33},
+      {"name": "game action", "foreground": "#07080a", "background": "#e8544e", "ratio": 5.54},
+      {"name": "web action", "foreground": "#07080a", "background": "#3fb8c9", "ratio": 8.50},
+      {"name": "Kids action", "foreground": "#07080a", "background": "#a78bfa", "ratio": 7.36},
+      {"name": "Kids disabled label", "foreground": "#8a929c", "background": "#191d23", "ratio": 5.38}
+    ]
+  },
+  "controlHeightPixels": {"before": [21, 19, 19, 21], "after": [48.390625, 48, 48, 48.390625]},
+  "verification": {
+    "productionBuildsBefore": {"catalog-game": "PASS", "catalog-web": "PASS", "kids": "PASS"},
+    "productionBuildsFinalAfter": {"catalog-game": "PASS", "catalog-web": "PASS", "kids": "PASS"},
+    "standaloneTypechecksFinal": {"catalog-game": "PASS", "catalog-web": "PASS", "kids": "PASS"},
+    "vitest": {
+      "files": 7,
+      "passed": 463,
+      "failed": 0,
+      "command": "pnpm exec vitest run tests/sites/catalog-storefronts.test.ts tests/sites/kids-surface.test.ts tests/sites/site-seams.test.ts tests/sites/site-kit-component-collapse.test.ts packages/profile-kids/test/activity.test.ts packages/site-kit/test/design-tokens.test.ts packages/site-kit/test/final-sites-acceptance.test.ts --reporter=dot",
+      "log": "sites/catalog-game/test/visual-evidence/tests.log"
+    },
+    "captureBeforeAssertions": 79,
+    "captureAfterAssertions": 87,
+    "existingCatalogBrowserAssertions": 16,
+    "existingKidsProductionTests": 1,
+    "kidsProductionLog": "sites/kids/test/visual-evidence/production-activity.log",
+    "kidsProductionRequests": 14,
+    "kidsThirdPartyRequests": 0,
+    "kidsConnectionRequests": 0,
+    "kidsCookiesStorageDatabasesCachesWorkers": 0,
+    "reducerByteParity": "PASS: cmp sites/kids/src/lib/kids-activity.ts packages/profile-kids/src/kids-activity.ts",
+    "helperEslint": "PASS",
+    "helperAntiSlop": "PASS: 0 errors, 0 warnings, 115 rules",
+    "scopedDiffCheck": "PASS",
+    "fullGateRerun": false
+  },
+  "recoveredFailures": [
+    {"step": "initial owning Vitest", "passed": 461, "failed": 2, "output": "catalog-storefronts.test.ts:562 expected animation: sa-dot; unused keyframes retained", "repair": "Remove unused sa-dot keyframes in both CSS files; unchanged assertions now 463 pass"},
+    {"step": "initial catalogs standalone typecheck", "exit": 2, "output": "engine-kernel gameplay.ts:168 pressed/value missing on {}; session.ts:189-203 kind/command/timestampMs/clock missing on object; session.ts:390 exactOptional entities undefined", "repair": "Shared owner repaired concurrent typing; no foreign edits; final both standalone checks exit 0"},
+    {"step": "helper lint", "output": "Unqualified Node/browser globals; eight readable-spacing errors", "repair": "Explicit node:process import/globalThis and oxlint spacing fixes; final lint clean"},
+    {"step": "optional formatter", "exit": 254, "output": "Command prettier not found", "repair": "No dependency installed; stylesheet syntax/build/tests verified"}
+  ],
+  "limits": ["Dedicated browser tool unavailable; actual installed Playwright production Chromium used", "No manual image review or exhaustive accessibility certification", "No whole-repository gate rerun", "Synchronous surfaces had no loading state; none fabricated", "No provider/native/deployment/production clearance claims"]
+}

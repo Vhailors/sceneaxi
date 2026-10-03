@@ -1,12 +1,8 @@
 import { describe, expect, it } from "vitest";
-import {
-  SCENE_PACKAGE_REFUSALS,
-  applyScenePackageMutation,
-  discoverScenePackage,
-  emptyScenePackageCatalog,
-} from "@sceneaxi/schemas";
+import { SCENE_PACKAGE_REFUSALS, applyScenePackageMutation, discoverScenePackage, emptyScenePackageCatalog, SCENE_PACKAGE_CATALOG_KIND, parseScenePackageCatalog } from "@sceneaxi/schemas";
 
 const digest = `sha256:${"11".repeat(32)}`;
+
 const manifest = Object.freeze({
   pluginId: "dev.sceneaxi.sample.intake-source",
   pluginVersion: "0.1.0",
@@ -21,6 +17,7 @@ describe("desktop scene package catalog", () => {
       digest,
       admittedCapabilities: ["sceneaxi.sculpt.intake-source.v1"],
     });
+
     expect(discovered).toMatchObject({
       ok: true,
       discovery: { executed: false, packageId: "dev.sceneaxi.sample.intake-source" },
@@ -40,12 +37,14 @@ describe("desktop scene package catalog", () => {
       digest,
       admittedCapabilities: [],
     })).toMatchObject({ ok: false, reason: SCENE_PACKAGE_REFUSALS.capabilityMissing });
+
     const discovered = discoverScenePackage({
       locator: "fixtures/plugin-host/sculpt-intake-source",
       manifest,
       digest,
       admittedCapabilities: ["sceneaxi.sculpt.intake-source.v1"],
     });
+
     if (!discovered.ok) throw new Error(discovered.message);
     expect(applyScenePackageMutation({
       catalog: emptyScenePackageCatalog(),
@@ -66,12 +65,15 @@ describe("desktop scene package catalog", () => {
       digest,
       admittedCapabilities: ["sceneaxi.sculpt.intake-source.v1"],
     });
+
     if (!discovered.ok) throw new Error(discovered.message);
+
     const installed = applyScenePackageMutation({
       catalog: emptyScenePackageCatalog(),
       profile: "@sceneaxi/profile-game",
       mutation: { kind: "install", discovery: discovered.discovery },
     });
+
     if (!installed.ok) throw new Error(installed.message);
     expect(installed.catalog.lock).toEqual([
       {
@@ -82,11 +84,63 @@ describe("desktop scene package catalog", () => {
         capabilities: ["sceneaxi.sculpt.intake-source.v1"],
       },
     ]);
+
     const removed = applyScenePackageMutation({
       catalog: installed.catalog,
       profile: "@sceneaxi/profile-web",
       mutation: { kind: "remove", packageId: "dev.sceneaxi.sample.intake-source" },
     });
+
     expect(removed).toMatchObject({ ok: true, catalog: { lock: [] } });
+  });
+});
+
+describe("desktop scene package catalog shape", () => {
+  const validEntry = Object.freeze({
+    packageId: "dev.sceneaxi.sample.intake-source",
+    version: "0.1.0",
+    digest: `sha256:${"22".repeat(32)}`,
+    sourceLocator: "fixtures/plugin-host/sculpt-intake-source",
+    capabilities: Object.freeze(["sceneaxi.sculpt.intake-source.v1"]),
+  });
+
+  const validCatalog = () => ({
+    schemaVersion: 1,
+    kind: SCENE_PACKAGE_CATALOG_KIND,
+    lock: [validEntry],
+  });
+
+  it("refuses malformed nested locks before consumers iterate them", () => {
+    for (const lock of [
+      undefined,
+      null,
+      "evil",
+      [validEntry, validEntry],
+      [validEntry, { ...validEntry, digest: `sha256:${"33".repeat(32)}` }],
+      {},
+      [null],
+      [42],
+      ["dev.sceneaxi.sample"],
+      [{ ...validEntry, packageId: "" }],
+      [{ ...validEntry, packageId: 7 }],
+      [{ ...validEntry, digest: "sha256:nope" }],
+      [{ ...validEntry, sourceLocator: "https://example.invalid/pkg" }],
+      [{ ...validEntry, capabilities: ["ok", 5] }],
+    ]) {
+      expect(parseScenePackageCatalog({ schemaVersion: 1, kind: SCENE_PACKAGE_CATALOG_KIND, lock })).toBeNull();
+    }
+  });
+
+  it("keeps accepting empty and valid locks with unknown extra fields", () => {
+    expect(parseScenePackageCatalog(undefined)).toEqual(emptyScenePackageCatalog());
+    expect(parseScenePackageCatalog(null)).toEqual(emptyScenePackageCatalog());
+    expect(parseScenePackageCatalog({ wrong: true })).toBeNull();
+    expect(parseScenePackageCatalog(validCatalog())).toMatchObject({ lock: [validEntry] });
+    expect(
+      parseScenePackageCatalog({ ...validCatalog(), futureField: { nested: true } }),
+    ).toMatchObject({ lock: [validEntry] });
+    expect(
+      parseScenePackageCatalog({ ...validCatalog(), lock: [{ ...validEntry, note: "extra" }] }),
+    ).toMatchObject({ lock: [{ ...validEntry, note: "extra" }] });
   });
 });

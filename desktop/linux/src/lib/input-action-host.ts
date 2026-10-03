@@ -22,9 +22,13 @@ import {
   type InputActionRefusal,
   type InputActionScope,
 } from "@sceneaxi/schemas";
+
+// parseInputActionOverrides also migrates full v1 maps in memory. Loaded raw
+// bytes remain the atomic compare-and-swap witness; reads never rewrite files.
 export { DESKTOP_INPUT_ACTIONS_CHANNEL } from "./input-action-contract.js";
 
 export const PROJECT_INPUT_ACTIONS_PATH = ".sceneaxi/input-actions.v1.json" as const;
+
 export const WORKSPACE_INPUT_ACTIONS_FILE = "input-actions.v1.json" as const;
 
 export type InputActionInspection = Readonly<{
@@ -94,12 +98,14 @@ function replaceOverride(
 ): InputActionOverrides {
   const byAction = new Map(current.bindings.map((row) => [row.actionId, row.binding]));
   byAction.set(actionId, binding);
+
   return Object.freeze({
     schemaVersion: 1 as const,
     kind: "sceneaxi.input-action-overrides" as const,
     scope: current.scope,
     bindings: Object.freeze(INPUT_ACTION_REGISTRY.flatMap((definition) => {
       const selected = byAction.get(definition.id);
+
       return selected === undefined
         ? []
         : [Object.freeze({ actionId: definition.id, binding: selected })];
@@ -118,10 +124,13 @@ export function createDesktopInputActionHost(options: Readonly<{
 
   const load = (scope: InputActionScope): LoadedScope | InputActionHostResult<never> => {
     const path = paths[scope];
+
     if (!existsSync(path)) {
       return Object.freeze({ overrides: emptyInputActionOverrides(scope), path, bytes: null });
     }
+
     let bytes: string;
+
     try {
       bytes = readFileSync(path, "utf8");
     } catch (error) {
@@ -131,7 +140,9 @@ export function createDesktopInputActionHost(options: Readonly<{
         error instanceof Error ? error.message : String(error),
       );
     }
+
     const overrides = parseInputActionOverrides(bytes, scope);
+
     if (overrides === null) {
       return refusal(
         INPUT_ACTION_REFUSALS.persistedStateInvalid,
@@ -139,24 +150,31 @@ export function createDesktopInputActionHost(options: Readonly<{
         path,
       );
     }
+
     return Object.freeze({ overrides, path, bytes });
   };
 
   const loaded = (): InputActionHostResult<Readonly<Record<InputActionScope, LoadedScope>>> => {
     const workspace = load("workspace");
+
     if ("ok" in workspace) return workspace;
     const project = load("project");
+
     if ("ok" in project) return project;
+
     return Object.freeze({ ok: true as const, data: Object.freeze({ workspace, project }) });
   };
 
   const inspection = (): InputActionHostResult<InputActionInspection> => {
     const scopes = loaded();
+
     if (!scopes.ok) return scopes;
+
     const map = composeInputActionMap(
       scopes.data.workspace.overrides,
       scopes.data.project.overrides,
     );
+
     return Object.freeze({
       ok: true as const,
       data: Object.freeze({
@@ -183,6 +201,7 @@ export function createDesktopInputActionHost(options: Readonly<{
     next: InputActionOverrides,
   ): InputActionHostResult<InputActionOverrides> => {
     const bytes = serializeInputActionOverrides(next);
+
     try {
       atomicWriteFile(loadedScope.path, bytes, loadedScope.bytes === null
         ? { mustBeAbsent: true }
@@ -194,6 +213,7 @@ export function createDesktopInputActionHost(options: Readonly<{
         error instanceof Error ? error.message : String(error),
       );
     }
+
     return Object.freeze({ ok: true as const, data: next });
   };
 
@@ -207,25 +227,34 @@ export function createDesktopInputActionHost(options: Readonly<{
       InputActionHostResult<InputActionOverrides>,
   ): InputActionHostResult<InputActionReview> => {
     const scopes = loaded();
+
     if (!scopes.ok) return scopes;
+
     const before = composeInputActionMap(
       scopes.data.workspace.overrides,
       scopes.data.project.overrides,
     );
+
     const currentBase = inputActionOverridesDigest(scopes.data[scope].overrides);
+
     if (currentBase !== expectedBaseVersion) {
       return refusal(
         INPUT_ACTION_REFUSALS.staleBase,
         `The ${scope} input-action base is stale; inspect and review the current map before retrying.`,
       );
     }
+
     const next = nextFor(before, scopes.data);
+
     if (!next.ok) return next;
+
     const effective = composeInputActionMap(
       scope === "workspace" ? next.data : scopes.data.workspace.overrides,
       scope === "project" ? next.data : scopes.data.project.overrides,
     );
+
     const resultBaseVersion = inputActionOverridesDigest(next.data);
+
     if ((!approved && reviewDigest !== null) ||
       (approved && reviewDigest !== resultBaseVersion)) {
       return refusal(
@@ -233,10 +262,13 @@ export function createDesktopInputActionHost(options: Readonly<{
         `The ${scope} input-action approval does not match the exact reviewed settings bytes.`,
       );
     }
+
     if (approved) {
       const committed = write(scopes.data[scope], next.data);
+
       if (!committed.ok) return committed;
     }
+
     return Object.freeze({
       ok: true as const,
       data: Object.freeze({
@@ -262,12 +294,15 @@ export function createDesktopInputActionHost(options: Readonly<{
       return review("rebind", input.scope, input.expectedBaseVersion, input.approved, input.reviewDigest,
         (current, scopes) => {
           const proposed = reviewInputActionRebind(current, input.actionId, input.binding);
+
           if (!proposed.ok) {
             return refusal(proposed.reason, proposed.message);
           }
+
           if (!("map" in proposed)) {
             return refusal(INPUT_ACTION_REFUSALS.registryInvalid, "The rebind review returned no map.");
           }
+
           return Object.freeze({
             ok: true as const,
             data: replaceOverride(

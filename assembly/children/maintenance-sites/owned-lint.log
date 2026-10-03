@@ -1,0 +1,23 @@
+
+/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/tests/sites/maintenance-compat.test.ts
+   53:10   error  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+   70:23   error  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+   72:14   error  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+   74:14   error  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+   79:23   error  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+   80:62   error  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+   81:61   error  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+   81:100  error  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+   89:123  error  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+   92:14   error  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+   95:82   error  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  125:26   error  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  129:27   error  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  131:25   error  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  145:25   error  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  146:26   error  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  147:37   error  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  152:29   error  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+✖ 18 problems (18 errors, 0 warnings)
+

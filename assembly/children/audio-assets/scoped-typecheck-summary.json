@@ -1,0 +1,38 @@
+{
+  "noEmit": true,
+  "fullBuild": false,
+  "ownedDiagnosticCount": 5,
+  "dependencyDiagnosticCount": 14,
+  "owned": [
+    {
+      "file": "desktop/linux/src/lib/desktop-scene.ts",
+      "line": 1158,
+      "code": 2339,
+      "message": "Property 'instanceId' does not exist on type 'Readonly<{ kind: \"create-node\"; parentInstanceId: string; name: string; }> | Readonly<{ kind: \"create-primitive\"; primitive: \"box\" | \"cylinder\" | \"sphere\"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.   Property 'instanceId' does not exist on type 'Readonly<{ kind: \"create-node\"; parentInstanceId: string; name: string; }>'."
+    },
+    {
+      "file": "desktop/linux/src/lib/desktop-scene.ts",
+      "line": 1163,
+      "code": 2339,
+      "message": "Property 'instanceId' does not exist on type 'Readonly<{ kind: \"create-node\"; parentInstanceId: string; name: string; }> | Readonly<{ kind: \"create-primitive\"; primitive: \"box\" | \"cylinder\" | \"sphere\"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.   Property 'instanceId' does not exist on type 'Readonly<{ kind: \"create-node\"; parentInstanceId: string; name: string; }>'."
+    },
+    {
+      "file": "desktop/linux/src/lib/desktop-scene.ts",
+      "line": 1175,
+      "code": 2339,
+      "message": "Property 'parentInstanceId' does not exist on type 'Readonly<{ kind: \"create-node\"; parentInstanceId: string; name: string; }> | Readonly<{ kind: \"create-primitive\"; primitive: \"box\" | \"cylinder\" | \"sphere\"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.   Property 'parentInstanceId' does not exist on type 'Readonly<{ kind: \"rename-object\"; instanceId: string; name: string; }>'."
+    },
+    {
+      "file": "desktop/linux/src/lib/desktop-scene.ts",
+      "line": 1180,
+      "code": 2339,
+      "message": "Property 'parentInstanceId' does not exist on type 'Readonly<{ kind: \"create-node\"; parentInstanceId: string; name: string; }> | Readonly<{ kind: \"create-primitive\"; primitive: \"box\" | \"cylinder\" | \"sphere\"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.   Property 'parentInstanceId' does not exist on type 'Readonly<{ kind: \"rename-object\"; instanceId: string; name: string; }>'."
+    },
+    {
+      "file": "desktop/linux/src/lib/desktop-scene.ts",
+      "line": 1199,
+      "code": 2339,
+      "message": "Property 'transformPolicy' does not exist on type 'Readonly<{ kind: \"create-node\"; parentInstanceId: string; name: string; }> | Readonly<{ kind: \"create-primitive\"; primitive: \"box\" | \"cylinder\" | \"sphere\"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.   Property 'transformPolicy' does not exist on type 'Readonly<{ kind: \"create-node\"; parentInstanceId: string; name: string; }>'."
+    }
+  ]
+}

@@ -13,13 +13,33 @@
  * operator running this on a real Mac still exercises the same code path.
  */
 import { spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
+import { validateReleaseArtifacts } from "./artifact-validation.mjs";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+// Decode primitive text without coercing objects or admitting boxed strings.
+function parseReleaseText(value) {
+  try {
+    const text = String.prototype.valueOf.call(value);
+
+    return text === value ? text : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const packaged = process.argv.includes("--packaged");
+
+const flags = process.argv.slice(2);
+
+if (flags.some((flag) => flag !== "--packaged") || flags.length > 1) {
+  console.error("desktop-macos smoke FAILED — MACOS_SMOKE_ARGUMENT_INVALID");
+  process.exit(1);
+}
+
+const packaged = flags.includes("--packaged");
+
 const releaseInputs = [
   "CSC_LINK",
   "CSC_KEY_PASSWORD",
@@ -28,6 +48,7 @@ const releaseInputs = [
   "APPLE_TEAM_ID",
   "SCENEAXI_MACOS_RELEASE_BASE_URL",
 ];
+
 const provenanceInputs = [
   "GITHUB_ACTIONS",
   "GITHUB_EVENT_NAME",
@@ -45,6 +66,7 @@ const fail = (message) => {
 
 if (!packaged) {
   const config = readFileSync(join(appRoot, "electron-builder.yml"), "utf8");
+
   for (const required of [
     "hardenedRuntime: true",
     "notarize: true",
@@ -54,36 +76,47 @@ if (!packaged) {
   ]) {
     if (!config.includes(required)) fail(`packaging config lacks '${required}'`);
   }
+
   const buildVersionMatches = [
     ...config.matchAll(/^buildVersion:\s*["']([^"']+)["']\s*$/gm),
   ];
+
   const buildVersion = buildVersionMatches.length === 1 ? buildVersionMatches[0][1] : undefined;
+
   if (!/^[1-9]\d{0,3}(?:\.(?:0|[1-9]\d?)){0,2}$/.test(buildVersion ?? "")) {
     fail("packaging config carries no valid Apple build version");
   }
+
   if (/^publish:/m.test(config)) fail("packaging config can publish implicitly");
+
   if (!existsSync(join(appRoot, "entitlements.mac.plist"))) {
     fail("packaging config references no tracked entitlements file");
   }
 
   const removed = [...releaseInputs, ...provenanceInputs];
+
   const env = Object.fromEntries(
     Object.entries(process.env).filter(([name]) => !removed.includes(name)),
   );
+
   const result = spawnSync(process.execPath, [join(appRoot, "scripts/dist.mjs"), "--preflight-only"], {
     cwd: appRoot,
     encoding: "utf8",
     env,
   });
+
   if (result.status !== 1) fail(`missing-input preflight exited ${result.status}, not 1`);
+
   for (const name of releaseInputs) {
     if (!result.stderr.includes(`MACOS_ENV_REQUIRED:${name}`)) {
       fail(`missing-input preflight did not refuse ${name}`);
     }
   }
+
   if (!result.stderr.includes("MACOS_PROVENANCE_REQUIRED:GITHUB_SHA")) {
     fail("missing-input preflight did not refuse absent source provenance");
   }
+
   const actionsResult = spawnSync(
     process.execPath,
     [join(appRoot, "scripts/dist.mjs"), "--preflight-only"],
@@ -101,9 +134,11 @@ if (!packaged) {
       },
     },
   );
+
   if (actionsResult.status !== 1) {
     fail(`missing Actions provenance preflight exited ${actionsResult.status}, not 1`);
   }
+
   for (const name of ["GITHUB_SHA", "GITHUB_RUN_ID"]) {
     if (!actionsResult.stderr.includes(`MACOS_PROVENANCE_REQUIRED:${name}`)) {
       fail(`Actions preflight did not refuse absent provenance ${name}`);
@@ -117,30 +152,47 @@ if (!packaged) {
 }
 
 if (process.platform !== "darwin") fail("--packaged requires macOS");
+
 const release = join(appRoot, "release");
+
 const checksumsPath = join(release, "SHA256SUMS");
+
 const actionsManifestPath = join(release, "desktop-macos-release.json");
+
 const localManifestPath = join(release, "desktop-macos-local-build.json");
+
 const manifestPaths = [actionsManifestPath, localManifestPath].filter((path) => existsSync(path));
+
 if (manifestPaths.length !== 1) fail("release must carry exactly one provenance record");
+
 const manifestPath = manifestPaths[0];
+
 const updatePath = join(release, "latest-mac.yml");
+
 for (const path of [checksumsPath, manifestPath, updatePath]) {
   if (!existsSync(path)) fail(`release proof file is absent: ${path}`);
 }
+
 const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+
 const { repository, sourceCommit, workflowRunId, verifiedOn } = manifest;
+
 if (
-  typeof sourceCommit !== "string" ||
+  manifest.schemaVersion !== 1 ||
+  manifest.platform !== "macOS universal" ||
+  manifest.sourceApplication !== "desktop/linux" ||
+  manifest.signed !== true || manifest.notarized !== true ||
+  parseReleaseText(sourceCommit) === undefined ||
   !/^[0-9a-f]{40}$/.test(sourceCommit) ||
-  typeof manifest.buildVersion !== "string" ||
+  parseReleaseText(manifest.buildVersion) === undefined ||
   !/^[1-9]\d{0,3}(?:\.(?:0|[1-9]\d?)){0,2}$/.test(manifest.buildVersion) ||
-  typeof verifiedOn !== "string" ||
+  parseReleaseText(verifiedOn) === undefined ||
   !/^\d{4}-\d{2}-\d{2}$/.test(verifiedOn) ||
   !Array.isArray(manifest.artifacts)
 ) {
   fail("build record carries no complete source provenance");
 }
+
 if (manifestPath === actionsManifestPath) {
   if (
     manifest.recordKind !== "github-actions-release" ||
@@ -154,6 +206,7 @@ if (manifestPath === actionsManifestPath) {
   }
 } else {
   const forbidden = ["repository", "workflowRunId", "downloadHref", "updateMetadataUrl"];
+
   if (
     manifest.recordKind !== "local-build" ||
     manifest.iaLinkable !== false ||
@@ -164,37 +217,53 @@ if (manifestPath === actionsManifestPath) {
   }
 }
 
-for (const line of readFileSync(checksumsPath, "utf8").trim().split("\n")) {
-  const match = /^([a-f0-9]{64}) {2}(.+)$/.exec(line);
-  if (match === null) fail(`invalid SHA256SUMS line: ${line}`);
-  const actual = createHash("sha256").update(readFileSync(join(release, match[2]))).digest("hex");
-  if (actual !== match[1]) fail(`checksum mismatch for ${match[2]}`);
+const { version } = JSON.parse(readFileSync(join(appRoot, "package.json"), "utf8"));
+
+const artifactStem = `SceneAxi-Engine-Desktop-${version}-macos-universal`;
+
+try {
+  validateReleaseArtifacts({
+    release, manifest, version,
+    expectedNames: [`${artifactStem}.dmg`, `${artifactStem}.zip`],
+    updateFile: "latest-mac.yml", updateArtifact: `${artifactStem}.zip`,
+    metadataNames: ["desktop-macos-local-build.json", "desktop-macos-release.json", "builder-debug.yml", "builder-effective-config.yaml"],
+    stagedDirectories: ["mac-universal", "mac-universal-x64", "mac-universal-arm64"],
+  });
+} catch (error) {
+  fail(error instanceof Error ? error.message : "RELEASE_INTEGRITY_FAILED");
 }
 
 const appBundle = join(release, "mac-universal", "SceneAxi Engine Desktop.app");
+
 for (const [command, args] of [
   ["codesign", ["--verify", "--deep", "--strict", "--verbose=2", appBundle]],
   ["spctl", ["--assess", "--type", "execute", "--verbose=2", appBundle]],
   ["xcrun", ["stapler", "validate", appBundle]],
 ]) {
   const result = spawnSync(command, args, { cwd: appRoot, stdio: "inherit" });
+
   if (result.status !== 0) fail(`${command} verification failed`);
 }
 
 const executable = join(appBundle, "Contents/MacOS/sceneaxi-engine-desktop");
+
 const result = spawnSync(executable, ["--smoke", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"], {
   cwd: appRoot,
   encoding: "utf8",
   timeout: 120_000,
 });
+
 const proofLine = (result.stdout ?? "")
   .split("\n")
   .filter((line) => line.startsWith("{"))
   .at(-1);
+
 if (result.status !== 0 || proofLine === undefined) {
   fail(`packaged application emitted no successful proof line\n${result.stderr ?? ""}`);
 }
+
 const proof = JSON.parse(proofLine);
+
 if (proof.ok !== true || proof.frameReport?.pixelsDrawn !== true) {
   fail("packaged application did not prove its real desktop runtime and pixel surface");
 }

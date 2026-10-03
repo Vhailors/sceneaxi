@@ -1,0 +1,32 @@
+[
+  {
+    "name": "build-umbrella-final",
+    "command": "pnpm --dir sites/umbrella build",
+    "exitCode": 0
+  },
+  {
+    "name": "owning-tests-final",
+    "command": "pnpm exec vitest run tests/sites/umbrella-visual.test.ts tests/sites/catalog-storefronts.test.ts tests/sites/kids-surface.test.ts tests/sites/site-seams.test.ts tests/sites/site-kit-component-collapse.test.ts packages/profile-kids/test/activity.test.ts packages/site-kit/test/design-tokens.test.ts packages/site-kit/test/final-sites-acceptance.test.ts --reporter=dot",
+    "exitCode": 0
+  },
+  {
+    "name": "provider",
+    "command": "pnpm --dir sites/umbrella test:provider",
+    "exitCode": 0
+  },
+  {
+    "name": "integration",
+    "command": "pnpm --dir sites/umbrella test:integration",
+    "exitCode": 0
+  },
+  {
+    "name": "kids-activity",
+    "command": "pnpm --dir sites/kids exec playwright test test/production-activity.spec.ts",
+    "exitCode": 1
+  },
+  {
+    "name": "types-umbrella",
+    "command": "pnpm --dir sites/umbrella exec tsc --noEmit",
+    "exitCode": 0
+  }
+]

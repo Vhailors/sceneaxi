@@ -1,0 +1,319 @@
+{
+  "status": "ROOT_SOURCE_HANDED_BACK_PUBLICATION_BLOCKED",
+  "owner": "bg-163",
+  "root": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1",
+  "startedAt": "2026-10-03T14:52:56.557351+00:00",
+  "baselineHead": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+  "mergeHead": "16f312c61435e3d379a0e54525ac8115e35fee86",
+  "leases": {
+    "bg-161": "FINAL_SOURCE_HANDED_BACK_HASHES_VERIFIED",
+    "bg-162": "FINAL_SOURCE_HANDED_BACK_HASHES_VERIFIED"
+  },
+  "publication": "BLOCKED_SOURCEGUARD_AND_INDEPENDENT_EXACT_TREE_REVIEW",
+  "sourceGuardZero": false,
+  "currentGate": {
+    "status": "FAIL",
+    "pass": 5194,
+    "fail": 22,
+    "source": "assembly/current-checks/gate-current.log",
+    "historical": false
+  },
+  "currentBuild": "HANDOFF_GREEN_NOT_YET_FROZEN_RERUN",
+  "commitsCreated": [],
+  "foreignWorktrees": "UNTOUCHED_OWNER_EXPORT_REQUIRED",
+  "sharedDirtyRows": 1511,
+  "sharedWorktree": "UNTOUCHED",
+  "checks": [
+    {
+      "command": "normal configured oxlint on exact provisional changed approved TS/JS path list",
+      "exit": 1,
+      "log": "sourceguard-provisional.json",
+      "status": "PROVISIONAL_NOT_STAGED_OR_FROZEN"
+    },
+    {
+      "command": "pnpm run --silent check:syntax",
+      "exit": 0,
+      "startedAt": "2026-10-03T15:07:07.425966+00:00",
+      "log": "check-syntax.log",
+      "frozen": false
+    },
+    {
+      "command": "pnpm run --silent check:boundaries",
+      "exit": 0,
+      "startedAt": "2026-10-03T15:07:09.703213+00:00",
+      "log": "check-boundaries.log",
+      "frozen": false
+    },
+    {
+      "command": "pnpm run --silent check:contracts",
+      "exit": 0,
+      "startedAt": "2026-10-03T15:07:11.704899+00:00",
+      "log": "check-contracts.log",
+      "frozen": false
+    },
+    {
+      "command": "pnpm run --silent check:traceability",
+      "exit": 0,
+      "startedAt": "2026-10-03T15:07:12.009749+00:00",
+      "log": "check-traceability.log",
+      "frozen": false
+    },
+    {
+      "command": "pnpm run --silent check:sites",
+      "exit": 0,
+      "startedAt": "2026-10-03T15:07:28.884863+00:00",
+      "log": "check-sites.log",
+      "frozen": false
+    },
+    {
+      "command": "pnpm run --silent check:desktop",
+      "exit": 0,
+      "startedAt": "2026-10-03T15:07:32.795218+00:00",
+      "log": "check-desktop.log",
+      "frozen": false
+    },
+    {
+      "command": "pnpm run --silent check:publish-ready",
+      "exit": 0,
+      "startedAt": "2026-10-03T15:07:34.140223+00:00",
+      "log": "check-publish-ready.log",
+      "frozen": false
+    },
+    {
+      "command": "focused root7suites",
+      "exit": 0,
+      "files": 7,
+      "pass": 48,
+      "log": "root-focused-after.log",
+      "frozen": false
+    },
+    {
+      "command": "declaration+schema-v2+asset-heartbeat serial",
+      "exit": 0,
+      "files": 3,
+      "log": "root-declaration-asset-after.log",
+      "frozen": false
+    },
+    {
+      "source": "assembly/current-checks/chrome-fix/report.json",
+      "kind": "CHILD_FINAL_SCOPED_CURRENT_SOURCE_HASH_VERIFIED",
+      "status": "SOURCE_VERIFIED_FOCUSED",
+      "frozen": false,
+      "testFiles": 10,
+      "testsPassed": 232
+    },
+    {
+      "source": "assembly/current-checks/catalog-fix/report.json",
+      "kind": "CHILD_FINAL_SCOPED_CURRENT_SOURCE_HASH_VERIFIED",
+      "status": "SOURCE_VERIFIED_HANDED_BACK",
+      "frozen": false,
+      "testFiles": 14,
+      "testsPassed": 150
+    },
+    {
+      "command": "pnpm exec eslint on five root edited files",
+      "exit": 0,
+      "log": "root-owned-eslint.log",
+      "frozen": false
+    },
+    {
+      "command": "git diff --check",
+      "exit": 0,
+      "log": "diff-check.log",
+      "frozen": false
+    },
+    {
+      "kind": "approved policy exact five source SHA256 matches",
+      "exit": 0,
+      "log": "policy-postimages-preserved.json"
+    }
+  ],
+  "proofInputs": "proof-inputs.json",
+  "candidateManifest": {
+    "path": "approved-candidate-manifest.json",
+    "paths": 2475,
+    "status": "PROVISIONAL",
+    "pendingNewSourcePaths": []
+  },
+  "leasedParentViewport": {
+    "status": "LEASED_PARENT_EXCLUSIVE",
+    "paths": [
+      "desktop/linux/src/renderer/viewport.ts",
+      "terminal lifecycle wiring",
+      "new viewport lifecycle test"
+    ]
+  },
+  "changes": [
+    {
+      "path": "packages/engine-presentation/test/declaration-consumer.test.ts",
+      "change": "Private consumer fixture outside live source tree; exact numeric positive and backend authority negative declarations retained"
+    },
+    {
+      "path": "packages/schemas/src/scene-composition.ts",
+      "change": "Explicit typed optional v2 instance JSON projection preserving canonical digest; actual strict non-exactOptional consumer diagnostics cleared"
+    },
+    {
+      "path": "packages/engine-kernel/test/seam.test.ts",
+      "change": "Public historical3argument consumer positively pinned; current snapshot digest checked; internal5argument helper untouched"
+    },
+    {
+      "path": "packages/schemas/test/seam.test.ts",
+      "change": "Actual Node conditional root equivalence and browser barrel refusal; both APIs preserved"
+    },
+    {
+      "path": "desktop/linux/test/viewport-input-actions.test.ts",
+      "change": "Actual modern default pointer2 collision asserted; unoccupied button4 remap executes camera/wheel/detach without rule weakening"
+    }
+  ],
+  "baseInventory": {
+    "paths": 1201,
+    "missing": 0,
+    "modeMismatches": 0,
+    "unchanged": 916,
+    "log": "base-inventory-preservation.json"
+  },
+  "lineage": {
+    "capturedRefs": 34,
+    "tips": 30,
+    "frontiers": 11,
+    "ancestorsOfActualHead": 6,
+    "nativeUnmerged": 105,
+    "commitsCreated": 0,
+    "log": "lineage-current.json"
+  },
+  "sourceguardBlocker": {
+    "status": "FAIL_NOT_STAGED_NOT_FROZEN",
+    "exit": 1,
+    "paths": 406,
+    "diagnostics": 7258,
+    "bySeverity": {
+      "error": 7237,
+      "warning": 21
+    },
+    "byRule": {
+      "anti-slop(require-readable-spacing)": 5792,
+      "anti-slop(no-conditional-empty-object-spread)": 61,
+      "anti-slop(no-runtime-typeof)": 488,
+      "anti-slop(no-unknown-parameters)": 204,
+      "anti-slop(no-unknown-returns)": 35,
+      "anti-slop(require-safety-comment-for-type-assertion)": 366,
+      "anti-slop(no-unsafe-dictionary-type)": 72,
+      "anti-slop(no-known-value-widening)": 37,
+      "anti-slop(no-chained-type-assertions)": 50,
+      "unicorn(no-new-array)": 5,
+      "anti-slop(no-object-parameters)": 10,
+      "anti-slop(no-reflect-apply)": 13,
+      "anti-slop(no-shape-in-symbol-names)": 91,
+      "anti-slop(no-array-filter-map)": 5,
+      "anti-slop(no-module-mocking)": 10,
+      "eslint(no-unused-vars)": 10,
+      "anti-slop(no-unknown-type-aliases)": 2,
+      "eslint(no-sparse-arrays)": 1,
+      "unicorn(no-useless-spread)": 3,
+      "unicorn(no-invalid-fetch-options)": 1,
+      "eslint(no-unused-expressions)": 1,
+      "oxc(no-accumulating-spread)": 1
+    },
+    "sourceGuardZero": false,
+    "approvedPolicySha256": "5059b62c799b7be9bbeb9dd98187d317f4e2005b31dbdc0c5f62371c688ef9d7",
+    "waivers": false,
+    "ignoredRulesChanged": false
+  },
+  "foreignExportGaps": "foreign-owner-export-gaps.json",
+  "logReceipts": [
+    {
+      "path": "root-focused-after.log",
+      "sha256": "6d6480a1ad62e5733dfa67921483177eb42165c98b712dc28e69a7b7b002dc44",
+      "summary": [
+        "Test Files  7 passed (7)",
+        "Tests  48 passed (48)",
+        "Duration  5.11s (transform 19.13s, setup 0ms, import 22.33s, tests 3.91s, environment 1ms)"
+      ]
+    },
+    {
+      "path": "root-declaration-asset-after.log",
+      "sha256": "bf9c3c408909156522c15638e77972d9a4f469f504be6288fa9be2b49dc660dd",
+      "summary": [
+        "Test Files  3 passed (3)",
+        "Tests  39 passed (39)",
+        "Duration  43.11s (transform 6.15s, setup 0ms, import 8.13s, tests 42.93s, environment 0ms)"
+      ]
+    },
+    {
+      "path": "root-public-compat-final.log",
+      "sha256": "243f299c30b478a78cc3e22db5b61aacbc97d24b4b8de93d9979ddbdaabf42cb",
+      "summary": [
+        "Test Files  4 passed (4)",
+        "Tests  20 passed (20)",
+        "Duration  10.18s (transform 20.74s, setup 0ms, import 22.89s, tests 2.39s, environment 1ms)"
+      ]
+    }
+  ],
+  "rootSourceReceipts": [
+    {
+      "path": "packages/engine-presentation/test/declaration-consumer.test.ts",
+      "sha256": "56b6773165a8a32a6b1263167ecc8331eb6cc40c2c8386c736b05fca93f6ff16"
+    },
+    {
+      "path": "packages/schemas/src/scene-composition.ts",
+      "sha256": "f42c00195a81985381c5a49d5a53f07d41aa72adbd849c1c9ec2d78de615f262"
+    },
+    {
+      "path": "packages/engine-kernel/test/seam.test.ts",
+      "sha256": "db1f76769e8708531256f06b453ff27b1d1304dca44ab88148e505c9c256893b"
+    },
+    {
+      "path": "packages/schemas/test/seam.test.ts",
+      "sha256": "e4c99349b67472cac8e498a7c2e23a33fb7b27c89bb27212ef8786c781e663ef"
+    },
+    {
+      "path": "desktop/linux/test/viewport-input-actions.test.ts",
+      "sha256": "e20db9f887e2ebbd30bde60e8b835ba7588adcc2bbff755a51fa42b326f2ed32"
+    }
+  ],
+  "latestRemoteMain": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+  "branch": "assembly/comprehensive-private-bg150",
+  "candidateTree": null,
+  "candidateCommit": null,
+  "mergedSha": null,
+  "publicationUrls": [
+    "https://github.com/Vhailors/sceneaxi/pull/310",
+    "https://github.com/Vhailors/sceneaxi/pull/312"
+  ],
+  "publicationOutcomes": "NO_PUSH_PR_MERGE_OR_PROTECTION_ACTION",
+  "lastUpdatedAt": "2026-10-03T15:18:26.270939+00:00",
+  "policyPostimagesPreserved": "policy-postimages-preserved.json",
+  "sourceSnapshotPreservation": {
+    "approvedOriginalPaths": 2333,
+    "missing": [],
+    "privateRecoveryNeverStaged": true,
+    "manifestFullJsonIngested": true,
+    "proofInputsFullJsonIngested": 13
+  },
+  "rootSourceFingerprintSha256": "052ccc4624e90e89e8271cce9d24cad6c9f5f035b1c0e8ebf99f90a2f5d703c6",
+  "rootSourceFingerprintIsGitTree": false,
+  "frozenChecks": "NOT_RUN_PARENT_VIEWPORT_LEASE_ACTIVE",
+  "publicationBlockers": [
+    "Actual configured guard7258diagnostics/7237errors on406provisionalapprovedchangedTSJS paths; exact staged/frozen guard remains mandatory",
+    "Parent viewport cleanup/lifecycle lease not yet handed back",
+    "No complete native descendant candidate commits; only6/30tips ancestors ofHEAD",
+    "Foreign owner uncommitted+ignored exports unavailable"
+  ],
+  "heavyChecksNotRun": [
+    "frozen full build",
+    "full gate rerun",
+    "SDK build",
+    "site production builds",
+    "browser/native execution"
+  ],
+  "ordinaryGitActions": [
+    "approved origin remote added",
+    "fetch origin main",
+    "live ls-remote main CAS observation"
+  ],
+  "noIndexWrites": true,
+  "rootSourceHandback": true,
+  "furtherRootSourceWritesByBg163": false,
+  "handbackTo": "parent controller",
+  "completedAt": "2026-10-03T15:19:11.968951+00:00"
+}

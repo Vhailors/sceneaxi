@@ -1,0 +1,1182 @@
+{
+  "assertions": 81,
+  "focus": {
+    "outline": "solid",
+    "outlineWidth": "2px",
+    "transition": "1e-06s"
+  },
+  "contrasts": [
+    {
+      "name": "landing",
+      "size": "desktop",
+      "selector": "h1",
+      "foreground": [
+        237,
+        239,
+        242,
+        255
+      ],
+      "background": [
+        7,
+        8,
+        10,
+        255
+      ],
+      "ratio": 17.392225742545474
+    },
+    {
+      "name": "landing",
+      "size": "desktop",
+      "selector": ".download-primary",
+      "foreground": [
+        7,
+        8,
+        10,
+        255
+      ],
+      "background": [
+        255,
+        107,
+        44,
+        255
+      ],
+      "ratio": 7.051896850105539
+    },
+    {
+      "name": "open",
+      "size": "desktop",
+      "selector": "h1",
+      "foreground": [
+        237,
+        239,
+        242,
+        255
+      ],
+      "background": [
+        7,
+        8,
+        10,
+        255
+      ],
+      "ratio": 17.392225742545474
+    },
+    {
+      "name": "open",
+      "size": "desktop",
+      "selector": ".state p",
+      "foreground": [
+        138,
+        146,
+        156,
+        255
+      ],
+      "background": [
+        13,
+        36,
+        34,
+        255
+      ],
+      "ratio": 5.162048023341347
+    },
+    {
+      "name": "open",
+      "size": "desktop",
+      "selector": ".state-head h3",
+      "foreground": [
+        94,
+        234,
+        212,
+        255
+      ],
+      "background": [
+        13,
+        36,
+        34,
+        255
+      ],
+      "ratio": 10.98264878551795
+    },
+    {
+      "name": "open",
+      "size": "desktop",
+      "selector": ".panel p",
+      "foreground": [
+        138,
+        146,
+        156,
+        255
+      ],
+      "background": [
+        13,
+        15,
+        18,
+        255
+      ],
+      "ratio": 6.097978230121539
+    },
+    {
+      "name": "editor",
+      "size": "desktop",
+      "selector": "h1",
+      "foreground": [
+        237,
+        239,
+        242,
+        255
+      ],
+      "background": [
+        7,
+        8,
+        10,
+        255
+      ],
+      "ratio": 17.392225742545474
+    },
+    {
+      "name": "editor",
+      "size": "desktop",
+      "selector": ".state p",
+      "foreground": [
+        138,
+        146,
+        156,
+        255
+      ],
+      "background": [
+        26,
+        17,
+        19,
+        255
+      ],
+      "ratio": 5.886402071480525
+    },
+    {
+      "name": "editor",
+      "size": "desktop",
+      "selector": ".state-head h3",
+      "foreground": [
+        255,
+        77,
+        94,
+        255
+      ],
+      "background": [
+        26,
+        17,
+        19,
+        255
+      ],
+      "ratio": 5.712528033887183
+    },
+    {
+      "name": "editor",
+      "size": "desktop",
+      "selector": ".ed-preview-note",
+      "foreground": [
+        138,
+        146,
+        156,
+        255
+      ],
+      "background": [
+        25,
+        18,
+        7,
+        255
+      ],
+      "ratio": 5.8998319409008175
+    },
+    {
+      "name": "account",
+      "size": "desktop",
+      "selector": "h1",
+      "foreground": [
+        237,
+        239,
+        242,
+        255
+      ],
+      "background": [
+        7,
+        8,
+        10,
+        255
+      ],
+      "ratio": 17.392225742545474
+    },
+    {
+      "name": "account",
+      "size": "desktop",
+      "selector": ".state p",
+      "foreground": [
+        138,
+        146,
+        156,
+        255
+      ],
+      "background": [
+        26,
+        17,
+        19,
+        255
+      ],
+      "ratio": 5.886402071480525
+    },
+    {
+      "name": "account",
+      "size": "desktop",
+      "selector": ".state-head h3",
+      "foreground": [
+        255,
+        77,
+        94,
+        255
+      ],
+      "background": [
+        26,
+        17,
+        19,
+        255
+      ],
+      "ratio": 5.712528033887183
+    },
+    {
+      "name": "login",
+      "size": "desktop",
+      "selector": "h1",
+      "foreground": [
+        237,
+        239,
+        242,
+        255
+      ],
+      "background": [
+        7,
+        8,
+        10,
+        255
+      ],
+      "ratio": 17.392225742545474
+    },
+    {
+      "name": "login",
+      "size": "desktop",
+      "selector": ".state p",
+      "foreground": [
+        138,
+        146,
+        156,
+        255
+      ],
+      "background": [
+        26,
+        17,
+        19,
+        255
+      ],
+      "ratio": 5.886402071480525
+    },
+    {
+      "name": "login",
+      "size": "desktop",
+      "selector": ".state-head h2",
+      "foreground": [
+        255,
+        77,
+        94,
+        255
+      ],
+      "background": [
+        26,
+        17,
+        19,
+        255
+      ],
+      "ratio": 5.712528033887183
+    },
+    {
+      "name": "docs",
+      "size": "desktop",
+      "selector": "h1",
+      "foreground": [
+        237,
+        239,
+        242,
+        255
+      ],
+      "background": [
+        7,
+        8,
+        10,
+        255
+      ],
+      "ratio": 17.392225742545474
+    },
+    {
+      "name": "docs",
+      "size": "desktop",
+      "selector": ".docs-rail a",
+      "foreground": [
+        138,
+        146,
+        156,
+        255
+      ],
+      "background": [
+        7,
+        8,
+        10,
+        255
+      ],
+      "ratio": 6.365755392762551
+    },
+    {
+      "name": "docs",
+      "size": "desktop",
+      "selector": ".panel p",
+      "foreground": [
+        138,
+        146,
+        156,
+        255
+      ],
+      "background": [
+        13,
+        15,
+        18,
+        255
+      ],
+      "ratio": 6.097978230121539
+    },
+    {
+      "name": "landing",
+      "size": "mobile",
+      "selector": "h1",
+      "foreground": [
+        237,
+        239,
+        242,
+        255
+      ],
+      "background": [
+        7,
+        8,
+        10,
+        255
+      ],
+      "ratio": 17.392225742545474
+    },
+    {
+      "name": "landing",
+      "size": "mobile",
+      "selector": ".download-primary",
+      "foreground": [
+        7,
+        8,
+        10,
+        255
+      ],
+      "background": [
+        255,
+        107,
+        44,
+        255
+      ],
+      "ratio": 7.051896850105539
+    },
+    {
+      "name": "open",
+      "size": "mobile",
+      "selector": "h1",
+      "foreground": [
+        237,
+        239,
+        242,
+        255
+      ],
+      "background": [
+        7,
+        8,
+        10,
+        255
+      ],
+      "ratio": 17.392225742545474
+    },
+    {
+      "name": "open",
+      "size": "mobile",
+      "selector": ".state p",
+      "foreground": [
+        138,
+        146,
+        156,
+        255
+      ],
+      "background": [
+        13,
+        36,
+        34,
+        255
+      ],
+      "ratio": 5.162048023341347
+    },
+    {
+      "name": "open",
+      "size": "mobile",
+      "selector": ".state-head h3",
+      "foreground": [
+        94,
+        234,
+        212,
+        255
+      ],
+      "background": [
+        13,
+        36,
+        34,
+        255
+      ],
+      "ratio": 10.98264878551795
+    },
+    {
+      "name": "open",
+      "size": "mobile",
+      "selector": ".panel p",
+      "foreground": [
+        138,
+        146,
+        156,
+        255
+      ],
+      "background": [
+        13,
+        15,
+        18,
+        255
+      ],
+      "ratio": 6.097978230121539
+    },
+    {
+      "name": "editor",
+      "size": "mobile",
+      "selector": "h1",
+      "foreground": [
+        237,
+        239,
+        242,
+        255
+      ],
+      "background": [
+        7,
+        8,
+        10,
+        255
+      ],
+      "ratio": 17.392225742545474
+    },
+    {
+      "name": "editor",
+      "size": "mobile",
+      "selector": ".state p",
+      "foreground": [
+        138,
+        146,
+        156,
+        255
+      ],
+      "background": [
+        26,
+        17,
+        19,
+        255
+      ],
+      "ratio": 5.886402071480525
+    },
+    {
+      "name": "editor",
+      "size": "mobile",
+      "selector": ".state-head h3",
+      "foreground": [
+        255,
+        77,
+        94,
+        255
+      ],
+      "background": [
+        26,
+        17,
+        19,
+        255
+      ],
+      "ratio": 5.712528033887183
+    },
+    {
+      "name": "editor",
+      "size": "mobile",
+      "selector": ".ed-minimum p",
+      "foreground": [
+        138,
+        146,
+        156,
+        255
+      ],
+      "background": [
+        13,
+        15,
+        18,
+        255
+      ],
+      "ratio": 6.097978230121539
+    },
+    {
+      "name": "editor",
+      "size": "mobile",
+      "selector": ".ed-preview-note",
+      "foreground": [
+        138,
+        146,
+        156,
+        255
+      ],
+      "background": [
+        25,
+        18,
+        7,
+        255
+      ],
+      "ratio": 5.8998319409008175
+    },
+    {
+      "name": "account",
+      "size": "mobile",
+      "selector": "h1",
+      "foreground": [
+        237,
+        239,
+        242,
+        255
+      ],
+      "background": [
+        7,
+        8,
+        10,
+        255
+      ],
+      "ratio": 17.392225742545474
+    },
+    {
+      "name": "account",
+      "size": "mobile",
+      "selector": ".state p",
+      "foreground": [
+        138,
+        146,
+        156,
+        255
+      ],
+      "background": [
+        26,
+        17,
+        19,
+        255
+      ],
+      "ratio": 5.886402071480525
+    },
+    {
+      "name": "account",
+      "size": "mobile",
+      "selector": ".state-head h3",
+      "foreground": [
+        255,
+        77,
+        94,
+        255
+      ],
+      "background": [
+        26,
+        17,
+        19,
+        255
+      ],
+      "ratio": 5.712528033887183
+    },
+    {
+      "name": "login",
+      "size": "mobile",
+      "selector": "h1",
+      "foreground": [
+        237,
+        239,
+        242,
+        255
+      ],
+      "background": [
+        7,
+        8,
+        10,
+        255
+      ],
+      "ratio": 17.392225742545474
+    },
+    {
+      "name": "login",
+      "size": "mobile",
+      "selector": ".state p",
+      "foreground": [
+        138,
+        146,
+        156,
+        255
+      ],
+      "background": [
+        26,
+        17,
+        19,
+        255
+      ],
+      "ratio": 5.886402071480525
+    },
+    {
+      "name": "login",
+      "size": "mobile",
+      "selector": ".state-head h2",
+      "foreground": [
+        255,
+        77,
+        94,
+        255
+      ],
+      "background": [
+        26,
+        17,
+        19,
+        255
+      ],
+      "ratio": 5.712528033887183
+    },
+    {
+      "name": "docs",
+      "size": "mobile",
+      "selector": "h1",
+      "foreground": [
+        237,
+        239,
+        242,
+        255
+      ],
+      "background": [
+        7,
+        8,
+        10,
+        255
+      ],
+      "ratio": 17.392225742545474
+    },
+    {
+      "name": "docs",
+      "size": "mobile",
+      "selector": ".docs-rail a",
+      "foreground": [
+        138,
+        146,
+        156,
+        255
+      ],
+      "background": [
+        7,
+        8,
+        10,
+        255
+      ],
+      "ratio": 6.365755392762551
+    },
+    {
+      "name": "docs",
+      "size": "mobile",
+      "selector": ".panel p",
+      "foreground": [
+        138,
+        146,
+        156,
+        255
+      ],
+      "background": [
+        13,
+        15,
+        18,
+        255
+      ],
+      "ratio": 6.097978230121539
+    }
+  ],
+  "results": [
+    {
+      "name": "landing",
+      "size": "desktop",
+      "status": 200,
+      "errors": [],
+      "screenshots": {
+        "before": {
+          "path": "docs/audits/production-swarm/finish-visual-umbrella-before-landing-desktop.png",
+          "bytes": 428610,
+          "sha256": "823f8c01ec25f8d89a8a27b55fd97ea4eb9bb0a8ff8a69d37f4eef096f7ed5f3"
+        },
+        "after": {
+          "path": "docs/audits/production-swarm/finish-visual-umbrella-after-landing-desktop.png",
+          "bytes": 428610,
+          "sha256": "823f8c01ec25f8d89a8a27b55fd97ea4eb9bb0a8ff8a69d37f4eef096f7ed5f3"
+        }
+      },
+      "overflow": 0,
+      "gutter": "32px",
+      "masthead": 61,
+      "panels": [],
+      "h1": "Build scenes. Keep the source."
+    },
+    {
+      "name": "open",
+      "size": "desktop",
+      "status": 200,
+      "errors": [],
+      "screenshots": {
+        "before": {
+          "path": "docs/audits/production-swarm/finish-visual-umbrella-before-open-desktop.png",
+          "bytes": 376685,
+          "sha256": "4eb5132e293c7833ecd30b541e586853c822c369f4716f63452cc4a373223000"
+        },
+        "after": {
+          "path": "docs/audits/production-swarm/finish-visual-umbrella-after-open-desktop.png",
+          "bytes": 389475,
+          "sha256": "db6f71bcaef5f9e92d90ce80b10c235f050876a759bb1b8581a5071642a9247a"
+        }
+      },
+      "overflow": 0,
+      "gutter": "32px",
+      "masthead": 61,
+      "panels": [
+        {
+          "class": "page-head",
+          "rect": {
+            "x": 112,
+            "y": 133,
+            "width": 680,
+            "height": 248.296875,
+            "top": 133,
+            "right": 792,
+            "bottom": 381.296875,
+            "left": 112
+          }
+        }
+      ],
+      "h1": "Open a real SceneAxi artifact"
+    },
+    {
+      "name": "editor",
+      "size": "desktop",
+      "status": 200,
+      "errors": [],
+      "screenshots": {
+        "before": {
+          "path": "docs/audits/production-swarm/finish-visual-umbrella-before-editor-desktop.png",
+          "bytes": 233758,
+          "sha256": "44b7fd73fa10271ad94524db9e7c36b9dd3ecac4b93050c84a584227c3f58e27"
+        },
+        "after": {
+          "path": "docs/audits/production-swarm/finish-visual-umbrella-after-editor-desktop.png",
+          "bytes": 235868,
+          "sha256": "cff403ecd542a7551c7245ef75c5def61403521e3d94323bed243e993118b804"
+        }
+      },
+      "overflow": 0,
+      "gutter": "32px",
+      "masthead": 0,
+      "panels": [
+        {
+          "class": "ed-overlay-notes",
+          "rect": {
+            "x": 380,
+            "y": 650.5625,
+            "width": 680,
+            "height": 311.4375,
+            "top": 650.5625,
+            "right": 1060,
+            "bottom": 962,
+            "left": 380
+          }
+        },
+        {
+          "class": "ed-minimum",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          }
+        }
+      ],
+      "h1": "SceneAxi Engine Desktop editor"
+    },
+    {
+      "name": "account",
+      "size": "desktop",
+      "status": 200,
+      "errors": [],
+      "screenshots": {
+        "before": {
+          "path": "docs/audits/production-swarm/finish-visual-umbrella-before-account-desktop.png",
+          "bytes": 197945,
+          "sha256": "d694263bb1bb951ba1afe71d4e1b559d2bb6d74f5f4bc4375b7347fda0d90acd"
+        },
+        "after": {
+          "path": "docs/audits/production-swarm/finish-visual-umbrella-after-account-desktop.png",
+          "bytes": 203233,
+          "sha256": "47c448be05b47c21d41e9e85fbf4f1fb6efe687e3ec0f02bfb4f1416d5a0add2"
+        }
+      },
+      "overflow": 0,
+      "gutter": "32px",
+      "masthead": 61,
+      "panels": [
+        {
+          "class": "page-head",
+          "rect": {
+            "x": 112,
+            "y": 133,
+            "width": 680,
+            "height": 222.265625,
+            "top": 133,
+            "right": 792,
+            "bottom": 355.265625,
+            "left": 112
+          }
+        }
+      ],
+      "h1": "Your SceneAxi account"
+    },
+    {
+      "name": "login",
+      "size": "desktop",
+      "status": 200,
+      "errors": [],
+      "screenshots": {
+        "before": {
+          "path": "docs/audits/production-swarm/finish-visual-umbrella-before-login-desktop.png",
+          "bytes": 95711,
+          "sha256": "27be0843428f2cc8486070a42070e1eaf081caf2c3e7613ed1eb5e0f6f922b6a"
+        },
+        "after": {
+          "path": "docs/audits/production-swarm/finish-visual-umbrella-after-login-desktop.png",
+          "bytes": 99385,
+          "sha256": "644370b04a545e6dc688c41c47bec633617189e84c454ebdb7200e05ade3104c"
+        }
+      },
+      "overflow": 0,
+      "gutter": "32px",
+      "masthead": 61,
+      "panels": [
+        {
+          "class": "page-head",
+          "rect": {
+            "x": 112,
+            "y": 133,
+            "width": 680,
+            "height": 144.15625,
+            "top": 133,
+            "right": 792,
+            "bottom": 277.15625,
+            "left": 112
+          }
+        }
+      ],
+      "h1": "Sign-in is not activated on this deployment"
+    },
+    {
+      "name": "docs",
+      "size": "desktop",
+      "status": 200,
+      "errors": [],
+      "screenshots": {
+        "before": {
+          "path": "docs/audits/production-swarm/finish-visual-umbrella-before-docs-desktop.png",
+          "bytes": 454129,
+          "sha256": "3eeec26e53790a33f9461b1348350476fc1a81defdb7072c9db429f88c7e5f08"
+        },
+        "after": {
+          "path": "docs/audits/production-swarm/finish-visual-umbrella-after-docs-desktop.png",
+          "bytes": 454305,
+          "sha256": "818772006d2e2d6a3d30927f49d228145bc2595aee63ee10d6a5da59ee04d2c1"
+        }
+      },
+      "overflow": 0,
+      "gutter": "32px",
+      "masthead": 61,
+      "panels": [
+        {
+          "class": "docs-rail",
+          "rect": {
+            "x": 112,
+            "y": 88,
+            "width": 216,
+            "height": 574.6875,
+            "top": 88,
+            "right": 328,
+            "bottom": 662.6875,
+            "left": 112
+          }
+        },
+        {
+          "class": "docs-main",
+          "rect": {
+            "x": 360,
+            "y": 61,
+            "width": 760,
+            "height": 3186.375,
+            "top": 61,
+            "right": 1120,
+            "bottom": 3247.375,
+            "left": 360
+          }
+        }
+      ],
+      "h1": "SceneAxi help"
+    },
+    {
+      "name": "landing",
+      "size": "mobile",
+      "status": 200,
+      "errors": [],
+      "screenshots": {
+        "before": {
+          "path": "docs/audits/production-swarm/finish-visual-umbrella-before-landing-mobile.png",
+          "bytes": 272557,
+          "sha256": "b85ac8c9d1669c0f3766ee40e38cbe4f7de697af9e24d7ca7da02f733507d9f6"
+        },
+        "after": {
+          "path": "docs/audits/production-swarm/finish-visual-umbrella-after-landing-mobile.png",
+          "bytes": 278239,
+          "sha256": "c9b3e0cbf27d5b143f8950bb24d757bd8d71322bfb6d1de0e4ac8df785893f95"
+        }
+      },
+      "overflow": 0,
+      "gutter": "20px",
+      "masthead": 155,
+      "panels": [],
+      "h1": "Build scenes. Keep the source."
+    },
+    {
+      "name": "open",
+      "size": "mobile",
+      "status": 200,
+      "errors": [],
+      "screenshots": {
+        "before": {
+          "path": "docs/audits/production-swarm/finish-visual-umbrella-before-open-mobile.png",
+          "bytes": 276974,
+          "sha256": "c2325100089f6f80a79e2e78ba3c4a6528c682ce73b84048575eff2f949c9070"
+        },
+        "after": {
+          "path": "docs/audits/production-swarm/finish-visual-umbrella-after-open-mobile.png",
+          "bytes": 300357,
+          "sha256": "b9163744b93bd042550b62993a3b0b08ed3175432f7714e0ca6f35e4c769e404"
+        }
+      },
+      "overflow": 0,
+      "gutter": "20px",
+      "masthead": 155,
+      "panels": [
+        {
+          "class": "page-head",
+          "rect": {
+            "x": 20,
+            "y": 195,
+            "width": 350,
+            "height": 271.109375,
+            "top": 195,
+            "right": 370,
+            "bottom": 466.109375,
+            "left": 20
+          }
+        }
+      ],
+      "h1": "Open a real SceneAxi artifact"
+    },
+    {
+      "name": "editor",
+      "size": "mobile",
+      "status": 200,
+      "errors": [],
+      "screenshots": {
+        "before": {
+          "path": "docs/audits/production-swarm/finish-visual-umbrella-before-editor-mobile.png",
+          "bytes": 44249,
+          "sha256": "5a0f12692c9eb15b126cf2c3b1927df14023a4349400788cb6be8915a652b664"
+        },
+        "after": {
+          "path": "docs/audits/production-swarm/finish-visual-umbrella-after-editor-mobile.png",
+          "bytes": 53406,
+          "sha256": "1ee6ede6a3d737d54deda79a351e51b3d2e483dfb66e5d932d84b884afc07207"
+        }
+      },
+      "overflow": 0,
+      "gutter": "20px",
+      "masthead": 0,
+      "panels": [
+        {
+          "class": "ed-overlay-notes",
+          "rect": {
+            "x": 20,
+            "y": 185.1875,
+            "width": 350,
+            "height": 464.890625,
+            "top": 185.1875,
+            "right": 370,
+            "bottom": 650.078125,
+            "left": 20
+          }
+        },
+        {
+          "class": "ed-minimum",
+          "rect": {
+            "x": 20,
+            "y": 24,
+            "width": 350,
+            "height": 145.1875,
+            "top": 24,
+            "right": 370,
+            "bottom": 169.1875,
+            "left": 20
+          }
+        }
+      ],
+      "h1": "SceneAxi Engine Desktop editor"
+    },
+    {
+      "name": "account",
+      "size": "mobile",
+      "status": 200,
+      "errors": [],
+      "screenshots": {
+        "before": {
+          "path": "docs/audits/production-swarm/finish-visual-umbrella-before-account-mobile.png",
+          "bytes": 188750,
+          "sha256": "665fb13bf23cf0e825e694bb4aedbf802ebf9fc76db8f0244fbff8b805868114"
+        },
+        "after": {
+          "path": "docs/audits/production-swarm/finish-visual-umbrella-after-account-mobile.png",
+          "bytes": 191558,
+          "sha256": "45bc68c9523961f7af361929b7c6e8812daae1fb0945a3c78e406775457e5112"
+        }
+      },
+      "overflow": 0,
+      "gutter": "20px",
+      "masthead": 155,
+      "panels": [
+        {
+          "class": "page-head",
+          "rect": {
+            "x": 20,
+            "y": 195,
+            "width": 350,
+            "height": 299.15625,
+            "top": 195,
+            "right": 370,
+            "bottom": 494.15625,
+            "left": 20
+          }
+        }
+      ],
+      "h1": "Your SceneAxi account"
+    },
+    {
+      "name": "login",
+      "size": "mobile",
+      "status": 200,
+      "errors": [],
+      "screenshots": {
+        "before": {
+          "path": "docs/audits/production-swarm/finish-visual-umbrella-before-login-mobile.png",
+          "bytes": 88748,
+          "sha256": "577717160ca7f5327dbb819b650c433f32aa68d656563c527c8034267a85fb8f"
+        },
+        "after": {
+          "path": "docs/audits/production-swarm/finish-visual-umbrella-after-login-mobile.png",
+          "bytes": 91291,
+          "sha256": "5f0a77a57919a132b7778ad7d312899ab1ac45fffbb059aff9da0fc1017ce2f9"
+        }
+      },
+      "overflow": 0,
+      "gutter": "20px",
+      "masthead": 155,
+      "panels": [
+        {
+          "class": "page-head",
+          "rect": {
+            "x": 20,
+            "y": 195,
+            "width": 350,
+            "height": 148.3125,
+            "top": 195,
+            "right": 370,
+            "bottom": 343.3125,
+            "left": 20
+          }
+        }
+      ],
+      "h1": "Sign-in is not activated on this deployment"
+    },
+    {
+      "name": "docs",
+      "size": "mobile",
+      "status": 200,
+      "errors": [],
+      "screenshots": {
+        "before": {
+          "path": "docs/audits/production-swarm/finish-visual-umbrella-before-docs-mobile.png",
+          "bytes": 419691,
+          "sha256": "cf372569c692bbd70617ea5e111ddd0447edb98cab96abceaa9245d31aa39950"
+        },
+        "after": {
+          "path": "docs/audits/production-swarm/finish-visual-umbrella-after-docs-mobile.png",
+          "bytes": 428969,
+          "sha256": "618dab073348762336cd8306a0d0114c07dce31601bfea21fa31b5f3e5bf9286"
+        }
+      },
+      "overflow": 0,
+      "gutter": "20px",
+      "masthead": 155,
+      "panels": [
+        {
+          "class": "docs-rail",
+          "rect": {
+            "x": 20,
+            "y": 155,
+            "width": 350,
+            "height": 303.34375,
+            "top": 155,
+            "right": 370,
+            "bottom": 458.34375,
+            "left": 20
+          }
+        },
+        {
+          "class": "docs-main",
+          "rect": {
+            "x": 20,
+            "y": 458.34375,
+            "width": 350,
+            "height": 5153.71875,
+            "top": 458.34375,
+            "right": 370,
+            "bottom": 5612.0625,
+            "left": 20
+          }
+        }
+      ],
+      "h1": "SceneAxi help"
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "taskId": "catalog-query",
+  "status": "PASS_SCOPED",
+  "root": "/home/devuser/Documents/Projects/sceneaxi",
+  "head": "4e532e2fbf43e9948741578ab6208a3277870405",
+  "sourceFingerprint": "79d001afd1784d37946cd1214594e708f2c1c0205730ace7016d2b57c99eba02",
+  "targetFingerprints": {
+    "sites/catalog-game/src/app/page.tsx": "1c2e0d12cc0791b11dfc6d6730df2e02b037cc169c3a336f877644386af01ff4",
+    "sites/catalog-web/src/app/page.tsx": "4678f5b6de751070888cfda6aab396cfda9ba5e1d6e590c9e1d4692ae706a719",
+    "packages/site-kit/src/catalog.ts": "d8e396466bd3034ef8de58b2d66e797dd7842904f29302867e909bf4d9edabeb",
+    "packages/site-kit/src/site-search-params.ts": "a28ef9faac8c61731f1ab835d085d777f83c0aa52a96e3f3bfd51fece16bb9df"
+  },
+  "artifactsSha256": {
+    "probe.cjs": "0750b79fbbd48e7c10bf70e5d9e1dd77897c9a5b34c5c1eabddcf5e5b1a54ad1",
+    "deferred-acceptance.sh": "c78eeabd43cd8bc1fe0bab1fa37933179830b342b2e66a4e2d634a5428f6c5cb",
+    "evidence.json": "70717d60bc38fa21fc7bfee4a189cf093ff917aeebeb351f9ba59e3db59e9192",
+    "run.log": "b08c649624891400dead3cdc4ea8db63abc28f96e46a54bbc914834fedb64d16"
+  },
+  "executed": {
+    "command": "node docs/audits/production-swarm/capacity-work-2026-10-02/catalog-query/probe.cjs",
+    "exit": 0,
+    "cases": 50,
+    "successfulAssertions": 231,
+    "tieFixtureCases": 3,
+    "compileConsumers": 2,
+    "sourceDriftCheck": "all loaded source files unchanged during probe",
+          "retryVerification": "Re-executed probe exit 0; sh -n deferred-acceptance.sh exit 0; deferred gate without token exit 78 as required. No full build or suite run."
+  },
+  "actualSubject": "Current source transpiled in memory, public site-kit barrel and default async page exports; actual installed React JSX runtime. No dist or Next HTTP runtime.",
+  "negativeControls": {
+    "runtime": "in-memory length bound 100 -> 100000: expected refusal assertion FAIL, Missing expected exception. Control PASS.",
+    "compile": "restore mutable string[] guard: exactly 3 TS2345 per catalog; 6 total. Control PASS.",
+        "deferredGate": "env -u CATALOG_SERIAL_HANDOFF sh deferred-acceptance.sh: exit 78, REFUSED: stable source, fresh hashed catalog builds, existing dependencies and exclusive browser token required. Control PASS; no heavy step executed."
+  },
+  "reproducedRefuted": {
+    "readonlyGuardGap": "REFUTED on current source: SearchParams[string] guard already repaired; old 08-FINAL gap reproduced only by controlled in-memory negative mutation.",
+    "querySemantics": "50 exact helper+default-page observations pass including frozen singleton/duplicate/empty arrays refusal, 100/101/4096 bounds, filters, sorts and empty UI.",
+    "tieSemantics": "public helper with schema-validated bundled-data override confirms inventory preservation and item-ID tie-break; not original fixture claim."
+  },
+  "patchProposal": null,
+  "handoff": "Preserve current isSearchText(value: SearchParams[string]): value is string at both pages line15. Integrate reusable probe after explicit serial handoff; no new product fix justified.",
+  "deferred": [
+    "Both full owning site typechecks",
+    "Fresh production builds and artifact hash capture",
+    "Actual rebuilt Next HTTP/browser query submission/duplicate parsing/clear filters acceptance via deferred-acceptance.sh; requires stable rebuilt all four sites and exclusive token"
+  ],
+  "initialHarnessFailure": {
+    "command": "node .../catalog-query/probe.cjs",
+    "exit": 1,
+    "output": "MODULE_NOT_FOUND /home/devuser/Documents/Projects/node_modules/typescript; corrected auxiliary root path from six ancestors to five, rerun exit0"
+  },
+  "resourcesCleaned": "No temporary fixtures, services, ports or children created. TypeScript consumers and mutations are memory-only.",
+  "sourceWrites": false,
+  "distUsed": false,
+  "fullReviewClaim": false
+}

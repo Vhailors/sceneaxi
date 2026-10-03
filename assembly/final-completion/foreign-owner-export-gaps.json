@@ -1,0 +1,24 @@
+{
+  "status": "OWNER_EXPORT_REQUIRED_NOT_CAPTURED",
+  "source": "private recovery/worktree-metadata.txt",
+  "physicalWorktreesTouched": false,
+  "gaps": [
+    {
+      "worktree": "/home/devuser/.bb-machines/dhajczuk-thinkpad-t16-gen-3.tailf6721c.ts.net/plugins/environment-git-worktree/host-data/worktrees/thr_7svfbah827-1/sceneaxi",
+      "capturedCommittedHead": "1e5ea6043946afbdddeac049ee01d7019dceec03",
+      "ownerBranch": "bb/luna-repository-sceneaxi-sceneaxi-monorepo-read-thr_7svfbah827",
+      "uncaptured": "All uncommitted and ignored files, owner-approved export required"
+    },
+    {
+      "worktree": "/home/devuser/.bb-machines/dhajczuk-thinkpad-t16-gen-3.tailf6721c.ts.net/plugins/environment-git-worktree/host-data/worktrees/thr_cgpu4vbkib-1/sceneaxi",
+      "capturedCommittedHead": "45866fc43f1d45920bbbfc32274685d61cf061c9",
+      "ownerBranch": "bb/opus-go-live-loop-2-for-sceneaxi-the-previous-lo-thr_cgpu4vbkib",
+      "uncaptured": "All uncommitted and ignored files, owner-approved export required"
+    },
+    {
+      "worktree": "Original shared source",
+      "capturedCommittedHead": "4e532e2fbf43e9948741578ab6208a3277870405",
+      "uncaptured": "Ignored files only; tracked/untracked captured privately, original1511dirtyrows untouched"
+    }
+  ]
+}

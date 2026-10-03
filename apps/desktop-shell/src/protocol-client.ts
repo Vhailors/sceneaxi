@@ -82,6 +82,7 @@ export type ShellRoundTripResult =
  */
 export function renderDiffForInspector(unifiedDiff: string): string {
   const body = unifiedDiff.trimEnd();
+
   return [
     "=== SceneAxi inspector — proposed change (review before accept) ===",
     body,
@@ -92,10 +93,13 @@ export function renderDiffForInspector(unifiedDiff: string): string {
 /** Propose via authoring-core (desktop face of the same protocol). */
 export function shellPropose(input: ShellEditInput): ShellProposeResult {
   const result = propose(toProposeInput(input));
+
   if (!result.ok) {
     return { ok: false, diagnostics: result.diagnostics, renderedDiff: null };
   }
+
   const actualContentHash = result.proposal.edits[0]?.baseContentHash;
+
   if (
     input.expectedContentHash !== undefined &&
     actualContentHash !== input.expectedContentHash
@@ -113,6 +117,7 @@ export function shellPropose(input: ShellEditInput): ShellProposeResult {
       renderedDiff: null,
     };
   }
+
   return {
     ok: true,
     proposal: result.proposal,
@@ -133,12 +138,13 @@ export function shellProposeAndApply(
   input: ShellEditInput,
 ): ShellRoundTripResult {
   const proposed = shellPropose(input);
+
   if (!proposed.ok) return proposed;
 
-  const applied = apply({
-    proposal: proposed.proposal,
-    ...(input.cwd !== undefined ? { cwd: input.cwd } : {}),
-  });
+  const applyInput: MutableOwnerFields<ApplyInput> = { proposal: proposed.proposal };
+
+  if (input.cwd !== undefined) applyInput.cwd = input.cwd;
+  const applied = apply(applyInput);
 
   if (applied.applicationState === "indeterminate") {
     return {
@@ -161,26 +167,31 @@ export function shellProposeAndApply(
     };
   }
 
-  return {
+  const result: MutableOwnerFields<ShellRoundTripOk> = {
     ok: true,
     proposal: proposed.proposal,
     unifiedDiff: proposed.unifiedDiff,
     renderedDiff: proposed.renderedDiff,
     appliedPaths: applied.appliedPaths,
     transactionId: applied.transactionId,
-    ...(applied.journalRecoveryPending === true
-      ? {
-          journalRecoveryPending: true,
-        }
-      : {}),
   };
+
+  if (applied.journalRecoveryPending === true) result.journalRecoveryPending = true;
+
+  return result;
 }
 
 function toProposeInput(input: ShellEditInput): ProposeInput {
-  return {
+  const result: MutableOwnerFields<ProposeInput> = {
     documentPath: input.documentPath,
     jsonPointer: input.jsonPointer,
     newValue: input.newValue,
-    ...(input.cwd !== undefined ? { cwd: input.cwd } : {}),
   };
+
+  if (input.cwd !== undefined) result.cwd = input.cwd;
+
+  return result;
 }
+
+/** Mutable request builders preserve each owner-defined property type. */
+type MutableOwnerFields<Owner> = { -readonly [Key in keyof Owner]: Owner[Key] };

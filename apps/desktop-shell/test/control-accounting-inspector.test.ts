@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import { DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS } from "@sceneaxi/schemas";
-import { CONTROL_STATES, regionControls } from "../../../tests/helpers/desktop-chrome-golden.js";
+import { CONTROL_STATES, regionControls } from "./helpers/desktop-chrome-golden.js";
 
 it("pins inspector inputs, selects, and catalog textareas", () => {
   for (const [label, state] of CONTROL_STATES) {

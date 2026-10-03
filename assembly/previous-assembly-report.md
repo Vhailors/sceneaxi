@@ -1,0 +1,11 @@
+# Private native comprehensive assembly
+
+**MERGE_IN_PROGRESS — assembled source, NOT a frozen/accepted commit.**
+
+- Owned branch `assembly/comprehensive-private-bg150`, clone `/tmp/sceneaxi-comprehensive-owned-xd4gdfl1`, current-main base `c202bfcbf3e93f5414596e7fc0fbec5d51d82a16` verified live. Primary repository and foreign worktrees untouched; no push/protection/admin action.
+- All34 captured refs/30tips copied into owned `refs/captured/*` before assembly; backup three SHA256 hashes verified. Full provenance: `semantic-matrix.json`.
+- Actual2333 approved source/test/docs/visual working paths reconstructed and rebased from private backup over4e532e2. Native snapshot tree `3f25ffea22f19d01ef9a484f317d8b8ca4cde397` is NOT a commit/candidate freeze. 1057 regular untracked files explicitly manifested,62 metadata/artifact-extension members excluded and preserved in private archive. No captured link dereferenced.
+- Normal native foundation merge initiated;105 unmerged index paths remain explicit. Fifteen main/private source conflicts assigned or pending. No blanket ours/theirs and no history-only closure. `source-assembly-manifest.json`, `private-source-conflicts.json`, `native-unfinished-conflicts.json` contain exact stages/blobs/modes/dispositions.
+- Four disjoint child ownership manifests reserved; parent never edits those paths before handback. Maintenance54 actual missing source/media paths assigned, not ignored. Root package preserves modern gate/tests/pnpm and unions security script/pins; SDK source/contract additions unioned.
+- Checks: frozen root install0; boundaries0; contracts0; traceability **FAIL34**; security-delivery **3pass5fail** (four independent site installs missing, SDK pin repair in progress); build **FAIL2** (schema v2 discriminants, audio public exports, prepared importer APIs, shared test rootDir). Full logs saved. No final full gate or published CI run.
+- Legacy family352 feature/87path acceptance rows remain pending until actual compatible ports/tests/accepted supersession. Uncaptured foreign uncommitted/ignored work still OWNER_EXPORT_REQUIRED, captured own backup is reconstructed and not blocked by old owner placeholders. Current authority remains canonical; historical proof/LLM/Kids/deploy code/data NOT autorun.

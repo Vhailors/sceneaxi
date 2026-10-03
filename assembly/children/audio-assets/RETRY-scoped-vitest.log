@@ -1,0 +1,24 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/tmp/sceneaxi-comprehensive-owned-xd4gdfl1[39m
+
+ [32m✓[39m packages/engine-presentation/test/legacy-audio-compat.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 34[2mms[22m[39m
+ [32m✓[39m packages/engine-presentation/test/audio-playback.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 52[2mms[22m[39m
+ [32m✓[39m packages/importers/test/legacy-asset-v1.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 464[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/audio-lifecycle-compat.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 220[2mms[22m[39m
+ [32m✓[39m tests/e2e/asset-pipeline-golden.test.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 1306[2mms[22m[39m
+     [33m[2m✓[22m[39m admits every required family with deterministic validation, preview, provenance, and contained copies [33m 633[2mms[22m[39m
+[90mstdout[2m | packages/importers/test/contained-gltf.test.ts[2m > [22m[2mAP-08 reparses16x8MiB canonical binary bytes and refuses the seventeenth asset
+[22m[39m{"task":"AP-PERF","case":"16x8MiB-and-count17","durationMs":5848,"maxRssKiB":839528,"platform":"linux","arch":"x64"}
+
+[90mstdout[2m | packages/importers/test/contained-gltf.test.ts[2m > [22m[2mAP-PERF admits250000 triangles and refuses250001 deterministically
+[22m[39m{"task":"AP-PERF","case":"triangles250000-and250001","durationMs":434,"maxRssKiB":839528,"platform":"linux","arch":"x64"}
+
+ [32m✓[39m packages/importers/test/contained-gltf.test.ts [2m([22m[2m18 tests[22m[2m)[22m[33m 7794[2mms[22m[39m
+   [33m[2m✓[22m[39m AP-08 reparses16x8MiB canonical binary bytes and refuses the seventeenth asset [33m 5855[2mms[22m[39m
+   [33m[2m✓[22m[39m AP-PERF admits250000 triangles and refuses250001 deterministically [33m 440[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m6 passed[39m[22m[90m (6)[39m
+[2m      Tests [22m [1m[32m49 passed[39m[22m[90m (49)[39m
+[2m   Start at [22m 12:00:30
+[2m   Duration [22m 11.04s[2m (transform 16.44s, setup 0ms, import 21.45s, tests 9.87s, environment 1ms)[22m
+

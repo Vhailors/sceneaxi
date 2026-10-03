@@ -155,23 +155,24 @@ describe("SA-PAY-1 credit-pack purchase presentation", () => {
   });
 
   it("uses browser redirects for named checkout refusals and requires a stable attempt token", () => {
-    const route = readFileSync(
-      new URL("../../sites/umbrella/src/app/api/checkout/route.ts", import.meta.url),
-      "utf8",
-    );
-
-    expect(route).toContain("readSiteMutationRequestSignals(request)");
-    expect(route).toContain("verifyLoginRequestOrigin(process.env, signals.formOrigin)");
-    expect(route).toContain('request.headers.get("accept")?.includes("application/json")');
-    // Named refusals redirect 303 to a same-site relative path carrying the reason.
-    expect(route).toContain("status: 303");
-    expect(route).toContain("new URLSearchParams(signedOut ? { next: \"/pricing\", reason } : { reason })");
-    expect(route).toContain("IDENTITY_SESSION_ABSENT");
-    expect(route).toContain("BILLING_CHECKOUT_REQUEST_INVALID");
-    expect(route).not.toContain("crypto.randomUUID");
-    expect(route).toContain("?checkout=success");
-    expect(route).toContain("?checkout=cancelled");
-  });
+      const route = readFileSync(new URL("../../sites/umbrella/src/app/api/checkout/route.ts", import.meta.url), "utf8");
+      const handler = readFileSync(new URL("../../sites/umbrella/src/app/api/checkout/checkout-handler.ts", import.meta.url), "utf8");
+      expect(route).toContain('import { createCheckoutHandler } from "./checkout-handler.js"');
+      expect(route).toContain("const checkout = createCheckoutHandler({");
+      expect(route).toContain("return checkout(request)");
+      expect(route).toContain("readRequestSignals: readSiteMutationRequestSignals");
+      expect(route).toContain("environment: () => process.env");
+      expect(route).toContain("plane: (sessionToken) => umbrellaRequestAuthority().plane({ sessionToken })");
+      expect(handler).toContain("verifyLoginRequestOrigin(dependencies.environment(), signals.formOrigin)");
+      expect(handler).toContain('request.headers.get("accept")?.includes("application/json")');
+      expect(handler).toContain("status: 303");
+      expect(handler).toContain('new URLSearchParams(signedOut ? { next: "/pricing", reason } : { reason })');
+      expect(handler).toContain("IDENTITY_SESSION_ABSENT");
+      expect(handler).toContain("BILLING_CHECKOUT_REQUEST_INVALID");
+      expect(route + handler).not.toContain("crypto.randomUUID");
+      expect(handler).toContain("?checkout=success");
+      expect(handler).toContain("?checkout=cancelled");
+    });
 
   it("shows payment return states without claiming an unconfirmed ledger grant", () => {
     const pricing = readFileSync(
@@ -184,7 +185,8 @@ describe("SA-PAY-1 credit-pack purchase presentation", () => {
       "utf8",
     );
 
-    expect(account).toContain("Payment received. Credits appear once confirmed in your ledger.");
+    expect(account).toContain("This return link is not proof of payment.");
+    expect(account).not.toContain("Payment received.");
     expect(pricing).toContain("No payment was completed. No credits were added.");
     expect(pricing).not.toContain('title="Billing mode"');
     expect(pricing).not.toContain('term: "Checkout"');

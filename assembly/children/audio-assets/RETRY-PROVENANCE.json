@@ -1,0 +1,443 @@
+{
+  "owner": "bg-152",
+  "featureSources": {
+    "EF-ASSET": "62e84cbee60471bd2cdd5f2e0e26a8c45f598928",
+    "EF-AUDIO-LIFECYCLE": "db8afa68c18e46b426e0c9ac2a846fc8a7d3fdba",
+    "EF-AUDIO-API": [
+      "db8afa68c18e46b426e0c9ac2a846fc8a7d3fdba",
+      "346933c105305224d575bf9319256301c1eeabfa"
+    ],
+    "PR310-desktop-scene": "fed05a766f1277b23ebf1757022067837d00621e"
+  },
+  "files": [
+    {
+      "path": "packages/engine-presentation/src/audio-playback.ts",
+      "currentSHA256": "9e526b2391eda8bfeb9f71c96b5bce297fb4dbdaed03efa9c61429a093710cf6",
+      "currentBlob": "485951c4603d58572b3b5299067f86c0f3e2f42c",
+      "currentMode": "100644",
+      "sourceVersions": {
+        "base": {
+          "sourceSHA": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+          "mode": "100644",
+          "blob": "a2d70fae1006864f8a165222953265f84415323c"
+        },
+        "approvedSnapshot": {
+          "sourceSHA": "3f25ffea22f19d01ef9a484f317d8b8ca4cde397",
+          "mode": "100644",
+          "blob": "6efa9f356834bd670dcb52dbed2e98362758044b"
+        },
+        "legacyAudio": {
+          "sourceSHA": "db8afa68c18e46b426e0c9ac2a846fc8a7d3fdba",
+          "mode": "100644",
+          "blob": "262e6269a31743913bf1bb2d1fbcdb525304d17b"
+        },
+        "assetV2": {
+          "sourceSHA": "62e84cbee60471bd2cdd5f2e0e26a8c45f598928",
+          "present": false
+        },
+        "strictAudio": {
+          "sourceSHA": "346933c105305224d575bf9319256301c1eeabfa",
+          "mode": "100644",
+          "blob": "a4c613d00172bb2a9513f4e4bec6bdd502dc7439"
+        },
+        "frozenPR310": {
+          "sourceSHA": "fed05a766f1277b23ebf1757022067837d00621e",
+          "present": false
+        }
+      }
+    },
+    {
+      "path": "packages/engine-presentation/src/index.ts",
+      "currentSHA256": "86e74386e4aea2dd9e8836e0124b6ae3ececead29d7a5c43d15af09f19c4a1c6",
+      "currentBlob": "3c77aa4ef3082647a782c008e5813388e3f610bc",
+      "currentMode": "100644",
+      "sourceVersions": {
+        "base": {
+          "sourceSHA": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+          "mode": "100644",
+          "blob": "ef10ad62cf2f5893dbac01119e663c14091505c8"
+        },
+        "approvedSnapshot": {
+          "sourceSHA": "3f25ffea22f19d01ef9a484f317d8b8ca4cde397",
+          "mode": "100644",
+          "blob": "050e863c97c5c6756fe38b2d582011de59e006c3"
+        },
+        "legacyAudio": {
+          "sourceSHA": "db8afa68c18e46b426e0c9ac2a846fc8a7d3fdba",
+          "mode": "100644",
+          "blob": "f042098a370b605371575935206a8687acdefecd"
+        },
+        "assetV2": {
+          "sourceSHA": "62e84cbee60471bd2cdd5f2e0e26a8c45f598928",
+          "mode": "100644",
+          "blob": "16fc5b850fe94e923c176b863290af212fea53e4"
+        },
+        "strictAudio": {
+          "sourceSHA": "346933c105305224d575bf9319256301c1eeabfa",
+          "mode": "100644",
+          "blob": "268f2359301790cf92914936a4b845046b4e70d9"
+        },
+        "frozenPR310": {
+          "sourceSHA": "fed05a766f1277b23ebf1757022067837d00621e",
+          "mode": "100644",
+          "blob": "33fd9317c58df8386bc30a414365a9e689996268"
+        }
+      }
+    },
+    {
+      "path": "packages/engine-presentation/test/audio-playback.test.ts",
+      "currentSHA256": "1ead8a56fd0eccd3e283e4d99ea58d121d209f69191ab89cf0e09c1408f0f2c4",
+      "currentBlob": "d98676b436266bba52a97fef32a85794345a88ee",
+      "currentMode": "100644",
+      "sourceVersions": {
+        "base": {
+          "sourceSHA": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+          "present": false
+        },
+        "approvedSnapshot": {
+          "sourceSHA": "3f25ffea22f19d01ef9a484f317d8b8ca4cde397",
+          "mode": "100644",
+          "blob": "a09d887f6cdff1416fe8c82c43af702587eb3088"
+        },
+        "legacyAudio": {
+          "sourceSHA": "db8afa68c18e46b426e0c9ac2a846fc8a7d3fdba",
+          "mode": "100644",
+          "blob": "f17dbe6e83c2bce4c1ab95ff8111821263227dc8"
+        },
+        "assetV2": {
+          "sourceSHA": "62e84cbee60471bd2cdd5f2e0e26a8c45f598928",
+          "present": false
+        },
+        "strictAudio": {
+          "sourceSHA": "346933c105305224d575bf9319256301c1eeabfa",
+          "mode": "100644",
+          "blob": "ed6307aaaf323c4e120870bc480a404778434692"
+        },
+        "frozenPR310": {
+          "sourceSHA": "fed05a766f1277b23ebf1757022067837d00621e",
+          "present": false
+        }
+      }
+    },
+    {
+      "path": "packages/engine-presentation/test/legacy-audio-compat.test.ts",
+      "currentSHA256": "7fb0128fbaa0a496de4f31e45434e387152b0f89b6bee20bf2a88377102ffde0",
+      "currentBlob": "c7aec4fc23febd94f8129a2830261f202d5e4fa0",
+      "currentMode": "100644",
+      "sourceVersions": {
+        "base": {
+          "sourceSHA": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+          "present": false
+        },
+        "approvedSnapshot": {
+          "sourceSHA": "3f25ffea22f19d01ef9a484f317d8b8ca4cde397",
+          "present": false
+        },
+        "legacyAudio": {
+          "sourceSHA": "db8afa68c18e46b426e0c9ac2a846fc8a7d3fdba",
+          "present": false
+        },
+        "assetV2": {
+          "sourceSHA": "62e84cbee60471bd2cdd5f2e0e26a8c45f598928",
+          "present": false
+        },
+        "strictAudio": {
+          "sourceSHA": "346933c105305224d575bf9319256301c1eeabfa",
+          "present": false
+        },
+        "frozenPR310": {
+          "sourceSHA": "fed05a766f1277b23ebf1757022067837d00621e",
+          "present": false
+        }
+      }
+    },
+    {
+      "path": "desktop/linux/src/renderer/viewport.ts",
+      "currentSHA256": "fd1a312f86bab166f46fcb3c434b253ff061406f15ca98dfd03def23e04ed85a",
+      "currentBlob": "36b517c321d250d490e4e0918eee75aee497e48b",
+      "currentMode": "100644",
+      "sourceVersions": {
+        "base": {
+          "sourceSHA": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+          "mode": "100644",
+          "blob": "7911c4cec1337e516373a62fcde19905754e62bb"
+        },
+        "approvedSnapshot": {
+          "sourceSHA": "3f25ffea22f19d01ef9a484f317d8b8ca4cde397",
+          "mode": "100644",
+          "blob": "51ac081cc414db63758dd017ceed09249566430a"
+        },
+        "legacyAudio": {
+          "sourceSHA": "db8afa68c18e46b426e0c9ac2a846fc8a7d3fdba",
+          "mode": "100644",
+          "blob": "76b600c9a1b9f8f9f7e110cdbf17d71898f081e2"
+        },
+        "assetV2": {
+          "sourceSHA": "62e84cbee60471bd2cdd5f2e0e26a8c45f598928",
+          "mode": "100644",
+          "blob": "7d2df4216b19ca9dd8d79f4d161de34e94d6d86d"
+        },
+        "strictAudio": {
+          "sourceSHA": "346933c105305224d575bf9319256301c1eeabfa",
+          "mode": "100644",
+          "blob": "677a47a038b13af1008f12eadb0ad7ebd157a2f6"
+        },
+        "frozenPR310": {
+          "sourceSHA": "fed05a766f1277b23ebf1757022067837d00621e",
+          "mode": "100644",
+          "blob": "ba5a378d57d0b8149accd2a5bb197c673d48c6c9"
+        }
+      }
+    },
+    {
+      "path": "desktop/linux/src/renderer/features/audio-playback.ts",
+      "currentSHA256": "f17b639acd8cea725c5aee957c97129db91f5135e5c3ce89d77e0ea9a4f3a504",
+      "currentBlob": "b6c5717532d99c943167433138a9dd0bf7d16fc1",
+      "currentMode": "100644",
+      "sourceVersions": {
+        "base": {
+          "sourceSHA": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+          "present": false
+        },
+        "approvedSnapshot": {
+          "sourceSHA": "3f25ffea22f19d01ef9a484f317d8b8ca4cde397",
+          "present": false
+        },
+        "legacyAudio": {
+          "sourceSHA": "db8afa68c18e46b426e0c9ac2a846fc8a7d3fdba",
+          "present": false
+        },
+        "assetV2": {
+          "sourceSHA": "62e84cbee60471bd2cdd5f2e0e26a8c45f598928",
+          "present": false
+        },
+        "strictAudio": {
+          "sourceSHA": "346933c105305224d575bf9319256301c1eeabfa",
+          "present": false
+        },
+        "frozenPR310": {
+          "sourceSHA": "fed05a766f1277b23ebf1757022067837d00621e",
+          "present": false
+        }
+      }
+    },
+    {
+      "path": "desktop/linux/src/lib/desktop-scene.ts",
+      "currentSHA256": "694f2f6b24441deebe4ffc5cf8e076ca87f91f4ba52420b265aa87ec2009feab",
+      "currentBlob": "b965bb5d9524e657d215d2d7589c8ccdb6bc5ec3",
+      "currentMode": "100644",
+      "sourceVersions": {
+        "base": {
+          "sourceSHA": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+          "mode": "100644",
+          "blob": "b08ae9c79ae2012ad42e7eb6bb2caa3a837455f9"
+        },
+        "approvedSnapshot": {
+          "sourceSHA": "3f25ffea22f19d01ef9a484f317d8b8ca4cde397",
+          "mode": "100644",
+          "blob": "a095f3fb514216d3ced0147b656e9b954b815a1b"
+        },
+        "legacyAudio": {
+          "sourceSHA": "db8afa68c18e46b426e0c9ac2a846fc8a7d3fdba",
+          "mode": "100644",
+          "blob": "a1326d2706fdd615190340a5c5c4fc808ae9ddf2"
+        },
+        "assetV2": {
+          "sourceSHA": "62e84cbee60471bd2cdd5f2e0e26a8c45f598928",
+          "mode": "100644",
+          "blob": "4c95c26a02aea5c9d1873f36f962779ca2c041b1"
+        },
+        "strictAudio": {
+          "sourceSHA": "346933c105305224d575bf9319256301c1eeabfa",
+          "mode": "100644",
+          "blob": "9702eace65a1b6d3635ebb42b34643619efe7591"
+        },
+        "frozenPR310": {
+          "sourceSHA": "fed05a766f1277b23ebf1757022067837d00621e",
+          "mode": "100644",
+          "blob": "855bae2fa8e5fc333abd50e14779baab5ac2130d"
+        }
+      }
+    },
+    {
+      "path": "desktop/linux/test/audio-lifecycle-compat.test.ts",
+      "currentSHA256": "ecfad22827d71e96b20fa93293fb3e73b0939f678322e6c5de69065cd27808d3",
+      "currentBlob": "5544f3a920ca6e8aa7f7c00385dfd32c16bba09a",
+      "currentMode": "100644",
+      "sourceVersions": {
+        "base": {
+          "sourceSHA": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+          "present": false
+        },
+        "approvedSnapshot": {
+          "sourceSHA": "3f25ffea22f19d01ef9a484f317d8b8ca4cde397",
+          "present": false
+        },
+        "legacyAudio": {
+          "sourceSHA": "db8afa68c18e46b426e0c9ac2a846fc8a7d3fdba",
+          "present": false
+        },
+        "assetV2": {
+          "sourceSHA": "62e84cbee60471bd2cdd5f2e0e26a8c45f598928",
+          "present": false
+        },
+        "strictAudio": {
+          "sourceSHA": "346933c105305224d575bf9319256301c1eeabfa",
+          "present": false
+        },
+        "frozenPR310": {
+          "sourceSHA": "fed05a766f1277b23ebf1757022067837d00621e",
+          "present": false
+        }
+      }
+    },
+    {
+      "path": "packages/importers/src/contained-gltf.ts",
+      "currentSHA256": "173f17ff6e614f33b1a5707cbf288365b20de50fd742c0e3584ee4e88d408266",
+      "currentBlob": "f2c43d50281b2a6c51d43cf72cd4bbdd7ca447b9",
+      "currentMode": "100644",
+      "sourceVersions": {
+        "base": {
+          "sourceSHA": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+          "mode": "100644",
+          "blob": "548cd883744e3c32b08465321c32ffd6ce8dfb9f"
+        },
+        "approvedSnapshot": {
+          "sourceSHA": "3f25ffea22f19d01ef9a484f317d8b8ca4cde397",
+          "mode": "100644",
+          "blob": "1684d310f9570ad46943b3bc70727b8f4415d9b8"
+        },
+        "legacyAudio": {
+          "sourceSHA": "db8afa68c18e46b426e0c9ac2a846fc8a7d3fdba",
+          "mode": "100644",
+          "blob": "0b0dc49e69ebae81e54d3cb7e6073bde45f46f0e"
+        },
+        "assetV2": {
+          "sourceSHA": "62e84cbee60471bd2cdd5f2e0e26a8c45f598928",
+          "mode": "100644",
+          "blob": "0ffcfe08598142f7a72037f475b4f575fb1d6c71"
+        },
+        "strictAudio": {
+          "sourceSHA": "346933c105305224d575bf9319256301c1eeabfa",
+          "mode": "100644",
+          "blob": "0ece0f463334e9b5bf8af0e06a6252127e410975"
+        },
+        "frozenPR310": {
+          "sourceSHA": "fed05a766f1277b23ebf1757022067837d00621e",
+          "mode": "100644",
+          "blob": "9a669d305268ce3dad0a1d33466f4646e5c7e515"
+        }
+      }
+    },
+    {
+      "path": "packages/importers/src/index.ts",
+      "currentSHA256": "c51c0fe6b0d6155bd38f51040a377b87a2b8bf18f73b9b8334caa82a841ee827",
+      "currentBlob": "f316099f9cf17323af49d5fbfb5f60b19b746e43",
+      "currentMode": "100644",
+      "sourceVersions": {
+        "base": {
+          "sourceSHA": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+          "mode": "100644",
+          "blob": "5d87e3a6765273aea42be733b2ec5b87dd74b938"
+        },
+        "approvedSnapshot": {
+          "sourceSHA": "3f25ffea22f19d01ef9a484f317d8b8ca4cde397",
+          "mode": "100644",
+          "blob": "6492b058e854220ee515656dec8d118905f4d5e8"
+        },
+        "legacyAudio": {
+          "sourceSHA": "db8afa68c18e46b426e0c9ac2a846fc8a7d3fdba",
+          "mode": "100644",
+          "blob": "6c9453efae3bced65764c54535c7a49a671e9f00"
+        },
+        "assetV2": {
+          "sourceSHA": "62e84cbee60471bd2cdd5f2e0e26a8c45f598928",
+          "mode": "100644",
+          "blob": "6c9453efae3bced65764c54535c7a49a671e9f00"
+        },
+        "strictAudio": {
+          "sourceSHA": "346933c105305224d575bf9319256301c1eeabfa",
+          "mode": "100644",
+          "blob": "931b3b322614e5777a9b8bb8f74d4d3bff2644b9"
+        },
+        "frozenPR310": {
+          "sourceSHA": "fed05a766f1277b23ebf1757022067837d00621e",
+          "mode": "100644",
+          "blob": "6c9453efae3bced65764c54535c7a49a671e9f00"
+        }
+      }
+    },
+    {
+      "path": "packages/importers/test/legacy-asset-v1.test.ts",
+      "currentSHA256": "fe45e4cbdf9c3755f61c42511e5a8185eb309516664cd491d3c154217610f15f",
+      "currentBlob": "46839f606332d7887fb0aae235891c220d64042e",
+      "currentMode": "100644",
+      "sourceVersions": {
+        "base": {
+          "sourceSHA": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+          "present": false
+        },
+        "approvedSnapshot": {
+          "sourceSHA": "3f25ffea22f19d01ef9a484f317d8b8ca4cde397",
+          "present": false
+        },
+        "legacyAudio": {
+          "sourceSHA": "db8afa68c18e46b426e0c9ac2a846fc8a7d3fdba",
+          "present": false
+        },
+        "assetV2": {
+          "sourceSHA": "62e84cbee60471bd2cdd5f2e0e26a8c45f598928",
+          "present": false
+        },
+        "strictAudio": {
+          "sourceSHA": "346933c105305224d575bf9319256301c1eeabfa",
+          "present": false
+        },
+        "frozenPR310": {
+          "sourceSHA": "fed05a766f1277b23ebf1757022067837d00621e",
+          "present": false
+        }
+      }
+    },
+    {
+      "path": "tests/e2e/asset-pipeline-golden.test.ts",
+      "currentSHA256": "2f7fb0b823e3d3485cc1f07d4281e897f5d47418c703d2badac4b6471d774a5f",
+      "currentBlob": "ef19b6f7a0d74d1677720e17ce25000c38b9b266",
+      "currentMode": "100644",
+      "sourceVersions": {
+        "base": {
+          "sourceSHA": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+          "mode": "100644",
+          "blob": "dff4f5fd4cb412f488a63ffafe0227382a0bb97a"
+        },
+        "approvedSnapshot": {
+          "sourceSHA": "3f25ffea22f19d01ef9a484f317d8b8ca4cde397",
+          "mode": "100644",
+          "blob": "3b98f64c4f9b723d496ead56f78180329cc0ad63"
+        },
+        "legacyAudio": {
+          "sourceSHA": "db8afa68c18e46b426e0c9ac2a846fc8a7d3fdba",
+          "mode": "100644",
+          "blob": "1fd68db6b76822a9ddfddb07e88184d574992ec6"
+        },
+        "assetV2": {
+          "sourceSHA": "62e84cbee60471bd2cdd5f2e0e26a8c45f598928",
+          "mode": "100644",
+          "blob": "2bb1ae82a43694a78ec780bb647454f342b11df4"
+        },
+        "strictAudio": {
+          "sourceSHA": "346933c105305224d575bf9319256301c1eeabfa",
+          "mode": "100644",
+          "blob": "37bae0907965b4bffd8fbe0b8d49954decba06dc"
+        },
+        "frozenPR310": {
+          "sourceSHA": "fed05a766f1277b23ebf1757022067837d00621e",
+          "mode": "100644",
+          "blob": "37bae0907965b4bffd8fbe0b8d49954decba06dc"
+        }
+      }
+    }
+  ],
+  "gitIndexUnchangedByChild": true,
+  "resolution": "Functionwise compatible adapter and generation/profile fences; retain existing main importer hardening and canonical-byte v1-to-v2 migration; pre-existing frozen PR310 package refusal retained. Expanded hierarchy mutation handlers remain explicitly pending parent mutation149 pack after handback."
+}

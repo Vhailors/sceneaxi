@@ -1,0 +1,63 @@
+# Evidence preparation sidecar — proposal, not repair closure
+
+Run: `orun-3-09og` (`sceneaxi-repair-review-findings`). App root: `/home/devuser/Documents/Projects/sceneaxi`; controlplane: `/home/devuser/Documents/SceneAxi`. This scout owns only `evidence-preparation.md/json` in this directory. Research executed; all six child packets below are **PROPOSED**, not queued, instructed, acknowledged or dispatched. No implementation child, build, browser, install, publication or source edit was started. Independent Astra allocation approval and actual original-parent receipt are still required. Do not block original ready assignments on this proposal.
+
+## Observations and ownership
+
+Read graph, AGENTS, layout, current repair baseline, deep-review 08 and goal accounting. Graph confirms eight original leads. `repair-missing-capabilities` retains authoritative repair ledger/assignment writes, subject to triage handback; no evidence child writes there. Security-delivery exclusively owns manifests, locks, workflows and scripts even beneath another lane. Sites owns umbrella editor/ShellButton and designated visual tests; desktop-cli owns desktop and web shell. `integrate` owns serial full verification after fan-in; `publish` is sole publication owner after local judge PASS.
+
+Fresh read-only JSON enumeration found 113 original rows; exact-ID recursive lookup across current `finish-*.json` matches 60 and leaves 53 unmatched, agreeing with dated deep-review accounting. Recursive lookup is a discovery oracle, NOT authoritative outcome deduplication: AP-06 appears twice inside one report (row plus another reference). Machine report preserves all 53 missing IDs. Blank original acceptance is directly visible in remaining-local-113. Missing report is not absent implementation. `finish-visual-postpr.json` does not exist: correct files are `finish-visual-postpr-sites.json` and `finish-visual-postpr-desktop.json`.
+
+Current repair baseline is PREPARING. Dated PR head `346933c105305224d575bf9319256301c1eeabfa`, base `dd77cc9cb91d24091082e0c5bc20a130f0f51ffc`, 825 deletions and four lost executable modes are prior reviewer observations, not newly rechecked remote state. No current run-node dispatch/acknowledgement was inferred from graph membership or old bg findings.
+
+## One-level read-only child packets
+
+All commands run with cwd `/home/devuser/Documents/Projects/sceneaxi`. All children: Sol6.1 planners, no children of their own, max five minutes/ten commands; source and authoritative reports read-only; output is parent handback only unless parent allocates an exclusive new sidecar receipt path. Parent cannot write an allocated child receipt until explicit handback. Each receipt must include unique key below, producer identity, task IDs, exact input SHA-256, observation time, commands/exits, limitations and explicit handback. No generic DONE or production closure.
+
+### EVID-01 — original acceptance join (parent: repair-missing-capabilities)
+- IDs: all exact 113 `remaining-local-113.json#/rows/*/id`; GA-003, 08-05 goal-accounting implications. Symbols: `taskOutcomes`, `rows`, `acceptance`.
+- Inputs: `docs/audits/production-swarm/{remaining-local-113.json,MEGALIST.json,FINAL.json,finish-integration.json,finish-*.json}`; `deep-review-2026-10-02/{07-goal-accounting,08-FINAL}.json`; repair ledger and assignment files only when present.
+- Oracle/command: `python3 -c 'import json,pathlib; p=pathlib.Path("docs/audits/production-swarm"); r=json.loads((p/"remaining-local-113.json").read_text())["rows"]; print(len(r),len({x["id"] for x in r}),sum(not x.get("acceptance") for x in r))'`; enumerate actual top-level outcome arrays rather than treating recursive references or coverage IDs as additional completion.
+- Acceptance: 113 unique original rows each with exact owning report+JSON pointer, normative acceptance source or explicit missing acceptance, one primary lead, original/coverage/supplement distinction; report all 53 unmatched IDs without assigning false absence or closure.
+- Prerequisite: existing source files; authoritative ledger need not exist yet. Resources: metadata/JSON only. Exclusion: no ledger, assignments or original FINAL edits. Receipt: `orun-3-09og/EVID-01/v1`; handback solely to missing-capabilities, which decides ledger changes.
+
+### EVID-02 — complete immutable tree/mode inventory (parent: repair-security-delivery; consumer: integrate/publish)
+- IDs: 08-01, 08-02, GA-001; source-contract crosschecks DOPS-001..006 where ledger confirms relevance.
+- Inputs: exact base/head above; `packages/schemas/package.json`; `sites/umbrella/src/app/api/checkout/{route,checkout-handler}.ts`; `scripts/check-publish-ready.mjs` symbols `PUBLISH_PLAN`, `CHECK_IDS`; `scripts/workspace-dist-resolver.mjs`, `scripts/build-engine-sdk.mjs` (path existence must be checked, not presumed).
+- Commands: `git ls-tree -r -z dd77cc9cb91d24091082e0c5bc20a130f0f51ffc`; `git ls-tree -r -z 346933c105305224d575bf9319256301c1eeabfa`; `git diff --raw -z --no-renames dd77cc9cb91d24091082e0c5bc20a130f0f51ffc 346933c105305224d575bf9319256301c1eeabfa`; `git status --porcelain=v1 -z --untracked-files=all`. Parse NUL records, retaining path/blob/mode and explicit untracked candidates.
+- Acceptance: exhaustive immutable tree delta and mode manifest, every deletion routed for owner approval, missing imports/exports/checker inputs enumerated; no changed-only tree reconstruction. Moving worktree is labelled snapshot, not frozen candidate. Final equality awaits integrator frozen manifest.
+- Prerequisite: local Git objects; if missing, report unavailable without fetch/install. Resources: one lightweight Git reader. Exclusion: no Git writes, stage, repair or publish. Receipt `orun-3-09og/EVID-02/v1`; handback security-delivery, then serial integration/publication consumption.
+
+### EVID-03 — post-PR chronology and PNG validity (parent: repair-sites-accessibility; desktop-cli consumer)
+- IDs: GA-002, GA-004, 08-05; VD-03/04/05 are NOT satisfied by hashing PNGs.
+- Inputs: `docs/audits/production-swarm/{PR-EVIDENCE.md,finish-visual-postpr-sites.json,finish-visual-postpr-desktop.json,finish-visual-qa.md}`; exact screenshot/source paths referenced within those JSON files; `sites/{umbrella,catalog-game,catalog-web,kids}/src/app/globals.css`; `desktop/linux/src/chrome.ts`; `apps/web-shell/src/inspector-app.ts` (verify receipt paths rather than assuming these last two are capture inputs).
+- Commands: `git show -s --format='%H %aI %cI' 346933c105305224d575bf9319256301c1eeabfa`; `git diff --name-status a2e41fed1c6f16a19e2dfc2075efa282cab6a173 346933c105305224d575bf9319256301c1eeabfa`; Python standard-library hashlib/struct/datetime over declared receipt files, comparing SHA-256/bytes/PNG signature/IHDR and UTC-normalized timestamps; `git cat-file -e 346933c105305224d575bf9319256301c1eeabfa:<each-validated-receipt-path>`.
+- Acceptance: distinguish execution/capture/report/commit times; 23:53:32+02:00 = 21:53:32Z; loop site timestamps observed 21:46:40Z–22:11:07Z, after PR creation 21:40:09Z. Mark each capture source-bound/stale/unknown and included/missing at immutable head. Hash validity does not prove visual quality or current-source pixels. No recapture in this child.
+- Prerequisite: declared bytes available; source modifications invalidate currentness, not historical existence. Resource: stream file hashing, no browser/GPU. Exclusion: no original visual report edits. Receipt `orun-3-09og/EVID-03/v1`; sites parent reconciles desktop consumer acknowledgement.
+
+### EVID-04 — security/publish evidence matrix (parent: repair-security-delivery)
+- IDs: 08-01/03, GA-001, DOPS-001..006 subject to exact ledger attribution; sharp advisory remains unverified until official range receipt.
+- Inputs: `scripts/check-publish-ready.mjs:41,119` (`PUBLISH_PLAN`, `CHECK_IDS`), `.github/workflows/**`, all graph-owned manifests/locks; historical `finish-integration-audit-*.json`; deep-review `02-build-tests`/`06-runtime-containment` reports.
+- Commands: `git ls-files -z -- 'package.json' '**/package.json' '*lock*' '**/*lock*' '.github/workflows/*'`; read only scripts/check-publish-ready.mjs and JSON/YAML files; compare declared, lock and installed sharp/Next versions using file reads only (no package managers). Do not import/execute checker merely to extract exported constants.
+- Acceptance: each check ID maps to source enforcement and exact candidate/PR inclusion; advisory row retains package/version/range/provenance/reachable path, unknown when unavailable; version mismatch separated from exploit claim. Official advisory retrieval, if needed, requires parent-approved read-only endpoint and no secret output.
+- Prerequisite: independently bounded from inventory child (this child semantic checks only; EVID-02 sole path/mode manifest owner). Resource: metadata reads. Exclusion: no manifest/lock edits, audit installs, CI/full checker runs. Receipt `orun-3-09og/EVID-04/v1`; handback security-delivery.
+
+### EVID-05 — literal/inert oracle review (parent: repair-sites-accessibility)
+- IDs: UI-001/UI-002 where original acceptance establishes linkage; 08-05 semantic-oracle caveat, VD-04/05 are desktop-consumer requirements, not substitutes.
+- Inputs: `sites/umbrella/src/app/editor/_components/editor-shell.tsx:36,158,213` symbols `ShellButton`, `inertControlAriaDisabled`; `tests/sites/umbrella-visual.test.ts:1186`; deep-review `03-visual-sites` and `04-visual-desktop`.
+- Command: `git diff -- sites/umbrella/src/app/editor/_components/editor-shell.tsx tests/sites/umbrella-visual.test.ts`; read bounded symbol/test regions and map literal `{ "aria-disabled": true }` to actual attribute assignment, inert event suppression, focus/describedby acceptance.
+- Acceptance: before/after assertion strength comparison without running tests; separate preserved literal from unproven rendered behavior and post-PR visual improvement; provide exact negative-case requests to original parent. Child neither changes nor duplicates tests.
+- Prerequisite: source readable; no stable build required. Resource: text only. Exclusion: no renderer/browser or source writes. Receipt `orun-3-09og/EVID-05/v1`; handback sites-accessibility with desktop cross-lane request only if necessary.
+
+### EVID-06 — documentation and scope gate reconciliation (parent: repair-missing-capabilities)
+- IDs: DR-006, DL-PERF-08, OPS-DOC-REVALIDATION, COVERAGE-IDENTITY, COVERAGE-BILLING-DATA; GA-005 and 08 accounting findings.
+- Inputs: `remaining-local-113.json`, `finish-cli-desktop.json`, `finish-integration.json`, `FINAL.md/json`, `MEGALIST.json`, `packages/schemas/src/desktop-project-build.ts:53-95`; original fix identity/billing reports when present.
+- Commands: `git diff -- packages/schemas/src/desktop-project-build.ts`; Python json reads select exact IDs above and retain original acceptance/status evidence. Read source only; do not execute signing/project-build operations.
+- Acceptance: local adapter versus signing/hardware/production action split; retained 120s GUI stall distinguished from narrower byte-boundary acceptance; missing identity/billing report classified reporting uncertainty, not absent code. Preserve external/intentional gaps, no completion denominator invented.
+- Prerequisite: EVID-01 supplies canonical join or child reads only its exact subset, avoiding a second ledger inventory. Resource: text/JSON only. Exclusion: no ledger/docs source edits. Receipt `orun-3-09og/EVID-06/v1`; missing-capabilities integrates after explicit handback.
+
+## Scheduling and gates
+
+Observed: this one scout performed bounded reads/enumeration; zero child dispatches and zero heavyweight processes. Planned: up to six independent read-only packets, not a concurrency setting; EVID-06 waits for EVID-01 join or stays exact-subset-only. Parent should start original ready work without waiting. Actual concurrency/capacity and original leads' availability require orchestrator receipts; graph alone proves ownership, not running status. Host supplied 12 logical CPUs/~5233 MiB available/49523 MiB swap used is not remeasured here. All builds/browser/package/native verification remain serial under original resource owner; no CPU-based heavy fanout.
+
+Missing dispatch gates for every packet: Astra allocation verdict, parent endpoint identity, acceptance of read-only scope and unique receipt, exclusion check against existing children, assigned output ownership and explicit handback protocol. Final frozen-source/PR-head manifest and serial fresh acceptance remain later barriers. No active run stopped/restarted or concurrency setting changed. Synthesis owns sidecar FINAL.md/json; this scout does not write them.

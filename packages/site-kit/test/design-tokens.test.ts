@@ -36,12 +36,15 @@ import type { FoundationContrastRole, SiteResult } from "@sceneaxi/site-kit";
 
 const hexOf = (token: string): string => {
   const color = FOUNDATION_COLORS.find((entry) => entry.token === token);
+
   if (color === undefined) throw new Error(`no such token: ${token}`);
+
   return color.hex;
 };
 
 const unwrap = (result: SiteResult<string>): string => {
   if (!result.ok) throw new Error(`expected ok, got ${result.reason}`);
+
   return result.value;
 };
 
@@ -65,6 +68,7 @@ describe("Foundations v2 transcription", () => {
   it("uses every token name exactly once, in CSS custom-property form", () => {
     const tokens = FOUNDATION_COLORS.map((color) => color.token);
     expect(new Set(tokens).size).toBe(tokens.length);
+
     for (const token of tokens) expect(token).toMatch(/^--[a-z0-9-]+$/);
   });
 
@@ -96,10 +100,12 @@ describe("Foundations v2 transcription", () => {
 
   it("keeps the type scale to two families and the printed weights", () => {
     expect(FOUNDATION_TYPE_SCALE).toHaveLength(10);
+
     for (const step of FOUNDATION_TYPE_SCALE) {
       expect(["archivo", "mono"]).toContain(step.family);
       expect([400, 500, 600, 700]).toContain(step.weight);
     }
+
     // "Never for prose": every prose-sized step is Archivo.
     for (const token of ["lead", "body", "display-xl", "display-l", "heading", "subhead"]) {
       expect(FOUNDATION_TYPE_SCALE.find((step) => step.token === token)?.family).toBe("archivo");
@@ -108,6 +114,7 @@ describe("Foundations v2 transcription", () => {
 
   it("keeps spacing on the 4px base with no invented in-between step", () => {
     expect(FOUNDATION_SPACING.map((step) => step.px)).toEqual([4, 8, 12, 16, 24, 32, 44, 72]);
+
     for (const step of FOUNDATION_SPACING) expect(step.px % 4).toBe(0);
   });
 
@@ -128,6 +135,7 @@ describe("Foundations v2 transcription", () => {
     expect(Object.isFrozen(FOUNDATION_COLORS)).toBe(true);
     expect(Object.isFrozen(FOUNDATION_COLORS[0])).toBe(true);
     expect(() => {
+      // SAFETY: arrays have a numeric length; removing readonly here intentionally attempts a write to the frozen array.
       (FOUNDATION_COLORS as { length: number }).length = 0;
     }).toThrow();
   });
@@ -138,15 +146,17 @@ describe("accessibility: measured contrast, not asserted", () => {
 
   it("classifies every non-neutral colour token", () => {
     const classified = new Set(Object.keys(FOUNDATION_CONTRAST_ROLES));
+
     const foregrounds = FOUNDATION_COLORS.filter(
       (color) => !FOUNDATION_NEUTRAL_TOKENS.includes(color.token) && !color.token.startsWith("--line"),
     );
+
     expect(foregrounds.map((color) => color.token).sort()).toEqual([...classified].sort());
   });
 
   it.each(
     Object.entries(FOUNDATION_CONTRAST_ROLES).map(
-      ([token, role]) => [token, role] as [string, FoundationContrastRole],
+      ([token, role]): ContrastCase => [token, role],
     ),
   )("%s clears the %s floor on every neutral surface", (token, role) => {
     for (const neutral of neutrals) {
@@ -194,6 +204,7 @@ describe("surface accents", () => {
   it("states a hover shade only where the sheet prints one", () => {
     const withHover = FOUNDATION_SURFACE_ACCENTS.filter((surface) => surface.accentHi !== null);
     expect(withHover.map((surface) => surface.id)).toEqual(["umbrella", "engine-desktop"]);
+
     for (const surface of withHover) expect(surface.accentHi).toBe("#FF8A54");
   });
 
@@ -220,9 +231,11 @@ describe("CSS emission", () => {
   it("emits every colour token into :root under its published name", () => {
     const css = unwrap(foundationsVariablesCss());
     expect(css.startsWith(":root {")).toBe(true);
+
     for (const color of FOUNDATION_COLORS) {
       expect(css).toContain(`${color.token}: ${color.hex};`);
     }
+
     for (const step of FOUNDATION_SPACING) expect(css).toContain(`--${step.token}: ${step.px}px;`);
     expect(css).toContain("--radius-full: 999px;");
     expect(css).toContain("--font-mono: 'JetBrains Mono'");
@@ -233,10 +246,12 @@ describe("CSS emission", () => {
     const store = unwrap(foundationsVariablesCss({ surface: "game-assets" }));
     expect(store).toContain("--accent: #E8544E;");
     expect(store).toContain("--accent-hi: #E8544E;");
+
     // Same skeleton, same neutrals: nothing but the accent pair moves.
     for (const token of FOUNDATION_NEUTRAL_TOKENS) {
       expect(store).toContain(`${token}: ${hexOf(token)};`);
     }
+
     expect(store.split("\n")).toHaveLength(base.split("\n").length + 2);
   });
 
@@ -256,8 +271,10 @@ describe("CSS emission", () => {
 
   it("emits one class per surface step and one per status", () => {
     const surfaces = foundationsSurfacesCss();
+
     for (const surface of FOUNDATION_SURFACES) expect(surfaces).toContain(`.sx-surface-${surface.id} {`);
     const statuses = foundationsStatusCss();
+
     for (const status of FOUNDATION_STATUSES) expect(statuses).toContain(`.sx-status-${status.id} {`);
   });
 
@@ -270,7 +287,40 @@ describe("CSS emission", () => {
   });
 
   it("keeps the package framework-free: the emitters return plain strings", () => {
-    expect(typeof foundationsBaseCss()).toBe("string");
-    expect(typeof foundationsSurfacesCss()).toBe("string");
+    expect(isCssText(foundationsBaseCss())).toBe(true);
+    expect(isCssText(foundationsSurfacesCss())).toBe(true);
   });
 });
+
+describe("D-4 motion: stated, not transcribed", () => {
+  /**
+   * The sheet states no motion, so these lines are recorded decision D-4 in
+   * `docs/design-foundations.md`, pinned value for value: changing one changes it.
+   */
+  const motionDeclarations = [
+    "  --motion-fast: 120ms;",
+    "  --motion-base: 200ms;",
+    "  --ease-standard: cubic-bezier(0.2, 0, 0, 1);",
+  ];
+
+  /** Every line declaring a motion duration or an easing curve, in emission order. */
+  const motionLines = (css: string): string[] =>
+    css.split("\n").filter((line) => /^\s*--(?:motion|ease)-/.test(line));
+
+  it("declares exactly two durations and one easing curve in :root", () => {
+    expect(motionLines(unwrap(foundationsVariablesCss()))).toEqual(motionDeclarations);
+  });
+
+  it.each(["umbrella", "game-assets", "web-assets"] as const)(
+    "serves the %s sheet the same motion, since a surface shifts only its accent",
+    (surface) => {
+      expect(motionLines(unwrap(foundationsCss({ surface })))).toEqual(motionDeclarations);
+    },
+  );
+});
+
+function isCssText(value: unknown): value is string {
+  return typeof value === "string";
+}
+
+type ContrastCase = [string, FoundationContrastRole];

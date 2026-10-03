@@ -37,6 +37,7 @@ export {
   type SceneOpenPathRequest,
   type SceneResumeRequest,
   type SculptOpenPathHandle,
+  type Bootstrapped,
   type SculptOpenPathRequest,
   type SculptResumeRequest,
 } from "./open-path.js";

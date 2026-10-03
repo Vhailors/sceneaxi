@@ -1,3 +1,35 @@
+type PixelsReportFixture = {
+    backend: "three";
+    label: string;
+    drawCalls: number;
+    frame: number;
+    instanceIds: string[];
+    surface: "headless";
+    pixelsDrawn?: boolean | string;
+};
+
+type RarityChromeReply = {
+    ok: boolean;
+    action?: string;
+    data?: Extract<DesktopResponse, {
+        ok: true;
+    }>["data"];
+    reason?: string;
+    message?: string;
+};
+
+type RarityChromePort = {
+    request(request: DesktopRequest): Promise<RarityChromeReply>;
+    project?(request: DesktopRequest): Promise<RarityChromeReply>;
+};
+
+type BridgeFixtureOptions = {
+    -readonly [Key in keyof NonNullable<Parameters<typeof createDesktopBridge>[0]>]: NonNullable<Parameters<typeof createDesktopBridge>[0]>[Key];
+};
+
+type DesktopRequest = Parameters<ReturnType<typeof createDesktopBridge>["handle"]>[0];
+
+type DesktopResponse = ReturnType<ReturnType<typeof createDesktopBridge>["handle"]>;
 /**
  * Golden path for the packaged Linux desktop application (ADR 0024, sceneaxi#183).
  *
@@ -14,2421 +46,2493 @@
  * `docs/desktop-linux.md`, never a gate inference — the same split the umbrella
  * live open path uses.
  */
+
 import { mkdtempSync, readFileSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runInNewContext } from "node:vm";
 import { afterAll, describe, expect, it, vi } from "vitest";
 import { Window as HappyWindow } from "happy-dom";
-import {
-  RARITY_PROVIDER_REQUEST_MAX_CHARS,
-  composeScene,
-  createDocument,
-  runAssistantSculptAction,
-  writeDocumentFile,
-} from "@sceneaxi/authoring-core";
-import {
-  EDITOR_SHELL_ASSISTANT_MODE_IDS,
-  EDITOR_COMMAND_REFUSALS,
-  PROPOSAL_KIND,
-  PROPOSAL_SCHEMA_VERSION,
-  RARITY_REFUSE_CODES,
-  SCENE_COMPOSITION_INTAKE_KIND,
-  SCENE_COMPOSITION_SCHEMA_VERSION,
-  emptySceneEffectsCatalog,
-  emptySceneEnvironmentCatalog,
-  emptySceneMaterialsCatalog,
-  sceneEnvironmentCatalogDigest,
-  createEditorCommandInvocation,
-  type SceneCompositionIntake,
-} from "@sceneaxi/schemas";
-import {
-  DESKTOP_ASSISTANT_RUNTIME_EVENT,
-  DESKTOP_PRODUCT_REFUSALS,
-  DESKTOP_RARITY_PROPOSAL_EVENT as SHELL_RARITY_PROPOSAL_EVENT,
-  DESKTOP_VIEWPORT_PLAY_EVENT as SHELL_VIEWPORT_PLAY_EVENT,
-  DESKTOP_VIEWPORT_SCENE_OPEN_EVENT as SHELL_VIEWPORT_SCENE_OPEN_EVENT,
-  DESKTOP_VISUAL_REFUSALS,
-  type DesktopSnapshot,
-} from "@sceneaxi/desktop-shell";
-import {
-  THREE_HEADLESS_SURFACE_LABEL,
-  createSculptMountApi,
-  createThreeSculptPresentationBackend,
-} from "../../packages/engine-presentation/src/index.ts";
-import {
-  DESKTOP_BRIDGE_ACTIONS,
-  DESKTOP_ACTIVE_DOCUMENT_PATH,
-  DESKTOP_BRIDGE_REFUSALS,
-  DESKTOP_RARITY_PROPOSAL_EVENT,
-  DESKTOP_VIEWPORT_PLAY_EVENT,
-  DESKTOP_VIEWPORT_SCENE_OPEN_EVENT,
-  createDesktopAssistantViewportController,
-  createDesktopBridge,
-  desktopAssistantScene,
-  desktopOpenScene,
-  desktopSceneFromDocumentData,
-  seedDesktopProject,
-  type DesktopAssistantJobSnapshot,
-  type DesktopBridgeResponse,
-  type DesktopFrameReport,
-  type DesktopRarityEvidence,
-} from "../../desktop/linux/src/index.ts";
-import {
-  DESKTOP_RUNTIME_META,
-  RENDERER_SCRIPT_TAG,
-  desktopLinuxIndexHtml,
-} from "../../desktop/linux/src/lib/chrome-document.ts";
-import {
-  desktopMountablePayload,
-  mountDesktopScene,
-  synchronizeViewportScene,
-} from "../../desktop/linux/src/renderer/viewport-playback.ts";
-import {
-  createDesktopPresentationBackend,
-  installAssistantProductFlow,
-} from "../../desktop/linux/src/renderer/viewport.ts";
-import {
-  DESKTOP_ASSISTANT_START_MODES,
-  decideAssistantStart,
-  withAssistantStrengthInstruction,
-} from "../../desktop/linux/src/renderer/assistant-start.ts";
+import { createChromeEventRealm } from "../helpers/desktop-chrome-golden.ts";
+import { RARITY_PROVIDER_REQUEST_MAX_CHARS, composeScene, createDocument, runAssistantSculptAction, writeDocumentFile, } from "@sceneaxi/authoring-core";
+import { EDITOR_SHELL_ASSISTANT_MODE_IDS, EDITOR_COMMAND_REFUSALS, PROPOSAL_KIND, PROPOSAL_SCHEMA_VERSION, RARITY_REFUSE_CODES, SCENE_COMPOSITION_INTAKE_KIND, SCENE_COMPOSITION_SCHEMA_VERSION, emptySceneEffectsCatalog, emptySceneEnvironmentCatalog, emptySceneMaterialsCatalog, sceneEnvironmentCatalogDigest, createEditorCommandInvocation, type SceneCompositionIntake, } from "@sceneaxi/schemas";
+import { DESKTOP_ASSISTANT_RUNTIME_EVENT, DESKTOP_PRODUCT_REFUSALS, DESKTOP_RARITY_PROPOSAL_EVENT as SHELL_RARITY_PROPOSAL_EVENT, DESKTOP_VIEWPORT_PLAY_EVENT as SHELL_VIEWPORT_PLAY_EVENT, DESKTOP_VIEWPORT_SCENE_OPEN_EVENT as SHELL_VIEWPORT_SCENE_OPEN_EVENT, DESKTOP_VISUAL_REFUSALS, type DesktopSnapshot, } from "@sceneaxi/desktop-shell";
+import { THREE_HEADLESS_SURFACE_LABEL, createSculptMountApi, createThreeSculptPresentationBackend, } from "../../packages/engine-presentation/src/index.ts";
+import { DESKTOP_BRIDGE_ACTIONS, DESKTOP_ACTIVE_DOCUMENT_PATH, DESKTOP_BRIDGE_REFUSALS, DESKTOP_RARITY_PROPOSAL_EVENT, DESKTOP_VIEWPORT_PLAY_EVENT, DESKTOP_VIEWPORT_SCENE_OPEN_EVENT, createDesktopAssistantViewportController, createDesktopBridge, desktopAssistantScene, desktopOpenScene, desktopSceneFromDocumentData, seedDesktopProject, type DesktopAssistantJobSnapshot, type DesktopBridgeResponse, type DesktopFrameReport, type DesktopRarityEvidence, } from "../../desktop/linux/src/index.ts";
+import { DESKTOP_RUNTIME_META, RENDERER_SCRIPT_TAG, desktopLinuxIndexHtml, } from "../../desktop/linux/src/lib/chrome-document.ts";
+import { desktopMountablePayload, mountDesktopScene, synchronizeViewportScene, } from "../../desktop/linux/src/renderer/viewport-playback.ts";
+import { createDesktopPresentationBackend, installAssistantProductFlow, } from "../../desktop/linux/src/renderer/viewport.ts";
+import { DESKTOP_ASSISTANT_START_MODES, decideAssistantStart, withAssistantStrengthInstruction, } from "../../desktop/linux/src/renderer/assistant-start.ts";
 import { desktopAssistantRuntimeSignal } from "../../desktop/linux/src/renderer/assistant-runtime.ts";
-import {
-  assistantInspectionText,
-  assistantRarityInvalidation,
-  assistantRarityResultDigest,
-  assistantRarityResultEvent,
-  assistantRarityResultSettlement,
-  assistantRaritySettlement,
-  rarityInvalidationMatches,
-} from "../../desktop/linux/src/renderer/assistant-inspection.ts";
+import { assistantInspectionText, assistantRarityInvalidation, assistantRarityResultDigest, assistantRarityResultEvent, assistantRarityResultSettlement, assistantRaritySettlement, rarityInvalidationMatches, } from "../../desktop/linux/src/renderer/assistant-inspection.ts";
 import { formatSafeRarityEvidence } from "@sceneaxi/authoring-core/rarity-evidence";
-import {
-  acknowledgeAssistantRaritySettlement,
-  pollAssistantJob,
-  watchAssistantRaritySettlement,
-} from "../../desktop/linux/src/renderer/assistant-poll.ts";
-import {
-  pixelsMetaContent,
-} from "../../desktop/linux/src/renderer/playback-report.ts";
+import { acknowledgeAssistantRaritySettlement, pollAssistantJob, watchAssistantRaritySettlement, } from "../../desktop/linux/src/renderer/assistant-poll.ts";
+import { pixelsMetaContent, } from "../../desktop/linux/src/renderer/playback-report.ts";
 import { createDesktopRarityFixtureProvider } from "../../desktop/linux/src/electron/provider-runtime.ts";
 
-const FIXED_NOW_MS = 1_753_920_000_000;
+const FIXED_NOW_MS = 1753920000000;
+
 const fixedNow = (): number => FIXED_NOW_MS;
+
 class FakeClassList {
-  readonly values = new Set<string>();
-
-  add(value: string): void {
-    this.values.add(value);
-  }
-
-  remove(value: string): void {
-    this.values.delete(value);
-  }
-
-  contains(value: string): boolean {
-    return this.values.has(value);
-  }
+    readonly values = new Set<string>();
+    add(value: string): void {
+        this.values.add(value);
+    }
+    remove(value: string): void {
+        this.values.delete(value);
+    }
+    contains(value: string): boolean {
+        return this.values.has(value);
+    }
 }
 
 class FakeElement {
-  readonly classList = new FakeClassList();
-  readonly dataset: Record<string, string>;
-  readonly attributes = new Map<string, string>();
-  hidden = false;
-  tabIndex = 0;
-  textContent: string | null = "";
+    readonly classList = new FakeClassList();
+    readonly dataset: Record<string, string>;
+    readonly attributes = new Map<string, string>();
+    readonly attributeListeners = new Set<(name: string) => void>();
+    hidden = false;
+    tabIndex = 0;
+    textContent: string | null = "";
+    constructor(readonly id = "", dataset: Record<string, string> = {}, private readonly selectorMatches: ReadonlyMap<string, readonly FakeElement[]> = new Map()) {
+        this.dataset = new Proxy({ ...dataset }, {
+            set: (target, key: string, value: string) => {
+                const previous = target[key];
+                target[key] = value;
 
-  constructor(
-    readonly id = "",
-    dataset: Record<string, string> = {},
-    private readonly selectorMatches: ReadonlyMap<string, readonly FakeElement[]> = new Map(),
-  ) {
-    this.dataset = { ...dataset };
-  }
+                if (previous !== value)
+                    this.notifyAttribute(`data-${key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`);
 
-  setAttribute(name: string, value: string): void {
-    this.attributes.set(name, value);
-  }
-
-  removeAttribute(name: string): void {
-    this.attributes.delete(name);
-  }
-
-  getAttribute(name: string): string | null {
-    return this.attributes.get(name) ?? null;
-  }
-
-  closest(selector: string): FakeElement | null {
-    if (selector === "[data-command]") {
-      return this.dataset.command === undefined ? null : this;
+                return true;
+            },
+        });
     }
-    return selector === "[data-action]" ? this : null;
-  }
+    setAttribute(name: string, value: string): void {
+        const previous = this.attributes.get(name);
+        this.attributes.set(name, value);
 
-  querySelector(selector: string): FakeElement | null {
-    return this.selectorMatches.get(selector)?.[0] ?? null;
-  }
+        if (previous !== value)
+            this.notifyAttribute(name);
+    }
+    removeAttribute(name: string): void {
+        if (this.attributes.delete(name))
+            this.notifyAttribute(name);
+    }
+    private notifyAttribute(name: string): void {
+        for (const listener of this.attributeListeners)
+            listener(name);
+    }
+    getAttribute(name: string): string | null {
+        return this.attributes.get(name) ?? null;
+    }
+    closest(selector: string): FakeElement | null {
+        if (selector === "[data-command]") {
+            return this.dataset.command === undefined ? null : this;
+        }
 
-  querySelectorAll(selector: string): FakeElement[] {
-    return [...(this.selectorMatches.get(selector) ?? [])];
-  }
+        return selector === "[data-action]" ? this : null;
+    }
+    querySelector(selector: string): FakeElement | null {
+        return this.selectorMatches.get(selector)?.[0] ?? null;
+    }
+    querySelectorAll(selector: string): FakeElement[] {
+        return [...(this.selectorMatches.get(selector) ?? [])];
+    }
+    focus(): void { }
+    contains(element: FakeElement | null): boolean {
+        return element !== null;
+    }
+    replaceChildren(): void { }
+    append(): void { }
+}
+/** Functional attribute observer for this transport-only fake DOM; pixel geometry stays a real-browser oracle. */
 
-  focus(): void {}
+class FakeMutationObserver {
+    private readonly detach = new Set<() => void>();
+    constructor(private readonly callback: () => void) { }
+    observe(target: FakeElement, options: {
+        attributes: boolean;
+        attributeFilter?: readonly string[];
+    }): void {
+        if (!options.attributes)
+            throw new Error("fixture observer supports attributes only");
 
-  contains(element: FakeElement | null): boolean {
-    return element !== null;
-  }
+        const listener = (name: string) => {
+            if (options.attributeFilter === undefined || options.attributeFilter.includes(name))
+                this.callback();
+        };
 
-  replaceChildren(): void {}
-
-  append(): void {}
+        target.attributeListeners.add(listener);
+        this.detach.add(() => target.attributeListeners.delete(listener));
+    }
+    disconnect(): void {
+        for (const remove of this.detach)
+            remove();
+        this.detach.clear();
+    }
 }
 
+it("observes real fake-DOM attribute transitions and disconnects without callbacks", () => {
+    const target = new FakeElement("observer-oracle");
+    let calls = 0;
+    const observer = new FakeMutationObserver(() => { calls += 1; });
+    observer.observe(target, { attributes: true, attributeFilter: ["data-drawer-left", "data-assistant"] });
+    target.dataset.drawerLeft = "open";
+    expect(calls).toBe(1);
+    target.dataset.drawerLeft = "open";
+    target.dataset.unrelated = "unchanged-observer";
+    expect(calls).toBe(1);
+    target.setAttribute("data-assistant", "open");
+    expect(calls).toBe(2);
+    target.removeAttribute("data-assistant");
+    expect(calls).toBe(3);
+    observer.disconnect();
+    expect(target.attributeListeners.size).toBe(0);
+    target.dataset.drawerLeft = "closed";
+    expect(calls).toBe(3);
+});
+
 class FakeSelectElement extends FakeElement {
-  value = "";
+    value = "";
 }
 
 class FakeTextAreaElement extends FakeElement {
-  readOnly = false;
+    readOnly = false;
 }
 
 class FakeShell extends FakeElement {
-  clickListener?: (event: { readonly target: FakeElement }) => void;
-
-  constructor(
-    controls: readonly FakeElement[],
-    profileChips: readonly FakeElement[],
-    selectorMatches: ReadonlyMap<string, readonly FakeElement[]> = new Map(),
-  ) {
-    super(
-      "shell",
-      {
-        assistant: "open",
-        assistantRuntime: "none",
-        drawerAssistant: "open",
-        overlay: "none",
-        profile: "game",
-      },
-      new Map([
-        ["[data-kind]", controls],
-        [".profile-chip", profileChips],
-        ...selectorMatches,
-      ]),
-    );
-  }
-
-  addEventListener(
-    name: string,
-    listener: (event: { readonly target: FakeElement }) => void,
-  ): void {
-    if (name === "click") this.clickListener = listener;
-  }
+    clickListener?: (event: {
+        readonly target: FakeElement;
+    }) => void;
+    constructor(controls: readonly FakeElement[], profileChips: readonly FakeElement[], selectorMatches: ReadonlyMap<string, readonly FakeElement[]> = new Map()) {
+        super("shell", {
+            assistant: "open",
+            assistantRuntime: "none",
+            drawerAssistant: "open",
+            overlay: "none",
+            profile: "game",
+        }, new Map([
+            ["[data-kind]", controls],
+            [".profile-chip", profileChips],
+            ...selectorMatches,
+        ]));
+    }
+    addEventListener(name: string, listener: (event: {
+        readonly target: FakeElement;
+    }) => void): void {
+        if (name === "click")
+            this.clickListener = listener;
+    }
 }
 
 const tmpDirs: string[] = [];
+
 afterAll(() => {
-  for (const dir of tmpDirs) rmSync(dir, { recursive: true, force: true });
+    for (const dir of tmpDirs)
+        rmSync(dir, { recursive: true, force: true });
 });
 
 function activeDocumentData(sceneId = "desktop-linux-open-scene") {
-  const starter = desktopOpenScene();
-  if (!starter.ok) throw new Error(`desktop scene refused: ${starter.reason}`);
-  const intake: SceneCompositionIntake = {
-    schemaVersion: SCENE_COMPOSITION_SCHEMA_VERSION,
-    kind: SCENE_COMPOSITION_INTAKE_KIND,
-    sceneId,
-    rootInstanceId: starter.composed.scene.rootInstanceId,
-    placements: starter.composed.scene.instances.map((instance) => ({
-      instanceId: instance.instanceId,
-      artifactId: instance.artifactId,
-      parentInstanceId: instance.parentInstanceId,
-      transform: instance.localTransform,
-    })),
-  };
-  const artifacts = [
-    ...new Map(
-      starter.composed.scene.instances.map((instance) => [instance.artifactId, instance.artifact]),
-    ).values(),
-  ];
-  const composed = composeScene(intake, artifacts);
-  if (!composed.ok) throw new Error(`active document composition refused: ${composed.code}`);
-  return composed.document.data;
+    const starter = desktopOpenScene();
+
+    if (!starter.ok)
+        throw new Error(`desktop scene refused: ${starter.reason}`);
+
+    const intake: SceneCompositionIntake = {
+        schemaVersion: SCENE_COMPOSITION_SCHEMA_VERSION,
+        kind: SCENE_COMPOSITION_INTAKE_KIND,
+        sceneId,
+        rootInstanceId: starter.composed.scene.rootInstanceId,
+        placements: starter.composed.scene.instances.map((instance) => ({
+            instanceId: instance.instanceId,
+            artifactId: instance.artifactId,
+            parentInstanceId: instance.parentInstanceId,
+            transform: instance.localTransform,
+        })),
+    };
+
+    const artifacts = [
+        ...new Map(starter.composed.scene.instances.map((instance) => [instance.artifactId, instance.artifact])).values(),
+    ];
+
+    const composed = composeScene(intake, artifacts);
+
+    if (!composed.ok)
+        throw new Error(`active document composition refused: ${composed.code}`);
+
+    return composed.document.data;
 }
 
-function authoringDir(
-  sceneId = "desktop-linux-open-scene",
-  extraData: Readonly<Record<string, unknown>> = {},
-): string {
-  const dir = mkdtempSync(join(tmpdir(), "sceneaxi-desktop-golden-"));
-  tmpDirs.push(dir);
-  const doc = createDocument({
-    id: "scene",
-    data: {
-      ...activeDocumentData(sceneId),
-      ...extraData,
-      entities: [{ id: "hero", x: 1, y: 2, rz: 0 }],
-      material: { roughness: 0.4 },
-    },
-  });
-  const written = writeDocumentFile(join(dir, "scene.json"), doc, { cwd: dir });
-  if (!written.ok) throw new Error("golden fixture document refused");
-  return dir;
+function authoringDir(sceneId = "desktop-linux-open-scene", extraData: Parameters<typeof createDocument>[0]["data"] = {}): string {
+    const dir = mkdtempSync(join(tmpdir(), "sceneaxi-desktop-golden-"));
+    tmpDirs.push(dir);
+
+    const doc = createDocument({
+        id: "scene",
+        data: {
+            ...activeDocumentData(sceneId),
+            ...extraData,
+            entities: [{ id: "hero", x: 1, y: 2, rz: 0 }],
+            material: { roughness: 0.4 },
+        },
+    });
+
+    const written = writeDocumentFile(join(dir, "scene.json"), doc, { cwd: dir });
+
+    if (!written.ok)
+        throw new Error("golden fixture document refused");
+
+    return dir;
 }
 
 function bridgeAt(dir: string, onFrameReport?: (report: DesktopFrameReport) => void) {
-  return createDesktopBridge({ cwd: dir, nowMs: fixedNow, ...(onFrameReport ? { onFrameReport } : {}) });
+    const options: BridgeFixtureOptions = { cwd: dir, nowMs: fixedNow };
+
+    if (onFrameReport !== undefined)
+        options.onFrameReport = onFrameReport;
+
+    return createDesktopBridge(options);
 }
 
 describe("desktop bridge — the packaged app's engine paths are real", () => {
-  it("preserves an existing composed document without adding rarity identity", () => {
-    const dir = authoringDir("existing-composed-scene");
-    const before = readFileSync(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8");
-    expect(seedDesktopProject(dir)).toEqual({ ok: true, migrated: false });
-    expect(readFileSync(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8")).toBe(before);
-  });
-
-  it("preserves a legacy project until its registered migration is reviewed and committed", () => {
-    const dir = mkdtempSync(join(tmpdir(), "sceneaxi-desktop-legacy-"));
-    tmpDirs.push(dir);
-    const legacy = createDocument({
-      id: "legacy-scene",
-      title: "Existing project",
-      data: { entities: [{ id: "legacy-hero", x: 9 }], material: { roughness: 0.8 } },
+    it("preserves an existing composed document without adding rarity identity", () => {
+        const dir = authoringDir("existing-composed-scene");
+        const before = readFileSync(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8");
+        expect(seedDesktopProject(dir)).toEqual({ ok: true, migrated: false });
+        expect(readFileSync(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8")).toBe(before);
     });
-    const written = writeDocumentFile(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), legacy, {
-      cwd: dir,
+    it("preserves a legacy project until its registered migration is reviewed and committed", () => {
+        const dir = mkdtempSync(join(tmpdir(), "sceneaxi-desktop-legacy-"));
+        tmpDirs.push(dir);
+
+        const legacy = createDocument({
+            id: "legacy-scene",
+            title: "Existing project",
+            data: { entities: [{ id: "legacy-hero", x: 9 }], material: { roughness: 0.8 } },
+        });
+
+        const written = writeDocumentFile(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), legacy, {
+            cwd: dir,
+        });
+
+        if (!written.ok) {
+            throw new Error(written.diagnostics.map((entry) => entry.message).join("; "));
+        }
+
+        const before = readFileSync(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8");
+        expect(seedDesktopProject(dir)).toEqual({ ok: true, migrated: false });
+        expect(readFileSync(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8")).toBe(before);
+        const bridge = bridgeAt(dir);
+
+        const status = bridge.handle({
+            action: "authoring",
+            payload: { op: "status", documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
+        });
+
+        if (!status.ok)
+            throw new Error(status.reason);
+        expect(status.data).toMatchObject({
+            ok: true,
+            documentId: "legacy-scene",
+            data: {
+                entities: [{ id: "legacy-hero", x: 9 }],
+                material: { roughness: 0.8 },
+            },
+        });
+
+        const inspected = bridge.handle({
+            action: "command",
+            payload: createEditorCommandInvocation("project-inspect", "desktop-control", {}),
+        });
+
+        expect(inspected).toMatchObject({ ok: true, data: { state: "legacy" } });
+
+        const proposed = bridge.handle({
+            action: "command",
+            payload: createEditorCommandInvocation("project-migration-propose", "desktop-control", {}),
+        });
+
+        expect(proposed).toMatchObject({ ok: true, data: { proposal: { proposalDigest: expect.any(String) } } });
+
+        if (!proposed.ok)
+            throw new Error(proposed.reason);
+
+        // SAFETY: the successful response is from the real bridge action invoked above on the seeded project; that action owns this response payload.
+        const proposalDigest = (proposed.data as {
+            proposal: {
+                proposalDigest: string;
+            };
+        }).proposal.proposalDigest;
+
+        expect(bridge.handle({
+            action: "command",
+            payload: createEditorCommandInvocation("project-migration-commit", "desktop-control", {
+                approved: true,
+                proposalDigest,
+            }),
+        })).toMatchObject({ ok: true, data: { inspection: { state: "native" } } });
+        expect(readFileSync(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8")).toBe(before);
+        expect(seedDesktopProject(dir)).toEqual({ ok: true, migrated: false });
+        expect(readFileSync(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8")).toBe(before);
     });
-    if (!written.ok) {
-      throw new Error(written.diagnostics.map((entry) => entry.message).join("; "));
-    }
+    it("handshakes with its identity and the closed action set", () => {
+        const bridge = bridgeAt(authoringDir());
+        const res = bridge.handle({ action: "handshake" });
+        expect(res.ok).toBe(true);
 
-    const before = readFileSync(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8");
-    expect(seedDesktopProject(dir)).toEqual({ ok: true, migrated: false });
-    expect(readFileSync(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8")).toBe(before);
-    const bridge = bridgeAt(dir);
-    const status = bridge.handle({
-      action: "authoring",
-      payload: { op: "status", documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
+        if (!res.ok)
+            return;
+        expect(res.data).toMatchObject({
+            app: "@sceneaxi/desktop-linux",
+            runtime: "electron",
+            bridgeVersion: 1,
+            actions: DESKTOP_BRIDGE_ACTIONS,
+            commandSchemaVersion: 1,
+        });
+        // SAFETY: the successful response is from the real bridge action invoked above on the seeded project; that action owns this response payload.
+        expect((res.data as {
+            commands: Array<{
+                id: string;
+            }>;
+        }).commands.map((command) => command.id)).toContain("assistant-local-build");
     });
-    if (!status.ok) throw new Error(status.reason);
-    expect(status.data).toMatchObject({
-      ok: true,
-      documentId: "legacy-scene",
-      data: {
-        entities: [{ id: "legacy-hero", x: 9 }],
-        material: { roughness: 0.8 },
-      },
+    it("validates registered commands before dispatch and preserves independent Kids denial", () => {
+        const bridge = bridgeAt(authoringDir());
+        expect(bridge.handle({
+            action: "command",
+            payload: {
+                schemaVersion: 2,
+                commandId: "assistant-local-build",
+                client: "desktop-control",
+                permission: "assistant:run",
+                input: { prompt: "Build", profile: "@sceneaxi/profile-game" },
+            },
+        })).toMatchObject({
+            ok: false,
+            reason: EDITOR_COMMAND_REFUSALS.schemaUnsupported,
+        });
+        expect(bridge.handle({
+            action: "command",
+            payload: {
+                schemaVersion: 1,
+                commandId: "assistant-local-build",
+                client: "desktop-control",
+                permission: "assistant:read",
+                input: { prompt: "Build", profile: "@sceneaxi/profile-game" },
+            },
+        })).toMatchObject({
+            ok: false,
+            reason: EDITOR_COMMAND_REFUSALS.permissionDenied,
+        });
+        expect(bridge.handle({
+            action: "command",
+            payload: {
+                schemaVersion: 1,
+                commandId: "assistant-local-build",
+                client: "desktop-control",
+                permission: "assistant:run",
+                input: { prompt: "Build", profile: "@sceneaxi/profile-kids" },
+            },
+        })).toMatchObject({ ok: false, reason: EDITOR_COMMAND_REFUSALS.kidsDenied });
     });
-    const inspected = bridge.handle({
-      action: "command",
-      payload: createEditorCommandInvocation("project-inspect", "desktop-control", {}),
+    it("serves authored presentation catalogs with the composed MountableScene", () => {
+        const environment = Object.freeze({ ...emptySceneEnvironmentCatalog(), background: "#123456", exposure: 1.5, toneMapping: "aces" as const });
+
+        const materials = Object.freeze({
+            ...emptySceneMaterialsCatalog(),
+            overrides: Object.freeze([Object.freeze({
+                    instanceId: "desktop-crate-root",
+                    emissiveColor: "#abcdef",
+                    emissiveIntensity: 2,
+                    opacity: 0.5,
+                    baseColorMapAssetId: null,
+                    normalMapAssetId: null,
+                    roughnessMapAssetId: null,
+                })]),
+        });
+
+        const effects = Object.freeze({
+            ...emptySceneEffectsCatalog(),
+            seed: 73,
+            emitters: Object.freeze([Object.freeze({
+                    emitterId: "dust",
+                    kind: "point" as const,
+                    rate: 10,
+                    lifetimeMs: 1000,
+                    speed: 1,
+                    spread: 2,
+                })]),
+        });
+
+        const dir = authoringDir("opened-project-scene", {
+            sceneEnvironment: environment,
+            sceneMaterials: materials,
+            sceneEffects: effects,
+        });
+
+        const expected = desktopSceneFromDocumentData({
+            ...activeDocumentData("opened-project-scene"),
+            sceneEnvironment: environment,
+            sceneMaterials: materials,
+            sceneEffects: effects,
+        });
+
+        if (!expected.ok)
+            throw new Error(expected.reason);
+        const bridge = bridgeAt(dir);
+
+        const res = bridge.handle({
+            action: "scene",
+            payload: { documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
+        });
+
+        expect(res.ok).toBe(true);
+
+        if (!res.ok)
+            return;
+        // SAFETY: the successful response is from the real bridge action invoked above on the seeded project; that action owns this response payload.
+        const scene = res.data as ComposedScene;
+        expect(scene.sceneId).toBe("opened-project-scene");
+        expect(scene.instances).toHaveLength(3);
+        expect(scene.sceneDigest).toBe(expected.mountable.sceneDigest);
+        expect(scene.instances.map((i) => i.instanceId)).toEqual(expected.mountable.instances.map((i) => i.instanceId));
+        expect(scene.instances.map((instance) => instance.label)).toEqual([
+            "desktop-crate-root",
+            "desktop-crate-beside",
+            "desktop-crate-stacked",
+        ]);
+        expect(scene.environment).toEqual(environment);
+        expect(scene.materials).toEqual(materials);
+        expect(scene.effects).toEqual(effects);
+        expect(scene.effects?.seed).toBe(73);
+        expect(desktopMountablePayload(expected.mountable)).toBe(true);
+        expect(desktopMountablePayload({ ...expected.mountable, effectsDigest: "sha256:stale" })).toBe(false);
+        const backend = createDesktopPresentationBackend();
+        const mounts = createSculptMountApi(backend);
+        const setEnvironment = vi.spyOn(backend, "setEnvironment");
+        const setMaterialOverrides = vi.spyOn(backend, "setMaterialOverrides");
+        const sampleEffects = vi.spyOn(backend, "sampleEffects");
+        mountDesktopScene(mounts, expected.mountable, backend);
+        const authoredEffects = expected.mountable.effects;
+
+        if (authoredEffects === undefined)
+            throw new Error("scene omitted its authored effects catalog");
+        backend.sampleEffects(authoredEffects, 25);
+        expect(setEnvironment).toHaveBeenCalledWith(expect.objectContaining({
+            background: "#123456",
+            exposure: 1.5,
+            toneMapping: "aces",
+        }));
+        expect(setMaterialOverrides).toHaveBeenCalledWith(materials.overrides);
+        expect(sampleEffects).toHaveBeenCalledWith(effects, 25);
+        mounts.dispose();
     });
-    expect(inspected).toMatchObject({ ok: true, data: { state: "legacy" } });
-    const proposed = bridge.handle({
-      action: "command",
-      payload: createEditorCommandInvocation("project-migration-propose", "desktop-control", {}),
+    it("withholds a texture-bound material override without blanking the desktop viewport", () => {
+        const materials = Object.freeze({
+            ...emptySceneMaterialsCatalog(),
+            overrides: Object.freeze([
+                Object.freeze({ instanceId: "desktop-crate-root", emissiveColor: "#abcdef", emissiveIntensity: 1, opacity: 1, baseColorMapAssetId: "asset-albedo", normalMapAssetId: null, roughnessMapAssetId: null }),
+                Object.freeze({ instanceId: "desktop-crate-beside", emissiveColor: "#123456", emissiveIntensity: 2, opacity: 0.5, baseColorMapAssetId: null, normalMapAssetId: null, roughnessMapAssetId: null }),
+            ]),
+        });
+
+        const composed = desktopSceneFromDocumentData({ ...activeDocumentData("opened-project-scene"), sceneMaterials: materials });
+
+        if (!composed.ok)
+            throw new Error(composed.reason);
+        const backend = createDesktopPresentationBackend();
+        const mounts = createSculptMountApi(backend);
+        const setMaterialOverrides = vi.spyOn(backend, "setMaterialOverrides");
+        expect(() => backend.setMaterialOverrides(materials.overrides)).toThrow(/ADR 0026/);
+        expect(mountDesktopScene(mounts, composed.mountable, backend)).toEqual({ refusedMaterialOverrides: ["desktop-crate-root"] });
+        expect(setMaterialOverrides).toHaveBeenLastCalledWith([materials.overrides[1]]);
+        expect(mounts.list().map((mounted) => mounted.instanceId)).toEqual(composed.mountable.instances.map((instance) => instance.instanceId));
+        mounts.dispose();
     });
-    expect(proposed).toMatchObject({ ok: true, data: { proposal: { proposalDigest: expect.any(String) } } });
-    if (!proposed.ok) throw new Error(proposed.reason);
-    const proposalDigest = (proposed.data as { proposal: { proposalDigest: string } }).proposal.proposalDigest;
-    expect(bridge.handle({
-      action: "command",
-      payload: createEditorCommandInvocation("project-migration-commit", "desktop-control", {
-        approved: true,
-        proposalDigest,
-      }),
-    })).toMatchObject({ ok: true, data: { inspection: { state: "native" } } });
-    expect(readFileSync(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8")).toBe(before);
-    expect(seedDesktopProject(dir)).toEqual({ ok: true, migrated: false });
-    expect(readFileSync(join(dir, DESKTOP_ACTIVE_DOCUMENT_PATH), "utf8")).toBe(before);
-  });
+    it("mounts the served scene on the one Three core without claiming pixels", () => {
+        const bridge = bridgeAt(authoringDir());
 
-  it("handshakes with its identity and the closed action set", () => {
-    const bridge = bridgeAt(authoringDir());
-    const res = bridge.handle({ action: "handshake" });
-    expect(res.ok).toBe(true);
-    if (!res.ok) return;
-    expect(res.data).toMatchObject({
-      app: "@sceneaxi/desktop-linux",
-      runtime: "electron",
-      bridgeVersion: 1,
-      actions: DESKTOP_BRIDGE_ACTIONS,
-      commandSchemaVersion: 1,
+        const res = bridge.handle({
+            action: "scene",
+            payload: { documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
+        });
+
+        if (!res.ok)
+            throw new Error(res.reason);
+        // SAFETY: the successful response is from the real bridge action invoked above on the seeded project; that action owns this response payload.
+        const scene = res.data as ComposedScene;
+        const backend = createThreeSculptPresentationBackend();
+        const mounts = createSculptMountApi(backend);
+
+        for (const instance of scene.instances) {
+            // SAFETY: the successful composed scene owns an artifact for each instance and supplies the renderer transform used by this mount.
+            mounts.mount({
+                instanceId: instance.instanceId,
+                artifact: scene.artifacts[instance.artifactId],
+                transform: instance.worldTransform,
+            } as Parameters<typeof mounts.mount>[0]);
+        }
+
+        const frame = mounts.render();
+        expect(frame.backend).toBe("three");
+        const expectedDrawCalls = scene.instances.reduce((sum, instance) => sum + (scene.artifacts[instance.artifactId]?.runtimeHierarchy.nodes.length ?? 0), 0);
+        expect(frame.drawCalls).toBe(expectedDrawCalls);
+        expect(frame.drawCalls).toBeGreaterThan(0);
+        expect(frame.surface).toBe("headless");
+        expect(frame.pixelsDrawn).toBe(false);
+        expect(frame.label).toBe(THREE_HEADLESS_SURFACE_LABEL);
+        expect(backend.capture()).toBeNull();
+        mounts.dispose();
     });
-    expect((res.data as { commands: Array<{ id: string }> }).commands.map(
-      (command) => command.id,
-    )).toContain("assistant-local-build");
-  });
-
-  it("validates registered commands before dispatch and preserves independent Kids denial", () => {
-    const bridge = bridgeAt(authoringDir());
-    expect(bridge.handle({
-      action: "command",
-      payload: {
-        schemaVersion: 2,
-        commandId: "assistant-local-build",
-        client: "desktop-control",
-        permission: "assistant:run",
-        input: { prompt: "Build", profile: "@sceneaxi/profile-game" },
-      },
-    })).toMatchObject({
-      ok: false,
-      reason: EDITOR_COMMAND_REFUSALS.schemaUnsupported,
+    it("builds a real WebGLRenderer on the canvas path, so node must refuse it", () => {
+        // SAFETY: this deliberately invalid fixture is passed only to the runtime refusal boundary exercised by this negative test.
+        expect(() => createThreeSculptPresentationBackend({
+            canvas: {
+                width: 960,
+                height: 540,
+                getContext: () => null,
+                addEventListener: () => { },
+                removeEventListener: () => { },
+            } as never,
+        })).toThrow(/webgl/i);
     });
-    expect(bridge.handle({
-      action: "command",
-      payload: {
-        schemaVersion: 1,
-        commandId: "assistant-local-build",
-        client: "desktop-control",
-        permission: "assistant:read",
-        input: { prompt: "Build", profile: "@sceneaxi/profile-game" },
-      },
-    })).toMatchObject({
-      ok: false,
-      reason: EDITOR_COMMAND_REFUSALS.permissionDenied,
+    it("runs the shared authoring session: propose, accept, undo — never a fork", () => {
+        const dir = authoringDir();
+        const bridge = bridgeAt(dir);
+        const before = readFileSync(join(dir, "scene.json"), "utf8");
+
+        const proposed = bridge.handle({
+            action: "authoring",
+            payload: {
+                op: "propose",
+                documentPath: "scene.json",
+                jsonPointer: "/data/entities/0/x",
+                newValue: 7,
+            },
+        });
+
+        expect(proposed.ok).toBe(true);
+
+        if (!proposed.ok)
+            return;
+        // SAFETY: the successful response is from the real bridge action invoked above on the seeded project; that action owns this response payload.
+        expect((proposed.data as {
+            phase: string;
+        }).phase).toBe("reviewing");
+        // Proposing writes nothing.
+        expect(readFileSync(join(dir, "scene.json"), "utf8")).toBe(before);
+        const accepted = bridge.handle({ action: "authoring", payload: { op: "accept" } });
+
+        if (!accepted.ok)
+            throw new Error(accepted.reason);
+        // SAFETY: the successful response is from the real bridge action invoked above on the seeded project; that action owns this response payload.
+        expect((accepted.data as {
+            phase: string;
+        }).phase).toBe("applied");
+
+        const recovered = bridge.handle({
+            action: "authoring",
+            payload: { op: "recover" },
+        });
+
+        expect(recovered.ok).toBe(true);
+
+        if (!recovered.ok)
+            return;
+        // SAFETY: the successful response is from the real bridge action invoked above on the seeded project; that action owns this response payload.
+        expect((recovered.data as {
+            phase: string;
+        }).phase).toBe("applied");
+        const after = readFileSync(join(dir, "scene.json"), "utf8");
+        expect(after).not.toBe(before);
+        expect(after).toContain('"x": 7');
+        const undone = bridge.handle({ action: "authoring", payload: { op: "undo" } });
+
+        if (!undone.ok)
+            throw new Error(undone.reason);
+        // SAFETY: the successful response is from the real bridge action invoked above on the seeded project; that action owns this response payload.
+        expect((undone.data as {
+            ok: boolean;
+        }).ok).toBe(true);
+        expect(readFileSync(join(dir, "scene.json"), "utf8")).toBe(before);
     });
-    expect(bridge.handle({
-      action: "command",
-      payload: {
-        schemaVersion: 1,
-        commandId: "assistant-local-build",
-        client: "desktop-control",
-        permission: "assistant:run",
-        input: { prompt: "Build", profile: "@sceneaxi/profile-kids" },
-      },
-    })).toMatchObject({ ok: false, reason: EDITOR_COMMAND_REFUSALS.kidsDenied });
-  });
+    it("restarts the authoring session and re-reads the active document", () => {
+        const dir = authoringDir();
+        const bridge = bridgeAt(dir);
 
-  it("serves authored presentation catalogs with the composed MountableScene", () => {
-    const environment = Object.freeze({ ...emptySceneEnvironmentCatalog(), background: "#123456", exposure: 1.5, toneMapping: "aces" as const });
-    const materials = Object.freeze({
-      ...emptySceneMaterialsCatalog(),
-      overrides: Object.freeze([Object.freeze({
-        instanceId: "desktop-crate-root",
-        emissiveColor: "#abcdef",
-        emissiveIntensity: 2,
-        opacity: 0.5,
-        baseColorMapAssetId: null,
-        normalMapAssetId: null,
-        roughnessMapAssetId: null,
-      })]),
+        const proposed = bridge.handle({
+            action: "authoring",
+            payload: {
+                op: "propose",
+                documentPath: "scene.json",
+                jsonPointer: "/data/entities/0/x",
+                newValue: 7,
+            },
+        });
+
+        expect(proposed.ok).toBe(true);
+
+        const restarted = bridge.handle({
+            action: "authoring",
+            payload: { op: "restart", documentPath: "scene.json" },
+        });
+
+        expect(restarted.ok).toBe(true);
+
+        if (!restarted.ok)
+            return;
+        expect(restarted.data).toMatchObject({ ok: true, documentId: "scene" });
+        const accepted = bridge.handle({ action: "authoring", payload: { op: "accept" } });
+        expect(accepted.ok).toBe(true);
+
+        if (!accepted.ok)
+            return;
+        expect(accepted.data).toMatchObject({
+            phase: "idle",
+            diagnostics: [{ code: "invalid-proposal" }],
+        });
     });
-    const effects = Object.freeze({
-      ...emptySceneEffectsCatalog(),
-      seed: 73,
-      emitters: Object.freeze([Object.freeze({
-        emitterId: "dust",
-        kind: "point" as const,
-        rate: 10,
-        lifetimeMs: 1000,
-        speed: 1,
-        spread: 2,
-      })]),
+    it("refuses an authoring documentPath that leaves the project directory", () => {
+        // The path arrives from the renderer across IPC and the authoring core resolves it
+        // against `cwd` with no containment check of its own, so the bridge owns it.
+        const dir = authoringDir();
+        const bridge = bridgeAt(dir);
+
+        const escapes = [
+            "/etc/passwd",
+            "../scene.json",
+            "nested/../scene.json",
+            "nested/../../scene.json",
+            join(dir, "scene.json"),
+        ];
+
+        for (const documentPath of escapes) {
+            const proposed = bridge.handle({
+                action: "authoring",
+                payload: { op: "propose", documentPath, jsonPointer: "/data/entities/0/x", newValue: 7 },
+            });
+
+            expect(proposed.ok, documentPath).toBe(false);
+
+            if (!proposed.ok)
+                expect(proposed.reason).toBe(DESKTOP_BRIDGE_REFUSALS.requestMalformed);
+            const status = bridge.handle({ action: "authoring", payload: { op: "status", documentPath } });
+            expect(status.ok, documentPath).toBe(false);
+
+            if (!status.ok)
+                expect(status.reason).toBe(DESKTOP_BRIDGE_REFUSALS.requestMalformed);
+        }
+
+        // A contained path still works: the constraint refuses escapes, not authoring.
+        const contained = bridge.handle({ action: "authoring", payload: { op: "status", documentPath: "scene.json" } });
+        expect(contained.ok).toBe(true);
     });
-    const dir = authoringDir("opened-project-scene", {
-      sceneEnvironment: environment,
-      sceneMaterials: materials,
-      sceneEffects: effects,
+    it("refuses a documentPath that leaves the project through a symlink", () => {
+        // A lexical check passes `link/scene.json` while the authoring core follows the
+        // link and reads and writes outside the project, so containment is judged on the
+        // canonical path — where the bytes actually land.
+        const dir = authoringDir();
+        const outside = authoringDir();
+        symlinkSync(outside, join(dir, "link"), "dir");
+        symlinkSync(join(outside, "scene.json"), join(dir, "elsewhere.json"), "file");
+        const bridge = bridgeAt(dir);
+
+        for (const documentPath of ["link/scene.json", "link", "elsewhere.json"]) {
+            const proposed = bridge.handle({
+                action: "authoring",
+                payload: { op: "propose", documentPath, jsonPointer: "/data/entities/0/x", newValue: 7 },
+            });
+
+            expect(proposed.ok, documentPath).toBe(false);
+
+            if (!proposed.ok)
+                expect(proposed.reason).toBe(DESKTOP_BRIDGE_REFUSALS.requestMalformed);
+            const status = bridge.handle({ action: "authoring", payload: { op: "status", documentPath } });
+            expect(status.ok, documentPath).toBe(false);
+
+            if (!status.ok)
+                expect(status.reason).toBe(DESKTOP_BRIDGE_REFUSALS.requestMalformed);
+        }
+
+        // A symlink that stays inside the project is not an escape, and a not-yet-created
+        // document inside it still resolves — containment is not an existence check.
+        symlinkSync(dir, join(dir, "self"), "dir");
+
+        for (const documentPath of ["self/scene.json", "new/scene.json"]) {
+            const status = bridge.handle({ action: "authoring", payload: { op: "status", documentPath } });
+            expect(status.ok, documentPath).toBe(true);
+        }
     });
-    const expected = desktopSceneFromDocumentData({
-      ...activeDocumentData("opened-project-scene"),
-      sceneEnvironment: environment,
-      sceneMaterials: materials,
-      sceneEffects: effects,
+    it("accepts only a real frame-report shape, and hands it to the observer", () => {
+        const seen: DesktopFrameReport[] = [];
+        const bridge = bridgeAt(authoringDir(), (report) => seen.push(report));
+        expect(bridge.lastFrameReport()).toBeNull();
+        const bad = bridge.handle({ action: "frame-report", payload: { backend: "three" } });
+        expect(bad.ok).toBe(false);
+
+        if (!bad.ok)
+            expect(bad.reason).toBe(DESKTOP_BRIDGE_REFUSALS.requestMalformed);
+
+        const report = {
+            backend: "three",
+            label: "Three presentation core",
+            frame: 1,
+            instanceIds: ["desktop-crate-root"],
+            drawCalls: 5,
+            surface: "webgl-canvas",
+            pixelsDrawn: true,
+        };
+
+        const good = bridge.handle({ action: "frame-report", payload: report });
+        expect(good.ok).toBe(true);
+        expect(bridge.lastFrameReport()).toEqual(report);
+        expect(seen).toHaveLength(1);
     });
-    if (!expected.ok) throw new Error(expected.reason);
-    const bridge = bridgeAt(dir);
-    const res = bridge.handle({
-      action: "scene",
-      payload: { documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
+    it("refuses unknown actions, malformed requests, and unknown authoring ops by name", () => {
+        const bridge = bridgeAt(authoringDir());
+        const unknown = bridge.handle({ action: "install-plugins" });
+        expect(unknown.ok).toBe(false);
+
+        if (!unknown.ok)
+            expect(unknown.reason).toBe(DESKTOP_BRIDGE_REFUSALS.actionUnknown);
+        const malformed = bridge.handle("open sesame");
+        expect(malformed.ok).toBe(false);
+
+        if (!malformed.ok)
+            expect(malformed.reason).toBe(DESKTOP_BRIDGE_REFUSALS.requestMalformed);
+        const badOp = bridge.handle({ action: "authoring", payload: { op: "publish" } });
+        expect(badOp.ok).toBe(false);
+
+        if (!badOp.ok)
+            expect(badOp.reason).toBe(DESKTOP_BRIDGE_REFUSALS.authoringOpUnknown);
     });
-    expect(res.ok).toBe(true);
-    if (!res.ok) return;
-    const scene = res.data as ComposedScene;
-    expect(scene.sceneId).toBe("opened-project-scene");
-    expect(scene.instances).toHaveLength(3);
-    expect(scene.sceneDigest).toBe(expected.mountable.sceneDigest);
-    expect(scene.instances.map((i) => i.instanceId)).toEqual(
-      expected.mountable.instances.map((i) => i.instanceId),
-    );
-    expect(scene.instances.map((instance) => instance.label)).toEqual([
-      "desktop-crate-root",
-      "desktop-crate-beside",
-      "desktop-crate-stacked",
-    ]);
-    expect(scene.environment).toEqual(environment);
-    expect(scene.materials).toEqual(materials);
-    expect(scene.effects).toEqual(effects);
-    expect(scene.effects?.seed).toBe(73);
-    expect(desktopMountablePayload(expected.mountable)).toBe(true);
-    expect(desktopMountablePayload({ ...expected.mountable, effectsDigest: "sha256:stale" })).toBe(false);
-
-    const backend = createDesktopPresentationBackend();
-    const mounts = createSculptMountApi(backend);
-    const setEnvironment = vi.spyOn(backend, "setEnvironment");
-    const setMaterialOverrides = vi.spyOn(backend, "setMaterialOverrides");
-    const sampleEffects = vi.spyOn(backend, "sampleEffects");
-    mountDesktopScene(mounts, expected.mountable, backend);
-    const authoredEffects = expected.mountable.effects;
-    if (authoredEffects === undefined) throw new Error("scene omitted its authored effects catalog");
-    backend.sampleEffects(authoredEffects, 25);
-    expect(setEnvironment).toHaveBeenCalledWith(expect.objectContaining({
-      background: "#123456",
-      exposure: 1.5,
-      toneMapping: "aces",
-    }));
-    expect(setMaterialOverrides).toHaveBeenCalledWith(materials.overrides);
-    expect(sampleEffects).toHaveBeenCalledWith(effects, 25);
-    mounts.dispose();
-  });
-
-  it("withholds a texture-bound material override without blanking the desktop viewport", () => {
-    const materials = Object.freeze({
-      ...emptySceneMaterialsCatalog(),
-      overrides: Object.freeze([
-        Object.freeze({ instanceId: "desktop-crate-root", emissiveColor: "#abcdef", emissiveIntensity: 1, opacity: 1, baseColorMapAssetId: "asset-albedo", normalMapAssetId: null, roughnessMapAssetId: null }),
-        Object.freeze({ instanceId: "desktop-crate-beside", emissiveColor: "#123456", emissiveIntensity: 2, opacity: 0.5, baseColorMapAssetId: null, normalMapAssetId: null, roughnessMapAssetId: null }),
-      ]),
-    });
-    const composed = desktopSceneFromDocumentData({ ...activeDocumentData("opened-project-scene"), sceneMaterials: materials });
-    if (!composed.ok) throw new Error(composed.reason);
-    const backend = createDesktopPresentationBackend();
-    const mounts = createSculptMountApi(backend);
-    const setMaterialOverrides = vi.spyOn(backend, "setMaterialOverrides");
-    expect(() => backend.setMaterialOverrides(materials.overrides)).toThrow(/ADR 0026/);
-    expect(mountDesktopScene(mounts, composed.mountable, backend)).toEqual({ refusedMaterialOverrides: ["desktop-crate-root"] });
-    expect(setMaterialOverrides).toHaveBeenLastCalledWith([materials.overrides[1]]);
-    expect(mounts.list().map((mounted) => mounted.instanceId)).toEqual(composed.mountable.instances.map((instance) => instance.instanceId));
-    mounts.dispose();
-  });
-
-  it("mounts the served scene on the one Three core without claiming pixels", () => {
-    const bridge = bridgeAt(authoringDir());
-    const res = bridge.handle({
-      action: "scene",
-      payload: { documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
-    });
-    if (!res.ok) throw new Error(res.reason);
-    const scene = res.data as ComposedScene;
-
-    const backend = createThreeSculptPresentationBackend();
-    const mounts = createSculptMountApi(backend);
-    for (const instance of scene.instances) {
-      mounts.mount({
-        instanceId: instance.instanceId,
-        artifact: scene.artifacts[instance.artifactId],
-        transform: instance.worldTransform,
-      } as Parameters<typeof mounts.mount>[0]);
-    }
-    const frame = mounts.render();
-    expect(frame.backend).toBe("three");
-    const expectedDrawCalls = scene.instances.reduce(
-      (sum, instance) =>
-        sum + (scene.artifacts[instance.artifactId]?.runtimeHierarchy.nodes.length ?? 0),
-      0,
-    );
-    expect(frame.drawCalls).toBe(expectedDrawCalls);
-    expect(frame.drawCalls).toBeGreaterThan(0);
-    expect(frame.surface).toBe("headless");
-    expect(frame.pixelsDrawn).toBe(false);
-    expect(frame.label).toBe(THREE_HEADLESS_SURFACE_LABEL);
-    expect(backend.capture()).toBeNull();
-    mounts.dispose();
-  });
-
-  it("builds a real WebGLRenderer on the canvas path, so node must refuse it", () => {
-    expect(() =>
-      createThreeSculptPresentationBackend({
-        canvas: {
-          width: 960,
-          height: 540,
-          getContext: () => null,
-          addEventListener: () => {},
-          removeEventListener: () => {},
-        } as never,
-      }),
-    ).toThrow(/webgl/i);
-  });
-
-  it("runs the shared authoring session: propose, accept, undo — never a fork", () => {
-    const dir = authoringDir();
-    const bridge = bridgeAt(dir);
-    const before = readFileSync(join(dir, "scene.json"), "utf8");
-
-    const proposed = bridge.handle({
-      action: "authoring",
-      payload: {
-        op: "propose",
-        documentPath: "scene.json",
-        jsonPointer: "/data/entities/0/x",
-        newValue: 7,
-      },
-    });
-    expect(proposed.ok).toBe(true);
-    if (!proposed.ok) return;
-    expect((proposed.data as { phase: string }).phase).toBe("reviewing");
-    // Proposing writes nothing.
-    expect(readFileSync(join(dir, "scene.json"), "utf8")).toBe(before);
-
-    const accepted = bridge.handle({ action: "authoring", payload: { op: "accept" } });
-    if (!accepted.ok) throw new Error(accepted.reason);
-    expect((accepted.data as { phase: string }).phase).toBe("applied");
-    const recovered = bridge.handle({
-      action: "authoring",
-      payload: { op: "recover" },
-    });
-    expect(recovered.ok).toBe(true);
-    if (!recovered.ok) return;
-    expect((recovered.data as { phase: string }).phase).toBe("applied");
-    const after = readFileSync(join(dir, "scene.json"), "utf8");
-    expect(after).not.toBe(before);
-    expect(after).toContain('"x": 7');
-
-    const undone = bridge.handle({ action: "authoring", payload: { op: "undo" } });
-    if (!undone.ok) throw new Error(undone.reason);
-    expect((undone.data as { ok: boolean }).ok).toBe(true);
-    expect(readFileSync(join(dir, "scene.json"), "utf8")).toBe(before);
-  });
-
-  it("restarts the authoring session and re-reads the active document", () => {
-    const dir = authoringDir();
-    const bridge = bridgeAt(dir);
-    const proposed = bridge.handle({
-      action: "authoring",
-      payload: {
-        op: "propose",
-        documentPath: "scene.json",
-        jsonPointer: "/data/entities/0/x",
-        newValue: 7,
-      },
-    });
-    expect(proposed.ok).toBe(true);
-
-    const restarted = bridge.handle({
-      action: "authoring",
-      payload: { op: "restart", documentPath: "scene.json" },
-    });
-    expect(restarted.ok).toBe(true);
-    if (!restarted.ok) return;
-    expect(restarted.data).toMatchObject({ ok: true, documentId: "scene" });
-
-    const accepted = bridge.handle({ action: "authoring", payload: { op: "accept" } });
-    expect(accepted.ok).toBe(true);
-    if (!accepted.ok) return;
-    expect(accepted.data).toMatchObject({
-      phase: "idle",
-      diagnostics: [{ code: "invalid-proposal" }],
-    });
-  });
-
-  it("refuses an authoring documentPath that leaves the project directory", () => {
-    // The path arrives from the renderer across IPC and the authoring core resolves it
-    // against `cwd` with no containment check of its own, so the bridge owns it.
-    const dir = authoringDir();
-    const bridge = bridgeAt(dir);
-    const escapes = [
-      "/etc/passwd",
-      "../scene.json",
-      "nested/../scene.json",
-      "nested/../../scene.json",
-      join(dir, "scene.json"),
-    ];
-
-    for (const documentPath of escapes) {
-      const proposed = bridge.handle({
-        action: "authoring",
-        payload: { op: "propose", documentPath, jsonPointer: "/data/entities/0/x", newValue: 7 },
-      });
-      expect(proposed.ok, documentPath).toBe(false);
-      if (!proposed.ok) expect(proposed.reason).toBe(DESKTOP_BRIDGE_REFUSALS.requestMalformed);
-
-      const status = bridge.handle({ action: "authoring", payload: { op: "status", documentPath } });
-      expect(status.ok, documentPath).toBe(false);
-      if (!status.ok) expect(status.reason).toBe(DESKTOP_BRIDGE_REFUSALS.requestMalformed);
-    }
-
-    // A contained path still works: the constraint refuses escapes, not authoring.
-    const contained = bridge.handle({ action: "authoring", payload: { op: "status", documentPath: "scene.json" } });
-    expect(contained.ok).toBe(true);
-  });
-
-  it("refuses a documentPath that leaves the project through a symlink", () => {
-    // A lexical check passes `link/scene.json` while the authoring core follows the
-    // link and reads and writes outside the project, so containment is judged on the
-    // canonical path — where the bytes actually land.
-    const dir = authoringDir();
-    const outside = authoringDir();
-    symlinkSync(outside, join(dir, "link"), "dir");
-    symlinkSync(join(outside, "scene.json"), join(dir, "elsewhere.json"), "file");
-    const bridge = bridgeAt(dir);
-
-    for (const documentPath of ["link/scene.json", "link", "elsewhere.json"]) {
-      const proposed = bridge.handle({
-        action: "authoring",
-        payload: { op: "propose", documentPath, jsonPointer: "/data/entities/0/x", newValue: 7 },
-      });
-      expect(proposed.ok, documentPath).toBe(false);
-      if (!proposed.ok) expect(proposed.reason).toBe(DESKTOP_BRIDGE_REFUSALS.requestMalformed);
-
-      const status = bridge.handle({ action: "authoring", payload: { op: "status", documentPath } });
-      expect(status.ok, documentPath).toBe(false);
-      if (!status.ok) expect(status.reason).toBe(DESKTOP_BRIDGE_REFUSALS.requestMalformed);
-    }
-
-    // A symlink that stays inside the project is not an escape, and a not-yet-created
-    // document inside it still resolves — containment is not an existence check.
-    symlinkSync(dir, join(dir, "self"), "dir");
-    for (const documentPath of ["self/scene.json", "new/scene.json"]) {
-      const status = bridge.handle({ action: "authoring", payload: { op: "status", documentPath } });
-      expect(status.ok, documentPath).toBe(true);
-    }
-  });
-
-  it("accepts only a real frame-report shape, and hands it to the observer", () => {
-    const seen: DesktopFrameReport[] = [];
-    const bridge = bridgeAt(authoringDir(), (report) => seen.push(report));
-    expect(bridge.lastFrameReport()).toBeNull();
-
-    const bad = bridge.handle({ action: "frame-report", payload: { backend: "three" } });
-    expect(bad.ok).toBe(false);
-    if (!bad.ok) expect(bad.reason).toBe(DESKTOP_BRIDGE_REFUSALS.requestMalformed);
-
-    const report = {
-      backend: "three",
-      label: "Three presentation core",
-      frame: 1,
-      instanceIds: ["desktop-crate-root"],
-      drawCalls: 5,
-      surface: "webgl-canvas",
-      pixelsDrawn: true,
-    };
-    const good = bridge.handle({ action: "frame-report", payload: report });
-    expect(good.ok).toBe(true);
-    expect(bridge.lastFrameReport()).toEqual(report);
-    expect(seen).toHaveLength(1);
-  });
-
-  it("refuses unknown actions, malformed requests, and unknown authoring ops by name", () => {
-    const bridge = bridgeAt(authoringDir());
-
-    const unknown = bridge.handle({ action: "install-plugins" });
-    expect(unknown.ok).toBe(false);
-    if (!unknown.ok) expect(unknown.reason).toBe(DESKTOP_BRIDGE_REFUSALS.actionUnknown);
-
-    const malformed = bridge.handle("open sesame");
-    expect(malformed.ok).toBe(false);
-    if (!malformed.ok) expect(malformed.reason).toBe(DESKTOP_BRIDGE_REFUSALS.requestMalformed);
-
-    const badOp = bridge.handle({ action: "authoring", payload: { op: "publish" } });
-    expect(badOp.ok).toBe(false);
-    if (!badOp.ok) expect(badOp.reason).toBe(DESKTOP_BRIDGE_REFUSALS.authoringOpUnknown);
-  });
 });
 
 describe("desktop chrome document — the shell's chrome, unforked, plus two injections", () => {
-  it("derives the document from renderDesktopChrome and injects runtime marker and renderer", () => {
-    const html = desktopLinuxIndexHtml();
-    expect(html).toContain('<meta name="generator" content="@sceneaxi/desktop-shell chrome">');
-    expect(html).toContain('<meta name="sceneaxi-pixels-drawn" content="false">');
-    expect(html).toContain(DESKTOP_RUNTIME_META);
-    expect(html).toContain(RENDERER_SCRIPT_TAG);
-    // The chrome's own interactive controls are intact — not a re-implementation.
-    expect(html).toContain('data-action="mode"');
-    expect(html).toContain('data-action="profile"');
-    // The markup the renderer viewport and the packaged smoke read but do not own.
-    expect(html).toContain('<div class="viewport">');
-    expect(html).toContain("viewport-note-inert");
-    expect(html).toContain("<title>SceneAxi Engine Desktop</title>");
-    expect(html).toContain('data-assistant-runtime="none"');
-    expect(html).toContain(
-      `<textarea id="assistant-prompt" data-kind="inert" aria-disabled="true" data-refusal="${DESKTOP_VISUAL_REFUSALS.noPresentationRuntime}"`,
-    );
-    expect(html).toContain(
-      `data-assistant-runtime-event="${DESKTOP_ASSISTANT_RUNTIME_EVENT}"`,
-    );
-    expect(html).toContain("Hosted · metered");
-  });
-
-  it("activates only after runtime binding and preserves refusal across profiles", async () => {
-    const runtimeRefusal = DESKTOP_BRIDGE_REFUSALS.presentationRuntimeUnavailable;
-    const prompt = new FakeTextAreaElement("assistant-prompt", { kind: "inert" });
-    const send = new FakeElement("assistant-send", { kind: "inert" });
-    const retry = new FakeElement("assistant-retry", { kind: "inert" });
-    const controls = [prompt, send, retry];
-    const profileChips = ["game", "web", "kids"].map(
-      (profile) =>
-        new FakeElement(`profile-${profile}`, {
-          action: "profile",
-          value: profile,
-        }),
-    );
-    const shell = new FakeShell(controls, profileChips);
-    const documentListeners = new Map<string, (event: { readonly detail?: unknown }) => void>();
-    const script = /<script>([\s\S]*?)<\/script>/.exec(desktopLinuxIndexHtml())?.[1];
-    expect(script).toBeDefined();
-    runInNewContext(script ?? "", {
-      document: {
-        activeElement: null,
-        addEventListener: (
-          name: string,
-          listener: (event: { readonly detail?: unknown }) => void,
-        ) => documentListeners.set(name, listener),
-        querySelector: (selector: string) => (selector === ".shell" ? shell : null),
-      },
-      Element: FakeElement,
-      HTMLTextAreaElement: FakeTextAreaElement,
-      window: {
-        matchMedia: () => ({
-          addEventListener: () => undefined,
-          matches: false,
-        }),
-      },
-      sceneaxiDesktopLinux: {
-        request: async (request: { action?: unknown; payload?: unknown }) => ({
-          ok: request.action === "profile",
-          action: "profile",
-          data: request.payload,
-        }),
-      },
+    it("derives the document from renderDesktopChrome and injects runtime marker and renderer", () => {
+        const html = desktopLinuxIndexHtml();
+        expect(html).toContain('<meta name="generator" content="@sceneaxi/desktop-shell chrome">');
+        expect(html).toContain('<meta name="sceneaxi-pixels-drawn" content="false">');
+        expect(html).toContain(DESKTOP_RUNTIME_META);
+        expect(html).toContain(RENDERER_SCRIPT_TAG);
+        // The chrome's own interactive controls are intact — not a re-implementation.
+        expect(html).toContain('data-action="mode"');
+        expect(html).toContain('data-action="profile"');
+        // The markup the renderer viewport and the packaged smoke read but do not own.
+        expect(html).toContain('<div class="viewport">');
+        expect(html).toContain("viewport-note-inert");
+        expect(html).toContain("<title>SceneAxi Engine Desktop</title>");
+        expect(html).toContain('data-assistant-runtime="none"');
+        expect(html).toContain(`<textarea id="assistant-prompt" data-kind="inert" aria-disabled="true" data-refusal="${DESKTOP_VISUAL_REFUSALS.noPresentationRuntime}"`);
+        expect(html).toContain(`data-assistant-runtime-event="${DESKTOP_ASSISTANT_RUNTIME_EVENT}"`);
+        expect(html).toContain("Hosted · metered");
     });
+    it("activates only after runtime binding and preserves refusal across profiles", async () => {
+        const runtimeRefusal = DESKTOP_BRIDGE_REFUSALS.presentationRuntimeUnavailable;
+        const prompt = new FakeTextAreaElement("assistant-prompt", { kind: "inert" });
+        const send = new FakeElement("assistant-send", { kind: "inert" });
+        const retry = new FakeElement("assistant-retry", { kind: "inert" });
+        const controls = [prompt, send, retry];
 
-    // The chrome serializes a profile switch with the project actions, so the
-    // click resolves through the document's in-flight guard rather than in the
-    // click handler itself: a real operator's next click is a later event-loop
-    // turn, and asserting inside this one would read the pre-switch document.
-    const switchTo = async (profile: string): Promise<void> => {
-      const chip = profileChips.find((candidate) => candidate.dataset.value === profile);
-      if (chip === undefined || shell.clickListener === undefined) {
-        throw new Error(`profile switch harness missing ${profile}`);
-      }
-      shell.clickListener({ target: chip });
-      for (let turn = 0; turn < 8; turn += 1) await Promise.resolve();
-    };
-    const expectRefusal = (reason: string): void => {
-      for (const control of controls) {
-        expect(control.dataset.kind).toBe("inert");
-        expect(control.dataset.refusal).toBe(reason);
-        expect(control.getAttribute("aria-disabled")).toBe("true");
-        expect(control.getAttribute("aria-describedby")).toBe(`refusal-${reason}`);
-        expect(control.classList.contains("is-inert")).toBe(true);
-      }
-      expect(prompt.readOnly).toBe(true);
-    };
+        const profileChips = ["game", "web", "kids"].map((profile) => new FakeElement(`profile-${profile}`, {
+            action: "profile",
+            value: profile,
+        }));
 
-    const expectLive = (): void => {
-      for (const control of controls) {
-        expect(control.dataset.kind).toBe("live");
-        expect(control.dataset.refusal).toBeUndefined();
-        expect(control.getAttribute("aria-disabled")).toBeNull();
-        expect(control.getAttribute("aria-describedby")).toBeNull();
-        expect(control.classList.contains("is-inert")).toBe(false);
-      }
-      expect(prompt.readOnly).toBe(false);
-    };
+        const shell = new FakeShell(controls, profileChips);
+        const eventRealm = createChromeEventRealm();
+        const audioProfiles: unknown[] = [];
+        eventRealm.document.addEventListener("sceneaxi:desktop-audio-invalidate", (event) => {
+            // SAFETY: the listener receives the named event emitted by the real desktop chrome in this fixture; its producer owns these detail fields.
+            audioProfiles.push((event as typeof event & {
+                detail: {
+                    profile: unknown;
+                };
+            }).detail.profile);
+        });
 
-    documentListeners.get(DESKTOP_ASSISTANT_RUNTIME_EVENT)?.({
-      detail: { runtime: "local" },
-    });
-    expectLive();
-    await switchTo("web");
-    expectLive();
-    await switchTo("kids");
-    expectRefusal(DESKTOP_VISUAL_REFUSALS.kidsAssistantDenied);
-    await switchTo("game");
-    expectLive();
+        const documentListeners = new Map<string, (event: {
+            readonly detail?: unknown;
+        }) => void>();
 
-    documentListeners.get(DESKTOP_ASSISTANT_RUNTIME_EVENT)?.({
-      detail: { runtime: "none", message: "Viewport unavailable" },
-    });
-    expectRefusal(runtimeRefusal);
+        const script = /<script>([\s\S]*?)<\/script>/.exec(desktopLinuxIndexHtml())?.[1];
+        expect(script).toBeDefined();
+        runInNewContext(script ?? "", {
+            MutationObserver: FakeMutationObserver,
+            Event: eventRealm.Event,
+            CustomEvent: eventRealm.CustomEvent,
+            document: {
+                activeElement: null,
+                addEventListener: (name: string, listener: (event: {
+                    readonly detail?: unknown;
+                }) => void) => documentListeners.set(name, listener),
+                dispatchEvent: eventRealm.document.dispatchEvent.bind(eventRealm.document),
+                querySelector: (selector: string) => (selector === ".shell" ? shell : null),
+            },
+            Element: FakeElement,
+            HTMLTextAreaElement: FakeTextAreaElement,
+            window: {
+                addEventListener: (name: string, listener: (event: {
+                    readonly detail?: unknown;
+                }) => void) => documentListeners.set(name, listener),
+                matchMedia: () => ({
+                    addEventListener: () => undefined, removeEventListener: () => undefined,
+                    matches: false,
+                }),
+            },
+            sceneaxiDesktopLinux: {
+                request: async (request: {
+                    action?: unknown;
+                    payload?: unknown;
+                }) => ({
+                    ok: request.action === "profile",
+                    action: "profile",
+                    data: request.payload,
+                }),
+            },
+        });
 
-    await switchTo("web");
-    expectRefusal(runtimeRefusal);
-    await switchTo("kids");
-    expectRefusal(DESKTOP_VISUAL_REFUSALS.kidsAssistantDenied);
-    await switchTo("game");
-    expectRefusal(runtimeRefusal);
-  });
+        // The chrome serializes a profile switch with the project actions, so the
+        // click resolves through the document's in-flight guard rather than in the
+        // click handler itself: a real operator's next click is a later event-loop
+        // turn, and asserting inside this one would read the pre-switch document.
+        const switchTo = async (profile: string): Promise<void> => {
+            const chip = profileChips.find((candidate) => candidate.dataset.value === profile);
 
-  function mountRarityChrome(port?: unknown) {
-    const accept = new FakeElement("change-accept", { action: "change-accept" });
-    const reject = new FakeElement("change-reject", { action: "change-reject" });
-    const reload = new FakeElement("document-reload", { action: "document-reload" });
-    const openRecent = new FakeElement("project-open-recent", { action: "project-open-recent" });
-    const removeRecent = new FakeElement("project-remove-recent", {
-      action: "project-remove-recent",
-    });
-    const undo = new FakeElement("edit-undo", { command: "edit-undo" });
-    const recentSelect = new FakeSelectElement("project-recent-select");
-    const play = new FakeElement("run-play", { command: "run-play" });
-    const runSession = new FakeElement("run-session");
-    const runLive = new FakeElement("run-live");
-    const runEvidence = new FakeElement("run-evidence");
-    runEvidence.hidden = true;
-    const proposal = new FakeElement("proposal");
-    proposal.hidden = true;
-    const empty = new FakeElement("empty");
-    const documentPath = new FakeElement("document");
-    const contentHash = new FakeElement("hash");
-    const diff = new FakeElement("diff");
-    const reviewEvidence = new FakeElement("review-evidence");
-    reviewEvidence.hidden = true;
-    const evidence = new FakeElement("evidence");
-    evidence.hidden = true;
-    const evidenceEmpty = new FakeElement("evidence-empty");
-    const projectState = new FakeElement("project-state");
-    const status = new FakeElement("status");
-    const fileStatus = new FakeElement("file-status");
-    const badge = new FakeElement("badge");
-    const changesTab = new FakeElement("dock-changes", { value: "changes" });
-    const evidenceTab = new FakeElement("dock-evidence", { value: "evidence" });
-    const changesPanel = new FakeElement("dock-panel-changes", { dockPanel: "changes" });
-    const evidencePanel = new FakeElement("dock-panel-evidence", { dockPanel: "evidence" });
-    const shell = new FakeShell(
-      [],
-      [],
-      new Map([
-        ["[data-change-proposal]", [proposal]],
-        ["[data-change-empty]", [empty]],
-        ["[data-change-document]", [documentPath]],
-        ["[data-change-content-hash]", [contentHash]],
-        ["[data-change-diff]", [diff]],
-        ["[data-change-rarity-evidence]", [reviewEvidence]],
-        ["[data-rarity-evidence]", [evidence]],
-        ["[data-rarity-evidence-empty]", [evidenceEmpty]],
-        ["[data-project-state]", [projectState]],
-        ["[data-project-status]", [status]],
-        ["[data-project-file-state]", [fileStatus]],
-        ["[data-change-badge]", [badge]],
-        ["[data-command]", [play, undo]],
-        ["[data-product-action]", [accept, reject, reload, openRecent, removeRecent]],
-        ["#project-recent-select", [recentSelect]],
-        ["[data-run-session-report]", [runSession]],
-        ["[data-run-live-report]", [runLive]],
-        ["[data-run-rarity-evidence]", [runEvidence]],
-        [".dock-tab", [changesTab, evidenceTab]],
-        ["[data-dock-panel]", [changesPanel, evidencePanel]],
-      ]),
-    );
-    const documentListeners = new Map<string, (event: { readonly detail?: unknown }) => void>();
-    const dispatchedEvents: Array<{ readonly type: string; readonly detail?: unknown }> = [];
-    const script = /<script>([\s\S]*?)<\/script>/.exec(desktopLinuxIndexHtml())?.[1];
-    expect(script).toBeDefined();
-    const adaptedPort = port === undefined ? undefined : {
-      ...(port as Record<string, unknown>),
-      request: (request: unknown) => {
-        const typed = request as {
-          action?: unknown;
-          payload?: { commandId?: unknown; input?: Record<string, unknown> };
+            if (chip === undefined || shell.clickListener === undefined) {
+                throw new Error(`profile switch harness missing ${profile}`);
+            }
+
+            shell.clickListener({ target: chip });
+
+            for (let turn = 0; turn < 8; turn += 1)
+                await Promise.resolve();
         };
-        const commandId = typed.action === "command" ? typed.payload?.commandId : null;
-        if (commandId === "scene-hierarchy-inspect") {
-          return Promise.resolve({
-            ok: false,
-            reason: "SCENE_HIERARCHY_CAPABILITY_MISSING",
-            message: "The rarity-only harness has no scene hierarchy authority.",
-          });
-        }
-        const translated = commandId === "project-save" || commandId === "change-review-accept"
-          ? { action: "authoring", payload: { op: "accept" } }
-          : commandId === "change-review-reject"
-            ? { action: "authoring", payload: { op: "reject" } }
-            : commandId === "edit-undo"
-              ? { action: "authoring", payload: { op: "undo" } }
-              : commandId === "run-play"
-                ? { action: "open-path", payload: typed.payload?.input }
-                : request;
-        return (port as { request: (value: unknown) => unknown }).request(translated);
-      },
-    };
-    runInNewContext(script ?? "", {
-      document: {
-        activeElement: null,
-        addEventListener: (
-          name: string,
-          listener: (event: { readonly detail?: unknown }) => void,
-        ) => documentListeners.set(name, listener),
-        // The chrome dispatches the viewport play event and the renderer answers
-        // it by marking the detail accepted. Routing it back through the same
-        // listener map lets a test stand in for that renderer.
-        dispatchEvent: (event: { readonly type: string; readonly detail?: unknown }) => {
-          dispatchedEvents.push(event);
-          documentListeners.get(event.type)?.(event);
-          return true;
-        },
-        createElement: () => new FakeElement("created"),
-        querySelector: (selector: string) => (selector === ".shell" ? shell : null),
-      },
-      CustomEvent: class {
-        readonly type: string;
-        readonly detail: unknown;
-        constructor(type: string, init?: { readonly detail?: unknown }) {
-          this.type = type;
-          this.detail = init?.detail;
-        }
-      },
-      Element: FakeElement,
-      HTMLTextAreaElement: FakeTextAreaElement,
-      window: {
-        matchMedia: () => ({ addEventListener: () => undefined, matches: false }),
-      },
-      ...(adaptedPort === undefined ? {} : { sceneaxiDesktop: adaptedPort }),
-    });
-    return {
-      shell, accept, reject, reload, openRecent, removeRecent, recentSelect, play, undo,
-      runSession, runLive,
-      runEvidence, proposal, empty, documentPath,
-      contentHash, diff, reviewEvidence, evidence, evidenceEmpty, projectState, status,
-      fileStatus, badge, changesTab, evidenceTab, changesPanel, evidencePanel,
-      documentListeners, dispatchedEvents,
-    };
-  }
 
-  it("reports runtime absence, request failure, and in-flight product state through mounted chrome", async () => {
-    const absent = mountRarityChrome();
-    absent.shell.clickListener?.({ target: absent.reload });
-    await vi.waitFor(() => {
-      expect(absent.status.textContent).toContain(DESKTOP_PRODUCT_REFUSALS.runtimeUnavailable);
+        const expectRefusal = (reason: string): void => {
+            for (const control of controls) {
+                expect(control.dataset.kind).toBe("inert");
+                expect(control.dataset.refusal).toBe(reason);
+                expect(control.getAttribute("aria-disabled")).toBe("true");
+                expect(control.getAttribute("aria-describedby")).toBe(`refusal-${reason}`);
+                expect(control.classList.contains("is-inert")).toBe(true);
+            }
+
+            expect(prompt.readOnly).toBe(true);
+        };
+
+        const expectLive = (): void => {
+            for (const control of controls) {
+                expect(control.dataset.kind).toBe("live");
+                expect(control.dataset.refusal).toBeUndefined();
+                expect(control.getAttribute("aria-disabled")).toBeNull();
+                expect(control.getAttribute("aria-describedby")).toBeNull();
+                expect(control.classList.contains("is-inert")).toBe(false);
+            }
+
+            expect(prompt.readOnly).toBe(false);
+        };
+
+        documentListeners.get(DESKTOP_ASSISTANT_RUNTIME_EVENT)?.({
+            detail: { runtime: "local" },
+        });
+        expectLive();
+        await switchTo("web");
+        expectLive();
+        await switchTo("kids");
+        expectRefusal(DESKTOP_VISUAL_REFUSALS.kidsAssistantDenied);
+        await switchTo("game");
+        expectLive();
+        // Rootless business switching still fences audio via actual DOM events.
+        expect(audioProfiles).toEqual([null, null, null]);
+        documentListeners.get(DESKTOP_ASSISTANT_RUNTIME_EVENT)?.({
+            detail: { runtime: "none", message: "Viewport unavailable" },
+        });
+        expectRefusal(runtimeRefusal);
+        await switchTo("web");
+        expectRefusal(runtimeRefusal);
+        await switchTo("kids");
+        expectRefusal(DESKTOP_VISUAL_REFUSALS.kidsAssistantDenied);
+        await switchTo("game");
+        expectRefusal(runtimeRefusal);
     });
 
-    const failed = mountRarityChrome({
-      request: () => Promise.reject(new Error("ipc channel closed")),
-    });
-    failed.shell.clickListener?.({ target: failed.reload });
-    await vi.waitFor(() => {
-      expect(failed.status.textContent).toContain(DESKTOP_PRODUCT_REFUSALS.runtimeRequestFailed);
-    });
+    function mountRarityChrome(port?: RarityChromePort) {
+        const accept = new FakeElement("change-accept", { action: "change-accept" });
+        const reject = new FakeElement("change-reject", { action: "change-reject" });
+        const reload = new FakeElement("document-reload", { action: "document-reload" });
+        const openRecent = new FakeElement("project-open-recent", { action: "project-open-recent" });
 
-    let resolveRequest: ((response: unknown) => void) | undefined;
-    const pending = mountRarityChrome({
-      request: () => new Promise((resolve) => {
-        resolveRequest = resolve;
-      }),
-    });
-    pending.shell.clickListener?.({ target: pending.reload });
-    expect(pending.reload.dataset.busy).toBe("true");
-    expect(pending.reload.getAttribute("aria-describedby")).toBe(
-      `refusal-${DESKTOP_PRODUCT_REFUSALS.requestInFlight}`,
-    );
-    await vi.waitFor(() => expect(resolveRequest).toBeTypeOf("function"));
-    resolveRequest?.({ ok: false, reason: "DESKTOP_TEST_DONE", message: "done" });
-    await vi.waitFor(() => {
-      expect(pending.reload.dataset.busy).toBeUndefined();
-    });
-  });
+        const removeRecent = new FakeElement("project-remove-recent", {
+            action: "project-remove-recent",
+        });
 
-  const RARITY_EVIDENCE_FIXTURE: DesktopRarityEvidence = Object.freeze({
-    eventId: "wayfinder-drop-001",
-    tier: "uncommon",
-    candidateId: "wayfinder-copper",
-    scope: "desktop-linux-rarity",
-    algorithmId: "sceneaxi.rarity.weighted-sha256-v1",
-    projectSeed: 20260809,
-    policyDigest: `sha256:${"1".repeat(64)}`,
-    requestDigest: `sha256:${"2".repeat(64)}`,
-    outcomeDigest: `sha256:${"3".repeat(64)}`,
-    provenanceDigest: `sha256:${"4".repeat(64)}`,
-    providerEvidenceDigest: `sha256:${"e".repeat(64)}`,
-    namespaceDigest: `sha256:${"5".repeat(64)}`,
-    tierRollDigest: `sha256:${"6".repeat(64)}`,
-    candidateRollDigest: `sha256:${"7".repeat(64)}`,
-    tierDraw: 69,
-    tierTotalWeight: 100,
-    candidateDraw: 2,
-    candidateTotalWeight: 5,
-    providerEvidence: {
-      schemaVersion: 1,
-      kind: "sceneaxi.model-provider-call-evidence",
-      operation: "tool-call",
-      profile: "@sceneaxi/profile-game",
-      model: {
-        provider: "sceneaxi-fixture",
-        model: "wayfinder-rarity-fixture",
-        quantization: "deterministic-json",
-        version: "2026-08-09",
-      },
-    },
-  } satisfies DesktopRarityEvidence);
+        const undo = new FakeElement("edit-undo", { command: "edit-undo" });
+        const recentSelect = new FakeSelectElement("project-recent-select");
+        const play = new FakeElement("run-play", { command: "run-play" });
+        const runSession = new FakeElement("run-session");
+        const runLive = new FakeElement("run-live");
+        const runEvidence = new FakeElement("run-evidence");
+        runEvidence.hidden = true;
+        const proposal = new FakeElement("proposal");
+        proposal.hidden = true;
+        const empty = new FakeElement("empty");
+        const documentPath = new FakeElement("document");
+        const contentHash = new FakeElement("hash");
+        const diff = new FakeElement("diff");
+        const reviewEvidence = new FakeElement("review-evidence");
+        reviewEvidence.hidden = true;
+        const evidence = new FakeElement("evidence");
+        evidence.hidden = true;
+        const evidenceEmpty = new FakeElement("evidence-empty");
+        const projectState = new FakeElement("project-state");
+        const status = new FakeElement("status");
+        const fileStatus = new FakeElement("file-status");
+        const badge = new FakeElement("badge");
+        const changesTab = new FakeElement("dock-changes", { value: "changes" });
+        const evidenceTab = new FakeElement("dock-evidence", { value: "evidence" });
+        const changesPanel = new FakeElement("dock-panel-changes", { dockPanel: "changes" });
+        const evidencePanel = new FakeElement("dock-panel-evidence", { dockPanel: "evidence" });
 
-  const RARITY_REPLAY_DIGEST = `sha256:${"a".repeat(64)}`;
-  const RARITY_PRODUCT_SESSION = Object.freeze({
-    bootstrap: Object.freeze({
-      kind: "product",
-      subjectId: "desktop-linux-rarity",
-      sessionId: `sha256:${"b".repeat(64)}`,
-      openedAtMs: FIXED_NOW_MS,
-      resumed: false,
-      kernelVersion: "0.0.0",
-      bomVersion: "0.0.0",
-    }),
-    initialDigest: `sha256:${"c".repeat(64)}`,
-    tickDigests: Object.freeze([`sha256:${"d".repeat(64)}`, RARITY_REPLAY_DIGEST]),
-    replayDigest: RARITY_REPLAY_DIGEST,
-  });
+        const shell = new FakeShell([], [], new Map([
+            ["[data-change-proposal]", [proposal]],
+            ["[data-change-empty]", [empty]],
+            ["[data-change-document]", [documentPath]],
+            ["[data-change-content-hash]", [contentHash]],
+            ["[data-change-diff]", [diff]],
+            ["[data-change-rarity-evidence]", [reviewEvidence]],
+            ["[data-rarity-evidence]", [evidence]],
+            ["[data-rarity-evidence-empty]", [evidenceEmpty]],
+            ["[data-project-state]", [projectState]],
+            ["[data-project-status]", [status]],
+            ["[data-project-file-state]", [fileStatus]],
+            ["[data-change-badge]", [badge]],
+            ["[data-command]", [play, undo]],
+            ["[data-product-action]", [accept, reject, reload, openRecent, removeRecent]],
+            ["#project-recent-select", [recentSelect]],
+            ["[data-run-session-report]", [runSession]],
+            ["[data-run-live-report]", [runLive]],
+            ["[data-run-rarity-evidence]", [runEvidence]],
+            [".dock-tab", [changesTab, evidenceTab]],
+            ["[data-dock-panel]", [changesPanel, evidencePanel]],
+        ]));
 
-  const RARITY_PROPOSAL_SNAPSHOT: DesktopSnapshot = Object.freeze({
-    phase: "reviewing",
-    proposal: {
-      schemaVersion: PROPOSAL_SCHEMA_VERSION,
-      kind: PROPOSAL_KIND,
-      edits: [{
-        documentPath: "scene.json",
-        baseContentHash: `sha256:${"0".repeat(64)}`,
-        jsonPointer: "/data",
-        oldValue: {},
-        newValue: {},
-      }],
-      diffs: [{ documentPath: "scene.json", unifiedDiff: "--- scene.json" }],
-    },
-    unifiedDiff: "--- scene.json",
-    renderedDiff: "rarity: + uncommon / wayfinder-copper",
-    appliedPaths: null,
-    journalRecoveryPending: false,
-    transactionId: null,
-    diagnostics: [],
-  });
+        const documentListeners = new Map<string, (event: {
+            readonly detail?: unknown;
+        }) => void>();
 
-  it("moves a rarity proposal into actionable review and both safe evidence views", () => {
-    const {
-      proposal, empty, documentPath, diff, reviewEvidence, evidence, evidenceEmpty,
-      projectState, status, fileStatus, badge, changesTab, evidenceTab, changesPanel,
-      evidencePanel, documentListeners,
-    } = mountRarityChrome();
+        const dispatchedEvents: Array<{
+            readonly type: string;
+            readonly detail?: unknown;
+        }> = [];
 
-    const rarityEvidence = RARITY_EVIDENCE_FIXTURE;
-    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
-      detail: {
-        replayed: false,
-        evidence: rarityEvidence,
-        snapshot: { ...RARITY_PROPOSAL_SNAPSHOT, rarityEvidence },
-      },
-    });
+        const eventRealm = createChromeEventRealm();
+        const initializationRequests: unknown[] = [];
+        const script = /<script>([\s\S]*?)<\/script>/.exec(desktopLinuxIndexHtml())?.[1];
+        expect(script).toBeDefined();
 
-    expect(proposal.hidden).toBe(false);
-    expect(empty.hidden).toBe(true);
-    expect(documentPath.textContent).toBe("scene.json");
-    expect(diff.textContent).toContain("wayfinder-copper");
-    expect(reviewEvidence.textContent).toContain(
-      `provenance ${RARITY_EVIDENCE_FIXTURE.provenanceDigest}`,
-    );
-    expect(evidence.textContent).toContain(
-      "provider sceneaxi-fixture · model wayfinder-rarity-fixture",
-    );
-    expect(reviewEvidence.hidden).toBe(false);
-    expect(evidence.hidden).toBe(false);
-    expect(evidenceEmpty.hidden).toBe(true);
-    expect(changesTab.getAttribute("aria-selected")).toBe("true");
-    expect(evidenceTab.getAttribute("aria-selected")).toBe("false");
-    expect(changesPanel.hidden).toBe(false);
-    expect(evidencePanel.hidden).toBe(true);
-    expect(projectState.dataset.projectState).toBe("dirty");
-    expect(status.textContent).toContain("review before Save");
-    expect(fileStatus.textContent).toContain("review before Save");
-    expect(badge.textContent).toBe("1");
-  });
+        const adaptedPort = port === undefined ? undefined : {
+            ...port,
+            request: (request: DesktopRequest) => {
+                // SAFETY: this request is emitted by the desktop protocol function exercised in this fixture; the projection reads only its documented IPC fields.
+                const typed = request as {
+                    action?: unknown;
+                    payload?: {
+                        commandId?: unknown;
+                        input?: Record<string, import("@sceneaxi/schemas").JsonValue>;
+                    };
+                };
 
-  it("reports an idempotent rarity replay as a replay, not as a staged proposal", () => {
-    const {
-      proposal, empty, evidence, evidenceEmpty, projectState, status, badge,
-      changesTab, evidenceTab, changesPanel, evidencePanel, documentListeners,
-    } = mountRarityChrome();
+                if (typed.action === "profile") {
+                    expect(request).toEqual({ action: "profile", payload: { profile: shell.dataset.profile } });
+                    initializationRequests.push(request);
 
-    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
-      detail: { replayed: true, snapshot: null, evidence: RARITY_EVIDENCE_FIXTURE },
-    });
-
-    expect(evidence.textContent).toContain(
-      `provenance ${RARITY_EVIDENCE_FIXTURE.provenanceDigest}`,
-    );
-    expect(evidence.hidden).toBe(false);
-    expect(evidenceEmpty.hidden).toBe(true);
-    expect(evidenceTab.getAttribute("aria-selected")).toBe("true");
-    expect(evidencePanel.hidden).toBe(false);
-    expect(changesTab.getAttribute("aria-selected")).toBe("false");
-    expect(changesPanel.hidden).toBe(true);
-    expect(proposal.hidden).toBe(true);
-    expect(empty.hidden).toBe(false);
-    expect(badge.textContent).toBe("0");
-    expect(projectState.dataset.projectState).not.toBe("dirty");
-    expect(status.textContent).toContain("nothing staged");
-    expect(status.textContent).not.toContain("review before Save");
-  });
-
-  // Reject is driven through the real click handler and a fake desktop port, so
-  // the assertion covers the chrome's own decision rather than a helper called
-  // directly. The proposal under review is installed through the rarity event in
-  // both cases; only its `rarityEvidence` member differs, which is exactly the
-  // difference the clear is supposed to key on.
-  const rejectingPort = (rarityEvidence?: DesktopRarityEvidence) => {
-    const rejected = {
-      phase: "rejected",
-      proposal: null,
-      unifiedDiff: null,
-      renderedDiff: null,
-      appliedPaths: null,
-      journalRecoveryPending: false,
-      transactionId: null,
-      diagnostics: [],
-      ...(rarityEvidence === undefined ? {} : { rarityEvidence }),
-    };
-    return {
-      request: (request: { readonly payload?: { readonly op?: string } }) =>
-        Promise.resolve(
-          request.payload?.op === "reject"
-            ? { ok: true, data: rejected }
-            : { ok: false, reason: "DESKTOP_TEST_NO_RUNTIME", message: "no runtime" },
-        ),
-    };
-  };
-
-  // Reject completes asynchronously and ends by reporting the re-open it could
-  // not perform against this fake port, so that status is the signal that
-  // `syncReview` has already seen the rejected snapshot. Asserting before it
-  // would read the pre-click state and pass either way.
-  const rejectSettled = async (status: FakeElement): Promise<void> => {
-    await vi.waitFor(() => {
-      expect(status.textContent).toContain("Open refused");
-    });
-  };
-
-  it("keeps accepted rarity evidence when an unrelated proposal is rejected", async () => {
-    const { reject, shell, evidence, evidenceEmpty, status, documentListeners } =
-      mountRarityChrome(rejectingPort());
-
-    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
-      detail: {
-        replayed: false,
-        evidence: RARITY_EVIDENCE_FIXTURE,
-        snapshot: { ...RARITY_PROPOSAL_SNAPSHOT, rarityEvidence: RARITY_EVIDENCE_FIXTURE },
-      },
-    });
-    expect(evidence.hidden).toBe(false);
-
-    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
-      detail: {
-        replayed: false,
-        evidence: RARITY_EVIDENCE_FIXTURE,
-        snapshot: { ...RARITY_PROPOSAL_SNAPSHOT, renderedDiff: "translation.x: 0 → 3" },
-      },
-    });
-
-    shell.clickListener?.({ target: reject });
-    await rejectSettled(status);
-    expect(evidence.textContent).toContain(
-      `provenance ${RARITY_EVIDENCE_FIXTURE.provenanceDigest}`,
-    );
-    expect(evidence.hidden).toBe(false);
-    expect(evidenceEmpty.hidden).toBe(true);
-  });
-
-  it("keeps a staged rarity proposal's evidence on screen through Play", async () => {
-    // Play reports the open path it just ran. Staging changed no project bytes, so
-    // that run carries no rarity — but the staged proposal is still pending Accept
-    // and its provenance is still rendered in Change Review.
-    const openPath = {
-      closed: true,
-      initialDigest: "sha256:initial",
-      tickDigests: ["sha256:tick"],
-      instanceCount: 1,
-      mountable: { sceneId: "desktop-scene" },
-    };
-    const port = {
-      request: (request: { readonly action?: string; readonly payload?: { readonly op?: string } }) =>
-        Promise.resolve(
-          request.action === "open-path"
-            ? { ok: true, action: "open-path", data: openPath }
-            : request.payload?.op === "status"
-              ? {
-                  ok: true,
-                  action: "authoring",
-                  data: {
-                    ok: true,
-                    documentId: "scene",
-                    contentHash: "sha256:base",
-                    data: {},
-                    undoAvailability: "unavailable",
-                  },
+                    return Promise.resolve({ ok: true, action: "profile", data: typed.payload });
                 }
-              : { ok: false, reason: "DESKTOP_TEST_NO_RUNTIME", message: "no runtime" },
-        ),
-    };
-    const { shell, play, reload, status, evidence, evidenceEmpty, runSession, documentListeners } =
-      mountRarityChrome(port);
 
-    documentListeners.set(DESKTOP_VIEWPORT_PLAY_EVENT, (event) => {
-      const detail = event.detail as { accepted: boolean; frame: number | null };
-      detail.accepted = true;
-      detail.frame = 1;
-    });
-    // Open the project first, so Play does not take the branch that discards a
-    // staged proposal on the operator's behalf — the sequence under test is
-    // Agent stages, then Play, on an already-open document.
-    shell.clickListener?.({ target: reload });
-    await vi.waitFor(() => {
-      expect(status.textContent).toContain("· open ·");
-    });
-    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
-      detail: {
-        replayed: false,
-        evidence: RARITY_EVIDENCE_FIXTURE,
-        snapshot: { ...RARITY_PROPOSAL_SNAPSHOT, rarityEvidence: RARITY_EVIDENCE_FIXTURE },
-      },
-    });
-    expect(evidence.hidden).toBe(false);
+                const commandId = typed.action === "command" ? typed.payload?.commandId : null;
 
-    shell.clickListener?.({ target: play });
-    await vi.waitFor(() => {
-      expect(runSession.textContent).toContain("terminal digest sha256:tick");
-    });
-    expect(evidence.textContent).toContain(
-      `provenance ${RARITY_EVIDENCE_FIXTURE.provenanceDigest}`,
-    );
-    expect(evidence.hidden).toBe(false);
-    expect(evidenceEmpty.hidden).toBe(true);
-    // The run itself carried no rarity, so its own report must not claim one.
-    expect(runSession.textContent).not.toContain("rarity uncommon");
-  });
-
-  it("keeps staged evidence in the dock while Play reports accepted evidence", async () => {
-    const stagedEvidence = Object.freeze({
-      ...RARITY_EVIDENCE_FIXTURE,
-      eventId: "wayfinder-drop-002",
-      candidateId: "wayfinder-silver",
-      provenanceDigest: `sha256:${"8".repeat(64)}`,
-      namespaceDigest: `sha256:${"9".repeat(64)}`,
-    });
-    const openPath = {
-      closed: true,
-      initialDigest: "sha256:initial",
-      tickDigests: ["sha256:tick"],
-      instanceCount: 1,
-      mountable: { sceneId: "desktop-scene" },
-      rarity: RARITY_EVIDENCE_FIXTURE,
-      raritySession: RARITY_PRODUCT_SESSION,
-    };
-    const port = {
-      request: (request: { readonly action?: string; readonly payload?: { readonly op?: string } }) =>
-        Promise.resolve(
-          request.action === "open-path"
-            ? { ok: true, action: "open-path", data: openPath }
-            : request.payload?.op === "status"
-              ? {
-                  ok: true,
-                  action: "authoring",
-                  data: {
-                    ok: true,
-                    documentId: "scene",
-                    contentHash: "sha256:accepted",
-                    data: { rarity: { kind: "sceneaxi.rarity.namespace" } },
-                    rarityNamespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
-                    acceptedRarityEvidence: RARITY_EVIDENCE_FIXTURE,
-                    undoAvailability: "unavailable",
-                  },
+                if (commandId === "scene-hierarchy-inspect") {
+                    return Promise.resolve({
+                        ok: false,
+                        reason: "SCENE_HIERARCHY_CAPABILITY_MISSING",
+                        message: "The rarity-only harness has no scene hierarchy authority.",
+                    });
                 }
-              : { ok: false, reason: "DESKTOP_TEST_NO_RUNTIME", message: "no runtime" },
-        ),
-    };
-    const {
-      shell, play, reload, status, evidence, runEvidence, documentListeners,
-    } = mountRarityChrome(port);
-    documentListeners.set(DESKTOP_VIEWPORT_PLAY_EVENT, (event) => {
-      const detail = event.detail as { accepted: boolean; frame: number | null };
-      detail.accepted = true;
-      detail.frame = 1;
-    });
 
-    shell.clickListener?.({ target: reload });
-    await vi.waitFor(() => {
-      expect(status.textContent).toContain("· open ·");
-    });
-    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
-      detail: {
-        replayed: false,
-        evidence: stagedEvidence,
-        snapshot: { ...RARITY_PROPOSAL_SNAPSHOT, rarityEvidence: stagedEvidence },
-      },
-    });
-    expect(evidence.textContent).toContain("wayfinder-silver");
+                const translated = commandId === "project-save" || commandId === "change-review-accept"
+                    ? { action: "authoring", payload: { op: "accept" } }
+                    : commandId === "change-review-reject"
+                        ? { action: "authoring", payload: { op: "reject" } }
+                        : commandId === "edit-undo"
+                            ? { action: "authoring", payload: { op: "undo" } }
+                            : commandId === "run-play"
+                                ? { action: "open-path", payload: typed.payload?.input }
+                                : request;
 
-    shell.clickListener?.({ target: play });
-    await vi.waitFor(() => {
-      expect(runEvidence.hidden).toBe(false);
-    });
-    expect(runEvidence.textContent).toContain("wayfinder-copper");
-    expect(evidence.textContent).toContain("wayfinder-silver");
-    expect(evidence.textContent).not.toContain("wayfinder-copper");
-  });
+                return port.request(translated);
+            },
+        };
 
-  it("renders the run's full safe provenance through the shared formatter", async () => {
-    const openPath = {
-      closed: true,
-      initialDigest: "sha256:initial",
-      tickDigests: ["sha256:tick"],
-      instanceCount: 1,
-      mountable: { sceneId: "desktop-scene" },
-      rarity: RARITY_EVIDENCE_FIXTURE,
-      raritySession: RARITY_PRODUCT_SESSION,
-    };
-    const port = {
-      request: (request: { readonly action?: string; readonly payload?: { readonly op?: string } }) =>
-        Promise.resolve(
-          request.action === "open-path"
-            ? { ok: true, action: "open-path", data: openPath }
-            : request.payload?.op === "status"
-              ? {
-                  ok: true,
-                  action: "authoring",
-                  data: {
-                    ok: true,
-                    documentId: "scene",
-                    contentHash: "sha256:base",
-                    data: {},
-                    undoAvailability: "unavailable",
-                  },
-                }
-              : { ok: false, reason: "DESKTOP_TEST_NO_RUNTIME", message: "no runtime" },
-        ),
-    };
-    const { shell, play, runSession, runEvidence, documentListeners } =
-      mountRarityChrome(port);
-    documentListeners.set(DESKTOP_VIEWPORT_PLAY_EVENT, (event) => {
-      const detail = event.detail as { accepted: boolean; frame: number | null };
-      detail.accepted = true;
-      detail.frame = 1;
-    });
+        runInNewContext(script ?? "", (() => {
+            const payload = { MutationObserver: FakeMutationObserver,
+                document: {
+                    activeElement: null,
+                    addEventListener: (name: string, listener: (event: {
+                        readonly detail?: unknown;
+                    }) => void) => documentListeners.set(name, listener),
+                    // The chrome dispatches the viewport play event and the renderer answers
+                    // it by marking the detail accepted. Routing it back through the same
+                    // listener map lets a test stand in for that renderer.
+                    dispatchEvent: (event: {
+                        readonly type: string;
+                        readonly detail?: unknown;
+                    }) => {
+                        expect(event).toBeInstanceOf(eventRealm.Event);
+                        // SAFETY: the listener receives the named event emitted by the real desktop chrome in this fixture; its producer owns these detail fields.
+                        eventRealm.document.dispatchEvent(event as InstanceType<typeof eventRealm.Event>);
+                        // Record the public event envelope, not realm-private Event internals.
+                        dispatchedEvents.push({ type: event.type, detail: event.detail });
+                        documentListeners.get(event.type)?.(event);
 
-    shell.clickListener?.({ target: play });
-    await vi.waitFor(() => {
-      expect(runEvidence.hidden).toBe(false);
-    });
-
-    // Every field the shared formatter prints, on the Run surface — not the
-    // tier/candidate/provenance summary it used to paraphrase.
-    const shared = formatSafeRarityEvidence(RARITY_EVIDENCE_FIXTURE);
-    expect(shared).not.toBeNull();
-    expect(runEvidence.textContent).toContain(shared ?? "");
-    expect(runEvidence.textContent).toContain("scope desktop-linux-rarity");
-    expect(runEvidence.textContent).toContain("seed 20260809");
-    expect(runEvidence.textContent).toContain("tier draw 69 / 100");
-    expect(runEvidence.textContent).toContain(
-      `namespace ${RARITY_EVIDENCE_FIXTURE.namespaceDigest}`,
-    );
-    expect(runEvidence.textContent).toContain(
-      "provider sceneaxi-fixture · model wayfinder-rarity-fixture",
-    );
-    // The rarity product session is named, and the run report line claims none of
-    // the rarity facts as its own.
-    expect(runEvidence.textContent).toContain(
-      `verified in a separate product session ${RARITY_PRODUCT_SESSION.bootstrap.subjectId}`,
-    );
-    expect(runEvidence.textContent).toContain(`replayed to ${RARITY_REPLAY_DIGEST}`);
-    expect(runSession.textContent).toContain("terminal digest sha256:tick");
-    expect(runSession.textContent).not.toContain("rarity");
-  });
-
-  it("refuses malformed numeric evidence and owns product-session attribution", () => {
-    const withSession = formatSafeRarityEvidence(
-      RARITY_EVIDENCE_FIXTURE,
-      RARITY_PRODUCT_SESSION,
-    );
-    expect(withSession).toContain(
-      `verified in a separate product session ${RARITY_PRODUCT_SESSION.bootstrap.subjectId}`,
-    );
-    expect(withSession).toContain(`replayed to ${RARITY_REPLAY_DIGEST}`);
-    for (const [field, value] of [
-      ["projectSeed", undefined],
-      ["tierDraw", -1],
-      ["tierDraw", 1.5],
-      ["tierTotalWeight", 0],
-      ["candidateDraw", 5],
-      ["candidateTotalWeight", Number.NaN],
-    ] as const) {
-      expect(
-        formatSafeRarityEvidence({ ...RARITY_EVIDENCE_FIXTURE, [field]: value }),
-        field,
-      ).toBeNull();
-    }
-    for (const malformed of [
-      { ...RARITY_EVIDENCE_FIXTURE, eventId: "Invalid event" },
-      { ...RARITY_EVIDENCE_FIXTURE, eventId: "valid-event\n" },
-      { ...RARITY_EVIDENCE_FIXTURE, tier: "mythic" },
-      { ...RARITY_EVIDENCE_FIXTURE, algorithmId: "other-algorithm" },
-      { ...RARITY_EVIDENCE_FIXTURE, namespaceDigest: "sha256:short" },
-      { ...RARITY_EVIDENCE_FIXTURE, providerEvidenceDigest: "sha256:short" },
-      {
-        ...RARITY_EVIDENCE_FIXTURE,
-        providerEvidenceDigest: `${RARITY_EVIDENCE_FIXTURE.providerEvidenceDigest}\n`,
-      },
-      {
-        ...RARITY_EVIDENCE_FIXTURE,
-        providerEvidence: {
-          ...RARITY_EVIDENCE_FIXTURE.providerEvidence,
-          profile: "@sceneaxi/profile-kids",
-        },
-      },
-      {
-        ...RARITY_EVIDENCE_FIXTURE,
-        providerEvidence: {
-          ...RARITY_EVIDENCE_FIXTURE.providerEvidence,
-          model: {
-            ...RARITY_EVIDENCE_FIXTURE.providerEvidence.model,
-            model: "wayfinder\nraw-detail",
-          },
-        },
-      },
-      {
-        ...RARITY_EVIDENCE_FIXTURE,
-        providerEvidence: {
-          ...RARITY_EVIDENCE_FIXTURE.providerEvidence,
-          model: {
-            ...RARITY_EVIDENCE_FIXTURE.providerEvidence.model,
-            provider: "sceneaxi-fixture\n",
-          },
-        },
-      },
-      {
-        ...RARITY_EVIDENCE_FIXTURE,
-        providerEvidence: {
-          ...RARITY_EVIDENCE_FIXTURE.providerEvidence,
-          model: {
-            ...RARITY_EVIDENCE_FIXTURE.providerEvidence.model,
-            provider: "sk_live_fixture",
-          },
-        },
-      },
-      {
-        ...RARITY_EVIDENCE_FIXTURE,
-        providerEvidence: {
-          ...RARITY_EVIDENCE_FIXTURE.providerEvidence,
-          model: {
-            ...RARITY_EVIDENCE_FIXTURE.providerEvidence.model,
-            provider: "whsec_abcdefgh",
-          },
-        },
-      },
-      {
-        ...RARITY_EVIDENCE_FIXTURE,
-        providerEvidence: {
-          ...RARITY_EVIDENCE_FIXTURE.providerEvidence,
-          model: {
-            ...RARITY_EVIDENCE_FIXTURE.providerEvidence.model,
-            provider: "xoxb-12345678-abcdefghijklmnop",
-          },
-        },
-      },
-      {
-        ...RARITY_EVIDENCE_FIXTURE,
-        providerEvidence: {
-          ...RARITY_EVIDENCE_FIXTURE.providerEvidence,
-          model: {
-            ...RARITY_EVIDENCE_FIXTURE.providerEvidence.model,
-            version: "v".repeat(129),
-          },
-        },
-      },
-    ]) {
-      expect(formatSafeRarityEvidence(malformed)).toBeNull();
-    }
-    expect(
-      formatSafeRarityEvidence(RARITY_EVIDENCE_FIXTURE, {
-        replayDigest: RARITY_REPLAY_DIGEST,
-      }),
-    ).toBeNull();
-    expect(
-      formatSafeRarityEvidence(RARITY_EVIDENCE_FIXTURE, {
-        ...RARITY_PRODUCT_SESSION,
-        replayDigest: `sha256:${"e".repeat(64)}`,
-      }),
-    ).toBeNull();
-  });
-
-  it("updates Assistant output when its rarity proposal settles", () => {
-    expect(
-      assistantRaritySettlement(RARITY_EVIDENCE_FIXTURE.namespaceDigest, {
-        settled: "applied",
-        evidence: RARITY_EVIDENCE_FIXTURE,
-      }),
-    ).toMatchObject({
-      activeNamespaceDigest: null,
-      evidenceVisible: true,
-      evidenceText: expect.stringContaining(
-        `namespace ${RARITY_EVIDENCE_FIXTURE.namespaceDigest}`,
-      ),
-      status: expect.stringContaining("accepted"),
-    });
-    expect(
-      assistantRaritySettlement(RARITY_EVIDENCE_FIXTURE.namespaceDigest, {
-        settled: "rejected",
-        evidence: RARITY_EVIDENCE_FIXTURE,
-      }),
-    ).toEqual({
-      activeNamespaceDigest: null,
-      evidenceText: "",
-      evidenceVisible: false,
-      status: "Rarity proposal rejected · project bytes and kernel state unchanged.",
-    });
-    expect(
-      assistantRaritySettlement(`sha256:${"f".repeat(64)}`, {
-        settled: "rejected",
-        evidence: RARITY_EVIDENCE_FIXTURE,
-      }),
-    ).toBeNull();
-    const invalidation = {
-      invalidated: true,
-      namespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
-    };
-    expect(
-      assistantRarityInvalidation(RARITY_EVIDENCE_FIXTURE.namespaceDigest, invalidation),
-    ).toMatchObject({
-      activeNamespaceDigest: null,
-      evidenceVisible: false,
-      status: expect.stringContaining("retired"),
-    });
-    expect(
-      rarityInvalidationMatches(RARITY_EVIDENCE_FIXTURE.namespaceDigest, invalidation),
-    ).toBe(true);
-    expect(rarityInvalidationMatches(`sha256:${"f".repeat(64)}`, invalidation)).toBe(false);
-  });
-
-  it("associates settlement only with the displayed rarity result", () => {
-    const staged = {
-      ok: true as const,
-      kind: "rarity-proposal" as const,
-      replayed: false,
-      evidence: RARITY_EVIDENCE_FIXTURE,
-    };
-    expect(assistantRarityResultDigest(staged)).toBe(
-      RARITY_EVIDENCE_FIXTURE.namespaceDigest,
-    );
-    expect(assistantRarityResultDigest({ ...staged, replayed: true })).toBeNull();
-    const rejected = {
-      ...staged,
-      authoring: {
-        ...RARITY_PROPOSAL_SNAPSHOT,
-        phase: "rejected" as const,
-        rarityEvidence: RARITY_EVIDENCE_FIXTURE,
-      },
-    };
-    expect(assistantRarityResultDigest(rejected)).toBeNull();
-    expect(assistantRarityResultSettlement(rejected)).toMatchObject({
-      evidenceVisible: false,
-      status: expect.stringContaining("rejected"),
-    });
-    const applied = {
-      ...staged,
-      authoring: {
-        ...RARITY_PROPOSAL_SNAPSHOT,
-        phase: "applied" as const,
-        rarityEvidence: RARITY_EVIDENCE_FIXTURE,
-      },
-    };
-    expect(assistantRarityResultDigest(applied)).toBeNull();
-    expect(assistantRarityResultSettlement(applied)).toMatchObject({
-      evidenceVisible: true,
-      status: expect.stringContaining("accepted"),
-    });
-    const retired = { ...applied, retirement: { reason: "undo" as const } };
-    expect(assistantRarityResultDigest(retired)).toBeNull();
-    expect(assistantRarityResultSettlement(retired)).toMatchObject({
-      evidenceVisible: false,
-      status: expect.stringContaining("Undo"),
-    });
-    expect(assistantRarityResultEvent(applied)).toMatchObject({
-      settled: "applied",
-      refreshAuthoring: true,
-      evidence: RARITY_EVIDENCE_FIXTURE,
-    });
-    expect(
-      assistantRarityResultEvent({
-        ...staged,
-        retirement: { reason: "session-restarted" as const },
-      }),
-    ).toEqual({
-      retired: "session-restarted",
-      refreshAuthoring: true,
-      evidence: RARITY_EVIDENCE_FIXTURE,
-    });
-    expect(assistantRarityResultDigest(null)).toBeNull();
-    expect(
-      assistantRarityResultDigest({
-        ok: true,
-        artifactDigest: `sha256:${"a".repeat(64)}`,
-        mountable: { instances: [] },
-      } as unknown as DesktopAssistantJobSnapshot["result"]),
-    ).toBeNull();
-  });
-
-  it("clears rarity evidence when the bound project root changes", async () => {
-    const lifecycleStatus = {
-      recents: [{ root: "/tmp/project-b", name: "project-b" }],
-      active: { name: "project-b", root: "/tmp/project-b", documentPath: "scene.json" },
-    };
-    const port = {
-      request: () =>
-        Promise.resolve({ ok: false, reason: "DESKTOP_TEST_NO_RUNTIME", message: "no runtime" }),
-      project: () =>
-        Promise.resolve({ ok: true, data: { status: lifecycleStatus, outcome: "opened" } }),
-    };
-    const { shell, openRecent, recentSelect, evidence, evidenceEmpty, documentListeners } =
-      mountRarityChrome(port);
-
-    // Project A's accepted provenance is on screen.
-    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
-      detail: { replayed: true, snapshot: null, evidence: RARITY_EVIDENCE_FIXTURE },
-    });
-    expect(evidence.hidden).toBe(false);
-    expect(evidence.textContent).toContain(
-      `provenance ${RARITY_EVIDENCE_FIXTURE.provenanceDigest}`,
-    );
-
-    recentSelect.value = "/tmp/project-b";
-    shell.clickListener?.({ target: openRecent });
-    await vi.waitFor(() => {
-      expect(evidence.hidden).toBe(true);
-    });
-    expect(evidence.textContent).toBe("");
-    expect(evidenceEmpty.hidden).toBe(false);
-  });
-
-  it("keeps rarity evidence when Remove Recent leaves the active project bound", async () => {
-    const lifecycleStatus = {
-      recents: [],
-      active: { name: "project-a", root: "/tmp/project-a", documentPath: "scene.json" },
-    };
-    const port = {
-      request: () =>
-        Promise.resolve({ ok: false, reason: "DESKTOP_TEST_NO_RUNTIME", message: "no runtime" }),
-      project: () =>
-        Promise.resolve({ ok: true, data: { status: lifecycleStatus, outcome: "removed" } }),
-    };
-    const { shell, removeRecent, recentSelect, status, evidence, evidenceEmpty, documentListeners } =
-      mountRarityChrome(port);
-
-    // The chrome syncs project lifecycle on load; let that settle so the status
-    // this test reads is the one its own click produced.
-    await vi.waitFor(() => {
-      expect(status.textContent).toContain("Open refused");
-    });
-    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
-      detail: { replayed: true, snapshot: null, evidence: RARITY_EVIDENCE_FIXTURE },
-    });
-    expect(evidence.hidden).toBe(false);
-
-    recentSelect.value = "/tmp/project-b";
-    shell.clickListener?.({ target: removeRecent });
-    await vi.waitFor(() => {
-      expect(status.textContent).toContain("Recent project removed");
-    });
-    // Forgetting a recent entry binds nothing, so the bound project's own
-    // provenance is still exactly as real as it was.
-    expect(evidence.hidden).toBe(false);
-    expect(evidence.textContent).toContain(
-      `provenance ${RARITY_EVIDENCE_FIXTURE.provenanceDigest}`,
-    );
-    expect(evidenceEmpty.hidden).toBe(true);
-  });
-
-  it("keeps rarity evidence when Undo reverts an unrelated Save", async () => {
-    // The reopened document still carries the accepted namespace, so the dock's
-    // provenance still describes real bytes and the empty state would be false.
-    const port = {
-      request: (request: { readonly payload?: { readonly op?: string } }) =>
-        Promise.resolve(
-          request.payload?.op === "undo"
-            ? { ok: true, action: "authoring", data: { ok: true, restoredPaths: ["scene.json"] } }
-            : request.payload?.op === "status"
-              ? {
-                  ok: true,
-                  action: "authoring",
-                  data: {
-                    ok: true,
-                    documentId: "scene",
-                    contentHash: "sha256:base",
-                    data: { rarity: { kind: "sceneaxi.rarity.namespace" } },
-                    rarityNamespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
-                    acceptedRarityEvidence: RARITY_EVIDENCE_FIXTURE,
-                    undoAvailability: "available",
-                  },
-                }
-              : { ok: false, reason: "DESKTOP_TEST_NO_RUNTIME", message: "no runtime" },
-        ),
-    };
-    const { shell, reload, undo, status, evidence, evidenceEmpty, documentListeners } =
-      mountRarityChrome(port);
-
-    shell.clickListener?.({ target: reload });
-    await vi.waitFor(() => {
-      expect(status.textContent).toContain("· open ·");
-    });
-    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
-      detail: { replayed: true, snapshot: null, evidence: RARITY_EVIDENCE_FIXTURE },
-    });
-    expect(evidence.hidden).toBe(false);
-
-    shell.clickListener?.({ target: undo });
-    await vi.waitFor(() => {
-      expect(status.textContent).toContain("Undid last Save");
-    });
-    expect(evidence.hidden).toBe(false);
-    expect(evidence.textContent).toContain(
-      `provenance ${RARITY_EVIDENCE_FIXTURE.provenanceDigest}`,
-    );
-    expect(evidenceEmpty.hidden).toBe(true);
-  });
-
-  it("reconciles displayed evidence to the namespace returned by Reload", async () => {
-    const replacement = Object.freeze({
-      ...RARITY_EVIDENCE_FIXTURE,
-      candidateId: "wayfinder-silver",
-      namespaceDigest: `sha256:${"8".repeat(64)}`,
-      provenanceDigest: `sha256:${"9".repeat(64)}`,
-    });
-    const port = {
-      request: () =>
-        Promise.resolve({
-          ok: true,
-          action: "authoring",
-          data: {
-            ok: true,
-            documentId: "scene",
-            contentHash: "sha256:replacement",
-            data: { rarity: { kind: "sceneaxi.rarity.namespace" } },
-            rarityNamespaceDigest: replacement.namespaceDigest,
-            acceptedRarityEvidence: replacement,
-            undoAvailability: "unavailable",
-          },
-        }),
-    };
-    const { shell, reload, status, evidence, documentListeners } = mountRarityChrome(port);
-    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
-      detail: { replayed: true, snapshot: null, evidence: RARITY_EVIDENCE_FIXTURE },
-    });
-    expect(evidence.textContent).toContain("wayfinder-copper");
-
-    shell.clickListener?.({ target: reload });
-    await vi.waitFor(() => {
-      expect(status.textContent).toContain("· open ·");
-      expect(evidence.textContent).toContain("wayfinder-silver");
-    });
-    expect(evidence.textContent).toContain(`namespace ${replacement.namespaceDigest}`);
-    expect(evidence.textContent).not.toContain("wayfinder-copper");
-  });
-
-  it("reconciles each rarity presentation surface to accepted provenance", async () => {
-    const replacement = Object.freeze({
-      ...RARITY_EVIDENCE_FIXTURE,
-      candidateId: "wayfinder-silver",
-      namespaceDigest: `sha256:${"8".repeat(64)}`,
-      provenanceDigest: `sha256:${"9".repeat(64)}`,
-    });
-    let acceptedEvidence = RARITY_EVIDENCE_FIXTURE;
-    const port = {
-      request: (request: { readonly action?: string }) =>
-        Promise.resolve(
-          request.action === "open-path"
-            ? {
-                ok: true,
-                action: "open-path",
-                data: {
-                  closed: true,
-                  initialDigest: "sha256:initial",
-                  tickDigests: ["sha256:tick"],
-                  instanceCount: 1,
-                  mountable: { sceneId: "desktop-scene" },
-                  rarity: RARITY_EVIDENCE_FIXTURE,
-                  raritySession: RARITY_PRODUCT_SESSION,
+                        return true;
+                    },
+                    createElement: () => new FakeElement("created"),
+                    querySelector: (selector: string) => (selector === ".shell" ? shell : null),
                 },
-              }
-            : {
+                Event: eventRealm.Event,
+                CustomEvent: eventRealm.CustomEvent,
+                Element: FakeElement,
+                HTMLTextAreaElement: FakeTextAreaElement,
+                window: {
+                    addEventListener: (name: string, listener: (event: {
+                        readonly detail?: unknown;
+                    }) => void) => documentListeners.set(name, listener),
+                    matchMedia: () => ({ addEventListener: () => undefined, removeEventListener: () => undefined, matches: false }),
+                } };
+
+            if (!(adaptedPort === undefined))
+                Object.assign(payload, { sceneaxiDesktop: adaptedPort });
+
+            return payload;
+        })());
+
+        return {
+            shell, accept, reject, reload, openRecent, removeRecent, recentSelect, play, undo,
+            runSession, runLive,
+            runEvidence, proposal, empty, documentPath,
+            contentHash, diff, reviewEvidence, evidence, evidenceEmpty, projectState, status,
+            fileStatus, badge, changesTab, evidenceTab, changesPanel, evidencePanel,
+            documentListeners, dispatchedEvents, initializationRequests,
+        };
+    }
+
+    it("reports runtime absence, request failure, and in-flight product state through mounted chrome", async () => {
+        const absent = mountRarityChrome();
+        absent.shell.clickListener?.({ target: absent.reload });
+        await vi.waitFor(() => {
+            expect(absent.status.textContent).toContain(DESKTOP_PRODUCT_REFUSALS.runtimeUnavailable);
+        });
+
+        const failed = mountRarityChrome({
+            request: () => Promise.reject(new Error("ipc channel closed")),
+        });
+
+        failed.shell.clickListener?.({ target: failed.reload });
+        await vi.waitFor(() => {
+            expect(failed.status.textContent).toContain(DESKTOP_PRODUCT_REFUSALS.runtimeRequestFailed);
+        });
+        let resolveRequest: ((response: Awaited<ReturnType<RarityChromePort["request"]>>) => void) | undefined;
+
+        const pending = mountRarityChrome({
+            request: () => new Promise((resolve) => {
+                resolveRequest = resolve;
+            }),
+        });
+
+        pending.shell.clickListener?.({ target: pending.reload });
+        expect(pending.reload.dataset.busy).toBe("true");
+        expect(pending.reload.getAttribute("aria-describedby")).toBe(`refusal-${DESKTOP_PRODUCT_REFUSALS.requestInFlight}`);
+        await vi.waitFor(() => expect(resolveRequest).toBeTypeOf("function"));
+        resolveRequest?.({ ok: false, reason: "DESKTOP_TEST_DONE", message: "done" });
+        await vi.waitFor(() => {
+            expect(pending.reload.dataset.busy).toBeUndefined();
+        });
+    });
+
+    const RARITY_EVIDENCE_FIXTURE: DesktopRarityEvidence = Object.freeze({
+        eventId: "wayfinder-drop-001",
+        tier: "uncommon",
+        candidateId: "wayfinder-copper",
+        scope: "desktop-linux-rarity",
+        algorithmId: "sceneaxi.rarity.weighted-sha256-v1",
+        projectSeed: 20260809,
+        policyDigest: `sha256:${"1".repeat(64)}`,
+        requestDigest: `sha256:${"2".repeat(64)}`,
+        outcomeDigest: `sha256:${"3".repeat(64)}`,
+        provenanceDigest: `sha256:${"4".repeat(64)}`,
+        providerEvidenceDigest: `sha256:${"e".repeat(64)}`,
+        namespaceDigest: `sha256:${"5".repeat(64)}`,
+        tierRollDigest: `sha256:${"6".repeat(64)}`,
+        candidateRollDigest: `sha256:${"7".repeat(64)}`,
+        tierDraw: 69,
+        tierTotalWeight: 100,
+        candidateDraw: 2,
+        candidateTotalWeight: 5,
+        providerEvidence: {
+            schemaVersion: 1,
+            kind: "sceneaxi.model-provider-call-evidence",
+            operation: "tool-call",
+            profile: "@sceneaxi/profile-game",
+            model: {
+                provider: "sceneaxi-fixture",
+                model: "wayfinder-rarity-fixture",
+                quantization: "deterministic-json",
+                version: "2026-08-09",
+            },
+        },
+    } satisfies DesktopRarityEvidence);
+
+    const RARITY_REPLAY_DIGEST = `sha256:${"a".repeat(64)}`;
+
+    const RARITY_PRODUCT_SESSION = Object.freeze({
+        bootstrap: Object.freeze({
+            kind: "product",
+            subjectId: "desktop-linux-rarity",
+            sessionId: `sha256:${"b".repeat(64)}`,
+            openedAtMs: FIXED_NOW_MS,
+            resumed: false,
+            kernelVersion: "0.0.0",
+            bomVersion: "0.0.0",
+        }),
+        initialDigest: `sha256:${"c".repeat(64)}`,
+        tickDigests: Object.freeze([`sha256:${"d".repeat(64)}`, RARITY_REPLAY_DIGEST]),
+        replayDigest: RARITY_REPLAY_DIGEST,
+    });
+
+    const RARITY_PROPOSAL_SNAPSHOT: DesktopSnapshot = Object.freeze({
+        phase: "reviewing",
+        proposal: {
+            schemaVersion: PROPOSAL_SCHEMA_VERSION,
+            kind: PROPOSAL_KIND,
+            edits: [{
+                    documentPath: "scene.json",
+                    baseContentHash: `sha256:${"0".repeat(64)}`,
+                    jsonPointer: "/data",
+                    oldValue: {},
+                    newValue: {},
+                }],
+            diffs: [{ documentPath: "scene.json", unifiedDiff: "--- scene.json" }],
+        },
+        unifiedDiff: "--- scene.json",
+        renderedDiff: "rarity: + uncommon / wayfinder-copper",
+        appliedPaths: null,
+        journalRecoveryPending: false,
+        transactionId: null,
+        diagnostics: [],
+    });
+
+    it("moves a rarity proposal into actionable review and both safe evidence views", () => {
+        const { proposal, empty, documentPath, diff, reviewEvidence, evidence, evidenceEmpty, projectState, status, fileStatus, badge, changesTab, evidenceTab, changesPanel, evidencePanel, documentListeners, } = mountRarityChrome();
+        const rarityEvidence = RARITY_EVIDENCE_FIXTURE;
+        documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+            detail: {
+                replayed: false,
+                evidence: rarityEvidence,
+                snapshot: { ...RARITY_PROPOSAL_SNAPSHOT, rarityEvidence },
+            },
+        });
+        expect(proposal.hidden).toBe(false);
+        expect(empty.hidden).toBe(true);
+        expect(documentPath.textContent).toBe("scene.json");
+        expect(diff.textContent).toContain("wayfinder-copper");
+        expect(reviewEvidence.textContent).toContain(`provenance ${RARITY_EVIDENCE_FIXTURE.provenanceDigest}`);
+        expect(evidence.textContent).toContain("provider sceneaxi-fixture · model wayfinder-rarity-fixture");
+        expect(reviewEvidence.hidden).toBe(false);
+        expect(evidence.hidden).toBe(false);
+        expect(evidenceEmpty.hidden).toBe(true);
+        expect(changesTab.getAttribute("aria-selected")).toBe("true");
+        expect(evidenceTab.getAttribute("aria-selected")).toBe("false");
+        expect(changesPanel.hidden).toBe(false);
+        expect(evidencePanel.hidden).toBe(true);
+        expect(projectState.dataset.projectState).toBe("dirty");
+        expect(status.textContent).toContain("review before Save");
+        expect(fileStatus.textContent).toContain("review before Save");
+        expect(badge.textContent).toBe("1");
+    });
+    it("reports an idempotent rarity replay as a replay, not as a staged proposal", () => {
+        const { proposal, empty, evidence, evidenceEmpty, projectState, status, badge, changesTab, evidenceTab, changesPanel, evidencePanel, documentListeners, } = mountRarityChrome();
+        documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+            detail: { replayed: true, snapshot: null, evidence: RARITY_EVIDENCE_FIXTURE },
+        });
+        expect(evidence.textContent).toContain(`provenance ${RARITY_EVIDENCE_FIXTURE.provenanceDigest}`);
+        expect(evidence.hidden).toBe(false);
+        expect(evidenceEmpty.hidden).toBe(true);
+        expect(evidenceTab.getAttribute("aria-selected")).toBe("true");
+        expect(evidencePanel.hidden).toBe(false);
+        expect(changesTab.getAttribute("aria-selected")).toBe("false");
+        expect(changesPanel.hidden).toBe(true);
+        expect(proposal.hidden).toBe(true);
+        expect(empty.hidden).toBe(false);
+        expect(badge.textContent).toBe("0");
+        expect(projectState.dataset.projectState).not.toBe("dirty");
+        expect(status.textContent).toContain("nothing staged");
+        expect(status.textContent).not.toContain("review before Save");
+    });
+
+    // Reject is driven through the real click handler and a fake desktop port, so
+    // the assertion covers the chrome's own decision rather than a helper called
+    // directly. The proposal under review is installed through the rarity event in
+    // both cases; only its `rarityEvidence` member differs, which is exactly the
+    // difference the clear is supposed to key on.
+    const rejectingPort = (rarityEvidence?: DesktopRarityEvidence) => {
+        const rejected = (() => {
+            const payload = { phase: "rejected",
+                proposal: null,
+                unifiedDiff: null,
+                renderedDiff: null,
+                appliedPaths: null,
+                journalRecoveryPending: false,
+                transactionId: null,
+                diagnostics: [] };
+
+            if (!(rarityEvidence === undefined))
+                Object.assign(payload, { rarityEvidence });
+
+            return payload;
+        })();
+
+        return {
+            request: (request: {
+                readonly payload?: {
+                    readonly op?: string;
+                };
+            }) => Promise.resolve(request.payload?.op === "reject"
+                ? { ok: true, data: rejected }
+                : { ok: false, reason: "DESKTOP_TEST_NO_RUNTIME", message: "no runtime" }),
+        };
+    };
+
+    // Reject completes asynchronously and ends by reporting the re-open it could
+    // not perform against this fake port, so that status is the signal that
+    // `syncReview` has already seen the rejected snapshot. Asserting before it
+    // would read the pre-click state and pass either way.
+    const rejectSettled = async (status: FakeElement): Promise<void> => {
+        await vi.waitFor(() => {
+            expect(status.textContent).toContain("Open refused");
+        });
+    };
+
+    it("keeps accepted rarity evidence when an unrelated proposal is rejected", async () => {
+        const { reject, shell, evidence, evidenceEmpty, status, documentListeners } = mountRarityChrome(rejectingPort());
+        documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+            detail: {
+                replayed: false,
+                evidence: RARITY_EVIDENCE_FIXTURE,
+                snapshot: { ...RARITY_PROPOSAL_SNAPSHOT, rarityEvidence: RARITY_EVIDENCE_FIXTURE },
+            },
+        });
+        expect(evidence.hidden).toBe(false);
+        documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+            detail: {
+                replayed: false,
+                evidence: RARITY_EVIDENCE_FIXTURE,
+                snapshot: { ...RARITY_PROPOSAL_SNAPSHOT, renderedDiff: "translation.x: 0 → 3" },
+            },
+        });
+        shell.clickListener?.({ target: reject });
+        await rejectSettled(status);
+        expect(evidence.textContent).toContain(`provenance ${RARITY_EVIDENCE_FIXTURE.provenanceDigest}`);
+        expect(evidence.hidden).toBe(false);
+        expect(evidenceEmpty.hidden).toBe(true);
+    });
+    it("keeps a staged rarity proposal's evidence on screen through Play", async () => {
+        // Play reports the open path it just ran. Staging changed no project bytes, so
+        // that run carries no rarity — but the staged proposal is still pending Accept
+        // and its provenance is still rendered in Change Review.
+        const openPath = {
+            closed: true,
+            initialDigest: "sha256:initial",
+            tickDigests: ["sha256:tick"],
+            instanceCount: 1,
+            mountable: { sceneId: "desktop-scene" },
+        };
+
+        const port = {
+            request: (request: {
+                readonly action?: string;
+                readonly payload?: {
+                    readonly op?: string;
+                };
+            }) => Promise.resolve(request.action === "open-path"
+                ? { ok: true, action: "open-path", data: openPath }
+                : request.payload?.op === "status"
+                    ? {
+                        ok: true,
+                        action: "authoring",
+                        data: {
+                            ok: true,
+                            documentId: "scene",
+                            contentHash: "sha256:base",
+                            data: {},
+                            undoAvailability: "unavailable",
+                        },
+                    }
+                    : { ok: false, reason: "DESKTOP_TEST_NO_RUNTIME", message: "no runtime" }),
+        };
+
+        const { shell, play, reload, status, evidence, evidenceEmpty, runSession, documentListeners } = mountRarityChrome(port);
+        documentListeners.set(DESKTOP_VIEWPORT_PLAY_EVENT, (event) => {
+            // SAFETY: the listener receives the named event emitted by the real desktop chrome in this fixture; its producer owns these detail fields.
+            const detail = event.detail as {
+                accepted: boolean;
+                frame: number | null;
+            };
+
+            detail.accepted = true;
+            detail.frame = 1;
+        });
+        // Open the project first, so Play does not take the branch that discards a
+        // staged proposal on the operator's behalf — the sequence under test is
+        // Agent stages, then Play, on an already-open document.
+        shell.clickListener?.({ target: reload });
+        await vi.waitFor(() => {
+            expect(status.textContent).toContain("· open ·");
+        });
+        documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+            detail: {
+                replayed: false,
+                evidence: RARITY_EVIDENCE_FIXTURE,
+                snapshot: { ...RARITY_PROPOSAL_SNAPSHOT, rarityEvidence: RARITY_EVIDENCE_FIXTURE },
+            },
+        });
+        expect(evidence.hidden).toBe(false);
+        shell.clickListener?.({ target: play });
+        await vi.waitFor(() => {
+            expect(runSession.textContent).toContain("terminal digest sha256:tick");
+        });
+        expect(evidence.textContent).toContain(`provenance ${RARITY_EVIDENCE_FIXTURE.provenanceDigest}`);
+        expect(evidence.hidden).toBe(false);
+        expect(evidenceEmpty.hidden).toBe(true);
+        // The run itself carried no rarity, so its own report must not claim one.
+        expect(runSession.textContent).not.toContain("rarity uncommon");
+    });
+    it("keeps staged evidence in the dock while Play reports accepted evidence", async () => {
+        const stagedEvidence = Object.freeze({
+            ...RARITY_EVIDENCE_FIXTURE,
+            eventId: "wayfinder-drop-002",
+            candidateId: "wayfinder-silver",
+            provenanceDigest: `sha256:${"8".repeat(64)}`,
+            namespaceDigest: `sha256:${"9".repeat(64)}`,
+        });
+
+        const openPath = {
+            closed: true,
+            initialDigest: "sha256:initial",
+            tickDigests: ["sha256:tick"],
+            instanceCount: 1,
+            mountable: { sceneId: "desktop-scene" },
+            rarity: RARITY_EVIDENCE_FIXTURE,
+            raritySession: RARITY_PRODUCT_SESSION,
+        };
+
+        const port = {
+            request: (request: {
+                readonly action?: string;
+                readonly payload?: {
+                    readonly op?: string;
+                };
+            }) => Promise.resolve(request.action === "open-path"
+                ? { ok: true, action: "open-path", data: openPath }
+                : request.payload?.op === "status"
+                    ? {
+                        ok: true,
+                        action: "authoring",
+                        data: {
+                            ok: true,
+                            documentId: "scene",
+                            contentHash: "sha256:accepted",
+                            data: { rarity: { kind: "sceneaxi.rarity.namespace" } },
+                            rarityNamespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
+                            acceptedRarityEvidence: RARITY_EVIDENCE_FIXTURE,
+                            undoAvailability: "unavailable",
+                        },
+                    }
+                    : { ok: false, reason: "DESKTOP_TEST_NO_RUNTIME", message: "no runtime" }),
+        };
+
+        const { shell, play, reload, status, evidence, runEvidence, documentListeners, } = mountRarityChrome(port);
+        documentListeners.set(DESKTOP_VIEWPORT_PLAY_EVENT, (event) => {
+            // SAFETY: the listener receives the named event emitted by the real desktop chrome in this fixture; its producer owns these detail fields.
+            const detail = event.detail as {
+                accepted: boolean;
+                frame: number | null;
+            };
+
+            detail.accepted = true;
+            detail.frame = 1;
+        });
+        shell.clickListener?.({ target: reload });
+        await vi.waitFor(() => {
+            expect(status.textContent).toContain("· open ·");
+        });
+        documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+            detail: {
+                replayed: false,
+                evidence: stagedEvidence,
+                snapshot: { ...RARITY_PROPOSAL_SNAPSHOT, rarityEvidence: stagedEvidence },
+            },
+        });
+        expect(evidence.textContent).toContain("wayfinder-silver");
+        shell.clickListener?.({ target: play });
+        await vi.waitFor(() => {
+            expect(runEvidence.hidden).toBe(false);
+        });
+        expect(runEvidence.textContent).toContain("wayfinder-copper");
+        expect(evidence.textContent).toContain("wayfinder-silver");
+        expect(evidence.textContent).not.toContain("wayfinder-copper");
+    });
+    it("renders the run's full safe provenance through the shared formatter", async () => {
+        const openPath = {
+            closed: true,
+            initialDigest: "sha256:initial",
+            tickDigests: ["sha256:tick"],
+            instanceCount: 1,
+            mountable: { sceneId: "desktop-scene" },
+            rarity: RARITY_EVIDENCE_FIXTURE,
+            raritySession: RARITY_PRODUCT_SESSION,
+        };
+
+        const port = {
+            request: (request: {
+                readonly action?: string;
+                readonly payload?: {
+                    readonly op?: string;
+                };
+            }) => Promise.resolve(request.action === "open-path"
+                ? { ok: true, action: "open-path", data: openPath }
+                : request.payload?.op === "status"
+                    ? {
+                        ok: true,
+                        action: "authoring",
+                        data: {
+                            ok: true,
+                            documentId: "scene",
+                            contentHash: "sha256:base",
+                            data: {},
+                            undoAvailability: "unavailable",
+                        },
+                    }
+                    : { ok: false, reason: "DESKTOP_TEST_NO_RUNTIME", message: "no runtime" }),
+        };
+
+        const { shell, play, runSession, runEvidence, documentListeners } = mountRarityChrome(port);
+        documentListeners.set(DESKTOP_VIEWPORT_PLAY_EVENT, (event) => {
+            // SAFETY: the listener receives the named event emitted by the real desktop chrome in this fixture; its producer owns these detail fields.
+            const detail = event.detail as {
+                accepted: boolean;
+                frame: number | null;
+            };
+
+            detail.accepted = true;
+            detail.frame = 1;
+        });
+        shell.clickListener?.({ target: play });
+        await vi.waitFor(() => {
+            expect(runEvidence.hidden).toBe(false);
+        });
+        // Every field the shared formatter prints, on the Run surface — not the
+        // tier/candidate/provenance summary it used to paraphrase.
+        const shared = formatSafeRarityEvidence(RARITY_EVIDENCE_FIXTURE);
+        expect(shared).not.toBeNull();
+        expect(runEvidence.textContent).toContain(shared ?? "");
+        expect(runEvidence.textContent).toContain("scope desktop-linux-rarity");
+        expect(runEvidence.textContent).toContain("seed 20260809");
+        expect(runEvidence.textContent).toContain("tier draw 69 / 100");
+        expect(runEvidence.textContent).toContain(`namespace ${RARITY_EVIDENCE_FIXTURE.namespaceDigest}`);
+        expect(runEvidence.textContent).toContain("provider sceneaxi-fixture · model wayfinder-rarity-fixture");
+        // The rarity product session is named, and the run report line claims none of
+        // the rarity facts as its own.
+        expect(runEvidence.textContent).toContain(`verified in a separate product session ${RARITY_PRODUCT_SESSION.bootstrap.subjectId}`);
+        expect(runEvidence.textContent).toContain(`replayed to ${RARITY_REPLAY_DIGEST}`);
+        expect(runSession.textContent).toContain("terminal digest sha256:tick");
+        expect(runSession.textContent).not.toContain("rarity");
+    });
+    it("refuses malformed numeric evidence and owns product-session attribution", () => {
+        const withSession = formatSafeRarityEvidence(RARITY_EVIDENCE_FIXTURE, RARITY_PRODUCT_SESSION);
+        expect(withSession).toContain(`verified in a separate product session ${RARITY_PRODUCT_SESSION.bootstrap.subjectId}`);
+        expect(withSession).toContain(`replayed to ${RARITY_REPLAY_DIGEST}`);
+
+        for (const [field, value] of [
+            ["projectSeed", undefined],
+            ["tierDraw", -1],
+            ["tierDraw", 1.5],
+            ["tierTotalWeight", 0],
+            ["candidateDraw", 5],
+            ["candidateTotalWeight", Number.NaN],
+        ] as const) {
+            expect(formatSafeRarityEvidence({ ...RARITY_EVIDENCE_FIXTURE, [field]: value }), field).toBeNull();
+        }
+
+        for (const malformed of [
+            { ...RARITY_EVIDENCE_FIXTURE, eventId: "Invalid event" },
+            { ...RARITY_EVIDENCE_FIXTURE, eventId: "valid-event\n" },
+            { ...RARITY_EVIDENCE_FIXTURE, tier: "mythic" },
+            { ...RARITY_EVIDENCE_FIXTURE, algorithmId: "other-algorithm" },
+            { ...RARITY_EVIDENCE_FIXTURE, namespaceDigest: "sha256:short" },
+            { ...RARITY_EVIDENCE_FIXTURE, providerEvidenceDigest: "sha256:short" },
+            {
+                ...RARITY_EVIDENCE_FIXTURE,
+                providerEvidenceDigest: `${RARITY_EVIDENCE_FIXTURE.providerEvidenceDigest}\n`,
+            },
+            {
+                ...RARITY_EVIDENCE_FIXTURE,
+                providerEvidence: {
+                    ...RARITY_EVIDENCE_FIXTURE.providerEvidence,
+                    profile: "@sceneaxi/profile-kids",
+                },
+            },
+            {
+                ...RARITY_EVIDENCE_FIXTURE,
+                providerEvidence: {
+                    ...RARITY_EVIDENCE_FIXTURE.providerEvidence,
+                    model: {
+                        ...RARITY_EVIDENCE_FIXTURE.providerEvidence.model,
+                        model: "wayfinder\nraw-detail",
+                    },
+                },
+            },
+            {
+                ...RARITY_EVIDENCE_FIXTURE,
+                providerEvidence: {
+                    ...RARITY_EVIDENCE_FIXTURE.providerEvidence,
+                    model: {
+                        ...RARITY_EVIDENCE_FIXTURE.providerEvidence.model,
+                        provider: "sceneaxi-fixture\n",
+                    },
+                },
+            },
+            {
+                ...RARITY_EVIDENCE_FIXTURE,
+                providerEvidence: {
+                    ...RARITY_EVIDENCE_FIXTURE.providerEvidence,
+                    model: {
+                        ...RARITY_EVIDENCE_FIXTURE.providerEvidence.model,
+                        provider: "sk_live_fixture",
+                    },
+                },
+            },
+            {
+                ...RARITY_EVIDENCE_FIXTURE,
+                providerEvidence: {
+                    ...RARITY_EVIDENCE_FIXTURE.providerEvidence,
+                    model: {
+                        ...RARITY_EVIDENCE_FIXTURE.providerEvidence.model,
+                        provider: "whsec_abcdefgh",
+                    },
+                },
+            },
+            {
+                ...RARITY_EVIDENCE_FIXTURE,
+                providerEvidence: {
+                    ...RARITY_EVIDENCE_FIXTURE.providerEvidence,
+                    model: {
+                        ...RARITY_EVIDENCE_FIXTURE.providerEvidence.model,
+                        provider: "xoxb-12345678-abcdefghijklmnop",
+                    },
+                },
+            },
+            {
+                ...RARITY_EVIDENCE_FIXTURE,
+                providerEvidence: {
+                    ...RARITY_EVIDENCE_FIXTURE.providerEvidence,
+                    model: {
+                        ...RARITY_EVIDENCE_FIXTURE.providerEvidence.model,
+                        version: "v".repeat(129),
+                    },
+                },
+            },
+        ]) {
+            expect(formatSafeRarityEvidence(malformed)).toBeNull();
+        }
+
+        expect(formatSafeRarityEvidence(RARITY_EVIDENCE_FIXTURE, {
+            replayDigest: RARITY_REPLAY_DIGEST,
+        })).toBeNull();
+        expect(formatSafeRarityEvidence(RARITY_EVIDENCE_FIXTURE, {
+            ...RARITY_PRODUCT_SESSION,
+            replayDigest: `sha256:${"e".repeat(64)}`,
+        })).toBeNull();
+    });
+    it("updates Assistant output when its rarity proposal settles", () => {
+        expect(assistantRaritySettlement(RARITY_EVIDENCE_FIXTURE.namespaceDigest, {
+            settled: "applied",
+            evidence: RARITY_EVIDENCE_FIXTURE,
+        })).toMatchObject({
+            activeNamespaceDigest: null,
+            evidenceVisible: true,
+            evidenceText: expect.stringContaining(`namespace ${RARITY_EVIDENCE_FIXTURE.namespaceDigest}`),
+            status: expect.stringContaining("accepted"),
+        });
+        expect(assistantRaritySettlement(RARITY_EVIDENCE_FIXTURE.namespaceDigest, {
+            settled: "rejected",
+            evidence: RARITY_EVIDENCE_FIXTURE,
+        })).toEqual({
+            activeNamespaceDigest: null,
+            evidenceText: "",
+            evidenceVisible: false,
+            status: "Rarity proposal rejected · project bytes and kernel state unchanged.",
+        });
+        expect(assistantRaritySettlement(`sha256:${"f".repeat(64)}`, {
+            settled: "rejected",
+            evidence: RARITY_EVIDENCE_FIXTURE,
+        })).toBeNull();
+
+        const invalidation = {
+            invalidated: true,
+            namespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
+        };
+
+        expect(assistantRarityInvalidation(RARITY_EVIDENCE_FIXTURE.namespaceDigest, invalidation)).toMatchObject({
+            activeNamespaceDigest: null,
+            evidenceVisible: false,
+            status: expect.stringContaining("retired"),
+        });
+        expect(rarityInvalidationMatches(RARITY_EVIDENCE_FIXTURE.namespaceDigest, invalidation)).toBe(true);
+        expect(rarityInvalidationMatches(`sha256:${"f".repeat(64)}`, invalidation)).toBe(false);
+    });
+    it("associates settlement only with the displayed rarity result", () => {
+        const staged = {
+            ok: true as const,
+            kind: "rarity-proposal" as const,
+            replayed: false,
+            evidence: RARITY_EVIDENCE_FIXTURE,
+        };
+
+        expect(assistantRarityResultDigest(staged)).toBe(RARITY_EVIDENCE_FIXTURE.namespaceDigest);
+        expect(assistantRarityResultDigest({ ...staged, replayed: true })).toBeNull();
+
+        const rejected = {
+            ...staged,
+            authoring: {
+                ...RARITY_PROPOSAL_SNAPSHOT,
+                phase: "rejected" as const,
+                rarityEvidence: RARITY_EVIDENCE_FIXTURE,
+            },
+        };
+
+        expect(assistantRarityResultDigest(rejected)).toBeNull();
+        expect(assistantRarityResultSettlement(rejected)).toMatchObject({
+            evidenceVisible: false,
+            status: expect.stringContaining("rejected"),
+        });
+
+        const applied = {
+            ...staged,
+            authoring: {
+                ...RARITY_PROPOSAL_SNAPSHOT,
+                phase: "applied" as const,
+                rarityEvidence: RARITY_EVIDENCE_FIXTURE,
+            },
+        };
+
+        expect(assistantRarityResultDigest(applied)).toBeNull();
+        expect(assistantRarityResultSettlement(applied)).toMatchObject({
+            evidenceVisible: true,
+            status: expect.stringContaining("accepted"),
+        });
+        const retired = { ...applied, retirement: { reason: "undo" as const } };
+        expect(assistantRarityResultDigest(retired)).toBeNull();
+        expect(assistantRarityResultSettlement(retired)).toMatchObject({
+            evidenceVisible: false,
+            status: expect.stringContaining("Undo"),
+        });
+        expect(assistantRarityResultEvent(applied)).toMatchObject({
+            settled: "applied",
+            refreshAuthoring: true,
+            evidence: RARITY_EVIDENCE_FIXTURE,
+        });
+        expect(assistantRarityResultEvent({
+            ...staged,
+            retirement: { reason: "session-restarted" as const },
+        })).toEqual({
+            retired: "session-restarted",
+            refreshAuthoring: true,
+            evidence: RARITY_EVIDENCE_FIXTURE,
+        });
+        expect(assistantRarityResultDigest(null)).toBeNull();
+        // SAFETY: this locally constructed job/evidence fixture is consumed only by the inspection or polling boundary under test; malformed members intentionally exercise refusal.
+        expect(assistantRarityResultDigest({
+            ok: true,
+            artifactDigest: `sha256:${"a".repeat(64)}`,
+            mountable: { instances: [] },
+        } as never)).toBeNull();
+    });
+    it("clears rarity evidence when the bound project root changes", async () => {
+        const lifecycleStatus = {
+            recents: [{ root: "/tmp/project-b", name: "project-b" }],
+            active: { name: "project-b", root: "/tmp/project-b", documentPath: "scene.json" },
+        };
+
+        const port = {
+            request: () => Promise.resolve({ ok: false, reason: "DESKTOP_TEST_NO_RUNTIME", message: "no runtime" }),
+            project: () => Promise.resolve({ ok: true, data: { status: lifecycleStatus, outcome: "opened" } }),
+        };
+
+        const { shell, openRecent, recentSelect, evidence, evidenceEmpty, documentListeners } = mountRarityChrome(port);
+        // Project A's accepted provenance is on screen.
+        documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+            detail: { replayed: true, snapshot: null, evidence: RARITY_EVIDENCE_FIXTURE },
+        });
+        expect(evidence.hidden).toBe(false);
+        expect(evidence.textContent).toContain(`provenance ${RARITY_EVIDENCE_FIXTURE.provenanceDigest}`);
+        recentSelect.value = "/tmp/project-b";
+        shell.clickListener?.({ target: openRecent });
+        await vi.waitFor(() => {
+            expect(evidence.hidden).toBe(true);
+        });
+        expect(evidence.textContent).toBe("");
+        expect(evidenceEmpty.hidden).toBe(false);
+    });
+    it("keeps rarity evidence when Remove Recent leaves the active project bound", async () => {
+        const lifecycleStatus = {
+            recents: [],
+            active: { name: "project-a", root: "/tmp/project-a", documentPath: "scene.json" },
+        };
+
+        const port = {
+            request: () => Promise.resolve({ ok: false, reason: "DESKTOP_TEST_NO_RUNTIME", message: "no runtime" }),
+            project: () => Promise.resolve({ ok: true, data: { status: lifecycleStatus, outcome: "removed" } }),
+        };
+
+        const { shell, removeRecent, recentSelect, status, evidence, evidenceEmpty, documentListeners } = mountRarityChrome(port);
+        // The chrome syncs project lifecycle on load; let that settle so the status
+        // this test reads is the one its own click produced.
+        await vi.waitFor(() => {
+            expect(status.textContent).toContain("Open refused");
+        });
+        documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+            detail: { replayed: true, snapshot: null, evidence: RARITY_EVIDENCE_FIXTURE },
+        });
+        expect(evidence.hidden).toBe(false);
+        recentSelect.value = "/tmp/project-b";
+        shell.clickListener?.({ target: removeRecent });
+        await vi.waitFor(() => {
+            expect(status.textContent).toContain("Recent project removed");
+        });
+        // Forgetting a recent entry binds nothing, so the bound project's own
+        // provenance is still exactly as real as it was.
+        expect(evidence.hidden).toBe(false);
+        expect(evidence.textContent).toContain(`provenance ${RARITY_EVIDENCE_FIXTURE.provenanceDigest}`);
+        expect(evidenceEmpty.hidden).toBe(true);
+    });
+    it("keeps rarity evidence when Undo reverts an unrelated Save", async () => {
+        // The reopened document still carries the accepted namespace, so the dock's
+        // provenance still describes real bytes and the empty state would be false.
+        const port = {
+            request: (request: {
+                readonly payload?: {
+                    readonly op?: string;
+                };
+            }) => Promise.resolve(request.payload?.op === "undo"
+                ? { ok: true, action: "authoring", data: { ok: true, restoredPaths: ["scene.json"] } }
+                : request.payload?.op === "status"
+                    ? {
+                        ok: true,
+                        action: "authoring",
+                        data: {
+                            ok: true,
+                            documentId: "scene",
+                            contentHash: "sha256:base",
+                            data: { rarity: { kind: "sceneaxi.rarity.namespace" } },
+                            rarityNamespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
+                            acceptedRarityEvidence: RARITY_EVIDENCE_FIXTURE,
+                            undoAvailability: "available",
+                        },
+                    }
+                    : { ok: false, reason: "DESKTOP_TEST_NO_RUNTIME", message: "no runtime" }),
+        };
+
+        const { shell, reload, undo, status, evidence, evidenceEmpty, documentListeners } = mountRarityChrome(port);
+        shell.clickListener?.({ target: reload });
+        await vi.waitFor(() => {
+            expect(status.textContent).toContain("· open ·");
+        });
+        documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+            detail: { replayed: true, snapshot: null, evidence: RARITY_EVIDENCE_FIXTURE },
+        });
+        expect(evidence.hidden).toBe(false);
+        shell.clickListener?.({ target: undo });
+        await vi.waitFor(() => {
+            expect(status.textContent).toContain("Undid last Save");
+        });
+        expect(evidence.hidden).toBe(false);
+        expect(evidence.textContent).toContain(`provenance ${RARITY_EVIDENCE_FIXTURE.provenanceDigest}`);
+        expect(evidenceEmpty.hidden).toBe(true);
+    });
+    it("reconciles displayed evidence to the namespace returned by Reload", async () => {
+        const replacement = Object.freeze({
+            ...RARITY_EVIDENCE_FIXTURE,
+            candidateId: "wayfinder-silver",
+            namespaceDigest: `sha256:${"8".repeat(64)}`,
+            provenanceDigest: `sha256:${"9".repeat(64)}`,
+        });
+
+        const port = {
+            request: () => Promise.resolve({
                 ok: true,
                 action: "authoring",
                 data: {
-                  ok: true,
-                  documentId: "scene",
-                  contentHash: "sha256:accepted",
-                  data: { rarity: { kind: "sceneaxi.rarity.namespace" } },
-                  rarityNamespaceDigest: acceptedEvidence.namespaceDigest,
-                  acceptedRarityEvidence: acceptedEvidence,
-                  undoAvailability: "unavailable",
-                },
-              },
-        ),
-    };
-    const {
-      shell, reload, play, evidence, runEvidence, status,
-      documentListeners, dispatchedEvents,
-    } = mountRarityChrome(port);
-    documentListeners.set(DESKTOP_VIEWPORT_PLAY_EVENT, (event) => {
-      const detail = event.detail as { accepted: boolean; frame: number | null };
-      detail.accepted = true;
-      detail.frame = 1;
-    });
-
-    shell.clickListener?.({ target: reload });
-    await vi.waitFor(() => {
-      expect(status.textContent).toContain("· open ·");
-    });
-    shell.clickListener?.({ target: play });
-    await vi.waitFor(() => {
-      expect(runEvidence.textContent).toContain("wayfinder-copper");
-    });
-    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
-      detail: { replayed: true, snapshot: null, evidence: replacement },
-    });
-    expect(evidence.textContent).toContain("wayfinder-silver");
-
-    const firstInvalidation = dispatchedEvents.length;
-    shell.clickListener?.({ target: reload });
-    await vi.waitFor(() => {
-      expect(evidence.textContent).toContain("wayfinder-copper");
-    });
-    expect(runEvidence.textContent).toContain("wayfinder-copper");
-    expect(dispatchedEvents.slice(firstInvalidation)).toContainEqual({
-      type: DESKTOP_RARITY_PROPOSAL_EVENT,
-      detail: { invalidated: true, namespaceDigest: replacement.namespaceDigest },
-    });
-    expect(dispatchedEvents.slice(firstInvalidation)).not.toContainEqual({
-      type: DESKTOP_RARITY_PROPOSAL_EVENT,
-      detail: { invalidated: true, namespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest },
-    });
-
-    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
-      detail: { replayed: true, snapshot: null, evidence: replacement },
-    });
-    acceptedEvidence = replacement;
-    const secondInvalidation = dispatchedEvents.length;
-    shell.clickListener?.({ target: reload });
-    await vi.waitFor(() => {
-      expect(evidence.textContent).toContain("wayfinder-silver");
-      expect(runEvidence.hidden).toBe(true);
-    });
-    expect(runEvidence.textContent).toBe("");
-    expect(dispatchedEvents.slice(secondInvalidation)).toContainEqual({
-      type: DESKTOP_RARITY_PROPOSAL_EVENT,
-      detail: {
-        invalidated: true,
-        namespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
-      },
-    });
-    expect(dispatchedEvents.slice(secondInvalidation)).not.toContainEqual({
-      type: DESKTOP_RARITY_PROPOSAL_EVENT,
-      detail: { invalidated: true, namespaceDigest: replacement.namespaceDigest },
-    });
-  });
-
-  it.each([
-    "document-not-found",
-    RARITY_REFUSE_CODES.outcomeMismatch,
-  ])("retires displayed evidence when Reload proves %s", async (diagnosticCode) => {
-    let statusReads = 0;
-    const port = {
-      request: (request: { readonly action?: string; readonly payload?: { readonly op?: string } }) => {
-        if (request.action === "open-path") {
-          return Promise.resolve({
-            ok: true,
-            action: "open-path",
-            data: {
-              closed: true,
-              initialDigest: "sha256:initial",
-              tickDigests: ["sha256:tick"],
-              instanceCount: 1,
-              mountable: { sceneId: "desktop-scene" },
-              rarity: RARITY_EVIDENCE_FIXTURE,
-              raritySession: RARITY_PRODUCT_SESSION,
-            },
-          });
-        }
-        statusReads += 1;
-        return Promise.resolve(statusReads === 1
-          ? {
-              ok: true,
-              action: "authoring",
-              data: {
-                ok: true,
-                documentId: "scene",
-                contentHash: "sha256:accepted",
-                data: { rarity: { kind: "sceneaxi.rarity.namespace" } },
-                rarityNamespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
-                acceptedRarityEvidence: RARITY_EVIDENCE_FIXTURE,
-                undoAvailability: "unavailable",
-              },
-            }
-          : {
-              ok: true,
-              action: "authoring",
-              data: {
-                ok: false,
-                diagnostics: [{ code: diagnosticCode, message: "accepted rarity is unavailable" }],
-              },
-            });
-      },
-    };
-    const {
-      shell, reload, play, status, evidence, evidenceEmpty, runEvidence,
-      documentListeners, dispatchedEvents,
-    } =
-      mountRarityChrome(port);
-    documentListeners.set(DESKTOP_VIEWPORT_PLAY_EVENT, (event) => {
-      const detail = event.detail as { accepted: boolean; frame: number | null };
-      detail.accepted = true;
-      detail.frame = 1;
-    });
-
-    shell.clickListener?.({ target: reload });
-    await vi.waitFor(() => {
-      expect(status.textContent).toContain("· open ·");
-    });
-    shell.clickListener?.({ target: play });
-    await vi.waitFor(() => {
-      expect(runEvidence.hidden).toBe(false);
-    });
-    expect(evidence.hidden).toBe(false);
-
-    shell.clickListener?.({ target: reload });
-    await vi.waitFor(() => {
-      expect(status.textContent).toContain(`Open refused · ${diagnosticCode}`);
-    });
-    expect(evidence.hidden).toBe(true);
-    expect(evidence.textContent).toBe("");
-    expect(evidenceEmpty.hidden).toBe(false);
-    expect(runEvidence.hidden).toBe(true);
-    expect(runEvidence.textContent).toBe("");
-    expect(dispatchedEvents).toContainEqual({
-      type: DESKTOP_RARITY_PROPOSAL_EVENT,
-      detail: {
-        invalidated: true,
-        namespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
-      },
-    });
-  });
-
-  it("retains displayed evidence when Reload cannot read the document", async () => {
-    const port = {
-      request: () =>
-        Promise.resolve({
-          ok: true,
-          action: "authoring",
-          data: {
-            ok: false,
-            diagnostics: [{ code: "document-read-failed", message: "scene.json is unreadable" }],
-          },
-        }),
-    };
-    const { shell, reload, status, evidence, documentListeners, dispatchedEvents } =
-      mountRarityChrome(port);
-    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
-      detail: { replayed: true, snapshot: null, evidence: RARITY_EVIDENCE_FIXTURE },
-    });
-
-    shell.clickListener?.({ target: reload });
-    await vi.waitFor(() => {
-      expect(status.textContent).toContain("Open refused · document-read-failed");
-    });
-    expect(evidence.hidden).toBe(false);
-    expect(evidence.textContent).toContain(RARITY_EVIDENCE_FIXTURE.namespaceDigest);
-    expect(dispatchedEvents).not.toContainEqual({
-      type: DESKTOP_RARITY_PROPOSAL_EVENT,
-      detail: {
-        invalidated: true,
-        namespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
-      },
-    });
-  });
-
-  it("retains accepted evidence through unreadable recovery restart", async () => {
-    const pending = {
-      ...RARITY_PROPOSAL_SNAPSHOT,
-      phase: "pending",
-      journalRecoveryPending: true,
-      transactionId: "tx-recovery",
-      diagnostics: [{ code: "journal-write-failed", message: "recovery required" }],
-    };
-    const port = {
-      request: (request: { readonly payload?: { readonly op?: string } }) =>
-        Promise.resolve(
-          request.payload?.op === "accept"
-            ? { ok: true, action: "authoring", data: pending }
-            : request.payload?.op === "restart"
-              ? {
-                  ok: true,
-                  action: "authoring",
-                  data: {
-                    ok: false,
-                    diagnostics: [
-                      { code: "document-read-failed", message: "scene.json is unreadable" },
-                    ],
-                  },
-                }
-              : { ok: false, reason: "DESKTOP_TEST_NO_RUNTIME", message: "no runtime" },
-        ),
-    };
-    const {
-      shell, accept, reload, status, evidence,
-      documentListeners, dispatchedEvents,
-    } =
-      mountRarityChrome(port);
-    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
-      detail: { replayed: true, snapshot: null, evidence: RARITY_EVIDENCE_FIXTURE },
-    });
-    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
-      detail: {
-        replayed: false,
-        evidence: RARITY_EVIDENCE_FIXTURE,
-        snapshot: { ...RARITY_PROPOSAL_SNAPSHOT, renderedDiff: "translation.x: 0 → 3" },
-      },
-    });
-
-    shell.clickListener?.({ target: accept });
-    await vi.waitFor(() => {
-      expect(status.textContent).toContain("recovery pending");
-    });
-    shell.clickListener?.({ target: reload });
-    await vi.waitFor(() => {
-      expect(status.textContent).toContain("Recovery reset · recovery-pending");
-      expect(status.textContent).toContain("document-read-failed");
-    });
-    expect(evidence.hidden).toBe(false);
-    expect(evidence.textContent).toContain(RARITY_EVIDENCE_FIXTURE.namespaceDigest);
-    expect(dispatchedEvents).not.toContainEqual({
-      type: DESKTOP_RARITY_PROPOSAL_EVENT,
-      detail: {
-        invalidated: true,
-        namespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
-      },
-    });
-  });
-
-  it("settles and invalidates a staged rarity proposal on recovery restart", async () => {
-    const pending = {
-      ...RARITY_PROPOSAL_SNAPSHOT,
-      phase: "pending",
-      journalRecoveryPending: true,
-      transactionId: "tx-rarity-recovery",
-      diagnostics: [{ code: "journal-write-failed", message: "recovery required" }],
-      rarityEvidence: RARITY_EVIDENCE_FIXTURE,
-    };
-    const port = {
-      request: (request: { readonly payload?: { readonly op?: string } }) =>
-        Promise.resolve(
-          request.payload?.op === "accept"
-            ? { ok: true, action: "authoring", data: pending }
-            : request.payload?.op === "restart"
-              ? {
-                  ok: true,
-                  action: "authoring",
-                  data: {
-                    ok: false,
-                    diagnostics: [
-                      { code: "document-read-failed", message: "scene.json is unreadable" },
-                    ],
-                  },
-                }
-              : { ok: false, reason: "DESKTOP_TEST_NO_RUNTIME", message: "no runtime" },
-        ),
-    };
-    const {
-      shell, accept, reload, status, evidence, reviewEvidence,
-      documentListeners, dispatchedEvents,
-    } = mountRarityChrome(port);
-    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
-      detail: {
-        replayed: false,
-        evidence: RARITY_EVIDENCE_FIXTURE,
-        snapshot: { ...RARITY_PROPOSAL_SNAPSHOT, rarityEvidence: RARITY_EVIDENCE_FIXTURE },
-      },
-    });
-
-    shell.clickListener?.({ target: accept });
-    await vi.waitFor(() => {
-      expect(status.textContent).toContain("recovery pending");
-    });
-    shell.clickListener?.({ target: reload });
-    await vi.waitFor(() => {
-      expect(status.textContent).toContain("Recovery reset · recovery-pending");
-    });
-    expect(evidence.hidden).toBe(true);
-    expect(reviewEvidence.hidden).toBe(true);
-    expect(dispatchedEvents).toContainEqual({
-      type: DESKTOP_RARITY_PROPOSAL_EVENT,
-      detail: { retired: "session-restarted", evidence: RARITY_EVIDENCE_FIXTURE },
-    });
-    expect(dispatchedEvents).toContainEqual({
-      type: DESKTOP_RARITY_PROPOSAL_EVENT,
-      detail: {
-        invalidated: true,
-        namespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
-      },
-    });
-  });
-
-  it("refreshes mounted chrome after a late local-RPC settlement", async () => {
-    const currentProposal = {
-      ...RARITY_PROPOSAL_SNAPSHOT,
-      proposal: {
-        edits: [{ documentPath: "scene.json", baseContentHash: "sha256:accepted" }],
-      },
-      renderedDiff: "translation.x: 1 → 4",
-    };
-    let statusReads = 0;
-    const port = {
-      request: (request: { readonly payload?: { readonly op?: string } }) => {
-        if (request.payload?.op !== "status") {
-          return Promise.resolve({
-            ok: false,
-            reason: "DESKTOP_TEST_NO_RUNTIME",
-            message: "no runtime",
-          });
-        }
-        statusReads += 1;
-        return Promise.resolve({
-          ok: true,
-          action: "authoring",
-          data: {
-            ok: true,
-            documentId: "scene",
-            contentHash: "sha256:accepted",
-            data: { rarity: { kind: "sceneaxi.rarity.namespace" } },
-            undoAvailability: "available",
-            rarityNamespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
-            acceptedRarityEvidence: RARITY_EVIDENCE_FIXTURE,
-            authoringSnapshot: currentProposal,
-          },
-        });
-      },
-    };
-    const {
-      proposal, diff, evidence, status, projectState, documentListeners,
-    } = mountRarityChrome(port);
-    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
-      detail: {
-        replayed: false,
-        evidence: RARITY_EVIDENCE_FIXTURE,
-        snapshot: { ...RARITY_PROPOSAL_SNAPSHOT, rarityEvidence: RARITY_EVIDENCE_FIXTURE },
-      },
-    });
-
-    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
-      detail: {
-        settled: "applied",
-        refreshAuthoring: true,
-        evidence: RARITY_EVIDENCE_FIXTURE,
-      },
-    });
-
-    await vi.waitFor(() => {
-      expect(statusReads).toBe(1);
-      expect(status.textContent).toContain("current proposal restored");
-    });
-    expect(proposal.hidden).toBe(false);
-    expect(diff.textContent).toBe("translation.x: 1 → 4");
-    expect(projectState.dataset.projectState).toBe("dirty");
-    expect(evidence.hidden).toBe(false);
-    expect(evidence.textContent).toContain(RARITY_EVIDENCE_FIXTURE.namespaceDigest);
-  });
-
-  it("refreshes every mounted surface after a rarity retirement event", async () => {
-    let statusReads = 0;
-    const idleSnapshot = {
-      ...RARITY_PROPOSAL_SNAPSHOT,
-      phase: "idle",
-      proposal: null,
-      unifiedDiff: "",
-      renderedDiff: "",
-    };
-    const port = {
-      request: (request: { readonly action?: string; readonly payload?: { readonly op?: string } }) => {
-        if (request.action === "open-path") {
-          return Promise.resolve({
-            ok: true,
-            action: "open-path",
-            data: {
-              closed: true,
-              initialDigest: "sha256:initial",
-              tickDigests: ["sha256:tick"],
-              instanceCount: 1,
-              mountable: { sceneId: "desktop-scene" },
-              rarity: RARITY_EVIDENCE_FIXTURE,
-              raritySession: RARITY_PRODUCT_SESSION,
-            },
-          });
-        }
-        statusReads += 1;
-        return Promise.resolve(statusReads === 1
-          ? {
-              ok: true,
-              action: "authoring",
-              data: {
-                ok: true,
-                documentId: "scene",
-                contentHash: "sha256:accepted",
-                data: { rarity: { kind: "sceneaxi.rarity.namespace" } },
-                rarityNamespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
-                acceptedRarityEvidence: RARITY_EVIDENCE_FIXTURE,
-                undoAvailability: "available",
-                authoringSnapshot: idleSnapshot,
-              },
-            }
-          : {
-              ok: true,
-              action: "authoring",
-              data: {
-                ok: true,
-                documentId: "scene",
-                contentHash: "sha256:base",
-                data: {},
-                rarityNamespaceDigest: null,
-                acceptedRarityEvidence: null,
-                undoAvailability: "unavailable",
-                authoringSnapshot: idleSnapshot,
-              },
-            });
-      },
-    };
-    const {
-      shell, reload, play, proposal, evidence, runEvidence, projectState, status,
-      documentListeners, dispatchedEvents,
-    } = mountRarityChrome(port);
-    documentListeners.set(DESKTOP_VIEWPORT_PLAY_EVENT, (event) => {
-      const detail = event.detail as { accepted: boolean; frame: number | null };
-      detail.accepted = true;
-      detail.frame = 1;
-    });
-    shell.clickListener?.({ target: reload });
-    await vi.waitFor(() => expect(status.textContent).toContain("· open ·"));
-    shell.clickListener?.({ target: play });
-    await vi.waitFor(() => expect(runEvidence.hidden).toBe(false));
-    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
-      detail: {
-        replayed: false,
-        evidence: RARITY_EVIDENCE_FIXTURE,
-        snapshot: { ...RARITY_PROPOSAL_SNAPSHOT, rarityEvidence: RARITY_EVIDENCE_FIXTURE },
-      },
-    });
-    expect(proposal.hidden).toBe(false);
-
-    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
-      detail: {
-        retired: "undo",
-        refreshAuthoring: true,
-        evidence: RARITY_EVIDENCE_FIXTURE,
-      },
-    });
-    await vi.waitFor(() => {
-      expect(statusReads).toBe(3);
-      expect(status.textContent).toContain("authoring state refreshed");
-    });
-    expect(proposal.hidden).toBe(true);
-    expect(evidence.hidden).toBe(true);
-    expect(runEvidence.hidden).toBe(true);
-    expect(projectState.dataset.projectState).toBe("open");
-    expect(dispatchedEvents).toContainEqual({
-      type: DESKTOP_RARITY_PROPOSAL_EVENT,
-      detail: {
-        invalidated: true,
-        namespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
-      },
-    });
-  });
-
-  it("retires rarity evidence when Undo takes the accepted namespace back out", async () => {
-    const port = {
-      request: (request: { readonly payload?: { readonly op?: string } }) =>
-        Promise.resolve(
-          request.payload?.op === "undo"
-            ? { ok: true, action: "authoring", data: { ok: true, restoredPaths: ["scene.json"] } }
-            : request.payload?.op === "status"
-              ? {
-                  ok: true,
-                  action: "authoring",
-                  data: {
                     ok: true,
                     documentId: "scene",
-                    contentHash: "sha256:base",
-                    data: {},
-                    undoAvailability: "available",
-                  },
+                    contentHash: "sha256:replacement",
+                    data: { rarity: { kind: "sceneaxi.rarity.namespace" } },
+                    rarityNamespaceDigest: replacement.namespaceDigest,
+                    acceptedRarityEvidence: replacement,
+                    undoAvailability: "unavailable",
+                },
+            }),
+        };
+
+        const { shell, reload, status, evidence, documentListeners } = mountRarityChrome(port);
+        documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+            detail: { replayed: true, snapshot: null, evidence: RARITY_EVIDENCE_FIXTURE },
+        });
+        expect(evidence.textContent).toContain("wayfinder-copper");
+        shell.clickListener?.({ target: reload });
+        await vi.waitFor(() => {
+            expect(status.textContent).toContain("· open ·");
+            expect(evidence.textContent).toContain("wayfinder-silver");
+        });
+        expect(evidence.textContent).toContain(`namespace ${replacement.namespaceDigest}`);
+        expect(evidence.textContent).not.toContain("wayfinder-copper");
+    });
+    it("reconciles each rarity presentation surface to accepted provenance", async () => {
+        const replacement = Object.freeze({
+            ...RARITY_EVIDENCE_FIXTURE,
+            candidateId: "wayfinder-silver",
+            namespaceDigest: `sha256:${"8".repeat(64)}`,
+            provenanceDigest: `sha256:${"9".repeat(64)}`,
+        });
+
+        let acceptedEvidence = RARITY_EVIDENCE_FIXTURE;
+
+        const port = {
+            request: (request: {
+                readonly action?: string;
+            }) => Promise.resolve(request.action === "open-path"
+                ? {
+                    ok: true,
+                    action: "open-path",
+                    data: {
+                        closed: true,
+                        initialDigest: "sha256:initial",
+                        tickDigests: ["sha256:tick"],
+                        instanceCount: 1,
+                        mountable: { sceneId: "desktop-scene" },
+                        rarity: RARITY_EVIDENCE_FIXTURE,
+                        raritySession: RARITY_PRODUCT_SESSION,
+                    },
                 }
-              : { ok: false, reason: "DESKTOP_TEST_NO_RUNTIME", message: "no runtime" },
-        ),
-    };
-    const { shell, reload, undo, status, evidence, evidenceEmpty, documentListeners } =
-      mountRarityChrome(port);
+                : {
+                    ok: true,
+                    action: "authoring",
+                    data: {
+                        ok: true,
+                        documentId: "scene",
+                        contentHash: "sha256:accepted",
+                        data: { rarity: { kind: "sceneaxi.rarity.namespace" } },
+                        rarityNamespaceDigest: acceptedEvidence.namespaceDigest,
+                        acceptedRarityEvidence: acceptedEvidence,
+                        undoAvailability: "unavailable",
+                    },
+                }),
+        };
 
-    // Open the project so a completed Save is undoable, then show the accepted
-    // provenance the way Play or a staged replay would.
-    shell.clickListener?.({ target: reload });
-    await vi.waitFor(() => {
-      expect(status.textContent).toContain("· open ·");
+        const { shell, reload, play, evidence, runEvidence, status, documentListeners, dispatchedEvents, } = mountRarityChrome(port);
+        documentListeners.set(DESKTOP_VIEWPORT_PLAY_EVENT, (event) => {
+            // SAFETY: the listener receives the named event emitted by the real desktop chrome in this fixture; its producer owns these detail fields.
+            const detail = event.detail as {
+                accepted: boolean;
+                frame: number | null;
+            };
+
+            detail.accepted = true;
+            detail.frame = 1;
+        });
+        shell.clickListener?.({ target: reload });
+        await vi.waitFor(() => {
+            expect(status.textContent).toContain("· open ·");
+        });
+        shell.clickListener?.({ target: play });
+        await vi.waitFor(() => {
+            expect(runEvidence.textContent).toContain("wayfinder-copper");
+        });
+        documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+            detail: { replayed: true, snapshot: null, evidence: replacement },
+        });
+        expect(evidence.textContent).toContain("wayfinder-silver");
+        const firstInvalidation = dispatchedEvents.length;
+        shell.clickListener?.({ target: reload });
+        await vi.waitFor(() => {
+            expect(evidence.textContent).toContain("wayfinder-copper");
+        });
+        expect(runEvidence.textContent).toContain("wayfinder-copper");
+        expect(dispatchedEvents.slice(firstInvalidation)).toContainEqual({
+            type: DESKTOP_RARITY_PROPOSAL_EVENT,
+            detail: { invalidated: true, namespaceDigest: replacement.namespaceDigest },
+        });
+        expect(dispatchedEvents.slice(firstInvalidation)).not.toContainEqual({
+            type: DESKTOP_RARITY_PROPOSAL_EVENT,
+            detail: { invalidated: true, namespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest },
+        });
+        documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+            detail: { replayed: true, snapshot: null, evidence: replacement },
+        });
+        acceptedEvidence = replacement;
+        const secondInvalidation = dispatchedEvents.length;
+        shell.clickListener?.({ target: reload });
+        await vi.waitFor(() => {
+            expect(evidence.textContent).toContain("wayfinder-silver");
+            expect(runEvidence.hidden).toBe(true);
+        });
+        expect(runEvidence.textContent).toBe("");
+        expect(dispatchedEvents.slice(secondInvalidation)).toContainEqual({
+            type: DESKTOP_RARITY_PROPOSAL_EVENT,
+            detail: {
+                invalidated: true,
+                namespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
+            },
+        });
+        expect(dispatchedEvents.slice(secondInvalidation)).not.toContainEqual({
+            type: DESKTOP_RARITY_PROPOSAL_EVENT,
+            detail: { invalidated: true, namespaceDigest: replacement.namespaceDigest },
+        });
     });
-    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
-      detail: { replayed: true, snapshot: null, evidence: RARITY_EVIDENCE_FIXTURE },
+    it.each([
+        "document-not-found",
+        RARITY_REFUSE_CODES.outcomeMismatch,
+    ])("retires displayed evidence when Reload proves %s", async (diagnosticCode) => {
+        let statusReads = 0;
+
+        const port = {
+            request: (request: {
+                readonly action?: string;
+                readonly payload?: {
+                    readonly op?: string;
+                };
+            }) => {
+                if (request.action === "open-path") {
+                    return Promise.resolve({
+                        ok: true,
+                        action: "open-path",
+                        data: {
+                            closed: true,
+                            initialDigest: "sha256:initial",
+                            tickDigests: ["sha256:tick"],
+                            instanceCount: 1,
+                            mountable: { sceneId: "desktop-scene" },
+                            rarity: RARITY_EVIDENCE_FIXTURE,
+                            raritySession: RARITY_PRODUCT_SESSION,
+                        },
+                    });
+                }
+
+                statusReads += 1;
+
+                return Promise.resolve(statusReads === 1
+                    ? {
+                        ok: true,
+                        action: "authoring",
+                        data: {
+                            ok: true,
+                            documentId: "scene",
+                            contentHash: "sha256:accepted",
+                            data: { rarity: { kind: "sceneaxi.rarity.namespace" } },
+                            rarityNamespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
+                            acceptedRarityEvidence: RARITY_EVIDENCE_FIXTURE,
+                            undoAvailability: "unavailable",
+                        },
+                    }
+                    : {
+                        ok: true,
+                        action: "authoring",
+                        data: {
+                            ok: false,
+                            diagnostics: [{ code: diagnosticCode, message: "accepted rarity is unavailable" }],
+                        },
+                    });
+            },
+        };
+
+        const { shell, reload, play, status, evidence, evidenceEmpty, runEvidence, documentListeners, dispatchedEvents, } = mountRarityChrome(port);
+        documentListeners.set(DESKTOP_VIEWPORT_PLAY_EVENT, (event) => {
+            // SAFETY: the listener receives the named event emitted by the real desktop chrome in this fixture; its producer owns these detail fields.
+            const detail = event.detail as {
+                accepted: boolean;
+                frame: number | null;
+            };
+
+            detail.accepted = true;
+            detail.frame = 1;
+        });
+        shell.clickListener?.({ target: reload });
+        await vi.waitFor(() => {
+            expect(status.textContent).toContain("· open ·");
+        });
+        shell.clickListener?.({ target: play });
+        await vi.waitFor(() => {
+            expect(runEvidence.hidden).toBe(false);
+        });
+        expect(evidence.hidden).toBe(false);
+        shell.clickListener?.({ target: reload });
+        await vi.waitFor(() => {
+            expect(status.textContent).toContain(`Open refused · ${diagnosticCode}`);
+        });
+        expect(evidence.hidden).toBe(true);
+        expect(evidence.textContent).toBe("");
+        expect(evidenceEmpty.hidden).toBe(false);
+        expect(runEvidence.hidden).toBe(true);
+        expect(runEvidence.textContent).toBe("");
+        expect(dispatchedEvents).toContainEqual({
+            type: DESKTOP_RARITY_PROPOSAL_EVENT,
+            detail: {
+                invalidated: true,
+                namespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
+            },
+        });
     });
-    expect(evidence.hidden).toBe(false);
+    it("retains displayed evidence when Reload cannot read the document", async () => {
+        const port = {
+            request: () => Promise.resolve({
+                ok: true,
+                action: "authoring",
+                data: {
+                    ok: false,
+                    diagnostics: [{ code: "document-read-failed", message: "scene.json is unreadable" }],
+                },
+            }),
+        };
 
-    shell.clickListener?.({ target: undo });
-    await vi.waitFor(() => {
-      expect(status.textContent).toContain("Undid last Save");
+        const { shell, reload, status, evidence, documentListeners, dispatchedEvents } = mountRarityChrome(port);
+        documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+            detail: { replayed: true, snapshot: null, evidence: RARITY_EVIDENCE_FIXTURE },
+        });
+        shell.clickListener?.({ target: reload });
+        await vi.waitFor(() => {
+            expect(status.textContent).toContain("Open refused · document-read-failed");
+        });
+        expect(evidence.hidden).toBe(false);
+        expect(evidence.textContent).toContain(RARITY_EVIDENCE_FIXTURE.namespaceDigest);
+        expect(dispatchedEvents).not.toContainEqual({
+            type: DESKTOP_RARITY_PROPOSAL_EVENT,
+            detail: {
+                invalidated: true,
+                namespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
+            },
+        });
     });
-    // The Save that wrote the namespace has been reverted, so provenance for it
-    // must not stay on screen describing bytes the file no longer holds.
-    expect(evidence.hidden).toBe(true);
-    expect(evidence.textContent).toBe("");
-    expect(evidenceEmpty.hidden).toBe(false);
-  });
+    it("retains accepted evidence through unreadable recovery restart", async () => {
+        const pending = {
+            ...RARITY_PROPOSAL_SNAPSHOT,
+            phase: "pending",
+            journalRecoveryPending: true,
+            transactionId: "tx-recovery",
+            diagnostics: [{ code: "journal-write-failed", message: "recovery required" }],
+        };
 
-  it("retires rarity evidence when the rarity proposal itself is rejected", async () => {
-    const { reject, shell, evidence, evidenceEmpty, status, documentListeners, dispatchedEvents } =
-      mountRarityChrome(rejectingPort(RARITY_EVIDENCE_FIXTURE));
+        const port = {
+            request: (request: {
+                readonly payload?: {
+                    readonly op?: string;
+                };
+            }) => Promise.resolve(request.payload?.op === "accept"
+                ? { ok: true, action: "authoring", data: pending }
+                : request.payload?.op === "restart"
+                    ? {
+                        ok: true,
+                        action: "authoring",
+                        data: {
+                            ok: false,
+                            diagnostics: [
+                                { code: "document-read-failed", message: "scene.json is unreadable" },
+                            ],
+                        },
+                    }
+                    : { ok: false, reason: "DESKTOP_TEST_NO_RUNTIME", message: "no runtime" }),
+        };
 
-    documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
-      detail: {
-        replayed: false,
-        evidence: RARITY_EVIDENCE_FIXTURE,
-        snapshot: { ...RARITY_PROPOSAL_SNAPSHOT, rarityEvidence: RARITY_EVIDENCE_FIXTURE },
-      },
+        const { shell, accept, reload, status, evidence, documentListeners, dispatchedEvents, } = mountRarityChrome(port);
+        documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+            detail: { replayed: true, snapshot: null, evidence: RARITY_EVIDENCE_FIXTURE },
+        });
+        documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+            detail: {
+                replayed: false,
+                evidence: RARITY_EVIDENCE_FIXTURE,
+                snapshot: { ...RARITY_PROPOSAL_SNAPSHOT, renderedDiff: "translation.x: 0 → 3" },
+            },
+        });
+        shell.clickListener?.({ target: accept });
+        await vi.waitFor(() => {
+            expect(status.textContent).toContain("recovery pending");
+        });
+        shell.clickListener?.({ target: reload });
+        await vi.waitFor(() => {
+            expect(status.textContent).toContain("Recovery reset · recovery-pending");
+            expect(status.textContent).toContain("document-read-failed");
+        });
+        expect(evidence.hidden).toBe(false);
+        expect(evidence.textContent).toContain(RARITY_EVIDENCE_FIXTURE.namespaceDigest);
+        expect(dispatchedEvents).not.toContainEqual({
+            type: DESKTOP_RARITY_PROPOSAL_EVENT,
+            detail: {
+                invalidated: true,
+                namespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
+            },
+        });
     });
-    expect(evidence.hidden).toBe(false);
+    it("settles and invalidates a staged rarity proposal on recovery restart", async () => {
+        const pending = {
+            ...RARITY_PROPOSAL_SNAPSHOT,
+            phase: "pending",
+            journalRecoveryPending: true,
+            transactionId: "tx-rarity-recovery",
+            diagnostics: [{ code: "journal-write-failed", message: "recovery required" }],
+            rarityEvidence: RARITY_EVIDENCE_FIXTURE,
+        };
 
-    shell.clickListener?.({ target: reject });
-    await rejectSettled(status);
-    expect(evidence.hidden).toBe(true);
-    expect(evidenceEmpty.hidden).toBe(false);
-    expect(
-      dispatchedEvents
-        .filter((event) => event.type === DESKTOP_RARITY_PROPOSAL_EVENT)
-        .map((event) => {
-          const detail = event.detail as Record<string, unknown>;
-          return detail["settled"] ?? (detail["invalidated"] === true ? "invalidated" : null);
-        }),
-    ).toEqual(["rejected", "invalidated"]);
-  });
+        const port = {
+            request: (request: {
+                readonly payload?: {
+                    readonly op?: string;
+                };
+            }) => Promise.resolve(request.payload?.op === "accept"
+                ? { ok: true, action: "authoring", data: pending }
+                : request.payload?.op === "restart"
+                    ? {
+                        ok: true,
+                        action: "authoring",
+                        data: {
+                            ok: false,
+                            diagnostics: [
+                                { code: "document-read-failed", message: "scene.json is unreadable" },
+                            ],
+                        },
+                    }
+                    : { ok: false, reason: "DESKTOP_TEST_NO_RUNTIME", message: "no runtime" }),
+        };
+
+        const { shell, accept, reload, status, evidence, reviewEvidence, documentListeners, dispatchedEvents, } = mountRarityChrome(port);
+        documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+            detail: {
+                replayed: false,
+                evidence: RARITY_EVIDENCE_FIXTURE,
+                snapshot: { ...RARITY_PROPOSAL_SNAPSHOT, rarityEvidence: RARITY_EVIDENCE_FIXTURE },
+            },
+        });
+        shell.clickListener?.({ target: accept });
+        await vi.waitFor(() => {
+            expect(status.textContent).toContain("recovery pending");
+        });
+        shell.clickListener?.({ target: reload });
+        await vi.waitFor(() => {
+            expect(status.textContent).toContain("Recovery reset · recovery-pending");
+        });
+        expect(evidence.hidden).toBe(true);
+        expect(reviewEvidence.hidden).toBe(true);
+        expect(dispatchedEvents).toContainEqual({
+            type: DESKTOP_RARITY_PROPOSAL_EVENT,
+            detail: { retired: "session-restarted", evidence: RARITY_EVIDENCE_FIXTURE },
+        });
+        expect(dispatchedEvents).toContainEqual({
+            type: DESKTOP_RARITY_PROPOSAL_EVENT,
+            detail: {
+                invalidated: true,
+                namespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
+            },
+        });
+    });
+    it("refreshes mounted chrome after a late local-RPC settlement", async () => {
+        const currentProposal = {
+            ...RARITY_PROPOSAL_SNAPSHOT,
+            proposal: {
+                edits: [{ documentPath: "scene.json", baseContentHash: "sha256:accepted" }],
+            },
+            renderedDiff: "translation.x: 1 → 4",
+        };
+
+        let statusReads = 0;
+
+        const port = {
+            request: (request: {
+                readonly payload?: {
+                    readonly op?: string;
+                };
+            }) => {
+                if (request.payload?.op !== "status") {
+                    return Promise.resolve({
+                        ok: false,
+                        reason: "DESKTOP_TEST_NO_RUNTIME",
+                        message: "no runtime",
+                    });
+                }
+
+                statusReads += 1;
+
+                return Promise.resolve({
+                    ok: true,
+                    action: "authoring",
+                    data: {
+                        ok: true,
+                        documentId: "scene",
+                        contentHash: "sha256:accepted",
+                        data: { rarity: { kind: "sceneaxi.rarity.namespace" } },
+                        undoAvailability: "available",
+                        rarityNamespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
+                        acceptedRarityEvidence: RARITY_EVIDENCE_FIXTURE,
+                        authoringSnapshot: currentProposal,
+                    },
+                });
+            },
+        };
+
+        const { proposal, diff, evidence, status, projectState, documentListeners, } = mountRarityChrome(port);
+        documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+            detail: {
+                replayed: false,
+                evidence: RARITY_EVIDENCE_FIXTURE,
+                snapshot: { ...RARITY_PROPOSAL_SNAPSHOT, rarityEvidence: RARITY_EVIDENCE_FIXTURE },
+            },
+        });
+        documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+            detail: {
+                settled: "applied",
+                refreshAuthoring: true,
+                evidence: RARITY_EVIDENCE_FIXTURE,
+            },
+        });
+        await vi.waitFor(() => {
+            expect(statusReads).toBe(1);
+            expect(status.textContent).toContain("current proposal restored");
+        });
+        expect(proposal.hidden).toBe(false);
+        expect(diff.textContent).toBe("translation.x: 1 → 4");
+        expect(projectState.dataset.projectState).toBe("dirty");
+        expect(evidence.hidden).toBe(false);
+        expect(evidence.textContent).toContain(RARITY_EVIDENCE_FIXTURE.namespaceDigest);
+    });
+    it("refreshes every mounted surface after a rarity retirement event", async () => {
+        let statusReads = 0;
+
+        const idleSnapshot = {
+            ...RARITY_PROPOSAL_SNAPSHOT,
+            phase: "idle",
+            proposal: null,
+            unifiedDiff: "",
+            renderedDiff: "",
+        };
+
+        const port = {
+            request: (request: {
+                readonly action?: string;
+                readonly payload?: {
+                    readonly op?: string;
+                };
+            }) => {
+                if (request.action === "open-path") {
+                    return Promise.resolve({
+                        ok: true,
+                        action: "open-path",
+                        data: {
+                            closed: true,
+                            initialDigest: "sha256:initial",
+                            tickDigests: ["sha256:tick"],
+                            instanceCount: 1,
+                            mountable: { sceneId: "desktop-scene" },
+                            rarity: RARITY_EVIDENCE_FIXTURE,
+                            raritySession: RARITY_PRODUCT_SESSION,
+                        },
+                    });
+                }
+
+                statusReads += 1;
+
+                return Promise.resolve(statusReads === 1
+                    ? {
+                        ok: true,
+                        action: "authoring",
+                        data: {
+                            ok: true,
+                            documentId: "scene",
+                            contentHash: "sha256:accepted",
+                            data: { rarity: { kind: "sceneaxi.rarity.namespace" } },
+                            rarityNamespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
+                            acceptedRarityEvidence: RARITY_EVIDENCE_FIXTURE,
+                            undoAvailability: "available",
+                            authoringSnapshot: idleSnapshot,
+                        },
+                    }
+                    : {
+                        ok: true,
+                        action: "authoring",
+                        data: {
+                            ok: true,
+                            documentId: "scene",
+                            contentHash: "sha256:base",
+                            data: {},
+                            rarityNamespaceDigest: null,
+                            acceptedRarityEvidence: null,
+                            undoAvailability: "unavailable",
+                            authoringSnapshot: idleSnapshot,
+                        },
+                    });
+            },
+        };
+
+        const { shell, reload, play, proposal, evidence, runEvidence, projectState, status, documentListeners, dispatchedEvents, initializationRequests, } = mountRarityChrome(port);
+        documentListeners.set(DESKTOP_VIEWPORT_PLAY_EVENT, (event) => {
+            // SAFETY: the listener receives the named event emitted by the real desktop chrome in this fixture; its producer owns these detail fields.
+            const detail = event.detail as {
+                accepted: boolean;
+                frame: number | null;
+            };
+
+            detail.accepted = true;
+            detail.frame = 1;
+        });
+        shell.clickListener?.({ target: reload });
+        await vi.waitFor(() => expect(status.textContent).toContain("· open ·"));
+        shell.clickListener?.({ target: play });
+        await vi.waitFor(() => expect(runEvidence.hidden).toBe(false));
+        documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+            detail: {
+                replayed: false,
+                evidence: RARITY_EVIDENCE_FIXTURE,
+                snapshot: { ...RARITY_PROPOSAL_SNAPSHOT, rarityEvidence: RARITY_EVIDENCE_FIXTURE },
+            },
+        });
+        expect(proposal.hidden).toBe(false);
+        documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+            detail: {
+                retired: "undo",
+                refreshAuthoring: true,
+                evidence: RARITY_EVIDENCE_FIXTURE,
+            },
+        });
+        await vi.waitFor(() => {
+            expect(statusReads).toBe(3);
+            expect(status.textContent).toContain("authoring state refreshed");
+            expect(initializationRequests).toEqual([{ action: "profile", payload: { profile: "game" } }]);
+        });
+        expect(proposal.hidden).toBe(true);
+        expect(evidence.hidden).toBe(true);
+        expect(runEvidence.hidden).toBe(true);
+        expect(projectState.dataset.projectState).toBe("open");
+        expect(dispatchedEvents).toContainEqual({
+            type: DESKTOP_RARITY_PROPOSAL_EVENT,
+            detail: {
+                invalidated: true,
+                namespaceDigest: RARITY_EVIDENCE_FIXTURE.namespaceDigest,
+            },
+        });
+    });
+    it("retires rarity evidence when Undo takes the accepted namespace back out", async () => {
+        const port = {
+            request: (request: {
+                readonly payload?: {
+                    readonly op?: string;
+                };
+            }) => Promise.resolve(request.payload?.op === "undo"
+                ? { ok: true, action: "authoring", data: { ok: true, restoredPaths: ["scene.json"] } }
+                : request.payload?.op === "status"
+                    ? {
+                        ok: true,
+                        action: "authoring",
+                        data: {
+                            ok: true,
+                            documentId: "scene",
+                            contentHash: "sha256:base",
+                            data: {},
+                            undoAvailability: "available",
+                        },
+                    }
+                    : { ok: false, reason: "DESKTOP_TEST_NO_RUNTIME", message: "no runtime" }),
+        };
+
+        const { shell, reload, undo, status, evidence, evidenceEmpty, documentListeners } = mountRarityChrome(port);
+        // Open the project so a completed Save is undoable, then show the accepted
+        // provenance the way Play or a staged replay would.
+        shell.clickListener?.({ target: reload });
+        await vi.waitFor(() => {
+            expect(status.textContent).toContain("· open ·");
+        });
+        documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+            detail: { replayed: true, snapshot: null, evidence: RARITY_EVIDENCE_FIXTURE },
+        });
+        expect(evidence.hidden).toBe(false);
+        shell.clickListener?.({ target: undo });
+        await vi.waitFor(() => {
+            expect(status.textContent).toContain("Undid last Save");
+        });
+        // The Save that wrote the namespace has been reverted, so provenance for it
+        // must not stay on screen describing bytes the file no longer holds.
+        expect(evidence.hidden).toBe(true);
+        expect(evidence.textContent).toBe("");
+        expect(evidenceEmpty.hidden).toBe(false);
+    });
+    it("retires rarity evidence when the rarity proposal itself is rejected", async () => {
+        const { reject, shell, evidence, evidenceEmpty, status, documentListeners, dispatchedEvents } = mountRarityChrome(rejectingPort(RARITY_EVIDENCE_FIXTURE));
+        documentListeners.get(DESKTOP_RARITY_PROPOSAL_EVENT)?.({
+            detail: {
+                replayed: false,
+                evidence: RARITY_EVIDENCE_FIXTURE,
+                snapshot: { ...RARITY_PROPOSAL_SNAPSHOT, rarityEvidence: RARITY_EVIDENCE_FIXTURE },
+            },
+        });
+        expect(evidence.hidden).toBe(false);
+        shell.clickListener?.({ target: reject });
+        await rejectSettled(status);
+        expect(evidence.hidden).toBe(true);
+        expect(evidenceEmpty.hidden).toBe(false);
+        expect(dispatchedEvents
+            .filter((event) => event.type === DESKTOP_RARITY_PROPOSAL_EVENT)
+            .map((event) => {
+            // SAFETY: the listener receives the named event emitted by the real desktop chrome in this fixture; its producer owns these detail fields.
+            const detail = event.detail as Record<string, import("@sceneaxi/schemas").JsonValue>;
+
+            return detail["settled"] ?? (detail["invalidated"] === true ? "invalidated" : null);
+        })).toEqual(["rejected", "invalidated"]);
+    });
 });
 
 describe("desktop renderer behavior", () => {
+    it("starts Sculpt object as the registered Local Build and mounts its registered result", async () => {
+        const generated = await runAssistantSculptAction({
+            route: "local",
+            prompt: "Sculpt object",
+            profile: "@sceneaxi/profile-game",
+        });
 
-  it("starts Sculpt object as the registered Local Build and mounts its registered result", async () => {
-    const generated = await runAssistantSculptAction({
-      route: "local",
-      prompt: "Sculpt object",
-      profile: "@sceneaxi/profile-game",
-    });
-    if (!generated.ok) throw new Error(generated.message);
-    const result = {
-      ok: true as const,
-      route: generated.route,
-      artifactBytes: generated.artifactBytes,
-      artifactDigest: generated.artifactDigest,
-      inspection: generated.inspection,
-      mountable: desktopAssistantScene(generated.artifact),
-    };
-    const window = new HappyWindow();
-    const backend = createThreeSculptPresentationBackend();
-    const mounts = createSculptMountApi(backend);
-    try {
-      window.document.body.innerHTML = `
+        if (!generated.ok)
+            throw new Error(generated.message);
+
+        const result = {
+            ok: true as const,
+            route: generated.route,
+            artifactBytes: generated.artifactBytes,
+            artifactDigest: generated.artifactDigest,
+            inspection: generated.inspection,
+            mountable: desktopAssistantScene(generated.artifact),
+        };
+
+        const window = new HappyWindow();
+        const backend = createThreeSculptPresentationBackend();
+        const mounts = createSculptMountApi(backend);
+
+        try {
+            window.document.body.innerHTML = `
         <main class="shell" data-assistant-mode="ask" data-assistant-route="hosted" data-profile="game">
           <textarea id="assistant-prompt"></textarea>
           <button id="assistant-send" data-action="assistant-send"></button>
@@ -2449,974 +2553,1064 @@ describe("desktop renderer behavior", () => {
           </section>
         </main>
       `;
-      vi.stubGlobal("document", window.document);
-      const commandRequests: Array<Record<string, unknown>> = [];
-      let statusReads = 0;
-      const port = {
-        request: (request: unknown): Promise<DesktopBridgeResponse> => {
-          const typed = request as { action?: unknown; payload?: Record<string, unknown> };
-          if (typed.action !== "command") throw new Error("Sculpt bypassed the registry");
-          const payload = typed.payload ?? {};
-          if (payload["commandId"] === "assistant-status") {
-            statusReads += 1;
-            return Promise.resolve({ ok: true, action: "assistant", data: null });
-          }
-          commandRequests.push(payload);
-          return Promise.resolve({
-            ok: true,
-            action: "assistant",
-            data: {
-              jobId: "desktop-assistant-sculpt",
-              commandId: "assistant-local-build",
-              route: "local",
-              status: "running",
-              latestProgress: null,
-              progressCount: 0,
-              terminal: null,
-            },
-          });
-        },
-      };
-      const readyJob: DesktopAssistantJobSnapshot = {
-        jobId: "desktop-assistant-sculpt",
-        commandId: "assistant-local-build",
-        route: "local",
-        status: "ready",
-        latestProgress: {
-          phase: "ready",
-          percent: 100,
-          message: "Sculpt Artifact is ready.",
-        },
-        progressCount: 4,
-        terminal: {
-          commandId: "assistant-local-build",
-          jobId: "desktop-assistant-sculpt",
-          status: "completed",
-          progress: {
-            phase: "ready",
-            percent: 100,
-            message: "Sculpt Artifact is ready.",
-            terminal: true,
-          },
-          evidenceKind: "sculpt-artifact",
-          resultTarget: "live-viewport",
-          refusal: null,
-        },
-        result,
-      };
-      let settlePoll: ((outcome: Awaited<ReturnType<typeof pollAssistantJob>>) => void) | undefined;
-      const pollJob: typeof pollAssistantJob = () => new Promise((resolve) => {
-        settlePoll = resolve;
-      });
-      const stage = window.document.querySelector(".viewport");
-      if (stage === null) throw new Error("missing viewport fixture");
-      expect(installAssistantProductFlow(
-        stage as unknown as Element,
-        port,
-        mounts,
-        backend,
-        pollJob,
-      )).toBe(true);
-      await vi.waitFor(() => expect(statusReads).toBe(1));
-      await Promise.resolve();
-      window.document.querySelector("#sculpt-start")?.dispatchEvent(new window.Event("click"));
-      await vi.waitFor(() => expect(commandRequests).toHaveLength(1));
-      expect(commandRequests[0]).toMatchObject({
-        schemaVersion: 1,
-        commandId: "assistant-local-build",
-        client: "desktop-control",
-        permission: "assistant:run",
-        input: { prompt: "Sculpt object", profile: "@sceneaxi/profile-game" },
-      });
-      expect(window.document.querySelector("[data-sculpt-progress]")?.hasAttribute("hidden"))
-        .toBe(false);
-      expect(window.document.querySelector("#sculpt-cancel")?.getAttribute("aria-disabled"))
-        .toBeNull();
-      settlePoll?.({ ok: true, job: readyJob, result });
-      await vi.waitFor(() => {
-        expect(window.document.querySelector("[data-assistant-status]")?.textContent)
-          .toContain("Mounted in the live center viewport");
-      });
-      expect(mounts.render().instanceIds).toContain("assistant-live-output");
-    } finally {
-      mounts.dispose();
-      window.close();
-      vi.unstubAllGlobals();
-    }
-  });
+            vi.stubGlobal("document", window.document);
+            const commandRequests: Array<Record<string, import("@sceneaxi/schemas").JsonValue>> = [];
+            let statusReads = 0;
 
-  // The manipulator seam has two ends that have to agree: the emitted chrome
-  // document — a generated public artifact this tier ships — declares the control
-  // values, and the renderer's viewport controller is what has to answer them.
-  // Asserting the document's own values against the controller's real transforms
-  // proves the wiring; reading viewport.ts for the call site would not.
-  it("answers every manipulator the emitted chrome document declares", () => {
-    const bar = /<div class="assistant-manipulators"[\s\S]*?<\/div>/.exec(
-      desktopLinuxIndexHtml(),
-    )?.[0];
-    expect(bar).toBeDefined();
-    const declared = [
-      ...(bar ?? "").matchAll(
-        /data-action="assistant-manipulator" data-value="([^"]+)"/g,
-      ),
-    ].map((match) => match[1]);
-    expect(declared.length).toBeGreaterThan(0);
+            const port = {
+                request: (request: DesktopRequest): Promise<DesktopBridgeResponse> => {
+                    // SAFETY: this request is emitted by the desktop protocol function exercised in this fixture; the projection reads only its documented IPC fields.
+                    const typed = request as {
+                        action?: unknown;
+                        payload?: Record<string, import("@sceneaxi/schemas").JsonValue>;
+                    };
 
-    const starter = desktopOpenScene();
-    if (!starter.ok) throw new Error(`desktop scene fixture refused: ${starter.reason}`);
-    const mounted = starter.composed.scene.instances[0];
-    if (mounted === undefined) throw new Error("desktop starter scene has no instance");
-    const scene = desktopAssistantScene(mounted.artifact);
+                    if (typed.action !== "command")
+                        throw new Error("Sculpt bypassed the registry");
+                    const payload = typed.payload ?? {};
 
-    const backend = createThreeSculptPresentationBackend();
-    const mounts = createSculptMountApi(backend);
-    const controller = createDesktopAssistantViewportController(mounts);
-    controller.replace(scene);
+                    if (payload["commandId"] === "assistant-status") {
+                        statusReads += 1;
 
-    const identity = {
-      translation: [0, 0, 0],
-      rotationEulerDegrees: [0, 0, 0],
-      scale: [1, 1, 1],
-    };
-    for (const value of declared) {
-      const moved = controller.manipulate(value);
-      expect(moved, value).not.toBeNull();
-      expect(moved?.transform, value).not.toEqual(identity);
-      controller.replace(scene);
-    }
-    // And a value the document does not declare is not silently accepted.
-    expect(controller.manipulate("not-a-manipulator")).toBeNull();
-  });
+                        return Promise.resolve({ ok: true, action: "assistant", data: null });
+                    }
 
-  it("abandons a job that never settles and names the timeout", async () => {
-    const requests: unknown[] = [];
-    const outcome = await pollAssistantJob({
-      jobId: "desktop-assistant-1",
-      attempts: 3,
-      wait: () => Promise.resolve(),
-      request: (request) => {
-        requests.push(request);
-        const abandoning =
-          (request as { payload?: { op?: string } }).payload?.op === "abandon";
-        if (!abandoning && requests.length === 1) {
-          return Promise.reject(new Error("status transport unavailable"));
-        }
-        if (!abandoning && requests.length === 2) {
-          return Promise.resolve({
-            ok: false as const,
-            reason: "DESKTOP_ASSISTANT_STATUS_UNAVAILABLE",
-            message: "The assistant status is temporarily unavailable.",
-            detail: null,
-          });
-        }
-        return Promise.resolve({
-          ok: true as const,
-          action: "assistant" as const,
-          data: {
-            jobId: "desktop-assistant-1",
-            route: "local",
-            status: abandoning ? "refused" : "running",
-            latestProgress: null,
-            progressCount: 0,
-            ...(abandoning
-              ? {
-                  refusal: {
-                    ok: false as const,
-                    reason: DESKTOP_BRIDGE_REFUSALS.assistantAbandoned,
-                    message: "The unresolved assistant job was abandoned.",
-                    recoverable: true,
-                  },
-                }
-              : {}),
-          },
-        });
-      },
-    });
-    expect(outcome).toEqual({
-      ok: false,
-      reason: DESKTOP_BRIDGE_REFUSALS.assistantStatusTimeout,
-      message:
-        "The assistant job did not finish in time; it was abandoned and Retry may start a fresh job.",
-    });
-    // The abandon is the point: without it the job stays running and the next
-    // Retry is met with DESKTOP_ASSISTANT_BUSY.
-    expect(requests).toHaveLength(4);
-    expect(requests.at(-1)).toEqual({
-      action: "assistant",
-      payload: { op: "abandon", jobId: "desktop-assistant-1" },
-    });
-    expect(requests.slice(0, 3)).toEqual(
-      Array.from({ length: 3 }, () => ({ action: "assistant", payload: { op: "status" } })),
-    );
-  });
+                    commandRequests.push(payload);
 
-  it("returns a ready job that wins the abandonment race", async () => {
-    const result = {
-      ok: true as const,
-      kind: "rarity-proposal" as const,
-      replayed: false,
-      evidence: {},
-    };
-    const outcome = await pollAssistantJob({
-      jobId: "desktop-assistant-1",
-      attempts: 1,
-      wait: () => Promise.resolve(),
-      request: (request) => {
-        const abandoning =
-          (request as { payload?: { op?: string } }).payload?.op === "abandon";
-        return Promise.resolve({
-          ok: true as const,
-          action: "assistant" as const,
-          data: {
-            jobId: "desktop-assistant-1",
-            route: "local",
-            status: abandoning ? "ready" : "running",
-            latestProgress: null,
-            progressCount: 0,
-            ...(abandoning ? { result } : {}),
-          },
-        });
-      },
-    });
-    expect(outcome).toMatchObject({
-      ok: true,
-      job: { status: "ready", result },
-      result,
-    });
-  });
+                    return Promise.resolve({
+                        ok: true,
+                        action: "assistant",
+                        data: {
+                            jobId: "desktop-assistant-sculpt",
+                            commandId: "assistant-local-build",
+                            route: "local",
+                            status: "running",
+                            latestProgress: null,
+                            progressCount: 0,
+                            terminal: null,
+                        },
+                    });
+                },
+            };
 
-  it("does not consume a newer job that wins the abandonment race", async () => {
-    const outcome = await pollAssistantJob({
-      jobId: "desktop-assistant-1",
-      attempts: 1,
-      wait: () => Promise.resolve(),
-      request: (request) => {
-        const abandoning =
-          (request as { payload?: { op?: string } }).payload?.op === "abandon";
-        return Promise.resolve({
-          ok: true as const,
-          action: "assistant" as const,
-          data: abandoning
-            ? {
-                jobId: "desktop-assistant-2",
+            const readyJob: DesktopAssistantJobSnapshot = {
+                jobId: "desktop-assistant-sculpt",
+                commandId: "assistant-local-build",
                 route: "local",
-                status: "running",
-                latestProgress: null,
-                progressCount: 0,
-              }
-            : {
+                status: "ready",
+                latestProgress: {
+                    phase: "ready",
+                    percent: 100,
+                    message: "Sculpt Artifact is ready.",
+                },
+                progressCount: 4,
+                terminal: {
+                    commandId: "assistant-local-build",
+                    jobId: "desktop-assistant-sculpt",
+                    status: "completed",
+                    progress: {
+                        phase: "ready",
+                        percent: 100,
+                        message: "Sculpt Artifact is ready.",
+                        terminal: true,
+                    },
+                    evidenceKind: "sculpt-artifact",
+                    resultTarget: "live-viewport",
+                    refusal: null,
+                },
+                result,
+            };
+
+            let settlePoll: ((outcome: Awaited<ReturnType<typeof pollAssistantJob>>) => void) | undefined;
+
+            const pollJob: typeof pollAssistantJob = () => new Promise((resolve) => {
+                settlePoll = resolve;
+            });
+
+            const stage = window.document.querySelector(".viewport");
+
+            if (stage === null)
+                throw new Error("missing viewport fixture");
+            // SAFETY: the test stage implements the DOM methods used by installAssistantProductFlow; it is a transport-only fixture, not pixel evidence.
+            expect(installAssistantProductFlow(stage as typeof stage & Element, port, mounts, backend, pollJob)).toBe(true);
+            await vi.waitFor(() => expect(statusReads).toBe(1));
+            await Promise.resolve();
+            window.document.querySelector("#sculpt-start")?.dispatchEvent(new window.Event("click"));
+            await vi.waitFor(() => expect(commandRequests).toHaveLength(1));
+            expect(commandRequests[0]).toMatchObject({
+                schemaVersion: 1,
+                commandId: "assistant-local-build",
+                client: "desktop-control",
+                permission: "assistant:run",
+                input: { prompt: "Sculpt object", profile: "@sceneaxi/profile-game" },
+            });
+            expect(window.document.querySelector("[data-sculpt-progress]")?.hasAttribute("hidden"))
+                .toBe(false);
+            expect(window.document.querySelector("#sculpt-cancel")?.getAttribute("aria-disabled"))
+                .toBeNull();
+            settlePoll?.({ ok: true, job: readyJob, result });
+            await vi.waitFor(() => {
+                expect(window.document.querySelector("[data-assistant-status]")?.textContent)
+                    .toContain("Mounted in the live center viewport");
+            });
+            expect(mounts.render().instanceIds).toContain("assistant-live-output");
+        }
+        finally {
+            mounts.dispose();
+            window.close();
+            vi.unstubAllGlobals();
+        }
+    });
+    // The manipulator seam has two ends that have to agree: the emitted chrome
+    // document — a generated public artifact this tier ships — declares the control
+    // values, and the renderer's viewport controller is what has to answer them.
+    // Asserting the document's own values against the controller's real transforms
+    // proves the wiring; reading viewport.ts for the call site would not.
+    it("answers every manipulator the emitted chrome document declares", () => {
+        const bar = /<div class="assistant-manipulators"[\s\S]*?<\/div>/.exec(desktopLinuxIndexHtml())?.[0];
+        expect(bar).toBeDefined();
+
+        const declared = [
+            ...(bar ?? "").matchAll(/data-action="assistant-manipulator" data-value="([^"]+)"/g),
+        ].map((match) => match[1]);
+
+        expect(declared.length).toBeGreaterThan(0);
+        const starter = desktopOpenScene();
+
+        if (!starter.ok)
+            throw new Error(`desktop scene fixture refused: ${starter.reason}`);
+        const mounted = starter.composed.scene.instances[0];
+
+        if (mounted === undefined)
+            throw new Error("desktop starter scene has no instance");
+        const scene = desktopAssistantScene(mounted.artifact);
+        const backend = createThreeSculptPresentationBackend();
+        const mounts = createSculptMountApi(backend);
+        const controller = createDesktopAssistantViewportController(mounts);
+        controller.replace(scene);
+
+        const identity = {
+            translation: [0, 0, 0],
+            rotationEulerDegrees: [0, 0, 0],
+            scale: [1, 1, 1],
+        };
+
+        for (const value of declared) {
+            const moved = controller.manipulate(value);
+            expect(moved, value).not.toBeNull();
+            expect(moved?.transform, value).not.toEqual(identity);
+            controller.replace(scene);
+        }
+
+        // And a value the document does not declare is not silently accepted.
+        expect(controller.manipulate("not-a-manipulator")).toBeNull();
+    });
+    it("abandons a job that never settles and names the timeout", async () => {
+        const requests: unknown[] = [];
+
+        const outcome = await pollAssistantJob({
+            jobId: "desktop-assistant-1",
+            attempts: 3,
+            wait: () => Promise.resolve(),
+            request: (request) => {
+                requests.push(request);
+
+                // SAFETY: this request is emitted by the desktop protocol function exercised in this fixture; the projection reads only its documented IPC fields.
+                const abandoning = (request as {
+                    payload?: {
+                        op?: string;
+                    };
+                }).payload?.op === "abandon";
+
+                if (!abandoning && requests.length === 1) {
+                    return Promise.reject(new Error("status transport unavailable"));
+                }
+
+                if (!abandoning && requests.length === 2) {
+                    return Promise.resolve({
+                        ok: false as const,
+                        reason: "DESKTOP_ASSISTANT_STATUS_UNAVAILABLE",
+                        message: "The assistant status is temporarily unavailable.",
+                        detail: null,
+                    });
+                }
+
+                return Promise.resolve({
+                    ok: true as const,
+                    action: "assistant" as const,
+                    data: (() => {
+                        const payload = { jobId: "desktop-assistant-1",
+                            route: "local",
+                            status: abandoning ? "refused" : "running",
+                            latestProgress: null,
+                            progressCount: 0 };
+
+                        if (abandoning)
+                            Object.assign(payload, {
+                                refusal: {
+                                    ok: false as const,
+                                    reason: DESKTOP_BRIDGE_REFUSALS.assistantAbandoned,
+                                    message: "The unresolved assistant job was abandoned.",
+                                    recoverable: true,
+                                },
+                            });
+
+                        return payload;
+                    })(),
+                });
+            },
+        });
+
+        expect(outcome).toEqual({
+            ok: false,
+            reason: DESKTOP_BRIDGE_REFUSALS.assistantStatusTimeout,
+            message: "The assistant job did not finish in time; it was abandoned and Retry may start a fresh job.",
+        });
+        // The abandon is the point: without it the job stays running and the next
+        // Retry is met with DESKTOP_ASSISTANT_BUSY.
+        expect(requests).toHaveLength(4);
+        expect(requests.at(-1)).toEqual({
+            action: "assistant",
+            payload: { op: "abandon", jobId: "desktop-assistant-1" },
+        });
+        expect(requests.slice(0, 3)).toEqual(Array.from({ length: 3 }, () => ({ action: "assistant", payload: { op: "status" } })));
+    });
+    it("returns a ready job that wins the abandonment race", async () => {
+        const result = {
+            ok: true as const,
+            kind: "rarity-proposal" as const,
+            replayed: false,
+            evidence: {},
+        };
+
+        const outcome = await pollAssistantJob({
+            jobId: "desktop-assistant-1",
+            attempts: 1,
+            wait: () => Promise.resolve(),
+            request: (request) => {
+                // SAFETY: this request is emitted by the desktop protocol function exercised in this fixture; the projection reads only its documented IPC fields.
+                const abandoning = (request as {
+                    payload?: {
+                        op?: string;
+                    };
+                }).payload?.op === "abandon";
+
+                return Promise.resolve({
+                    ok: true as const,
+                    action: "assistant" as const,
+                    data: (() => {
+                        const payload = { jobId: "desktop-assistant-1",
+                            route: "local",
+                            status: abandoning ? "ready" : "running",
+                            latestProgress: null,
+                            progressCount: 0 };
+
+                        if (abandoning)
+                            Object.assign(payload, { result });
+
+                        return payload;
+                    })(),
+                });
+            },
+        });
+
+        expect(outcome).toMatchObject({
+            ok: true,
+            job: { status: "ready", result },
+            result,
+        });
+    });
+    it("does not consume a newer job that wins the abandonment race", async () => {
+        const outcome = await pollAssistantJob({
+            jobId: "desktop-assistant-1",
+            attempts: 1,
+            wait: () => Promise.resolve(),
+            request: (request) => {
+                // SAFETY: this request is emitted by the desktop protocol function exercised in this fixture; the projection reads only its documented IPC fields.
+                const abandoning = (request as {
+                    payload?: {
+                        op?: string;
+                    };
+                }).payload?.op === "abandon";
+
+                return Promise.resolve({
+                    ok: true as const,
+                    action: "assistant" as const,
+                    data: abandoning
+                        ? {
+                            jobId: "desktop-assistant-2",
+                            route: "local",
+                            status: "running",
+                            latestProgress: null,
+                            progressCount: 0,
+                        }
+                        : {
+                            jobId: "desktop-assistant-1",
+                            route: "local",
+                            status: "running",
+                            latestProgress: null,
+                            progressCount: 0,
+                        },
+                });
+            },
+        });
+
+        expect(outcome).toEqual({
+            ok: false,
+            reason: DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed,
+            message: "The assistant job did not finish in time, and its abandonment could not be confirmed; wait before retrying.",
+            retryJobId: "desktop-assistant-1",
+        });
+    });
+    it("keeps a ready rarity job observable until local-RPC settlement", async () => {
+        let statusReads = 0;
+        const namespaceDigest = `sha256:${"5".repeat(64)}`;
+        // SAFETY: this locally constructed job/evidence fixture is consumed only by the inspection or polling boundary under test; malformed members intentionally exercise refusal.
+        const evidence = { namespaceDigest } as DesktopRarityEvidence;
+
+        const reviewing = {
+            phase: "reviewing" as const,
+            proposal: null,
+            unifiedDiff: "",
+            renderedDiff: "",
+            appliedPaths: null,
+            journalRecoveryPending: false,
+            transactionId: null,
+            diagnostics: [],
+        };
+
+        const applied = {
+            ...reviewing,
+            phase: "applied" as const,
+            rarityEvidence: evidence,
+        };
+
+        const settled = await watchAssistantRaritySettlement({
+            jobId: "desktop-assistant-1",
+            namespaceDigest,
+            active: () => true,
+            wait: () => Promise.resolve(),
+            request: () => {
+                statusReads += 1;
+
+                if (statusReads === 1)
+                    return Promise.reject(new Error("transport unavailable"));
+
+                if (statusReads === 2) {
+                    return Promise.resolve({
+                        ok: false as const,
+                        reason: "DESKTOP_ASSISTANT_STATUS_UNAVAILABLE",
+                        message: "The assistant status is temporarily unavailable.",
+                        detail: null,
+                    });
+                }
+
+                return Promise.resolve({
+                    ok: true as const,
+                    action: "assistant" as const,
+                    data: {
+                        jobId: "desktop-assistant-1",
+                        route: "local" as const,
+                        status: "ready" as const,
+                        latestProgress: null,
+                        progressCount: 0,
+                        result: {
+                            ok: true as const,
+                            kind: "rarity-proposal" as const,
+                            replayed: false,
+                            evidence,
+                            authoring: statusReads === 3
+                                ? { ...reviewing, rarityEvidence: evidence }
+                                : applied,
+                        },
+                    },
+                });
+            },
+        });
+
+        expect(statusReads).toBe(4);
+        expect(settled?.authoring?.phase).toBe("applied");
+    });
+    it("retries terminal rarity acknowledgement without targeting a newer job", async () => {
+        const requests: unknown[] = [];
+        let attempts = 0;
+
+        const acknowledged = await acknowledgeAssistantRaritySettlement({
+            jobId: "desktop-assistant-1",
+            active: () => true,
+            wait: () => Promise.resolve(),
+            request: (request) => {
+                requests.push(request);
+                attempts += 1;
+
+                if (attempts === 1)
+                    return Promise.reject(new Error("transport unavailable"));
+
+                return Promise.resolve({
+                    ok: true as const,
+                    action: "assistant" as const,
+                    data: null,
+                });
+            },
+        });
+
+        expect(acknowledged).toBe(true);
+        expect(requests).toEqual([
+            {
+                action: "assistant",
+                payload: { op: "abandon", jobId: "desktop-assistant-1" },
+            },
+            {
+                action: "assistant",
+                payload: { op: "abandon", jobId: "desktop-assistant-1" },
+            },
+        ]);
+    });
+    it("does not claim Retry is safe when abandonment refuses or cannot be confirmed", async () => {
+        const running = {
+            ok: true as const,
+            action: "assistant" as const,
+            data: {
                 jobId: "desktop-assistant-1",
                 route: "local",
                 status: "running",
                 latestProgress: null,
                 progressCount: 0,
-              },
-        });
-      },
-    });
-    expect(outcome).toEqual({
-      ok: false,
-      reason: DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed,
-      message:
-        "The assistant job did not finish in time, and its abandonment could not be confirmed; wait before retrying.",
-      retryJobId: "desktop-assistant-1",
-    });
-  });
+            },
+        };
 
-  it("keeps a ready rarity job observable until local-RPC settlement", async () => {
-    let statusReads = 0;
-    const namespaceDigest = `sha256:${"5".repeat(64)}`;
-    const evidence = { namespaceDigest } as DesktopRarityEvidence;
-    const reviewing = {
-      phase: "reviewing" as const,
-      proposal: null,
-      unifiedDiff: "",
-      renderedDiff: "",
-      appliedPaths: null,
-      journalRecoveryPending: false,
-      transactionId: null,
-      diagnostics: [],
-    };
-    const applied = {
-      ...reviewing,
-      phase: "applied" as const,
-      rarityEvidence: evidence,
-    };
-    const settled = await watchAssistantRaritySettlement({
-      jobId: "desktop-assistant-1",
-      namespaceDigest,
-      active: () => true,
-      wait: () => Promise.resolve(),
-      request: () => {
-        statusReads += 1;
-        if (statusReads === 1) return Promise.reject(new Error("transport unavailable"));
-        if (statusReads === 2) {
-          return Promise.resolve({
-            ok: false as const,
-            reason: "DESKTOP_ASSISTANT_STATUS_UNAVAILABLE",
-            message: "The assistant status is temporarily unavailable.",
-            detail: null,
-          });
-        }
-        return Promise.resolve({
-          ok: true as const,
-          action: "assistant" as const,
-          data: {
+        // SAFETY: this request is emitted by the desktop protocol function exercised in this fixture; the projection reads only its documented IPC fields.
+        const refused = await pollAssistantJob({
             jobId: "desktop-assistant-1",
+            attempts: 1,
+            wait: () => Promise.resolve(),
+            request: (request) => Promise.resolve((request as {
+                payload?: {
+                    op?: string;
+                };
+            }).payload?.op === "abandon"
+                ? {
+                    ok: false as const,
+                    reason: "DESKTOP_ASSISTANT_ABANDON_DENIED",
+                    message: "The running job is still owned by another request.",
+                    detail: null,
+                }
+                : running),
+        });
+
+        expect(refused).toEqual({
+            ok: false,
+            reason: "DESKTOP_ASSISTANT_ABANDON_DENIED",
+            message: "The running job is still owned by another request.",
+            retryJobId: "desktop-assistant-1",
+        });
+
+        // SAFETY: this request is emitted by the desktop protocol function exercised in this fixture; the projection reads only its documented IPC fields.
+        const rejected = await pollAssistantJob({
+            jobId: "desktop-assistant-1",
+            attempts: 1,
+            wait: () => Promise.resolve(),
+            request: (request) => (request as {
+                payload?: {
+                    op?: string;
+                };
+            }).payload?.op === "abandon"
+                ? Promise.reject(new Error("transport unavailable"))
+                : Promise.resolve(running),
+        });
+
+        expect(rejected).toEqual({
+            ok: false,
+            reason: DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed,
+            message: "The assistant job did not finish in time, and its abandonment could not be confirmed; wait before retrying.",
+            retryJobId: "desktop-assistant-1",
+        });
+    });
+    it("adopts a retained assistant job when the renderer initializes", async () => {
+        const window = new HappyWindow();
+        const backend = createThreeSculptPresentationBackend();
+        const mounts = createSculptMountApi(backend);
+
+        try {
+            window.document.body.innerHTML = `
+        <main class="shell" data-assistant-mode="build" data-assistant-route="local" data-profile="game">
+          <textarea id="assistant-prompt">Build a blue crate</textarea>
+          <button id="assistant-send" data-action="assistant-send"></button>
+          <button id="assistant-retry" data-action="assistant-send" hidden></button>
+          <p data-assistant-status></p>
+          <pre data-assistant-result hidden></pre>
+          <section class="viewport">
+            <div data-assistant-manipulators>
+              <button data-action="assistant-manipulator" data-value="move-x"></button>
+            </div>
+          </section>
+        </main>
+      `;
+            vi.stubGlobal("document", window.document);
+            let starts = 0;
+
+            const retainedJob: DesktopBridgeResponse = {
+                ok: true,
+                action: "assistant",
+                data: {
+                    jobId: "desktop-assistant-retained",
+                    route: "local",
+                    status: "running",
+                    latestProgress: null,
+                    progressCount: 0,
+                },
+            };
+
+            const port = {
+                request: (request: DesktopRequest): Promise<DesktopBridgeResponse> => {
+                    // SAFETY: this request is emitted by the desktop protocol function exercised in this fixture; the projection reads only its documented IPC fields.
+                    const payload = (request as {
+                        payload?: {
+                            op?: string;
+                            commandId?: string;
+                        };
+                    }).payload;
+
+                    const operation = payload?.op ?? payload?.commandId;
+
+                    if (operation === "status" || operation === "assistant-status") {
+                        return Promise.resolve(retainedJob);
+                    }
+
+                    if (operation === "start" || operation === "assistant-local-build")
+                        starts += 1;
+
+                    return Promise.reject(new Error("unexpected assistant request"));
+                },
+            };
+
+            const polledJobIds: string[] = [];
+
+            const pollJob: typeof pollAssistantJob = (input) => {
+                polledJobIds.push(input.jobId);
+
+                return Promise.resolve({
+                    ok: false,
+                    reason: "DESKTOP_TEST_RECOVERED",
+                    message: "The retained renderer job was recovered.",
+                });
+            };
+
+            const stage = window.document.querySelector(".viewport");
+
+            if (stage === null)
+                throw new Error("missing viewport fixture");
+            // SAFETY: the test stage implements the DOM methods used by installAssistantProductFlow; it is a transport-only fixture, not pixel evidence.
+            expect(installAssistantProductFlow(stage as typeof stage & Element, port, mounts, backend, pollJob)).toBe(true);
+            const status = window.document.querySelector("[data-assistant-status]");
+
+            if (status === null)
+                throw new Error("missing assistant status");
+            await vi.waitFor(() => {
+                expect(status.textContent).toContain("DESKTOP_TEST_RECOVERED");
+            });
+            expect(polledJobIds).toEqual(["desktop-assistant-retained"]);
+            expect(starts).toBe(0);
+        }
+        finally {
+            mounts.dispose();
+            window.close();
+            vi.unstubAllGlobals();
+        }
+    });
+    it("recovers a busy retained job before Retry starts fresh work", async () => {
+        const window = new HappyWindow();
+        const backend = createThreeSculptPresentationBackend();
+        const mounts = createSculptMountApi(backend);
+
+        try {
+            window.document.body.innerHTML = `
+        <main class="shell" data-assistant-mode="build" data-assistant-route="local" data-profile="game">
+          <textarea id="assistant-prompt">Build a blue crate</textarea>
+          <button id="assistant-send" data-action="assistant-send"></button>
+          <button id="assistant-retry" data-action="assistant-send" hidden></button>
+          <p data-assistant-status></p>
+          <pre data-assistant-result hidden></pre>
+          <section class="viewport">
+            <div data-assistant-manipulators>
+              <button data-action="assistant-manipulator" data-value="move-x"></button>
+            </div>
+          </section>
+        </main>
+      `;
+            vi.stubGlobal("document", window.document);
+            let starts = 0;
+            let statusReads = 0;
+
+            const runningJob = (jobId: string): DesktopBridgeResponse => ({
+                ok: true,
+                action: "assistant",
+                data: {
+                    jobId,
+                    route: "local",
+                    status: "running",
+                    latestProgress: null,
+                    progressCount: 0,
+                },
+            });
+
+            const port = {
+                request: (request: DesktopRequest): Promise<DesktopBridgeResponse> => {
+                    // SAFETY: this request is emitted by the desktop protocol function exercised in this fixture; the projection reads only its documented IPC fields.
+                    const payload = (request as {
+                        payload?: {
+                            op?: string;
+                            commandId?: string;
+                        };
+                    }).payload;
+
+                    const operation = payload?.op ?? payload?.commandId;
+
+                    if (operation === "status" || operation === "assistant-status") {
+                        statusReads += 1;
+
+                        return Promise.resolve(statusReads === 1 ? { ok: true, action: "assistant", data: null } :
+                            runningJob("desktop-assistant-retained"));
+                    }
+
+                    if (operation !== "start" && operation !== "assistant-local-build") {
+                        return Promise.reject(new Error("unexpected direct assistant request"));
+                    }
+
+                    starts += 1;
+
+                    return Promise.resolve(starts === 1
+                        ? {
+                            ok: false,
+                            reason: DESKTOP_BRIDGE_REFUSALS.assistantBusy,
+                            message: "A retained assistant job is still active.",
+                            detail: null,
+                        }
+                        : runningJob("desktop-assistant-2"));
+                },
+            };
+
+            const polledJobIds: string[] = [];
+
+            const pollJob: typeof pollAssistantJob = (input) => {
+                polledJobIds.push(input.jobId);
+
+                if (polledJobIds.length === 1) {
+                    return Promise.resolve({
+                        ok: false,
+                        reason: DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed,
+                        message: "The first abandonment could not be confirmed.",
+                        retryJobId: input.jobId,
+                    });
+                }
+
+                if (polledJobIds.length === 2) {
+                    return Promise.resolve({
+                        ok: false,
+                        reason: DESKTOP_BRIDGE_REFUSALS.assistantStatusTimeout,
+                        message: "The retained job was abandoned.",
+                    });
+                }
+
+                return Promise.resolve({
+                    ok: false,
+                    reason: "DESKTOP_TEST_COMPLETE",
+                    message: "The fresh job completed the test.",
+                });
+            };
+
+            const stage = window.document.querySelector(".viewport");
+
+            if (stage === null)
+                throw new Error("missing viewport fixture");
+            // SAFETY: the test stage implements the DOM methods used by installAssistantProductFlow; it is a transport-only fixture, not pixel evidence.
+            expect(installAssistantProductFlow(stage as typeof stage & Element, port, mounts, backend, pollJob)).toBe(true);
+            const send = window.document.querySelector("#assistant-send");
+            const retry = window.document.querySelector("#assistant-retry");
+            const status = window.document.querySelector("[data-assistant-status]");
+
+            if (send === null || retry === null || status === null) {
+                throw new Error("missing assistant fixture controls");
+            }
+
+            await vi.waitFor(() => expect(statusReads).toBe(1));
+            await Promise.resolve();
+            await Promise.resolve();
+            send.dispatchEvent(new window.Event("click"));
+            await vi.waitFor(() => {
+                expect(status.textContent).toContain("abandonment could not be confirmed");
+            });
+            expect(starts).toBe(1);
+            expect(statusReads).toBe(2);
+            expect(polledJobIds).toEqual(["desktop-assistant-retained"]);
+            retry.dispatchEvent(new window.Event("click"));
+            await vi.waitFor(() => {
+                expect(status.textContent).toContain(DESKTOP_BRIDGE_REFUSALS.assistantStatusTimeout);
+            });
+            expect(starts).toBe(1);
+            expect(polledJobIds).toEqual([
+                "desktop-assistant-retained",
+                "desktop-assistant-retained",
+            ]);
+            retry.dispatchEvent(new window.Event("click"));
+            await vi.waitFor(() => {
+                expect(status.textContent).toContain("DESKTOP_TEST_COMPLETE");
+            });
+            expect(starts).toBe(2);
+            expect(polledJobIds).toEqual([
+                "desktop-assistant-retained",
+                "desktop-assistant-retained",
+                "desktop-assistant-2",
+            ]);
+        }
+        finally {
+            mounts.dispose();
+            window.close();
+            vi.unstubAllGlobals();
+        }
+    });
+    it("carries a refused job's redacted reason and detail into one poll outcome", async () => {
+        const settled = async (job: Parameters<typeof assistantInspectionText>[0] | {
+            readonly [key: string]: import("@sceneaxi/schemas").JsonValue;
+        } | null) => pollAssistantJob({
+            jobId: "j",
+            attempts: 2,
+            wait: () => Promise.resolve(),
+            request: () => Promise.resolve({ ok: true as const, action: "assistant" as const, data: job }),
+        });
+
+        expect(await settled({
+            jobId: "j",
+            route: "local",
+            status: "refused",
+            latestProgress: null,
+            progressCount: 0,
+            refusal: { ok: false, reason: "SOME_REFUSAL", message: "it refused", recoverable: true },
+        })).toEqual({ ok: false, reason: "SOME_REFUSAL", message: "it refused" });
+        expect(await settled({
+            jobId: "j",
+            route: "local",
+            status: "refused",
+            latestProgress: null,
+            progressCount: 0,
+            refusal: {
+                ok: false,
+                reason: "SOME_REFUSAL",
+                message: "it refused",
+                recoverable: true,
+                detail: "local detail",
+            },
+        })).toMatchObject({ ok: false, message: "it refused — local detail" });
+        expect(await settled(null)).toEqual({
+            ok: false,
+            reason: DESKTOP_BRIDGE_REFUSALS.assistantJobMissing,
+            message: "The assistant job disappeared; retry the prompt.",
+        });
+    });
+    it("projects a settled Build job into the read-only inspection view", () => {
+        // SAFETY: this partial inspection fixture supplies each field read by the projection; it crosses only that tested boundary, not the job scheduler.
+        const job = {
+            jobId: "j",
             route: "local" as const,
             status: "ready" as const,
             latestProgress: null,
             progressCount: 0,
             result: {
-              ok: true as const,
-              kind: "rarity-proposal" as const,
-              replayed: false,
-              evidence,
-              authoring: statusReads === 3
-                ? { ...reviewing, rarityEvidence: evidence }
-                : applied,
+                ok: true as const,
+                route: "local" as const,
+                artifactBytes: 0,
+                artifactDigest: "sha256:artifact",
+                inspection: {
+                    materials: {
+                        values: [{ id: "crate-shell", baseColor: "#3366cc", metallic: 0.1, roughness: 0.7 }],
+                    },
+                    physics: {
+                        supported: false,
+                        reason: "PHYSICS_UNSUPPORTED",
+                        message: "no collider authority on this surface",
+                    },
+                    settings: {
+                        proceduralModule: { moduleId: "crate", exportName: "buildCrate" },
+                        edit: { refusal: "SETTINGS_READ_ONLY" },
+                    },
+                },
+                mountable: undefined,
             },
-          },
+        };
+
+        // SAFETY: this partial fixture constructs every field consumed by the inspection projection and is passed only to that boundary.
+        const text = assistantInspectionText(job as never);
+        expect(text.split("\n")).toEqual([
+            "MATERIALS (read-only)",
+            "crate-shell: #3366cc, metal 0.1, rough 0.7",
+            "",
+            "PHYSICS (read-only)",
+            "PHYSICS_UNSUPPORTED: no collider authority on this surface",
+            "",
+            "SETTINGS (read-only)",
+            "crate · buildCrate",
+            "SETTINGS_READ_ONLY",
+        ]);
+        // A rarity proposal carries no artifact to inspect, so this view stays empty
+        // and its provenance is rendered by the shared safe-evidence formatter.
+        // SAFETY: this locally constructed job/evidence fixture is consumed only by the inspection or polling boundary under test; malformed members intentionally exercise refusal.
+        expect(assistantInspectionText({
+            ...job,
+            result: { ok: true, kind: "rarity-proposal", replayed: false, evidence: {} },
+        } as DesktopAssistantJobSnapshot)).toBe("");
+    });
+    it("starts Build and Agent through the bridge and refuses every other composer mode", async () => {
+        const profile = "@sceneaxi/profile-game" as const;
+        expect(DESKTOP_ASSISTANT_START_MODES).toEqual(EDITOR_SHELL_ASSISTANT_MODE_IDS);
+        expect(withAssistantStrengthInstruction("ask", "a crate")).toContain("Light pass");
+        expect(withAssistantStrengthInstruction("ask", "a crate")).toContain("a crate");
+        expect(withAssistantStrengthInstruction("build", "a crate")).toBe("a crate");
+        expect(withAssistantStrengthInstruction("agent", "a crate")).toContain("Strong pass");
+
+        const agent = decideAssistantStart({
+            mode: "agent",
+            route: "local",
+            profile,
+            prompt: "  stage a drop  ",
         });
-      },
-    });
-    expect(statusReads).toBe(4);
-    expect(settled?.authoring?.phase).toBe("applied");
-  });
 
-  it("retries terminal rarity acknowledgement without targeting a newer job", async () => {
-    const requests: unknown[] = [];
-    let attempts = 0;
-    const acknowledged = await acknowledgeAssistantRaritySettlement({
-      jobId: "desktop-assistant-1",
-      active: () => true,
-      wait: () => Promise.resolve(),
-      request: (request) => {
-        requests.push(request);
-        attempts += 1;
-        if (attempts === 1) return Promise.reject(new Error("transport unavailable"));
-        return Promise.resolve({
-          ok: true as const,
-          action: "assistant" as const,
-          data: null,
+        expect(agent).toEqual({
+            ok: true,
+            payload: {
+                op: "start",
+                route: "local",
+                profile,
+                prompt: "stage a drop",
+                mode: "agent",
+                documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+            },
         });
-      },
-    });
-    expect(acknowledged).toBe(true);
-    expect(requests).toEqual([
-      {
-        action: "assistant",
-        payload: { op: "abandon", jobId: "desktop-assistant-1" },
-      },
-      {
-        action: "assistant",
-        payload: { op: "abandon", jobId: "desktop-assistant-1" },
-      },
-    ]);
-  });
 
-  it("does not claim Retry is safe when abandonment refuses or cannot be confirmed", async () => {
-    const running = {
-      ok: true as const,
-      action: "assistant" as const,
-      data: {
-        jobId: "desktop-assistant-1",
-        route: "local",
-        status: "running",
-        latestProgress: null,
-        progressCount: 0,
-      },
-    };
-    const refused = await pollAssistantJob({
-      jobId: "desktop-assistant-1",
-      attempts: 1,
-      wait: () => Promise.resolve(),
-      request: (request) =>
-        Promise.resolve(
-          (request as { payload?: { op?: string } }).payload?.op === "abandon"
-            ? {
-                ok: false as const,
-                reason: "DESKTOP_ASSISTANT_ABANDON_DENIED",
-                message: "The running job is still owned by another request.",
-                detail: null,
-              }
-            : running,
-        ),
-    });
-    expect(refused).toEqual({
-      ok: false,
-      reason: "DESKTOP_ASSISTANT_ABANDON_DENIED",
-      message: "The running job is still owned by another request.",
-      retryJobId: "desktop-assistant-1",
-    });
-
-    const rejected = await pollAssistantJob({
-      jobId: "desktop-assistant-1",
-      attempts: 1,
-      wait: () => Promise.resolve(),
-      request: (request) =>
-        (request as { payload?: { op?: string } }).payload?.op === "abandon"
-          ? Promise.reject(new Error("transport unavailable"))
-          : Promise.resolve(running),
-    });
-    expect(rejected).toEqual({
-      ok: false,
-      reason: DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed,
-      message:
-        "The assistant job did not finish in time, and its abandonment could not be confirmed; wait before retrying.",
-      retryJobId: "desktop-assistant-1",
-    });
-  });
-
-  it("adopts a retained assistant job when the renderer initializes", async () => {
-    const window = new HappyWindow();
-    const backend = createThreeSculptPresentationBackend();
-    const mounts = createSculptMountApi(backend);
-    try {
-      window.document.body.innerHTML = `
-        <main class="shell" data-assistant-mode="build" data-assistant-route="local" data-profile="game">
-          <textarea id="assistant-prompt">Build a blue crate</textarea>
-          <button id="assistant-send" data-action="assistant-send"></button>
-          <button id="assistant-retry" data-action="assistant-send" hidden></button>
-          <p data-assistant-status></p>
-          <pre data-assistant-result hidden></pre>
-          <section class="viewport">
-            <div data-assistant-manipulators>
-              <button data-action="assistant-manipulator" data-value="move-x"></button>
-            </div>
-          </section>
-        </main>
-      `;
-      vi.stubGlobal("document", window.document);
-
-      let starts = 0;
-      const retainedJob: DesktopBridgeResponse = {
-        ok: true,
-        action: "assistant",
-        data: {
-          jobId: "desktop-assistant-retained",
-          route: "local",
-          status: "running",
-          latestProgress: null,
-          progressCount: 0,
-        },
-      };
-      const port = {
-        request: (request: unknown): Promise<DesktopBridgeResponse> => {
-          const payload = (request as { payload?: { op?: string; commandId?: string } }).payload;
-          const operation = payload?.op ?? payload?.commandId;
-          if (operation === "status" || operation === "assistant-status") {
-            return Promise.resolve(retainedJob);
-          }
-          if (operation === "start" || operation === "assistant-local-build") starts += 1;
-          return Promise.reject(new Error("unexpected assistant request"));
-        },
-      };
-      const polledJobIds: string[] = [];
-      const pollJob: typeof pollAssistantJob = (input) => {
-        polledJobIds.push(input.jobId);
-        return Promise.resolve({
-          ok: false,
-          reason: "DESKTOP_TEST_RECOVERED",
-          message: "The retained renderer job was recovered.",
+        const boundedAgent = decideAssistantStart({
+            mode: "agent",
+            route: "local",
+            profile,
+            prompt: "x".repeat(RARITY_PROVIDER_REQUEST_MAX_CHARS + 100),
         });
-      };
-      const stage = window.document.querySelector(".viewport");
-      if (stage === null) throw new Error("missing viewport fixture");
-      expect(
-        installAssistantProductFlow(stage as unknown as Element, port, mounts, backend, pollJob),
-      ).toBe(true);
-      const status = window.document.querySelector("[data-assistant-status]");
-      if (status === null) throw new Error("missing assistant status");
 
-      await vi.waitFor(() => {
-        expect(status.textContent).toContain("DESKTOP_TEST_RECOVERED");
-      });
-      expect(polledJobIds).toEqual(["desktop-assistant-retained"]);
-      expect(starts).toBe(0);
-    } finally {
-      mounts.dispose();
-      window.close();
-      vi.unstubAllGlobals();
-    }
-  });
+        expect(boundedAgent.ok).toBe(true);
 
-  it("recovers a busy retained job before Retry starts fresh work", async () => {
-    const window = new HappyWindow();
-    const backend = createThreeSculptPresentationBackend();
-    const mounts = createSculptMountApi(backend);
-    try {
-      window.document.body.innerHTML = `
-        <main class="shell" data-assistant-mode="build" data-assistant-route="local" data-profile="game">
-          <textarea id="assistant-prompt">Build a blue crate</textarea>
-          <button id="assistant-send" data-action="assistant-send"></button>
-          <button id="assistant-retry" data-action="assistant-send" hidden></button>
-          <p data-assistant-status></p>
-          <pre data-assistant-result hidden></pre>
-          <section class="viewport">
-            <div data-assistant-manipulators>
-              <button data-action="assistant-manipulator" data-value="move-x"></button>
-            </div>
-          </section>
-        </main>
-      `;
-      vi.stubGlobal("document", window.document);
-
-      let starts = 0;
-      let statusReads = 0;
-      const runningJob = (jobId: string): DesktopBridgeResponse => ({
-        ok: true,
-        action: "assistant",
-        data: {
-          jobId,
-          route: "local",
-          status: "running",
-          latestProgress: null,
-          progressCount: 0,
-        },
-      });
-      const port = {
-        request: (request: unknown): Promise<DesktopBridgeResponse> => {
-          const payload = (request as { payload?: { op?: string; commandId?: string } }).payload;
-          const operation = payload?.op ?? payload?.commandId;
-          if (operation === "status" || operation === "assistant-status") {
-            statusReads += 1;
-            return Promise.resolve(
-              statusReads === 1 ? { ok: true, action: "assistant", data: null } :
-                runningJob("desktop-assistant-retained"),
-            );
-          }
-          if (operation !== "start" && operation !== "assistant-local-build") {
-            return Promise.reject(new Error("unexpected direct assistant request"));
-          }
-          starts += 1;
-          return Promise.resolve(
-            starts === 1
-              ? {
-                  ok: false,
-                  reason: DESKTOP_BRIDGE_REFUSALS.assistantBusy,
-                  message: "A retained assistant job is still active.",
-                  detail: null,
-                }
-              : runningJob("desktop-assistant-2"),
-          );
-        },
-      };
-      const polledJobIds: string[] = [];
-      const pollJob: typeof pollAssistantJob = (input) => {
-        polledJobIds.push(input.jobId);
-        if (polledJobIds.length === 1) {
-          return Promise.resolve({
-            ok: false,
-            reason: DESKTOP_BRIDGE_REFUSALS.assistantRuntimeFailed,
-            message: "The first abandonment could not be confirmed.",
-            retryJobId: input.jobId,
-          });
+        if (boundedAgent.ok) {
+            expect(boundedAgent.payload.prompt).toHaveLength(RARITY_PROVIDER_REQUEST_MAX_CHARS);
         }
-        if (polledJobIds.length === 2) {
-          return Promise.resolve({
-            ok: false,
-            reason: DESKTOP_BRIDGE_REFUSALS.assistantStatusTimeout,
-            message: "The retained job was abandoned.",
-          });
-        }
-        return Promise.resolve({
-          ok: false,
-          reason: "DESKTOP_TEST_COMPLETE",
-          message: "The fresh job completed the test.",
+
+        const build = decideAssistantStart({
+            mode: "build",
+            route: undefined,
+            profile,
+            prompt: `a crate ${"x".repeat(RARITY_PROVIDER_REQUEST_MAX_CHARS)}`,
         });
-      };
-      const stage = window.document.querySelector(".viewport");
-      if (stage === null) throw new Error("missing viewport fixture");
-      expect(
-        installAssistantProductFlow(stage as unknown as Element, port, mounts, backend, pollJob),
-      ).toBe(true);
 
-      const send = window.document.querySelector("#assistant-send");
-      const retry = window.document.querySelector("#assistant-retry");
-      const status = window.document.querySelector("[data-assistant-status]");
-      if (send === null || retry === null || status === null) {
-        throw new Error("missing assistant fixture controls");
-      }
+        expect(build.ok).toBe(true);
 
-      await vi.waitFor(() => expect(statusReads).toBe(1));
-      await Promise.resolve();
-      await Promise.resolve();
-      send.dispatchEvent(new window.Event("click"));
-      await vi.waitFor(() => {
-        expect(status.textContent).toContain("abandonment could not be confirmed");
-      });
-      expect(starts).toBe(1);
-      expect(statusReads).toBe(2);
-      expect(polledJobIds).toEqual(["desktop-assistant-retained"]);
+        if (build.ok) {
+            expect(build.payload.prompt).toBe(`a crate ${"x".repeat(RARITY_PROVIDER_REQUEST_MAX_CHARS)}`);
+        }
 
-      retry.dispatchEvent(new window.Event("click"));
-      await vi.waitFor(() => {
-        expect(status.textContent).toContain(DESKTOP_BRIDGE_REFUSALS.assistantStatusTimeout);
-      });
-      expect(starts).toBe(1);
-      expect(polledJobIds).toEqual([
-        "desktop-assistant-retained",
-        "desktop-assistant-retained",
-      ]);
-
-      retry.dispatchEvent(new window.Event("click"));
-      await vi.waitFor(() => {
-        expect(status.textContent).toContain("DESKTOP_TEST_COMPLETE");
-      });
-      expect(starts).toBe(2);
-      expect(polledJobIds).toEqual([
-        "desktop-assistant-retained",
-        "desktop-assistant-retained",
-        "desktop-assistant-2",
-      ]);
-    } finally {
-      mounts.dispose();
-      window.close();
-      vi.unstubAllGlobals();
-    }
-  });
-
-  it("carries a refused job's redacted reason and detail into one poll outcome", async () => {
-    const settled = async (job: unknown) =>
-      pollAssistantJob({
-        jobId: "j",
-        attempts: 2,
-        wait: () => Promise.resolve(),
-        request: () =>
-          Promise.resolve({ ok: true as const, action: "assistant" as const, data: job }),
-      });
-
-    expect(
-      await settled({
-        jobId: "j",
-        route: "local",
-        status: "refused",
-        latestProgress: null,
-        progressCount: 0,
-        refusal: { ok: false, reason: "SOME_REFUSAL", message: "it refused", recoverable: true },
-      }),
-    ).toEqual({ ok: false, reason: "SOME_REFUSAL", message: "it refused" });
-
-    expect(
-      await settled({
-        jobId: "j",
-        route: "local",
-        status: "refused",
-        latestProgress: null,
-        progressCount: 0,
-        refusal: {
-          ok: false,
-          reason: "SOME_REFUSAL",
-          message: "it refused",
-          recoverable: true,
-          detail: "local detail",
-        },
-      }),
-    ).toMatchObject({ ok: false, message: "it refused — local detail" });
-
-    expect(await settled(null)).toEqual({
-      ok: false,
-      reason: DESKTOP_BRIDGE_REFUSALS.assistantJobMissing,
-      message: "The assistant job disappeared; retry the prompt.",
-    });
-  });
-
-  it("projects a settled Build job into the read-only inspection view", () => {
-    const job = {
-      jobId: "j",
-      route: "local" as const,
-      status: "ready" as const,
-      latestProgress: null,
-      progressCount: 0,
-      result: {
-        ok: true as const,
-        route: "local" as const,
-        artifactBytes: 0,
-        artifactDigest: "sha256:artifact",
-        inspection: {
-          materials: {
-            values: [{ id: "crate-shell", baseColor: "#3366cc", metallic: 0.1, roughness: 0.7 }],
-          },
-          physics: {
-            supported: false,
-            reason: "PHYSICS_UNSUPPORTED",
-            message: "no collider authority on this surface",
-          },
-          settings: {
-            proceduralModule: { moduleId: "crate", exportName: "buildCrate" },
-            edit: { refusal: "SETTINGS_READ_ONLY" },
-          },
-        },
-        mountable: undefined,
-      },
-    } as unknown as DesktopAssistantJobSnapshot;
-
-    const text = assistantInspectionText(job);
-    expect(text.split("\n")).toEqual([
-      "MATERIALS (read-only)",
-      "crate-shell: #3366cc, metal 0.1, rough 0.7",
-      "",
-      "PHYSICS (read-only)",
-      "PHYSICS_UNSUPPORTED: no collider authority on this surface",
-      "",
-      "SETTINGS (read-only)",
-      "crate · buildCrate",
-      "SETTINGS_READ_ONLY",
-    ]);
-
-    // A rarity proposal carries no artifact to inspect, so this view stays empty
-    // and its provenance is rendered by the shared safe-evidence formatter.
-    expect(
-      assistantInspectionText({
-        ...job,
-        result: { ok: true, kind: "rarity-proposal", replayed: false, evidence: {} },
-      } as unknown as DesktopAssistantJobSnapshot),
-    ).toBe("");
-  });
-
-  it("starts Build and Agent through the bridge and refuses every other composer mode", async () => {
-    const profile = "@sceneaxi/profile-game" as const;
-    expect(DESKTOP_ASSISTANT_START_MODES).toEqual(EDITOR_SHELL_ASSISTANT_MODE_IDS);
-    expect(withAssistantStrengthInstruction("ask", "a crate")).toContain("Light pass");
-    expect(withAssistantStrengthInstruction("ask", "a crate")).toContain("a crate");
-    expect(withAssistantStrengthInstruction("build", "a crate")).toBe("a crate");
-    expect(withAssistantStrengthInstruction("agent", "a crate")).toContain("Strong pass");
-    const agent = decideAssistantStart({
-      mode: "agent",
-      route: "local",
-      profile,
-      prompt: "  stage a drop  ",
-    });
-    expect(agent).toEqual({
-      ok: true,
-      payload: {
-        op: "start",
-        route: "local",
-        profile,
-        prompt: "stage a drop",
-        mode: "agent",
-        documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
-      },
-    });
-    const boundedAgent = decideAssistantStart({
-      mode: "agent",
-      route: "local",
-      profile,
-      prompt: "x".repeat(RARITY_PROVIDER_REQUEST_MAX_CHARS + 100),
-    });
-    expect(boundedAgent.ok).toBe(true);
-    if (boundedAgent.ok) {
-      expect(boundedAgent.payload.prompt).toHaveLength(RARITY_PROVIDER_REQUEST_MAX_CHARS);
-    }
-    const build = decideAssistantStart({
-      mode: "build",
-      route: undefined,
-      profile,
-      prompt: `a crate ${"x".repeat(RARITY_PROVIDER_REQUEST_MAX_CHARS)}`,
-    });
-    expect(build.ok).toBe(true);
-    if (build.ok) {
-      expect(build.payload.prompt).toBe(`a crate ${"x".repeat(RARITY_PROVIDER_REQUEST_MAX_CHARS)}`);
-    }
-
-    const ask = decideAssistantStart({
-      mode: "ask",
-      route: "local",
-      profile,
-      prompt: "What instances are in the document?",
-    });
-    expect(ask).toEqual({
-      ok: true,
-      payload: {
-        op: "start",
-        route: "local",
-        profile,
-        prompt: "What instances are in the document?",
-        mode: "ask",
-        documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
-      },
-    });
-    for (const mode of [undefined, "", "Agent", "agent "]) {
-      expect(decideAssistantStart({ mode, route: "local", profile, prompt: "a crate" })).toEqual({
-        ok: false,
-        reason: DESKTOP_BRIDGE_REFUSALS.assistantBuildModeRequired,
-        message:
-          "Choose Ask to inspect typed project state, Build for a Sculpt Artifact, or Agent for a fixture-backed rarity proposal.",
-      });
-    }
-    expect(
-      decideAssistantStart({ mode: "agent", route: "local", profile, prompt: "   " }),
-    ).toMatchObject({ ok: false, reason: "ASSISTANT_SCULPT_PROMPT_INVALID" });
-
-    const dir = mkdtempSync(join(tmpdir(), "sceneaxi-desktop-composer-mode-"));
-    try {
-      expect(seedDesktopProject(dir)).toEqual({ ok: true, migrated: false });
-      const bridge = createDesktopBridge({
-        cwd: dir,
-        nowMs: fixedNow,
-        runRarityProvider: createDesktopRarityFixtureProvider(),
-      });
-      expect(
-        bridge.handle({
-          action: "assistant",
-          payload: {
-            op: "start",
+        const ask = decideAssistantStart({
+            mode: "ask",
             route: "local",
             profile,
             prompt: "What instances are in the document?",
-            mode: "ask",
-          },
-        }),
-      ).toMatchObject({
-        ok: true,
-        data: {
-          commandId: "assistant-ask",
-          status: "ready",
-          result: { kind: "sceneaxi.assistant-ask-answer", savedBytesWritten: false, providerClass: "none" },
-        },
-      });
-      if (!agent.ok) throw new Error("agent start refused");
-      expect(bridge.handle({ action: "assistant", payload: agent.payload })).toMatchObject({
-        ok: true,
-        action: "assistant",
-      });
-      await vi.waitFor(() => {
-        const response = bridge.handle({ action: "assistant", payload: { op: "status" } });
-        const job = response.ok ? (response.data as DesktopAssistantJobSnapshot | null) : null;
-        expect(job?.status).toBe("ready");
-      });
-      const settled = bridge.handle({ action: "assistant", payload: { op: "status" } });
-      const job = settled.ok ? (settled.data as DesktopAssistantJobSnapshot | null) : null;
-      expect(job?.result).toMatchObject({ kind: "rarity-proposal", replayed: false });
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
+        });
 
-  it("keeps the composer unavailable until viewport controls are bound", () => {
-    expect(
-      desktopAssistantRuntimeSignal({
-        status: "refused",
-        message: "the scene request refused",
-      }),
-    ).toEqual({ runtime: "none", message: "the scene request refused" });
-    expect(
-      desktopAssistantRuntimeSignal({ status: "mounted", controlsBound: false }),
-    ).toEqual({
-      runtime: "none",
-      message: "the assistant controls could not be bound to the mounted presentation runtime.",
+        expect(ask).toEqual({
+            ok: true,
+            payload: {
+                op: "start",
+                route: "local",
+                profile,
+                prompt: "What instances are in the document?",
+                mode: "ask",
+                documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH,
+            },
+        });
+
+        for (const mode of [undefined, "", "Agent", "agent "]) {
+            expect(decideAssistantStart({ mode, route: "local", profile, prompt: "a crate" })).toEqual({
+                ok: false,
+                reason: DESKTOP_BRIDGE_REFUSALS.assistantBuildModeRequired,
+                message: "Choose Ask to inspect typed project state, Build for a Sculpt Artifact, or Agent for a fixture-backed rarity proposal.",
+            });
+        }
+
+        expect(decideAssistantStart({ mode: "agent", route: "local", profile, prompt: "   " })).toMatchObject({ ok: false, reason: "ASSISTANT_SCULPT_PROMPT_INVALID" });
+        const dir = mkdtempSync(join(tmpdir(), "sceneaxi-desktop-composer-mode-"));
+
+        try {
+            expect(seedDesktopProject(dir)).toEqual({ ok: true, migrated: false });
+
+            const bridge = createDesktopBridge({
+                cwd: dir,
+                nowMs: fixedNow,
+                runRarityProvider: createDesktopRarityFixtureProvider(),
+            });
+
+            expect(bridge.handle({
+                action: "assistant",
+                payload: {
+                    op: "start",
+                    route: "local",
+                    profile,
+                    prompt: "What instances are in the document?",
+                    mode: "ask",
+                },
+            })).toMatchObject({
+                ok: true,
+                data: {
+                    commandId: "assistant-ask",
+                    status: "ready",
+                    result: { kind: "sceneaxi.assistant-ask-answer", savedBytesWritten: false, providerClass: "none" },
+                },
+            });
+
+            if (!agent.ok)
+                throw new Error("agent start refused");
+            expect(bridge.handle({ action: "assistant", payload: agent.payload })).toMatchObject({
+                ok: true,
+                action: "assistant",
+            });
+            await vi.waitFor(() => {
+                const response = bridge.handle({ action: "assistant", payload: { op: "status" } });
+                // SAFETY: the successful response is from the real bridge action invoked above on the seeded project; that action owns this response payload.
+                const job = response.ok ? (response.data as DesktopAssistantJobSnapshot | null) : null;
+                expect(job?.status).toBe("ready");
+            });
+            const settled = bridge.handle({ action: "assistant", payload: { op: "status" } });
+            // SAFETY: the successful response is from the real bridge action invoked above on the seeded project; that action owns this response payload.
+            const job = settled.ok ? (settled.data as DesktopAssistantJobSnapshot | null) : null;
+            expect(job?.result).toMatchObject({ kind: "rarity-proposal", replayed: false });
+        }
+        finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
     });
-    expect(
-      desktopAssistantRuntimeSignal({ status: "mounted", controlsBound: true }),
-    ).toEqual({ runtime: "local" });
-  });
-
-  it("synchronizes the mounted viewport scene and restores it after a refused replacement", () => {
-    const initial = desktopSceneFromDocumentData({
-      ...activeDocumentData(),
-      sceneEnvironment: emptySceneEnvironmentCatalog(),
+    it("keeps the composer unavailable until viewport controls are bound", () => {
+        expect(desktopAssistantRuntimeSignal({
+            status: "refused",
+            message: "the scene request refused",
+        })).toEqual({ runtime: "none", message: "the scene request refused" });
+        expect(desktopAssistantRuntimeSignal({ status: "mounted", controlsBound: false })).toEqual({
+            runtime: "none",
+            message: "the assistant controls could not be bound to the mounted presentation runtime.",
+        });
+        expect(desktopAssistantRuntimeSignal({ status: "mounted", controlsBound: true })).toEqual({ runtime: "local" });
     });
-    const replacement = desktopSceneFromDocumentData(activeDocumentData("viewport-replacement"));
-    if (!initial.ok || !replacement.ok) throw new Error("viewport scene fixture refused");
-    const backend = createThreeSculptPresentationBackend();
-    const mounts = createSculptMountApi(backend);
-    mountDesktopScene(mounts, initial.mountable, backend);
-    const setEnvironment = vi.spyOn(backend, "setEnvironment");
-    let reframes = 0;
-    const currentEnvironment = initial.mountable.environment;
-    if (currentEnvironment === undefined) throw new Error("desktop scene omitted its environment catalog");
-    const changedEnvironment = { ...currentEnvironment, background: "#123456" };
-    const visualUpdate = {
-      ...initial.mountable,
-      environment: changedEnvironment,
-      environmentDigest: sceneEnvironmentCatalogDigest(changedEnvironment),
-    };
-    const presentationSync = synchronizeViewportScene({
-      mounts,
-      frameMountedContent: () => { reframes += 1; },
-      current: initial.mountable,
-      next: visualUpdate,
-      triangleBackend: backend,
+    it("synchronizes the mounted viewport scene and restores it after a refused replacement", () => {
+        const initial = desktopSceneFromDocumentData({
+            ...activeDocumentData(),
+            sceneEnvironment: emptySceneEnvironmentCatalog(),
+        });
+
+        const replacement = desktopSceneFromDocumentData(activeDocumentData("viewport-replacement"));
+
+        if (!initial.ok || !replacement.ok)
+            throw new Error("viewport scene fixture refused");
+        const backend = createThreeSculptPresentationBackend();
+        const mounts = createSculptMountApi(backend);
+        mountDesktopScene(mounts, initial.mountable, backend);
+        const setEnvironment = vi.spyOn(backend, "setEnvironment");
+        let reframes = 0;
+        const currentEnvironment = initial.mountable.environment;
+
+        if (currentEnvironment === undefined)
+            throw new Error("desktop scene omitted its environment catalog");
+        const changedEnvironment = { ...currentEnvironment, background: "#123456" };
+
+        const visualUpdate = {
+            ...initial.mountable,
+            environment: changedEnvironment,
+            environmentDigest: sceneEnvironmentCatalogDigest(changedEnvironment),
+        };
+
+        const presentationSync = synchronizeViewportScene({
+            mounts,
+            frameMountedContent: () => { reframes += 1; },
+            current: initial.mountable,
+            next: visualUpdate,
+            triangleBackend: backend,
+        });
+
+        expect(presentationSync.ok).toBe(true);
+        expect(setEnvironment).toHaveBeenLastCalledWith(expect.objectContaining({ background: "#123456" }));
+
+        const synchronized = synchronizeViewportScene({
+            mounts,
+            frameMountedContent: () => {
+                reframes += 1;
+            },
+            current: visualUpdate,
+            next: replacement.mountable,
+            triangleBackend: backend,
+        });
+
+        expect(synchronized).toMatchObject({
+            ok: true,
+            scene: { sceneId: "viewport-replacement" },
+        });
+
+        if (!synchronized.ok)
+            return;
+        expect(mounts.list().map((instance) => instance.instanceId)).toEqual(replacement.mountable.instances.map((instance) => instance.instanceId));
+
+        const invalid = {
+            ...replacement.mountable,
+            sceneDigest: "sha256:invalid-replacement",
+            instances: replacement.mountable.instances.map((instance, index) => index === 0 ? { ...instance, worldTransform: {} } : instance),
+        };
+
+        const refused = synchronizeViewportScene({
+            mounts,
+            frameMountedContent: () => {
+                reframes += 1;
+            },
+            current: synchronized.scene,
+            next: invalid,
+            triangleBackend: backend,
+        });
+
+        expect(refused.ok).toBe(false);
+        expect(mounts.list().map((instance) => instance.instanceId)).toEqual(replacement.mountable.instances.map((instance) => instance.instanceId));
+        expect(reframes).toBe(3);
+        mounts.dispose();
     });
-    expect(presentationSync.ok).toBe(true);
-    expect(setEnvironment).toHaveBeenLastCalledWith(expect.objectContaining({ background: "#123456" }));
-    const synchronized = synchronizeViewportScene({
-      mounts,
-      frameMountedContent: () => {
-        reframes += 1;
-      },
-      current: visualUpdate,
-      next: replacement.mountable,
-      triangleBackend: backend,
+    // The two tiers must name the same events or neither surface ever hears the
+    // other; these are the constants both sides import, not a reading of a file.
+    it("shares one event name per surface with the shell", () => {
+        expect(DESKTOP_VIEWPORT_PLAY_EVENT).toBe("sceneaxi:desktop-viewport-play");
+        expect(DESKTOP_VIEWPORT_PLAY_EVENT).toBe(SHELL_VIEWPORT_PLAY_EVENT);
+        expect(DESKTOP_VIEWPORT_SCENE_OPEN_EVENT).toBe("sceneaxi:desktop-viewport-scene-open");
+        expect(DESKTOP_VIEWPORT_SCENE_OPEN_EVENT).toBe(SHELL_VIEWPORT_SCENE_OPEN_EVENT);
+        expect(DESKTOP_RARITY_PROPOSAL_EVENT).toBe(SHELL_RARITY_PROPOSAL_EVENT);
     });
-    expect(synchronized).toMatchObject({
-      ok: true,
-      scene: { sceneId: "viewport-replacement" },
+    it("lets the pixels meta claim only what a frame really reported", () => {
+        const frame = (pixelsDrawn: boolean | string | undefined) => {
+            const report: PixelsReportFixture = {
+                backend: "three", label: "desktop", drawCalls: 1, frame: 1, instanceIds: [], surface: "headless",
+            };
+
+            if (pixelsDrawn !== undefined)
+                report.pixelsDrawn = pixelsDrawn;
+
+            // SAFETY: this deliberately malformed report is used only to exercise pixelsMetaContent's runtime validation.
+            return report as Parameters<typeof pixelsMetaContent>[0];
+        };
+
+        expect(pixelsMetaContent(frame(true))).toBe("true");
+        expect(pixelsMetaContent(frame(false))).toBe("false");
+        // A frame that reported nothing is not evidence, so the meta is left alone
+        // rather than being written with a fabricated value.
+        expect(pixelsMetaContent(frame(undefined))).toBeNull();
+        expect(pixelsMetaContent(frame("true"))).toBeNull();
     });
-    if (!synchronized.ok) return;
-    expect(mounts.list().map((instance) => instance.instanceId)).toEqual(
-      replacement.mountable.instances.map((instance) => instance.instanceId),
-    );
-
-    const invalid = {
-      ...replacement.mountable,
-      sceneDigest: "sha256:invalid-replacement",
-      instances: replacement.mountable.instances.map((instance, index) =>
-        index === 0 ? { ...instance, worldTransform: {} } : instance,
-      ),
-    };
-    const refused = synchronizeViewportScene({
-      mounts,
-      frameMountedContent: () => {
-        reframes += 1;
-      },
-      current: synchronized.scene,
-      next: invalid,
-      triangleBackend: backend,
-    });
-    expect(refused.ok).toBe(false);
-    expect(mounts.list().map((instance) => instance.instanceId)).toEqual(
-      replacement.mountable.instances.map((instance) => instance.instanceId),
-    );
-    expect(reframes).toBe(3);
-    mounts.dispose();
-  });
-
-  // The two tiers must name the same events or neither surface ever hears the
-  // other; these are the constants both sides import, not a reading of a file.
-  it("shares one event name per surface with the shell", () => {
-    expect(DESKTOP_VIEWPORT_PLAY_EVENT).toBe("sceneaxi:desktop-viewport-play");
-    expect(DESKTOP_VIEWPORT_PLAY_EVENT).toBe(SHELL_VIEWPORT_PLAY_EVENT);
-    expect(DESKTOP_VIEWPORT_SCENE_OPEN_EVENT).toBe("sceneaxi:desktop-viewport-scene-open");
-    expect(DESKTOP_VIEWPORT_SCENE_OPEN_EVENT).toBe(SHELL_VIEWPORT_SCENE_OPEN_EVENT);
-    expect(DESKTOP_RARITY_PROPOSAL_EVENT).toBe(SHELL_RARITY_PROPOSAL_EVENT);
-  });
-
-  it("lets the pixels meta claim only what a frame really reported", () => {
-    const frame = (pixelsDrawn: unknown) =>
-      ({
-        backend: "three",
-        label: "desktop",
-        drawCalls: 1,
-        frame: 1,
-        instanceIds: [],
-        surface: "headless",
-        ...(pixelsDrawn === undefined ? {} : { pixelsDrawn }),
-      }) as unknown as Parameters<typeof pixelsMetaContent>[0];
-
-    expect(pixelsMetaContent(frame(true))).toBe("true");
-    expect(pixelsMetaContent(frame(false))).toBe("false");
-    // A frame that reported nothing is not evidence, so the meta is left alone
-    // rather than being written with a fabricated value.
-    expect(pixelsMetaContent(frame(undefined))).toBeNull();
-    expect(pixelsMetaContent(frame("true"))).toBeNull();
-  });
-
 });
-
 /** The browser payload a successful scene composition serves. */
-type ComposedScene = Extract<
-  ReturnType<typeof desktopOpenScene>,
-  { ok: true }
->["mountable"];
+
+type ComposedScene = Extract<ReturnType<typeof desktopOpenScene>, {
+    ok: true;
+}>["mountable"];

@@ -26,6 +26,7 @@ import {
   type CreditLedgerEntry,
 } from "@sceneaxi/schemas";
 import type { Awaitable } from "@sceneaxi/auth";
+import { snapshotHostedResponse } from "./hosted-response.js";
 
 /**
  * The atomic result of a credits sale: the buyer debit, the creator grant (absent
@@ -35,6 +36,14 @@ import type { Awaitable } from "@sceneaxi/auth";
  * buyer charged without their 50% share — and a share record without the buyer's
  * debit is refused, so no settlement can book a gross that was never collected.
  */
+/** Raw values admitted to the schema parsing boundary; no value is trusted until validated. */
+export type StoreBoundaryValue = Parameters<typeof validateCreditLedgerEntry>[0];
+
+function isText(value: unknown): value is string { return typeof value === "string"; }
+
+function isBoolean(value: unknown): value is boolean { return typeof value === "boolean"; }
+
+
 export type CreditsSaleSettlement = Readonly<{
   buyerEntry?: CreditLedgerEntry | undefined;
   creatorEntry?: CreditLedgerEntry | undefined;
@@ -71,7 +80,7 @@ export type CommittedEntry = Readonly<{
  */
 export function readCommittedEntry(
   requested: CreditLedgerEntry,
-  candidate: unknown,
+  candidate: StoreBoundaryValue,
 ): CommittedEntry | undefined {
   try {
     return assertCommittedEntry(requested, candidate);
@@ -85,7 +94,7 @@ export type CommittedReconciliation = Readonly<{
   replayed: boolean;
 }>;
 
-function snapshotReconciliation(candidate: unknown): CreditReconciliationRecord {
+function snapshotReconciliation(candidate: StoreBoundaryValue): CreditReconciliationRecord {
   const parsed = validateCreditReconciliationRecord(candidate);
 
   if (!parsed.ok) return fail(parsed.message);
@@ -95,11 +104,11 @@ function snapshotReconciliation(candidate: unknown): CreditReconciliationRecord 
 
 export function readCommittedReconciliation(
   requested: CreditReconciliationRecord,
-  candidate: unknown,
+  candidate: StoreBoundaryValue,
 ): CommittedReconciliation | undefined {
   const answer = snapshotPlainRecord(candidate);
 
-  if (answer === undefined || typeof answer["replayed"] !== "boolean") return undefined;
+  if (answer === undefined || !isBoolean(answer["replayed"])) return undefined;
   const parsed = validateCreditReconciliationRecord(answer["record"]);
 
   if (!parsed.ok || JSON.stringify(parsed.value) !== JSON.stringify(snapshotReconciliation(requested))) return undefined;
@@ -107,9 +116,49 @@ export function readCommittedReconciliation(
   return Object.freeze({ record: parsed.value, replayed: answer["replayed"] });
 }
 
+export type ReconciliationQuery = Readonly<{
+  userId: string;
+  limit?: number;
+  intentIds?: ReadonlyArray<string>;
+  after?: Readonly<{ occurredAt: string; mode: BillingMode; eventId: string }>;
+}>;
+
+export function validateReconciliationQuery(query: ReconciliationQuery): ReconciliationQuery {
+  const limit = query.limit ?? 100;
+
+  if (!isText(query.userId) || query.userId.length === 0 || query.userId.length > 128 ||
+    !Number.isSafeInteger(limit) || limit < 1 || limit > 100 ||
+    (query.intentIds !== undefined && (query.intentIds.length > 50 || query.intentIds.some((id) => !isText(id) || id.length === 0 || id.length > 128))) ||
+    (query.after !== undefined && (!Number.isFinite(Date.parse(query.after.occurredAt)) || !["test", "live"].includes(query.after.mode) || query.after.eventId.length === 0))) {
+    return fail("invalid reconciliation page");
+  }
+
+  return Object.freeze({ ...query, limit });
+}
+
+export type HostedCallOperation = Readonly<{
+  accountId: string; idempotencyKey: string; amount: number; reason: string;
+  model: string; operation: string; now: number;
+}>;
+
+export type HostedCallReservation = Readonly<{
+  status: "acquired" | "pending" | "response-ready" | "completed" | "insufficient" | "conflict";
+  response?: unknown;
+}>;
+
+export type HostedCallStore = Readonly<{
+  reserve(operation: HostedCallOperation): Awaitable<HostedCallReservation>;
+  saveResponse(operation: HostedCallOperation, response: StoreBoundaryValue): Awaitable<void>;
+  finish(operation: HostedCallOperation): Awaitable<void>;
+  release(operation: HostedCallOperation): Awaitable<void>;
+}>;
+
 export type CreditStore = Readonly<{
+  /** No expiry/re-execution for uncertain calls; a durable response can resume the debit. */
+  hostedCalls?: HostedCallStore;
   findReconciliation(mode: BillingMode, eventId: string): Awaitable<CreditReconciliationRecord | undefined>;
-  listReconciliations(): Awaitable<ReadonlyArray<CreditReconciliationRecord>>;
+  listReconciliations(query?: ReconciliationQuery): Awaitable<ReadonlyArray<CreditReconciliationRecord>>;
+  listPurchaseEntries?(accountId: string, intentIds: ReadonlyArray<string>): Awaitable<ReadonlyArray<CreditLedgerEntry>>;
   appendOrReplayReconciliation(record: CreditReconciliationRecord): Awaitable<CommittedReconciliation>;
   findAccountByUserId(userId: string): Awaitable<CreditAccount | undefined>;
   findAccountById(accountId: string): Awaitable<CreditAccount | undefined>;
@@ -154,6 +203,7 @@ export type InMemoryCreditStoreOptions = Readonly<{
 
 export type InMemoryCreditStore = CreditStore &
   Readonly<{
+    hostedCalls: HostedCallStore;
     entryCount(accountId: string): number;
     shareRecordCount(): number;
   }>;
@@ -169,6 +219,7 @@ export type InMemoryCreditStore = CreditStore &
 export const SALE_ENTRY_KEY_PREFIX = "sale:" as const;
 
 const SALE_BUYER_SUFFIX = ":buyer";
+
 const SALE_CREATOR_SUFFIX = ":creator";
 
 /** The two reserved ledger keys of one credits sale. */
@@ -189,12 +240,15 @@ export function isSaleEntryKey(idempotencyKey: string): boolean {
 function saleIdForEntryKey(key: string): string | undefined {
   if (!isSaleEntryKey(key)) return undefined;
   const rest = key.slice(SALE_ENTRY_KEY_PREFIX.length);
+
   if (rest.endsWith(SALE_BUYER_SUFFIX)) {
     return rest.slice(0, -SALE_BUYER_SUFFIX.length);
   }
+
   if (rest.endsWith(SALE_CREATOR_SUFFIX)) {
     return rest.slice(0, -SALE_CREATOR_SUFFIX.length);
   }
+
   return "";
 }
 
@@ -202,27 +256,33 @@ function fail(message: string): never {
   throw new Error(`credit store: ${message}`);
 }
 
-function snapshotAccount(account: unknown): CreditAccount {
+function snapshotAccount(account: StoreBoundaryValue): CreditAccount {
   const validated = validateCreditAccount(account);
+
   if (!validated.ok) {
     return fail(`invalid account (${validated.code}): ${validated.message}`);
   }
+
   return validated.value;
 }
 
-function snapshotEntry(entry: unknown): CreditLedgerEntry {
+function snapshotEntry(entry: StoreBoundaryValue): CreditLedgerEntry {
   const validated = validateCreditLedgerEntry(entry);
+
   if (!validated.ok) {
     return fail(`invalid entry (${validated.code}): ${validated.message}`);
   }
+
   return validated.value;
 }
 
-function snapshotShare(share: unknown): CreatorShareRecord {
+function snapshotShare(share: StoreBoundaryValue): CreatorShareRecord {
   const validated = validateCreatorShareRecord(share);
+
   if (!validated.ok) {
     return fail(`invalid share (${validated.code}): ${validated.message}`);
   }
+
   return validated.value;
 }
 
@@ -231,6 +291,7 @@ function sameEntry(
   right: CreditLedgerEntry | undefined,
 ): boolean {
   if (left === undefined || right === undefined) return left === right;
+
   return (
     left.schemaVersion === right.schemaVersion &&
     left.kind === right.kind &&
@@ -289,8 +350,9 @@ function sameSettlement(
  * mints the same way, and the comparison needs nothing but the settlement
  * itself, so it belongs here rather than in whichever adapter remembered it.
  */
-function snapshotSaleSettlement(candidate: unknown): CreditsSaleSettlement {
+function snapshotSaleSettlement(candidate: StoreBoundaryValue): CreditsSaleSettlement {
   const record = snapshotPlainRecord(candidate);
+
   if (
     record === undefined ||
     !Object.hasOwn(record, "share") ||
@@ -300,12 +362,15 @@ function snapshotSaleSettlement(candidate: unknown): CreditsSaleSettlement {
   ) {
     return fail("a sale settlement must be a plain settlement object");
   }
+
   const share = snapshotShare(record["share"]);
   const keys = saleEntryKeys(share.saleId);
+
   const buyerEntry =
     record["buyerEntry"] === undefined
       ? undefined
       : snapshotEntry(record["buyerEntry"]);
+
   const creatorEntry =
     record["creatorEntry"] === undefined
       ? undefined
@@ -314,21 +379,26 @@ function snapshotSaleSettlement(candidate: unknown): CreditsSaleSettlement {
   if (buyerEntry !== undefined && buyerEntry.idempotencyKey !== keys.buyer) {
     return fail(`sale ${share.saleId} has an invalid buyer entry key`);
   }
+
   if (creatorEntry !== undefined && creatorEntry.idempotencyKey !== keys.creator) {
     return fail(`sale ${share.saleId} has an invalid creator entry key`);
   }
+
   if (creatorEntry === undefined && share.creatorCredits !== 0) {
     return fail(`sale ${share.saleId} is missing its creator entry`);
   }
+
   if (buyerEntry === undefined && share.grossCredits !== 0) {
     return fail(`sale ${share.saleId} is missing its buyer entry`);
   }
+
   if (
     buyerEntry !== undefined &&
     (buyerEntry.movement !== "debit" || buyerEntry.delta !== -share.grossCredits)
   ) {
     return fail(`sale ${share.saleId} has an invalid buyer entry`);
   }
+
   if (
     creatorEntry !== undefined &&
     (creatorEntry.movement !== "grant" ||
@@ -337,21 +407,30 @@ function snapshotSaleSettlement(candidate: unknown): CreditsSaleSettlement {
     return fail(`sale ${share.saleId} has an invalid creator entry`);
   }
 
-  return Object.freeze({
-    ...(buyerEntry === undefined ? {} : { buyerEntry }),
-    ...(creatorEntry === undefined ? {} : { creatorEntry }),
-    share,
-  });
+  const settlement: SaleSettlementDraft = { share };
+
+  if (buyerEntry !== undefined) settlement.buyerEntry = buyerEntry;
+
+  if (creatorEntry !== undefined) settlement.creatorEntry = creatorEntry;
+
+  return Object.freeze(settlement);
+
 }
 
 /** An entry an adapter may append on its own — never a reserved sale leg. */
-function assertAppendable(candidate: unknown): CreditLedgerEntry {
+function assertAppendable(candidate: StoreBoundaryValue): CreditLedgerEntry {
   const entry = snapshotEntry(candidate);
+
   if (isSaleEntryKey(entry.idempotencyKey)) {
     return fail(
       `sale entry ${entry.idempotencyKey} requires atomic settlement`,
     );
   }
+
+  if (entry.sequence === 1 && entry.balanceAfter !== entry.delta) {
+    return fail("the first entry must derive its balance from zero");
+  }
+
   return entry;
 }
 
@@ -376,16 +455,19 @@ function assertAppendable(candidate: unknown): CreditLedgerEntry {
  */
 function assertCommittedEntry(
   requested: CreditLedgerEntry,
-  committed: unknown,
+  committed: StoreBoundaryValue,
 ): CommittedEntry {
   const record = snapshotPlainRecord(committed);
-  if (record === undefined || typeof record["replayed"] !== "boolean") {
+
+  if (record === undefined || !isBoolean(record["replayed"])) {
     return fail(
       `append-or-replay of ${requested.idempotencyKey} returned no committed entry`,
     );
   }
+
   const entry = snapshotEntry(record["entry"]);
   const replayed = record["replayed"];
+
   if (
     entry.idempotencyKey !== requested.idempotencyKey ||
     entry.accountId !== requested.accountId ||
@@ -397,6 +479,7 @@ function assertCommittedEntry(
       `append-or-replay of ${requested.idempotencyKey} answered with a different entry`,
     );
   }
+
   if (
     entry.sequence !== requested.sequence ||
     entry.balanceAfter !== requested.balanceAfter
@@ -407,11 +490,13 @@ function assertCommittedEntry(
         : `append-or-replay of ${requested.idempotencyKey} claims a fresh append it did not make`,
     );
   }
+
   if (!replayed && !sameEntry(entry, requested)) {
     return fail(
       `append-or-replay of ${requested.idempotencyKey} claims a fresh append it did not make`,
     );
   }
+
   return Object.freeze({ entry, replayed });
 }
 
@@ -425,12 +510,14 @@ function assertCommittedEntry(
  */
 function assertSettlementOutcome(
   saleId: string,
-  outcome: unknown,
+  outcome: StoreBoundaryValue,
 ): CreditsSaleSettlementOutcome {
   const record = snapshotPlainRecord(outcome);
-  if (record === undefined || typeof record["replayed"] !== "boolean") {
+
+  if (record === undefined || !isBoolean(record["replayed"])) {
     return fail(`settlement of sale ${saleId} returned no settlement outcome`);
   }
+
   return Object.freeze({ replayed: record["replayed"] });
 }
 
@@ -469,7 +556,7 @@ function mapAwaitable<In, Out>(
  * before the write, so a refusal never depends on the adapter being awaited.
  */
 export function createCreditStore(adapter: CreditStoreAdapter): CreditStore {
-  return Object.freeze({
+  const store: CreditStoreDraft = {
     findReconciliation(mode, eventId) {
       return mapAwaitable(adapter.findReconciliation(mode, eventId), (candidate) => {
         if (candidate === undefined) return undefined;
@@ -480,8 +567,18 @@ export function createCreditStore(adapter: CreditStoreAdapter): CreditStore {
         return record;
       });
     },
-    listReconciliations() {
-      return mapAwaitable(adapter.listReconciliations(), (records) => Object.freeze(records.map(snapshotReconciliation)));
+    listReconciliations(query) {
+      const scoped = query === undefined ? undefined : validateReconciliationQuery(query);
+
+      return mapAwaitable(adapter.listReconciliations(scoped), (records) => {
+        const snapshots = records.map(snapshotReconciliation);
+
+        if (scoped !== undefined && (snapshots.length > (scoped.limit ?? 100) || snapshots.some((record) => record.userId !== scoped.userId || (scoped.intentIds !== undefined && !scoped.intentIds.includes(record.intentId))))) {
+          return fail("reconciliation page exceeded its scope or limit");
+        }
+
+        return Object.freeze(snapshots);
+      });
     },
     appendOrReplayReconciliation(record) {
       const requested = snapshotReconciliation(record);
@@ -500,17 +597,70 @@ export function createCreditStore(adapter: CreditStoreAdapter): CreditStore {
     appendEntry: (entry) => adapter.appendEntry(assertAppendable(entry)),
     appendOrReplayEntry(entry) {
       const requested = assertAppendable(entry);
+
       return mapAwaitable(adapter.appendOrReplayEntry(requested), (committed) =>
         assertCommittedEntry(requested, committed),
       );
     },
     settleCreditsSale(settlement) {
       const requested = snapshotSaleSettlement(settlement);
+
       return mapAwaitable(adapter.settleCreditsSale(requested), (outcome) =>
         assertSettlementOutcome(requested.share.saleId, outcome),
       );
     },
-  });
+  };
+
+  if (adapter.hostedCalls !== undefined) {
+    const hosted = adapter.hostedCalls;
+    store.hostedCalls = Object.freeze({
+      reserve(operation) {
+        return mapAwaitable(hosted.reserve(operation), (candidate) => {
+          const reservation = snapshotPlainRecord(candidate);
+          const status = reservation?.["status"];
+
+          if (status !== "acquired" && status !== "pending" && status !== "response-ready" && status !== "completed" && status !== "insufficient" && status !== "conflict") return fail("invalid hosted reservation outcome");
+
+          if (status !== "response-ready") return Object.freeze({ status });
+          const snapshot = snapshotHostedResponse(reservation?.["response"]);
+
+          if (snapshot === undefined) return fail("hosted response is not bounded accessor-free JSON");
+
+          return Object.freeze({ status, response: snapshot.value });
+        });
+      },
+      saveResponse(operation, response) {
+        const snapshot = snapshotHostedResponse(response);
+
+        if (snapshot === undefined) return fail("hosted response is not bounded accessor-free JSON");
+
+        return hosted.saveResponse(operation, snapshot.value);
+      },
+      finish: (operation) => hosted.finish(operation),
+      release: (operation) => hosted.release(operation),
+    });
+  }
+
+  if (adapter.listPurchaseEntries !== undefined) {
+
+    store.listPurchaseEntries = function
+      listPurchaseEntries(accountId: string, intentIds: ReadonlyArray<string>) {
+        if (intentIds.length > 50 || intentIds.some((id) => !isText(id) || id.length === 0)) return fail("invalid purchase page");
+        const listPurchaseEntries = adapter.listPurchaseEntries;
+
+        if (listPurchaseEntries === undefined) return fail("purchase persistence is unavailable");
+
+        return mapAwaitable(listPurchaseEntries.call(adapter, accountId, intentIds), (rows) => {
+          const entries = rows.map(snapshotEntry);
+
+          if (entries.length > 100 || entries.some((entry) => entry.accountId !== accountId || !intentIds.some((id) => entry.reason.split(";").some((segment) => segment.trim() === `intent:${id}`)))) return fail("purchase entries exceeded page scope");
+
+          return Object.freeze(entries);
+        });
+      };
+  }
+
+  return Object.freeze(store);
 }
 
 /**
@@ -521,6 +671,12 @@ export function createCreditStore(adapter: CreditStoreAdapter): CreditStore {
 export function createInMemoryCreditStore(
   options: InMemoryCreditStoreOptions = {},
 ): InMemoryCreditStore {
+  const hostedOperations = new Map<string, { operation: HostedCallOperation; status: "pending" | "response-ready" | "completed"; response?: unknown }>();
+
+  const heldCredits = (accountId: string, ownKey?: string) => [...hostedOperations.values()]
+    .filter((record) => record.operation.accountId === accountId && record.operation.idempotencyKey !== ownKey && record.status !== "completed")
+    .reduce((sum, record) => sum + record.operation.amount, 0);
+
   const reconciliations = new Map<string, CreditReconciliationRecord>();
   const accountsById = new Map<string, CreditAccount>();
   const accountsByUserId = new Map<string, CreditAccount>();
@@ -532,21 +688,26 @@ export function createInMemoryCreditStore(
 
   for (const candidate of options.accounts ?? []) {
     const account = snapshotAccount(candidate);
+
     if (accountsById.has(account.accountId)) {
       fail(`account ${account.accountId} already exists`);
     }
+
     if (accountsByUserId.has(account.userId)) {
       fail(`user ${account.userId} already has a credit account`);
     }
+
     accountsById.set(account.accountId, account);
     accountsByUserId.set(account.userId, account);
   }
 
   const listFor = (accountId: string): CreditLedgerEntry[] => {
     const existing = entriesByAccount.get(accountId);
+
     if (existing !== undefined) return existing;
     const created: CreditLedgerEntry[] = [];
     entriesByAccount.set(accountId, created);
+
     return created;
   };
 
@@ -555,12 +716,17 @@ export function createInMemoryCreditStore(
     previous: CreditLedgerEntry | undefined,
   ): void => {
     const expectedSequence = (previous?.sequence ?? 0) + 1;
+
     if (entry.sequence !== expectedSequence) {
       throw new Error(
         `credit store: sequence ${entry.sequence} does not extend ${entry.accountId} at ${expectedSequence}`,
       );
     }
+
     const expectedBalance = (previous?.balanceAfter ?? 0) + entry.delta;
+
+    if (expectedBalance < heldCredits(entry.accountId, entry.idempotencyKey)) fail("credits are reserved for another hosted operation");
+
     if (
       !Number.isSafeInteger(expectedBalance) ||
       entry.balanceAfter !== expectedBalance
@@ -573,30 +739,36 @@ export function createInMemoryCreditStore(
 
   const assertKnownAccount = (entry: CreditLedgerEntry): CreditAccount => {
     const account = accountsById.get(entry.accountId);
+
     if (account === undefined) {
       return fail(`account ${entry.accountId} does not exist`);
     }
+
     return account;
   };
 
   const appendSnapshot = (entry: CreditLedgerEntry): void => {
     assertKnownAccount(entry);
     const list = listFor(entry.accountId);
+
     if (list.some((held) => held.sequence === entry.sequence)) {
       throw new Error(
         `credit store: sequence ${entry.sequence} already exists for ${entry.accountId} — the ledger is append-only`,
       );
     }
+
     if (entryIds.has(entry.entryId)) {
       throw new Error(
         `credit store: entry ${entry.entryId} already exists — the ledger is append-only`,
       );
     }
+
     if (entriesByIdempotencyKey.has(entry.idempotencyKey)) {
       throw new Error(
         `credit store: idempotency key ${entry.idempotencyKey} already applied`,
       );
     }
+
     assertExtendsTail(entry, list.at(-1));
     entryIds.add(entry.entryId);
     entriesByIdempotencyKey.set(entry.idempotencyKey, entry);
@@ -611,9 +783,10 @@ export function createInMemoryCreditStore(
    * committed entry rather than against anything the caller remembers. A key
    * carrying different money is a conflict, mirroring the pure ledger's rule.
    */
-  const appendOrReplay = (candidate: unknown): CommittedEntry => {
+  const appendOrReplay = (candidate: StoreBoundaryValue): CommittedEntry => {
     const entry = snapshotEntry(candidate);
     const existing = entriesByIdempotencyKey.get(entry.idempotencyKey);
+
     if (existing !== undefined) {
       if (
         existing.accountId !== entry.accountId ||
@@ -625,9 +798,12 @@ export function createInMemoryCreditStore(
           `credit store: idempotency key ${entry.idempotencyKey} already applied with a different movement`,
         );
       }
+
       return Object.freeze({ entry: existing, replayed: true });
     }
+
     appendSnapshot(entry);
+
     return Object.freeze({ entry, replayed: false });
   };
 
@@ -641,7 +817,7 @@ export function createInMemoryCreditStore(
    * out of the account belonging to the party the share record names.
    */
   const snapshotSettlement = (
-    candidate: unknown,
+    candidate: StoreBoundaryValue,
   ): CreditsSaleSettlement => {
     const settlement = snapshotSaleSettlement(candidate);
     const { buyerEntry, creatorEntry, share } = settlement;
@@ -652,6 +828,7 @@ export function createInMemoryCreditStore(
     ) {
       return fail(`sale ${share.saleId} is not the buyer's own account`);
     }
+
     if (
       creatorEntry !== undefined &&
       assertKnownAccount(creatorEntry).userId !== share.creatorUserId
@@ -664,20 +841,26 @@ export function createInMemoryCreditStore(
 
   for (const candidate of options.shareRecords ?? []) {
     const share = snapshotShare(candidate);
+
     if (settlementsBySaleId.has(share.saleId)) {
       fail(`share sale id ${share.saleId} already recorded`);
     }
+
     const keys = saleEntryKeys(share.saleId);
+
     const settlement = snapshotSettlement({
       buyerEntry: entriesByIdempotencyKey.get(keys.buyer),
       creatorEntry: entriesByIdempotencyKey.get(keys.creator),
       share,
     });
+
     settlementsBySaleId.set(share.saleId, settlement);
     shareRecords.push(settlement.share);
   }
+
   for (const key of entriesByIdempotencyKey.keys()) {
     const saleId = saleIdForEntryKey(key);
+
     if (saleId !== undefined && !settlementsBySaleId.has(saleId)) {
       fail(`sale entry ${key} has no atomic settlement record`);
     }
@@ -688,56 +871,68 @@ export function createInMemoryCreditStore(
   ): CreditsSaleSettlementOutcome => {
     const settlement = snapshotSettlement(candidate);
     const existing = settlementsBySaleId.get(settlement.share.saleId);
+
     if (existing !== undefined) {
       if (!sameSettlement(existing, settlement)) {
         throw new Error(
           `credit store: share sale id ${settlement.share.saleId} already recorded with different settlement evidence`,
         );
       }
+
       return Object.freeze({ replayed: true });
     }
+
     const entries = [
       settlement.buyerEntry,
       settlement.creatorEntry,
     ].filter((entry): entry is CreditLedgerEntry => entry !== undefined);
+
     const stagedSequences = new Set<string>();
     const stagedEntryIds = new Set<string>();
     const stagedIdempotencyKeys = new Set<string>();
     const stagedTails = new Map<string, CreditLedgerEntry>();
+
     for (const entry of entries) {
       assertKnownAccount(entry);
       const sequenceKey = `${entry.accountId}:${entry.sequence}`;
       const list = listFor(entry.accountId);
+
       if (list.some((held) => held.sequence === entry.sequence)) {
         throw new Error(
           `credit store: sequence ${entry.sequence} already exists for ${entry.accountId} — the ledger is append-only`,
         );
       }
+
       if (stagedSequences.has(sequenceKey)) {
         throw new Error(
           `credit store: sequence ${entry.sequence} already staged for ${entry.accountId} — the ledger is append-only`,
         );
       }
+
       if (entryIds.has(entry.entryId)) {
         throw new Error(
           `credit store: entry ${entry.entryId} already exists — the ledger is append-only`,
         );
       }
+
       if (stagedEntryIds.has(entry.entryId)) {
         throw new Error(
           `credit store: entry ${entry.entryId} already staged — the ledger is append-only`,
         );
       }
+
       if (entriesByIdempotencyKey.has(entry.idempotencyKey)) {
         throw new Error(
           `credit store: idempotency key ${entry.idempotencyKey} already applied`,
         );
       }
+
       if (stagedIdempotencyKeys.has(entry.idempotencyKey)) {
         throw new Error(
           `credit store: idempotency key ${entry.idempotencyKey} already staged`,
         );
       }
+
       assertExtendsTail(
         entry,
         stagedTails.get(entry.accountId) ?? list.at(-1),
@@ -747,27 +942,91 @@ export function createInMemoryCreditStore(
       stagedIdempotencyKeys.add(entry.idempotencyKey);
       stagedTails.set(entry.accountId, entry);
     }
+
     for (const entry of entries) {
       entryIds.add(entry.entryId);
       entriesByIdempotencyKey.set(entry.idempotencyKey, entry);
       listFor(entry.accountId).push(entry);
     }
+
     settlementsBySaleId.set(
       settlement.share.saleId,
       Object.freeze(settlement),
     );
     shareRecords.push(settlement.share);
+
     return Object.freeze({ replayed: false });
   };
 
   // Built through the shared boundary rather than beside it, so the reference
   // store is held to exactly the rules a Neon adapter will be.
+  const matchesHosted = (a: HostedCallOperation, b: HostedCallOperation) => a.accountId === b.accountId && a.idempotencyKey === b.idempotencyKey && a.amount === b.amount && a.reason === b.reason && a.model === b.model && a.operation === b.operation;
+
+  const hostedCalls: HostedCallStore = Object.freeze({
+    reserve(operation) {
+      if (!accountsById.has(operation.accountId) || !Number.isSafeInteger(operation.amount) || operation.amount < 1) return fail("invalid hosted reservation");
+      const held = hostedOperations.get(operation.idempotencyKey);
+
+      if (held !== undefined) {
+          if (!matchesHosted(held.operation, operation)) return { status: "conflict" };
+          const reservation: HostedReservationDraft = { status: held.status };
+
+          if (held.status === "response-ready") reservation.response = held.response;
+
+          return Object.freeze(reservation);
+
+        }
+
+      const balance = listFor(operation.accountId).at(-1)?.balanceAfter ?? 0;
+
+
+      if (balance - heldCredits(operation.accountId) < operation.amount) return { status: "insufficient" };
+      hostedOperations.set(operation.idempotencyKey, { operation: Object.freeze({ ...operation }), status: "pending" });
+
+      return { status: "acquired" };
+    },
+    saveResponse(operation, response) {
+      const held = hostedOperations.get(operation.idempotencyKey);
+
+      if (held === undefined || !matchesHosted(held.operation, operation) || held.status !== "pending") return fail("hosted response has no reservation");
+      const snapshot = snapshotHostedResponse(response);
+
+      if (snapshot === undefined) return fail("hosted response is not bounded accessor-free JSON");
+      held.response = snapshot.value;
+      held.status = "response-ready";
+    },
+    finish(operation) {
+      const held = hostedOperations.get(operation.idempotencyKey);
+      const debit = entriesByIdempotencyKey.get(operation.idempotencyKey);
+
+      if (held === undefined || !matchesHosted(held.operation, operation) || debit?.accountId !== operation.accountId || debit.delta !== -operation.amount || debit.reason !== operation.reason) return fail("hosted completion has no matching debit");
+      held.status = "completed";
+    },
+    release(operation) {
+      const held = hostedOperations.get(operation.idempotencyKey);
+
+      if (held === undefined || !matchesHosted(held.operation, operation) || held.status !== "pending" || entriesByIdempotencyKey.has(operation.idempotencyKey)) return fail("only a confirmed uncharged failure releases a reservation");
+      hostedOperations.delete(operation.idempotencyKey);
+    },
+  });
+
   const adapter: CreditStoreAdapter = Object.freeze({
+    hostedCalls,
     findReconciliation(mode, eventId) {
       return reconciliations.get(`${mode}:${eventId}`);
     },
-    listReconciliations() {
-      return Object.freeze([...reconciliations.values()]);
+    listReconciliations(query) {
+      const rows = [...reconciliations.values()].sort((a, b) => a.occurredAt.localeCompare(b.occurredAt) || a.mode.localeCompare(b.mode) || a.eventId.localeCompare(b.eventId));
+
+      if (query === undefined) return Object.freeze(rows);
+      const scoped = validateReconciliationQuery(query);
+
+      return Object.freeze(rows.filter((row) => row.userId === scoped.userId &&
+        (scoped.intentIds === undefined || scoped.intentIds.includes(row.intentId)) &&
+        (scoped.after === undefined || row.occurredAt > scoped.after.occurredAt || (row.occurredAt === scoped.after.occurredAt && (row.mode > scoped.after.mode || (row.mode === scoped.after.mode && row.eventId > scoped.after.eventId))))).slice(0, scoped.limit));
+    },
+    listPurchaseEntries(accountId, intentIds) {
+      return Object.freeze(listFor(accountId).filter((entry) => intentIds.some((id) => entry.reason.split(";").some((segment) => segment.trim() === `intent:${id}`))).slice(0, 100));
     },
     appendOrReplayReconciliation(record) {
       const key = `${record.mode}:${record.eventId}`;
@@ -800,6 +1059,7 @@ export function createInMemoryCreditStore(
 
   return Object.freeze({
     ...createCreditStore(adapter),
+    hostedCalls,
     entryCount(accountId) {
       return listFor(accountId).length;
     },
@@ -808,3 +1068,9 @@ export function createInMemoryCreditStore(
     },
   });
 }
+
+type SaleSettlementDraft = { share: CreatorShareRecord; buyerEntry?: CreditLedgerEntry; creatorEntry?: CreditLedgerEntry };
+
+type CreditStoreDraft = { -readonly [Key in keyof CreditStore]: CreditStore[Key] };
+
+type HostedReservationDraft = { status: HostedCallReservation["status"]; response?: HostedCallReservation["response"] };

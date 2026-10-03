@@ -1,0 +1,128 @@
+{
+  "status": "DONE_IMPLEMENTED_VERIFIED_FOCUSED",
+  "productionStatus": "NOT_ASSESSED",
+  "checkout": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1",
+  "finishedAt": "2026-10-03T11:23:28Z",
+  "retryBaseline": "Current owned checkout retained assertion passed before retry edits (19/19); original failure is historical evidence, not a new retry reproduction.",
+  "sourceHandback": true,
+  "sourceHashes": [
+    {
+      "path": "apps/desktop-shell/src/chrome/core/script.ts",
+      "absolutePath": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell/src/chrome/core/script.ts",
+      "sha256": "dab3926500881a00b9699a5614ec6ff94fdea626d6f9ff343ba8a6d2cf4f8c05",
+      "bytes": 115499
+    },
+    {
+      "path": "apps/desktop-shell/src/chrome/core/styles.ts",
+      "absolutePath": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell/src/chrome/core/styles.ts",
+      "sha256": "c9ef0aca16b88f1816608e6948539f71b1b8357c276618596334cbb2edf628a8",
+      "bytes": 44666
+    },
+    {
+      "path": "apps/desktop-shell/test/control-accounting.test.ts",
+      "absolutePath": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell/test/control-accounting.test.ts",
+      "sha256": "dc2733dea2fdb0fdd92beb8bca0aae28b46681326eba1a1e1c52e7a14ab333c9",
+      "bytes": 28035
+    },
+    {
+      "path": "apps/desktop-shell/test/minimum-window.test.ts",
+      "absolutePath": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell/test/minimum-window.test.ts",
+      "sha256": "0f5b9d41b8d26682a4625f3906fb4ba5f5de69135bbf4c54ee27f5ae693b094d",
+      "bytes": 6307
+    }
+  ],
+  "retainedAssertion": {
+    "path": "apps/desktop-shell/test/control-accounting.test.ts",
+    "originalLine": 530,
+    "currentLine": 531,
+    "text": "expect(computedDisplay(rules, [body, element(\"window-refusal\")], size)).toBe(\"block\");",
+    "before": {
+      "exit": 1,
+      "expected": "block",
+      "received": "none",
+      "log": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/finishing/refusal/before.log"
+    },
+    "weakened": false
+  },
+  "changes": [
+    "Minimum-media selector strengthened against repeated late base rules; explicit runtime refused-state display. Bounded scrolling preserved.",
+    "Refusal hidden/data-window now synchronized before focus, with pre-hide focus capture for reliable browser restoration; computed-display lifecycle assertions added.",
+    "Client uses model minimum dimensions in matchMedia; shell state ready/refused and inert follow CSS media.",
+    "Refusal dismisses menus/dialogs/drawers/disclosure and focuses named sibling alert; original menu/dialog opener is restored only after valid resize. Removed/hidden opener falls back to shell; externally moved focus is not stolen.",
+    "Escape, synthetic clicks, accelerators and pending outcome overlays cannot bypass below-minimum refusal.",
+    "Added CSS visibility boundaries/every-profile tests and five shipped-client DOM lifecycle tests without modifying retained assertions."
+  ],
+  "preserved": [
+    "Ctrl/Alt/Shift F12 matching and key fallback",
+    "Primary Ctrl/Cmd matching and missing/undeclared modifier negatives",
+    "Synchronous audio invalidation before profile/project transitions",
+    "Approved current-profile confirmation; refused/mismatching/stale replies remain denied"
+  ],
+  "verification": {
+    "command": "./node_modules/.bin/vitest run apps/desktop-shell/test/control-accounting.test.ts apps/desktop-shell/test/minimum-window.test.ts apps/desktop-shell/test/visual-refinement.test.ts apps/desktop-shell/test/visual-model.test.ts apps/desktop-shell/test/legacy-editor-compat.test.ts --reporter=verbose",
+    "exit": 0,
+    "filesPassed": 5,
+    "testsPassed": 66,
+    "testsFailed": 0,
+    "skipped": 0,
+    "log": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/finishing/refusal/retry-focused.log",
+    "proofKind": "emitted-source CSS cascade + shipped-client DOM emulator; NOT browser pixels/native audio"
+  },
+  "limitations": [
+    "Happy DOM comma-media evaluation corrected in test harness to OR through actual single-term evaluator; resize/listener-state events supplied explicitly. Restoration layout port is supplied for one trigger because emulator has no layout.",
+    "Intermediate lifecycle runs failed due emulator media/state limitations; logs retained. Initial lifecycle tests also failed before implementation.",
+    "Root build/install, browser/native/packaging, typecheck/lint and whole-tree tests intentionally not run. No production/native/browser PASS claim."
+  ],
+  "evidence": [
+    {
+      "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/finishing/refusal/before.log",
+      "sha256": "abba99ee65bc4ad1ac542aef09682e3f20d4d6484209eed3b14c91f932ae4096",
+      "bytes": 4351
+    },
+    {
+      "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/finishing/refusal/lifecycle-before.log",
+      "sha256": "6681b7280b705708e0f5d87b20ca66faf556647929f0f0bab7cad048281e1d01",
+      "bytes": 6314
+    },
+    {
+      "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/finishing/refusal/after.log",
+      "sha256": "3303c16703abd9812d38273877f7dd526a5cbfc9da7eed2a5d249102ac89ea50",
+      "bytes": 13504
+    },
+    {
+      "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/finishing/refusal/lifecycle-after.log",
+      "sha256": "4061e9fb9db36b22d441aaa3247a5b181c90f605d24953024ee60d4dcf50c94f",
+      "bytes": 6321
+    },
+    {
+      "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/finishing/refusal/lifecycle-after-2.log",
+      "sha256": "0bc496691aeef24d887088287ce9e43df0be637a87e9087a8a4d042fb456f66b",
+      "bytes": 6321
+    },
+    {
+      "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/finishing/refusal/lifecycle-after-3.log",
+      "sha256": "ee7266edee53cb08793c55410c8491f3c335c40461e41a759e9d34acdc2fdf04",
+      "bytes": 1109
+    },
+    {
+      "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/finishing/refusal/focused-final.log",
+      "sha256": "446fceb3e829d95c97784041492bb82df82e886b0e0dccb5b17990cbedb7c0b1",
+      "bytes": 16152
+    },
+    {
+      "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/finishing/refusal/lifecycle-final.log",
+      "sha256": "912b21b3cb4f07dfcdf4b112a2dfe7040500fa0308529a77fb8acbecdfd63c0e",
+      "bytes": 1574
+    },
+    {
+      "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/finishing/refusal/focused-final-2.log",
+      "sha256": "4a37ba7658ce676671a2ceeb7ffffcafd4f2331d3c6913f2b6de19e4c2ab1a49",
+      "bytes": 14712
+    }
+  ],
+  "safety": {
+    "sharedSourceWrites": false,
+    "excludedSourceWrites": false,
+    "gitIndexOrPublicationOperations": false
+  }
+}

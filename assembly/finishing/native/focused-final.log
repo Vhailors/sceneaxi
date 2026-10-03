@@ -1,0 +1,50 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/tmp/sceneaxi-comprehensive-owned-xd4gdfl1[39m
+
+ [32m✓[39m packages/authoring-core/test/scene-transform-v2.test.ts [2m([22m[2m14 tests[22m[2m)[22m[33m 338[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/scene-materials-mutation-consumer.test.ts [2m([22m[2m2 tests[22m[2m)[22m[33m 1217[2mms[22m[39m
+     [33m[2m✓[22m[39m public desktop consumer refuses malformed fields with zero partial apply/accessor hooks [33m 1091[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/audio-lifecycle-compat.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 310[2mms[22m[39m
+ [32m✓[39m tests/e2e/desktop-assistant-scene-loop-golden.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 325[2mms[22m[39m
+ [32m✓[39m tests/e2e/desktop-linux-bridge-assistant-golden.test.ts [2m([22m[2m9 tests[22m[2m)[22m[33m 816[2mms[22m[39m
+ [32m✓[39m tests/e2e/desktop-animation-golden.test.ts [2m([22m[2m2 tests[22m[2m)[22m[33m 985[2mms[22m[39m
+     [33m[2m✓[22m[39m authors clips through review, scrubs without writing, and replays identical Play samples [33m 852[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/scene-physics-mutation-consumer.test.ts [2m([22m[2m2 tests[22m[2m)[22m[33m 2961[2mms[22m[39m
+     [33m[2m✓[22m[39m public desktop consumer refuses malformed fields with zero partial apply/accessor hooks [33m 2864[2mms[22m[39m
+ [32m✓[39m packages/schemas/test/scene-transform-v2.test.ts [2m([22m[2m26 tests[22m[2m)[22m[32m 87[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/scene-environment-mutation-consumer.test.ts [2m([22m[2m2 tests[22m[2m)[22m[33m 474[2mms[22m[39m
+     [33m[2m✓[22m[39m public desktop consumer refuses malformed fields with zero partial apply/accessor hooks [33m 324[2mms[22m[39m
+ [32m✓[39m packages/schemas/test/desktop-scene-animation-mutation.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m tests/e2e/desktop-physics-golden.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 1872[2mms[22m[39m
+     [33m[2m✓[22m[39m opts into initialized Rapier through review, refuses an absent host, and reopens identically [33m 1000[2mms[22m[39m
+     [33m[2m✓[22m[39m authors bodies through review and replays identical Play snapshots without writing [33m 472[2mms[22m[39m
+ [32m✓[39m packages/schemas/test/desktop-scene-physics.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 72[2mms[22m[39m
+ [32m✓[39m packages/schemas/test/desktop-scene-physics-mutation.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 64[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/scene-effects-mutation-consumer.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 265[2mms[22m[39m
+ [32m✓[39m tests/e2e/desktop-scene-property-golden.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 2436[2mms[22m[39m
+     [33m[2m✓[22m[39m settles selected transforms and add/remove through review, persistence, undo, and Play [33m 1153[2mms[22m[39m
+     [33m[2m✓[22m[39m keeps canonical transform and add bytes identical across desktop, protocol, and CLI [33m 429[2mms[22m[39m
+ [32m✓[39m packages/schemas/test/desktop-scene-materials-mutation.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m packages/schemas/test/desktop-scene-environment-mutation.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 36[2mms[22m[39m
+ [32m✓[39m packages/schemas/test/desktop-scene-effects.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 43[2mms[22m[39m
+ [32m✓[39m packages/schemas/test/desktop-scene-environment.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 29[2mms[22m[39m
+ [32m✓[39m packages/schemas/test/desktop-scene-materials.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/native-assistant-scene-compat.test.ts [2m([22m[2m14 tests[22m[2m)[22m[33m 2926[2mms[22m[39m
+     [33m[2m✓[22m[39m runs create/rename through real E1 review, accept and fresh bridge reopen [33m 1038[2mms[22m[39m
+     [33m[2m✓[22m[39m reconstructs and stages exactly one real sphere primitive [33m 332[2mms[22m[39m
+     [33m[2m✓[22m[39m preserves node kind/name through rename, legacy reparent, transform edits and reopen [33m 494[2mms[22m[39m
+ [32m✓[39m packages/schemas/test/desktop-scene-effects-mutation.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/scene-animation-mutation-consumer.test.ts [2m([22m[2m2 tests[22m[2m)[22m[33m 4348[2mms[22m[39m
+     [33m[2m✓[22m[39m public desktop consumer refuses malformed fields with zero partial apply/accessor hooks [33m 4224[2mms[22m[39m
+ [32m✓[39m packages/schemas/test/desktop-scene-animation.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m packages/schemas/test/desktop-scene-edit.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m tests/e2e/desktop-hierarchy-golden.test.ts [2m([22m[2m17 tests[22m[2m)[22m[33m 3523[2mms[22m[39m
+     [33m[2m✓[22m[39m keeps hierarchy data out of generic project status [33m 794[2mms[22m[39m
+     [33m[2m✓[22m[39m stages one deterministic reparent transaction, then survives save, reopen, Play, undo, and redo [33m 375[2mms[22m[39m
+     [33m[2m✓[22m[39m commits byte-identical reparent results for desktop, CLI, and assistant clients [33m 444[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m26 passed[39m[22m[90m (26)[39m
+[2m      Tests [22m [1m[32m246 passed[39m[22m[90m (246)[39m
+[2m   Start at [22m 13:28:52
+[2m   Duration [22m 11.27s[2m (transform 58.05s, setup 0ms, import 81.98s, tests 23.24s, environment 3ms)[22m
+

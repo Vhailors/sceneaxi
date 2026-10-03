@@ -1,0 +1,111 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/tmp/sceneaxi-comprehensive-owned-xd4gdfl1[39m
+
+ [31m×[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mstops all allocated root resources once and fences retained entry points[32m 284[2mms[22m[39m
+[31m   → expected 3 to be 2 // Object.is equality[39m
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mpagehide during input readiness cannot allocate or issue later IPC[32m 108[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mpagehide during scene readiness cannot allocate or issue later IPC[32m 71[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mpagehide during actual openPath fences its late report[32m 81[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mreleases partial allocations after mount-failure even if a release throws[32m 50[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mreleases partial allocations after observe-failure even if a release throws[32m 51[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mreleases partial allocations after cleanup-failure even if a release throws[32m 74[2mms[22m[39m
+ [31m×[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mterminal shutdown initiates close synchronously during ready and suppresses late audio work[32m 72[2mms[22m[39m
+[31m   → expected +0 to be 1 // Object.is equality[39m
+ [31m×[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mterminal shutdown initiates close synchronously during request and suppresses late audio work[32m 73[2mms[22m[39m
+[31m   → expected +0 to be 1 // Object.is equality[39m
+ [31m×[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mterminal shutdown initiates close synchronously during digest and suppresses late audio work[32m 98[2mms[22m[39m
+[31m   → expected +0 to be 1 // Object.is equality[39m
+ [31m×[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mterminal shutdown initiates close synchronously during resume and suppresses late audio work[32m 106[2mms[22m[39m
+[31m   → expected +0 to be 1 // Object.is equality[39m
+ [31m×[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mterminal shutdown initiates close synchronously during decode and suppresses late audio work[32m 97[2mms[22m[39m
+[31m   → expected +0 to be 1 // Object.is equality[39m
+ [31m×[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mterminal shutdown also closes controls retired by a normal stop before its 100ms measurement[32m 57[2mms[22m[39m
+[31m   → expected +0 to be 1 // Object.is equality[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 7 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mstops all allocated root resources once and fences retained entry points
+[31m[1mAssertionError[22m: expected 3 to be 2 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 2[39m
+[31m+ 3[39m
+
+[36m [2m❯[22m desktop/linux/test/viewport-terminal-lifecycle.test.ts:[2m148:28[22m[39m
+    [90m146|[39m     expect(h.calls).toMatchObject({ input: 1, render: 1, resize: 1, ca…
+    [90m147|[39m     [35mconst[39m writes [33m=[39m h[33m.[39mcalls[33m.[39mwrites[33m;[39m h[33m.[39m[34mresolveAll[39m()[33m;[39m [35mawait[39m h[33m.[39m[34msettle[39m()[33m;[39m
+    [90m148|[39m     [34mexpect[39m(h[33m.[39mcalls[33m.[39mwrites)[33m.[39m[34mtoBe[39m(writes)[33m;[39m
+    [90m   |[39m                            [31m^[39m
+    [90m149|[39m   })[33m;[39m
+    [90m150|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/7]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mterminal shutdown initiates close synchronously during ready and suppresses late audio work
+[41m[1m FAIL [22m[49m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mterminal shutdown initiates close synchronously during request and suppresses late audio work
+[41m[1m FAIL [22m[49m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mterminal shutdown initiates close synchronously during digest and suppresses late audio work
+[41m[1m FAIL [22m[49m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mterminal shutdown initiates close synchronously during resume and suppresses late audio work
+[31m[1mAssertionError[22m: expected +0 to be 1 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 1[39m
+[31m+ 0[39m
+
+[36m [2m❯[22m desktop/linux/test/viewport-terminal-lifecycle.test.ts:[2m175:37[22m[39m
+    [90m173|[39m     [35mif[39m (mode [33m===[39m [32m"ready"[39m) [34mexpect[39m(h[33m.[39mcalls[33m.[39mstart)[33m.[39m[34mtoBe[39m([34m1[39m)[33m;[39m
+    [90m174|[39m     [35mif[39m (mode [33m===[39m [32m"decode"[39m) [34mexpect[39m(h[33m.[39mcalls[33m.[39mdecode)[33m.[39m[34mtoBe[39m([34m1[39m)[33m;[39m
+    [90m175|[39m     h[33m.[39m[34mhide[39m()[33m;[39m [34mexpect[39m(h[33m.[39mcalls[33m.[39mclose)[33m.[39m[34mtoBe[39m([34m1[39m)[33m;[39m h[33m.[39m[34mhide[39m()[33m;[39m
+    [90m   |[39m                                     [31m^[39m
+    [90m176|[39m     const ipc = [...h.requests], writes = h.calls.writes, starts = h.c…
+    [90m177|[39m     h[33m.[39m[34mresolveAll[39m()[33m;[39m [35mawait[39m h[33m.[39m[34msettle[39m()[33m;[39m h[33m.[39m[34mplay[39m()[33m;[39m h[33m.[39m[34mstop[39m()[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/7]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mterminal shutdown initiates close synchronously during decode and suppresses late audio work
+[31m[1mAssertionError[22m: expected +0 to be 1 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 1[39m
+[31m+ 0[39m
+
+[36m [2m❯[22m desktop/linux/test/viewport-terminal-lifecycle.test.ts:[2m174:51[22m[39m
+    [90m172|[39m     [34mexpect[39m(h[33m.[39mcalls[33m.[39mcontextCreate)[33m.[39m[34mtoBe[39m([34m1[39m)[33m;[39m
+    [90m173|[39m     [35mif[39m (mode [33m===[39m [32m"ready"[39m) [34mexpect[39m(h[33m.[39mcalls[33m.[39mstart)[33m.[39m[34mtoBe[39m([34m1[39m)[33m;[39m
+    [90m174|[39m     [35mif[39m (mode [33m===[39m [32m"decode"[39m) [34mexpect[39m(h[33m.[39mcalls[33m.[39mdecode)[33m.[39m[34mtoBe[39m([34m1[39m)[33m;[39m
+    [90m   |[39m                                                   [31m^[39m
+    [90m175|[39m     h[33m.[39m[34mhide[39m()[33m;[39m [34mexpect[39m(h[33m.[39mcalls[33m.[39mclose)[33m.[39m[34mtoBe[39m([34m1[39m)[33m;[39m h[33m.[39m[34mhide[39m()[33m;[39m
+    [90m176|[39m     const ipc = [...h.requests], writes = h.calls.writes, starts = h.c…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/7]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mterminal shutdown also closes controls retired by a normal stop before its 100ms measurement
+[31m[1mAssertionError[22m: expected +0 to be 1 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 1[39m
+[31m+ 0[39m
+
+[36m [2m❯[22m desktop/linux/test/viewport-terminal-lifecycle.test.ts:[2m186:37[22m[39m
+    [90m184|[39m     const h = host(); await h.settle(); h.play(); h.clickPlay(); await…
+    [90m185|[39m     [34mexpect[39m(h[33m.[39mcalls[33m.[39mclose)[33m.[39m[34mtoBe[39m([34m0[39m)[33m;[39m [34mexpect[39m(h[33m.[39mtimers[33m.[39mlength)[33m.[39m[34mtoBe[39m([34m1[39m)[33m;[39m
+    [90m186|[39m     h[33m.[39m[34mhide[39m()[33m;[39m [34mexpect[39m(h[33m.[39mcalls[33m.[39mclose)[33m.[39m[34mtoBe[39m([34m1[39m)[33m;[39m
+    [90m   |[39m                                     [31m^[39m
+    [90m187|[39m     for (const callback of h.timers.splice(0)) callback(); await h.set…
+    [90m188|[39m   })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/7]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m7 failed[39m[22m[2m | [22m[1m[32m6 passed[39m[22m[90m (13)[39m
+[2m   Start at [22m 18:30:29
+[2m   Duration [22m 6.12s[2m (transform 3.54s, setup 0ms, import 4.40s, tests 1.22s, environment 0ms)[22m
+

@@ -1,0 +1,28 @@
+# pr-ready — auxiliary tree acceptance: BLOCKED
+
+Task ID **pr-ready**. Only this directory changed. Product/config/test tree remains FROZEN for Astra/orun-3-09og; no staging, commits, pushes, merge, installation, API tree builders, credentials, live providers or production access. This is new reusable proof tooling, not a duplicate full review or claim fixes landed.
+
+## Exact subject and fresh observations
+
+`report.json` captures complete native Git inventories of base `dd77cc9cb91d24091082e0c5bc20a130f0f51ffc` (1,101 paths), published #312 `346933c105305224d575bf9319256301c1eeabfa` (456), local HEAD `4e532e2fbf43e9948741578ab6208a3277870405` (1,096), existing index (1,276), and current nonignored checkout (2,072). Raw Git blob IDs, path, object kind and executable/symlink modes are retained. Capacity-work auxiliary subtree is explicitly excluded from checkout hashing to respect other agents' ownership; no other agent report contents read. Ignored generated/install artifacts are not source; no dist used.
+
+Checkout inventory SHA256 `f97646b228458c907f851551054010e80edad4e78bf02e4c784f217c164e852c`; source projection excluding docs/audits SHA256 `0a89014ed48be7c943c6bb280e14ed68c64c24644801120c311cee00e6719d48`. No per-file snapshot races observed; whole-tree freeze must still be owner-attested. No immutable source-candidate ref supplied; the checkout fingerprint does NOT replace candidate acceptance. Candidate option was exercised with published SHA strictly as a negative control, not represented as Astra's candidate.
+
+- **Reproduced:** published loses 826 base paths (825 deletions plus one rename-source), 25 package manifests, and all four executable paths. Native rename-aware diff: D825/M204/A180/R099:1. Full 1,210-record diff in verification.json. No retained-path mode conversion: executable paths disappeared instead.
+- **Refuted current-local missing-path gap:** checkout has zero missing base paths and zero mode changes. **New commit-preparation hazard:** existing index still omits `tests/e2e/desktop-asset-import-order-golden.test.ts`, `desktop-control-dispatch-real-bridge-golden.test.ts`, `desktop-editor-command-forms-golden.test.ts`, and `tests/helpers/scoped-tmpdir.ts`; do not commit that index blindly.
+- `sites/umbrella/src/app/api/checkout/route.ts:5` imports the still-untracked handler, blob `472ecd11579f61c648a7e924a38964e22468dced`, absent PR. Four post-PR site CSS files and desktop chrome/web inspector differ from PR; both post-PR visual JSON reports remain untracked/absent PR. Exact desired blobs are in `probes` and complete inventories.
+- Live read-only open PRs: #312 MERGEABLE/BLOCKED; #311 draft MERGEABLE/CLEAN; #310 draft CONFLICTING/DIRTY; #309 MERGEABLE/BLOCKED. #312 current exact SHA rollup: **9 FAILURE, 2 SKIPPED, 0 SUCCESS**. Rollup alone does not establish branch-required-check policy. Local HEAD is not a descendant of published head (`merge-base --is-ancestor` exit1).
+
+## Executed harness and live negative controls
+
+`compare_trees.py:37` tree(), `:53` compare(), `:62` checkout(), `:121` main(): executable Python, native `git ls-tree -rz`, `ls-files -z`, `hash-object --no-filters` and symlink-target hashing; never writes Git objects/index/refs. Command: `python3 docs/audits/production-swarm/capacity-work-2026-10-02/pr-ready/compare_trees.py --github` → **exit2 BLOCKED**, valid JSON, no snapshotErrors. Tool never authorizes publication.
+
+Artificially remove only `packages/schemas/package.json` from an in-memory actual-base snapshot; input SHA256 `dc4ca177b2cb038b3e973a0628360c6dcb1ec69ea4b5826bef087ddf4853a9a7`; exact observed missing list is that path. Separate artificial blob and executable-mode mutations detected; identity control has empty differences. Actual tree untouched. Second run `--candidate 346933c105305224d575bf9319256301c1eeabfa` → exit2, 1,616 missing checkout paths / 113 changed blobs, proving candidate comparison executes. Python syntax PASS. Script SHA256 `2f6c70efcf2be7608e9f807ec4cf734a4f974d92c93729a5c16357ee398528bd`.
+
+Initial harness run failed `git exit128: not a git repository` due parent-path off-by-one, followed by JSON parse failure on empty output; corrected parents[6]→parents[5], reran controls successfully. Retained honestly in verification.json. `deferred-checks.sh` default guard executed: **exit2 NOTRUN**, zero heavy jobs.
+
+## Handoff and deferred work
+
+`handoff.md` supplies exact native-Git restoration/commit-preparation and fast-forward update packets, reviewed path classes, deletion/mode requirements, immutable candidate comparison commands, prerequisites and explicit publication separation. Serial integrator must select/approve full desired blobs including legitimate untracked files and restored four paths; freeze/review candidate; publication owner only under later authority constructs a normal descendant commit of freshly checked PR head. Never reuse partial-subtree API uploader or shared stale index. No source patch required for the Git loss: proposed correction is complete tree restoration from approved path/blob/mode records, not an algorithm rewrite.
+
+Root gate, four site builds, SDK/docs/native/browser acceptance and resulting-SHA required CI **NOT RUN** (heavy budget zero). Deferred guarded executable provided; owning lanes must supply semantic/import/export/rendered proof. Read inputs: AGENTS.md; layout.md; repair integration.md:19–31, ledger header, fix-security-delivery.md; deep-review 01 and 08. Source ownership frozen; integration.md identifies bg-106, but no release inferred. No temporary files outside scope, services, ports or containers allocated; nothing to clean.

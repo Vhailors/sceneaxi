@@ -4,9 +4,10 @@ import {
   LAUNCH_PROOFS,
   PROFILE_RELEASE_MATRIX,
 } from "../lib/launch-marketing.js";
-import { RELEASE_MARKER } from "../lib/site-content.js";
+import { PROOF_MEDIA, RELEASE_MARKER } from "../lib/site-content.js";
 import { DownloadCta } from "./_components/download-cta.js";
 import { HeroViewport } from "./_components/hero-viewport.js";
+import { ProofFigure } from "./_components/proof-figure.js";
 import { StatePanel } from "./_components/state-panel.js";
 
 const PROFILE_STATE_COPY = Object.freeze({
@@ -15,23 +16,36 @@ const PROFILE_STATE_COPY = Object.freeze({
   "refuse-only": Object.freeze({ label: "Refuse-only", tone: "isolated" }),
 });
 
+/** The first-release paths, each shown with the route it opens. */
+const RELEASE_PATHS = Object.freeze([
+  Object.freeze({ href: "/docs", label: "Read the docs" }),
+  Object.freeze({ href: LIVE_OPEN_PATH, label: "Open the proof" }),
+  Object.freeze({ href: "/login", label: "Sign in" }),
+  Object.freeze({ href: "/pricing", label: "View credit pricing" }),
+]);
+
 /**
  * The first public engine release overview (sceneaxi#203).
  *
  * The route sells one bounded proposition: local, reviewable scene authoring over a
- * shared engine core. Its hero visual is the committed public artifact, its comparison
- * claims link to each product's own description, and its profile matrix carries a
- * structurally false shipping claim.
+ * shared engine core. Its hero visual is the committed public artifact, its proof gallery
+ * shows unretouched captures of the recorded Linux build beside their limits, its
+ * comparison claims link to each product's own description, and its profile matrix
+ * carries a structurally false shipping claim.
  */
 export default function OverviewPage() {
   const heroScene = resolveLiveOpenScene();
+  const gallery = PROOF_MEDIA.filter((media) => media.placement === "home");
 
   return (
     <>
       <section className="hero release-hero" aria-labelledby="release-title">
         <div className="hero-inner hero-inner-split">
           <div className="hero-copy">
-            <p className="badge">{RELEASE_MARKER}</p>
+            <p className="badge">
+              <span className="dot" aria-hidden="true" />
+              {RELEASE_MARKER}
+            </p>
             <h1 id="release-title">Build scenes. Keep the source.</h1>
             <p className="lede">
               Build interactive scenes as local, reviewable files, then open them through
@@ -52,19 +66,21 @@ export default function OverviewPage() {
               label={`A committed SceneAxi Sculpt Artifact, composed into ${LIVE_OPEN_INSTANCE_COUNT} placed instances and drawn live`}
             />
           ) : (
-            <StatePanel
-              tone="deny"
-              level={2}
-              title="The release artifact refused to open"
-              reason={heroScene.reason}
-              evidence={[{ term: "Surface", value: "release overview" }]}
-            >
-              <p>{heroScene.message}</p>
-              <p>
-                This slot shows the same composed artifact as the public open path. A
-                refusal stays visible instead of being replaced by invented marketing art.
-              </p>
-            </StatePanel>
+            <div className="hero-stage" data-frame="refused">
+              <StatePanel
+                tone="deny"
+                level={2}
+                title="The release artifact refused to open"
+                reason={heroScene.reason}
+                evidence={[{ term: "Surface", value: "release overview" }]}
+              >
+                <p>{heroScene.message}</p>
+                <p>
+                  This slot shows the same composed artifact as the public open path. A
+                  refusal stays visible instead of being replaced by invented marketing art.
+                </p>
+              </StatePanel>
+            </div>
           )}
         </div>
 
@@ -82,52 +98,90 @@ export default function OverviewPage() {
         </div>
       </section>
 
-      <section className="band-inner release-section" id="compare" aria-labelledby="compare-title">
+      <section className="band-inner release-section" aria-labelledby="proof-title">
         <div className="release-heading">
-          <h2 id="compare-title">Choose the right layer.</h2>
+          <p className="eyebrow">Recorded Linux build</p>
+          <h2 id="proof-title">Inside the recorded Linux build.</h2>
           <p className="prose prose-wide">
-            Unity and Godot are broad game engines. Three.js is a web rendering library.
-            SceneAxi is a smaller engine and library centered on reviewable source,
-            deterministic evidence, and versioned profiles.
+            Captured in the Linux developer build. Never retouched.
           </p>
         </div>
 
-        <div
-          className="scroll-x comparison-scroll"
-          role="region"
-          tabIndex={0}
-          aria-label="Engine comparison, scrollable"
-        >
-          <table className="comparison-table" aria-label="Engine comparison">
-            <thead>
-              <tr>
-                <th scope="col">Product</th>
-                <th className="wrap" scope="col">What it is</th>
-                <th className="wrap" scope="col">Choose it when</th>
-                <th className="wrap" scope="col">Honest tradeoff</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ENGINE_COMPARISONS.map((entry) => (
-                <tr className={entry.name === "SceneAxi" ? "comparison-sceneaxi" : undefined} key={entry.name}>
-                  <th scope="row">
-                    <span>{entry.name}</span>
-                    <a
-                      href={entry.source.href}
-                      {...(entry.source.href.startsWith("https://")
-                        ? { rel: "noreferrer", target: "_blank" }
-                        : {})}
-                    >
-                      {entry.source.label}
-                    </a>
-                  </th>
-                  <td className="wrap">{entry.category}</td>
-                  <td className="wrap">{entry.bestWhen}</td>
-                  <td className="wrap">{entry.tradeoff}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="proof-gallery">
+          {gallery.map((media) => (
+            <ProofFigure
+              key={media.id}
+              media={media}
+              sizes="(max-width: 620px) calc(100vw - 36px), (max-width: 1024px) 50vw, 389px"
+            />
+          ))}
+        </div>
+      </section>
+
+      <section className="band" id="compare" aria-labelledby="compare-title">
+        <div className="band-inner release-section">
+          <div className="release-heading">
+            <h2 id="compare-title">Choose the right layer.</h2>
+            <p className="prose prose-wide">
+              Unity and Godot are broad game engines. Three.js is a web rendering library.
+              SceneAxi is a smaller engine and library centered on reviewable source,
+              deterministic evidence, and versioned profiles.
+            </p>
+          </div>
+
+          <div className="scroll-frame">
+            <div
+              className="scroll-x comparison-scroll"
+              role="region"
+              tabIndex={0}
+              aria-label="Engine comparison, scrollable"
+            >
+              <table className="comparison-table" aria-label="Engine comparison">
+                <thead>
+                  <tr>
+                    <th scope="col">Product</th>
+                    <th className="wrap" scope="col">What it is</th>
+                    <th className="wrap" scope="col">Choose it when</th>
+                    <th className="wrap" scope="col">Honest tradeoff</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ENGINE_COMPARISONS.map((entry) => {
+                    const external = entry.source.href.startsWith("https://");
+
+                    return (
+                      <tr
+                        className={entry.name === "SceneAxi" ? "comparison-sceneaxi" : undefined}
+                        key={entry.name}
+                      >
+                        <th scope="row">
+                          <span>{entry.name}</span>
+                          <a
+                            href={entry.source.href}
+                            {...(external ? { rel: "noreferrer", target: "_blank" } : {})}
+                          >
+                            <span className="source-label">{entry.source.label}</span>
+                            {external && (
+                              <>
+                                {/* A no-break space keeps the arrow on its last word's line. */}
+                                {" "}
+                                <span className="glyph" aria-hidden="true">
+                                  ↗
+                                </span>
+                              </>
+                            )}
+                          </a>
+                        </th>
+                        <td className="wrap">{entry.category}</td>
+                        <td className="wrap">{entry.bestWhen}</td>
+                        <td className="wrap">{entry.tradeoff}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -142,40 +196,43 @@ export default function OverviewPage() {
             </p>
           </div>
 
-          <div
-            className="scroll-x profile-release-scroll"
-            role="region"
-            tabIndex={0}
-            aria-label="Profile capability matrix, scrollable"
-          >
-            <table className="profile-release-matrix" aria-label="Profile capability matrix">
-              <thead>
-                <tr>
-                  <th scope="col">Capability</th>
-                  {PROFILE_RELEASE_MATRIX.profiles.map((profile) => {
-                    const state = PROFILE_STATE_COPY[profile.state];
-                    return (
-                      <th className="wrap" scope="col" key={profile.id}>
-                        <span className="profile-column-name">{profile.name}</span>
-                        <span className={`chip chip-${state.tone}`}>{state.label}</span>
-                      </th>
-                    );
-                  })}
-                </tr>
-              </thead>
-              <tbody>
-                {PROFILE_RELEASE_MATRIX.capabilities.map((capability) => (
-                  <tr key={capability.capability}>
-                    <th className="wrap" scope="row">{capability.capability}</th>
-                    {PROFILE_RELEASE_MATRIX.profiles.map((profile) => (
-                      <td className="wrap" key={profile.id}>
-                        {capability.values[profile.id]}
-                      </td>
-                    ))}
+          <div className="scroll-frame">
+            <div
+              className="scroll-x profile-release-scroll"
+              role="region"
+              tabIndex={0}
+              aria-label="Profile capability matrix, scrollable"
+            >
+              <table className="profile-release-matrix" aria-label="Profile capability matrix">
+                <thead>
+                  <tr>
+                    <th scope="col">Capability</th>
+                    {PROFILE_RELEASE_MATRIX.profiles.map((profile) => {
+                      const state = PROFILE_STATE_COPY[profile.state];
+
+                      return (
+                        <th className={`wrap profile-col-${profile.id}`} scope="col" key={profile.id}>
+                          <span className="profile-column-name">{profile.name}</span>
+                          <span className={`chip chip-${state.tone}`}>{state.label}</span>
+                        </th>
+                      );
+                    })}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {PROFILE_RELEASE_MATRIX.capabilities.map((capability) => (
+                    <tr key={capability.capability}>
+                      <th className="wrap" scope="row">{capability.capability}</th>
+                      {PROFILE_RELEASE_MATRIX.profiles.map((profile) => (
+                        <td className="wrap" key={profile.id}>
+                          {capability.values[profile.id]}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <div className="matrix-note">
@@ -183,7 +240,9 @@ export default function OverviewPage() {
               This matrix makes no shipping or availability claim. The detailed open-path
               table is generated directly from the conformance registry and policy.
             </p>
-            <a className="button button-quiet" href="/profiles">Inspect profile evidence</a>
+            <a className="button button-quiet button-lg" href="/profiles">
+              Inspect profile evidence
+            </a>
           </div>
         </div>
       </section>
@@ -197,10 +256,19 @@ export default function OverviewPage() {
           </p>
         </div>
         <nav className="path-links" aria-label="First-release paths">
-          <a href="/docs">Read the docs</a>
-          <a href={LIVE_OPEN_PATH}>Open the proof</a>
-          <a href="/login">Sign in</a>
-          <a href="/pricing">View credit pricing</a>
+          {RELEASE_PATHS.map((path) => (
+            <a href={path.href} key={path.href}>
+              <span className="path-route" aria-hidden="true">
+                {path.href}
+              </span>
+              <span className="path-label">
+                {path.label}
+                <span className="glyph" aria-hidden="true">
+                  →
+                </span>
+              </span>
+            </a>
+          ))}
         </nav>
       </section>
     </>

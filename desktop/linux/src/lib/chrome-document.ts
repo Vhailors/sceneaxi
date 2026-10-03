@@ -16,6 +16,7 @@
  * anchors the renderer viewport and the packaged smoke depend on, this throws
  * rather than emitting a window that silently lost its live viewport.
  */
+import { createHash } from "node:crypto";
 import {
   DESKTOP_ASSISTANT_RUNTIME_EVENT,
   createDesktopVisualState,
@@ -33,6 +34,7 @@ export const DESKTOP_RUNTIME_META = '<meta name="sceneaxi-desktop-runtime" conte
 export const RENDERER_SCRIPT_TAG = '<script defer src="./renderer.js"></script>';
 
 const PIXELS_META_ANCHOR = `<meta name="${PIXELS_META_NAME}" content="false">`;
+
 const BODY_CLOSE_ANCHOR = "</body>";
 
 /**
@@ -83,6 +85,7 @@ export function desktopLinuxIndexHtml(options: DesktopIndexHtmlOptions = {}): st
   const view = desktopVisualView(
     createDesktopVisualState({ assistantRuntime: "none" }),
   );
+
   const chrome = renderDesktopChrome(view, {
     title: options.title ?? "SceneAxi Engine Desktop",
   });
@@ -92,11 +95,13 @@ export function desktopLinuxIndexHtml(options: DesktopIndexHtmlOptions = {}): st
       `desktop chrome document lost its '${PIXELS_META_NAME}' meta — refusing to emit a window without the honesty marker`,
     );
   }
+
   if (!chrome.includes(BODY_CLOSE_ANCHOR)) {
     throw new Error(
       "desktop chrome document lost its </body> anchor — refusing to emit a window without the live viewport script",
     );
   }
+
   for (const anchor of RUNTIME_ANCHORS) {
     if (!chrome.includes(anchor.markup)) {
       throw new Error(
@@ -105,7 +110,15 @@ export function desktopLinuxIndexHtml(options: DesktopIndexHtmlOptions = {}): st
     }
   }
 
+  // Hash the unforked shell's exact inline script bytes, including whitespace.
+  // Existing runtime styles need inline declarations; scripts never get unsafe-inline/eval.
+  const hashes = [...chrome.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)]
+    .map((match) => `'sha256-${createHash("sha256").update(match[1] ?? "").digest("base64")}'`);
+
+  const policy = `default-src 'none'; script-src 'self' ${hashes.join(" ")}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; media-src 'self' blob:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'`;
+  const csp = `<meta http-equiv="Content-Security-Policy" content="${policy}">`;
+
   return chrome
-    .replace(PIXELS_META_ANCHOR, `${PIXELS_META_ANCHOR}\n${DESKTOP_RUNTIME_META}`)
+    .replace(PIXELS_META_ANCHOR, `${PIXELS_META_ANCHOR}\n${DESKTOP_RUNTIME_META}\n${csp}`)
     .replace(BODY_CLOSE_ANCHOR, `${RENDERER_SCRIPT_TAG}\n${BODY_CLOSE_ANCHOR}`);
 }

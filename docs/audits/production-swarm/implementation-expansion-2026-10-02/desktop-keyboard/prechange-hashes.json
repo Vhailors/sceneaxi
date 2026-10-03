@@ -1,0 +1,5 @@
+{
+  "apps/desktop-shell/src/chrome.ts": "1c45e9cdb94fdd251cdf2703b7801c63db54ae36f867693a36121d409662008f",
+  "apps/desktop-shell/src/visual-tokens.ts": "a23536b1f566347ccccd7d23d40e1e9849f403021fcdedd27b26798d5f4740e7",
+  "apps/desktop-shell/test/visual-postpr-evidence/retry/capture.mjs": "212dfa0f9e041bff72a96387829efda97fa8e4b89d5ede03384eb6066f18a363"
+}

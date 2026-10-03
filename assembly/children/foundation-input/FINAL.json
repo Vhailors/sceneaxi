@@ -1,0 +1,266 @@
+{
+  "status": "ASSIGNED_CODE_IMPLEMENTED_SCOPED_VERIFIED",
+  "readiness": "PARTIAL_RECONCILIATION_NOT_ALL_CODE_MERGED",
+  "owner": "bg-151 foundation-input",
+  "ownedClone": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1",
+  "baseline": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+  "frozenInitialApprovedTree": "3f25ffea22f19d01ef9a484f317d8b8ca4cde397",
+  "sourceInputsRead": [
+    "legacy-foundation/report.json",
+    "editor-features/report.json",
+    "docs-checkpoints/report.json",
+    "assembly/private-source-conflicts.json",
+    "assembly/source-assembly-manifest.json"
+  ],
+  "editingMethod": "TypeScript AST statement/node transformations for valid TS (ast_edit unavailable; parent confirmed). Anchored text edits for owned JSON/doc. No foreign physical worktree reads or writes.",
+  "featureResolutions": [
+    {
+      "id": "LF-01",
+      "sourceSHA": "16f312c61435e3d379a0e54525ac8115e35fee86",
+      "sourceBlob": "8449b4c7ebc36a8bc85f6804fa2211f749dbd931",
+      "sourcePath": "packages/engine-kernel/src/session.ts",
+      "mode": "100644",
+      "resolution": "Restored browser-safe original public three-argument computeDigest via new legacy-digest.ts adapter. Preserve caller entity order, id/x/y JSON projection, key order and sha256 prefix. Modern internal rarity helper/session untouched.",
+      "oracles": [
+        "Three fixed original vectors (empty, Unicode/negative unsorted, reversed) independently checked by exact original Git AST function execution; original-digest-vectors.json",
+        "Public no-rarity open/advance/save/replay digests match helper",
+        "Order/projection/immutability and invalid-array throw",
+        "Compiled root consumer; four-argument call rejected with checked @ts-expect-error",
+        "Node crypto import mock refusal"
+      ],
+      "tests": "packages/engine-kernel/test/legacy-digest.test.ts"
+    },
+    {
+      "id": "LF-02",
+      "sourceSHA": "16f312c61435e3d379a0e54525ac8115e35fee86",
+      "sourceBlob": "a274dbfac35c09c3723f4b91e6d31a9c69b92c90",
+      "sourcePath": "packages/schemas/src/index.ts",
+      "mode": "100644",
+      "resolution": "Restored ConformanceCheckResult/ConformanceSuiteResult root type-only re-exports. Canonical synchronous Node subpath remains unchanged; old synchronous ROOT RUNTIME helper remains explicitly pending, not restored or silently wrapped async.",
+      "oracles": [
+        "Actual TypeScript no-emit in-memory original consumer compiles both root types",
+        "Root runtime helper absence also checked as compiler expected error",
+        "Type-only AST declaration erased in emitted browser root graph; recursive runtime graph contains no Node imports or suite",
+        "Canonical package Node subpath exact target and actual profile-game synchronous suite passes including shippingClaim:false and held citation; forged true shipping claim refuses"
+      ],
+      "pending": "Safe versioned decision for old synchronous root runtime helper is explicitly outside this assigned type-only restoration.",
+      "tests": "packages/schemas/test/legacy-import-compat.test.ts"
+    },
+    {
+      "id": "LF-05",
+      "sourceSHA": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+      "sourceBlob": "39d259bb7fd97b62d4601d245a24c30fdbcda7bb",
+      "sourcePath": "docs/kernel-browser-open.md",
+      "mode": "100644",
+      "resolution": "Replaced stale barrel-Node warning/testing wildcard with exact canonical node/profile-conformance-suite subpath, erased type exports and pending old root runtime policy; documented digest and input migration without equivalence beyond tested vectors.",
+      "oracles": [
+        "Doc canonical subpath/pending policy regression and negative obsolete testing wildcard check",
+        "Actual emitted root graph and manifest export checks"
+      ],
+      "tests": "packages/schemas/test/legacy-import-compat.test.ts"
+    },
+    {
+      "id": "EF-INPUT",
+      "sourceSHA": "740c7e950cf5eb6528e6629ee6f7041ef50dde5c",
+      "sourceBlob": "3e1269264a670fd757742bab10aa083efed63746",
+      "sourcePath": "packages/schemas/src/input-action-registry.ts",
+      "additionalSourceBlobs": {
+        "schema": "645054f6df10e7c1e8fdbd6912bc09d416801916",
+        "host": "53f30050c865a2b14a2b08db1a1a8f4f138d431a"
+      },
+      "mode": "100644",
+      "resolution": "Explicit exact historical eleven-ID/order schemaVersion1 migration adds modern45 registry defaults without changing old supplied controller bindings. Old controller indices0..3/axis0..15/button0..31 preserved, not narrowed/converted to gamepad. Modern default gamepad/deadzone, fly/editor controls preserved. Full v1 settings maps become minimal scoped overrides in memory, original raw bytes retained as atomic CAS witness. Writes remain exact approved rebind/reset only. Modern rebind considers normalized full registry; migrated ambiguity with new defaults refuses rather than losing intent.",
+      "oracles": [
+        "Exact original Git-evaluated data fixture loaded/retained; new interface current45 controls and default gamepad",
+        "Project/workspace legacy file reads unchanged, exact review commits migrate bytes, restart durability/stale/review-mismatch refusals",
+        "Controller high index range, project precedence and approved resets restoring workspace then modern defaults",
+        "Actual bridge Kids and missing capability denies before old-file mutation",
+        "Reserved/text-entry/context checks and fly/editor isolation",
+        "Wrong version/truncation/order/duplicates/control bounds and new-command collision refusal",
+        "Schema explicit legacy11 ordered branch; current45 cardinality assertions unchanged"
+      ],
+      "tests": [
+        "packages/schemas/test/input-action-registry.test.ts",
+        "desktop/linux/test/legacy-input-map.test.ts"
+      ]
+    }
+  ],
+  "verification": [
+    {
+      "command": "pnpm exec vitest run packages/engine-kernel/test/legacy-digest.test.ts packages/schemas/test/legacy-import-compat.test.ts packages/schemas/test/input-action-registry.test.ts desktop/linux/test/legacy-input-map.test.ts --reporter=dot",
+      "cwd": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1",
+      "exit": 1,
+      "filesFailed": 4,
+      "testsFailed": 10,
+      "testsPassed": 43,
+      "log": "red-before.log",
+      "classification": "Literal observed red. Four LF01 missing-function cases, two EF map migration cases, one LF02 export case, two legacy host cases; one new session test fixture erroneously used id/schemaVersion without productId/seed. Corrected only that fixture to valid public manifest, assertions unchanged; that one red is not a source defect."
+    },
+    {
+      "command": "pnpm exec vitest run packages/engine-kernel/test/legacy-digest.test.ts packages/schemas/test/legacy-import-compat.test.ts packages/schemas/test/input-action-registry.test.ts desktop/linux/test/legacy-input-map.test.ts --reporter=dot",
+      "cwd": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1",
+      "exit": 0,
+      "filesPassed": 4,
+      "testsPassed": 53,
+      "log": "green-initial.log"
+    },
+    {
+      "command": "pnpm exec vitest run packages/engine-kernel/test/legacy-digest.test.ts packages/schemas/test/legacy-import-compat.test.ts packages/schemas/test/input-action-registry.test.ts desktop/linux/test/legacy-input-map.test.ts --reporter=dot",
+      "cwd": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1",
+      "exit": 0,
+      "filesPassed": 4,
+      "testsPassed": 61,
+      "log": "green-expanded.log"
+    },
+    {
+      "command": "pnpm exec vitest run packages/engine-kernel/test/legacy-digest.test.ts packages/schemas/test/legacy-import-compat.test.ts packages/schemas/test/input-action-registry.test.ts desktop/linux/test/legacy-input-map.test.ts --reporter=dot",
+      "cwd": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1",
+      "exit": 0,
+      "filesPassed": 4,
+      "testsPassed": 63,
+      "log": "green-consumer.log"
+    },
+    {
+      "command": "pnpm exec vitest run packages/engine-kernel/test/legacy-digest.test.ts packages/schemas/test/legacy-import-compat.test.ts packages/schemas/test/input-action-registry.test.ts desktop/linux/test/legacy-input-map.test.ts --reporter=dot",
+      "cwd": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1",
+      "exit": 0,
+      "filesPassed": 4,
+      "testsPassed": 63,
+      "log": "green-final.log"
+    },
+    {
+      "command": "git diff --check -- <11 exact owned source leaves>",
+      "exit": 0,
+      "scope": "owned only"
+    },
+    {
+      "command": "Exact original Git AST computeDigest vector execution + all owned stages/modes/hashes comparison",
+      "exit": 0,
+      "originalVectors": 3,
+      "stageIndicesUnchanged": true,
+      "proofs": [
+        "original-digest-vectors.json",
+        "three-stage-root-exports.json",
+        "before.json",
+        "after.json"
+      ],
+      "note": "Initial POSIX mode assertion rejected new files created0664, despite Git mode100644. Normalized four new files to0644; rerun passes. No executable mode change or index mutation."
+    }
+  ],
+  "paths": [
+    {
+      "path": "packages/engine-kernel/src/index.ts",
+      "mode": "644",
+      "gitMode": "100644",
+      "sha256": "ec7527967a7eb9b8499ef8f3e4d73802b2ac75d8aa20ecea5452af8f42c7bcfe",
+      "gitBlob": "965b6e671e37caae67dcfab1069c7a865cbc2d5a",
+      "indexUnchanged": true
+    },
+    {
+      "path": "packages/engine-kernel/src/legacy-digest.ts",
+      "mode": "644",
+      "gitMode": "100644",
+      "sha256": "a07ebabf9a3aef014b1a0da7bf281aacf670c6baccaf55746cc5582050072ab7",
+      "gitBlob": "bc7659d8f1a52098040e51341ff3eb42b2e8544c",
+      "indexUnchanged": true
+    },
+    {
+      "path": "packages/engine-kernel/test/legacy-digest.test.ts",
+      "mode": "644",
+      "gitMode": "100644",
+      "sha256": "7a546318492687d936225cefee446b40334c3ddf9f95af8705951da7ec70cff4",
+      "gitBlob": "a3005ef60fa42ba714646b6851e12263da640394",
+      "indexUnchanged": true
+    },
+    {
+      "path": "packages/schemas/src/index.ts",
+      "mode": "644",
+      "gitMode": "100644",
+      "sha256": "5537e93189e4a1135718120e21958f7f53f730b6c92d09b0dc454d265ff16963",
+      "gitBlob": "f1437ac9f4f7bab9eeeb000561148e8876e63144",
+      "indexUnchanged": true
+    },
+    {
+      "path": "packages/schemas/src/input-action-registry.ts",
+      "mode": "644",
+      "gitMode": "100644",
+      "sha256": "2e7ed9933838680afe33cbfb721d9c7b137d3d5515ebf3b30d9eb1f3af2017aa",
+      "gitBlob": "74355576e9275cd690f84555286d465fd1184e57",
+      "indexUnchanged": true
+    },
+    {
+      "path": "packages/schemas/contracts/input-action-map.schema.json",
+      "mode": "644",
+      "gitMode": "100644",
+      "sha256": "209d0a41461b55e751a6f66bbd193883e531289b11384c7c07bb56499b42c80f",
+      "gitBlob": "3b88389be53f7530c723f0f6559d2a963679f51c",
+      "indexUnchanged": true
+    },
+    {
+      "path": "packages/schemas/test/input-action-registry.test.ts",
+      "mode": "644",
+      "gitMode": "100644",
+      "sha256": "620cb4d0874b499e70a73edf85923a6f4e7188fe3be450a1a62fba06c50f3d0b",
+      "gitBlob": "5143c09ba4934aa0274ced60c9bc5c86fa82a440",
+      "indexUnchanged": true
+    },
+    {
+      "path": "packages/schemas/test/legacy-import-compat.test.ts",
+      "mode": "644",
+      "gitMode": "100644",
+      "sha256": "5bb9567297d7d2409405dc978ab075932e90134f3d3372eed298284a8cf7f4ee",
+      "gitBlob": "f4914e543de94c524bbace93df6526bb68a72195",
+      "indexUnchanged": true
+    },
+    {
+      "path": "desktop/linux/src/lib/input-action-host.ts",
+      "mode": "644",
+      "gitMode": "100644",
+      "sha256": "c469c1912d7aa2cbbee581ea6d6756c089f214e84565e5dc266f1eccd2192de7",
+      "gitBlob": "2f1b6065c42b030be8326b8bb3fcce502064a4a9",
+      "indexUnchanged": true
+    },
+    {
+      "path": "desktop/linux/test/legacy-input-map.test.ts",
+      "mode": "644",
+      "gitMode": "100644",
+      "sha256": "ab09e61aac8bfad114a8628b7464dd14f84bf3a763a85ca13f4bc2591052aebe",
+      "gitBlob": "839777f06d05fa0285c7c10c604521c879f1154f",
+      "indexUnchanged": true
+    },
+    {
+      "path": "docs/kernel-browser-open.md",
+      "mode": "644",
+      "gitMode": "100644",
+      "sha256": "ef8e13c4c64c2a60d43f0ff83e084ddc02209d0571ac032783f57830160d6930",
+      "gitBlob": "4fe4595a3502f7894abe191f76e268ee0a2cfd42",
+      "indexUnchanged": true
+    }
+  ],
+  "preservation": "AST additions preserve all existing modern/latest-private barrel exports and session implementations. Existing input-action tests retained verbatim; new public-seam tests added. Native unmerged stages deliberately unchanged (publication/index reserved parent).",
+  "parentRequests": [
+    {
+      "path": "scripts/engine-sdk-files.json",
+      "request": "Add packages/engine-kernel/src/legacy-digest.ts to SDK source inventory after source HANDBACK; child cannot edit this root manifest."
+    },
+    {
+      "path": "packages/schemas/src/index.ts",
+      "request": "PR310 exports remain parent-owned after HANDBACK. Preserve added LF02 erased type export and all pre-existing runtime/type exports."
+    }
+  ],
+  "unrunHeavyCriteria": [
+    "No full/root build or whole-project typecheck/lint/contracts/boundaries/gate run by child; parent owns consolidated checks. Consumer-only TS semantic diagnostics are covered in own Vitest test, not a whole graph typecheck claim.",
+    "No actual browser/device/native/Electron/package/SDK/Docker/provider tests, installation or publication.",
+    "Related existing browser-open-play/portable-digest/rarity/input-actions-golden suites not run: parent endpoint became unavailable before scoped expansion permission; final own tests63pass do not claim whole-tree or all rarity goldens equivalence.",
+    "Original synchronous schemas root runtime helper remains explicit pending versioned compatibility decision; no complete restoration claim."
+  ],
+  "publication": "NO_STAGE_COMMIT_PUSH_MERGE_RESET_STASH_CLEAN_FORCE_INSTALL_OR_GIT_INDEX_EDITS",
+  "sourceHANDBACK": {
+    "status": "HANDBACK",
+    "all11OwnedLeavesReleasedToParent": true,
+    "schemasIndexReleased": true,
+    "noFurtherChildSourceWrites": true,
+    "parentMayWriteAgain": true
+  },
+  "coordination": "First-step lm_313 delivered ownership receipt to bg-150; lm_315 parent confirmed frozen install and AST tool absence. lm_324 implementation progress delivered; subsequent bg-150 endpoint absent, notify_parent progress posted. Durable final report plus final channel serves explicit source HANDBACK."
+}

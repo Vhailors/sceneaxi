@@ -6,15 +6,18 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   desktop-linux:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4 — official upstream commit verified by git ls-remote
       # No explicit pnpm version: the root `packageManager` field pins it, exactly
       # as the gate workflow resolves it.
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4 — official upstream commit verified by git ls-remote
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4 — official upstream commit verified by git ls-remote
         with:
           node-version: 24
           cache: pnpm
@@ -27,6 +30,11 @@ jobs:
       - name: Install the desktop tier
         working-directory: desktop/linux
         run: pnpm install --frozen-lockfile
+
+      # CLI bridge discovery smoke launches the real workspace CLI child. Build it
+      # before packaging; a missing executable is a failure, never a smoke skip.
+      - name: Build workspace CLI preflight
+        run: pnpm build
 
       # `pnpm dist` runs esbuild, which strips types without checking them, and the
       # root build covers only this tier's `src/index.ts` and `src/lib/**`. This is the
@@ -57,7 +65,7 @@ jobs:
       # declared here rather than inherited from a settings page, because
       # `docs/desktop-linux.md` and the umbrella `/engine` record state the date the
       # download expires and nothing at runtime can observe that expiry.
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4 — official upstream commit verified by git ls-remote
         with:
           name: sceneaxi-desktop-linux
           path: |

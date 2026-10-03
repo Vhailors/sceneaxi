@@ -1,0 +1,59 @@
+[
+  {
+    "delta": 32,
+    "path": "apps/desktop-shell/src/chrome/core/script.ts",
+    "resolution": "Exact semantic private addition already retained by main"
+  },
+  {
+    "delta": 33,
+    "resolution": "Needs manual current-function comparison",
+    "old": "    if (modifiers.includes('primary') !== primary) return false;",
+    "new": "    if (modifiers.includes('primary') && !primary) return false;"
+  },
+  {
+    "delta": 34,
+    "path": "apps/desktop-shell/src/chrome/core/script.ts",
+    "resolution": "AST-statement-anchored private semantic replacement"
+  },
+  {
+    "delta": 35,
+    "path": "apps/desktop-shell/src/chrome/core/script.ts",
+    "resolution": "Unique AST-function context insertion"
+  },
+  {
+    "delta": 36,
+    "path": "apps/desktop-shell/src/chrome/core/script.ts",
+    "resolution": "Unique AST-function context insertion"
+  },
+  {
+    "delta": 37,
+    "path": "apps/desktop-shell/src/chrome/core/script.ts",
+    "resolution": "AST-statement-anchored private semantic replacement"
+  },
+  {
+    "delta": 38,
+    "resolution": "Needs manual current-function comparison",
+    "old": "",
+    "new": "  const compactDrawerQuery = window.matchMedia('${belowTier(\"compact\")}');\n  // Undocked panels occlude the viewport/dock. Keep covered controls out of\n  // keyboard and pointer navigation until the drawer is closed again.\n  const syncDrawerNavigation = () => {\n    const assistantDrawer = drawerQuery.matches && shell.dataset.assistant !== 'denied' && shell.dataset.drawerAssistant === 'open';\n    const leftDrawer = compactDrawerQuery.matches && shell.dataset.drawerLeft === 'open';\n    const inspectorDrawer = compactDrawerQuery.matches && shell.dataset.drawerInspector === 'open';\n    q('.viewport-region, .dock').forEach((el) => { el.inert = assistantDrawer || leftDrawer || inspectorDrawer; });\n    q('.left-dock').forEach((el) => { el.inert = assistantDrawer || inspectorDrawer; });\n    q('.inspector').forEach((el) => { el.inert = assistantDrawer || leftDrawer; });\n  };\n  const drawerNavigationObserver = new MutationObserver(syncDrawerNavigation);\n  drawerNavigationObserver.observe(shell, { attributes: true, attributeFilter: ['data-drawer-left', 'data-drawer-inspector', 'data-drawer-assistant', 'data-assistant'] });\n  drawerQuery.addEventListener('change', syncDrawerNavigation);\n  compactDrawerQuery.addEventListener('change', syncDrawerNavigation);\n  window.addEventListener('pagehide', () => {\n    drawerNavigationObserver.disconnect();\n    drawerQuery.removeEventListener('change', syncDrawerNavigation);\n    compactDrawerQuery.removeEventListener('change', syncDrawerNavigation);\n  }, { once: true });\n  syncDrawerNavigation();"
+  },
+  {
+    "delta": 39,
+    "resolution": "Modern static registry form/command superset retained; typed input modal migrated into canonical fields/Submit/Approve controls."
+  },
+  {
+    "delta": 40,
+    "resolution": "Needs manual current-function comparison",
+    "old": "    }, 'animation');",
+    "new": "    }, 'animation', { authoringSnapshot: true });"
+  },
+  {
+    "delta": 41,
+    "resolution": "Modern static registry form/command superset retained; typed input modal migrated into canonical fields/Submit/Approve controls."
+  },
+  {
+    "delta": 42,
+    "resolution": "Needs manual current-function comparison",
+    "old": "      if (primary && showSceneProperty(primary) && shell.dataset.mode !== 'build') showModePanels('build');",
+    "new": "      if (primary && showSceneProperty(primary)) {\n        if (shell.dataset.mode !== 'build') showModePanels('build');\n        const instanceIds = [...selectedSceneEntityIds];\n        const generation = sceneSelectionGeneration;\n        sceneSelectionPending = sceneSelectionPending.then(\n          () => setSceneSelection(instanceIds, generation),\n          () => setSceneSelection(instanceIds, generation),\n        );\n      }"
+  }
+]

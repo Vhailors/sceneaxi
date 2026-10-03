@@ -1,0 +1,38 @@
+{
+  "runs": [
+    {
+      "argv": [
+        "python3",
+        "docs/audits/production-swarm/capacity-work-2026-10-02/task-proof/validate_crosswalk.py"
+      ],
+      "exit": 0,
+      "stdoutPath": "docs/audits/production-swarm/capacity-work-2026-10-02/task-proof/report.json",
+      "stdoutSha256": "67e8f33bd83dff832ce0bd1af022a59420288ea7288f097346485ef394b1f0a1",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "python3",
+        "docs/audits/production-swarm/capacity-work-2026-10-02/task-proof/validate_crosswalk.py",
+        "--negative-control",
+        "missing-id"
+      ],
+      "exit": 1,
+      "stdoutPath": "docs/audits/production-swarm/capacity-work-2026-10-02/task-proof/negative-control.json",
+      "stdoutSha256": "e2ce0bc83be19f2e3c6aa2f4d2b3df8e39d17c981528ab7a15e92b21d2ebe5f9",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "python3",
+        "docs/audits/production-swarm/capacity-work-2026-10-02/task-proof/validate_crosswalk.py",
+        "--strict-proof"
+      ],
+      "exit": 2,
+      "stdoutPath": "docs/audits/production-swarm/capacity-work-2026-10-02/task-proof/strict-proof.json",
+      "stdoutSha256": "67e8f33bd83dff832ce0bd1af022a59420288ea7288f097346485ef394b1f0a1",
+      "stderr": ""
+    }
+  ],
+  "harnessSha256": "53b3d7aea149a9c8ea4eab6596ef5d37ba605b6ad2d6481267ed91121d2521bc"
+}

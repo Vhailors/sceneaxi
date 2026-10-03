@@ -1,0 +1,184 @@
+{
+  "status": "SOURCE_HANDBACK_SECURITY_REPAIRED_PUBLIC_TESTS_GREEN_INTEGRATION_PENDING",
+  "sourceHandback": true,
+  "root": "/home/devuser/Documents/Projects/sceneaxi",
+  "finding": "CAP-01",
+  "confirmedSourceGap": "Historical CAP-01 was already repaired with a verified private snapshot. Retry independently reproduced a remaining owned artifact/runtime.cjs symlink replacement at spawn executing a safe marker; trusted bootstrap is now outside the artifact and inherited by pinned verified read descriptor.",
+  "retry": {
+    "redBefore": { "log": "red-owned-before.log", "exit": 1, "failed": 1, "skipped": 28, "assertion": "expected true to be false: safe marker existed after replacing owned artifact/runtime.cjs immediately before real spawn" },
+    "initialAttempt": { "log": "red-before.log", "outcome": "30-second shell timeout before result; not counted as an assertion proof" },
+    "intermediate": "Marker absent after bootstrap fix, but cleanup safely refused substituted symlink; cleanup repaired to restore directory permissions only, without reopening substituted files.",
+    "greenAfter": { "log": "green-bootstrap.log", "exit": 0, "files": 3, "passed": 41, "failed": 0, "skipped": 0, "normalPublicConfiguration": true },
+    "additionalAssertions": ["Generated bootstrap bytes match approved runtime; bootstrap mode0400", "Owned artifact runtime and bootstrap pathname symlink replacements cannot execute marker; real Node child refuses", "Private namespace removed and original receipt/document unchanged"],
+    "nativeLoaderRisk": "Stock Node descriptor-path negatives pass; actual Electron entrypoint descriptor loading and pixel-positive proof are deferred to serial native smoke.",
+    "typecheck": "Not rerun in retry; fresh schema declarations and normal authoring typecheck remain deferred, prior diagnostic is not reclassified green.",
+    "resources": "Final tests terminate, no matching vitest/no-proof/hanging/replacement process remained at explicit process check. No native/browser/provider/background service started."
+  },
+  "beforeFiles": [
+    {
+      "path": "packages/authoring-core/src/local-project-build.ts",
+      "sha256": "6465dba1a3d3e4a0bf42af916b882cc938c19d1a5f52ca5b86a5a753233342f0"
+    },
+    {
+      "path": "packages/authoring-core/test/local-project-build.test.ts",
+      "sha256": "72af6656f72870e608af20c0b8128c0950a7f769902621bf78f086035ae5f404"
+    },
+    {
+      "path": "packages/schemas/src/desktop-project-build.ts",
+      "sha256": "9493b82e88d6eea649be33a91b3d133d5daddc2bc160744b9599a5750dd8cff5"
+    },
+    {
+      "path": "packages/schemas/test/local-project-build.test.ts",
+      "sha256": "5a71f3f7e718a900a3fa3965fd530e7dd18444551b37f6c54df5ed7531a617dd"
+    }
+  ],
+  "redBefore": {
+    "command": "pnpm exec vitest run packages/authoring-core/test/local-project-build.test.ts packages/schemas/test/local-project-build.test.ts --reporter=dot",
+    "exit": 1,
+    "passed": 27,
+    "failed": 4,
+    "log": "red-security-before.log",
+    "assertionOutput": [
+      "runtime symlink/rewrite and spawn-boundary rewrite: expected true to be false (unsafe marker existed)",
+      "directory symlink: expected 1 to be +0 (child spawned)"
+    ],
+    "payload": "Safe local fixture writes only its own marker, no external payload/network/provider. Actual stock Node child."
+  },
+  "greenAfter": {
+    "command": "pnpm exec vitest run packages/authoring-core/test/local-project-build.test.ts packages/schemas/test/local-project-build.test.ts packages/schemas/test/desktop-project-build.test.ts --reporter=dot",
+    "exit": 0,
+    "files": 3,
+    "passed": 41,
+    "failed": 0,
+    "skipped": 0,
+    "log": "green-bootstrap.log",
+    "publicConsumer": "Normal repository configuration, authoring imported by @sceneaxi/authoring-core; no bridge or export-only aliases."
+  },
+  "assertions": [
+    "Runtime symlink, runtime rewrite, directory symlink injected at mkdtemp after verification: marker absent and zero spawn, named refusal.",
+    "Late original runtime rewrite/symlink, directory symlink, project symlink injected immediately before real spawn: only owned runtime/doc bytes available; marker absent; actual Node exits nonzero because Electron is unavailable. No native/pixel-success claim.",
+    "Actual snapshot runtime/document bytes exactly match source; directory modes0500/runtime0400 at spawn boundary.",
+    "Forged receipt that correctly hashes altered runtime still refuses before spawn.",
+    "Failed snapshot receipt write: no spawn/source changes; synchronous spawn failure: named refusal and snapshot cleanup.",
+    "Existing signed schema gate, Kids-before-IO, no-overwrite, source/destination/root symlink, budgets, receipt integrity, timeout/output and no-proof negatives remain passing.",
+    "Every created launch namespace removed by end of test; existing fixture cleanup retained."
+  ],
+  "cleanup": "All bounded real shell/Node fixtures terminate; timeout/output process groups killed and child close awaited. afterEach asserts every owned sceneaxi-local-launch namespace absent and removes user-project fixtures. No server/browser/native/container/install/provider process started.",
+  "deferredChecks": [
+    "Serial fresh schemas declarations/build then normal authoring typecheck; current stale declaration diagnostic must not be called green.",
+    "Root fullbuild/fullgate, native/browser/site proof intentionally NOT RUN per scope.",
+    "Actual trusted profile/held-key action wiring remains host/integration ownership; this helper does not authorize it.",
+    "Actual Electron saved user-project native smoke must validate descriptor app path, private canonical file root, real document digest, captured rendered PNG and exact exit0."
+  ],
+  "nativeSmokeCommand": "sh docs/audits/production-swarm/implementation-expansion-2026-10-02/unsigned-project-build/deferred-native-smoke.sh",
+  "remainingRisk": [
+    "Private read-only snapshot is an ownership protocol, not Linux memfd sealing or a same-UID/root sandbox. A hostile same-UID process/root can deliberately chmod/write private files; do not claim cryptographic immutability against those principals.",
+    "Approved host executable is caller authority and pinned by fd, not a signed/redistributed runtime receipt.",
+    "Actual Electron support of inherited descriptor app path and private canonical resource root remains unverified until serial native smoke.",
+    "Source hashing/snapshot validation is synchronous bounded filesystem work; no latency/RSS benchmark claim.",
+    "Concurrent original project mutation after snapshot can still cause preserved post-exit receipt refusal, but cannot redirect executed artifact bytes."
+  ],
+  "sourceEditsComplete": true,
+  "sourceOwnershipReleasedTo": "parent/serial integration owner",
+  "files": [
+    {
+      "path": "packages/authoring-core/src/local-project-build.ts",
+      "sha256": "c57134d87891c2b2b7098a9efb18c58094788a9f24a04ec4df066bd37f83447f",
+      "editedByThisWorker": true
+    },
+    {
+      "path": "packages/authoring-core/test/local-project-build.test.ts",
+      "sha256": "194fe7b6bb6cc59b3958a4249ce0021b6b8ff547bb1587cf6c249659540b0fc7",
+      "editedByThisWorker": true
+    },
+    {
+      "path": "packages/schemas/src/desktop-project-build.ts",
+      "sha256": "9493b82e88d6eea649be33a91b3d133d5daddc2bc160744b9599a5750dd8cff5",
+      "bytes": 4610,
+      "lines": 122,
+      "editedByThisWorker": false
+    },
+    {
+      "path": "packages/schemas/test/local-project-build.test.ts",
+      "sha256": "5a71f3f7e718a900a3fa3965fd530e7dd18444551b37f6c54df5ed7531a617dd",
+      "bytes": 1884,
+      "lines": 21,
+      "editedByThisWorker": false
+    }
+  ],
+  "implementation": [
+    "Factor exact existing receipt/runtime/document/handoff/file-set verification into pinned-directory helper; no validation removals.",
+    "After initial verification, allocate fresh owner-only launch namespace; exclusively create artifact directory.",
+    "Reopen source with descriptor-anchored O_NOFOLLOW paths, validate/hash every copied byte and receipt equality; reverify the complete independently owned snapshot before spawn.",
+    "Runtime must still match generated trusted RUNTIME digest even if receipt is rewritten with matching attacker digest/length.",
+    "Snapshot dirs0500/files0400, no open writable file handles; retained snapshot directory passed as child fd4; executable remains pinned child fd3.",
+    "Execute /proc/self/fd/5: fixed trusted bootstrap outside artifact, created with exclusive writer and digest-verified on inherited read handle; no writable handle retained at spawn. fd4 pins artifact; private canonical root supports Electron file URLs. Original user-project paths never select child code/data.",
+    "Restore directory permissions only during final cleanup without reopening substituted files/symlinks; close bootstrap and all owned descriptors, guard cleanup by evidence-directory inode identity; preserve deadline/output/process-group kill/readiness/PNG/exit0 and post-exit original receipt checks."
+  ],
+  "checks": {
+    "lint": {
+      "command": "pnpm exec eslint packages/authoring-core/src/local-project-build.ts packages/authoring-core/test/local-project-build.test.ts",
+      "exit": 0,
+      "log": "lint-bootstrap.log"
+    },
+    "typecheck": {
+      "command": "pnpm exec tsc --noEmit -p packages/authoring-core/tsconfig.json",
+      "exit": 2,
+      "log": "typecheck.log",
+      "diagnostics": 19,
+      "ownedNewTypeErrors": 0,
+      "ownedDependencyError": "packages/authoring-core/src/local-project-build.ts(7,10): TS2724 schemas has no exported member evaluateLocalProjectBuild (existing schemas dist declarations stale; actual source export/public tests now work).",
+      "remainingDiagnostics": "v2 schemas declarations absent from stale dist cause neighboring scene-composition/test/presentation diagnostics; no casts, aliases, check weakening or declaration fabrication. Serial rebuild required."
+    }
+  },
+  "signedReleasePreserved": {
+    "schemaFileUnchanged": true,
+    "original96LinePrefixBytes": 3524,
+    "sha256": "ec7b86e27314891af86e662279d6ea835b12ccfec63155c7e022578ebfee0588",
+    "publicV1AndGeneratedRuntimeUnchanged": true
+  },
+  "historicalDiagnostics": [
+    "red-before.log retained: before public export worker handback normal consumer had22fail/9pass, buildLocalProject is not a function; not a security proof.",
+    "Temporary test-registration nesting error produced4fail/32pass, repaired; final39pass.",
+    "Temporary cleanup no-unsafe-finally lint error repaired without suppression; final lint exit0.",
+    "Original owning schema/test files unchanged; no matrices/indices/manifests/global ledgers edited by launcher worker."
+  ],
+  "nativeSmokeRequires": [
+    "SCENEAXI_LOCAL_ELECTRON approved symlink-free binary",
+    "SCENEAXI_LOCAL_RENDERER existing actual renderer.js",
+    "SCENEAXI_LOCAL_PUBLISHER existing no-replace publisher binary",
+    "Fresh built exports and real existing Web exporter; no editor artifact substitution"
+  ],
+  "resourceProjection": {
+    "disk": "Existing source unaffected; new launch snapshot <=128MiB artifact aggregate + <=128KiB receipt, capture <=8MiB read cap.",
+    "output": "16KiB combined stdout/stderr, <=15s child deadline preserved.",
+    "memory": "Full-file Buffer reads and repeat hashing; no measured RSS claim; no new heavy worker/server."
+  },
+  "evidenceFiles": [
+    {
+      "path": "docs/audits/production-swarm/final-wiring-2026-10-02/launcher-security/green-after.log",
+      "sha256": "2d6c3dd060729abd912dc348b5f14035aa913db10b8c40ad5ba91ebe47edb466",
+      "bytes": 1239
+    },
+    {
+      "path": "docs/audits/production-swarm/final-wiring-2026-10-02/launcher-security/lint.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "docs/audits/production-swarm/final-wiring-2026-10-02/launcher-security/red-before.log",
+      "sha256": "1000c25438379b9712038839e664d90a57b83808d5b7849c531dc5c67c266c29",
+      "bytes": 16981
+    },
+    {
+      "path": "docs/audits/production-swarm/final-wiring-2026-10-02/launcher-security/red-security-before.log",
+      "sha256": "30eb69db002aca8e7133845981430632e7b68d22c782cd0a7c44ab4e3a6a17b9",
+      "bytes": 4684
+    },
+    {
+      "path": "docs/audits/production-swarm/final-wiring-2026-10-02/launcher-security/typecheck.log",
+      "sha256": "3271b747383de1e77e3a2cee0597c19f741a2df02e9612dec86972302ee15e70",
+      "bytes": 3502
+    }
+  ]
+}

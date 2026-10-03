@@ -51,17 +51,26 @@ export function HeroViewport({
     mountedInstanceIds,
     presentation: "snapshot",
   });
+
   const frame = currentFrame(viewport.status);
 
+  /*
+    The stage's paint state, read from the same status the provenance line reads. The
+    stylesheet uses `pending` to lay a labelled panel over the canvas until the core
+    reports a frame, so the hero never shows an unexplained black box while it opens.
+  */
+  const paint = viewport.status.kind === "refused" ? "refused" : frame === null ? "pending" : "drawn";
+
   return (
-    <div className="hero-stage">
+    <div className="hero-stage" data-frame={paint}>
       <SculptViewportSurface viewport={viewport} label={label} refusalLevel={2} />
       {viewport.status.kind !== "refused" && (
         /*
           One line of provenance under the art, so the hero cannot read as a render of
           something invented. Both values come from the running core, never from this
           page — and `surface` is printed beside the frame count so a counter can never
-          imply pixels the core did not draw.
+          imply pixels the core did not draw. The counters are one group, so a narrow
+          stage breaks the line between the surface and its counters, never inside them.
         */
         <p className="hero-stage-note">
           <span className="dot tone-ok" aria-hidden="true" />
@@ -69,8 +78,14 @@ export function HeroViewport({
             "Opening a committed Sculpt Artifact…"
           ) : (
             <>
-              <code>{frame.surface}</code> · frame {frame.frame} · {frame.drawCalls} draw
-              calls · {frame.instanceIds.length} instances
+              <code>{frame.surface}</code>{" "}
+              <span className="hero-stage-sep" aria-hidden="true">
+                ·
+              </span>{" "}
+              <span className="hero-stage-facts">
+                frame {frame.frame} · {frame.drawCalls} draw calls ·{" "}
+                {frame.instanceIds.length} instances
+              </span>
             </>
           )}
         </p>

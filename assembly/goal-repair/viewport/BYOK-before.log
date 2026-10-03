@@ -1,0 +1,112 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/tmp/sceneaxi-comprehensive-owned-xd4gdfl1[39m
+
+ [31m×[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22minstaller abort: pending status success settles without late DOM or IPC[32m 116[2mms[22m[39m
+[31m   → expected true to be false // Object.is equality[39m
+ [31m×[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22minstaller abort: pending status rejection settles without late DOM or IPC[32m 36[2mms[22m[39m
+[31m   → expected true to be false // Object.is equality[39m
+ [31m×[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22minstaller abort: pending save success settles without late DOM or IPC[32m 36[2mms[22m[39m
+[31m   → expected true to be false // Object.is equality[39m
+ [31m×[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22minstaller abort: pending save rejection settles without late DOM or IPC[32m 13[2mms[22m[39m
+[31m   → expected true to be false // Object.is equality[39m
+ [31m×[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22minstaller abort: pending remove success settles without late DOM or IPC[32m 8[2mms[22m[39m
+[31m   → expected true to be false // Object.is equality[39m
+ [31m×[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22minstaller abort: pending remove rejection settles without late DOM or IPC[32m 14[2mms[22m[39m
+[31m   → expected true to be false // Object.is equality[39m
+ [31m×[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22mroot pagehide: pending status success settles without late DOM or IPC[33m 301[2mms[22m[39m
+[31m   → expected true to be false // Object.is equality[39m
+ [31m×[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22mroot pagehide: pending status rejection settles without late DOM or IPC[32m 101[2mms[22m[39m
+[31m   → expected true to be false // Object.is equality[39m
+ [31m×[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22mroot pagehide: pending save success settles without late DOM or IPC[32m 117[2mms[22m[39m
+[31m   → expected true to be false // Object.is equality[39m
+ [31m×[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22mroot pagehide: pending save rejection settles without late DOM or IPC[32m 40[2mms[22m[39m
+[31m   → expected true to be false // Object.is equality[39m
+ [31m×[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22mroot pagehide: pending remove success settles without late DOM or IPC[32m 117[2mms[22m[39m
+[31m   → expected true to be false // Object.is equality[39m
+ [31m×[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22mroot pagehide: pending remove rejection settles without late DOM or IPC[32m 110[2mms[22m[39m
+[31m   → expected true to be false // Object.is equality[39m
+ [31m×[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22mphysically removes all registered listeners and fences a queued route microtask[32m 22[2mms[22m[39m
+[31m   → expected [] to have a length of 4 but got +0[39m
+ [31m×[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22ma pre-aborted lifetime refuses installation before DOM allocation or IPC[32m 23[2mms[22m[39m
+[31m   → expected true to be false // Object.is equality[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22mthe original boolean/no-options API retains normal status, provider, save and remove behavior[32m 45[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22msame-turn Kids save clears the field without secure-storage admission[32m 12[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22mlive IPC failure still renders a generic refusal without thrown key internals[32m 8[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22mmissing privileged channel retains the named unavailable surface[32m 6[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 14 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22minstaller abort: pending status success settles without late DOM or IPC
+[41m[1m FAIL [22m[49m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22minstaller abort: pending status rejection settles without late DOM or IPC
+[41m[1m FAIL [22m[49m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22minstaller abort: pending save success settles without late DOM or IPC
+[41m[1m FAIL [22m[49m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22minstaller abort: pending save rejection settles without late DOM or IPC
+[41m[1m FAIL [22m[49m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22minstaller abort: pending remove success settles without late DOM or IPC
+[41m[1m FAIL [22m[49m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22minstaller abort: pending remove rejection settles without late DOM or IPC
+[41m[1m FAIL [22m[49m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22mroot pagehide: pending status success settles without late DOM or IPC
+[41m[1m FAIL [22m[49m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22mroot pagehide: pending status rejection settles without late DOM or IPC
+[41m[1m FAIL [22m[49m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22mroot pagehide: pending save success settles without late DOM or IPC
+[41m[1m FAIL [22m[49m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22mroot pagehide: pending save rejection settles without late DOM or IPC
+[41m[1m FAIL [22m[49m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22mroot pagehide: pending remove success settles without late DOM or IPC
+[41m[1m FAIL [22m[49m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22mroot pagehide: pending remove rejection settles without late DOM or IPC
+[31m[1mAssertionError[22m: expected true to be false // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- false[39m
+[31m+ true[39m
+
+[36m [2m❯[22m desktop/linux/test/byo-terminal-lifecycle.test.ts:[2m77:39[22m[39m
+    [90m 75|[39m         expect(configureByo.mock.calls[0]?.[0]).toMatchObject({ action…
+    [90m 76|[39m         [35mif[39m (root) h[33m?.[39m[34mhide[39m()[33m;[39m [35melse[39m lifetime[33m.[39m[34mabort[39m()[33m;[39m
+    [90m 77|[39m         [34mexpect[39m(c[33m.[39msurface[33m.[39misConnected)[33m.[39m[34mtoBe[39m([35mfalse[39m)[33m;[39m
+    [90m   |[39m                                       [31m^[39m
+    [90m 78|[39m         expect(f.routeButton.getAttribute("aria-controls")).toBe("prio…
+    [90m 79|[39m         expect(f.routeButton.getAttribute("aria-expanded")).toBe("fals…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22mphysically removes all registered listeners and fences a queued route microtask
+[31m[1mAssertionError[22m: expected [] to have a length of 4 but got +0[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 4[39m
+[31m+ 0[39m
+
+[36m [2m❯[22m desktop/linux/test/byo-terminal-lifecycle.test.ts:[2m104:19[22m[39m
+    [90m102|[39m     expect(installDesktopByoConfigurationSurface({ configureByo }, { s…
+    [90m103|[39m     const bound = add.mock.calls.map((args, i) => ({ args, target: add…
+    [90m104|[39m     [34mexpect[39m(bound)[33m.[39m[34mtoHaveLength[39m([34m4[39m)[33m;[39m
+    [90m   |[39m                   [31m^[39m
+    [90m105|[39m     f.shell.setAttribute("data-assistant-route", "byo"); f.routeButton…
+    [90m106|[39m     for (const { args, target } of bound) expect(remove.mock.calls.som…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22ma pre-aborted lifetime refuses installation before DOM allocation or IPC
+[31m[1mAssertionError[22m: expected true to be false // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- false[39m
+[31m+ true[39m
+
+[36m [2m❯[22m desktop/linux/test/byo-terminal-lifecycle.test.ts:[2m112:98[22m[39m
+    [90m110|[39m     const f = fixture(), lifetime = new AbortController(), configureBy…
+    [90m111|[39m     lifetime.abort(); const before = f.window.document.documentElement…
+    [90m112|[39m     expect(installDesktopByoConfigurationSurface({ configureByo }, { s…
+    [90m   |[39m                                                                                                  [31m^[39m
+    [90m113|[39m     expect(f.window.document.documentElement.outerHTML).toBe(before); …
+    [90m114|[39m   })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/14]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m14 failed[39m[22m[2m | [22m[1m[32m4 passed[39m[22m[90m (18)[39m
+[2m   Start at [22m 19:02:43
+[2m   Duration [22m 4.50s[2m (transform 532ms, setup 0ms, import 2.61s, tests 1.13s, environment 0ms)[22m
+

@@ -6,6 +6,8 @@ import {
   functionParameterBindingName,
   functionParameterTypeAnnotation,
 } from "../shared/function-parameters.ts";
+import { isCheckedInputDecoder, isRuntimeFunction } from "../shared/checked-boundaries.ts";
+
 type ParameterOwner =
   | ESTree.ArrowFunctionExpression
   | ESTree.Function
@@ -45,6 +47,7 @@ export const noUnknownParametersRule = defineRule({
         if (!containsUnknownType(annotation.typeAnnotation)) continue;
         const name = functionParameterBindingName(parameter, context.sourceCode);
         if (name === "cause" || isTypePredicateSubject(node, name)) continue;
+          if (isRuntimeFunction(node) && isCheckedInputDecoder(node, name, context.sourceCode)) continue;
         context.report({
           node: annotation.typeAnnotation,
           messageId: "unknownParameter",

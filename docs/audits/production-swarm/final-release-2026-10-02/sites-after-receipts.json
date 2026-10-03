@@ -1,0 +1,106 @@
+[
+  {
+    "name": "umbrella-typecheck-after",
+    "command": [
+      "pnpm",
+      "--dir",
+      "sites/umbrella",
+      "exec",
+      "tsc",
+      "--noEmit",
+      "--incremental",
+      "false"
+    ],
+    "exit": 0,
+    "seconds": 8.551
+  },
+  {
+    "name": "umbrella-build-after",
+    "command": [
+      "pnpm",
+      "--dir",
+      "sites/umbrella",
+      "build"
+    ],
+    "exit": 0,
+    "seconds": 70.365
+  },
+  {
+    "name": "catalog-game-typecheck-after",
+    "command": [
+      "pnpm",
+      "--dir",
+      "sites/catalog-game",
+      "exec",
+      "tsc",
+      "--noEmit",
+      "--incremental",
+      "false"
+    ],
+    "exit": 0,
+    "seconds": 5.914
+  },
+  {
+    "name": "catalog-game-build-after",
+    "command": [
+      "pnpm",
+      "--dir",
+      "sites/catalog-game",
+      "build"
+    ],
+    "exit": 0,
+    "seconds": 43.885
+  },
+  {
+    "name": "catalog-web-typecheck-after",
+    "command": [
+      "pnpm",
+      "--dir",
+      "sites/catalog-web",
+      "exec",
+      "tsc",
+      "--noEmit",
+      "--incremental",
+      "false"
+    ],
+    "exit": 0,
+    "seconds": 5.564
+  },
+  {
+    "name": "catalog-web-build-after",
+    "command": [
+      "pnpm",
+      "--dir",
+      "sites/catalog-web",
+      "build"
+    ],
+    "exit": 0,
+    "seconds": 45.436
+  },
+  {
+    "name": "kids-typecheck-after",
+    "command": [
+      "pnpm",
+      "--dir",
+      "sites/kids",
+      "exec",
+      "tsc",
+      "--noEmit",
+      "--incremental",
+      "false"
+    ],
+    "exit": 0,
+    "seconds": 2.14
+  },
+  {
+    "name": "kids-build-after",
+    "command": [
+      "pnpm",
+      "--dir",
+      "sites/kids",
+      "build"
+    ],
+    "exit": 0,
+    "seconds": 13.358
+  }
+]

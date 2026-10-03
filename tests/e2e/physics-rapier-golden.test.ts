@@ -21,10 +21,10 @@ const catalog = {
     { bodyId: 'fixed', instanceId: 'fixed', kind: 'dynamic', mass: 4 },
     { bodyId: 'hinged', instanceId: 'hinged', kind: 'dynamic', mass: 5 },
   ],
-  shapes: [
-    { shapeId: 'floor', bodyId: 'floor', kind: 'box', size: 1 },
-    { shapeId: 'ball', bodyId: 'ball', kind: 'sphere', size: 0.25 },
-    { shapeId: 'capsule', bodyId: 'capsule', kind: 'capsule', size: 0.25 },
+  colliders: [
+    { colliderId: 'floor', bodyId: 'floor', kind: 'box', size: 1 },
+    { colliderId: 'ball', bodyId: 'ball', kind: 'sphere', size: 0.25 },
+    { colliderId: 'capsule', bodyId: 'capsule', kind: 'capsule', size: 0.25 },
   ],
   materials: [
     { bodyId: 'floor', friction: 0.8, restitution: 0.6 },

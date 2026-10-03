@@ -24,10 +24,12 @@
 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { statSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 import { canonicalPath } from "@sceneaxi/authoring-core";
 import {
   createInspectorApp,
+  inspectorPageHtml,
   INSPECTOR_ACTIONS,
   MAX_REQUEST_BODY_BYTES,
   WEB_SHELL_APP,
@@ -57,6 +59,7 @@ export const LOOPBACK_HOSTS: readonly string[] = Object.freeze([
 ]);
 
 export const DEFAULT_HOST = "127.0.0.1";
+
 export const DEFAULT_PORT = 5180;
 
 export type DevServerOptions = {
@@ -126,32 +129,42 @@ export function parseDevServerArgs(
 
   for (let i = 0; i < argv.length; i++) {
     const token = argv[i];
+
     if (token === undefined) continue;
+
     if (token === "--help" || token === "-h") {
       return { ok: true, mode: "help", lines: USAGE_LINES };
     }
+
     if (!token.startsWith("--")) {
       return argRefusal(`Unexpected argument: ${token}`);
     }
+
     const eq = token.indexOf("=");
     const name = eq < 0 ? token : token.slice(0, eq);
+
     if (!VALUED_FLAGS.has(name)) {
       return argRefusal(`Unknown flag: ${name}`);
     }
+
     let value: string | undefined;
+
     if (eq >= 0) {
       value = token.slice(eq + 1);
     } else {
       value = argv[i + 1];
       i += 1;
     }
+
     if (value === undefined || value.length === 0) {
       return argRefusal(`${name} requires a value`);
     }
+
     flags.set(name, value);
   }
 
   const host = flags.get("--host") ?? DEFAULT_HOST;
+
   if (!LOOPBACK_HOSTS.includes(host)) {
     return {
       ok: false,
@@ -166,11 +179,14 @@ export function parseDevServerArgs(
 
   const rawPort = flags.get("--port");
   let port = DEFAULT_PORT;
+
   if (rawPort !== undefined) {
     if (!/^\d+$/.test(rawPort)) {
       return argRefusal(`--port must be a whole number: ${rawPort}`);
     }
+
     port = Number.parseInt(rawPort, 10);
+
     if (port > 65535) {
       return argRefusal(`--port must be between 0 and 65535: ${rawPort}`);
     }
@@ -178,6 +194,7 @@ export function parseDevServerArgs(
 
   const rawCwd = flags.get("--cwd");
   const requested = resolve(rawCwd ?? ".");
+
   try {
     if (!statSync(requested).isDirectory()) {
       return {
@@ -228,6 +245,7 @@ export type InspectorDevServer = {
 /** Format a browsable origin, bracketing IPv6 as URLs require. */
 export function serverUrl(host: string, port: number): string {
   const authority = host.includes(":") ? `[${host}]` : host;
+
   return `http://${authority}:${port}/`;
 }
 
@@ -255,13 +273,16 @@ function readBody(request: IncomingMessage): Promise<BodyRead> {
     request.on("data", (chunk: Buffer) => {
       if (settled) return;
       size += chunk.length;
+
       if (size > MAX_REQUEST_BODY_BYTES) {
         settled = true;
         chunks.length = 0;
         request.resume();
         resolveBody({ ok: false, cause: "too-large" });
+
         return;
       }
+
       chunks.push(chunk);
     });
     request.on("end", () => {
@@ -277,6 +298,27 @@ function readBody(request: IncomingMessage): Promise<BodyRead> {
   });
 }
 
+// Only renderer-owned bytes mint CSP authorization, never an app response or
+// request. The project root is escaped outside these two static blocks.
+const CHROME_INTEGRITY_REFUSAL = "WEB_SHELL_CHROME_INTEGRITY_INVALID";
+
+function chromeBlockHash(html: string, tag: "script" | "style"): string {
+  const blocks = [...html.matchAll(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`, "g"))];
+  const bytes = blocks[0]?.[1];
+
+  if (blocks.length !== 1 || bytes === undefined || bytes.length === 0) {
+    throw new Error(CHROME_INTEGRITY_REFUSAL);
+  }
+
+  return `'sha256-${createHash("sha256").update(bytes, "utf8").digest("base64")}'`;
+}
+
+const STATIC_CHROME = inspectorPageHtml("");
+
+const CHROME_SCRIPT_HASH = chromeBlockHash(STATIC_CHROME, "script");
+
+const CHROME_STYLE_HASH = chromeBlockHash(STATIC_CHROME, "style");
+
 /**
  * Headers every response carries, whatever it is answering.
  *
@@ -289,15 +331,17 @@ function readBody(request: IncomingMessage): Promise<BodyRead> {
  * structurally cannot refuse it. Denied twice on purpose: `frame-ancestors` is
  * the rule, `x-frame-options` is what a browser that ignores CSP reads.
  *
- * The rest of the policy matches the page as served — inline style and inline
- * script, same-origin `fetch`, no external asset of any kind — so the surface
- * cannot grow a remote dependency without this line changing first.
+ * Only exact deterministic renderer-owned script/style bytes are authorized.
+ * Attribute handlers/styles and external assets remain forbidden; same-origin
+ * fetch is the sole network permission. Changed response HTML refuses below.
  */
 const RESPONSE_SECURITY_HEADERS: Readonly<Record<string, string>> = Object.freeze({
   "content-security-policy": [
     "default-src 'none'",
-    "style-src 'unsafe-inline'",
-    "script-src 'unsafe-inline'",
+    `style-src ${CHROME_STYLE_HASH}`,
+    `script-src ${CHROME_SCRIPT_HASH}`,
+    "style-src-attr 'none'",
+    "script-src-attr 'none'",
     "connect-src 'self'",
     "base-uri 'none'",
     "form-action 'none'",
@@ -317,20 +361,24 @@ function writeResponse(
   closeConnection = false,
 ): void {
   if (closeConnection) response.shouldKeepAlive = false;
-  response.writeHead(status, {
+
+  const headers: import("node:http").OutgoingHttpHeaders = {
     "content-type": contentType,
     "content-length": Buffer.byteLength(body, "utf8"),
     // A local authoring surface must never be served from a stale cache: the
     // diff on screen has to be the diff the session is holding.
     "cache-control": "no-store",
     ...RESPONSE_SECURITY_HEADERS,
-    ...(closeConnection ? { connection: "close" } : {}),
-  });
+  };
+
+  if (closeConnection) headers["connection"] = "close";
+  response.writeHead(status, headers);
   response.end(headOnly ? undefined : body);
 }
 
 function isResolvedLoopbackAddress(address: string): boolean {
   const normalized = address.toLowerCase();
+
   return (
     normalized === "::1" ||
     normalized.startsWith("127.") ||
@@ -354,6 +402,7 @@ type BoundAuthority = {
 
 function boundAuthority(host: string, port: number): BoundAuthority {
   const url = new URL(serverUrl(host, port));
+
   return { origin: url.origin, host: url.host };
 }
 
@@ -363,6 +412,7 @@ function requestBoundaryRefusal(
   expected: BoundAuthority,
 ): { readonly reason: WebShellRefusal; readonly message: string } | null {
   const host = request.headers.host;
+
   if (host === undefined || host.toLowerCase() !== expected.host.toLowerCase()) {
     return {
       reason: WEB_SHELL_REFUSALS.requestHostInvalid,
@@ -373,6 +423,7 @@ function requestBoundaryRefusal(
   if (method === "GET" || method === "HEAD" || method === "OPTIONS") return null;
 
   const origin = request.headers.origin;
+
   if (
     origin !== undefined &&
     origin.toLowerCase() !== expected.origin.toLowerCase()
@@ -418,10 +469,18 @@ export function startInspectorDevServer(
     );
   }
 
-  const app = createInspectorApp({
-    projectRoot: options.projectRoot,
-    ...(options.assistant === undefined ? {} : { assistant: options.assistant }),
-  });
+  const appOptions: MutableOwnerFields<Parameters<typeof createInspectorApp>[0]> = { projectRoot: options.projectRoot };
+
+  if (options.assistant !== undefined) appOptions.assistant = options.assistant;
+  const app = createInspectorApp(appOptions);
+
+  const expectedPage = inspectorPageHtml(app.projectRoot);
+
+  // A future root-dependent script/style must not silently gain authorization.
+  if (chromeBlockHash(expectedPage, "script") !== CHROME_SCRIPT_HASH ||
+      chromeBlockHash(expectedPage, "style") !== CHROME_STYLE_HASH) {
+    return Promise.reject(new Error(CHROME_INTEGRITY_REFUSAL));
+  }
 
   // Resolved in `onListening`, which is the only place the bound port is known.
   // Null until then, and a request cannot be accepted before the socket listens.
@@ -452,9 +511,12 @@ export function startInspectorDevServer(
           ),
           headOnly,
         );
+
         return;
       }
+
       const boundaryRefusal = requestBoundaryRefusal(request, method, authority);
+
       if (boundaryRefusal !== null) {
         writeResponse(
           response,
@@ -466,17 +528,22 @@ export function startInspectorDevServer(
           ),
           headOnly,
         );
+
         return;
       }
 
       let body: string | undefined;
+
       if (method === "POST" || method === "PUT" || method === "PATCH") {
         const read = await readBody(request);
+
         if (!read.ok) {
           if (read.cause === "stream-failed") {
             response.destroy();
+
             return;
           }
+
           writeResponse(
             response,
             413,
@@ -495,16 +562,32 @@ export function startInspectorDevServer(
             false,
             true,
           );
+
           return;
         }
+
         body = read.body;
       }
 
-      const result = await app.handleAsync({
-        method: headOnly ? "GET" : method,
-        url,
-        ...(body === undefined ? {} : { body }),
-      });
+      const httpRequest: InspectorSocketRequest = { method: headOnly ? "GET" : method, url };
+
+      if (body !== undefined) httpRequest.body = body;
+      const result = await app.handleAsync(httpRequest);
+
+      // This server serves one owned HTML page. Refuse all byte drift (including
+      // attributes or extra tags), rather than hashing and blessing returned HTML.
+      if (result.contentType.split(";", 1)[0]?.trim().toLowerCase() === "text/html" && result.body !== expectedPage) {
+        writeResponse(response, 500, "application/json; charset=utf-8", `${JSON.stringify({
+          app: WEB_SHELL_APP,
+          ok: false,
+          action: "unknown",
+          reason: CHROME_INTEGRITY_REFUSAL,
+          message: "Inspector chrome differs from the trusted renderer-owned page.",
+        })}\n`, headOnly);
+
+        return;
+      }
+
       writeResponse(response, result.status, result.contentType, result.body, headOnly);
     })().catch(() => {
       // `app.handle` already turns a routing throw into a named refusal, so
@@ -520,6 +603,7 @@ export function startInspectorDevServer(
       server.removeListener("listening", onListening);
       rejectServer(error);
     };
+
     const onListening = (): void => {
       server.removeListener("error", onError);
       // Bind-time `onError` is one-shot, but the server keeps emitting 'error'
@@ -532,15 +616,17 @@ export function startInspectorDevServer(
         );
       });
       const address = server.address();
+
       if (
-        typeof address !== "object" ||
+        !isProtocolObject(address) ||
         address === null ||
         !isResolvedLoopbackAddress(address.address)
       ) {
         const resolved =
-          typeof address === "object" && address !== null
+          isProtocolObject(address) && address !== null
             ? address.address
             : String(address);
+
         server.close(() => {
           rejectServer(
             new Error(
@@ -549,8 +635,10 @@ export function startInspectorDevServer(
           );
         });
         server.closeAllConnections();
+
         return;
       }
+
       const port = address.port;
       authority = boundAuthority(options.host, port);
       resolveServer({
@@ -566,6 +654,7 @@ export function startInspectorDevServer(
           }),
       });
     };
+
     server.once("error", onError);
     server.once("listening", onListening);
     server.listen(options.port, options.host);
@@ -597,15 +686,18 @@ export async function main(
       `${[`refused: ${parsed.reason}`, `  ${parsed.message}`, "", ...parsed.lines].join("\n")}\n`,
     );
     process.exitCode = parsed.exitCode;
+
     return parsed.exitCode;
   }
 
   if (parsed.mode === "help") {
     process.stdout.write(`${parsed.lines.join("\n")}\n`);
+
     return WebShellExit.OK;
   }
 
   let server: InspectorDevServer;
+
   try {
     server = await startInspectorDevServer(parsed.options);
   } catch (error) {
@@ -615,6 +707,7 @@ export async function main(
       }\n`,
     );
     process.exitCode = WebShellExit.ERROR;
+
     return WebShellExit.ERROR;
   }
 
@@ -622,14 +715,31 @@ export async function main(
 
   await new Promise<void>((stopped) => {
     let stopping = false;
+
     const stop = (): void => {
       if (stopping) return;
       stopping = true;
       void server.close().then(stopped, stopped);
     };
+
     process.once("SIGINT", stop);
     process.once("SIGTERM", stop);
   });
 
   return WebShellExit.OK;
+}
+
+function isProtocolObject<Value>(value: Value): value is Value & (object | null) {
+  return isBoundaryObjectValue(value);
+}
+
+/** Mutable request builders preserve each owner-defined property type. */
+type MutableOwnerFields<Owner> = { -readonly [Key in keyof Owner]: Owner[Key] };
+
+type InspectorSocketRequest = { method: string; url: string; body?: string };
+
+type BoundaryObjectValue = object | null;
+
+function isBoundaryObjectValue<Input>(value: Input): value is Input & Readonly<BoundaryObjectValue> {
+  return typeof value === "object";
 }

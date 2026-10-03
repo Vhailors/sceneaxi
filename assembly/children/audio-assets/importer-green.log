@@ -1,0 +1,46 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/tmp/sceneaxi-comprehensive-owned-xd4gdfl1[39m
+
+[33m[39m[31mx[39m[33m[39m[31mx[39m[33m[39m[31mx[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[90mstdout[2m | packages/importers/test/contained-gltf.test.ts[2m > [22m[2mAP-08 reparses16x8MiB canonical binary bytes and refuses the seventeenth asset
+[22m[39m{"task":"AP-PERF","case":"16x8MiB-and-count17","durationMs":4965,"maxRssKiB":885672,"platform":"linux","arch":"x64"}
+
+[33m[39m[32m·[39m[33m[39m[32m·[39m[90mstdout[2m | packages/importers/test/contained-gltf.test.ts[2m > [22m[2mAP-PERF admits250000 triangles and refuses250001 deterministically
+[22m[39m{"task":"AP-PERF","case":"triangles250000-and250001","durationMs":330,"maxRssKiB":885672,"platform":"linux","arch":"x64"}
+
+[33m[39m[32m·[39m[33m[39m[32m·[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 3 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m packages/importers/test/legacy-asset-v1.test.ts[2m > [22madmits original v1 manifest into v2 interface without changing canonical bytes or identities
+[31m[1mError[22m: Node transform is invalid.[39m
+[36m [2m❯[22m seedData packages/importers/test/legacy-asset-v1.test.ts:[2m88:15[22m[39m
+
+[90m [2m❯[22m legacyData packages/importers/test/legacy-asset-v1.test.ts:[2m13:187[22m[39m
+[90m [2m❯[22m packages/importers/test/legacy-asset-v1.test.ts:[2m19:18[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m packages/importers/test/legacy-asset-v1.test.ts[2m > [22mmaterializes original v1 bytes and stable reload migrates only after real public E1 approval
+[31m[1mError[22m: Node transform is invalid.[39m
+[36m [2m❯[22m seedData packages/importers/test/legacy-asset-v1.test.ts:[2m88:15[22m[39m
+
+[90m [2m❯[22m legacyData packages/importers/test/legacy-asset-v1.test.ts:[2m13:187[22m[39m
+[90m [2m❯[22m packages/importers/test/legacy-asset-v1.test.ts:[2m38:22[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m packages/importers/test/legacy-asset-v1.test.ts[2m > [22mv1 wrong digests, duplicates, unknown version, traversal, wrong identity and dangling aliases refuse
+[31m[1mError[22m: Node transform is invalid.[39m
+[36m [2m❯[22m seedData packages/importers/test/legacy-asset-v1.test.ts:[2m88:15[22m[39m
+
+[90m [2m❯[22m legacyData packages/importers/test/legacy-asset-v1.test.ts:[2m13:187[22m[39m
+[90m [2m❯[22m packages/importers/test/legacy-asset-v1.test.ts:[2m65:18[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m1 passed[39m[22m[90m (2)[39m
+[2m      Tests [22m [1m[31m3 failed[39m[22m[2m | [22m[1m[32m19 passed[39m[22m[90m (22)[39m
+[2m   Start at [22m 11:37:05
+[2m   Duration [22m 9.79s[2m (transform 5.27s, setup 0ms, import 6.17s, tests 6.46s, environment 0ms)[22m
+

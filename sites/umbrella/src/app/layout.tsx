@@ -1,4 +1,9 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
+
+export const dynamic = "force-dynamic";
+
+import { resolveUmbrellaOriginConfiguration } from "@sceneaxi/site-kit";
 import { Archivo, JetBrains_Mono } from "next/font/google";
 import { umbrellaFoundationsCss } from "../lib/foundations.js";
 import { LIVE_OPEN_PATH } from "../lib/live-open.js";
@@ -32,10 +37,21 @@ const jetbrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains",
 });
 
-export const metadata: Metadata = {
-  title: "SceneAxi — interactive engine and library",
-  description: UMBRELLA_BRAND.summary,
-};
+const metadataOrigin = resolveUmbrellaOriginConfiguration(process.env).origin;
+
+export async function generateMetadata(): Promise<Metadata> {
+  const route = (await headers()).get("x-sceneaxi-route") ?? "/";
+  const path = route.startsWith("/") && !route.startsWith("//") && !/[?#\\]/.test(route) ? route : "/";
+
+  const metadata: Metadata = { title: "SceneAxi — interactive engine and library", description: UMBRELLA_BRAND.summary };
+
+  if (metadataOrigin.ok) {
+    metadata.metadataBase = new URL(metadataOrigin.value);
+    metadata.alternates = { canonical: new URL(path, metadataOrigin.value).href };
+  }
+
+  return metadata;
+}
 
 const NAV: readonly NavItem[] = [
   { href: "/", label: "Overview" },
@@ -58,6 +74,7 @@ export default function RootLayout({ children }: { readonly children: React.Reac
    * Foundations v2 under it.
    */
   const foundations = umbrellaFoundationsCss();
+
   if (!foundations.ok) {
     throw new Error(
       `The Foundations v2 token layer refused: ${foundations.reason} — ${foundations.message}`,
@@ -67,6 +84,7 @@ export default function RootLayout({ children }: { readonly children: React.Reac
   // Family cross-links are ordinary links: the locked topology forbids carrying
   // identity, session, or telemetry across a surface boundary. Kids is never linked.
   const family = resolveFamilyLinks(process.env);
+
   const catalogs = [
     { href: family.gameCatalog, label: "Game assets", tone: "var(--store-game)" },
     { href: family.webCatalog, label: "Web assets", tone: "var(--store-web)" },
@@ -114,7 +132,7 @@ export default function RootLayout({ children }: { readonly children: React.Reac
                 </a>
               ))}
               {catalogs.length > 0 && <span className="masthead-divider" aria-hidden="true" />}
-              <a className="button button-sm" href="/engine">
+              <a className="button button-lg" href="/engine">
                 Download
               </a>
             </div>
@@ -131,7 +149,6 @@ export default function RootLayout({ children }: { readonly children: React.Reac
                 SceneAxi
               </span>
               <p>{UMBRELLA_BRAND.tagline}</p>
-              <p className="footer-version">{RELEASE_MARKER}</p>
             </div>
 
             {FOOTER_COLUMNS.map((column) => (
@@ -155,8 +172,7 @@ export default function RootLayout({ children }: { readonly children: React.Reac
                 ))
               ) : (
                 <p className="footer-note">
-                  No catalog origin is configured for this deployment, so no catalog link
-                  is rendered rather than a broken one.
+                  Catalog links are not available here yet. You can still explore the free engine SDK and help guides.
                 </p>
               )}
             </div>
@@ -164,6 +180,7 @@ export default function RootLayout({ children }: { readonly children: React.Reac
 
           <div className="footer-base">
             <span>© 2026 SceneAxi</span>
+            <span className="footer-version">{RELEASE_MARKER}</span>
             <span className="footer-iso">
               <span className="dot" aria-hidden="true" />
               Kids runs on its own origin. This site links to it from nowhere.

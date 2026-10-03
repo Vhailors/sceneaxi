@@ -5,7 +5,11 @@
   "description": "SceneAxi schemas package — ALL shared contracts; zero dependencies by rule",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
+    ".": {
+            "browser": "./src/index.ts",
+            "node": "./src/node-index.ts",
+            "default": "./src/index.ts"
+          },
     "./node/profile-conformance-suite": "./src/profile-conformance-suite.ts",
     "./testing/scene-composition": "./src/testing/scene-composition.ts",
     "./contracts/catalog-item.schema.json": "./contracts/catalog-item.schema.json",

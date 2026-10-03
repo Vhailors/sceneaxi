@@ -145,9 +145,11 @@ production-readiness claim — and `@sceneaxi/profile-kids` refuses.
 These paths fail closed in runnable-surfaces v1:
 
 - `project new` refuses to overwrite an existing document without `--force`.
-- `project dev --watch` refuses because the normative E1 hot-reload loop is not
-  implemented; `project dev` is currently one-shot. The target remains owned by
-  [`docs/authoring-contracts.md`](../../docs/authoring-contracts.md).
+- `project dev --watch` streams local reload results from the executable. SIGINT
+  closes its watcher and exits; help, version, and malformed global switches
+  dispatch normally without opening a watcher. The synchronous `runCli` API
+  remains one-shot and refuses watch mode: use the executable for streaming.
+  Reloads preserve the last valid scene when a changed document is invalid.
 - `catalog list` reports commerce activation and `metadataComplete`; the latter
   means only that mandatory metadata exists, never that screening, curation, or
   human approval has made the item listing-ready.

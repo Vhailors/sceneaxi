@@ -7,7 +7,10 @@ Game Kernel seam: deterministic command/snapshot session
 - Only `advance` mutates authoritative state
 - `observe` returns deeply frozen snapshots with a canonical digest
 - Game-session save/replay artifacts stamp schema + kernel/BOM versions; schema
-  major mismatch refuses
+  major mismatch refuses. Kernel/BOM major must be 0 until a migration exists
+  (`KERNEL_VERSION_UNSUPPORTED`); same-major minor/patch saves remain supported.
+  This explicitly strengthens the former schema-only compatibility policy;
+  supported `0.0.0` golden digests are unchanged
 - Allowed dependency: `@sceneaxi/schemas` only (no presentation/backend types)
 - No Node builtin and no Node-only global: every session path is browser-runnable
 
@@ -67,3 +70,19 @@ their instance ids.
 This is a minimal multi-object open path, not an engine expansion: it adds no
 physics behavior beyond the toy path, no engine port, no plugin capability, and
 no Minimum E2 checklist item.
+
+## Bounded gameplay and input
+
+Declarative Game/Web actions, finite integer state, and simulation-time timers
+use the shared KernelCommand action union. There is no eval or Kids gameplay.
+`createGamepadActionSampler()` reads host-supplied standard Gamepad samples,
+validates the complete bounded batch, applies configured deadzones/directions,
+and produces `play.primary` only on rising edges in active Game/Web play.
+Sampling cannot advance a session; dispatch queues, advance commits. Disconnect,
+editor/inactive state, and Kids clear edges without generating commands.
+
+The deterministic limits are 4096 entities/pending commands, 100000 saved events,
+128-character product/entity ids, safe-integer seeds/ticks/timestamps, coordinates
+within +/-1000000 and 0..60000ms advances. Capacity refusal preserves snapshots,
+pending commands and history. No hidden history eviction or digest-changing
+checkpoint occurs; applications explicitly save/reopen at their lifetime boundary.

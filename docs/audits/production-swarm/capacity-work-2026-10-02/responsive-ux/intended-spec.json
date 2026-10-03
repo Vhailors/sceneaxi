@@ -1,0 +1,13 @@
+{
+  "taskId": "responsive-ux",
+  "version": 1,
+  "status": "IMMUTABLE_INTENDED_ACCEPTANCE_NOT_PRODUCT_PASS",
+  "requiredCases": ["site-refusal", "editor-long-diff", "account-long-id", "catalog-game-long-hash", "catalog-web-query-refusal", "kids-error", "desktop-compact-refusal"],
+  "inputContract": "approved-loopback.json: candidateSha, sourceHashes and buildHashes maps of root-relative path to SHA256; cases array with id, url, httpStatus, selector, expectedText, actions [{kind:fill|click|press,selector,value|key}]. Fixture selectors and expected text must be recorded from actual owning source, never guessed or injected DOM.",
+  "viewports": {"sites": [390,1440], "desktopCompact": [1024,1280]},
+  "themes": ["light","dark"],
+  "forcedColors": ["none","active"],
+  "exactContrast": {"selector":".ed-cr-current", "baselineForeground":"#7A6448", "intendedForeground":"#8A929C", "background":"#0D0F12", "minimumNormalTextRatio":4.5, "retain":"text-decoration: line-through", "actualSubject":"Historical computed DOM foreground and declared panel background; no current browser contrast claim"},
+  "assertions": ["PNG digest/bytes/CRC/IHDR", "No document or diagnostic element overflow", "Nonzero actual diagnostic and exact refusal text", "Real Tab nonzero geometry/viewport/center occlusion/describedby resolution", "Raw HTTP status and zero page errors", "Candidate/source/build bindings before run; source bindings after run"],
+  "remainingAcceptance": ["Effective contrast with ancestor alpha/image/group-opacity accounting in every theme", "Ring clipping ancestry and edge occlusion", "Actual modal dismissal/trap and inert activation; keyboard-ux owns extension", "Screen reader and physical desktop native proof", "Approved own-user fixture must distinguish authenticated history from signed-out account"]
+}

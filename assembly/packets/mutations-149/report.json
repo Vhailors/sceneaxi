@@ -1,0 +1,337 @@
+{
+  "status": "SOURCE_IMPLEMENTED_NATIVE_GUARD_BLOCKED",
+  "retryVerification": {
+    "implementationAlreadyPresent": true,
+    "sourceEditsThisRetry": 0,
+    "all12OwnedHashesMatchRecordedEvidence": true,
+    "uncheckedTargetMutationCasts": 0,
+    "normalVitest": {
+      "files": 10,
+      "tests": 121,
+      "passed": 121,
+      "failed": 0,
+      "exit": 0,
+      "config": "unchanged root vitest.config.ts",
+      "report": "retry-normal-tests.json"
+    },
+    "diffCheckExit": 0,
+    "nativeGuardRerun": false,
+    "typecheckRerun": false,
+    "note": "Existing implementation and evidence were confirmed, not redundantly rewritten. Native guard/typecheck findings elsewhere in this report are prior evidence, not fresh retry passes."
+  },
+  "clone": "/tmp/sceneaxi-pr310-main-first.tSd8ya",
+  "beforeHashes": {
+    "desktop-scene-animation.ts": "c5b5c8e86dc3c349b0008d3cbf563d7a1d208da62824cd8df5bf8d5730da5350",
+    "desktop-scene-effects.ts": "159adefbebe49a69ccfa6de4a7c40657ae1730cd7c532ad70160f55f756ef895",
+    "desktop-scene-environment.ts": "294933a51cddfe53bffb4f7c14d6bc89ab641c012a558504fcd77a2546199674",
+    "desktop-scene-materials.ts": "c2c7027ec1ced13aa5a07cec28f4e3b7393b80eca82075f52f6bec81dc678f6b",
+    "desktop-scene-physics.ts": "70b969d8d78208002d808c06780304d49447c7c27f5048077de24252b32b798b",
+    "desktop-scene.ts": "9466743bc2055274ea5211eca054c8d1d83a55c5ccf638ceb49f4710d4609fe0",
+    "index.ts": "f4e7179669709a4a58fd2602617ec8ec4176d95828aff48b9364c0b72ceed9a3"
+  },
+  "beforeUncheckedMutationCasts": 5,
+  "targetUncheckedMutationCasts": 0,
+  "api50": {
+    "exports": 50,
+    "mismatches": [],
+    "beforeTypeHash": "8e9ab06a37973ae2fc457021e9c6b474ebc42c4af0fbb3902088fb65e61d7593",
+    "afterTypeHash": "8e9ab06a37973ae2fc457021e9c6b474ebc42c4af0fbb3902088fb65e61d7593",
+    "executed": true
+  },
+  "executed": [
+    "REPORT.md:58–64 read before snapshots/oracles",
+    "Actual before/current source SHA256 and five-to-zero target cast proof",
+    "API50 exact compatibility and schema/index old export type equality",
+    "17 files/160 tests normal config passed",
+    "1512 old/current domain outcomes exact identical;5oldthrows now named refusal/0raw reads",
+    "Scoped tsc:5baseline/5current/0introduced (not fulltypecheckpass)",
+    "Scoped ESLint and diff check passed",
+    "Scoped native oxlint FAILED251diagnostics"
+  ],
+  "deferred": [
+    "Parent native integration guard/commit; blocked until truthful policy/source reconciliation",
+    "Full workspace build/typecheck/gate (not authorized)",
+    "Native/browser/CSP deployment/runtime proofs (not authorized)"
+  ],
+  "currentHashes": {
+    "packages/schemas/src/desktop-scene-animation.ts": "ea7eaa54429f4401d1f596ff05064db22c5224b1085050968312163e8c4884d8",
+    "packages/schemas/src/desktop-scene-physics.ts": "1c08b1bde4ca768bd5d24f95f8496c7b10e477319edfdeb1620f393511f1fddf",
+    "packages/schemas/src/desktop-scene-environment.ts": "8be1625db2e618052317e8c969ee2887ecfaa0b2462ba7e08f7f22b1a2533476",
+    "packages/schemas/src/desktop-scene-materials.ts": "ca64fb4d6f340bce506321c87bbc9a9c5610b06c67653471086af81d525b200a",
+    "packages/schemas/src/desktop-scene-effects.ts": "af61fb0b04c22e619838ed0deda349e3061f91643593f1a9a5a717c27f9b113a",
+    "desktop/linux/src/lib/desktop-scene.ts": "4d6f3dcccd91ab7ef263272d6cd01e1123627573066d0d014c9d223a95c55e40",
+    "packages/schemas/src/index.ts": "062f31fdc04f3b226e0f6cd20e79389d7c9cb41f6cad2c011360e5539e30447e",
+    "packages/schemas/test/desktop-scene-animation-mutation.test.ts": "f5b5095f0710fb3a6c3f74fe95b218f15b60532f29803f0eed91e92b3b259dbb",
+    "packages/schemas/test/desktop-scene-physics-mutation.test.ts": "aff118e2337c1153d7d680ab495938d56d4bb35a0567ceaadedb99f5946f2268",
+    "packages/schemas/test/desktop-scene-environment-mutation.test.ts": "829d3d276fdca2f7a1bd6b761933145d74c59b3c00b4ef109237f993812916b1",
+    "packages/schemas/test/desktop-scene-materials-mutation.test.ts": "d9597b4254dd66e84bef07c1327d5f0dce8e3f11dc683d907f67df0b3909cfe2",
+    "packages/schemas/test/desktop-scene-effects-mutation.test.ts": "178f357fe449255891e77e57e698aeb6ad588f4b1c2cdc6f06dc9bdd599e4fd2"
+  },
+  "currentUncheckedMutationCasts": 0,
+  "ownedFiles": [
+    "packages/schemas/src/desktop-scene-animation.ts",
+    "packages/schemas/src/desktop-scene-physics.ts",
+    "packages/schemas/src/desktop-scene-environment.ts",
+    "packages/schemas/src/desktop-scene-materials.ts",
+    "packages/schemas/src/desktop-scene-effects.ts",
+    "desktop/linux/src/lib/desktop-scene.ts",
+    "packages/schemas/src/index.ts",
+    "packages/schemas/test/desktop-scene-animation-mutation.test.ts",
+    "packages/schemas/test/desktop-scene-physics-mutation.test.ts",
+    "packages/schemas/test/desktop-scene-environment-mutation.test.ts",
+    "packages/schemas/test/desktop-scene-materials-mutation.test.ts",
+    "packages/schemas/test/desktop-scene-effects-mutation.test.ts"
+  ],
+  "schemaPublicApi": {
+    "mismatches": [],
+    "newExports": [
+      {
+        "file": "packages/schemas/src/desktop-scene-animation.ts",
+        "name": "parseSceneAnimationMutation"
+      },
+      {
+        "file": "packages/schemas/src/desktop-scene-physics.ts",
+        "name": "parseScenePhysicsMutation"
+      },
+      {
+        "file": "packages/schemas/src/desktop-scene-environment.ts",
+        "name": "parseSceneEnvironmentMutation"
+      },
+      {
+        "file": "packages/schemas/src/desktop-scene-materials.ts",
+        "name": "parseSceneMaterialsMutation"
+      },
+      {
+        "file": "packages/schemas/src/desktop-scene-effects.ts",
+        "name": "parseSceneEffectsMutation"
+      },
+      {
+        "file": "packages/schemas/src/index.ts",
+        "name": "parseSceneAnimationMutation"
+      },
+      {
+        "file": "packages/schemas/src/index.ts",
+        "name": "parseScenePhysicsMutation"
+      },
+      {
+        "file": "packages/schemas/src/index.ts",
+        "name": "parseSceneEnvironmentMutation"
+      },
+      {
+        "file": "packages/schemas/src/index.ts",
+        "name": "parseSceneMaterialsMutation"
+      },
+      {
+        "file": "packages/schemas/src/index.ts",
+        "name": "parseSceneEffectsMutation"
+      }
+    ],
+    "beforeTypeHash": "8316a7fbb2a2cb0c025675322915462e6b5190d63867c809274f23f20318eb1e"
+  },
+  "targetCasts": {
+    "before": 5,
+    "after": 0,
+    "scope": "Only five desktop raw mutation union assertions; unrelated inherited catalog assertions are NOT claimed safe or zero"
+  },
+  "checks": {
+    "normalVitest": {
+      "command": "pnpm exec vitest run <10 owned schema test files> <7 existing desktop golden files> --reporter=json --outputFile=/tmp/sceneaxi-pr310-mutation-proof/final-normal-tests.json",
+      "config": "unchanged root vitest.config.ts; no bridge aliases/custom config",
+      "files": 17,
+      "passed": 160,
+      "failed": 0,
+      "exit": 0,
+      "originalSchemas": 24,
+      "newParserTests": 97,
+      "desktopGoldens": 39
+    },
+    "differential": {
+      "compared": 1512,
+      "mismatches": 0,
+      "malformed": [
+        {
+          "name": "Animation",
+          "beforeThrows": true,
+          "afterReason": "ANIMATION_INPUT_UNSUPPORTED",
+          "afterGetterReads": 0
+        },
+        {
+          "name": "Physics",
+          "beforeThrows": true,
+          "afterReason": "PHYSICS_INPUT_UNSUPPORTED",
+          "afterGetterReads": 0
+        },
+        {
+          "name": "Environment",
+          "beforeThrows": true,
+          "afterReason": "ENVIRONMENT_INPUT_UNSUPPORTED",
+          "afterGetterReads": 0
+        },
+        {
+          "name": "Materials",
+          "beforeThrows": true,
+          "afterReason": "MATERIALS_INPUT_UNSUPPORTED",
+          "afterGetterReads": 0
+        },
+        {
+          "name": "Effects",
+          "beforeThrows": true,
+          "afterReason": "EFFECTS_INPUT_UNSUPPORTED",
+          "afterGetterReads": 0
+        }
+      ],
+      "exit": 0,
+      "scope": "Declared primitive-shaped mutation fields incl ranges/IDs/enums/nonfinite/empty+populated contexts; canonical raw malformed fields are newly refused."
+    },
+    "ownerTypes": {
+      "before": [
+        {
+          "file": "desktop/linux/src/lib/desktop-scene.ts",
+          "code": 2339,
+          "line": 1284,
+          "message": "Property 'instanceId' does not exist on type 'Readonly<{ kind: \"create-node\"; parentInstanceId: string; name: string; }> | Readonly<{ kind: \"create-primitive\"; primitive: \"box\" | \"cylinder\" | \"sphere\"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.\n  Property 'instanceId' does not exist on type 'Readonly<{ kind: \"create-node\"; parentInstanceId: string; name: string; }>'."
+        },
+        {
+          "file": "desktop/linux/src/lib/desktop-scene.ts",
+          "code": 2339,
+          "line": 1290,
+          "message": "Property 'instanceId' does not exist on type 'Readonly<{ kind: \"create-node\"; parentInstanceId: string; name: string; }> | Readonly<{ kind: \"create-primitive\"; primitive: \"box\" | \"cylinder\" | \"sphere\"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.\n  Property 'instanceId' does not exist on type 'Readonly<{ kind: \"create-node\"; parentInstanceId: string; name: string; }>'."
+        },
+        {
+          "file": "desktop/linux/src/lib/desktop-scene.ts",
+          "code": 2339,
+          "line": 1304,
+          "message": "Property 'parentInstanceId' does not exist on type 'Readonly<{ kind: \"create-node\"; parentInstanceId: string; name: string; }> | Readonly<{ kind: \"create-primitive\"; primitive: \"box\" | \"cylinder\" | \"sphere\"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.\n  Property 'parentInstanceId' does not exist on type 'Readonly<{ kind: \"rename-object\"; instanceId: string; name: string; }>'."
+        },
+        {
+          "file": "desktop/linux/src/lib/desktop-scene.ts",
+          "code": 2339,
+          "line": 1310,
+          "message": "Property 'parentInstanceId' does not exist on type 'Readonly<{ kind: \"create-node\"; parentInstanceId: string; name: string; }> | Readonly<{ kind: \"create-primitive\"; primitive: \"box\" | \"cylinder\" | \"sphere\"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.\n  Property 'parentInstanceId' does not exist on type 'Readonly<{ kind: \"rename-object\"; instanceId: string; name: string; }>'."
+        },
+        {
+          "file": "desktop/linux/src/lib/desktop-scene.ts",
+          "code": 2339,
+          "line": 1333,
+          "message": "Property 'transformPolicy' does not exist on type 'Readonly<{ kind: \"create-node\"; parentInstanceId: string; name: string; }> | Readonly<{ kind: \"create-primitive\"; primitive: \"box\" | \"cylinder\" | \"sphere\"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.\n  Property 'transformPolicy' does not exist on type 'Readonly<{ kind: \"create-node\"; parentInstanceId: string; name: string; }>'."
+        }
+      ],
+      "after": [
+        {
+          "file": "desktop/linux/src/lib/desktop-scene.ts",
+          "code": 2339,
+          "line": 1284,
+          "message": "Property 'instanceId' does not exist on type 'Readonly<{ kind: \"create-node\"; parentInstanceId: string; name: string; }> | Readonly<{ kind: \"create-primitive\"; primitive: \"box\" | \"cylinder\" | \"sphere\"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.\n  Property 'instanceId' does not exist on type 'Readonly<{ kind: \"create-node\"; parentInstanceId: string; name: string; }>'."
+        },
+        {
+          "file": "desktop/linux/src/lib/desktop-scene.ts",
+          "code": 2339,
+          "line": 1290,
+          "message": "Property 'instanceId' does not exist on type 'Readonly<{ kind: \"create-node\"; parentInstanceId: string; name: string; }> | Readonly<{ kind: \"create-primitive\"; primitive: \"box\" | \"cylinder\" | \"sphere\"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.\n  Property 'instanceId' does not exist on type 'Readonly<{ kind: \"create-node\"; parentInstanceId: string; name: string; }>'."
+        },
+        {
+          "file": "desktop/linux/src/lib/desktop-scene.ts",
+          "code": 2339,
+          "line": 1304,
+          "message": "Property 'parentInstanceId' does not exist on type 'Readonly<{ kind: \"create-node\"; parentInstanceId: string; name: string; }> | Readonly<{ kind: \"create-primitive\"; primitive: \"box\" | \"cylinder\" | \"sphere\"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.\n  Property 'parentInstanceId' does not exist on type 'Readonly<{ kind: \"rename-object\"; instanceId: string; name: string; }>'."
+        },
+        {
+          "file": "desktop/linux/src/lib/desktop-scene.ts",
+          "code": 2339,
+          "line": 1310,
+          "message": "Property 'parentInstanceId' does not exist on type 'Readonly<{ kind: \"create-node\"; parentInstanceId: string; name: string; }> | Readonly<{ kind: \"create-primitive\"; primitive: \"box\" | \"cylinder\" | \"sphere\"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.\n  Property 'parentInstanceId' does not exist on type 'Readonly<{ kind: \"rename-object\"; instanceId: string; name: string; }>'."
+        },
+        {
+          "file": "desktop/linux/src/lib/desktop-scene.ts",
+          "code": 2339,
+          "line": 1333,
+          "message": "Property 'transformPolicy' does not exist on type 'Readonly<{ kind: \"create-node\"; parentInstanceId: string; name: string; }> | Readonly<{ kind: \"create-primitive\"; primitive: \"box\" | \"cylinder\" | \"sphere\"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.\n  Property 'transformPolicy' does not exist on type 'Readonly<{ kind: \"create-node\"; parentInstanceId: string; name: string; }>'."
+        }
+      ],
+      "introduced": [],
+      "exit": 0,
+      "fullTypecheckPass": false
+    },
+    "eslint": {
+      "exit": 0,
+      "log": "final-eslint.log"
+    },
+    "diffCheck": {
+      "exit": 0,
+      "log": "final-diff-check.log"
+    },
+    "nativeOxlint": {
+      "exit": 1,
+      "total": 251,
+      "counts": {
+        "anti-slop(no-unknown-parameters)": 17,
+        "anti-slop(no-runtime-typeof)": 12,
+        "anti-slop(require-safety-comment-for-type-assertion)": 16,
+        "anti-slop(no-unsafe-dictionary-type)": 7,
+        "anti-slop(require-readable-spacing)": 172,
+        "anti-slop(no-shape-in-symbol-names)": 27
+      },
+      "desktopResiduals": [
+        {
+          "code": "anti-slop(no-runtime-typeof)",
+          "line": 490
+        },
+        {
+          "code": "anti-slop(no-runtime-typeof)",
+          "line": 493
+        },
+        {
+          "code": "anti-slop(no-runtime-typeof)",
+          "line": 880
+        },
+        {
+          "code": "anti-slop(no-unsafe-dictionary-type)",
+          "line": 1435
+        },
+        {
+          "code": "anti-slop(no-unsafe-dictionary-type)",
+          "line": 1633
+        },
+        {
+          "code": "anti-slop(no-runtime-typeof)",
+          "line": 2285
+        },
+        {
+          "code": "anti-slop(no-runtime-typeof)",
+          "line": 2316
+        }
+      ],
+      "log": "final-oxlint.json"
+    }
+  },
+  "historicalFailures": [
+    {
+      "check": "first differential script",
+      "output": "AssertionError [ERR_ASSERTION]: false == true at differential.cjs:16:93",
+      "resolution": "Old environment apply intentionally does not read kind; changed before-throw oracle to the genuinely consumed sky accessor. No product mutation changed for this oracle correction."
+    },
+    {
+      "check": "first scoped TypeScript",
+      "output": "5 new TS2345: fixtures[0] may be undefined at Object.create(fixtures[0])",
+      "resolution": "Added actual missing-fixture check before prototype creation. Final 0 introduced;5baselineTS2339 remain."
+    }
+  ],
+  "handback": "Exclusive source and matching test paths released to parent and policy receiver bg-148. Parent must run native guard and commit only after blockers are reconciled; no stage/commit/push performed.",
+  "constraints": {
+    "noArbitraryAllowlist": true,
+    "noNewSafetyComments": true,
+    "noNewUncheckedAssertions": true,
+    "noRulesOrConfigEdits": true,
+    "schemasZeroDependenciesRetained": true,
+    "heldKidsOrderRetained": true,
+    "rootFullBuild": false,
+    "stage": false,
+    "commit": false,
+    "push": false,
+    "install": false,
+    "browser": false,
+    "native": false,
+    "docker": false,
+    "sharedAppWrite": false
+  }
+}

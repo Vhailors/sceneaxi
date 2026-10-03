@@ -1,0 +1,162 @@
+[
+  {
+    "site": "catalog-game",
+    "route": "/item/lantern-prop",
+    "viewport": "desktop",
+    "status": "PASS",
+    "httpStatus": 200,
+    "metrics": {
+      "width": 1440,
+      "scrollWidth": 1440,
+      "title": "Hand-carved lantern prop",
+      "spacing": "0px",
+      "bodyColor": "rgb(237, 239, 242)",
+      "bodyBackground": "rgb(7, 8, 10)"
+    },
+    "screenshot": {
+      "path": "docs/audits/production-swarm/visual/qa-inventory-catalog-game--item-lantern-prop-desktop.png",
+      "bytes": 417980,
+      "sha256": "b0fa05a0d1b8ad7733f4344531a3efe0b9862c8886f5453ede21d99f004ed03f"
+    }
+  },
+  {
+    "site": "catalog-game",
+    "route": "/item/lantern-prop",
+    "viewport": "mobile",
+    "status": "PASS",
+    "httpStatus": 200,
+    "metrics": {
+      "width": 390,
+      "scrollWidth": 390,
+      "title": "Hand-carved lantern prop",
+      "spacing": "0px",
+      "bodyColor": "rgb(237, 239, 242)",
+      "bodyBackground": "rgb(7, 8, 10)"
+    },
+    "screenshot": {
+      "path": "docs/audits/production-swarm/visual/qa-inventory-catalog-game--item-lantern-prop-mobile.png",
+      "bytes": 322535,
+      "sha256": "3dab55877694df9299a0faf1f2a78944328ff7d907c8c0ad81efc64df53d13c6"
+    }
+  },
+  {
+    "site": "catalog-game",
+    "route": "/item/market-stall-kit",
+    "viewport": "desktop",
+    "status": "PASS",
+    "httpStatus": 200,
+    "metrics": {
+      "width": 1440,
+      "scrollWidth": 1440,
+      "title": "Modular market stall kit",
+      "spacing": "0px",
+      "bodyColor": "rgb(237, 239, 242)",
+      "bodyBackground": "rgb(7, 8, 10)"
+    },
+    "screenshot": {
+      "path": "docs/audits/production-swarm/visual/qa-inventory-catalog-game--item-market-stall-kit-desktop.png",
+      "bytes": 414792,
+      "sha256": "d04534f62ada58e4d50c95e92ba732c6a0e88d72b7ac5a16e2abcfce7fa3c2a3"
+    }
+  },
+  {
+    "site": "catalog-game",
+    "route": "/item/market-stall-kit",
+    "viewport": "mobile",
+    "status": "PASS",
+    "httpStatus": 200,
+    "metrics": {
+      "width": 390,
+      "scrollWidth": 390,
+      "title": "Modular market stall kit",
+      "spacing": "0px",
+      "bodyColor": "rgb(237, 239, 242)",
+      "bodyBackground": "rgb(7, 8, 10)"
+    },
+    "screenshot": {
+      "path": "docs/audits/production-swarm/visual/qa-inventory-catalog-game--item-market-stall-kit-mobile.png",
+      "bytes": 326210,
+      "sha256": "e39ec843ae61cf240f42c9ad6ddda3c02a47f1d7dc7226d084d511454102b7e4"
+    }
+  },
+  {
+    "site": "catalog-game",
+    "route": "/item/odd-price-charm",
+    "viewport": "desktop",
+    "status": "PASS",
+    "httpStatus": 200,
+    "metrics": {
+      "width": 1440,
+      "scrollWidth": 1440,
+      "title": "Odd-price charm (covers remainder rounding)",
+      "spacing": "0px",
+      "bodyColor": "rgb(237, 239, 242)",
+      "bodyBackground": "rgb(7, 8, 10)"
+    },
+    "screenshot": {
+      "path": "docs/audits/production-swarm/visual/qa-inventory-catalog-game--item-odd-price-charm-desktop.png",
+      "bytes": 346058,
+      "sha256": "2b74544d211e7831e82686450e032409fa432b9d3b9838fb98832f3ac7ae44b2"
+    }
+  },
+  {
+    "site": "catalog-game",
+    "route": "/item/odd-price-charm",
+    "viewport": "mobile",
+    "status": "PASS",
+    "httpStatus": 200,
+    "metrics": {
+      "width": 390,
+      "scrollWidth": 390,
+      "title": "Odd-price charm (covers remainder rounding)",
+      "spacing": "0px",
+      "bodyColor": "rgb(237, 239, 242)",
+      "bodyBackground": "rgb(7, 8, 10)"
+    },
+    "screenshot": {
+      "path": "docs/audits/production-swarm/visual/qa-inventory-catalog-game--item-odd-price-charm-mobile.png",
+      "bytes": 277015,
+      "sha256": "2277162b56fc2a1fb0fc7f24a2bf732b5f283472f1e8b0ac6498a51be19a2d4c"
+    }
+  },
+  {
+    "site": "catalog-web",
+    "route": "/item/harbour-diorama",
+    "viewport": "desktop",
+    "status": "PASS",
+    "httpStatus": 200,
+    "metrics": {
+      "width": 1440,
+      "scrollWidth": 1440,
+      "title": "Harbour diorama scene",
+      "spacing": "0px",
+      "bodyColor": "rgb(237, 239, 242)",
+      "bodyBackground": "rgb(7, 8, 10)"
+    },
+    "screenshot": {
+      "path": "docs/audits/production-swarm/visual/qa-inventory-catalog-web--item-harbour-diorama-desktop.png",
+      "bytes": 347161,
+      "sha256": "1d32174f24d07f22e8aa2725b1f46c6052221d108e4d70a2770c20c60674b0a5"
+    }
+  },
+  {
+    "site": "catalog-web",
+    "route": "/item/harbour-diorama",
+    "viewport": "mobile",
+    "status": "PASS",
+    "httpStatus": 200,
+    "metrics": {
+      "width": 390,
+      "scrollWidth": 390,
+      "title": "Harbour diorama scene",
+      "spacing": "0px",
+      "bodyColor": "rgb(237, 239, 242)",
+      "bodyBackground": "rgb(7, 8, 10)"
+    },
+    "screenshot": {
+      "path": "docs/audits/production-swarm/visual/qa-inventory-catalog-web--item-harbour-diorama-mobile.png",
+      "bytes": 270548,
+      "sha256": "d7eba9d00b745e814fa1e932bf6f163de592f54e637f6e3dc4d86dc0abd630e6"
+    }
+  }
+]

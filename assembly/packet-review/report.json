@@ -1,0 +1,82 @@
+{
+  "reviewer": "bg-157",
+  "scope": "Exact frozen policy-148 and mutations-149 packets; read-only candidate compatibility",
+  "candidate": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1",
+  "verifiedExecutionTree": "/tmp/sceneaxi-pr310-main-first.tSd8ya",
+  "hashVerification": {
+    "beforeReview": true,
+    "manifest": "../packets/checksums.sha256",
+    "entriesPassed": 4,
+    "matchingPostimageFiles": 17
+  },
+  "PolicyPatch": {
+    "verdict": "FAIL",
+    "sha256": "c5bb51cbf0d963c80b301271cf4dbcb9d18daf20050391fdc7c0fc63afcaf2d9",
+    "approved": false,
+    "suppliedFixtures": {"passed": 40, "failed": 0},
+    "independentControls": {"passed": 9, "failed": 2},
+    "failures": [
+      {
+        "id": "P148-1",
+        "case": "async primitive predicate called by same-input decoder",
+        "expectedErrors": ["no-runtime-typeof", "no-unknown-parameters"],
+        "actualErrors": [],
+        "runtimeOracle": "decode(42) returns 42 because Promise is truthy"
+      },
+      {
+        "id": "P148-2",
+        "case": "generator primitive predicate called by same-input decoder",
+        "expectedErrors": ["no-runtime-typeof", "no-unknown-parameters"],
+        "actualErrors": [],
+        "runtimeOracle": "decode(42) returns 42 because iterator is truthy"
+      }
+    ],
+    "qualification": "TypeScript rejects these predicate signatures. This proves unsound native-rule recognition, not a bypass of a complete typechecked gate.",
+    "requiredChange": "Reject async/generator owners in checkedPredicateProbe and decoder eligibility; add modifier negative controls, rerun native fixtures and freeze a new patch hash.",
+    "ordinaryErrorsRetained": ["unchecked parameters", "unchecked casts", "unvalidated dictionaries", "imported and fake decoder guards", "wrong subject", "unchecked early success", "object-only domain claims", "shadowing and unsupported aliases"],
+    "historicalSourceErrors": {"total": 65, "typeof": 59, "unknown": 4, "dictionary": 2},
+    "freshCandidateSourceGuardRun": false
+  },
+  "MutationPatch": {
+    "verdict": "PASS",
+    "approvalScope": "PARTIAL_FROZEN_BASELINE_ONLY_NOT_CURRENT_CANDIDATE",
+    "sha256": "6597a311f1749a860a05f2182c2beaa37b3e4a6a05b63bfd3ca223e0c3c10227",
+    "approved": true,
+    "checkedParsing": "Schema-owned descriptor snapshots, complete consumed-field checks, fresh frozen mutations, downstream domain validation retained",
+    "actualVitest": {"files": 10, "passed": 121, "failed": 0, "rootConfigUnchanged": true, "cacheAndTemporaryWritesReviewOwned": true},
+    "actualDifferential": {"outcomes": 1512, "mismatches": 0, "oldGetterThrowsReplacedByNamedRefusals": 5, "afterGetterReads": 0},
+    "independentChecks": {"total": 223, "failed": 0, "requiredFieldOracleIndependentOfParserAcceptance": true},
+    "abi": {"desktopExportsCompared": 50, "existingTypeMismatches": 0, "newParsers": 5, "indexReexports": 5, "publicRawInputNarrowingIntroducedByPatch": false},
+    "historicalNonzeroIntegrationEvidence": {"baselineTypeErrors": 5, "nativeGuardDiagnostics": 251, "freshlyRerun": false},
+    "limits": ["No approval of arbitrary executable/class-instance inputs", "No full typecheck/build/native-runtime proof", "No approval of current candidate or a future reconciled hash"]
+  },
+  "CandidateCompatibility": {
+    "verdict": "NOT_READY",
+    "readOnlyApplyCheck": {"policy": "APPLIES", "mutations": "CONTEXT_FAILURE", "mutationFailureFiles": ["packages/schemas/src/desktop-scene-physics.ts", "packages/schemas/src/index.ts", "desktop/linux/src/lib/desktop-scene.ts"]},
+    "actualValidConsumerCounterexample": {
+      "mutation": {"kind": "shape-upsert", "colliderId": "s1", "bodyId": "b1", "colliderKind": "box", "size": 1},
+      "precondition": "Valid b1 body inserted in candidate catalog",
+      "candidateApplyOk": true,
+      "frozenParserResult": null,
+      "receipt": "candidate-compat.json"
+    },
+    "requiredNewSource": [
+      "Physics parser must preserve both current colliderId/colliderKind and legacy shapeId/shapeKind variants using actual checked fields, retaining current catalog/save-reload guards",
+      "Add positive consumer tests for both vocabularies and malformed/conflicting field controls",
+      "Surgically reconcile five desktop parser calls and schema exports without overwriting child-owned work",
+      "Preserve candidate raw unknown I/O ABI; no unrelated inherited packet-origin narrowing",
+      "For bridge/catalog/proposal/output residuals use structural validation or genuine owner-derived checked contracts and resolved decoder flow, never blanket name/file exemptions or unchecked casts"
+    ]
+  },
+  "SOURCEGUARDZERO": "NO",
+  "fullMerge": "NOT_READY",
+  "fullCandidatePass": false,
+  "assemblyMutable": true,
+  "verificationFailures": ["Initial CLI attempt: CACError: Unknown option --cacheDir; corrected programmatic Vitest run passed", "Two unresolved independent policy negative-control failures"],
+  "skipped": ["install", "build", "full suite", "browser", "Docker", "full typecheck", "native integration", "current candidate source guard"],
+  "writes": "Only assembly/packet-review reports and lightweight probes/receipts",
+  "sourceOrConfigEdits": false,
+  "stageCommitPushProtectionActions": false,
+  "delivery": {"bg156Policy": "lm_349", "bg156FinalAttempt": "unknown-endpoint; endpoint exited", "controllerPartialVerdict": "lm_358"},
+  "evidence": ["frozen-policy-tests.log", "independent-policy-tests.log", "mutation-vitest.log", "mutation-vitest-retry.log", "differential.json", "independent-mutation.log", "abi.json", "candidate-compat.json"]
+}

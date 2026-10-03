@@ -1,13 +1,11 @@
-import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
 import * as schemas from "@sceneaxi/schemas";
 import {
   OBJECT_SCULPT_SPEC_KIND,
+  SCULPT_ARTIFACT_KIND,
+  SCULPT_INTAKE_KIND,
   SCULPT_PROCEDURAL_EXPORT_NAME,
   SCULPT_PROCEDURAL_MODULE_ID,
   SCULPT_PROCEDURAL_SOURCE_DIGEST,
-  SCULPT_ARTIFACT_KIND,
-  SCULPT_INTAKE_KIND,
   SCULPT_SCHEMA_VERSION,
   contracts,
   digestObjectSculptSpec,
@@ -23,12 +21,14 @@ import {
   type ObjectSculptSpec,
   type SculptArtifact,
   type SculptDiagnosticCode,
+  type SculptProceduralModuleRef,
   type SculptQualityArtifact,
   type SculptQualityObjectSculptSpec,
   type SculptQualityRuntimeHierarchy,
-  type SculptProceduralModuleRef,
   type SculptRuntimeHierarchy,
 } from "@sceneaxi/schemas";
+import { readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
 
 interface LegacySculptArtifactExtension extends SculptArtifact {
   readonly consumerTag: string;
@@ -58,6 +58,7 @@ function exhaustLegacySculptDiagnostic(code: SculptDiagnosticCode) {
       return code;
     default: {
       const exhaustive: never = code;
+
       return exhaustive;
     }
   }
@@ -71,11 +72,11 @@ const fixtureProceduralEmitEvidence = {
     "sha256:9a80ed9ac2bd6602900c40a6c6f6320a9986d76d7cbdaa4d81d5fd2382bfbef1",
 } as const;
 
-const transform = {
+const transform: MutableFixture<ObjectSculptSpec["hierarchy"][number]["transform"]> = {
   translation: [0, 0, 0],
   rotationEulerDegrees: [0, 0, 0],
   scale: [1, 1, 1],
-} as const;
+};
 
 const qualityPasses = [
   { id: "blockout", deterministic: true, steps: ["establish-volume"] },
@@ -190,12 +191,14 @@ function fixtureArtifact(): SculptQualityArtifact {
 }
 
 function reverseMemberOrder<Value extends object>(value: Value): Value {
+  // SAFETY: callers supply enumerable JSON fixture records; reversing entries preserves each member name and value.
   return Object.fromEntries(Object.entries(value).reverse()) as Value;
 }
 
 function sparseCopy<Value>(values: readonly Value[]) {
   const sparse = [...values];
   Reflect.deleteProperty(sparse, 0);
+
   return sparse;
 }
 
@@ -213,6 +216,7 @@ describe("hybrid sculpt contracts", () => {
     });
 
     const tamperedDigest = digest("f");
+
     const tampered = {
       ...artifact,
       proceduralModule: {
@@ -228,9 +232,11 @@ describe("hybrid sculpt contracts", () => {
         ),
       },
     };
+
     const result = validateSculptQualityArtifact(tampered);
 
     expect(result.ok).toBe(false);
+
     if (!result.ok) {
       expect(result.diagnostics[0]?.code).toBe("invalid-reference");
     }
@@ -242,20 +248,24 @@ describe("hybrid sculpt contracts", () => {
       [contracts.objectSculptSpec, "https://sceneaxi.invalid/contracts/object-sculpt-spec/v1"],
       [contracts.sculptArtifact, "https://sceneaxi.invalid/contracts/sculpt-artifact/v1"],
     ] as const) {
+      // SAFETY: this reads a package-owned authoritative JSON Schema; the expected schema fields are asserted below.
       const schema = JSON.parse(
         readFileSync(new URL(`../${path}`, import.meta.url), "utf8"),
       ) as { $id: string };
+
       expect(schema.$id).toBe(expectedId);
     }
   });
 
   it("keeps public non-blank intake strings aligned with runtime validation", () => {
+    // SAFETY: this reads a package-owned authoritative JSON Schema; the expected schema fields are asserted below.
     const schema = JSON.parse(
       readFileSync(new URL("../contracts/sculpt-intake.schema.json", import.meta.url), "utf8"),
     ) as {
       $defs: { image: { properties: { uri: { pattern: string } } } };
       oneOf: Array<{ properties?: { brief?: { pattern: string } } }>;
     };
+
     expect(schema.$defs.image.properties.uri.pattern).toBe("\\S");
     expect(
       schema.oneOf.flatMap((variant) =>
@@ -303,21 +313,28 @@ describe("hybrid sculpt contracts", () => {
   });
 
   it("preserves and explicitly normalizes legacy PR 75 specs", () => {
-    const legacy = Object.fromEntries(
+    // SAFETY: removing only complexityClass and passes from the complete fixture yields the documented legacy spec fields.
+    const legacyInput = Object.fromEntries(
       Object.entries(fixtureSpec).filter(
         ([key]) => key !== "complexityClass" && key !== "passes",
       ),
-    ) as unknown as LegacyObjectSculptSpec;
+    );
+
+      if (!isLegacyFixture(legacyInput)) throw new Error("Invalid legacy fixture.");
+      const legacy = legacyInput;
+
     const extendedLegacy: LegacyObjectSculptSpecExtension = {
       ...legacy,
       consumerTag: "legacy-consumer",
     };
+
     const extendedModule: LegacySculptProceduralModuleRefExtension = {
       moduleId: "sceneaxi/procedural/crate",
       exportName: "buildCrate",
       sourceDigest: digest("b"),
       consumerTag: "legacy-consumer",
     };
+
     expect(extendedLegacy.consumerTag).toBe("legacy-consumer");
     expect(extendedModule.consumerTag).toBe("legacy-consumer");
     expect(validateObjectSculptSpec(legacy)).toEqual({
@@ -341,8 +358,10 @@ describe("hybrid sculpt contracts", () => {
       rootNodeId: legacy.rootNodeId,
       nodes: legacy.hierarchy,
     } satisfies SculptRuntimeHierarchy;
+
     const qualityRuntimeHierarchy: SculptQualityRuntimeHierarchy =
       projectAnimationReadyHierarchy(normalized);
+
     expect(qualityRuntimeHierarchy.kind).toBe(
       "sceneaxi.animation-ready-hierarchy",
     );
@@ -368,19 +387,25 @@ describe("hybrid sculpt contracts", () => {
         ],
       },
     };
+
     expect(validateSculptArtifact(legacyArtifact)).toEqual({
       ok: true,
       value: legacyArtifact,
     });
+
     const extended: LegacySculptArtifactExtension = {
       ...legacyArtifact,
       consumerTag: "legacy-consumer",
     };
+
     const annotatedSpec: SculptArtifact["spec"] = legacy;
+
     const annotatedModule: SculptArtifact["proceduralModule"] =
       legacyArtifact.proceduralModule;
+
     const annotatedRuntime: SculptArtifact["runtimeHierarchy"] =
       legacyRuntimeHierarchy;
+
     expect([
       extended.consumerTag,
       annotatedSpec.id,
@@ -404,6 +429,8 @@ describe("hybrid sculpt contracts", () => {
 
   it("narrows only complete sculpt-quality field correlations", () => {
     const nonTrivial = nonTrivialFixtureSpec();
+
+    // SAFETY: removing only complexityClass and passes from the complete fixture yields the documented legacy spec fields.
     const partials = [
       Object.fromEntries(
         Object.entries(fixtureSpec).filter(
@@ -442,6 +469,7 @@ describe("hybrid sculpt contracts", () => {
   });
 
   it("publishes closed ordered pass sequences in the authoritative schema", () => {
+    // SAFETY: this reads a package-owned authoritative JSON Schema; the expected schema fields are asserted below.
     const schema = JSON.parse(
       readFileSync(
         new URL("../contracts/object-sculpt-spec.schema.json", import.meta.url),
@@ -458,11 +486,13 @@ describe("hybrid sculpt contracts", () => {
         };
       }>;
     };
+
     const sequences = schema.oneOf
       .flatMap((branch) => branch.properties?.passes?.oneOf ?? [])
       .map((sequence) =>
         sequence.prefixItems.map((item) => item.$ref.split("/").at(-1)),
       );
+
     expect(sequences).toEqual([
       ["blockoutPass", "structurePass", "materialsPass", "socketsPass"],
       [
@@ -476,6 +506,7 @@ describe("hybrid sculpt contracts", () => {
   });
 
   it("aligns inventory strings and procedural seeds with runtime validation", () => {
+    // SAFETY: this reads a package-owned authoritative JSON Schema; the expected schema fields are asserted below.
     const specSchema = JSON.parse(
       readFileSync(
         new URL("../contracts/object-sculpt-spec.schema.json", import.meta.url),
@@ -489,6 +520,8 @@ describe("hybrid sculpt contracts", () => {
         };
       };
     };
+
+    // SAFETY: this reads a package-owned authoritative JSON Schema; the expected schema fields are asserted below.
     const artifactSchema = JSON.parse(
       readFileSync(
         new URL("../contracts/sculpt-artifact.schema.json", import.meta.url),
@@ -504,6 +537,7 @@ describe("hybrid sculpt contracts", () => {
         };
       };
     };
+
     const trimmedNonBlank = new RegExp(
       specSchema.$defs.trimmedNonBlank.pattern,
     );
@@ -511,6 +545,7 @@ describe("hybrid sculpt contracts", () => {
     expect(trimmedNonBlank.test("raised lid")).toBe(true);
     expect(trimmedNonBlank.test(" raised lid")).toBe(false);
     expect(trimmedNonBlank.test("raised lid ")).toBe(false);
+
     for (const field of [
       "silhouetteFeatures",
       "structuralFeatures",
@@ -520,6 +555,7 @@ describe("hybrid sculpt contracts", () => {
         specSchema.$defs.detailInventory.properties[field]?.items.$ref,
       ).toBe("#/$defs/trimmedNonBlank");
     }
+
     expect(
       artifactSchema.$defs.qualityProceduralModule.properties.seed,
     ).toEqual({
@@ -534,6 +570,7 @@ describe("hybrid sculpt contracts", () => {
 
   it("accepts the required multi-pass order and a reference-checked non-trivial inventory", () => {
     const base = nonTrivialFixtureSpec();
+
     const spec = {
       ...base,
       passes: [
@@ -542,6 +579,7 @@ describe("hybrid sculpt contracts", () => {
         qualityPasses[3],
       ],
     };
+
     expect(validateObjectSculptSpec(spec)).toEqual({ ok: true, value: spec });
   });
 
@@ -614,6 +652,7 @@ describe("hybrid sculpt contracts", () => {
   ])("refuses %s with a stable quality code", (_name, spec, code) => {
     const result = validateSculptQualityObjectSculptSpec(spec);
     expect(result.ok).toBe(false);
+
     if (!result.ok) expect(result.diagnostics[0]?.code).toBe(code);
   });
 
@@ -621,10 +660,12 @@ describe("hybrid sculpt contracts", () => {
     expect(exhaustLegacySculptDiagnostic("invalid-hierarchy")).toBe(
       "invalid-hierarchy",
     );
+
     const quality = validateSculptQualityObjectSculptSpec({
       ...fixtureSpec,
       passes: qualityPasses.slice(0, 3),
     });
+
     expect(quality).toMatchObject({
       ok: false,
       diagnostics: [{ code: "missing-sculpt-pass" }],
@@ -645,15 +686,20 @@ describe("hybrid sculpt contracts", () => {
     Reflect.deleteProperty(sparsePasses, 1);
     const steps = ["establish-volume"];
     Reflect.deleteProperty(steps, 0);
+
     const sparseSteps = qualityPasses.map((pass, index) =>
       index === 0 ? { ...pass, steps } : pass,
     );
+
+    // SAFETY: structuredClone preserves the declared fixture fields and creates mutable copies of its arrays and objects.
     const sparseInventory = structuredClone(
       nonTrivialFixtureSpec(),
     ) as SculptQualityArtifact["spec"];
+
     const silhouetteFeatures = [
       ...(sparseInventory.detailInventory?.silhouetteFeatures ?? []),
     ];
+
     Reflect.deleteProperty(silhouetteFeatures, 0);
 
     for (const spec of [
@@ -720,52 +766,43 @@ describe("hybrid sculpt contracts", () => {
   ])("refuses %s with a named diagnostic", (_name, intake, code) => {
     const result = validateSculptIntake(intake);
     expect(result.ok).toBe(false);
+
     if (result.ok) return;
     expect(result.diagnostics[0]?.code).toBe(code);
   });
 
   it("refuses broken spec references and hierarchy cycles", () => {
-    const missingMaterial = structuredClone(fixtureSpec) as unknown as {
-      components: Array<{ materialId: string }>;
-    };
+    // SAFETY: structuredClone preserves the declared fixture fields and creates mutable copies of its arrays and objects.
+    const missingMaterial = structuredClone<ObjectSculptSpec>(fixtureSpec) as MutableFixture<ObjectSculptSpec>;
+
     const firstComponent = missingMaterial.components[0];
     expect(firstComponent).toBeDefined();
+
     if (firstComponent === undefined) return;
     firstComponent.materialId = "missing";
     const materialResult = validateObjectSculptSpec(missingMaterial);
     expect(materialResult.ok).toBe(false);
+
     if (!materialResult.ok) expect(materialResult.diagnostics[0]?.code).toBe("invalid-reference");
 
-    const cycle = structuredClone(fixtureSpec) as unknown as {
-      hierarchy: Array<{ id: string; parentId: string | null }>;
-    };
+    // SAFETY: structuredClone preserves the declared fixture fields and creates mutable copies of its arrays and objects.
+    const cycle = structuredClone<ObjectSculptSpec>(fixtureSpec) as MutableFixture<ObjectSculptSpec>;
+
     const root = cycle.hierarchy[0];
     expect(root).toBeDefined();
+
     if (root === undefined) return;
     root.parentId = "crate-lid";
     const cycleResult = validateObjectSculptSpec(cycle);
     expect(cycleResult.ok).toBe(false);
+
     if (!cycleResult.ok) expect(cycleResult.diagnostics[0]?.code).toBe("invalid-hierarchy");
   });
 
   it("validates a deep hierarchy without repeated ancestor walks", () => {
-    const deep = structuredClone(fixtureSpec) as unknown as {
-      rootNodeId: string;
-      hierarchy: Array<{
-        id: string;
-        parentId: string | null;
-        componentId: string;
-        transform: typeof transform;
-      }>;
-      sockets: Array<{
-        id: string;
-        nodeId: string;
-        kind: "attachment";
-        axis: "y";
-        amplitude: number;
-        frequencyHz: number;
-      }>;
-    };
+    // SAFETY: structuredClone preserves the declared fixture fields and creates mutable copies of its arrays and objects.
+    const deep = structuredClone<ObjectSculptSpec>(fixtureSpec) as MutableFixture<ObjectSculptSpec>;
+
     deep.rootNodeId = "node-0";
     deep.hierarchy = Array.from({ length: 5_000 }, (_, index) => ({
       id: `node-${index}`,
@@ -794,6 +831,7 @@ describe("hybrid sculpt contracts", () => {
 
   it("accepts semantic runtime projections with reordered object members", () => {
     const artifact = fixtureArtifact();
+
     const runtimeHierarchy = {
       ...artifact.runtimeHierarchy,
       nodes: artifact.runtimeHierarchy.nodes.map((node) =>
@@ -818,6 +856,7 @@ describe("hybrid sculpt contracts", () => {
         reverseMemberOrder({ ...attachment }),
       ),
     };
+
     const reordered = { ...artifact, runtimeHierarchy };
 
     expect(validateSculptArtifact(reordered)).toEqual({
@@ -835,6 +874,7 @@ describe("hybrid sculpt contracts", () => {
     expect(runtimeNode).toBeDefined();
     expect(runtimePivot).toBeDefined();
     expect(runtimeCollider).toBeDefined();
+
     if (
       runtimeNode === undefined ||
       runtimePivot === undefined ||
@@ -847,6 +887,7 @@ describe("hybrid sculpt contracts", () => {
     const mutableComponent = mutableSpec.components[0];
     expect(mutableNode).toBeDefined();
     expect(mutableComponent).toBeDefined();
+
     if (mutableNode === undefined || mutableComponent === undefined) return;
     expect(Reflect.set(mutableNode.transform.translation, 0, 99)).toBe(true);
     expect(Reflect.set(mutableComponent.dimensions, 0, 99)).toBe(true);
@@ -873,6 +914,7 @@ describe("hybrid sculpt contracts", () => {
     const artifact = structuredClone(fixtureArtifact());
     const sparsePivots = [...artifact.runtimeHierarchy.pivots];
     delete sparsePivots[0];
+
     const result = validateSculptArtifact({
       ...artifact,
       runtimeHierarchy: {
@@ -892,38 +934,43 @@ describe("hybrid sculpt contracts", () => {
     ["attachments", "missing-runtime-attachment"],
   ] as const)("refuses incomplete animation-ready %s with a stable code", (field, code) => {
     const artifact = structuredClone(fixtureArtifact());
+
     const result = validateSculptQualityArtifact({
       ...artifact,
       runtimeHierarchy: { ...artifact.runtimeHierarchy, [field]: [] },
     });
+
     expect(result.ok).toBe(false);
+
     if (!result.ok) expect(result.diagnostics[0]?.code).toBe(code);
   });
 
   it("refuses runtime hierarchy drift and unpassed evidence", () => {
-    const drift = structuredClone(fixtureArtifact()) as unknown as {
-      runtimeHierarchy: {
-        nodes: Array<{ transform: { translation: [number, number, number] } }>;
-      };
-    };
+    // SAFETY: structuredClone preserves the declared fixture fields and creates mutable copies of its arrays and objects.
+    const drift = structuredClone(fixtureArtifact()) as MutableFixture<SculptQualityArtifact>;
+
     drift.runtimeHierarchy.nodes = structuredClone(drift.runtimeHierarchy.nodes);
     const firstRuntimeNode = drift.runtimeHierarchy.nodes[0];
     expect(firstRuntimeNode).toBeDefined();
+
     if (firstRuntimeNode === undefined) return;
     firstRuntimeNode.transform.translation[0] = 99;
     const driftResult = validateSculptArtifact(drift);
     expect(driftResult.ok).toBe(false);
+
     if (!driftResult.ok) expect(driftResult.diagnostics[0]?.code).toBe("invalid-hierarchy");
 
-    const failedGate = structuredClone(fixtureArtifact()) as unknown as {
-      evidence: { qualityGates: Array<{ status: string }> };
-    };
+    // SAFETY: structuredClone preserves the declared fixture fields and creates mutable copies of its arrays and objects.
+    const failedGate = mutableQualityGateFixture(fixtureArtifact());
+
     const gate = failedGate.evidence.qualityGates[0];
     expect(gate).toBeDefined();
+
     if (gate === undefined) return;
     gate.status = "failed";
     const gateResult = validateSculptArtifact(failedGate);
     expect(gateResult.ok).toBe(false);
+
     if (!gateResult.ok) expect(gateResult.diagnostics[0]?.code).toBe("invalid-field");
 
   });
@@ -935,3 +982,18 @@ describe("hybrid sculpt contracts", () => {
     expect(surface).not.toContain("meshstandardmaterial");
   });
 });
+
+// Mutable test copies retain the complete owner-derived fixture contract.
+type MutableFixture<Value> = { -readonly [Key in keyof Value]: Value[Key] extends object ? MutableFixture<Value[Key]> : Value[Key] };
+
+function isLegacyFixture(value: Parameters<typeof validateObjectSculptSpec>[0]): value is LegacyObjectSculptSpec {
+  const checked = validateObjectSculptSpec(value);
+
+  return checked.ok && !("complexityClass" in checked.value) && !("passes" in checked.value);
+}
+
+function mutableQualityGateFixture(artifact: SculptQualityArtifact) {
+  const clone = structuredClone(artifact);
+
+  return { ...clone, evidence: { ...clone.evidence, qualityGates: clone.evidence.qualityGates.map(gate => ({ ...gate, status: String(gate.status) })) } };
+}

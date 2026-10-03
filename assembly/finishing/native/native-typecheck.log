@@ -1,0 +1,2 @@
+desktop/linux/src/lib/desktop-scene.ts(508,87): error TS2339: Property 'artifactId' does not exist on type '{ kind: "node"; name?: string; instanceId: string; parentInstanceId: string | null; transform: unknown; } | { artifactId: string | undefined; name?: string; instanceId: string; parentInstanceId: string | null; transform: unknown; }'.
+  Property 'artifactId' does not exist on type '{ kind: "node"; name?: string; instanceId: string; parentInstanceId: string | null; transform: unknown; }'.

@@ -1,0 +1,73 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/tmp/sceneaxi-comprehensive-owned-xd4gdfl1[39m
+
+[33m[39m[31mx[39m[33m[39m[31mx[39m[33m[39m[31mx[39m[33m[39m[31mx[39m[33m[39m[31mx[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 5 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m packages/engine-presentation/test/audio-playback.test.ts[2m > [22mpublic offline audio runtime (not audible-device proof)[2m > [22mrequires explicit unlock, decodes PCM, bounds volume, stops on hiding and owns teardown
+[31m[1mTypeError[22m: createAudioPlaybackRuntime is not a function[39m
+[36m [2m❯[22m packages/engine-presentation/test/audio-playback.test.ts:[2m32:15[22m[39m
+    [90m 30|[39m   it("requires explicit unlock, decodes PCM, bounds volume, stops on h…
+    [90m 31|[39m     const {ctx,sources,gains} = context(); const create = vi.fn(() => …
+    [90m 32|[39m     const a = createAudioPlaybackRuntime({ profile: "game", createCont…
+    [90m   |[39m               [31m^[39m
+    [90m 33|[39m     expect(() => a.play({assetId:"tone",bytes:wav()})).toThrow(/unlock…
+    [90m 34|[39m     await expect(a.unlock(false)).rejects.toThrow(/interaction/); expe…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m packages/engine-presentation/test/audio-playback.test.ts[2m > [22mpublic offline audio runtime (not audible-device proof)[2m > [22mreleases partially allocated nodes and stops a failed start before retrying
+[31m[1mTypeError[22m: createAudioPlaybackRuntime is not a function[39m
+[36m [2m❯[22m packages/engine-presentation/test/audio-playback.test.ts:[2m43:19[22m[39m
+    [90m 41|[39m   it("releases partially allocated nodes and stops a failed start befo…
+    [90m 42|[39m     [35mconst[39m { ctx[33m,[39m sources[33m,[39m gains } [33m=[39m [34mcontext[39m()[33m;[39m
+    [90m 43|[39m     const audio = createAudioPlaybackRuntime({ profile: "game", create…
+    [90m   |[39m                   [31m^[39m
+    [90m 44|[39m     [35mawait[39m audio[33m.[39m[34munlock[39m([35mtrue[39m)[33m;[39m
+    [90m 45|[39m     [35mconst[39m createGain [33m=[39m ctx[33m.[39mcreateGain[33m.[39m[34mbind[39m(ctx)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m packages/engine-presentation/test/audio-playback.test.ts[2m > [22mpublic offline audio runtime (not audible-device proof)[2m > [22mrefuses malformed/unsupported WAV before allocation, capacity limit+1 and Kids
+[31m[1mTypeError[22m: createAudioPlaybackRuntime is not a function[39m
+[36m [2m❯[22m packages/engine-presentation/test/audio-playback.test.ts:[2m93:48[22m[39m
+    [90m 91|[39m   })[33m;[39m
+    [90m 92|[39m   it("refuses malformed/unsupported WAV before allocation, capacity li…
+    [90m 93|[39m     const {ctx,sources} = context(); const a = createAudioPlaybackRunt…
+    [90m   |[39m                                                [31m^[39m
+    [90m 94|[39m     expect(() => a.play({assetId:"bad",bytes:new Uint8Array(44)})).toT…
+    [90m 95|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m packages/engine-presentation/test/audio-playback.test.ts[2m > [22mdisposal cleans every source even when a host stop or disconnect fails
+[31m[1mTypeError[22m: createAudioPlaybackRuntime is not a function[39m
+[36m [2m❯[22m packages/engine-presentation/test/audio-playback.test.ts:[2m106:13[22m[39m
+    [90m104|[39m it("disposal cleans every source even when a host stop or disconnect f…
+    [90m105|[39m   [35mconst[39m { ctx[33m,[39m sources[33m,[39m gains } [33m=[39m [34mcontext[39m()[33m;[39m
+    [90m106|[39m   const a = createAudioPlaybackRuntime({ profile: "game", createContex…
+    [90m   |[39m             [31m^[39m
+    [90m107|[39m   await a.unlock(true); a.play({ assetId: "tone", bytes: wav() }); a.p…
+    [90m108|[39m   requireValue(sources[0]).stop = () => { throw new Error("host stop f…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m packages/engine-presentation/test/audio-playback.test.ts[2m > [22mrefuses accessor/proxy audio assets before allocation without conversion hooks
+[31m[1mTypeError[22m: createAudioPlaybackRuntime is not a function[39m
+[36m [2m❯[22m packages/engine-presentation/test/audio-playback.test.ts:[2m128:17[22m[39m
+    [90m126|[39m it("refuses accessor/proxy audio assets before allocation without conv…
+    [90m127|[39m   [35mconst[39m { ctx } [33m=[39m [34mcontext[39m()[33m;[39m
+    [90m128|[39m   const audio = createAudioPlaybackRuntime({ profile: "game", createCo…
+    [90m   |[39m                 [31m^[39m
+    [90m129|[39m   [35mawait[39m audio[33m.[39m[34munlock[39m([35mtrue[39m)[33m;[39m
+    [90m130|[39m   [35mlet[39m reads [33m=[39m [34m0[39m[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m1 passed[39m[22m[90m (2)[39m
+[2m      Tests [22m [1m[31m5 failed[39m[22m[2m | [22m[1m[32m6 passed[39m[22m[90m (11)[39m
+[2m   Start at [22m 11:21:14
+[2m   Duration [22m 6.54s[2m (transform 5.80s, setup 0ms, import 7.15s, tests 999ms, environment 0ms)[22m
+

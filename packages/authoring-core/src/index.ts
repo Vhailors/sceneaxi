@@ -169,6 +169,7 @@ export {
   type SculptProceduralMaterial,
   type SculptProceduralNode,
 } from "./sculpt-procedural-emit.js";
+
 export type {
   SculptOfflineAgent,
   SculptReconstructionOptions,
@@ -262,3 +263,28 @@ export {
   parseDocumentText,
   parseProposalText,
 } from "@sceneaxi/schemas";
+
+export {
+  composeSceneV2,
+  serializeComposedSceneV2,
+  sceneDocumentFromComposedSceneV2,
+  migrateComposedSceneV1ToV2,
+  type SceneCompositionResultV2,
+} from "./scene-composition.js";
+
+export {
+  LOCAL_PROJECT_BUILD_LIMITS,
+  LOCAL_PROJECT_BUILD_REFUSALS,
+  buildLocalProject,
+  verifyLocalProjectBuild,
+  launchLocalProjectBuild,
+  type LocalProjectBuildRefusal,
+  type LocalProjectBuildReceipt,
+  type LocalProjectBuildSuccess,
+  type LocalProjectBuildResult,
+  type LocalProjectBuildInput,
+  type LocalProjectLaunchInput,
+  type LocalProjectLaunchSuccess,
+} from "./local-project-build.js";
+
+export { createAuthoringV1Adapter } from "./legacy-v1.js";

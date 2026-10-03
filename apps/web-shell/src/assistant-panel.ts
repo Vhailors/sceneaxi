@@ -94,6 +94,7 @@ import {
   MODEL_PROVIDER_PORT_SCHEMA_VERSION,
   type ModelProviderPort,
   type ModelProviderSuccess,
+  type JsonValue,
 } from "@sceneaxi/authoring-core";
 import {
   requireAuthenticated,
@@ -174,6 +175,7 @@ export const ASSISTANT_PANEL_REASONS = Object.freeze({
   creditsUnavailable: "ASSISTANT_CREDITS_UNAVAILABLE",
   ledgerOwnerMismatch: "ASSISTANT_LEDGER_OWNER_MISMATCH",
   turnAlreadyCharged: "ASSISTANT_TURN_ALREADY_CHARGED",
+  busy: "ASSISTANT_BUSY",
 } as const);
 
 export type AssistantPanelReason =
@@ -215,6 +217,8 @@ export type AssistantPanelSnapshot = Readonly<{
   /** Whether the SceneAxi-hosted route is switched on. Off by default. */
   hostedEnabled: boolean;
   turns: ReadonlyArray<AssistantTurn>;
+  /** Older exchanges removed by the local retention bound; never a billing count. */
+  turnsDropped?: number;
   /** Last balance the ledger reported. Absent rather than defaulted to zero. */
   creditBalance?: number;
   refusal?: AssistantRefusal;
@@ -242,7 +246,7 @@ export type AssistantAskRequest = Readonly<{
 export type AssistantPanel = Readonly<{
   snapshot(): AssistantPanelSnapshot;
   /** Switch transport modes. Refuses a mode with no injected port. */
-  setMode(mode: unknown): AssistantPanelSnapshot;
+  setMode(mode: JsonValue | undefined): AssistantPanelSnapshot;
   ask(request: AssistantAskRequest): Promise<AssistantPanelSnapshot>;
 }>;
 
@@ -278,7 +282,16 @@ export type CreateAssistantPanelResult =
   | Readonly<{ ok: true; panel: AssistantPanel }>
   | Readonly<{ ok: false; reason: AssistantPanelReason; message: string }>;
 
+export const MAX_ASSISTANT_TURNS = 100;
+
+export const MAX_ASSISTANT_TRANSCRIPT_BYTES = 256 * 1024;
+
+export const MAX_ASSISTANT_PROMPT_BYTES = 16 * 1024;
+
+export const MAX_ASSISTANT_RESPONSE_BYTES = 64 * 1024;
+
 const KIDS_PROFILE = "@sceneaxi/profile-kids";
+
 const PROFILE_PATTERN = /^@sceneaxi\/profile-[a-z][a-z0-9-]*$/;
 
 /** Exactly the fields a pinned model is, in the port's own order. */
@@ -293,8 +306,12 @@ function isAssistantMode(value: unknown): value is AssistantMode {
   return ASSISTANT_MODES.some((mode) => mode === value);
 }
 
+type PanelRecord = NonNullable<ReturnType<typeof snapshotPlainRecord>>;
+
+type Mutable<T> = { -readonly [K in keyof T]: T[K] };
+
 function hasExactKeys(
-  value: Readonly<Record<string, unknown>>,
+  value: PanelRecord,
   keys: ReadonlyArray<string>,
 ) {
   return (
@@ -315,9 +332,10 @@ function hasExactKeys(
  * own injected `CreditStore`, and it moves the refusal back to the wiring.
  */
 function isAssistantPort(value: unknown): value is ModelProviderPort {
-  if (value === null || typeof value !== "object") return false;
+  if (value === null || !(isBoundaryObjectValue(value))) return false;
+
   try {
-    return typeof (value as Record<string, unknown>)["complete"] === "function";
+    return "complete" in value && isBoundaryCallableValue(value.complete);
   } catch {
     return false;
   }
@@ -334,17 +352,39 @@ function isAssistantPort(value: unknown): value is ModelProviderPort {
  * reader as "the model provider call failed", on every turn, from the check
  * whose whole job is to catch it at construction.
  */
-function snapshotModelDescriptor(value: unknown): ModelDescriptor | undefined {
+function isText(value: unknown): value is string {
+  return typeof value === "string";
+}
+
+function isClock(value: unknown): value is () => number {
+  return isBoundaryCallableValue(value);
+}
+
+function isSurface(value: unknown): value is IdentitySurface {
+  return PANEL_SURFACES.some((surface) => surface === value);
+}
+
+function isModelDescriptor(value: unknown): value is ModelDescriptor {
   const record = snapshotPlainRecord(value);
+
+  return record !== undefined && hasExactKeys(record, MODEL_DESCRIPTOR_KEYS) &&
+    MODEL_DESCRIPTOR_KEYS.every((key) => isText(record[key]) && record[key].length > 0);
+}
+
+function snapshotModelDescriptor(value: ModelDescriptor): ModelDescriptor | undefined {
+  const record = snapshotPlainRecord(value);
+
   if (
     record === undefined ||
     !hasExactKeys(record, MODEL_DESCRIPTOR_KEYS) ||
     !MODEL_DESCRIPTOR_KEYS.every(
-      (key) => typeof record[key] === "string" && record[key].length > 0,
+      (key) => isText(record[key]) && record[key].length > 0,
     )
   ) {
     return undefined;
   }
+
+  // SAFETY: the exact descriptor keys were checked above to contain non-empty strings.
   return Object.freeze({
     model: record["model"] as string,
     provider: record["provider"] as string,
@@ -354,10 +394,11 @@ function snapshotModelDescriptor(value: unknown): ModelDescriptor | undefined {
 }
 
 function snapshotPortSuccess(
-  value: unknown,
+  value: Parameters<typeof snapshotPlainRecord>[0],
   expectedProfile: ModelProviderProfile,
 ): ModelProviderSuccess<ModelCompleteResponse> | undefined {
   const result = snapshotPlainRecord(value);
+
   if (
     result === undefined ||
     result["ok"] !== true ||
@@ -367,6 +408,7 @@ function snapshotPortSuccess(
   }
 
   const response = snapshotPlainRecord(result["response"]);
+
   if (
     response === undefined ||
     !hasExactKeys(response, [
@@ -377,7 +419,7 @@ function snapshotPortSuccess(
     ]) ||
     response["schemaVersion"] !== MODEL_PROVIDER_PORT_SCHEMA_VERSION ||
     response["operation"] !== "complete" ||
-    typeof response["text"] !== "string" ||
+    !isText(response["text"]) ||
     (response["finishReason"] !== "stop" &&
       response["finishReason"] !== "length")
   ) {
@@ -385,7 +427,12 @@ function snapshotPortSuccess(
   }
 
   const evidence = snapshotPlainRecord(result["evidence"]);
-  const executedModel = snapshotModelDescriptor(evidence?.["model"]);
+  const executedModelInput = evidence?.["model"];
+
+  const executedModel = isModelDescriptor(executedModelInput)
+    ? snapshotModelDescriptor(executedModelInput)
+    : undefined;
+
   if (
     evidence === undefined ||
     executedModel === undefined ||
@@ -450,18 +497,21 @@ export function createAssistantPanel(
   options: CreateAssistantPanelOptions,
 ): CreateAssistantPanelResult {
   const optionRecord = snapshotPlainRecord(options);
+
   if (optionRecord === undefined) {
     return createFailure(
       ASSISTANT_PANEL_REASONS.surfaceInvalid,
       "The assistant panel needs a known SceneAxi surface.",
     );
   }
-  if (!PANEL_SURFACES.includes(optionRecord["surface"] as IdentitySurface)) {
+
+  if (!isSurface(optionRecord["surface"])) {
     return createFailure(
       ASSISTANT_PANEL_REASONS.surfaceInvalid,
       "The assistant panel needs a known SceneAxi surface.",
     );
   }
+
   // Kids first, and before anything else is even validated: no assistant exists
   // on that surface, so no mode of it can be metered or dispatched.
   if (optionRecord["surface"] === "kids") {
@@ -470,14 +520,16 @@ export function createAssistantPanel(
       "Kids never reaches a third-party or hosted LLM through this surface; no assistant panel is offered.",
     );
   }
+
   if (optionRecord["profile"] === KIDS_PROFILE) {
     return createFailure(
       ASSISTANT_PANEL_REASONS.kidsProfileDenied,
       "The Kids profile has no assistant route; the panel refuses before any metering or dispatch can be attempted.",
     );
   }
+
   if (
-    typeof optionRecord["profile"] !== "string" ||
+    !isText(optionRecord["profile"]) ||
     !PROFILE_PATTERN.test(optionRecord["profile"])
   ) {
     return createFailure(
@@ -485,40 +537,50 @@ export function createAssistantPanel(
       "The assistant panel needs a SceneAxi profile the Model Provider Port can evaluate a policy for.",
     );
   }
-  const model = snapshotModelDescriptor(optionRecord["model"]);
+
+  const modelInput = optionRecord["model"];
+  const model = isModelDescriptor(modelInput) ? snapshotModelDescriptor(modelInput) : undefined;
+
   if (model === undefined) {
     return createFailure(
       ASSISTANT_PANEL_REASONS.modelInvalid,
       "The assistant panel needs the exact model descriptor its ports are pinned to.",
     );
   }
+
   const portRecord = snapshotPlainRecord(optionRecord["ports"]);
+
   if (portRecord === undefined) {
     return createFailure(
       ASSISTANT_PANEL_REASONS.transportMissing,
       "The assistant panel needs at least one Model Provider Port; it builds no adapter and holds no credential.",
     );
   }
+
   const initialMode =
     optionRecord["mode"] === undefined
       ? ASSISTANT_DEFAULT_MODE
       : optionRecord["mode"];
+
   if (!isAssistantMode(initialMode)) {
     return createFailure(
       ASSISTANT_PANEL_REASONS.modeUnknown,
       `An assistant mode must be one of: ${ASSISTANT_MODES.join(", ")}.`,
     );
   }
+
   if (!isAssistantPort(portRecord[initialMode])) {
     return createFailure(
       ASSISTANT_PANEL_REASONS.transportMissing,
       `No Model Provider Port is wired for the '${initialMode}' assistant mode; it does not fall back to another mode's transport.`,
     );
   }
+
   const adminRecord = snapshotPlainRecord(optionRecord["admin"]);
+
   if (
     adminRecord === undefined ||
-    typeof adminRecord["email"] !== "string" ||
+    !isText(adminRecord["email"]) ||
     adminRecord["email"].length === 0
   ) {
     return createFailure(
@@ -526,47 +588,75 @@ export function createAssistantPanel(
       "The assistant panel requires the resolved admin identity.",
     );
   }
-  if (typeof optionRecord["clock"] !== "function") {
+
+  if (!isClock(optionRecord["clock"])) {
     return createFailure(
       ASSISTANT_PANEL_REASONS.clockInvalid,
       "The assistant panel requires an injected clock.",
     );
   }
 
-  const surface = optionRecord["surface"] as IdentitySurface;
+  const surface = optionRecord["surface"];
+  // SAFETY: the string passed PROFILE_PATTERN, the schema namespace for provider profiles.
   const profile = optionRecord["profile"] as ModelProviderProfile;
+
+  // SAFETY: options declares this mode-to-port mapping; every selected port is checked by isAssistantPort before invocation.
   const ports = Object.freeze({ ...portRecord }) as Readonly<
     Partial<Record<AssistantMode, ModelProviderPort>>
   >;
+
+  // SAFETY: options supplies an AdminIdentity; its email was checked above and the auth gate still enforces provenance.
   const admin = optionRecord["admin"] as AdminIdentity;
-  const clock = optionRecord["clock"] as () => number;
+  const clock = optionRecord["clock"];
   const hostedAiRecord = snapshotPlainRecord(optionRecord["hostedAi"]);
-  const hostedAi: HostedAiConfig = Object.freeze({
+
+  const hostedAiConfig: Mutable<HostedAiConfig> = {
     enabled: hostedAiRecord?.["enabled"] === true,
-  });
+  };
+
+  if (hostedAiRecord?.["pricing"] !== undefined) {
+    // SAFETY: the typed options supplies billing-issued pricing; retain its identity so billing can enforce policy provenance.
+    hostedAiConfig.pricing = hostedAiRecord["pricing"] as NonNullable<HostedAiConfig["pricing"]>;
+  }
+
+  const hostedAi: HostedAiConfig = Object.freeze(hostedAiConfig);
+
+  // SAFETY: options declares an optional Principal; the auth gate validates its provenance before use.
   const principal = optionRecord["principal"] as Principal | undefined;
+  // SAFETY: options declares the injected credits view; readOwnedLedger validates its callable and ledger result.
   const credits = optionRecord["credits"] as AssistantCreditsView | undefined;
+  // SAFETY: options declares the injected CreditStore; the billing gate validates it before persisting a debit.
   const store = optionRecord["store"] as CreditStore | undefined;
+
+  // SAFETY: options declares an optional numeric price; billing validates the integer amount against its authoritative pricing policy.
   const hostedTurnCredits = optionRecord["hostedTurnCredits"] as
     | number
     | undefined;
 
   let mode: AssistantMode = initialMode;
   const turns: AssistantTurn[] = [];
+  let turnsDropped = 0;
   let creditBalance: number | undefined;
   const serializeTurn = createOperationQueue();
 
-  const view = (value?: AssistantRefusal): AssistantPanelSnapshot =>
-    Object.freeze({
+  const view = (value?: AssistantRefusal): AssistantPanelSnapshot => {
+    const snapshot: Mutable<AssistantPanelSnapshot> = {
       mode,
       surface,
       profile,
       metered: ASSISTANT_MODE_BILLING[mode].route === "hosted",
       hostedEnabled: hostedAi.enabled === true,
       turns: Object.freeze([...turns]),
-      ...(creditBalance === undefined ? {} : { creditBalance }),
-      ...(value === undefined ? {} : { refusal: value }),
-    });
+    };
+
+    if (turnsDropped !== 0) snapshot.turnsDropped = turnsDropped;
+
+    if (creditBalance !== undefined) snapshot.creditBalance = creditBalance;
+
+    if (value !== undefined) snapshot.refusal = value;
+
+    return Object.freeze(snapshot);
+  };
 
   const refuseLedger = (value: AssistantRefusal): LedgerResolution =>
     Object.freeze({ ok: false, refusal: value });
@@ -592,10 +682,13 @@ export function createAssistantPanel(
     }
 
     const read = await readOwnedLedger(credits, userId);
+
     if (read.ok) return Object.freeze({ ok: true, state: read.state });
+
     if (read.failure === "invalid") {
       return refuseLedger(refusal(read.reason, read.message));
     }
+
     if (read.failure === "unavailable") {
       return refuseLedger(
         refusal(
@@ -604,9 +697,11 @@ export function createAssistantPanel(
         ),
       );
     }
+
     if (read.failure === "missing") {
       return Object.freeze({ ok: true, state: undefined });
     }
+
     return refuseLedger(
       refusal(
         ASSISTANT_PANEL_REASONS.ledgerOwnerMismatch,
@@ -616,13 +711,15 @@ export function createAssistantPanel(
   };
 
   const ask = async (
-    request: Readonly<Record<string, unknown>> | undefined,
+    request: Readonly<{ prompt?: unknown; turnId?: unknown }> | undefined,
     activeMode: AssistantMode,
   ): Promise<AssistantPanelSnapshot> => {
     if (ASSISTANT_MODE_BILLING[activeMode].route === "hosted") {
       creditBalance = undefined;
     }
+
     const now = readEpochClock(clock);
+
     if (now === undefined) {
       return view(
         refusal(
@@ -633,17 +730,21 @@ export function createAssistantPanel(
     }
 
     const prompt = request?.["prompt"];
-    if (typeof prompt !== "string" || prompt.trim().length === 0) {
+
+    if (!isText(prompt) || prompt.trim().length === 0 ||
+        Buffer.byteLength(prompt, "utf8") > MAX_ASSISTANT_PROMPT_BYTES) {
       return view(
         refusal(
           ASSISTANT_PANEL_REASONS.promptInvalid,
-          "An assistant turn requires a non-empty prompt.",
+          `An assistant turn requires a non-empty prompt of at most ${MAX_ASSISTANT_PROMPT_BYTES} UTF-8 bytes.`,
         ),
       );
     }
+
     const turnId = request?.["turnId"];
 
     const port = ports[activeMode];
+
     if (!isAssistantPort(port)) {
       return view(
         refusal(
@@ -670,10 +771,13 @@ export function createAssistantPanel(
     // says `ENTITLEMENT_ACCOUNT_REQUIRED`. Every authenticated hosted principal
     // must then supply a ledger the gate confirms is current.
     let state: LedgerState | undefined;
+
     if (hosted && hostedAi.enabled === true) {
       const guarded = requireAuthenticated(principal, { now, surface, admin });
+
       if (guarded.ok) {
         const resolved = await resolveHostedLedger(guarded.value.user.userId);
+
         if (!resolved.ok) return view(resolved.refusal);
         state = resolved.state;
       }
@@ -686,6 +790,7 @@ export function createAssistantPanel(
     // kept so the reader is told which route the port refused, while billing
     // still speaks its own `HOSTED_AI_PROVIDER_FAILED`.
     let portRefusal: Readonly<{ reason: string; message: string }> | undefined;
+
     const call = async (): Promise<
       ModelProviderSuccess<ModelCompleteResponse>
     > => {
@@ -696,39 +801,47 @@ export function createAssistantPanel(
         model,
         prompt,
       });
+
       const resultRecord = snapshotPlainRecord(result);
+
       if (resultRecord?.["ok"] === false) {
         const reason = resultRecord["reason"];
         const message = resultRecord["message"];
+
         if (
           !hasExactKeys(resultRecord, ["ok", "reason", "message"]) ||
-          typeof reason !== "string" ||
+          !isText(reason) ||
           reason.length === 0 ||
-          typeof message !== "string" ||
-          message.length === 0
+          Buffer.byteLength(reason, "utf8") > 256 ||
+          !isText(message) ||
+          message.length === 0 ||
+          Buffer.byteLength(message, "utf8") > MAX_ASSISTANT_RESPONSE_BYTES
         ) {
           throw new TypeError(
             "The Model Provider Port returned an invalid refusal envelope.",
           );
         }
+
         portRefusal = Object.freeze({
           reason,
           message,
         });
         throw new Error(reason);
       }
-      const success = snapshotPortSuccess(resultRecord, profile);
-      if (success === undefined) {
+
+      const success = snapshotPortSuccess(result, profile);
+
+      if (success === undefined ||
+            Buffer.byteLength(JSON.stringify(success), "utf8") > MAX_ASSISTANT_RESPONSE_BYTES) {
         throw new TypeError(
           "The Model Provider Port returned an invalid success envelope.",
         );
       }
+
       return success;
     };
 
-    const outcome = await runMeteredModelCall<
-      ModelProviderSuccess<ModelCompleteResponse>
-    >({
+    const meteredRequest: Mutable<Parameters<typeof runMeteredModelCall<ModelProviderSuccess<ModelCompleteResponse>>>[0]> = {
       route: billing.route,
       capability: billing.capability,
       call,
@@ -736,21 +849,27 @@ export function createAssistantPanel(
       hostedAi,
       admin,
       surface,
-      ...(principal === undefined ? {} : { principal }),
-      ...(hosted
-        ? {
-            ...(state === undefined ? {} : { state }),
-            ...(store === undefined ? {} : { store }),
-            ...(hostedTurnCredits === undefined
-              ? {}
-              : { creditAmount: hostedTurnCredits }),
-            reason: ASSISTANT_DEBIT_REASON,
-            ...(typeof turnId === "string" && turnId.length > 0
-              ? { idempotencyKey: `${ASSISTANT_TURN_KEY_PREFIX}:${turnId}` }
-              : {}),
-          }
-        : {}),
-    });
+    };
+
+    if (principal !== undefined) meteredRequest.principal = principal;
+
+    if (hosted) {
+      meteredRequest.model = model.model;
+      meteredRequest.operation = "complete";
+
+      if (state !== undefined) meteredRequest.state = state;
+
+      if (store !== undefined) meteredRequest.store = store;
+
+      if (hostedTurnCredits !== undefined) meteredRequest.creditAmount = hostedTurnCredits;
+      meteredRequest.reason = ASSISTANT_DEBIT_REASON;
+
+      if (isText(turnId) && turnId.length > 0) {
+        meteredRequest.idempotencyKey = `${ASSISTANT_TURN_KEY_PREFIX}:${turnId}`;
+      }
+    }
+
+    const outcome = await runMeteredModelCall(meteredRequest);
 
     if (!outcome.ok) {
       return view(
@@ -769,6 +888,7 @@ export function createAssistantPanel(
     // than saying it is gone. The balance comes from the current ledger.
     if (outcome.value.replayed) {
       creditBalance = outcome.value.balance;
+
       return view(
         refusal(
           ASSISTANT_PANEL_REASONS.turnAlreadyCharged,
@@ -780,20 +900,36 @@ export function createAssistantPanel(
     if (outcome.value.balance !== undefined) {
       creditBalance = outcome.value.balance;
     }
-    const completion = outcome.value.response.response;
-    turns.push(
-      Object.freeze({
-        mode: activeMode,
-        prompt,
-        text: completion.text,
-        finishReason: completion.finishReason,
-        evidence: outcome.value.response.evidence,
-        metered: outcome.value.metered,
-        ...(outcome.value.entry === undefined
-          ? {}
-          : { credits: -outcome.value.entry.delta }),
-      }),
-    );
+
+    const success = snapshotPortSuccess(outcome.value.response, profile);
+
+      if (success === undefined) {
+        return view(refusal(
+          BILLING_REFUSE_REASONS.hostedAiProviderFailed,
+          "The stored model answer is not a valid assistant completion envelope.",
+        ));
+      }
+
+      const completion = success.response;
+
+    const turn: Mutable<AssistantTurn> = {
+      mode: activeMode,
+      prompt,
+      text: completion.text,
+      finishReason: completion.finishReason,
+      evidence: success.evidence,
+      metered: outcome.value.metered,
+    };
+
+    if (outcome.value.entry !== undefined) turn.credits = -outcome.value.entry.delta;
+    turns.push(Object.freeze(turn));
+
+    while (turns.length > MAX_ASSISTANT_TURNS ||
+           Buffer.byteLength(JSON.stringify(turns), "utf8") > MAX_ASSISTANT_TRANSCRIPT_BYTES) {
+      turns.shift();
+      turnsDropped += 1;
+    }
+
     return view();
   };
 
@@ -811,6 +947,7 @@ export function createAssistantPanel(
           ),
         );
       }
+
       if (!isAssistantPort(ports[next])) {
         return view(
           refusal(
@@ -819,7 +956,9 @@ export function createAssistantPanel(
           ),
         );
       }
+
       mode = next;
+
       return view();
     },
 
@@ -837,9 +976,25 @@ export function createAssistantPanel(
     async ask(request) {
       const requestedMode = mode;
       const requestSnapshot = snapshotPlainRecord(request);
-      return serializeTurn(() => ask(requestSnapshot, requestedMode));
+
+      return serializeTurn(() => ask(requestSnapshot, requestedMode), () => view(refusal(
+        ASSISTANT_PANEL_REASONS.busy,
+        "The assistant queue is full; this turn was not admitted, dispatched or charged. Retry explicitly later.",
+      )));
     },
   });
 
   return Object.freeze({ ok: true, panel });
+}
+
+type BoundaryObjectValue = object | null;
+
+type BoundaryCallableValue = (...args: never[]) => void;
+
+function isBoundaryObjectValue<Input>(value: Input): value is Input & Readonly<BoundaryObjectValue> {
+  return typeof value === "object";
+}
+
+function isBoundaryCallableValue<Input>(value: Input): value is Input & BoundaryCallableValue & object {
+  return typeof value === "function";
 }

@@ -1,0 +1,134 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/tmp/sceneaxi-comprehensive-owned-xd4gdfl1[39m
+
+[33m[39m[31mx[39m[33m[39m[31mx[39m[33m[39m[31mx[39m[33m[39m[31mx[39m[33m[39m[31mx[39m[33m[39m[31mx[39m[33m[39m[31mx[39m[33m[39m[31mx[39m[33m[39m[31mx[39m[33m[39m[31mx[39m
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 10 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m tests/sites/maintenance-compat.test.ts[2m > [22mmaintenance P2-P6 public compatibility and refusal oracles[2m > [22mP2 emits the versioned motion values on every existing surface without changing contrast
+[31m[1mAssertionError[22m: expected { seam: { …(2) }, …(174), [Symbol(Symbol.toStringTag)]: '…' } to have property "FOUNDATION_MOTION" with value { fast: '120ms', base: '200ms', …(1) }[39m
+
+[32m- Expected:[39m
+{
+  "base": "200ms",
+  "easeStandard": "cubic-bezier(0.2, 0, 0, 1)",
+  "fast": "120ms",
+}
+
+[31m+ Received:[39m
+undefined
+
+[36m [2m❯[22m tests/sites/maintenance-compat.test.ts:[2m56:21[22m[39m
+    [90m 54|[39m describe("maintenance P2-P6 public compatibility and refusal oracles",…
+    [90m 55|[39m   it("P2 emits the versioned motion values on every existing surface w…
+    [90m 56|[39m     expect(siteKit).toHaveProperty("FOUNDATION_MOTION", { fast: "120ms…
+    [90m   |[39m                     [31m^[39m
+    [90m 57|[39m     [35mfor[39m ([35mconst[39m surface [35mof[39m siteKit[33m.[39m[33mFOUNDATION_SURFACES[39m) {
+    [90m 58|[39m       const css = siteKit.foundationsVariablesCss(surface); expect(css…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/sites/maintenance-compat.test.ts[2m > [22mmaintenance P2-P6 public compatibility and refusal oracles[2m > [22mcatalog-game P4 preserves large/ok legacy props and explicit variant precedence
+[41m[1m FAIL [22m[49m tests/sites/maintenance-compat.test.ts[2m > [22mmaintenance P2-P6 public compatibility and refusal oracles[2m > [22mcatalog-web P4 preserves large/ok legacy props and explicit variant precedence
+[31m[1mAssertionError[22m: expected 'sigil sigil-lg' to be 'plate plate-detail' // Object.is equality[39m
+
+Expected: [32m"plate plate-detail"[39m
+Received: [31m"sigil sigil-lg"[39m
+
+[36m [2m❯[22m tests/sites/maintenance-compat.test.ts:[2m70:46[22m[39m
+    [90m 68|[39m       [35mconst[39m listing [33m=[39m siteKit[33m.[39m[34mlistSiteCatalog[39m(store)[[34m0[39m][33m![39m[33m;[39m
+    [90m 69|[39m       const old = call(m, "DigestFigure", { digest: listing.recordDige…
+    [90m 70|[39m       expect(nodes(old)[0]!.props.className).toBe("plate plate-detail"…
+    [90m   |[39m                                              [31m^[39m
+    [90m 71|[39m       const explicit = call(m, "DigestFigure", { digest: listing.recor…
+    [90m 72|[39m       expect(nodes(explicit)[0]!.props.className).toBe("plate plate-le…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/sites/maintenance-compat.test.ts[2m > [22mmaintenance P2-P6 public compatibility and refusal oracles[2m > [22mcatalog-game P4 keeps ListingTile list semantics alongside LeadPlate and honest refusal pricing
+[41m[1m FAIL [22m[49m tests/sites/maintenance-compat.test.ts[2m > [22mmaintenance P2-P6 public compatibility and refusal oracles[2m > [22mcatalog-web P4 keeps ListingTile list semantics alongside LeadPlate and honest refusal pricing
+[31m[1mAssertionError[22m: LeadPlate public export: expected undefined to be type of 'function'[39m
+
+Expected: [32m"[7mf[27mun[7mction[27m"[39m
+Received: [31m"un[7mdefined[27m"[39m
+
+[36m [2m❯[22m call tests/sites/maintenance-compat.test.ts:[2m50:64[22m[39m
+    [90m 48|[39m }
+    [90m 49|[39m function call(module: ReturnType<typeof loadComponent>, name: string, …
+    [90m 50|[39m   const fn = module[name]; expect(fn, name + " public export").toBeTyp…
+    [90m   |[39m                                                                [31m^[39m
+    [90m 51|[39m   [35mreturn[39m [34mfn[39m[33m![39m(props [35mas[39m never)[33m;[39m
+    [90m 52|[39m }
+[90m [2m❯[22m tests/sites/maintenance-compat.test.ts:[2m79:20[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/sites/maintenance-compat.test.ts[2m > [22mmaintenance P2-P6 public compatibility and refusal oracles[2m > [22mcatalog-game P4 marks real pathname navigation and keeps publish slot a link, not intake
+[31m[1mError[22m: ENOENT: no such file or directory, open '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/sites/catalog-game/src/app/_components/store-nav.tsx'[39m
+[36m [2m❯[22m load tests/sites/maintenance-compat.test.ts:[2m20:20[22m[39m
+    [90m 18|[39m     [35mconst[39m cached [33m=[39m cache[33m.[39m[35mget[39m(file)[33m;[39m [35mif[39m (cached) [35mreturn[39m cached[33m.[39mexports[33m;[39m
+    [90m 19|[39m     const module = { exports: {} as Record<string, (...args: never[]) …
+    [90m 20|[39m     [35mconst[39m source [33m=[39m [34mreadFileSync[39m(file[33m,[39m [32m"utf8"[39m)[33m;[39m
+    [90m   |[39m                    [31m^[39m
+    [90m 21|[39m     const code = ts.transpileModule(source, { compilerOptions: { targe…
+    [90m 22|[39m     [35mconst[39m require [33m=[39m (specifier[33m:[39m string)[33m:[39m unknown [33m=>[39m {
+[90m [2m❯[22m loadComponent tests/sites/maintenance-compat.test.ts:[2m33:10[22m[39m
+[90m [2m❯[22m tests/sites/maintenance-compat.test.ts:[2m85:19[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/sites/maintenance-compat.test.ts[2m > [22mmaintenance P2-P6 public compatibility and refusal oracles[2m > [22mcatalog-game P4 executes modern bounded browse success, empty state and query refusal
+[31m[1mError[22m: CATALOG_BROWSE_QUERY_INVALID[39m
+[36m [2m❯[22m browseSiteCatalog packages/site-kit/src/catalog.ts:[2m381:108[22m[39m
+    [90m379|[39m
+    [90m380|[39m   [35mfor[39m ([35mconst[39m [key[33m,[39m value] [35mof[39m [33mObject[39m[33m.[39m[34mentries[39m(params)) {
+    [90m381|[39m     if (!allowed.includes(key) || Array.isArray(value) || (value !== u…
+    [90m   |[39m                                                                                                            [31m^[39m
+    [90m382|[39m   }
+    [90m383|[39m
+[90m [2m❯[22m CataloguePage sites/catalog-game/src/app/page.tsx:[2m39:53[22m[39m
+[90m [2m❯[22m tests/sites/maintenance-compat.test.ts:[2m96:23[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/sites/maintenance-compat.test.ts[2m > [22mmaintenance P2-P6 public compatibility and refusal oracles[2m > [22mcatalog-web P4 marks real pathname navigation and keeps publish slot a link, not intake
+[31m[1mError[22m: ENOENT: no such file or directory, open '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/sites/catalog-web/src/app/_components/store-nav.tsx'[39m
+[36m [2m❯[22m load tests/sites/maintenance-compat.test.ts:[2m20:20[22m[39m
+    [90m 18|[39m     [35mconst[39m cached [33m=[39m cache[33m.[39m[35mget[39m(file)[33m;[39m [35mif[39m (cached) [35mreturn[39m cached[33m.[39mexports[33m;[39m
+    [90m 19|[39m     const module = { exports: {} as Record<string, (...args: never[]) …
+    [90m 20|[39m     [35mconst[39m source [33m=[39m [34mreadFileSync[39m(file[33m,[39m [32m"utf8"[39m)[33m;[39m
+    [90m   |[39m                    [31m^[39m
+    [90m 21|[39m     const code = ts.transpileModule(source, { compilerOptions: { targe…
+    [90m 22|[39m     [35mconst[39m require [33m=[39m (specifier[33m:[39m string)[33m:[39m unknown [33m=>[39m {
+[90m [2m❯[22m loadComponent tests/sites/maintenance-compat.test.ts:[2m33:10[22m[39m
+[90m [2m❯[22m tests/sites/maintenance-compat.test.ts:[2m85:19[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/sites/maintenance-compat.test.ts[2m > [22mmaintenance P2-P6 public compatibility and refusal oracles[2m > [22mcatalog-web P4 executes modern bounded browse success, empty state and query refusal
+[31m[1mError[22m: CATALOG_BROWSE_QUERY_INVALID[39m
+[36m [2m❯[22m browseSiteCatalog packages/site-kit/src/catalog.ts:[2m381:108[22m[39m
+    [90m379|[39m
+    [90m380|[39m   [35mfor[39m ([35mconst[39m [key[33m,[39m value] [35mof[39m [33mObject[39m[33m.[39m[34mentries[39m(params)) {
+    [90m381|[39m     if (!allowed.includes(key) || Array.isArray(value) || (value !== u…
+    [90m   |[39m                                                                                                            [31m^[39m
+    [90m382|[39m   }
+    [90m383|[39m
+[90m [2m❯[22m ShowroomPage sites/catalog-web/src/app/page.tsx:[2m42:53[22m[39m
+[90m [2m❯[22m tests/sites/maintenance-compat.test.ts:[2m96:23[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/sites/maintenance-compat.test.ts[2m > [22mmaintenance P2-P6 public compatibility and refusal oracles[2m > [22mP3/P5 retain exact original PNG bytes and show historical limitations through ProofFigure
+[31m[1mAssertionError[22m: Target cannot be null or undefined.[39m
+[36m [2m❯[22m tests/sites/maintenance-compat.test.ts:[2m101:19[22m[39m
+
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/10]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m10 failed[39m[22m[90m (10)[39m
+[2m   Start at [22m 11:44:00
+[2m   Duration [22m 7.32s[2m (transform 5.04s, setup 0ms, import 6.38s, tests 565ms, environment 0ms)[22m
+

@@ -1,0 +1,890 @@
+{
+  "taskid": "checkout-boundary",
+  "subject": "exact current source",
+  "node": "v24.21.0",
+  "typescript": "5.9.3",
+  "fingerprints": {
+    "sites/umbrella/src/app/api/checkout/checkout-handler.ts": "a4c3a2a93dfd3bfa94daefe5fd8e4f655da4330b17aa67d50449056ade6a3ab3",
+    "packages/site-kit/src/index.ts": "e2e04ca903eea55313480a1997721d33b58cb54246132b97e9ee7460296e6198",
+    "packages/schemas/src/index.ts": "70d2d830c403c6f8f55191f277f13cf875714b0fa9c7e9556ecdf368801984c2",
+    "packages/schemas/src/project-git.ts": "5cb9cdfd049d0a13ae7d55e77b3da118d52f5fa93054ef51806b7d6ab6cc7d44",
+    "packages/schemas/src/project-manifest.ts": "e88ee989c5d5fd70ed9813fb195e50ed0d714d5f10cdd869b8f02c39b3b91823",
+    "packages/schemas/src/sculpt-json.ts": "7175f05896d96f1560d580d30249fde711e4da45eb760ebf8ca62164c0d08b15",
+    "packages/schemas/src/gltf-animation.ts": "b7fedcbee0481c2254272297c94a72276b91c70b113d6c53673929657cebd3d0",
+    "packages/schemas/src/catalog.ts": "712100185fd7c88bafc2f93afec7a6fa16d06e4576ed6274e9e598a656954191",
+    "packages/schemas/src/document.ts": "3a50c64a37bd781a68ef9ecf119d4a87fcdc6dcd361c354bc586963eb08a3004",
+    "packages/schemas/src/identity.ts": "af3a98501836447a0fad428a9041519d47155f7e4e79ea4ebeebb266a87c64e3",
+    "packages/schemas/src/record-validation.ts": "72be7d5ef27c41ac3abe86236d53a5b5da2f8451f43669c71082267c8a9d1812",
+    "packages/schemas/src/credits.ts": "0de5a5b16c3614e633855b8a7e5f6a41185e90e5baf81cd2732d8e471111434b",
+    "packages/schemas/src/billing.ts": "cffe6d034cdca1ce2780bbf4a0db021e45839949650928a96066fa6660f952f9",
+    "packages/schemas/src/credit-packs.data.ts": "13186453a8b85a157c8e55ebd639b456aa3d40e3f7662b1e275107cd8e9d1b56",
+    "packages/schemas/src/entitlements.ts": "c63be7188ba86f8c2b9ba8589082bb5655c0715b176969227818160a90327c8b",
+    "packages/schemas/src/catalog-listing.ts": "c7ce6ab7b6df8df0ba965cd57beb738d7fbd15d9032bd60b9b7a154b5484dea7",
+    "packages/schemas/src/catalog-listings.data.ts": "5448612dcbac984459a1c61edae163e80063ceb543245d7828392e0f2305410e",
+    "packages/schemas/src/revenue-share.ts": "e4eb5999235d2b1f222395ed8d0da620aed0e67ac290df9f1ae384161976cbd5",
+    "packages/schemas/src/stripe-connect.ts": "fa211775c6953861a0817b542b916e4d6461b39e06c9f75aced25022263ca90d",
+    "packages/schemas/src/credit-reconciliation.ts": "48164d435141a6fb798135d8d966deabbcb6ceba7bbd8c3fb61459f3e1a5dcd2",
+    "packages/schemas/src/provenance.ts": "83a2174e443b54a2c620f165929ccebc0c9a477b48ec7abca350edb1a0070bb8",
+    "packages/schemas/src/unambiguous-json.ts": "cfeac583b541a42291ba78e8c6a30a3e2633bb9eb34495aaef130e435cd698af",
+    "packages/schemas/src/web-experience-authoring.ts": "bb69b574256c1bd2a68a47185731bc251a0f8b8c251bf7099ff0c19e7cf38381",
+    "packages/schemas/src/proposal.ts": "849d72ab519d6a8087f18b121a0e0b3ddef3cb385fb562650bff0a96073516ad",
+    "packages/schemas/src/editor-command-registry.ts": "5803b0b7a390651778ac62133558f2e6594d125ee45a912e07352de4e1c568a3",
+    "packages/schemas/src/sculpt.ts": "5096d27b1759eb6a437c12f6e7a2c7c1f9d9a26a76ffa698a204b97e3f5d8e50",
+    "packages/schemas/src/sculpt-procedural.ts": "83a83ab3234ba73d611034efaf6b5831251b93264344abce54af52e906136b8c",
+    "packages/schemas/src/desktop-scene-edit.ts": "0427ce1d9ad3e2eb9cd95c164857bfe48735846103a522b84e16c8a45bd78218",
+    "packages/schemas/src/scene-composition.ts": "43c85cf3544bd261caa3e3504b5be4a9e9c8f7680fbcd588616a73c91c8a3c0f",
+    "packages/schemas/src/desktop-scene-transform.ts": "11c81b3ff29bf956788237f2db352db899d9c07f6068c4c60faf90fe7f0707a1",
+    "packages/schemas/src/desktop-scene-prefab.ts": "1440dc4cdced9bf44732d44e783ff55d64176f140d9b87264474c53b0c2f29bd",
+    "packages/schemas/src/desktop-play-session.ts": "5c01f459b72af0a5b6c061d0fe70010f41b971c20967b36fbbdb98dd4fe162c9",
+    "packages/schemas/src/desktop-scene-animation.ts": "c5b5c8e86dc3c349b0008d3cbf563d7a1d208da62824cd8df5bf8d5730da5350",
+    "packages/schemas/src/desktop-scene-physics.ts": "77efd8aa05900dc319303dc96f502b927f77db473ba84d106a11d54cafc5d9d3",
+    "packages/schemas/src/physics-world-host.ts": "0ff3615be0b0b5bc1dfe656bc770bd2de3a41a1e648c60ff512e3f0cd3ba2151",
+    "packages/schemas/src/desktop-scene-environment.ts": "c17ca23c7ce9251b1d2b99afaf21345b84603e1929b9a4f091d756f108889646",
+    "packages/schemas/src/desktop-scene-materials.ts": "1a7be19a9437ce2d6b0e4f914b331d1c1760c4f88ee33799ef5f349ed37d9c4b",
+    "packages/schemas/src/desktop-scene-effects.ts": "7fd21bfb8336efc0a4d6d29eb6690c1d509edcb15e98edc0b8c45820cdae5d52",
+    "packages/schemas/src/desktop-assistant-ask.ts": "2e85482eb24cf214a4a7d936e290c735a42e77ef88045ddee432992f02f26b11",
+    "packages/schemas/src/desktop-scene-package.ts": "3ef9a2cb60884e3476fcb1252b1477636c5074d00fc07e444a9d3acf5034601f",
+    "packages/schemas/src/desktop-profile-evidence.ts": "bf8eddc6fa9882c8ae793f1d7623f3643aa64f2f98743ec4cb54ba5b94954b62",
+    "packages/schemas/src/desktop-workspace-layout.ts": "2589017fc764dc3425033818d061da45ae13cd8e1408f17eae723f0f2a5ce71d",
+    "packages/schemas/src/desktop-extension-seams.ts": "df65d34b2e4c5654cea3aad80c22a11c654ef5473a4c67653c63d24475ff9d57",
+    "packages/schemas/src/desktop-project-build.ts": "ec7b86e27314891af86e662279d6ea835b12ccfec63155c7e022578ebfee0588",
+    "packages/schemas/src/input-action-registry.ts": "c40b9abbb5c1967b0ef8a1e8b47d3be25f90e118924ae9330474de6436b208f5",
+    "packages/schemas/src/delivery-handoff.ts": "c321a798e6463406353b5cc0c6505a75bc52e8b39a549befbb54ebaf50975dee",
+    "packages/schemas/src/model-provider.ts": "24f5d5e92a3547cbf9e3301fa247885800b94bc0fd623296c7c70ebe768b5dca",
+    "packages/schemas/src/desktop-local-bridge.ts": "e7d5391cf23741124744f9835d3b3b85482662ef67261875386ee6493e2dbd14",
+    "packages/schemas/src/editor-shell.ts": "71f9c2a638ac9296d15e78ac31b0925c6d95861c8e5e6e829431637ce1bd1929",
+    "packages/schemas/src/plugin.ts": "a5e26c8c0564d4cf7908ab4ad3ed0690fef86cd18a0cba8706bd6f0e61d044c8",
+    "packages/schemas/src/exact-semver.ts": "3267b07d4509e3cdde4876ae9aa89f27237559457ba8c3121c09221c88ec59be",
+    "packages/schemas/src/plugin-capability-registry.ts": "1335123cb7774303edf3a568b1cea70a0b0d6d30f99c162efde3c70b846eef81",
+    "packages/schemas/src/plugin-capability-sculpt-intake.ts": "9cd0331ad0efca6699371bb6ceea941de6bc33ad8d8e7cf9409b7b5be5611b6e",
+    "packages/schemas/src/kernel-session.ts": "bbc1526e5b4c9be8357a085448f7d0cbf1a0838f892808c85ece4089b43f85d9",
+    "packages/schemas/src/rarity.ts": "c4894f136bda21aca2a23a7c175fb5477ae1e445d1faaf3f76f0d1e493bdf06e",
+    "packages/schemas/src/profile-conformance.ts": "01cd902017d64bb68c43dba7aa8177cc2b365da42c03071923872abc2f2d37e6",
+    "packages/schemas/src/open-path-policy.ts": "914204755a5119595d73241f3958c27bc50ca581f900aad75b8455ecb00dfe0e",
+    "packages/site-kit/src/refusals.ts": "a7bff5b6803112a06694186357359ce03185498bdc9eac9654b28502496e9cdf",
+    "packages/site-kit/src/ports.ts": "9604969fbec4594dd8bab4b9fd26d65fb02c9666b8fc73b533aac447b317b00d",
+    "packages/site-kit/src/site-session.ts": "56712ccd4e4242d1f8b76b155fd72633d5764e1c4413edc330e0b68b3f902d6d",
+    "packages/site-kit/src/catalog-identity.ts": "265b5febb386e6f6db1e712d3a7a3f89da96cbbe26cfe1ccb86b3b21ba006e2c",
+    "packages/site-kit/src/engine-sdk-offer.ts": "420666de5ecec370c019dca6eba60ba2de07a0424d79ef6fca34af83406a4763",
+    "packages/site-kit/src/web-editor.ts": "25914316ab00eec4ec6854b745c670431d67aed325de356ab164afb2b7905506",
+    "packages/authoring-core/src/index.ts": "b8cdb0319d78dd2930c5d7072b7ab1ba48ba5c459c97a43c43de2329d0f5acf4",
+    "packages/authoring-core/src/project-git.ts": "cea7700614575f74112d8802f08bb3073382034eb8cd0149e6c4924309de5ab1",
+    "packages/authoring-core/src/atomic-write.ts": "39fbb2d720350e17a31060ff2166c94544af059a1d230320692166b1b9ec5e5d",
+    "packages/authoring-core/src/content-hash.ts": "7c4c956c477f3c66865dd7d54a6a4d68707cc1625f9468f833d805e537743053",
+    "packages/authoring-core/src/propose-apply.ts": "47fc6d05ae2d786772dc068aaaf3cc620af2c0c610e3fcd2807e0472639fe22a",
+    "packages/authoring-core/src/json-pointer.ts": "68195c35dfb45ce1f1de7e05d6da8a374998d549c8b75045a953cb7efc29d2ab",
+    "packages/authoring-core/src/unified-diff.ts": "7e7129200b9f6536ad141a053d115f7234d25579dc6e765ef77a8c44b7476e9f",
+    "packages/authoring-core/src/apply-journal.ts": "d9b11dbb3310e3803cb3d3b185a21efb28c2545ebc0a10038bdcb4d729631d84",
+    "packages/authoring-core/src/project-model.ts": "367c2599795b5fabcfe8464c4c19bf37dfd45465fb633f9fa7380a24ed7086c5",
+    "packages/authoring-core/src/model-provider-port.ts": "9204bc275dc0a955a20e686baae2680f3996ba9b093c8ce77b388b35a12b632f",
+    "packages/authoring-core/src/json-invariants.ts": "d603f57fb3b5aeb79e9dc3c7282e48e3d791d48cca7cbce3bc09b1a83c0a2e71",
+    "packages/authoring-core/src/rarity-authoring.ts": "5bf3dc212a05bdc54c998fe5401268ec3cb69b229e567882334ceba35ffae49b",
+    "packages/authoring-core/src/rarity-evidence.ts": "6dc8ade22ff8ce26dd423645de96275ebada210b58e59941dee71ab6996c13af",
+    "packages/authoring-core/src/sculpt-reconstruction.ts": "a27a745c489fadbdc3107bfa241e9abd3b2ba22f96cf0ef557be111cf8de29dd",
+    "packages/authoring-core/src/sculpt-procedural-emit.ts": "c108b99eb10c8b6234310693a913353e21c9d1f607c4799e62f394775d8e45a6",
+    "packages/authoring-core/src/scene-composition.ts": "bb38670abdbf3cdc7a4205a012f1b9ba0be4506cad40cdedf516f96cdd6e0084",
+    "packages/authoring-core/src/assistant-sculpt.ts": "62f9d8b4d4afd36756b372428b3aeb43ddb099ac7929ba6b14791222f5a9eeca",
+    "packages/authoring-core/src/minimum-e2.ts": "31c373960d5ccbcacc4d26a3194a00ae6a6817cb730b24844806322d775c484e",
+    "packages/engine-kernel/src/index.ts": "9affaa80a874dc3af5cbec6f07474e8666fd0aed4339556d04b61a868639d5b2",
+    "packages/engine-kernel/src/portable-digest.ts": "f24f6f1e1ebd4a270646a776f2522b985050de23d381be64f34b1fb03dd0274a",
+    "packages/engine-kernel/src/errors.ts": "cbd977830f3ff5faea54276d23ce816043d367bad92fe3a860f278cf90e910ac",
+    "packages/engine-kernel/src/session.ts": "d219019e2d6e487743b30e44d035b0e2f6f5e5118b1581b126790af83a9026af",
+    "packages/engine-kernel/src/rarity.ts": "3bf9b6b6a73dc7cd43d40671740a53f4ec3697fab676f42affe1eb876ad100d4",
+    "packages/engine-kernel/src/gameplay.ts": "2e00b663a926b3355fc0c0d9744c29b86fd47d55e04b7a05da3b09754150956e",
+    "packages/engine-kernel/src/sculpt-session.ts": "19c77050b009aa07057c6ecca30133e89c444c973e285b96a0e977ebbb422ddc",
+    "packages/engine-kernel/src/scene-session.ts": "6819196c063040f6266fdd4a25b4e6a12fd7813f86ea665166657518b088fbb4",
+    "packages/engine-presentation/src/index.ts": "71ccdda8f1ad02b2dc05d091d107f7d71995782816e6d19ddb8817b062782936",
+    "packages/engine-presentation/src/runtime.ts": "bec15b23991888c7db0ef9baec343da8d635505e0ad3ea4980fd7e45184ef7d1",
+    "packages/engine-presentation/src/sculpt-mount.ts": "c5c654c526831012aeba1c4bf70b79a02a0d02d2bf89d492fff2223c158643a8",
+    "packages/engine-presentation/src/three-presentation-error.ts": "f5a6cb67409a609d8baf10b8e40e0e93d1745b336c28228685916134d0e5df38",
+    "packages/engine-presentation/src/three-core.ts": "bd32d77e972a8a3bb74707d263903629828d944a731df63515e317438207b041",
+    "packages/engine-presentation/src/orbit-camera.ts": "568a08ecc1ad119fffe82c8d5499921a2c717a2d15a8e688c1ee70f3efd4b9a6",
+    "packages/engine-presentation/src/three-surface.ts": "17aee10be74148c3d8ae534f2e2c22f6a3a29f8329345d61313072c859bcd26e",
+    "packages/engine-presentation/src/three-sculpt.ts": "fd9c8d3f57d6142a440705f88ef56a80b434064b672fec3222fbef237d7c7098",
+    "packages/engine-presentation/src/triangle-animation.ts": "f6a800ca54ca3ed0a8bd27abc7a8d8b132ca5ea0cf0074271ff3001749e0609c",
+    "packages/engine-presentation/src/three-runtime.ts": "988f51cddce17b5ed0f58015e607de75a838f92d7b4d1a8c20701f173679caf0",
+    "packages/engine-presentation/src/render-loop.ts": "4518a0a100e3109d9e8a5668fbd244873edfe735802b082dcb6fad802d335e97",
+    "packages/engine-presentation/src/audio-playback.ts": "ee3b33a872c617744651c48d9a06f8d4f7596adca1d0ecfe25ff03fbd2ae4bbc",
+    "packages/engine-presentation/src/contained-image.ts": "ea9c433fdd6f524864637556c53f6dc88a7c7f910437e08fc32fff51bf797692",
+    "packages/site-kit/src/web-experience-editor.ts": "3cb55a89677a36baee70844f44f5710298f1531bd530c5100ed2dd264c317647",
+    "packages/site-kit/src/site-search-params.ts": "a28ef9faac8c61731f1ab835d085d777f83c0aa52a96e3f3bfd51fece16bb9df",
+    "packages/site-kit/src/starter-artifact.ts": "6611683bb217537ece1ebfe52616200e6698f647752f74b4a7baa510819a659b",
+    "packages/site-kit/src/starter-prop-intake.ts": "8274cc6d26158402a01be94c499c345f7ce08b4c6830396a0b3dbd4bc86f6ac3",
+    "packages/site-kit/src/mountable-scene.ts": "acefd07d3ffe27d7bf891b3aba7a65d2a10801f4d09d4f1686de2bca227c72a3",
+    "packages/site-kit/src/desktop-app-offer.ts": "0c91e3665512d307eb94061ca383ad5a25ff8909f50c330fc87bbb00a4f801ea",
+    "packages/site-kit/src/live-open.ts": "22d4aadb80343470e24b0c3fa464564a75175365faf587ec98b31b6cf4b85caf",
+    "packages/site-kit/src/catalog.ts": "d8e396466bd3034ef8de58b2d66e797dd7842904f29302867e909bf4d9edabeb",
+    "packages/site-kit/src/catalog-pipeline.ts": "ece981eb94fd00df53db40405fed3873dadd69e53cb97bfe07f590817618a071",
+    "packages/site-kit/src/editor-session.ts": "79da3cbaae869dd08309fe7898ca3cb20fcd93bbbd27f08271a09b4569a05d7c",
+    "packages/site-kit/src/editor-state.ts": "79c3f324e5ae4ecaf254d3e9333b4d8ea289c36fb51be86eeb7125685e5ffa11",
+    "packages/site-kit/src/deep-link.ts": "3bdde6d2e7d3a8cbb760c982b1abebf8086e7347aba7ea1432cfab242776b6ef",
+    "packages/site-kit/src/entitlement.ts": "20c674ef2b058aeae22a2e87d77da37a206603f0e4fa3143f768ea5b5294306e",
+    "packages/site-kit/src/editor-shell.ts": "b8fedcba795f475bf649675942d80adc88c20dc265ff2d91ea2a6dc6a61f7529",
+    "packages/site-kit/src/change-review.ts": "4754f89c3d0c56f71af8a8d1ba8a54e7697ee1ac1be3655c9f650af2df9162b2",
+    "packages/site-kit/src/site-element.ts": "d45a0622a64013b033c38cbc23a80d9039945765c3b2f641896845112fd9d0ea",
+    "packages/site-kit/src/design-tokens.ts": "bf58bf8646f400560f2e72d751a4cf62e5db152397068a04d6e61241919be486",
+    "packages/site-kit/src/state-panel.ts": "9e4d39f8fc7b261bbcdd86517ae8d17d536f1e5015fbe92c82afc85bc28ed9c3",
+    "packages/site-kit/src/commerce-notice.ts": "68dce8173b3925bba5702e4b4678eff9e3f5355d44770c7509397f36be432cb5",
+    "packages/site-kit/src/access-states.ts": "31d040c759721487360c88e3eccd86d9908fd91efa51d35aabee4245d7d64637",
+    "packages/site-kit/src/offline-web-export.ts": "d61761d0ee4ab65524335e49e474c674bffa449ee18a17e07e3cfcec784c22a5",
+    "packages/site-kit/src/catalog-browse.ts": "9c6adb0cfad3c201f4fbf61f591aadb5c9669dce84a8f4752a465b89320cc245",
+    "packages/site-kit/src/admin-reauth.ts": "b8686837fce72f0e4da98e43d5873a49de881a709d3dd083bd78ed1273c1a5f0",
+    "packages/site-kit/src/purchase-history.ts": "2f54c1bb081b63ffc43b2b06914ce0999a1aefb15a42248f056ed246c9b12ff7",
+    "packages/site-kit/src/catalog-durable.ts": "155b94655ae91b737f4c3e34b950abc0c75fca800732bcacae17d0316271e807",
+    "sites/umbrella/src/lib/login-flow.ts": "d938a1065480b11dbda031c018002bcbd83ecb7c652d374a16055d08be72afc2",
+    "sites/umbrella/src/app/api/checkout/route.ts": "6d9658d6e8827c71f1794cd52517f1fd62f7e90a1fcd2683e5df39ad00ddbb75"
+  },
+  "loadedModules": 128,
+  "rows": [
+    {
+      "id": "origin-before-body:null",
+      "input": {
+        "origin": null,
+        "body": "GETTER_TRAP"
+      },
+      "status": "PASS",
+      "observed": {
+        "status": 403,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": {
+          "ok": false,
+          "reason": "SITE_REQUEST_CROSS_ORIGIN",
+          "message": "The submission did not come from this deployment's own pages, so no action was performed."
+        },
+        "calls": {
+          "session": 0,
+          "plane": 0,
+          "principal": 0,
+          "checkout": [],
+          "tokens": []
+        },
+        "bodyGetterReads": 0
+      },
+      "inputSha256": "f9aa65057c8e49ddd2406ef14aecdf433f14d9a805ffbb46b25863c04936b29b"
+    },
+    {
+      "id": "origin-before-body:https://evil.test",
+      "input": {
+        "origin": "https://evil.test",
+        "body": "GETTER_TRAP"
+      },
+      "status": "PASS",
+      "observed": {
+        "status": 403,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": {
+          "ok": false,
+          "reason": "SITE_REQUEST_CROSS_ORIGIN",
+          "message": "The submission did not come from this deployment's own pages, so no action was performed."
+        },
+        "calls": {
+          "session": 0,
+          "plane": 0,
+          "principal": 0,
+          "checkout": [],
+          "tokens": []
+        },
+        "bodyGetterReads": 0
+      },
+      "inputSha256": "90293d141c531e308d28e1361ba1d91d2c887e3d5de5e1aedf991d98458110e2"
+    },
+    {
+      "id": "origin-before-body:https://alias.test",
+      "input": {
+        "origin": "https://alias.test",
+        "body": "GETTER_TRAP"
+      },
+      "status": "PASS",
+      "observed": {
+        "status": 403,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": {
+          "ok": false,
+          "reason": "SITE_REQUEST_CROSS_ORIGIN",
+          "message": "The submission did not come from this deployment's own pages, so no action was performed."
+        },
+        "calls": {
+          "session": 0,
+          "plane": 0,
+          "principal": 0,
+          "checkout": [],
+          "tokens": []
+        },
+        "bodyGetterReads": 0
+      },
+      "inputSha256": "1cc078d6540cc177f7d6fae2159842e58cc720af4dc642c00263dea7806a3ec1"
+    },
+    {
+      "id": "origin-before-body:null",
+      "input": {
+        "origin": "null",
+        "body": "GETTER_TRAP"
+      },
+      "status": "PASS",
+      "observed": {
+        "status": 403,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": {
+          "ok": false,
+          "reason": "SITE_REQUEST_CROSS_ORIGIN",
+          "message": "The submission did not come from this deployment's own pages, so no action was performed."
+        },
+        "calls": {
+          "session": 0,
+          "plane": 0,
+          "principal": 0,
+          "checkout": [],
+          "tokens": []
+        },
+        "bodyGetterReads": 0
+      },
+      "inputSha256": "a895d730bdcf93a6c616cb86661594328db61384c6d69359e9377e14637fb672"
+    },
+    {
+      "id": "malformed-config-before-body",
+      "input": {
+        "configuredOrigin": "not-a-url"
+      },
+      "status": "PASS",
+      "observed": {
+        "status": 403,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": {
+          "ok": false,
+          "reason": "SITE_REQUEST_CROSS_ORIGIN",
+          "message": "The submission did not come from this deployment's own pages, so no action was performed."
+        },
+        "calls": {
+          "session": 0,
+          "plane": 0,
+          "principal": 0,
+          "checkout": [],
+          "tokens": []
+        }
+      },
+      "inputSha256": "503ff63b6f87edc0782715fef6fed055140a50c78b17222cfde6537f29797d5f"
+    },
+    {
+      "id": "json",
+      "input": {
+        "body": "{}",
+        "bodyBytes": 2,
+        "contentType": "application/json"
+      },
+      "status": "PASS",
+      "observed": {
+        "status": 400,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": {
+          "ok": false,
+          "reason": "BILLING_CHECKOUT_REQUEST_INVALID",
+          "message": "The checkout request is malformed."
+        },
+        "calls": {
+          "session": 0,
+          "plane": 0,
+          "principal": 0,
+          "checkout": [],
+          "tokens": []
+        }
+      },
+      "inputSha256": "f417a3c9bbe1f1f25ee4434bb72a6b0e27c89966380e9b8cb7b21ba9b913c999"
+    },
+    {
+      "id": "malformed-json",
+      "input": {
+        "body": "{\"",
+        "bodyBytes": 2,
+        "contentType": "application/json"
+      },
+      "status": "PASS",
+      "observed": {
+        "status": 400,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": {
+          "ok": false,
+          "reason": "BILLING_CHECKOUT_REQUEST_INVALID",
+          "message": "The checkout request is malformed."
+        },
+        "calls": {
+          "session": 0,
+          "plane": 0,
+          "principal": 0,
+          "checkout": [],
+          "tokens": []
+        }
+      },
+      "inputSha256": "3e7284246c01ac0aa6cc4775dd8a99c373a3f44131ffb72dc724f810b2e0b337"
+    },
+    {
+      "id": "multipart-truncated",
+      "input": {
+        "body": "bad",
+        "bodyBytes": 3,
+        "contentType": "multipart/form-data; boundary=missing"
+      },
+      "status": "PASS",
+      "observed": {
+        "status": 400,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": {
+          "ok": false,
+          "reason": "BILLING_CHECKOUT_REQUEST_INVALID",
+          "message": "The checkout request is malformed."
+        },
+        "calls": {
+          "session": 0,
+          "plane": 0,
+          "principal": 0,
+          "checkout": [],
+          "tokens": []
+        }
+      },
+      "inputSha256": "ee7430fa0acdc6860d92147071fd818ab8bf42f73a8fa0d114d4c9e24c1160b7"
+    },
+    {
+      "id": "multipart-no-boundary",
+      "input": {
+        "body": "bad",
+        "bodyBytes": 3,
+        "contentType": "multipart/form-data"
+      },
+      "status": "PASS",
+      "observed": {
+        "status": 400,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": {
+          "ok": false,
+          "reason": "BILLING_CHECKOUT_REQUEST_INVALID",
+          "message": "The checkout request is malformed."
+        },
+        "calls": {
+          "session": 0,
+          "plane": 0,
+          "principal": 0,
+          "checkout": [],
+          "tokens": []
+        }
+      },
+      "inputSha256": "2b9bb1f1bd2980082da0c43964bb2212747f3c81ccb9f05c0ee4ddf78ac332d7"
+    },
+    {
+      "id": "duplicate-attempt",
+      "input": {
+        "body": "packId=starter-100&attempt=fixture_attempt_123456&attempt=duplicate",
+        "bodyBytes": 67,
+        "contentType": "application/x-www-form-urlencoded"
+      },
+      "status": "PASS",
+      "observed": {
+        "status": 400,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": {
+          "ok": false,
+          "reason": "BILLING_CHECKOUT_REQUEST_INVALID",
+          "message": "The checkout request is malformed."
+        },
+        "calls": {
+          "session": 0,
+          "plane": 0,
+          "principal": 0,
+          "checkout": [],
+          "tokens": []
+        }
+      },
+      "inputSha256": "1ab3294704dda1c90d5c1e1030f5b61dee088d34f708fb40a61e204534b3e037"
+    },
+    {
+      "id": "duplicate-pack",
+      "input": {
+        "body": "packId=starter-100&attempt=fixture_attempt_123456&packId=starter-100",
+        "bodyBytes": 68,
+        "contentType": "application/x-www-form-urlencoded"
+      },
+      "status": "PASS",
+      "observed": {
+        "status": 400,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": {
+          "ok": false,
+          "reason": "BILLING_CHECKOUT_REQUEST_INVALID",
+          "message": "The checkout request is malformed."
+        },
+        "calls": {
+          "session": 0,
+          "plane": 0,
+          "principal": 0,
+          "checkout": [],
+          "tokens": []
+        }
+      },
+      "inputSha256": "f875ff10aed5195c680e78c8b091fc6f6754f497e0e28a73074f1a33206f3ea0"
+    },
+    {
+      "id": "forged-user",
+      "input": {
+        "body": "packId=starter-100&attempt=fixture_attempt_123456&userId=other-user",
+        "bodyBytes": 67,
+        "contentType": "application/x-www-form-urlencoded"
+      },
+      "status": "PASS",
+      "observed": {
+        "status": 400,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": {
+          "ok": false,
+          "reason": "BILLING_CHECKOUT_REQUEST_INVALID",
+          "message": "The checkout request is malformed."
+        },
+        "calls": {
+          "session": 0,
+          "plane": 0,
+          "principal": 0,
+          "checkout": [],
+          "tokens": []
+        }
+      },
+      "inputSha256": "dd97e26929381aaccc61898e2f0acab7cd96982ddb3751c808fd2df62ed69c75"
+    },
+    {
+      "id": "missing-attempt",
+      "input": {
+        "body": "packId=starter-100",
+        "bodyBytes": 18,
+        "contentType": "application/x-www-form-urlencoded"
+      },
+      "status": "PASS",
+      "observed": {
+        "status": 400,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": {
+          "ok": false,
+          "reason": "BILLING_CHECKOUT_REQUEST_INVALID",
+          "message": "The checkout request is malformed."
+        },
+        "calls": {
+          "session": 0,
+          "plane": 0,
+          "principal": 0,
+          "checkout": [],
+          "tokens": []
+        }
+      },
+      "inputSha256": "2206e62b70ca30e78c7a0766f872d68aa11c8dd985fc6170d4d6f819bb4f5f8e"
+    },
+    {
+      "id": "oversize",
+      "input": {
+        "body": "packId=starter-100&attempt=fixture_attempt_123456                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                ",
+        "bodyBytes": 8193,
+        "contentType": "application/x-www-form-urlencoded"
+      },
+      "status": "PASS",
+      "observed": {
+        "status": 400,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": {
+          "ok": false,
+          "reason": "BILLING_CHECKOUT_REQUEST_INVALID",
+          "message": "The checkout request is malformed."
+        },
+        "calls": {
+          "session": 0,
+          "plane": 0,
+          "principal": 0,
+          "checkout": [],
+          "tokens": []
+        }
+      },
+      "inputSha256": "01151bed12979288a903108e11966c0c39c08b0d8bef37265236c8df9c7f682a"
+    },
+    {
+      "id": "valid",
+      "input": {
+        "body": "packId=starter-100&attempt=fixture_attempt_123456",
+        "bodyBytes": 49
+      },
+      "status": "PASS",
+      "observed": {
+        "status": 303,
+        "headers": {
+          "location": "https://checkout.fixture.test/session"
+        },
+        "body": null,
+        "calls": {
+          "session": 1,
+          "plane": 1,
+          "principal": 1,
+          "checkout": [
+            {
+              "userId": "verified-user",
+              "packId": "starter-100",
+              "successUrl": "https://fixture.test/account?checkout=success",
+              "cancelUrl": "https://fixture.test/pricing?checkout=cancelled",
+              "idempotencyKey": "pack:starter-100:user:verified-user:attempt:fixture_attempt_123456"
+            }
+          ],
+          "tokens": [
+            "fixture-session"
+          ]
+        }
+      },
+      "inputSha256": "44579dc76345b8c2dbe8a70fa5b984546c73f5cf82851beeef31fb7d6db7d5e9"
+    },
+    {
+      "id": "exact-8192",
+      "input": {
+        "body": "packId=starter-100&attempt=fixture_attempt_123456                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               ",
+        "bodyBytes": 8192
+      },
+      "status": "PASS",
+      "observed": {
+        "status": 303,
+        "headers": {
+          "location": "https://checkout.fixture.test/session"
+        },
+        "body": null,
+        "calls": {
+          "session": 1,
+          "plane": 1,
+          "principal": 1,
+          "checkout": [
+            {
+              "userId": "verified-user",
+              "packId": "starter-100",
+              "successUrl": "https://fixture.test/account?checkout=success",
+              "cancelUrl": "https://fixture.test/pricing?checkout=cancelled",
+              "idempotencyKey": "pack:starter-100:user:verified-user:attempt:fixture_attempt_123456"
+            }
+          ],
+          "tokens": [
+            "fixture-session"
+          ]
+        }
+      },
+      "inputSha256": "fca4334357165448e1c9884a45cb03a3a5de223a3d0dc638f7ca2908b4cd301d"
+    },
+    {
+      "id": "multipart-valid",
+      "input": {
+        "packId": "starter-100",
+        "attempt": "fixture_attempt_123456"
+      },
+      "status": "PASS",
+      "observed": {
+        "status": 303,
+        "headers": {
+          "location": "https://checkout.fixture.test/session"
+        },
+        "body": null,
+        "calls": {
+          "session": 1,
+          "plane": 1,
+          "principal": 1,
+          "checkout": [
+            {
+              "userId": "verified-user",
+              "packId": "starter-100",
+              "successUrl": "https://fixture.test/account?checkout=success",
+              "cancelUrl": "https://fixture.test/pricing?checkout=cancelled",
+              "idempotencyKey": "pack:starter-100:user:verified-user:attempt:fixture_attempt_123456"
+            }
+          ],
+          "tokens": [
+            "fixture-session"
+          ]
+        }
+      },
+      "inputSha256": "60752b7bb342c10f38f52b6bfe4923b21d0b8a30c98fd6d4285fee5bad9ef391"
+    },
+    {
+      "id": "alias-request-url",
+      "input": {
+        "url": "https://alias.test/api/checkout",
+        "origin": "https://fixture.test",
+        "host": "alias.test"
+      },
+      "status": "PASS",
+      "observed": {
+        "status": 402,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": {
+          "ok": false,
+          "reason": "BILLING_CHECKOUT_ORIGIN_UNTRUSTED",
+          "message": "The request origin is not the umbrella origin this deployment is configured with, so no checkout redirect is built from it."
+        },
+        "calls": {
+          "session": 1,
+          "plane": 1,
+          "principal": 0,
+          "checkout": [],
+          "tokens": [
+            "fixture-session"
+          ]
+        }
+      },
+      "inputSha256": "32e1865c06f2640efa0dc6e77b4efd323c7b094599e633b0ab02436d82f9350b"
+    },
+    {
+      "id": "rate-limit:application/json",
+      "input": {
+        "body": "packId=starter-100&attempt=fixture_attempt_123456",
+        "accept": "application/json",
+        "billingReason": "BILLING_CHECKOUT_RATE_LIMITED"
+      },
+      "status": "PASS",
+      "observed": {
+        "status": 429,
+        "headers": {
+          "content-type": "application/json",
+          "retry-after": "300"
+        },
+        "body": {
+          "ok": false,
+          "reason": "BILLING_CHECKOUT_RATE_LIMITED",
+          "message": "Budget reached."
+        },
+        "calls": {
+          "session": 1,
+          "plane": 1,
+          "principal": 1,
+          "checkout": [
+            {
+              "userId": "verified-user",
+              "packId": "starter-100",
+              "successUrl": "https://fixture.test/account?checkout=success",
+              "cancelUrl": "https://fixture.test/pricing?checkout=cancelled",
+              "idempotencyKey": "pack:starter-100:user:verified-user:attempt:fixture_attempt_123456"
+            }
+          ],
+          "tokens": [
+            "fixture-session"
+          ]
+        }
+      },
+      "inputSha256": "68cb64ac40bd6ffcb79ce9417dc11b260e0613f2ea46ea7db42c3c8bebfdd311"
+    },
+    {
+      "id": "rate-limit:text/html",
+      "input": {
+        "body": "packId=starter-100&attempt=fixture_attempt_123456",
+        "accept": "text/html",
+        "billingReason": "BILLING_CHECKOUT_RATE_LIMITED"
+      },
+      "status": "PASS",
+      "observed": {
+        "status": 303,
+        "headers": {
+          "location": "/pricing?reason=BILLING_CHECKOUT_RATE_LIMITED"
+        },
+        "body": null,
+        "calls": {
+          "session": 1,
+          "plane": 1,
+          "principal": 1,
+          "checkout": [
+            {
+              "userId": "verified-user",
+              "packId": "starter-100",
+              "successUrl": "https://fixture.test/account?checkout=success",
+              "cancelUrl": "https://fixture.test/pricing?checkout=cancelled",
+              "idempotencyKey": "pack:starter-100:user:verified-user:attempt:fixture_attempt_123456"
+            }
+          ],
+          "tokens": [
+            "fixture-session"
+          ]
+        }
+      },
+      "inputSha256": "69955a71cbc3464ec4cd9f86dda9506674de32f5565c679d1c33f05d468372da"
+    },
+    {
+      "id": "negative-control-same-origin-trap",
+      "input": {
+        "origin": "https://fixture.test",
+        "body": "GETTER_TRAP"
+      },
+      "status": "PASS",
+      "observed": {
+        "status": 400,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": {
+          "ok": false,
+          "reason": "BILLING_CHECKOUT_REQUEST_INVALID",
+          "message": "The checkout request is malformed."
+        },
+        "calls": {
+          "session": 0,
+          "plane": 0,
+          "principal": 0,
+          "checkout": [],
+          "tokens": []
+        },
+        "bodyGetterReads": 1
+      },
+      "inputSha256": "7655444b3d7792a32aeaf4cdfc8ec1f8bfc76bbfb60555b92458e1bcadf3c85b"
+    },
+    {
+      "id": "oversize-cancels",
+      "input": {
+        "bytes": 8193
+      },
+      "status": "PASS",
+      "observed": {
+        "status": 400,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": {
+          "ok": false,
+          "reason": "BILLING_CHECKOUT_REQUEST_INVALID",
+          "message": "The checkout request is malformed."
+        },
+        "calls": {
+          "session": 0,
+          "plane": 0,
+          "principal": 0,
+          "checkout": [],
+          "tokens": []
+        },
+        "cancels": 1,
+        "locked": false
+      },
+      "inputSha256": "17c20d690f46e1acf96fbc7ecfa2e0f74388094fea6cd748fca74a48d8cbd945"
+    },
+    {
+      "id": "request-abort-observation",
+      "input": {
+        "abort": true
+      },
+      "status": "OBSERVED",
+      "observed": {
+        "settledAfterAbort": false,
+        "cancels": 0,
+        "locked": true,
+        "status": 400,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": {
+          "ok": false,
+          "reason": "BILLING_CHECKOUT_REQUEST_INVALID",
+          "message": "The checkout request is malformed."
+        }
+      },
+      "inputSha256": "983a8eaa44a68c2760dc2d056aaf64e7d19a7579d0d63a9f491a1a80273d1a58"
+    },
+    {
+      "id": "request-abort-cancels-stalled-reader",
+      "input": {
+        "abortAfterMs": 10,
+        "observeAfterMs": 100
+      },
+      "status": "FAIL",
+      "error": "request abort did not terminate reader within 100ms\n\nfalse !== true\n",
+      "inputSha256": "1d770391c33af5fb9fd68ab766ee4a1c5f125f0fbde4800bbb926eecf2455c33"
+    },
+    {
+      "id": "body-deadline-observation",
+      "input": {
+        "stalledStream": true
+      },
+      "status": "OBSERVED",
+      "observed": {
+        "settled": false,
+        "cancels": 0,
+        "locked": true,
+        "status": 400,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": {
+          "ok": false,
+          "reason": "BILLING_CHECKOUT_REQUEST_INVALID",
+          "message": "The checkout request is malformed."
+        }
+      },
+      "inputSha256": "a6221a5f3b1a3cf6b657e5c7b898339aef0da7286e907e98e1ad56189d49ee0b"
+    },
+    {
+      "id": "body-deadline",
+      "input": {
+        "stalledStream": true,
+        "observeMs": 100
+      },
+      "status": "FAIL",
+      "error": "no bounded reader deadline observed; source contains no timer\n\nfalse !== true\n",
+      "inputSha256": "5e355948fe3f5c062806acf7c9e72cce2274d7d52ae04910c82e2a322d90421f"
+    },
+    {
+      "id": "cancel-observation",
+      "input": {
+        "bytes": 8193,
+        "cancel": "deferred-promise"
+      },
+      "status": "OBSERVED",
+      "observed": {
+        "settled": false,
+        "locked": true,
+        "status": 400,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": {
+          "ok": false,
+          "reason": "BILLING_CHECKOUT_REQUEST_INVALID",
+          "message": "The checkout request is malformed."
+        }
+      },
+      "inputSha256": "16142e2e63ee808836e17b06c9e738bb5d2d0d7efed6dab14e7dd3f5a9be3b07"
+    },
+    {
+      "id": "nonsettling-cancel-does-not-hold-refusal",
+      "input": {
+        "bytes": 8193,
+        "cancel": "deferred-promise",
+        "observeMs": 100
+      },
+      "status": "FAIL",
+      "error": "await reader.cancel holds oversize refusal\n\nfalse !== true\n",
+      "inputSha256": "a6022c70b488bbf5e4829d0735a867f8a58b7647a0429ad8d101dcc9ae912562"
+    }
+  ],
+  "totals": {
+    "pass": 22,
+    "fail": 3
+  },
+  "cleanup": "all deferred readers errored/cancelled and cancel promises released; no files outside owned directory, no ports/providers"
+}

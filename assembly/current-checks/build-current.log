@@ -1,0 +1,6 @@
+$ tsc --build && tsc -p tsconfig.tests.json
+desktop/linux/test/native-assistant-scene-compat.test.ts(33,48): error TS2345: Argument of type '{ composedScene: unknown; }' is not assignable to parameter of type 'JsonObject'.
+  Property 'composedScene' is incompatible with index signature.
+    Type 'unknown' is not assignable to type 'JsonValue'.
+desktop/windows/src/lib/update-policy.ts(1,40): error TS2307: Cannot find module 'electron-updater' or its corresponding type declarations.
+[ELIFECYCLE] Command failed with exit code 2.

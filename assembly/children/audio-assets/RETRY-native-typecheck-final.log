@@ -1,0 +1,15 @@
+desktop/linux/src/electron/main.ts(759,111): error TS2339: Property 'runLocalAssistant' does not exist on type 'DesktopBridgeOptions'.
+desktop/linux/src/lib/bridge.ts(390,19): error TS2552: Cannot find name 'DesktopDocumentData'. Did you mean 'DesktopDocumentStatus'?
+desktop/linux/src/lib/bridge.ts(618,56): error TS2552: Cannot find name 'DesktopDocumentData'. Did you mean 'DesktopDocumentStatus'?
+desktop/linux/src/lib/bridge.ts(1090,33): error TS2552: Cannot find name 'DesktopDocumentData'. Did you mean 'DesktopDocumentStatus'?
+desktop/linux/src/lib/bridge.ts(2703,72): error TS2304: Cannot find name 'PhysicsWorldHost'.
+desktop/linux/src/lib/desktop-scene.ts(1158,55): error TS2339: Property 'instanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }> | Readonly<{ kind: "create-primitive"; primitive: "box" | "cylinder" | "sphere"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.
+  Property 'instanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }>'.
+desktop/linux/src/lib/desktop-scene.ts(1163,51): error TS2339: Property 'instanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }> | Readonly<{ kind: "create-primitive"; primitive: "box" | "cylinder" | "sphere"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.
+  Property 'instanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }>'.
+desktop/linux/src/lib/desktop-scene.ts(1175,55): error TS2339: Property 'parentInstanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }> | Readonly<{ kind: "create-primitive"; primitive: "box" | "cylinder" | "sphere"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.
+  Property 'parentInstanceId' does not exist on type 'Readonly<{ kind: "rename-object"; instanceId: string; name: string; }>'.
+desktop/linux/src/lib/desktop-scene.ts(1180,55): error TS2339: Property 'parentInstanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }> | Readonly<{ kind: "create-primitive"; primitive: "box" | "cylinder" | "sphere"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.
+  Property 'parentInstanceId' does not exist on type 'Readonly<{ kind: "rename-object"; instanceId: string; name: string; }>'.
+desktop/linux/src/lib/desktop-scene.ts(1199,31): error TS2339: Property 'transformPolicy' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }> | Readonly<{ kind: "create-primitive"; primitive: "box" | "cylinder" | "sphere"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.
+  Property 'transformPolicy' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }>'.

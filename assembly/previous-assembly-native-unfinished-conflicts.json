@@ -1,0 +1,2442 @@
+[
+  {
+    "path": ".github/workflows/gate.yml",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "ad8503de76cd072713219c5987dc75b06f1a7b0d",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "09394bb0358b49d147d2ba7d8adace75550848bb",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "45359135272f35a570b6a55cd2b0fb4a373676e1"
+    }
+  },
+  {
+    "path": "AGENTS.md",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "248dffcad8479c44c633b1b3b06d5fe30bd4f325",
+        "stage": 1
+      },
+      {
+        "mode": "100644",
+        "blob": "b85ad299135386a383c24381b07562db29eaf5c4",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "2a27df2261ca0d97595e96a119abfa9c6aba85ff",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "b85ad299135386a383c24381b07562db29eaf5c4"
+    }
+  },
+  {
+    "path": "MANIFEST.md",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "1495c0b61868d4594cf695178c61dc3f3ec95464",
+        "stage": 1
+      },
+      {
+        "mode": "100644",
+        "blob": "9917998672257bff95ded228b425b99af64d5744",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "19a5e4ff36bbc8e20e54c25461558774b4b6b988",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "9917998672257bff95ded228b425b99af64d5744"
+    }
+  },
+  {
+    "path": "README.md",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "efbbd68122c5cd2840dd665ccb48ac2b59ec24c8",
+        "stage": 1
+      },
+      {
+        "mode": "100644",
+        "blob": "6cfc2d6717f4c90fe94727bd4858a0bdd84b2aa0",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "e1c93b0d819e3f18ed20276568270d536423d613",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "6cfc2d6717f4c90fe94727bd4858a0bdd84b2aa0"
+    }
+  },
+  {
+    "path": "apps/catalog-game/README.md",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "6f323096f31c496621ab426dcc9f567ea6e71ad2",
+        "stage": 1
+      },
+      {
+        "mode": "100644",
+        "blob": "89b302643c556e9bde36b8783683e3453d3eff26",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "a7d276e48f89d904b570302e850637ed11789118",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "89b302643c556e9bde36b8783683e3453d3eff26"
+    }
+  },
+  {
+    "path": "apps/catalog-game/src/index.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "6643517abdd3b56fc4c1f75d0a4ed35caed61db5",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "e481463eaeadd6db9223fd364bd9a54e9f55f926",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "6643517abdd3b56fc4c1f75d0a4ed35caed61db5"
+    }
+  },
+  {
+    "path": "apps/catalog-web/README.md",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "2a97638bb1734fcca0a6da60e6bb33222a7334ab",
+        "stage": 1
+      },
+      {
+        "mode": "100644",
+        "blob": "3f6f86c77ca1832b9f8ed97589c4a20dc3f8f356",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "06c05c8d9a5481579ccc671f0f6b2f405128bbb6",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "3f6f86c77ca1832b9f8ed97589c4a20dc3f8f356"
+    }
+  },
+  {
+    "path": "apps/catalog-web/src/index.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "4f3fa8edbf877c29f4e5b6c2d03d3ba0ffe85ad4",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "76778c35f25724ad37547b024b2968f677274684",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "4f3fa8edbf877c29f4e5b6c2d03d3ba0ffe85ad4"
+    }
+  },
+  {
+    "path": "apps/desktop-shell/README.md",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "e0816fd9573765df7cd33dd44a4c1143070f6327",
+        "stage": 1
+      },
+      {
+        "mode": "100644",
+        "blob": "e1dc9b687d82144c7df89499f57fd2a5dd90e74c",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "63cd4ae8ec56532ecc89ed558ced7ac80737c51f",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "e1dc9b687d82144c7df89499f57fd2a5dd90e74c"
+    }
+  },
+  {
+    "path": "apps/desktop-shell/package.json",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "aa36ae562f9f2227e2979ba76a5aa2b059783570",
+        "stage": 1
+      },
+      {
+        "mode": "100644",
+        "blob": "3804ac0817ba6d1a4c6a10fa821695ad8c775806",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "fe4d474072f29742ca8f2bf53451c577b6f887ac",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "3804ac0817ba6d1a4c6a10fa821695ad8c775806"
+    }
+  },
+  {
+    "path": "apps/desktop-shell/src/index.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "0005b6c43ffdf05ccd711873b472c0f4aa4ed5d1",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "9cd3bbfc0f9e32b1228ac8c59ff21515ed07692b",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "0005b6c43ffdf05ccd711873b472c0f4aa4ed5d1"
+    }
+  },
+  {
+    "path": "apps/desktop-shell/src/protocol-client.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "d6a5f4bbb5e1b1b0ad90b70682eecd8aa2a886d0",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "0078cad82cfd4a617c41c5cb961c54d021fdd2a6",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "d6a5f4bbb5e1b1b0ad90b70682eecd8aa2a886d0"
+    }
+  },
+  {
+    "path": "apps/desktop-shell/test/protocol-client.test.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "4435bb6b72f4218efa81618c109de23d209df843",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "228e48c1f35db8415c554d9e28cdc93816789dad",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "4435bb6b72f4218efa81618c109de23d209df843"
+    }
+  },
+  {
+    "path": "apps/desktop-shell/test/seam.test.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "7492aeb78e9c375e93f823e952d9379ba6e3f6e8",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "93ddf70d479485d3e2f3dec704ea26571c6da999",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "7492aeb78e9c375e93f823e952d9379ba6e3f6e8"
+    }
+  },
+  {
+    "path": "apps/desktop-shell/tsconfig.json",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "5bd42de20de95fdf14c52a6a62419ca5920d5d80",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "ebaea3f95083ab9b85b14743707203caabda890d",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "5bd42de20de95fdf14c52a6a62419ca5920d5d80"
+    }
+  },
+  {
+    "path": "apps/web-shell/README.md",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "de002b87e2ab3f018054a7bb59f2f5e71d9ec5cc",
+        "stage": 1
+      },
+      {
+        "mode": "100644",
+        "blob": "89052145eb0a4d8a27b5dd66118790b9ac369944",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "e8cb0bf987d9494cd5f9ccaf12e42bf65a7729c9",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "89052145eb0a4d8a27b5dd66118790b9ac369944"
+    }
+  },
+  {
+    "path": "apps/web-shell/package.json",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "4a74df0c697e88581db12eb46887645dd276e00e",
+        "stage": 1
+      },
+      {
+        "mode": "100644",
+        "blob": "50ab747871aa7a57f651d501342020118c27ff7e",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "84e1bc3fc63f7732cf4647c9dd7daa06220a4a38",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "50ab747871aa7a57f651d501342020118c27ff7e"
+    }
+  },
+  {
+    "path": "apps/web-shell/src/index.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "02f4c680bdd13449baae46609f086de6d0f4bb18",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "2c121418c9108dd6bdd0a9807b57f17567971b9c",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "02f4c680bdd13449baae46609f086de6d0f4bb18"
+    }
+  },
+  {
+    "path": "apps/web-shell/src/inspector.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "6d08f22908868504fc37eec5707e2ffdc3cb33a9",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "640a5d7cc0b3df2ecef63d7524e0b3590c6ad948",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "6d08f22908868504fc37eec5707e2ffdc3cb33a9"
+    }
+  },
+  {
+    "path": "apps/web-shell/src/protocol-client.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "b46f93819d41c11bc764a7a11d8958c263550c91",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "dd9ae1685a3af9dfd8f4885604eb80eaca79f5c1",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "b46f93819d41c11bc764a7a11d8958c263550c91"
+    }
+  },
+  {
+    "path": "apps/web-shell/test/inspector.test.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "d26d39a5ff9c9f39e85ad3838163b08fbf1bebf9",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "367d36a6ac02f68c588e8e02fc238c8214ec8bb9",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "d26d39a5ff9c9f39e85ad3838163b08fbf1bebf9"
+    }
+  },
+  {
+    "path": "apps/web-shell/tsconfig.json",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "81ee1f6793db3e8527fcbe47b91ace15617b22d8",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "ebaea3f95083ab9b85b14743707203caabda890d",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "81ee1f6793db3e8527fcbe47b91ace15617b22d8"
+    }
+  },
+  {
+    "path": "docs/adr/0002-presentation-runtime-deep-seam.md",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "5df614d9dc3ecd24c08b6f7db39dac4f318bd5bd",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "421688dcf6208b9b5856fda7f4442dc47c368cb9",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "5df614d9dc3ecd24c08b6f7db39dac4f318bd5bd"
+    }
+  },
+  {
+    "path": "docs/adr/0003-editor-sequencing-e1-first-e2-specified.md",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "aa77296d5ac4b7c5be7dd01695c2f6494a92c27a",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "135d1343f564b51ed33d9cb6909c445342822455",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "aa77296d5ac4b7c5be7dd01695c2f6494a92c27a"
+    }
+  },
+  {
+    "path": "docs/adr/0004-no-plugin-ports-before-two-adapters.md",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "c651d4f5aa8f3a62221248f8b91d535b5db899f5",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "898c9b4f57350051cb85450f9183ec8043644fd5",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "c651d4f5aa8f3a62221248f8b91d535b5db899f5"
+    }
+  },
+  {
+    "path": "docs/adr/README.md",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "959587ae83ea70c3baacadd891feb6dbaecc3446",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "288ca3ef9630c9a6f9d6a2e13f307560f8ff9a01",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "959587ae83ea70c3baacadd891feb6dbaecc3446"
+    }
+  },
+  {
+    "path": "docs/authoring-contracts.md",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "baabd4e62453ca04cebc06348ac9348169e522e6",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "1552a64cb380471a2bbd265287d5548d09ea2f00",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "baabd4e62453ca04cebc06348ac9348169e522e6"
+    }
+  },
+  {
+    "path": "docs/program/SPEC.md",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "a534d32520dfdef2ba95e1d426e5f596ef38aeee",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "1b36dcb2e6265aa2c9f5cf25698eec1339d2ca15",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "a534d32520dfdef2ba95e1d426e5f596ef38aeee"
+    }
+  },
+  {
+    "path": "docs/program/spec-41.md",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "d7f48a2466f9e8169f0f3cff5d9148cc058d12f5",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "8351b8d2aba0d9245584b1e80b9acae99ebade30",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "d7f48a2466f9e8169f0f3cff5d9148cc058d12f5"
+    }
+  },
+  {
+    "path": "docs/proof/stage-0-acceptance-contract-template.md",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "4ad21205688d7e1e86cd91391ecd8ba0053228ca",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "6d7f0e826f928d9ab75ee9f8dfdd936ad2c4bb36",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "4ad21205688d7e1e86cd91391ecd8ba0053228ca"
+    }
+  },
+  {
+    "path": "docs/proof/stage-1-counting-adjudication-worksheet.md",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "d1e7f9d353be7182564f50255a48c3f19d355eb4",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "60943fba7c32f0208b5a4a0f69a8af09b2f2a6f1",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "d1e7f9d353be7182564f50255a48c3f19d355eb4"
+    }
+  },
+  {
+    "path": "docs/proof/stage-1-paired-replicate-run-sheet.md",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "744624ad7b19d734047c5150bd098b6ff250ad04",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "ff3fb8fa6efd7bf2659fd50aed4154c3dd28f001",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "744624ad7b19d734047c5150bd098b6ff250ad04"
+    }
+  },
+  {
+    "path": "eslint.config.mjs",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "de5874289b21b4ee666056e7eecc0ce670e8877e",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "f4f3ed5305ef476e90e69e75d556cb22eb601259",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "de5874289b21b4ee666056e7eecc0ce670e8877e"
+    }
+  },
+  {
+    "path": "package.json",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "58359b1abf6faaef24a7f4e2e6babffa8b1ee9f4",
+        "stage": 1
+      },
+      {
+        "mode": "100644",
+        "blob": "765ec55e98683ab5ab1c0691cc4edf417416615b",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "09ae70f2a127f1a4dd5b46884c520f2d40f1f68b",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "765ec55e98683ab5ab1c0691cc4edf417416615b"
+    }
+  },
+  {
+    "path": "packages/authoring-core/README.md",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "582858b5a6cc72bbe0583688b550bb2d1170a4dc",
+        "stage": 1
+      },
+      {
+        "mode": "100644",
+        "blob": "936103779655a092d07fe273470d97a87445e300",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "462524c561e693c29e1cfccdb26aa340cc5cbaeb",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "936103779655a092d07fe273470d97a87445e300"
+    }
+  },
+  {
+    "path": "packages/authoring-core/src/atomic-write.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "dfa26c2268d3d699d3d0d89908be3558a7e83aba",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "bc781ac935a17dc684b0300074a345fd881c8f80",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "f98aca65840250ca54a3ce5899bbbba454158b7c"
+    }
+  },
+  {
+    "path": "packages/authoring-core/src/index.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "e9c445562e3919b690841d7da95d748982ebda9a",
+        "stage": 1
+      },
+      {
+        "mode": "100644",
+        "blob": "1ff4424ed631c2910641712355acf01c16be57b7",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "2001724f467abdf770b3cf9ec4ed8aa74fe59466",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "b018691c2474e0358904803ce593ca2219aed723"
+    }
+  },
+  {
+    "path": "packages/authoring-core/src/json-pointer.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "919b7e05ca6083abb8d00850402411dee31ceab5",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "4fa894e402e24e959bf3c49857ce8a8f319b6f8c",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "919b7e05ca6083abb8d00850402411dee31ceab5"
+    }
+  },
+  {
+    "path": "packages/authoring-core/src/propose-apply.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "3a6ced86e6871e14e8c4eafe0fae228bfbbba281",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "f8d445e86a2c1a21161251ac7571436a5f05049c",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "72b9b1caa8b6a038ec182815f48a3ee80e6771b9"
+    }
+  },
+  {
+    "path": "packages/authoring-core/tsconfig.json",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "b3efbf6da692b91228d4db66a789dcf212c8d8b5",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "b9cbe260d42737a408c1faa90e826760bf2c74e4",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "b3efbf6da692b91228d4db66a789dcf212c8d8b5"
+    }
+  },
+  {
+    "path": "packages/cli/README.md",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "70e97ceb0e2aeecc2e87fa3345c93c34accc0751",
+        "stage": 1
+      },
+      {
+        "mode": "100644",
+        "blob": "5afd5202accb7bfb848cc9c518beb3cb7deadbbf",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "69f47ef0d1ebef33afd3e2c54fe72b70ef6085a4",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "485129324c8e4d752da16f3a6a2534deab2f40e3"
+    }
+  },
+  {
+    "path": "packages/cli/src/commands.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "21428ffeeff8c4dfbe1fb0bfe8e8fb8483cd0329",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "6b9838dbba1caf50e0efe1a44c4bceb2fcb1e8d9",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "81bc54868d294195ff2dd8440d25634b753ad097"
+    }
+  },
+  {
+    "path": "packages/cli/src/dispatcher.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "e29d85d93eb4b7d34fa20a743aeb3a701badbaa9",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "963f449ea847fe9f1e0ea33dd02a9464739bd95d",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "40652c6ac800fe9bd3ba73bb8f64346e96a768a7"
+    }
+  },
+  {
+    "path": "packages/cli/src/envelope.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "f6277da4a5662ab669f1a7888117335f48876668",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "66a1bff3b0e100bcc8ccb99bdd00da981cb1ee79",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "f6277da4a5662ab669f1a7888117335f48876668"
+    }
+  },
+  {
+    "path": "packages/cli/src/exit-codes.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "8b1b38106ea2178301ea5ca5e0a65fc64ec33a3b",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "3b985313a743150db9b34d8142d67c91d6f69224",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "2707b109a4f6d507993c5148ace1cb948f4cceb1"
+    }
+  },
+  {
+    "path": "packages/cli/src/held-keys/gate.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "c82a97078449ab1b181d70d49acf896195a19cdf",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "d45e0ec41491dc628b823d8d7ad68e6306085e1d",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "c89b97d49c8c00ee35d6e0d83f8ac117ab5b53d3"
+    }
+  },
+  {
+    "path": "packages/cli/src/held-keys/registry.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "b9403ab66b2d1c45f2984642c4011a886c338685",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "ba8703224f0574e14f6a825a7470ebc65e6fb3e2",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "b9403ab66b2d1c45f2984642c4011a886c338685"
+    }
+  },
+  {
+    "path": "packages/cli/src/held-keys/shipped.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "5843cd4d77bcaf894aa35474396f28fe3829f4ca",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "c1cb0933a4fafd7e0d5cafab2cca7f43649f43b0",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "77830f98ce629bdb7a3deb5746cfbc210d821ab9"
+    }
+  },
+  {
+    "path": "packages/cli/src/index.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "d7642c4a88b6501bd630602a0808da533da42149",
+        "stage": 1
+      },
+      {
+        "mode": "100644",
+        "blob": "d53365f59b9edd4749cbac3dc87dfea256d50134",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "607c56f6286e1429f0de28c029d1495c17cfda0f",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "d53365f59b9edd4749cbac3dc87dfea256d50134"
+    }
+  },
+  {
+    "path": "packages/cli/src/project-verbs.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "f0f7529e61c7845756dab92b2a2dfbe82a15ac37",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "1f6a162aa6283c0df442fcbcb377886c26e65713",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "f0f7529e61c7845756dab92b2a2dfbe82a15ac37"
+    }
+  },
+  {
+    "path": "packages/cli/src/run.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "e10b90e835796ac863db705d5675fda7dcc125e6",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "44ec617ad0147802d967de956d6fd1c829a30337",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "29f5d1058ccb43fd427607a36dd2d507132a224a"
+    }
+  },
+  {
+    "path": "packages/cli/src/verb-args.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "63db31873476005a6112ee1225e6c44d3d67bf77",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "22ca7968f080d92cb24b0c406da0119ccbf9be53",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "63db31873476005a6112ee1225e6c44d3d67bf77"
+    }
+  },
+  {
+    "path": "packages/cli/test/exit-codes.golden.test.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "af593c47c631f030ffd5a6ecd68a072fc2ff84a2",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "faa2daf75e70e35737f6e81acbec51fa0d87104f",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "af593c47c631f030ffd5a6ecd68a072fc2ff84a2"
+    }
+  },
+  {
+    "path": "packages/cli/test/held-keys.command-map.test.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "49fe186dc452c6250c11e41f84407fc59e9930f6",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "3e8de82d38dba4591c27581432bf2cf0fa4aa133",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "49fe186dc452c6250c11e41f84407fc59e9930f6"
+    }
+  },
+  {
+    "path": "packages/cli/test/held-keys.generator.test.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "61f1b66d8fefa205b4a438dacf86bc017e90cfe9",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "19bdd68ab71636286f94843a9f0172ccf59bcb7a",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "61f1b66d8fefa205b4a438dacf86bc017e90cfe9"
+    }
+  },
+  {
+    "path": "packages/cli/test/held-keys.refusal-table.test.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "b1d85cd0421f7c37f569a91bee4f2b0f4ff2db78",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "be0b37928555572a72ef542fc6b740ee27fd67df",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "6822bde742727081efe7101c46a8022748d1bf1f"
+    }
+  },
+  {
+    "path": "packages/cli/test/json-equivalence.test.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "c39d674dde83582dcafeec3aa290a0bfe2d7211a",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "61717dfb3eda3ac28a3ca0b6e3b77e0aa9b04635",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "c39d674dde83582dcafeec3aa290a0bfe2d7211a"
+    }
+  },
+  {
+    "path": "packages/cli/test/project-propose-apply.test.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "23f0972cde8b26e004205daec7c06f40e039a031",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "9550bb47d234a740b9ba0860d67507e6423efaa2",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "23f0972cde8b26e004205daec7c06f40e039a031"
+    }
+  },
+  {
+    "path": "packages/cli/test/refusal.test.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "db916beb57767933582060f2b5e2d77e7c9af169",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "6c4516ba01e57aa3119ab7cfd3f99b6b7f45a65b",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "2c59dadf24940aa80fd060f2392f24af984534d2"
+    }
+  },
+  {
+    "path": "packages/cli/tsconfig.json",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "1df1a5c35b7acff27b6c77382a23d8787534d98e",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "eea7de6fe2048307927aa6bf13fd4ee35a959100",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "1df1a5c35b7acff27b6c77382a23d8787534d98e"
+    }
+  },
+  {
+    "path": "packages/engine-kernel/README.md",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "74770cd023434495ed0dd9220276111d58a62f74",
+        "stage": 1
+      },
+      {
+        "mode": "100644",
+        "blob": "3536232b72d837508d09053b704cdf2c0385da9c",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "00411421ea863b5c234dde1bb6f6f93959c6b01d",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "aa0fc9cf7fa9e74269cdf67ca451ec7ed6408562"
+    }
+  },
+  {
+    "path": "packages/engine-kernel/src/index.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "4ff2872bd34c424d31f7f609343d8829d2910dd8",
+        "stage": 1
+      },
+      {
+        "mode": "100644",
+        "blob": "2d79ab4247070545a8f820927cf046dff252cf80",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "ea57257c51296d6a8bf4baaef756761604dfc142",
+        "stage": 3
+      }
+    ],
+    "owner": "foundation-input",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "a43c1d15802a49f1cf7f78524c9a4454be3b2032"
+    }
+  },
+  {
+    "path": "packages/engine-kernel/src/session.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "a1315bcc846c24af23e6ca2728eb80693e1fe1b5",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "8449b4c7ebc36a8bc85f6804fa2211f749dbd931",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "2180ef2cbf30be7bd6f4c0c7319eada4597380a5"
+    }
+  },
+  {
+    "path": "packages/engine-kernel/test/seam.test.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "8e0aeebe0c74334e9bc500c59add53700c995090",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "361abbbee4e9520666ad9ab5a8755dd835d1d683",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "8e0aeebe0c74334e9bc500c59add53700c995090"
+    }
+  },
+  {
+    "path": "packages/engine-kernel/test/session.test.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "5006c131b6c7f166b66035f103a832c28a2720bb",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "f96dac9253ff29884e00a6667b4da6ee7df04729",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "5006c131b6c7f166b66035f103a832c28a2720bb"
+    }
+  },
+  {
+    "path": "packages/engine-orchestrator/src/index.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "3eba276ebb360e669e6acc7d514859b7d1ec0c54",
+        "stage": 1
+      },
+      {
+        "mode": "100644",
+        "blob": "8c17bb12bf7c08692e5f941ef058ea941494caa7",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "78b35b67c318227d9c05df8730dd2ce693f24b0f",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "aabd59c8969aa72e60c626425b262964feaf3364"
+    }
+  },
+  {
+    "path": "packages/engine-orchestrator/tsconfig.json",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "4a07fa62049f16fede7ee4ef6aaf1fe9ab2fb44f",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "b9cbe260d42737a408c1faa90e826760bf2c74e4",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "4a07fa62049f16fede7ee4ef6aaf1fe9ab2fb44f"
+    }
+  },
+  {
+    "path": "packages/engine-presentation/src/index.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "9aeafcbc3c6a5000dcbc83f9e73514a7f702dc28",
+        "stage": 1
+      },
+      {
+        "mode": "100644",
+        "blob": "ef10ad62cf2f5893dbac01119e663c14091505c8",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "c555042f17bd70bb866695e4fbd71eb80a889631",
+        "stage": 3
+      }
+    ],
+    "owner": "audio-assets",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "0ec293650803bf6c82955fe7a5a06b39e1d28077"
+    }
+  },
+  {
+    "path": "packages/engine-presentation/test/seam.test.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "47407478e1de656291ffd21084a22e08bfa46ff0",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "ac45a011766dd2c645940e8bd13364686d978d27",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "47407478e1de656291ffd21084a22e08bfa46ff0"
+    }
+  },
+  {
+    "path": "packages/engine-presentation/tsconfig.json",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "89a9e8d9d7f5dd60b1d1f344623824419e8c560a",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "b9cbe260d42737a408c1faa90e826760bf2c74e4",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "89a9e8d9d7f5dd60b1d1f344623824419e8c560a"
+    }
+  },
+  {
+    "path": "packages/importers/src/index.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "366ecb966e6cee4d88f0fe524fe55527af9500bd",
+        "stage": 1
+      },
+      {
+        "mode": "100644",
+        "blob": "5d87e3a6765273aea42be733b2ec5b87dd74b938",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "18906712d43a930d0f0ab6ebe4b5a02efd511a7c",
+        "stage": 3
+      }
+    ],
+    "owner": "audio-assets",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "6492b058e854220ee515656dec8d118905f4d5e8"
+    }
+  },
+  {
+    "path": "packages/importers/test/seam.test.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "66330d7176207895ef9e17b830a6096eff32e00f",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "9208925a057b1b3e42e96ab5e716742d3b738f12",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "66330d7176207895ef9e17b830a6096eff32e00f"
+    }
+  },
+  {
+    "path": "packages/importers/tsconfig.json",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "d8a6a7ef3ed19fb135e2ccd46d053613fc878215",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "b9cbe260d42737a408c1faa90e826760bf2c74e4",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "d8a6a7ef3ed19fb135e2ccd46d053613fc878215"
+    }
+  },
+  {
+    "path": "packages/profile-game/README.md",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "3ee11287e8a276de69d739ec55fa57021c6138ba",
+        "stage": 1
+      },
+      {
+        "mode": "100644",
+        "blob": "72ef66e85a74078c0f70ea217415233566850b0b",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "81949c41e11ff35c31ca0f605b1f27e6b19953f8",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "72ef66e85a74078c0f70ea217415233566850b0b"
+    }
+  },
+  {
+    "path": "packages/profile-game/src/index.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "aa459d42d692d742d87e9dad417c15c89fd2f3e3",
+        "stage": 1
+      },
+      {
+        "mode": "100644",
+        "blob": "767494fb3eca0023b925bb5d41fc01258be35b7c",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "0a514fdaef4dbb41324436844712a29992401dcf",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "767494fb3eca0023b925bb5d41fc01258be35b7c"
+    }
+  },
+  {
+    "path": "packages/profile-game/test/conformance.test.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "bb907ecc68e8c8ec7d406b5bbde77cb626db5e9d",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "9d7dbf51ad8e7ddf75baa3f3f55a207f3b5cc626",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "bb907ecc68e8c8ec7d406b5bbde77cb626db5e9d"
+    }
+  },
+  {
+    "path": "packages/profile-game/tsconfig.json",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "84860c29120901d5ec06db297bfdfa92c5463938",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "4483865745cc72d8386f57d85f8d509fb06c00b9",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "84860c29120901d5ec06db297bfdfa92c5463938"
+    }
+  },
+  {
+    "path": "packages/profile-kids/src/index.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "cdc803b1805e8eb34a611e85563cce02887ddb3e",
+        "stage": 1
+      },
+      {
+        "mode": "100644",
+        "blob": "498731d2fce0c761dc7e2ef7b1fcc35230809cba",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "b5008d5c05a5ec0b361584a944491156fcbe4b48",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "498731d2fce0c761dc7e2ef7b1fcc35230809cba"
+    }
+  },
+  {
+    "path": "packages/profile-web/src/index.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "719a3ae4a63a4b538bd6f4d724c65d01728a8238",
+        "stage": 1
+      },
+      {
+        "mode": "100644",
+        "blob": "79630d66c005d8492967e44bc33959f77ba4d8e3",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "538a11ba33505688568e413dc36f1f4f9d908f12",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "79630d66c005d8492967e44bc33959f77ba4d8e3"
+    }
+  },
+  {
+    "path": "packages/profile-web/tsconfig.json",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "54c323fd7bfbca3fdc933754054d64f8b2315b62",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "b9cbe260d42737a408c1faa90e826760bf2c74e4",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "54c323fd7bfbca3fdc933754054d64f8b2315b62"
+    }
+  },
+  {
+    "path": "packages/schemas/README.md",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "ab4f5e410f442b7a3149387c192e78e30c9e5b66",
+        "stage": 1
+      },
+      {
+        "mode": "100644",
+        "blob": "e84aa7fcafaf15eaf2182966aff15d19bb287c6d",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "b709791b0b67514031cfb85046be511ac165727f",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "e84aa7fcafaf15eaf2182966aff15d19bb287c6d"
+    }
+  },
+  {
+    "path": "packages/schemas/contracts/catalog-item.schema.json",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "e776ac392ea2ff80f553709c4e411c04223acd52",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "1eaa4926bc86b9f1129b502ca4174437aea8a1d8",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "e776ac392ea2ff80f553709c4e411c04223acd52"
+    }
+  },
+  {
+    "path": "packages/schemas/contracts/cli-protocol-envelope.schema.json",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "c49f1f58d02c8a9c33f79d975924b8ad7c85e968",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "ccf36d322096dba025a6d5ca67c88b8aa33ac13c",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "c49f1f58d02c8a9c33f79d975924b8ad7c85e968"
+    }
+  },
+  {
+    "path": "packages/schemas/contracts/kernel-session.schema.json",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "2a8ce9646e2dce9e0bed38c9065f056140db6bbf",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "06f4a19f6f27d72e64c4705e30501ecd034aff52",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "7545c69795a29ae9c904200eda479b424395b522"
+    }
+  },
+  {
+    "path": "packages/schemas/contracts/profile-conformance.schema.json",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "770154ed1509e9eec7303874f4e4c448e4d4c72b",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "fd84742ddb4afe7be586fc66f32f82f689444116",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "770154ed1509e9eec7303874f4e4c448e4d4c72b"
+    }
+  },
+  {
+    "path": "packages/schemas/src/catalog.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "db472bf799aedc0e27b9f9c0661f693fef596040",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "6ad68c4f4a38db54e18c45079818749735eb3977",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "db472bf799aedc0e27b9f9c0661f693fef596040"
+    }
+  },
+  {
+    "path": "packages/schemas/src/document.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "f0e953a78d151e1ca3e64e5abbcf46935f3fb611",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "4e260822b402ba36d64b58e60c059010dd529a41",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "6372e58e5764200858ad91fc5610114a926dcd76"
+    }
+  },
+  {
+    "path": "packages/schemas/src/index.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "21b0ff4303413b5141d7a8307a05ef2f776b2f19",
+        "stage": 1
+      },
+      {
+        "mode": "100644",
+        "blob": "b3467cef92f626e377497fa8a3ab82b56bf5ff70",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "a274dbfac35c09c3723f4b91e6d31a9c69b92c90",
+        "stage": 3
+      }
+    ],
+    "owner": "foundation-input",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "07a4fbe1d0ab1bd831e9f6128bf77221c4d7fcec"
+    }
+  },
+  {
+    "path": "packages/schemas/src/kernel-session.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "58060d9574f8251e02f39abd76d6e160b2589819",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "c0b6fb462431c29a3cbde22a6b20c727d8a4463a",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "dfce9dd3156dddcca724797173ad1cc2756d8607"
+    }
+  },
+  {
+    "path": "packages/schemas/src/profile-conformance-suite.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "300fe1716a59b7f1d7f8d35a6abdf3626b1d45c7",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "c3e3d972684374f3cab5e2e7b84f790da8a4bd18",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "300fe1716a59b7f1d7f8d35a6abdf3626b1d45c7"
+    }
+  },
+  {
+    "path": "packages/schemas/src/profile-conformance.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "ae505cfbe7b19dddf23db200c9bab4c587b2fb60",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "53630aed8de3819411a8e798929a7c9e4ec751e3",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "ae505cfbe7b19dddf23db200c9bab4c587b2fb60"
+    }
+  },
+  {
+    "path": "packages/schemas/src/proposal.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "516a43e7c2ab7649b050126b6023281ed0c9a9d3",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "664c305294e50bf8100e76c2ac268331e5ae3615",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "516a43e7c2ab7649b050126b6023281ed0c9a9d3"
+    }
+  },
+  {
+    "path": "packages/schemas/test/catalog-pipeline.test.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "aa784b28f02850fe126a887d1d6cb921b69e831f",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "a42648ca072eafb32846476cfe9f30562eaf8052",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "aa784b28f02850fe126a887d1d6cb921b69e831f"
+    }
+  },
+  {
+    "path": "packages/schemas/test/document-proposal.test.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "f5246599059ce30d5dd53bbbd22405fe029e49ee",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "690b0d79a376b0ca0287ca0c83820e71bed35b1e",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "f5246599059ce30d5dd53bbbd22405fe029e49ee"
+    }
+  },
+  {
+    "path": "packages/schemas/test/seam.test.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "195e2d5272a6fe19d7f2023308919b7865fd76b2",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "5407b11885b85d745ad13616f5acf8d789d0e09c",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "195e2d5272a6fe19d7f2023308919b7865fd76b2"
+    }
+  },
+  {
+    "path": "pnpm-lock.yaml",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "c4b79352a106af4588a1afd1b37304a8ec83a085",
+        "stage": 1
+      },
+      {
+        "mode": "100644",
+        "blob": "4be08523a9c0e16945782b76d105a438cdf8d930",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "294fdc9849904318ce605916cff312987b2419eb",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "587d324e5221e3fe6e4a32dbd6c5e91af09b8817"
+    }
+  },
+  {
+    "path": "scripts/check-contracts.mjs",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "4ae1f9042a53236156121f9f13a0f36740781e56",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "4d12387ab6c4e04cd171926c043e1acb6e61bb67",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "4ae1f9042a53236156121f9f13a0f36740781e56"
+    }
+  },
+  {
+    "path": "scripts/check-contracts.test.mjs",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "1d3ce7d1263c0aabbb9ee80384968daecae943e9",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "8a75a9080328dcbf0982b0d00e309eee2414e52e",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "1d3ce7d1263c0aabbb9ee80384968daecae943e9"
+    }
+  },
+  {
+    "path": "tests/boundary/injected-violations.test.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "3dc13cd69e53b28e166c18eb2f48f5ffecf44334",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "032e1f4fde56b4f556d66e2b12fec8565f803c7d",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "3dc13cd69e53b28e166c18eb2f48f5ffecf44334"
+    }
+  },
+  {
+    "path": "tests/helpers/fixture.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "282656ebafb592bc1bb9183a6d84866a98652f87",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "1efbea62a3a0df42e556711efdb8c879b9eaceb8",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "282656ebafb592bc1bb9183a6d84866a98652f87"
+    }
+  },
+  {
+    "path": "tests/parity/shell-cli-parity.test.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "6eccfeff074baff4abc1d5417758332593d6533a",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "be8e59d4ab1ff5bb1e6c2f80128aab73dc42f9ac",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "6eccfeff074baff4abc1d5417758332593d6533a"
+    }
+  },
+  {
+    "path": "tests/syntax/check-syntax.test.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "cb87e8390ebeeb5be83e5b5002990a30e254c4b9",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "6f71e59b65e9e7459ab15c7f8d09d7aac9234798",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "cb87e8390ebeeb5be83e5b5002990a30e254c4b9"
+    }
+  },
+  {
+    "path": "tsconfig.json",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "a59235ce851d57a88fe94f2713e03ed9bc953452",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "e0ac71c49fe20d8a6209389f03a40bacc48a800f",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "a59235ce851d57a88fe94f2713e03ed9bc953452"
+    }
+  },
+  {
+    "path": "tsconfig.tests.json",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "dd1c1d8b1405849cc61556a8ff31d04d9a519ee0",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "38a175e6441111b002ce97157609a580ba8efebe",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "8a32fe882f541becf48434df0b3e89f72b9f80bb"
+    }
+  },
+  {
+    "path": "vitest.config.ts",
+    "stages": [
+      {
+        "mode": "100644",
+        "blob": "1a9743dbdefd4f43c67c26fa61adca73c07d7593",
+        "stage": 2
+      },
+      {
+        "mode": "100644",
+        "blob": "4b116d6cef9db2b26250f29add79b589fcec2ac3",
+        "stage": 3
+      }
+    ],
+    "owner": "assembly-parent",
+    "acceptance": "PENDING_ORIGINAL_FEATURE_PROOF",
+    "workingCandidate": {
+      "mode": "100644",
+      "kind": "blob",
+      "blob": "223e146c34365b3e6f731c7c67be5c01e7ce55e3"
+    }
+  }
+]

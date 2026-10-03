@@ -1,0 +1,85 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/tmp/sceneaxi-comprehensive-owned-xd4gdfl1[39m
+
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22minstaller abort: pending status success settles without late DOM or IPC[32m 161[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22minstaller abort: pending status rejection settles without late DOM or IPC[32m 18[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22minstaller abort: pending save success settles without late DOM or IPC[32m 31[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22minstaller abort: pending save rejection settles without late DOM or IPC[32m 10[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22minstaller abort: pending remove success settles without late DOM or IPC[32m 40[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22minstaller abort: pending remove rejection settles without late DOM or IPC[32m 14[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22mroot pagehide: pending status success settles without late DOM or IPC[33m 505[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22mroot pagehide: pending status rejection settles without late DOM or IPC[32m 100[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22mroot pagehide: pending save success settles without late DOM or IPC[32m 82[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22mroot pagehide: pending save rejection settles without late DOM or IPC[32m 43[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22mroot pagehide: pending remove success settles without late DOM or IPC[32m 53[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22mroot pagehide: pending remove rejection settles without late DOM or IPC[32m 50[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22mphysically removes all registered listeners and fences a queued route microtask[32m 14[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22ma pre-aborted lifetime refuses installation before DOM allocation or IPC[32m 4[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22mthe original boolean/no-options API retains normal status, provider, save and remove behavior[32m 8[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22msame-turn Kids save clears the field without secure-storage admission[32m 26[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22mlive IPC failure still renders a generic refusal without thrown key internals[32m 15[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22mmissing privileged channel retains the named unavailable surface[32m 20[2mms[22m[39m
+ [32m✓[39m packages/engine-presentation/test/legacy-audio-compat.test.ts[2m > [22mpreserves historical object factory, typed tagged nodes, async Play and master volume[32m 25[2mms[22m[39m
+ [32m✓[39m packages/engine-presentation/test/legacy-audio-compat.test.ts[2m > [22mdenies historical Kids before allocating and preserves modern function factory[32m 9[2mms[22m[39m
+ [32m✓[39m packages/engine-presentation/test/legacy-audio-compat.test.ts[2m > [22minvalidates pending and out-of-order decodes through Stop and reset[32m 1[2mms[22m[39m
+ [32m✓[39m packages/engine-presentation/test/legacy-audio-compat.test.ts[2m > [22mrejects post-dispose decoding and closes every source even after host stop errors[32m 1[2mms[22m[39m
+ [32m✓[39m packages/engine-presentation/test/audio-playback.test.ts[2m > [22mpublic offline audio runtime (not audible-device proof)[2m > [22mrequires explicit unlock, decodes PCM, bounds volume, stops on hiding and owns teardown[32m 32[2mms[22m[39m
+ [32m✓[39m packages/engine-presentation/test/audio-playback.test.ts[2m > [22mpublic offline audio runtime (not audible-device proof)[2m > [22mreleases partially allocated nodes and stops a failed start before retrying[32m 8[2mms[22m[39m
+ [32m✓[39m packages/engine-presentation/test/audio-playback.test.ts[2m > [22mpublic offline audio runtime (not audible-device proof)[2m > [22mrefuses malformed/unsupported WAV before allocation, capacity limit+1 and Kids[32m 8[2mms[22m[39m
+ [32m✓[39m packages/engine-presentation/test/audio-playback.test.ts[2m > [22mdisposal cleans every source even when a host stop or disconnect fails[32m 1[2mms[22m[39m
+ [32m✓[39m packages/engine-presentation/test/audio-playback.test.ts[2m > [22mrefuses accessor/proxy audio assets before allocation without conversion hooks[32m 7[2mms[22m[39m
+ [32m✓[39m packages/engine-presentation/test/audio-playback.test.ts[2m > [22mretains strict PCM16 refusal independently of compatible injected codecs[32m 2[2mms[22m[39m
+ [32m✓[39m packages/engine-presentation/test/audio-playback.test.ts[2m > [22mdispose during pending unlock cannot reactivate the runtime[32m 1[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-input-actions.test.ts[2m > [22mdesktop Play-facing viewport input actions[2m > [22mpublishes a consumable Play input event with the action state[32m 20[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-input-actions.test.ts[2m > [22mdesktop Play-facing viewport input actions[2m > [22mpolls injected gamepads only in Play and reports button press and release[32m 13[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-input-actions.test.ts[2m > [22mdesktop Play-facing viewport input actions[2m > [22mreleases held actions when Play context ends without polling[32m 1[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-input-actions.test.ts[2m > [22mdesktop Play-facing viewport input actions[2m > [22mapplies the binding deadzone to axis polling[32m 20[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mstops all allocated root resources once and fences retained entry points[33m 386[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mpagehide during input readiness cannot allocate or issue later IPC[32m 94[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-input-actions.test.ts[2m > [22mdesktop Play-facing viewport input actions[2m > [22mdrives pointer and wheel controls only through the effective shared map[32m 75[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mpagehide during scene readiness cannot allocate or issue later IPC[32m 102[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22ma rejected input readiness after pagehide is cancellation, not a late refusal[32m 114[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22ma rejected scene readiness after pagehide is cancellation, not a late refusal[32m 137[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22ma live rejected input readiness still reports a genuine refusal[32m 231[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22ma live rejected scene readiness still reports a genuine refusal[33m 399[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mreports genuine pre-abort frame rejection but suppresses late rejection and retained reports[33m 458[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mpagehide during actual openPath fences its late report[32m 166[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mreleases partial allocations after mount-failure even if a release throws[32m 115[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mreleases partial allocations after observe-failure even if a release throws[32m 217[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mreleases partial allocations after cleanup-failure even if a release throws[32m 216[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mterminal shutdown initiates close synchronously during ready and suppresses late audio work[32m 282[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mterminal shutdown initiates close synchronously during request and suppresses late audio work[32m 44[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mterminal shutdown initiates close synchronously during digest and suppresses late audio work[32m 48[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mterminal shutdown initiates close synchronously during resume and suppresses late audio work[32m 53[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mterminal shutdown initiates close synchronously during decode and suppresses late audio work[32m 64[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mterminal shutdown also closes controls retired by a normal stop before its 100ms measurement[32m 94[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/audio-lifecycle-compat.test.ts[2m > [22mretains descriptor/digest admission and Ogg host codec, refuses bad envelopes before decode[32m 36[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/audio-lifecycle-compat.test.ts[2m > [22mStop cancels before fetch, before digest and before deferred host decode[32m 21[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/audio-lifecycle-compat.test.ts[2m > [22mnew Play wins out-of-order request and decode completions[32m 19[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/audio-lifecycle-compat.test.ts[2m > [22mreset/project/profile cancellation denies Kids before context allocation[32m 9[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/audio-lifecycle-compat.test.ts[2m > [22mrequest/decode/close rejection is named and repeated disposal closes once[32m 10[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/audio-lifecycle-compat.test.ts[2m > [22mfrozen PR310 package refusal preserves modern presentation and physics projection[32m 246[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/audio-lifecycle-compat.test.ts[2m > [22mper-clip Stop leaves other accepted sources playing, reset retires the entire project[32m 4[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/audio-lifecycle-compat.test.ts[2m > [22mrejected close is not reported as successful context disposal[32m 3[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/audio-lifecycle-compat.test.ts[2m > [22mchrome null-profile fence cancels synchronously before a stale request completes[32m 4[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/audio-lifecycle-compat.test.ts[2m > [22mmalformed authority events remain denied and disposed listeners cannot restore authority[32m 2[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/native-assistant-scene-compat.test.ts[2m > [22mprivate injected local assistant execution[2m > [22mdispatches the real injected compiler with trimmed prompt/profile/progress and publishes its result[32m 29[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/native-assistant-scene-compat.test.ts[2m > [22mprivate injected local assistant execution[2m > [22mkeeps default local compilation when no executor is injected[32m 7[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/native-assistant-scene-compat.test.ts[2m > [22mprivate injected local assistant execution[2m > [22mrefuses Kids/hosted/BYO before calling a private local executor[32m 2[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/native-assistant-scene-compat.test.ts[2m > [22mprivate injected local assistant execution[2m > [22msettles false async/sync injected failures as runtime refusals[32m 3[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/native-assistant-scene-compat.test.ts[2m > [22mprivate injected local assistant execution[2m > [22msettles true async/sync injected failures as runtime refusals[32m 3[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/native-assistant-scene-compat.test.ts[2m > [22mprivate injected local assistant execution[2m > [22mfences progress and completion from an abandoned injected job[32m 7[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/native-assistant-scene-compat.test.ts[2m > [22mcomplete current scene-operation compatibility[2m > [22mruns create/rename through real E1 review, accept and fresh bridge reopen[33m 1327[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/native-assistant-scene-compat.test.ts[2m > [22mcomplete current scene-operation compatibility[2m > [22mstages a named empty node and reproduces the digest without changing source bytes[32m 115[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/native-assistant-scene-compat.test.ts[2m > [22mcomplete current scene-operation compatibility[2m > [22mreconstructs and stages exactly one real box primitive[32m 115[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/native-assistant-scene-compat.test.ts[2m > [22mcomplete current scene-operation compatibility[2m > [22mreconstructs and stages exactly one real cylinder primitive[32m 97[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/native-assistant-scene-compat.test.ts[2m > [22mcomplete current scene-operation compatibility[2m > [22mreconstructs and stages exactly one real sphere primitive[32m 100[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/native-assistant-scene-compat.test.ts[2m > [22mcomplete current scene-operation compatibility[2m > [22mrenames an existing artifact without changing artifact bytes, placement or selection[32m 125[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/native-assistant-scene-compat.test.ts[2m > [22mcomplete current scene-operation compatibility[2m > [22mpreserves node kind/name through rename, legacy reparent, transform edits and reopen[33m 644[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/native-assistant-scene-compat.test.ts[2m > [22mcomplete current scene-operation compatibility[2m > [22mkeeps document/profile/policy refusal precedence and distinguishes absent creation parent from stale rename target[32m 128[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m7 passed[39m[22m[90m (7)[39m
+[2m      Tests [22m [1m[32m76 passed[39m[22m[90m (76)[39m
+[2m   Start at [22m 19:04:57
+[2m   Duration [22m 19.92s[2m (transform 53.84s, setup 0ms, import 70.56s, tests 7.73s, environment 1ms)[22m
+

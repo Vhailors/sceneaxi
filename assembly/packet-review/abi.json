@@ -1,0 +1,46 @@
+{
+  "desktopExports": 50,
+  "mismatches": [],
+  "added": [
+    {
+      "f": "packages/schemas/src/desktop-scene-animation.ts",
+      "n": "parseSceneAnimationMutation"
+    },
+    {
+      "f": "packages/schemas/src/desktop-scene-physics.ts",
+      "n": "parseScenePhysicsMutation"
+    },
+    {
+      "f": "packages/schemas/src/desktop-scene-environment.ts",
+      "n": "parseSceneEnvironmentMutation"
+    },
+    {
+      "f": "packages/schemas/src/desktop-scene-materials.ts",
+      "n": "parseSceneMaterialsMutation"
+    },
+    {
+      "f": "packages/schemas/src/desktop-scene-effects.ts",
+      "n": "parseSceneEffectsMutation"
+    },
+    {
+      "f": "packages/schemas/src/index.ts",
+      "n": "parseSceneAnimationMutation"
+    },
+    {
+      "f": "packages/schemas/src/index.ts",
+      "n": "parseScenePhysicsMutation"
+    },
+    {
+      "f": "packages/schemas/src/index.ts",
+      "n": "parseSceneEnvironmentMutation"
+    },
+    {
+      "f": "packages/schemas/src/index.ts",
+      "n": "parseSceneMaterialsMutation"
+    },
+    {
+      "f": "packages/schemas/src/index.ts",
+      "n": "parseSceneEffectsMutation"
+    }
+  ]
+}

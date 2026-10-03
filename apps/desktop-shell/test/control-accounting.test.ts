@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DESKTOP_MINIMUM_WINDOW } from "../src/visual-model.js";
 import { DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS } from "@sceneaxi/schemas";
 import {
   ACCENT,
@@ -13,7 +14,7 @@ import {
   type DesktopVisualView,
   type DesktopWindowSize,
 } from "@sceneaxi/desktop-shell";
-import { CONTROL_STATES as STATES } from "../../../tests/helpers/desktop-chrome-golden.js";
+import { CONTROL_STATES as STATES } from "./helpers/desktop-chrome-golden.js";
 
 /**
  * The executable form of the model/renderer contract.
@@ -73,13 +74,15 @@ const CONTROL_KINDS: ReadonlySet<string> = new Set([
  */
 const NOT_RENDERED = [/^profiles\[\d+\]\.assistant(\.|$)/, /^controls(\[|$)/];
 
-const isControl = (value: unknown): value is DesktopControl => {
-  if (typeof value !== "object" || value === null) return false;
-  const candidate = value as Record<string, unknown>;
+const isControl = <Value>(value: Value): value is Value & DesktopControl => {
+  if (!(isBoundaryObjectValue(value)) || value === null) return false;
+  // SAFETY: the non-null object is inspected only for the control fields validated by this guard.
+  const candidate = value as Partial<DesktopControl>;
+
   return (
-    typeof candidate["id"] === "string" &&
-    typeof candidate["label"] === "string" &&
-    typeof candidate["kind"] === "string" &&
+    isBoundaryTextValue(candidate["id"]) &&
+    isBoundaryTextValue(candidate["label"]) &&
+    isBoundaryTextValue(candidate["kind"]) &&
     CONTROL_KINDS.has(candidate["kind"]) &&
     "refusal" in candidate &&
     "refusalMessage" in candidate
@@ -89,25 +92,31 @@ const isControl = (value: unknown): value is DesktopControl => {
 /** A control's identity for set comparison: neither part can contain a pipe. */
 const key = (control: DesktopControl): string => `${control.id}|${control.kind}`;
 
-function collectControls(
-  node: unknown,
+function collectControls<Input>(
+  node: Input,
   path = "",
   found: Map<string, DesktopControl> = new Map(),
 ): Map<string, DesktopControl> {
   if (NOT_RENDERED.some((pattern) => pattern.test(path))) return found;
+
   if (isControl(node)) {
     found.set(key(node), node);
+
     return found;
   }
+
   if (Array.isArray(node)) {
     node.forEach((item, index) => collectControls(item, `${path}[${index}]`, found));
+
     return found;
   }
-  if (typeof node === "object" && node !== null) {
+
+  if (isProtocolObject(node) && node !== null) {
     for (const [field, value] of Object.entries(node)) {
       collectControls(value, path === "" ? field : `${path}.${field}`, found);
     }
   }
+
   return found;
 }
 
@@ -118,7 +127,7 @@ describe("engine desktop chrome — control accounting (model → document)", ()
     // switch would silently skip.
     for (const [label, state] of STATES) {
       const view = desktopVisualView(state);
-      const walked = new Set([...collectControls(view).keys()]);
+      const walked = new Set(collectControls(view).keys());
       const indexed = new Set(view.controls.map(key));
       expect(indexed.size, label).toBe(view.controls.length);
       expect([...indexed].sort(), label).toEqual([...walked].sort());
@@ -131,6 +140,7 @@ describe("engine desktop chrome — control accounting (model → document)", ()
       const html = renderDesktopChrome(view);
       const controls = [...collectControls(view).values()];
       expect(controls.length, label).toBeGreaterThan(0);
+
       for (const control of controls) {
         expect(html, `${label} ${control.id}`).toContain(
           `id="${control.id}" data-kind="${control.kind}"`,
@@ -143,11 +153,13 @@ describe("engine desktop chrome — control accounting (model → document)", ()
     for (const [label, state] of STATES) {
       const view = desktopVisualView(state);
       const html = renderDesktopChrome(view);
+
       for (const control of collectControls(view).values()) {
         if (control.kind !== "inert") {
           expect(control.refusal, `${label} ${control.id}`).toBeNull();
           continue;
         }
+
         expect(html, `${label} ${control.id}`).toMatch(
           new RegExp(
             `id="${control.id}"[^>]*data-kind="inert"[^>]*aria-disabled="true"[^>]*data-refusal="${control.refusal}"`,
@@ -167,6 +179,7 @@ describe("engine desktop chrome — control accounting (document → model)", ()
       const html = render(state);
       const buttons = [...html.matchAll(/<button\b[^>]*>/g)].map(([tag]) => tag);
       expect(buttons.length, label).toBeGreaterThan(0);
+
       for (const tag of buttons) {
         // `button(control, …)` is the only thing that emits this pair, so a raw
         // `<button>` written into the markup fails here rather than at review.
@@ -179,9 +192,11 @@ describe("engine desktop chrome — control accounting (document → model)", ()
     for (const [label, state] of STATES) {
       const view = desktopVisualView(state);
       const html = renderDesktopChrome(view);
+
       const modelled = new Set(
         [...collectControls(view).values()].map((control) => control.id),
       );
+
       for (const [tag] of html.matchAll(/<button\b[^>]*>/g)) {
         const id = /\sid="([^"]+)"/.exec(tag)?.[1] ?? "";
         expect(modelled.has(id), `${label} ${id}`).toBe(true);
@@ -195,10 +210,12 @@ describe("engine desktop chrome — control accounting (document → model)", ()
       expect(html, label).not.toMatch(/<(a|details|summary)\b/i);
       const inputs = html.match(/<input\b[^>]*>/g) ?? [];
       expect(inputs, label).toHaveLength(DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS.length + 9);
+
       // Exact field identities are pinned by the matching region suites.
       for (const tag of inputs) {
         expect(tag, label).toMatch(/data-kind="(view|live|inert)"/);
       }
+
       const selects = html.match(/<select\b[^>]*>/g) ?? [];
       expect(selects, label).toHaveLength(19);
       expect(selects[0], label).toMatch(/data-kind="(view|inert)"/);
@@ -207,11 +224,14 @@ describe("engine desktop chrome — control accounting (document → model)", ()
       expect(selects[3], label).toMatch(/data-kind="(live|inert)"/);
       expect(selects[4], label).toMatch(/data-kind="(live|inert)"/);
       expect(selects[5], label).toMatch(/data-kind="(live|inert)"/);
+
       for (const tag of selects.slice(7)) expect(tag, label).toMatch(/data-kind="(live|inert)"/);
       const textareas = html.match(/<textarea\b[^>]*>/g) ?? [];
       expect(textareas, label).toHaveLength(8);
+
       for (const tag of textareas) expect(tag, label).toMatch(/data-kind="(view|live|inert)"/);
       expect(html, label).not.toMatch(/\son[a-z]+=/i);
+
       // A focus stop outside a <button> would be an interactive element with no
       // control behind it; the tabs' roving `tabindex` sits on buttons. The one
       // exceptions are scroll containers: the rendered diff and safe evidence
@@ -227,8 +247,10 @@ describe("engine desktop chrome — control accounting (document → model)", ()
           expect(tag, `${label} ${tag}`).toMatch(/aria-label="[^"]+"/);
           continue;
         }
+
         expect(tag, `${label} ${tag}`).toMatch(/^<(button|input|textarea|select)\b/);
       }
+
       // The rendered diff is the one surface whose whole purpose is reviewing
       // before an all-or-nothing write, and it clips at its own `max-height`.
       // A scroll container the keyboard cannot reach hides part of what Accept
@@ -260,27 +282,35 @@ type VirtualElement = Readonly<{
 function parseRules(css: string, media: string | null, sink: StyleRule[]): void {
   const clean = css.replace(/\/\*[\s\S]*?\*\//g, "");
   let index = 0;
+
   while (index < clean.length) {
     const brace = clean.indexOf("{", index);
+
     if (brace === -1) break;
     const prelude = clean.slice(index, brace).trim();
     let depth = 0;
     let end = brace;
+
     for (; end < clean.length; end++) {
       if (clean[end] === "{") depth += 1;
       else if (clean[end] === "}") {
         depth -= 1;
+
         if (depth === 0) break;
       }
     }
+
     const body = clean.slice(brace + 1, end);
     index = end + 1;
+
     if (prelude.startsWith("@keyframes")) continue;
+
     if (prelude.startsWith("@media")) {
       const condition = prelude.slice("@media".length).trim();
       parseRules(body, media === null ? condition : `${media} and ${condition}`, sink);
       continue;
     }
+
     if (prelude.startsWith("@")) continue;
     sink.push({ selector: prelude, body, media, order: sink.length });
   }
@@ -289,14 +319,17 @@ function parseRules(css: string, media: string | null, sink: StyleRule[]): void 
 /** Evaluate one `@media` condition list against a viewport. Comma is OR. */
 function mediaApplies(condition: string | null, size: DesktopWindowSize): boolean {
   if (condition === null) return true;
+
   return condition.split(",").some((clause) =>
     clause.split(/\band\b/).every((term) => {
       const bound = /\((max|min)-(width|height):(\d+)px\)/.exec(term);
+
       // Anything else (prefers-reduced-motion) is not a size condition and is
       // treated as not applying, which is what a default browser reports.
       if (bound === null) return false;
       const measured = bound[2] === "width" ? size.width : size.height;
       const limit = Number(bound[3]);
+
       return bound[1] === "max" ? measured <= limit : measured >= limit;
     }),
   );
@@ -307,35 +340,48 @@ function splitCompound(compound: string): string[] {
   const parts: string[] = [];
   let current = "";
   let depth = 0;
+
   for (const char of compound) {
     if (char === "(") depth += 1;
+
     if (char === ")") depth -= 1;
+
     if (depth === 0 && (char === "." || char === "[" || char === ":") && current !== "") {
       parts.push(current);
       current = char;
       continue;
     }
+
     current += char;
   }
+
   if (current !== "") parts.push(current);
+
   return parts;
 }
 
 function matchesCompound(compound: string, element: VirtualElement): boolean {
   return splitCompound(compound).every((part) => {
     if (part.startsWith(".")) return element.classes.has(part.slice(1));
+
     if (part.startsWith(":not(")) {
       return !matchesCompound(part.slice(5, -1), element);
     }
+
     if (part.startsWith("[")) {
       const pair = /^\[([\w-]+)(?:=["']?([^"'\]]*)["']?)?\]$/.exec(part);
+
       if (pair === null) throw new Error(`unsupported attribute selector: ${part}`);
       const name = pair[1] ?? "";
       const value = pair[2];
+
       if (value === undefined) return name in element.attributes;
+
       return element.attributes[name] === value;
     }
+
     if (part.startsWith(":")) return false;
+
     // A type selector: the virtual tree carries no tag names, so nothing matches.
     return false;
   });
@@ -346,11 +392,14 @@ function specificity(selector: string): number {
     .trim()
     .split(/\s+/)
     .flatMap((compound) => splitCompound(compound));
+
   let score = 0;
+
   for (const part of parts) {
     if (part.startsWith(":not(")) score += specificity(part.slice(5, -1));
     else if (part.startsWith(".") || part.startsWith("[") || part.startsWith(":")) score += 1;
   }
+
   return score;
 }
 
@@ -362,17 +411,22 @@ function specificity(selector: string): number {
 function matchesChain(selector: string, chain: ReadonlyArray<VirtualElement>): boolean {
   const compounds = selector.trim().split(/\s+/);
   const last = chain[chain.length - 1];
+
   if (last === undefined) return false;
   const target = compounds[compounds.length - 1];
+
   if (target === undefined || !matchesCompound(target, last)) return false;
   let remaining = compounds.slice(0, -1);
+
   for (let i = chain.length - 2; i >= 0 && remaining.length > 0; i -= 1) {
     const ancestor = chain[i];
     const candidate = remaining[remaining.length - 1];
+
     if (ancestor !== undefined && candidate !== undefined && matchesCompound(candidate, ancestor)) {
       remaining = remaining.slice(0, -1);
     }
   }
+
   return remaining.length === 0;
 }
 
@@ -388,20 +442,25 @@ function computedValue(
   let bestScore = -1;
   let bestOrder = -1;
   let important = false;
+
   for (const rule of rules) {
     if (!mediaApplies(rule.media, size)) continue;
     const found = declaration.exec(rule.body);
+
     if (found === null) continue;
     const value = (found[1] ?? "").trim();
     const isImportant = value.endsWith("!important");
+
     for (const selector of rule.selector.split(",")) {
       if (!matchesChain(selector, chain)) continue;
       const score = specificity(selector);
+
       const wins = important && !isImportant
         ? false
         : (!important && isImportant) ||
           score > bestScore ||
           (score === bestScore && rule.order > bestOrder);
+
       if (!wins) continue;
       winner = value.replace("!important", "").trim();
       bestScore = score;
@@ -409,6 +468,7 @@ function computedValue(
       important = isImportant;
     }
   }
+
   return winner;
 }
 
@@ -423,6 +483,7 @@ const stylesheet = (html: string): StyleRule[] => {
   expect(css.length).toBeGreaterThan(0);
   const rules: StyleRule[] = [];
   parseRules(css, null, rules);
+
   return rules;
 };
 
@@ -434,9 +495,11 @@ const element = (
 const shellElement = (html: string): VirtualElement => {
   const tag = /<div class="shell"[^>]*>/.exec(html)?.[0] ?? "";
   const attributes: Record<string, string> = {};
+
   for (const [, name, value] of tag.matchAll(/\s(data-[\w-]+)="([^"]*)"/g)) {
     attributes[name ?? ""] = value ?? "";
   }
+
   return { classes: new Set(["shell"]), attributes };
 };
 
@@ -529,6 +592,34 @@ describe("engine desktop chrome — refusal reachability at every tier", () => {
     expect(computedDisplay(rules, [body, shell], size)).toBe("none");
     expect(computedDisplay(rules, [body, element("window-refusal")], size)).toBe("block");
   });
+
+  it("keeps the named refusal visible for either undersized dimension on every profile", () => {
+    for (const profile of ["game", "web", "kids"] as const) {
+      // Runtime size can differ from the size used to render the document.
+      const html = render(createDesktopVisualState({ profile }));
+      const rules = stylesheet(html);
+
+      for (const size of [
+        { width: DESKTOP_MINIMUM_WINDOW.width - 1, height: 1080 },
+        { width: 1920, height: DESKTOP_MINIMUM_WINDOW.height - 1 },
+        { width: 320, height: 240 },
+      ]) {
+        expect(computedDisplay(rules, [body, shellElement(html)], size)).toBe("none");
+        expect(computedDisplay(rules, [body, element("window-refusal")], size)).toBe("block");
+      }
+
+      expect(html).toContain('<div class="window-refusal" role="alert">');
+      expect(html).toContain("Window below the minimum size");
+      expect(html).toContain("DESKTOP_WINDOW_BELOW_MINIMUM");
+    }
+  });
+
+  it("hides only the size refusal at the exact minimum", () => {
+    const html = render(createDesktopVisualState());
+    const rules = stylesheet(html);
+    expect(computedDisplay(rules, [body, shellElement(html)], DESKTOP_MINIMUM_WINDOW)).toBe("grid");
+    expect(computedDisplay(rules, [body, element("window-refusal")], DESKTOP_MINIMUM_WINDOW)).toBe("none");
+  });
 });
 
 /* -------------------------------------------------------------------------- */
@@ -564,7 +655,9 @@ const REGION_CHAINS: Readonly<Record<string, ReadonlyArray<string>>> = Object.fr
 const afterAction = (shell: VirtualElement, tag: string): VirtualElement => {
   const action = /\sdata-action="([^"]+)"/.exec(tag)?.[1];
   const value = /\sdata-value="([^"]+)"/.exec(tag)?.[1];
+
   if (action !== "drawer" || value === undefined) return shell;
+
   return {
     classes: shell.classes,
     attributes: { ...shell.attributes, [`data-drawer-${value}`]: "open" },
@@ -580,15 +673,19 @@ describe("engine desktop chrome — a declared kind tells the truth", () => {
       const html = render(state);
       const rules = stylesheet(html);
       const shell = shellElement(html);
+
       for (const [tag] of html.matchAll(/<button\b[^>]*>/g)) {
         const target = /\saria-controls="([^"]+)"/.exec(tag)?.[1];
+
         if (target === undefined) continue;
         const chain = REGION_CHAINS[target];
         expect(chain, `${label} ${target} names no known region`).toBeDefined();
+
         if (/\sdata-kind="inert"/.test(tag)) continue;
-        let path: VirtualElement[] = [body, afterAction(shell, tag)];
+        const path: VirtualElement[] = [body, afterAction(shell, tag)];
+
         for (const region of chain ?? []) {
-          path = [...path, element(region)];
+          path.push(element(region));
           expect(
             computedDisplay(rules, path, state.window),
             `${label} ${target} via .${region}`,
@@ -605,6 +702,7 @@ describe("engine desktop chrome — a declared kind tells the truth", () => {
       element("title-actions"),
       element("assistant-toggle"),
     ];
+
     for (const [renderLabel, renderSize] of TIER_SIZES) {
       const html = render(createDesktopVisualState({ window: renderSize }));
       const rules = stylesheet(html);
@@ -614,22 +712,41 @@ describe("engine desktop chrome — a declared kind tells the truth", () => {
       // a drawer nobody opened must not sit on the panel it undocked from
       // before any script has run.
       expect(shell.attributes["data-drawer-assistant"], renderLabel).toBe("closed");
+
       for (const [openLabel, openSize] of TIER_SIZES) {
         const at = `${renderLabel} opened at ${openLabel}`;
+
         const shown =
           computedDisplay(rules, [body, shell, element("assistant")], openSize) !== "none";
+
         const drawerTier =
           openSize.width < (REGULAR?.minWidth ?? 0) ||
           openSize.height < (REGULAR?.minHeight ?? 0);
+
         expect(shown, at).toBe(!drawerTier);
         // The lit styling is decided at the viewport, not at the render size.
         expect(
           computedValue(rules, toggle(shell), openSize, "background") === ACCENT.surface,
           `${at} lit`,
         ).toBe(shown);
+
         if (renderLabel !== openLabel) continue;
         expect(/id="assistant-toggle"[^>]*aria-pressed="true"/.test(html), at).toBe(shown);
       }
     }
   });
 });
+
+function isProtocolObject<Value>(value: Value): value is Value & (object | null) {
+  return isBoundaryObjectValue(value);
+}
+
+type BoundaryObjectValue = object | null;
+
+function isBoundaryObjectValue<Input>(value: Input): value is Input & Readonly<BoundaryObjectValue> {
+  return typeof value === "object";
+}
+
+function isBoundaryTextValue<Input>(value: Input): value is Input & string {
+  return typeof value === "string";
+}

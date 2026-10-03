@@ -1,0 +1,42 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/tmp/sceneaxi-comprehensive-owned-xd4gdfl1[39m
+
+[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[31mx[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[31mx[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 2 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m tests/e2e/asset-pipeline-golden.test.ts[2m > [22mfirst-class manifest-backed asset pipeline[2m > [22mprojects audio manifests without bytes and serves only named accepted clips on demand
+[31m[1mReferenceError[22m: compactAssetSnapshot is not defined[39m
+[36m [2m❯[22m genericAuthoringSnapshot desktop/linux/src/lib/bridge.ts:[2m507:21[22m[39m
+    [90m505|[39m
+    [90m506|[39m   const genericAuthoringSnapshot = (snapshot: DesktopSnapshot) => {
+    [90m507|[39m     const compact = compactAssetSnapshot(snapshot);
+    [90m   |[39m                     [31m^[39m
+    [90m508|[39m     if (compact !== snapshot) return compact;
+    [90m509|[39m     const decorated = withRarityProposalEvidence(snapshot);
+[90m [2m❯[22m genericAuthoringData desktop/linux/src/lib/bridge.ts:[2m567:19[22m[39m
+[90m [2m❯[22m authoringOk desktop/linux/src/lib/bridge.ts:[2m942:41[22m[39m
+[90m [2m❯[22m authoring desktop/linux/src/lib/bridge.ts:[2m1546:11[22m[39m
+[90m [2m❯[22m Object.handle desktop/linux/src/lib/bridge.ts:[2m3163:16[22m[39m
+[90m [2m❯[22m tests/e2e/asset-pipeline-golden.test.ts:[2m221:19[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m desktop/linux/test/audio-lifecycle-compat.test.ts[2m > [22mfrozen PR310 package refusal preserves modern presentation and physics projection
+[31m[1mTypeError[22m: inspectDesktopScenePackages is not a function[39m
+[36m [2m❯[22m desktop/linux/test/audio-lifecycle-compat.test.ts:[2m110:12[22m[39m
+    [90m108|[39m })[33m;[39m
+    [90m109|[39m it("frozen PR310 package refusal preserves modern presentation and phy…
+    [90m110|[39m     expect(inspectDesktopScenePackages({})).toMatchObject({ ok: true }…
+    [90m   |[39m            [31m^[39m
+    [90m111|[39m     expect(inspectDesktopScenePackages({ scenePackageCatalog: null }))…
+    [90m112|[39m     expect(inspectDesktopScenePackages({ scenePackageCatalog: { schema…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m2 passed[39m[22m[90m (4)[39m
+[2m      Tests [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m19 passed[39m[22m[90m (21)[39m
+[2m   Start at [22m 11:32:05
+[2m   Duration [22m 10.06s[2m (transform 18.73s, setup 0ms, import 23.63s, tests 1.40s, environment 0ms)[22m
+

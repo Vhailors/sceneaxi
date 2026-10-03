@@ -1,0 +1,53 @@
+[96mdesktop/linux/src/lib/desktop-scene.ts[0m:[93m1158[0m:[93m55[0m - [91merror[0m[90m TS2339: [0mProperty 'instanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }> | Readonly<{ kind: "create-primitive"; primitive: "box" | "cylinder" | "sphere"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.
+  Property 'instanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }>'.
+
+[7m1158[0m       (instance) => instance.instanceId === operation.instanceId,
+[7m    [0m [91m                                                      ~~~~~~~~~~[0m
+[96mdesktop/linux/src/lib/desktop-scene.ts[0m:[93m1163[0m:[93m51[0m - [91merror[0m[90m TS2339: [0mProperty 'instanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }> | Readonly<{ kind: "create-primitive"; primitive: "box" | "cylinder" | "sphere"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.
+  Property 'instanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }>'.
+
+[7m1163[0m         `The selected child is stale: ${operation.instanceId}.`,
+[7m    [0m [91m                                                  ~~~~~~~~~~[0m
+[96mdesktop/linux/src/lib/desktop-scene.ts[0m:[93m1175[0m:[93m55[0m - [91merror[0m[90m TS2339: [0mProperty 'parentInstanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }> | Readonly<{ kind: "create-primitive"; primitive: "box" | "cylinder" | "sphere"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.
+  Property 'parentInstanceId' does not exist on type 'Readonly<{ kind: "rename-object"; instanceId: string; name: string; }>'.
+
+[7m1175[0m       (instance) => instance.instanceId === operation.parentInstanceId,
+[7m    [0m [91m                                                      ~~~~~~~~~~~~~~~~[0m
+[96mdesktop/linux/src/lib/desktop-scene.ts[0m:[93m1180[0m:[93m55[0m - [91merror[0m[90m TS2339: [0mProperty 'parentInstanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }> | Readonly<{ kind: "create-primitive"; primitive: "box" | "cylinder" | "sphere"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.
+  Property 'parentInstanceId' does not exist on type 'Readonly<{ kind: "rename-object"; instanceId: string; name: string; }>'.
+
+[7m1180[0m         `The requested parent is missing: ${operation.parentInstanceId}.`,
+[7m    [0m [91m                                                      ~~~~~~~~~~~~~~~~[0m
+[96mdesktop/linux/src/lib/desktop-scene.ts[0m:[93m1199[0m:[93m31[0m - [91merror[0m[90m TS2339: [0mProperty 'transformPolicy' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }> | Readonly<{ kind: "create-primitive"; primitive: "box" | "cylinder" | "sphere"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.
+  Property 'transformPolicy' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }>'.
+
+[7m1199[0m     const derived = operation.transformPolicy === "preserve-world"
+[7m    [0m [91m                              ~~~~~~~~~~~~~~~[0m
+[96mtests/e2e/asset-pipeline-golden.test.ts[0m:[93m12[0m:[93m35[0m - [91merror[0m[90m TS5097: [0mAn import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
+
+[7m12[0m import { parseDocumentText } from "../../packages/schemas/src/index.ts";
+[7m  [0m [91m                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[96mtests/e2e/asset-pipeline-golden.test.ts[0m:[93m13[0m:[93m23[0m - [91merror[0m[90m TS5097: [0mAn import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
+
+[7m13[0m import { apply } from "../../packages/authoring-core/src/index.ts";
+[7m  [0m [91m                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[96mtests/e2e/asset-pipeline-golden.test.ts[0m:[93m21[0m:[93m8[0m - [91merror[0m[90m TS5097: [0mAn import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
+
+[7m21[0m } from "../../packages/importers/src/index.ts";
+[7m  [0m [91m       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[96mtests/e2e/asset-pipeline-golden.test.ts[0m:[93m22[0m:[93m116[0m - [91merror[0m[90m TS5097: [0mAn import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
+
+[7m22[0m import { createDesktopBridge, createDesktopProjectBrowser, desktopSceneFromDocumentData, seedDesktopProject } from "../../desktop/linux/src/index.ts";
+[7m  [0m [91m                                                                                                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[96mtests/e2e/asset-pipeline-golden.test.ts[0m:[93m23[0m:[93m46[0m - [91merror[0m[90m TS5097: [0mAn import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
+
+[7m23[0m import { assistantAssetInspectionText } from "../../desktop/linux/src/renderer/assistant-inspection.ts";
+[7m  [0m [91m                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[96mtests/e2e/asset-pipeline-golden.test.ts[0m:[93m24[0m:[93m51[0m - [91merror[0m[90m TS5097: [0mAn import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
+
+[7m24[0m import { runAssetHotReload, runAssetImport } from "../../packages/cli/src/asset-verbs.ts";
+[7m  [0m [91m                                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[96mtests/e2e/asset-pipeline-golden.test.ts[0m:[93m25[0m:[93m33[0m - [91merror[0m[90m TS5097: [0mAn import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
+
+[7m25[0m import { runProjectApply } from "../../packages/cli/src/project-verbs.ts";
+[7m  [0m [91m                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m

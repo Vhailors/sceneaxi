@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "graphId": "sceneaxi-production-swarm",
+  "nodeId": "fix-shells",
+  "role": "code",
+  "root": "/home/devuser/Documents/Projects/sceneaxi",
+  "head": "4e532e2fbf43e9948741578ab6208a3277870405",
+  "integrationOutcome": "FAIL",
+  "productionStatus": "PARTIAL",
+  "productionPass": false,
+  "baseline": "Checkout was already dirty on retry. Preserved inherited web-shell hardening and all other lane changes; no clean-baseline claim.",
+  "decisions": [
+    "Reuse the shared registry's inputSchema to collect complete named fields; keep host validation and package boundaries unchanged.",
+    "Document/hash/profile and inspected settings versions/digests are locked; settings review does not write until explicit approval. Scene mutations stage through existing Change Review and Save.",
+    "No automatic write retry after a lost response. Explicit authoritative-state reconciliation blocks further browser writes until successful.",
+    "Retain 100 turns and 256KiB serialized transcript, 16KiB UTF8 prompts and 64KiB provider envelopes; admit one running plus eight waiting operations. No race-and-forget provider timeout.",
+    "Full gate/native source/root golden edits belong to serial integration, not concurrent shell builds. Do not invent live provider, signing, legal or publication evidence."
+  ],
+  "changedFiles": [
+    {"path": "apps/desktop-shell/src/interaction-commands.ts", "symbols": ["interaction", "DESKTOP_INTERACTION_COMMANDS"], "change": "Expose input inspection, all five prefab verbs, viewport source selection and physics evaluation in menu/palette inventory."},
+    {"path": "apps/desktop-shell/src/chrome.ts", "symbols": ["collectCommandInput", "runEditorCommand", "commandHandlers", "keyboardBindingMatches", "overlayStops"], "change": "Schema-derived typed accessible fields and real host submission; inspected settings/migration review; existing staged snapshot projection; committed binding hydration; explicit control/meta keyboard matching; form focus trap."},
+    {"path": "apps/desktop-shell/test/chrome.test.ts", "symbols": ["production command forms through the real host"], "change": "Mounted emitted chrome against existing Linux bridge and owned fixture roots. Assert actual prefab Save/Reject and binding review/commit/reset plus rebound-key Save persistence and Kids refusal. Runtime-only peer loading avoids compiling another lane into shell dist."},
+    {"path": "apps/web-shell/src/assistant-panel.ts", "symbols": ["call"], "change": "Additionally bound provider refusal reason/message UTF8 bytes; retained inherited prompt/response/transcript/queue hardening."},
+    {"path": "apps/web-shell/test/assistant-panel.test.ts", "symbols": ["bounded local assistant retention and admission"], "change": "120 UTF8 exchanges, count/byte/full-snapshot bounds, dropped-history disclosure, oversized prompt/output/refusal and concurrent admission/pinned-mode assertions."},
+    {"path": "apps/web-shell/test/inspector-app.test.ts", "symbols": ["served inspector production regressions"], "change": "Both redacted catches and real socket survival; mounted root/reject/abort/nonJSON/lost-Accept reconciliation with no retry; cleanup own fixtures."}
+  ],
+  "preservedInheritedChanges": ["apps/web-shell/src/inspector-app.ts", "apps/web-shell/src/panel-support.ts", "apps/web-shell/src/account-panel.ts", "apps/web-shell/src/assistant-panel.ts", "apps/web-shell/test/assistant-panel.test.ts"],
+  "tasks": [
+    {"id": "SH-T01", "findingIds": ["SHELL-006"], "status": "done-with-evidence", "evidence": ["V1"], "acceptance": "Unexpected sentinel absent from both500 catches and real socket500; state200 after failure; existing diagnostics/refusal tests remain passing."},
+    {"id": "SH-T02", "findingIds": ["SHELL-003", "SHELL-004", "SHELL-005"], "status": "done-with-evidence", "evidence": ["V1", "V2"], "acceptance": "Actual Chromium against spawned binary: root review, reject clears diff, abort and nonJSON show accessible unknown state, lost Accept commits once and blocks retry until explicit state reread; no pageerror; CLI/DesktopSession byte parity."},
+    {"id": "SH-T03", "findingIds": ["SHELL-001", "SHELL-002"], "status": "implemented-bounded-proof", "evidence": ["V1"], "remaining": ["Native OS keyboard/input proof", "Complete stale-base/review-mismatch GUI negative matrix in integration-owned golden"]},
+    {"id": "SH-T04", "findingIds": ["SHELL-001"], "status": "implemented-bounded-proof", "evidence": ["V1", "V3"], "remaining": ["Positive GUI override/refresh and stale-hash matrix; backend goldens pass but are not all GUI clicks"]},
+    {"id": "SH-T05", "findingIds": ["SHELL-001"], "status": "implemented-awaiting-native-integration", "evidence": ["V3"], "remaining": ["Desktop-linux must consume viewport-source-set result into the one actual viewport owner", "GUI deterministic physics replay and invalid/Kids matrix; backend goldens alone do not prove pixels"]},
+    {"id": "SH-T06", "findingIds": ["SHELL-002"], "status": "implemented-awaiting-integration-proof", "evidence": ["V3"], "remaining": ["Actual GUI package install/remove fixture proof using authoritatively inspected contained locator/manifest/digest; escape/stale/Kids matrix", "Do not treat existing caller-supplied fixture digest as physical package integrity proof"]},
+    {"id": "SH-T07", "findingIds": ["SHELL-002"], "status": "implemented-awaiting-integration-proof", "evidence": ["V3"], "remaining": ["GUI migration commit on legacy owned fixture and approved extension seam typed outcome; source-changed/digest-negative matrix"]},
+    {"id": "SH-T08", "findingIds": ["SHELL-007"], "status": "implemented-local-proof-shared-regression", "evidence": ["V3", "V4"], "remaining": ["12 existing hosted assistant cases fail CREDIT_AMOUNT_INVALID following quote-contract changes; billing/integration must reconcile authoritative model/operation quoting without weakening assertions", "Account-panel overflow acceptance beyond existing unchanged account tests"]},
+    {"id": "SH-T09", "status": "deferred-to-native-and-integration-owner", "remaining": ["Packaged native Linux launch/input/pixels; serial unchanged full gate"]},
+    {"id": "COVERAGE-SHELLS", "status": "partial", "remaining": ["Full66 native GUI commands", "Hardware gamepad/OS keychain/live BYOK", "Long-duration exhaustion/load", "macOS/Windows/signing", "Full accessibility audit"]},
+    {"id": "LOCAL-PROOF-057", "status": "preserved-bounded-proof", "remaining": ["General Compose and project Rename/Delete remain intentionally refused; no full capability closure"]},
+    {"id": "REQ-PROOF-SURFACE-002", "status": "preserved-bounded-proof", "evidence": ["V1", "V2"], "remaining": ["Native packaged launch/control proof"]},
+    {"id": "REQ-PROOF-SURFACE-003", "status": "bounded-local-proof", "evidence": ["V1", "V2"], "remaining": ["Shared hosted quote regression; genuine live provider proof"]},
+    {"id": "SCOPE-COMPOSE-UI", "status": "intentional-nonlaunch-capability", "remaining": ["General composition editor and project-file Rename/Delete remain explicit refusals"]}
+  ],
+  "verification": [
+    {"id": "V1", "cwd": "/home/devuser/Documents/Projects/sceneaxi", "command": "pnpm exec vitest run apps/web-shell/test/inspector-app.test.ts apps/web-shell/test/dev-server.test.ts tests/parity/shell-cli-parity.test.ts apps/desktop-shell/test/chrome.test.ts", "exitCode": 0, "output": "PASS114 FAIL0", "assertions": ["Real socket500 redaction/survival", "DOM uncertainty and no duplicate Accept", "Real native bridge prefab persistence", "Real settings persistence and rebound-key Save", "Kids controls refuse", "CLI/session parity"]},
+    {"id": "V2", "cwd": "/home/devuser/Documents/Projects/sceneaxi", "command": "node --input-type=module -e <real Chromium + spawned binary/CLI + DesktopSession probe recorded in fix-shells.md>", "exitCode": 0, "output": "PASS real Chromium + spawned loopback binary; root review/reject, abort/nonJSON, lost Accept reconciliation, zero pageerrors, one Accept only, no writes until Accept, CLI/DesktopSession byte parity", "platform": "Linux; existing /usr/bin/chromium and sites/umbrella @playwright/test", "cleanup": "Chromium/server closed; three owned fixture roots removed"},
+    {"id": "V3", "cwd": "/home/devuser/Documents/Projects/sceneaxi", "command": "pnpm exec vitest run apps/desktop-shell/test apps/web-shell/test tests/parity/shell-cli-parity.test.ts tests/e2e/desktop-prefab-golden.test.ts tests/e2e/desktop-package-golden.test.ts tests/e2e/desktop-extension-seams-golden.test.ts tests/e2e/desktop-physics-golden.test.ts tests/e2e/desktop-play-session-golden.test.ts", "exitCode": 1, "output": "PASS401 FAIL12; existing hosted assistant CREDIT_AMOUNT_INVALID failures", "limits": ["Backend goldens are not full GUI/native/pixel evidence"]},
+    {"id": "V4", "command": "pnpm exec vitest run apps/web-shell/test/assistant-panel.test.ts apps/web-shell/test/account-panel.test.ts", "exitCode": 1, "output": "PASS78 FAIL12; all3 new bounds/concurrency assertions pass;12 existing hosted failures remain"},
+    {"id": "V5", "command": "pnpm exec vitest run tests/e2e/desktop-command-interactions-golden.test.ts", "exitCode": 1, "output": "PASS86 FAIL24; old goldens assume immediate empty-input dispatch/refusal instead of actual form collection", "owner": "integration; existing root tests read-only for shells"},
+    {"id": "V6", "command": "node node_modules/typescript/bin/tsc -p apps/desktop-shell/tsconfig.json && node node_modules/typescript/bin/tsc -p apps/web-shell/tsconfig.json", "exitCode": 0, "output": "Both owned package builds pass with installed pinned TypeScript5.9.3; no full-tree build"},
+    {"id": "V7", "command": "pnpm exec eslint apps/desktop-shell/src/chrome.ts apps/desktop-shell/src/interaction-commands.ts apps/desktop-shell/test/chrome.test.ts apps/web-shell/src apps/web-shell/test/inspector-app.test.ts apps/web-shell/test/assistant-panel.test.ts --max-warnings 0", "exitCode": 0, "output": "ESLint: No issues found"},
+    {"id": "V8", "command": "pnpm check:boundaries && pnpm check:contracts", "exitCode": 0, "output": "27 package boundaries OK; unchanged shared contract check OK"}
+  ],
+  "beforeAfter": [
+    "Audit E3/E4 described baseline web defects; retry entered with web fixes already present, so this node claims after verification, not a newly rerun unpatched web oracle.",
+    "New real-host prefab form assertion initially failed refused instead of dirty; fixed nested authoringSnapshot projection; then passed Save/Reject persistence.",
+    "Binding probe initially used unsorted modifiers and clean Save; corrected valid fixture rather than weakening validation. Found source matcher rejected explicit control/meta; fixed it and retained stronger rebound-key Save mutation assertion.",
+    "Concurrent-mode fixture initially used a third-party port as local, which properly refused; corrected it to injected BYO fixture. All3 new retention/admission cases pass."
+  ],
+  "sharedRequests": [
+    {"owner": "integration", "path": "tests/e2e/desktop-command-interactions-golden.test.ts", "symbol": "INPUT_REQUIRED_COMMANDS/invoke/engineResponse", "request": "Replace six immediate malformed empty-input refusal assumptions with clicks opening named command-input form, authoritative inspect responses, field fill and explicit submit/review approval. Include new8 ids; assert full host outcomes/persistence and retain every negative case. Do not merely delete cases or convert them to fake success."},
+    {"owner": "billing-and-integration", "path": "packages/billing/src/hosted-ai.ts", "symbol": "RunMeteredModelCallRequest/runMeteredModelCall", "request": "New model/operation quote vocabulary exists at215-217 while shell adapter supplies creditAmount. Define authoritative quote forwarding and reconcile12 old shell and5 shared hosted golden failures without changing assertions or weakening price gates."},
+    {"owner": "desktop-linux", "path": "desktop/linux/src/renderer/viewport.ts", "symbol": "single viewport source owner", "request": "Consume the actual viewport-source-set result from typed chrome command into one native owner; prove returned source changes mounted viewport and replay does not write. Shell forms do not attest GPU pixels."},
+    {"owner": "assets-plugins-and-integration", "path": "desktop/linux/src/lib/bridge.ts", "symbol": "package-install/package-remove", "request": "Complete GUI package proofs with genuinely inspected contained locator/manifest/digest and unchanged escape/stale/Kids checks. Existing fixture digest is not production integrity proof."},
+    {"owner": "integration", "paths": ["docs/runnable-surfaces.md", "docs/engine-desktop-surface.md", "docs/full-editor-v1-capability-matrix.md", "docs/audits/go-live-backlog.json", "docs/audits/go-live-gaps-2026-09-26.md", "apps/web-shell/README.md"], "request": "Reconcile new typed controls and bounded resource/reconciliation semantics against proof limits; root backlog53 is not fully closed until complete native/GUI matrix. Keep general Compose/Rename/Delete limitations and external production gaps explicit."},
+    {"owner": "integration", "request": "Run unchanged full build/gate serially after all lanes and independently rerun front doors; route genuine local failures within3-pass bound. No production PASS from focused test exit0."}
+  ],
+  "externalInputs": ["Real provider credentials and separately authorized live provider use/spend", "macOS/Windows native hosts and genuine signing/notarization inputs", "Legal/provider/deployment/publication/production-data authority", "Existing structured held-key proof/Kids/curation authority; never supplied by this local build"],
+  "toolRecovery": ["project(test) could not detect a command; used exact existing pnpm exec vitest script in real root", "pnpm exec tsc -p --noEmit unexpectedly routed to TS6 and refused TS5101 baseUrl; used installed node node_modules/typescript/bin/tsc5.9.3 without config changes", "Initial static native test imports caused TS5097/6059/6307; changed acceptance peer loading to runtime-only, removed92 exact untracked compiler-generated native artifacts, retained native TS work; owned builds then passed"],
+  "cleanup": "No launched server/browser remains. Three browser fixture roots and all new desktop fixture roots removed. New web regression fixture roots cleaned afterEach. Exact accidental native compiler artifacts removed; no stash/reset/clean/commit/push/deploy/publish/spend/production change.",
+  "finalGateOwner": "integration",
+  "remainingListCompleteForLane": true
+}
