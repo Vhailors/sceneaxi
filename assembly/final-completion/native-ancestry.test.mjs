@@ -11,6 +11,7 @@ const incorporatedFrontiers = [
   "db8afa68c18e46b426e0c9ac2a846fc8a7d3fdba",
   "94a4503050def7641f78faa24ae756497ceb3292",
   "1d2fe8aa089772c87271580deb158d87dd68cb64",
+  "23413eb7889ad2cdb41ab8d729c32c7512917394",
 ];
 
 for (const tip of incorporatedFrontiers) {
