@@ -1,0 +1,270 @@
+diff --git a/packages/authoring-core/src/propose-apply.ts b/packages/authoring-core/src/propose-apply.ts
+index 3a6ced86..9fbdda60 100644
+--- a/packages/authoring-core/src/propose-apply.ts
++++ b/packages/authoring-core/src/propose-apply.ts
+@@ -92,8 +92,41 @@ export type ApplyInput = {
+   readonly cwd?: string;
+ };
+ 
+-function resolvePath(cwd: string, documentPath: string): string {
+-  return canonicalPath(resolve(cwd, documentPath));
++type ResolvedPath =
++  | { readonly ok: true; readonly abs: string }
++  | { readonly ok: false; readonly diagnostics: readonly ApplyDiagnostic[] };
++
++/**
++ * Resolve a caller-supplied document/proposal path against the authoritative
++ * project root and refuse anything that does not stay contained: absolute
++ * paths outside the root, traversal escapes, and symlinks resolving elsewhere.
++ * Matches writeDocumentFile's documented containment contract.
++ */
++function resolveContainedPath(
++  cwd: string,
++  documentPath: string,
++): ResolvedPath {
++  const root = canonicalPath(resolve(cwd));
++  const abs = canonicalPath(resolve(root, documentPath));
++  const relativePath = relative(root, abs);
++  if (
++    relativePath === "" ||
++    relativePath === ".." ||
++    relativePath.startsWith(`..${sep}`) ||
++    isAbsolute(relativePath)
++  ) {
++    return {
++      ok: false,
++      diagnostics: [
++        {
++          code: "validation-failed",
++          message: "Document path must be inside its authoritative project root.",
++          documentPath,
++        },
++      ],
++    };
++  }
++  return { ok: true, abs };
+ }
+ 
+ function jsonValuesEqual(left: unknown, right: unknown): boolean {
+@@ -247,7 +280,9 @@ export function propose(input: ProposeInput): ProposeResult {
+   if (recoveryFailure !== null) {
+     return { ok: false, diagnostics: recoveryFailure };
+   }
+-  const abs = resolvePath(cwd, input.documentPath);
++  const contained = resolveContainedPath(cwd, input.documentPath);
++  if (!contained.ok) return contained;
++  const abs = contained.abs;
+   const loaded = loadDocument(abs, input.documentPath);
+   if (!loaded.ok) return loaded;
+ 
+@@ -360,7 +395,9 @@ export function proposeMany(inputs: readonly ProposeInput[]): ProposeResult {
+   const displayPath = new Map<string, string>();
+ 
+   for (const input of inputs) {
+-    const abs = resolvePath(input.cwd ?? cwd, input.documentPath);
++    const contained = resolveContainedPath(input.cwd ?? cwd, input.documentPath);
++    if (!contained.ok) return contained;
++    const abs = contained.abs;
+     const documentPath = displayPath.get(abs) ?? input.documentPath;
+     displayPath.set(abs, documentPath);
+     let text = workingText.get(abs);
+@@ -491,7 +528,9 @@ export function editDirect(input: DirectEditInput): DirectEditResult {
+   if (recoveryFailure !== null) {
+     return { ok: false, diagnostics: recoveryFailure };
+   }
+-  const abs = resolvePath(cwd, input.documentPath);
++  const contained = resolveContainedPath(cwd, input.documentPath);
++  if (!contained.ok) return contained;
++  const abs = contained.abs;
+   const loaded = loadDocument(abs, input.documentPath);
+   if (!loaded.ok) return loaded;
+ 
+@@ -572,7 +611,9 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
+     // Treat as proposal JSON text if it looks like JSON, else as a path.
+     const asPath = input.proposalPath === undefined && !input.proposal.trimStart().startsWith("{");
+     if (asPath) {
+-      const abs = resolvePath(cwd, input.proposal);
++      const contained = resolveContainedPath(cwd, input.proposal);
++      if (!contained.ok) return contained;
++      const abs = contained.abs;
+       if (!fileExists(abs)) {
+         return {
+           ok: false,
+@@ -648,7 +689,9 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
+     { readonly documentPath: string; readonly edits: ProposalEdit[] }
+   >();
+   for (const edit of proposal.edits) {
+-    const abs = resolvePath(cwd, edit.documentPath);
++    const contained = resolveContainedPath(cwd, edit.documentPath);
++    if (!contained.ok) return contained;
++    const abs = contained.abs;
+     const existing = byDoc.get(abs);
+     if (existing !== undefined && existing.documentPath !== edit.documentPath) {
+       return {
+@@ -785,7 +828,9 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
+     { readonly documentPath: string; readonly unifiedDiff: string }
+   >();
+   for (const diff of proposal.diffs) {
+-    const abs = resolvePath(cwd, diff.documentPath);
++    const contained = resolveContainedPath(cwd, diff.documentPath);
++    if (!contained.ok) return contained;
++    const abs = contained.abs;
+     const grouped = byDoc.get(abs);
+     if (
+       grouped === undefined ||
+diff --git a/packages/authoring-core/test/transaction-history.test.ts b/packages/authoring-core/test/transaction-history.test.ts
+index a1e495c6..189d990f 100644
+--- a/packages/authoring-core/test/transaction-history.test.ts
++++ b/packages/authoring-core/test/transaction-history.test.ts
+@@ -1,7 +1,9 @@
+ import {
++  existsSync,
+   mkdtempSync,
+   readFileSync,
+   readdirSync,
++  symlinkSync,
+   writeFileSync,
+ } from "node:fs";
+ import { tmpdir } from "node:os";
+@@ -12,11 +14,14 @@ import {
+   applyRedoAvailability,
+   applyUndoAvailability,
+   createDocument,
++  editDirect,
+   propose,
++  proposeMany,
+   recoverIncompleteApplies,
+   redoLastApply,
+   undoLastApply,
+   writeDocumentFile,
++  writeProposalFile,
+ } from "@sceneaxi/authoring-core";
+ 
+ function project() {
+@@ -111,3 +116,126 @@ describe("full-editor durable command history", () => {
+     expect(readFileSync(path, "utf8")).toBe(after);
+   });
+ });
++
++describe("authoring root containment", () => {
++  it("refuses absolute, traversal, and symlinked document paths without creating journal bytes", () => {
++    const { cwd } = project();
++    const outside = mkdtempSync(join(tmpdir(), "sceneaxi-escape-"));
++    writeFileSync(join(outside, "scene.json"), readFileSync(join(cwd, "scene.json"), "utf8"));
++    const linkTarget = join(cwd, "link.json");
++    symlinkSync(join(outside, "scene.json"), linkTarget);
++    const snapshot = existsSync(join(cwd, ".sceneaxi")) ? readdirSync(join(cwd, ".sceneaxi")) : [];
++    const escape = {
++      code: "validation-failed",
++      message: "Document path must be inside its authoritative project root.",
++    };
++
++    for (const documentPath of [join(outside, "scene.json"), "../escape/scene.json", "link.json"]) {
++      expect(propose({ cwd, documentPath, jsonPointer: "/data/value", newValue: 1 })).toMatchObject({
++        ok: false,
++        diagnostics: [expect.objectContaining(escape)],
++      });
++      expect(editDirect({ cwd, documentPath, jsonPointer: "/data/value", newValue: 1 })).toMatchObject({
++        ok: false,
++        diagnostics: [expect.objectContaining(escape)],
++      });
++      expect(
++        proposeMany([{ cwd, documentPath, jsonPointer: "/data/value", newValue: 1 }]),
++      ).toMatchObject({ ok: false, diagnostics: [expect.objectContaining(escape)] });
++    }
++
++    expect(existsSync(join(cwd, ".sceneaxi")) ? readdirSync(join(cwd, ".sceneaxi")) : []).toEqual(snapshot);
++    expect(readFileSync(linkTarget, "utf8")).toBe(readFileSync(join(outside, "scene.json"), "utf8"));
++  });
++
++  it("refuses a proposal file that resolves outside the authoritative project root before reading it", () => {
++    const { cwd } = project();
++    const staged = propose({ cwd, documentPath: "scene.json", jsonPointer: "/data/value", newValue: 1 });
++    if (!staged.ok) throw new Error("proposal refused");
++    const outsideDir = mkdtempSync(join(tmpdir(), "sceneaxi-proposal-"));
++    const outsideProposal = join(outsideDir, "proposal.json");
++    writeProposalFile(outsideProposal, staged.proposal);
++    const before = readFileSync(join(cwd, "scene.json"), "utf8");
++
++    const refused = apply({ cwd, proposal: outsideProposal });
++
++    expect(refused).toMatchObject({
++      ok: false,
++      diagnostics: [
++        expect.objectContaining({
++          code: "validation-failed",
++          message: "Document path must be inside its authoritative project root.",
++          documentPath: outsideProposal,
++        }),
++      ],
++    });
++    expect(readFileSync(join(cwd, "scene.json"), "utf8")).toBe(before);
++    expect(existsSync(join(cwd, ".sceneaxi", "journal"))).toBe(false);
++  });
++  it("apply refuses proposal edits whose document paths escape the authoritative project root", () => {
++    const { cwd } = project();
++    const staged = propose({ cwd, documentPath: "scene.json", jsonPointer: "/data/value", newValue: 1 });
++    if (!staged.ok) throw new Error("proposal refused");
++    const outsideDir = mkdtempSync(join(tmpdir(), "sceneaxi-edit-"));
++    const outsideScene = join(outsideDir, "scene.json");
++    writeFileSync(outsideScene, readFileSync(join(cwd, "scene.json"), "utf8"));
++    symlinkSync(outsideScene, join(cwd, "edit-link.json"));
++    const before = readFileSync(join(cwd, "scene.json"), "utf8");
++
++    for (const documentPath of [outsideScene, "../sceneaxi-edit-missing/scene.json", "edit-link.json"]) {
++      const forged = {
++        ...staged.proposal,
++        edits: staged.proposal.edits.map((edit) => ({ ...edit, documentPath })),
++      } as typeof staged.proposal;
++      expect(apply({ cwd, proposal: forged })).toMatchObject({
++        ok: false,
++        diagnostics: [
++          expect.objectContaining({
++            code: "validation-failed",
++            message: "Document path must be inside its authoritative project root.",
++            documentPath,
++          }),
++        ],
++      });
++    }
++
++    expect(readFileSync(join(cwd, "scene.json"), "utf8")).toBe(before);
++    expect(existsSync(join(cwd, ".sceneaxi"))).toBe(false);
++  });
++
++  it("apply refuses proposal diffs whose document paths escape the authoritative project root after contained edits pass grouping", () => {
++    const { cwd } = project();
++    const staged = propose({ cwd, documentPath: "scene.json", jsonPointer: "/data/value", newValue: 1 });
++    if (!staged.ok) throw new Error("proposal refused");
++    const escapedDiffPath = "../sceneaxi-diff-escape/scene.json";
++    const forged = {
++      ...staged.proposal,
++      diffs: staged.proposal.diffs.map((diff) => ({ ...diff, documentPath: escapedDiffPath })),
++    } as typeof staged.proposal;
++    const before = readFileSync(join(cwd, "scene.json"), "utf8");
++
++    const refused = apply({ cwd, proposal: forged });
++
++    expect(refused).toMatchObject({
++      ok: false,
++      diagnostics: [
++        expect.objectContaining({
++          code: "validation-failed",
++          message: "Document path must be inside its authoritative project root.",
++          documentPath: escapedDiffPath,
++        }),
++      ],
++    });
++    expect(readFileSync(join(cwd, "scene.json"), "utf8")).toBe(before);
++    expect(existsSync(join(cwd, ".sceneaxi"))).toBe(false);
++  });
++
++  it("keeps contained relative edits working across propose and apply", () => {
++    const { cwd, path } = project();
++    commit(cwd, 7);
++    expect(readFileSync(path, "utf8")).toContain('"value": 7');
++    const direct = editDirect({ cwd, documentPath: "./scene.json", jsonPointer: "/data/value", newValue: 8 });
++    expect(direct).toMatchObject({ ok: true });
++    expect(readFileSync(path, "utf8")).toContain('"value": 8');
++  });
++});
