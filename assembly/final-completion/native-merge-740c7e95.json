@@ -1,0 +1,423 @@
+{
+  "tip": "740c7e950cf5eb6528e6629ee6f7041ef50dde5c",
+  "approvedResolvedTree": "759adfe932768ef588660fb6de68ab2b948d1a9e",
+  "method": "Per-path reviewed assembly postimages including compatibility function ports; no ours/theirs strategy; ordinary native merge",
+  "paths": [
+    {
+      "path": "apps/desktop-shell/src/chrome.ts",
+      "incoming": "100644 blob 3c95e682d7eba1b6594a095367a22eb0be82c3ce\tapps/desktop-shell/src/chrome.ts",
+      "chosenPostimage": "100644 blob 2438d07934aff4943876734a2fe4a2726b628c21\tapps/desktop-shell/src/chrome.ts",
+      "originalPerPathDecision": "CONFLICT_WORKING_MAIN_PENDING_FUNCTION_PORT",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": "apps/desktop-shell/src/interaction-commands.ts",
+      "incoming": "100644 blob c2adc287a5e56619cbd4d16ed8a8f7fdeddc590e\tapps/desktop-shell/src/interaction-commands.ts",
+      "chosenPostimage": "100644 blob 0307f4f2b4f7c5c1855c397d665f25fe88f81e3b\tapps/desktop-shell/src/interaction-commands.ts",
+      "originalPerPathDecision": "PRIVATE_SOURCE_DELTA_MAIN_UNCHANGED",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": "apps/desktop-shell/src/visual-model.ts",
+      "incoming": "100644 blob 75a4dca245b78f68654a353d934180da6c4401c3\tapps/desktop-shell/src/visual-model.ts",
+      "chosenPostimage": "100644 blob cbd02141eea60288942202413d4b641516feb30e\tapps/desktop-shell/src/visual-model.ts",
+      "originalPerPathDecision": "CURRENT_MAIN_RETAINED_SHARED_UNCHANGED",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": "desktop/linux/src/electron/main.ts",
+      "incoming": "100644 blob 7db945210166c72a48e337c6446ec21741acc069\tdesktop/linux/src/electron/main.ts",
+      "chosenPostimage": "100644 blob 6df78ff0fb60f13131ce8ff9e2b0d54bdd5f8578\tdesktop/linux/src/electron/main.ts",
+      "originalPerPathDecision": "CONFLICT_WORKING_MAIN_PENDING_FUNCTION_PORT",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": "desktop/linux/src/electron/preload.ts",
+      "incoming": "100644 blob 45c9c1411070527ac8712cc05d125780b8e362f3\tdesktop/linux/src/electron/preload.ts",
+      "chosenPostimage": "100644 blob 6b0719419112910a906eb58990c7269f3c07bd1d\tdesktop/linux/src/electron/preload.ts",
+      "originalPerPathDecision": "CURRENT_MAIN_RETAINED_SHARED_UNCHANGED",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": "desktop/linux/src/lib/bridge.ts",
+      "incoming": "100644 blob 80d0a556d024d0d93aed9c364db630c85a71898e\tdesktop/linux/src/lib/bridge.ts",
+      "chosenPostimage": "100644 blob 6eee0556c183cace969e9f702604a0a5576d7721\tdesktop/linux/src/lib/bridge.ts",
+      "originalPerPathDecision": "CONFLICT_WORKING_MAIN_PENDING_FUNCTION_PORT",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": "desktop/linux/src/lib/input-action-host.ts",
+      "incoming": "100644 blob 53f30050c865a2b14a2b08db1a1a8f4f138d431a\tdesktop/linux/src/lib/input-action-host.ts",
+      "chosenPostimage": "100644 blob fc340b14565d763a67cdb6954f7111797b3f9e94\tdesktop/linux/src/lib/input-action-host.ts",
+      "originalPerPathDecision": "CURRENT_MAIN_RETAINED_SHARED_UNCHANGED",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": "desktop/linux/src/lib/local-rpc.ts",
+      "incoming": "100644 blob 89209626427e833f298fdebe269b9bba1b9df5a8\tdesktop/linux/src/lib/local-rpc.ts",
+      "chosenPostimage": "100644 blob 6547277da988986326f2a10259422fde6f10f638\tdesktop/linux/src/lib/local-rpc.ts",
+      "originalPerPathDecision": "CURRENT_MAIN_RETAINED_SHARED_UNCHANGED",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": "desktop/linux/src/renderer/viewport.ts",
+      "incoming": "100644 blob 55f58994f1dbd21b06c16c8af64a6a45597e6ebc\tdesktop/linux/src/renderer/viewport.ts",
+      "chosenPostimage": "100644 blob 28739d336aa55aeaac237a9db35ca218b38a75c7\tdesktop/linux/src/renderer/viewport.ts",
+      "originalPerPathDecision": "CONFLICT_WORKING_MAIN_PENDING_FUNCTION_PORT",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": "desktop/linux/test/viewport-input-actions.test.ts",
+      "incoming": "100644 blob 97d3d159c15a8efe7d90529257773f97b7ca9264\tdesktop/linux/test/viewport-input-actions.test.ts",
+      "chosenPostimage": "100644 blob 992c283f9e5ad6c84832d58c38469f4056e930e8\tdesktop/linux/test/viewport-input-actions.test.ts",
+      "originalPerPathDecision": "CURRENT_MAIN_RETAINED_SHARED_UNCHANGED",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": "docs/desktop-linux.md",
+      "incoming": "100644 blob af4fdc2403a4ad155ccb349a2fdb28a939663996\tdocs/desktop-linux.md",
+      "chosenPostimage": "100644 blob b3b9623e989ee5fc32239fb77aafc42fdcce86cd\tdocs/desktop-linux.md",
+      "originalPerPathDecision": "PRIVATE_SOURCE_DELTA_MAIN_UNCHANGED",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": "docs/desktop-local-bridge.md",
+      "incoming": "100644 blob 211c227419079534e41949612db75d0051a8aa1b\tdocs/desktop-local-bridge.md",
+      "chosenPostimage": "100644 blob 6704d53209dd591b7175326e92f62b33292a0681\tdocs/desktop-local-bridge.md",
+      "originalPerPathDecision": "PRIVATE_SOURCE_DELTA_MAIN_UNCHANGED",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": "docs/full-editor-v1-capability-matrix.md",
+      "incoming": "100644 blob 64658d341afc503d12e81c92ad32a50d66d93fd3\tdocs/full-editor-v1-capability-matrix.md",
+      "chosenPostimage": "100644 blob 1b9bf7203deedac1ea7e0cb55bae553e8301482d\tdocs/full-editor-v1-capability-matrix.md",
+      "originalPerPathDecision": "THREE_WAY_TEXT_REBASE_ACCEPTANCE_PENDING",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": "packages/schemas/README.md",
+      "incoming": "100644 blob 49267c3fa12dfac6a43f6357e25a10353daad5f3\tpackages/schemas/README.md",
+      "chosenPostimage": "100644 blob e84aa7fcafaf15eaf2182966aff15d19bb287c6d\tpackages/schemas/README.md",
+      "originalPerPathDecision": "CURRENT_MAIN_RETAINED_SHARED_UNCHANGED",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": "packages/schemas/contracts/desktop-local-bridge.schema.json",
+      "incoming": "100644 blob 98a19a8fa6265a2bdf2b43e1a8011cc517ef4ddc\tpackages/schemas/contracts/desktop-local-bridge.schema.json",
+      "chosenPostimage": "100644 blob aa144ca03b3a807c9803abc32c72b21523d7b04c\tpackages/schemas/contracts/desktop-local-bridge.schema.json",
+      "originalPerPathDecision": "CURRENT_MAIN_RETAINED_SHARED_UNCHANGED",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": "packages/schemas/contracts/editor-command-registry.schema.json",
+      "incoming": "100644 blob 22877dafe57c60fe7394432859696db5521cd39f\tpackages/schemas/contracts/editor-command-registry.schema.json",
+      "chosenPostimage": "100644 blob ce057a453af8dfdf7f81ebbdd3f8670cb95d9f92\tpackages/schemas/contracts/editor-command-registry.schema.json",
+      "originalPerPathDecision": "CURRENT_MAIN_RETAINED_SHARED_UNCHANGED",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": "packages/schemas/contracts/input-action-map.schema.json",
+      "incoming": "100644 blob 645054f6df10e7c1e8fdbd6912bc09d416801916\tpackages/schemas/contracts/input-action-map.schema.json",
+      "chosenPostimage": "100644 blob 3b88389be53f7530c723f0f6559d2a963679f51c\tpackages/schemas/contracts/input-action-map.schema.json",
+      "originalPerPathDecision": "CURRENT_MAIN_RETAINED_SHARED_UNCHANGED",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": "packages/schemas/contracts/project-manifest.schema.json",
+      "incoming": "100644 blob 733aaf9a9eb6995d1cf118007368b451f09b7aac\tpackages/schemas/contracts/project-manifest.schema.json",
+      "chosenPostimage": "100644 blob c46a01cde1d8539038358145ecbcda2645aa873b\tpackages/schemas/contracts/project-manifest.schema.json",
+      "originalPerPathDecision": "CURRENT_MAIN_RETAINED_SHARED_UNCHANGED",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": "packages/schemas/src/desktop-local-bridge.ts",
+      "incoming": "100644 blob 99be0a98452090bfab061043e61c8355313240f2\tpackages/schemas/src/desktop-local-bridge.ts",
+      "chosenPostimage": "100644 blob 4ad7be63b350a486c37e0f385e87b11c82821593\tpackages/schemas/src/desktop-local-bridge.ts",
+      "originalPerPathDecision": "CURRENT_MAIN_RETAINED_SHARED_UNCHANGED",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": "packages/schemas/src/editor-command-registry.ts",
+      "incoming": "100644 blob 89da952a8ddcb94c8ea9c80168e563742df0bfb0\tpackages/schemas/src/editor-command-registry.ts",
+      "chosenPostimage": "100644 blob 0f512e48c8218bbbb35b875f6d365f216ec733d9\tpackages/schemas/src/editor-command-registry.ts",
+      "originalPerPathDecision": "CURRENT_MAIN_RETAINED_SHARED_UNCHANGED",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": "packages/schemas/src/index.ts",
+      "incoming": "100644 blob 168549f67f60d4e749fccae8e178ab4f1b514181\tpackages/schemas/src/index.ts",
+      "chosenPostimage": "100644 blob cf8dd4e89eb7928c851fa09e66a667186e178480\tpackages/schemas/src/index.ts",
+      "originalPerPathDecision": "THREE_WAY_TEXT_REBASE_ACCEPTANCE_PENDING",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": "packages/schemas/src/input-action-registry.ts",
+      "incoming": "100644 blob 3e1269264a670fd757742bab10aa083efed63746\tpackages/schemas/src/input-action-registry.ts",
+      "chosenPostimage": "100644 blob 1620960b991295d50db2daf637f18be915de6562\tpackages/schemas/src/input-action-registry.ts",
+      "originalPerPathDecision": "CURRENT_MAIN_RETAINED_SHARED_UNCHANGED",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": "packages/schemas/test/desktop-local-bridge.test.ts",
+      "incoming": "100644 blob 8d892531bcf6c8f39273520edaebcfd6356bf75a\tpackages/schemas/test/desktop-local-bridge.test.ts",
+      "chosenPostimage": "100644 blob 47685af43e9abeeb110fa87869ff3750c6a7fd5a\tpackages/schemas/test/desktop-local-bridge.test.ts",
+      "originalPerPathDecision": "CURRENT_MAIN_RETAINED_SHARED_UNCHANGED",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": "packages/schemas/test/input-action-registry.test.ts",
+      "incoming": "100644 blob 99f4860f407194412d88b13a0b34ad0cb3318ec1\tpackages/schemas/test/input-action-registry.test.ts",
+      "chosenPostimage": "100644 blob 49978ec8fc59f6b019ec4c57a8a624ff28f479c1\tpackages/schemas/test/input-action-registry.test.ts",
+      "originalPerPathDecision": "CURRENT_MAIN_RETAINED_SHARED_UNCHANGED",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": "tests/e2e/desktop-command-interactions-golden.test.ts",
+      "incoming": "100644 blob fd24c0cc019a6472547e4c8b9149838aec7ce74f\ttests/e2e/desktop-command-interactions-golden.test.ts",
+      "chosenPostimage": "100644 blob aea5d580356c36d676b0ff7ba684709aded91c52\ttests/e2e/desktop-command-interactions-golden.test.ts",
+      "originalPerPathDecision": "CONFLICT_WORKING_MAIN_PENDING_FUNCTION_PORT",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": "tests/e2e/input-actions-golden.test.ts",
+      "incoming": "100644 blob 6f4220b29296b677ea29d089ff6d795268d25a1f\ttests/e2e/input-actions-golden.test.ts",
+      "chosenPostimage": "100644 blob decb9b8ef85797497f9fedffeebfd3710b028af1\ttests/e2e/input-actions-golden.test.ts",
+      "originalPerPathDecision": "CURRENT_MAIN_RETAINED_SHARED_UNCHANGED",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    }
+  ]
+}
