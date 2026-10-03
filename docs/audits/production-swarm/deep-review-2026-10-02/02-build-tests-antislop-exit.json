@@ -1,0 +1,1 @@
+{"command": "pnpm -s lint:anti-slop", "exit": 1, "timeoutSeconds": 60}

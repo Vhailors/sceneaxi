@@ -1,0 +1,426 @@
+{
+  "lane": "sites-accessibility",
+  "root": "/home/devuser/Documents/Projects/sceneaxi",
+  "phase": "implementation-ready-serial-verification-pending",
+  "repairPass": 1,
+  "maxRepairPasses": 3,
+  "localStatus": "NEEDS_LOCAL_FIX",
+  "publishedStatus": "NOT_VERIFIED",
+  "fullProductionStatus": "BLOCKED",
+  "tasks": [
+    {
+      "id": "GATE-LEGAL-PAGES",
+      "status": "EXTERNAL_BLOCKER",
+      "assertions": [
+        "Genuine supplied input and independently verified actual target/evidence under matching action-specific authorization; never fixture-substitute."
+      ],
+      "missingInput": "Reviewed terms/privacy/refund/cookie/imprint text, real entity/contact/support channel, licence/trademark rights. Placeholder pages remain visibly unapproved and no public legal assertion is invented.",
+      "verification": "not yet executed"
+    },
+    {
+      "id": "LOCAL-PROOF-039",
+      "status": "NEEDS_LOCAL_FIX",
+      "assertions": [
+        "Exact passing current lane evidence only; residual gap IDs below remain open."
+      ],
+      "missingInput": null,
+      "verification": "not yet executed"
+    },
+    {
+      "id": "LOCAL-PROOF-042",
+      "status": "NEEDS_LOCAL_FIX",
+      "assertions": [
+        "Exact passing current lane evidence only; residual gap IDs below remain open."
+      ],
+      "missingInput": null,
+      "verification": "not yet executed"
+    },
+    {
+      "id": "LOCAL-043",
+      "status": "NEEDS_LOCAL_FIX",
+      "assertions": [
+        "Current bounded criterion in lane audit remains satisfied; external/full-capability proof is separately tracked rather than inferred from old done."
+      ],
+      "missingInput": null,
+      "verification": "not yet executed"
+    },
+    {
+      "id": "LOCAL-044",
+      "status": "NEEDS_LOCAL_FIX",
+      "assertions": [
+        "Current bounded criterion in lane audit remains satisfied; external/full-capability proof is separately tracked rather than inferred from old done."
+      ],
+      "missingInput": null,
+      "verification": "not yet executed"
+    },
+    {
+      "id": "LOCAL-PROOF-045",
+      "status": "NEEDS_LOCAL_FIX",
+      "assertions": [
+        "Exact passing current lane evidence only; residual gap IDs below remain open."
+      ],
+      "missingInput": null,
+      "verification": "not yet executed"
+    },
+    {
+      "id": "LOCAL-047",
+      "status": "NEEDS_LOCAL_FIX",
+      "assertions": [
+        "Current bounded criterion in lane audit remains satisfied; external/full-capability proof is separately tracked rather than inferred from old done."
+      ],
+      "missingInput": null,
+      "verification": "not yet executed"
+    },
+    {
+      "id": "REQ-PROOF-SURFACE-011",
+      "status": "NEEDS_LOCAL_FIX",
+      "assertions": [
+        "Current-source/public assertion for this full statement, including refusal/negative controls; proof-path presence alone insufficient.",
+        "PENDING_BROWSER_BUILD"
+      ],
+      "missingInput": null,
+      "verification": "not yet executed"
+    },
+    {
+      "id": "REQ-PROOF-SURFACE-012",
+      "status": "NEEDS_LOCAL_FIX",
+      "assertions": [
+        "Current-source/public assertion for this full statement, including refusal/negative controls; proof-path presence alone insufficient.",
+        "PENDING_BROWSER_BUILD"
+      ],
+      "missingInput": null,
+      "verification": "not yet executed"
+    },
+    {
+      "id": "VS-01",
+      "status": "NEEDS_LOCAL_FIX",
+      "assertions": [
+        "Preserve untouched files while publishing the intended complete reviewed artifact under separate authority, include all four CSS changes and evidence, then verify exact new head tree/blobs and required checks. This review performs no push.",
+        "Complete path/blob/mode inventory matches reviewed intended artifact; every deletion has explicit approval; handler/tests/evidence included.",
+        "Required CI is successful on exactly the current published SHA; local or historical greens are not substitutes."
+      ],
+      "missingInput": null,
+      "verification": "not yet executed"
+    },
+    {
+      "id": "VS-02",
+      "status": "NEEDS_LOCAL_FIX",
+      "assertions": [
+        "Allow readonly string arrays (or unknown with proper string narrowing) at the pure guard while preserving string-only admission; rerun both owning typechecks and complete build/browser checks on one stable artifact."
+      ],
+      "missingInput": null,
+      "verification": "not yet executed"
+    },
+    {
+      "id": "VS-03",
+      "status": "NEEDS_LOCAL_FIX",
+      "assertions": [
+        "Normalize all timestamps with their explicit offsets, distinguish declared report times from independently recorded commit times, and bind any eventual follow-up to its actual remote SHA.",
+        "Complete path/blob/mode inventory matches reviewed intended artifact; every deletion has explicit approval; handler/tests/evidence included.",
+        "Required CI is successful on exactly the current published SHA; local or historical greens are not substitutes."
+      ],
+      "missingInput": null,
+      "verification": "not yet executed"
+    },
+    {
+      "id": "VS-04",
+      "status": "NEEDS_LOCAL_FIX",
+      "assertions": [
+        "Restore complete intended tree, record source/build fingerprint plus exact SHA and run required checks/captures from that artifact; keep dirty-worktree evidence separate.",
+        "Complete path/blob/mode inventory matches reviewed intended artifact; every deletion has explicit approval; handler/tests/evidence included.",
+        "Required CI is successful on exactly the current published SHA; local or historical greens are not substitutes."
+      ],
+      "missingInput": null,
+      "verification": "not yet executed"
+    },
+    {
+      "id": "VS-05",
+      "status": "NEEDS_LOCAL_FIX",
+      "assertions": [
+        "Retain machine checks for foreground/background/effective contrast, clipped/occluded focus rings, element-level overflow and relevant keyboard states; capture authenticated own-user branch with approved nonproduction provider configuration; persist raw HTTP/page-error assertions and artifact identity."
+      ],
+      "missingInput": null,
+      "verification": "not yet executed"
+    }
+  ],
+  "changedPaths": [
+    "sites/catalog-game/src/app/page.tsx",
+    "sites/catalog-web/src/app/page.tsx",
+    "tests/sites/kids-surface.test.ts",
+    "tests/sites/umbrella-visual.test.ts",
+    "sites/catalog-game/src/app/loading.tsx",
+    "sites/catalog-web/src/app/loading.tsx",
+    "sites/catalog-game/src/app/global-error.tsx",
+    "sites/catalog-web/src/app/global-error.tsx",
+    "sites/kids/src/app/loading.tsx",
+    "sites/kids/src/app/global-error.tsx",
+    "sites/umbrella/src/app/editor/loading.tsx",
+    "sites/umbrella/src/app/docs/loading.tsx",
+    "sites/catalog-game/test/rendered-route-states.test.mjs",
+    "sites/catalog-game/test/repair-accessibility-proof.mjs"
+  ],
+  "repro": {
+    "command": "pnpm --dir sites/catalog-{game,web} exec tsc --noEmit --incremental false",
+    "exit": 2,
+    "assertion": "TS2345 readonly array versus mutable guard at page.tsx 115/117/121 in both catalogs"
+  },
+  "resources": {
+    "children": 0,
+    "heavyToken": false,
+    "processesStarted": [],
+    "cleanup": "Focused tests exited; no server/browser/container/temp adapter started. Browser oracle owns try/finally process-group termination when serial execution occurs."
+  },
+  "sourceHashes": {
+    "sites/catalog-game/src/app/page.tsx": "1c2e0d12cc0791b11dfc6d6730df2e02b037cc169c3a336f877644386af01ff4",
+    "sites/catalog-web/src/app/page.tsx": "4678f5b6de751070888cfda6aab396cfda9ba5e1d6e590c9e1d4692ae706a719",
+    "tests/sites/kids-surface.test.ts": "1103074b2f44ef68893974ca886b57c6f9dbb80223638e825dc022698dc9d548",
+    "tests/sites/umbrella-visual.test.ts": "dc8c61e5ec532d037339ad0d0ec74011ab32a99d5b7c8cb2ed77ceed4d30761d",
+    "sites/catalog-game/src/app/loading.tsx": "797f2f43296295b2ac1c287579701457360f0a6eebb30244f4dd5238c3073d05",
+    "sites/catalog-web/src/app/loading.tsx": "797f2f43296295b2ac1c287579701457360f0a6eebb30244f4dd5238c3073d05",
+    "sites/catalog-game/src/app/global-error.tsx": "7b5874f1ab3d93872e0bcd264713db2591daa78ecca35f059073ba54aa1a2fa0",
+    "sites/catalog-web/src/app/global-error.tsx": "7b5874f1ab3d93872e0bcd264713db2591daa78ecca35f059073ba54aa1a2fa0",
+    "sites/kids/src/app/loading.tsx": "cb3dc28f1943bdbc4aa204ef392afabc36986ad2f9fd2a4ab733f0391278bcad",
+    "sites/kids/src/app/global-error.tsx": "fa3d6670aa164cd4ddd71dca16fd856ca94f61b931182bd4f4464ca314196487",
+    "sites/umbrella/src/app/editor/loading.tsx": "5e921209507af5ffa551906eb2e51752ffb20e1c310c92cb83d2c649fb1ee41e",
+    "sites/umbrella/src/app/docs/loading.tsx": "e6e7c3c4157c489b06609f67ea3c5f5af0d0b137f91064c55d61574b45ef3010",
+    "sites/catalog-game/test/rendered-route-states.test.mjs": "4e59c0416bac1e9c9904daed2f6fa3d01ca4bf001420174c7102ae2891e2e83c",
+    "sites/catalog-game/test/repair-accessibility-proof.mjs": "086ac35dc4cb9a4bc5290beb9d7d31727d677bdc059fc973c71166ada13c0e01"
+  },
+  "commands": [
+    {
+      "command": "pnpm --dir sites/catalog-game exec tsc --noEmit --incremental false",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "beforeExit": 2,
+      "afterExit": 0,
+      "assertion": "SearchParams[string] guard accepts readonly union without mutation; admits strings only"
+    },
+    {
+      "command": "pnpm --dir sites/catalog-web exec tsc --noEmit --incremental false",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "beforeExit": 2,
+      "afterExit": 0,
+      "assertion": "same readonly guard parity"
+    },
+    {
+      "command": "pnpm --dir sites/kids exec tsc --noEmit --incremental false",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "exit": 0
+    },
+    {
+      "command": "pnpm exec vitest run tests/sites/umbrella-visual.test.ts tests/sites/catalog-storefronts.test.ts tests/sites/kids-surface.test.ts packages/site-kit/test/final-sites-acceptance.test.ts --reporter=dot",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "exit": 0,
+      "passed": 190
+    },
+    {
+      "command": "pnpm --dir sites/umbrella exec vitest run test/project-persistence.test.ts --reporter=dot",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "exit": 0,
+      "passed": 5
+    },
+    {
+      "command": "pnpm exec vitest run tests/sites/umbrella-visual.test.ts --reporter=dot",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "exit": 0,
+      "passed": 81,
+      "assertion": "new canonical owned edit/save/reopen exact bytes and digests; increasing revision, stale/foreign rollback"
+    },
+    {
+      "command": "pnpm exec vitest run tests/sites/kids-surface.test.ts --reporter=dot",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "exit": 0,
+      "passed": 10,
+      "assertion": "byte parity, all refusal table scenarios, no dependency edge, CSP isolation,4.5 contrast"
+    },
+    {
+      "command": "pnpm exec eslint tests/sites/kids-surface.test.ts tests/sites/umbrella-visual.test.ts sites/catalog-game/src/app/page.tsx sites/catalog-web/src/app/page.tsx",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "exit": 0
+    },
+    {
+      "command": "pnpm exec vitest run tests/sites/umbrella-visual.test.ts tests/sites/catalog-storefronts.test.ts tests/sites/kids-surface.test.ts tests/sites/site-response-hardening.test.ts tests/sites/web-experience-editor.test.ts tests/e2e/umbrella-live-open-golden.test.ts tests/e2e/umbrella-editor-viewport-golden.test.ts packages/site-kit/test/catalog-pipeline.test.ts packages/site-kit/test/catalog-identity.test.ts packages/site-kit/test/final-sites-acceptance.test.ts --reporter=verbose",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "exit": 1,
+      "passed": 240,
+      "failed": 1,
+      "actualFiles": 8,
+      "missingRequestedFiles": [
+        "packages/site-kit/test/catalog-pipeline.test.ts",
+        "packages/site-kit/test/catalog-identity.test.ts"
+      ],
+      "failure": "site-response-hardening.test.ts:103 expected -1 to be greater than -1: route.indexOf(verifyLoginRequestOrigin) no longer follows helper delegation",
+      "log": "sites/catalog-game/test/visual-evidence/repair/focused-tests.log"
+    },
+    {
+      "command": "pnpm exec vitest run tests/sites/identity-plane-wiring.test.ts tests/e2e/editor-catalog-intake-golden.test.ts --reporter=verbose",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "exit": 0,
+      "log": "sites/catalog-game/test/visual-evidence/repair/catalog-identity-intake-tests.log",
+      "assertions": [
+        "real adapter seam site-principal admission, foreign surface/client-role/Kids/unwired refusal",
+        "real digest-bound intake, idempotent retry/conflict rollback, explicit human approval, anonymous/preview/Kids/unsupported/malformed/unavailable-before-writes"
+      ]
+    },
+    {
+      "command": "node --test sites/catalog-game/test/rendered-route-states.test.mjs",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "exit": 0,
+      "passed": 4,
+      "assertions": [
+        "actual source loading components SSR named live/busy state without fictional operation",
+        "actual catalog error components redact message/stack and retain safe reference",
+        "editor access remains undecided in fallback; Kids fallback no imports/env/network/commerce",
+        "actual root-error components full named document, alert, no exception echo"
+      ],
+      "note": "Source-component SSR, not a forced production route/layout exception."
+    },
+    {
+      "command": "pnpm --dir sites/umbrella exec tsc --noEmit --incremental false",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "exit": 2,
+      "failure": "shared packages/schemas/src/physics-world-host.ts51,52,66,69,77,81,82 undeclared live/steps/disposed (concurrent external owner source); lane source not implicated"
+    },
+    {
+      "command": "node --check sites/catalog-game/test/repair-accessibility-proof.mjs && pnpm exec eslint sites/catalog-game/test/repair-accessibility-proof.mjs",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "exit": 0,
+      "assertion": "Permanent browser oracle syntax/lint only; browser execution NOT_EXECUTED."
+    },
+    {
+      "command": "pnpm -s check:boundaries",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "exit": 0,
+      "packages": 27
+    },
+    {
+      "command": "pnpm -s check:sites",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "exit": 1,
+      "failure": "11 binary/evidence false positives: eight existing Kids PNG files names link, three existing build/browser logs external URL",
+      "log": "sites/catalog-game/test/visual-evidence/repair/sites-check.log"
+    },
+    {
+      "command": "pnpm exec eslint <all14 owned changed JS/TS paths>; node --test sites/catalog-game/test/rendered-route-states.test.mjs; git diff --check -- <owned paths/report pair>",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "exit": 0,
+      "assertion": "All changed-code lint clean, actual component SSR4pass; owned diff whitespace clean"
+    }
+  ],
+  "harnessFailures": [
+    {
+      "command": "pnpm exec tsc --noEmit --incremental false -p sites/kids/tsconfig.json",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "exit": 2,
+      "output": "TS2882 globals.css side-effect import: root TS CLI was wrong installation context; owning Kids pnpm --dir command passes"
+    },
+    {
+      "command": "TypeScript NodeNext program diagnostics tests/sites/kids-surface.test.ts",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "exit": 1,
+      "output": "TS2345 unknown=>KidsActivityInput line214 plus unrelated TS2307 site-kit alias/TS7006 from unresolved alias; after patch focused TS2345 count0, not whole test typecheck claim"
+    }
+  ],
+  "preservedCssHashes": {
+    "sites/umbrella/src/app/globals.css": "37ff7ca533d6ea48037f258b60c2937a95644929c197c24190fc7387f11f2009",
+    "sites/catalog-game/src/app/globals.css": "c12f47aba173b6e3f02b740404b6f8e9af698737a7266ec7c88804c1286b5eb0",
+    "sites/catalog-web/src/app/globals.css": "a6b2238ee1e56f52edbedaa3604adbc39d4bf7d4012ba83698e352d291cbe9e3",
+    "sites/kids/src/app/globals.css": "120f68a9e0763f8d04f3df76ca3484fa562724b39101dcf8c04d6e4d274260f0"
+  },
+  "canonicalPersistenceSource": {
+    "path": "sites/umbrella/src/app/editor/_components/project-persistence.ts",
+    "sha256": "1a4cb34d42071b47eb478cbbcda352913acc5861f53e36b9d60a58ce537dd6d5",
+    "note": "Inherited implementation preserved; new root oracle executes this exact helper against actual canonical renders."
+  },
+  "evidence": [
+    {
+      "path": "sites/catalog-game/test/visual-evidence/repair/catalog-identity-intake-tests.log",
+      "sha256": "c2fd7328cf1072854b1925de01564d3971e71b0431caa89edea09c36f3768968",
+      "bytes": 32991
+    },
+    {
+      "path": "sites/catalog-game/test/visual-evidence/repair/focused-tests.log",
+      "sha256": "50739a247fec0f86f1464730fff5e6424b5fc1a1ef55add6f6a5099df720f2b5",
+      "bytes": 54728
+    },
+    {
+      "path": "sites/catalog-game/test/visual-evidence/repair/kids-boundary-types.log",
+      "sha256": "b71f2a5bb6ab1b25aceb2dfcbe865662e359e4789f6edb471b4d8bfe4ee0624d",
+      "bytes": 28
+    },
+    {
+      "path": "sites/catalog-game/test/visual-evidence/repair/persistence-tests.log",
+      "sha256": "be62052cddeab5cd700dae77e07dd9aeb5aaae25a27eb2903ab04b2100d15338",
+      "bytes": 1471
+    },
+    {
+      "path": "sites/catalog-game/test/visual-evidence/repair/route-states-tests.log",
+      "sha256": "3128b999d831133cf8c2e3f4a944636f647fa28b08e82db0338888c45baeb180",
+      "bytes": 540
+    },
+    {
+      "path": "sites/catalog-game/test/visual-evidence/repair/sites-check.log",
+      "sha256": "fbb47fe8682d9ddcb86cfd6fcfc3e72643227b32e0009ed6e7036cb0b5ffb636",
+      "bytes": 1486
+    }
+  ],
+  "sharedRequests": [
+    {
+      "id": "SITE-REQ-01",
+      "owner": "serial-integration",
+      "request": "Stable rebuilt all4 sites from final candidate; exclusive browser token; execute node sites/catalog-game/test/repair-accessibility-proof.mjs with timeout300s actual root cwd. Requires BUILD_ID for each site. No independent root/site build by lane."
+    },
+    {
+      "id": "SITE-REQ-02",
+      "owner": "serial-integration",
+      "request": "Repair tests/sites/site-response-hardening.test.ts:101-108 lexical origin-before-reader oracle to follow actual checkout-handler.ts; keep runtime negative origin/body-budget/invalid-form assertions."
+    },
+    {
+      "id": "SITE-REQ-03",
+      "owner": "serial-integration",
+      "request": "Repair scripts/check-sites.mjs Kids runtime scan to distinguish executable source/config from retained binary PNG/log proof assets; preserve all src env/import/network/link forbidden injections and all evidence."
+    },
+    {
+      "id": "SITE-REQ-04",
+      "owner": "serial-integration",
+      "request": "Umbrella root src/app/loading.tsx and global-error.tsx outside current exact write grant: add truthful named/busy loading and root-layout error redaction; update exact client-graph allowlist tests intentionally (do not widen browser package imports). Owned editor/docs fallbacks already added."
+    },
+    {
+      "id": "SITE-REQ-05",
+      "owner": "identity",
+      "request": "Actual catalog read-only own-session adapter wiring via trusted umbrella authority; both catalogs valid/expired/forged/foreign/Kids parity. Current injected seam tests pass but are not deployed adapter proof. No catalog auth package dependency, credential logging or default Kids path."
+    },
+    {
+      "id": "SITE-REQ-06",
+      "owner": "identity/serial-integration",
+      "request": "Authenticated own-user purchase-history browser capture using approved nonproduction provider configuration/existing principal; preview-local checkpoint captures are not provider proof. No production provider/DB/account actions."
+    },
+    {
+      "id": "SITE-REQ-07",
+      "owner": "serial-publication",
+      "request": "VS01/03/04 exact complete current published tree/modes/CSS blobs/evidence and mandatory CI; historical read-only PR-EVIDENCE UTC conversion fix23:53:32+02=>21:53:32Z; no local or historical green transfer."
+    },
+    {
+      "id": "SITE-REQ-08",
+      "owner": "engine/serial-integration",
+      "request": "Current shared physics-world-host.ts undeclared live/steps/disposed must resolve before final umbrella strict tsc/build."
+    }
+  ],
+  "browser": {
+    "command": "node sites/catalog-game/test/repair-accessibility-proof.mjs",
+    "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+    "timeoutSeconds": 300,
+    "execution": "NOT_EXECUTED_AWAITING_STABLE_SERIAL_BUILDS_AND_TOKEN",
+    "assertions": [
+      "all4site390/1440status/pageerrors",
+      "normal text4.5 composited ratio, unsupported complex fills explicitly counted",
+      "actualTab ring width/clipping/occlusion/describedby under normal+forcedcolors",
+      "real catalog search submit/clear/repeated/long refusals",
+      "real Kids play and zero outbound/networkAPIs/cookies/storage",
+      "real Web canonical document export/save/reopen and malformed/oversized/foreign/valid-checksum forged/stale digest/Kids import no-partial-change",
+      "public open real canvas mount-all/root transition and reset",
+      "source fingerprint+buildIDs+end-source-drift refusal+PNG receipts+cleanup"
+    ]
+  },
+  "review": "Independent Astra review and published exact SHA mandatory CI pending; no self-review PASS.",
+  "updatedAt": "2026-10-02T09:51:33.009Z"
+}

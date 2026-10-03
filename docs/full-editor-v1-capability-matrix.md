@@ -26,9 +26,9 @@ panel remains fake or partial until a real command can populate it.
 
 ## Inventory accounting
 
-The shared shell model owns **126 unique control ids** across all modes and runtime
-projections. A default Game or Web render contains 111 because `dock-timeline`
-exists only in Animate while other dock tabs are mode-dependent. The union below
+The shared shell model owns **215 unique control ids** across all modes and runtime
+projections in this consolidated source. Individual renders are mode/profile-dependent:
+`dock-timeline` exists only in Animate and other dock tabs vary. The union below
 comes from `desktopVisualView()` and is enforced model-to-document and
 document-to-model by
 `apps/desktop-shell/test/control-accounting.test.ts`. Mounted behavior is covered
@@ -40,10 +40,10 @@ model: the OpenRouter provider select, password input, Save/Replace key button,
 and Remove key button. Their availability is decided by
 `desktop/linux/src/lib/byo-configuration-view.ts` and tested in
 `tests/desktop/desktop-byo-secure-storage.test.ts`. They are deliberately not
-counted as shell controls, so the current packaged-window union is **130**.
+counted as shell controls, so the current packaged-window union is **219**.
 
-The CLI exposes **21 verbs** from `packages/cli/src/commands.ts`; the Electron
-bridge exposes **11 actions**, **10 authoring operations**, and **3 legacy
+The CLI exposes **30 verbs** from `packages/cli/src/commands.ts`; the Electron
+bridge exposes **12 actions**, **10 authoring operations**, and **3 legacy
 assistant transport operations** from `desktop/linux/src/lib/bridge-contract.ts`;
 the same-user local agent bridge exposes **67 tools** from
 `packages/schemas/src/desktop-local-bridge.ts`. The previous 61-tool statement
@@ -59,6 +59,7 @@ id family expands only the suffixes printed in the Item(s) cell.
 
 | Item(s) | Count | Status | Current behavior and refusal | Evidence owner | Smallest dependency |
 |---|---:|---|---|---|---|
+| `menu-command-input-actions-inspect`, `menu-command-scene-prefab-inspect`, `menu-command-scene-prefab-define`, `menu-command-scene-prefab-instance`, `menu-command-scene-prefab-override`, `menu-command-scene-prefab-refresh`, `menu-command-viewport-source-set`, `menu-command-physics-evaluate`, `palette-input-actions-inspect`, `palette-scene-prefab-inspect`, `palette-scene-prefab-define`, `palette-scene-prefab-instance`, `palette-scene-prefab-override`, `palette-scene-prefab-refresh`, `palette-viewport-source-set`, `palette-physics-evaluate` | 16 | **partial** | Shared registry typed inputs, explicit form submission and named host outcomes; staging still requires Change Review/Save. Native all-command acceptance remains incomplete. | `tests/e2e/desktop-command-interactions-golden.test.ts`; `apps/desktop-shell/test/chrome.test.ts` | Complete native input/pixel negative matrix. |
 | `change-review-accept`, `change-review-reject` | 2 | **real** | Accept commits the one active proposal through the shared session; Reject discards it without a write. Invalid states name `DESKTOP_PROPOSAL_NOT_REVIEWING` or the upstream authoring refusal. | `apps/desktop-shell/src/session.ts`; `tests/e2e/desktop-product-loop-golden.test.ts` | None for the current single-proposal decision. |
 | `sculpt-start`, `sculpt-cancel` | 2 | **real** | After the packaged viewport binds, Sculpt starts the registered deterministic Local Assistant Build and mounts its validated Sculpt Artifact at the registry's `live-viewport` target. Cancel becomes actionable only for the exact returned job id and reports a terminal bounded-progress result or `EDITOR_COMMAND_ACTIVE_JOB_MISMATCH`; it never changes presentation state by itself. | `packages/schemas/test/editor-command-registry.test.ts`; `tests/e2e/desktop-linux-bridge-golden.test.ts`; renderer typecheck | None for this bounded Local Build slice; broader Sculpt authoring remains under later capability tickets. |
 | `assistant-toggle`, `assistant-close` | 2 | **real** | Open/close the assistant column or responsive drawer. Kids makes both inert under `DESKTOP_KIDS_ASSISTANT_DENIED`. | `apps/desktop-shell/src/visual-model.ts`; control inventory golden | None. |
@@ -125,6 +126,7 @@ New/Open/Import controls, not extra persistent chrome controls. The three title-
 window dots and four viewport-tool marks are `aria-hidden` decoration and have no
 click or focus behavior.
 
+
 ## CLI, bridge, and assistant inventory
 
 | Surface | Item(s) | Status | Current behavior / gap | Evidence and next dependency |
@@ -136,6 +138,7 @@ click or focus behavior.
 | CLI | `catalog list`, `evidence list` | **real** | Read-only bounded listings; catalog commerce remains inert. | registry verb tests. |
 | CLI | `desktop bridge call`, `status`, `tools` | **real** | Discovers and authenticates the same-user Unix socket; validates exact tool, permission, and input. `tools` exposes the same command schema version and definitions; registered calls include project migration, contained Git, hierarchy inspect/select/create/remove/reparent, and input-action inspect/rebind/reset without a second CLI result model. | CLI bridge, local RPC, contained Git, hierarchy, input-action, and CLI→local bridge goldens. |
 | CLI | `demo gated` | **fake** | Intentionally synthetic held-key fixture command; no product capability uses it. The shipped runtime refuses `HELD_KEY` and fails closed by default. | held-key regression suites; keep outside the full-editor registry. |
+| CLI | `project init`, `project migrate`, `desktop play`, `desktop build`, `plugin list`, `plugin validate`, `evidence show`, `evidence verify`, `catalog submit` | **partial** | Offline bounded templates, validation, evidence and permission-bound aliases. Unsupported conversions/storage/signing/held actions refuse; asset removal remains absent. | `packages/cli/test/capabilities.test.ts`; `packages/cli/test/distribution.test.ts` |
 | CLI | `protocol version`, `protocol inspect` | **real** | Reports the CLI envelope and exit-code contract. | CLI protocol tests. |
 | Desktop interaction table | New, Open, Save, Git Status, Git Diff, Git Stage, Prepare Git Commit, Export Web, Undo, Redo, Play | **real** | All eleven derive identity, label, schema version, and permission from the shared registry; Git inspection displays the shared repository evidence. Every advertised chord and the palette chord derive from the default input-action map; restored overrides update the same emitted resolver and labels. | `apps/desktop-shell/src/interaction-commands.ts`; command interaction, contained Git, and input-action goldens. |
 | Electron bridge actions | `handshake`, `profile`, `command`, `scene`, `project-browser-open`, `open-path`, `audio-asset`, `asset-import`, `ship`, `assistant`, `authoring`, `frame-report` | **real** | `profile` binds the active registered command profile, while `command` validates schema version, declared client, exact input, permission, and Kids denial before adapting to the existing handlers. `audio-asset` returns accepted audio bytes only on named request after validating the active project manifest. Legacy transport actions remain for unchanged bounded behavior. | registry tests; asset-pipeline golden; desktop Linux Electron smoke. |
@@ -325,3 +328,12 @@ claim Stage 6 ran, does not widen the Web editor, and does not authorize a Kids
 editor. No new ADR is needed: Electron ownership, Three presentation ownership,
 plugin capabilities, and platform packaging already have owners in ADRs 0017,
 0024, and 0004–0005.
+
+## Current integration clarification
+
+2026-10-01 current model has179 unique controls and30 CLI leaves; older numbers
+above are dated observations, not current acceptance. Typed prefab/package, input
+settings and migration forms now collect registry fields. The semantic golden
+asserts preflight, no implicit dispatch, explicit submission and named answers;
+real-host tests prove prefab Save/Reject and settings review/commit. Complete
+packaged command/feature coverage remains outstanding, not credential-blocked.

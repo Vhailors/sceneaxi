@@ -21,11 +21,21 @@ export const SYNTHETIC_DEMO_KEYS: readonly string[] = Object.freeze([
   "synthetic-demo-beta",
 ]);
 
+// SAFETY: This literal supplies the required numeric epochs, CLI version and command/heldKeys pairs; Object.freeze preserves those fields.
 export const SHIPPED_COMMAND_MAP: CliCommandMap = Object.freeze({
   schemaVersion: 1,
   builtForRegistryEpoch: 1,
   cliVersion: CLI_VERSION,
   commands: Object.freeze([
+    { command: "project init", heldKeys: [] },
+    { command: "project migrate", heldKeys: [] },
+    { command: "plugin list", heldKeys: [] },
+    { command: "plugin validate", heldKeys: [] },
+    { command: "catalog submit", heldKeys: [] },
+    { command: "evidence show", heldKeys: [] },
+    { command: "evidence verify", heldKeys: [] },
+    { command: "desktop play", heldKeys: [] },
+    { command: "desktop build", heldKeys: [] },
     { command: "project new", heldKeys: [] },
     { command: "project dev", heldKeys: [] },
     { command: "project test", heldKeys: [] },

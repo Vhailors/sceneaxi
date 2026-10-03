@@ -1,5 +1,5 @@
 import { DESKTOP_MINIMUM_WINDOW } from "../../visual-model.js";
-import { ACCENT, INERT, LINE, METRICS, SCRIM, SIGNAL, SURFACE, TEXT, TYPE } from "../../visual-tokens.js";
+import { ACCENT, INERT, LINE, METRICS, SCRIM, SIGNAL, SURFACE, TEXT, TYPE, SPACING } from "../../visual-tokens.js";
 import { atTierOrAbove, belowTier } from "./markup.js";
 import { titleBarStyles, modeRailStyles, statusBarStyles } from "../frame/styles.js";
 import { settingsStyles } from "../settings/styles.js";
@@ -12,7 +12,7 @@ import { paletteStyles } from "../palette/styles.js";
 
 /** Contiguous slices retain the original cascade and every emitted byte. */
 export function styles(): string {
-  return `
+  return reconcilePrivateChromeStyles(`
 :root{
   --canvas:${SURFACE.canvas};--well:${SURFACE.well};--assistant:${SURFACE.assistant};
   --panel:${SURFACE.panel};--overlay:${SURFACE.overlay};--raised:${SURFACE.raised};
@@ -30,6 +30,8 @@ export function styles(): string {
   --status-h:${METRICS.statusBarHeight}px;
   --sans:${TYPE.sans};--mono:${TYPE.mono};
   --r-panel:18px;--r-card:13px;--r-control:10px;
+  --space-1:${SPACING.unit}px;--space-2:${SPACING.small}px;--space-3:${SPACING.medium}px;
+  --space-4:${SPACING.large}px;--space-6:${SPACING.section}px;
 }
 *{box-sizing:border-box}
 /* Every hidden region here is an explicit model or runtime decision. */
@@ -245,12 +247,202 @@ ${paletteStyles()}
    model refuse at exactly the same size and cannot be raised apart. */
 @media (max-width:${DESKTOP_MINIMUM_WINDOW.width - 1}px),(max-height:${DESKTOP_MINIMUM_WINDOW.height - 1}px){
   .shell{display:none}
-  .window-refusal{display:block}
+  /* Keep the named refusal visible even if a later refinement repeats its base rule. */
+  .window-refusal.window-refusal{display:block}
 }
 
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}
   .sculpt-sweep,.assistant-live{display:none}
 }
-`;
+
+/* Private source usability additions, after canonical regional cascade. */
+  --space-1:${SPACING.unit}px;--space-2:${SPACING.small}px;--space-3:${SPACING.medium}px;
+  --space-4:${SPACING.large}px;--space-6:${SPACING.section}px;
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-control);box-shadow:0 0 0 4px var(--well)}
+.view-tab:focus-visible,.dock-tab:focus-visible,.rail-mode:focus-visible{outline-offset:-3px;box-shadow:none}
+/* Rings remain inside clipped listboxes and popovers; filled controls retain the well halo. */
+:is(.menu-command,.project-files select,.project-recent-select,.assistant-route,.assistant-manipulator):focus-visible{outline-offset:-3px;box-shadow:none}
+:is(button,input,select,textarea,a[href],[tabindex]):focus-visible{scroll-margin:var(--space-3)}
+@media (forced-colors:active){:focus-visible{outline:2px solid Highlight;outline-offset:-2px;box-shadow:none}button[aria-pressed="true"],button[aria-selected="true"]{border:1px solid Highlight}}
+:is(.menu-item,.profile-chip,.icon-button,.assistant-toggle,.assistant-mode):not(.is-inert):not([aria-pressed="true"]):hover{background:var(--hover);color:var(--text)}
+button:not(.is-inert):not(:disabled):not([aria-disabled="true"]):active{box-shadow:inset 0 0 0 2px var(--line-hover)}
+button:not(.is-inert):not(:disabled):not([aria-disabled="true"]):active:focus-visible{box-shadow:0 0 0 4px var(--well),inset 0 0 0 2px var(--line-hover)}
+:is(.left-dock,.inspector,.dock-body,.assistant-body,.assistant-composer,.palette-list,.overlay-card){scrollbar-gutter:stable;scroll-padding:var(--space-3)}
+button{transition:background-color .14s ease,border-color .14s ease,color .14s ease}
+/* Intrinsic section heights contribute to the inspector's scroll extent. */
+.inspector > section{flex-shrink:0;min-width:0}
+/* Catalogue textareas must not share an inline baseline with Stage: native
+   multiline controls otherwise paint below the label's line box at the scroll edge. */
+.scene-catalog-editor{display:grid;gap:var(--space-2);min-width:0;padding:var(--space-3)}
+.scene-catalog-editor label{display:grid;gap:var(--space-1);min-width:0}
+.scene-catalog-editor textarea{display:block;width:100%;min-width:0;resize:vertical}
+.scene-catalog-editor button{justify-self:start}
+.scene-catalog-editor pre{min-width:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.panel-head{margin:0;height:32px;flex:none;display:flex;align-items:center;padding:0 var(--space-3);background:var(--header);border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.08em;color:var(--text-3)}
+.panel-empty{margin:var(--space-2);padding:var(--space-3);border:1px dashed var(--line-control);border-radius:var(--r-control);background:var(--well);font-size:12px;line-height:1.65;color:var(--dim);overflow-wrap:anywhere}
+.panel-empty[aria-live]{border-style:solid;border-left:2px solid var(--line-hover)}
+.project-launcher{display:grid;gap:var(--space-2);padding:var(--space-3);border-bottom:1px solid var(--line)}
+.project-launcher p,.project-root{margin:0;color:var(--dim);font-size:11px;line-height:1.6;overflow-wrap:anywhere}
+.project-recent-label{font-family:var(--mono);font-size:10px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em}
+.project-browser-detail dl{display:grid;gap:var(--space-2);margin:var(--space-3) 0}
+.project-browser-detail dt{font-family:var(--mono);font-size:10px;color:var(--faint);text-transform:uppercase}
+.project-browser-detail dd{margin:0;min-width:0;overflow-wrap:anywhere;font-family:var(--mono);font-size:10px;line-height:1.6;color:var(--dim)}
+.asset-browser-card span{margin-top:var(--space-1);font-family:var(--mono);font-size:10px;line-height:1.6;color:var(--dim);font-variant-numeric:tabular-nums;user-select:text}
+.scene-entities{padding:0 var(--space-2) var(--space-3)}
+/* The canonical multi-select remains a keyboard control, not an invisible focus stop. */
+.scene-entities select:focus-visible{position:static;width:100%;height:auto;min-height:96px;padding:6px;margin:0;overflow:auto;clip:auto;white-space:normal;border:1px solid var(--line-card)}
+.scene-entity-identities{display:grid;gap:var(--space-2);min-width:0;margin:var(--space-2) 0 0;padding:0;list-style:none}
+.scene-entity-identity{min-width:0;margin-left:calc(var(--scene-depth,0) * var(--space-2));padding:var(--space-2) var(--space-3);border:1px solid var(--line-card);border-left:2px solid var(--line-card);border-radius:6px;background:var(--well);cursor:pointer;transition:background-color .14s ease,border-color .14s ease}
+.scene-entity-identity:focus-visible{outline-offset:-3px;box-shadow:none}
+.scene-entity-identity>span{display:block;margin-bottom:var(--space-1);font-size:12px;line-height:1.5;font-weight:600;color:var(--text);overflow-wrap:anywhere}
+.scene-entity-identity dl{display:none;gap:var(--space-1);margin:var(--space-2) 0 0}
+.scene-entity-identity dl div{display:grid;grid-template-columns:42px minmax(0,1fr);gap:var(--space-2);min-width:0;padding:var(--space-1) 0;border-top:1px solid var(--line-row)}
+.scene-entity-identity dt{font-family:var(--mono);font-size:10px;line-height:1.6;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
+.scene-entity-identity code{display:block;min-width:0;font-size:10px;line-height:1.6;color:var(--dim);white-space:normal;overflow-wrap:anywhere;font-variant-numeric:tabular-nums;user-select:text}
+.scene-property-input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.scene-property-input.is-inert{color:var(--inert)}
+.scene-property-review{max-height:150px;margin:0;padding:var(--space-2);overflow:auto;border:1px solid var(--line);border-radius:4px;background:var(--well);color:var(--dim);font-family:var(--mono);font-size:10px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
+.pass-row{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-3);background:var(--raised);border:1px solid var(--line);border-radius:4px;min-width:0}
+.pass-row>div{min-width:0;overflow-wrap:anywhere}
+.pass-row:nth-child(even){background:var(--well)}
+.viewport-backdrop{position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 0 1px var(--line-row)}
+.change-empty{margin:auto;padding:var(--space-6) var(--space-4);max-width:52ch;text-align:center;font-size:13px;line-height:1.65;color:var(--dim)}
+.change-empty::before{content:"";display:block;width:24px;height:24px;margin:0 auto var(--space-3);border:1px solid var(--line-hover);border-radius:6px;background:var(--raised)}
+.assistant-head{height:40px;flex:none;display:flex;align-items:center;gap:9px;padding:0 12px;background:var(--raised);border-bottom:1px solid var(--line)}
+/* One live-bars signal confirms work; the canvas and labels stay visually still. */
+.shell[data-assistant-busy="true"] .assistant-mark{box-shadow:0 0 0 4px ${ACCENT.surface}}
+.icon-button{width:26px;height:26px;flex:none;border-radius:4px;display:grid;place-items:center;color:var(--dim);line-height:1}
+:is(.dot,.rail-glyph,.assistant-mark,.overlay-mark,.badge){flex-shrink:0}
+.assistant-body{flex:1;min-height:0;overflow-y:auto;padding:var(--space-4) var(--space-3)}
+.assistant-empty{margin:0;padding:var(--space-3);border:1px dashed var(--line-card);border-radius:var(--r-control);background:var(--well);font-size:13px;line-height:1.65;color:var(--dim);max-width:40ch}
+.assistant-thinking .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.assistant-progress{min-width:0;min-height:44px;margin:var(--space-3) 0;overflow-wrap:anywhere;font-size:11px;line-height:1.5;color:var(--text-2);padding:var(--space-3);border:1px solid var(--line-control);border-radius:4px;background:var(--header);transition:border-color .2s ease,color .2s ease}
+.shell[data-assistant-busy="true"] .assistant-progress{border-color:var(--accent);color:var(--text)}
+.assistant-result{min-width:0;padding:var(--space-3);border-left:2px solid var(--line-hover);background:var(--well);font-size:12px;line-height:1.65;color:var(--text-3);white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;animation:rise .16s ease-out}
+.assistant-composer{flex:none;max-height:65%;min-height:0;overflow-y:auto;scroll-padding:var(--space-2);border-top:1px solid var(--line);background:var(--panel);padding:var(--space-3);display:flex;flex-direction:column;gap:var(--space-2)}
+.assistant-prompt{width:100%;min-height:72px;flex-shrink:0;resize:vertical;border:1px solid var(--line-control);border-radius:6px;background:var(--well);color:var(--text);font:12px/1.6 var(--sans);padding:var(--space-3)}
+.assistant-prompt::placeholder{color:var(--faint)}
+.assistant-route{min-width:0;padding:var(--space-2) var(--space-1);border:1px solid var(--line-control);border-radius:3px;color:var(--dim);font-size:9px;line-height:1.2}
+.assistant-route-refusal{display:block;margin-top:var(--space-1);font-size:10px;line-height:1.5;overflow-wrap:anywhere;color:var(--scene)}
+.overlay-body{margin:0;min-width:0;padding:var(--space-4);font-size:12px;line-height:1.6;color:var(--text-2);overflow-wrap:anywhere}
+.overlay-refused .overlay-body{border-left:2px solid var(--refuse);margin:var(--space-4);padding:0 var(--space-3)}
+.palette-item{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-4);width:100%;min-height:36px;text-align:left}
+.palette-name{min-width:0;overflow-wrap:anywhere}
+.palette-item kbd{flex:none;white-space:nowrap}
+.palette-item:hover,.palette-item:focus-visible{background:var(--hover)}
+.palette-item:focus-visible{outline-offset:-3px;box-shadow:none}
+.window-refusal{padding:48px var(--space-6);overflow-wrap:anywhere;max-height:100dvh;overflow:auto}
+/* Runtime visibility mirrors the media refusal before moving focus. */
+.window-refusal[data-window="refused"]{display:block}
+
+`);
+}
+
+/** Private refinement deltas applied to the modern modular cascade, never historical whole-file replacement. */
+function reconcilePrivateChromeStyles(css: string): string {
+  const refinements: readonly (readonly [string, string])[] = [
+  [`:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-control)}`, `:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-control);box-shadow:0 0 0 4px var(--well)}
+.view-tab:focus-visible,.dock-tab:focus-visible,.rail-mode:focus-visible{outline-offset:-3px;box-shadow:none}
+/* Rings remain inside clipped listboxes and popovers; filled controls retain the well halo. */
+:is(.menu-command,.project-files select,.project-recent-select,.assistant-route,.assistant-manipulator):focus-visible{outline-offset:-3px;box-shadow:none}
+:is(button,input,select,textarea,a[href],[tabindex]):focus-visible{scroll-margin:var(--space-3)}
+@media (forced-colors:active){:focus-visible{outline:2px solid Highlight;outline-offset:-2px;box-shadow:none}button[aria-pressed="true"],button[aria-selected="true"]{border:1px solid Highlight}}
+:is(.menu-item,.profile-chip,.icon-button,.assistant-toggle,.assistant-mode):not(.is-inert):not([aria-pressed="true"]):hover{background:var(--hover);color:var(--text)}
+button:not(.is-inert):not(:disabled):not([aria-disabled="true"]):active{box-shadow:inset 0 0 0 2px var(--line-hover)}
+button:not(.is-inert):not(:disabled):not([aria-disabled="true"]):active:focus-visible{box-shadow:0 0 0 4px var(--well),inset 0 0 0 2px var(--line-hover)}
+:is(.left-dock,.inspector,.dock-body,.assistant-body,.assistant-composer,.palette-list,.overlay-card){scrollbar-gutter:stable;scroll-padding:var(--space-3)}
+button{transition:background-color .14s ease,border-color .14s ease,color .14s ease}`],
+  [`.panel-head{margin:0;height:29px;flex:none;display:flex;align-items:center;padding:0 10px;background:var(--header);border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-family:var(--mono);font-size:9px;font-weight:400;letter-spacing:.15em;color:var(--text-3)}
+.panel-empty{margin:0;padding:12px 11px;font-size:11px;line-height:1.55;color:var(--dim)}`, `/* Intrinsic section heights contribute to the inspector's scroll extent. */
+.inspector > section{flex-shrink:0;min-width:0}
+/* Catalogue textareas must not share an inline baseline with Stage: native
+   multiline controls otherwise paint below the label's line box at the scroll edge. */
+.scene-catalog-editor{display:grid;gap:var(--space-2);min-width:0;padding:var(--space-3)}
+.scene-catalog-editor label{display:grid;gap:var(--space-1);min-width:0}
+.scene-catalog-editor textarea{display:block;width:100%;min-width:0;resize:vertical}
+.scene-catalog-editor button{justify-self:start}
+.scene-catalog-editor pre{min-width:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.panel-head{margin:0;height:32px;flex:none;display:flex;align-items:center;padding:0 var(--space-3);background:var(--header);border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.08em;color:var(--text-3)}
+.panel-empty{margin:var(--space-2);padding:var(--space-3);border:1px dashed var(--line-control);border-radius:var(--r-control);background:var(--well);font-size:12px;line-height:1.65;color:var(--dim);overflow-wrap:anywhere}
+.panel-empty[aria-live]{border-style:solid;border-left:2px solid var(--line-hover)}`],
+  [`.project-launcher{display:grid;gap:7px;padding:9px;border-bottom:1px solid var(--line)}
+.project-launcher p,.project-root{margin:0;color:var(--dim);font-size:9px;line-height:1.45;overflow-wrap:anywhere}`, `.project-launcher{display:grid;gap:var(--space-2);padding:var(--space-3);border-bottom:1px solid var(--line)}
+.project-launcher p,.project-root{margin:0;color:var(--dim);font-size:11px;line-height:1.6;overflow-wrap:anywhere}`],
+  [`.project-recent-label{font-family:var(--mono);font-size:8px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em}`, `.project-recent-label{font-family:var(--mono);font-size:10px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em}`],
+  [`.project-browser-detail dl{display:grid;gap:5px;margin:8px 0}`, `.project-browser-detail dl{display:grid;gap:var(--space-2);margin:var(--space-3) 0}`],
+  [`.project-browser-detail dt{font-family:var(--mono);font-size:8px;color:var(--faint);text-transform:uppercase}
+.project-browser-detail dd{margin:0;min-width:0;overflow-wrap:anywhere;font-family:var(--mono);font-size:8px;line-height:1.45;color:var(--dim)}`, `.project-browser-detail dt{font-family:var(--mono);font-size:10px;color:var(--faint);text-transform:uppercase}
+.project-browser-detail dd{margin:0;min-width:0;overflow-wrap:anywhere;font-family:var(--mono);font-size:10px;line-height:1.6;color:var(--dim)}`],
+  [`.asset-browser-card span{margin-top:4px;font-family:var(--mono);font-size:8px;line-height:1.45;color:var(--dim)}`, `.asset-browser-card span{margin-top:var(--space-1);font-family:var(--mono);font-size:10px;line-height:1.6;color:var(--dim);font-variant-numeric:tabular-nums;user-select:text}`],
+  [`.scene-entities{padding:0 7px 9px}`, `.scene-entities{padding:0 var(--space-2) var(--space-3)}`],
+  [`.scene-entity-identities{display:grid;gap:5px;min-width:0;margin:6px 0 0;padding:0;list-style:none}
+.scene-entity-identity{min-width:0;margin-left:calc(var(--scene-depth,0) * 7px);padding:8px 9px;border:1px solid var(--line-card);border-left:2px solid var(--accent);border-radius:6px;background:var(--well);cursor:pointer}`, `/* The canonical multi-select remains a keyboard control, not an invisible focus stop. */
+.scene-entities select:focus-visible{position:static;width:100%;height:auto;min-height:96px;padding:6px;margin:0;overflow:auto;clip:auto;white-space:normal;border:1px solid var(--line-card)}
+.scene-entity-identities{display:grid;gap:var(--space-2);min-width:0;margin:var(--space-2) 0 0;padding:0;list-style:none}
+.scene-entity-identity{min-width:0;margin-left:calc(var(--scene-depth,0) * var(--space-2));padding:var(--space-2) var(--space-3);border:1px solid var(--line-card);border-left:2px solid var(--line-card);border-radius:6px;background:var(--well);cursor:pointer;transition:background-color .14s ease,border-color .14s ease}
+.scene-entity-identity:focus-visible{outline-offset:-3px;box-shadow:none}`],
+  [`.scene-entity-identity>span{display:block;margin-bottom:2px;font-size:11px;font-weight:600;color:var(--text)}
+.scene-entity-identity dl{display:none;gap:3px;margin:4px 0 0}`, `.scene-entity-identity>span{display:block;margin-bottom:var(--space-1);font-size:12px;line-height:1.5;font-weight:600;color:var(--text);overflow-wrap:anywhere}
+.scene-entity-identity dl{display:none;gap:var(--space-1);margin:var(--space-2) 0 0}`],
+  [`.scene-entity-identity dl div{display:grid;grid-template-columns:42px minmax(0,1fr);gap:5px;min-width:0}
+.scene-entity-identity dt{font-family:var(--mono);font-size:7px;line-height:1.45;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}`, `.scene-entity-identity dl div{display:grid;grid-template-columns:42px minmax(0,1fr);gap:var(--space-2);min-width:0;padding:var(--space-1) 0;border-top:1px solid var(--line-row)}
+.scene-entity-identity dt{font-family:var(--mono);font-size:10px;line-height:1.6;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}`],
+  [`.scene-entity-identity code{display:block;min-width:0;font-size:8px;line-height:1.45;color:var(--dim);white-space:normal;overflow-wrap:anywhere}`, `.scene-entity-identity code{display:block;min-width:0;font-size:10px;line-height:1.6;color:var(--dim);white-space:normal;overflow-wrap:anywhere;font-variant-numeric:tabular-nums;user-select:text}`],
+  [`.scene-property-input:focus{outline:1px solid var(--accent);outline-offset:1px}.scene-property-input.is-inert{color:var(--inert)}`, `.scene-property-input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.scene-property-input.is-inert{color:var(--inert)}`],
+  [`.scene-property-review{max-height:150px;margin:0;padding:8px;overflow:auto;border:1px solid var(--line);border-radius:4px;background:var(--well);color:var(--dim);font-family:var(--mono);font-size:8px;line-height:1.45;white-space:pre-wrap}`, `.scene-property-review{max-height:150px;margin:0;padding:var(--space-2);overflow:auto;border:1px solid var(--line);border-radius:4px;background:var(--well);color:var(--dim);font-family:var(--mono);font-size:10px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}`],
+  [`.pass-row{display:flex;align-items:center;gap:10px;padding:6px 9px;background:var(--raised);border:1px solid var(--line);border-radius:4px}`, `.pass-row{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-3);background:var(--raised);border:1px solid var(--line);border-radius:4px;min-width:0}
+.pass-row>div{min-width:0;overflow-wrap:anywhere}
+.pass-row:nth-child(even){background:var(--well)}`],
+  [`.viewport-backdrop{position:absolute;inset:0;pointer-events:none}`, `.viewport-backdrop{position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 0 1px var(--line-row)}`],
+  [`.change-empty{margin:0;padding:34px 14px;text-align:center;font-size:12px;color:var(--dim)}`, `.change-empty{margin:auto;padding:var(--space-6) var(--space-4);max-width:52ch;text-align:center;font-size:13px;line-height:1.65;color:var(--dim)}
+.change-empty::before{content:"";display:block;width:24px;height:24px;margin:0 auto var(--space-3);border:1px solid var(--line-hover);border-radius:6px;background:var(--raised)}`],
+  [`.assistant-head{height:36px;flex:none;display:flex;align-items:center;gap:9px;padding:0 12px;background:var(--raised);border-bottom:1px solid var(--line)}`, `.assistant-head{height:40px;flex:none;display:flex;align-items:center;gap:9px;padding:0 12px;background:var(--raised);border-bottom:1px solid var(--line)}`],
+  [`.shell[data-assistant-busy="true"] .assistant-mark{box-shadow:0 0 0 4px ${ACCENT.surface};animation:assistant-breathe 1.1s ease-in-out infinite}
+.shell[data-assistant-busy="true"] .assistant-mark::before{animation:assistant-spin 1.6s linear infinite}
+.shell[data-assistant-busy="true"] .viewport::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(80% 70% at 50% 40%, ${ACCENT.surface} 0%, transparent 70%);animation:assistant-glow 1.4s ease-in-out infinite}`, `/* One live-bars signal confirms work; the canvas and labels stay visually still. */
+.shell[data-assistant-busy="true"] .assistant-mark{box-shadow:0 0 0 4px ${ACCENT.surface}}`],
+  [`.icon-button{width:26px;height:26px;border-radius:4px;display:grid;place-items:center;color:var(--dim)}`, `.icon-button{width:26px;height:26px;flex:none;border-radius:4px;display:grid;place-items:center;color:var(--dim);line-height:1}
+:is(.dot,.rail-glyph,.assistant-mark,.overlay-mark,.badge){flex-shrink:0}`],
+  [`.assistant-body{flex:1;min-height:0;overflow-y:auto;padding:13px 12px}
+.assistant-empty{margin:0;font-size:11px;line-height:1.55;color:var(--dim)}`, `.assistant-body{flex:1;min-height:0;overflow-y:auto;padding:var(--space-4) var(--space-3)}
+.assistant-empty{margin:0;padding:var(--space-3);border:1px dashed var(--line-card);border-radius:var(--r-control);background:var(--well);font-size:13px;line-height:1.65;color:var(--dim);max-width:40ch}`],
+  [`.assistant-thinking .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:assistant-dot 1s ease-in-out infinite}
+.assistant-thinking .dot:nth-child(2){animation-delay:.15s}
+.assistant-thinking .dot:nth-child(3){animation-delay:.3s}
+.assistant-progress{font-size:11px;line-height:1.5;color:var(--text-2);padding:9px;border:1px solid var(--line-control);border-radius:4px;background:var(--header);transition:border-color .2s ease,color .2s ease}
+.shell[data-assistant-busy="true"] .assistant-progress{border-color:var(--accent);color:var(--text);animation:assistant-card 1.2s ease-in-out infinite}
+.assistant-result{font-size:10px;line-height:1.55;color:var(--text-3);white-space:pre-wrap;animation:rise .28s ease-out}`, `.assistant-thinking .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.assistant-progress{min-width:0;min-height:44px;margin:var(--space-3) 0;overflow-wrap:anywhere;font-size:11px;line-height:1.5;color:var(--text-2);padding:var(--space-3);border:1px solid var(--line-control);border-radius:4px;background:var(--header);transition:border-color .2s ease,color .2s ease}
+.shell[data-assistant-busy="true"] .assistant-progress{border-color:var(--accent);color:var(--text)}
+.assistant-result{min-width:0;padding:var(--space-3);border-left:2px solid var(--line-hover);background:var(--well);font-size:12px;line-height:1.65;color:var(--text-3);white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;animation:rise .16s ease-out}`],
+  [`.assistant-composer{flex:none;border-top:1px solid var(--line);background:var(--panel);padding:9px 11px 11px;display:flex;flex-direction:column;gap:8px}
+.assistant-prompt{width:100%;min-height:58px;resize:vertical;border:1px solid var(--line-control);border-radius:4px;background:var(--well);color:var(--text);font:11px/1.5 var(--sans);padding:8px}`, `.assistant-composer{flex:none;max-height:65%;min-height:0;overflow-y:auto;scroll-padding:var(--space-2);border-top:1px solid var(--line);background:var(--panel);padding:var(--space-3);display:flex;flex-direction:column;gap:var(--space-2)}
+.assistant-prompt{width:100%;min-height:72px;flex-shrink:0;resize:vertical;border:1px solid var(--line-control);border-radius:6px;background:var(--well);color:var(--text);font:12px/1.6 var(--sans);padding:var(--space-3)}
+.assistant-prompt::placeholder{color:var(--faint)}`],
+  [`.assistant-route{min-width:0;padding:5px 3px;border:1px solid var(--line-control);border-radius:3px;color:var(--dim);font-size:9px;line-height:1.2}
+.assistant-route-refusal{display:block;margin-top:3px;font-size:7px;line-height:1.2;overflow-wrap:anywhere;color:var(--scene)}`, `.assistant-route{min-width:0;padding:var(--space-2) var(--space-1);border:1px solid var(--line-control);border-radius:3px;color:var(--dim);font-size:9px;line-height:1.2}
+.assistant-route-refusal{display:block;margin-top:var(--space-1);font-size:10px;line-height:1.5;overflow-wrap:anywhere;color:var(--scene)}`],
+  [`.overlay-body{margin:0;padding:15px 18px;font-size:12px;line-height:1.6;color:var(--text-2)}`, `.overlay-body{margin:0;min-width:0;padding:var(--space-4);font-size:12px;line-height:1.6;color:var(--text-2);overflow-wrap:anywhere}
+.overlay-refused .overlay-body{border-left:2px solid var(--refuse);margin:var(--space-4);padding:0 var(--space-3)}`],
+  [`.palette-item{display:flex;align-items:center;gap:12px;padding:8px 16px;width:100%;text-align:left}
+.palette-item:hover{background:var(--hover)}`, `.palette-item{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-4);width:100%;min-height:36px;text-align:left}
+.palette-name{min-width:0;overflow-wrap:anywhere}
+.palette-item kbd{flex:none;white-space:nowrap}
+.palette-item:hover,.palette-item:focus-visible{background:var(--hover)}
+.palette-item:focus-visible{outline-offset:-3px;box-shadow:none}`],
+  [`.window-refusal{display:none;max-width:52ch;margin:0 auto;padding:48px 24px;text-align:center}`, `.window-refusal{display:none;max-width:52ch;margin:0 auto;padding:48px var(--space-6);text-align:center;overflow-wrap:anywhere}`],
+  [`@keyframes assistant-breathe{0%,100%{opacity:1}50%{opacity:.62}}
+@keyframes assistant-spin{to{transform:rotate(225deg)}}`, ``],
+  [`@keyframes assistant-dot{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:1;transform:translateY(-2px)}}
+@keyframes assistant-card{0%,100%{box-shadow:0 0 0 0 ${ACCENT.surface}}50%{box-shadow:0 0 0 4px ${ACCENT.surface}}}
+@keyframes assistant-glow{0%,100%{opacity:.18}50%{opacity:.4}}`, ``],
+  [`): Record<string, Record<string, readonly [string, string | null]>> {`, `) {`],
+  ];
+
+  for (const [previous, refined] of refinements) {
+    // Exact rules only: independently evolved modern selectors and handlers remain untouched.
+    css = css.replace(previous, () => refined);
+  }
+
+  return css;
 }

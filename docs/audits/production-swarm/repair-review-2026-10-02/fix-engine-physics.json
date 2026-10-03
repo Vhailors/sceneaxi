@@ -1,0 +1,405 @@
+{
+  "lane": "engine-physics",
+  "root": "/home/devuser/Documents/Projects/sceneaxi",
+  "status": "NEEDS_LOCAL_FIX",
+  "publishedStatus": "NOT_VERIFIED",
+  "productionStatus": "BLOCKED",
+  "repairPass": 1,
+  "maximumRepairPasses": 3,
+  "rows": [
+    {
+      "id": "ENG-002",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Unsafe/overflow inputs refuse; before/after/retried snapshot and pending commands stable; scene rollback oracle; supported golden digests unchanged and snapshots finite/JSON-roundtrippable."
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "ENG-005",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Five malformed replacements leave zero new live resources and old render works; direct disposed backend methods refuse and repeated dispose safe."
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "ENG-003",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Malformed inputs throw named errors without altering last good frame/camera/resources; bounded limit/limit+1 viewport oracle, valid goldens unchanged."
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "ENG-006",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Actual Chromium same-canvas100 create/draw/dispose rounds have bounded live handles; supported remount/restoration draws real pixels, lost context reportsfalse and capture unavailable."
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "ENG-004",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "External consumer type oracle exposes no Three Group/types; real WebGL and goldens preserved."
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "ENG-007",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Hostile toString/Error.message/proxy thrown values never escape bootstrap/resume; named reasons stable."
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "ENG-001",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Compatibility table executably covered; supported JSON saves replay exact digest, unsupported version policy explicit before event work."
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "ENG-008",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Limit/limit+1 public oracles, maximum-supported session replay,100 lifecycle resource plateau and measured repeated CPU/memory records; headless counters never GPU proof."
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "ENG-009",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Actual input action\u2192dispatch\u2192advance\u2192save/replay outcome and invalid/Kids/unknown-action refusal through packaged play front door",
+        "pnpm exec vitest run packages/engine-kernel/test/session.test.ts tests/e2e/input-actions-golden.test.ts tests/e2e/desktop-play-session-golden.test.ts"
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "ENG-010",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Public posed multi-object save/load/replay joint/collision digest and real renderer pose evidence",
+        "pnpm exec vitest run packages/physics-rapier/test/seam.test.ts tests/e2e/physics-rapier-golden.test.ts tests/e2e/desktop-physics-golden.test.ts tests/e2e/desktop-animation-golden.test.ts"
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "ENG-011",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Real browser gesture unlock/play/stop and zero active sources after dispose; actual audible/device observation separately recorded, not AudioContext counters",
+        "pnpm exec vitest run packages/engine-presentation/test && pnpm --dir desktop/linux smoke --packaged"
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "ENG-012",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Actual admitted textured GLB/glTF browser/packaged checker pixels,resize/dispose,malformed bounds; numeric PNG-array test alone insufficient",
+        "pnpm exec vitest run packages/engine-presentation/test/three-presentation.test.ts tests/e2e/asset-ingestion-golden.test.ts"
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "ENG-013",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Real imported animation before/after pixel changes,deterministic time replay and stable resources; explicit unsupported formats remain visible",
+        "pnpm exec vitest run tests/e2e/desktop-animation-golden.test.ts packages/engine-presentation/test/three-presentation.test.ts"
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "ENG-014",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Real authored-catalog WebGL comparisons and long-lived performance; no headless pixel inference",
+        "pnpm exec vitest run packages/engine-presentation/test/three-presentation.test.ts packages/engine-presentation/test/three-surface.test.ts"
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "ENG-015",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Actual packaged input/play flow and genuine connected standard-controller test, not navigator mock",
+        "pnpm exec vitest run tests/e2e/input-actions-golden.test.ts packages/schemas/test/input-action-registry.test.ts"
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "ENG-017",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Real contained authored texture positive/negative pixels; non-null slots refuse until genuinely supported; never null placeholders claiming texture binding",
+        "pnpm exec vitest run packages/engine-presentation/test/three-presentation.test.ts tests/e2e/umbrella-editor-viewport-golden.test.ts && pnpm check:contracts"
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "COVERAGE-ENGINE",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Exact command/exit/assertions/platform recorded; tested input/result/persistence or pixels where required.",
+        "Full unchanged gate plus relevant actual front doors; 3-pass FAIL routing; every unresolved hole classified local/intentional/external.",
+        "Actual authored checker texture, imported animation, bloom/vignette/particles/material override pixel fixtures not exercised; positive /open scene pixels do not prove every feature",
+        "Actual WebGL lost/restored public front door not exercised by this node; mocked lifecycle tests are not restored-pixel evidence",
+        "No genuine physical gamepad/audio-device/physical GPU acceptance in this node",
+        "No macOS/Windows/mobile/Firefox/Safari hardware rendering evidence",
+        "No production deployment pixels or entitled production editor session; local public /open existing production build only",
+        "No sustained multi-hour session, explicit capacity SLA or maximum-supported replay memory benchmark",
+        "Packaged Linux GUI/input/play feature acceptance belongs desktop/shell integration owners, not this SDK audit",
+        "General gameplay, audio, full posed physics persistence,skin/CUBICSPLINE,compressed texture decoding,texture binding and optional renderer/network scope remain full-product gaps until genuinely implemented"
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "ENG-016",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Any admitted new adapter/protocol needs real two-adapter/peer correctness,disconnect/replay/auth/input-bound proofs; current absence is not a defect in intentional refusal or missing credential",
+        "pnpm check:boundaries && pnpm exec vitest run packages/engine-kernel/test packages/engine-presentation/test"
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "GATE-DEVICES",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Genuine supplied input and independently verified actual target/evidence under matching action-specific authorization; never fixture-substitute."
+      ],
+      "evidence": [],
+      "missingInput": "Genuine supported connected controller/audio device and physical GPU/browser/platform hosts; actual input/audio/render/recovery behavior, names and measured capacity. navigator fixtures, SwiftShader and AudioContext counts are not physical-device acceptance."
+    },
+    {
+      "id": "LOCAL-PROOF-063",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Exact passing current lane evidence only; residual gap IDs below remain open."
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "LOCAL-PROOF-066",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Exact passing current lane evidence only; residual gap IDs below remain open."
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "LOCAL-PROOF-067",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Exact passing current lane evidence only; residual gap IDs below remain open."
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "LOCAL-PROOF-068",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Exact passing current lane evidence only; residual gap IDs below remain open."
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "LOCAL-PROOF-069",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Exact passing current lane evidence only; residual gap IDs below remain open."
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "LOCAL-PROOF-090",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Exact passing current lane evidence only; residual gap IDs below remain open."
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "REQ-PROOF-CORE-001",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Current-source/public assertion for this full statement, including refusal/negative controls; proof-path presence alone insufficient.",
+        "BOUNDED_HERMETIC_PASS_WITH_DEFECTS"
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "REQ-PROOF-CORE-002",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Current-source/public assertion for this full statement, including refusal/negative controls; proof-path presence alone insufficient.",
+        "BOUNDED_PASS_ORDINARY_ERRORS"
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "REQ-PROOF-CORE-003",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Current-source/public assertion for this full statement, including refusal/negative controls; proof-path presence alone insufficient.",
+        "PORTABILITY_AND_ACTUAL_BROWSER_REPLAY_PASS"
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "REQ-PROOF-CORE-005",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Current-source/public assertion for this full statement, including refusal/negative controls; proof-path presence alone insufficient.",
+        "POLICY_PARITY_REFUSAL_PASS"
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "REQ-PROOF-CORE-007",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Current-source/public assertion for this full statement, including refusal/negative controls; proof-path presence alone insufficient.",
+        "HEADLESS_TRUTH_AND_REAL_PIXEL_SEPARATION_PASS"
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "REQ-PROOF-CORE-011",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Current-source/public assertion for this full statement, including refusal/negative controls; proof-path presence alone insufficient.",
+        "PUBLIC_HIERARCHY_PREFAB_GOLDEN_PASS"
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "REQ-PROOF-CORE-012",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Current-source/public assertion for this full statement, including refusal/negative controls; proof-path presence alone insufficient.",
+        "PUBLIC_TRANSFORM_REVIEW_GOLDEN_PASS"
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "REQ-PROOF-CORE-014",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Current-source/public assertion for this full statement, including refusal/negative controls; proof-path presence alone insufficient.",
+        "INPUT_REGISTRY_GOLDEN_PASS"
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "REQ-PROOF-CORE-015",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Current-source/public assertion for this full statement, including refusal/negative controls; proof-path presence alone insufficient.",
+        "ISOLATED_PLAY_SOURCE_HASH_GOLDEN_PASS"
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "REQ-PROOF-CORE-017",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Current-source/public assertion for this full statement, including refusal/negative controls; proof-path presence alone insufficient.",
+        "REAL_WASM_FIXED_STEP_AND_GOLDEN_ORDER_PASS_BOUNDED"
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "REQ-PROOF-CORE-018",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Current-source/public assertion for this full statement, including refusal/negative controls; proof-path presence alone insufficient.",
+        "CATALOG_AUTHORING_SCHEMA_AND_RENDERER_HERMETIC_PASS"
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "06-01",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Rebuild complete PR tree preserving untouched files/modes; verify fresh exact-head checkout gate and restored seam/recovery/portable negative suites.",
+        "Complete path/blob/mode inventory matches reviewed intended artifact; every deletion has explicit approval; handler/tests/evidence included.",
+        "Required CI is successful on exactly the current published SHA; local or historical greens are not substitutes."
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "06-02",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Keep old symbols and normalize v1 shapes to colliders with stable IDs or introduce schema2 plus v1 migration; public legacy fixture must evaluate/save/reload on toy and Rapier."
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "06-03",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "Validate non-null plain world/all catalog arrays and fields before cast; preserve rejection without mutation; add null/proxy/accessor/legacy fixture public-boundary negatives."
+      ],
+      "evidence": [],
+      "missingInput": null
+    },
+    {
+      "id": "DEEP-08-ADDITIONAL-1",
+      "status": "NEEDS_LOCAL_FIX",
+      "acceptance": [
+        "04:27-49 blank refusal fixture and1795 repeated predicates,not exhaustive accessibility."
+      ],
+      "evidence": [],
+      "missingInput": null
+    }
+  ],
+  "commands": [],
+  "changedPaths": [],
+  "sharedRequests": []
+}

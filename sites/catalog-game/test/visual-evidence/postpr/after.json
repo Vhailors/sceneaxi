@@ -1,0 +1,2353 @@
+{
+  "phase": "after",
+  "assertions": 261,
+  "receipts": [
+    {
+      "site": "umbrella",
+      "name": "login",
+      "path": "/login",
+      "viewport": "desktop",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-umbrella-login-desktop.png",
+      "sha256": "644370b04a545e6dc688c41c47bec633617189e84c454ebdb7200e05ade3104c",
+      "bytes": 99385,
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "controls": 22,
+        "stale": [],
+        "spec": []
+      }
+    },
+    {
+      "site": "umbrella",
+      "name": "account",
+      "path": "/account",
+      "viewport": "desktop",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-umbrella-account-desktop.png",
+      "sha256": "47c448be05b47c21d41e9e85fbf4f1fb6efe687e3ec0f02bfb4f1416d5a0add2",
+      "bytes": 203233,
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "controls": 23,
+        "stale": [],
+        "spec": []
+      }
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "path": "/editor",
+      "viewport": "desktop",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-umbrella-editor-desktop.png",
+      "sha256": "cda2472aa524a5d1a10b81b16ad21ed2e04763954505f1ba46665d3fb710dc44",
+      "bytes": 236704,
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "controls": 74,
+        "stale": [
+          {
+            "color": "rgb(138, 146, 156)",
+            "text": "{}"
+          }
+        ],
+        "spec": []
+      }
+    },
+    {
+      "site": "umbrella",
+      "name": "editor-focus",
+      "viewport": "desktop",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-umbrella-editor-desktop-focus.png",
+      "sha256": "5c4cc324cc1ee60eb4c026b30f221579ca6b876d866f13fb86cd74ce590cb02b",
+      "bytes": 238448
+    },
+    {
+      "site": "umbrella",
+      "name": "engine",
+      "path": "/engine",
+      "viewport": "desktop",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-umbrella-engine-desktop.png",
+      "sha256": "a0015ad0a9919b8460c508757396a18693b58a3b403974d88fd77294bedaa434",
+      "bytes": 588990,
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "controls": 23,
+        "stale": [],
+        "spec": []
+      }
+    },
+    {
+      "site": "umbrella",
+      "name": "docs",
+      "path": "/docs",
+      "viewport": "desktop",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-umbrella-docs-desktop.png",
+      "sha256": "104ffeeaf133433045ac9f26754f7e97f18bd5cf1ac97ecca6b3ae22d211a38b",
+      "bytes": 454576,
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "controls": 42,
+        "stale": [],
+        "spec": []
+      }
+    },
+    {
+      "site": "umbrella",
+      "name": "login",
+      "path": "/login",
+      "viewport": "mobile",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-umbrella-login-mobile.png",
+      "sha256": "5f0a77a57919a132b7778ad7d312899ab1ac45fffbb059aff9da0fc1017ce2f9",
+      "bytes": 91291,
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "controls": 22,
+        "stale": [],
+        "spec": []
+      }
+    },
+    {
+      "site": "umbrella",
+      "name": "account",
+      "path": "/account",
+      "viewport": "mobile",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-umbrella-account-mobile.png",
+      "sha256": "45bc68c9523961f7af361929b7c6e8812daae1fb0945a3c78e406775457e5112",
+      "bytes": 191558,
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "controls": 23,
+        "stale": [],
+        "spec": []
+      }
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "path": "/editor",
+      "viewport": "mobile",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-umbrella-editor-mobile.png",
+      "sha256": "1ee6ede6a3d737d54deda79a351e51b3d2e483dfb66e5d932d84b884afc07207",
+      "bytes": 53406,
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "controls": 74,
+        "stale": [
+          {
+            "color": "rgb(138, 146, 156)",
+            "text": "{}"
+          }
+        ],
+        "spec": []
+      }
+    },
+    {
+      "site": "umbrella",
+      "name": "editor-focus",
+      "viewport": "mobile",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-umbrella-editor-mobile-focus.png",
+      "sha256": "1ee6ede6a3d737d54deda79a351e51b3d2e483dfb66e5d932d84b884afc07207",
+      "bytes": 53406
+    },
+    {
+      "site": "umbrella",
+      "name": "engine",
+      "path": "/engine",
+      "viewport": "mobile",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-umbrella-engine-mobile.png",
+      "sha256": "e349be65ae4cc726fc9903eb2829cf4116d999a848d685eb11415cdd9868a73f",
+      "bytes": 563055,
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "controls": 23,
+        "stale": [],
+        "spec": []
+      }
+    },
+    {
+      "site": "umbrella",
+      "name": "docs",
+      "path": "/docs",
+      "viewport": "mobile",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-umbrella-docs-mobile.png",
+      "sha256": "75dbae3857c748c28bea3a432eb83bf5d377393fcc3997a6b86024e8a03522ec",
+      "bytes": 428750,
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "controls": 42,
+        "stale": [],
+        "spec": []
+      }
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "path": "/",
+      "viewport": "desktop",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-catalog-game-home-desktop.png",
+      "sha256": "08b0dca38927c604375fbe924c7b6b14e1ee6f358d802b6d67ac30c253c97472",
+      "bytes": 455949,
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "controls": 23,
+        "stale": [],
+        "spec": []
+      }
+    },
+    {
+      "site": "catalog-game",
+      "name": "home-focus",
+      "viewport": "desktop",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-catalog-game-home-desktop-focus.png",
+      "sha256": "aa40fc3f062bda2bcfd6d527224601c23c354eac8d2b863e8bb661a157c593a2",
+      "bytes": 445042
+    },
+    {
+      "site": "catalog-game",
+      "name": "detail",
+      "path": "/item/lantern-prop",
+      "viewport": "desktop",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-catalog-game-detail-desktop.png",
+      "sha256": "5ea9d1c9936f32252dd41582bb8e8e50a2d99d615ba93b982d3ca20d73375c31",
+      "bytes": 413728,
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "controls": 12,
+        "stale": [],
+        "spec": [
+          {
+            "font": "12px",
+            "align": "left"
+          },
+          {
+            "font": "12px",
+            "align": "left"
+          },
+          {
+            "font": "12px",
+            "align": "left"
+          },
+          {
+            "font": "12px",
+            "align": "left"
+          },
+          {
+            "font": "12px",
+            "align": "left"
+          }
+        ]
+      }
+    },
+    {
+      "site": "catalog-game",
+      "name": "empty",
+      "path": "/?q=postpr-no-matching-item",
+      "viewport": "desktop",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-catalog-game-empty-desktop.png",
+      "sha256": "192d28715ab87875544c27aa9b8e5159383cf24ef95841806f800b4d3edf41c3",
+      "bytes": 302619,
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "controls": 18,
+        "stale": [],
+        "spec": []
+      }
+    },
+    {
+      "site": "catalog-game",
+      "name": "refused",
+      "path": "/?sort=unsupported",
+      "viewport": "desktop",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-catalog-game-refused-desktop.png",
+      "sha256": "850bc48ff0370b7a14477b750b14fda94e06674e2f4172ec83e38d9e18a443b5",
+      "bytes": 78970,
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "controls": 10,
+        "stale": [],
+        "spec": []
+      }
+    },
+    {
+      "site": "catalog-game",
+      "name": "publish",
+      "path": "/publish",
+      "viewport": "desktop",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-catalog-game-publish-desktop.png",
+      "sha256": "30df3afffad18b809357ae65bba432c5e48af72d0bd61a4dab4188d31b762cb1",
+      "bytes": 287931,
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "controls": 9,
+        "stale": [],
+        "spec": []
+      }
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "path": "/",
+      "viewport": "mobile",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-catalog-game-home-mobile.png",
+      "sha256": "00e98bf874863be63ce5425bde357a3eb0b42c7e809d9ecb3b0d6f65c47d1f64",
+      "bytes": 452084,
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "controls": 23,
+        "stale": [],
+        "spec": []
+      }
+    },
+    {
+      "site": "catalog-game",
+      "name": "home-focus",
+      "viewport": "mobile",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-catalog-game-home-mobile-focus.png",
+      "sha256": "9468c6e3243a8a33e2b3927386b50b311e6ed71c1e6dc0d631f6d9615ac01da3",
+      "bytes": 450171
+    },
+    {
+      "site": "catalog-game",
+      "name": "detail",
+      "path": "/item/lantern-prop",
+      "viewport": "mobile",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-catalog-game-detail-mobile.png",
+      "sha256": "eb73b71fda5613b7c48afb850ffabb611daac0dc2b40cb2464f55395b306c1fc",
+      "bytes": 326092,
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "controls": 12,
+        "stale": [],
+        "spec": [
+          {
+            "font": "12px",
+            "align": "left"
+          },
+          {
+            "font": "12px",
+            "align": "left"
+          },
+          {
+            "font": "12px",
+            "align": "left"
+          },
+          {
+            "font": "12px",
+            "align": "left"
+          },
+          {
+            "font": "12px",
+            "align": "left"
+          }
+        ]
+      }
+    },
+    {
+      "site": "catalog-game",
+      "name": "empty",
+      "path": "/?q=postpr-no-matching-item",
+      "viewport": "mobile",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-catalog-game-empty-mobile.png",
+      "sha256": "a53ac360b1c4dfd26365e27c142e4aa90a880da7ab2613c7fefd5efb163452a0",
+      "bytes": 207805,
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "controls": 18,
+        "stale": [],
+        "spec": []
+      }
+    },
+    {
+      "site": "catalog-game",
+      "name": "refused",
+      "path": "/?sort=unsupported",
+      "viewport": "mobile",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-catalog-game-refused-mobile.png",
+      "sha256": "44802562342c6e30bd6c06acf2e6af0e55408da6cfe86c551407520da8b3cbea",
+      "bytes": 67353,
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "controls": 10,
+        "stale": [],
+        "spec": []
+      }
+    },
+    {
+      "site": "catalog-game",
+      "name": "publish",
+      "path": "/publish",
+      "viewport": "mobile",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-catalog-game-publish-mobile.png",
+      "sha256": "ff28b71079899cef6d72edc8dc17bc5ebc0686bebf8ccc02bb635575a87ec8a1",
+      "bytes": 252889,
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "controls": 9,
+        "stale": [],
+        "spec": []
+      }
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "path": "/",
+      "viewport": "desktop",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-catalog-web-home-desktop.png",
+      "sha256": "c02e45273132a83a44892d180b68b0e7f6bf5f4c09ce9ecc89485c5b4b23e95d",
+      "bytes": 512607,
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "controls": 19,
+        "stale": [],
+        "spec": []
+      }
+    },
+    {
+      "site": "catalog-web",
+      "name": "home-focus",
+      "viewport": "desktop",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-catalog-web-home-desktop-focus.png",
+      "sha256": "82f693a5cee23440a5d7a266a5a4231889b1b526822ee4050c81ebb7eb87fb4c",
+      "bytes": 509145
+    },
+    {
+      "site": "catalog-web",
+      "name": "detail",
+      "path": "/item/harbour-diorama",
+      "viewport": "desktop",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-catalog-web-detail-desktop.png",
+      "sha256": "c9ab0c05ead8aff9463166a0450141b3f70147eebf9b1f0d859a122937c96988",
+      "bytes": 340171,
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "controls": 11,
+        "stale": [],
+        "spec": [
+          {
+            "font": "12px",
+            "align": "left"
+          },
+          {
+            "font": "12px",
+            "align": "left"
+          },
+          {
+            "font": "12px",
+            "align": "left"
+          },
+          {
+            "font": "12px",
+            "align": "left"
+          },
+          {
+            "font": "12px",
+            "align": "left"
+          }
+        ]
+      }
+    },
+    {
+      "site": "catalog-web",
+      "name": "empty",
+      "path": "/?q=postpr-no-matching-item",
+      "viewport": "desktop",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-catalog-web-empty-desktop.png",
+      "sha256": "27a7d5ce33f007aa14d3aaf8ca292462ffa594ccc40a1f42043c98ba674e9660",
+      "bytes": 341622,
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "controls": 18,
+        "stale": [],
+        "spec": []
+      }
+    },
+    {
+      "site": "catalog-web",
+      "name": "refused",
+      "path": "/?sort=unsupported",
+      "viewport": "desktop",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-catalog-web-refused-desktop.png",
+      "sha256": "51b46d1403fb247e1a6800d129c6ceffcbd2009df3f8ac40f06a4f373db1ad05",
+      "bytes": 79192,
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "controls": 10,
+        "stale": [],
+        "spec": []
+      }
+    },
+    {
+      "site": "catalog-web",
+      "name": "publish",
+      "path": "/publish",
+      "viewport": "desktop",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-catalog-web-publish-desktop.png",
+      "sha256": "b0c13c6e39bb1ef2b33383dcd7da3e65705d7e8afc6c08ae2c170bf72dfa765a",
+      "bytes": 291232,
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "controls": 9,
+        "stale": [],
+        "spec": []
+      }
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "path": "/",
+      "viewport": "mobile",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-catalog-web-home-mobile.png",
+      "sha256": "404282dcccf134309b18b30b73aa83ee77fd68e920bc378f31efdb3c89b2147f",
+      "bytes": 326714,
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "controls": 19,
+        "stale": [],
+        "spec": []
+      }
+    },
+    {
+      "site": "catalog-web",
+      "name": "home-focus",
+      "viewport": "mobile",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-catalog-web-home-mobile-focus.png",
+      "sha256": "b774914f4e485ed4a3374bbb180d4373cc3944e1fc33e0b78a57df10e5c44456",
+      "bytes": 327507
+    },
+    {
+      "site": "catalog-web",
+      "name": "detail",
+      "path": "/item/harbour-diorama",
+      "viewport": "mobile",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-catalog-web-detail-mobile.png",
+      "sha256": "ced0445be1b51550f9492094d415f7c7991e4ff859a92403fe7ac95a3ff658cf",
+      "bytes": 275785,
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "controls": 11,
+        "stale": [],
+        "spec": [
+          {
+            "font": "12px",
+            "align": "left"
+          },
+          {
+            "font": "12px",
+            "align": "left"
+          },
+          {
+            "font": "12px",
+            "align": "left"
+          },
+          {
+            "font": "12px",
+            "align": "left"
+          },
+          {
+            "font": "12px",
+            "align": "left"
+          }
+        ]
+      }
+    },
+    {
+      "site": "catalog-web",
+      "name": "empty",
+      "path": "/?q=postpr-no-matching-item",
+      "viewport": "mobile",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-catalog-web-empty-mobile.png",
+      "sha256": "96c021a773b977b01c9301ad7e8442dbf2ed90569bc787903f674efa8aca346f",
+      "bytes": 217870,
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "controls": 18,
+        "stale": [],
+        "spec": []
+      }
+    },
+    {
+      "site": "catalog-web",
+      "name": "refused",
+      "path": "/?sort=unsupported",
+      "viewport": "mobile",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-catalog-web-refused-mobile.png",
+      "sha256": "5e73a41ed86bb614f1a04c4915d7291b408c409c8c77d266fb4c2144702af196",
+      "bytes": 68179,
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "controls": 10,
+        "stale": [],
+        "spec": []
+      }
+    },
+    {
+      "site": "catalog-web",
+      "name": "publish",
+      "path": "/publish",
+      "viewport": "mobile",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-catalog-web-publish-mobile.png",
+      "sha256": "bf558e8b2eeb91b82ea3238f0db7dad251841028d7402e5dbe22f6ca207eb23f",
+      "bytes": 255404,
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "controls": 9,
+        "stale": [],
+        "spec": []
+      }
+    },
+    {
+      "site": "kids",
+      "name": "empty",
+      "path": "/",
+      "viewport": "desktop",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-kids-empty-desktop.png",
+      "sha256": "e659b2d904dd30948d656d045063a594f2217178d064e7fd313316b1eaa9b3c9",
+      "bytes": 165654,
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "controls": 11,
+        "stale": [],
+        "spec": [],
+        "message": 68.15625
+      }
+    },
+    {
+      "site": "kids",
+      "name": "empty-focus",
+      "viewport": "desktop",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-kids-empty-desktop-focus.png",
+      "sha256": "cae2f4c859b69e16dab9fcd9c624ae6de34e73abd52ec11b109f11c7213ad096",
+      "bytes": 166729
+    },
+    {
+      "site": "kids",
+      "name": "playing",
+      "path": "/",
+      "viewport": "desktop",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-kids-playing-desktop.png",
+      "sha256": "b2e404aeee10bdb2311434662e6785fd657771da85204520c529d2f20307ccba",
+      "bytes": 174285,
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "controls": 11,
+        "stale": [],
+        "spec": [],
+        "message": 68.15625
+      }
+    },
+    {
+      "site": "kids",
+      "name": "empty",
+      "path": "/",
+      "viewport": "mobile",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-kids-empty-mobile.png",
+      "sha256": "f54beda2284c106d15fd52f3389c012f82342c3ce1f235b19bde84c5347d1be3",
+      "bytes": 109054,
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "controls": 11,
+        "stale": [],
+        "spec": [],
+        "message": 68.15625
+      }
+    },
+    {
+      "site": "kids",
+      "name": "empty-focus",
+      "viewport": "mobile",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-kids-empty-mobile-focus.png",
+      "sha256": "c06c130ef66fdf84874ca720f9d3799d0ea5c7bc08fd41f0891fd38f3ba219b3",
+      "bytes": 110024
+    },
+    {
+      "site": "kids",
+      "name": "playing",
+      "path": "/",
+      "viewport": "mobile",
+      "file": "sites/catalog-game/test/visual-evidence/postpr/after-kids-playing-mobile.png",
+      "sha256": "b8a5fd4a2de61a7e614bbaa96ea15dc332ca44334f6e7d3bc55c773dad4e0943",
+      "bytes": 117868,
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "controls": 11,
+        "stale": [],
+        "spec": [],
+        "message": 68.15625
+      }
+    }
+  ],
+  "focusSamples": [
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "A",
+      "text": "SceneAxi home",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "File",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "Edit",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "Scene",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "Object",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "Sculpt",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "Run",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "Window",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "Help",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "Game",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "Website",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "Kids",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "SUMMARY",
+      "text": "Local project",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "Search ⌘K",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "Assistant",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "BUILD",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "SCULPT",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "SCENE",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "ANIM",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "RUN",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "SHIP",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "PLUG",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "A",
+      "text": "starter-service-crate-artifact",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "Scene",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "Game",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "Sculpt preview",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "Reset view",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "Show only object-1",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "Changes1",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "Assets",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "Console",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "Evidence",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "Reject all",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "Accept all",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "DIV",
+      "text": "This render saved through propose/apply. Apply is ",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "✕Reject /data",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "✓Accept /data",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "SELECT",
+      "text": "object-1object-2",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "INPUT",
+      "text": "",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "INPUT",
+      "text": "",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "Apply",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "Light",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "Mid",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "Strong",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "umbrella",
+      "name": "editor",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "Send",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "A",
+      "text": "Skip to the catalogue",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "A",
+      "text": "SceneAxi ForgeSCENEAXI STORE",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "A",
+      "text": "Catalogue",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "A",
+      "text": "Sell your work",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "A",
+      "text": "Browse the catalogue",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "A",
+      "text": "How pricing reads",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "A",
+      "text": "TESTd167…aa5aHand-carved lantern prop40 credits · ",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "A",
+      "text": "TEST7771…00afModular market stall kit75 credits or",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "A",
+      "text": "TESTa0cf…d141Odd-price charm (covers remainder rou",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "ASIDE",
+      "text": "PricingCredits only1Credits or money2Sellerusr_cre",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "INPUT",
+      "text": "",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "SELECT",
+      "text": "All price modesCreditsMoneyCredits and money",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "SELECT",
+      "text": "Inventory orderTitleNewest",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "Apply filters",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "A",
+      "text": "Clear filters",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "A",
+      "text": "TESTmetadata-onlyd167…aa5aHand-carved lantern prop",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "A",
+      "text": "TESTmetadata-only7771…00afModular market stall kit",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "A",
+      "text": "TESTmetadata-onlya0cf…d141Odd-price charm (covers ",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "A",
+      "text": "Catalogue",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "A",
+      "text": "How pricing reads",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "A",
+      "text": "Sell your work",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "A",
+      "text": "What listing will require",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "A",
+      "text": "Read the listing rules",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "A",
+      "text": "Skip to the catalogue",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "A",
+      "text": "SceneAxi ForgeSCENEAXI STORE",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "A",
+      "text": "Catalogue",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "A",
+      "text": "Sell your work",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "A",
+      "text": "Browse the catalogue",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "A",
+      "text": "How pricing reads",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "A",
+      "text": "TESTd167…aa5aHand-carved lantern prop40 credits · ",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "A",
+      "text": "TEST7771…00afModular market stall kit75 credits or",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "A",
+      "text": "TESTa0cf…d141Odd-price charm (covers remainder rou",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "ASIDE",
+      "text": "PricingCredits only1Credits or money2Sellerusr_cre",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "INPUT",
+      "text": "",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "SELECT",
+      "text": "All price modesCreditsMoneyCredits and money",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "SELECT",
+      "text": "Inventory orderTitleNewest",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "BUTTON",
+      "text": "Apply filters",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "A",
+      "text": "Clear filters",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "A",
+      "text": "TESTmetadata-onlyd167…aa5aHand-carved lantern prop",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "A",
+      "text": "TESTmetadata-only7771…00afModular market stall kit",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "A",
+      "text": "TESTmetadata-onlya0cf…d141Odd-price charm (covers ",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "A",
+      "text": "Catalogue",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "A",
+      "text": "How pricing reads",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "A",
+      "text": "Sell your work",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "A",
+      "text": "What listing will require",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-game",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "A",
+      "text": "Read the listing rules",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "A",
+      "text": "Skip to the showroom",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "A",
+      "text": "SceneAxi VitrineSCENEAXI STORE",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "A",
+      "text": "Showroom",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "A",
+      "text": "Submit a scene",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "A",
+      "text": "Browse the showroom",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "A",
+      "text": "How pricing reads",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "A",
+      "text": "TESTc751…1d69Harbour diorama scene12.00 USD · crea",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "ASIDE",
+      "text": "PricingMoney only1Sellerusr_creator_ben1ModeTEST1A",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "INPUT",
+      "text": "",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "SELECT",
+      "text": "All price modesCreditsMoneyCredits and money",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "SELECT",
+      "text": "Inventory orderTitleNewest",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "Apply filters",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "A",
+      "text": "Clear filters",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "A",
+      "text": "TESTmetadata-onlyc751…1d69Harbour diorama scene12.",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "A",
+      "text": "Showroom",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "A",
+      "text": "How pricing reads",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "A",
+      "text": "Submit a scene",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "A",
+      "text": "What submission will require",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "desktop",
+      "tag": "A",
+      "text": "Read the submission rules",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "A",
+      "text": "Skip to the showroom",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "A",
+      "text": "SceneAxi VitrineSCENEAXI STORE",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "A",
+      "text": "Showroom",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "A",
+      "text": "Submit a scene",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "A",
+      "text": "Browse the showroom",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "A",
+      "text": "How pricing reads",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "A",
+      "text": "TESTc751…1d69Harbour diorama scene12.00 USD · crea",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "ASIDE",
+      "text": "PricingMoney only1Sellerusr_creator_ben1ModeTEST1A",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "-2px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "INPUT",
+      "text": "",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "SELECT",
+      "text": "All price modesCreditsMoneyCredits and money",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "SELECT",
+      "text": "Inventory orderTitleNewest",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "BUTTON",
+      "text": "Apply filters",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "A",
+      "text": "Clear filters",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "A",
+      "text": "TESTmetadata-onlyc751…1d69Harbour diorama scene12.",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "A",
+      "text": "Showroom",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "A",
+      "text": "How pricing reads",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "A",
+      "text": "Submit a scene",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "A",
+      "text": "What submission will require",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "catalog-web",
+      "name": "home",
+      "vp": "mobile",
+      "tag": "A",
+      "text": "Read the submission rules",
+      "visible": true,
+      "outline": "solid",
+      "width": "2px",
+      "offset": "3px"
+    },
+    {
+      "site": "kids",
+      "name": "empty",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "▶Play my world",
+      "visible": true,
+      "outline": "solid",
+      "width": "3px",
+      "offset": "3px"
+    },
+    {
+      "site": "kids",
+      "name": "empty",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "☀️Sunny meadow",
+      "visible": true,
+      "outline": "solid",
+      "width": "3px",
+      "offset": "3px"
+    },
+    {
+      "site": "kids",
+      "name": "empty",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "🌙Moon camp",
+      "visible": true,
+      "outline": "solid",
+      "width": "3px",
+      "offset": "3px"
+    },
+    {
+      "site": "kids",
+      "name": "empty",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "🌊Coral cove",
+      "visible": true,
+      "outline": "solid",
+      "width": "3px",
+      "offset": "3px"
+    },
+    {
+      "site": "kids",
+      "name": "empty",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "🐙Friend",
+      "visible": true,
+      "outline": "solid",
+      "width": "3px",
+      "offset": "3px"
+    },
+    {
+      "site": "kids",
+      "name": "empty",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "🌳Tree",
+      "visible": true,
+      "outline": "solid",
+      "width": "3px",
+      "offset": "3px"
+    },
+    {
+      "site": "kids",
+      "name": "empty",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "⭐Star",
+      "visible": true,
+      "outline": "solid",
+      "width": "3px",
+      "offset": "3px"
+    },
+    {
+      "site": "kids",
+      "name": "empty",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "🚀Rocket",
+      "visible": true,
+      "outline": "solid",
+      "width": "3px",
+      "offset": "3px"
+    },
+    {
+      "site": "kids",
+      "name": "empty",
+      "vp": "desktop",
+      "tag": "BUTTON",
+      "text": "Start over",
+      "visible": true,
+      "outline": "solid",
+      "width": "3px",
+      "offset": "3px"
+    },
+    {
+      "site": "kids",
+      "name": "empty",
+      "vp": "desktop",
+      "tag": "SUMMARY",
+      "text": "For grown-ups",
+      "visible": true,
+      "outline": "solid",
+      "width": "3px",
+      "offset": "3px"
+    },
+    {
+      "site": "kids",
+      "name": "empty",
+      "vp": "mobile",
+      "tag": "BUTTON",
+      "text": "▶Play my world",
+      "visible": true,
+      "outline": "solid",
+      "width": "3px",
+      "offset": "3px"
+    },
+    {
+      "site": "kids",
+      "name": "empty",
+      "vp": "mobile",
+      "tag": "BUTTON",
+      "text": "☀️Sunny meadow",
+      "visible": true,
+      "outline": "solid",
+      "width": "3px",
+      "offset": "3px"
+    },
+    {
+      "site": "kids",
+      "name": "empty",
+      "vp": "mobile",
+      "tag": "BUTTON",
+      "text": "🌙Moon camp",
+      "visible": true,
+      "outline": "solid",
+      "width": "3px",
+      "offset": "3px"
+    },
+    {
+      "site": "kids",
+      "name": "empty",
+      "vp": "mobile",
+      "tag": "BUTTON",
+      "text": "🌊Coral cove",
+      "visible": true,
+      "outline": "solid",
+      "width": "3px",
+      "offset": "3px"
+    },
+    {
+      "site": "kids",
+      "name": "empty",
+      "vp": "mobile",
+      "tag": "BUTTON",
+      "text": "🐙Friend",
+      "visible": true,
+      "outline": "solid",
+      "width": "3px",
+      "offset": "3px"
+    },
+    {
+      "site": "kids",
+      "name": "empty",
+      "vp": "mobile",
+      "tag": "BUTTON",
+      "text": "🌳Tree",
+      "visible": true,
+      "outline": "solid",
+      "width": "3px",
+      "offset": "3px"
+    },
+    {
+      "site": "kids",
+      "name": "empty",
+      "vp": "mobile",
+      "tag": "BUTTON",
+      "text": "⭐Star",
+      "visible": true,
+      "outline": "solid",
+      "width": "3px",
+      "offset": "3px"
+    },
+    {
+      "site": "kids",
+      "name": "empty",
+      "vp": "mobile",
+      "tag": "BUTTON",
+      "text": "🚀Rocket",
+      "visible": true,
+      "outline": "solid",
+      "width": "3px",
+      "offset": "3px"
+    },
+    {
+      "site": "kids",
+      "name": "empty",
+      "vp": "mobile",
+      "tag": "BUTTON",
+      "text": "Start over",
+      "visible": true,
+      "outline": "solid",
+      "width": "3px",
+      "offset": "3px"
+    },
+    {
+      "site": "kids",
+      "name": "empty",
+      "vp": "mobile",
+      "tag": "SUMMARY",
+      "text": "For grown-ups",
+      "visible": true,
+      "outline": "solid",
+      "width": "3px",
+      "offset": "3px"
+    }
+  ]
+}

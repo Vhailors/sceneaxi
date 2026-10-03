@@ -115,11 +115,13 @@ export const conformance: ProfileConformanceSurface = Object.freeze({
  */
 export const openPathPolicy: OpenPathPolicyRow = (() => {
   const row = openPathPolicyRowFor("@sceneaxi/profile-game");
+
   if (row === undefined) {
     throw new Error(
       "@sceneaxi/profile-game has no row in the shared open-path demo policy.",
     );
   }
+
   return row;
 })();
 

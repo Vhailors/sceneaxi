@@ -31,6 +31,8 @@ import {
   atomicWriteAll,
   atomicWriteFile,
   canonicalPath,
+  containedProjectPath,
+  ProjectPathEscapeError,
   fileExists,
   readTextFile,
   verifyAtomicWritePreconditions,
@@ -93,15 +95,38 @@ export type ApplyInput = {
 };
 
 function resolvePath(cwd: string, documentPath: string): string {
-  return canonicalPath(resolve(cwd, documentPath));
+  return containedProjectPath(cwd, documentPath);
 }
 
-function jsonValuesEqual(left: unknown, right: unknown): boolean {
-  if (typeof left === "number" && typeof right === "number") {
+type JsonObject = { [key: string]: JsonValue };
+
+type Mutable<Value> = { -readonly [Key in keyof Value]: Value[Key] };
+
+type ApplySuccess = Mutable<Extract<ApplyResult, { ok: true }>>;
+
+type CanonicalWriteInput = Mutable<Parameters<typeof writeCanonicalDocument>[0]>;
+
+function isNumber(value: JsonValue | undefined): value is number {
+  return typeof value === "number";
+}
+
+function isString(value: unknown): value is string {
+  return typeof value === "string";
+}
+
+function isJsonObject(value: JsonValue | undefined): value is JsonObject {
+  return value !== null && isBoundaryObjectValue(value) && !Array.isArray(value);
+}
+
+function jsonValuesEqual(left: JsonValue | undefined, right: JsonValue | undefined): boolean {
+  if (isNumber(left) && isNumber(right)) {
     return left === right || (left === 0 && right === 0);
   }
+
   if (left === right) return true;
+
   if (left === null || right === null) return false;
+
   if (Array.isArray(left) || Array.isArray(right)) {
     return (
       Array.isArray(left) &&
@@ -110,10 +135,12 @@ function jsonValuesEqual(left: unknown, right: unknown): boolean {
       left.every((value, index) => jsonValuesEqual(value, right[index]))
     );
   }
-  if (typeof left !== "object" || typeof right !== "object") return false;
-  const leftRecord = left as Record<string, unknown>;
-  const rightRecord = right as Record<string, unknown>;
+
+  if (!isJsonObject(left) || !isJsonObject(right)) return false;
+  const leftRecord = left;
+  const rightRecord = right;
   const leftKeys = Object.keys(leftRecord);
+
   return (
     leftKeys.length === Object.keys(rightRecord).length &&
     leftKeys.every(
@@ -126,7 +153,9 @@ function jsonValuesEqual(left: unknown, right: unknown): boolean {
 
 function recoveryDiagnostics(cwd: string): readonly ApplyDiagnostic[] | null {
   const recovered = recoverIncompleteApplies({ cwd });
+
   if (!recovered.ok) return recovered.diagnostics;
+
   return recovered.journalRecoveryPending === true
     ? journalRecoveryPendingDiagnostics()
     : null;
@@ -153,6 +182,7 @@ function loadDocument(
 
   const text = readTextFile(absPath);
   const parsed = parseDocumentText(text);
+
   if (!parsed.ok) {
     const code =
       parsed.code === "schema-major-mismatch"
@@ -160,6 +190,7 @@ function loadDocument(
         : parsed.code === "parse-error"
           ? "parse-error"
           : "invalid-document";
+
     return {
       ok: false,
       diagnostics: [
@@ -184,10 +215,10 @@ function loadDocument(
  * Shared mutation path: apply a pointer edit in memory and re-validate.
  * Used by both propose and directEdit — one validator implementation.
  */
-export function applyPointerEditInMemory(
+export function applyPointerEditInMemory<EditValue>(
   document: SceneDocument,
   jsonPointer: string,
-  newValue: unknown,
+  newValue: EditValue,
 ):
   | { ok: true; document: SceneDocument; text: string }
   | { ok: false; diagnostics: ApplyDiagnostic[] } {
@@ -202,7 +233,9 @@ export function applyPointerEditInMemory(
       ],
     };
   }
+
   const setResult = setAtPointer(document, jsonPointer, newValue);
+
   if (!setResult.ok) {
     return {
       ok: false,
@@ -217,11 +250,13 @@ export function applyPointerEditInMemory(
 
   // One validator: same validateDocument as load path.
   const validated = validateDocument(setResult.value);
+
   if (!validated.ok) {
     const code =
       validated.code === "schema-major-mismatch"
         ? "schema-major-mismatch"
         : "validation-failed";
+
     return {
       ok: false,
       diagnostics: [
@@ -234,6 +269,7 @@ export function applyPointerEditInMemory(
   }
 
   const text = serializeDocument(validated.document);
+
   return { ok: true, document: validated.document, text };
 }
 
@@ -241,17 +277,21 @@ export function applyPointerEditInMemory(
  * Propose a single JSON Pointer edit. Returns a proposal with unified diff.
  * Does not write the document.
  */
-export function propose(input: ProposeInput): ProposeResult {
+function proposeContained(input: ProposeInput): ProposeResult {
   const cwd = input.cwd ?? process.cwd();
   const recoveryFailure = recoveryDiagnostics(cwd);
+
   if (recoveryFailure !== null) {
     return { ok: false, diagnostics: recoveryFailure };
   }
+
   const abs = resolvePath(cwd, input.documentPath);
   const loaded = loadDocument(abs, input.documentPath);
+
   if (!loaded.ok) return loaded;
 
   const oldAt = getAtPointer(loaded.document, input.jsonPointer);
+
   if (!oldAt.ok) {
     return {
       ok: false,
@@ -264,6 +304,7 @@ export function propose(input: ProposeInput): ProposeResult {
       ],
     };
   }
+
   if (!isJsonValue(oldAt.value)) {
     return {
       ok: false,
@@ -282,6 +323,7 @@ export function propose(input: ProposeInput): ProposeResult {
     input.jsonPointer,
     input.newValue,
   );
+
   if (!mutated.ok) {
     return {
       ok: false,
@@ -293,6 +335,7 @@ export function propose(input: ProposeInput): ProposeResult {
     };
   }
 
+  // SAFETY: applyPointerEditInMemory succeeded after isJsonValue checked this exact input value.
   const edit: ProposalEdit = {
     documentPath: input.documentPath,
     baseContentHash: loaded.hash,
@@ -319,7 +362,7 @@ export function propose(input: ProposeInput): ProposeResult {
  * Fails if any propose fails or if the same document is edited twice with
  * inconsistent base hashes (caller should re-read).
  */
-export function proposeMany(inputs: readonly ProposeInput[]): ProposeResult {
+function proposeManyContained(inputs: readonly ProposeInput[]): ProposeResult {
   if (inputs.length === 0) {
     return {
       ok: false,
@@ -337,6 +380,7 @@ export function proposeMany(inputs: readonly ProposeInput[]): ProposeResult {
   // Track in-memory post-edit text per document so chained edits on the same
   // file share one base → final diff and a single base hash.
   const cwd = resolve(inputs[0]?.cwd ?? process.cwd());
+
   for (const input of inputs) {
     if (resolve(input.cwd ?? cwd) !== cwd) {
       return {
@@ -350,10 +394,13 @@ export function proposeMany(inputs: readonly ProposeInput[]): ProposeResult {
       };
     }
   }
+
   const recoveryFailure = recoveryDiagnostics(cwd);
+
   if (recoveryFailure !== null) {
     return { ok: false, diagnostics: recoveryFailure };
   }
+
   const workingText = new Map<string, string>();
   const baseHash = new Map<string, string>();
   const baseText = new Map<string, string>();
@@ -368,6 +415,7 @@ export function proposeMany(inputs: readonly ProposeInput[]): ProposeResult {
 
     if (text === undefined) {
       const loaded = loadDocument(abs, documentPath);
+
       if (!loaded.ok) return loaded;
       text = loaded.text;
       hash = loaded.hash;
@@ -377,6 +425,7 @@ export function proposeMany(inputs: readonly ProposeInput[]): ProposeResult {
     }
 
     const parsed = parseDocumentText(text);
+
     if (!parsed.ok) {
       return {
         ok: false,
@@ -394,6 +443,7 @@ export function proposeMany(inputs: readonly ProposeInput[]): ProposeResult {
     }
 
     const oldAt = getAtPointer(parsed.document, input.jsonPointer);
+
     if (!oldAt.ok) {
       return {
         ok: false,
@@ -406,6 +456,7 @@ export function proposeMany(inputs: readonly ProposeInput[]): ProposeResult {
         ],
       };
     }
+
     if (!isJsonValue(oldAt.value)) {
       return {
         ok: false,
@@ -424,6 +475,7 @@ export function proposeMany(inputs: readonly ProposeInput[]): ProposeResult {
       input.jsonPointer,
       input.newValue,
     );
+
     if (!mutated.ok) {
       return {
         ok: false,
@@ -448,6 +500,7 @@ export function proposeMany(inputs: readonly ProposeInput[]): ProposeResult {
       };
     }
 
+    // SAFETY: applyPointerEditInMemory succeeded after isJsonValue checked this exact input value.
     edits.push({
       documentPath,
       baseContentHash: hash,
@@ -478,6 +531,7 @@ export function proposeMany(inputs: readonly ProposeInput[]): ProposeResult {
 
   const proposal = createProposal({ edits, diffs });
   const primaryDiff = diffs[0]?.unifiedDiff ?? "";
+
   return { ok: true, proposal, unifiedDiff: primaryDiff };
 }
 
@@ -485,14 +539,17 @@ export function proposeMany(inputs: readonly ProposeInput[]): ProposeResult {
  * Direct edit through the **same** validator + serializer path as propose/apply.
  * Used to prove byte-identical outcomes vs the proposal path.
  */
-export function editDirect(input: DirectEditInput): DirectEditResult {
+function editDirectContained(input: DirectEditInput): DirectEditResult {
   const cwd = input.cwd ?? process.cwd();
   const recoveryFailure = recoveryDiagnostics(cwd);
+
   if (recoveryFailure !== null) {
     return { ok: false, diagnostics: recoveryFailure };
   }
+
   const abs = resolvePath(cwd, input.documentPath);
   const loaded = loadDocument(abs, input.documentPath);
+
   if (!loaded.ok) return loaded;
 
   const mutated = applyPointerEditInMemory(
@@ -500,6 +557,7 @@ export function editDirect(input: DirectEditInput): DirectEditResult {
     input.jsonPointer,
     input.newValue,
   );
+
   if (!mutated.ok) {
     return {
       ok: false,
@@ -518,10 +576,12 @@ export function editDirect(input: DirectEditInput): DirectEditResult {
       contents: mutated.text,
       expectedContentHash: loaded.hash,
     });
+
     if (!written.ok) return written;
   } catch (error) {
     if (error instanceof AtomicWriteConflictError) {
       const current = error.currentContentHash ?? "missing";
+
       return {
         ok: false,
         diagnostics: [
@@ -534,6 +594,7 @@ export function editDirect(input: DirectEditInput): DirectEditResult {
         ],
       };
     }
+
     if (error instanceof AtomicWriteLockError) {
       return {
         ok: false,
@@ -547,8 +608,10 @@ export function editDirect(input: DirectEditInput): DirectEditResult {
         ],
       };
     }
+
     throw error;
   }
+
   return {
     ok: true,
     documentPath: input.documentPath,
@@ -560,19 +623,23 @@ export function editDirect(input: DirectEditInput): DirectEditResult {
  * Apply a proposal. All-or-nothing across every edit; content-hash conflicts
  * reject the whole proposal with a re-read hint.
  */
-export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResult {
+function applyContained(input: ApplyInput & { proposalPath?: string }): ApplyResult {
   const cwd = input.cwd ?? process.cwd();
   const recoveryFailure = recoveryDiagnostics(cwd);
+
   if (recoveryFailure !== null) {
     return { ok: false, diagnostics: recoveryFailure };
   }
 
   let proposal: Proposal;
-  if (typeof input.proposal === "string") {
+
+  if (isString(input.proposal)) {
     // Treat as proposal JSON text if it looks like JSON, else as a path.
     const asPath = input.proposalPath === undefined && !input.proposal.trimStart().startsWith("{");
+
     if (asPath) {
-      const abs = resolvePath(cwd, input.proposal);
+      const abs = canonicalPath(resolve(cwd, input.proposal));
+
       if (!fileExists(abs)) {
         return {
           ok: false,
@@ -585,8 +652,10 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
           ],
         };
       }
+
       const text = readTextFile(abs);
       const parsed = parseProposalText(text);
+
       if (!parsed.ok) {
         return {
           ok: false,
@@ -603,9 +672,11 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
           ],
         };
       }
+
       proposal = parsed.proposal;
     } else {
       const parsed = parseProposalText(input.proposal);
+
       if (!parsed.ok) {
         return {
           ok: false,
@@ -622,10 +693,12 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
           ],
         };
       }
+
       proposal = parsed.proposal;
     }
   } else {
     const parsed = validateProposal(input.proposal);
+
     if (!parsed.ok) {
       return {
         ok: false,
@@ -640,6 +713,7 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
         ],
       };
     }
+
     proposal = parsed.proposal;
   }
 
@@ -647,9 +721,11 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
     string,
     { readonly documentPath: string; readonly edits: ProposalEdit[] }
   >();
+
   for (const edit of proposal.edits) {
     const abs = resolvePath(cwd, edit.documentPath);
     const existing = byDoc.get(abs);
+
     if (existing !== undefined && existing.documentPath !== edit.documentPath) {
       return {
         ok: false,
@@ -662,6 +738,7 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
         ],
       };
     }
+
     if (existing === undefined) {
       byDoc.set(abs, { documentPath: edit.documentPath, edits: [edit] });
     } else {
@@ -680,10 +757,12 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
   for (const [abs, grouped] of byDoc) {
     const { documentPath, edits } = grouped;
     const loaded = loadDocument(abs, documentPath);
+
     if (!loaded.ok) return loaded;
 
     // All edits for this document must share the same base hash (proposal base).
     const expectedHash = edits[0]?.baseContentHash;
+
     if (expectedHash === undefined) {
       return {
         ok: false,
@@ -727,8 +806,10 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
     }
 
     let current = loaded.document;
+
     for (const edit of edits) {
       const oldAt = getAtPointer(current, edit.jsonPointer);
+
       if (!oldAt.ok) {
         return {
           ok: false,
@@ -742,7 +823,10 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
         };
       }
 
-      if (!jsonValuesEqual(oldAt.value, edit.oldValue)) {
+      // SAFETY: oldAt selects a value from current, a SceneDocument returned by the shared validator.
+      const currentValue = oldAt.value as JsonValue;
+
+      if (!jsonValuesEqual(currentValue, edit.oldValue)) {
         return {
           ok: false,
           diagnostics: [
@@ -760,6 +844,7 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
         edit.jsonPointer,
         edit.newValue,
       );
+
       if (!mutated.ok) {
         return {
           ok: false,
@@ -768,6 +853,7 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
           ),
         };
       }
+
       current = mutated.document;
     }
 
@@ -784,9 +870,11 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
     string,
     { readonly documentPath: string; readonly unifiedDiff: string }
   >();
+
   for (const diff of proposal.diffs) {
     const abs = resolvePath(cwd, diff.documentPath);
     const grouped = byDoc.get(abs);
+
     if (
       grouped === undefined ||
       grouped.documentPath !== diff.documentPath ||
@@ -803,8 +891,10 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
         ],
       };
     }
+
     proposalDiffs.set(abs, diff);
   }
+
   if (proposalDiffs.size !== plans.length) {
     return {
       ok: false,
@@ -816,11 +906,13 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
       ],
     };
   }
+
   for (const plan of plans) {
     const expectedDiff = unifiedDiff(plan.beforeContent, plan.contents, {
       oldPath: `a/${plan.documentPath}`,
       newPath: `b/${plan.documentPath}`,
     });
+
     if (proposalDiffs.get(plan.path)?.unifiedDiff !== expectedDiff) {
       return {
         ok: false,
@@ -836,6 +928,7 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
   }
 
   let transaction: ReturnType<typeof beginApplyJournalTransaction>;
+
   try {
     transaction = beginApplyJournalTransaction(
       cwd,
@@ -855,14 +948,17 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
         ],
       };
     }
+
     throw error;
   }
+
   try {
     const atomicPlans = plans.map((plan) => ({
       path: plan.path,
       contents: plan.contents,
       expectedContentHash: plan.expectedContentHash,
     }));
+
     try {
       verifyAtomicWritePreconditions(atomicPlans, transaction);
     } catch (error) {
@@ -870,6 +966,7 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
         const plan = plans.find((candidate) => candidate.path === error.path);
         const documentPath = plan?.documentPath ?? error.path;
         const current = error.currentContentHash ?? "missing";
+
         return {
           ok: false,
           diagnostics: [
@@ -882,6 +979,7 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
           ],
         };
       }
+
       if (error instanceof AtomicWriteLockError) {
         return {
           ok: false,
@@ -895,10 +993,12 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
           ],
         };
       }
+
       throw error;
     }
 
     let journal: ReturnType<typeof prepareApplyJournal>;
+
     try {
       journal = prepareApplyJournal(
         cwd,
@@ -908,7 +1008,11 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
           afterContent: plan.contents,
         })),
       );
-    } catch {
+    } catch (error) {
+      // Preserve the public containment refusal instead of disguising an
+      // escaped journal resource as a generic storage failure.
+      if (error instanceof ProjectPathEscapeError) throw error;
+
       return {
         ok: false,
         diagnostics: [
@@ -929,18 +1033,19 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
     } catch (error) {
       if (error instanceof AtomicWriteError && !error.rollbackComplete) {
         const recovered = recoverPreparedApply(cwd, journal, transaction);
+
         if (recovered.ok) {
-          return {
+          const result: ApplySuccess = {
             ok: true,
             appliedPaths: plans.map((plan) => plan.documentPath),
             transactionId: journal.transactionId,
-            ...(recovered.journalRecoveryPending === true
-              ? {
-                  journalRecoveryPending: true,
-                }
-              : {}),
           };
+
+          if (recovered.journalRecoveryPending === true) result.journalRecoveryPending = true;
+
+          return result;
         }
+
         return {
           ok: false,
           applicationState: "indeterminate",
@@ -954,18 +1059,19 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
         abortApplyJournal(cwd, journal);
       } catch {
         const recovered = recoverPreparedApply(cwd, journal, transaction);
+
         if (recovered.ok) {
-          return {
+          const result: ApplySuccess = {
             ok: true,
             appliedPaths: plans.map((plan) => plan.documentPath),
             transactionId: journal.transactionId,
-            ...(recovered.journalRecoveryPending === true
-              ? {
-                  journalRecoveryPending: true,
-                }
-              : {}),
           };
+
+          if (recovered.journalRecoveryPending === true) result.journalRecoveryPending = true;
+
+          return result;
         }
+
         return {
           ok: false,
           applicationState: "indeterminate",
@@ -974,10 +1080,12 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
           diagnostics: journalRecoveryPendingDiagnostics(),
         };
       }
+
       if (error instanceof AtomicWriteConflictError) {
         const plan = plans.find((candidate) => candidate.path === error.path);
         const documentPath = plan?.documentPath ?? error.path;
         const current = error.currentContentHash ?? "missing";
+
         return {
           ok: false,
           diagnostics: [
@@ -990,6 +1098,7 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
           ],
         };
       }
+
       return {
         ok: false,
         diagnostics: [
@@ -1001,6 +1110,7 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
         ],
       };
     }
+
     try {
       completeApplyJournal(cwd, journal);
     } catch {
@@ -1011,6 +1121,7 @@ export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResul
         transactionId: journal.transactionId,
       };
     }
+
     return {
       ok: true,
       appliedPaths: plans.map((plan) => plan.documentPath),
@@ -1049,8 +1160,10 @@ export function readProposalFile(path: string): {
       ],
     };
   }
+
   const text = readTextFile(path);
   const parsed = parseProposalText(text);
+
   if (!parsed.ok) {
     return {
       ok: false,
@@ -1067,6 +1180,7 @@ export function readProposalFile(path: string): {
       ],
     };
   }
+
   return { ok: true, proposal: parsed.proposal };
 }
 
@@ -1079,6 +1193,7 @@ export function writeDocumentFile(
   | { ok: true; contentHash: string }
   | { ok: false; diagnostics: readonly ApplyDiagnostic[] } {
   const validated = validateDocument(document);
+
   if (!validated.ok) {
     return {
       ok: false,
@@ -1094,6 +1209,7 @@ export function writeDocumentFile(
       ],
     };
   }
+
   if (options?.cwd === undefined) {
     return {
       ok: false,
@@ -1106,9 +1222,11 @@ export function writeDocumentFile(
       ],
     };
   }
+
   const cwd = canonicalPath(resolve(options.cwd));
   const documentPath = canonicalPath(resolve(cwd, path));
   const relativePath = relative(cwd, documentPath);
+
   if (
     relativePath === "" ||
     relativePath === ".." ||
@@ -1126,20 +1244,23 @@ export function writeDocumentFile(
       ],
     };
   }
+
   const text = serializeDocument(validated.document);
+
   let written:
     | { readonly ok: true }
     | { readonly ok: false; readonly diagnostics: readonly ApplyDiagnostic[] };
+
   try {
-    written = writeCanonicalDocument({
-      cwd,
-      path: documentPath,
-      contents: text,
-      ...(options.mustBeAbsent === undefined
-        ? {}
-        : { mustBeAbsent: options.mustBeAbsent }),
-    });
+    const input: CanonicalWriteInput = { cwd, path: documentPath, contents: text };
+
+    if (options.mustBeAbsent !== undefined) input.mustBeAbsent = options.mustBeAbsent;
+    written = writeCanonicalDocument(input);
   } catch (error) {
+    if (error instanceof ProjectPathEscapeError) {
+      return { ok: false, diagnostics: [{ code: "validation-failed", message: error.message, documentPath: error.documentPath }] };
+    }
+
     if (error instanceof AtomicWriteConflictError) {
       return {
         ok: false,
@@ -1156,10 +1277,59 @@ export function writeDocumentFile(
         ],
       };
     }
+
     throw error;
   }
+
   if (!written.ok) return written;
+
   return { ok: true, contentHash: contentHash(text) };
 }
 
 export { contentHash, validateDocument, serializeDocument, serializeProposal };
+
+export function propose(input: ProposeInput): ProposeResult {
+  try {
+    return proposeContained(input);
+  } catch (error) {
+    if (!(error instanceof ProjectPathEscapeError)) throw error;
+
+    return { ok: false, diagnostics: [{ code: "validation-failed", message: error.message, documentPath: error.documentPath }] };
+  }
+}
+
+export function proposeMany(inputs: readonly ProposeInput[]): ProposeResult {
+  try {
+    return proposeManyContained(inputs);
+  } catch (error) {
+    if (!(error instanceof ProjectPathEscapeError)) throw error;
+
+    return { ok: false, diagnostics: [{ code: "validation-failed", message: error.message, documentPath: error.documentPath }] };
+  }
+}
+
+export function editDirect(input: DirectEditInput): DirectEditResult {
+  try {
+    return editDirectContained(input);
+  } catch (error) {
+    if (!(error instanceof ProjectPathEscapeError)) throw error;
+
+    return { ok: false, diagnostics: [{ code: "validation-failed", message: error.message, documentPath: error.documentPath }] };
+  }
+}
+
+export function apply(input: ApplyInput & { proposalPath?: string }): ApplyResult {
+  try {
+    return applyContained(input);
+  } catch (error) {
+    if (!(error instanceof ProjectPathEscapeError)) throw error;
+
+    return { ok: false, diagnostics: [{ code: "validation-failed", message: error.message, documentPath: error.documentPath }] };
+  }
+}
+
+type BoundaryObjectValue = object | null;
+
+function isBoundaryObjectValue<Input>(value: Input): value is Input & Readonly<BoundaryObjectValue> {
+  return typeof value === "object";
+}

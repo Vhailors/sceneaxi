@@ -1,0 +1,346 @@
+[
+  {
+    "baseStart": 85,
+    "privateStart": 85,
+    "old": "",
+    "new": "  SPACING,",
+    "before": "  PROFILE_DOT,\n  SCRIM,\n  SIGNAL,",
+    "after": "  SURFACE,\n  TEXT,\n  TYPE,"
+  },
+  {
+    "baseStart": 124,
+    "privateStart": 127,
+    "old": "function inlineJson(value: unknown): string {",
+    "new": "function inlineJson<T>(value: T): string {",
+    "before": "}\n\n/** JSON for an inline `<script>`: `<` is escaped so no tag can close early. */",
+    "after": "  return JSON.stringify(value).replace(/</g, \"\\\\u003c\");\n}\n"
+  },
+  {
+    "baseStart": 1096,
+    "privateStart": 1141,
+    "old": "",
+    "new": "  --space-1:${SPACING.unit}px;--space-2:${SPACING.small}px;--space-3:${SPACING.medium}px;\n  --space-4:${SPACING.large}px;--space-6:${SPACING.section}px;",
+    "before": "  --status-h:${METRICS.statusBarHeight}px;\n  --sans:${TYPE.sans};--mono:${TYPE.mono};\n  --r-panel:18px;--r-card:13px;--r-control:10px;",
+    "after": "}\n*{box-sizing:border-box}\n/* Every hidden region here is an explicit model or runtime decision. */"
+  },
+  {
+    "baseStart": 1103,
+    "privateStart": 1150,
+    "old": ":focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-control)}",
+    "new": ":focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-control);box-shadow:0 0 0 4px var(--well)}\n.view-tab:focus-visible,.dock-tab:focus-visible,.rail-mode:focus-visible{outline-offset:-3px;box-shadow:none}\n/* Rings remain inside clipped listboxes and popovers; filled controls retain the well halo. */\n:is(.menu-command,.project-files select,.project-recent-select,.assistant-route,.assistant-manipulator):focus-visible{outline-offset:-3px;box-shadow:none}\n:is(button,input,select,textarea,a[href],[tabindex]):focus-visible{scroll-margin:var(--space-3)}\n@media (forced-colors:active){:focus-visible{outline:2px solid Highlight;outline-offset:-2px;box-shadow:none}button[aria-pressed=\"true\"],button[aria-selected=\"true\"]{border:1px solid Highlight}}\n:is(.menu-item,.profile-chip,.icon-button,.assistant-toggle,.assistant-mode):not(.is-inert):not([aria-pressed=\"true\"]):hover{background:var(--hover);color:var(--text)}\nbutton:not(.is-inert):not(:disabled):not([aria-disabled=\"true\"]):active{box-shadow:inset 0 0 0 2px var(--line-hover)}\nbutton:not(.is-inert):not(:disabled):not([aria-disabled=\"true\"]):active:focus-visible{box-shadow:0 0 0 4px var(--well),inset 0 0 0 2px var(--line-hover)}\n:is(.left-dock,.inspector,.dock-body,.assistant-body,.assistant-composer,.palette-list,.overlay-card){scrollbar-gutter:stable;scroll-padding:var(--space-3)}\nbutton{transition:background-color .14s ease,border-color .14s ease,color .14s ease}",
+    "before": "html,body{margin:0;padding:0;height:100%;overflow:hidden}\nbody{background:var(--backdrop);color:var(--text);font-family:var(--sans);font-size:13px;-webkit-font-smoothing:antialiased}\n.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}",
+    "after": "button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}\n/* An inert control is dimmed by paint, never by element opacity: opacity\n   composites the label toward whatever is behind it, and both the token gate and"
+  },
+  {
+    "baseStart": 1196,
+    "privateStart": 1253,
+    "old": ".panel-head{margin:0;height:29px;flex:none;display:flex;align-items:center;padding:0 10px;background:var(--header);border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-family:var(--mono);font-size:9px;font-weight:400;letter-spacing:.15em;color:var(--text-3)}\n.panel-empty{margin:0;padding:12px 11px;font-size:11px;line-height:1.55;color:var(--dim)}",
+    "new": "/* Intrinsic section heights contribute to the inspector's scroll extent. */\n.inspector > section{flex-shrink:0;min-width:0}\n/* Catalogue textareas must not share an inline baseline with Stage: native\n   multiline controls otherwise paint below the label's line box at the scroll edge. */\n.scene-catalog-editor{display:grid;gap:var(--space-2);min-width:0;padding:var(--space-3)}\n.scene-catalog-editor label{display:grid;gap:var(--space-1);min-width:0}\n.scene-catalog-editor textarea{display:block;width:100%;min-width:0;resize:vertical}\n.scene-catalog-editor button{justify-self:start}\n.scene-catalog-editor pre{min-width:0;white-space:pre-wrap;overflow-wrap:anywhere}\n.panel-head{margin:0;height:32px;flex:none;display:flex;align-items:center;padding:0 var(--space-3);background:var(--header);border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.08em;color:var(--text-3)}\n.panel-empty{margin:var(--space-2);padding:var(--space-3);border:1px dashed var(--line-control);border-radius:var(--r-control);background:var(--well);font-size:12px;line-height:1.65;color:var(--dim);overflow-wrap:anywhere}\n.panel-empty[aria-live]{border-style:solid;border-left:2px solid var(--line-hover)}",
+    "before": ".left-dock,.inspector{background:var(--panel);display:flex;flex-direction:column;min-height:0;overflow-y:auto}\n.left-dock{border-right:1px solid var(--line)}\n.inspector{border-left:1px solid var(--line)}",
+    "after": ".panel-note{display:flex;gap:9px;align-items:flex-start;margin:0 10px 11px;padding:10px 11px;border:1px solid;border-radius:4px;font-size:11px;line-height:1.55}\n.panel-note .dot{margin-top:5px}\n.project-panel{flex:none;border-bottom:1px solid var(--line)}"
+  },
+  {
+    "baseStart": 1203,
+    "privateStart": 1270,
+    "old": ".project-launcher{display:grid;gap:7px;padding:9px;border-bottom:1px solid var(--line)}\n.project-launcher p,.project-root{margin:0;color:var(--dim);font-size:9px;line-height:1.45;overflow-wrap:anywhere}",
+    "new": ".project-launcher{display:grid;gap:var(--space-2);padding:var(--space-3);border-bottom:1px solid var(--line)}\n.project-launcher p,.project-root{margin:0;color:var(--dim);font-size:11px;line-height:1.6;overflow-wrap:anywhere}",
+    "before": ".project-panel{flex:none;border-bottom:1px solid var(--line)}\n.project-panel .panel-head{justify-content:space-between}\n.project-name{max-width:126px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dim);font-size:8px;letter-spacing:.04em}",
+    "after": ".project-lifecycle-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px}\n.project-lifecycle-actions button{min-width:0;padding-inline:7px}\n.project-recent-label{font-family:var(--mono);font-size:8px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em}"
+  },
+  {
+    "baseStart": 1207,
+    "privateStart": 1274,
+    "old": ".project-recent-label{font-family:var(--mono);font-size:8px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em}",
+    "new": ".project-recent-label{font-family:var(--mono);font-size:10px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em}",
+    "before": ".project-launcher p,.project-root{margin:0;color:var(--dim);font-size:9px;line-height:1.45;overflow-wrap:anywhere}\n.project-lifecycle-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px}\n.project-lifecycle-actions button{min-width:0;padding-inline:7px}",
+    "after": ".project-recent-select{width:100%;min-width:0;height:26px;padding:0 7px;border:1px solid var(--line-control);border-radius:4px;background:var(--raised);color:var(--text);font-family:var(--mono);font-size:9px}\n.project-recent-select.is-inert{color:var(--inert);border-color:var(--line-control)}\n.project-bound{min-width:0}"
+  },
+  {
+    "baseStart": 1218,
+    "privateStart": 1285,
+    "old": ".project-browser-detail dl{display:grid;gap:5px;margin:8px 0}",
+    "new": ".project-browser-detail dl{display:grid;gap:var(--space-2);margin:var(--space-3) 0}",
+    "before": ".project-files option:checked{background:${ACCENT.surface};color:var(--text)}\n.project-browser-detail{margin:0 7px 8px;padding:8px;border:1px solid var(--line);border-radius:4px;background:var(--well);min-width:0}\n.project-browser-detail>strong{display:block;overflow-wrap:anywhere;font-family:var(--mono);font-size:9px;color:var(--text)}",
+    "after": ".project-browser-detail dl div{display:grid;grid-template-columns:54px minmax(0,1fr);gap:6px;min-width:0}\n.project-browser-detail dt{font-family:var(--mono);font-size:8px;color:var(--faint);text-transform:uppercase}\n.project-browser-detail dd{margin:0;min-width:0;overflow-wrap:anywhere;font-family:var(--mono);font-size:8px;line-height:1.45;color:var(--dim)}"
+  },
+  {
+    "baseStart": 1220,
+    "privateStart": 1287,
+    "old": ".project-browser-detail dt{font-family:var(--mono);font-size:8px;color:var(--faint);text-transform:uppercase}\n.project-browser-detail dd{margin:0;min-width:0;overflow-wrap:anywhere;font-family:var(--mono);font-size:8px;line-height:1.45;color:var(--dim)}",
+    "new": ".project-browser-detail dt{font-family:var(--mono);font-size:10px;color:var(--faint);text-transform:uppercase}\n.project-browser-detail dd{margin:0;min-width:0;overflow-wrap:anywhere;font-family:var(--mono);font-size:10px;line-height:1.6;color:var(--dim)}",
+    "before": ".project-browser-detail>strong{display:block;overflow-wrap:anywhere;font-family:var(--mono);font-size:9px;color:var(--text)}\n.project-browser-detail dl{display:grid;gap:5px;margin:8px 0}\n.project-browser-detail dl div{display:grid;grid-template-columns:54px minmax(0,1fr);gap:6px;min-width:0}",
+    "after": ".project-browser-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:5px}\n.project-browser-actions button{min-width:0;height:auto;min-height:24px;padding:4px 6px;font-size:8px;white-space:normal}\n.project-browser-actions button:first-child{grid-column:1/-1}"
+  },
+  {
+    "baseStart": 1230,
+    "privateStart": 1297,
+    "old": ".asset-browser-card span{margin-top:4px;font-family:var(--mono);font-size:8px;line-height:1.45;color:var(--dim)}",
+    "new": ".asset-browser-card span{margin-top:var(--space-1);font-family:var(--mono);font-size:10px;line-height:1.6;color:var(--dim);font-variant-numeric:tabular-nums;user-select:text}",
+    "before": ".asset-browser-card{min-width:0;padding:9px 10px;border:1px solid var(--line-card);border-radius:4px;background:var(--well)}\n.asset-browser-card strong,.asset-browser-card span{display:block;overflow-wrap:anywhere}\n.asset-browser-card strong{font-family:var(--mono);font-size:9px;color:var(--text)}",
+    "after": ".asset-browser-card .asset-browser-meta{display:none}\n.scene-entities{padding:0 7px 9px}\n.scene-entities-label{margin:0 3px 5px;font-size:10px;letter-spacing:.02em;color:var(--dim)}"
+  },
+  {
+    "baseStart": 1232,
+    "privateStart": 1299,
+    "old": ".scene-entities{padding:0 7px 9px}",
+    "new": ".scene-entities{padding:0 var(--space-2) var(--space-3)}",
+    "before": ".asset-browser-card strong{font-family:var(--mono);font-size:9px;color:var(--text)}\n.asset-browser-card span{margin-top:4px;font-family:var(--mono);font-size:8px;line-height:1.45;color:var(--dim)}\n.asset-browser-card .asset-browser-meta{display:none}",
+    "after": ".scene-entities-label{margin:0 3px 5px;font-size:10px;letter-spacing:.02em;color:var(--dim)}\n.scene-entities select{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}\n.scene-entity-identities{display:grid;gap:5px;min-width:0;margin:6px 0 0;padding:0;list-style:none}"
+  },
+  {
+    "baseStart": 1235,
+    "privateStart": 1302,
+    "old": ".scene-entity-identities{display:grid;gap:5px;min-width:0;margin:6px 0 0;padding:0;list-style:none}\n.scene-entity-identity{min-width:0;margin-left:calc(var(--scene-depth,0) * 7px);padding:8px 9px;border:1px solid var(--line-card);border-left:2px solid var(--accent);border-radius:6px;background:var(--well);cursor:pointer}",
+    "new": "/* The canonical multi-select remains a keyboard control, not an invisible focus stop. */\n.scene-entities select:focus-visible{position:static;width:100%;height:auto;min-height:96px;padding:6px;margin:0;overflow:auto;clip:auto;white-space:normal;border:1px solid var(--line-card)}\n.scene-entity-identities{display:grid;gap:var(--space-2);min-width:0;margin:var(--space-2) 0 0;padding:0;list-style:none}\n.scene-entity-identity{min-width:0;margin-left:calc(var(--scene-depth,0) * var(--space-2));padding:var(--space-2) var(--space-3);border:1px solid var(--line-card);border-left:2px solid var(--line-card);border-radius:6px;background:var(--well);cursor:pointer;transition:background-color .14s ease,border-color .14s ease}\n.scene-entity-identity:focus-visible{outline-offset:-3px;box-shadow:none}",
+    "before": ".scene-entities{padding:0 7px 9px}\n.scene-entities-label{margin:0 3px 5px;font-size:10px;letter-spacing:.02em;color:var(--dim)}\n.scene-entities select{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}",
+    "after": ".scene-entity-identity:hover{border-color:var(--line-hover)}\n.scene-entity-identity.is-selected{border-color:var(--accent);background:${ACCENT.surface}}\n.scene-entity-identity>span{display:block;margin-bottom:2px;font-size:11px;font-weight:600;color:var(--text)}"
+  },
+  {
+    "baseStart": 1239,
+    "privateStart": 1309,
+    "old": ".scene-entity-identity>span{display:block;margin-bottom:2px;font-size:11px;font-weight:600;color:var(--text)}\n.scene-entity-identity dl{display:none;gap:3px;margin:4px 0 0}",
+    "new": ".scene-entity-identity>span{display:block;margin-bottom:var(--space-1);font-size:12px;line-height:1.5;font-weight:600;color:var(--text);overflow-wrap:anywhere}\n.scene-entity-identity dl{display:none;gap:var(--space-1);margin:var(--space-2) 0 0}",
+    "before": ".scene-entity-identity{min-width:0;margin-left:calc(var(--scene-depth,0) * 7px);padding:8px 9px;border:1px solid var(--line-card);border-left:2px solid var(--accent);border-radius:6px;background:var(--well);cursor:pointer}\n.scene-entity-identity:hover{border-color:var(--line-hover)}\n.scene-entity-identity.is-selected{border-color:var(--accent);background:${ACCENT.surface}}",
+    "after": ".shell[data-details-open=\"true\"] .scene-entity-identity dl{display:grid}\n.scene-entity-identity dl div{display:grid;grid-template-columns:42px minmax(0,1fr);gap:5px;min-width:0}\n.scene-entity-identity dt{font-family:var(--mono);font-size:7px;line-height:1.45;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}"
+  },
+  {
+    "baseStart": 1242,
+    "privateStart": 1312,
+    "old": ".scene-entity-identity dl div{display:grid;grid-template-columns:42px minmax(0,1fr);gap:5px;min-width:0}\n.scene-entity-identity dt{font-family:var(--mono);font-size:7px;line-height:1.45;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}",
+    "new": ".scene-entity-identity dl div{display:grid;grid-template-columns:42px minmax(0,1fr);gap:var(--space-2);min-width:0;padding:var(--space-1) 0;border-top:1px solid var(--line-row)}\n.scene-entity-identity dt{font-family:var(--mono);font-size:10px;line-height:1.6;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}",
+    "before": ".scene-entity-identity>span{display:block;margin-bottom:2px;font-size:11px;font-weight:600;color:var(--text)}\n.scene-entity-identity dl{display:none;gap:3px;margin:4px 0 0}\n.shell[data-details-open=\"true\"] .scene-entity-identity dl{display:grid}",
+    "after": ".scene-entity-identity dd{min-width:0;margin:0}\n.scene-entity-identity code{display:block;min-width:0;font-size:8px;line-height:1.45;color:var(--dim);white-space:normal;overflow-wrap:anywhere}\n.scene-entity{width:100%;min-width:0;padding:8px 9px;border:1px solid var(--line-card);border-radius:4px;background:var(--raised);color:var(--dim);text-align:left}"
+  },
+  {
+    "baseStart": 1245,
+    "privateStart": 1315,
+    "old": ".scene-entity-identity code{display:block;min-width:0;font-size:8px;line-height:1.45;color:var(--dim);white-space:normal;overflow-wrap:anywhere}",
+    "new": ".scene-entity-identity code{display:block;min-width:0;font-size:10px;line-height:1.6;color:var(--dim);white-space:normal;overflow-wrap:anywhere;font-variant-numeric:tabular-nums;user-select:text}",
+    "before": ".scene-entity-identity dl div{display:grid;grid-template-columns:42px minmax(0,1fr);gap:5px;min-width:0}\n.scene-entity-identity dt{font-family:var(--mono);font-size:7px;line-height:1.45;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}\n.scene-entity-identity dd{min-width:0;margin:0}",
+    "after": ".scene-entity{width:100%;min-width:0;padding:8px 9px;border:1px solid var(--line-card);border-radius:4px;background:var(--raised);color:var(--dim);text-align:left}\n.scene-entity span,.scene-entity code{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}\n.scene-entity span{font-size:10px;color:var(--text)}.scene-entity code{margin-top:3px;font-size:8px;color:var(--dim)}"
+  },
+  {
+    "baseStart": 1268,
+    "privateStart": 1338,
+    "old": ".scene-property-input:focus{outline:1px solid var(--accent);outline-offset:1px}.scene-property-input.is-inert{color:var(--inert)}",
+    "new": ".scene-property-input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.scene-property-input.is-inert{color:var(--inert)}",
+    "before": ".scene-instance-actions button{min-width:0;padding-inline:6px}\n.scene-parenting{display:grid;gap:7px;padding-top:2px}.scene-parenting label{display:grid;gap:4px}.scene-parenting select{width:100%;min-width:0;height:28px;border:1px solid var(--line-control);border-radius:4px;background:var(--raised);color:var(--text);font-family:var(--mono);font-size:9px}\n.scene-property-input{width:100%;min-width:0;height:28px;padding:0 8px;border:1px solid var(--line-control);border-radius:4px;background:var(--raised);color:var(--text);font-family:var(--mono);font-size:11px}",
+    "after": ".scene-property-diagnostic{margin:0;font-size:9px;line-height:1.45;color:var(--dim);overflow-wrap:anywhere}\n.scene-property-review{max-height:150px;margin:0;padding:8px;overflow:auto;border:1px solid var(--line);border-radius:4px;background:var(--well);color:var(--dim);font-family:var(--mono);font-size:8px;line-height:1.45;white-space:pre-wrap}\n.ship-export-panel{padding:0 12px 12px}.ship-export-evidence{display:grid;gap:8px;margin:12px 0 0}.ship-export-evidence div{min-width:0}.ship-export-evidence dt{font:9px/1.4 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}.ship-export-evidence dd{margin:2px 0 0;color:var(--dim);overflow-wrap:anywhere}.ship-export-evidence code{font-size:9px}"
+  },
+  {
+    "baseStart": 1270,
+    "privateStart": 1340,
+    "old": ".scene-property-review{max-height:150px;margin:0;padding:8px;overflow:auto;border:1px solid var(--line);border-radius:4px;background:var(--well);color:var(--dim);font-family:var(--mono);font-size:8px;line-height:1.45;white-space:pre-wrap}",
+    "new": ".scene-property-review{max-height:150px;margin:0;padding:var(--space-2);overflow:auto;border:1px solid var(--line);border-radius:4px;background:var(--well);color:var(--dim);font-family:var(--mono);font-size:10px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}",
+    "before": ".scene-property-input{width:100%;min-width:0;height:28px;padding:0 8px;border:1px solid var(--line-control);border-radius:4px;background:var(--raised);color:var(--text);font-family:var(--mono);font-size:11px}\n.scene-property-input:focus{outline:1px solid var(--accent);outline-offset:1px}.scene-property-input.is-inert{color:var(--inert)}\n.scene-property-diagnostic{margin:0;font-size:9px;line-height:1.45;color:var(--dim);overflow-wrap:anywhere}",
+    "after": ".ship-export-panel{padding:0 12px 12px}.ship-export-evidence{display:grid;gap:8px;margin:12px 0 0}.ship-export-evidence div{min-width:0}.ship-export-evidence dt{font:9px/1.4 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}.ship-export-evidence dd{margin:2px 0 0;color:var(--dim);overflow-wrap:anywhere}.ship-export-evidence code{font-size:9px}\n.pass-list{list-style:none;margin:0;padding:10px 11px;display:flex;flex-direction:column;gap:6px}\n.pass-row{display:flex;align-items:center;gap:10px;padding:6px 9px;background:var(--raised);border:1px solid var(--line);border-radius:4px}"
+  },
+  {
+    "baseStart": 1273,
+    "privateStart": 1343,
+    "old": ".pass-row{display:flex;align-items:center;gap:10px;padding:6px 9px;background:var(--raised);border:1px solid var(--line);border-radius:4px}",
+    "new": ".pass-row{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-3);background:var(--raised);border:1px solid var(--line);border-radius:4px;min-width:0}\n.pass-row>div{min-width:0;overflow-wrap:anywhere}\n.pass-row:nth-child(even){background:var(--well)}",
+    "before": ".scene-property-review{max-height:150px;margin:0;padding:8px;overflow:auto;border:1px solid var(--line);border-radius:4px;background:var(--well);color:var(--dim);font-family:var(--mono);font-size:8px;line-height:1.45;white-space:pre-wrap}\n.ship-export-panel{padding:0 12px 12px}.ship-export-evidence{display:grid;gap:8px;margin:12px 0 0}.ship-export-evidence div{min-width:0}.ship-export-evidence dt{font:9px/1.4 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}.ship-export-evidence dd{margin:2px 0 0;color:var(--dim);overflow-wrap:anywhere}.ship-export-evidence code{font-size:9px}\n.pass-list{list-style:none;margin:0;padding:10px 11px;display:flex;flex-direction:column;gap:6px}",
+    "after": ".pass-order{width:14px;height:14px;border-radius:3px;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font-size:9px;font-weight:700;flex:none}\n.pass-row b{display:block;font-size:11px;font-weight:400;color:var(--text)}\n.pass-row em{display:block;font-style:normal;font-size:10px;color:var(--dim)}"
+  },
+  {
+    "baseStart": 1334,
+    "privateStart": 1406,
+    "old": ".viewport-backdrop{position:absolute;inset:0;pointer-events:none}",
+    "new": ".viewport-backdrop{position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 0 1px var(--line-row)}",
+    "before": ".view-tools{display:flex;align-items:center;gap:3px;padding:0 8px}\n.view-tools i{width:10px;height:10px;border:1.4px solid var(--faint);border-radius:1px}\n.viewport{flex:1;position:relative;min-height:0;overflow:hidden;background:radial-gradient(130% 95% at 50% 0%, ${VIEWPORT_GRADIENT.inner} 0%, ${VIEWPORT_GRADIENT.mid} 48%, ${SURFACE.canvas} 100%);display:grid;place-items:center}",
+    "after": ".site-stage{display:none}\n.shell[data-profile=\"web\"] .stage-host{overflow:auto;background:${SIGNAL.infoSurface};padding:18px 20px 28px}\n.shell[data-profile=\"web\"] .site-stage{display:block}"
+  },
+  {
+    "baseStart": 1398,
+    "privateStart": 1470,
+    "old": ".change-empty{margin:0;padding:34px 14px;text-align:center;font-size:12px;color:var(--dim)}",
+    "new": ".change-empty{margin:auto;padding:var(--space-6) var(--space-4);max-width:52ch;text-align:center;font-size:13px;line-height:1.65;color:var(--dim)}\n.change-empty::before{content:\"\";display:block;width:24px;height:24px;margin:0 auto var(--space-3);border:1px solid var(--line-hover);border-radius:6px;background:var(--raised)}",
+    "before": ".change-diff{min-width:0;max-height:min(46vh,280px);overflow:auto;margin:0;padding:9px 10px;border:1px solid var(--line-control);border-radius:4px;background:var(--well);color:var(--text-2);font:10px/1.45 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere}\n.change-actions{display:flex;gap:7px;justify-content:flex-end}\n.change-actions .primary-button,.change-actions .ghost-button{height:30px;padding:0 13px}",
+    "after": "\n.assistant{background:var(--assistant);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}\n.assistant-head{height:36px;flex:none;display:flex;align-items:center;gap:9px;padding:0 12px;background:var(--raised);border-bottom:1px solid var(--line)}"
+  },
+  {
+    "baseStart": 1401,
+    "privateStart": 1474,
+    "old": ".assistant-head{height:36px;flex:none;display:flex;align-items:center;gap:9px;padding:0 12px;background:var(--raised);border-bottom:1px solid var(--line)}",
+    "new": ".assistant-head{height:40px;flex:none;display:flex;align-items:center;gap:9px;padding:0 12px;background:var(--raised);border-bottom:1px solid var(--line)}",
+    "before": ".change-empty{margin:0;padding:34px 14px;text-align:center;font-size:12px;color:var(--dim)}\n\n.assistant{background:var(--assistant);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}",
+    "after": ".assistant-head h2{margin:0;font-size:12px;font-weight:600;flex:1}\n.assistant-mark{width:16px;height:16px;border-radius:4px;background:${ACCENT.surface};display:grid;place-items:center}\n.assistant-mark::before{content:\"\";width:6px;height:6px;border-radius:1px;background:var(--accent);transform:rotate(45deg)}"
+  },
+  {
+    "baseStart": 1405,
+    "privateStart": 1478,
+    "old": ".shell[data-assistant-busy=\"true\"] .assistant-mark{box-shadow:0 0 0 4px ${ACCENT.surface};animation:assistant-breathe 1.1s ease-in-out infinite}\n.shell[data-assistant-busy=\"true\"] .assistant-mark::before{animation:assistant-spin 1.6s linear infinite}\n.shell[data-assistant-busy=\"true\"] .viewport::after{content:\"\";position:absolute;inset:0;pointer-events:none;background:radial-gradient(80% 70% at 50% 40%, ${ACCENT.surface} 0%, transparent 70%);animation:assistant-glow 1.4s ease-in-out infinite}",
+    "new": "/* One live-bars signal confirms work; the canvas and labels stay visually still. */\n.shell[data-assistant-busy=\"true\"] .assistant-mark{box-shadow:0 0 0 4px ${ACCENT.surface}}",
+    "before": ".assistant-head h2{margin:0;font-size:12px;font-weight:600;flex:1}\n.assistant-mark{width:16px;height:16px;border-radius:4px;background:${ACCENT.surface};display:grid;place-items:center}\n.assistant-mark::before{content:\"\";width:6px;height:6px;border-radius:1px;background:var(--accent);transform:rotate(45deg)}",
+    "after": ".shell[data-assistant=\"denied\"] .assistant-mark{background:${SIGNAL.sceneSurface}}\n.shell[data-assistant=\"denied\"] .assistant-mark::before{background:var(--scene)}\n.assistant-model{font-family:var(--mono);font-size:9px;color:var(--dim);background:var(--header);border:1px solid var(--line-control);border-radius:3px;padding:2px 6px}"
+  },
+  {
+    "baseStart": 1411,
+    "privateStart": 1483,
+    "old": ".icon-button{width:26px;height:26px;border-radius:4px;display:grid;place-items:center;color:var(--dim)}",
+    "new": ".icon-button{width:26px;height:26px;flex:none;border-radius:4px;display:grid;place-items:center;color:var(--dim);line-height:1}\n:is(.dot,.rail-glyph,.assistant-mark,.overlay-mark,.badge){flex-shrink:0}",
+    "before": ".shell[data-assistant=\"denied\"] .assistant-mark{background:${SIGNAL.sceneSurface}}\n.shell[data-assistant=\"denied\"] .assistant-mark::before{background:var(--scene)}\n.assistant-model{font-family:var(--mono);font-size:9px;color:var(--dim);background:var(--header);border:1px solid var(--line-control);border-radius:3px;padding:2px 6px}",
+    "after": "/* An icon button on the accent fill keeps the on-accent glyph colour: without\n   this the later single-class rule wins and paints --dim on orange (1.1:1). */\n.primary-button.icon-button{color:var(--on-accent)}"
+  },
+  {
+    "baseStart": 1416,
+    "privateStart": 1489,
+    "old": ".assistant-body{flex:1;min-height:0;overflow-y:auto;padding:13px 12px}\n.assistant-empty{margin:0;font-size:11px;line-height:1.55;color:var(--dim)}",
+    "new": ".assistant-body{flex:1;min-height:0;overflow-y:auto;padding:var(--space-4) var(--space-3)}\n.assistant-empty{margin:0;padding:var(--space-3);border:1px dashed var(--line-card);border-radius:var(--r-control);background:var(--well);font-size:13px;line-height:1.65;color:var(--dim);max-width:40ch}",
+    "before": "   this the later single-class rule wins and paints --dim on orange (1.1:1). */\n.primary-button.icon-button{color:var(--on-accent)}\n.primary-button.icon-button.is-inert{color:var(--inert-on-accent)}",
+    "after": ".assistant-live{display:none;align-items:end;gap:4px;height:28px;margin:14px 0 0}\n.shell[data-assistant-busy=\"true\"] .assistant-live{display:flex}\n.assistant-live i{width:5px;border-radius:99px;background:var(--accent);animation:assistant-bars 0.9s ease-in-out infinite}"
+  },
+  {
+    "baseStart": 1425,
+    "privateStart": 1498,
+    "old": ".assistant-thinking .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:assistant-dot 1s ease-in-out infinite}\n.assistant-thinking .dot:nth-child(2){animation-delay:.15s}\n.assistant-thinking .dot:nth-child(3){animation-delay:.3s}\n.assistant-progress{font-size:11px;line-height:1.5;color:var(--text-2);padding:9px;border:1px solid var(--line-control);border-radius:4px;background:var(--header);transition:border-color .2s ease,color .2s ease}\n.shell[data-assistant-busy=\"true\"] .assistant-progress{border-color:var(--accent);color:var(--text);animation:assistant-card 1.2s ease-in-out infinite}\n.assistant-result{font-size:10px;line-height:1.55;color:var(--text-3);white-space:pre-wrap;animation:rise .28s ease-out}",
+    "new": ".assistant-thinking .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}\n.assistant-progress{min-width:0;min-height:44px;margin:var(--space-3) 0;overflow-wrap:anywhere;font-size:11px;line-height:1.5;color:var(--text-2);padding:var(--space-3);border:1px solid var(--line-control);border-radius:4px;background:var(--header);transition:border-color .2s ease,color .2s ease}\n.shell[data-assistant-busy=\"true\"] .assistant-progress{border-color:var(--accent);color:var(--text)}\n.assistant-result{min-width:0;padding:var(--space-3);border-left:2px solid var(--line-hover);background:var(--well);font-size:12px;line-height:1.65;color:var(--text-3);white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;animation:rise .16s ease-out}",
+    "before": ".assistant-live i:nth-child(2){height:16px;animation-delay:.12s}\n.assistant-live i:nth-child(3){height:22px;animation-delay:.24s}\n.assistant-thinking{display:flex;align-items:center;gap:6px;margin:12px 0 0;font-size:12px;color:var(--accent)}",
+    "after": ".assistant-foot{font-size:10px;color:var(--dim);line-height:1.5;margin:12px 0 0}\n.assistant-composer{flex:none;border-top:1px solid var(--line);background:var(--panel);padding:9px 11px 11px;display:flex;flex-direction:column;gap:8px}\n.assistant-prompt{width:100%;min-height:58px;resize:vertical;border:1px solid var(--line-control);border-radius:4px;background:var(--well);color:var(--text);font:11px/1.5 var(--sans);padding:8px}"
+  },
+  {
+    "baseStart": 1432,
+    "privateStart": 1503,
+    "old": ".assistant-composer{flex:none;border-top:1px solid var(--line);background:var(--panel);padding:9px 11px 11px;display:flex;flex-direction:column;gap:8px}\n.assistant-prompt{width:100%;min-height:58px;resize:vertical;border:1px solid var(--line-control);border-radius:4px;background:var(--well);color:var(--text);font:11px/1.5 var(--sans);padding:8px}",
+    "new": ".assistant-composer{flex:none;max-height:65%;min-height:0;overflow-y:auto;scroll-padding:var(--space-2);border-top:1px solid var(--line);background:var(--panel);padding:var(--space-3);display:flex;flex-direction:column;gap:var(--space-2)}\n.assistant-prompt{width:100%;min-height:72px;flex-shrink:0;resize:vertical;border:1px solid var(--line-control);border-radius:6px;background:var(--well);color:var(--text);font:12px/1.6 var(--sans);padding:var(--space-3)}\n.assistant-prompt::placeholder{color:var(--faint)}",
+    "before": ".shell[data-assistant-busy=\"true\"] .assistant-progress{border-color:var(--accent);color:var(--text);animation:assistant-card 1.2s ease-in-out infinite}\n.assistant-result{font-size:10px;line-height:1.55;color:var(--text-3);white-space:pre-wrap;animation:rise .28s ease-out}\n.assistant-foot{font-size:10px;color:var(--dim);line-height:1.5;margin:12px 0 0}",
+    "after": ".assistant-prompt.is-inert{color:var(--inert);cursor:not-allowed}\n.assistant-routes{display:none;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px}\n.shell[data-details-open=\"true\"] .assistant-routes{display:grid}"
+  },
+  {
+    "baseStart": 1437,
+    "privateStart": 1509,
+    "old": ".assistant-route{min-width:0;padding:5px 3px;border:1px solid var(--line-control);border-radius:3px;color:var(--dim);font-size:9px;line-height:1.2}\n.assistant-route-refusal{display:block;margin-top:3px;font-size:7px;line-height:1.2;overflow-wrap:anywhere;color:var(--scene)}",
+    "new": ".assistant-route{min-width:0;padding:var(--space-2) var(--space-1);border:1px solid var(--line-control);border-radius:3px;color:var(--dim);font-size:9px;line-height:1.2}\n.assistant-route-refusal{display:block;margin-top:var(--space-1);font-size:10px;line-height:1.5;overflow-wrap:anywhere;color:var(--scene)}",
+    "before": ".assistant-prompt.is-inert{color:var(--inert);cursor:not-allowed}\n.assistant-routes{display:none;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px}\n.shell[data-details-open=\"true\"] .assistant-routes{display:grid}",
+    "after": ".assistant-route[aria-pressed=\"true\"]{border-color:var(--accent);color:var(--accent);background:${ACCENT.surface}}\n.composer-actions{display:flex;align-items:center;gap:7px}\n.assistant-modes{display:flex;background:var(--header);border:1px solid var(--line-control);border-radius:4px;padding:2px}"
+  },
+  {
+    "baseStart": 1497,
+    "privateStart": 1569,
+    "old": ".overlay-body{margin:0;padding:15px 18px;font-size:12px;line-height:1.6;color:var(--text-2)}",
+    "new": ".overlay-body{margin:0;min-width:0;padding:var(--space-4);font-size:12px;line-height:1.6;color:var(--text-2);overflow-wrap:anywhere}\n.overlay-refused .overlay-body{border-left:2px solid var(--refuse);margin:var(--space-4);padding:0 var(--space-3)}",
+    "before": ".overlay-mark{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;flex:none}\n.mark-refuse{background:${SIGNAL.refuseSurface};border:1px solid ${SIGNAL.refuseLine};color:var(--refuse)}\n.mark-complete{background:${SIGNAL.infoSurface};border:1px solid ${SIGNAL.infoLine};color:var(--info)}",
+    "after": ".overlay-actions{display:flex;gap:9px;justify-content:flex-end;padding:13px 18px;background:var(--well);border-top:1px solid var(--line)}\n.overlay-actions .primary-button,.overlay-actions .ghost-button{height:31px;padding:0 14px;font-size:12px}\n.palette-list{list-style:none;margin:0;padding:6px 0;max-height:352px;overflow-y:auto}"
+  },
+  {
+    "baseStart": 1503,
+    "privateStart": 1576,
+    "old": ".palette-item{display:flex;align-items:center;gap:12px;padding:8px 16px;width:100%;text-align:left}\n.palette-item:hover{background:var(--hover)}",
+    "new": ".palette-item{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-4);width:100%;min-height:36px;text-align:left}\n.palette-name{min-width:0;overflow-wrap:anywhere}\n.palette-item kbd{flex:none;white-space:nowrap}\n.palette-item:hover,.palette-item:focus-visible{background:var(--hover)}\n.palette-item:focus-visible{outline-offset:-3px;box-shadow:none}",
+    "before": ".palette-list{list-style:none;margin:0;padding:6px 0;max-height:352px;overflow-y:auto}\n.palette-group h3{margin:0;padding:8px 16px 4px;font-family:var(--mono);font-size:9px;font-weight:400;letter-spacing:.14em;color:var(--faint)}\n.palette-group ul{list-style:none;margin:0;padding:0}",
+    "after": ".palette-name{flex:1;font-size:13px}\n.palette-item kbd{font-size:9px;color:var(--dim);border:1px solid var(--line-control);border-radius:3px;padding:2px 5px}\n.overlay-foot{margin:0;padding:10px 16px;background:var(--well);border-top:1px solid var(--line);font-size:10.5px;color:var(--dim)}"
+  },
+  {
+    "baseStart": 1515,
+    "privateStart": 1591,
+    "old": ".window-refusal{display:none;max-width:52ch;margin:0 auto;padding:48px 24px;text-align:center}",
+    "new": ".window-refusal{display:none;max-width:52ch;margin:0 auto;padding:48px var(--space-6);text-align:center;overflow-wrap:anywhere}",
+    "before": ".refusal-row{margin:0 0 6px;font-size:11px;line-height:1.5;color:var(--dim)}\n.refusal-row code{color:var(--accent);margin-right:8px}\n",
+    "after": ".window-refusal h1{font-size:17px;margin:0 0 12px}\n.window-refusal p{font-size:13px;line-height:1.65;color:var(--dim);margin:0 0 10px}\n.window-refusal code{color:var(--accent)}"
+  },
+  {
+    "baseStart": 1522,
+    "privateStart": 1598,
+    "old": "@keyframes assistant-breathe{0%,100%{opacity:1}50%{opacity:.62}}\n@keyframes assistant-spin{to{transform:rotate(225deg)}}",
+    "new": "",
+    "before": "\n@keyframes rise{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}\n@keyframes sweep{0%{transform:translateX(-120%)}100%{transform:translateX(420%)}}",
+    "after": "@keyframes assistant-bars{0%,100%{opacity:.4}50%{opacity:1}}\n@keyframes assistant-dot{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:1;transform:translateY(-2px)}}\n@keyframes assistant-card{0%,100%{box-shadow:0 0 0 0 ${ACCENT.surface}}50%{box-shadow:0 0 0 4px ${ACCENT.surface}}}"
+  },
+  {
+    "baseStart": 1525,
+    "privateStart": 1599,
+    "old": "@keyframes assistant-dot{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:1;transform:translateY(-2px)}}\n@keyframes assistant-card{0%,100%{box-shadow:0 0 0 0 ${ACCENT.surface}}50%{box-shadow:0 0 0 4px ${ACCENT.surface}}}\n@keyframes assistant-glow{0%,100%{opacity:.18}50%{opacity:.4}}",
+    "new": "",
+    "before": "@keyframes assistant-breathe{0%,100%{opacity:1}50%{opacity:.62}}\n@keyframes assistant-spin{to{transform:rotate(225deg)}}\n@keyframes assistant-bars{0%,100%{opacity:.4}50%{opacity:1}}",
+    "after": "\n/* Compact: the assistant leaves the grid and becomes an overlay drawer. Its\n   existing toggle opens and closes it, so nothing becomes unreachable. */"
+  },
+  {
+    "baseStart": 1601,
+    "privateStart": 1672,
+    "old": "): Record<string, Record<string, readonly [string, string | null]>> {",
+    "new": ") {",
+    "before": "function controlsByProfile(\n  view: DesktopVisualView,\n  runtime = view.state.assistantRuntime,",
+    "after": "  const table: Record<string, Record<string, readonly [string, string | null]>> = {};\n  for (const profile of view.profiles) {\n    const merged: Record<string, readonly [string, string | null]> = {};"
+  },
+  {
+    "baseStart": 1777,
+    "privateStart": 1855,
+    "old": "    if (modifiers.includes('primary') !== primary) return false;",
+    "new": "    if (modifiers.includes('primary') && !primary) return false;",
+    "before": "    if (binding.code !== (event.code || fallback)) return false;\n    const modifiers = binding.modifiers;\n    const primary = event.ctrlKey || event.metaKey;",
+    "after": "    if (!modifiers.includes('primary')) {\n      if (modifiers.includes('control') !== Boolean(event.ctrlKey)) return false;\n      if (modifiers.includes('meta') !== Boolean(event.metaKey)) return false;"
+  },
+  {
+    "baseStart": 2078,
+    "privateStart": 2156,
+    "old": "    const first = edits[0];",
+    "new": "    const compact = snapshot?.preparedReview;\n    const first = edits[0] || (snapshot.proposal === null && snapshot.preparedAsset &&\n      Number.isSafeInteger(snapshot.preparedAsset.canonicalBase64ByteLength) &&\n      snapshot.preparedAsset.canonicalBase64ByteLength > 0 && compact &&\n      typeof compact.documentPath === 'string' && compact.documentPath.length > 0 &&\n      typeof compact.baseContentHash === 'string' && compact.baseContentHash.length > 0 ? compact : null);",
+    "before": "    if (!isSessionSnapshot(snapshot)) return null;\n    const proposal = snapshot && snapshot.proposal;\n    const edits = proposal && Array.isArray(proposal.edits) ? proposal.edits : [];",
+    "after": "    const diff = snapshot && typeof snapshot.renderedDiff === 'string'\n      ? snapshot.renderedDiff\n      : null;"
+  },
+  {
+    "baseStart": 2486,
+    "privateStart": 2569,
+    "old": "",
+    "new": "    const browserRevision = Number(shell.dataset.projectBrowserRevision || '0') + 1;\n    shell.dataset.projectBrowserRevision = String(browserRevision);\n    shell.dataset.projectBrowserSelectedPath = status.selectedPath;",
+    "before": "    if (files.length !== status.files.length ||\n        !files.some((file) => file.path === status.selectedPath)) return false;\n    projectBrowserStatus = status;",
+    "after": "    const list = shell.querySelector('#project-browser-file-select');\n    if (list && list.tagName === 'SELECT') {\n      list.replaceChildren();"
+  },
+  {
+    "baseStart": 2551,
+    "privateStart": 2637,
+    "old": "",
+    "new": "    delete shell.dataset.projectBrowserSelectedPath;",
+    "before": "\n  const clearProjectBrowser = () => {\n    projectBrowserStatus = null;",
+    "after": "    const list = shell.querySelector('#project-browser-file-select');\n    if (list) list.replaceChildren();\n    const detail = shell.querySelector('[data-project-browser-detail]');"
+  },
+  {
+    "baseStart": 3978,
+    "privateStart": 4065,
+    "old": "    return open === null ? [] : Array.from(open.querySelectorAll('button'));",
+    "new": "    return open === null ? [] : Array.from(open.querySelectorAll('button, input:not([disabled]), textarea:not([disabled]), select:not([disabled])'));",
+    "before": "  // would contain nothing at all.\n  const overlayStops = () => {\n    const open = shell.querySelector('.overlay:not([hidden])');",
+    "after": "  };\n\n  const setOverlay = (id) => {"
+  },
+  {
+    "baseStart": 4105,
+    "privateStart": 4192,
+    "old": "",
+    "new": "  const compactDrawerQuery = window.matchMedia('${belowTier(\"compact\")}');\n  // Undocked panels occlude the viewport/dock. Keep covered controls out of\n  // keyboard and pointer navigation until the drawer is closed again.\n  const syncDrawerNavigation = () => {\n    const assistantDrawer = drawerQuery.matches && shell.dataset.assistant !== 'denied' && shell.dataset.drawerAssistant === 'open';\n    const leftDrawer = compactDrawerQuery.matches && shell.dataset.drawerLeft === 'open';\n    const inspectorDrawer = compactDrawerQuery.matches && shell.dataset.drawerInspector === 'open';\n    q('.viewport-region, .dock').forEach((el) => { el.inert = assistantDrawer || leftDrawer || inspectorDrawer; });\n    q('.left-dock').forEach((el) => { el.inert = assistantDrawer || inspectorDrawer; });\n    q('.inspector').forEach((el) => { el.inert = assistantDrawer || leftDrawer; });\n  };\n  const drawerNavigationObserver = new MutationObserver(syncDrawerNavigation);\n  drawerNavigationObserver.observe(shell, { attributes: true, attributeFilter: ['data-drawer-left', 'data-drawer-inspector', 'data-drawer-assistant', 'data-assistant'] });\n  drawerQuery.addEventListener('change', syncDrawerNavigation);\n  compactDrawerQuery.addEventListener('change', syncDrawerNavigation);\n  window.addEventListener('pagehide', () => {\n    drawerNavigationObserver.disconnect();\n    drawerQuery.removeEventListener('change', syncDrawerNavigation);\n    compactDrawerQuery.removeEventListener('change', syncDrawerNavigation);\n  }, { once: true });\n  syncDrawerNavigation();",
+    "before": "  // announce itself pressed over nothing, and its first press would only turn\n  // that claim off. One press opens the drawer at every tier.\n  const drawerQuery = window.matchMedia('${belowTier(\"regular\")}');",
+    "after": "\n  const assistantOpen = () => shell.dataset.drawerAssistant === 'open';\n"
+  },
+  {
+    "baseStart": 4219,
+    "privateStart": 4327,
+    "old": "  const runEditorCommand = async (commandId) => {\n    const input = commandId === 'package-inspect' || commandId === 'profile-inspect'",
+    "new": "  // Collect the registry's real fields; the existing host remains the validator\n    // and the existing Change Review/Save path remains the sole document writer.\n    const inputCommands = new Set([\n    'input-action-rebind', 'input-actions-reset', 'scene-prefab-define',\n    'scene-prefab-instance', 'scene-prefab-override', 'scene-prefab-refresh',\n    'viewport-source-set', 'physics-evaluate', 'package-install', 'package-remove',\n    'project-migration-commit', 'extension-start',\n    ]);\n    const collectCommandInput = async (commandId) => {\n    const command = T.editorCommands.find((row) => row.id === commandId);\n    if (shell.dataset.profile === 'kids') return commandRefusal('EDITOR_COMMAND_KIDS_DENIED');\n    const properties = command.inputSchema.properties;\n    if (properties.expectedContentHash && !(await openTimelineVersion())) return;\n    let inspection = null;\n    if (properties.expectedBaseVersion || properties.proposalDigest) {\n      const response = await commandRequest(properties.expectedBaseVersion\n        ? 'input-actions-inspect' : 'project-migration-propose', {});\n      const diagnostic = responseDiagnostic(response);\n      if (diagnostic !== null) return showOutcome(commandId + ' refused', diagnostic.code, diagnostic.message);\n      inspection = response.data;\n    }\n    shell.querySelector('[data-overlay=\"command-input\"]')?.remove();\n    const overlay = document.createElement('div');\n    overlay.className = 'overlay';\n    overlay.dataset.overlay = 'command-input';\n    overlay.setAttribute('role', 'dialog');\n    overlay.setAttribute('aria-modal', 'true');\n    overlay.setAttribute('aria-labelledby', 'command-input-title');\n    const card = document.createElement('div');\n    card.className = 'overlay-card';\n    card.style.maxHeight = '85vh';\n    card.style.overflowY = 'auto';\n    const title = document.createElement('h2');\n    title.id = 'command-input-title';\n    title.textContent = command.label;\n    const help = document.createElement('p');\n    help.textContent = command.mutation === 'stages-change'\n      ? 'Stage for Change Review. Only Save writes; Reject discards.'\n      : 'Review exact input before submitting. Settings and approved migrations commit explicitly; host validation remains mandatory.';\n    const form = document.createElement('form');\n    form.dataset.commandInput = commandId;\n    const fields = new Map();\n    const required = command.inputSchema.required || [];\n    const defaults = {\n      documentPath: T.product.documentPath, expectedContentHash: projectContentHash,\n      profile: shell.dataset.profile, scope: 'project',\n      expectedBaseVersion: inspection?.baseVersions?.project,\n      proposalDigest: inspection?.proposal?.proposalDigest,\n      reviewDigest: 'null', instanceIds: JSON.stringify(selectedSceneEntityIds),\n      instanceId: selectedSceneEntityId, parentInstanceId: editableScene?.hierarchy?.rootInstanceId,\n      steps: 1,\n    };\n    for (const [name, schema] of Object.entries(properties)) {\n      const label = document.createElement('label');\n      label.style.display = 'grid';\n      label.style.marginBottom = '8px';\n      label.textContent = name;\n      const json = Array.isArray(schema.type) || schema.type === 'object' || schema.type === 'array';\n      const boolean = schema.type === 'boolean' || schema.const === true;\n      const field = document.createElement(schema.enum ? 'select' : json ? 'textarea' : 'input');\n      field.dataset.commandField = name;\n      field.name = name;\n      if (schema.enum) schema.enum.forEach((value) => {\n        const option = document.createElement('option');\n        option.value = String(value); option.textContent = String(value); field.append(option);\n      });\n      else if (boolean) field.type = 'checkbox';\n      else if (!json) field.type = schema.type === 'number' || schema.type === 'integer' ? 'number' : 'text';\n      if (!boolean) field.required = required.includes(name);\n      if (schema.type === 'integer') field.step = '1';\n      if (schema.type === 'number') field.step = 'any';\n      if (schema.minimum !== undefined) field.min = String(schema.minimum);\n      if (schema.maximum !== undefined) field.max = String(schema.maximum);\n      if (schema.pattern) field.pattern = schema.pattern;\n      if (schema.minLength !== undefined) field.minLength = schema.minLength;\n      if (schema.maxLength !== undefined) field.maxLength = schema.maxLength;\n      if (defaults[name] !== undefined && defaults[name] !== null) field.value = String(defaults[name]);\n      if (['documentPath', 'expectedContentHash', 'profile', 'expectedBaseVersion', 'proposalDigest', 'reviewDigest'].includes(name)) {\n        field.readOnly = true;\n        if (field.tagName === 'SELECT') field.disabled = true;\n      }\n      label.append(field); form.append(label);\n      fields.set(name, { field, schema, json, boolean });\n    }\n    if (fields.has('expectedBaseVersion')) fields.get('scope').field.addEventListener('change', () => {\n      fields.get('expectedBaseVersion').field.value = inspection.baseVersions[fields.get('scope').field.value];\n      fields.get('approved').field.checked = false;\n      fields.get('reviewDigest').field.value = 'null';\n    });\n    const evidence = document.createElement('pre');\n    evidence.dataset.commandEvidence = '';\n    evidence.setAttribute('role', 'status');\n    evidence.textContent = inspection === null ? 'No command submitted.' : JSON.stringify(inspection, null, 2);\n    const submit = document.createElement('button');\n    submit.type = 'submit';\n    submit.textContent = command.mutation === 'stages-change' ? 'Stage for review' : 'Submit reviewed input';\n    const cancel = document.createElement('button');\n    cancel.type = 'button'; cancel.textContent = 'Cancel';\n    cancel.addEventListener('click', () => setOverlay('none'));\n    form.append(submit, cancel);\n    form.addEventListener('input', (event) => {\n      if (fields.has('reviewDigest') && event.target !== fields.get('approved').field) {\n        fields.get('approved').field.checked = false;\n        fields.get('reviewDigest').field.value = 'null';\n      }\n    });\n    form.addEventListener('submit', (event) => {\n      event.preventDefault();\n      if (inFlight || submit.disabled) return;\n      let input;\n      try {\n        input = Object.fromEntries(Array.from(fields, ([name, row]) => {\n          const value = row.boolean ? row.field.checked : row.json ? JSON.parse(row.field.value)\n            : row.schema.type === 'number' || row.schema.type === 'integer' ? Number(row.field.value) : row.field.value;\n          return [name, value];\n        }).filter(([name, value]) => required.includes(name) || value !== ''));\n      } catch { evidence.textContent = 'EDITOR_COMMAND_INPUT_INVALID: complex fields require valid JSON.'; return; }\n      submit.disabled = true;\n      void productAction(async () => {\n        try {\n          if (properties.expectedContentHash && input.expectedContentHash !== projectContentHash) {\n            evidence.textContent = 'EDITOR_COMMAND_STALE_BASE_VERSION: reopen and review the current document.';\n            return;\n          }\n          if (command.mutation === 'stages-change') {\n            setOverlay('none');\n            await stageSceneCommand(commandId, input, command.label, { authoringSnapshot: true });\n            return;\n          }\n          const response = await commandRequest(commandId, input);\n          const diagnostic = responseDiagnostic(response);\n          evidence.textContent = diagnostic === null ? JSON.stringify(response.data, null, 2)\n            : diagnostic.code + ' \u00b7 ' + diagnostic.message;\n          if (diagnostic !== null) return;\n          if (response.data?.kind === 'sceneaxi.input-action-review') {\n            if (response.data.status === 'review') {\n              fields.get('reviewDigest').field.value = JSON.stringify(response.data.reviewDigest);\n              evidence.textContent += '\\\\nReview before/after, then explicitly check approved and submit the exact input.';\n            } else {\n              activeInputActionMap = response.data.after; refreshInputBindingLabels(); submit.hidden = true;\n            }\n          } else {\n            submit.hidden = true;\n            if (commandId === 'project-migration-commit') await openProject();\n          }\n        } finally { submit.disabled = false; }\n      });\n    });\n    card.append(title, help, form, evidence); overlay.append(card); shell.append(overlay);\n    setOverlay('command-input');\n    };\n\n    const runEditorCommand = async (commandId) => {\n    if (inputCommands.has(commandId)) return collectCommandInput(commandId);\n    const input = commandId === 'package-inspect' || commandId === 'profile-inspect' || commandId === 'scene-prefab-inspect'",
+    "before": "    }\n  });\n",
+    "after": "      ? { documentPath: T.product.documentPath, profile: shell.dataset.profile }\n      : commandId === 'extension-inspect'\n        ? { profile: shell.dataset.profile }"
+  },
+  {
+    "baseStart": 4268,
+    "privateStart": 4529,
+    "old": "    }, 'animation');",
+    "new": "    }, 'animation', { authoringSnapshot: true });",
+    "before": "      documentPath: T.product.documentPath,\n      expectedContentHash: projectContentHash,\n      mutation,",
+    "after": "    if (result) q('[data-timeline-result]').forEach((el) => {\n      el.textContent = 'Animation edit staged in Change Review. Save applies the proposal.';\n    });"
+  },
+  {
+    "baseStart": 4339,
+    "privateStart": 4600,
+    "old": "      'project-inspect', 'input-action-rebind', 'input-actions-reset',",
+    "new": "      'project-inspect', 'input-actions-inspect', 'input-action-rebind', 'input-actions-reset',\n      'scene-prefab-inspect', 'scene-prefab-define', 'scene-prefab-instance',\n      'scene-prefab-override', 'scene-prefab-refresh', 'viewport-source-set', 'physics-evaluate',",
+    "before": "      'workspace-layout-inspect', 'workspace-layout-apply', 'workspace-layout-reset',\n      'project-migration-propose', 'project-migration-commit', 'project-migration-recover',\n      'project-build', 'extension-inspect', 'extension-start', 'profile-inspect',",
+    "after": "    ].map((id) => [id, () => runEditorCommand(id)])),\n  });\n"
+  },
+  {
+    "baseStart": 4409,
+    "privateStart": 4672,
+    "old": "      if (primary && showSceneProperty(primary) && shell.dataset.mode !== 'build') showModePanels('build');",
+    "new": "      if (primary && showSceneProperty(primary)) {\n        if (shell.dataset.mode !== 'build') showModePanels('build');\n        const instanceIds = [...selectedSceneEntityIds];\n        const generation = sceneSelectionGeneration;\n        sceneSelectionPending = sceneSelectionPending.then(\n          () => setSceneSelection(instanceIds, generation),\n          () => setSceneSelection(instanceIds, generation),\n        );\n      }",
+    "before": "    else if (action === 'change-reject') void productAction(() => rejectProposal('rejected'));\n    else if (action === 'scene-entity-select' && value) {\n      const primary = el.tagName === 'SELECT' ? el.value : value;",
+    "after": "    }\n    else if (action === 'scene-property-stage') void productAction(stageSceneProperty);\n    else if (action === 'catalog-stage' && value) void productAction(() => stageCatalog(value));"
+  }
+]

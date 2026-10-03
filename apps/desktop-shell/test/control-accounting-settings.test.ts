@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { CONTROL_STATES, chromeDocument } from "../../../tests/helpers/desktop-chrome-golden.js";
+import { CONTROL_STATES, chromeDocument } from "./helpers/desktop-chrome-golden.js";
 
 it("pins settings form inputs, selects, and JSON textareas", () => {
   for (const [label, state] of CONTROL_STATES) {

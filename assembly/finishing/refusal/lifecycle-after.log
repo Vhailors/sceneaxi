@@ -1,0 +1,106 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/tmp/sceneaxi-comprehensive-owned-xd4gdfl1[39m
+
+ [31m×[39m apps/desktop-shell/test/minimum-window.test.ts[2m > [22mminimum-window refusal client lifecycle (DOM, not pixels)[2m > [22mdismisses a menu on refusal and returns to its trigger only after resizing[32m 182[2mms[22m[39m
+[31m   → expected 'ready' to be 'refused' // Object.is equality[39m
+ [31m×[39m apps/desktop-shell/test/minimum-window.test.ts[2m > [22mminimum-window refusal client lifecycle (DOM, not pixels)[2m > [22mdismisses dialogs without reopening them and restores their original opener[32m 97[2mms[22m[39m
+[31m   → expected 'palette' to be 'none' // Object.is equality[39m
+ [31m×[39m apps/desktop-shell/test/minimum-window.test.ts[2m > [22mminimum-window refusal client lifecycle (DOM, not pixels)[2m > [22muses either dimension, allows the exact minimum and does not steal moved focus[32m 96[2mms[22m[39m
+[31m   → expected HTMLButtonElement{ …(1), …(50) } to be HTMLDivElement{ …(47) } // Object.is equality[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 3 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m apps/desktop-shell/test/minimum-window.test.ts[2m > [22mminimum-window refusal client lifecycle (DOM, not pixels)[2m > [22mdismisses a menu on refusal and returns to its trigger only after resizing
+[31m[1mAssertionError[22m: expected 'ready' to be 'refused' // Object.is equality[39m
+
+Expected: [32m"re[7mfused[27m"[39m
+Received: [31m"re[7mady[27m"[39m
+
+[36m [2m❯[22m apps/desktop-shell/test/minimum-window.test.ts:[2m28:39[22m[39m
+    [90m 26|[39m     [34mexpect[39m(panel[33m.[39m[34mcontains[39m(h[33m.[39mwindow[33m.[39mdocument[33m.[39mactiveElement))[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m 27|[39m     h[33m.[39m[34mrefuse[39m()[33m;[39m
+    [90m 28|[39m     [34mexpect[39m(h[33m.[39mshell[33m.[39mdataset[[32m"window"[39m])[33m.[39m[34mtoBe[39m([32m"refused"[39m)[33m;[39m
+    [90m   |[39m                                       [31m^[39m
+    [90m 29|[39m     [34mexpect[39m(h[33m.[39mshell[33m.[39minert)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m 30|[39m     [34mexpect[39m(panel[33m.[39mhidden)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m apps/desktop-shell/test/minimum-window.test.ts[2m > [22mminimum-window refusal client lifecycle (DOM, not pixels)[2m > [22mdismisses dialogs without reopening them and restores their original opener
+[31m[1mAssertionError[22m: expected 'palette' to be 'none' // Object.is equality[39m
+
+Expected: [32m"[7mnon[27me"[39m
+Received: [31m"[7mpalett[27me"[39m
+
+[36m [2m❯[22m apps/desktop-shell/test/minimum-window.test.ts:[2m46:40[22m[39m
+    [90m 44|[39m     [34mexpect[39m(h[33m.[39mshell[33m.[39mdataset[[32m"overlay"[39m])[33m.[39m[34mtoBe[39m([32m"palette"[39m)[33m;[39m
+    [90m 45|[39m     h[33m.[39m[34mrefuse[39m()[33m;[39m
+    [90m 46|[39m     [34mexpect[39m(h[33m.[39mshell[33m.[39mdataset[[32m"overlay"[39m])[33m.[39m[34mtoBe[39m([32m"none"[39m)[33m;[39m
+    [90m   |[39m                                        [31m^[39m
+    [90m 47|[39m     expect([...h.shell.querySelectorAll(".overlay")].every((el) => el.…
+    [90m 48|[39m     [34mexpect[39m(h[33m.[39mwindow[33m.[39mdocument[33m.[39mactiveElement)[33m.[39m[34mtoBe[39m(h[33m.[39mrefusal)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m apps/desktop-shell/test/minimum-window.test.ts[2m > [22mminimum-window refusal client lifecycle (DOM, not pixels)[2m > [22muses either dimension, allows the exact minimum and does not steal moved focus
+[31m[1mAssertionError[22m: expected HTMLButtonElement{ …(1), …(50) } to be HTMLDivElement{ …(47) } // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- <div[39m
+[32m-   class="window-refusal"[39m
+[32m-   role="alert"[39m
+[31m+ <button[39m
+[31m+   aria-expanded="false"[39m
+[31m+   aria-haspopup="menu"[39m
+[31m+   class="menu-item"[39m
+[31m+   data-kind="view"[39m
+[31m+   data-menu-trigger="file"[39m
+[31m+   id="menu-file"[39m
+[31m+   type="button"[39m
+[2m  >[22m
+[32m-   [39m
+[32m-   [39m
+[32m-   <h1>[39m
+[32m-     Window below the minimum size[39m
+[32m-   </h1>[39m
+[32m-   [39m
+[32m-   [39m
+[32m-   <p>[39m
+[32m-     The editor chrome refuses below its minimum window size rather than rendering an unusable layout.[39m
+[32m-   </p>[39m
+[32m-   [39m
+[32m-   [39m
+[32m-   <p>[39m
+[32m-     Minimum: [39m
+[32m-     <code>[39m
+[32m-       900×600[39m
+[32m-     </code>[39m
+[32m-      · refusal [39m
+[32m-     <code>[39m
+[32m-       DESKTOP_WINDOW_BELOW_MINIMUM[39m
+[32m-     </code>[39m
+[32m-   </p>[39m
+[32m-   [39m
+[32m-[39m
+[32m- </div>[39m
+[31m+   File[39m
+[31m+ </button>[39m
+
+[36m [2m❯[22m apps/desktop-shell/test/minimum-window.test.ts:[2m62:45[22m[39m
+    [90m 60|[39m     h[33m.[39mtrigger[33m.[39m[34mfocus[39m()[33m;[39m
+    [90m 61|[39m     h.resize(DESKTOP_MINIMUM_WINDOW.width, DESKTOP_MINIMUM_WINDOW.heig…
+    [90m 62|[39m     [34mexpect[39m(h[33m.[39mwindow[33m.[39mdocument[33m.[39mactiveElement)[33m.[39m[34mtoBe[39m(h[33m.[39mrefusal)[33m;[39m
+    [90m   |[39m                                             [31m^[39m
+    [90m 63|[39m     h.resize(DESKTOP_MINIMUM_WINDOW.width, DESKTOP_MINIMUM_WINDOW.heig…
+    [90m 64|[39m     [34mexpect[39m(h[33m.[39mshell[33m.[39mdataset[[32m"window"[39m])[33m.[39m[34mtoBe[39m([32m"ready"[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m3 failed[39m[22m[90m (3)[39m
+[2m   Start at [22m 13:11:46
+[2m   Duration [22m 4.04s[2m (transform 2.67s, setup 0ms, import 3.41s, tests 377ms, environment 0ms)[22m
+

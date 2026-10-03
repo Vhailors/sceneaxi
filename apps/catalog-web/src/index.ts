@@ -32,11 +32,13 @@ const FIXTURE_HASH =
 
 function deepFreeze<T extends object>(value: T): T {
   const nestedValues: unknown[] = Object.values(value);
+
   for (const nested of nestedValues) {
-    if (nested !== null && typeof nested === "object") {
+    if (nested !== null && isProtocolObject(nested)) {
       deepFreeze(nested);
     }
   }
+
   return Object.freeze(value);
 }
 
@@ -63,18 +65,23 @@ function buildListedFixture(): CatalogItem {
     },
     compatibility: { coreRange: "^0.0.0", profiles: ["web"] },
   });
+
   const screened = transitionCatalogItem(intake, {
     to: "screening",
     reason: "Fixture quarantine checks passed.",
     at: "2026-07-24T12:01:00.000Z",
   });
+
   if (!screened.ok) throw new Error(screened.message);
+
   const curated = transitionCatalogItem(screened.item, {
     to: "curation",
     reason: "Fixture metadata checks passed.",
     at: "2026-07-24T12:02:00.000Z",
   });
+
   if (!curated.ok) throw new Error(curated.message);
+
   const verdict: HumanCurationVerdict = {
     kind: "human",
     decision: "approve",
@@ -83,17 +90,21 @@ function buildListedFixture(): CatalogItem {
       "Approved only as dormant fixture evidence; recorded in apps/catalog-web/fixtures/web-golden-fixture.human-verdict.json.",
     recordedAt: "2026-07-24T12:03:00.000Z",
   };
+
   const listed = transitionCatalogItem(curated.item, {
     to: "listed",
     reason: "Fixture human approval recorded.",
     at: "2026-07-24T12:03:00.000Z",
     humanVerdict: verdict,
   });
+
   if (!listed.ok) throw new Error(listed.message);
+
   return listed.item;
 }
 
 export const listedFixtureItem = deepFreeze(buildListedFixture());
+
 const listedItems = Object.freeze([listedFixtureItem] as const);
 
 export function listCatalogItems(): readonly CatalogItem[] {
@@ -102,6 +113,7 @@ export function listCatalogItems(): readonly CatalogItem[] {
 
 export function showCatalogItem(itemId: string) {
   const item = listedItems.find((candidate) => candidate.itemId === itemId);
+
   return item === undefined
     ? Object.freeze({
         ok: false as const,
@@ -152,3 +164,13 @@ export const catalogSurface = Object.freeze({
   attemptCatalogPurchase,
   attemptCatalogMarketplacePublish,
 });
+
+function isProtocolObject<Value>(value: Value): value is Value & (object | null) {
+  return isBoundaryObjectValue(value);
+}
+
+type BoundaryObjectValue = object | null;
+
+function isBoundaryObjectValue<Input>(value: Input): value is Input & Readonly<BoundaryObjectValue> {
+  return typeof value === "object";
+}

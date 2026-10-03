@@ -1,0 +1,287 @@
+{
+  "verdict": "FAIL",
+  "integrationStatus": "NOT_READY",
+  "root": "/home/devuser/Documents/Projects/sceneaxi",
+  "head": "4e532e2fbf43e9948741578ab6208a3277870405",
+  "at": "2026-10-02T14:00:38.810305+00:00",
+  "sourceReadOnly": true,
+  "allThreeHandbacksPresent": true,
+  "fingerprint": {
+    "before": "fingerprint-before.json",
+    "after": "fingerprint-after.json",
+    "files": {
+      "packages/schemas/src/scene-composition.ts": "3ffd88fa60166409acc381fc921e7bd1bd81adab2060b7b9b384d2822ae573aa",
+      "packages/authoring-core/src/scene-composition.ts": "509f85a54af188f993aa7cbe615b04ee6c2ed0f6b8104ee57e81bfd4133b2383",
+      "packages/engine-presentation/src/scene-transforms.ts": "c77e395f2a50b4a7f46c46e5e640d6ef664b65f213d04a19489f64dceec22a04",
+      "packages/schemas/test/scene-transform-v2.test.ts": "373e313d4421d951089c6d46def343ce846f88608230942c723f44ba30e3fae7",
+      "packages/authoring-core/test/scene-transform-v2.test.ts": "521683c6ba8ba28715bfa531746d36255d72a253f8b0bac366513f15829e5702",
+      "packages/schemas/src/desktop-project-build.ts": "9493b82e88d6eea649be33a91b3d133d5daddc2bc160744b9599a5750dd8cff5",
+      "packages/authoring-core/src/local-project-build.ts": "6465dba1a3d3e4a0bf42af916b882cc938c19d1a5f52ca5b86a5a753233342f0",
+      "packages/schemas/test/local-project-build.test.ts": "5a71f3f7e718a900a3fa3965fd530e7dd18444551b37f6c54df5ed7531a617dd",
+      "packages/authoring-core/test/local-project-build.test.ts": "72af6656f72870e608af20c0b8128c0950a7f769902621bf78f086035ae5f404",
+      "packages/importers/src/contained-gltf.ts": "72c8b5a140f0252ee2bad11b2b367c6ecc7c7c8b476f9eb1d9e8bd6c0e8b46a1",
+      "packages/importers/src/asset-preparation-worker.ts": "4d05057f457ac0a76510e270163285d480f18510362c8a6b65fcd61d41a42746",
+      "packages/importers/test/asset-preparation-bounds.test.ts": "8f88d2a91bba560733a117bcf094e8571e17deb457dd71f8f04332e0ff21ef4d",
+      "packages/schemas/src/index.ts": "70d2d830c403c6f8f55191f277f13cf875714b0fa9c7e9556ecdf368801984c2",
+      "packages/authoring-core/src/index.ts": "b8cdb0319d78dd2930c5d7072b7ab1ba48ba5c459c97a43c43de2329d0f5acf4",
+      "packages/importers/src/index.ts": "16168577c7d8a1e14a55fcfa615e56e25875d9ff6d056c06f0b9eb5b16cdf508",
+      "packages/engine-presentation/src/index.ts": "71ccdda8f1ad02b2dc05d091d107f7d71995782816e6d19ddb8817b062782936",
+      "vitest.config.ts": "fc37bb4f76c6f57159ce3e2afd7345686839e26efb63fbda291cfca3a9e19326"
+    },
+    "changed": [],
+    "scope": "12 handed-back source/test files, four public indexes and vitest config; not whole-repository freeze"
+  },
+  "prefixCompatibility": {
+    "packages/schemas/src/scene-composition.ts": {
+      "originalPrefixVerified": true,
+      "removedOnlyAddedImport": false,
+      "match": {
+        "lines": 1111,
+        "bytes": 35788,
+        "sha256": "43c85cf3544bd261caa3e3504b5be4a9e9c8f7680fbcd588616a73c91c8a3c0f"
+      }
+    },
+    "packages/authoring-core/src/scene-composition.ts": {
+      "originalPrefixVerified": true,
+      "removedOnlyAddedImport": true,
+      "match": {
+        "lines": 641,
+        "bytes": 18977,
+        "sha256": "bb38670abdbf3cdc7a4205a012f1b9ba0be4506cad40cdedf516f96cdd6e0084"
+      }
+    },
+    "packages/schemas/src/desktop-project-build.ts": {
+      "originalPrefixVerified": true,
+      "removedOnlyAddedImport": false,
+      "match": {
+        "lines": 96,
+        "bytes": 3524,
+        "sha256": "ec7b86e27314891af86e662279d6ea835b12ccfec63155c7e022578ebfee0588"
+      }
+    }
+  },
+  "commands": [
+    {
+      "command": "pnpm exec vitest run packages/schemas/test/scene-transform-v2.test.ts packages/authoring-core/test/scene-transform-v2.test.ts packages/schemas/test/scene-composition.test.ts packages/authoring-core/test/scene-composition.test.ts tests/e2e/scene-composition-golden.test.ts packages/schemas/test/local-project-build.test.ts packages/authoring-core/test/local-project-build.test.ts --reporter=dot",
+      "exit": 1,
+      "passed": 65,
+      "failed": 31,
+      "log": "regular-tests.log"
+    },
+    {
+      "command": "pnpm exec vitest run packages/schemas/test/scene-transform-v2.test.ts packages/authoring-core/test/scene-transform-v2.test.ts packages/schemas/test/scene-composition.test.ts packages/authoring-core/test/scene-composition.test.ts tests/e2e/scene-composition-golden.test.ts --config docs/audits/production-swarm/implementation-expansion-2026-10-02/versioned-transforms/focused.config.ts --reporter=dot",
+      "exit": 0,
+      "passed": 69,
+      "failed": 0,
+      "log": "export-probe-transforms.log",
+      "limit": "Exact pending export aliases; not public product wiring"
+    },
+    {
+      "command": "pnpm exec vitest run packages/importers/test/asset-preparation-bounds.test.ts --reporter=dot",
+      "exit": 1,
+      "passed": 5,
+      "failed": 5,
+      "log": "worker-tests.log"
+    },
+    {
+      "command": "pnpm exec vitest run --config docs/audits/production-swarm/implementation-expansion-2026-10-02/review-capabilities/probe.config.mjs --reporter=dot",
+      "exit": 1,
+      "passed": 0,
+      "failed": 1,
+      "log": "launch-race.log",
+      "limit": "Actual stock Node child, controlled filesystem race injection, no native/browser"
+    }
+  ],
+  "findings": [
+    {
+      "id": "CAP-01",
+      "status": "FAIL",
+      "severity": "high",
+      "path": "packages/authoring-core/src/local-project-build.ts",
+      "lines": [
+        264,
+        275,
+        279,
+        304
+      ],
+      "predicate": "No execution of unverified or symlink-substituted runtime after artifact verification",
+      "observed": "Injected symlink replacement at mkdtempSync before spawn; actual Node child executed replacement and wrote marker; eventual LAUNCH_UNVERIFIED refusal was too late",
+      "sourceSha256": "6465dba1a3d3e4a0bf42af916b882cc938c19d1a5f52ca5b86a5a753233342f0",
+      "fix": "Execute trusted immutable/pinned bootstrap outside mutable artifacts, preserve descriptor-contained artifact/resource identity until use, add permanent adversarial launch substitution test; do not rely on post-execution hash check",
+      "external": false
+    },
+    {
+      "id": "CAP-02",
+      "status": "FAIL",
+      "paths": [
+        "packages/schemas/src/index.ts:953",
+        "packages/schemas/src/index.ts:1113",
+        "packages/authoring-core/src/index.ts:188",
+        "packages/importers/src/index.ts:62"
+      ],
+      "predicate": "Public exports and real worker module linking",
+      "observed": "Regular tests31fail65pass; worker5fail5pass; missing v2 schema/local-build public exports",
+      "fix": "Apply exact additive export requests then rerun unchanged regular suites",
+      "external": false
+    },
+    {
+      "id": "CAP-03",
+      "status": "NOT_READY",
+      "path": "packages/importers/src/contained-gltf.ts",
+      "lines": [
+        2490,
+        2492
+      ],
+      "predicate": "Whole preparation/publication/canonical GUI path meets unchanged responsiveness/memory limits",
+      "observed": "Publication callback still synchronously reads/hashes complete document and source; no document byte cap here; native120s cause unproved;512MiB worker heap does not prove256MiB GUI RSS/32MiB plateau",
+      "fix": "Measure complete publication/IPC/reload on pre-populated capacity document; remove measured main-thread blocking without changing canonical bytes/digest; preserve4s/100ms/500ms and resource thresholds",
+      "external": false
+    },
+    {
+      "id": "CAP-04",
+      "status": "NOT_READY",
+      "path": "packages/engine-presentation/src/scene-transforms.ts:11",
+      "predicate": "Actual v2 kernel/save/replay/presentation integration",
+      "observed": "Numeric helper and export-probe tests pass, actual runtime wiring not certified",
+      "fix": "Explicit v2 dispatch, schema2 kernel replay and artifact-local animation/world-matrix application exactly once, transactional cleanup, real pixel/negative proofs",
+      "external": false
+    },
+    {
+      "id": "CAP-05",
+      "status": "NOT_READY",
+      "path": "packages/authoring-core/src/local-project-build.ts:148",
+      "predicate": "Actual desktop/CLI local-unsigned saved user-project stage/launch",
+      "observed": "Real user-document/export staging helper exists; native launch success and trusted-profile/held-key action wiring not certified",
+      "fix": "Repair CAP-01, wire existing exporter and trusted authority, execute deferred native user-document/pixel/exact-exit driver; signing remains independently held",
+      "external": false
+    }
+  ],
+  "sharedSerialRequests": {
+    "versioned-transforms": {
+      "exportRequests": {
+        "packages/schemas/src/index.ts": {
+          "from": "./scene-composition.js",
+          "values": [
+            "SCENE_COMPOSITION_SCHEMA_VERSION_V2",
+            "SCENE_MATRIX_CONVENTION_V2",
+            "multiplySceneMatricesV2",
+            "sceneMatrixFromSculptTransformV2",
+            "validateSceneCompositionIntakeV2",
+            "resolveScenePlacementsV2",
+            "migrateSceneCompositionIntakeV1ToV2",
+            "digestScenePlacementsV2",
+            "digestComposedSceneV2",
+            "projectSceneInstanceHierarchyV2",
+            "validateComposedSceneV2",
+            "composedSceneV2FromDocumentData"
+          ],
+          "types": [
+            "SceneMatrixV2",
+            "SceneCompositionIntakeV2",
+            "ResolvedScenePlacementV2",
+            "SceneBoundsV2",
+            "ComposedSceneInstanceV2",
+            "ComposedSceneV2",
+            "PlacedSceneInstanceHierarchyV2"
+          ]
+        },
+        "packages/authoring-core/src/index.ts": {
+          "from": "./scene-composition.js",
+          "values": [
+            "composeSceneV2",
+            "serializeComposedSceneV2",
+            "sceneDocumentFromComposedSceneV2",
+            "migrateComposedSceneV1ToV2"
+          ],
+          "types": [
+            "SceneCompositionResultV2"
+          ]
+        },
+        "packages/engine-presentation/src/index.ts": {
+          "from": "./scene-transforms.js",
+          "values": [
+            "resolveScenePresentationV2"
+          ],
+          "types": [
+            "ScenePresentationSourceV2"
+          ]
+        }
+      },
+      "contractRequest": {
+        "path": "packages/schemas/contracts/scene-composition-v2.schema.json",
+        "proposal": "docs/audits/production-swarm/implementation-expansion-2026-10-02/versioned-transforms/scene-composition-v2.schema.proposal.json",
+        "v1ContractUnchanged": true
+      },
+      "integrationRequests": [
+        "Add exact schema/authoring/presentation public exports above without modifying v1 exports.",
+        "Install proposed v2 JSON schema additively; update contract fixture/checker/docs inventory under serial ownership, not v1 schema/version/golden bytes.",
+        "Add explicit openSceneKernelSessionV2/replaySceneKernelSessionV2 or equivalent schema2-only dispatch; v1 API/save shape remain unchanged. Save schema2 carries full validated scene matrix/evidence; replay recomputes matrices/bounds and terminal digest, rejects wrong majors/tampering.",
+        "Kernel must simulate artifact-local driver transforms and recompute node world matrices with multiplySceneMatricesV2 before flattening; never decompose shear matrices or send them to v1 additive-Euler simulation. Rest-pose helper output is not animated/runtime-physics proof.",
+        "Presentation: use resolveScenePresentationV2 validation before allocation. Reuse existing buildInstance with identity placement, set independent instance root.matrix from validated worldMatrix and matrixAutoUpdate=false, retaining unchanged local artifact hierarchy. Do not apply already absolute node world matrices again under worldMatrix parent. Add transactional all-instance cleanup/live guard.",
+        "Use explicit v2 authoring intake dispatch to composeSceneV2; legacy composeScene continues rejecting schema2. Document/save uses the existing composedScene data key; branch explicitly to composedSceneV2FromDocumentData on schema2.",
+        "Run regular (no probe aliases) owned tests after shared exports, then unchanged full build/gate, declarations/contracts, real kernel v2 rotated/sheared advance/save-replay negative oracles and browser pixels/cleanup. No v2 runtime success claimed before these."
+      ]
+    },
+    "unsigned-project-build": {
+      "exportRequests": {
+        "packages/schemas/src/index.ts": "Add evaluateLocalProjectBuild to existing desktop-project-build.js named export block.",
+        "packages/authoring-core/src/index.ts": "export { LOCAL_PROJECT_BUILD_LIMITS, LOCAL_PROJECT_BUILD_REFUSALS, buildLocalProject, verifyLocalProjectBuild, launchLocalProjectBuild, type LocalProjectBuildRefusal, type LocalProjectBuildReceipt, type LocalProjectBuildSuccess, type LocalProjectBuildResult, type LocalProjectBuildInput, type LocalProjectLaunchInput, type LocalProjectLaunchSuccess } from \"./local-project-build.js\";"
+      },
+      "integrationRequest": {
+        "owner": "bg-109 only",
+        "source": "desktop/linux existing exportDesktopWebProject / CLI / desktop action",
+        "instruction": "Expose an explicitly local-unsigned action under existing held-key/profile authority: produce existing saved-project Web export; call buildLocalProject({projectRoot,exportPath:relative(projectRoot,export.outputDirectory),name,profile:trustedSessionProfile,purpose:\"local-unsigned\",target:\"linux\"}); call verifyLocalProjectBuild before launch; launchLocalProjectBuild({projectRoot,name,executable:approvedSymlinkFreeElectronBinary}); expose receipt/PNG smoke proof with releaseReady:false. Do not repurpose signed evaluateProjectBuild, mark published/signed, or infer readiness from child creation."
+      }
+    },
+    "importer-capacity": {
+      "exactExports": {
+        "file": "packages/importers/src/index.ts",
+        "from": "./asset-preparation-worker.js",
+        "values": [
+          "startProjectAssetPreparation",
+          "ASSET_PREPARATION_REFUSALS",
+          "ASSET_PREPARATION_DEADLINE_MS"
+        ],
+        "types": [
+          "ProjectAssetPreparationInput",
+          "ProjectAssetPreparationOutcome",
+          "ProjectAssetPreparationJob"
+        ]
+      }
+    }
+  },
+  "verified": [
+    "Original v1 schema/authoring prefixes and signed-gate bytes preserved",
+    "69 export-probe transform/v1 tests including v1 golden bytes/save-replay",
+    "Real worker cancellation terminal exit/busy/deadline/Kids/startup cleanup five cases",
+    "Recorded source/index/test-config fingerprints unchanged"
+  ],
+  "notRun": [
+    "Fullbuild/fullgate",
+    "Browser/native/site/container/install",
+    "Actual v2 runtime/save-replay/render integration",
+    "Actual unsigned Electron user-project positive smoke",
+    "Desktop/CLI action and held-key wiring",
+    "Complete16x8MiB GUI propagation and native memory/heartbeat acceptance"
+  ],
+  "notRecertified": [
+    "Builder16x8MiB/count17/symlink/rollback existing18tests",
+    "Builder849472KiB capacity measurement (not pass)",
+    "No canonical compaction was implemented"
+  ],
+  "resources": {
+    "spawned": "Vitest, real Node workers and one stock Node child; ephemeral fixture directories",
+    "cleanup": "Owning tests assert worker exit and remove fixtures; independent race fixture and launch evidence dirs removed; no server/browser/native/container created"
+  },
+  "evidenceSha256": {
+    "fingerprint-before.json": "e183ecc5fc3a1f7bb13bb42b0c8a54e2b1b810c383c1d6aafeb56c530bca63a4",
+    "probe.config.mjs": "168adf416b0056dfe111642cc1e2e996a801516bd456d401a8bbb43b937d7d85",
+    "launch-race.test.mjs": "193f45940195f6579bcd16a9552c2e1272a1954b6c3f6a788c7522057a49b71e",
+    "launch-race.log": "14d9f5f689f68aa25aab1cb7d574bff75f8b71cc4e02f834aba6cb6e0995fbd1",
+    "export-probe-transforms.log": "e74ffd4db8aa79edc89e717f80ab4e8fab0cd0f321eec8d03c59682542fac669",
+    "worker-tests.log": "ea251fac13044965b8953c4cf11645f29a51396236ac8adc9779dce46d1dd09d",
+    "report.md": "cbc4e4db266744da3f3f55f30ffe1bc19b743b1b99ccd5bc62d24e9515f61e30",
+    "fingerprint-after.json": "1be5a408d9c4bcabbccbf9151dc0bd225a112e69ea6432e6b0652cb6b67b444e",
+    "regular-tests.log": "63a70a604e6c0a7bef416f872f4e0d3d5cd43467914c838191f054671e5cd65a"
+  }
+}

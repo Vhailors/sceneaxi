@@ -30,7 +30,7 @@ export function frameScript(): string {
     if (binding.code !== (event.code || fallback)) return false;
     const modifiers = binding.modifiers;
     const primary = event.ctrlKey || event.metaKey;
-    if (modifiers.includes('primary') !== primary) return false;
+    if (modifiers.includes('primary') && !primary) return false;
     if (!modifiers.includes('primary')) {
       if (modifiers.includes('control') !== Boolean(event.ctrlKey)) return false;
       if (modifiers.includes('meta') !== Boolean(event.metaKey)) return false;

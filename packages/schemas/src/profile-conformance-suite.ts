@@ -63,6 +63,7 @@ export function runProfileConformanceSuite(
       claimResult.ok ? undefined : claimResult.message,
     ),
   );
+
   if (!claimResult.ok) {
     return fail(checks);
   }
@@ -120,7 +121,7 @@ export function runProfileConformanceSuite(
   checks.push(
     check(
       "core-pin-real-range",
-      typeof claim.corePin === "string" &&
+      isConformanceText(claim.corePin) &&
         claim.corePin.length > 0 &&
         /[\d*]/.test(claim.corePin) &&
         surface.seam.corePin === claim.corePin,
@@ -167,6 +168,7 @@ export function runProfileConformanceSuite(
   // Kernel session through the profile's pinned core.
   try {
     const host = fixedHost(1_000);
+
     const manifest = Object.freeze({
       productId: "profile-conformance",
       seed: 7,
@@ -174,6 +176,7 @@ export function runProfileConformanceSuite(
         Object.freeze({ id: "player", x: 0, y: 0 }),
       ]),
     });
+
     const session = surface.core.kernel.open(manifest, host);
     const before = session.observe();
     session.dispatch({ type: "move", actor: "player", axis: [2, 0] });
@@ -224,19 +227,24 @@ export function runProfileConformanceSuite(
 
   // Document propose/apply through the profile's pinned core.
   let tempDir: string | undefined;
+
   try {
     tempDir = nodeFs.mkdtempSync(
       nodePath.join(nodeOs.tmpdir(), "sceneaxi-profile-conformance-"),
     );
     const docName = "scene.json";
+
     const doc = surface.core.authoring.createDocument({
       id: "conformance-scene",
       data: { entities: [{ id: "hero", x: 0, y: 0 }] },
     });
+
     const abs = nodePath.join(tempDir, docName);
+
     const written = surface.core.authoring.writeDocumentFile(abs, doc, {
       cwd: tempDir,
     });
+
     checks.push(check("document-write", written.ok === true));
 
     const proposed = surface.core.authoring.propose({
@@ -245,6 +253,7 @@ export function runProfileConformanceSuite(
       newValue: 10,
       cwd: tempDir,
     });
+
     checks.push(
       check(
         "document-propose",
@@ -259,7 +268,7 @@ export function runProfileConformanceSuite(
       checks.push(
         check(
           "document-propose-diff",
-          typeof proposed.unifiedDiff === "string" &&
+          isConformanceText(proposed.unifiedDiff) &&
             proposed.unifiedDiff.includes("scene.json"),
         ),
       );
@@ -268,6 +277,7 @@ export function runProfileConformanceSuite(
         proposal: proposed.proposal,
         cwd: tempDir,
       });
+
       checks.push(
         check(
           "document-apply",
@@ -284,12 +294,13 @@ export function runProfileConformanceSuite(
         const text = nodeFs.readFileSync(abs, "utf8");
         const parsed = parseDocumentText(text);
         checks.push(check("document-reparse", parsed.ok === true));
+
         if (parsed.ok) {
           const entities = parsed.document.data["entities"];
-          const first =
-            Array.isArray(entities) && entities[0] !== undefined
-              ? (entities[0] as { x?: unknown })
-              : undefined;
+
+          const candidate = Array.isArray(entities) ? entities[0] : undefined;
+            const first = isEntityRecord(candidate) ? candidate : undefined;
+
           checks.push(
             check(
               "document-apply-mutated-pointer",
@@ -328,13 +339,29 @@ function fail(checks: ConformanceCheckResult[]): ConformanceSuiteResult {
   };
 }
 
-function fixedHost(startMs: number): { nowMs: () => number } {
+function fixedHost(startMs: number) {
   let t = startMs;
+
   return {
     nowMs: () => {
       const v = t;
       t += 1;
+
       return v;
     },
   };
+}
+
+function isConformanceText(value: unknown): value is string {
+  return typeof value === "string";
+}
+
+function isEntityRecord(value: import("./document.js").JsonValue | undefined): value is import("./document.js").JsonObject {
+  return value !== null && isBoundaryObjectValue(value) && !Array.isArray(value);
+}
+
+type BoundaryObjectValue = object | null;
+
+function isBoundaryObjectValue<Input>(value: Input): value is Input & Readonly<BoundaryObjectValue> {
+  return typeof value === "object";
 }

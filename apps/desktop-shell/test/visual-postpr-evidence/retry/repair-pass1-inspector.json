@@ -1,0 +1,992 @@
+[
+  {
+    "scheme": "light",
+    "scenario": "idle",
+    "screenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/repair-pass1-inspector-idle-light.png",
+    "focusScreenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/repair-pass1-inspector-idle-light-focus.png",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "errors": [],
+    "metrics": {
+      "documentOverflow": false,
+      "diffOverflow": false,
+      "refusalColor": "rgb(0, 0, 0)",
+      "canvas": "rgb(255, 255, 255)",
+      "disabledOpacity": "1",
+      "hiddenRecovery": true
+    },
+    "focus": [
+      {
+        "key": 12,
+        "id": "documentPath",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(0, 0, 0)",
+        "rect": {
+          "x": 24,
+          "y": 141.390625,
+          "width": 736,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Tab"
+      },
+      {
+        "key": 14,
+        "id": "jsonPointer",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(0, 0, 0)",
+        "rect": {
+          "x": 24,
+          "y": 217.390625,
+          "width": 736,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Tab"
+      },
+      {
+        "key": 16,
+        "id": "newValue",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(0, 0, 0)",
+        "rect": {
+          "x": 24,
+          "y": 293.390625,
+          "width": 736,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Tab"
+      },
+      {
+        "key": 18,
+        "id": "propose",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(0, 0, 0)",
+        "rect": {
+          "x": 24,
+          "y": 360.390625,
+          "width": 85.015625,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Tab"
+      },
+      {
+        "key": 18,
+        "id": "propose",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(0, 0, 0)",
+        "rect": {
+          "x": 24,
+          "y": 360.390625,
+          "width": 85.015625,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Shift+Tab"
+      },
+      {
+        "key": 16,
+        "id": "newValue",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(0, 0, 0)",
+        "rect": {
+          "x": 24,
+          "y": 293.390625,
+          "width": 736,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Shift+Tab"
+      },
+      {
+        "key": 14,
+        "id": "jsonPointer",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(0, 0, 0)",
+        "rect": {
+          "x": 24,
+          "y": 217.390625,
+          "width": 736,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Shift+Tab"
+      },
+      {
+        "key": 12,
+        "id": "documentPath",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(0, 0, 0)",
+        "rect": {
+          "x": 24,
+          "y": 141.390625,
+          "width": 736,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Shift+Tab"
+      }
+    ]
+  },
+  {
+    "scheme": "light",
+    "scenario": "long-diff",
+    "screenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/repair-pass1-inspector-long-diff-light.png",
+    "focusScreenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/repair-pass1-inspector-long-diff-light-focus.png",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "errors": [],
+    "metrics": {
+      "documentOverflow": false,
+      "diffOverflow": false,
+      "refusalColor": "rgb(0, 0, 0)",
+      "canvas": "rgb(255, 255, 255)",
+      "disabledOpacity": "1",
+      "hiddenRecovery": true
+    },
+    "focus": [
+      {
+        "key": 12,
+        "id": "documentPath",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(0, 0, 0)",
+        "rect": {
+          "x": 16,
+          "y": 280.390625,
+          "width": 358,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Tab"
+      },
+      {
+        "key": 14,
+        "id": "jsonPointer",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(0, 0, 0)",
+        "rect": {
+          "x": 16,
+          "y": 356.390625,
+          "width": 358,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Tab"
+      },
+      {
+        "key": 16,
+        "id": "newValue",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(0, 0, 0)",
+        "rect": {
+          "x": 16,
+          "y": 432.390625,
+          "width": 358,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Tab"
+      },
+      {
+        "key": 18,
+        "id": "propose",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(0, 0, 0)",
+        "rect": {
+          "x": 16,
+          "y": 499.390625,
+          "width": 119.625,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Tab"
+      },
+      {
+        "key": 18,
+        "id": "propose",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(0, 0, 0)",
+        "rect": {
+          "x": 16,
+          "y": 499.390625,
+          "width": 119.625,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Shift+Tab"
+      },
+      {
+        "key": 16,
+        "id": "newValue",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(0, 0, 0)",
+        "rect": {
+          "x": 16,
+          "y": 432.390625,
+          "width": 358,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Shift+Tab"
+      },
+      {
+        "key": 14,
+        "id": "jsonPointer",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(0, 0, 0)",
+        "rect": {
+          "x": 16,
+          "y": 356.390625,
+          "width": 358,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Shift+Tab"
+      },
+      {
+        "key": 12,
+        "id": "documentPath",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(0, 0, 0)",
+        "rect": {
+          "x": 16,
+          "y": 280.390625,
+          "width": 358,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Shift+Tab"
+      }
+    ]
+  },
+  {
+    "scheme": "light",
+    "scenario": "refusal",
+    "screenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/repair-pass1-inspector-refusal-light.png",
+    "focusScreenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/repair-pass1-inspector-refusal-light-focus.png",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "errors": [],
+    "metrics": {
+      "documentOverflow": false,
+      "diffOverflow": false,
+      "refusalColor": "rgb(179, 38, 30)",
+      "canvas": "rgb(255, 255, 255)",
+      "disabledOpacity": "1",
+      "hiddenRecovery": true
+    },
+    "focus": [
+      {
+        "key": 12,
+        "id": "documentPath",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(0, 0, 0)",
+        "rect": {
+          "x": 16,
+          "y": 280.390625,
+          "width": 358,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Tab"
+      },
+      {
+        "key": 14,
+        "id": "jsonPointer",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(0, 0, 0)",
+        "rect": {
+          "x": 16,
+          "y": 356.390625,
+          "width": 358,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Tab"
+      },
+      {
+        "key": 16,
+        "id": "newValue",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(0, 0, 0)",
+        "rect": {
+          "x": 16,
+          "y": 432.390625,
+          "width": 358,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Tab"
+      },
+      {
+        "key": 18,
+        "id": "propose",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(0, 0, 0)",
+        "rect": {
+          "x": 16,
+          "y": 499.390625,
+          "width": 119.625,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Tab"
+      },
+      {
+        "key": 18,
+        "id": "propose",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(0, 0, 0)",
+        "rect": {
+          "x": 16,
+          "y": 499.390625,
+          "width": 119.625,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Shift+Tab"
+      },
+      {
+        "key": 16,
+        "id": "newValue",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(0, 0, 0)",
+        "rect": {
+          "x": 16,
+          "y": 432.390625,
+          "width": 358,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Shift+Tab"
+      },
+      {
+        "key": 14,
+        "id": "jsonPointer",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(0, 0, 0)",
+        "rect": {
+          "x": 16,
+          "y": 356.390625,
+          "width": 358,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Shift+Tab"
+      },
+      {
+        "key": 12,
+        "id": "documentPath",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(0, 0, 0)",
+        "rect": {
+          "x": 16,
+          "y": 280.390625,
+          "width": 358,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Shift+Tab"
+      }
+    ]
+  },
+  {
+    "scheme": "dark",
+    "scenario": "idle",
+    "screenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/repair-pass1-inspector-idle-dark.png",
+    "focusScreenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/repair-pass1-inspector-idle-dark-focus.png",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "errors": [],
+    "metrics": {
+      "documentOverflow": false,
+      "diffOverflow": false,
+      "refusalColor": "rgb(255, 255, 255)",
+      "canvas": "rgb(18, 18, 18)",
+      "disabledOpacity": "1",
+      "hiddenRecovery": true
+    },
+    "focus": [
+      {
+        "key": 12,
+        "id": "documentPath",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 255, 255)",
+        "rect": {
+          "x": 24,
+          "y": 141.390625,
+          "width": 736,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Tab"
+      },
+      {
+        "key": 14,
+        "id": "jsonPointer",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 255, 255)",
+        "rect": {
+          "x": 24,
+          "y": 217.390625,
+          "width": 736,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Tab"
+      },
+      {
+        "key": 16,
+        "id": "newValue",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 255, 255)",
+        "rect": {
+          "x": 24,
+          "y": 293.390625,
+          "width": 736,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Tab"
+      },
+      {
+        "key": 18,
+        "id": "propose",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 255, 255)",
+        "rect": {
+          "x": 24,
+          "y": 360.390625,
+          "width": 85.015625,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Tab"
+      },
+      {
+        "key": 18,
+        "id": "propose",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 255, 255)",
+        "rect": {
+          "x": 24,
+          "y": 360.390625,
+          "width": 85.015625,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Shift+Tab"
+      },
+      {
+        "key": 16,
+        "id": "newValue",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 255, 255)",
+        "rect": {
+          "x": 24,
+          "y": 293.390625,
+          "width": 736,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Shift+Tab"
+      },
+      {
+        "key": 14,
+        "id": "jsonPointer",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 255, 255)",
+        "rect": {
+          "x": 24,
+          "y": 217.390625,
+          "width": 736,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Shift+Tab"
+      },
+      {
+        "key": 12,
+        "id": "documentPath",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 255, 255)",
+        "rect": {
+          "x": 24,
+          "y": 141.390625,
+          "width": 736,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Shift+Tab"
+      }
+    ]
+  },
+  {
+    "scheme": "dark",
+    "scenario": "long-diff",
+    "screenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/repair-pass1-inspector-long-diff-dark.png",
+    "focusScreenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/repair-pass1-inspector-long-diff-dark-focus.png",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "errors": [],
+    "metrics": {
+      "documentOverflow": false,
+      "diffOverflow": false,
+      "refusalColor": "rgb(255, 255, 255)",
+      "canvas": "rgb(18, 18, 18)",
+      "disabledOpacity": "1",
+      "hiddenRecovery": true
+    },
+    "focus": [
+      {
+        "key": 12,
+        "id": "documentPath",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 255, 255)",
+        "rect": {
+          "x": 16,
+          "y": 280.390625,
+          "width": 358,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Tab"
+      },
+      {
+        "key": 14,
+        "id": "jsonPointer",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 255, 255)",
+        "rect": {
+          "x": 16,
+          "y": 356.390625,
+          "width": 358,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Tab"
+      },
+      {
+        "key": 16,
+        "id": "newValue",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 255, 255)",
+        "rect": {
+          "x": 16,
+          "y": 432.390625,
+          "width": 358,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Tab"
+      },
+      {
+        "key": 18,
+        "id": "propose",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 255, 255)",
+        "rect": {
+          "x": 16,
+          "y": 499.390625,
+          "width": 119.625,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Tab"
+      },
+      {
+        "key": 18,
+        "id": "propose",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 255, 255)",
+        "rect": {
+          "x": 16,
+          "y": 499.390625,
+          "width": 119.625,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Shift+Tab"
+      },
+      {
+        "key": 16,
+        "id": "newValue",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 255, 255)",
+        "rect": {
+          "x": 16,
+          "y": 432.390625,
+          "width": 358,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Shift+Tab"
+      },
+      {
+        "key": 14,
+        "id": "jsonPointer",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 255, 255)",
+        "rect": {
+          "x": 16,
+          "y": 356.390625,
+          "width": 358,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Shift+Tab"
+      },
+      {
+        "key": 12,
+        "id": "documentPath",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 255, 255)",
+        "rect": {
+          "x": 16,
+          "y": 280.390625,
+          "width": 358,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Shift+Tab"
+      }
+    ]
+  },
+  {
+    "scheme": "dark",
+    "scenario": "refusal",
+    "screenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/repair-pass1-inspector-refusal-dark.png",
+    "focusScreenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/repair-pass1-inspector-refusal-dark-focus.png",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "errors": [],
+    "metrics": {
+      "documentOverflow": false,
+      "diffOverflow": false,
+      "refusalColor": "rgb(255, 77, 94)",
+      "canvas": "rgb(18, 18, 18)",
+      "disabledOpacity": "1",
+      "hiddenRecovery": true
+    },
+    "focus": [
+      {
+        "key": 12,
+        "id": "documentPath",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 255, 255)",
+        "rect": {
+          "x": 16,
+          "y": 280.390625,
+          "width": 358,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Tab"
+      },
+      {
+        "key": 14,
+        "id": "jsonPointer",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 255, 255)",
+        "rect": {
+          "x": 16,
+          "y": 356.390625,
+          "width": 358,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Tab"
+      },
+      {
+        "key": 16,
+        "id": "newValue",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 255, 255)",
+        "rect": {
+          "x": 16,
+          "y": 432.390625,
+          "width": 358,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Tab"
+      },
+      {
+        "key": 18,
+        "id": "propose",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 255, 255)",
+        "rect": {
+          "x": 16,
+          "y": 499.390625,
+          "width": 119.625,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Tab"
+      },
+      {
+        "key": 18,
+        "id": "propose",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 255, 255)",
+        "rect": {
+          "x": 16,
+          "y": 499.390625,
+          "width": 119.625,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Shift+Tab"
+      },
+      {
+        "key": 16,
+        "id": "newValue",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 255, 255)",
+        "rect": {
+          "x": 16,
+          "y": 432.390625,
+          "width": 358,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Shift+Tab"
+      },
+      {
+        "key": 14,
+        "id": "jsonPointer",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 255, 255)",
+        "rect": {
+          "x": 16,
+          "y": 356.390625,
+          "width": 358,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Shift+Tab"
+      },
+      {
+        "key": 12,
+        "id": "documentPath",
+        "focusVisible": true,
+        "outline": "solid",
+        "width": "2px",
+        "color": "rgb(255, 255, 255)",
+        "rect": {
+          "x": 16,
+          "y": 280.390625,
+          "width": 358,
+          "height": 39
+        },
+        "inViewport": true,
+        "clipped": false,
+        "occluded": false,
+        "direction": "Shift+Tab"
+      }
+    ]
+  }
+]

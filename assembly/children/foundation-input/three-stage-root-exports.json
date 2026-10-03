@@ -1,0 +1,5924 @@
+[
+  {
+    "path": "packages/engine-kernel/src/index.ts",
+    "versions": [
+      {
+        "stage": 1,
+        "mode": "100644",
+        "blob": "4ff2872bd34c424d31f7f609343d8829d2910dd8",
+        "sha256": "ed890aa9bfe4e966a425d01d6773741f83b5ce49f23675632a549f2867279ce9",
+        "parseErrors": 0,
+        "exports": []
+      },
+      {
+        "stage": 2,
+        "mode": "100644",
+        "blob": "2d79ab4247070545a8f820927cf046dff252cf80",
+        "sha256": "c64a067655c5a596518aaf64daf42b75aa955a564b6c6be861e71de605cf6dfe",
+        "parseErrors": 0,
+        "exports": [
+          {
+            "name": "portableKernelDigest",
+            "typeOnly": false,
+            "from": "./portable-digest.js"
+          },
+          {
+            "name": "resolveKernelDigest",
+            "typeOnly": false,
+            "from": "./portable-digest.js"
+          },
+          {
+            "name": "KernelDigest",
+            "typeOnly": true,
+            "from": "./portable-digest.js"
+          },
+          {
+            "name": "KernelDigestHost",
+            "typeOnly": true,
+            "from": "./portable-digest.js"
+          },
+          {
+            "name": "BOM_VERSION",
+            "typeOnly": false,
+            "from": "./session.js"
+          },
+          {
+            "name": "KERNEL_VERSION",
+            "typeOnly": false,
+            "from": "./session.js"
+          },
+          {
+            "name": "KernelSessionError",
+            "typeOnly": false,
+            "from": "./session.js"
+          },
+          {
+            "name": "open",
+            "typeOnly": false,
+            "from": "./session.js"
+          },
+          {
+            "name": "replay",
+            "typeOnly": false,
+            "from": "./session.js"
+          },
+          {
+            "name": "KernelHost",
+            "typeOnly": true,
+            "from": "./session.js"
+          },
+          {
+            "name": "KernelSession",
+            "typeOnly": true,
+            "from": "./session.js"
+          },
+          {
+            "name": "resolveRarityRoll",
+            "typeOnly": false,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "RarityResolution",
+            "typeOnly": true,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "RarityResolutionContext",
+            "typeOnly": true,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "RarityResolutionResult",
+            "typeOnly": true,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "FrameClock",
+            "typeOnly": true,
+            "from": "@sceneaxi/schemas"
+          },
+          {
+            "name": "KernelCommand",
+            "typeOnly": true,
+            "from": "@sceneaxi/schemas"
+          },
+          {
+            "name": "KernelSessionEvent",
+            "typeOnly": true,
+            "from": "@sceneaxi/schemas"
+          },
+          {
+            "name": "KernelSessionSaveArtifact",
+            "typeOnly": true,
+            "from": "@sceneaxi/schemas"
+          },
+          {
+            "name": "KernelSnapshot",
+            "typeOnly": true,
+            "from": "@sceneaxi/schemas"
+          },
+          {
+            "name": "ProductManifest",
+            "typeOnly": true,
+            "from": "@sceneaxi/schemas"
+          },
+          {
+            "name": "RarityCandidate",
+            "typeOnly": true,
+            "from": "@sceneaxi/schemas"
+          },
+          {
+            "name": "RarityNamespace",
+            "typeOnly": true,
+            "from": "@sceneaxi/schemas"
+          },
+          {
+            "name": "RarityOutcome",
+            "typeOnly": true,
+            "from": "@sceneaxi/schemas"
+          },
+          {
+            "name": "RarityPolicy",
+            "typeOnly": true,
+            "from": "@sceneaxi/schemas"
+          },
+          {
+            "name": "RarityProvenance",
+            "typeOnly": true,
+            "from": "@sceneaxi/schemas"
+          },
+          {
+            "name": "RarityRefuseCode",
+            "typeOnly": true,
+            "from": "@sceneaxi/schemas"
+          },
+          {
+            "name": "RarityRollCommand",
+            "typeOnly": true,
+            "from": "@sceneaxi/schemas"
+          },
+          {
+            "name": "RarityRollRecord",
+            "typeOnly": true,
+            "from": "@sceneaxi/schemas"
+          },
+          {
+            "name": "RarityRollRequest",
+            "typeOnly": true,
+            "from": "@sceneaxi/schemas"
+          },
+          {
+            "name": "RarityTierId",
+            "typeOnly": true,
+            "from": "@sceneaxi/schemas"
+          },
+          {
+            "name": "RarityValidationRefuse",
+            "typeOnly": true,
+            "from": "@sceneaxi/schemas"
+          },
+          {
+            "name": "SnapshotEntity",
+            "typeOnly": true,
+            "from": "@sceneaxi/schemas"
+          },
+          {
+            "name": "KERNEL_SESSION_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "@sceneaxi/schemas"
+          },
+          {
+            "name": "RARITY_ALGORITHM_ID",
+            "typeOnly": false,
+            "from": "@sceneaxi/schemas"
+          },
+          {
+            "name": "RARITY_NAMESPACE_KIND",
+            "typeOnly": false,
+            "from": "@sceneaxi/schemas"
+          },
+          {
+            "name": "RARITY_OUTCOME_KIND",
+            "typeOnly": false,
+            "from": "@sceneaxi/schemas"
+          },
+          {
+            "name": "RARITY_POLICY_KIND",
+            "typeOnly": false,
+            "from": "@sceneaxi/schemas"
+          },
+          {
+            "name": "RARITY_PROVENANCE_KIND",
+            "typeOnly": false,
+            "from": "@sceneaxi/schemas"
+          },
+          {
+            "name": "RARITY_REFUSE_CODES",
+            "typeOnly": false,
+            "from": "@sceneaxi/schemas"
+          },
+          {
+            "name": "RARITY_REQUEST_KIND",
+            "typeOnly": false,
+            "from": "@sceneaxi/schemas"
+          },
+          {
+            "name": "RARITY_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "@sceneaxi/schemas"
+          },
+          {
+            "name": "RARITY_TIERS",
+            "typeOnly": false,
+            "from": "@sceneaxi/schemas"
+          },
+          {
+            "name": "SCULPT_KERNEL_SAVE_KIND",
+            "typeOnly": false,
+            "from": "./sculpt-session.js"
+          },
+          {
+            "name": "openSculptKernelSession",
+            "typeOnly": false,
+            "from": "./sculpt-session.js"
+          },
+          {
+            "name": "replaySculptKernelSession",
+            "typeOnly": false,
+            "from": "./sculpt-session.js"
+          },
+          {
+            "name": "SculptAnimationSocketSnapshot",
+            "typeOnly": true,
+            "from": "./sculpt-session.js"
+          },
+          {
+            "name": "SculptKernelNodeSnapshot",
+            "typeOnly": true,
+            "from": "./sculpt-session.js"
+          },
+          {
+            "name": "SculptKernelOptions",
+            "typeOnly": true,
+            "from": "./sculpt-session.js"
+          },
+          {
+            "name": "SculptKernelSaveArtifact",
+            "typeOnly": true,
+            "from": "./sculpt-session.js"
+          },
+          {
+            "name": "SculptKernelSession",
+            "typeOnly": true,
+            "from": "./sculpt-session.js"
+          },
+          {
+            "name": "SculptKernelSnapshot",
+            "typeOnly": true,
+            "from": "./sculpt-session.js"
+          },
+          {
+            "name": "SCENE_KERNEL_SAVE_KIND",
+            "typeOnly": false,
+            "from": "./scene-session.js"
+          },
+          {
+            "name": "deriveSceneInstanceSeed",
+            "typeOnly": false,
+            "from": "./scene-session.js"
+          },
+          {
+            "name": "openSceneKernelSession",
+            "typeOnly": false,
+            "from": "./scene-session.js"
+          },
+          {
+            "name": "replaySceneKernelSession",
+            "typeOnly": false,
+            "from": "./scene-session.js"
+          },
+          {
+            "name": "SceneInstanceSnapshot",
+            "typeOnly": true,
+            "from": "./scene-session.js"
+          },
+          {
+            "name": "SceneKernelOptions",
+            "typeOnly": true,
+            "from": "./scene-session.js"
+          },
+          {
+            "name": "SceneKernelSaveArtifact",
+            "typeOnly": true,
+            "from": "./scene-session.js"
+          },
+          {
+            "name": "SceneKernelSession",
+            "typeOnly": true,
+            "from": "./scene-session.js"
+          },
+          {
+            "name": "SceneKernelSnapshot",
+            "typeOnly": true,
+            "from": "./scene-session.js"
+          }
+        ]
+      },
+      {
+        "stage": 3,
+        "mode": "100644",
+        "blob": "ea57257c51296d6a8bf4baaef756761604dfc142",
+        "sha256": "330ce049b185cbb26fa70264f98dbd537f32bd3a435470bc0e76c3bcca810da3",
+        "parseErrors": 0,
+        "exports": [
+          {
+            "name": "BOM_VERSION",
+            "typeOnly": false,
+            "from": "./session.js"
+          },
+          {
+            "name": "KERNEL_VERSION",
+            "typeOnly": false,
+            "from": "./session.js"
+          },
+          {
+            "name": "KernelSessionError",
+            "typeOnly": false,
+            "from": "./session.js"
+          },
+          {
+            "name": "computeDigest",
+            "typeOnly": false,
+            "from": "./session.js"
+          },
+          {
+            "name": "open",
+            "typeOnly": false,
+            "from": "./session.js"
+          },
+          {
+            "name": "replay",
+            "typeOnly": false,
+            "from": "./session.js"
+          },
+          {
+            "name": "KernelHost",
+            "typeOnly": true,
+            "from": "./session.js"
+          },
+          {
+            "name": "KernelSession",
+            "typeOnly": true,
+            "from": "./session.js"
+          },
+          {
+            "name": "FrameClock",
+            "typeOnly": true,
+            "from": "@sceneaxi/schemas"
+          },
+          {
+            "name": "KernelCommand",
+            "typeOnly": true,
+            "from": "@sceneaxi/schemas"
+          },
+          {
+            "name": "KernelSessionEvent",
+            "typeOnly": true,
+            "from": "@sceneaxi/schemas"
+          },
+          {
+            "name": "KernelSessionSaveArtifact",
+            "typeOnly": true,
+            "from": "@sceneaxi/schemas"
+          },
+          {
+            "name": "KernelSnapshot",
+            "typeOnly": true,
+            "from": "@sceneaxi/schemas"
+          },
+          {
+            "name": "ProductManifest",
+            "typeOnly": true,
+            "from": "@sceneaxi/schemas"
+          },
+          {
+            "name": "SnapshotEntity",
+            "typeOnly": true,
+            "from": "@sceneaxi/schemas"
+          },
+          {
+            "name": "KERNEL_SESSION_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "@sceneaxi/schemas"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "path": "packages/schemas/src/index.ts",
+    "versions": [
+      {
+        "stage": 1,
+        "mode": "100644",
+        "blob": "21b0ff4303413b5141d7a8307a05ef2f776b2f19",
+        "sha256": "25b84e4fe12f628caaac2c68e1382b251462bf1c4378715eb99884f43fa4207c",
+        "parseErrors": 0,
+        "exports": []
+      },
+      {
+        "stage": 2,
+        "mode": "100644",
+        "blob": "b3467cef92f626e377497fa8a3ab82b56bf5ff70",
+        "sha256": "f4e7179669709a4a58fd2602617ec8ec4176d95828aff48b9364c0b72ceed9a3",
+        "parseErrors": 0,
+        "exports": [
+          {
+            "name": "AssetRenderMesh",
+            "typeOnly": true,
+            "from": "./asset-render-mesh.js"
+          },
+          {
+            "name": "BaseColorTexture",
+            "typeOnly": true,
+            "from": "./asset-render-mesh.js"
+          },
+          {
+            "name": "evaluateGltfAnimation",
+            "typeOnly": false,
+            "from": "./gltf-animation.js"
+          },
+          {
+            "name": "GltfAnimationChannel",
+            "typeOnly": true,
+            "from": "./gltf-animation.js"
+          },
+          {
+            "name": "GltfAnimationClip",
+            "typeOnly": true,
+            "from": "./gltf-animation.js"
+          },
+          {
+            "name": "GltfAnimationEvaluation",
+            "typeOnly": true,
+            "from": "./gltf-animation.js"
+          },
+          {
+            "name": "GltfAnimationInterpolation",
+            "typeOnly": true,
+            "from": "./gltf-animation.js"
+          },
+          {
+            "name": "GltfAnimationPath",
+            "typeOnly": true,
+            "from": "./gltf-animation.js"
+          },
+          {
+            "name": "GltfAnimationPose",
+            "typeOnly": true,
+            "from": "./gltf-animation.js"
+          },
+          {
+            "name": "CATALOG_DATE_TIME_PATTERN",
+            "typeOnly": false,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "CATALOG_ITEM_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "CATALOG_METADATA_UNAVAILABLE_TOMBSTONE_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "CATALOG_POLICY_CITES",
+            "typeOnly": false,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "COMMERCE_ACTIVATION_GATE",
+            "typeOnly": false,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "PIPELINE_STATES",
+            "typeOnly": false,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "attemptCommerceActivation",
+            "typeOnly": false,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "createCatalogItemAtIntake",
+            "typeOnly": false,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "isCommerceActive",
+            "typeOnly": false,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "legalSuccessors",
+            "typeOnly": false,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "missingMandatoryMetadata",
+            "typeOnly": false,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "transitionCatalogItem",
+            "typeOnly": false,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "validateCatalogItem",
+            "typeOnly": false,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "AiGenerationDisclosure",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "AssetPackageRef",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "CatalogDelistingResult",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "CatalogItem",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "CatalogItemValidationResult",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "CatalogItemTransitionOk",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "CatalogItemTransitionResult",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "CatalogMetadataUnavailableTombstone",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "CatalogTombstoneTransitionOk",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "CommerceActivationResult",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "CommerceFields",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "Compatibility",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "HumanCurationVerdict",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "ModerationState",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "PipelineState",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "ProvenanceRecord",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "RightsRecord",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "TransitionOk",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "TransitionRecord",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "TransitionRefuse",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "TransitionRequest",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "TransitionResult",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "DOCUMENT_KIND",
+            "typeOnly": false,
+            "from": "./document.js"
+          },
+          {
+            "name": "DOCUMENT_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./document.js"
+          },
+          {
+            "name": "createDocument",
+            "typeOnly": false,
+            "from": "./document.js"
+          },
+          {
+            "name": "isJsonObject",
+            "typeOnly": false,
+            "from": "./document.js"
+          },
+          {
+            "name": "isJsonValue",
+            "typeOnly": false,
+            "from": "./document.js"
+          },
+          {
+            "name": "parseDocumentText",
+            "typeOnly": false,
+            "from": "./document.js"
+          },
+          {
+            "name": "serializeDocument",
+            "typeOnly": false,
+            "from": "./document.js"
+          },
+          {
+            "name": "validateDocument",
+            "typeOnly": false,
+            "from": "./document.js"
+          },
+          {
+            "name": "CLIENT_ROLE_CLAIM_KEYS",
+            "typeOnly": false,
+            "from": "./identity.js"
+          },
+          {
+            "name": "IDENTITY_REFUSE_CODES",
+            "typeOnly": false,
+            "from": "./identity.js"
+          },
+          {
+            "name": "IDENTITY_ROLES",
+            "typeOnly": false,
+            "from": "./identity.js"
+          },
+          {
+            "name": "IDENTITY_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./identity.js"
+          },
+          {
+            "name": "IDENTITY_SURFACES",
+            "typeOnly": false,
+            "from": "./identity.js"
+          },
+          {
+            "name": "KIDS_IDENTITY_SURFACE",
+            "typeOnly": false,
+            "from": "./identity.js"
+          },
+          {
+            "name": "ROLE_ASSIGNMENT_KIND",
+            "typeOnly": false,
+            "from": "./identity.js"
+          },
+          {
+            "name": "ROLE_SOURCES",
+            "typeOnly": false,
+            "from": "./identity.js"
+          },
+          {
+            "name": "SESSION_KIND",
+            "typeOnly": false,
+            "from": "./identity.js"
+          },
+          {
+            "name": "USER_KIND",
+            "typeOnly": false,
+            "from": "./identity.js"
+          },
+          {
+            "name": "claimedRoleKey",
+            "typeOnly": false,
+            "from": "./identity.js"
+          },
+          {
+            "name": "isIdentityRole",
+            "typeOnly": false,
+            "from": "./identity.js"
+          },
+          {
+            "name": "isIdentitySurface",
+            "typeOnly": false,
+            "from": "./identity.js"
+          },
+          {
+            "name": "isRoleSource",
+            "typeOnly": false,
+            "from": "./identity.js"
+          },
+          {
+            "name": "validatePrincipal",
+            "typeOnly": false,
+            "from": "./identity.js"
+          },
+          {
+            "name": "validateRoleAssignment",
+            "typeOnly": false,
+            "from": "./identity.js"
+          },
+          {
+            "name": "validateSession",
+            "typeOnly": false,
+            "from": "./identity.js"
+          },
+          {
+            "name": "validateUser",
+            "typeOnly": false,
+            "from": "./identity.js"
+          },
+          {
+            "name": "IdentityRefuseCode",
+            "typeOnly": true,
+            "from": "./identity.js"
+          },
+          {
+            "name": "IdentityRole",
+            "typeOnly": true,
+            "from": "./identity.js"
+          },
+          {
+            "name": "IdentitySurface",
+            "typeOnly": true,
+            "from": "./identity.js"
+          },
+          {
+            "name": "IdentityValidationOk",
+            "typeOnly": true,
+            "from": "./identity.js"
+          },
+          {
+            "name": "IdentityValidationRefuse",
+            "typeOnly": true,
+            "from": "./identity.js"
+          },
+          {
+            "name": "IdentityValidationResult",
+            "typeOnly": true,
+            "from": "./identity.js"
+          },
+          {
+            "name": "Principal",
+            "typeOnly": true,
+            "from": "./identity.js"
+          },
+          {
+            "name": "RoleAssignment",
+            "typeOnly": true,
+            "from": "./identity.js"
+          },
+          {
+            "name": "RoleSource",
+            "typeOnly": true,
+            "from": "./identity.js"
+          },
+          {
+            "name": "Session",
+            "typeOnly": true,
+            "from": "./identity.js"
+          },
+          {
+            "name": "User",
+            "typeOnly": true,
+            "from": "./identity.js"
+          },
+          {
+            "name": "CREDITS_REFUSE_CODES",
+            "typeOnly": false,
+            "from": "./credits.js"
+          },
+          {
+            "name": "CREDITS_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./credits.js"
+          },
+          {
+            "name": "CREDIT_ACCOUNT_KIND",
+            "typeOnly": false,
+            "from": "./credits.js"
+          },
+          {
+            "name": "CREDIT_LEDGER_ENTRY_KIND",
+            "typeOnly": false,
+            "from": "./credits.js"
+          },
+          {
+            "name": "CREDIT_MOVEMENTS",
+            "typeOnly": false,
+            "from": "./credits.js"
+          },
+          {
+            "name": "isCreditMovement",
+            "typeOnly": false,
+            "from": "./credits.js"
+          },
+          {
+            "name": "validateCreditAccount",
+            "typeOnly": false,
+            "from": "./credits.js"
+          },
+          {
+            "name": "validateCreditLedgerEntry",
+            "typeOnly": false,
+            "from": "./credits.js"
+          },
+          {
+            "name": "CreditAccount",
+            "typeOnly": true,
+            "from": "./credits.js"
+          },
+          {
+            "name": "CreditLedgerEntry",
+            "typeOnly": true,
+            "from": "./credits.js"
+          },
+          {
+            "name": "CreditMovement",
+            "typeOnly": true,
+            "from": "./credits.js"
+          },
+          {
+            "name": "CreditsRefuseCode",
+            "typeOnly": true,
+            "from": "./credits.js"
+          },
+          {
+            "name": "CreditsValidationOk",
+            "typeOnly": true,
+            "from": "./credits.js"
+          },
+          {
+            "name": "CreditsValidationRefuse",
+            "typeOnly": true,
+            "from": "./credits.js"
+          },
+          {
+            "name": "CreditsValidationResult",
+            "typeOnly": true,
+            "from": "./credits.js"
+          },
+          {
+            "name": "BILLING_MODES",
+            "typeOnly": false,
+            "from": "./billing.js"
+          },
+          {
+            "name": "BILLING_REFUSE_CODES",
+            "typeOnly": false,
+            "from": "./billing.js"
+          },
+          {
+            "name": "BILLING_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./billing.js"
+          },
+          {
+            "name": "CHECKOUT_PURPOSES",
+            "typeOnly": false,
+            "from": "./billing.js"
+          },
+          {
+            "name": "CHECKOUT_COMPLETED_EVENT_KIND",
+            "typeOnly": false,
+            "from": "./billing.js"
+          },
+          {
+            "name": "CHECKOUT_COMPLETED_EVENT_TYPE",
+            "typeOnly": false,
+            "from": "./billing.js"
+          },
+          {
+            "name": "CHECKOUT_SESSION_INTENT_KIND",
+            "typeOnly": false,
+            "from": "./billing.js"
+          },
+          {
+            "name": "CREDIT_PACKS_FIXTURES_PATH",
+            "typeOnly": false,
+            "from": "./billing.js"
+          },
+          {
+            "name": "DEFAULT_BILLING_MODE",
+            "typeOnly": false,
+            "from": "./billing.js"
+          },
+          {
+            "name": "STRIPE_CUSTOMER_LINK_KIND",
+            "typeOnly": false,
+            "from": "./billing.js"
+          },
+          {
+            "name": "isBillingIdentifier",
+            "typeOnly": false,
+            "from": "./billing.js"
+          },
+          {
+            "name": "isBillingMode",
+            "typeOnly": false,
+            "from": "./billing.js"
+          },
+          {
+            "name": "isCheckoutPurpose",
+            "typeOnly": false,
+            "from": "./billing.js"
+          },
+          {
+            "name": "isHttpsUrl",
+            "typeOnly": false,
+            "from": "./billing.js"
+          },
+          {
+            "name": "validateCheckoutCompletedEvent",
+            "typeOnly": false,
+            "from": "./billing.js"
+          },
+          {
+            "name": "validateCheckoutSessionIntent",
+            "typeOnly": false,
+            "from": "./billing.js"
+          },
+          {
+            "name": "validateCreditPack",
+            "typeOnly": false,
+            "from": "./billing.js"
+          },
+          {
+            "name": "validateCreditPackCatalog",
+            "typeOnly": false,
+            "from": "./billing.js"
+          },
+          {
+            "name": "validateCreditPackCatalogArchive",
+            "typeOnly": false,
+            "from": "./billing.js"
+          },
+          {
+            "name": "validateStripeCustomerLink",
+            "typeOnly": false,
+            "from": "./billing.js"
+          },
+          {
+            "name": "CREDIT_PACK_CATALOG_DATA",
+            "typeOnly": false,
+            "from": "./credit-packs.data.js"
+          },
+          {
+            "name": "BillingMode",
+            "typeOnly": true,
+            "from": "./billing.js"
+          },
+          {
+            "name": "BillingRefuseCode",
+            "typeOnly": true,
+            "from": "./billing.js"
+          },
+          {
+            "name": "BillingValidationOk",
+            "typeOnly": true,
+            "from": "./billing.js"
+          },
+          {
+            "name": "BillingValidationRefuse",
+            "typeOnly": true,
+            "from": "./billing.js"
+          },
+          {
+            "name": "BillingValidationResult",
+            "typeOnly": true,
+            "from": "./billing.js"
+          },
+          {
+            "name": "CheckoutCompletedEvent",
+            "typeOnly": true,
+            "from": "./billing.js"
+          },
+          {
+            "name": "CheckoutPurpose",
+            "typeOnly": true,
+            "from": "./billing.js"
+          },
+          {
+            "name": "CheckoutSessionIntent",
+            "typeOnly": true,
+            "from": "./billing.js"
+          },
+          {
+            "name": "CreditPack",
+            "typeOnly": true,
+            "from": "./billing.js"
+          },
+          {
+            "name": "CreditPackCatalog",
+            "typeOnly": true,
+            "from": "./billing.js"
+          },
+          {
+            "name": "CreditPackCatalogArchive",
+            "typeOnly": true,
+            "from": "./billing.js"
+          },
+          {
+            "name": "CreditPackRevision",
+            "typeOnly": true,
+            "from": "./billing.js"
+          },
+          {
+            "name": "StripeCustomerLink",
+            "typeOnly": true,
+            "from": "./billing.js"
+          },
+          {
+            "name": "ENTITLEMENT_CAPABILITIES",
+            "typeOnly": false,
+            "from": "./entitlements.js"
+          },
+          {
+            "name": "ENTITLEMENT_DECISION_KIND",
+            "typeOnly": false,
+            "from": "./entitlements.js"
+          },
+          {
+            "name": "ENTITLEMENT_MATRIX",
+            "typeOnly": false,
+            "from": "./entitlements.js"
+          },
+          {
+            "name": "ENTITLEMENT_MATRIX_FIXTURES_PATH",
+            "typeOnly": false,
+            "from": "./entitlements.js"
+          },
+          {
+            "name": "ENTITLEMENT_OUTCOMES",
+            "typeOnly": false,
+            "from": "./entitlements.js"
+          },
+          {
+            "name": "ENTITLEMENT_PRICE_KINDS",
+            "typeOnly": false,
+            "from": "./entitlements.js"
+          },
+          {
+            "name": "ENTITLEMENT_REFUSE_CODES",
+            "typeOnly": false,
+            "from": "./entitlements.js"
+          },
+          {
+            "name": "ENTITLEMENT_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./entitlements.js"
+          },
+          {
+            "name": "STARTER_CREDIT_GRANT",
+            "typeOnly": false,
+            "from": "./entitlements.js"
+          },
+          {
+            "name": "entitlementRuleFor",
+            "typeOnly": false,
+            "from": "./entitlements.js"
+          },
+          {
+            "name": "isEntitlementCapability",
+            "typeOnly": false,
+            "from": "./entitlements.js"
+          },
+          {
+            "name": "isEntitlementOutcome",
+            "typeOnly": false,
+            "from": "./entitlements.js"
+          },
+          {
+            "name": "validateEntitlementDecision",
+            "typeOnly": false,
+            "from": "./entitlements.js"
+          },
+          {
+            "name": "EntitlementCapability",
+            "typeOnly": true,
+            "from": "./entitlements.js"
+          },
+          {
+            "name": "EntitlementDecision",
+            "typeOnly": true,
+            "from": "./entitlements.js"
+          },
+          {
+            "name": "EntitlementOutcome",
+            "typeOnly": true,
+            "from": "./entitlements.js"
+          },
+          {
+            "name": "EntitlementPriceKind",
+            "typeOnly": true,
+            "from": "./entitlements.js"
+          },
+          {
+            "name": "EntitlementRefuseCode",
+            "typeOnly": true,
+            "from": "./entitlements.js"
+          },
+          {
+            "name": "EntitlementRule",
+            "typeOnly": true,
+            "from": "./entitlements.js"
+          },
+          {
+            "name": "EntitlementValidationOk",
+            "typeOnly": true,
+            "from": "./entitlements.js"
+          },
+          {
+            "name": "EntitlementValidationRefuse",
+            "typeOnly": true,
+            "from": "./entitlements.js"
+          },
+          {
+            "name": "EntitlementValidationResult",
+            "typeOnly": true,
+            "from": "./entitlements.js"
+          },
+          {
+            "name": "CATALOG_LISTINGS_FIXTURES_PATH",
+            "typeOnly": false,
+            "from": "./catalog-listing.js"
+          },
+          {
+            "name": "CATALOG_LISTING_KIND",
+            "typeOnly": false,
+            "from": "./catalog-listing.js"
+          },
+          {
+            "name": "CATALOG_LISTING_REFUSE_CODES",
+            "typeOnly": false,
+            "from": "./catalog-listing.js"
+          },
+          {
+            "name": "CATALOG_LISTING_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./catalog-listing.js"
+          },
+          {
+            "name": "LISTING_CATALOGS",
+            "typeOnly": false,
+            "from": "./catalog-listing.js"
+          },
+          {
+            "name": "LISTING_PRICE_MODES",
+            "typeOnly": false,
+            "from": "./catalog-listing.js"
+          },
+          {
+            "name": "isListingCatalog",
+            "typeOnly": false,
+            "from": "./catalog-listing.js"
+          },
+          {
+            "name": "isListingPriceMode",
+            "typeOnly": false,
+            "from": "./catalog-listing.js"
+          },
+          {
+            "name": "priceModeIncludesCredits",
+            "typeOnly": false,
+            "from": "./catalog-listing.js"
+          },
+          {
+            "name": "priceModeIncludesMoney",
+            "typeOnly": false,
+            "from": "./catalog-listing.js"
+          },
+          {
+            "name": "validateCatalogListing",
+            "typeOnly": false,
+            "from": "./catalog-listing.js"
+          },
+          {
+            "name": "validateCatalogListingSet",
+            "typeOnly": false,
+            "from": "./catalog-listing.js"
+          },
+          {
+            "name": "CATALOG_LISTINGS_DATA",
+            "typeOnly": false,
+            "from": "./catalog-listings.data.js"
+          },
+          {
+            "name": "CatalogListing",
+            "typeOnly": true,
+            "from": "./catalog-listing.js"
+          },
+          {
+            "name": "CatalogListingRefuseCode",
+            "typeOnly": true,
+            "from": "./catalog-listing.js"
+          },
+          {
+            "name": "CatalogListingSet",
+            "typeOnly": true,
+            "from": "./catalog-listing.js"
+          },
+          {
+            "name": "CatalogListingValidationOk",
+            "typeOnly": true,
+            "from": "./catalog-listing.js"
+          },
+          {
+            "name": "CatalogListingValidationRefuse",
+            "typeOnly": true,
+            "from": "./catalog-listing.js"
+          },
+          {
+            "name": "CatalogListingValidationResult",
+            "typeOnly": true,
+            "from": "./catalog-listing.js"
+          },
+          {
+            "name": "ListingCatalog",
+            "typeOnly": true,
+            "from": "./catalog-listing.js"
+          },
+          {
+            "name": "ListingMoneyPrice",
+            "typeOnly": true,
+            "from": "./catalog-listing.js"
+          },
+          {
+            "name": "ListingPriceMode",
+            "typeOnly": true,
+            "from": "./catalog-listing.js"
+          },
+          {
+            "name": "BASIS_POINTS_TOTAL",
+            "typeOnly": false,
+            "from": "./revenue-share.js"
+          },
+          {
+            "name": "CREATOR_SHARE_BASIS_POINTS",
+            "typeOnly": false,
+            "from": "./revenue-share.js"
+          },
+          {
+            "name": "CREATOR_SHARE_RECORD_KIND",
+            "typeOnly": false,
+            "from": "./revenue-share.js"
+          },
+          {
+            "name": "FORBIDDEN_PAYOUT_KEYS",
+            "typeOnly": false,
+            "from": "./revenue-share.js"
+          },
+          {
+            "name": "MONEY_SPLIT_RECORD_KIND",
+            "typeOnly": false,
+            "from": "./revenue-share.js"
+          },
+          {
+            "name": "REVENUE_SHARE_REFUSE_CODES",
+            "typeOnly": false,
+            "from": "./revenue-share.js"
+          },
+          {
+            "name": "REVENUE_SHARE_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./revenue-share.js"
+          },
+          {
+            "name": "validateCreatorShareRecord",
+            "typeOnly": false,
+            "from": "./revenue-share.js"
+          },
+          {
+            "name": "validateMoneySplitRecord",
+            "typeOnly": false,
+            "from": "./revenue-share.js"
+          },
+          {
+            "name": "CreatorShareRecord",
+            "typeOnly": true,
+            "from": "./revenue-share.js"
+          },
+          {
+            "name": "MoneySplitRecord",
+            "typeOnly": true,
+            "from": "./revenue-share.js"
+          },
+          {
+            "name": "RevenueShareRefuseCode",
+            "typeOnly": true,
+            "from": "./revenue-share.js"
+          },
+          {
+            "name": "RevenueShareValidationOk",
+            "typeOnly": true,
+            "from": "./revenue-share.js"
+          },
+          {
+            "name": "RevenueShareValidationRefuse",
+            "typeOnly": true,
+            "from": "./revenue-share.js"
+          },
+          {
+            "name": "RevenueShareValidationResult",
+            "typeOnly": true,
+            "from": "./revenue-share.js"
+          },
+          {
+            "name": "CONNECT_ACCOUNT_RECORD_KIND",
+            "typeOnly": false,
+            "from": "./stripe-connect.js"
+          },
+          {
+            "name": "CONNECT_ONBOARDING_INTENT_KIND",
+            "typeOnly": false,
+            "from": "./stripe-connect.js"
+          },
+          {
+            "name": "CONNECT_PAYOUT_INTENT_KIND",
+            "typeOnly": false,
+            "from": "./stripe-connect.js"
+          },
+          {
+            "name": "CONNECT_PAYOUT_OUTCOME_KIND",
+            "typeOnly": false,
+            "from": "./stripe-connect.js"
+          },
+          {
+            "name": "CONNECT_PAYOUT_STATUSES",
+            "typeOnly": false,
+            "from": "./stripe-connect.js"
+          },
+          {
+            "name": "CONNECT_STATUS_RECORD_KIND",
+            "typeOnly": false,
+            "from": "./stripe-connect.js"
+          },
+          {
+            "name": "STRIPE_CONNECT_REFUSE_CODES",
+            "typeOnly": false,
+            "from": "./stripe-connect.js"
+          },
+          {
+            "name": "STRIPE_CONNECT_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./stripe-connect.js"
+          },
+          {
+            "name": "connectPayoutMatchesMoneySplit",
+            "typeOnly": false,
+            "from": "./stripe-connect.js"
+          },
+          {
+            "name": "validateConnectAccountRecord",
+            "typeOnly": false,
+            "from": "./stripe-connect.js"
+          },
+          {
+            "name": "validateConnectOnboardingIntent",
+            "typeOnly": false,
+            "from": "./stripe-connect.js"
+          },
+          {
+            "name": "validateConnectPayoutIntent",
+            "typeOnly": false,
+            "from": "./stripe-connect.js"
+          },
+          {
+            "name": "validateConnectPayoutOutcome",
+            "typeOnly": false,
+            "from": "./stripe-connect.js"
+          },
+          {
+            "name": "validateConnectStatusRecord",
+            "typeOnly": false,
+            "from": "./stripe-connect.js"
+          },
+          {
+            "name": "validateCreditReconciliationRecord",
+            "typeOnly": false,
+            "from": "./credit-reconciliation.js"
+          },
+          {
+            "name": "CreditReconciliationRecord",
+            "typeOnly": true,
+            "from": "./credit-reconciliation.js"
+          },
+          {
+            "name": "ConnectAccountRecord",
+            "typeOnly": true,
+            "from": "./stripe-connect.js"
+          },
+          {
+            "name": "ConnectOnboardingIntent",
+            "typeOnly": true,
+            "from": "./stripe-connect.js"
+          },
+          {
+            "name": "ConnectPayoutIntent",
+            "typeOnly": true,
+            "from": "./stripe-connect.js"
+          },
+          {
+            "name": "ConnectPayoutOutcome",
+            "typeOnly": true,
+            "from": "./stripe-connect.js"
+          },
+          {
+            "name": "ConnectPayoutStatus",
+            "typeOnly": true,
+            "from": "./stripe-connect.js"
+          },
+          {
+            "name": "ConnectStatusRecord",
+            "typeOnly": true,
+            "from": "./stripe-connect.js"
+          },
+          {
+            "name": "StripeConnectRefuseCode",
+            "typeOnly": true,
+            "from": "./stripe-connect.js"
+          },
+          {
+            "name": "StripeConnectValidationResult",
+            "typeOnly": true,
+            "from": "./stripe-connect.js"
+          },
+          {
+            "name": "isEpochMilliseconds",
+            "typeOnly": false,
+            "from": "./record-validation.js"
+          },
+          {
+            "name": "isNonEmptyString",
+            "typeOnly": false,
+            "from": "./record-validation.js"
+          },
+          {
+            "name": "isPlainRecord",
+            "typeOnly": false,
+            "from": "./record-validation.js"
+          },
+          {
+            "name": "snapshotPlainArray",
+            "typeOnly": false,
+            "from": "./record-validation.js"
+          },
+          {
+            "name": "snapshotPlainRecord",
+            "typeOnly": false,
+            "from": "./record-validation.js"
+          },
+          {
+            "name": "createProvenanceWitness",
+            "typeOnly": false,
+            "from": "./provenance.js"
+          },
+          {
+            "name": "ProvenanceWitness",
+            "typeOnly": true,
+            "from": "./provenance.js"
+          },
+          {
+            "name": "parseUnambiguousJson",
+            "typeOnly": false,
+            "from": "./unambiguous-json.js"
+          },
+          {
+            "name": "UnambiguousJsonParseResult",
+            "typeOnly": true,
+            "from": "./unambiguous-json.js"
+          },
+          {
+            "name": "DocumentValidationOk",
+            "typeOnly": true,
+            "from": "./document.js"
+          },
+          {
+            "name": "DocumentValidationRefuse",
+            "typeOnly": true,
+            "from": "./document.js"
+          },
+          {
+            "name": "DocumentValidationResult",
+            "typeOnly": true,
+            "from": "./document.js"
+          },
+          {
+            "name": "JsonObject",
+            "typeOnly": true,
+            "from": "./document.js"
+          },
+          {
+            "name": "JsonPrimitive",
+            "typeOnly": true,
+            "from": "./document.js"
+          },
+          {
+            "name": "JsonValue",
+            "typeOnly": true,
+            "from": "./document.js"
+          },
+          {
+            "name": "SceneDocument",
+            "typeOnly": true,
+            "from": "./document.js"
+          },
+          {
+            "name": "WEB_EXPERIENCE_AUTHORING_OPERATIONS",
+            "typeOnly": false,
+            "from": "./web-experience-authoring.js"
+          },
+          {
+            "name": "WEB_EXPERIENCE_AUTHORING_REFUSALS",
+            "typeOnly": false,
+            "from": "./web-experience-authoring.js"
+          },
+          {
+            "name": "WEB_EXPERIENCE_DESKTOP_ONLY_OPERATIONS",
+            "typeOnly": false,
+            "from": "./web-experience-authoring.js"
+          },
+          {
+            "name": "WEB_EXPERIENCE_SANDBOX_POLICY",
+            "typeOnly": false,
+            "from": "./web-experience-authoring.js"
+          },
+          {
+            "name": "evaluateWebExperienceAuthoringOperation",
+            "typeOnly": false,
+            "from": "./web-experience-authoring.js"
+          },
+          {
+            "name": "WebExperienceAuthoringDecision",
+            "typeOnly": true,
+            "from": "./web-experience-authoring.js"
+          },
+          {
+            "name": "WebExperienceAuthoringOperation",
+            "typeOnly": true,
+            "from": "./web-experience-authoring.js"
+          },
+          {
+            "name": "WebExperienceAuthoringRefusal",
+            "typeOnly": true,
+            "from": "./web-experience-authoring.js"
+          },
+          {
+            "name": "WebExperienceDesktopOnlyOperation",
+            "typeOnly": true,
+            "from": "./web-experience-authoring.js"
+          },
+          {
+            "name": "CONTENT_HASH_PREFIX",
+            "typeOnly": false,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "PROPOSAL_KIND",
+            "typeOnly": false,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "PROPOSAL_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "createProposal",
+            "typeOnly": false,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "parseProposalText",
+            "typeOnly": false,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "serializeProposal",
+            "typeOnly": false,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "validateProposal",
+            "typeOnly": false,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "EDITOR_COMMAND_CLIENTS",
+            "typeOnly": false,
+            "from": "./editor-command-registry.js"
+          },
+          {
+            "name": "EDITOR_COMMAND_PERMISSIONS",
+            "typeOnly": false,
+            "from": "./editor-command-registry.js"
+          },
+          {
+            "name": "EDITOR_COMMAND_REFUSALS",
+            "typeOnly": false,
+            "from": "./editor-command-registry.js"
+          },
+          {
+            "name": "EDITOR_COMMAND_REGISTRY",
+            "typeOnly": false,
+            "from": "./editor-command-registry.js"
+          },
+          {
+            "name": "EDITOR_COMMAND_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./editor-command-registry.js"
+          },
+          {
+            "name": "createEditorCommandInvocation",
+            "typeOnly": false,
+            "from": "./editor-command-registry.js"
+          },
+          {
+            "name": "defineEditorCommandRegistry",
+            "typeOnly": false,
+            "from": "./editor-command-registry.js"
+          },
+          {
+            "name": "editorCommand",
+            "typeOnly": false,
+            "from": "./editor-command-registry.js"
+          },
+          {
+            "name": "editorCommandTerminalResult",
+            "typeOnly": false,
+            "from": "./editor-command-registry.js"
+          },
+          {
+            "name": "editorCommandTransactionResult",
+            "typeOnly": false,
+            "from": "./editor-command-registry.js"
+          },
+          {
+            "name": "validateEditorCommandInput",
+            "typeOnly": false,
+            "from": "./editor-command-registry.js"
+          },
+          {
+            "name": "validateEditorCommandInvocation",
+            "typeOnly": false,
+            "from": "./editor-command-registry.js"
+          },
+          {
+            "name": "DEFAULT_INPUT_ACTION_MAP",
+            "typeOnly": false,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "INPUT_ACTION_CONTEXTS",
+            "typeOnly": false,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "INPUT_ACTION_DEVICES",
+            "typeOnly": false,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "INPUT_ACTION_MAP_KIND",
+            "typeOnly": false,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "INPUT_ACTION_OVERRIDES_KIND",
+            "typeOnly": false,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "INPUT_ACTION_REFUSALS",
+            "typeOnly": false,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "INPUT_ACTION_REGISTRY",
+            "typeOnly": false,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "INPUT_ACTION_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "INPUT_ACTION_SCOPES",
+            "typeOnly": false,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "composeInputActionMap",
+            "typeOnly": false,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "emptyInputActionOverrides",
+            "typeOnly": false,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "inputAction",
+            "typeOnly": false,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "inputActionBindingEquals",
+            "typeOnly": false,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "inputActionForCommand",
+            "typeOnly": false,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "inputActionMapDigest",
+            "typeOnly": false,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "inputActionOverridesDigest",
+            "typeOnly": false,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "parseInputActionOverrides",
+            "typeOnly": false,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "resolveInputAction",
+            "typeOnly": false,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "reviewInputActionRebind",
+            "typeOnly": false,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "serializeInputActionOverrides",
+            "typeOnly": false,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "validateInputActionBinding",
+            "typeOnly": false,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "validateInputActionMap",
+            "typeOnly": false,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "validateInputActionOverrides",
+            "typeOnly": false,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "ControllerInputBinding",
+            "typeOnly": true,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "GamepadInputBinding",
+            "typeOnly": true,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "InputActionBinding",
+            "typeOnly": true,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "InputActionContext",
+            "typeOnly": true,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "InputActionDefinition",
+            "typeOnly": true,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "InputActionDevice",
+            "typeOnly": true,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "InputActionId",
+            "typeOnly": true,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "InputActionMap",
+            "typeOnly": true,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "InputActionMapEntry",
+            "typeOnly": true,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "InputActionOverrides",
+            "typeOnly": true,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "InputActionRefusal",
+            "typeOnly": true,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "InputActionResolution",
+            "typeOnly": true,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "InputActionScope",
+            "typeOnly": true,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "KeyboardInputBinding",
+            "typeOnly": true,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "PointerInputBinding",
+            "typeOnly": true,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "WheelInputBinding",
+            "typeOnly": true,
+            "from": "./input-action-registry.js"
+          },
+          {
+            "name": "EditorCommandClient",
+            "typeOnly": true,
+            "from": "./editor-command-registry.js"
+          },
+          {
+            "name": "EditorCommandDefinition",
+            "typeOnly": true,
+            "from": "./editor-command-registry.js"
+          },
+          {
+            "name": "EditorCommandId",
+            "typeOnly": true,
+            "from": "./editor-command-registry.js"
+          },
+          {
+            "name": "EditorCommandInvocation",
+            "typeOnly": true,
+            "from": "./editor-command-registry.js"
+          },
+          {
+            "name": "EditorCommandMutation",
+            "typeOnly": true,
+            "from": "./editor-command-registry.js"
+          },
+          {
+            "name": "EditorCommandPermission",
+            "typeOnly": true,
+            "from": "./editor-command-registry.js"
+          },
+          {
+            "name": "EditorCommandProgress",
+            "typeOnly": true,
+            "from": "./editor-command-registry.js"
+          },
+          {
+            "name": "EditorCommandRefusal",
+            "typeOnly": true,
+            "from": "./editor-command-registry.js"
+          },
+          {
+            "name": "EditorCommandResultTarget",
+            "typeOnly": true,
+            "from": "./editor-command-registry.js"
+          },
+          {
+            "name": "EditorCommandTerminalResult",
+            "typeOnly": true,
+            "from": "./editor-command-registry.js"
+          },
+          {
+            "name": "EditorCommandTransactionResult",
+            "typeOnly": true,
+            "from": "./editor-command-registry.js"
+          },
+          {
+            "name": "EditorCommandValidation",
+            "typeOnly": true,
+            "from": "./editor-command-registry.js"
+          },
+          {
+            "name": "LEGACY_PROJECT_FORMAT_VERSION",
+            "typeOnly": false,
+            "from": "./project-manifest.js"
+          },
+          {
+            "name": "PROJECT_CAPABILITIES",
+            "typeOnly": false,
+            "from": "./project-manifest.js"
+          },
+          {
+            "name": "PROJECT_FORMAT_VERSION",
+            "typeOnly": false,
+            "from": "./project-manifest.js"
+          },
+          {
+            "name": "PROJECT_MANIFEST_DIAGNOSTICS",
+            "typeOnly": false,
+            "from": "./project-manifest.js"
+          },
+          {
+            "name": "PROJECT_MANIFEST_KIND",
+            "typeOnly": false,
+            "from": "./project-manifest.js"
+          },
+          {
+            "name": "PROJECT_MANIFEST_PATH",
+            "typeOnly": false,
+            "from": "./project-manifest.js"
+          },
+          {
+            "name": "PROJECT_MANIFEST_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./project-manifest.js"
+          },
+          {
+            "name": "PROJECT_MIGRATION_ID",
+            "typeOnly": false,
+            "from": "./project-manifest.js"
+          },
+          {
+            "name": "canonicalProjectManifestJson",
+            "typeOnly": false,
+            "from": "./project-manifest.js"
+          },
+          {
+            "name": "createProjectManifest",
+            "typeOnly": false,
+            "from": "./project-manifest.js"
+          },
+          {
+            "name": "deterministicProjectAssetId",
+            "typeOnly": false,
+            "from": "./project-manifest.js"
+          },
+          {
+            "name": "deterministicProjectId",
+            "typeOnly": false,
+            "from": "./project-manifest.js"
+          },
+          {
+            "name": "deterministicProjectObjectId",
+            "typeOnly": false,
+            "from": "./project-manifest.js"
+          },
+          {
+            "name": "isCanonicalProjectPath",
+            "typeOnly": false,
+            "from": "./project-manifest.js"
+          },
+          {
+            "name": "parseProjectManifestText",
+            "typeOnly": false,
+            "from": "./project-manifest.js"
+          },
+          {
+            "name": "projectManifestDigest",
+            "typeOnly": false,
+            "from": "./project-manifest.js"
+          },
+          {
+            "name": "projectVersionCapabilityResult",
+            "typeOnly": false,
+            "from": "./project-manifest.js"
+          },
+          {
+            "name": "serializeProjectManifest",
+            "typeOnly": false,
+            "from": "./project-manifest.js"
+          },
+          {
+            "name": "validateProjectManifest",
+            "typeOnly": false,
+            "from": "./project-manifest.js"
+          },
+          {
+            "name": "PROJECT_GIT_DIAGNOSTICS",
+            "typeOnly": false,
+            "from": "./project-git.js"
+          },
+          {
+            "name": "PROJECT_GIT_EVIDENCE_MAX_BYTES",
+            "typeOnly": false,
+            "from": "./project-git.js"
+          },
+          {
+            "name": "PROJECT_GIT_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./project-git.js"
+          },
+          {
+            "name": "ProjectGitCommitPreparation",
+            "typeOnly": true,
+            "from": "./project-git.js"
+          },
+          {
+            "name": "ProjectGitCommitPreparationResult",
+            "typeOnly": true,
+            "from": "./project-git.js"
+          },
+          {
+            "name": "ProjectGitDiagnosticCode",
+            "typeOnly": true,
+            "from": "./project-git.js"
+          },
+          {
+            "name": "ProjectGitEntry",
+            "typeOnly": true,
+            "from": "./project-git.js"
+          },
+          {
+            "name": "ProjectGitFailure",
+            "typeOnly": true,
+            "from": "./project-git.js"
+          },
+          {
+            "name": "ProjectGitRepositoryState",
+            "typeOnly": true,
+            "from": "./project-git.js"
+          },
+          {
+            "name": "ProjectGitStateResult",
+            "typeOnly": true,
+            "from": "./project-git.js"
+          },
+          {
+            "name": "ProjectAssetIdentity",
+            "typeOnly": true,
+            "from": "./project-manifest.js"
+          },
+          {
+            "name": "ProjectCapability",
+            "typeOnly": true,
+            "from": "./project-manifest.js"
+          },
+          {
+            "name": "ProjectCapabilityGrant",
+            "typeOnly": true,
+            "from": "./project-manifest.js"
+          },
+          {
+            "name": "ProjectFormatVersion",
+            "typeOnly": true,
+            "from": "./project-manifest.js"
+          },
+          {
+            "name": "ProjectManifest",
+            "typeOnly": true,
+            "from": "./project-manifest.js"
+          },
+          {
+            "name": "ProjectManifestDiagnostic",
+            "typeOnly": true,
+            "from": "./project-manifest.js"
+          },
+          {
+            "name": "ProjectManifestDiagnosticCode",
+            "typeOnly": true,
+            "from": "./project-manifest.js"
+          },
+          {
+            "name": "ProjectManifestValidation",
+            "typeOnly": true,
+            "from": "./project-manifest.js"
+          },
+          {
+            "name": "ProjectMigrationRecord",
+            "typeOnly": true,
+            "from": "./project-manifest.js"
+          },
+          {
+            "name": "ProjectObjectIdentity",
+            "typeOnly": true,
+            "from": "./project-manifest.js"
+          },
+          {
+            "name": "ProjectVersionCapabilityResult",
+            "typeOnly": true,
+            "from": "./project-manifest.js"
+          },
+          {
+            "name": "DELIVERY_ARTIFACT_ROLES",
+            "typeOnly": false,
+            "from": "./delivery-handoff.js"
+          },
+          {
+            "name": "DELIVERY_HANDOFF_KIND",
+            "typeOnly": false,
+            "from": "./delivery-handoff.js"
+          },
+          {
+            "name": "DELIVERY_HANDOFF_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./delivery-handoff.js"
+          },
+          {
+            "name": "DELIVERY_TARGET_PLATFORMS",
+            "typeOnly": false,
+            "from": "./delivery-handoff.js"
+          },
+          {
+            "name": "computeDeliveryArtifactSetDigest",
+            "typeOnly": false,
+            "from": "./delivery-handoff.js"
+          },
+          {
+            "name": "parseDeliveryHandoffText",
+            "typeOnly": false,
+            "from": "./delivery-handoff.js"
+          },
+          {
+            "name": "validateDeliveryHandoff",
+            "typeOnly": false,
+            "from": "./delivery-handoff.js"
+          },
+          {
+            "name": "MODEL_PROVIDER_CALL_EVIDENCE_KIND",
+            "typeOnly": false,
+            "from": "./model-provider.js"
+          },
+          {
+            "name": "MODEL_PROVIDER_OPERATIONS",
+            "typeOnly": false,
+            "from": "./model-provider.js"
+          },
+          {
+            "name": "MODEL_PROVIDER_PORT_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./model-provider.js"
+          },
+          {
+            "name": "MODEL_PROVIDER_ROUTE_KINDS",
+            "typeOnly": false,
+            "from": "./model-provider.js"
+          },
+          {
+            "name": "DESKTOP_LOCAL_BRIDGE_DISCOVERY_KIND",
+            "typeOnly": false,
+            "from": "./desktop-local-bridge.js"
+          },
+          {
+            "name": "DESKTOP_LOCAL_BRIDGE_ERROR_CODES",
+            "typeOnly": false,
+            "from": "./desktop-local-bridge.js"
+          },
+          {
+            "name": "DESKTOP_LOCAL_BRIDGE_PERMISSIONS",
+            "typeOnly": false,
+            "from": "./desktop-local-bridge.js"
+          },
+          {
+            "name": "DESKTOP_LOCAL_BRIDGE_PROTOCOL_VERSION",
+            "typeOnly": false,
+            "from": "./desktop-local-bridge.js"
+          },
+          {
+            "name": "DESKTOP_LOCAL_BRIDGE_TOOLS",
+            "typeOnly": false,
+            "from": "./desktop-local-bridge.js"
+          },
+          {
+            "name": "DESKTOP_LOCAL_BRIDGE_TRANSPORT",
+            "typeOnly": false,
+            "from": "./desktop-local-bridge.js"
+          },
+          {
+            "name": "desktopLocalBridgeTool",
+            "typeOnly": false,
+            "from": "./desktop-local-bridge.js"
+          },
+          {
+            "name": "isDesktopLocalBridgePermission",
+            "typeOnly": false,
+            "from": "./desktop-local-bridge.js"
+          },
+          {
+            "name": "parseDesktopLocalBridgeDiscovery",
+            "typeOnly": false,
+            "from": "./desktop-local-bridge.js"
+          },
+          {
+            "name": "validateDesktopLocalBridgeToolInput",
+            "typeOnly": false,
+            "from": "./desktop-local-bridge.js"
+          },
+          {
+            "name": "DesktopLocalBridgeDiscovery",
+            "typeOnly": true,
+            "from": "./desktop-local-bridge.js"
+          },
+          {
+            "name": "DesktopLocalBridgeErrorCode",
+            "typeOnly": true,
+            "from": "./desktop-local-bridge.js"
+          },
+          {
+            "name": "DesktopLocalBridgeFailure",
+            "typeOnly": true,
+            "from": "./desktop-local-bridge.js"
+          },
+          {
+            "name": "DesktopLocalBridgePermission",
+            "typeOnly": true,
+            "from": "./desktop-local-bridge.js"
+          },
+          {
+            "name": "DesktopLocalBridgeRequest",
+            "typeOnly": true,
+            "from": "./desktop-local-bridge.js"
+          },
+          {
+            "name": "DesktopLocalBridgeResponse",
+            "typeOnly": true,
+            "from": "./desktop-local-bridge.js"
+          },
+          {
+            "name": "DesktopLocalBridgeSuccess",
+            "typeOnly": true,
+            "from": "./desktop-local-bridge.js"
+          },
+          {
+            "name": "DesktopLocalBridgeTool",
+            "typeOnly": true,
+            "from": "./desktop-local-bridge.js"
+          },
+          {
+            "name": "DesktopLocalBridgeToolName",
+            "typeOnly": true,
+            "from": "./desktop-local-bridge.js"
+          },
+          {
+            "name": "ModelCapabilityDescriptor",
+            "typeOnly": true,
+            "from": "./model-provider.js"
+          },
+          {
+            "name": "ModelCompleteRequest",
+            "typeOnly": true,
+            "from": "./model-provider.js"
+          },
+          {
+            "name": "ModelCompleteResponse",
+            "typeOnly": true,
+            "from": "./model-provider.js"
+          },
+          {
+            "name": "ModelDescriptor",
+            "typeOnly": true,
+            "from": "./model-provider.js"
+          },
+          {
+            "name": "ModelProviderCallEvidence",
+            "typeOnly": true,
+            "from": "./model-provider.js"
+          },
+          {
+            "name": "ModelProviderOperation",
+            "typeOnly": true,
+            "from": "./model-provider.js"
+          },
+          {
+            "name": "ModelProviderProfile",
+            "typeOnly": true,
+            "from": "./model-provider.js"
+          },
+          {
+            "name": "ModelProviderRequest",
+            "typeOnly": true,
+            "from": "./model-provider.js"
+          },
+          {
+            "name": "ModelProviderRequestBase",
+            "typeOnly": true,
+            "from": "./model-provider.js"
+          },
+          {
+            "name": "ModelProviderRouteKind",
+            "typeOnly": true,
+            "from": "./model-provider.js"
+          },
+          {
+            "name": "ModelStreamChunk",
+            "typeOnly": true,
+            "from": "./model-provider.js"
+          },
+          {
+            "name": "ModelStreamRequest",
+            "typeOnly": true,
+            "from": "./model-provider.js"
+          },
+          {
+            "name": "ModelToolCall",
+            "typeOnly": true,
+            "from": "./model-provider.js"
+          },
+          {
+            "name": "ModelToolCallRequest",
+            "typeOnly": true,
+            "from": "./model-provider.js"
+          },
+          {
+            "name": "ModelToolCallResponse",
+            "typeOnly": true,
+            "from": "./model-provider.js"
+          },
+          {
+            "name": "ModelToolDescriptor",
+            "typeOnly": true,
+            "from": "./model-provider.js"
+          },
+          {
+            "name": "DeliveryArtifactRole",
+            "typeOnly": true,
+            "from": "./delivery-handoff.js"
+          },
+          {
+            "name": "DeliveryBuildMetadata",
+            "typeOnly": true,
+            "from": "./delivery-handoff.js"
+          },
+          {
+            "name": "DeliveryHandoff",
+            "typeOnly": true,
+            "from": "./delivery-handoff.js"
+          },
+          {
+            "name": "DeliveryHandoffArtifact",
+            "typeOnly": true,
+            "from": "./delivery-handoff.js"
+          },
+          {
+            "name": "DeliveryHandoffArtifacts",
+            "typeOnly": true,
+            "from": "./delivery-handoff.js"
+          },
+          {
+            "name": "DeliveryHandoffDiagnostic",
+            "typeOnly": true,
+            "from": "./delivery-handoff.js"
+          },
+          {
+            "name": "DeliveryHandoffDiagnosticCode",
+            "typeOnly": true,
+            "from": "./delivery-handoff.js"
+          },
+          {
+            "name": "DeliveryHandoffProduct",
+            "typeOnly": true,
+            "from": "./delivery-handoff.js"
+          },
+          {
+            "name": "DeliveryHandoffProvenance",
+            "typeOnly": true,
+            "from": "./delivery-handoff.js"
+          },
+          {
+            "name": "DeliveryHandoffValidationOk",
+            "typeOnly": true,
+            "from": "./delivery-handoff.js"
+          },
+          {
+            "name": "DeliveryHandoffValidationRefuse",
+            "typeOnly": true,
+            "from": "./delivery-handoff.js"
+          },
+          {
+            "name": "DeliveryHandoffValidationResult",
+            "typeOnly": true,
+            "from": "./delivery-handoff.js"
+          },
+          {
+            "name": "DeliveryTargetPlatform",
+            "typeOnly": true,
+            "from": "./delivery-handoff.js"
+          },
+          {
+            "name": "EDITOR_SHELL_ASSISTANT_MODE_IDS",
+            "typeOnly": false,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "EDITOR_SHELL_ASSISTANT_MODES",
+            "typeOnly": false,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "editorShellAssistantModeLabel",
+            "typeOnly": false,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "EDITOR_SHELL_ASSISTANT_STATES",
+            "typeOnly": false,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "EDITOR_SHELL_CONTROL_KINDS",
+            "typeOnly": false,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "EDITOR_SHELL_DESKTOP_ASSISTANT_INTENTS",
+            "typeOnly": false,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "EDITOR_SHELL_DESKTOP_LAYOUT",
+            "typeOnly": false,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "EDITOR_SHELL_DESKTOP_WORKSPACES",
+            "typeOnly": false,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "EDITOR_SHELL_DISCLOSURE",
+            "typeOnly": false,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "EDITOR_SHELL_DOCK_TAB_GATES",
+            "typeOnly": false,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "EDITOR_SHELL_DOCK_TAB_IDS",
+            "typeOnly": false,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "EDITOR_SHELL_METRICS",
+            "typeOnly": false,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "EDITOR_SHELL_MINIMUM_WINDOW",
+            "typeOnly": false,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "EDITOR_SHELL_MODE_IDS",
+            "typeOnly": false,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "EDITOR_SHELL_MODES",
+            "typeOnly": false,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "EDITOR_SHELL_PRIMARY_DOCK_TABS",
+            "typeOnly": false,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "EDITOR_SHELL_RETIRED_COPY",
+            "typeOnly": false,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "EDITOR_SHELL_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "EDITOR_SHELL_SESSION_STATES",
+            "typeOnly": false,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "EDITOR_SHELL_SOURCE",
+            "typeOnly": false,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "EDITOR_SHELL_SURFACES",
+            "typeOnly": false,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "EDITOR_SHELL_VIEWPORT_SOURCES",
+            "typeOnly": false,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "EDITOR_SHELL_WINDOW_TIERS",
+            "typeOnly": false,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "editorShellDockTabsFor",
+            "typeOnly": false,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "editorShellModeRow",
+            "typeOnly": false,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "editorShellModeSurface",
+            "typeOnly": false,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "editorShellPrimaryDockTabs",
+            "typeOnly": false,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "EditorShellAssistantModeId",
+            "typeOnly": true,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "EditorShellAssistantState",
+            "typeOnly": true,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "EditorShellControlKind",
+            "typeOnly": true,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "EditorShellDisclosure",
+            "typeOnly": true,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "EditorShellDockTabGate",
+            "typeOnly": true,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "EditorShellDockTabId",
+            "typeOnly": true,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "EditorShellModeId",
+            "typeOnly": true,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "EditorShellModeRow",
+            "typeOnly": true,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "EditorShellSessionState",
+            "typeOnly": true,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "EditorShellSurface",
+            "typeOnly": true,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "EditorShellViewportSourceId",
+            "typeOnly": true,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "EditorShellWindowTierId",
+            "typeOnly": true,
+            "from": "./editor-shell.js"
+          },
+          {
+            "name": "PLUGIN_MANIFEST_HOST_API_DIALECT",
+            "typeOnly": false,
+            "from": "./plugin.js"
+          },
+          {
+            "name": "PLUGIN_MANIFEST_PATH",
+            "typeOnly": false,
+            "from": "./plugin.js"
+          },
+          {
+            "name": "PLUGIN_MANIFEST_SCHEMA_URI",
+            "typeOnly": false,
+            "from": "./plugin.js"
+          },
+          {
+            "name": "PLUGIN_MANIFEST_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./plugin.js"
+          },
+          {
+            "name": "inertPluginManifestFixture",
+            "typeOnly": false,
+            "from": "./plugin.js"
+          },
+          {
+            "name": "parsePluginManifestText",
+            "typeOnly": false,
+            "from": "./plugin.js"
+          },
+          {
+            "name": "validatePluginManifest",
+            "typeOnly": false,
+            "from": "./plugin.js"
+          },
+          {
+            "name": "PluginManifest",
+            "typeOnly": true,
+            "from": "./plugin.js"
+          },
+          {
+            "name": "PluginManifestDiagnostic",
+            "typeOnly": true,
+            "from": "./plugin.js"
+          },
+          {
+            "name": "PluginManifestDiagnosticCode",
+            "typeOnly": true,
+            "from": "./plugin.js"
+          },
+          {
+            "name": "PluginManifestValidationOk",
+            "typeOnly": true,
+            "from": "./plugin.js"
+          },
+          {
+            "name": "PluginManifestValidationRefuse",
+            "typeOnly": true,
+            "from": "./plugin.js"
+          },
+          {
+            "name": "PluginManifestValidationResult",
+            "typeOnly": true,
+            "from": "./plugin.js"
+          },
+          {
+            "name": "PLUGIN_CAPABILITY_REGISTRY_SCHEMA_PATH",
+            "typeOnly": false,
+            "from": "./plugin-capability-registry.js"
+          },
+          {
+            "name": "PLUGIN_CAPABILITY_REGISTRY_SCHEMA_URI",
+            "typeOnly": false,
+            "from": "./plugin-capability-registry.js"
+          },
+          {
+            "name": "PLUGIN_CAPABILITY_REGISTRY_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./plugin-capability-registry.js"
+          },
+          {
+            "name": "PLUGIN_CAPABILITY_REGISTRY_SEED_PATH",
+            "typeOnly": false,
+            "from": "./plugin-capability-registry.js"
+          },
+          {
+            "name": "PLUGIN_CAPABILITY_REGISTRY_VERSION",
+            "typeOnly": false,
+            "from": "./plugin-capability-registry.js"
+          },
+          {
+            "name": "SHIPPED_PLUGIN_CAPABILITY_IDS",
+            "typeOnly": false,
+            "from": "./plugin-capability-registry.js"
+          },
+          {
+            "name": "emptyPluginCapabilityRegistry",
+            "typeOnly": false,
+            "from": "./plugin-capability-registry.js"
+          },
+          {
+            "name": "lookupPluginCapability",
+            "typeOnly": false,
+            "from": "./plugin-capability-registry.js"
+          },
+          {
+            "name": "parsePluginCapabilityRegistryText",
+            "typeOnly": false,
+            "from": "./plugin-capability-registry.js"
+          },
+          {
+            "name": "pluginCapabilityRegistrySeed",
+            "typeOnly": false,
+            "from": "./plugin-capability-registry.js"
+          },
+          {
+            "name": "validatePluginCapabilityRegistry",
+            "typeOnly": false,
+            "from": "./plugin-capability-registry.js"
+          },
+          {
+            "name": "PluginCapabilityLookupHit",
+            "typeOnly": true,
+            "from": "./plugin-capability-registry.js"
+          },
+          {
+            "name": "PluginCapabilityLookupMiss",
+            "typeOnly": true,
+            "from": "./plugin-capability-registry.js"
+          },
+          {
+            "name": "PluginCapabilityLookupResult",
+            "typeOnly": true,
+            "from": "./plugin-capability-registry.js"
+          },
+          {
+            "name": "PluginCapabilityRegistry",
+            "typeOnly": true,
+            "from": "./plugin-capability-registry.js"
+          },
+          {
+            "name": "PluginCapabilityRegistryDiagnostic",
+            "typeOnly": true,
+            "from": "./plugin-capability-registry.js"
+          },
+          {
+            "name": "PluginCapabilityRegistryDiagnosticCode",
+            "typeOnly": true,
+            "from": "./plugin-capability-registry.js"
+          },
+          {
+            "name": "PluginCapabilityRegistryEntry",
+            "typeOnly": true,
+            "from": "./plugin-capability-registry.js"
+          },
+          {
+            "name": "PluginCapabilityRegistryValidationOk",
+            "typeOnly": true,
+            "from": "./plugin-capability-registry.js"
+          },
+          {
+            "name": "PluginCapabilityRegistryValidationRefuse",
+            "typeOnly": true,
+            "from": "./plugin-capability-registry.js"
+          },
+          {
+            "name": "PluginCapabilityRegistryValidationResult",
+            "typeOnly": true,
+            "from": "./plugin-capability-registry.js"
+          },
+          {
+            "name": "ValidatePluginCapabilityRegistryOptions",
+            "typeOnly": true,
+            "from": "./plugin-capability-registry.js"
+          },
+          {
+            "name": "SCULPT_INTAKE_SOURCE_CAPABILITY_ID",
+            "typeOnly": false,
+            "from": "./plugin-capability-sculpt-intake.js"
+          },
+          {
+            "name": "SCULPT_INTAKE_SOURCE_CONTRACT_REF",
+            "typeOnly": false,
+            "from": "./plugin-capability-sculpt-intake.js"
+          },
+          {
+            "name": "SCULPT_INTAKE_SOURCE_CONTRACT_VERSION",
+            "typeOnly": false,
+            "from": "./plugin-capability-sculpt-intake.js"
+          },
+          {
+            "name": "SCULPT_INTAKE_SOURCE_OWNING_PACKAGE",
+            "typeOnly": false,
+            "from": "./plugin-capability-sculpt-intake.js"
+          },
+          {
+            "name": "checkSculptIntakeSourceImplementation",
+            "typeOnly": false,
+            "from": "./plugin-capability-sculpt-intake.js"
+          },
+          {
+            "name": "requestSculptIntake",
+            "typeOnly": false,
+            "from": "./plugin-capability-sculpt-intake.js"
+          },
+          {
+            "name": "SculptIntakeSource",
+            "typeOnly": true,
+            "from": "./plugin-capability-sculpt-intake.js"
+          },
+          {
+            "name": "SculptIntakeSourceContractCheckOk",
+            "typeOnly": true,
+            "from": "./plugin-capability-sculpt-intake.js"
+          },
+          {
+            "name": "SculptIntakeSourceContractCheckRefuse",
+            "typeOnly": true,
+            "from": "./plugin-capability-sculpt-intake.js"
+          },
+          {
+            "name": "SculptIntakeSourceContractCheckResult",
+            "typeOnly": true,
+            "from": "./plugin-capability-sculpt-intake.js"
+          },
+          {
+            "name": "SculptIntakeSourceOk",
+            "typeOnly": true,
+            "from": "./plugin-capability-sculpt-intake.js"
+          },
+          {
+            "name": "SculptIntakeSourceRefusalReason",
+            "typeOnly": true,
+            "from": "./plugin-capability-sculpt-intake.js"
+          },
+          {
+            "name": "SculptIntakeSourceRefuse",
+            "typeOnly": true,
+            "from": "./plugin-capability-sculpt-intake.js"
+          },
+          {
+            "name": "SculptIntakeSourceRequest",
+            "typeOnly": true,
+            "from": "./plugin-capability-sculpt-intake.js"
+          },
+          {
+            "name": "SculptIntakeSourceResult",
+            "typeOnly": true,
+            "from": "./plugin-capability-sculpt-intake.js"
+          },
+          {
+            "name": "ApplyDiagnostic",
+            "typeOnly": true,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "ApplyDiagnosticCode",
+            "typeOnly": true,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "ApplyApplied",
+            "typeOnly": true,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "ApplyIndeterminate",
+            "typeOnly": true,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "ApplyOk",
+            "typeOnly": true,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "ApplyReject",
+            "typeOnly": true,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "ApplyResult",
+            "typeOnly": true,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "Proposal",
+            "typeOnly": true,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "ProposalDiff",
+            "typeOnly": true,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "ProposalEdit",
+            "typeOnly": true,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "ProposalValidationOk",
+            "typeOnly": true,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "ProposalValidationRefuse",
+            "typeOnly": true,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "ProposalValidationResult",
+            "typeOnly": true,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "KERNEL_SESSION_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./kernel-session.js"
+          },
+          {
+            "name": "ProductManifest",
+            "typeOnly": true,
+            "from": "./kernel-session.js"
+          },
+          {
+            "name": "ProductEntitySeed",
+            "typeOnly": true,
+            "from": "./kernel-session.js"
+          },
+          {
+            "name": "Axis2",
+            "typeOnly": true,
+            "from": "./kernel-session.js"
+          },
+          {
+            "name": "Position2",
+            "typeOnly": true,
+            "from": "./kernel-session.js"
+          },
+          {
+            "name": "RarityRollCommand",
+            "typeOnly": true,
+            "from": "./kernel-session.js"
+          },
+          {
+            "name": "KernelCommand",
+            "typeOnly": true,
+            "from": "./kernel-session.js"
+          },
+          {
+            "name": "FrameClock",
+            "typeOnly": true,
+            "from": "./kernel-session.js"
+          },
+          {
+            "name": "SnapshotEntity",
+            "typeOnly": true,
+            "from": "./kernel-session.js"
+          },
+          {
+            "name": "KernelSnapshot",
+            "typeOnly": true,
+            "from": "./kernel-session.js"
+          },
+          {
+            "name": "KernelSessionEvent",
+            "typeOnly": true,
+            "from": "./kernel-session.js"
+          },
+          {
+            "name": "KernelSessionSaveArtifact",
+            "typeOnly": true,
+            "from": "./kernel-session.js"
+          },
+          {
+            "name": "RARITY_ALGORITHM_ID",
+            "typeOnly": false,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "RARITY_FIXTURES_PATH",
+            "typeOnly": false,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "RARITY_FORBIDDEN_INPUT_KEYS",
+            "typeOnly": false,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "RARITY_MAX_CANDIDATES",
+            "typeOnly": false,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "RARITY_NAMESPACE_KIND",
+            "typeOnly": false,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "RARITY_OUTCOME_KIND",
+            "typeOnly": false,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "RARITY_POLICY_KIND",
+            "typeOnly": false,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "RARITY_PROVIDER_DESCRIPTOR_MAX_CHARS",
+            "typeOnly": false,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "RARITY_PROVIDER_REQUEST_MAX_CHARS",
+            "typeOnly": false,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "RARITY_PROVENANCE_KIND",
+            "typeOnly": false,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "RARITY_REFUSE_CODES",
+            "typeOnly": false,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "RARITY_REQUEST_KIND",
+            "typeOnly": false,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "RARITY_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "RARITY_TIERS",
+            "typeOnly": false,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "canonicalRarityJson",
+            "typeOnly": false,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "digestRarityNamespace",
+            "typeOnly": false,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "digestRarityOutcome",
+            "typeOnly": false,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "digestRarityPolicy",
+            "typeOnly": false,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "digestRarityProvenance",
+            "typeOnly": false,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "digestRarityRequest",
+            "typeOnly": false,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "digestRarityValue",
+            "typeOnly": false,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "isRarityForbiddenInputKey",
+            "typeOnly": false,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "isRarityIdentifier",
+            "typeOnly": false,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "isRarityProviderSafeIdentifier",
+            "typeOnly": false,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "refuseRarity",
+            "typeOnly": false,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "serializeRarityNamespace",
+            "typeOnly": false,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "validateRarityNamespace",
+            "typeOnly": false,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "validateRarityOutcome",
+            "typeOnly": false,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "validateRarityPolicy",
+            "typeOnly": false,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "validateRarityProviderEvidence",
+            "typeOnly": false,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "validateRarityProvenance",
+            "typeOnly": false,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "validateRarityRollRequest",
+            "typeOnly": false,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "RarityCandidate",
+            "typeOnly": true,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "RarityNamespace",
+            "typeOnly": true,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "RarityOutcome",
+            "typeOnly": true,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "RarityPolicy",
+            "typeOnly": true,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "RarityProvenance",
+            "typeOnly": true,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "RarityRefuseCode",
+            "typeOnly": true,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "RarityRollRecord",
+            "typeOnly": true,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "RarityRollRequest",
+            "typeOnly": true,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "RarityTierId",
+            "typeOnly": true,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "RarityTierWeights",
+            "typeOnly": true,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "RarityValidationOk",
+            "typeOnly": true,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "RarityValidationRefuse",
+            "typeOnly": true,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "RarityValidationResult",
+            "typeOnly": true,
+            "from": "./rarity.js"
+          },
+          {
+            "name": "PROFILE_CONFORMANCE_KIND",
+            "typeOnly": false,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "PROFILE_CONFORMANCE_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "PROFILE_CONFORMANCE_SUITE_VERSION",
+            "typeOnly": false,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "PROFILE_ROLLOUT_ORDER_HELD_KEY",
+            "typeOnly": false,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "createProfileConformanceClaim",
+            "typeOnly": false,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "profileConformanceRegistry",
+            "typeOnly": false,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "registryEntryFor",
+            "typeOnly": false,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "validateProfileConformanceClaim",
+            "typeOnly": false,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "ClaimValidationOk",
+            "typeOnly": true,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "ClaimValidationRefuse",
+            "typeOnly": true,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "ClaimValidationResult",
+            "typeOnly": true,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "ProfileClaimStatus",
+            "typeOnly": true,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "ProfileConformanceClaim",
+            "typeOnly": true,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "ProfileConformanceRegistryEntry",
+            "typeOnly": true,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "ProfileConformanceSeam",
+            "typeOnly": true,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "ProfileConformanceSurface",
+            "typeOnly": true,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "ProfileCoreAuthoring",
+            "typeOnly": true,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "ProfileCoreKernel",
+            "typeOnly": true,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "ProfileEvidenceHook",
+            "typeOnly": true,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "ProfileEvidenceHooks",
+            "typeOnly": true,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "OPEN_PATH_DEMO_DECISION_KIND",
+            "typeOnly": false,
+            "from": "./open-path-policy.js"
+          },
+          {
+            "name": "OPEN_PATH_DEMO_LEVELS",
+            "typeOnly": false,
+            "from": "./open-path-policy.js"
+          },
+          {
+            "name": "OPEN_PATH_DEMO_OPERATIONS",
+            "typeOnly": false,
+            "from": "./open-path-policy.js"
+          },
+          {
+            "name": "OPEN_PATH_POLICY",
+            "typeOnly": false,
+            "from": "./open-path-policy.js"
+          },
+          {
+            "name": "OPEN_PATH_POLICY_FIXTURES_PATH",
+            "typeOnly": false,
+            "from": "./open-path-policy.js"
+          },
+          {
+            "name": "OPEN_PATH_POLICY_NOTES",
+            "typeOnly": false,
+            "from": "./open-path-policy.js"
+          },
+          {
+            "name": "OPEN_PATH_POLICY_PROFILES",
+            "typeOnly": false,
+            "from": "./open-path-policy.js"
+          },
+          {
+            "name": "OPEN_PATH_POLICY_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./open-path-policy.js"
+          },
+          {
+            "name": "OPEN_PATH_REFUSE_CODES",
+            "typeOnly": false,
+            "from": "./open-path-policy.js"
+          },
+          {
+            "name": "OPEN_PATH_REFUSE_ONLY_PROFILE",
+            "typeOnly": false,
+            "from": "./open-path-policy.js"
+          },
+          {
+            "name": "OPEN_PATH_SESSION_KINDS",
+            "typeOnly": false,
+            "from": "./open-path-policy.js"
+          },
+          {
+            "name": "evaluateOpenPathDemo",
+            "typeOnly": false,
+            "from": "./open-path-policy.js"
+          },
+          {
+            "name": "isOpenPathDemoOperation",
+            "typeOnly": false,
+            "from": "./open-path-policy.js"
+          },
+          {
+            "name": "openPathPolicyRowFor",
+            "typeOnly": false,
+            "from": "./open-path-policy.js"
+          },
+          {
+            "name": "openPathPolicyView",
+            "typeOnly": false,
+            "from": "./open-path-policy.js"
+          },
+          {
+            "name": "openPathPolicyViewFor",
+            "typeOnly": false,
+            "from": "./open-path-policy.js"
+          },
+          {
+            "name": "openPathSurfaceNotes",
+            "typeOnly": false,
+            "from": "./open-path-policy.js"
+          },
+          {
+            "name": "resolveOpenPathSurfaceRequest",
+            "typeOnly": false,
+            "from": "./open-path-policy.js"
+          },
+          {
+            "name": "validateOpenPathDemoDecision",
+            "typeOnly": false,
+            "from": "./open-path-policy.js"
+          },
+          {
+            "name": "OpenPathDemoAllowed",
+            "typeOnly": true,
+            "from": "./open-path-policy.js"
+          },
+          {
+            "name": "OpenPathDemoDecision",
+            "typeOnly": true,
+            "from": "./open-path-policy.js"
+          },
+          {
+            "name": "OpenPathDemoLevel",
+            "typeOnly": true,
+            "from": "./open-path-policy.js"
+          },
+          {
+            "name": "OpenPathDemoOperation",
+            "typeOnly": true,
+            "from": "./open-path-policy.js"
+          },
+          {
+            "name": "OpenPathDemoRefusal",
+            "typeOnly": true,
+            "from": "./open-path-policy.js"
+          },
+          {
+            "name": "OpenPathDemoRequest",
+            "typeOnly": true,
+            "from": "./open-path-policy.js"
+          },
+          {
+            "name": "OpenPathPolicyFilteredView",
+            "typeOnly": true,
+            "from": "./open-path-policy.js"
+          },
+          {
+            "name": "OpenPathPolicyProjection",
+            "typeOnly": true,
+            "from": "./open-path-policy.js"
+          },
+          {
+            "name": "OpenPathPolicyRow",
+            "typeOnly": true,
+            "from": "./open-path-policy.js"
+          },
+          {
+            "name": "OpenPathPolicyViewModel",
+            "typeOnly": true,
+            "from": "./open-path-policy.js"
+          },
+          {
+            "name": "OpenPathPolicyViewRow",
+            "typeOnly": true,
+            "from": "./open-path-policy.js"
+          },
+          {
+            "name": "OpenPathRefuseCode",
+            "typeOnly": true,
+            "from": "./open-path-policy.js"
+          },
+          {
+            "name": "OpenPathSessionKind",
+            "typeOnly": true,
+            "from": "./open-path-policy.js"
+          },
+          {
+            "name": "OpenPathSurfaceOutcome",
+            "typeOnly": true,
+            "from": "./open-path-policy.js"
+          },
+          {
+            "name": "OpenPathSurfaceRequest",
+            "typeOnly": true,
+            "from": "./open-path-policy.js"
+          },
+          {
+            "name": "ANIMATION_READY_HIERARCHY_KIND",
+            "typeOnly": false,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "ANIMATION_READY_HIERARCHY_VERSION",
+            "typeOnly": false,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "OBJECT_SCULPT_SPEC_KIND",
+            "typeOnly": false,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "REQUIRED_SCULPT_PASSES",
+            "typeOnly": false,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "SCULPT_ARTIFACT_KIND",
+            "typeOnly": false,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "SCULPT_INTAKE_KIND",
+            "typeOnly": false,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "SCULPT_INTAKE_MODES",
+            "typeOnly": false,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "SCULPT_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "digestObjectSculptSpec",
+            "typeOnly": false,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "isSculptIdentifier",
+            "typeOnly": false,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "isSculptIntakeMode",
+            "typeOnly": false,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "isSculptQualityObjectSculptSpec",
+            "typeOnly": false,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "isSculptTransform",
+            "typeOnly": false,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "normalizeObjectSculptSpec",
+            "typeOnly": false,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "projectAnimationReadyHierarchy",
+            "typeOnly": false,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "validateObjectSculptSpec",
+            "typeOnly": false,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "validateSculptArtifact",
+            "typeOnly": false,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "validateSculptIntake",
+            "typeOnly": false,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "validateSculptQualityArtifact",
+            "typeOnly": false,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "validateSculptQualityObjectSculptSpec",
+            "typeOnly": false,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "ObjectSculptSpec",
+            "typeOnly": true,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "LegacyObjectSculptSpec",
+            "typeOnly": true,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "LegacySculptArtifact",
+            "typeOnly": true,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "LegacySculptProceduralModuleRef",
+            "typeOnly": true,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "LegacySculptRuntimeHierarchy",
+            "typeOnly": true,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "RequiredSculptPassId",
+            "typeOnly": true,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "SculptAttachmentPoint",
+            "typeOnly": true,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "SculptArtifact",
+            "typeOnly": true,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "SculptComponent",
+            "typeOnly": true,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "SculptCollider",
+            "typeOnly": true,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "SculptDiagnostic",
+            "typeOnly": true,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "SculptDiagnosticCode",
+            "typeOnly": true,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "SculptDetailInventory",
+            "typeOnly": true,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "SculptEvidence",
+            "typeOnly": true,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "SculptHierarchyNode",
+            "typeOnly": true,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "SculptImage",
+            "typeOnly": true,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "SculptIntake",
+            "typeOnly": true,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "SculptIntakeMode",
+            "typeOnly": true,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "SculptMaterial",
+            "typeOnly": true,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "SculptMaterialBinding",
+            "typeOnly": true,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "SculptPass",
+            "typeOnly": true,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "SculptPivot",
+            "typeOnly": true,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "SculptProceduralModuleRef",
+            "typeOnly": true,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "SculptQualityGateEvidence",
+            "typeOnly": true,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "SculptQualityDiagnostic",
+            "typeOnly": true,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "SculptQualityDiagnosticCode",
+            "typeOnly": true,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "SculptQualityArtifact",
+            "typeOnly": true,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "SculptQualityObjectSculptSpec",
+            "typeOnly": true,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "SculptQualityProceduralModuleRef",
+            "typeOnly": true,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "SculptQualityRuntimeHierarchy",
+            "typeOnly": true,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "SculptQualityValidationResult",
+            "typeOnly": true,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "SculptRuntimeHierarchy",
+            "typeOnly": true,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "SculptSocket",
+            "typeOnly": true,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "SculptTransform",
+            "typeOnly": true,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "SculptValidationResult",
+            "typeOnly": true,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "Vector3",
+            "typeOnly": true,
+            "from": "./sculpt.js"
+          },
+          {
+            "name": "COMPOSED_SCENE_DOCUMENT_DATA_KEY",
+            "typeOnly": false,
+            "from": "./scene-composition.js"
+          },
+          {
+            "name": "COMPOSED_SCENE_KIND",
+            "typeOnly": false,
+            "from": "./scene-composition.js"
+          },
+          {
+            "name": "SCENE_COMPOSITION_INTAKE_KIND",
+            "typeOnly": false,
+            "from": "./scene-composition.js"
+          },
+          {
+            "name": "SCENE_COMPOSITION_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./scene-composition.js"
+          },
+          {
+            "name": "SCENE_MAXIMUM_DEPTH",
+            "typeOnly": false,
+            "from": "./scene-composition.js"
+          },
+          {
+            "name": "SCENE_MAXIMUM_COMPONENT_MAGNITUDE",
+            "typeOnly": false,
+            "from": "./scene-composition.js"
+          },
+          {
+            "name": "SCENE_MAXIMUM_INSTANCES",
+            "typeOnly": false,
+            "from": "./scene-composition.js"
+          },
+          {
+            "name": "SCENE_MINIMUM_INSTANCES",
+            "typeOnly": false,
+            "from": "./scene-composition.js"
+          },
+          {
+            "name": "SCENE_MINIMUM_SCALE",
+            "typeOnly": false,
+            "from": "./scene-composition.js"
+          },
+          {
+            "name": "composeSculptTransforms",
+            "typeOnly": false,
+            "from": "./scene-composition.js"
+          },
+          {
+            "name": "composedSceneFromDocumentData",
+            "typeOnly": false,
+            "from": "./scene-composition.js"
+          },
+          {
+            "name": "deriveCanonicalLocalSculptTransform",
+            "typeOnly": false,
+            "from": "./scene-composition.js"
+          },
+          {
+            "name": "digestComposedScene",
+            "typeOnly": false,
+            "from": "./scene-composition.js"
+          },
+          {
+            "name": "digestSceneArtifact",
+            "typeOnly": false,
+            "from": "./scene-composition.js"
+          },
+          {
+            "name": "digestScenePlacements",
+            "typeOnly": false,
+            "from": "./scene-composition.js"
+          },
+          {
+            "name": "identitySculptTransform",
+            "typeOnly": false,
+            "from": "./scene-composition.js"
+          },
+          {
+            "name": "projectSceneInstanceHierarchy",
+            "typeOnly": false,
+            "from": "./scene-composition.js"
+          },
+          {
+            "name": "resolveScenePlacements",
+            "typeOnly": false,
+            "from": "./scene-composition.js"
+          },
+          {
+            "name": "validateComposedScene",
+            "typeOnly": false,
+            "from": "./scene-composition.js"
+          },
+          {
+            "name": "validateSceneCompositionIntake",
+            "typeOnly": false,
+            "from": "./scene-composition.js"
+          },
+          {
+            "name": "CanonicalLocalSculptTransformResult",
+            "typeOnly": true,
+            "from": "./scene-composition.js"
+          },
+          {
+            "name": "DESKTOP_SCENE_EDIT_PROFILES",
+            "typeOnly": false,
+            "from": "./desktop-scene-edit.js"
+          },
+          {
+            "name": "DESKTOP_SCENE_HIERARCHY_KIND",
+            "typeOnly": false,
+            "from": "./desktop-scene-edit.js"
+          },
+          {
+            "name": "DESKTOP_SCENE_HIERARCHY_REFUSALS",
+            "typeOnly": false,
+            "from": "./desktop-scene-edit.js"
+          },
+          {
+            "name": "DESKTOP_SCENE_HIERARCHY_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./desktop-scene-edit.js"
+          },
+          {
+            "name": "DESKTOP_SCENE_REPARENT_POLICIES",
+            "typeOnly": false,
+            "from": "./desktop-scene-edit.js"
+          },
+          {
+            "name": "DESKTOP_SCENE_TRANSFORM_PROPERTY_DEFINITIONS",
+            "typeOnly": false,
+            "from": "./desktop-scene-edit.js"
+          },
+          {
+            "name": "desktopSceneTransformProperty",
+            "typeOnly": false,
+            "from": "./desktop-scene-edit.js"
+          },
+          {
+            "name": "isDesktopSceneEditOperation",
+            "typeOnly": false,
+            "from": "./desktop-scene-edit.js"
+          },
+          {
+            "name": "isDesktopSceneEditProfile",
+            "typeOnly": false,
+            "from": "./desktop-scene-edit.js"
+          },
+          {
+            "name": "isDesktopSceneReparentPolicy",
+            "typeOnly": false,
+            "from": "./desktop-scene-edit.js"
+          },
+          {
+            "name": "resolveDesktopSceneSelection",
+            "typeOnly": false,
+            "from": "./desktop-scene-edit.js"
+          },
+          {
+            "name": "DESKTOP_SCENE_TRANSFORM_AXES",
+            "typeOnly": false,
+            "from": "./desktop-scene-transform.js"
+          },
+          {
+            "name": "DESKTOP_SCENE_TRANSFORM_MODES",
+            "typeOnly": false,
+            "from": "./desktop-scene-transform.js"
+          },
+          {
+            "name": "DESKTOP_SCENE_TRANSFORM_PIVOTS",
+            "typeOnly": false,
+            "from": "./desktop-scene-transform.js"
+          },
+          {
+            "name": "DESKTOP_SCENE_TRANSFORM_REFUSALS",
+            "typeOnly": false,
+            "from": "./desktop-scene-transform.js"
+          },
+          {
+            "name": "DESKTOP_SCENE_TRANSFORM_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./desktop-scene-transform.js"
+          },
+          {
+            "name": "DESKTOP_SCENE_TRANSFORM_SPACES",
+            "typeOnly": false,
+            "from": "./desktop-scene-transform.js"
+          },
+          {
+            "name": "DESKTOP_SCENE_TRANSFORM_VALUE_KINDS",
+            "typeOnly": false,
+            "from": "./desktop-scene-transform.js"
+          },
+          {
+            "name": "isDesktopSceneTransformRequest",
+            "typeOnly": false,
+            "from": "./desktop-scene-transform.js"
+          },
+          {
+            "name": "resolveDesktopSceneTransform",
+            "typeOnly": false,
+            "from": "./desktop-scene-transform.js"
+          },
+          {
+            "name": "DesktopSceneTransformAxis",
+            "typeOnly": true,
+            "from": "./desktop-scene-transform.js"
+          },
+          {
+            "name": "DesktopSceneTransformComponent",
+            "typeOnly": true,
+            "from": "./desktop-scene-transform.js"
+          },
+          {
+            "name": "DesktopSceneTransformInstance",
+            "typeOnly": true,
+            "from": "./desktop-scene-transform.js"
+          },
+          {
+            "name": "DesktopSceneTransformMode",
+            "typeOnly": true,
+            "from": "./desktop-scene-transform.js"
+          },
+          {
+            "name": "DesktopSceneTransformPivot",
+            "typeOnly": true,
+            "from": "./desktop-scene-transform.js"
+          },
+          {
+            "name": "DesktopSceneTransformRefusal",
+            "typeOnly": true,
+            "from": "./desktop-scene-transform.js"
+          },
+          {
+            "name": "DesktopSceneTransformRequest",
+            "typeOnly": true,
+            "from": "./desktop-scene-transform.js"
+          },
+          {
+            "name": "DesktopSceneTransformResult",
+            "typeOnly": true,
+            "from": "./desktop-scene-transform.js"
+          },
+          {
+            "name": "DesktopSceneTransformSpace",
+            "typeOnly": true,
+            "from": "./desktop-scene-transform.js"
+          },
+          {
+            "name": "DesktopSceneTransformValueKind",
+            "typeOnly": true,
+            "from": "./desktop-scene-transform.js"
+          },
+          {
+            "name": "DesktopSceneTransformVector",
+            "typeOnly": true,
+            "from": "./desktop-scene-transform.js"
+          },
+          {
+            "name": "SCENE_PREFAB_CATALOG_KEY",
+            "typeOnly": false,
+            "from": "./desktop-scene-prefab.js"
+          },
+          {
+            "name": "SCENE_PREFAB_CATALOG_KIND",
+            "typeOnly": false,
+            "from": "./desktop-scene-prefab.js"
+          },
+          {
+            "name": "SCENE_PREFAB_REFUSALS",
+            "typeOnly": false,
+            "from": "./desktop-scene-prefab.js"
+          },
+          {
+            "name": "SCENE_PREFAB_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./desktop-scene-prefab.js"
+          },
+          {
+            "name": "defineScenePrefab",
+            "typeOnly": false,
+            "from": "./desktop-scene-prefab.js"
+          },
+          {
+            "name": "emptyScenePrefabCatalog",
+            "typeOnly": false,
+            "from": "./desktop-scene-prefab.js"
+          },
+          {
+            "name": "inspectScenePrefab",
+            "typeOnly": false,
+            "from": "./desktop-scene-prefab.js"
+          },
+          {
+            "name": "instanceScenePrefab",
+            "typeOnly": false,
+            "from": "./desktop-scene-prefab.js"
+          },
+          {
+            "name": "overrideScenePrefab",
+            "typeOnly": false,
+            "from": "./desktop-scene-prefab.js"
+          },
+          {
+            "name": "parseScenePrefabCatalog",
+            "typeOnly": false,
+            "from": "./desktop-scene-prefab.js"
+          },
+          {
+            "name": "refreshScenePrefab",
+            "typeOnly": false,
+            "from": "./desktop-scene-prefab.js"
+          },
+          {
+            "name": "scenePrefabChildInstanceId",
+            "typeOnly": false,
+            "from": "./desktop-scene-prefab.js"
+          },
+          {
+            "name": "scenePrefabDefinitionDigest",
+            "typeOnly": false,
+            "from": "./desktop-scene-prefab.js"
+          },
+          {
+            "name": "scenePrefabRootInstanceId",
+            "typeOnly": false,
+            "from": "./desktop-scene-prefab.js"
+          },
+          {
+            "name": "SCENE_ANIMATION_CATALOG_KEY",
+            "typeOnly": false,
+            "from": "./desktop-scene-animation.js"
+          },
+          {
+            "name": "SCENE_ANIMATION_CATALOG_KIND",
+            "typeOnly": false,
+            "from": "./desktop-scene-animation.js"
+          },
+          {
+            "name": "SCENE_ANIMATION_INTERPOLATIONS",
+            "typeOnly": false,
+            "from": "./desktop-scene-animation.js"
+          },
+          {
+            "name": "SCENE_ANIMATION_REFUSALS",
+            "typeOnly": false,
+            "from": "./desktop-scene-animation.js"
+          },
+          {
+            "name": "SCENE_ANIMATION_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./desktop-scene-animation.js"
+          },
+          {
+            "name": "applySceneAnimationMutation",
+            "typeOnly": false,
+            "from": "./desktop-scene-animation.js"
+          },
+          {
+            "name": "emptySceneAnimationCatalog",
+            "typeOnly": false,
+            "from": "./desktop-scene-animation.js"
+          },
+          {
+            "name": "evaluateSceneAnimation",
+            "typeOnly": false,
+            "from": "./desktop-scene-animation.js"
+          },
+          {
+            "name": "inspectSceneAnimation",
+            "typeOnly": false,
+            "from": "./desktop-scene-animation.js"
+          },
+          {
+            "name": "parseSceneAnimationCatalog",
+            "typeOnly": false,
+            "from": "./desktop-scene-animation.js"
+          },
+          {
+            "name": "sceneAnimationCatalogDigest",
+            "typeOnly": false,
+            "from": "./desktop-scene-animation.js"
+          },
+          {
+            "name": "SCENE_PHYSICS_BODY_KINDS",
+            "typeOnly": false,
+            "from": "./desktop-scene-physics.js"
+          },
+          {
+            "name": "SCENE_PHYSICS_CATALOG_KEY",
+            "typeOnly": false,
+            "from": "./desktop-scene-physics.js"
+          },
+          {
+            "name": "SCENE_PHYSICS_CATALOG_KIND",
+            "typeOnly": false,
+            "from": "./desktop-scene-physics.js"
+          },
+          {
+            "name": "SCENE_PHYSICS_CONSTRAINT_KINDS",
+            "typeOnly": false,
+            "from": "./desktop-scene-physics.js"
+          },
+          {
+            "name": "SCENE_PHYSICS_ENGINES",
+            "typeOnly": false,
+            "from": "./desktop-scene-physics.js"
+          },
+          {
+            "name": "SCENE_PHYSICS_REFUSALS",
+            "typeOnly": false,
+            "from": "./desktop-scene-physics.js"
+          },
+          {
+            "name": "SCENE_PHYSICS_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./desktop-scene-physics.js"
+          },
+          {
+            "name": "SCENE_PHYSICS_SHAPE_KINDS",
+            "typeOnly": false,
+            "from": "./desktop-scene-physics.js"
+          },
+          {
+            "name": "applyScenePhysicsMutation",
+            "typeOnly": false,
+            "from": "./desktop-scene-physics.js"
+          },
+          {
+            "name": "emptyScenePhysicsCatalog",
+            "typeOnly": false,
+            "from": "./desktop-scene-physics.js"
+          },
+          {
+            "name": "evaluateScenePhysics",
+            "typeOnly": false,
+            "from": "./desktop-scene-physics.js"
+          },
+          {
+            "name": "inspectScenePhysics",
+            "typeOnly": false,
+            "from": "./desktop-scene-physics.js"
+          },
+          {
+            "name": "parseScenePhysicsCatalog",
+            "typeOnly": false,
+            "from": "./desktop-scene-physics.js"
+          },
+          {
+            "name": "ASSISTANT_ASK_ANSWER_KIND",
+            "typeOnly": false,
+            "from": "./desktop-assistant-ask.js"
+          },
+          {
+            "name": "ASSISTANT_ASK_REFUSALS",
+            "typeOnly": false,
+            "from": "./desktop-assistant-ask.js"
+          },
+          {
+            "name": "ASSISTANT_ASK_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./desktop-assistant-ask.js"
+          },
+          {
+            "name": "ASSISTANT_ASK_SCOPES",
+            "typeOnly": false,
+            "from": "./desktop-assistant-ask.js"
+          },
+          {
+            "name": "ASSISTANT_PROVIDER_CLASSES",
+            "typeOnly": false,
+            "from": "./desktop-assistant-ask.js"
+          },
+          {
+            "name": "SCENE_ASSISTANT_BUILD_CATALOG_KEY",
+            "typeOnly": false,
+            "from": "./desktop-assistant-ask.js"
+          },
+          {
+            "name": "SCENE_ASSISTANT_BUILD_CATALOG_KIND",
+            "typeOnly": false,
+            "from": "./desktop-assistant-ask.js"
+          },
+          {
+            "name": "answerAssistantAsk",
+            "typeOnly": false,
+            "from": "./desktop-assistant-ask.js"
+          },
+          {
+            "name": "applyAssistantBuildEntry",
+            "typeOnly": false,
+            "from": "./desktop-assistant-ask.js"
+          },
+          {
+            "name": "emptySceneAssistantBuildCatalog",
+            "typeOnly": false,
+            "from": "./desktop-assistant-ask.js"
+          },
+          {
+            "name": "isAssistantAskScope",
+            "typeOnly": false,
+            "from": "./desktop-assistant-ask.js"
+          },
+          {
+            "name": "isFixtureProviderDescriptor",
+            "typeOnly": false,
+            "from": "./desktop-assistant-ask.js"
+          },
+          {
+            "name": "parseSceneAssistantBuildCatalog",
+            "typeOnly": false,
+            "from": "./desktop-assistant-ask.js"
+          },
+          {
+            "name": "SCENE_PACKAGE_CATALOG_KEY",
+            "typeOnly": false,
+            "from": "./desktop-scene-package.js"
+          },
+          {
+            "name": "SCENE_PACKAGE_CATALOG_KIND",
+            "typeOnly": false,
+            "from": "./desktop-scene-package.js"
+          },
+          {
+            "name": "SCENE_PACKAGE_REFUSALS",
+            "typeOnly": false,
+            "from": "./desktop-scene-package.js"
+          },
+          {
+            "name": "SCENE_PACKAGE_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./desktop-scene-package.js"
+          },
+          {
+            "name": "applyScenePackageMutation",
+            "typeOnly": false,
+            "from": "./desktop-scene-package.js"
+          },
+          {
+            "name": "discoverScenePackage",
+            "typeOnly": false,
+            "from": "./desktop-scene-package.js"
+          },
+          {
+            "name": "emptyScenePackageCatalog",
+            "typeOnly": false,
+            "from": "./desktop-scene-package.js"
+          },
+          {
+            "name": "inspectScenePackages",
+            "typeOnly": false,
+            "from": "./desktop-scene-package.js"
+          },
+          {
+            "name": "parseScenePackageCatalog",
+            "typeOnly": false,
+            "from": "./desktop-scene-package.js"
+          },
+          {
+            "name": "PROFILE_EVIDENCE_KIND",
+            "typeOnly": false,
+            "from": "./desktop-profile-evidence.js"
+          },
+          {
+            "name": "PROFILE_EVIDENCE_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./desktop-profile-evidence.js"
+          },
+          {
+            "name": "PROFILE_METRIC_IDS",
+            "typeOnly": false,
+            "from": "./desktop-profile-evidence.js"
+          },
+          {
+            "name": "PROFILE_REFUSALS",
+            "typeOnly": false,
+            "from": "./desktop-profile-evidence.js"
+          },
+          {
+            "name": "captureProfileEvidence",
+            "typeOnly": false,
+            "from": "./desktop-profile-evidence.js"
+          },
+          {
+            "name": "WORKSPACE_LAYOUT_DEFAULT_ID",
+            "typeOnly": false,
+            "from": "./desktop-workspace-layout.js"
+          },
+          {
+            "name": "WORKSPACE_LAYOUT_KIND",
+            "typeOnly": false,
+            "from": "./desktop-workspace-layout.js"
+          },
+          {
+            "name": "WORKSPACE_LAYOUT_REFUSALS",
+            "typeOnly": false,
+            "from": "./desktop-workspace-layout.js"
+          },
+          {
+            "name": "WORKSPACE_LAYOUT_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./desktop-workspace-layout.js"
+          },
+          {
+            "name": "applyWorkspaceLayoutMutation",
+            "typeOnly": false,
+            "from": "./desktop-workspace-layout.js"
+          },
+          {
+            "name": "defaultWorkspaceLayout",
+            "typeOnly": false,
+            "from": "./desktop-workspace-layout.js"
+          },
+          {
+            "name": "inspectWorkspaceLayout",
+            "typeOnly": false,
+            "from": "./desktop-workspace-layout.js"
+          },
+          {
+            "name": "parseWorkspaceLayout",
+            "typeOnly": false,
+            "from": "./desktop-workspace-layout.js"
+          },
+          {
+            "name": "EXTENSION_SEAM_CAPABILITY_IDS",
+            "typeOnly": false,
+            "from": "./desktop-extension-seams.js"
+          },
+          {
+            "name": "EXTENSION_SEAM_IDS",
+            "typeOnly": false,
+            "from": "./desktop-extension-seams.js"
+          },
+          {
+            "name": "EXTENSION_SEAM_KIND",
+            "typeOnly": false,
+            "from": "./desktop-extension-seams.js"
+          },
+          {
+            "name": "EXTENSION_SEAM_REFUSALS",
+            "typeOnly": false,
+            "from": "./desktop-extension-seams.js"
+          },
+          {
+            "name": "EXTENSION_SEAM_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./desktop-extension-seams.js"
+          },
+          {
+            "name": "inspectExtensionSeams",
+            "typeOnly": false,
+            "from": "./desktop-extension-seams.js"
+          },
+          {
+            "name": "isDeclaredExtensionCapability",
+            "typeOnly": false,
+            "from": "./desktop-extension-seams.js"
+          },
+          {
+            "name": "refuseUndeclaredExtensionGrant",
+            "typeOnly": false,
+            "from": "./desktop-extension-seams.js"
+          },
+          {
+            "name": "startExtensionSeam",
+            "typeOnly": false,
+            "from": "./desktop-extension-seams.js"
+          },
+          {
+            "name": "PROJECT_BUILD_KIND",
+            "typeOnly": false,
+            "from": "./desktop-project-build.js"
+          },
+          {
+            "name": "PROJECT_BUILD_PLATFORMS",
+            "typeOnly": false,
+            "from": "./desktop-project-build.js"
+          },
+          {
+            "name": "PROJECT_BUILD_REFUSALS",
+            "typeOnly": false,
+            "from": "./desktop-project-build.js"
+          },
+          {
+            "name": "PROJECT_BUILD_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./desktop-project-build.js"
+          },
+          {
+            "name": "detectProjectBuildHost",
+            "typeOnly": false,
+            "from": "./desktop-project-build.js"
+          },
+          {
+            "name": "evaluateProjectBuild",
+            "typeOnly": false,
+            "from": "./desktop-project-build.js"
+          },
+          {
+            "name": "isProjectBuildPlatform",
+            "typeOnly": false,
+            "from": "./desktop-project-build.js"
+          },
+          {
+            "name": "ProjectBuildHost",
+            "typeOnly": true,
+            "from": "./desktop-project-build.js"
+          },
+          {
+            "name": "ProjectBuildPlatform",
+            "typeOnly": true,
+            "from": "./desktop-project-build.js"
+          },
+          {
+            "name": "ProjectBuildRefusal",
+            "typeOnly": true,
+            "from": "./desktop-project-build.js"
+          },
+          {
+            "name": "ExtensionSeam",
+            "typeOnly": true,
+            "from": "./desktop-extension-seams.js"
+          },
+          {
+            "name": "ExtensionSeamId",
+            "typeOnly": true,
+            "from": "./desktop-extension-seams.js"
+          },
+          {
+            "name": "ExtensionSeamRefusal",
+            "typeOnly": true,
+            "from": "./desktop-extension-seams.js"
+          },
+          {
+            "name": "WorkspaceLayout",
+            "typeOnly": true,
+            "from": "./desktop-workspace-layout.js"
+          },
+          {
+            "name": "WorkspaceLayoutRefusal",
+            "typeOnly": true,
+            "from": "./desktop-workspace-layout.js"
+          },
+          {
+            "name": "ProfileEvidence",
+            "typeOnly": true,
+            "from": "./desktop-profile-evidence.js"
+          },
+          {
+            "name": "ProfileMetric",
+            "typeOnly": true,
+            "from": "./desktop-profile-evidence.js"
+          },
+          {
+            "name": "ProfileMetricId",
+            "typeOnly": true,
+            "from": "./desktop-profile-evidence.js"
+          },
+          {
+            "name": "ProfileRefusal",
+            "typeOnly": true,
+            "from": "./desktop-profile-evidence.js"
+          },
+          {
+            "name": "ScenePackageCatalog",
+            "typeOnly": true,
+            "from": "./desktop-scene-package.js"
+          },
+          {
+            "name": "ScenePackageDiscovery",
+            "typeOnly": true,
+            "from": "./desktop-scene-package.js"
+          },
+          {
+            "name": "ScenePackageInspection",
+            "typeOnly": true,
+            "from": "./desktop-scene-package.js"
+          },
+          {
+            "name": "ScenePackageLockEntry",
+            "typeOnly": true,
+            "from": "./desktop-scene-package.js"
+          },
+          {
+            "name": "ScenePackageMutation",
+            "typeOnly": true,
+            "from": "./desktop-scene-package.js"
+          },
+          {
+            "name": "ScenePackageRefusal",
+            "typeOnly": true,
+            "from": "./desktop-scene-package.js"
+          },
+          {
+            "name": "AssistantAskAnswer",
+            "typeOnly": true,
+            "from": "./desktop-assistant-ask.js"
+          },
+          {
+            "name": "AssistantAskRefusal",
+            "typeOnly": true,
+            "from": "./desktop-assistant-ask.js"
+          },
+          {
+            "name": "AssistantAskScope",
+            "typeOnly": true,
+            "from": "./desktop-assistant-ask.js"
+          },
+          {
+            "name": "AssistantAskScopeState",
+            "typeOnly": true,
+            "from": "./desktop-assistant-ask.js"
+          },
+          {
+            "name": "AssistantProviderClass",
+            "typeOnly": true,
+            "from": "./desktop-assistant-ask.js"
+          },
+          {
+            "name": "SceneAssistantBuildCatalog",
+            "typeOnly": true,
+            "from": "./desktop-assistant-ask.js"
+          },
+          {
+            "name": "SceneAssistantBuildEntry",
+            "typeOnly": true,
+            "from": "./desktop-assistant-ask.js"
+          },
+          {
+            "name": "ScenePhysicsBody",
+            "typeOnly": true,
+            "from": "./desktop-scene-physics.js"
+          },
+          {
+            "name": "ScenePhysicsCatalog",
+            "typeOnly": true,
+            "from": "./desktop-scene-physics.js"
+          },
+          {
+            "name": "ScenePhysicsConstraint",
+            "typeOnly": true,
+            "from": "./desktop-scene-physics.js"
+          },
+          {
+            "name": "ScenePhysicsEngine",
+            "typeOnly": true,
+            "from": "./desktop-scene-physics.js"
+          },
+          {
+            "name": "ScenePhysicsEvaluation",
+            "typeOnly": true,
+            "from": "./desktop-scene-physics.js"
+          },
+          {
+            "name": "ScenePhysicsMaterial",
+            "typeOnly": true,
+            "from": "./desktop-scene-physics.js"
+          },
+          {
+            "name": "ScenePhysicsMutation",
+            "typeOnly": true,
+            "from": "./desktop-scene-physics.js"
+          },
+          {
+            "name": "ScenePhysicsRefusal",
+            "typeOnly": true,
+            "from": "./desktop-scene-physics.js"
+          },
+          {
+            "name": "ScenePhysicsShape",
+            "typeOnly": true,
+            "from": "./desktop-scene-physics.js"
+          },
+          {
+            "name": "ScenePhysicsSnapshot",
+            "typeOnly": true,
+            "from": "./desktop-scene-physics.js"
+          },
+          {
+            "name": "ScenePhysicsWorld",
+            "typeOnly": true,
+            "from": "./desktop-scene-physics.js"
+          },
+          {
+            "name": "SCENE_LIGHTS_CATALOG_KEY",
+            "typeOnly": false,
+            "from": "./desktop-scene-lights.js"
+          },
+          {
+            "name": "SCENE_LIGHTS_CATALOG_KIND",
+            "typeOnly": false,
+            "from": "./desktop-scene-lights.js"
+          },
+          {
+            "name": "SCENE_LIGHTS_REFUSALS",
+            "typeOnly": false,
+            "from": "./desktop-scene-lights.js"
+          },
+          {
+            "name": "SCENE_LIGHTS_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./desktop-scene-lights.js"
+          },
+          {
+            "name": "SCENE_LIGHT_KINDS",
+            "typeOnly": false,
+            "from": "./desktop-scene-lights.js"
+          },
+          {
+            "name": "applySceneLightsMutation",
+            "typeOnly": false,
+            "from": "./desktop-scene-lights.js"
+          },
+          {
+            "name": "emptySceneLightsCatalog",
+            "typeOnly": false,
+            "from": "./desktop-scene-lights.js"
+          },
+          {
+            "name": "inspectSceneLights",
+            "typeOnly": false,
+            "from": "./desktop-scene-lights.js"
+          },
+          {
+            "name": "parseSceneLightsCatalog",
+            "typeOnly": false,
+            "from": "./desktop-scene-lights.js"
+          },
+          {
+            "name": "sceneLightsCatalogDigest",
+            "typeOnly": false,
+            "from": "./desktop-scene-lights.js"
+          },
+          {
+            "name": "SceneLight",
+            "typeOnly": true,
+            "from": "./desktop-scene-lights.js"
+          },
+          {
+            "name": "SceneLightsCatalog",
+            "typeOnly": true,
+            "from": "./desktop-scene-lights.js"
+          },
+          {
+            "name": "SceneLightsMutation",
+            "typeOnly": true,
+            "from": "./desktop-scene-lights.js"
+          },
+          {
+            "name": "SceneLightsRefusal",
+            "typeOnly": true,
+            "from": "./desktop-scene-lights.js"
+          },
+          {
+            "name": "SCENE_CAMERAS_CATALOG_KEY",
+            "typeOnly": false,
+            "from": "./desktop-scene-cameras.js"
+          },
+          {
+            "name": "SCENE_CAMERAS_CATALOG_KIND",
+            "typeOnly": false,
+            "from": "./desktop-scene-cameras.js"
+          },
+          {
+            "name": "SCENE_CAMERAS_REFUSALS",
+            "typeOnly": false,
+            "from": "./desktop-scene-cameras.js"
+          },
+          {
+            "name": "SCENE_CAMERAS_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./desktop-scene-cameras.js"
+          },
+          {
+            "name": "SCENE_CAMERA_KINDS",
+            "typeOnly": false,
+            "from": "./desktop-scene-cameras.js"
+          },
+          {
+            "name": "applySceneCamerasMutation",
+            "typeOnly": false,
+            "from": "./desktop-scene-cameras.js"
+          },
+          {
+            "name": "emptySceneCamerasCatalog",
+            "typeOnly": false,
+            "from": "./desktop-scene-cameras.js"
+          },
+          {
+            "name": "inspectSceneCameras",
+            "typeOnly": false,
+            "from": "./desktop-scene-cameras.js"
+          },
+          {
+            "name": "parseSceneCamerasCatalog",
+            "typeOnly": false,
+            "from": "./desktop-scene-cameras.js"
+          },
+          {
+            "name": "sceneCamerasCatalogDigest",
+            "typeOnly": false,
+            "from": "./desktop-scene-cameras.js"
+          },
+          {
+            "name": "SceneCamera",
+            "typeOnly": true,
+            "from": "./desktop-scene-cameras.js"
+          },
+          {
+            "name": "SceneCamerasCatalog",
+            "typeOnly": true,
+            "from": "./desktop-scene-cameras.js"
+          },
+          {
+            "name": "SceneCamerasMutation",
+            "typeOnly": true,
+            "from": "./desktop-scene-cameras.js"
+          },
+          {
+            "name": "SceneCamerasRefusal",
+            "typeOnly": true,
+            "from": "./desktop-scene-cameras.js"
+          },
+          {
+            "name": "SCENE_AUDIO_CATALOG_KEY",
+            "typeOnly": false,
+            "from": "./desktop-scene-audio.js"
+          },
+          {
+            "name": "SCENE_AUDIO_CATALOG_KIND",
+            "typeOnly": false,
+            "from": "./desktop-scene-audio.js"
+          },
+          {
+            "name": "SCENE_AUDIO_REFUSALS",
+            "typeOnly": false,
+            "from": "./desktop-scene-audio.js"
+          },
+          {
+            "name": "SCENE_AUDIO_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./desktop-scene-audio.js"
+          },
+          {
+            "name": "applySceneAudioMutation",
+            "typeOnly": false,
+            "from": "./desktop-scene-audio.js"
+          },
+          {
+            "name": "emptySceneAudioCatalog",
+            "typeOnly": false,
+            "from": "./desktop-scene-audio.js"
+          },
+          {
+            "name": "inspectSceneAudio",
+            "typeOnly": false,
+            "from": "./desktop-scene-audio.js"
+          },
+          {
+            "name": "parseSceneAudioCatalog",
+            "typeOnly": false,
+            "from": "./desktop-scene-audio.js"
+          },
+          {
+            "name": "sceneAudioCatalogDigest",
+            "typeOnly": false,
+            "from": "./desktop-scene-audio.js"
+          },
+          {
+            "name": "SceneAudioSource",
+            "typeOnly": true,
+            "from": "./desktop-scene-audio.js"
+          },
+          {
+            "name": "SceneAudioCatalog",
+            "typeOnly": true,
+            "from": "./desktop-scene-audio.js"
+          },
+          {
+            "name": "SceneAudioMutation",
+            "typeOnly": true,
+            "from": "./desktop-scene-audio.js"
+          },
+          {
+            "name": "SceneAudioRefusal",
+            "typeOnly": true,
+            "from": "./desktop-scene-audio.js"
+          },
+          {
+            "name": "SCENE_ENVIRONMENT_CATALOG_KEY",
+            "typeOnly": false,
+            "from": "./desktop-scene-environment.js"
+          },
+          {
+            "name": "SCENE_ENVIRONMENT_CATALOG_KIND",
+            "typeOnly": false,
+            "from": "./desktop-scene-environment.js"
+          },
+          {
+            "name": "SCENE_ENVIRONMENT_EFFECTS",
+            "typeOnly": false,
+            "from": "./desktop-scene-environment.js"
+          },
+          {
+            "name": "SCENE_ENVIRONMENT_REFUSALS",
+            "typeOnly": false,
+            "from": "./desktop-scene-environment.js"
+          },
+          {
+            "name": "SCENE_ENVIRONMENT_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./desktop-scene-environment.js"
+          },
+          {
+            "name": "SCENE_ENVIRONMENT_TONE_MAPS",
+            "typeOnly": false,
+            "from": "./desktop-scene-environment.js"
+          },
+          {
+            "name": "applySceneEnvironmentMutation",
+            "typeOnly": false,
+            "from": "./desktop-scene-environment.js"
+          },
+          {
+            "name": "emptySceneEnvironmentCatalog",
+            "typeOnly": false,
+            "from": "./desktop-scene-environment.js"
+          },
+          {
+            "name": "inspectSceneEnvironment",
+            "typeOnly": false,
+            "from": "./desktop-scene-environment.js"
+          },
+          {
+            "name": "parseSceneEnvironmentCatalog",
+            "typeOnly": false,
+            "from": "./desktop-scene-environment.js"
+          },
+          {
+            "name": "sceneEnvironmentCatalogDigest",
+            "typeOnly": false,
+            "from": "./desktop-scene-environment.js"
+          },
+          {
+            "name": "SceneEnvironmentCatalog",
+            "typeOnly": true,
+            "from": "./desktop-scene-environment.js"
+          },
+          {
+            "name": "SceneEnvironmentMutation",
+            "typeOnly": true,
+            "from": "./desktop-scene-environment.js"
+          },
+          {
+            "name": "SceneEnvironmentRefusal",
+            "typeOnly": true,
+            "from": "./desktop-scene-environment.js"
+          },
+          {
+            "name": "SCENE_MATERIALS_CATALOG_KEY",
+            "typeOnly": false,
+            "from": "./desktop-scene-materials.js"
+          },
+          {
+            "name": "SCENE_MATERIALS_CATALOG_KIND",
+            "typeOnly": false,
+            "from": "./desktop-scene-materials.js"
+          },
+          {
+            "name": "SCENE_MATERIALS_REFUSALS",
+            "typeOnly": false,
+            "from": "./desktop-scene-materials.js"
+          },
+          {
+            "name": "SCENE_MATERIALS_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./desktop-scene-materials.js"
+          },
+          {
+            "name": "SCENE_MATERIAL_PARAMETERS",
+            "typeOnly": false,
+            "from": "./desktop-scene-materials.js"
+          },
+          {
+            "name": "applySceneMaterialsMutation",
+            "typeOnly": false,
+            "from": "./desktop-scene-materials.js"
+          },
+          {
+            "name": "emptySceneMaterialsCatalog",
+            "typeOnly": false,
+            "from": "./desktop-scene-materials.js"
+          },
+          {
+            "name": "inspectSceneMaterials",
+            "typeOnly": false,
+            "from": "./desktop-scene-materials.js"
+          },
+          {
+            "name": "parseSceneMaterialsCatalog",
+            "typeOnly": false,
+            "from": "./desktop-scene-materials.js"
+          },
+          {
+            "name": "sceneMaterialsCatalogDigest",
+            "typeOnly": false,
+            "from": "./desktop-scene-materials.js"
+          },
+          {
+            "name": "SceneMaterialOverride",
+            "typeOnly": true,
+            "from": "./desktop-scene-materials.js"
+          },
+          {
+            "name": "SceneMaterialsCatalog",
+            "typeOnly": true,
+            "from": "./desktop-scene-materials.js"
+          },
+          {
+            "name": "SceneMaterialsMutation",
+            "typeOnly": true,
+            "from": "./desktop-scene-materials.js"
+          },
+          {
+            "name": "SceneMaterialsRefusal",
+            "typeOnly": true,
+            "from": "./desktop-scene-materials.js"
+          },
+          {
+            "name": "SCENE_EFFECTS_CATALOG_KEY",
+            "typeOnly": false,
+            "from": "./desktop-scene-effects.js"
+          },
+          {
+            "name": "SCENE_EFFECTS_CATALOG_KIND",
+            "typeOnly": false,
+            "from": "./desktop-scene-effects.js"
+          },
+          {
+            "name": "SCENE_EFFECTS_REFUSALS",
+            "typeOnly": false,
+            "from": "./desktop-scene-effects.js"
+          },
+          {
+            "name": "SCENE_EFFECTS_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./desktop-scene-effects.js"
+          },
+          {
+            "name": "SCENE_EFFECT_EMITTER_KINDS",
+            "typeOnly": false,
+            "from": "./desktop-scene-effects.js"
+          },
+          {
+            "name": "applySceneEffectsMutation",
+            "typeOnly": false,
+            "from": "./desktop-scene-effects.js"
+          },
+          {
+            "name": "emptySceneEffectsCatalog",
+            "typeOnly": false,
+            "from": "./desktop-scene-effects.js"
+          },
+          {
+            "name": "inspectSceneEffects",
+            "typeOnly": false,
+            "from": "./desktop-scene-effects.js"
+          },
+          {
+            "name": "parseSceneEffectsCatalog",
+            "typeOnly": false,
+            "from": "./desktop-scene-effects.js"
+          },
+          {
+            "name": "sampleSceneEffects",
+            "typeOnly": false,
+            "from": "./desktop-scene-effects.js"
+          },
+          {
+            "name": "SceneEffectEmitter",
+            "typeOnly": true,
+            "from": "./desktop-scene-effects.js"
+          },
+          {
+            "name": "SceneEffectSample",
+            "typeOnly": true,
+            "from": "./desktop-scene-effects.js"
+          },
+          {
+            "name": "SceneEffectsCatalog",
+            "typeOnly": true,
+            "from": "./desktop-scene-effects.js"
+          },
+          {
+            "name": "SceneEffectsEvaluation",
+            "typeOnly": true,
+            "from": "./desktop-scene-effects.js"
+          },
+          {
+            "name": "SceneEffectsMutation",
+            "typeOnly": true,
+            "from": "./desktop-scene-effects.js"
+          },
+          {
+            "name": "SceneEffectsRefusal",
+            "typeOnly": true,
+            "from": "./desktop-scene-effects.js"
+          },
+          {
+            "name": "PHYSICS_HOST_PROBE_STEPS",
+            "typeOnly": false,
+            "from": "./physics-world-host.js"
+          },
+          {
+            "name": "PHYSICS_WORLD_HOST_KINDS",
+            "typeOnly": false,
+            "from": "./physics-world-host.js"
+          },
+          {
+            "name": "PHYSICS_WORLD_HOST_REFUSALS",
+            "typeOnly": false,
+            "from": "./physics-world-host.js"
+          },
+          {
+            "name": "createToyPhysicsWorldHost",
+            "typeOnly": false,
+            "from": "./physics-world-host.js"
+          },
+          {
+            "name": "PhysicsWorldHandle",
+            "typeOnly": true,
+            "from": "./physics-world-host.js"
+          },
+          {
+            "name": "PhysicsWorldHost",
+            "typeOnly": true,
+            "from": "./physics-world-host.js"
+          },
+          {
+            "name": "PhysicsWorldHostKind",
+            "typeOnly": true,
+            "from": "./physics-world-host.js"
+          },
+          {
+            "name": "SceneAnimationBinding",
+            "typeOnly": true,
+            "from": "./desktop-scene-animation.js"
+          },
+          {
+            "name": "SceneAnimationCatalog",
+            "typeOnly": true,
+            "from": "./desktop-scene-animation.js"
+          },
+          {
+            "name": "SceneAnimationClip",
+            "typeOnly": true,
+            "from": "./desktop-scene-animation.js"
+          },
+          {
+            "name": "SceneAnimationEvaluation",
+            "typeOnly": true,
+            "from": "./desktop-scene-animation.js"
+          },
+          {
+            "name": "SceneAnimationInterpolation",
+            "typeOnly": true,
+            "from": "./desktop-scene-animation.js"
+          },
+          {
+            "name": "SceneAnimationKeyframe",
+            "typeOnly": true,
+            "from": "./desktop-scene-animation.js"
+          },
+          {
+            "name": "SceneAnimationMutation",
+            "typeOnly": true,
+            "from": "./desktop-scene-animation.js"
+          },
+          {
+            "name": "SceneAnimationRefusal",
+            "typeOnly": true,
+            "from": "./desktop-scene-animation.js"
+          },
+          {
+            "name": "SceneAnimationSample",
+            "typeOnly": true,
+            "from": "./desktop-scene-animation.js"
+          },
+          {
+            "name": "SceneAnimationTrack",
+            "typeOnly": true,
+            "from": "./desktop-scene-animation.js"
+          },
+          {
+            "name": "PLAY_SESSION_KIND",
+            "typeOnly": false,
+            "from": "./desktop-play-session.js"
+          },
+          {
+            "name": "PLAY_SESSION_REFUSALS",
+            "typeOnly": false,
+            "from": "./desktop-play-session.js"
+          },
+          {
+            "name": "PLAY_SESSION_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./desktop-play-session.js"
+          },
+          {
+            "name": "PLAY_SESSION_STATES",
+            "typeOnly": false,
+            "from": "./desktop-play-session.js"
+          },
+          {
+            "name": "PLAY_VIEWPORT_SOURCES",
+            "typeOnly": false,
+            "from": "./desktop-play-session.js"
+          },
+          {
+            "name": "disposePlaySession",
+            "typeOnly": false,
+            "from": "./desktop-play-session.js"
+          },
+          {
+            "name": "playCloneDigest",
+            "typeOnly": false,
+            "from": "./desktop-play-session.js"
+          },
+          {
+            "name": "resetPlaySession",
+            "typeOnly": false,
+            "from": "./desktop-play-session.js"
+          },
+          {
+            "name": "setPlayViewportSource",
+            "typeOnly": false,
+            "from": "./desktop-play-session.js"
+          },
+          {
+            "name": "startPlaySession",
+            "typeOnly": false,
+            "from": "./desktop-play-session.js"
+          },
+          {
+            "name": "stopPlaySession",
+            "typeOnly": false,
+            "from": "./desktop-play-session.js"
+          },
+          {
+            "name": "PlaySession",
+            "typeOnly": true,
+            "from": "./desktop-play-session.js"
+          },
+          {
+            "name": "PlaySessionRefusal",
+            "typeOnly": true,
+            "from": "./desktop-play-session.js"
+          },
+          {
+            "name": "PlaySessionState",
+            "typeOnly": true,
+            "from": "./desktop-play-session.js"
+          },
+          {
+            "name": "PlayViewportSource",
+            "typeOnly": true,
+            "from": "./desktop-play-session.js"
+          },
+          {
+            "name": "ScenePrefabCatalog",
+            "typeOnly": true,
+            "from": "./desktop-scene-prefab.js"
+          },
+          {
+            "name": "ScenePrefabDefinition",
+            "typeOnly": true,
+            "from": "./desktop-scene-prefab.js"
+          },
+          {
+            "name": "ScenePrefabInspection",
+            "typeOnly": true,
+            "from": "./desktop-scene-prefab.js"
+          },
+          {
+            "name": "ScenePrefabInstanceLink",
+            "typeOnly": true,
+            "from": "./desktop-scene-prefab.js"
+          },
+          {
+            "name": "ScenePrefabNode",
+            "typeOnly": true,
+            "from": "./desktop-scene-prefab.js"
+          },
+          {
+            "name": "ScenePrefabOverride",
+            "typeOnly": true,
+            "from": "./desktop-scene-prefab.js"
+          },
+          {
+            "name": "ScenePrefabPlacement",
+            "typeOnly": true,
+            "from": "./desktop-scene-prefab.js"
+          },
+          {
+            "name": "ScenePrefabRefusal",
+            "typeOnly": true,
+            "from": "./desktop-scene-prefab.js"
+          },
+          {
+            "name": "ScenePrefabSourceNode",
+            "typeOnly": true,
+            "from": "./desktop-scene-prefab.js"
+          },
+          {
+            "name": "DesktopSceneEditOperation",
+            "typeOnly": true,
+            "from": "./desktop-scene-edit.js"
+          },
+          {
+            "name": "DesktopSceneEditProfile",
+            "typeOnly": true,
+            "from": "./desktop-scene-edit.js"
+          },
+          {
+            "name": "DesktopSceneHierarchyRefusal",
+            "typeOnly": true,
+            "from": "./desktop-scene-edit.js"
+          },
+          {
+            "name": "DesktopSceneReparentPolicy",
+            "typeOnly": true,
+            "from": "./desktop-scene-edit.js"
+          },
+          {
+            "name": "DesktopSceneSelection",
+            "typeOnly": true,
+            "from": "./desktop-scene-edit.js"
+          },
+          {
+            "name": "DesktopSceneSelectionResult",
+            "typeOnly": true,
+            "from": "./desktop-scene-edit.js"
+          },
+          {
+            "name": "DesktopSceneTransformPropertyDefinition",
+            "typeOnly": true,
+            "from": "./desktop-scene-edit.js"
+          },
+          {
+            "name": "DesktopSceneTransformPropertyId",
+            "typeOnly": true,
+            "from": "./desktop-scene-edit.js"
+          },
+          {
+            "name": "ComposedScene",
+            "typeOnly": true,
+            "from": "./scene-composition.js"
+          },
+          {
+            "name": "ComposedSceneArtifactDigest",
+            "typeOnly": true,
+            "from": "./scene-composition.js"
+          },
+          {
+            "name": "ComposedSceneEvidence",
+            "typeOnly": true,
+            "from": "./scene-composition.js"
+          },
+          {
+            "name": "ComposedSceneInstance",
+            "typeOnly": true,
+            "from": "./scene-composition.js"
+          },
+          {
+            "name": "PlacedSceneInstanceHierarchy",
+            "typeOnly": true,
+            "from": "./scene-composition.js"
+          },
+          {
+            "name": "ResolvedScenePlacement",
+            "typeOnly": true,
+            "from": "./scene-composition.js"
+          },
+          {
+            "name": "SceneCompositionDiagnostic",
+            "typeOnly": true,
+            "from": "./scene-composition.js"
+          },
+          {
+            "name": "SceneCompositionDiagnosticCode",
+            "typeOnly": true,
+            "from": "./scene-composition.js"
+          },
+          {
+            "name": "SceneCompositionIntake",
+            "typeOnly": true,
+            "from": "./scene-composition.js"
+          },
+          {
+            "name": "SceneCompositionValidationResult",
+            "typeOnly": true,
+            "from": "./scene-composition.js"
+          },
+          {
+            "name": "ScenePlacement",
+            "typeOnly": true,
+            "from": "./scene-composition.js"
+          },
+          {
+            "name": "SCULPT_PROCEDURAL_EMIT_KIND",
+            "typeOnly": false,
+            "from": "./sculpt-procedural.js"
+          },
+          {
+            "name": "SCULPT_PROCEDURAL_EMIT_VERSION",
+            "typeOnly": false,
+            "from": "./sculpt-procedural.js"
+          },
+          {
+            "name": "SCULPT_PROCEDURAL_EXPORT_NAME",
+            "typeOnly": false,
+            "from": "./sculpt-procedural.js"
+          },
+          {
+            "name": "SCULPT_PROCEDURAL_MODULE_ID",
+            "typeOnly": false,
+            "from": "./sculpt-procedural.js"
+          },
+          {
+            "name": "SCULPT_PROCEDURAL_SOURCE_DIGEST",
+            "typeOnly": false,
+            "from": "./sculpt-procedural.js"
+          },
+          {
+            "name": "SculptProceduralEmit",
+            "typeOnly": true,
+            "from": "./sculpt-procedural.js"
+          },
+          {
+            "name": "SculptProceduralGeometry",
+            "typeOnly": true,
+            "from": "./sculpt-procedural.js"
+          },
+          {
+            "name": "SculptProceduralMaterial",
+            "typeOnly": true,
+            "from": "./sculpt-procedural.js"
+          },
+          {
+            "name": "SculptProceduralNode",
+            "typeOnly": true,
+            "from": "./sculpt-procedural.js"
+          }
+        ]
+      },
+      {
+        "stage": 3,
+        "mode": "100644",
+        "blob": "a274dbfac35c09c3723f4b91e6d31a9c69b92c90",
+        "sha256": "00ff7800c49f37112811d9fb5d3974d4b2e9cae7ba379a17d01d519f52fa4c47",
+        "parseErrors": 0,
+        "exports": [
+          {
+            "name": "CATALOG_ITEM_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "CATALOG_POLICY_CITES",
+            "typeOnly": false,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "COMMERCE_ACTIVATION_GATE",
+            "typeOnly": false,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "PIPELINE_STATES",
+            "typeOnly": false,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "attemptCommerceActivation",
+            "typeOnly": false,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "createCatalogItemAtIntake",
+            "typeOnly": false,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "isCommerceActive",
+            "typeOnly": false,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "legalSuccessors",
+            "typeOnly": false,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "missingMandatoryMetadata",
+            "typeOnly": false,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "transitionCatalogItem",
+            "typeOnly": false,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "AiGenerationDisclosure",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "AssetPackageRef",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "CatalogItem",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "CommerceActivationResult",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "CommerceFields",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "Compatibility",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "HumanCurationVerdict",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "ModerationState",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "PipelineState",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "ProvenanceRecord",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "RightsRecord",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "TransitionOk",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "TransitionRecord",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "TransitionRefuse",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "TransitionRequest",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "TransitionResult",
+            "typeOnly": true,
+            "from": "./catalog.js"
+          },
+          {
+            "name": "DOCUMENT_KIND",
+            "typeOnly": false,
+            "from": "./document.js"
+          },
+          {
+            "name": "DOCUMENT_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./document.js"
+          },
+          {
+            "name": "createDocument",
+            "typeOnly": false,
+            "from": "./document.js"
+          },
+          {
+            "name": "parseDocumentText",
+            "typeOnly": false,
+            "from": "./document.js"
+          },
+          {
+            "name": "serializeDocument",
+            "typeOnly": false,
+            "from": "./document.js"
+          },
+          {
+            "name": "validateDocument",
+            "typeOnly": false,
+            "from": "./document.js"
+          },
+          {
+            "name": "DocumentValidationOk",
+            "typeOnly": true,
+            "from": "./document.js"
+          },
+          {
+            "name": "DocumentValidationRefuse",
+            "typeOnly": true,
+            "from": "./document.js"
+          },
+          {
+            "name": "DocumentValidationResult",
+            "typeOnly": true,
+            "from": "./document.js"
+          },
+          {
+            "name": "SceneDocument",
+            "typeOnly": true,
+            "from": "./document.js"
+          },
+          {
+            "name": "CONTENT_HASH_PREFIX",
+            "typeOnly": false,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "PROPOSAL_KIND",
+            "typeOnly": false,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "PROPOSAL_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "createProposal",
+            "typeOnly": false,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "parseProposalText",
+            "typeOnly": false,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "serializeProposal",
+            "typeOnly": false,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "validateProposal",
+            "typeOnly": false,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "ApplyDiagnostic",
+            "typeOnly": true,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "ApplyDiagnosticCode",
+            "typeOnly": true,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "ApplyOk",
+            "typeOnly": true,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "ApplyReject",
+            "typeOnly": true,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "ApplyResult",
+            "typeOnly": true,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "Proposal",
+            "typeOnly": true,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "ProposalDiff",
+            "typeOnly": true,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "ProposalEdit",
+            "typeOnly": true,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "ProposalValidationOk",
+            "typeOnly": true,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "ProposalValidationRefuse",
+            "typeOnly": true,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "ProposalValidationResult",
+            "typeOnly": true,
+            "from": "./proposal.js"
+          },
+          {
+            "name": "KERNEL_SESSION_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./kernel-session.js"
+          },
+          {
+            "name": "ProductManifest",
+            "typeOnly": true,
+            "from": "./kernel-session.js"
+          },
+          {
+            "name": "ProductEntitySeed",
+            "typeOnly": true,
+            "from": "./kernel-session.js"
+          },
+          {
+            "name": "Axis2",
+            "typeOnly": true,
+            "from": "./kernel-session.js"
+          },
+          {
+            "name": "Position2",
+            "typeOnly": true,
+            "from": "./kernel-session.js"
+          },
+          {
+            "name": "KernelCommand",
+            "typeOnly": true,
+            "from": "./kernel-session.js"
+          },
+          {
+            "name": "FrameClock",
+            "typeOnly": true,
+            "from": "./kernel-session.js"
+          },
+          {
+            "name": "SnapshotEntity",
+            "typeOnly": true,
+            "from": "./kernel-session.js"
+          },
+          {
+            "name": "KernelSnapshot",
+            "typeOnly": true,
+            "from": "./kernel-session.js"
+          },
+          {
+            "name": "KernelSessionEvent",
+            "typeOnly": true,
+            "from": "./kernel-session.js"
+          },
+          {
+            "name": "KernelSessionSaveArtifact",
+            "typeOnly": true,
+            "from": "./kernel-session.js"
+          },
+          {
+            "name": "PROFILE_CONFORMANCE_KIND",
+            "typeOnly": false,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "PROFILE_CONFORMANCE_SCHEMA_VERSION",
+            "typeOnly": false,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "PROFILE_CONFORMANCE_SUITE_VERSION",
+            "typeOnly": false,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "PROFILE_ROLLOUT_ORDER_HELD_KEY",
+            "typeOnly": false,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "createProfileConformanceClaim",
+            "typeOnly": false,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "profileConformanceRegistry",
+            "typeOnly": false,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "registryEntryFor",
+            "typeOnly": false,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "validateProfileConformanceClaim",
+            "typeOnly": false,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "ClaimValidationOk",
+            "typeOnly": true,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "ClaimValidationRefuse",
+            "typeOnly": true,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "ClaimValidationResult",
+            "typeOnly": true,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "ProfileClaimStatus",
+            "typeOnly": true,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "ProfileConformanceClaim",
+            "typeOnly": true,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "ProfileConformanceRegistryEntry",
+            "typeOnly": true,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "ProfileConformanceSeam",
+            "typeOnly": true,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "ProfileConformanceSurface",
+            "typeOnly": true,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "ProfileCoreAuthoring",
+            "typeOnly": true,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "ProfileCoreKernel",
+            "typeOnly": true,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "ProfileEvidenceHook",
+            "typeOnly": true,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "ProfileEvidenceHooks",
+            "typeOnly": true,
+            "from": "./profile-conformance.js"
+          },
+          {
+            "name": "runProfileConformanceSuite",
+            "typeOnly": false,
+            "from": "./profile-conformance-suite.js"
+          },
+          {
+            "name": "ConformanceCheckResult",
+            "typeOnly": true,
+            "from": "./profile-conformance-suite.js"
+          },
+          {
+            "name": "ConformanceSuiteResult",
+            "typeOnly": true,
+            "from": "./profile-conformance-suite.js"
+          }
+        ]
+      }
+    ]
+  }
+]

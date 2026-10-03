@@ -1,0 +1,47 @@
+apps/desktop-shell/src/session.ts(38,8): error TS2307: Cannot find module '@sceneaxi-internal/project-git-authority' or its corresponding type declarations.
+desktop/linux/src/lib/bridge-contract.ts(20,15): error TS6059: File '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/desktop/linux/src/lib/bridge-contract-assistant.ts' is not under 'rootDir' '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/packages/schemas'. 'rootDir' is expected to contain all source files.
+  The file is in the program because:
+    Imported via "./bridge-contract-assistant.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/desktop/linux/src/lib/bridge-contract.ts'
+    Imported via "./bridge-contract-assistant.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/desktop/linux/src/lib/bridge-contract-play.ts'
+  File is ECMAScript module because '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/desktop/linux/package.json' has field "type" with value "module"
+desktop/linux/src/lib/bridge-contract.ts(20,15): error TS6307: File '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/desktop/linux/src/lib/bridge-contract-assistant.ts' is not listed within the file list of project '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/packages/schemas/tsconfig.json'. Projects must list all files or use an 'include' pattern.
+  The file is in the program because:
+    Imported via "./bridge-contract-assistant.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/desktop/linux/src/lib/bridge-contract.ts'
+    Imported via "./bridge-contract-assistant.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/desktop/linux/src/lib/bridge-contract-play.ts'
+  File is ECMAScript module because '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/desktop/linux/package.json' has field "type" with value "module"
+desktop/linux/src/lib/bridge-contract.ts(21,15): error TS6059: File '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/desktop/linux/src/lib/bridge-contract-play.ts' is not under 'rootDir' '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/packages/schemas'. 'rootDir' is expected to contain all source files.
+  File is ECMAScript module because '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/desktop/linux/package.json' has field "type" with value "module"
+desktop/linux/src/lib/bridge-contract.ts(21,15): error TS6307: File '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/desktop/linux/src/lib/bridge-contract-play.ts' is not listed within the file list of project '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/packages/schemas/tsconfig.json'. Projects must list all files or use an 'include' pattern.
+  File is ECMAScript module because '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/desktop/linux/package.json' has field "type" with value "module"
+desktop/linux/src/lib/desktop-scene.ts(131,46): error TS6059: File '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/desktop/linux/src/lib/bridge-contract.ts' is not under 'rootDir' '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/packages/schemas'. 'rootDir' is expected to contain all source files.
+  File is ECMAScript module because '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/desktop/linux/package.json' has field "type" with value "module"
+desktop/linux/src/lib/desktop-scene.ts(131,46): error TS6307: File '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/desktop/linux/src/lib/bridge-contract.ts' is not listed within the file list of project '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/packages/schemas/tsconfig.json'. Projects must list all files or use an 'include' pattern.
+  File is ECMAScript module because '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/desktop/linux/package.json' has field "type" with value "module"
+desktop/linux/src/lib/desktop-scene.ts(1158,55): error TS2339: Property 'instanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }> | Readonly<{ kind: "create-primitive"; primitive: "box" | "cylinder" | "sphere"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.
+  Property 'instanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }>'.
+desktop/linux/src/lib/desktop-scene.ts(1163,51): error TS2339: Property 'instanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }> | Readonly<{ kind: "create-primitive"; primitive: "box" | "cylinder" | "sphere"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.
+  Property 'instanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }>'.
+desktop/linux/src/lib/desktop-scene.ts(1175,55): error TS2339: Property 'parentInstanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }> | Readonly<{ kind: "create-primitive"; primitive: "box" | "cylinder" | "sphere"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.
+  Property 'parentInstanceId' does not exist on type 'Readonly<{ kind: "rename-object"; instanceId: string; name: string; }>'.
+desktop/linux/src/lib/desktop-scene.ts(1180,55): error TS2339: Property 'parentInstanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }> | Readonly<{ kind: "create-primitive"; primitive: "box" | "cylinder" | "sphere"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.
+  Property 'parentInstanceId' does not exist on type 'Readonly<{ kind: "rename-object"; instanceId: string; name: string; }>'.
+desktop/linux/src/lib/desktop-scene.ts(1199,31): error TS2339: Property 'transformPolicy' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }> | Readonly<{ kind: "create-primitive"; primitive: "box" | "cylinder" | "sphere"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.
+  Property 'transformPolicy' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }>'.
+packages/schemas/test/desktop-scene-animation-mutation.test.ts(3,62): error TS6059: File '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/desktop/linux/src/lib/desktop-scene.ts' is not under 'rootDir' '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/packages/schemas'. 'rootDir' is expected to contain all source files.
+  The file is in the program because:
+    Imported via "../../../desktop/linux/src/lib/desktop-scene.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/packages/schemas/test/desktop-scene-animation-mutation.test.ts'
+    Imported via "./desktop-scene.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/desktop/linux/src/lib/bridge-contract-play.ts'
+    Imported via "../../../desktop/linux/src/lib/desktop-scene.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/packages/schemas/test/desktop-scene-effects-mutation.test.ts'
+    Imported via "../../../desktop/linux/src/lib/desktop-scene.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/packages/schemas/test/desktop-scene-environment-mutation.test.ts'
+    Imported via "../../../desktop/linux/src/lib/desktop-scene.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/packages/schemas/test/desktop-scene-materials-mutation.test.ts'
+    Imported via "../../../desktop/linux/src/lib/desktop-scene.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/packages/schemas/test/desktop-scene-physics-mutation.test.ts'
+  File is ECMAScript module because '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/desktop/linux/package.json' has field "type" with value "module"
+packages/schemas/test/desktop-scene-animation-mutation.test.ts(3,62): error TS6307: File '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/desktop/linux/src/lib/desktop-scene.ts' is not listed within the file list of project '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/packages/schemas/tsconfig.json'. Projects must list all files or use an 'include' pattern.
+  The file is in the program because:
+    Imported via "../../../desktop/linux/src/lib/desktop-scene.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/packages/schemas/test/desktop-scene-animation-mutation.test.ts'
+    Imported via "./desktop-scene.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/desktop/linux/src/lib/bridge-contract-play.ts'
+    Imported via "../../../desktop/linux/src/lib/desktop-scene.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/packages/schemas/test/desktop-scene-effects-mutation.test.ts'
+    Imported via "../../../desktop/linux/src/lib/desktop-scene.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/packages/schemas/test/desktop-scene-environment-mutation.test.ts'
+    Imported via "../../../desktop/linux/src/lib/desktop-scene.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/packages/schemas/test/desktop-scene-materials-mutation.test.ts'
+    Imported via "../../../desktop/linux/src/lib/desktop-scene.js" from file '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/packages/schemas/test/desktop-scene-physics-mutation.test.ts'
+  File is ECMAScript module because '/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/desktop/linux/package.json' has field "type" with value "module"

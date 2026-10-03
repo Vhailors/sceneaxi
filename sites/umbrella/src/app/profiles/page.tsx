@@ -67,40 +67,48 @@ export default function ProfilesPage() {
       <div className="stack">
         <h2>What each profile is graded for</h2>
         <p className="prose prose-wide">{PROFILE_MATRIX_COPY.claimNote}</p>
-        <div className="scroll-x">
-          <table className="matrix">
-            <thead>
-              <tr>
-                <th className="wrap">Kernel-seam operation</th>
-                {matrix.rows.map((row) => (
-                  <th key={row.profile} className="wrap">
-                    {row.name}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {matrix.operations.map((operation) => (
-                <tr key={operation}>
-                  <th scope="row" className="wrap">
-                    <code>{operation}</code>
-                    <br />
-                    <span className="note">{PROFILE_OPERATION_COPY[operation]}</span>
-                  </th>
-                  {matrix.rows.map((row) => {
-                    const cell = row.cells.find((entry) => entry.operation === operation);
-                    const status = cell?.status ?? "not-yet-claimed";
-                    const copy = PROFILE_CAPABILITY_COPY[status];
-                    return (
-                      <td key={`${row.profile}-${operation}`}>
-                        <span className={`chip chip-${copy.tone}`}>{copy.label}</span>
-                      </td>
-                    );
-                  })}
+        <div className="scroll-frame">
+          <div
+            className="scroll-x"
+            role="region"
+            tabIndex={0}
+            aria-label="Profile grading matrix, scrollable"
+          >
+            <table className="matrix">
+              <thead>
+                <tr>
+                  <th className="wrap">Kernel-seam operation</th>
+                  {matrix.rows.map((row) => (
+                    <th key={row.profile} className="wrap">
+                      {row.name}
+                    </th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {matrix.operations.map((operation) => (
+                  <tr key={operation}>
+                    <th scope="row" className="wrap">
+                      <code>{operation}</code>
+                      <br />
+                      <span className="note">{PROFILE_OPERATION_COPY[operation]}</span>
+                    </th>
+                    {matrix.rows.map((row) => {
+                      const cell = row.cells.find((entry) => entry.operation === operation);
+                      const status = cell?.status ?? "not-yet-claimed";
+                      const copy = PROFILE_CAPABILITY_COPY[status];
+
+                      return (
+                        <td key={`${row.profile}-${operation}`}>
+                          <span className={`chip chip-${copy.tone}`}>{copy.label}</span>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
         <p className="note">{PROFILE_MATRIX_COPY.evidenceNote}</p>
       </div>

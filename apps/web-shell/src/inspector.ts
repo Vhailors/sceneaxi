@@ -85,6 +85,7 @@ export function createInspectorSession(options: {
 
   const refusePending = (): InspectorSnapshot => {
     diagnostics = pendingDiagnostics();
+
     return snap();
   };
 
@@ -94,10 +95,12 @@ export function createInspectorSession(options: {
     proposeEdit(input: ShellEditInput): InspectorSnapshot {
       if (journalRecoveryPending) return refusePending();
       const cwd = canonicalPath(input.cwd ?? options.cwd ?? ".");
+
       const result = shellPropose({
         ...input,
         cwd,
       });
+
       if (!result.ok) {
         phase = "idle";
         unifiedDiff = null;
@@ -108,8 +111,10 @@ export function createInspectorSession(options: {
         appliedPaths = null;
         journalRecoveryPending = false;
         diagnostics = result.diagnostics;
+
         return snap();
       }
+
       phase = "reviewing";
       unifiedDiff = result.unifiedDiff;
       renderedDiff = result.renderedDiff;
@@ -119,11 +124,13 @@ export function createInspectorSession(options: {
       appliedPaths = null;
       journalRecoveryPending = false;
       diagnostics = null;
+
       return snap();
     },
 
     accept(): InspectorSnapshot {
       if (journalRecoveryPending) return refusePending();
+
       if (phase !== "reviewing" || proposal === null) {
         diagnostics = [
           {
@@ -132,31 +139,40 @@ export function createInspectorSession(options: {
               "No pending proposal to accept. Call proposeEdit() and review the rendered diff first.",
           },
         ];
+
         return snap();
       }
+
       const cwd = pendingCwd;
-      const result = shellApply({
-        proposal,
-        ...(cwd !== undefined ? { cwd } : {}),
-      });
+
+      const applyInput: MutableOwnerFields<Parameters<typeof shellApply>[0]> = { proposal };
+
+      if (cwd !== undefined) applyInput.cwd = cwd;
+      const result = shellApply(applyInput);
+
       if (result.applicationState === "indeterminate") {
         phase = "pending";
         appliedPaths = null;
         journalRecoveryPending = true;
         pendingTransactionId = result.transactionId;
         diagnostics = result.diagnostics;
+
         return snap();
       }
+
       if (!result.ok) {
         phase = "reviewing";
         diagnostics = result.diagnostics;
+
         return snap();
       }
+
       phase = "applied";
       appliedPaths = result.appliedPaths;
       journalRecoveryPending = result.journalRecoveryPending === true;
       pendingTransactionId = result.transactionId ?? null;
       diagnostics = null;
+
       // Keep renderedDiff visible after apply so the inspector can show what was accepted.
       return snap();
     },
@@ -172,6 +188,7 @@ export function createInspectorSession(options: {
       appliedPaths = null;
       journalRecoveryPending = false;
       diagnostics = null;
+
       return snap();
     },
 
@@ -179,18 +196,24 @@ export function createInspectorSession(options: {
       if (!journalRecoveryPending || pendingTransactionId === null) {
         return snap();
       }
-      const resolved = resolveApplyTransaction({
-        transactionId: pendingTransactionId,
-        ...(pendingCwd === undefined ? {} : { cwd: pendingCwd }),
-      });
+
+      const recoveryInput: InspectorRecoveryInput = { transactionId: pendingTransactionId };
+
+      if (pendingCwd !== undefined) recoveryInput.cwd = pendingCwd;
+      const resolved = resolveApplyTransaction(recoveryInput);
+
       if (!resolved.ok) {
         diagnostics = resolved.diagnostics;
+
         return snap();
       }
+
       if (resolved.state === "pending") {
         diagnostics = pendingDiagnostics();
+
         return snap();
       }
+
       if (resolved.state === "missing") {
         diagnostics = [
           {
@@ -200,8 +223,10 @@ export function createInspectorSession(options: {
               "Re-read the affected documents and create a new inspector session before continuing.",
           },
         ];
+
         return snap();
       }
+
       if (resolved.state !== "completed") {
         phase = "reviewing";
         appliedPaths = null;
@@ -215,16 +240,25 @@ export function createInspectorSession(options: {
               "Re-read the affected documents before accepting another proposal.",
           },
         ];
+
         return snap();
       }
+
       if (phase === "pending") {
         phase = "applied";
         appliedPaths = resolved.documentPaths;
       }
+
       journalRecoveryPending = false;
       pendingTransactionId = null;
       diagnostics = null;
+
       return snap();
     },
   };
 }
+
+/** Mutable request builders preserve each owner-defined property type. */
+type MutableOwnerFields<Owner> = { -readonly [Key in keyof Owner]: Owner[Key] };
+
+type InspectorRecoveryInput = { transactionId: string; cwd?: string };

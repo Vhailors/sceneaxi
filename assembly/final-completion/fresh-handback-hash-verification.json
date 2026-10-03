@@ -1,0 +1,47 @@
+[
+  {
+    "owner": "bg-161",
+    "path": "apps/desktop-shell/src/chrome/core/script.ts",
+    "sha256": "645684aa0f8dd528a09e575a0a103c590aeab6a5ccfa9566c100c76403e1f373"
+  },
+  {
+    "owner": "bg-161",
+    "path": "apps/desktop-shell/test/helpers/desktop-chrome-golden.ts",
+    "sha256": "2ae58a249c7b41b5793b6ba21ee8b91dc1fd438ea99f5eef68406cee321c5a12"
+  },
+  {
+    "owner": "bg-161",
+    "path": "apps/desktop-shell/test/chrome-frame.test.ts",
+    "sha256": "04f6425c7982e9ae4dc91cc0c311f40bb422ae56e1aa830b334832132eaab7a2"
+  },
+  {
+    "owner": "bg-161",
+    "path": "tests/e2e/desktop-command-interactions-golden.test.ts",
+    "sha256": "d4635da4696d1c6f96c9f8836276b30c5cb30439ad4d934ce9ecbdce6ee9e56c"
+  },
+  {
+    "owner": "bg-161",
+    "path": "tests/e2e/desktop-linux-bridge-golden.test.ts",
+    "sha256": "5f5f7356cfbd3eba011b454d92b983f4c4f231e3c22999ee932087fe5db45abc"
+  },
+  {
+    "owner": "bg-161",
+    "path": "tests/e2e/desktop-product-loop-golden.test.ts",
+    "sha256": "b7e21b5b12d8cee00852a00badb33203a80426a2bccbfa1e3bb058fbfad5cfd9"
+  },
+  {
+    "owner": "bg-162",
+    "path": "desktop/linux/src/lib/bridge.ts",
+    "sha256": "2747f9ce773b4df482ff9e40fc696eb66d7da0a092e6da7d6d978445aba75417"
+  },
+  {
+    "owner": "bg-162",
+    "path": "desktop/linux/src/lib/bridge/catalog-authoring.ts",
+    "sha256": "cd31f2ac542c79a7a88b1e476ee648f7485fe40fd997918f72121bc08f79a43b"
+  },
+  {
+    "owner": "bg-162",
+    "path": "desktop/linux/test/catalog-authoring-protocol.test.ts",
+    "sha256": "2e53aae3eb38ea357e8c212a5d7551d7cc212c12652164a02ce3303ec0b93127"
+  }
+]

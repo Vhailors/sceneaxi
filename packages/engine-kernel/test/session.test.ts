@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   KERNEL_SESSION_SCHEMA_VERSION,
-  type KernelCommand,
+  type isJsonValue,
   type ProductManifest,
 } from "@sceneaxi/schemas";
 import {
@@ -22,10 +22,12 @@ const manifest: ProductManifest = Object.freeze({
 
 function fixedHost(startMs = 1_000): KernelHost {
   let t = startMs;
+
   return {
     nowMs: () => {
       const v = t;
       t += 1;
+
       return v;
     },
   };
@@ -39,6 +41,7 @@ function runSequence(host: KernelHost = fixedHost()): string {
   session.advance({ tick: 2, deltaMs: 16 });
   session.dispatch({ type: "spawn", actor: "npc", position: [5, 5] });
   session.advance({ tick: 3, deltaMs: 16 });
+
   return session.observe().digest;
 }
 
@@ -80,12 +83,15 @@ describe("KernelSession — command/snapshot seam", () => {
     expect(Object.isFrozen(snap.entities[0])).toBe(true);
 
     expect(() => {
+      // SAFETY: the observed player snapshot declares these numeric fields; this view removes readonly only to test runtime freezing.
       (snap as { tick: number }).tick = 99;
     }).toThrow();
     expect(() => {
+      // SAFETY: the observed player snapshot declares these numeric fields; this view removes readonly only to test runtime freezing.
       (snap.entities as SnapshotEntityMutable[]).push({ id: "x", x: 0, y: 0 });
     }).toThrow();
     expect(() => {
+      // SAFETY: the observed player snapshot declares these numeric fields; this view removes readonly only to test runtime freezing.
       (snap.entities[0] as { x: number }).x = 999;
     }).toThrow();
 
@@ -97,9 +103,10 @@ describe("KernelSession — command/snapshot seam", () => {
   it("rejects invalid commands on dispatch without mutating state", () => {
     const session = open(manifest, fixedHost());
     const before = session.observe().digest;
+    const commandBoundary: KernelCommandBoundary = session;
 
     expect(() =>
-      session.dispatch({ type: "teleport" } as unknown as KernelCommand),
+      commandBoundary.dispatch({ type: "teleport" }),
     ).toThrow(/unknown|invalid|command/i);
     expect(() =>
       session.dispatch({ type: "move", actor: "", axis: [1, 0] }),
@@ -108,7 +115,7 @@ describe("KernelSession — command/snapshot seam", () => {
       session.dispatch({
         type: "move",
         actor: "player",
-        axis: [1.5, 0] as unknown as [number, number],
+        axis: [1.5, 0],
       }),
     ).toThrow();
 
@@ -213,10 +220,7 @@ describe("KernelSession — command/snapshot seam", () => {
     const artifact = session.save();
 
     expect(() =>
-      replay(
-        { ...artifact, terminalDigest: undefined as unknown as string },
-        fixedHost(),
-      ),
+      replayBoundary.replay({ ...artifact, terminalDigest: undefined }, fixedHost()),
     ).toThrow(/terminalDigest/i);
     expect(() =>
       replay({ ...artifact, terminalDigest: "not-a-digest" }, fixedHost()),
@@ -229,11 +233,13 @@ describe("KernelSession — command/snapshot seam", () => {
     dispatching.dispatch({ type: "move", actor: "player", axis: [1, 0] });
     dispatching.advance({ tick: 1, deltaMs: 1 });
     const withDispatch = dispatching.save();
+
     const events = withDispatch.events.map((event) =>
       event.kind === "dispatch"
         ? { ...event, timestampMs: Number.NaN }
         : event,
     );
+
     expect(() => replay({ ...withDispatch, events }, fixedHost())).toThrow(
       /timestampMs/i,
     );
@@ -280,3 +286,12 @@ interface SnapshotEntityMutable {
   x: number;
   y: number;
 }
+
+// Runtime refusal tests exercise the real kernel validators with raw boundary inputs.
+type KernelBoundaryInput = Parameters<typeof isJsonValue>[0];
+
+type KernelCommandBoundary = { dispatch(command: KernelBoundaryInput): void };
+
+type KernelReplayBoundary = { replay(artifact: KernelBoundaryInput, host: Parameters<typeof replay>[1]): ReturnType<typeof replay> };
+
+const replayBoundary: KernelReplayBoundary = { replay };

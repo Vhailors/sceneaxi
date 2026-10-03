@@ -1,0 +1,769 @@
+{
+  "taskid": "paid-response",
+  "subject": "current source transpiled in memory; source public exports + raw deployment adapter; no dist/DB/provider",
+  "negativeControl": true,
+  "typescript": "5.9.3",
+  "fingerprints": {
+    "packages/billing/src/index.ts": "28982834ea743ad9e243076188684f2539084050637388e6345457a9f6b5e224",
+    "packages/schemas/src/index.ts": "70d2d830c403c6f8f55191f277f13cf875714b0fa9c7e9556ecdf368801984c2",
+    "packages/schemas/src/project-git.ts": "5cb9cdfd049d0a13ae7d55e77b3da118d52f5fa93054ef51806b7d6ab6cc7d44",
+    "packages/schemas/src/project-manifest.ts": "e88ee989c5d5fd70ed9813fb195e50ed0d714d5f10cdd869b8f02c39b3b91823",
+    "packages/schemas/src/sculpt-json.ts": "7175f05896d96f1560d580d30249fde711e4da45eb760ebf8ca62164c0d08b15",
+    "packages/schemas/src/gltf-animation.ts": "b7fedcbee0481c2254272297c94a72276b91c70b113d6c53673929657cebd3d0",
+    "packages/schemas/src/catalog.ts": "712100185fd7c88bafc2f93afec7a6fa16d06e4576ed6274e9e598a656954191",
+    "packages/schemas/src/document.ts": "3a50c64a37bd781a68ef9ecf119d4a87fcdc6dcd361c354bc586963eb08a3004",
+    "packages/schemas/src/identity.ts": "af3a98501836447a0fad428a9041519d47155f7e4e79ea4ebeebb266a87c64e3",
+    "packages/schemas/src/record-validation.ts": "72be7d5ef27c41ac3abe86236d53a5b5da2f8451f43669c71082267c8a9d1812",
+    "packages/schemas/src/credits.ts": "0de5a5b16c3614e633855b8a7e5f6a41185e90e5baf81cd2732d8e471111434b",
+    "packages/schemas/src/billing.ts": "cffe6d034cdca1ce2780bbf4a0db021e45839949650928a96066fa6660f952f9",
+    "packages/schemas/src/credit-packs.data.ts": "13186453a8b85a157c8e55ebd639b456aa3d40e3f7662b1e275107cd8e9d1b56",
+    "packages/schemas/src/entitlements.ts": "c63be7188ba86f8c2b9ba8589082bb5655c0715b176969227818160a90327c8b",
+    "packages/schemas/src/catalog-listing.ts": "c7ce6ab7b6df8df0ba965cd57beb738d7fbd15d9032bd60b9b7a154b5484dea7",
+    "packages/schemas/src/catalog-listings.data.ts": "5448612dcbac984459a1c61edae163e80063ceb543245d7828392e0f2305410e",
+    "packages/schemas/src/revenue-share.ts": "e4eb5999235d2b1f222395ed8d0da620aed0e67ac290df9f1ae384161976cbd5",
+    "packages/schemas/src/stripe-connect.ts": "fa211775c6953861a0817b542b916e4d6461b39e06c9f75aced25022263ca90d",
+    "packages/schemas/src/credit-reconciliation.ts": "48164d435141a6fb798135d8d966deabbcb6ceba7bbd8c3fb61459f3e1a5dcd2",
+    "packages/schemas/src/provenance.ts": "83a2174e443b54a2c620f165929ccebc0c9a477b48ec7abca350edb1a0070bb8",
+    "packages/schemas/src/unambiguous-json.ts": "cfeac583b541a42291ba78e8c6a30a3e2633bb9eb34495aaef130e435cd698af",
+    "packages/schemas/src/web-experience-authoring.ts": "bb69b574256c1bd2a68a47185731bc251a0f8b8c251bf7099ff0c19e7cf38381",
+    "packages/schemas/src/proposal.ts": "849d72ab519d6a8087f18b121a0e0b3ddef3cb385fb562650bff0a96073516ad",
+    "packages/schemas/src/editor-command-registry.ts": "5803b0b7a390651778ac62133558f2e6594d125ee45a912e07352de4e1c568a3",
+    "packages/schemas/src/sculpt.ts": "5096d27b1759eb6a437c12f6e7a2c7c1f9d9a26a76ffa698a204b97e3f5d8e50",
+    "packages/schemas/src/sculpt-procedural.ts": "83a83ab3234ba73d611034efaf6b5831251b93264344abce54af52e906136b8c",
+    "packages/schemas/src/desktop-scene-edit.ts": "0427ce1d9ad3e2eb9cd95c164857bfe48735846103a522b84e16c8a45bd78218",
+    "packages/schemas/src/scene-composition.ts": "43c85cf3544bd261caa3e3504b5be4a9e9c8f7680fbcd588616a73c91c8a3c0f",
+    "packages/schemas/src/desktop-scene-transform.ts": "11c81b3ff29bf956788237f2db352db899d9c07f6068c4c60faf90fe7f0707a1",
+    "packages/schemas/src/desktop-scene-prefab.ts": "1440dc4cdced9bf44732d44e783ff55d64176f140d9b87264474c53b0c2f29bd",
+    "packages/schemas/src/desktop-play-session.ts": "5c01f459b72af0a5b6c061d0fe70010f41b971c20967b36fbbdb98dd4fe162c9",
+    "packages/schemas/src/desktop-scene-animation.ts": "c5b5c8e86dc3c349b0008d3cbf563d7a1d208da62824cd8df5bf8d5730da5350",
+    "packages/schemas/src/desktop-scene-physics.ts": "4b97126db4ac441419e697a37f6fc966b4a214916b1c2fc9e42a13c72e52daac",
+    "packages/schemas/src/physics-world-host.ts": "0ff3615be0b0b5bc1dfe656bc770bd2de3a41a1e648c60ff512e3f0cd3ba2151",
+    "packages/schemas/src/desktop-scene-environment.ts": "c17ca23c7ce9251b1d2b99afaf21345b84603e1929b9a4f091d756f108889646",
+    "packages/schemas/src/desktop-scene-materials.ts": "1a7be19a9437ce2d6b0e4f914b331d1c1760c4f88ee33799ef5f349ed37d9c4b",
+    "packages/schemas/src/desktop-scene-effects.ts": "7fd21bfb8336efc0a4d6d29eb6690c1d509edcb15e98edc0b8c45820cdae5d52",
+    "packages/schemas/src/desktop-assistant-ask.ts": "2e85482eb24cf214a4a7d936e290c735a42e77ef88045ddee432992f02f26b11",
+    "packages/schemas/src/desktop-scene-package.ts": "3ef9a2cb60884e3476fcb1252b1477636c5074d00fc07e444a9d3acf5034601f",
+    "packages/schemas/src/desktop-profile-evidence.ts": "bf8eddc6fa9882c8ae793f1d7623f3643aa64f2f98743ec4cb54ba5b94954b62",
+    "packages/schemas/src/desktop-workspace-layout.ts": "2589017fc764dc3425033818d061da45ae13cd8e1408f17eae723f0f2a5ce71d",
+    "packages/schemas/src/desktop-extension-seams.ts": "df65d34b2e4c5654cea3aad80c22a11c654ef5473a4c67653c63d24475ff9d57",
+    "packages/schemas/src/desktop-project-build.ts": "ec7b86e27314891af86e662279d6ea835b12ccfec63155c7e022578ebfee0588",
+    "packages/schemas/src/input-action-registry.ts": "c40b9abbb5c1967b0ef8a1e8b47d3be25f90e118924ae9330474de6436b208f5",
+    "packages/schemas/src/delivery-handoff.ts": "c321a798e6463406353b5cc0c6505a75bc52e8b39a549befbb54ebaf50975dee",
+    "packages/schemas/src/model-provider.ts": "24f5d5e92a3547cbf9e3301fa247885800b94bc0fd623296c7c70ebe768b5dca",
+    "packages/schemas/src/desktop-local-bridge.ts": "e7d5391cf23741124744f9835d3b3b85482662ef67261875386ee6493e2dbd14",
+    "packages/schemas/src/editor-shell.ts": "71f9c2a638ac9296d15e78ac31b0925c6d95861c8e5e6e829431637ce1bd1929",
+    "packages/schemas/src/plugin.ts": "a5e26c8c0564d4cf7908ab4ad3ed0690fef86cd18a0cba8706bd6f0e61d044c8",
+    "packages/schemas/src/exact-semver.ts": "3267b07d4509e3cdde4876ae9aa89f27237559457ba8c3121c09221c88ec59be",
+    "packages/schemas/src/plugin-capability-registry.ts": "1335123cb7774303edf3a568b1cea70a0b0d6d30f99c162efde3c70b846eef81",
+    "packages/schemas/src/plugin-capability-sculpt-intake.ts": "9cd0331ad0efca6699371bb6ceea941de6bc33ad8d8e7cf9409b7b5be5611b6e",
+    "packages/schemas/src/kernel-session.ts": "bbc1526e5b4c9be8357a085448f7d0cbf1a0838f892808c85ece4089b43f85d9",
+    "packages/schemas/src/rarity.ts": "c4894f136bda21aca2a23a7c175fb5477ae1e445d1faaf3f76f0d1e493bdf06e",
+    "packages/schemas/src/profile-conformance.ts": "01cd902017d64bb68c43dba7aa8177cc2b365da42c03071923872abc2f2d37e6",
+    "packages/schemas/src/open-path-policy.ts": "914204755a5119595d73241f3958c27bc50ca581f900aad75b8455ecb00dfe0e",
+    "packages/billing/src/refusals.ts": "ed596b2321de2fd1d2d00d2c0620949803bfdd1bb968b67032d3569fd4ee5977",
+    "packages/billing/src/ledger.ts": "c3d3fa809a212575a61931d742774d0fb5e8a5a61d117306d326981c8c3ccda9",
+    "packages/billing/src/store.ts": "ddb5c93911554ec8a099ae15a79c8b1d23e70926cdaedcd65739f4c0118bcf9f",
+    "packages/billing/src/hosted-response.ts": "23e95dc242718b0b6cc648c59dd1dd4bd33516f4fefabe375cdae67ec3edc791",
+    "packages/billing/src/support-ledger.ts": "3f41548116f61d48ce9898c0edf6b301c3afe48d98dc942e0ff1b9921c82c986",
+    "packages/auth/src/index.ts": "23edf8c5a6dd8c9843a1c4737af29801b7a555d16588cab759dd07d54b9c6b00",
+    "packages/auth/src/admin.ts": "5270630b98cc903e49ad05e083b4f637c0f2d1efca9a4bb4da82ac93bf97b958",
+    "packages/auth/src/refusals.ts": "b0cdd1dc332d2da8fcd540f2fa8a2a6198396af5f388a06d77bec7e0d5decdf0",
+    "packages/auth/src/session-token.ts": "8d692476ac3fb971cf4c4a0d6700d33c3a911f5ff1683b4e6217c5c4b4bb1225",
+    "packages/auth/src/roles.ts": "6aef56a05e859120c6177461cebd40f522a2211a6de4014a8cf373983e597c8f",
+    "packages/auth/src/principal-provenance.ts": "d3f0bbbd3d9edc73a3b604c4e36bb2baf4498e5cacbcf636356774d4d798ab42",
+    "packages/auth/src/store.ts": "46a3e1535fff5ddaf2eecd3f9b8ab4acb25dc95126f2c49e1345cdc558884ca3",
+    "packages/auth/src/better-auth-adapter.ts": "5ac71e11fbc3ee13bd040e16bddcdf8d422f83ff310d535be1a3473b1a48da5a",
+    "packages/auth/src/identity-port.ts": "3a7b69aecc1adeacea0a851217e8f530c7a729dad69277f05a82b85a0df4f2b7",
+    "packages/auth/src/bootstrap.ts": "71e995fc6bbd41a68d8b900d0ad185ee8f9f5abc28d2495eb3af1c149e619649",
+    "packages/billing/src/metering.ts": "6245672a715d7cadcbd713ef5d65b5b3c9814f912a7e1c2f0eb62f03533d0e6d",
+    "packages/billing/src/credit-packs.ts": "3e6053e214d37b06478b4e628e2c60dccb87061248695e11f01d74417c81e427",
+    "packages/billing/src/entitlements.ts": "4c7704ce15468128ac273f40c9d9e53e0ff07f8b2f5dcfd7bada65b6138117c6",
+    "packages/billing/src/hosted-ai.ts": "66955f50919576c3ea1023be1dfdc1056d042b95109651cf3de396e3da54ff40",
+    "packages/billing/src/checkout.ts": "d1236762b263cecd6dd42a964bfab855c6170c0b376163fb8b1cf3b76ddff56f",
+    "packages/billing/src/live-mode.ts": "8b95f4fb6fe59282dc75ab4d02697c1eb1bc62f0f3abb8b593bfa8f1f9b7aa1f",
+    "packages/billing/src/catalog-listings.ts": "3721c68a1ad90ffa2592b4b527de663ce3c59501f63a37e85da4eee036bf4e35",
+    "packages/billing/src/stripe-webhook.ts": "65f79908e1b95fc7d5493c1efe7d430830f3e3da96ccce7bf61f84f2603229e2",
+    "packages/billing/src/fixture-commerce.ts": "4205895dace47c6d5ce3b3c94db28e238b85862553162e7c957ab136289fef8b",
+    "packages/billing/src/revenue-share.ts": "7857ec15997ff593496ed9684ab3b0d83fe13e8fad1df676421d6dc969f12de4",
+    "packages/billing/src/stripe-connect.ts": "48f22fe7b948035308183e8de8058e72d36f801c4f8c86c106252ae5f021b008",
+    "packages/auth/src/testing/principal-issuance.ts": "bd97cb1363cd1022d5923de7aeb99e55d284b482f61055de36f95cec6f599798",
+    "sites/umbrella/src/lib/provider-adapters.ts": "715db8a4e4e33e3610899328fa45ae13fdc8c0e7b2057fa7ccd4ca3e8f63ebb2"
+  },
+  "cases": [
+    {
+      "id": "codec:Map",
+      "input": "Map",
+      "status": "FAIL",
+      "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ {\n+   json: '{}',\n+   value: {}\n+ }\n- undefined\n"
+    },
+    {
+      "id": "raw-save:Map",
+      "input": "Map",
+      "status": "FAIL",
+      "error": "The input did not match the regular expression /bounded JSON/. Input:\n\n'Error: SQL reached'\n"
+    },
+    {
+      "id": "raw-recovery:Map",
+      "input": "Map",
+      "status": "FAIL",
+      "error": "Missing expected rejection."
+    },
+    {
+      "id": "shared-save:Map",
+      "input": "Map",
+      "status": "FAIL",
+      "error": "Expected values to be strictly equal:\n\n1 !== 0\n"
+    },
+    {
+      "id": "paid:Map",
+      "input": "Map",
+      "status": "FAIL",
+      "error": "Expected values to be strictly equal:\n\ntrue !== false\n"
+    },
+    {
+      "id": "codec:Date",
+      "input": "Date",
+      "status": "PASS",
+      "observed": {
+        "refused": true
+      }
+    },
+    {
+      "id": "raw-save:Date",
+      "input": "Date",
+      "status": "PASS",
+      "observed": {
+        "sqlCalls": 0
+      }
+    },
+    {
+      "id": "raw-recovery:Date",
+      "input": "Date",
+      "status": "PASS",
+      "observed": {
+        "sqlReadCalls": 1,
+        "sqlWriteCalls": 0
+      }
+    },
+    {
+      "id": "shared-save:Date",
+      "input": "Date",
+      "status": "PASS",
+      "observed": {
+        "adapterSaveCalls": 0
+      }
+    },
+    {
+      "id": "paid:Date",
+      "input": "Date",
+      "status": "PASS",
+      "observed": {
+        "reason": "CREDIT_STORE_FAILED",
+        "message": "The provider response is not supported bounded accessor-free JSON. The reservation remains held; do not call the provider again.",
+        "providerCalls": 1,
+        "debits": 0,
+        "retryProviderCalls": 0,
+        "reservation": "pending"
+      }
+    },
+    {
+      "id": "codec:BigInt",
+      "input": "BigInt",
+      "status": "PASS",
+      "observed": {
+        "refused": true
+      }
+    },
+    {
+      "id": "raw-save:BigInt",
+      "input": "BigInt",
+      "status": "PASS",
+      "observed": {
+        "sqlCalls": 0
+      }
+    },
+    {
+      "id": "raw-recovery:BigInt",
+      "input": "BigInt",
+      "status": "PASS",
+      "observed": {
+        "sqlReadCalls": 1,
+        "sqlWriteCalls": 0
+      }
+    },
+    {
+      "id": "shared-save:BigInt",
+      "input": "BigInt",
+      "status": "PASS",
+      "observed": {
+        "adapterSaveCalls": 0
+      }
+    },
+    {
+      "id": "paid:BigInt",
+      "input": "BigInt",
+      "status": "PASS",
+      "observed": {
+        "reason": "CREDIT_STORE_FAILED",
+        "message": "The provider response is not supported bounded accessor-free JSON. The reservation remains held; do not call the provider again.",
+        "providerCalls": 1,
+        "debits": 0,
+        "retryProviderCalls": 0,
+        "reservation": "pending"
+      }
+    },
+    {
+      "id": "codec:cycle",
+      "input": "cycle",
+      "status": "PASS",
+      "observed": {
+        "refused": true
+      }
+    },
+    {
+      "id": "raw-save:cycle",
+      "input": "cycle",
+      "status": "PASS",
+      "observed": {
+        "sqlCalls": 0
+      }
+    },
+    {
+      "id": "raw-recovery:cycle",
+      "input": "cycle",
+      "status": "PASS",
+      "observed": {
+        "sqlReadCalls": 1,
+        "sqlWriteCalls": 0
+      }
+    },
+    {
+      "id": "shared-save:cycle",
+      "input": "cycle",
+      "status": "PASS",
+      "observed": {
+        "adapterSaveCalls": 0
+      }
+    },
+    {
+      "id": "paid:cycle",
+      "input": "cycle",
+      "status": "PASS",
+      "observed": {
+        "reason": "CREDIT_STORE_FAILED",
+        "message": "The provider response is not supported bounded accessor-free JSON. The reservation remains held; do not call the provider again.",
+        "providerCalls": 1,
+        "debits": 0,
+        "retryProviderCalls": 0,
+        "reservation": "pending"
+      }
+    },
+    {
+      "id": "codec:depth65",
+      "input": "depth65",
+      "status": "PASS",
+      "observed": {
+        "refused": true
+      }
+    },
+    {
+      "id": "raw-save:depth65",
+      "input": "depth65",
+      "status": "PASS",
+      "observed": {
+        "sqlCalls": 0
+      }
+    },
+    {
+      "id": "raw-recovery:depth65",
+      "input": "depth65",
+      "status": "PASS",
+      "observed": {
+        "sqlReadCalls": 1,
+        "sqlWriteCalls": 0
+      }
+    },
+    {
+      "id": "shared-save:depth65",
+      "input": "depth65",
+      "status": "PASS",
+      "observed": {
+        "adapterSaveCalls": 0
+      }
+    },
+    {
+      "id": "paid:depth65",
+      "input": "depth65",
+      "status": "PASS",
+      "observed": {
+        "reason": "CREDIT_STORE_FAILED",
+        "message": "The provider response is not supported bounded accessor-free JSON. The reservation remains held; do not call the provider again.",
+        "providerCalls": 1,
+        "debits": 0,
+        "retryProviderCalls": 0,
+        "reservation": "pending"
+      }
+    },
+    {
+      "id": "codec:accessor",
+      "input": "accessor",
+      "status": "PASS",
+      "observed": {
+        "refused": true
+      }
+    },
+    {
+      "id": "raw-save:accessor",
+      "input": "accessor",
+      "status": "PASS",
+      "observed": {
+        "sqlCalls": 0
+      }
+    },
+    {
+      "id": "raw-recovery:accessor",
+      "input": "accessor",
+      "status": "PASS",
+      "observed": {
+        "sqlReadCalls": 1,
+        "sqlWriteCalls": 0
+      }
+    },
+    {
+      "id": "shared-save:accessor",
+      "input": "accessor",
+      "status": "PASS",
+      "observed": {
+        "adapterSaveCalls": 0
+      }
+    },
+    {
+      "id": "paid:accessor",
+      "input": "accessor",
+      "status": "PASS",
+      "observed": {
+        "reason": "CREDIT_STORE_FAILED",
+        "message": "The provider response is not supported bounded accessor-free JSON. The reservation remains held; do not call the provider again.",
+        "providerCalls": 1,
+        "debits": 0,
+        "retryProviderCalls": 0,
+        "reservation": "pending"
+      }
+    },
+    {
+      "id": "codec:toJSON",
+      "input": "toJSON",
+      "status": "PASS",
+      "observed": {
+        "refused": true
+      }
+    },
+    {
+      "id": "raw-save:toJSON",
+      "input": "toJSON",
+      "status": "PASS",
+      "observed": {
+        "sqlCalls": 0
+      }
+    },
+    {
+      "id": "raw-recovery:toJSON",
+      "input": "toJSON",
+      "status": "PASS",
+      "observed": {
+        "sqlReadCalls": 1,
+        "sqlWriteCalls": 0
+      }
+    },
+    {
+      "id": "shared-save:toJSON",
+      "input": "toJSON",
+      "status": "PASS",
+      "observed": {
+        "adapterSaveCalls": 0
+      }
+    },
+    {
+      "id": "paid:toJSON",
+      "input": "toJSON",
+      "status": "PASS",
+      "observed": {
+        "reason": "CREDIT_STORE_FAILED",
+        "message": "The provider response is not supported bounded accessor-free JSON. The reservation remains held; do not call the provider again.",
+        "providerCalls": 1,
+        "debits": 0,
+        "retryProviderCalls": 0,
+        "reservation": "pending"
+      }
+    },
+    {
+      "id": "codec:throwingProxy",
+      "input": "throwingProxy",
+      "status": "PASS",
+      "observed": {
+        "refused": true
+      }
+    },
+    {
+      "id": "raw-save:throwingProxy",
+      "input": "throwingProxy",
+      "status": "PASS",
+      "observed": {
+        "sqlCalls": 0
+      }
+    },
+    {
+      "id": "raw-recovery:throwingProxy",
+      "input": "throwingProxy",
+      "status": "PASS",
+      "observed": {
+        "sqlReadCalls": 1,
+        "sqlWriteCalls": 0
+      }
+    },
+    {
+      "id": "shared-save:throwingProxy",
+      "input": "throwingProxy",
+      "status": "PASS",
+      "observed": {
+        "adapterSaveCalls": 0
+      }
+    },
+    {
+      "id": "paid:throwingProxy",
+      "input": "throwingProxy",
+      "status": "PASS",
+      "observed": {
+        "reason": "CREDIT_STORE_FAILED",
+        "message": "The provider response is not supported bounded accessor-free JSON. The reservation remains held; do not call the provider again.",
+        "providerCalls": 1,
+        "debits": 0,
+        "retryProviderCalls": 0,
+        "reservation": "pending"
+      }
+    },
+    {
+      "id": "codec:undefined",
+      "input": "undefined",
+      "status": "PASS",
+      "observed": {
+        "refused": true
+      }
+    },
+    {
+      "id": "raw-save:undefined",
+      "input": "undefined",
+      "status": "PASS",
+      "observed": {
+        "sqlCalls": 0
+      }
+    },
+    {
+      "id": "raw-recovery:undefined",
+      "input": "undefined",
+      "status": "PASS",
+      "observed": {
+        "sqlReadCalls": 1,
+        "sqlWriteCalls": 0
+      }
+    },
+    {
+      "id": "shared-save:undefined",
+      "input": "undefined",
+      "status": "PASS",
+      "observed": {
+        "adapterSaveCalls": 0
+      }
+    },
+    {
+      "id": "paid:undefined",
+      "input": "undefined",
+      "status": "PASS",
+      "observed": {
+        "reason": "CREDIT_STORE_FAILED",
+        "message": "The provider response is not supported bounded accessor-free JSON. The reservation remains held; do not call the provider again.",
+        "providerCalls": 1,
+        "debits": 0,
+        "retryProviderCalls": 0,
+        "reservation": "pending"
+      }
+    },
+    {
+      "id": "codec:negativeZero",
+      "input": "negativeZero",
+      "status": "PASS",
+      "observed": {
+        "refused": true
+      }
+    },
+    {
+      "id": "raw-save:negativeZero",
+      "input": "negativeZero",
+      "status": "PASS",
+      "observed": {
+        "sqlCalls": 0
+      }
+    },
+    {
+      "id": "raw-recovery:negativeZero",
+      "input": "negativeZero",
+      "status": "PASS",
+      "observed": {
+        "sqlReadCalls": 1,
+        "sqlWriteCalls": 0
+      }
+    },
+    {
+      "id": "shared-save:negativeZero",
+      "input": "negativeZero",
+      "status": "PASS",
+      "observed": {
+        "adapterSaveCalls": 0
+      }
+    },
+    {
+      "id": "paid:negativeZero",
+      "input": "negativeZero",
+      "status": "PASS",
+      "observed": {
+        "reason": "CREDIT_STORE_FAILED",
+        "message": "The provider response is not supported bounded accessor-free JSON. The reservation remains held; do not call the provider again.",
+        "providerCalls": 1,
+        "debits": 0,
+        "retryProviderCalls": 0,
+        "reservation": "pending"
+      }
+    },
+    {
+      "id": "codec:sparseArray",
+      "input": "sparseArray",
+      "status": "PASS",
+      "observed": {
+        "refused": true
+      }
+    },
+    {
+      "id": "raw-save:sparseArray",
+      "input": "sparseArray",
+      "status": "PASS",
+      "observed": {
+        "sqlCalls": 0
+      }
+    },
+    {
+      "id": "raw-recovery:sparseArray",
+      "input": "sparseArray",
+      "status": "PASS",
+      "observed": {
+        "sqlReadCalls": 1,
+        "sqlWriteCalls": 0
+      }
+    },
+    {
+      "id": "shared-save:sparseArray",
+      "input": "sparseArray",
+      "status": "PASS",
+      "observed": {
+        "adapterSaveCalls": 0
+      }
+    },
+    {
+      "id": "paid:sparseArray",
+      "input": "sparseArray",
+      "status": "PASS",
+      "observed": {
+        "reason": "CREDIT_STORE_FAILED",
+        "message": "The provider response is not supported bounded accessor-free JSON. The reservation remains held; do not call the provider again.",
+        "providerCalls": 1,
+        "debits": 0,
+        "retryProviderCalls": 0,
+        "reservation": "pending"
+      }
+    },
+    {
+      "id": "codec:overBytes",
+      "input": "overBytes",
+      "status": "PASS",
+      "observed": {
+        "refused": true
+      }
+    },
+    {
+      "id": "raw-save:overBytes",
+      "input": "overBytes",
+      "status": "PASS",
+      "observed": {
+        "sqlCalls": 0
+      }
+    },
+    {
+      "id": "raw-recovery:overBytes",
+      "input": "overBytes",
+      "status": "PASS",
+      "observed": {
+        "sqlReadCalls": 1,
+        "sqlWriteCalls": 0
+      }
+    },
+    {
+      "id": "shared-save:overBytes",
+      "input": "overBytes",
+      "status": "PASS",
+      "observed": {
+        "adapterSaveCalls": 0
+      }
+    },
+    {
+      "id": "paid:overBytes",
+      "input": "overBytes",
+      "status": "PASS",
+      "observed": {
+        "reason": "CREDIT_STORE_FAILED",
+        "message": "The provider response is not supported bounded accessor-free JSON. The reservation remains held; do not call the provider again.",
+        "providerCalls": 1,
+        "debits": 0,
+        "retryProviderCalls": 0,
+        "reservation": "pending"
+      }
+    },
+    {
+      "id": "capability:throwingToString",
+      "input": "throwingToString",
+      "status": "PASS",
+      "observed": {
+        "reason": "ENTITLEMENT_CAPABILITY_UNKNOWN",
+        "message": "The capability is not allowed on the \"hosted\" route; that route bills hosted-ai-assistant or metered-model-port.",
+        "providerCalls": 0,
+        "storeCalls": 0,
+        "conversionCalls": 0
+      }
+    },
+    {
+      "id": "capability:Symbol.toPrimitive",
+      "input": "Symbol.toPrimitive",
+      "status": "PASS",
+      "observed": {
+        "reason": "ENTITLEMENT_CAPABILITY_UNKNOWN",
+        "message": "The capability is not allowed on the \"hosted\" route; that route bills hosted-ai-assistant or metered-model-port.",
+        "providerCalls": 0,
+        "storeCalls": 0,
+        "conversionCalls": 0
+      }
+    },
+    {
+      "id": "capability:conversionAccessor",
+      "input": "conversionAccessor",
+      "status": "PASS",
+      "observed": {
+        "reason": "ENTITLEMENT_CAPABILITY_UNKNOWN",
+        "message": "The capability is not allowed on the \"hosted\" route; that route bills hosted-ai-assistant or metered-model-port.",
+        "providerCalls": 0,
+        "storeCalls": 0,
+        "conversionCalls": 0
+      }
+    },
+    {
+      "id": "capability:throwingGetProxy",
+      "input": "throwingGetProxy",
+      "status": "PASS",
+      "observed": {
+        "reason": "ENTITLEMENT_CAPABILITY_UNKNOWN",
+        "message": "The capability is not allowed on the \"hosted\" route; that route bills hosted-ai-assistant or metered-model-port.",
+        "providerCalls": 0,
+        "storeCalls": 0,
+        "conversionCalls": 0
+      }
+    },
+    {
+      "id": "capability:unsupportedString",
+      "input": "unsupportedString",
+      "status": "PASS",
+      "observed": {
+        "reason": "ENTITLEMENT_CAPABILITY_UNKNOWN",
+        "message": "The capability is not allowed on the \"hosted\" route; that route bills hosted-ai-assistant or metered-model-port.",
+        "providerCalls": 0,
+        "storeCalls": 0,
+        "conversionCalls": 0
+      }
+    },
+    {
+      "id": "capability:symbol",
+      "input": "symbol",
+      "status": "PASS",
+      "observed": {
+        "reason": "ENTITLEMENT_CAPABILITY_UNKNOWN",
+        "message": "The capability is not allowed on the \"hosted\" route; that route bills hosted-ai-assistant or metered-model-port.",
+        "providerCalls": 0,
+        "storeCalls": 0,
+        "conversionCalls": 0
+      }
+    },
+    {
+      "id": "inclusiveBytes",
+      "input": {
+        "asciiLength": 262142,
+        "jsonBytes": 262144
+      },
+      "status": "PASS",
+      "observed": {
+        "bytes": 262144,
+        "sha256": "38a529ffa4f3253631e18b2c7832a11a2689ef5bbd3dbf3a390bf1706ca84761"
+      }
+    },
+    {
+      "id": "raw-roundtrip",
+      "input": "{\"text\":\"paid answer\",\"tokens\":[1,null,true],\"nested\":{\"unicode\":\"é😀\"},\"toJSON\":\"ordinary data\",\"__proto__\":{\"answer\":\"original\"}}",
+      "status": "PASS",
+      "observed": {
+        "sqlCalls": 2,
+        "json": "{\"text\":\"paid answer\",\"tokens\":[1,null,true],\"nested\":{\"unicode\":\"é😀\"},\"toJSON\":\"ordinary data\",\"__proto__\":{\"answer\":\"original\"}}",
+        "bytes": 134,
+        "sha256": "3608c567bfa4d9f48a7c8f78a7ee0df54660cc3854428b363073b67de77022b7"
+      }
+    },
+    {
+      "id": "paid-interrupted-before-debit",
+      "input": "{\"text\":\"paid answer\",\"tokens\":[1,null,true],\"nested\":{\"unicode\":\"é😀\"},\"toJSON\":\"ordinary data\",\"__proto__\":{\"answer\":\"original\"}}",
+      "status": "PASS",
+      "observed": {
+        "reason": "CREDIT_STORE_FAILED",
+        "message": "The credit store failed while persisting the metered debit.",
+        "firstProviderCalls": 1,
+        "firstDebits": 0,
+        "retainedSha256": "3608c567bfa4d9f48a7c8f78a7ee0df54660cc3854428b363073b67de77022b7",
+        "freshRecovery": {
+          "json": "{\"text\":\"paid answer\",\"tokens\":[1,null,true],\"nested\":{\"unicode\":\"é😀\"},\"toJSON\":\"ordinary data\",\"__proto__\":{\"answer\":\"original\"}}",
+          "sha256": "3608c567bfa4d9f48a7c8f78a7ee0df54660cc3854428b363073b67de77022b7",
+          "providerCalls": 0,
+          "entries": 2,
+          "balance": 93,
+          "replay": true
+        }
+      }
+    },
+    {
+      "id": "fresh-process-response-ready",
+      "input": "{\"text\":\"paid answer\",\"tokens\":[1,null,true],\"nested\":{\"unicode\":\"é😀\"},\"toJSON\":\"ordinary data\",\"__proto__\":{\"answer\":\"original\"}}",
+      "status": "PASS",
+      "observed": {
+        "json": "{\"text\":\"paid answer\",\"tokens\":[1,null,true],\"nested\":{\"unicode\":\"é😀\"},\"toJSON\":\"ordinary data\",\"__proto__\":{\"answer\":\"original\"}}",
+        "sha256": "3608c567bfa4d9f48a7c8f78a7ee0df54660cc3854428b363073b67de77022b7",
+        "providerCalls": 0,
+        "entries": 2,
+        "balance": 93,
+        "replay": true
+      }
+    },
+    {
+      "id": "hook-safety",
+      "input": "accessors/toJSON must not run; proxy reflection may throw",
+      "status": "PASS",
+      "observed": {
+        "reflectionThrows": 5,
+        "serializationOrConversionHooks": 0
+      }
+    }
+  ],
+  "passed": 66,
+  "failed": 5
+}

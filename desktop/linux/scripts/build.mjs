@@ -2,8 +2,9 @@
 /**
  * Build the desktop application's runtime files into `dist/`.
  *
- * Four outputs, all derived from `src/` and the linked workspace packages:
+ * Five outputs, all derived from `src/` and the linked workspace packages:
  * - `dist/main.cjs`     — Electron main process (bundled, only `electron` external)
+ * - `dist/asset-preparation-worker.cjs` — actual importer worker sibling
  * - `dist/preload.cjs`  — the context-isolated bridge preload
  * - `dist/renderer.js`  — the live viewport bundle (Three core included)
  * - `dist/index.html`   — the Engine Desktop chrome document with the renderer
@@ -20,11 +21,15 @@ import { build } from "esbuild";
 import { bundleDesktopRenderer } from "./renderer-bundle.mjs";
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+
 const dist = join(appRoot, "dist");
+
 const distBuild = join(appRoot, "dist-build");
 
 rmSync(dist, { recursive: true, force: true });
+
 rmSync(distBuild, { recursive: true, force: true });
+
 mkdirSync(dist, { recursive: true });
 
 const common = {
@@ -54,6 +59,16 @@ await build({
   external: ["electron"],
 });
 
+// Fixed sibling selected by the real worker adapter in the CJS main bundle.
+await build({
+  ...common,
+  entryPoints: [resolve(appRoot, "../../packages/importers/src/asset-preparation-worker.ts")],
+  outfile: join(dist, "asset-preparation-worker.cjs"),
+  platform: "node",
+  format: "cjs",
+  target: "node22",
+});
+
 // Preload: runs sandboxed, so everything except `electron` must be inlined.
 await build({
   ...common,
@@ -76,9 +91,11 @@ await build({
   format: "esm",
   target: "node22",
 });
+
 const { desktopLinuxIndexHtml } = await import(
   pathToFileURL(join(distBuild, "chrome-document.mjs")).href
 );
+
 writeFileSync(join(dist, "index.html"), desktopLinuxIndexHtml());
 
 // The recorded-build offer must stay out of the build it describes. This tier bundles
@@ -88,6 +105,7 @@ writeFileSync(join(dist, "index.html"), desktopLinuxIndexHtml());
 // drops it; the annotation is checked in the repository gate, but the property is
 // only true of emitted bytes, so it is checked here on the bundles esbuild wrote.
 const offerEntry = join(distBuild, "recorded-offer.mjs");
+
 await build({
   ...common,
   stdin: {
@@ -100,12 +118,17 @@ await build({
   format: "esm",
   target: "node22",
 });
+
 const { DESKTOP_LINUX_APP_OFFER } = await import(pathToFileURL(offerEntry).href);
+
 const leaked = [];
-for (const file of ["main.cjs", "preload.cjs", "renderer.js"]) {
+
+for (const file of ["main.cjs", "asset-preparation-worker.cjs", "preload.cjs", "renderer.js"]) {
   const bytes = readFileSync(join(dist, file), "utf8");
+
   for (const artifact of DESKTOP_LINUX_APP_OFFER.artifacts) {
     if (bytes.includes(artifact.sha256)) leaked.push(`${file} carries the recorded ${artifact.kind} digest`);
+
     if (bytes.includes(artifact.fileName)) leaked.push(`${file} carries the recorded ${artifact.kind} file name`);
   }
 }
@@ -119,4 +142,4 @@ if (leaked.length > 0) {
   process.exit(1);
 }
 
-console.log("desktop runtime build OK — dist/main.cjs, dist/preload.cjs, dist/renderer.js, dist/index.html");
+console.log("desktop runtime build OK — dist/main.cjs, dist/asset-preparation-worker.cjs, dist/preload.cjs, dist/renderer.js, dist/index.html");

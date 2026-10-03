@@ -1,0 +1,326 @@
+[
+  {
+    "path": "docs/design-foundations.md",
+    "sourceSHA": "4e669cc39766bbd4b24c25ee64bdae8aedc24564",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": false
+  },
+  {
+    "path": "packages/site-kit/src/design-tokens.ts",
+    "sourceSHA": "4e669cc39766bbd4b24c25ee64bdae8aedc24564",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": false
+  },
+  {
+    "path": "packages/site-kit/test/design-tokens.test.ts",
+    "sourceSHA": "4e669cc39766bbd4b24c25ee64bdae8aedc24564",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": false
+  },
+  {
+    "path": "sites/umbrella/MEDIA-PROVENANCE.md",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": false
+  },
+  {
+    "path": "sites/umbrella/public/proof/desktop-change-review.png",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": false
+  },
+  {
+    "path": "sites/umbrella/public/proof/desktop-local-build.png",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": false
+  },
+  {
+    "path": "sites/umbrella/public/proof/desktop-run-viewport.png",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": false
+  },
+  {
+    "path": "sites/umbrella/public/proof/desktop-run-window.png",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": false
+  },
+  {
+    "path": "sites/umbrella/src/lib/site-content.ts",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": false
+  },
+  {
+    "path": "sites/catalog-game/src/app/_components/commerce-notice.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": false
+  },
+  {
+    "path": "sites/catalog-game/src/app/_components/digest-figure.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": false
+  },
+  {
+    "path": "sites/catalog-game/src/app/_components/family-bar.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": false
+  },
+  {
+    "path": "sites/catalog-game/src/app/_components/listing-card.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 1,
+    "hasPrivateDelta": true
+  },
+  {
+    "path": "sites/catalog-game/src/app/_components/listing-tile.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": false
+  },
+  {
+    "path": "sites/catalog-game/src/app/_components/publish-slot.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": false
+  },
+  {
+    "path": "sites/catalog-game/src/app/_components/state-panel.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": false
+  },
+  {
+    "path": "sites/catalog-game/src/app/_components/store-nav.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": false
+  },
+  {
+    "path": "sites/catalog-game/src/app/_components/test-pipeline-proof.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": false
+  },
+  {
+    "path": "sites/catalog-game/src/app/globals.css",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 9,
+    "hasPrivateDelta": true
+  },
+  {
+    "path": "sites/catalog-game/src/app/item/[itemId]/page.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": true
+  },
+  {
+    "path": "sites/catalog-game/src/app/layout.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 2,
+    "hasPrivateDelta": true
+  },
+  {
+    "path": "sites/catalog-game/src/app/not-found.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": false
+  },
+  {
+    "path": "sites/catalog-game/src/app/page.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 3,
+    "hasPrivateDelta": true
+  },
+  {
+    "path": "sites/catalog-game/src/app/publish/page.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 1,
+    "hasPrivateDelta": true
+  },
+  {
+    "path": "sites/catalog-web/src/app/_components/commerce-notice.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": false
+  },
+  {
+    "path": "sites/catalog-web/src/app/_components/digest-figure.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": false
+  },
+  {
+    "path": "sites/catalog-web/src/app/_components/family-bar.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": false
+  },
+  {
+    "path": "sites/catalog-web/src/app/_components/listing-card.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 1,
+    "hasPrivateDelta": true
+  },
+  {
+    "path": "sites/catalog-web/src/app/_components/listing-tile.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": false
+  },
+  {
+    "path": "sites/catalog-web/src/app/_components/publish-slot.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": false
+  },
+  {
+    "path": "sites/catalog-web/src/app/_components/state-panel.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": false
+  },
+  {
+    "path": "sites/catalog-web/src/app/_components/store-nav.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": false
+  },
+  {
+    "path": "sites/catalog-web/src/app/_components/test-pipeline-proof.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": false
+  },
+  {
+    "path": "sites/catalog-web/src/app/globals.css",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 9,
+    "hasPrivateDelta": true
+  },
+  {
+    "path": "sites/catalog-web/src/app/item/[itemId]/page.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": true
+  },
+  {
+    "path": "sites/catalog-web/src/app/layout.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 2,
+    "hasPrivateDelta": true
+  },
+  {
+    "path": "sites/catalog-web/src/app/not-found.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": false
+  },
+  {
+    "path": "sites/catalog-web/src/app/page.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 4,
+    "hasPrivateDelta": true
+  },
+  {
+    "path": "sites/catalog-web/src/app/publish/page.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 1,
+    "hasPrivateDelta": true
+  },
+  {
+    "path": "sites/umbrella/src/app/_components/hero-viewport.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": false
+  },
+  {
+    "path": "sites/umbrella/src/app/_components/proof-figure.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": false
+  },
+  {
+    "path": "sites/umbrella/src/app/docs/_components/help-doc-page.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": false
+  },
+  {
+    "path": "sites/umbrella/src/app/docs/page.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": true
+  },
+  {
+    "path": "sites/umbrella/src/app/engine/page.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 1,
+    "hasPrivateDelta": true
+  },
+  {
+    "path": "sites/umbrella/src/app/globals.css",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 7,
+    "hasPrivateDelta": true
+  },
+  {
+    "path": "sites/umbrella/src/app/layout.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": true
+  },
+  {
+    "path": "sites/umbrella/src/app/login/page.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 1,
+    "hasPrivateDelta": true
+  },
+  {
+    "path": "sites/umbrella/src/app/open/page.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": false
+  },
+  {
+    "path": "sites/umbrella/src/app/page.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": false
+  },
+  {
+    "path": "sites/umbrella/src/app/pricing/page.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": false
+  },
+  {
+    "path": "sites/umbrella/src/app/profiles/page.tsx",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": false
+  },
+  {
+    "path": "sites/umbrella/test/first-release.visual.spec.ts",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": false
+  },
+  {
+    "path": "tests/sites/catalog-storefronts.test.ts",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": false
+  },
+  {
+    "path": "tests/sites/umbrella-visual.test.ts",
+    "sourceSHA": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+    "mergeConflicts": 0,
+    "hasPrivateDelta": true
+  }
+]

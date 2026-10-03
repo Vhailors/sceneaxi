@@ -1,0 +1,143 @@
+{
+  "status": "BLOCKED_SEMANTIC_PROOF_PARTIAL_PATCH",
+  "clone": "/tmp/sceneaxi-pr310-main-first.tSd8ya",
+  "changedFiles": [
+    ".oxlintrc.json",
+    "tools/oxlint/anti-slop/rules/no-runtime-typeof.ts",
+    "tools/oxlint/anti-slop/rules/no-unknown-parameters.ts",
+    "tools/oxlint/anti-slop/shared/checked-boundaries.ts",
+    "tools/oxlint/anti-slop/tests/checked-boundaries.test.mjs"
+  ],
+  "indexWrites": false,
+  "commit": false,
+  "productParserWrites": false,
+  "configChange": {
+    "rule": "anti-slop/no-runtime-typeof",
+    "level": "error",
+    "existingOption": "allowInTypeGuards",
+    "value": true
+  },
+  "independentReview": {
+    "status": "REQUESTED_NOT_RECEIVED",
+    "requestedVia": "advisor:90cf2c96-de5c-4a20-9843-c8063b727e9c",
+    "messages": [
+      "lm_305",
+      "lm_308"
+    ],
+    "parentCommitAllowed": false
+  },
+  "verification": [
+    {
+      "command": "node --test tools/oxlint/anti-slop/tests/checked-boundaries.test.mjs",
+      "exit": 0,
+      "tests": 40,
+      "pass": 40,
+      "fail": 0,
+      "skipped": 0,
+      "positiveFixtures": 10,
+      "negativeFixtures": 30,
+      "log": "native-rule-tests.log"
+    },
+    {
+      "command": "targeted tsc --noEmit --strict --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext --allowImportingTsExtensions (helper + two rules)",
+      "exit": 0,
+      "log": "typecheck.log"
+    },
+    {
+      "command": "eslint --no-ignore (helper, two rules, harness)",
+      "exit": 0,
+      "log": "eslint-no-ignore.log"
+    },
+    {
+      "command": "git diff --check -- .oxlintrc.json tools/oxlint/anti-slop",
+      "exit": 0
+    },
+    {
+      "command": "oxlint --config .oxlintrc.json --format json (8 staged TS/JS paths against current working bytes)",
+      "exit": 1,
+      "summary": {
+        "total": 65,
+        "counts": {
+          "anti-slop(no-runtime-typeof)": 59,
+          "anti-slop(no-unknown-parameters)": 4,
+          "anti-slop(no-unsafe-dictionary-type)": 2
+        },
+        "files": [
+          "tests/e2e/desktop-package-golden.test.ts",
+          "packages/schemas/src/desktop-scene-package.ts",
+          "packages/authoring-core/src/propose-apply.ts",
+          "desktop/linux/src/lib/desktop-scene.ts",
+          "desktop/linux/src/lib/bridge.ts"
+        ]
+      },
+      "log": "scoped-staged-oxlint.json"
+    }
+  ],
+  "historicalFailures": [
+    {
+      "step": "first targeted typecheck",
+      "exit": 2,
+      "output": "owner.body possibly null; Identifier union not assignable to IdentifierReference (two sites). Fixed with null body guard and lexical Scope lookup, no assertions."
+    },
+    {
+      "step": "default ESLint",
+      "exit": 0,
+      "output": "Four files ignored by existing root pattern; not counted as verification."
+    },
+    {
+      "step": "first eslint --no-ignore",
+      "exit": 1,
+      "output": "checked-boundaries.test.mjs:9:32 error 'URL' is not defined no-undef. Fixed explicit node:url URL import; current run passes."
+    }
+  ],
+  "blockers": [
+    {
+      "kind": "named-domain-decoder",
+      "location": "packages/schemas/src/desktop-scene-package.ts:138",
+      "reason": "The actual decoder has a typed empty-catalog early return and a local catalog predicate with nested lock-entry validation, array iteration and duplicate checks. This limited checker cannot establish all success paths implement the named ScenePackageCatalog contract. Accepting a predicate annotation/call name would also accept always-true validators or unchecked early returns. Diagnostic retained."
+    },
+    {
+      "kind": "raw-public-port-and-projection",
+      "locations": [
+        "desktop/linux/src/lib/bridge.ts:165",
+        "desktop/linux/src/lib/bridge.ts:172",
+        "desktop/linux/src/lib/bridge.ts:2869"
+      ],
+      "reason": "Signature declarations have no body. Their named return union alone cannot prove request refusal or opaque forwarding. Implementation descriptor-derived fields and projection callbacks need source-capture, alias and validation-flow analysis across nested calls; no name, prefix or filename exemption was added."
+    },
+    {
+      "kind": "transport-discrimination",
+      "location": "packages/authoring-core/src/propose-apply.ts:675",
+      "reason": "The typeof source is a property of ApplyInput, not the predicate subject. Both paths must resolve imported parseProposalText/validateProposal, contained-file read provenance, success-result capture and subsequent proposal uses. Merely detecting calls in branches cannot reject shadowed validators, unrelated reads or an unchecked alternate success. No transport exception added."
+    },
+    {
+      "kind": "legacy-output-consumer-validation",
+      "locations": [
+        "desktop/linux/src/lib/desktop-scene.ts:1435",
+        "desktop/linux/src/lib/desktop-scene.ts:1633"
+      ],
+      "reason": "The existing exported Record<string,unknown> outputs have no AST-level declaration distinguishing them from unchecked compatibility dictionaries. The inherited 50-signature equality oracle proves compatibility, not validation of every opaque consumer before property access/cast. Consumer validation provenance must be established across exports; dictionary rule left byte-for-byte unchanged."
+    },
+    {
+      "kind": "remaining-runtime-projections",
+      "reason": "Other descriptor/projection and imported guard property checks remain errors. Conservative predicate grammar deliberately rejects unsupported bodies rather than infer meaningful contracts from enclosing function names or annotations."
+    }
+  ],
+  "skipped": [
+    "full source build",
+    "installation",
+    "browser",
+    "Docker",
+    "native integration",
+    "commit hooks (no commit authorized)"
+  ],
+  "handback": "Candidate is unstaged and released; no zero-guard or stage-unblocking claim. Parent must retain normal commit hook and independent Astra review before any commit.",
+  "patchSha256": "c5bb51cbf0d963c80b301271cf4dbcb9d18daf20050391fdc7c0fc63afcaf2d9",
+  "hashes": {
+    ".oxlintrc.json": "f815dd07e6a8d7e50b8ed37736baa1da63d9baab3be4edb3a31b86140459f0c5",
+    "tools/oxlint/anti-slop/rules/no-runtime-typeof.ts": "bbfe2c0c3398b95a3e663d9c6d54720cd5d4b41eb9edef086af6c4565e28f41c",
+    "tools/oxlint/anti-slop/rules/no-unknown-parameters.ts": "4c58e709c90e8ad9d645dc0c791bb8e7dcdb82e3cdaabe0ae3387ef73d8106d4",
+    "tools/oxlint/anti-slop/shared/checked-boundaries.ts": "8b4811cc490d3eb590a09d4d60ace2a3065261a5e35d93e2fd162699bcef9293",
+    "tools/oxlint/anti-slop/tests/checked-boundaries.test.mjs": "73899be9f7a737d69ef3f68a5d3fff9edba8453bb971bef45093484e6a43c9cd"
+  }
+}

@@ -19,6 +19,7 @@ import {
   Group,
   Mesh,
   MeshStandardMaterial,
+  SkinnedMesh,
   Scene,
   type Object3D,
 } from "three";
@@ -41,6 +42,7 @@ import {
   type ThreePresentationSurface,
   type ThreePresentationSurfaceKind,
   type ThreeSurfaceSettings,
+  type WebGLCanvasSurfaceOptions,
 } from "./three-surface.js";
 
 /** UI-facing identification of the product presentation core. */
@@ -110,6 +112,19 @@ export type ThreePresentationCore = {
   readonly surfaceKind: ThreePresentationSurfaceKind;
   readonly label: string;
   readonly camera: OrbitCameraControls;
+  frames(): number;
+  draw(): ThreeDrawnFrame;
+  setEnvironment(environment: ThreeSceneEnvironment): void;
+  sampleEffects(catalog: SceneEffectsCatalog, timeMs: number): SceneEffectsEvaluation;
+  resize(width: number, height: number, pixelRatio?: number): void;
+  capture(): Uint8Array | null;
+  dispose(): void;
+};
+
+export type InternalThreePresentationCore = {
+  readonly surfaceKind: ThreePresentationSurfaceKind;
+  readonly label: string;
+  readonly camera: OrbitCameraControls;
   /** Implementation-private scene root a facade may populate. */
   readonly content: Group;
   frames(): number;
@@ -123,50 +138,66 @@ export type ThreePresentationCore = {
 
 const DEFAULT_VIEWPORT = { width: 1280, height: 720 } as const;
 
-function resolveViewport(options: ThreePresentationCoreOptions): {
-  width: number;
-  height: number;
-  pixelRatio: number;
-} {
+function resolveViewport(options: ThreePresentationCoreOptions): ResolvedViewport {
   const declared = options.viewport;
   const canvas = options.canvas;
   const width = declared?.width ?? canvas?.width ?? DEFAULT_VIEWPORT.width;
   const height = declared?.height ?? canvas?.height ?? DEFAULT_VIEWPORT.height;
   const pixelRatio = declared?.pixelRatio ?? 1;
-  if (!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0) {
+
+  if (!Number.isSafeInteger(width) || !Number.isSafeInteger(height) || width <= 0 || height <= 0 || width > 8192 || height > 8192) {
     throw new ThreePresentationError(
       "invalid-viewport",
       "Viewport width and height must be positive integers.",
     );
   }
-  if (!Number.isFinite(pixelRatio) || pixelRatio <= 0) {
+
+  const bufferWidth = Math.floor(width * pixelRatio);
+    const bufferHeight = Math.floor(height * pixelRatio);
+
+    if (!Number.isFinite(pixelRatio) || pixelRatio <= 0 || pixelRatio > 4 || bufferWidth < 1 || bufferHeight < 1 || bufferWidth > 8192 || bufferHeight > 8192 || bufferWidth * bufferHeight > 16_777_216) {
     throw new ThreePresentationError(
       "invalid-viewport",
-      "Viewport pixelRatio must be a finite positive number.",
+      "Framebuffer requires ratio 0..4, dimensions 1..8192, and at most 16777216 pixels.",
     );
   }
+
   return { width, height, pixelRatio };
 }
+
+type MutableSurfaceOptions = { -readonly [K in keyof WebGLCanvasSurfaceOptions]: WebGLCanvasSurfaceOptions[K] };
+
+type MutableViewport = { -readonly [K in keyof ThreeViewport]: ThreeViewport[K] };
+
+type ResolvedViewport = { width: number; height: number; pixelRatio: number };
 
 function resolveSurface(
   options: ThreePresentationCoreOptions,
 ): ThreePresentationSurface {
   if (options.surface !== undefined) return options.surface;
+
   if (options.canvas === undefined) return createHeadlessThreeSurface();
-  return createWebGLCanvasSurface({
-    canvas: options.canvas,
-    alpha: options.background === null,
-    ...(options.antialias === undefined ? {} : { antialias: options.antialias }),
-    ...(options.preserveDrawingBuffer === undefined
-      ? {}
-      : { preserveDrawingBuffer: options.preserveDrawingBuffer }),
-  });
+
+  const surfaceOptions: MutableSurfaceOptions = { canvas: options.canvas, alpha: options.background === null };
+
+  if (options.antialias !== undefined) surfaceOptions.antialias = options.antialias;
+
+  if (options.preserveDrawingBuffer !== undefined) surfaceOptions.preserveDrawingBuffer = options.preserveDrawingBuffer;
+
+  return createWebGLCanvasSurface(surfaceOptions);
 }
 
 /** Builds the one shared Three core: scene graph, lighting, camera, and surface. */
-export function createThreePresentationCore(
+export function createThreePresentationCore(options: ThreePresentationCoreOptions = {}): ThreePresentationCore {
+  const { content: privateContent, ...facade } = createInternalThreePresentationCore(options);
+  void privateContent;
+
+  return Object.freeze(facade);
+}
+
+export function createInternalThreePresentationCore(
   options: ThreePresentationCoreOptions = {},
-): ThreePresentationCore {
+): InternalThreePresentationCore {
   const viewport = resolveViewport(options);
   const orbit = createOrbitCamera(options.camera ?? {});
   const scene = new Scene();
@@ -191,10 +222,27 @@ export function createThreePresentationCore(
   scene.add(particles);
   const emitters = new Map<string, Points<BufferGeometry, PointsMaterial>>();
   let settings: ThreeSurfaceSettings = Object.freeze({ effects: Object.freeze([]), toneMapping: "aces", exposure: 1.35 });
+
   let environmentBackground: string | null =
     background === undefined ? "#101318" : background;
 
   function applyEnvironment(environment: ThreeSceneEnvironment): void {
+    if (!environment || !isEnvironmentRecord(environment)) throw new ThreePresentationError("invalid-renderable", "Environment is required.");
+
+    for (const value of [environment.ambientIntensity, environment.keyIntensity, environment.fillIntensity]) {
+      if (value !== undefined && (!Number.isFinite(value) || value < 0 || value > 16)) throw new ThreePresentationError("invalid-renderable", "Light intensity must be in 0..16.");
+    }
+
+    for (const color of [environment.background, environment.ambientColor, environment.keyColor, environment.fog?.color]) {
+      if (color !== undefined && color !== null && (!isColorText(color) || !/^#[0-9a-f]{3}(?:[0-9a-f]{3})?$/i.test(color))) throw new ThreePresentationError("invalid-renderable", "Environment requires a hex color.");
+    }
+
+    if (environment.keyDirection !== undefined && (!Array.isArray(environment.keyDirection) || environment.keyDirection.length !== 3 || environment.keyDirection.some((value) => !Number.isFinite(value) || Math.abs(value) > 1_000_000))) throw new ThreePresentationError("invalid-renderable", "Invalid light direction.");
+
+    if (environment.fog !== undefined && (!isFogVisibility(environment.fog.enabled) || !Number.isFinite(environment.fog.near) || !Number.isFinite(environment.fog.far) || environment.fog.near < 0 || environment.fog.far <= environment.fog.near || environment.fog.far > 1_000_000)) throw new ThreePresentationError("invalid-renderable", "Invalid fog range.");
+
+    if (environment.effects !== undefined && (!Array.isArray(environment.effects) || environment.effects.length > 2)) throw new ThreePresentationError("invalid-renderable", "Invalid effects list.");
+
     if (environment.effects?.some((effect) => !SCENE_ENVIRONMENT_EFFECTS.includes(effect))) {
       throw new ThreePresentationError("invalid-renderable", "Unknown post-process effect.");
     }
@@ -211,10 +259,15 @@ export function createThreePresentationCore(
       environmentBackground = environment.background;
       scene.background = environment.background === null ? null : new Color(environment.background);
     }
+
     if (environment.ambientIntensity !== undefined) ambient.intensity = environment.ambientIntensity;
+
     if (environment.ambientColor !== undefined) ambient.color = new Color(environment.ambientColor);
+
     if (environment.keyIntensity !== undefined) key.intensity = environment.keyIntensity;
+
     if (environment.keyColor !== undefined) key.color = new Color(environment.keyColor);
+
     if (environment.keyDirection !== undefined) {
       key.position.set(
         environment.keyDirection[0],
@@ -222,7 +275,9 @@ export function createThreePresentationCore(
         environment.keyDirection[2],
       );
     }
+
     if (environment.fillIntensity !== undefined) fill.intensity = environment.fillIntensity;
+
     if (environment.fog !== undefined) {
       scene.fog = environment.fog.enabled
         ? new Fog(environment.fog.color, environment.fog.near, environment.fog.far)
@@ -252,6 +307,7 @@ export function createThreePresentationCore(
   }
 
   orbit.setViewport(viewport.width, viewport.height);
+
   try {
     surface.resize(viewport.width, viewport.height, viewport.pixelRatio);
   } catch (error) {
@@ -276,6 +332,7 @@ export function createThreePresentationCore(
       requireLive();
       const result = surface.draw(scene, orbit.camera, settings);
       frame += 1;
+
       return Object.freeze({
         frame,
         drawCalls: result.drawCalls,
@@ -350,6 +407,8 @@ export function createThreePresentationCore(
 
         if (object.geometry.getAttribute("position").count !== sample.count) {
           object.geometry.dispose();
+
+    if (object instanceof SkinnedMesh) object.skeleton.dispose();
           object.geometry = new BufferGeometry();
           object.geometry.setAttribute("position", new Float32BufferAttribute(new Float32Array(sample.count * 3), 3));
         }
@@ -365,19 +424,19 @@ export function createThreePresentationCore(
 
     resize(width, height, pixelRatio) {
       requireLive();
-      const resolved = resolveViewport({
-        viewport: {
-          width,
-          height,
-          ...(pixelRatio === undefined ? {} : { pixelRatio }),
-        },
-      });
-      orbit.setViewport(resolved.width, resolved.height);
+
+      const viewport: MutableViewport = { width, height };
+
+      if (pixelRatio !== undefined) viewport.pixelRatio = pixelRatio;
+      const resolved = resolveViewport({ viewport });
+
       surface.resize(resolved.width, resolved.height, resolved.pixelRatio);
+      orbit.setViewport(resolved.width, resolved.height);
     },
 
     capture() {
       requireLive();
+
       return surface.capture();
     },
 
@@ -401,12 +460,37 @@ export function disposeSubtree(root: Object3D) {
   root.traverse((object) => {
     if (!(object instanceof Mesh) && !(object instanceof Points)) return;
     object.geometry.dispose();
+
+    if (object instanceof SkinnedMesh) object.skeleton.dispose();
+
     const materials = Array.isArray(object.material)
       ? object.material
       : [object.material];
+
     for (const material of materials) {
-      if (material instanceof MeshStandardMaterial) material.map?.dispose();
+      if (material instanceof MeshStandardMaterial) {
+        for (const texture of [material.map, material.normalMap, material.roughnessMap]) if (texture && texture.userData["sceneaxiCatalogTexture"] !== true) texture.dispose();
+      }
+
       material.dispose();
     }
   });
+}
+
+function isEnvironmentRecord(value: ThreeSceneEnvironment): value is ThreeSceneEnvironment {
+  return isBoundaryObjectValue(value);
+}
+
+function isColorText(value: unknown): value is string {
+  return typeof value === "string";
+}
+
+function isFogVisibility(value: unknown): value is boolean {
+  return typeof value === "boolean";
+}
+
+type BoundaryObjectValue = object | null;
+
+function isBoundaryObjectValue<Input>(value: Input): value is Input & Readonly<BoundaryObjectValue> {
+  return typeof value === "object";
 }

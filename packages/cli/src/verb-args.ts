@@ -31,12 +31,14 @@ export function parseVerbArgs(tokens: readonly string[]): VerbArgs {
   const record = (name: string, value: string): void => {
     flags.set(name, value);
     const seen = repeated.get(name);
+
     if (seen === undefined) repeated.set(name, [value]);
     else seen.push(value);
   };
 
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i];
+
     if (token === undefined) continue;
 
     if (token === "--") {
@@ -54,12 +56,14 @@ export function parseVerbArgs(tokens: readonly string[]): VerbArgs {
 
     if (token.startsWith("--")) {
       const next = tokens[i + 1];
+
       if (next !== undefined && !next.startsWith("-")) {
         record(token, next);
         i += 1;
       } else {
         switches.add(token);
       }
+
       continue;
     }
 
@@ -94,17 +98,20 @@ export function requireFlag(
   options: { readonly allowEmpty?: boolean } = {},
 ): { ok: true; value: string } | { ok: false; message: string } {
   const value = args.flags.get(name);
+
   if (value === undefined) {
     return {
       ok: false,
       message: `Missing required flag ${name}`,
     };
   }
+
   if (value.length === 0 && options.allowEmpty !== true) {
     return {
       ok: false,
       message: `Missing required flag ${name}`,
     };
   }
+
   return { ok: true, value };
 }

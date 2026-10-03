@@ -1,0 +1,189 @@
+{
+  "status": "PASS_46_OWNED_TS_TSX_SYNTAX_ONLY_NOT_TYPECHECK",
+  "results": [
+    {
+      "path": "packages/site-kit/src/design-tokens.ts",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "packages/site-kit/test/design-tokens.test.ts",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/umbrella/src/lib/site-content.ts",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/catalog-game/src/app/_components/commerce-notice.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/catalog-game/src/app/_components/digest-figure.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/catalog-game/src/app/_components/family-bar.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/catalog-game/src/app/_components/listing-card.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/catalog-game/src/app/_components/listing-tile.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/catalog-game/src/app/_components/publish-slot.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/catalog-game/src/app/_components/state-panel.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/catalog-game/src/app/_components/store-nav.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/catalog-game/src/app/_components/test-pipeline-proof.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/catalog-game/src/app/item/[itemId]/page.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/catalog-game/src/app/layout.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/catalog-game/src/app/not-found.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/catalog-game/src/app/page.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/catalog-game/src/app/publish/page.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/catalog-web/src/app/_components/commerce-notice.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/catalog-web/src/app/_components/digest-figure.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/catalog-web/src/app/_components/family-bar.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/catalog-web/src/app/_components/listing-card.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/catalog-web/src/app/_components/listing-tile.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/catalog-web/src/app/_components/publish-slot.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/catalog-web/src/app/_components/state-panel.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/catalog-web/src/app/_components/store-nav.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/catalog-web/src/app/_components/test-pipeline-proof.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/catalog-web/src/app/item/[itemId]/page.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/catalog-web/src/app/layout.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/catalog-web/src/app/not-found.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/catalog-web/src/app/page.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/catalog-web/src/app/publish/page.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/umbrella/src/app/_components/hero-viewport.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/umbrella/src/app/_components/proof-figure.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/umbrella/src/app/docs/_components/help-doc-page.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/umbrella/src/app/docs/page.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/umbrella/src/app/engine/page.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/umbrella/src/app/layout.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/umbrella/src/app/login/page.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/umbrella/src/app/open/page.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/umbrella/src/app/page.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/umbrella/src/app/pricing/page.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/umbrella/src/app/profiles/page.tsx",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "sites/umbrella/test/first-release.visual.spec.ts",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "tests/sites/catalog-storefronts.test.ts",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "tests/sites/umbrella-visual.test.ts",
+      "parseDiagnostics": []
+    },
+    {
+      "path": "tests/sites/maintenance-compat.test.ts",
+      "parseDiagnostics": []
+    }
+  ]
+}

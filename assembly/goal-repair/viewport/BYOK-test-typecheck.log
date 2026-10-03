@@ -1,0 +1,57 @@
+apps/desktop-shell/src/session.ts(38,8): error TS2307: Cannot find module '@sceneaxi-internal/project-git-authority' or its corresponding type declarations.
+desktop/linux/src/lib/bridge.ts(87,8): error TS2307: Cannot find module '@sceneaxi-internal/desktop-session-project-git' or its corresponding type declarations.
+desktop/linux/src/lib/bridge.ts(376,9): error TS18046: 'cause' is of type 'unknown'.
+desktop/linux/src/lib/bridge.ts(804,32): error TS18046: 'cause' is of type 'unknown'.
+desktop/linux/src/lib/bridge.ts(804,55): error TS18046: 'cause' is of type 'unknown'.
+desktop/linux/src/lib/bridge.ts(3290,11): error TS18046: 'cause' is of type 'unknown'.
+desktop/linux/src/lib/bridge.ts(3291,11): error TS18046: 'cause' is of type 'unknown'.
+desktop/linux/src/lib/bridge.ts(3292,11): error TS18046: 'cause' is of type 'unknown'.
+desktop/linux/test/byo-terminal-lifecycle.test.ts(105,72): error TS2339: Property 'click' does not exist on type 'Element'.
+packages/authoring-core/src/scene-composition.ts(677,27): error TS2345: Argument of type 'ComposedSceneV2' is not assignable to parameter of type 'JsonValue'.
+  Type 'ComposedSceneV2' is not assignable to type 'JsonObject'.
+    Property 'instances' is incompatible with index signature.
+      Type 'readonly ComposedSceneInstanceV2[]' is not assignable to type 'JsonValue'.
+        Type 'readonly ComposedSceneInstanceV2[]' is not assignable to type 'readonly JsonValue[]'.
+          Type 'ComposedSceneInstanceV2' is not assignable to type 'JsonValue'.
+            Type 'Omit<{ readonly name?: string | undefined; readonly instanceId: string; readonly parentInstanceId: string | null; readonly depth: number; readonly localTransform: SculptTransform; readonly worldTransform: SculptTransform; } & { ...; }, "worldTransform"> & { ...; } & { ...; }' is not assignable to type 'JsonValue'.
+              Type 'Omit<{ readonly name?: string | undefined; readonly instanceId: string; readonly parentInstanceId: string | null; readonly depth: number; readonly localTransform: SculptTransform; readonly worldTransform: SculptTransform; } & { ...; }, "worldTransform"> & { ...; } & { ...; }' is not assignable to type 'JsonObject'.
+                Property 'kind' is incompatible with index signature.
+                  Type 'undefined' is not assignable to type 'JsonValue'.
+packages/authoring-core/src/scene-composition.ts(689,75): error TS2345: Argument of type '{ id: string; data: { composedScene: ComposedSceneV2; }; }' is not assignable to parameter of type '{ readonly id: string; readonly data?: JsonObject | undefined; readonly title?: string | undefined; }'.
+  Types of property 'data' are incompatible.
+    Type '{ composedScene: ComposedSceneV2; }' is not assignable to type 'JsonObject'.
+      Property '[COMPOSED_SCENE_DOCUMENT_DATA_KEY]' is incompatible with index signature.
+        Type 'ComposedSceneV2' is not assignable to type 'JsonValue'.
+          Type 'ComposedSceneV2' is not assignable to type 'JsonObject'.
+            Property 'instances' is incompatible with index signature.
+              Type 'readonly ComposedSceneInstanceV2[]' is not assignable to type 'JsonValue'.
+                Type 'readonly ComposedSceneInstanceV2[]' is not assignable to type 'readonly JsonValue[]'.
+                  Type 'ComposedSceneInstanceV2' is not assignable to type 'JsonValue'.
+                    Type 'Omit<{ readonly name?: string | undefined; readonly instanceId: string; readonly parentInstanceId: string | null; readonly depth: number; readonly localTransform: SculptTransform; readonly worldTransform: SculptTransform; } & { ...; }, "worldTransform"> & { ...; } & { ...; }' is not assignable to type 'JsonValue'.
+                      Type 'Omit<{ readonly name?: string | undefined; readonly instanceId: string; readonly parentInstanceId: string | null; readonly depth: number; readonly localTransform: SculptTransform; readonly worldTransform: SculptTransform; } & { ...; }, "worldTransform"> & { ...; } & { ...; }' is not assignable to type 'JsonObject'.
+                        Property 'kind' is incompatible with index signature.
+                          Type 'undefined' is not assignable to type 'JsonValue'.
+packages/authoring-core/src/scene-composition.ts(690,22): error TS2345: Argument of type '{ title: string; id: string; data: { composedScene: ComposedSceneV2; }; }' is not assignable to parameter of type '{ readonly id: string; readonly data?: JsonObject | undefined; readonly title?: string | undefined; }'.
+  Types of property 'data' are incompatible.
+    Type '{ composedScene: ComposedSceneV2; }' is not assignable to type 'JsonObject'.
+      Property '[COMPOSED_SCENE_DOCUMENT_DATA_KEY]' is incompatible with index signature.
+        Type 'ComposedSceneV2' is not assignable to type 'JsonValue'.
+          Type 'ComposedSceneV2' is not assignable to type 'JsonObject'.
+            Property 'instances' is incompatible with index signature.
+              Type 'readonly ComposedSceneInstanceV2[]' is not assignable to type 'JsonValue'.
+                Type 'readonly ComposedSceneInstanceV2[]' is not assignable to type 'readonly JsonValue[]'.
+                  Type 'ComposedSceneInstanceV2' is not assignable to type 'JsonValue'.
+                    Type 'Omit<{ readonly name?: string | undefined; readonly instanceId: string; readonly parentInstanceId: string | null; readonly depth: number; readonly localTransform: SculptTransform; readonly worldTransform: SculptTransform; } & { ...; }, "worldTransform"> & { ...; } & { ...; }' is not assignable to type 'JsonValue'.
+                      Type 'Omit<{ readonly name?: string | undefined; readonly instanceId: string; readonly parentInstanceId: string | null; readonly depth: number; readonly localTransform: SculptTransform; readonly worldTransform: SculptTransform; } & { ...; }, "worldTransform"> & { ...; } & { ...; }' is not assignable to type 'JsonObject'.
+                        Property 'kind' is incompatible with index signature.
+                          Type 'undefined' is not assignable to type 'JsonValue'.
+packages/authoring-core/src/scene-composition.ts(743,42): error TS2345: Argument of type 'SceneCompositionIntakeV2' is not assignable to parameter of type 'JsonValue'.
+  Type 'SceneCompositionIntakeV2' is not assignable to type 'JsonObject'.
+    Property 'placements' is incompatible with index signature.
+      Type 'readonly ScenePlacement[]' is not assignable to type 'JsonValue'.
+        Type 'readonly ScenePlacement[]' is not assignable to type 'readonly JsonValue[]'.
+          Type 'ScenePlacement' is not assignable to type 'JsonValue'.
+            Type '{ readonly kind?: undefined; readonly artifactId: string; } & { readonly name?: string | undefined; readonly instanceId: string; readonly parentInstanceId: string | null; readonly transform: SculptTransform; }' is not assignable to type 'JsonValue'.
+              Type '{ readonly kind?: undefined; readonly artifactId: string; } & { readonly name?: string | undefined; readonly instanceId: string; readonly parentInstanceId: string | null; readonly transform: SculptTransform; }' is not assignable to type 'JsonObject'.
+                Property 'kind' is incompatible with index signature.
+                  Type 'undefined' is not assignable to type 'JsonValue'.

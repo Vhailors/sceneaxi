@@ -1,0 +1,980 @@
+{
+  "loopStartTimestamp": "2026-10-01T22:08:21Z",
+  "loopEndTimestamp": "2026-10-01T22:20:45Z",
+  "root": "/home/devuser/Documents/Projects/sceneaxi",
+  "status": "RETRY_ADDITIONAL_VISUAL_EDITS_IMPLEMENTED",
+  "verificationStatus": "OWNING_TESTS_PASS_LINUX_TYPECHECK_BLOCKED",
+  "productionReady": false,
+  "pr": {
+    "url": "https://github.com/Vhailors/sceneaxi/pull/312",
+    "createdAt": "2026-10-01T21:40:09Z",
+    "currentHeadAtLoop": "346933c105305224d575bf9319256301c1eeabfa",
+    "localHead": "4e532e2fbf43e9948741578ab6208a3277870405",
+    "baselineMethod": "Read-only fetch of current PR head; before bundles exact pinned source, after bundles owned current source. Current visual model/native bridge are shared. Prior pass captures remain unchanged.",
+    "commit": false,
+    "push": false
+  },
+  "changes": [
+    {"file":"apps/desktop-shell/src/chrome.ts","line":1154,"improved":"Every explicit tabindex gets focus scroll margins; forced-colors system Highlight outlines and selected borders.","why":"Keep keyboard/programmatic focus and high-contrast states legible."},
+    {"file":"apps/desktop-shell/src/chrome.ts","line":1254,"improved":"Dashed dark empty-guidance wells; existing live-status wells use a solid rail.","why":"Separate idle guidance from status without inventing content or success."},
+    {"file":"desktop/linux/src/renderer/byo-configuration.ts","line":42,"improved":"Shared focus halo/scroll spacing, enabled-field hover, native invalid-state borders and forced-colors outline.","why":"Align BYOK controls with surrounding shell without changing validation."},
+    {"file":"desktop/linux/src/renderer/byo-configuration.ts","line":53,"improved":"Selectable complete status text, empty message suppression and conditional alert refusal rail.","why":"Avoid blank decorative wells and preserve diagnostic readability; conditional styling is not a provider-error acceptance claim."},
+    {"file":"apps/web-shell/src/inspector-app.ts","line":810,"improved":"Focus coverage for selects/textareas/summary/tabindex, forced-colors outline and native invalid-state light/dark borders.","why":"Cover every interactive control category instead of buttons/inputs alone."},
+    {"file":"apps/web-shell/src/inspector-app.ts","line":816,"improved":"Empty diff framing, conditional busy rail, 1.65 line-height, two-column tabs and wrapping tabular code.","why":"Improve empty/loading and dense long-ID evidence without changing payloads; busy rail requires existing aria-busy."},
+    {"file":"apps/desktop-shell/test/visual-refinement.test.ts","line":84,"improved":"Extended tabindex/forced-colors and empty/live/BYOK status invariants.","why":"Prevent focus/state-presentation regressions while retaining earlier rhythm/icon safeguards."},
+    {"file":"apps/web-shell/test/visual-postpr.test.ts","line":15,"improved":"Expanded focus assertions and added empty/dense-diff/native-invalid invariant.","why":"Guard this retry's additional inspector polish."}
+  ],
+  "verification": {
+    "tests": {"passed":438,"failed":0,"pending":0,"files":26,"desktopShell":224,"webShell":186,"linux":28,"receipt":"apps/desktop-shell/test/visual-postpr-evidence/retry/tests.json"},
+    "browser": {"cases":20,"desktopStates":14,"inspectorCases":6,"checksPassed":1795,"enabledControlFocusSamples":581,"pageErrors":0,"documentOverflow":0,"inspectorDiffOverflow":0},
+    "lint": {"files":5,"eslint":"PASS","oxlint":"PASS","warnings":0,"errors":0},
+    "rendererGraph": {"status":"PASS","inputs":94},
+    "whitespace": "PASS",
+    "linuxTypecheck": {"status":"FAIL","exitCode":2,"outsideEditedFiles":true,"errors":["src/lib/desktop-scene.ts(297,57): TS2345 unknown is not assignable to JsonValue","packages/engine-presentation/src/three-sculpt.ts(241,202),(241,473),(534,417): TS2345 unknown is not assignable to number","packages/engine-presentation/src/three-sculpt.ts(518,27),(518,69): TS2556 spread argument requires a tuple type or rest parameter"]},
+    "initialRetryTestFailure": "435 passed/2 failed: literal assertions still expected narrower focus selectors. Updated selectors and added one empty-diff invariant; all owning suites rerun green."
+  },
+  "evidenceIndex": {"path":"apps/desktop-shell/test/visual-postpr-evidence/retry/summary.json","screenshotPairs":26,"contains":"All screenshot SHA-256 pairs, source hashes, browser counts and owning test counts.","captureHarnesses":["apps/desktop-shell/test/visual-postpr-evidence/retry/capture.mjs","apps/desktop-shell/test/visual-postpr-evidence/retry/capture-web.mjs"],"captureArguments":["before","after"]},
+  "diff": {"path":"apps/desktop-shell/test/visual-postpr-evidence/retry/source-vs-pr.patch","sha256":"069cfb0e024e50164b7a2b8e2cad2e66d5ccc968db58393e4c347e894c75f282","attribution":"Raw diff includes pre-existing inspector typing changes. Only CSS/test entries in changes belong to this retry."},
+  "screenshots": [
+    {"scenario":"empty","before":{"path":"apps/desktop-shell/test/visual-postpr-evidence/retry/before-empty.png","sha256":"da35923ea169bf55978df4b6821de41986a83bcbf8d9ad27284cbba6419df335"},"after":{"path":"apps/desktop-shell/test/visual-postpr-evidence/retry/after-empty.png","sha256":"fdcfdd0a25a42e295b2c857db705e799313a0ecd1090aa2b6a1840ed3712f39e"}},
+    {"scenario":"forced-focus","before":{"path":"apps/desktop-shell/test/visual-postpr-evidence/retry/before-forced-focus.png","sha256":"ebea96764fa9fa6c9ec94a31a198e70eb47637240a839766ee852b7bb2c2234a"},"after":{"path":"apps/desktop-shell/test/visual-postpr-evidence/retry/after-forced-focus.png","sha256":"ecbb2f5e4cd0d6eb7a545046f5ae8195c0800fb9f531b02bc26712f586482a98"}},
+    {"scenario":"byok-narrow","before":{"path":"apps/desktop-shell/test/visual-postpr-evidence/retry/before-byok-narrow.png","sha256":"5ce6282b30b45eacf0cb519d927e8bd245ae8bc11053d6277c950bd2cc18e784"},"after":{"path":"apps/desktop-shell/test/visual-postpr-evidence/retry/after-byok-narrow.png","sha256":"6aeec7f72ab5189e882c31647d96e6a64bf4620428bf1ae3ebc73a9a353e02d4"}},
+    {"scenario":"inspector-idle-light","before":{"path":"apps/desktop-shell/test/visual-postpr-evidence/retry/before-inspector-idle-light.png","sha256":"6371c84c7266f190f725431da1681f8060a7248316f2493cf414ec9593f8ac72"},"after":{"path":"apps/desktop-shell/test/visual-postpr-evidence/retry/after-inspector-idle-light.png","sha256":"e84bad504b221fb03d5e5347c01d7ee6d050c9740c894f0851add99be33987bd"}},
+    {"scenario":"inspector-long-diff-dark","before":{"path":"apps/desktop-shell/test/visual-postpr-evidence/retry/before-inspector-long-diff-dark.png","sha256":"b4f99b36af82f75ad3334b27790390695a46b0b205b21473bef8f52c36a9a841"},"after":{"path":"apps/desktop-shell/test/visual-postpr-evidence/retry/after-inspector-long-diff-dark.png","sha256":"9fe66f3e9deb4fdaf7e74c4663b4c5c4deab26bb8b138d5c08baed93c46d29a3"}},
+    {"scenario":"inspector-refusal-dark","before":{"path":"apps/desktop-shell/test/visual-postpr-evidence/retry/before-inspector-refusal-dark.png","sha256":"bd79093c44a8b065df0ac1b4fbef638c7aa0886615313d77a23161f1c8235358"},"after":{"path":"apps/desktop-shell/test/visual-postpr-evidence/retry/after-inspector-refusal-dark.png","sha256":"198996b1b0416cc173c0d462fe86c39c89e6e0cdb4f57edad84951a9936aeaf2"}}
+  ],
+  "limits": ["No full repository gate, native/GPU/provider acceptance or manual image-review certification.","Busy/dense/refusal content is explicitly visual-only fixture content, not provider or write acceptance.","Cached first-loop inputs were not reread; one failed test replacement required a surgical test-region reread.","Accidental no-argument debug capture outputs moved out of repository to /tmp/sceneaxi-postpr-desktop/discarded-debug; not counted as evidence."],
+  "priorLoop": {
+  "loopStartTimestamp": "2026-10-01T21:46:40Z",
+  "loopEndTimestamp": "2026-10-01T22:06:58Z",
+  "root": "/home/devuser/Documents/Projects/sceneaxi",
+  "status": "SECOND_VISUAL_PASS_IMPLEMENTED",
+  "verificationStatus": "OWNING_TESTS_PASS_LINUX_TYPECHECK_BLOCKED",
+  "productionReady": false,
+  "pr": {
+    "url": "https://github.com/Vhailors/sceneaxi/pull/312",
+    "createdAt": "2026-10-01T21:40:09Z",
+    "creationHead": "a2e41fed1c6f16a19e2dfc2075efa282cab6a173",
+    "currentHeadAtLoop": "f4990b8aac5f5af75a16fe3fbb55b74855f2b636",
+    "currentHeadCommittedAt": "2026-10-01T21:43:12Z",
+    "localHead": "4e532e2fbf43e9948741578ab6208a3277870405",
+    "baselineMethod": "Read-only git fetch of existing production-swarm branch. Before screenshots bundle pinned PR current head source; after screenshots bundle current owned source. Desktop chrome/BYOK/token files matched pinned PR head at loop entry. inspectorPageHtml UI also matched; earlier nonvisual inspector typing edits already present locally are excluded from attributionDiffs.",
+    "commit": false,
+    "push": false
+  },
+  "readAuthority": [
+    "docs/audits/production-swarm/PR-EVIDENCE.md",
+    "docs/audits/production-swarm/finish-visual-desktop.md",
+    "docs/audits/production-swarm/finish-visual-desktop.json",
+    "docs/audits/production-swarm/finish-visual-umbrella.md",
+    "docs/audits/production-swarm/finish-visual-umbrella.json",
+    "docs/audits/production-swarm/finish-visual-catalogs.md",
+    "docs/audits/production-swarm/finish-visual-catalogs.json",
+    "docs/audits/production-swarm/finish-visual-qa.json",
+    "docs/audits/production-swarm/visual/desktop-ledger.json",
+    "docs/audits/production-swarm/visual/desktop-focus-ledger.json"
+  ],
+  "changes": [
+    {
+      "file": "apps/desktop-shell/src/chrome.ts",
+      "line": 1153,
+      "improved": "Inset keyboard rings for clipped menus/listboxes/routes; scroll targets clear container edges.",
+      "why": "Make focus as legible in dense popovers as on the main toolbar."
+    },
+    {
+      "file": "apps/desktop-shell/src/chrome.ts",
+      "line": 1155,
+      "improved": "Inert-safe hover and pressed feedback, without animations or displacement.",
+      "why": "Confirm input without making unavailable actions look active."
+    },
+    {
+      "file": "apps/desktop-shell/src/chrome.ts",
+      "line": 1158,
+      "improved": "Stable scrollbar gutters and scroll padding across scrollable panels.",
+      "why": "Avoid dense rows and composer fields shifting when evidence grows."
+    },
+    {
+      "file": "apps/desktop-shell/src/chrome.ts",
+      "line": 1286,
+      "improved": "10px tabular, selectable metadata; existing complete hashes wrap.",
+      "why": "Asset evidence previously remained 8px after the first loop."
+    },
+    {
+      "file": "apps/desktop-shell/src/chrome.ts",
+      "line": 1299,
+      "improved": "Separated evidence rows with full selectable tabular identities.",
+      "why": "Scan dense labels/values without truncating identifiers."
+    },
+    {
+      "file": "apps/desktop-shell/src/chrome.ts",
+      "line": 1330,
+      "improved": "Alternating quiet pass surfaces and bounded wrapping.",
+      "why": "Keep dense pass sequences readable without card noise."
+    },
+    {
+      "file": "apps/desktop-shell/src/chrome.ts",
+      "line": 1470,
+      "improved": "Fixed nonshrinking, centered glyph boxes; palette shortcut chips never wrap.",
+      "why": "Align icons and shortcuts despite longer labels."
+    },
+    {
+      "file": "apps/desktop-shell/src/chrome.ts",
+      "line": 1477,
+      "improved": "Distinct neutral empty well, stable wrapping status block, selectable returned-evidence well.",
+      "why": "Separate guidance, work status and output without implying progress or success."
+    },
+    {
+      "file": "apps/desktop-shell/src/chrome.ts",
+      "line": 1557,
+      "improved": "Wrapped diagnostic body with restrained refusal rail.",
+      "why": "Keep long machine keys/messages inside the error dialog."
+    },
+    {
+      "file": "desktop/linux/src/renderer/byo-configuration.ts",
+      "line": 50,
+      "improved": "Grouped BYOK status/error explanation; inert-safe press feedback; reduced-motion transitions off.",
+      "why": "Give the real unavailable state a readable place without asserting configuration success."
+    },
+    {
+      "file": "apps/web-shell/src/inspector-app.ts",
+      "line": 799,
+      "improved": "System light/dark surfaces, uniform focus/hover/press states, readable dashed disabled controls.",
+      "why": "Remove opacity-based unreadable labels while retaining native disabled behavior."
+    },
+    {
+      "file": "apps/web-shell/src/inspector-app.ts",
+      "line": 813,
+      "improved": "Wrapped full diff/path/hash evidence and bounded mobile controls.",
+      "why": "Eliminate actual long-refusal document overflow and long-diff inner overflow."
+    },
+    {
+      "file": "apps/web-shell/src/inspector-app.ts",
+      "line": 815,
+      "improved": "Distinct wrapping refusal explanation; existing Foundations danger paint on dark Canvas.",
+      "why": "Dark refusal text improves 2.87:1 to 5.78:1; light refusal stays 6.54:1."
+    },
+    {
+      "file": "apps/desktop-shell/test/visual-refinement.test.ts",
+      "line": 81,
+      "improved": "Five added desktop/BYOK presentation invariants.",
+      "why": "Guard the second-loop styling while retaining all six first-loop tests."
+    },
+    {
+      "file": "apps/web-shell/test/visual-postpr.test.ts",
+      "line": 6,
+      "improved": "Three added inspector presentation invariants.",
+      "why": "Guard full evidence, disabled paint and dark refusal framing."
+    }
+  ],
+  "sourceFiles": [
+    {
+      "path": "apps/desktop-shell/src/chrome.ts",
+      "bytes": 254261,
+      "sha256": "bc884fd3de6781cfb28b8b575fa68217c34e8baae0e76bfabc4dfbb270b1e7e0"
+    },
+    {
+      "path": "desktop/linux/src/renderer/byo-configuration.ts",
+      "bytes": 10817,
+      "sha256": "9538b1191b58debcfa36b080a60722241b2aa79ed6552765e676862f6e118b41"
+    },
+    {
+      "path": "apps/web-shell/src/inspector-app.ts",
+      "bytes": 31494,
+      "sha256": "c3c6c5590acd13dedfabe340723feae5bffc0ec13f415d67844ca3c0d4c221bd"
+    },
+    {
+      "path": "apps/desktop-shell/test/visual-refinement.test.ts",
+      "bytes": 6084,
+      "sha256": "00fa4a54ccbea73476d08c3284cc6a17677ef6fd2e42f7bf4ff4d51ec8255e84"
+    },
+    {
+      "path": "apps/web-shell/test/visual-postpr.test.ts",
+      "bytes": 1370,
+      "sha256": "5c58605c24ba62c19ab5db40a3c9b1e412997cc67ce92f9b4cca9bd0b25dac1c"
+    }
+  ],
+  "attributionDiffs": [
+    {
+      "path": "apps/desktop-shell/src/chrome.ts",
+      "beforeSourceSha256": "ba3b06ed4000282705b81a2fe73ec9a9864d2edc5ecf817ffba869e67d36c178",
+      "afterSourceSha256": "bc884fd3de6781cfb28b8b575fa68217c34e8baae0e76bfabc4dfbb270b1e7e0",
+      "diff": "--- /tmp/sceneaxi-postpr-desktop/chrome-before.ts\t2026-10-01 23:47:43.477980233 +0200\n+++ apps/desktop-shell/src/chrome.ts\t2026-10-01 23:50:56.782170277 +0200\n@@ -1149,6 +1149,13 @@\n .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}\n :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-control);box-shadow:0 0 0 4px var(--well)}\n .view-tab:focus-visible,.dock-tab:focus-visible,.rail-mode:focus-visible{outline-offset:-3px;box-shadow:none}\n+/* Rings remain inside clipped listboxes and popovers; filled controls retain the well halo. */\n+:is(.menu-command,.project-files select,.project-recent-select,.assistant-route,.assistant-manipulator):focus-visible{outline-offset:-3px;box-shadow:none}\n+:is(button,input,select,textarea,a[href],[tabindex=\"0\"]):focus-visible{scroll-margin:var(--space-3)}\n+:is(.menu-item,.profile-chip,.icon-button,.assistant-toggle,.assistant-mode):not(.is-inert):not([aria-pressed=\"true\"]):hover{background:var(--hover);color:var(--text)}\n+button:not(.is-inert):not(:disabled):not([aria-disabled=\"true\"]):active{box-shadow:inset 0 0 0 2px var(--line-hover)}\n+button:not(.is-inert):not(:disabled):not([aria-disabled=\"true\"]):active:focus-visible{box-shadow:0 0 0 4px var(--well),inset 0 0 0 2px var(--line-hover)}\n+:is(.left-dock,.inspector,.dock-body,.assistant-body,.assistant-composer,.palette-list,.overlay-card){scrollbar-gutter:stable;scroll-padding:var(--space-3)}\n button{transition:background-color .14s ease,border-color .14s ease,color .14s ease}\n button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}\n /* An inert control is dimmed by paint, never by element opacity: opacity\n@@ -1276,7 +1283,7 @@\n .asset-browser-card{min-width:0;padding:9px 10px;border:1px solid var(--line-card);border-radius:4px;background:var(--well)}\n .asset-browser-card strong,.asset-browser-card span{display:block;overflow-wrap:anywhere}\n .asset-browser-card strong{font-family:var(--mono);font-size:9px;color:var(--text)}\n-.asset-browser-card span{margin-top:4px;font-family:var(--mono);font-size:8px;line-height:1.45;color:var(--dim)}\n+.asset-browser-card span{margin-top:var(--space-1);font-family:var(--mono);font-size:10px;line-height:1.6;color:var(--dim);font-variant-numeric:tabular-nums;user-select:text}\n .asset-browser-card .asset-browser-meta{display:none}\n .scene-entities{padding:0 var(--space-2) var(--space-3)}\n .scene-entities-label{margin:0 3px 5px;font-size:10px;letter-spacing:.02em;color:var(--dim)}\n@@ -1289,10 +1296,10 @@\n .scene-entity-identity>span{display:block;margin-bottom:var(--space-1);font-size:12px;line-height:1.5;font-weight:600;color:var(--text);overflow-wrap:anywhere}\n .scene-entity-identity dl{display:none;gap:var(--space-1);margin:var(--space-2) 0 0}\n .shell[data-details-open=\"true\"] .scene-entity-identity dl{display:grid}\n-.scene-entity-identity dl div{display:grid;grid-template-columns:42px minmax(0,1fr);gap:5px;min-width:0}\n+.scene-entity-identity dl div{display:grid;grid-template-columns:42px minmax(0,1fr);gap:var(--space-2);min-width:0;padding:var(--space-1) 0;border-top:1px solid var(--line-row)}\n .scene-entity-identity dt{font-family:var(--mono);font-size:10px;line-height:1.6;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}\n .scene-entity-identity dd{min-width:0;margin:0}\n-.scene-entity-identity code{display:block;min-width:0;font-size:10px;line-height:1.6;color:var(--dim);white-space:normal;overflow-wrap:anywhere}\n+.scene-entity-identity code{display:block;min-width:0;font-size:10px;line-height:1.6;color:var(--dim);white-space:normal;overflow-wrap:anywhere;font-variant-numeric:tabular-nums;user-select:text}\n .scene-entity{width:100%;min-width:0;padding:8px 9px;border:1px solid var(--line-card);border-radius:4px;background:var(--raised);color:var(--dim);text-align:left}\n .scene-entity span,.scene-entity code{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}\n .scene-entity span{font-size:10px;color:var(--text)}.scene-entity code{margin-top:3px;font-size:8px;color:var(--dim)}\n@@ -1320,7 +1327,9 @@\n .scene-property-review{max-height:150px;margin:0;padding:var(--space-2);overflow:auto;border:1px solid var(--line);border-radius:4px;background:var(--well);color:var(--dim);font-family:var(--mono);font-size:10px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}\n .ship-export-panel{padding:0 12px 12px}.ship-export-evidence{display:grid;gap:8px;margin:12px 0 0}.ship-export-evidence div{min-width:0}.ship-export-evidence dt{font:9px/1.4 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}.ship-export-evidence dd{margin:2px 0 0;color:var(--dim);overflow-wrap:anywhere}.ship-export-evidence code{font-size:9px}\n .pass-list{list-style:none;margin:0;padding:10px 11px;display:flex;flex-direction:column;gap:6px}\n-.pass-row{display:flex;align-items:center;gap:10px;padding:6px 9px;background:var(--raised);border:1px solid var(--line);border-radius:4px}\n+.pass-row{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-3);background:var(--raised);border:1px solid var(--line);border-radius:4px;min-width:0}\n+.pass-row>div{min-width:0;overflow-wrap:anywhere}\n+.pass-row:nth-child(even){background:var(--well)}\n .pass-order{width:14px;height:14px;border-radius:3px;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font-size:9px;font-weight:700;flex:none}\n .pass-row b{display:block;font-size:11px;font-weight:400;color:var(--text)}\n .pass-row em{display:block;font-style:normal;font-size:10px;color:var(--dim)}\n@@ -1458,13 +1467,14 @@\n .shell[data-assistant=\"denied\"] .assistant-mark{background:${SIGNAL.sceneSurface}}\n .shell[data-assistant=\"denied\"] .assistant-mark::before{background:var(--scene)}\n .assistant-model{font-family:var(--mono);font-size:9px;color:var(--dim);background:var(--header);border:1px solid var(--line-control);border-radius:3px;padding:2px 6px}\n-.icon-button{width:26px;height:26px;border-radius:4px;display:grid;place-items:center;color:var(--dim)}\n+.icon-button{width:26px;height:26px;flex:none;border-radius:4px;display:grid;place-items:center;color:var(--dim);line-height:1}\n+:is(.dot,.rail-glyph,.assistant-mark,.overlay-mark,.badge){flex-shrink:0}\n /* An icon button on the accent fill keeps the on-accent glyph colour: without\n    this the later single-class rule wins and paints --dim on orange (1.1:1). */\n .primary-button.icon-button{color:var(--on-accent)}\n .primary-button.icon-button.is-inert{color:var(--inert-on-accent)}\n .assistant-body{flex:1;min-height:0;overflow-y:auto;padding:var(--space-4) var(--space-3)}\n-.assistant-empty{margin:0;font-size:13px;line-height:1.65;color:var(--dim);max-width:40ch}\n+.assistant-empty{margin:0;padding:var(--space-3);border:1px dashed var(--line-card);border-radius:var(--r-control);background:var(--well);font-size:13px;line-height:1.65;color:var(--dim);max-width:40ch}\n .assistant-live{display:none;align-items:end;gap:4px;height:28px;margin:14px 0 0}\n .shell[data-assistant-busy=\"true\"] .assistant-live{display:flex}\n .assistant-live i{width:5px;border-radius:99px;background:var(--accent);animation:assistant-bars 0.9s ease-in-out infinite}\n@@ -1473,9 +1483,9 @@\n .assistant-live i:nth-child(3){height:22px;animation-delay:.24s}\n .assistant-thinking{display:flex;align-items:center;gap:6px;margin:12px 0 0;font-size:12px;color:var(--accent)}\n .assistant-thinking .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}\n-.assistant-progress{font-size:11px;line-height:1.5;color:var(--text-2);padding:9px;border:1px solid var(--line-control);border-radius:4px;background:var(--header);transition:border-color .2s ease,color .2s ease}\n+.assistant-progress{min-width:0;min-height:44px;margin:var(--space-3) 0;overflow-wrap:anywhere;font-size:11px;line-height:1.5;color:var(--text-2);padding:var(--space-3);border:1px solid var(--line-control);border-radius:4px;background:var(--header);transition:border-color .2s ease,color .2s ease}\n .shell[data-assistant-busy=\"true\"] .assistant-progress{border-color:var(--accent);color:var(--text)}\n-.assistant-result{min-width:0;font-size:12px;line-height:1.65;color:var(--text-3);white-space:pre-wrap;overflow-wrap:anywhere;animation:rise .16s ease-out}\n+.assistant-result{min-width:0;padding:var(--space-3);border-left:2px solid var(--line-hover);background:var(--well);font-size:12px;line-height:1.65;color:var(--text-3);white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;animation:rise .16s ease-out}\n .assistant-foot{font-size:10px;color:var(--dim);line-height:1.5;margin:12px 0 0}\n .assistant-composer{flex:none;max-height:65%;min-height:0;overflow-y:auto;scroll-padding:var(--space-2);border-top:1px solid var(--line);background:var(--panel);padding:var(--space-3);display:flex;flex-direction:column;gap:var(--space-2)}\n .assistant-prompt{width:100%;min-height:72px;flex-shrink:0;resize:vertical;border:1px solid var(--line-control);border-radius:6px;background:var(--well);color:var(--text);font:12px/1.6 var(--sans);padding:var(--space-3)}\n@@ -1543,13 +1553,16 @@\n .overlay-mark{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;flex:none}\n .mark-refuse{background:${SIGNAL.refuseSurface};border:1px solid ${SIGNAL.refuseLine};color:var(--refuse)}\n .mark-complete{background:${SIGNAL.infoSurface};border:1px solid ${SIGNAL.infoLine};color:var(--info)}\n-.overlay-body{margin:0;padding:15px 18px;font-size:12px;line-height:1.6;color:var(--text-2)}\n+.overlay-body{margin:0;min-width:0;padding:var(--space-4);font-size:12px;line-height:1.6;color:var(--text-2);overflow-wrap:anywhere}\n+.overlay-refused .overlay-body{border-left:2px solid var(--refuse);margin:var(--space-4);padding:0 var(--space-3)}\n .overlay-actions{display:flex;gap:9px;justify-content:flex-end;padding:13px 18px;background:var(--well);border-top:1px solid var(--line)}\n .overlay-actions .primary-button,.overlay-actions .ghost-button{height:31px;padding:0 14px;font-size:12px}\n .palette-list{list-style:none;margin:0;padding:6px 0;max-height:352px;overflow-y:auto}\n .palette-group h3{margin:0;padding:8px 16px 4px;font-family:var(--mono);font-size:9px;font-weight:400;letter-spacing:.14em;color:var(--faint)}\n .palette-group ul{list-style:none;margin:0;padding:0}\n-.palette-item{display:flex;align-items:center;gap:12px;padding:8px 16px;width:100%;text-align:left}\n+.palette-item{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-4);width:100%;min-height:36px;text-align:left}\n+.palette-name{min-width:0;overflow-wrap:anywhere}\n+.palette-item kbd{flex:none;white-space:nowrap}\n .palette-item:hover,.palette-item:focus-visible{background:var(--hover)}\n .palette-item:focus-visible{outline-offset:-3px;box-shadow:none}\n .palette-name{flex:1;font-size:13px}\n"
+    },
+    {
+      "path": "desktop/linux/src/renderer/byo-configuration.ts",
+      "beforeSourceSha256": "113cb303b9deda3438f0cabe88bd881122cc4ee7e7c4e35cb0c69c8b8208edbb",
+      "afterSourceSha256": "9538b1191b58debcfa36b080a60722241b2aa79ed6552765e676862f6e118b41",
+      "diff": "--- /tmp/sceneaxi-postpr-desktop/byo-before.ts\t2026-10-01 23:47:43.477980233 +0200\n+++ desktop/linux/src/renderer/byo-configuration.ts\t2026-10-01 23:50:56.782170277 +0200\n@@ -46,7 +46,11 @@\n .desktop-byo-config button[data-primary]{border-color:var(--accent);color:var(--accent)}\n /* Disabled labels keep AA contrast: paint with the inert token, never composite opacity. */\n .desktop-byo-config button:disabled,.desktop-byo-config input:disabled,.desktop-byo-config select:disabled{cursor:not-allowed;color:var(--inert);border-color:var(--line-control)}\n-.desktop-byo-config-message{margin:0;font-size:11px;line-height:1.6;color:var(--dim);overflow-wrap:anywhere}\n+/* The same stable status well serves configured and unavailable states without implying success. */\n+.desktop-byo-config-message{margin:var(--space-1) 0 0;min-width:0;padding:var(--space-2);border-left:2px solid var(--line-hover);background:var(--panel);font-size:11px;line-height:1.6;color:var(--dim);overflow-wrap:anywhere}\n+.desktop-byo-config button:not(:disabled):active{box-shadow:inset 0 0 0 2px var(--line-hover)}\n+.desktop-byo-config button:not(:disabled):active:focus-visible{box-shadow:0 0 0 4px var(--well),inset 0 0 0 2px var(--line-hover)}\n+@media (prefers-reduced-motion: reduce){.desktop-byo-config button{transition:none}}\n @media (prefers-reduced-motion: reduce){.desktop-byo-config *{scroll-behavior:auto}}\n `;\n   document.head.append(style);\n"
+    },
+    {
+      "path": "apps/web-shell/src/inspector-app.ts",
+      "beforeSourceSha256": "36c5e2271bcb97b121c9b9676a2e899c39a773964823d67d5a0deabb2c2bf6aa",
+      "afterSourceSha256": "c3c6c5590acd13dedfabe340723feae5bffc0ec13f415d67844ca3c0d4c221bd",
+      "diff": "--- /tmp/sceneaxi-postpr-desktop/inspector-before.ts\t2026-10-01 23:53:20.595240773 +0200\n+++ apps/web-shell/src/inspector-app.ts\t2026-10-01 23:56:25.582909490 +0200\n@@ -797,19 +797,27 @@\n <title>SceneAxi inspector — ${root}</title>\n <style>\n   :root { color-scheme: light dark; }\n-  body { font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; margin: 0; padding: 1.5rem; }\n-  h1 { font-size: 1.1rem; margin: 0 0 .25rem; }\n-  .root { opacity: .7; margin: 0 0 1.25rem; word-break: break-all; }\n-  form { display: grid; gap: .5rem; max-width: 46rem; }\n-  label { display: grid; gap: .2rem; }\n-  input { font: inherit; padding: .35rem .5rem; }\n-  .actions { display: flex; gap: .5rem; flex-wrap: wrap; margin: 1rem 0; }\n-  button { font: inherit; padding: .4rem .9rem; cursor: pointer; }\n-  button[disabled] { cursor: not-allowed; opacity: .45; }\n-  pre { border: 1px solid currentColor; padding: .75rem; overflow-x: auto; max-width: 60rem; }\n+  * { box-sizing: border-box; }\n+  body { font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; margin: 0; padding: 24px; background: Canvas; color: CanvasText; }\n+  h1 { font-size: 1.1rem; margin: 0 0 4px; }\n+  .root { margin: 0 0 20px; overflow-wrap: anywhere; }\n+  form { display: grid; gap: 12px; max-width: 46rem; min-width: 0; }\n+  label { display: grid; gap: 4px; min-width: 0; }\n+  input { font: inherit; width: 100%; min-width: 0; padding: 8px 12px; background: Field; color: FieldText; border: 1px solid currentColor; border-radius: 4px; }\n+  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0; }\n+  button { font: inherit; min-height: 36px; padding: 8px 12px; cursor: pointer; background: ButtonFace; color: ButtonText; border: 1px solid currentColor; border-radius: 4px; }\n+  button[disabled] { cursor: not-allowed; border-style: dashed; }\n+  :is(button,input,a[href]):focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }\n+  button:not(:disabled):hover { text-decoration: underline; text-underline-offset: 4px; }\n+  button:not(:disabled):active { box-shadow: inset 0 0 0 2px currentColor; }\n+  pre { border: 1px solid currentColor; border-radius: 4px; padding: 16px; max-width: 60rem; white-space: pre-wrap; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }\n   .phase { font-weight: 700; }\n+  #note:not(:empty) { display: block; margin-top: 8px; padding: 8px 12px; border-left: 2px solid currentColor; overflow-wrap: anywhere; }\n   .refused { color: #b3261e; }\n-  footer { margin-top: 2rem; opacity: .7; max-width: 46rem; }\n+  /* Foundations danger paint remains legible on the browser's dark Canvas. */\n+  @media (prefers-color-scheme: dark) { .refused { color: #FF4D5E; } }\n+  footer { margin-top: 32px; max-width: 46rem; overflow-wrap: anywhere; }\n+  @media (max-width: 480px) { body { padding: 16px; } .actions button { flex: 1 1 auto; } }\n </style>\n </head>\n <body>\n"
+    }
+  ],
+  "prCurrentHeadDiff": "diff --git a/apps/desktop-shell/src/chrome.ts b/apps/desktop-shell/src/chrome.ts\nindex 96466927..6607829b 100644\n--- a/apps/desktop-shell/src/chrome.ts\n+++ b/apps/desktop-shell/src/chrome.ts\n@@ -1149,6 +1149,13 @@ body{background:var(--backdrop);color:var(--text);font-family:var(--sans);font-s\n .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}\n :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-control);box-shadow:0 0 0 4px var(--well)}\n .view-tab:focus-visible,.dock-tab:focus-visible,.rail-mode:focus-visible{outline-offset:-3px;box-shadow:none}\n+/* Rings remain inside clipped listboxes and popovers; filled controls retain the well halo. */\n+:is(.menu-command,.project-files select,.project-recent-select,.assistant-route,.assistant-manipulator):focus-visible{outline-offset:-3px;box-shadow:none}\n+:is(button,input,select,textarea,a[href],[tabindex=\"0\"]):focus-visible{scroll-margin:var(--space-3)}\n+:is(.menu-item,.profile-chip,.icon-button,.assistant-toggle,.assistant-mode):not(.is-inert):not([aria-pressed=\"true\"]):hover{background:var(--hover);color:var(--text)}\n+button:not(.is-inert):not(:disabled):not([aria-disabled=\"true\"]):active{box-shadow:inset 0 0 0 2px var(--line-hover)}\n+button:not(.is-inert):not(:disabled):not([aria-disabled=\"true\"]):active:focus-visible{box-shadow:0 0 0 4px var(--well),inset 0 0 0 2px var(--line-hover)}\n+:is(.left-dock,.inspector,.dock-body,.assistant-body,.assistant-composer,.palette-list,.overlay-card){scrollbar-gutter:stable;scroll-padding:var(--space-3)}\n button{transition:background-color .14s ease,border-color .14s ease,color .14s ease}\n button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}\n /* An inert control is dimmed by paint, never by element opacity: opacity\n@@ -1276,7 +1283,7 @@ code,kbd{font-family:var(--mono);font-size:.86em}\n .asset-browser-card{min-width:0;padding:9px 10px;border:1px solid var(--line-card);border-radius:4px;background:var(--well)}\n .asset-browser-card strong,.asset-browser-card span{display:block;overflow-wrap:anywhere}\n .asset-browser-card strong{font-family:var(--mono);font-size:9px;color:var(--text)}\n-.asset-browser-card span{margin-top:4px;font-family:var(--mono);font-size:8px;line-height:1.45;color:var(--dim)}\n+.asset-browser-card span{margin-top:var(--space-1);font-family:var(--mono);font-size:10px;line-height:1.6;color:var(--dim);font-variant-numeric:tabular-nums;user-select:text}\n .asset-browser-card .asset-browser-meta{display:none}\n .scene-entities{padding:0 var(--space-2) var(--space-3)}\n .scene-entities-label{margin:0 3px 5px;font-size:10px;letter-spacing:.02em;color:var(--dim)}\n@@ -1289,10 +1296,10 @@ code,kbd{font-family:var(--mono);font-size:.86em}\n .scene-entity-identity>span{display:block;margin-bottom:var(--space-1);font-size:12px;line-height:1.5;font-weight:600;color:var(--text);overflow-wrap:anywhere}\n .scene-entity-identity dl{display:none;gap:var(--space-1);margin:var(--space-2) 0 0}\n .shell[data-details-open=\"true\"] .scene-entity-identity dl{display:grid}\n-.scene-entity-identity dl div{display:grid;grid-template-columns:42px minmax(0,1fr);gap:5px;min-width:0}\n+.scene-entity-identity dl div{display:grid;grid-template-columns:42px minmax(0,1fr);gap:var(--space-2);min-width:0;padding:var(--space-1) 0;border-top:1px solid var(--line-row)}\n .scene-entity-identity dt{font-family:var(--mono);font-size:10px;line-height:1.6;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}\n .scene-entity-identity dd{min-width:0;margin:0}\n-.scene-entity-identity code{display:block;min-width:0;font-size:10px;line-height:1.6;color:var(--dim);white-space:normal;overflow-wrap:anywhere}\n+.scene-entity-identity code{display:block;min-width:0;font-size:10px;line-height:1.6;color:var(--dim);white-space:normal;overflow-wrap:anywhere;font-variant-numeric:tabular-nums;user-select:text}\n .scene-entity{width:100%;min-width:0;padding:8px 9px;border:1px solid var(--line-card);border-radius:4px;background:var(--raised);color:var(--dim);text-align:left}\n .scene-entity span,.scene-entity code{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}\n .scene-entity span{font-size:10px;color:var(--text)}.scene-entity code{margin-top:3px;font-size:8px;color:var(--dim)}\n@@ -1320,7 +1327,9 @@ code,kbd{font-family:var(--mono);font-size:.86em}\n .scene-property-review{max-height:150px;margin:0;padding:var(--space-2);overflow:auto;border:1px solid var(--line);border-radius:4px;background:var(--well);color:var(--dim);font-family:var(--mono);font-size:10px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}\n .ship-export-panel{padding:0 12px 12px}.ship-export-evidence{display:grid;gap:8px;margin:12px 0 0}.ship-export-evidence div{min-width:0}.ship-export-evidence dt{font:9px/1.4 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}.ship-export-evidence dd{margin:2px 0 0;color:var(--dim);overflow-wrap:anywhere}.ship-export-evidence code{font-size:9px}\n .pass-list{list-style:none;margin:0;padding:10px 11px;display:flex;flex-direction:column;gap:6px}\n-.pass-row{display:flex;align-items:center;gap:10px;padding:6px 9px;background:var(--raised);border:1px solid var(--line);border-radius:4px}\n+.pass-row{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-3);background:var(--raised);border:1px solid var(--line);border-radius:4px;min-width:0}\n+.pass-row>div{min-width:0;overflow-wrap:anywhere}\n+.pass-row:nth-child(even){background:var(--well)}\n .pass-order{width:14px;height:14px;border-radius:3px;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font-size:9px;font-weight:700;flex:none}\n .pass-row b{display:block;font-size:11px;font-weight:400;color:var(--text)}\n .pass-row em{display:block;font-style:normal;font-size:10px;color:var(--dim)}\n@@ -1458,13 +1467,14 @@ code,kbd{font-family:var(--mono);font-size:.86em}\n .shell[data-assistant=\"denied\"] .assistant-mark{background:${SIGNAL.sceneSurface}}\n .shell[data-assistant=\"denied\"] .assistant-mark::before{background:var(--scene)}\n .assistant-model{font-family:var(--mono);font-size:9px;color:var(--dim);background:var(--header);border:1px solid var(--line-control);border-radius:3px;padding:2px 6px}\n-.icon-button{width:26px;height:26px;border-radius:4px;display:grid;place-items:center;color:var(--dim)}\n+.icon-button{width:26px;height:26px;flex:none;border-radius:4px;display:grid;place-items:center;color:var(--dim);line-height:1}\n+:is(.dot,.rail-glyph,.assistant-mark,.overlay-mark,.badge){flex-shrink:0}\n /* An icon button on the accent fill keeps the on-accent glyph colour: without\n    this the later single-class rule wins and paints --dim on orange (1.1:1). */\n .primary-button.icon-button{color:var(--on-accent)}\n .primary-button.icon-button.is-inert{color:var(--inert-on-accent)}\n .assistant-body{flex:1;min-height:0;overflow-y:auto;padding:var(--space-4) var(--space-3)}\n-.assistant-empty{margin:0;font-size:13px;line-height:1.65;color:var(--dim);max-width:40ch}\n+.assistant-empty{margin:0;padding:var(--space-3);border:1px dashed var(--line-card);border-radius:var(--r-control);background:var(--well);font-size:13px;line-height:1.65;color:var(--dim);max-width:40ch}\n .assistant-live{display:none;align-items:end;gap:4px;height:28px;margin:14px 0 0}\n .shell[data-assistant-busy=\"true\"] .assistant-live{display:flex}\n .assistant-live i{width:5px;border-radius:99px;background:var(--accent);animation:assistant-bars 0.9s ease-in-out infinite}\n@@ -1473,9 +1483,9 @@ code,kbd{font-family:var(--mono);font-size:.86em}\n .assistant-live i:nth-child(3){height:22px;animation-delay:.24s}\n .assistant-thinking{display:flex;align-items:center;gap:6px;margin:12px 0 0;font-size:12px;color:var(--accent)}\n .assistant-thinking .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}\n-.assistant-progress{font-size:11px;line-height:1.5;color:var(--text-2);padding:9px;border:1px solid var(--line-control);border-radius:4px;background:var(--header);transition:border-color .2s ease,color .2s ease}\n+.assistant-progress{min-width:0;min-height:44px;margin:var(--space-3) 0;overflow-wrap:anywhere;font-size:11px;line-height:1.5;color:var(--text-2);padding:var(--space-3);border:1px solid var(--line-control);border-radius:4px;background:var(--header);transition:border-color .2s ease,color .2s ease}\n .shell[data-assistant-busy=\"true\"] .assistant-progress{border-color:var(--accent);color:var(--text)}\n-.assistant-result{min-width:0;font-size:12px;line-height:1.65;color:var(--text-3);white-space:pre-wrap;overflow-wrap:anywhere;animation:rise .16s ease-out}\n+.assistant-result{min-width:0;padding:var(--space-3);border-left:2px solid var(--line-hover);background:var(--well);font-size:12px;line-height:1.65;color:var(--text-3);white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;animation:rise .16s ease-out}\n .assistant-foot{font-size:10px;color:var(--dim);line-height:1.5;margin:12px 0 0}\n .assistant-composer{flex:none;max-height:65%;min-height:0;overflow-y:auto;scroll-padding:var(--space-2);border-top:1px solid var(--line);background:var(--panel);padding:var(--space-3);display:flex;flex-direction:column;gap:var(--space-2)}\n .assistant-prompt{width:100%;min-height:72px;flex-shrink:0;resize:vertical;border:1px solid var(--line-control);border-radius:6px;background:var(--well);color:var(--text);font:12px/1.6 var(--sans);padding:var(--space-3)}\n@@ -1543,13 +1553,16 @@ code,kbd{font-family:var(--mono);font-size:.86em}\n .overlay-mark{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;flex:none}\n .mark-refuse{background:${SIGNAL.refuseSurface};border:1px solid ${SIGNAL.refuseLine};color:var(--refuse)}\n .mark-complete{background:${SIGNAL.infoSurface};border:1px solid ${SIGNAL.infoLine};color:var(--info)}\n-.overlay-body{margin:0;padding:15px 18px;font-size:12px;line-height:1.6;color:var(--text-2)}\n+.overlay-body{margin:0;min-width:0;padding:var(--space-4);font-size:12px;line-height:1.6;color:var(--text-2);overflow-wrap:anywhere}\n+.overlay-refused .overlay-body{border-left:2px solid var(--refuse);margin:var(--space-4);padding:0 var(--space-3)}\n .overlay-actions{display:flex;gap:9px;justify-content:flex-end;padding:13px 18px;background:var(--well);border-top:1px solid var(--line)}\n .overlay-actions .primary-button,.overlay-actions .ghost-button{height:31px;padding:0 14px;font-size:12px}\n .palette-list{list-style:none;margin:0;padding:6px 0;max-height:352px;overflow-y:auto}\n .palette-group h3{margin:0;padding:8px 16px 4px;font-family:var(--mono);font-size:9px;font-weight:400;letter-spacing:.14em;color:var(--faint)}\n .palette-group ul{list-style:none;margin:0;padding:0}\n-.palette-item{display:flex;align-items:center;gap:12px;padding:8px 16px;width:100%;text-align:left}\n+.palette-item{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-4);width:100%;min-height:36px;text-align:left}\n+.palette-name{min-width:0;overflow-wrap:anywhere}\n+.palette-item kbd{flex:none;white-space:nowrap}\n .palette-item:hover,.palette-item:focus-visible{background:var(--hover)}\n .palette-item:focus-visible{outline-offset:-3px;box-shadow:none}\n .palette-name{flex:1;font-size:13px}\ndiff --git a/apps/web-shell/src/inspector-app.ts b/apps/web-shell/src/inspector-app.ts\nindex 3dd8e9df..33466234 100644\n--- a/apps/web-shell/src/inspector-app.ts\n+++ b/apps/web-shell/src/inspector-app.ts\n@@ -26,6 +26,8 @@ import {\n   contentHash,\n   parseDocumentText,\n   type ApplyDiagnostic,\n+  type JsonObject,\n+  type JsonValue,\n } from \"@sceneaxi/authoring-core\";\n import {\n   createInspectorSession,\n@@ -35,6 +37,8 @@ import {\n import { createDefaultAssistantPanel } from \"./assistant-default.js\";\n import type {\n   AssistantPanel,\n+  AssistantAskRequest,\n+  AssistantPanelReason,\n   AssistantPanelSnapshot,\n   AssistantRefusal,\n   CreateAssistantPanelResult,\n@@ -196,13 +200,41 @@ const JSON_TYPE = \"application/json; charset=utf-8\";\n \n const HTML_TYPE = \"text/html; charset=utf-8\";\n \n-function jsonBody(payload: Readonly<Record<string, unknown>>): string {\n+type AssistantTurnRequest = { -readonly [K in keyof AssistantAskRequest]: AssistantAskRequest[K] };\n+\n+type InspectorResponsePayload = Readonly<{\n+  app?: string;\n+  ok?: boolean;\n+  action?: string;\n+  reason?: ServedRefusalReason;\n+  message?: string;\n+  projectRoot?: string;\n+  reviewToken?: string | null;\n+  snapshot?: InspectorSnapshot | AssistantPanelSnapshot;\n+  documentPath?: string;\n+  documentId?: string;\n+  contentHash?: string;\n+  dataKeys?: string[];\n+  routes?: string[];\n+  assistantReason?: AssistantPanelReason;\n+}>;\n+\n+function isText(value: JsonValue | undefined): value is string {\n+  return typeof value === \"string\";\n+}\n+\n+function isJsonObject(value: JsonValue): value is JsonObject {\n+  // The caller supplies JSON.parse output, so only the root object/array distinction remains.\n+  return typeof value === \"object\" && value !== null && !Array.isArray(value);\n+}\n+\n+function jsonBody(payload: InspectorResponsePayload): string {\n   return `${JSON.stringify(payload, null, 2)}\\n`;\n }\n \n function okResponse(\n   action: string,\n-  payload: Readonly<Record<string, unknown>>,\n+  payload: InspectorResponsePayload,\n ): InspectorHttpResponse {\n   return {\n     status: 200,\n@@ -216,7 +248,7 @@ function refuse(\n   action: string,\n   reason: ServedRefusalReason,\n   message: string,\n-  extra: Readonly<Record<string, unknown>> = {},\n+  extra: InspectorResponsePayload = {},\n ): InspectorHttpResponse {\n   return {\n     status,\n@@ -281,11 +313,11 @@ function refuseRequest(\n  */\n export function resolveInsideProjectRoot(\n   projectRoot: string,\n-  documentPath: unknown,\n+  documentPath: JsonValue | undefined,\n ):\n   | { readonly ok: true; readonly documentPath: string; readonly absolute: string }\n   | ({ readonly ok: false } & RequestRefusal) {\n-  if (typeof documentPath !== \"string\" || documentPath.length === 0) {\n+  if (!isText(documentPath) || documentPath.length === 0) {\n     return {\n       ok: false,\n       reason: WEB_SHELL_REFUSALS.editFieldInvalid,\n@@ -318,7 +350,7 @@ export function resolveInsideProjectRoot(\n function parseJsonObject(\n   body: string | undefined,\n ):\n-  | { readonly ok: true; readonly value: Readonly<Record<string, unknown>> }\n+  | { readonly ok: true; readonly value: JsonObject }\n   | ({ readonly ok: false } & RequestRefusal) {\n   const text = body ?? \"\";\n \n@@ -331,7 +363,7 @@ function parseJsonObject(\n   }\n \n   if (text.trim() === \"\") return { ok: true, value: {} };\n-  let parsed: unknown;\n+  let parsed: JsonValue;\n \n   try {\n     parsed = JSON.parse(text);\n@@ -345,7 +377,7 @@ function parseJsonObject(\n     };\n   }\n \n-  if (typeof parsed !== \"object\" || parsed === null || Array.isArray(parsed)) {\n+  if (!isJsonObject(parsed)) {\n     return {\n       ok: false,\n       reason: WEB_SHELL_REFUSALS.requestBodyNotJson,\n@@ -353,7 +385,7 @@ function parseJsonObject(\n     };\n   }\n \n-  return { ok: true, value: parsed as Record<string, unknown> };\n+  return { ok: true, value: parsed };\n }\n \n /**\n@@ -424,7 +456,7 @@ export function createInspectorApp(\n   let reviewGeneration = 0;\n   let activeReviewToken: string | null = null;\n \n-  const documentStatus = (path: unknown): InspectorHttpResponse => {\n+  const documentStatus = (path: JsonValue | undefined): InspectorHttpResponse => {\n     const resolved = resolveInsideProjectRoot(projectRoot, path);\n \n     if (!resolved.ok) return refuseRequest(\"document\", resolved);\n@@ -476,7 +508,7 @@ export function createInspectorApp(\n     if (!resolved.ok) return refuseRequest(\"propose\", resolved);\n     const jsonPointer = parsed.value[\"jsonPointer\"];\n \n-    if (typeof jsonPointer !== \"string\") {\n+    if (!isText(jsonPointer)) {\n       return refuseRequest(\"propose\", {\n         reason: WEB_SHELL_REFUSALS.editFieldInvalid,\n         message:\n@@ -529,7 +561,7 @@ export function createInspectorApp(\n     const reviewToken = parsed.value[\"reviewToken\"];\n \n     if (\n-      typeof reviewToken !== \"string\" ||\n+      !isText(reviewToken) ||\n       activeReviewToken === null ||\n       reviewToken !== activeReviewToken\n     ) {\n@@ -577,12 +609,16 @@ export function createInspectorApp(\n       }\n     }\n \n-    const snapshot = await panel.ask({\n-      prompt: typeof parsed.value[\"prompt\"] === \"string\" ? parsed.value[\"prompt\"] : \"\",\n-      ...(typeof parsed.value[\"turnId\"] === \"string\"\n-        ? { turnId: parsed.value[\"turnId\"] }\n-        : {}),\n-    });\n+    const prompt = parsed.value[\"prompt\"];\n+    const turnId = parsed.value[\"turnId\"];\n+\n+    const request: AssistantTurnRequest = {\n+      prompt: isText(prompt) ? prompt : \"\",\n+    };\n+\n+    if (isText(turnId)) request.turnId = turnId;\n+\n+    const snapshot = await panel.ask(request);\n \n     return assistantSnapshotResponse(\"assistant\", snapshot);\n   };\n@@ -627,7 +663,8 @@ export function createInspectorApp(\n       );\n     }\n \n-    const [action, matched] = entry as [\n+    // SAFETY: entry comes from Object.entries of the closed INSPECTOR_ACTIONS registry, preserving its key/value pairs.\n+  const [action, matched] = entry as [\n       InspectorAction,\n       (typeof INSPECTOR_ACTIONS)[InspectorAction],\n     ];\n@@ -760,19 +797,27 @@ export function inspectorPageHtml(projectRoot: string): string {\n <title>SceneAxi inspector — ${root}</title>\n <style>\n   :root { color-scheme: light dark; }\n-  body { font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; margin: 0; padding: 1.5rem; }\n-  h1 { font-size: 1.1rem; margin: 0 0 .25rem; }\n-  .root { opacity: .7; margin: 0 0 1.25rem; word-break: break-all; }\n-  form { display: grid; gap: .5rem; max-width: 46rem; }\n-  label { display: grid; gap: .2rem; }\n-  input { font: inherit; padding: .35rem .5rem; }\n-  .actions { display: flex; gap: .5rem; flex-wrap: wrap; margin: 1rem 0; }\n-  button { font: inherit; padding: .4rem .9rem; cursor: pointer; }\n-  button[disabled] { cursor: not-allowed; opacity: .45; }\n-  pre { border: 1px solid currentColor; padding: .75rem; overflow-x: auto; max-width: 60rem; }\n+  * { box-sizing: border-box; }\n+  body { font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; margin: 0; padding: 24px; background: Canvas; color: CanvasText; }\n+  h1 { font-size: 1.1rem; margin: 0 0 4px; }\n+  .root { margin: 0 0 20px; overflow-wrap: anywhere; }\n+  form { display: grid; gap: 12px; max-width: 46rem; min-width: 0; }\n+  label { display: grid; gap: 4px; min-width: 0; }\n+  input { font: inherit; width: 100%; min-width: 0; padding: 8px 12px; background: Field; color: FieldText; border: 1px solid currentColor; border-radius: 4px; }\n+  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0; }\n+  button { font: inherit; min-height: 36px; padding: 8px 12px; cursor: pointer; background: ButtonFace; color: ButtonText; border: 1px solid currentColor; border-radius: 4px; }\n+  button[disabled] { cursor: not-allowed; border-style: dashed; }\n+  :is(button,input,a[href]):focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }\n+  button:not(:disabled):hover { text-decoration: underline; text-underline-offset: 4px; }\n+  button:not(:disabled):active { box-shadow: inset 0 0 0 2px currentColor; }\n+  pre { border: 1px solid currentColor; border-radius: 4px; padding: 16px; max-width: 60rem; white-space: pre-wrap; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }\n   .phase { font-weight: 700; }\n+  #note:not(:empty) { display: block; margin-top: 8px; padding: 8px 12px; border-left: 2px solid currentColor; overflow-wrap: anywhere; }\n   .refused { color: #b3261e; }\n-  footer { margin-top: 2rem; opacity: .7; max-width: 46rem; }\n+  /* Foundations danger paint remains legible on the browser's dark Canvas. */\n+  @media (prefers-color-scheme: dark) { .refused { color: #FF4D5E; } }\n+  footer { margin-top: 32px; max-width: 46rem; overflow-wrap: anywhere; }\n+  @media (max-width: 480px) { body { padding: 16px; } .actions button { flex: 1 1 auto; } }\n </style>\n </head>\n <body>\ndiff --git a/desktop/linux/src/renderer/byo-configuration.ts b/desktop/linux/src/renderer/byo-configuration.ts\nindex 6c3d1b0e..94048de9 100644\n--- a/desktop/linux/src/renderer/byo-configuration.ts\n+++ b/desktop/linux/src/renderer/byo-configuration.ts\n@@ -46,7 +46,11 @@ function installStyles(): void {\n .desktop-byo-config button[data-primary]{border-color:var(--accent);color:var(--accent)}\n /* Disabled labels keep AA contrast: paint with the inert token, never composite opacity. */\n .desktop-byo-config button:disabled,.desktop-byo-config input:disabled,.desktop-byo-config select:disabled{cursor:not-allowed;color:var(--inert);border-color:var(--line-control)}\n-.desktop-byo-config-message{margin:0;font-size:11px;line-height:1.6;color:var(--dim);overflow-wrap:anywhere}\n+/* The same stable status well serves configured and unavailable states without implying success. */\n+.desktop-byo-config-message{margin:var(--space-1) 0 0;min-width:0;padding:var(--space-2);border-left:2px solid var(--line-hover);background:var(--panel);font-size:11px;line-height:1.6;color:var(--dim);overflow-wrap:anywhere}\n+.desktop-byo-config button:not(:disabled):active{box-shadow:inset 0 0 0 2px var(--line-hover)}\n+.desktop-byo-config button:not(:disabled):active:focus-visible{box-shadow:0 0 0 4px var(--well),inset 0 0 0 2px var(--line-hover)}\n+@media (prefers-reduced-motion: reduce){.desktop-byo-config button{transition:none}}\n @media (prefers-reduced-motion: reduce){.desktop-byo-config *{scroll-behavior:auto}}\n `;\n   document.head.append(style);\n",
+  "qaDisposition": "Prior QA visual ledger already passed bounded measurements. This pass addresses additional dense/hash/state/focus/interaction polish rather than fabricating old overlap defects. QA root-build web-shell typing failures were repaired before or outside this styling pass; targeted shell build now passes. Existing Linux desktop-scene type error remains outside owned renderer scope.",
+  "browser": {
+    "tool": "Existing installed Playwright/Chromium; no dedicated browser tool exposed; no new dependencies.",
+    "executable": "/home/devuser/.cache/ms-playwright/chromium-1223/chrome-linux64/chrome",
+    "desktopScenarios": 13,
+    "inspectorCases": 6,
+    "screenshotCount": 50,
+    "changedPairs": 22,
+    "checks": 1599,
+    "passed": 1599,
+    "focusSamples": 510,
+    "failed": 0,
+    "pageErrors": 0,
+    "afterDocumentOverflowCases": 0,
+    "afterInspectorDiffOverflowCases": 0,
+    "beforeInspectorDocumentOverflowCases": 2,
+    "beforeInspectorDiffOverflowCases": 4,
+    "metrics": [
+      {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/before.json",
+        "bytes": 168904,
+        "sha256": "9b5e5ed4e0887ecbca771dca8a87be0fadb77c436eb0f768493a3d85c4596662"
+      },
+      {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/after.json",
+        "bytes": 168813,
+        "sha256": "51759d691a6a1cef347e17f85809cd0093a447a0c61980617dd0da3cfe5727be"
+      },
+      {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/before-inspector.json",
+        "bytes": 7464,
+        "sha256": "3672afbba8971221b7f58a2ae17cf0fb8865071352e3bf7d596ace8589ffeb92"
+      },
+      {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/after-inspector.json",
+        "bytes": 7467,
+        "sha256": "db2d4e793215f345bdec97f3d1ff882bf1003b4b39eb25f21f790772951862d7"
+      }
+    ],
+    "focusMethod": "Keyboard Tab establishes modality, then focus every visible/enabled sampled control. 510 after-case samples all have solid >=2px focus-visible rings; repeated controls across scenarios are not claimed as 510 unique controls.",
+    "fixtures": "Actual seeded native bridge hierarchy for selection. BYOK no configureByo port gives genuine unavailable state. Busy, dense cloned hierarchy/long result, refusal-dialog and inspector long-diff/refusal text are explicitly labelled visual-only fixtures; no provider operation or proposal performed. Native/GPU proof and manual image inspection are not claimed.",
+    "desktopHarness": "import {createRequire, registerHooks} from 'node:module';\nimport {execFileSync} from 'node:child_process';\nimport {mkdirSync, mkdtempSync, rmSync, writeFileSync} from 'node:fs';\nimport {tmpdir} from 'node:os';\nimport {join} from 'node:path';\nconst root='/home/devuser/Documents/Projects/sceneaxi';\nconst {resolve}=await import(root+'/scripts/workspace-dist-resolver.mjs');\nregisterHooks({resolve});\nconst require=createRequire(root+'/sites/umbrella/package.json');\nconst {chromium}=require('@playwright/test');\nconst esbuild=createRequire(root+'/desktop/linux/package.json')('esbuild');\nconst hostBundle=await esbuild.build({stdin:{contents:`export {createDesktopBridge} from '${root}/desktop/linux/src/lib/bridge.ts'; export {seedDesktopProject} from '${root}/desktop/linux/src/lib/project-seed.ts';`,resolveDir:root},bundle:true,packages:'external',platform:'node',format:'esm',write:false});\nconst {createDesktopBridge,seedDesktopProject}=await import('data:text/javascript;base64,'+Buffer.from(hostBundle.outputFiles[0].text).toString('base64'));\nconst stage=process.argv[2];\nconst beforeBundle=await esbuild.build({stdin:{contents:execFileSync('git',['show','f4990b8aac5f5af75a16fe3fbb55b74855f2b636:apps/desktop-shell/src/chrome.ts'],{cwd:root,encoding:'utf8'}),resolveDir:root+'/apps/desktop-shell/src',loader:'ts'},bundle:true,packages:'external',platform:'node',format:'esm',write:false});\nconst afterBundle=await esbuild.build({entryPoints:[root+'/apps/desktop-shell/src/chrome.ts'],bundle:true,packages:'external',platform:'node',format:'esm',write:false});\nconst afterModule=await import('data:text/javascript;base64,'+Buffer.from(afterBundle.outputFiles[0].text).toString('base64'));\nconst beforeModule=await import('data:text/javascript;base64,'+Buffer.from(beforeBundle.outputFiles[0].text).toString('base64'));\nconst {createDesktopVisualState,desktopVisualView}=await import('@sceneaxi/desktop-shell');\nconst byoSource=stage==='before'?execFileSync('git',['show','f4990b8aac5f5af75a16fe3fbb55b74855f2b636:desktop/linux/src/renderer/byo-configuration.ts'],{cwd:root,encoding:'utf8'}):null;\nconst byo=await esbuild.build({...byoSource?{stdin:{contents:byoSource,loader:'ts',resolveDir:root+'/desktop/linux/src/renderer'}}:{entryPoints:[root+'/desktop/linux/src/renderer/byo-configuration.ts']},bundle:true,platform:'browser',format:'iife',globalName:'Byo',write:false});\nconst directory=root+'/apps/desktop-shell/test/visual-postpr-evidence';\nmkdirSync(directory,{recursive:true});\nconst browser=await chromium.launch({headless:true,executablePath:'/home/devuser/.cache/ms-playwright/chromium-1223/chrome-linux64/chrome'});\nconst receipts=[];\nconst fixtureRoot=mkdtempSync(join(tmpdir(),'sceneaxi-visual-'));\n\nif(!seedDesktopProject(fixtureRoot).ok) throw new Error('seed failed');\nconst host=createDesktopBridge({cwd:fixtureRoot,commandCapabilities:['scene.compose','authoring.change-review','authoring.undo','authoring.redo']});\ntry {\nfor(const scenario of [\n{id:'empty',width:1680,height:1000},\n{id:'long-evidence',width:1680,height:1000,host:true,details:true},\n{id:'selected',width:1680,height:1000,host:true,details:true},\n{id:'byok',width:1680,height:1000,byo:true,details:true},\n{id:'narrow',width:900,height:640,host:true,drawer:true},\n{id:'byok-narrow',width:900,height:640,byo:true,details:true,assistantDrawer:true},\n{id:'palette',width:1280,height:900,palette:true},\n{id:'refused',width:1280,height:900,palette:true,refused:true},\n{id:'menu-pressed',width:1280,height:900,pressed:true},\n{id:'mobile-refusal',width:375,height:812},\n{id:'busy',width:1680,height:1000,busy:true},\n{id:'web',width:1680,height:1000,profile:'web'},\n{id:'kids',width:900,height:640,profile:'kids'},\n]) {\nconst context=await browser.newContext({viewport:{width:scenario.width,height:scenario.height},reducedMotion:scenario.busy?'no-preference':'reduce'});\nconst page=await context.newPage();\nconst errors=[]; page.on('pageerror',e=>errors.push(e.message));\nif(scenario.host){\nawait page.exposeFunction('visualHostRequest',request=>host.handle(request));\nawait page.addInitScript(({fixtureRoot})=>{globalThis.sceneaxiDesktopLinux={request:request=>globalThis.visualHostRequest(request),project:async()=>({ok:true,data:{status:{active:{name:'Visual proof project',root:fixtureRoot,documentPath:'scene.json',source:'opened'},recents:[],recovery:null}}})};},{fixtureRoot});\n}\nconst args=['apps/desktop-shell/bin/sceneaxi-desktop.mjs','chrome','--width',String(scenario.width),'--height',String(scenario.height),'--json'];\nif(scenario.palette) args.push('--overlay','palette');\nif(scenario.profile) args.push('--profile',scenario.profile);\n// Below minimum is rendered at the admitted tier, then the browser checks the real CSS refusal.\nif(scenario.width<900){args[3]='900';args[5]='640';}\nconst envelope=JSON.parse(execFileSync(process.execPath,args,{cwd:root,encoding:'utf8',maxBuffer:2000000}));\nif(!envelope.ok) throw new Error(JSON.stringify(envelope));\nenvelope.result.html=(stage==='before'?beforeModule:afterModule).renderDesktopChrome(desktopVisualView(createDesktopVisualState({window:{width:Math.max(900,scenario.width),height:scenario.height},profile:scenario.profile??'game',overlay:scenario.palette?'palette':'none'})));\nawait page.route('http://desktop.visual.test/',route=>route.fulfill({body:envelope.result.html,contentType:'text/html'}));\nawait page.goto('http://desktop.visual.test/');\nif(scenario.host) await page.waitForSelector('.scene-entity-identity',{state:'attached'});\nif(scenario.details) await page.evaluate(()=>{document.querySelector('.shell').dataset.detailsOpen='true';});\nif(scenario.drawer) await page.evaluate(()=>{document.querySelector('.shell').dataset.drawerLeft='open';});\nif(scenario.assistantDrawer) await page.click('.assistant-toggle');\nif(scenario.busy) await page.evaluate(()=>{document.querySelector('.shell').dataset.assistantBusy='true';document.querySelector('[data-assistant-thinking]').hidden=false;document.querySelector('[data-assistant-thinking]').lastChild.textContent='Loading-state visual fixture';document.querySelector('[data-assistant-status]').textContent='Visual loading fixture only; no provider request.';});\nif(scenario.byo){\nawait page.addScriptTag({content:byo.outputFiles[0].text});\nawait page.evaluate(()=>{Byo.installDesktopByoConfigurationSurface({});document.querySelector('.desktop-byo-config').hidden=false;});\nawait page.locator('.desktop-byo-config').scrollIntoViewIfNeeded();\n}\nif(scenario.id==='long-evidence') await page.evaluate(()=>{const row=document.querySelector('.scene-entity-identity'); for(let i=0;i<12;i++){const copy=row.cloneNode(true); copy.querySelector('span').textContent='Dense-list visual fixture '+(i+1); for(const code of copy.querySelectorAll('code')) code.textContent='fixture-sha256:'+('0123456789abcdef'.repeat(4)); row.parentElement.append(copy);} const result=document.querySelector('[data-assistant-result]');result.hidden=false;result.textContent='Long evidence visual fixture — '+('0123456789abcdef'.repeat(16));for(const el of document.querySelectorAll('.asset-browser-card span')) el.textContent='fixture-sha256:'+('0123456789abcdef'.repeat(4));});\nif(scenario.id==='selected'){await page.locator('.scene-entity-identity').first().click();await page.locator('.scene-entity-identity').first().focus();}\nif(scenario.id==='palette') {await page.keyboard.press('Tab');await page.locator('.palette-item').first().focus();}\nif(scenario.refused) await page.evaluate(()=>{document.querySelector('[data-overlay=\"palette\"]').hidden=true;document.querySelector('[data-overlay=\"outcome\"]').hidden=false;document.querySelector('[data-outcome-title]').textContent='Refusal layout visual fixture';document.querySelector('[data-outcome-code]').textContent='VISUAL_FIXTURE_ONLY';document.querySelector('[data-outcome-message]').textContent='No command or provider request made. Long diagnostic readability: '+('0123456789abcdef'.repeat(12));});\nif(scenario.pressed){await page.locator('.menu-item').first().hover();await page.mouse.down();}\nif(scenario.busy) await page.waitForTimeout(350);\nconst screenshot=`apps/desktop-shell/test/visual-postpr-evidence/${stage}-${scenario.id}.png`;\nawait page.screenshot({path:root+'/'+screenshot});\nconst metrics=await page.evaluate(()=>{\nconst report={};\nfor(const selector of ['.panel-head','.scene-entity-identity','.scene-entity-identity code','.assistant-empty','.assistant-result','.assistant-prompt','.assistant-composer','.assistant-body','.assistant','.desktop-byo-config button:disabled','.palette-item:focus-visible','.window-refusal','.asset-browser-card span','.assistant-progress','.desktop-byo-config-message','.overlay-refused .overlay-body','.icon-button','.menu-item:active']){\nconst element=document.querySelector(selector);if(!element) continue;const s=getComputedStyle(element);const r=element.getBoundingClientRect();report[selector]={font:s.fontSize,lineHeight:s.lineHeight,color:s.color,background:s.backgroundColor,opacity:s.opacity,outlineWidth:s.outlineWidth,outlineColor:s.outlineColor,width:r.width,height:r.height,visible:r.width>0&&r.height>0};}\nreport.activeAnimations=document.getAnimations().filter(animation=>animation.playState==='running').length;\nreport.documentOverflow=document.documentElement.scrollWidth>innerWidth;\nreport.controlCount=document.querySelectorAll('button,input,select,textarea').length;\nreturn report;\n});\nif(scenario.pressed) await page.mouse.up();\nawait page.keyboard.press('Tab');\nconst focusSamples=[];\nfor(const locator of await page.locator('button,input,select,textarea,a[href],[tabindex=\"0\"]').all()){if(!await locator.isVisible()||!await locator.isEnabled())continue;await locator.focus();focusSamples.push(await locator.evaluate(el=>{const s=getComputedStyle(el);return {tag:el.tagName,id:el.id,className:el.className,visible:el.matches(':focus-visible'),outline:s.outlineStyle,width:s.outlineWidth,color:s.outlineColor};}));}\nreceipts.push({scenario:scenario.id,screenshot,focusSamples,viewport:{width:scenario.width,height:scenario.height},errors,metrics});\nawait context.close();\n}\n}finally{await browser.close();rmSync(fixtureRoot,{recursive:true,force:true});}\nwriteFileSync(root+`/apps/desktop-shell/test/visual-postpr-evidence/${stage}.json`,JSON.stringify(receipts,null,2)+'\\n');\nconsole.log(JSON.stringify(receipts,null,2));\n",
+    "inspectorHarness": "import {createRequire,registerHooks} from 'node:module';\nimport {execFileSync} from 'node:child_process';\nimport {writeFileSync} from 'node:fs';\nconst root='/home/devuser/Documents/Projects/sceneaxi';\nconst {resolve}=await import(root+'/scripts/workspace-dist-resolver.mjs');registerHooks({resolve});\nconst {chromium}=createRequire(root+'/sites/umbrella/package.json')('@playwright/test');\nconst esbuild=createRequire(root+'/desktop/linux/package.json')('esbuild');\nconst stage=process.argv[2];\nconst source=stage==='before'?execFileSync('git',['show','f4990b8aac5f5af75a16fe3fbb55b74855f2b636:apps/web-shell/src/inspector-app.ts'],{cwd:root,encoding:'utf8'}):null;\nconst bundle=await esbuild.build({...source?{stdin:{contents:source,resolveDir:root+'/apps/web-shell/src',loader:'ts'}}:{entryPoints:[root+'/apps/web-shell/src/inspector-app.ts']},bundle:true,packages:'external',platform:'node',format:'esm',write:false});\nconst {inspectorPageHtml,createInspectorApp}=await import('data:text/javascript;base64,'+Buffer.from(bundle.outputFiles[0].text).toString('base64'));\n// Only rendering and readonly idle-state requests; neither writes nor provider calls.\nconst app=createInspectorApp({projectRoot:root});\nconst browser=await chromium.launch({headless:true,executablePath:'/home/devuser/.cache/ms-playwright/chromium-1223/chrome-linux64/chrome'});\nconst rows=[];\ntry {\nfor(const scheme of ['light','dark']) for(const scenario of [{id:'idle',width:1440,height:1000},{id:'long-diff',width:390,height:844,stress:true},{id:'refusal',width:390,height:844,error:true}]){\nconst context=await browser.newContext({viewport:{width:scenario.width,height:scenario.height},colorScheme:scheme,reducedMotion:'reduce'});const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));\nawait page.route('http://inspector.visual.test/**',route=>{const path=new URL(route.request().url()).pathname;if(path==='/'){return route.fulfill({body:inspectorPageHtml('/workspace/'+('long-project-identity-'.repeat(10))),contentType:'text/html'});} const response=app.handle({method:'GET',url:path});return route.fulfill({body:response.body,status:response.status,contentType:'application/json'});});\nawait page.goto('http://inspector.visual.test/');await page.waitForTimeout(100);\nif(scenario.stress) await page.evaluate(()=>{document.getElementById('diff').textContent='Visual-only long diff fixture; no proposal made.\\ncontentHash: '+('0123456789abcdef'.repeat(16))+'\\nold: '+JSON.stringify({id:'fixture',path:'long-path/'.repeat(24)});});\nif(scenario.error) await page.evaluate(()=>{const note=document.getElementById('note');note.className='refused';note.textContent='Visual-only refusal fixture: REQUEST_REFUSED — no write or retry has occurred. '+('0123456789abcdef'.repeat(8));});\nconst screenshot=`apps/desktop-shell/test/visual-postpr-evidence/${stage}-inspector-${scenario.id}-${scheme}.png`;await page.screenshot({path:root+'/'+screenshot,fullPage:true});\nconst metrics=await page.evaluate(()=>{const diff=document.getElementById('diff');const note=document.getElementById('note');const disabled=document.getElementById('accept');const style=getComputedStyle(note);return {documentOverflow:document.documentElement.scrollWidth>innerWidth,diffOverflow:diff.scrollWidth>diff.clientWidth,refusalColor:style.color,canvas:getComputedStyle(document.body).backgroundColor,disabledOpacity:getComputedStyle(disabled).opacity,hiddenRecovery:document.getElementById('recover').hidden};});\nawait page.keyboard.press('Tab');const focus=[];for(const locator of await page.locator('button,input').all()){if(!await locator.isVisible()||!await locator.isEnabled())continue;await locator.focus();focus.push(await locator.evaluate(el=>{const s=getComputedStyle(el);return {id:el.id,focusVisible:el.matches(':focus-visible'),outline:s.outlineStyle,width:s.outlineWidth,color:s.outlineColor};}));}\nconst focusScreenshot=`apps/desktop-shell/test/visual-postpr-evidence/${stage}-inspector-${scenario.id}-${scheme}-focus.png`;await page.screenshot({path:root+'/'+focusScreenshot,fullPage:true});\nrows.push({scheme,scenario:scenario.id,screenshot,focusScreenshot,viewport:{width:scenario.width,height:scenario.height},errors,metrics,focus});await context.close();\n}\n}finally{await browser.close();}\nwriteFileSync(root+`/apps/desktop-shell/test/visual-postpr-evidence/${stage}-inspector.json`,JSON.stringify(rows,null,2)+'\\n');console.log(rows);\n"
+  },
+  "screenshots": [
+    {
+      "surface": "desktop-chrome",
+      "scenario": "empty",
+      "viewport": {
+        "width": 1680,
+        "height": 1000
+      },
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/before-empty.png",
+        "bytes": 231076,
+        "sha256": "da35923ea169bf55978df4b6821de41986a83bcbf8d9ad27284cbba6419df335",
+        "width": 1680,
+        "height": 1000
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/after-empty.png",
+        "bytes": 234403,
+        "sha256": "dd54e6b2517029a18a98401bbf2b354a8eac9f85229b2fb31395f345fb8129e0",
+        "width": 1680,
+        "height": 1000
+      },
+      "changed": true
+    },
+    {
+      "surface": "desktop-chrome",
+      "scenario": "long-evidence",
+      "viewport": {
+        "width": 1680,
+        "height": 1000
+      },
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/before-long-evidence.png",
+        "bytes": 321990,
+        "sha256": "c2117216a0b15f5e3130ed2241fc8be4558dc1081e5b32034380fed8f889e5d2",
+        "width": 1680,
+        "height": 1000
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/after-long-evidence.png",
+        "bytes": 312119,
+        "sha256": "5aefa4f2831cb28632dff58f026a86c7215d337a8fe19b44c38c872c4d786e75",
+        "width": 1680,
+        "height": 1000
+      },
+      "changed": true
+    },
+    {
+      "surface": "desktop-chrome",
+      "scenario": "selected",
+      "viewport": {
+        "width": 1680,
+        "height": 1000
+      },
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/before-selected.png",
+        "bytes": 257866,
+        "sha256": "189dfd833b084b4331366ae246015c54a2ffaff18341a92b19ad04f112f8dd86",
+        "width": 1680,
+        "height": 1000
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/after-selected.png",
+        "bytes": 261734,
+        "sha256": "ddb17e3e7ccff1376860fee4342eb84ae5ceb8180dc93a4e85ee2da34be84001",
+        "width": 1680,
+        "height": 1000
+      },
+      "changed": true
+    },
+    {
+      "surface": "desktop-chrome",
+      "scenario": "byok",
+      "viewport": {
+        "width": 1680,
+        "height": 1000
+      },
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/before-byok.png",
+        "bytes": 254113,
+        "sha256": "6530d46e7839387f09f0097b0f8338dd756de21c174ee21f382c841e53ade698",
+        "width": 1680,
+        "height": 1000
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/after-byok.png",
+        "bytes": 258041,
+        "sha256": "14134b3d78b1687331c52dd09e842a7758edde2ad50273584acffdeb7c50e752",
+        "width": 1680,
+        "height": 1000
+      },
+      "changed": true
+    },
+    {
+      "surface": "desktop-chrome",
+      "scenario": "narrow",
+      "viewport": {
+        "width": 900,
+        "height": 640
+      },
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/before-narrow.png",
+        "bytes": 101656,
+        "sha256": "7b1aeb6b695431b555ffbd90318addc18beda310c59776f75b33f13e380b24d9",
+        "width": 900,
+        "height": 640
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/after-narrow.png",
+        "bytes": 102070,
+        "sha256": "7281e0098e44307d4bcf657b15214c65a1f1a5e51bf39639dc64fbda3835ada4",
+        "width": 900,
+        "height": 640
+      },
+      "changed": true
+    },
+    {
+      "surface": "desktop-chrome",
+      "scenario": "byok-narrow",
+      "viewport": {
+        "width": 900,
+        "height": 640
+      },
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/before-byok-narrow.png",
+        "bytes": 111694,
+        "sha256": "5ce6282b30b45eacf0cb519d927e8bd245ae8bc11053d6277c950bd2cc18e784",
+        "width": 900,
+        "height": 640
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/after-byok-narrow.png",
+        "bytes": 111443,
+        "sha256": "6aeec7f72ab5189e882c31647d96e6a64bf4620428bf1ae3ebc73a9a353e02d4",
+        "width": 900,
+        "height": 640
+      },
+      "changed": true
+    },
+    {
+      "surface": "desktop-chrome",
+      "scenario": "palette",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/before-palette.png",
+        "bytes": 149764,
+        "sha256": "7655fd5ec213563395f6271ac48ca5d7e4f7b269f18ace124b0e0f8c77d51777",
+        "width": 1280,
+        "height": 900
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/after-palette.png",
+        "bytes": 148661,
+        "sha256": "f2195a90562a0a71b61cfedcf8c87adc2b63c33c743bf94302b3b452882432c5",
+        "width": 1280,
+        "height": 900
+      },
+      "changed": true
+    },
+    {
+      "surface": "desktop-chrome",
+      "scenario": "refused",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/before-refused.png",
+        "bytes": 5292,
+        "sha256": "9ca518ad54a088a1f189afe27c53c2d6d2d0773f4a4e99faca94e81d410fa67e",
+        "width": 1280,
+        "height": 900
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/after-refused.png",
+        "bytes": 5292,
+        "sha256": "9ca518ad54a088a1f189afe27c53c2d6d2d0773f4a4e99faca94e81d410fa67e",
+        "width": 1280,
+        "height": 900
+      },
+      "changed": false
+    },
+    {
+      "surface": "desktop-chrome",
+      "scenario": "menu-pressed",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/before-menu-pressed.png",
+        "bytes": 183539,
+        "sha256": "e5c5722f67e9730abb3e2310a128de283ea5aa3efb5b9703cf17b33f0e2b7250",
+        "width": 1280,
+        "height": 900
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/after-menu-pressed.png",
+        "bytes": 183968,
+        "sha256": "f7b15fe88045eb9ab3c23b83781d8e1a7b95ddaeb613015a68cb7bbf194b6de6",
+        "width": 1280,
+        "height": 900
+      },
+      "changed": true
+    },
+    {
+      "surface": "desktop-chrome",
+      "scenario": "mobile-refusal",
+      "viewport": {
+        "width": 375,
+        "height": 812
+      },
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/before-mobile-refusal.png",
+        "bytes": 17367,
+        "sha256": "880266fa3f6ca1660da3c37b7189adae065fb507a0e60704fe2153cdc0b96b32",
+        "width": 375,
+        "height": 812
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/after-mobile-refusal.png",
+        "bytes": 17367,
+        "sha256": "880266fa3f6ca1660da3c37b7189adae065fb507a0e60704fe2153cdc0b96b32",
+        "width": 375,
+        "height": 812
+      },
+      "changed": false
+    },
+    {
+      "surface": "desktop-chrome",
+      "scenario": "busy",
+      "viewport": {
+        "width": 1680,
+        "height": 1000
+      },
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/before-busy.png",
+        "bytes": 230870,
+        "sha256": "e7456e1952a73a9ead9140f86d335bb6a0b7672d67b157c8367a8db132f133ca",
+        "width": 1680,
+        "height": 1000
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/after-busy.png",
+        "bytes": 234346,
+        "sha256": "dec77b1687a288a7f780f0113fa1e4aee50c3936cd0a51f01e350d470ba1a84d",
+        "width": 1680,
+        "height": 1000
+      },
+      "changed": true
+    },
+    {
+      "surface": "desktop-chrome",
+      "scenario": "web",
+      "viewport": {
+        "width": 1680,
+        "height": 1000
+      },
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/before-web.png",
+        "bytes": 199460,
+        "sha256": "01d87acc68149d5570003757d118df10d6926a89f660fa9d6d3e422602b5e63f",
+        "width": 1680,
+        "height": 1000
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/after-web.png",
+        "bytes": 201301,
+        "sha256": "273622d0b0dab908e360f083fa3cbdc8ac9837365b964610fadfda6509100f93",
+        "width": 1680,
+        "height": 1000
+      },
+      "changed": true
+    },
+    {
+      "surface": "desktop-chrome",
+      "scenario": "kids",
+      "viewport": {
+        "width": 900,
+        "height": 640
+      },
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/before-kids.png",
+        "bytes": 111306,
+        "sha256": "7c5fae57dd20576b943efeccf17518611e9e0b7449560be8e91da70c76bd0790",
+        "width": 900,
+        "height": 640
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/after-kids.png",
+        "bytes": 111306,
+        "sha256": "7c5fae57dd20576b943efeccf17518611e9e0b7449560be8e91da70c76bd0790",
+        "width": 900,
+        "height": 640
+      },
+      "changed": false
+    },
+    {
+      "surface": "web-shell-inspector",
+      "scenario": "idle",
+      "scheme": "light",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/before-inspector-idle-light.png",
+        "bytes": 54032,
+        "sha256": "6371c84c7266f190f725431da1681f8060a7248316f2493cf414ec9593f8ac72",
+        "width": 1440,
+        "height": 1000
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/after-inspector-idle-light.png",
+        "bytes": 55423,
+        "sha256": "a7f70d4759170fa8aa6e0fd807f88b1572c6fab470f8bae911c588cb1e57ea12",
+        "width": 1440,
+        "height": 1000
+      },
+      "changed": true
+    },
+    {
+      "surface": "web-shell-inspector",
+      "scenario": "idle-focus",
+      "scheme": "light",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/before-inspector-idle-light-focus.png",
+        "bytes": 54088,
+        "sha256": "5aafe99ec46f1568ed8c9cb15f76e4c867d1c4449c0d248bab6dd89e1b73eb5a",
+        "width": 1440,
+        "height": 1000
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/after-inspector-idle-light-focus.png",
+        "bytes": 55878,
+        "sha256": "c0c25a909991445b6a3404e60c18849233a2632090ffb6e91463b5de5be6d2a3",
+        "width": 1440,
+        "height": 1000
+      },
+      "changed": true
+    },
+    {
+      "surface": "web-shell-inspector",
+      "scenario": "long-diff",
+      "scheme": "light",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/before-inspector-long-diff-light.png",
+        "bytes": 51076,
+        "sha256": "1416cda826e6418a5db51b4b42203108d9bb087cd5cfd36c4deac6b8207d79b6",
+        "width": 390,
+        "height": 844
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/after-inspector-long-diff-light.png",
+        "bytes": 74172,
+        "sha256": "d1b6e8c5a4f14d7ad5355bf89244006900d5aef3fada729613fe299841da2255",
+        "width": 390,
+        "height": 1189
+      },
+      "changed": true
+    },
+    {
+      "surface": "web-shell-inspector",
+      "scenario": "long-diff-focus",
+      "scheme": "light",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/before-inspector-long-diff-light-focus.png",
+        "bytes": 51125,
+        "sha256": "c1d6e990af186ab4cf4f5ede58342338bc2a229210f15c2cb505bf9ea4d64648",
+        "width": 390,
+        "height": 844
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/after-inspector-long-diff-light-focus.png",
+        "bytes": 74549,
+        "sha256": "1dda553c537b6aa80bd5a2481ebb16e1c298f47b516d713dae7caff56185f6fd",
+        "width": 390,
+        "height": 1189
+      },
+      "changed": true
+    },
+    {
+      "surface": "web-shell-inspector",
+      "scenario": "refusal",
+      "scheme": "light",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/before-inspector-refusal-light.png",
+        "bytes": 75990,
+        "sha256": "4bdd9ea170a236f56173a07613491fcdde779b4bfda8c7d48dd101b5b0c654ae",
+        "width": 1103,
+        "height": 844
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/after-inspector-refusal-light.png",
+        "bytes": 59723,
+        "sha256": "9be78c2a10464a947c28a5ef8f2355f4bae0115e4f12ffbf0219c8f43eb849d8",
+        "width": 390,
+        "height": 1003
+      },
+      "changed": true
+    },
+    {
+      "surface": "web-shell-inspector",
+      "scenario": "refusal-focus",
+      "scheme": "light",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/before-inspector-refusal-light-focus.png",
+        "bytes": 76041,
+        "sha256": "1d0cacb0e032f3c3fd2161ae9bb1b25deeabdd03e8d3a939e888c4d3b25672b9",
+        "width": 1103,
+        "height": 844
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/after-inspector-refusal-light-focus.png",
+        "bytes": 60096,
+        "sha256": "f194bc787287976f2ea8c9379618e375b0c94c7c38f94c1a5319fcf5db217506",
+        "width": 390,
+        "height": 1003
+      },
+      "changed": true
+    },
+    {
+      "surface": "web-shell-inspector",
+      "scenario": "idle",
+      "scheme": "dark",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/before-inspector-idle-dark.png",
+        "bytes": 53658,
+        "sha256": "b24ea318e955c5748ba627c9dc053aaa4b8f7dee26727751e5517296a9eea738",
+        "width": 1440,
+        "height": 1000
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/after-inspector-idle-dark.png",
+        "bytes": 55528,
+        "sha256": "a6accd146cca216cc85bb06fab437490e953ff346e317de50030fe4c9ca17086",
+        "width": 1440,
+        "height": 1000
+      },
+      "changed": true
+    },
+    {
+      "surface": "web-shell-inspector",
+      "scenario": "idle-focus",
+      "scheme": "dark",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/before-inspector-idle-dark-focus.png",
+        "bytes": 53762,
+        "sha256": "e0409379bf3fc0a8e056d2debd0ae4e119a4e2b5981dfccf4965c5eb32996ba0",
+        "width": 1440,
+        "height": 1000
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/after-inspector-idle-dark-focus.png",
+        "bytes": 56018,
+        "sha256": "b339f3cfbc4176d6833bb6b7d01f8901c07e12fc52779f59c36e7f3b2a52f14d",
+        "width": 1440,
+        "height": 1000
+      },
+      "changed": true
+    },
+    {
+      "surface": "web-shell-inspector",
+      "scenario": "long-diff",
+      "scheme": "dark",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/before-inspector-long-diff-dark.png",
+        "bytes": 51385,
+        "sha256": "b4f99b36af82f75ad3334b27790390695a46b0b205b21473bef8f52c36a9a841",
+        "width": 390,
+        "height": 844
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/after-inspector-long-diff-dark.png",
+        "bytes": 74618,
+        "sha256": "450e0755e5aa8cee63dbca3d93f0843842a631686bd81815bc2ff5cbe3031ebc",
+        "width": 390,
+        "height": 1189
+      },
+      "changed": true
+    },
+    {
+      "surface": "web-shell-inspector",
+      "scenario": "long-diff-focus",
+      "scheme": "dark",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/before-inspector-long-diff-dark-focus.png",
+        "bytes": 51483,
+        "sha256": "2d66c20a500631f0387743df341d34236ec7365d97c63f53cfc802f709645888",
+        "width": 390,
+        "height": 844
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/after-inspector-long-diff-dark-focus.png",
+        "bytes": 75049,
+        "sha256": "8c44381a4d146b78cac0936e4ae64646c2245f56ec17a2ff4079bc620acbcb2b",
+        "width": 390,
+        "height": 1189
+      },
+      "changed": true
+    },
+    {
+      "surface": "web-shell-inspector",
+      "scenario": "refusal",
+      "scheme": "dark",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/before-inspector-refusal-dark.png",
+        "bytes": 74552,
+        "sha256": "bd79093c44a8b065df0ac1b4fbef638c7aa0886615313d77a23161f1c8235358",
+        "width": 1103,
+        "height": 844
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/after-inspector-refusal-dark.png",
+        "bytes": 60279,
+        "sha256": "f44e20ececce31d21bf87c3350491963abe7c72ebf1e27e2d4a8f6ff63a3c74b",
+        "width": 390,
+        "height": 1003
+      },
+      "changed": true
+    },
+    {
+      "surface": "web-shell-inspector",
+      "scenario": "refusal-focus",
+      "scheme": "dark",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "before": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/before-inspector-refusal-dark-focus.png",
+        "bytes": 74656,
+        "sha256": "acd579c1f817fbb32e084b321ecd0abc13dab5ade3d4fbf149256bc8583e828d",
+        "width": 1103,
+        "height": 844
+      },
+      "after": {
+        "path": "apps/desktop-shell/test/visual-postpr-evidence/after-inspector-refusal-dark-focus.png",
+        "bytes": 60709,
+        "sha256": "e7dc0158a42b8402cbb8d5bb6fae84c900c8e6294ec9fdd9b22c00cb0d72c09f",
+        "width": 390,
+        "height": 1003
+      },
+      "changed": true
+    }
+  ],
+  "tests": {
+    "files": 97,
+    "total": 563,
+    "passed": 563,
+    "failed": 0,
+    "pending": 0,
+    "newTestsThisLoop": 8,
+    "groups": {
+      "goldens": {
+        "files": 3,
+        "passed": 126
+      },
+      "desktopShell": {
+        "files": 12,
+        "passed": 224
+      },
+      "webShell": {
+        "files": 11,
+        "passed": 185
+      },
+      "linux": {
+        "files": 3,
+        "passed": 28
+      }
+    },
+    "command": "pnpm exec vitest run apps/desktop-shell/test apps/web-shell/test desktop/linux/test tests/e2e/desktop-visual-golden.test.ts tests/e2e/desktop-command-interactions-golden.test.ts tests/e2e/desktop-physics-golden.test.ts tests/e2e/assistant-panel-golden.test.ts --reporter=dot --reporter=json --outputFile=<receipt>",
+    "receipt": {
+      "path": "apps/desktop-shell/test/visual-postpr-evidence/tests.json",
+      "bytes": 187584,
+      "sha256": "9aa9f91ba007c43f30794bab8bc4e7ec22c1a355b113f24cbccfb65270cfb70a"
+    },
+    "history": [
+      {
+        "passed": 329,
+        "failed": 0,
+        "scope": "initial desktop-only targeted suites"
+      },
+      {
+        "passed": 561,
+        "failed": 2,
+        "receipt": {
+          "path": "apps/desktop-shell/test/visual-postpr-evidence/tests-initial-failures.json",
+          "bytes": 189433,
+          "sha256": "391710c71d55c591a6e1d96369fd4245b23829e9a5228c7dd16fd1d65cd5e73b"
+        },
+        "reason": "Own CSS replacement accidentally omitted inspector closing style tag, caught by unchanged existing interaction test; new CSS helper matched grouped span rule instead of sized rule."
+      },
+      {
+        "passed": 37,
+        "failed": 1,
+        "receipt": {
+          "path": "apps/desktop-shell/test/visual-postpr-evidence/tests-retry.json",
+          "bytes": 13510,
+          "sha256": "89d2a77fafeeb61108dba4545daf3efaf2d4c40b1015ee620f19f7a6aef5b8df"
+        },
+        "reason": "Helper selector corrected; missing style tag still caught."
+      },
+      {
+        "passed": 563,
+        "failed": 0,
+        "reason": "Restored closing style tag; all existing owning interaction tests and new invariants green. No assertions weakened."
+      }
+    ]
+  },
+  "verification": [
+    {
+      "command": "pnpm exec tsc -b apps/desktop-shell apps/web-shell",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm --dir desktop/linux check:renderer",
+      "exitCode": 0,
+      "inputs": 94
+    },
+    {
+      "command": "pnpm exec eslint <five touched TS files>",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm exec oxlint -c .oxlintrc.json <five touched TS files>",
+      "exitCode": 0,
+      "warnings": 0,
+      "errors": 0
+    },
+    {
+      "command": "pnpm --dir desktop/linux typecheck",
+      "exitCode": 2,
+      "output": "src/lib/desktop-scene.ts(297,57): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'JsonValue'.",
+      "disposition": "Existing first-loop nonvisual error, outside owned renderer paths; reported to parent, not modified."
+    },
+    {
+      "command": "git diff --check -- <owned source files>",
+      "exitCode": 0
+    },
+    {
+      "command": "dedicated project test tool",
+      "disposition": "No test command detected; explicit real-root owning pnpm suites used instead."
+    }
+  ],
+  "contrast": {
+    "method": "WCAG sRGB luminance on Chromium dark Canvas rgb(18,18,18); refusal foreground before rgb(179,38,30), after rgb(255,77,94). Light Canvas rgb(255,255,255).",
+    "darkRefusalBefore": 2.866,
+    "darkRefusalAfter": 5.776,
+    "lightRefusal": 6.536
+  },
+  "recoveredCaptureFailures": [
+    {
+      "error": "Inert palette click did not display outcome (waitForSelector timeout).",
+      "disposition": "Refuted harness assumption: inert click does not simulate runtime outcome. Capture now explicitly labels and opens existing refusal-layout DOM as a visual fixture; actual BYOK unavailable remains separately captured."
+    }
+  ],
+  "invariants": {
+    "newDependencies": 0,
+    "behaviorChanges": false,
+    "contractChanges": false,
+    "commandInventoryChanges": false,
+    "desktopPaletteChanges": false,
+    "minimumWindowChanges": false,
+    "preexistingEditsPreserved": true,
+    "committed": false,
+    "pushed": false
+  },
+  "limitations": [
+    "No full repository gate rerun.",
+    "Linux full typecheck is blocked by reported nonvisual error.",
+    "Chromium-rendered emitted desktop chrome is not packaged-native or physical-GPU acceptance.",
+    "Inspector fixture pixels are not provider/authenticated/error-transport acceptance.",
+    "No human image-viewer inspection or exhaustive accessibility certification."
+  ]
+  }
+}

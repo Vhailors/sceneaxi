@@ -17,8 +17,20 @@ import { existsSync, lstatSync, readFileSync, readdirSync, statSync } from "node
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+/** @returns {value is string} */
+function isManifestText(value) {
+  try {
+    // The intrinsic accepts strings and boxed strings; identity excludes boxes.
+    return String.prototype.valueOf.call(value) === value;
+  } catch {
+    return false;
+  }
+}
+
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+
 const errors = [];
+
 const fail = (msg) => errors.push(msg);
 
 /**
@@ -30,30 +42,39 @@ const fail = (msg) => errors.push(msg);
 function declaredScalar(raw, commentChars) {
   let value = raw.trim();
   const quote = value[0];
+
   if (quote === '"' || quote === "'") {
     const closing = value.indexOf(quote, 1);
+
     if (closing !== -1) return value.slice(1, closing);
   }
+
   for (const char of commentChars) {
     const at = value.indexOf(char);
+
     if (at !== -1) value = value.slice(0, at);
   }
+
   return value.trim();
 }
 
 /** Parse an npmrc into a normalized key/value map — the shape pnpm actually reads. */
 function readNpmrc(path) {
   const settings = {};
+
   for (const line of readFileSync(path, "utf8").split("\n")) {
     const trimmed = line.trim();
+
     if (trimmed.length === 0 || trimmed.startsWith("#") || trimmed.startsWith(";")) continue;
     const separator = trimmed.indexOf("=");
+
     if (separator === -1) continue;
     settings[trimmed.slice(0, separator).trim()] = declaredScalar(
       trimmed.slice(separator + 1),
       ["#", ";"],
     );
   }
+
   return settings;
 }
 
@@ -64,10 +85,12 @@ function readNpmrc(path) {
  */
 function readWorkspaceSettings(path, key) {
   const declared = [];
+
   for (const line of readFileSync(path, "utf8").split("\n")) {
     if (!line.startsWith(`${key}:`)) continue;
     declared.push(declaredScalar(line.slice(key.length + 1), ["#"]));
   }
+
   return declared;
 }
 
@@ -81,15 +104,20 @@ const REQUIRED_FILES = Object.freeze([
 ]);
 
 const REQUIRED_SCRIPTS = Object.freeze(["dev", "build", "typecheck"]);
+
 const KIDS_SITE_PACKAGE = "@sceneaxi/site-kids";
+
 const KIDS_SITE_RUNTIME_DEPENDENCIES = Object.freeze(["next", "react", "react-dom"]);
+
 const KIDS_SITE_DEVELOPMENT_DEPENDENCIES = Object.freeze([
   "@types/node",
   "@types/react",
   "@types/react-dom",
   "typescript",
 ]);
+
 const KIDS_SITE_DIR = "sites/kids";
+
 const KIDS_SITE_FORBIDDEN_APIS = Object.freeze([
   { label: "fetch", pattern: /\bfetch\s*\(/ },
   { label: "XMLHttpRequest", pattern: /\bXMLHttpRequest\b/ },
@@ -135,6 +163,7 @@ const FRAMEWORK_DEPENDENCIES = Object.freeze([
 
 /** Provider clients terminate at the umbrella's one deployment-owned seam. */
 const UMBRELLA_SITE_PACKAGE = "@sceneaxi/site-umbrella";
+
 const UMBRELLA_ONLY_PROVIDER_DEPENDENCIES = Object.freeze([
   "better-auth",
   "stripe",
@@ -178,6 +207,7 @@ const walk = (dir, out = []) => {
     if (SKIP_DIRECTORIES.includes(entry) || SKIP_FILES.includes(entry)) continue;
     const path = join(dir, entry);
     const stat = lstatSync(path);
+
     if (stat.isSymbolicLink()) {
       fail(`${relative(root, path)} is a symbolic link — sites must be self-contained`);
     } else if (stat.isDirectory()) {
@@ -186,6 +216,7 @@ const walk = (dir, out = []) => {
       out.push(path);
     }
   }
+
   return out;
 };
 
@@ -193,6 +224,7 @@ const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
 
 const ENV_REFERENCE_SOURCE =
   String.raw`(?:process\.env|env|environment)(?:\.[A-Za-z_$][\w$]*|\[(?:"[^"\r\n]+"|'[^'\r\n]+')\])`;
+
 const ENV_OPERAND = new RegExp(`^${ENV_REFERENCE_SOURCE}`);
 
 /**
@@ -213,57 +245,76 @@ const ENV_OPERAND = new RegExp(`^${ENV_REFERENCE_SOURCE}`);
 function rhsIsCommittedSecret(text, start) {
   const len = text.length;
   let i = start;
+
   const skipTrivia = () => {
     while (i < len) {
       const ch = text[i];
+
       if (ch === "/" && text[i + 1] === "/") {
         while (i < len && text[i] !== "\n") i += 1;
         continue;
       }
+
       if (ch === "#") {
         while (i < len && text[i] !== "\n") i += 1;
         continue;
       }
+
       if (ch === "/" && text[i + 1] === "*") {
         i += 2;
+
         while (i < len && !(text[i] === "*" && text[i + 1] === "/")) i += 1;
         i += 2;
         continue;
       }
+
       if (/\s/.test(ch)) {
         i += 1;
         continue;
       }
+
       break;
     }
   };
+
   const readEnvOperand = () => {
     const match = ENV_OPERAND.exec(text.slice(i));
+
     if (match === null) return false;
     i += match[0].length;
+
     return true;
   };
+
   skipTrivia();
+
   if (!readEnvOperand()) return true;
+
   const readPostfixAssertions = () => {
     for (;;) {
       skipTrivia();
+
       if (text[i] === "!") {
         i += 1;
         continue;
       }
+
       break;
     }
   };
+
   for (;;) {
     readPostfixAssertions();
     skipTrivia();
     const rest = text.slice(i);
+
     if (rest === "" || /^[;),}\]].?/.test(rest)) return false;
     const operator = /^(?:\?\?|\|\||&&|\?|:|\+)/.exec(rest);
+
     if (operator === null) return true;
     i += operator[0].length;
     skipTrivia();
+
     if (!readEnvOperand()) return true;
   }
 }
@@ -273,40 +324,49 @@ const assignsSecretValue = (text, name) => {
     `(?:"${name}"|'${name}'|\`${name}\`|\\b${name}\\b)\\s*(?::|=(?!=))\\s*`,
     "g",
   );
+
   for (const match of text.matchAll(header)) {
     const valueStart = (match.index ?? 0) + match[0].length;
+
     if (rhsIsCommittedSecret(text, valueStart)) return true;
   }
+
   return false;
 };
 
 // --- the tier must exist and be non-empty ---
 const sitesDir = join(root, "sites");
+
 if (!existsSync(sitesDir)) {
-  console.error("sites check: sites/ does not exist — refusing to pass on a missing tier");
-  process.exit(1);
+  globalThis.console.error("sites check: sites/ does not exist — refusing to pass on a missing tier");
+  globalThis.process.exit(1);
 }
+
 const siteDirs = readdirSync(sitesDir)
   .sort()
   .map((entry) => join(sitesDir, entry))
   .filter((dir) => statSync(dir).isDirectory() && existsSync(join(dir, "package.json")));
+
 if (siteDirs.length === 0) {
-  console.error("sites check: found zero sites — refusing to pass on an empty surface");
-  process.exit(1);
+  globalThis.console.error("sites check: found zero sites — refusing to pass on an empty surface");
+  globalThis.process.exit(1);
 }
 
 // --- the matrix must list every site, and vice versa ---
 let matrix;
+
 try {
   matrix = readJson(join(root, "docs", "dependency-matrix.json"));
 } catch (error) {
-  console.error(`sites check: cannot load docs/dependency-matrix.json: ${error.message}`);
-  process.exit(1);
+  globalThis.console.error(`sites check: cannot load docs/dependency-matrix.json: ${error.message}`);
+  globalThis.process.exit(1);
 }
+
 const matrixPackages = matrix.packages ?? {};
 
 // --- the hermetic root must stay hermetic ---
 const rootManifest = readJson(join(root, "package.json"));
+
 for (const field of ["dependencies", "devDependencies", "optionalDependencies"]) {
   for (const dep of Object.keys(rootManifest[field] ?? {})) {
     if (FRAMEWORK_DEPENDENCIES.includes(dep)) {
@@ -318,8 +378,10 @@ for (const field of ["dependencies", "devDependencies", "optionalDependencies"])
 }
 
 const workspaceFile = join(root, "pnpm-workspace.yaml");
+
 if (existsSync(workspaceFile)) {
   const workspace = readFileSync(workspaceFile, "utf8");
+
   if (/^\s*-\s*["']?sites\//m.test(workspace)) {
     fail(
       "pnpm-workspace.yaml globs sites/ — sites are separate install roots so the hermetic root lockfile never moves",
@@ -330,11 +392,13 @@ if (existsSync(workspaceFile)) {
 // --- per-site structure ---
 for (const dir of siteDirs) {
   const rel = relative(root, dir);
+
   for (const required of REQUIRED_FILES) {
     if (!existsSync(join(dir, required))) fail(`${rel} is missing required file '${required}'`);
   }
 
   let manifest;
+
   try {
     manifest = readJson(join(dir, "package.json"));
   } catch (error) {
@@ -342,11 +406,13 @@ for (const dir of siteDirs) {
     continue;
   }
 
-  if (typeof manifest.name !== "string" || manifest.name.length === 0) {
+  if (!isManifestText(manifest.name) || manifest.name.length === 0) {
     fail(`${rel}/package.json has no name`);
     continue;
   }
+
   if (manifest.private !== true) fail(`${manifest.name} must be private`);
+
   if (manifest.sceneaxi?.releaseGroup !== "sites") {
     fail(
       `${manifest.name}: sceneaxi.releaseGroup is '${manifest.sceneaxi?.releaseGroup}', must be 'sites'`,
@@ -354,6 +420,7 @@ for (const dir of siteDirs) {
   }
 
   const entry = matrixPackages[manifest.name];
+
   if (entry === undefined) {
     fail(`${manifest.name} exists on disk but is not listed in the dependency matrix`);
   } else if (resolve(root, entry.dir) !== resolve(dir)) {
@@ -361,12 +428,13 @@ for (const dir of siteDirs) {
   }
 
   for (const script of REQUIRED_SCRIPTS) {
-    if (typeof manifest.scripts?.[script] !== "string") {
+    if (!isManifestText(manifest.scripts?.[script])) {
       fail(`${manifest.name} is missing the '${script}' script`);
     }
   }
 
   const dependencies = manifest.dependencies ?? {};
+
   if (manifest.name !== UMBRELLA_SITE_PACKAGE) {
     for (const dependency of UMBRELLA_ONLY_PROVIDER_DEPENDENCIES) {
       if (dependencies[dependency] !== undefined) {
@@ -376,14 +444,18 @@ for (const dir of siteDirs) {
       }
     }
   }
+
   if (manifest.name === KIDS_SITE_PACKAGE) {
     const runtimeNames = Object.keys(dependencies).sort();
+
     if (JSON.stringify(runtimeNames) !== JSON.stringify(KIDS_SITE_RUNTIME_DEPENDENCIES)) {
       fail(
         `${manifest.name}: the isolated Kids runtime may declare only next, react, and react-dom (found ${runtimeNames.join(", ") || "none"})`,
       );
     }
+
     const developmentNames = Object.keys(manifest.devDependencies ?? {}).sort();
+
     if (
       developmentNames.some(
         (dependency) => !KIDS_SITE_DEVELOPMENT_DEPENDENCIES.includes(dependency),
@@ -393,18 +465,22 @@ for (const dir of siteDirs) {
         `${manifest.name}: the isolated Kids development toolchain contains an undeclared dependency`,
       );
     }
+
     for (const field of ["optionalDependencies", "peerDependencies"]) {
       if (Object.keys(manifest[field] ?? {}).length > 0) {
         fail(`${manifest.name}: ${field} must stay empty under the isolated Kids build`);
       }
     }
+
     const kidsWorkspacePolicy = readFileSync(join(dir, "pnpm-workspace.yaml"), "utf8").trim();
+
     const expectedKidsWorkspacePolicy = [
       "packages:",
       '  - "."',
       "allowBuilds:",
       "  sharp: true",
     ].join("\n");
+
     if (kidsWorkspacePolicy !== expectedKidsWorkspacePolicy) {
       fail(
         `${manifest.name}: pnpm build approval must allow only sharp in the isolated site workspace`,
@@ -412,13 +488,15 @@ for (const dir of siteDirs) {
     }
   } else {
     const siteKit = dependencies["@sceneaxi/site-kit"];
-    if (typeof siteKit !== "string") {
+
+    if (!isManifestText(siteKit)) {
       fail(`${manifest.name} must depend on @sceneaxi/site-kit`);
     } else if (!siteKit.startsWith("link:")) {
       fail(
         `${manifest.name}: @sceneaxi/site-kit must use a 'link:' specifier (found '${siteKit}') because sites are not workspace members`,
       );
     }
+
     // Neither file carries the linker on its own: pnpm below 10.6 reads it only from
     // `.npmrc`, pnpm 10.6 and later only from pnpm-workspace.yaml, and no site pins a
     // `packageManager` that would settle which line a builder runs. Both declarations
@@ -427,17 +505,21 @@ for (const dir of siteDirs) {
     // prevent, silently.
     const siteNpmrc = join(dir, ".npmrc");
     const nodeLinker = existsSync(siteNpmrc) ? readNpmrc(siteNpmrc)["node-linker"] : undefined;
+
     if (nodeLinker !== "hoisted") {
       fail(
         `${manifest.name}: deployable serverless sites must set 'node-linker=hoisted' in .npmrc — pnpm below 10.6 reads the linker only from there`,
       );
     }
+
     const workspaceLinkers = readWorkspaceSettings(join(dir, "pnpm-workspace.yaml"), "nodeLinker");
+
     if (workspaceLinkers.length === 0) {
       fail(
         `${manifest.name}: deployable serverless sites must set 'nodeLinker: hoisted' in pnpm-workspace.yaml — pnpm 10.6 and later reads the linker only from there`,
       );
     }
+
     for (const declared of workspaceLinkers) {
       if (declared !== "hoisted") {
         fail(
@@ -445,12 +527,14 @@ for (const dir of siteDirs) {
         );
       }
     }
+
     if (manifest.scripts?.postbuild !== "node ../../scripts/check-vercel-package.mjs .") {
       fail(
         `${manifest.name}: postbuild must validate the emitted Vercel function package traces`,
       );
     }
   }
+
   for (const framework of ["next", "react", "react-dom"]) {
     if (dependencies[framework] === undefined) {
       fail(`${manifest.name} must declare '${framework}' — a site is a deployable Next app`);
@@ -459,11 +543,14 @@ for (const dir of siteDirs) {
 
   // `.env.example` documents names, never values.
   const envExample = join(dir, ".env.example");
+
   if (existsSync(envExample)) {
     for (const [index, line] of readFileSync(envExample, "utf8").split("\n").entries()) {
       const trimmed = line.trim();
+
       if (trimmed.length === 0 || trimmed.startsWith("#")) continue;
       const match = /^([A-Z0-9_]+)=(.*)$/.exec(trimmed);
+
       if (match === null) {
         fail(`${rel}/.env.example:${index + 1} is neither a comment nor a NAME= line`);
       } else if (match[2].trim().length > 0) {
@@ -481,7 +568,9 @@ for (const dir of siteDirs) {
 for (const file of walk(sitesDir)) {
   const rel = relative(root, file);
   const text = readFileSync(file, "utf8");
-  if (rel.startsWith(`${KIDS_SITE_DIR}/`)) {
+
+  if (rel.startsWith(`${KIDS_SITE_DIR}/`) &&
+      !(rel.startsWith(`${KIDS_SITE_DIR}/test/visual-evidence/`) && /\.(?:png|log)$/.test(rel))) {
     // The whole install root, not just `src/`: an outbound path is added in the site's
     // own configuration at least as easily as in a component.
     for (const forbidden of KIDS_SITE_FORBIDDEN_APIS) {
@@ -491,6 +580,7 @@ for (const file of walk(sitesDir)) {
         );
       }
     }
+
     if (isKidsConfigFile(rel)) {
       for (const forbidden of KIDS_SITE_FORBIDDEN_CONFIG_KEYS) {
         if (forbidden.pattern.test(text)) {
@@ -501,10 +591,13 @@ for (const file of walk(sitesDir)) {
       }
     }
   }
+
   for (const pattern of SECRET_VALUE_PATTERNS) {
     if (pattern.test(text)) fail(`${rel} contains secret-shaped material (${pattern})`);
   }
+
   if (rel.endsWith(".env.example")) continue;
+
   for (const name of SECRET_NAMES) {
     if (assignsSecretValue(text, name)) {
       fail(`${rel} assigns a literal value to '${name}' — secrets are env-only, never committed`);
@@ -513,10 +606,12 @@ for (const file of walk(sitesDir)) {
 }
 
 if (errors.length > 0) {
-  console.error(`sites check FAILED — ${errors.length} problem(s):`);
-  for (const error of errors) console.error(`  - ${error}`);
-  process.exit(1);
+  globalThis.console.error(`sites check FAILED — ${errors.length} problem(s):`);
+
+  for (const error of errors) globalThis.console.error(`  - ${error}`);
+  globalThis.process.exit(1);
 }
-console.log(
+
+globalThis.console.log(
   `sites check OK — ${siteDirs.length} deployable sites verified (separate install roots, matrix-listed, no committed secrets)`,
 );

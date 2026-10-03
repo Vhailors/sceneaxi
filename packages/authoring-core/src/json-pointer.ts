@@ -3,20 +3,30 @@
  * Empty pointer addresses the whole document.
  */
 
+import { isJsonValue } from "@sceneaxi/schemas";
+
+type PointerInput = Parameters<typeof isJsonValue>[0];
+
+type PointerContainer = { [key: string]: PointerInput };
+
 export type PointerGetOk = { readonly ok: true; readonly value: unknown };
+
 export type PointerGetFail = {
   readonly ok: false;
   readonly code: "invalid-pointer" | "path-not-found";
   readonly message: string;
 };
+
 export type PointerGetResult = PointerGetOk | PointerGetFail;
 
 export type PointerSetOk = { readonly ok: true; readonly value: unknown };
+
 export type PointerSetFail = {
   readonly ok: false;
   readonly code: "invalid-pointer" | "path-not-found";
   readonly message: string;
 };
+
 export type PointerSetResult = PointerSetOk | PointerSetFail;
 
 function unescapeToken(token: string): string {
@@ -26,8 +36,11 @@ function unescapeToken(token: string): string {
 /** Split a pointer into unescaped tokens. Empty string → []. */
 export function pointerTokens(pointer: string): string[] | null {
   if (pointer === "") return [];
+
   if (!pointer.startsWith("/")) return null;
+
   if (/(?:~(?![01]))/.test(pointer)) return null;
+
   // Split on unescaped '/' — RFC 6901 segments cannot contain raw '/'.
   return pointer
     .slice(1)
@@ -36,10 +49,11 @@ export function pointerTokens(pointer: string): string[] | null {
 }
 
 export function getAtPointer(
-  document: unknown,
+  document: PointerInput,
   pointer: string,
 ): PointerGetResult {
   const tokens = pointerTokens(pointer);
+
   if (tokens === null) {
     return {
       ok: false,
@@ -49,14 +63,16 @@ export function getAtPointer(
   }
 
   let current: unknown = document;
+
   for (const token of tokens) {
-    if (current === null || typeof current !== "object") {
+    if (current === null || !isBoundaryObjectOrNull(current)) {
       return {
         ok: false,
         code: "path-not-found",
         message: `JSON Pointer path not found: ${JSON.stringify(pointer)}`,
       };
     }
+
     if (Array.isArray(current)) {
       if (!/^(0|[1-9][0-9]*)$/.test(token)) {
         return {
@@ -65,7 +81,9 @@ export function getAtPointer(
           message: `JSON Pointer array index invalid at ${JSON.stringify(token)}`,
         };
       }
+
       const index = Number(token);
+
       if (index < 0 || index >= current.length) {
         return {
           ok: false,
@@ -73,10 +91,14 @@ export function getAtPointer(
           message: `JSON Pointer path not found: ${JSON.stringify(pointer)}`,
         };
       }
+
       current = current[index];
       continue;
     }
-    const obj = current as Record<string, unknown>;
+
+    // SAFETY: current is a non-null object and not an array; member values remain raw pointer inputs.
+    const obj = current as PointerContainer;
+
     if (!Object.hasOwn(obj, token)) {
       return {
         ok: false,
@@ -84,8 +106,10 @@ export function getAtPointer(
         message: `JSON Pointer path not found: ${JSON.stringify(pointer)}`,
       };
     }
+
     current = obj[token];
   }
+
   return { ok: true, value: current };
 }
 
@@ -94,11 +118,12 @@ export function getAtPointer(
  * Does not create missing intermediate paths (fail-closed).
  */
 export function setAtPointer(
-  document: unknown,
+  document: PointerInput,
   pointer: string,
-  newValue: unknown,
+  newValue: PointerInput,
 ): PointerSetResult {
   const tokens = pointerTokens(pointer);
+
   if (tokens === null) {
     return {
       ok: false,
@@ -111,11 +136,13 @@ export function setAtPointer(
     return { ok: true, value: newValue };
   }
 
-  const root = structuredClone(document) as unknown;
+  const root = structuredClone(document);
 
   let parent: unknown = root;
+
   for (let i = 0; i < tokens.length - 1; i++) {
     const token = tokens[i];
+
     if (token === undefined) {
       return {
         ok: false,
@@ -123,13 +150,15 @@ export function setAtPointer(
         message: `Invalid JSON Pointer: ${JSON.stringify(pointer)}`,
       };
     }
-    if (parent === null || typeof parent !== "object") {
+
+    if (parent === null || !isBoundaryObjectOrNull(parent)) {
       return {
         ok: false,
         code: "path-not-found",
         message: `JSON Pointer path not found: ${JSON.stringify(pointer)}`,
       };
     }
+
     if (Array.isArray(parent)) {
       if (!/^(0|[1-9][0-9]*)$/.test(token)) {
         return {
@@ -138,7 +167,9 @@ export function setAtPointer(
           message: `JSON Pointer array index invalid at ${JSON.stringify(token)}`,
         };
       }
+
       const index = Number(token);
+
       if (index < 0 || index >= parent.length) {
         return {
           ok: false,
@@ -146,10 +177,14 @@ export function setAtPointer(
           message: `JSON Pointer path not found: ${JSON.stringify(pointer)}`,
         };
       }
+
       parent = parent[index];
       continue;
     }
-    const obj = parent as Record<string, unknown>;
+
+    // SAFETY: parent is a non-null object and not an array; member values remain raw pointer inputs.
+    const obj = parent as PointerContainer;
+
     if (!Object.hasOwn(obj, token)) {
       return {
         ok: false,
@@ -157,10 +192,12 @@ export function setAtPointer(
         message: `JSON Pointer path not found: ${JSON.stringify(pointer)}`,
       };
     }
+
     parent = obj[token];
   }
 
   const last = tokens[tokens.length - 1];
+
   if (last === undefined) {
     return {
       ok: false,
@@ -169,7 +206,7 @@ export function setAtPointer(
     };
   }
 
-  if (parent === null || typeof parent !== "object") {
+  if (parent === null || !isBoundaryObjectOrNull(parent)) {
     return {
       ok: false,
       code: "path-not-found",
@@ -185,7 +222,9 @@ export function setAtPointer(
         message: `JSON Pointer array index invalid at ${JSON.stringify(last)}`,
       };
     }
+
     const index = Number(last);
+
     if (index < 0 || index >= parent.length) {
       return {
         ok: false,
@@ -193,11 +232,15 @@ export function setAtPointer(
         message: `JSON Pointer path not found: ${JSON.stringify(pointer)}`,
       };
     }
+
     parent[index] = newValue;
+
     return { ok: true, value: root };
   }
 
-  const obj = parent as Record<string, unknown>;
+  // SAFETY: parent is a non-null object and not an array; the own target key was checked below.
+  const obj = parent as PointerContainer;
+
   if (!Object.hasOwn(obj, last)) {
     return {
       ok: false,
@@ -205,6 +248,18 @@ export function setAtPointer(
       message: `JSON Pointer path not found: ${JSON.stringify(pointer)}`,
     };
   }
+
   obj[last] = newValue;
+
   return { ok: true, value: root };
+}
+
+function isBoundaryObjectOrNull(value: PointerInput): value is object | null {
+  return isBoundaryObjectValue(value);
+}
+
+type BoundaryObjectValue = object | null;
+
+function isBoundaryObjectValue<Input>(value: Input): value is Input & Readonly<BoundaryObjectValue> {
+  return typeof value === "object";
 }

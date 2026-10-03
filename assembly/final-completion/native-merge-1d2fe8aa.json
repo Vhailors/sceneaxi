@@ -1,0 +1,23 @@
+{
+  "tip": "1d2fe8aa089772c87271580deb158d87dd68cb64",
+  "approvedResolvedTree": "759adfe932768ef588660fb6de68ab2b948d1a9e",
+  "method": "Per-path reviewed assembly postimages including compatibility function ports; no ours/theirs strategy; ordinary native merge",
+  "paths": [
+    {
+      "path": "AGENTS.md",
+      "incoming": "100644 blob 52c8341cffca32b40b638303c049df49dea6d225\tAGENTS.md",
+      "chosenPostimage": "100644 blob b85ad299135386a383c24381b07562db29eaf5c4\tAGENTS.md",
+      "originalPerPathDecision": "CURRENT_MAIN_RETAINED_SHARED_UNCHANGED",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    }
+  ]
+}

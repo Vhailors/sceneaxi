@@ -1,0 +1,9 @@
+{
+  "status": "IN_PROGRESS_SOURCE_OWNED_NO_HANDBACK",
+  "snapshot": "3f25ffea22f19d01ef9a484f317d8b8ca4cde397",
+  "source": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+  "motion": "4e669cc39766bbd4b24c25ee64bdae8aedc24564",
+  "scope": "P2-P6 54 paths plus maintenance-compat public seam tests",
+  "tests": "ROOT_INSTALL_READY_NOT_YET_RUN",
+  "prohibited": "index/stage/commit/build/install/browser/native untouched"
+}

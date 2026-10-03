@@ -1,26 +1,27 @@
-import {
-  closeSync,
-  constants,
-  fstatSync,
-  openSync,
-  readSync,
-  realpathSync,
-} from "node:fs";
+import * as nodeFileSystem from "node:fs";
+
+export type ContainedFileHost = Pick<typeof nodeFileSystem, "closeSync" | "constants" | "fstatSync" | "openSync" | "readSync" | "realpathSync">;
+
 import { isAbsolute, relative, sep } from "node:path";
 
 function within(root: string, candidate: string): boolean {
   const rel = relative(root, candidate);
+
   return rel === "" || (rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel));
 }
 
-export function openContainedRegularFile(root: string, target: string) {
+export function openContainedRegularFile(root: string, target: string, host: ContainedFileHost = nodeFileSystem) {
+  const { closeSync, constants, fstatSync, openSync, realpathSync } = host;
+
   let descriptor: number | null = null;
+
   try {
     descriptor = openSync(
       target,
       constants.O_RDONLY | constants.O_NONBLOCK | constants.O_NOFOLLOW,
     );
     const stats = fstatSync(descriptor);
+
     if (!stats.isFile()) {
       return Object.freeze({
         ok: false as const,
@@ -29,7 +30,9 @@ export function openContainedRegularFile(root: string, target: string) {
         detail: "the opened path is not a regular file",
       });
     }
+
     const canonical = realpathSync(`/proc/self/fd/${String(descriptor)}`);
+
     if (!within(root, canonical)) {
       return Object.freeze({
         ok: false as const,
@@ -38,8 +41,10 @@ export function openContainedRegularFile(root: string, target: string) {
         detail: "the opened file resolves outside the project root",
       });
     }
+
     const openedDescriptor = descriptor;
     descriptor = null;
+
     return Object.freeze({
       ok: true as const,
       descriptor: openedDescriptor,
@@ -47,9 +52,10 @@ export function openContainedRegularFile(root: string, target: string) {
     });
   } catch (error) {
     const code =
-      typeof error === "object" && error !== null && "code" in error
+      isBoundaryObjectValue(error) && error !== null && "code" in error
         ? error.code
         : null;
+
     return Object.freeze({
       ok: false as const,
       kind:
@@ -70,13 +76,19 @@ export function readContainedRegularFile(
   root: string,
   target: string,
   limits: Readonly<{ maximumBytes?: number; expectedBytes?: number }> = {},
+  host: ContainedFileHost = nodeFileSystem,
 ) {
+  const { closeSync, fstatSync, readSync } = host;
+
   let descriptor: number | null = null;
+
   try {
-    const opened = openContainedRegularFile(root, target);
+    const opened = openContainedRegularFile(root, target, host);
+
     if (!opened.ok) return opened;
     descriptor = opened.descriptor;
     const before = opened.stats;
+
     if (
       !Number.isSafeInteger(before.size) ||
       before.size < 0 ||
@@ -90,8 +102,10 @@ export function readContainedRegularFile(
         detail: "the opened file length is outside its accepted bounds",
       });
     }
+
     const bytes = Buffer.alloc(before.size);
     let offset = 0;
+
     while (offset < bytes.byteLength) {
       const count = readSync(
         descriptor,
@@ -100,6 +114,7 @@ export function readContainedRegularFile(
         bytes.byteLength - offset,
         null,
       );
+
       if (count === 0) {
         return Object.freeze({
           ok: false as const,
@@ -108,9 +123,12 @@ export function readContainedRegularFile(
           detail: "the opened file ended before its verified length",
         });
       }
+
       offset += count;
     }
+
     const trailing = Buffer.alloc(1);
+
     if (readSync(descriptor, trailing, 0, trailing.byteLength, null) !== 0) {
       return Object.freeze({
         ok: false as const,
@@ -119,7 +137,9 @@ export function readContainedRegularFile(
         detail: "the opened file grew beyond its verified length",
       });
     }
+
     const after = fstatSync(descriptor);
+
     if (bytes.byteLength !== before.size || after.size !== before.size) {
       return Object.freeze({
         ok: false as const,
@@ -128,12 +148,14 @@ export function readContainedRegularFile(
         detail: "the opened file length changed while it was being read",
       });
     }
+
     return Object.freeze({ ok: true as const, bytes, stats: after });
   } catch (error) {
     const code =
-      typeof error === "object" && error !== null && "code" in error
+      isBoundaryObjectValue(error) && error !== null && "code" in error
         ? error.code
         : null;
+
     return Object.freeze({
       ok: false as const,
       kind:
@@ -154,4 +176,10 @@ export function readContainedRegularFile(
       }
     }
   }
+}
+
+type BoundaryObjectValue = object | null;
+
+function isBoundaryObjectValue<Input>(value: Input): value is Input & Readonly<BoundaryObjectValue> {
+  return typeof value === "object";
 }

@@ -1,0 +1,292 @@
+{
+  "owner": "bg-158",
+  "status": "SOURCE_RELEASED_FOCUSED_CHECKS_PASS_INDEPENDENT_REVIEW_REQUIRED",
+  "checkout": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1",
+  "sourceHandback": true,
+  "furtherSourceWrites": false,
+  "scopeApproval": [
+    "controller lm_368",
+    "root owner bg-160 lm_366"
+  ],
+  "sourceFiles": [
+    {
+      "path": "desktop/linux/src/lib/bridge/assistant.ts",
+      "bytes": 26985,
+      "mode": "0o664",
+      "beforeSha256": "ee3d4f155687588d5b9e83ecabdd10595c2d05d34c41ff1336df9e4bd4c260e1",
+      "sha256": "e6657c5d071ba83c5b4750d34fef9d739e42977b05a242f4f6228139a514ca0d"
+    },
+    {
+      "path": "desktop/linux/src/lib/desktop-scene.ts",
+      "bytes": 78899,
+      "mode": "0o644",
+      "beforeSha256": "694f2f6b24441deebe4ffc5cf8e076ca87f91f4ba52420b265aa87ec2009feab",
+      "sha256": "97f9f507197494179799e4baf52160ccf245f5c02d744f43c87bbbf6c8fb4bd5"
+    },
+    {
+      "path": "desktop/linux/test/native-assistant-scene-compat.test.ts",
+      "bytes": 13831,
+      "mode": "0o664",
+      "beforeSha256": null,
+      "sha256": "ada2a14733f981288f2ced17dce97642653da85783ad6a74a672c27dc2f74b7e"
+    },
+    {
+      "path": "desktop/linux/test/scene-animation-mutation-consumer.test.ts",
+      "bytes": 4005,
+      "mode": "0o664",
+      "beforeSha256": null,
+      "sha256": "77bcb9b946d7d69ee665890beebe9db92d45f0d781d5a4a26cba124aa3521213"
+    },
+    {
+      "path": "desktop/linux/test/scene-effects-mutation-consumer.test.ts",
+      "bytes": 3561,
+      "mode": "0o664",
+      "beforeSha256": null,
+      "sha256": "b9f92ed4a07e2f1848a4029ccf6ad116503ee316751de260abd4b4d1226cc1dd"
+    },
+    {
+      "path": "desktop/linux/test/scene-environment-mutation-consumer.test.ts",
+      "bytes": 3954,
+      "mode": "0o664",
+      "beforeSha256": null,
+      "sha256": "ab5da7db83a6b4e9400dd6fd0ece141e881e9f26bef1816860a61fdf45d789d8"
+    },
+    {
+      "path": "desktop/linux/test/scene-materials-mutation-consumer.test.ts",
+      "bytes": 3605,
+      "mode": "0o664",
+      "beforeSha256": null,
+      "sha256": "e726bb934cc2511777c5d422fdb21620c81b9d08c28f53242cda3a3172d7d308"
+    },
+    {
+      "path": "desktop/linux/test/scene-physics-mutation-consumer.test.ts",
+      "bytes": 3970,
+      "mode": "0o664",
+      "beforeSha256": null,
+      "sha256": "5e4505f3bdae627da63394ca1c6656c429a9d9bc63a7d18f71c51761803ae225"
+    },
+    {
+      "path": "packages/schemas/src/desktop-scene-animation.ts",
+      "bytes": 20023,
+      "mode": "0o644",
+      "beforeSha256": "c5b5c8e86dc3c349b0008d3cbf563d7a1d208da62824cd8df5bf8d5730da5350",
+      "sha256": "001757687a00add4c017c7242064366bb42aab94f8198d4be5318e19600057e1"
+    },
+    {
+      "path": "packages/schemas/src/desktop-scene-effects.ts",
+      "bytes": 12603,
+      "mode": "0o644",
+      "beforeSha256": "159adefbebe49a69ccfa6de4a7c40657ae1730cd7c532ad70160f55f756ef895",
+      "sha256": "97b86d1f80b7c90790688e3ca7d57b5c19a7a07ba48fb9c117ae675f8edefaaa"
+    },
+    {
+      "path": "packages/schemas/src/desktop-scene-environment.ts",
+      "bytes": 15338,
+      "mode": "0o644",
+      "beforeSha256": "294933a51cddfe53bffb4f7c14d6bc89ab641c012a558504fcd77a2546199674",
+      "sha256": "279ffd546797e80643cb23d607d856cb8b51bb5c822283adef9fa590a6f26024"
+    },
+    {
+      "path": "packages/schemas/src/desktop-scene-materials.ts",
+      "bytes": 9721,
+      "mode": "0o644",
+      "beforeSha256": "c2c7027ec1ced13aa5a07cec28f4e3b7393b80eca82075f52f6bec81dc678f6b",
+      "sha256": "82e2aa187fc2220bd0b4fce686dc513617a7edd8680eecba29526a1060ad6fc2"
+    },
+    {
+      "path": "packages/schemas/src/desktop-scene-physics.ts",
+      "bytes": 29089,
+      "mode": "0o644",
+      "beforeSha256": "77efd8aa05900dc319303dc96f502b927f77db473ba84d106a11d54cafc5d9d3",
+      "sha256": "aa028ba303579b1a7a4c4cf19cfac8093ae5d7fe68c0dc63fd5e49fbed9bbae9"
+    },
+    {
+      "path": "packages/schemas/test/desktop-scene-animation-mutation.test.ts",
+      "bytes": 5387,
+      "mode": "0o664",
+      "beforeSha256": null,
+      "sha256": "3b2e133d334bcd0a33401c01527b06374a6a36247f2bc75b467b8707c24ec7f1"
+    },
+    {
+      "path": "packages/schemas/test/desktop-scene-effects-mutation.test.ts",
+      "bytes": 3965,
+      "mode": "0o664",
+      "beforeSha256": null,
+      "sha256": "8730aa092f11c2b71737097a3cbe57cb2fd3dda3db873d53856b3a0d70ec9382"
+    },
+    {
+      "path": "packages/schemas/test/desktop-scene-environment-mutation.test.ts",
+      "bytes": 7247,
+      "mode": "0o664",
+      "beforeSha256": null,
+      "sha256": "0071f2a90f048290a402db75bfe851716cfec1bf1029072a3fbd6edda9b714e3"
+    },
+    {
+      "path": "packages/schemas/test/desktop-scene-materials-mutation.test.ts",
+      "bytes": 4059,
+      "mode": "0o664",
+      "beforeSha256": null,
+      "sha256": "66df126651c36e9c3a26f9d2dfa0ccafca32e97f9baad9d8c4ebfc90c7ae1fe3"
+    },
+    {
+      "path": "packages/schemas/test/desktop-scene-physics-mutation.test.ts",
+      "bytes": 6655,
+      "mode": "0o664",
+      "beforeSha256": null,
+      "sha256": "a66660f82a4d5ff98763c0799f8028b9135983a19a7d618951adc92a5fab2e4f"
+    }
+  ],
+  "sourceFingerprintAlgorithm": "sha256 of compact JSON sorted [path,sha256] pairs; NOT a Git tree hash",
+  "sourceFingerprintSha256": "abe492a558f4092d30251e9dc41ed78eed73388359a396ff9812e1416ed98ae8",
+  "indexSeparateHandback": {
+    "path": "packages/schemas/src/index.ts",
+    "releasedTo": "bg-160",
+    "message": "lm_370",
+    "sha256AtRelease": "4cc1763a04b6287f274691057e04ca7812538499cfdd5e7bd9e6b23be27dc250",
+    "change": "Only five actual parser value reexports; no unrelated exports changed by bg158; current file may subsequently change by parent LF02 work"
+  },
+  "inputEvidence": {
+    "handoff": "assembly/handoff-bg156.json",
+    "audioFinal": "assembly/children/audio-assets/RETRY-FINAL.json",
+    "editorFinal": "FINAL.md/json absent; read actual continuation-typecheck.log, actual modern modular/native source and historical private-bridge-source.ts local executor implementation",
+    "parserPacket": "assembly/packets/mutations-149/mutation-only.patch",
+    "parserPacketSha256": "6597a311f1749a860a05f2182c2beaa37b3e4a6a05b63bfd3ca223e0c3c10227"
+  },
+  "implemented": [
+    "Genuine private runLocalAssistant typed option and actual local dispatch in modular assistant. Absent option uses real deterministic compiler. No cast/dummy callback, BYO/hosted/Kids/Ask/rarity gates and active-job progress/abandon/refusal settlement preserved.",
+    "Explicit create-node/create-primitive/rename-object branches before reparent fallback. Node uses canonical composition-owned empty artifact; primitive uses real reconstructSculpt structured spec. Existing placements retain node kind/name through recomposition and canonical traversal; editable labels honor authored names. E1 review/accept/fresh bridge reopen and artifact-byte preservation tested.",
+    "Five checked descriptor-snapshot mutation parsers integrated functionwise from approved149 logic, matching existing public unions/apply gates. No raw union mutation casts at five desktop intakes. Public direct apply rechecks after existing Kids/catalog gate. Catalog/new Rapier/projection/audio/v2 implementation not overwritten.",
+    "Physics parser handles colliderId/colliderKind and legacy shapeId/shapeKind; snapshot-only modern alias precedence matches existing apply, normalizes current canonical colliders+legacy shapes, reload equality tested. Structural parsing retains typed domain invalid values for existing domain refusal order.",
+    "Original97 parser/public-consumer assertions retained. Ten public desktop tests relocated from schema test project into five native consumer files to avoid TS6059/6307 rootDir crossing; no test aliases. Added modern physics variant/canonical precedence test and14 native assistant/scene tests."
+  ],
+  "checks": [
+    {
+      "command": "pnpm exec vitest run desktop/linux/test/native-assistant-scene-compat.test.ts desktop/linux/test/scene-animation-mutation-consumer.test.ts desktop/linux/test/scene-physics-mutation-consumer.test.ts desktop/linux/test/scene-environment-mutation-consumer.test.ts desktop/linux/test/scene-materials-mutation-consumer.test.ts desktop/linux/test/scene-effects-mutation-consumer.test.ts desktop/linux/test/audio-lifecycle-compat.test.ts packages/schemas/test/desktop-scene-animation-mutation.test.ts packages/schemas/test/desktop-scene-physics-mutation.test.ts packages/schemas/test/desktop-scene-environment-mutation.test.ts packages/schemas/test/desktop-scene-materials-mutation.test.ts packages/schemas/test/desktop-scene-effects-mutation.test.ts packages/schemas/test/desktop-scene-animation.test.ts packages/schemas/test/desktop-scene-physics.test.ts packages/schemas/test/desktop-scene-environment.test.ts packages/schemas/test/desktop-scene-materials.test.ts packages/schemas/test/desktop-scene-effects.test.ts packages/schemas/test/desktop-scene-edit.test.ts packages/schemas/test/scene-transform-v2.test.ts packages/authoring-core/test/scene-transform-v2.test.ts tests/e2e/desktop-linux-bridge-assistant-golden.test.ts tests/e2e/desktop-scene-property-golden.test.ts tests/e2e/desktop-hierarchy-golden.test.ts tests/e2e/desktop-physics-golden.test.ts tests/e2e/desktop-animation-golden.test.ts tests/e2e/desktop-assistant-scene-loop-golden.test.ts",
+      "cwd": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1",
+      "exitCode": 0,
+      "files": 26,
+      "tests": 246,
+      "fail": 0,
+      "log": "focused-final.log",
+      "coverage": "regular unchanged root Vitest configuration; real local compiler+E1 filesystem mutation; inherited assistant/hierarchy/physics/animation regressions; audio lifecycle10; v2 schema26+authoring14"
+    },
+    {
+      "command": "pnpm exec tsc -p desktop/linux/tsconfig.json --noEmit",
+      "cwd": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1",
+      "exitCode": 0,
+      "log": "native-typecheck-after.log",
+      "previous": "native-typecheck.log exit2 TS2339 at desktop-scene.ts508: artifactId missing from node union; replaced unchecked member read with real in discrimination, no cast"
+    },
+    {
+      "command": "pnpm exec tsc -p packages/schemas/tsconfig.json --noEmit",
+      "cwd": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1",
+      "exitCode": 0,
+      "log": "schema-typecheck-after.log",
+      "previous": "schema-typecheck.log exit2: packet desktop consumer imports crossed schema rootDir plus then-unfixed operation fallback. Relocated desktop assertions, preserved schema tests and fixed operation handling."
+    },
+    {
+      "command": "pnpm exec eslint desktop/linux/src/lib/bridge/assistant.ts desktop/linux/src/lib/desktop-scene.ts packages/schemas/src/desktop-scene-animation.ts packages/schemas/src/desktop-scene-physics.ts packages/schemas/src/desktop-scene-environment.ts packages/schemas/src/desktop-scene-materials.ts packages/schemas/src/desktop-scene-effects.ts packages/schemas/test/desktop-scene-animation-mutation.test.ts packages/schemas/test/desktop-scene-physics-mutation.test.ts packages/schemas/test/desktop-scene-environment-mutation.test.ts packages/schemas/test/desktop-scene-materials-mutation.test.ts packages/schemas/test/desktop-scene-effects-mutation.test.ts desktop/linux/test/native-assistant-scene-compat.test.ts desktop/linux/test/scene-animation-mutation-consumer.test.ts desktop/linux/test/scene-physics-mutation-consumer.test.ts desktop/linux/test/scene-environment-mutation-consumer.test.ts desktop/linux/test/scene-materials-mutation-consumer.test.ts desktop/linux/test/scene-effects-mutation-consumer.test.ts",
+      "cwd": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1",
+      "result": "PASS across initial scoped check plus rerun only failed five relocated native test files",
+      "initialExitCode": 1,
+      "initialLog": "scoped-eslint.log",
+      "initialOutput": "10 no-unused-vars errors: applyScene*Mutation/emptyScene*Catalog imports in relocated consumer files only. Source and remaining tests clean. Removed unused imports.",
+      "repairedFilesExitCode": 0,
+      "repairedFilesLog": "scoped-eslint-after.log"
+    }
+  ],
+  "failuresAndFixtureCorrections": [
+    {
+      "log": "compat-before.log",
+      "result": "12failed/1pass before desktop source edits; genuine injected executor 0calls, wrong default ready instead of injected failures, stale-node/rename fallback reproduced. Test fixture also used wrong Kids reason, starter root id, hierarchy diagnostic code, and mountable shape; not all12 classified implementation defects."
+    },
+    {
+      "log": "compat-first-after.log",
+      "result": "8failed/5pass; source correctly handled rename; remaining fixture root/Kids/mountable/refusal-oracle mismatches corrected without weakening feature assertions."
+    },
+    {
+      "log": "compat-second-after.log",
+      "result": "2failed/108pass; mountable has no schemaVersion, preserve-world reparent intentionally computes4.4 localX. Corrected assertions and explicitly asserted unchanged world transform."
+    },
+    {
+      "log": "compat-third-after.log",
+      "result": "3files/36pass"
+    },
+    {
+      "log": "compat-e1.log",
+      "result": "1failed/13pass; fresh scene request omitted required documentPath. Added required path; E1 review/disk-unchanged/accept/reopen oracle now passes."
+    }
+  ],
+  "logs": [
+    {
+      "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/finishing/native/compat-before.log",
+      "sha256": "af6681eb70f15af5f00a96eeec5f5ed31430f9a7ba4dfdeee999517b012e4d62",
+      "bytes": 13374
+    },
+    {
+      "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/finishing/native/compat-e1.log",
+      "sha256": "cffc45764c68459f50c2bec8651590c7240a608491f9da8590380dc04277dd2f",
+      "bytes": 3430
+    },
+    {
+      "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/finishing/native/compat-first-after.log",
+      "sha256": "8eae71f2c74ae03f4d7cf5168baeff20011eb039b1d50db191705e07487e8a9a",
+      "bytes": 20895
+    },
+    {
+      "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/finishing/native/compat-second-after.log",
+      "sha256": "1a430760a6bc9c641bb33a04dc9de52fda06ffe8f7429bbe093a023b974ca59e",
+      "bytes": 6016
+    },
+    {
+      "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/finishing/native/compat-third-after.log",
+      "sha256": "e02d2f757f4eb0d8e814f35d607d824b8f5e513e89e2e7fdbb0ebc55d0090dbb",
+      "bytes": 1074
+    },
+    {
+      "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/finishing/native/focused-final.log",
+      "sha256": "6c371a499e06267c5a6030f470bbeb2c38e10a4a5d37e68292ec972da5f74dc7",
+      "bytes": 5875
+    },
+    {
+      "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/finishing/native/native-typecheck-after.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/finishing/native/native-typecheck.log",
+      "sha256": "f74f54ab20245ad13ad9792fa47b88f2883f9a812acff189d184137909424689",
+      "bytes": 498
+    },
+    {
+      "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/finishing/native/schema-typecheck-after.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/finishing/native/schema-typecheck.log",
+      "sha256": "e9741500d7bb0357579658db098e30259ed327bb143ce19bc120166859590245",
+      "bytes": 9118
+    },
+    {
+      "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/finishing/native/scoped-eslint-after.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/finishing/native/scoped-eslint.log",
+      "sha256": "26f272baabcfbdaea7621fa9aa4431a5e7643eccc0545bbed9ed9abc0e329669",
+      "bytes": 1627
+    }
+  ],
+  "unrun": [
+    "install",
+    "full build",
+    "full gate",
+    "native browser/actual gesture/RMS",
+    "packaging",
+    "Git/index/protection/publication operations",
+    "native policy oxlint guard"
+  ],
+  "claims": "Local focused implementation/typecheck only. Approved149 baseline proof is historical, not current candidate approval. Independent current source review/root acceptance remains controller responsibility."
+}

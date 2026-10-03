@@ -30,11 +30,18 @@ import type {
   MountableScene,
   WebExperienceEditorView,
 } from "@sceneaxi/site-kit";
+import { createProjectRecord, readProjectRecord, projectStorageKey, saveProjectRecord, verifyProjectReconstruction, PROJECT_RECORD_MAX_BYTES } from "./project-persistence.js";
 import { EditorViewport } from "./editor-viewport.js";
+
+/** Inert controls keep a literal aria contract: the umbrella visual oracle asserts this exact source form. */
+const inertControlAriaDisabled = { "aria-disabled": true } as const;
+
 import { WebExperienceEditor } from "./web-experience-editor.js";
 
 type ModeId = EditorShellView["modes"][number]["id"];
+
 type DockTabId = EditorShellView["modes"][number]["dockTabs"][number];
+
 type ProfileId = EditorShellView["profiles"][number]["id"];
 
 const DOCK_TAB_LABELS: Record<DockTabId, string> = {
@@ -95,18 +102,22 @@ function hrefInViewState(
   profile: ProfileId | null,
 ): string {
   const [path, query] = href.split("?");
+
   if (path === undefined || query === undefined) return href;
   const params = new URLSearchParams(query);
   let rewritten = false;
+
   if (mode !== null && params.has("mode")) {
     params.set("mode", mode);
     rewritten = true;
   }
+
   if (path === "/editor" && (profile === "game" || profile === "web")) {
     if (profile === "web") params.set("profile", "web");
     else params.delete("profile");
     rewritten = true;
   }
+
   return rewritten ? `${path}?${params.toString()}` : href;
 }
 
@@ -132,6 +143,7 @@ function ShellViewState({
 
 /** The one panel every viewport-source tab controls. */
 const VIEWPORT_PANEL_ID = "ed-viewport-panel";
+
 /**
  * One dock panel exists at a time, so every dock tab controls the one panel
  * element the body always renders — an `aria-controls` per tab would name four
@@ -181,31 +193,36 @@ function ShellButton({
     control.kind === "inert" ||
     demotedRefusal !== undefined ||
     profileRefusal !== undefined;
+
   const refusal =
     control.kind === "inert"
       ? control.refusal
       : (demotedRefusal ?? profileRefusal ?? null);
+
   const binding = control.binding;
   const activeMode = useContext(ActiveModeContext);
   const activeProfile = useContext(ActiveProfileContext);
 
-  const shared = {
+  type ControlAttributes = React.AriaAttributes & { className: string; "data-kind": string; "data-refusal"?: string | undefined; role?: "tab" };
+
+  const shared: ControlAttributes = {
     className: `${className ?? ""}${inert ? " is-inert" : ""}`,
     "data-kind": inert ? "inert" : control.kind,
-    ...(inert
-      ? {
-          "aria-disabled": true,
-          "data-refusal": refusal ?? undefined,
-          "aria-describedby": refusal === null ? undefined : legendId(refusal),
-        }
-      : {}),
-    ...(pressed === undefined ? {} : { "aria-pressed": pressed }),
-    ...(role === undefined ? {} : { role }),
-    ...(selected === undefined || role === undefined
-      ? {}
-      : { "aria-selected": selected }),
-    ...(controls === undefined ? {} : { "aria-controls": controls }),
-  } as const;
+  };
+
+    if (inert) {
+      shared["aria-disabled"] = inertControlAriaDisabled["aria-disabled"];
+      shared["data-refusal"] = refusal ?? undefined;
+      shared["aria-describedby"] = refusal === null ? undefined : legendId(refusal);
+    }
+
+  if (pressed !== undefined) shared["aria-pressed"] = pressed;
+
+  if (role !== undefined) shared.role = role;
+
+  if (selected !== undefined && role !== undefined) shared["aria-selected"] = selected;
+
+  if (controls !== undefined) shared["aria-controls"] = controls;
 
   if (!inert && binding !== null && binding.kind === "href") {
     return (
@@ -218,6 +235,7 @@ function ShellButton({
       </a>
     );
   }
+
   return (
     <button
       id={control.id}
@@ -232,6 +250,9 @@ function ShellButton({
 
 export function EditorShell({
   view,
+  projectOwner,
+  projectDigest,
+  projectDocument,
   scene,
   selectedInstanceId,
   deepLinkFields,
@@ -239,6 +260,9 @@ export function EditorShell({
   viewportCopy,
   webView,
 }: {
+  readonly projectOwner: string;
+  readonly projectDigest: string;
+  readonly projectDocument: string;
   readonly view: EditorShellView;
   readonly scene: MountableScene | null;
   readonly selectedInstanceId: string;
@@ -261,15 +285,23 @@ export function EditorShell({
   const [assistantMode, setAssistantMode] = useState(view.assistant.defaultModeId);
   const [paletteRequested, setPaletteRequested] = useState(false);
   const [paletteQuery, setPaletteQuery] = useState("");
+  const [projectMessage, setProjectMessage] = useState("Local checkpoints are saved only when you choose Save locally; no cloud sync.");
+  const [projectBusy, setProjectBusy] = useState(false);
+  const importRef = useRef<HTMLInputElement | null>(null);
+  const projectLock = useRef(false);
+  const projectEpoch = useRef(0);
   const paletteRef = useRef<HTMLInputElement | null>(null);
   const paletteReturnFocus = useRef<HTMLElement | null>(null);
 
   const fallbackMode = view.modes[0];
+
   if (fallbackMode === undefined) {
     throw new Error("The editor shell view carries no modes.");
   }
+
   const activeMode =
     view.modes.find((candidate) => candidate.id === mode) ?? fallbackMode;
+
   const kids = profile === "kids";
   const web = profile === "web";
   /**
@@ -279,6 +311,7 @@ export function EditorShell({
    * live play row included, is therefore unreachable while Kids is selected.
    */
   const paletteOpen = paletteRequested && !kids;
+
   // The view decides which source has a session here; the other tabs refuse.
   const selectedViewportSource = view.viewport.sources.find(
     (source) => source.kind !== "inert",
@@ -286,6 +319,7 @@ export function EditorShell({
 
   const enterMode = (next: ModeId) => {
     const nextMode = view.modes.find((candidate) => candidate.id === next);
+
     if (nextMode === undefined) return;
     setMode(next);
     setDockTab(nextMode.dockTabs[0] ?? "console");
@@ -297,21 +331,27 @@ export function EditorShell({
     const onKey = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         if (kids) return;
+
         if (web) return;
         event.preventDefault();
+
         // Only the keystroke that opens the palette records where focus came
         // from. While it is open the rest of the chrome is `inert`, so
         // `activeElement` is the palette's own input — capturing that would
         // hand the close effect an element React is about to unmount.
         if (!paletteOpen) {
-          paletteReturnFocus.current = document.activeElement as HTMLElement;
+          const activeElement = document.activeElement;
+          paletteReturnFocus.current = activeElement instanceof HTMLElement ? activeElement : null;
         }
+
         setPaletteRequested(true);
       } else if (event.key === "Escape" && paletteOpen) {
         setPaletteRequested(false);
       }
     };
+
     document.addEventListener("keydown", onKey);
+
     return () => document.removeEventListener("keydown", onKey);
   }, [paletteOpen, kids, web]);
 
@@ -325,8 +365,10 @@ export function EditorShell({
   useEffect(() => {
     if (paletteOpen) {
       paletteRef.current?.focus();
+
       return;
     }
+
     setPaletteQuery("");
     paletteReturnFocus.current?.focus();
     paletteReturnFocus.current = null;
@@ -349,6 +391,7 @@ export function EditorShell({
    * about what a row is, only whether this reader asked to see it.
    */
   const paletteNeedle = paletteQuery.trim().toLowerCase();
+
   const paletteRows =
     paletteNeedle === ""
       ? view.palette
@@ -357,10 +400,84 @@ export function EditorShell({
         );
 
   /** Palette groups in the view's own mint order — the view decides the set. */
-  const paletteGroups = paletteRows.reduce<readonly string[]>(
-    (groups, row) => (groups.includes(row.group) ? groups : [...groups, row.group]),
-    [],
-  );
+  const paletteGroups = paletteRows.reduce<string[]>((groups, row) => {
+    if (!groups.includes(row.group)) groups.push(row.group);
+
+    return groups;
+  }, []);
+
+  const localProjectAction = async (action: "save" | "load" | "export" | "forget", imported?: File) => {
+    if (kids || projectLock.current) return;
+    const epoch = projectEpoch.current;
+
+    const assertCurrentProfile = () => {
+      if (epoch !== projectEpoch.current) throw new Error("PROJECT_PROFILE_CHANGED");
+    };
+
+    projectLock.current = true;
+    setProjectBusy(true);
+
+    try {
+      const key = await projectStorageKey(projectOwner, web ? "web" : "game");
+      assertCurrentProfile();
+      const storage = window.localStorage;
+
+      if (action === "forget") {
+        storage.removeItem(key);
+        setProjectMessage("This profile's local checkpoint was removed. The open scene is unchanged.");
+
+        return;
+      }
+
+      const prior = storage.getItem(key);
+
+      if (action === "save" || action === "export") {
+        // The profile chip changes only presentation. Persist only the profile
+        // the server actually reconstructed, never another profile's digest.
+        const renderedProfile = new URL(location.href).searchParams.get("profile") === "web" ? "web" : "game";
+
+        if (renderedProfile !== (web ? "web" : "game")) throw new Error("PROJECT_PROFILE_MISMATCH");
+        const previous = prior === null ? null : await readProjectRecord(prior, projectOwner);
+
+        const record = await createProjectRecord({ owner: projectOwner, revision: (previous?.revision ?? 0) + 1,
+          href: `${location.pathname}${location.search}`, documentDigest: projectDigest });
+
+        if (action === "save") {
+          await saveProjectRecord(storage, key, record, assertCurrentProfile);
+          setProjectMessage(`Saved locally, revision ${record.revision}. Browser-owned checkpoint, not an account backup.`);
+        } else {
+          assertCurrentProfile();
+          const url = URL.createObjectURL(new Blob([JSON.stringify(record, null, 2)], { type: "application/json" }));
+
+          try {
+            const link = document.createElement("a");
+            link.href = url; link.download = "sceneaxi-local-project.json"; link.click();
+          } finally { URL.revokeObjectURL(url); }
+
+          setProjectMessage("Exported the bounded editor checkpoint. This is not a standalone scene package.");
+        }
+
+        return;
+      }
+
+      if (imported !== undefined && imported.size > PROJECT_RECORD_MAX_BYTES) throw new Error("PROJECT_RECORD_TOO_LARGE");
+      const text = imported === undefined ? prior : await imported.text();
+
+      if (text === null) throw new Error("PROJECT_RECORD_ABSENT");
+      const record = await readProjectRecord(text, projectOwner);
+      const savedProfile = new URL(record.href, location.origin).searchParams.get("profile") === "web" ? "web" : "game";
+
+      if (savedProfile !== (web ? "web" : "game")) throw new Error("PROJECT_PROFILE_MISMATCH");
+      // Reuse the entitled real front door, not a second scene/authoring implementation.
+      await verifyProjectReconstruction(record);
+      // Import/load never writes the checkpoint. Only an explicit Save replaces it.
+      assertCurrentProfile();
+      location.assign(record.href);
+    } catch (error) {
+      const code = error instanceof Error && /^PROJECT_[A-Z_]+$/.test(error.message) ? error.message : "PROJECT_STORAGE_UNAVAILABLE";
+      setProjectMessage(`${code}. No checkpoint was changed; your current scene is still open.`);
+    } finally { projectLock.current = false; setProjectBusy(false); }
+  };
 
   const dockTabs = activeMode.dockTabs;
   const shownDockTab: DockTabId = dockTabs.includes(dockTab) ? dockTab : (dockTabs[0] ?? "console");
@@ -406,7 +523,7 @@ export function EditorShell({
                 control={chip.control}
                 className={`ed-profile-chip ed-profile-${chip.id}`}
                 pressed={profile === chip.id}
-                onClick={() => setProfile(chip.id)}
+                onClick={() => { projectEpoch.current += 1; setProfile(chip.id); }}
               >
                 <span className="dot" aria-hidden="true" />
                 {chip.label}
@@ -422,6 +539,32 @@ export function EditorShell({
             <span className="ed-project-save">{view.changes.savedLabel}</span>
           </div>
           <div className="ed-title-actions">
+              {!kids && <details className="ed-local-project">
+                <summary>Local project</summary>
+                <div className="ed-local-project-panel">
+                  <p role="status">{projectMessage}</p>
+                  <p>One checkpoint per profile and owner in this browser. Export before clearing browser data. Import revalidates entitlement and the reconstructed document; it does not grant access.</p>
+                  <button type="button" disabled={projectBusy || !projectDigest} onClick={() => void localProjectAction("save")}>Save locally</button>
+                  <button type="button" disabled={projectBusy} onClick={() => void localProjectAction("load")}>Reopen local</button>
+                  <button type="button" disabled={projectBusy || !projectDigest} onClick={() => void localProjectAction("export")}>Export checkpoint</button>
+                  <button type="button" disabled={projectBusy || !projectDigest} onClick={() => {
+                    const url = URL.createObjectURL(new Blob([projectDocument], { type: "application/json" }));
+
+                    try { const link = document.createElement("a"); link.href = url; link.download = `sceneaxi-document-${projectDigest}.json`; link.click(); }
+                    finally { URL.revokeObjectURL(url); }
+                  }}>Export canonical document</button>
+                  {web && <button type="button" disabled={projectBusy} onClick={() => { location.assign(`/api/editor/export${location.search}`); }}>Export offline HTML PWA</button>}
+                  <button type="button" disabled={projectBusy} onClick={() => importRef.current?.click()}>Import checkpoint</button>
+                  <button type="button" disabled={projectBusy} onClick={() => void localProjectAction("forget")}>Forget checkpoint</button>
+                  <input ref={importRef} type="file" accept="application/json,.json" hidden onChange={(event) => {
+                    const file = event.currentTarget.files?.[0];
+                    event.currentTarget.value = "";
+
+                    if (file !== undefined) void localProjectAction("load", file);
+                  }} />
+                </div>
+              </details>}
+
             <ShellButton
               control={view.paletteOpener}
               className="ed-search"
@@ -748,6 +891,7 @@ export function EditorShell({
                                   const decision = view.changes.rowDecisions.find(
                                     (candidate) => candidate.index === row.index,
                                   );
+
                                   return (
                                     <tr key={row.index}>
                                       <td className="mono">
@@ -1214,7 +1358,9 @@ export function EditorShell({
               )}
               {paletteGroups.map((group) => {
                 const rows = paletteRows.filter((row) => row.group === group);
+
                 if (rows.length === 0) return null;
+
                 return (
                   <div key={group} className="ed-palette-group">
                     <p className="ed-palette-group-name">{group}</p>

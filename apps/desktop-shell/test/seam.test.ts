@@ -4,6 +4,7 @@ import * as desktopShell from "@sceneaxi/desktop-shell";
 
 const { seam } = desktopShell;
 
+// SAFETY: This is the checked-in owning package manifest, whose name and sceneaxi.releaseGroup fields define the seam identity tested below.
 const manifest = JSON.parse(
   readFileSync(new URL("../package.json", import.meta.url), "utf8"),
 ) as { name: string; sceneaxi: { releaseGroup: string } };
@@ -15,7 +16,7 @@ describe("@sceneaxi/desktop-shell public seam", () => {
   });
 
   it("is immutable", () => {
-    expect(typeof seam).toBe("object");
+    expect(isSeamObject(seam)).toBe(true);
     expect(Object.isFrozen(seam)).toBe(true);
   });
 
@@ -25,3 +26,13 @@ describe("@sceneaxi/desktop-shell public seam", () => {
     expect(Object.hasOwn(desktopShell, "prepareDesktopSessionProjectGitCommit")).toBe(false);
   });
 });
+
+function isSeamObject<Value>(value: Value): value is Value & (object | null) {
+  return isBoundaryObjectValue(value);
+}
+
+type BoundaryObjectValue = object | null;
+
+function isBoundaryObjectValue<Input>(value: Input): value is Input & Readonly<BoundaryObjectValue> {
+  return typeof value === "object";
+}

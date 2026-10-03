@@ -1,0 +1,31 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/tmp/sceneaxi-comprehensive-owned-xd4gdfl1[39m
+
+ [32m✓[39m packages/engine-presentation/test/legacy-audio-compat.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+ [32m✓[39m packages/engine-presentation/test/audio-playback.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 39[2mms[22m[39m
+ [32m✓[39m packages/importers/test/legacy-asset-v1.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 451[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/audio-lifecycle-compat.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 143[2mms[22m[39m
+ [32m✓[39m tests/e2e/asset-pipeline-golden.test.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 2994[2mms[22m[39m
+     [33m[2m✓[22m[39m admits every required family with deterministic validation, preview, provenance, and contained copies [33m 1596[2mms[22m[39m
+     [33m[2m✓[22m[39m stages digest hot reload by stable identity and keeps accepted bytes untouched until approval [33m 478[2mms[22m[39m
+     [33m[2m✓[22m[39m keeps model identity and canonical-byte Play loading intact across an approved reload [33m 398[2mms[22m[39m
+[90mstdout[2m | packages/importers/test/contained-gltf.test.ts[2m > [22m[2mAP-08 reparses16x8MiB canonical binary bytes and refuses the seventeenth asset
+[22m[39m{"task":"AP-PERF","case":"16x8MiB-and-count17","durationMs":10931,"maxRssKiB":823392,"platform":"linux","arch":"x64"}
+
+[90mstdout[2m | packages/importers/test/contained-gltf.test.ts[2m > [22m[2mAP-PERF admits250000 triangles and refuses250001 deterministically
+[22m[39m{"task":"AP-PERF","case":"triangles250000-and250001","durationMs":771,"maxRssKiB":823392,"platform":"linux","arch":"x64"}
+
+ [32m✓[39m packages/importers/test/contained-gltf.test.ts [2m([22m[2m18 tests[22m[2m)[22m[33m 15673[2mms[22m[39m
+     [33m[2m✓[22m[39m refuses duplicate manifest paths and media types that disagree with canonical bytes [33m 424[2mms[22m[39m
+     [33m[2m✓[22m[39m AP-01 bounds graph depth/count and refuses cycles/multiple parents without writes [33m 484[2mms[22m[39m
+     [33m[2m✓[22m[39m AP-05 refuses lexical destination links for initial import, reload and recovery [33m 703[2mms[22m[39m
+     [33m[2m✓[22m[39m admits accessor count250000 and rejects250001 with a real backing buffer [33m 331[2mms[22m[39m
+     [33m[2m✓[22m[39m admits the8MiB byte ceiling and refuses the next byte; URI schemes stay refused [33m 565[2mms[22m[39m
+   [33m[2m✓[22m[39m AP-08 reparses16x8MiB canonical binary bytes and refuses the seventeenth asset [33m 10951[2mms[22m[39m
+   [33m[2m✓[22m[39m AP-PERF admits250000 triangles and refuses250001 deterministically [33m 783[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m6 passed[39m[22m[90m (6)[39m
+[2m      Tests [22m [1m[32m49 passed[39m[22m[90m (49)[39m
+[2m   Start at [22m 19:04:57
+[2m   Duration [22m 27.15s[2m (transform 59.22s, setup 0ms, import 71.51s, tests 19.34s, environment 2ms)[22m
+

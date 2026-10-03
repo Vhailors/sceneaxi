@@ -1,0 +1,2559 @@
+{
+  "lane": "identity-provider",
+  "status": "NEEDS_LOCAL_FIX",
+  "root": "/home/devuser/Documents/Projects/sceneaxi",
+  "repairPass": 1,
+  "maximumRepairPasses": 3,
+  "publishedStatus": "NOT_VERIFIED",
+  "productionStatus": "BLOCKED",
+  "taskIds": [
+    "IDENTITY-01",
+    "GATE-RETENTION",
+    "GATE-MAIL",
+    "SCOPE-CLOSED-SIGNUP",
+    "SCOPE-OAUTH",
+    "LOCAL-PROOF-014",
+    "REQ-PROOF-IDENT-001",
+    "REQ-PROOF-IDENT-002",
+    "REQ-PROOF-IDENT-003",
+    "REQ-PROOF-IDENT-004",
+    "REQ-PROOF-IDENT-005",
+    "REQ-PROOF-IDENT-006",
+    "REQ-PROOF-IDENT-007",
+    "Repair05-003"
+  ],
+  "changedPaths": [
+    "sites/umbrella/src/lib/provider-adapters.ts",
+    "tests/sites/provider-adapters.test.ts",
+    "tests/sites/billing-final-acceptance.test.ts"
+  ],
+  "evidence": [
+    {
+      "utc": "2026-10-02T09:34:36.822166+00:00",
+      "command": "pnpm exec vitest run packages/auth/test tests/sites/identity-plane-wiring.test.ts tests/e2e/runtime-provenance-refusal.test.ts tests/sites/umbrella-login-flow.test.ts tests/sites/provider-adapters.test.ts tests/sites/billing-final-acceptance.test.ts packages/billing/test/store-boundary.test.ts packages/billing/test/metering.test.ts packages/billing/test/stripe-checkout.test.ts packages/billing/test/live-mode.test.ts packages/billing/test/hosted-ai.test.ts tests/e2e/hosted-ai-metering-golden.test.ts tests/e2e/auth-credits-refuse-matrix.test.ts --reporter=json --outputFile=<owned temporary JSON removed>",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "exit": 0,
+      "passed": 499,
+      "failed": 0,
+      "pending": 0,
+      "assertions": [
+        {
+          "file": "tests/e2e/auth-credits-refuse-matrix.test.ts",
+          "name": "auth refuse matrix reaches every admin-resolution refusal",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/auth-credits-refuse-matrix.test.ts",
+          "name": "auth refuse matrix reaches every wiring and request refusal",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/auth-credits-refuse-matrix.test.ts",
+          "name": "auth refuse matrix reaches every adapter and store refusal",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/auth-credits-refuse-matrix.test.ts",
+          "name": "auth refuse matrix reaches every session-verification refusal",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/auth-credits-refuse-matrix.test.ts",
+          "name": "auth refuse matrix reaches every guard refusal",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/auth-credits-refuse-matrix.test.ts",
+          "name": "auth refuse matrix reaches the bootstrap refusals",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/auth-credits-refuse-matrix.test.ts",
+          "name": "billing refuse matrix reaches every ledger refusal",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/auth-credits-refuse-matrix.test.ts",
+          "name": "billing refuse matrix reaches every metering refusal",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/auth-credits-refuse-matrix.test.ts",
+          "name": "billing refuse matrix reaches every hosted-AI routing refusal",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/auth-credits-refuse-matrix.test.ts",
+          "name": "billing refuse matrix reaches every entitlement refusal",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/auth-credits-refuse-matrix.test.ts",
+          "name": "billing refuse matrix reaches every credit-pack and checkout refusal",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/auth-credits-refuse-matrix.test.ts",
+          "name": "billing refuse matrix reaches every webhook refusal",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/auth-credits-refuse-matrix.test.ts",
+          "name": "billing refuse matrix reaches every listing refusal",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/auth-credits-refuse-matrix.test.ts",
+          "name": "billing refuse matrix reaches every revenue-share refusal",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/auth-credits-refuse-matrix.test.ts",
+          "name": "billing refuse matrix reaches every Stripe Connect refusal",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/auth-credits-refuse-matrix.test.ts",
+          "name": "administrator support refusal paths guards provenance and role before any support read or append",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/auth-credits-refuse-matrix.test.ts",
+          "name": "administrator support refusal paths reaches every new site support refusal through the witnessed identity port",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/auth-credits-refuse-matrix.test.ts",
+          "name": "the reason maps are honest in both directions has no duplicate reason string in either map",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/auth-credits-refuse-matrix.test.ts",
+          "name": "the reason maps are honest in both directions reaches every auth reason with a concrete case",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/auth-credits-refuse-matrix.test.ts",
+          "name": "the reason maps are honest in both directions reaches every billing reason with a concrete case",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/hosted-ai-metering-golden.test.ts",
+          "name": "hosted AI metering golden path charges exactly the configured credits for one real port call",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/hosted-ai-metering-golden.test.ts",
+          "name": "hosted AI metering golden path answers a retry from the prior debit without re-entering the transport",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/hosted-ai-metering-golden.test.ts",
+          "name": "hosted AI metering golden path is default-off: the wired adapter alone does not enable hosted AI",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/hosted-ai-metering-golden.test.ts",
+          "name": "hosted AI metering golden path refuses a zero balance before the transport is entered",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/hosted-ai-metering-golden.test.ts",
+          "name": "hosted AI metering golden path refuses an insufficient balance before the transport is entered",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/hosted-ai-metering-golden.test.ts",
+          "name": "hosted AI metering golden path keeps the same wired provider free on the BYO route",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/hosted-ai-metering-golden.test.ts",
+          "name": "hosted AI metering golden path denies Kids before the port, the ledger, or the transport",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/hosted-ai-metering-golden.test.ts",
+          "name": "hosted AI metering golden path turns a port refusal into a named provider failure with no debit",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/hosted-ai-metering-golden.test.ts",
+          "name": "hosted AI metering golden path needs no network and no credential: the transport is recorded data",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/runtime-provenance-refusal.test.ts",
+          "name": "admin identity provenance refuses a hand-built identity naming the attacker's own address",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/runtime-provenance-refusal.test.ts",
+          "name": "admin identity provenance refuses a hand-built identity even when it names the real captain",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/runtime-provenance-refusal.test.ts",
+          "name": "admin identity provenance refuses every copy of a genuinely resolved identity",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/runtime-provenance-refusal.test.ts",
+          "name": "admin identity provenance accepts only the object the environment resolution issued",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/runtime-provenance-refusal.test.ts",
+          "name": "admin identity provenance binds guards to the resolved environment identity, taking no admin argument",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/runtime-provenance-refusal.test.ts",
+          "name": "admin identity provenance carries a refused resolution into every bound guard, by its own name",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/runtime-provenance-refusal.test.ts",
+          "name": "admin identity provenance refuses guards built from a fabricated resolution result",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/runtime-provenance-refusal.test.ts",
+          "name": "principal provenance refuses a hand-built principal at every role guard",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/runtime-provenance-refusal.test.ts",
+          "name": "principal provenance refuses every copy while accepting the exact issued object",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/runtime-provenance-refusal.test.ts",
+          "name": "ledger support principal provenance refuses copied authority before persistence while genuine support can append once",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/runtime-provenance-refusal.test.ts",
+          "name": "verified checkout completion provenance refuses an `as`-cast completion at the grant path",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/runtime-provenance-refusal.test.ts",
+          "name": "verified checkout completion provenance refuses every copy of a genuine completion",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/runtime-provenance-refusal.test.ts",
+          "name": "verified checkout completion provenance refuses a hand-built verified webhook at the parse step",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/runtime-provenance-refusal.test.ts",
+          "name": "verified checkout completion provenance refuses every copy of a genuine verified webhook",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/runtime-provenance-refusal.test.ts",
+          "name": "verified checkout completion provenance still grants a genuine completion exactly once, and nothing on replay",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/runtime-provenance-refusal.test.ts",
+          "name": "verified credit-pack refund provenance refuses an `as`-cast refund at the adjustment path",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/runtime-provenance-refusal.test.ts",
+          "name": "verified credit-pack refund provenance refuses every copy of a genuine refund",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/runtime-provenance-refusal.test.ts",
+          "name": "verified credit-pack refund provenance refuses every copy of a genuine verified webhook at parsing and reconciliation persistence",
+          "status": "passed"
+        },
+        {
+          "file": "tests/e2e/runtime-provenance-refusal.test.ts",
+          "name": "verified credit-pack refund provenance still reverses a genuine refund exactly once, and nothing on replay",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/billing-final-acceptance.test.ts",
+          "name": "real checkout handler boundary with hermetic authority fixture malformed/ambiguous/bounded form returns named400 before authority",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/billing-final-acceptance.test.ts",
+          "name": "real checkout handler boundary with hermetic authority fixture malformed/ambiguous/bounded form returns named400 before authority",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/billing-final-acceptance.test.ts",
+          "name": "real checkout handler boundary with hermetic authority fixture malformed/ambiguous/bounded form returns named400 before authority",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/billing-final-acceptance.test.ts",
+          "name": "real checkout handler boundary with hermetic authority fixture malformed/ambiguous/bounded form returns named400 before authority",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/billing-final-acceptance.test.ts",
+          "name": "real checkout handler boundary with hermetic authority fixture hostile/missing/alias Origin null refuses403 before body/authority",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/billing-final-acceptance.test.ts",
+          "name": "real checkout handler boundary with hermetic authority fixture hostile/missing/alias Origin https://evil.test refuses403 before body/authority",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/billing-final-acceptance.test.ts",
+          "name": "real checkout handler boundary with hermetic authority fixture hostile/missing/alias Origin https://alias.test refuses403 before body/authority",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/billing-final-acceptance.test.ts",
+          "name": "real checkout handler boundary with hermetic authority fixture durable budget refusal maps JSON429 with bounded retry-after",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/billing-final-acceptance.test.ts",
+          "name": "real checkout handler boundary with hermetic authority fixture browser refusal keeps303 same-site relative target, never requestHost",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/billing-final-acceptance.test.ts",
+          "name": "configured-origin proof accompanies both BetterAuth mutation POSTs, no Host trust",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/billing-final-acceptance.test.ts",
+          "name": "checkout carried-session and configured-origin positive/negative proof does not read a hostile cross-origin body getter or any session authority",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/billing-final-acceptance.test.ts",
+          "name": "checkout carried-session and configured-origin positive/negative proof uses only the authenticated user and configured origin, never request Host",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/billing-final-acceptance.test.ts",
+          "name": "checkout carried-session and configured-origin positive/negative proof signed-out carried credential refuses before checkout creation",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/billing-final-acceptance.test.ts",
+          "name": "checkout carried-session and configured-origin positive/negative proof rejects a forged userId form field rather than letting it replace the principal",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "administrator ledger support refuses members, signed-out visitors, and Kids before support store reads",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "administrator ledger support reads without a starter grant and appends signed, attributed entries exactly once",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "administrator ledger support refuses malformed forms, cross-origin requests, conflicts, missing targets and overdrafts",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "administrator ledger support keeps the page noindex and the POST-only route behind the request facade",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 1 \u2014 admin env login on the umbrella resolves the admin role for the session whose user the env names",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 1 \u2014 admin env login on the umbrella gives every other user the plain role, no matter which session is presented",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 1 \u2014 admin env login on the umbrella refuses admin when the environment names nobody, rather than defaulting to one",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 1 \u2014 admin env login on the umbrella never lets a client role claim reach the identity port",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 1 \u2014 admin env login on the umbrella refuses the Kids surface before any adapter or store is consulted",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 1 \u2014 admin env login on the umbrella reads a signed-out visitor as absent, not as a broken plane",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 1 \u2014 admin env login on the umbrella reads an unknown or mismatched session as absent rather than naming which",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 1 \u2014 admin env login on the umbrella refuses an expired session with its own reason",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 1 \u2014 admin env login on the umbrella refuses a disabled user even though the provider would still know them",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 1 \u2014 admin env login on the umbrella splits the carried credential without interpreting either half",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 2 \u2014 the starter allotment is granted exactly once grants 100 credits on the first balance read",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 2 \u2014 the starter allotment is granted exactly once appends nothing on any later read, and never a second grant",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 2 \u2014 the starter allotment is granted exactly once grants once per user, not once per deployment",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 2 \u2014 the starter allotment is granted exactly once survives concurrent first reads with a single grant",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 2 \u2014 the starter allotment is granted exactly once reports an unknown balance rather than zero when the user has no account",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 2 \u2014 the starter allotment is granted exactly once reports an unknown balance rather than zero when the ledger read throws",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant lists the committed credit packs without any provider handle",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant creates a TEST-mode checkout for the verified buyer",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant refuses a checkout whose submitted user id is not the verified buyer",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant refuses a checkout for a signed-out visitor",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant still refuses live mode with every handle present",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant grants the pack's credits through a signature-verified event",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant refuses an inflated persisted intent before the webhook commit boundary",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant binds the fixture wire keys to the metadata contract the grant path reads",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant answers deployment failures with 503 and request faults with 400",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant keeps no-record acknowledgements closed to unrelated events",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant owns a settlement bound to the wrong session, and still disowns a bad signature",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant reports a missing signing secret as this deployment's failure, not the sender's",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant acknowledges a signed event type it does not handle without consulting any adapter",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant acknowledges an expired checkout, whose settlement can never exist",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant reconciles a verified full TEST refund as one idempotent append-only adjustment",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant refuses a refund whose intent id is only a prefix of another grant's intent",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant records charge.dispute.created through the webhook",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant records charge.dispute.closed through the webhook",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant retries a partial refund when its reconciliation record cannot be confirmed",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant records a partial refund by name instead of retrying it forever",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant acknowledges a refund the spent balance cannot absorb, without inventing a negative",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant still refuses a signed body that carries no event type",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant acknowledges a checkout session this deployment never created",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant refuses a SceneAxi checkout whose metadata is missing the intent id",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant refuses a SceneAxi checkout whose intent id is present but empty",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant acknowledges a catalog-listing completion without consulting any adapter",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant acknowledges a catalog-listing completion whose intent this endpoint never held",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant still refuses a completion whose purpose is not one the contract names",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant acknowledges a catalog-listing completion even when the buyer has no credit account",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant still refuses a signed body that is not a JSON event object",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant grants nothing a second time when Stripe redelivers the same event",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant commits a webhook grant only through the credit commit boundary",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant refuses retryably when the boundary could not commit, granting nothing",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant never acknowledges an unconfirmed commit, and loses nothing when it did land",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant takes the store's own replay answer when a redelivery committed first",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant names the failing step when a store read throws instead of escaping the plane",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant names the failing step when the checkout evidence adapter throws",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant refuses an unsigned body without touching the ledger",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant refuses a forged signature",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant refuses a body altered after signing, because the signature covers raw bytes",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant refuses a captured event replayed outside the tolerance window",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant refuses when no webhook secret is configured, rather than accepting the event",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant refuses a signed event whose persisted intent is missing",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant refuses an unpaid settlement even with a valid signature and intent",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 3 \u2014 TEST credit-pack checkout and the verified webhook grant refuses a livemode event, because going live is a separate captain decision",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 4 \u2014 catalogs accept surface: site principals pins the site identity surface",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 4 \u2014 catalogs accept surface: site principals accepts a site principal through the shared port with an injected adapter",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 4 \u2014 catalogs accept surface: site principals refuses a session minted for another surface",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 4 \u2014 catalogs accept surface: site principals refuses a client-claimed role before any adapter is consulted",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 4 \u2014 catalogs accept surface: site principals has no way to ask for the Kids surface, and refuses it if asked",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 4 \u2014 catalogs accept surface: site principals refuses honestly with no adapter, holding no second auth stack",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "umbrella deployment health configuration classifies documented variables without returning supplied values",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "umbrella deployment health configuration serves non-cacheable health without configuration values",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "umbrella deployment health configuration marks complete runtime handles wired and valid-but-unavailable configuration misconfigured",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 5 \u2014 an unwired deployment refuses by name invents no session, balance, or checkout when nothing is supplied",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 5 \u2014 an unwired deployment refuses by name refuses a checkout with identity wired but no provider round-trip",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 5 \u2014 an unwired deployment refuses by name reports an identity store failure as unavailable, never as signed out",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 5 \u2014 an unwired deployment refuses by name maps every auth refusal onto a named site reason, never onto silence",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 5 \u2014 an unwired deployment refuses by name reports each billing refusal on the plane that was read, not on the checkout",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 6 \u2014 no secret, no live mode, no Kids does not turn a caller-supplied environment into deployment authority",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 6 \u2014 no secret, no live mode, no Kids lets an explicit null admin override deployment-issued evidence",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 6 \u2014 no secret, no live mode, no Kids keeps production routes on the no-argument deployment capability boundary",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 6 \u2014 no secret, no live mode, no Kids keeps the Better Auth host provider-only and outside request authority",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 6 \u2014 no secret, no live mode, no Kids refuses a webhook on an unwired deployment as that deployment's own omission",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 6 \u2014 no secret, no live mode, no Kids keeps environment and provider I/O out of the hermetic auth and billing roots",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "acceptance 6 \u2014 no secret, no live mode, no Kids never mints or accepts a Kids session on any site plane",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "hosted login \u2014 the umbrella sign-in path (sceneaxi#185) keeps request signals in the framework adapter and rejects before request data",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "hosted login \u2014 the umbrella sign-in path (sceneaxi#185) signs in through the real port and reaches the entitled editor",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "hosted login \u2014 the umbrella sign-in path (sceneaxi#185) refuses a session id the cookie credential cannot carry back, rather than minting a dead cookie",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "hosted login \u2014 the umbrella sign-in path (sceneaxi#185) names a provider fault at issuance as one, never as a credential this browser presented",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "hosted login \u2014 the umbrella sign-in path (sceneaxi#185) refuses wrong credentials as their own named outcome, back at the form",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "hosted login \u2014 the umbrella sign-in path (sceneaxi#185) refuses an empty submission before the provider is consulted",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "hosted login \u2014 the umbrella sign-in path (sceneaxi#185) refuses a disabled user with the named outcome even on a correct password",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "hosted login \u2014 the umbrella sign-in path (sceneaxi#185) refuses the Kids surface and a client role claim before any dispatch",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "hosted login \u2014 the umbrella sign-in path (sceneaxi#185) names an unwired deployment and a failed provider distinctly",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "hosted login \u2014 the umbrella sign-in path (sceneaxi#185) confines the post-login destination to a same-site relative path",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "hosted login \u2014 the umbrella sign-in path (sceneaxi#185) signs out both sessions and clears the cookie",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "hosted login \u2014 the umbrella sign-in path (sceneaxi#185) still revokes the provider when the local session is already gone",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "hosted login \u2014 the umbrella sign-in path (sceneaxi#185) revokes the provider even when the local session expired",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "hosted login \u2014 the umbrella sign-in path (sceneaxi#185) retries local deletion after provider revocation succeeded",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "hosted login \u2014 the umbrella sign-in path (sceneaxi#185) dispatches no revocation for an absent credential",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "hosted login \u2014 the umbrella sign-in path (sceneaxi#185) refuses missing provider revocation without deleting the local session, and allows a retry",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "hosted login \u2014 the umbrella sign-in path (sceneaxi#185) refuses throw provider revocation without deleting the local session, and allows a retry",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "hosted login \u2014 the umbrella sign-in path (sceneaxi#185) refuses non-success provider revocation without deleting the local session, and allows a retry",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "hosted login \u2014 the umbrella sign-in path (sceneaxi#185) refuses malformed provider revocation without deleting the local session, and allows a retry",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "hosted login \u2014 the umbrella sign-in path (sceneaxi#185) refuses still-live provider revocation without deleting the local session, and allows a retry",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "hosted login \u2014 the umbrella sign-in path (sceneaxi#185) refuses lookup-failed provider revocation without deleting the local session, and allows a retry",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "hosted login \u2014 the umbrella sign-in path (sceneaxi#185) stamps Secure from the configured origin, so a TLS-terminating proxy cannot strip it",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "hosted login \u2014 the umbrella sign-in path (sceneaxi#185) refuses a submission from another site before either plane is reached",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "authenticated purchase-history facade derives member from verified credential and returns a bounded next key without claiming payment",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "authenticated purchase-history facade refuses absent/forged sessions, Kids and caller-selected users before history persistence",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/identity-plane-wiring.test.ts",
+          "name": "authenticated purchase-history facade does not need Stripe checkout capability to read persisted own history",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "raw SQL deployment boundary compatibility compiles the formerly supported unknown-column SDK consumer without assertions",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "raw SQL deployment boundary compatibility refuses invalid identity columns before constructing a trusted user: {\"user_id\":7}",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "raw SQL deployment boundary compatibility refuses invalid identity columns before constructing a trusted user: {\"email_verified\":\"true\"}",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "raw SQL deployment boundary compatibility refuses invalid identity columns before constructing a trusted user: {\"disabled\":0}",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "raw SQL deployment boundary compatibility refuses invalid identity columns before constructing a trusted user: {\"created_at\":\"not-a-date\"}",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "raw SQL deployment boundary compatibility refuses invalid identity columns before constructing a trusted user: {\"email\":{}}",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "raw SQL deployment boundary compatibility decodes real SQL bigint and timestamp columns while rejecting unsafe integer values",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "umbrella server logging emits stable JSON events and redacts secrets, tokens, emails, URLs, and unapproved fields",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "umbrella server logging writes exactly one safe event for each webhook outcome",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "umbrella deployment provider adapters builds hermetically from typed evidence without reading env or a network default",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "umbrella deployment provider adapters provisions one account with the SceneAxi user exactly once at authentication",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "umbrella deployment provider adapters reconciles the provider's address and verification state on every authentication",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "umbrella deployment provider adapters maps provider rows to identity sessions and preserves the token digest boundary",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "umbrella deployment provider adapters round-trips a session row through the Neon store's write, read, and delete",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "umbrella deployment provider adapters grants the starter and spends through the Neon store's append-or-replay boundary",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "umbrella deployment provider adapters persists a TEST intent before creating Stripe checkout and stamps contract metadata",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "umbrella deployment provider adapters replays a persisted intent when the same idempotency key is submitted again",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "umbrella deployment provider adapters runs a persisted TEST intent through grant, dispute, partial refund, and replay on the Neon adapter",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "umbrella deployment provider adapters fails closed when the deployment has no Neon provider",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "umbrella deployment provider adapters echoes Stripe's retrieved session id so the core parser owns mismatch refusal",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "umbrella deployment provider adapters refuses a Kids surface on both halves of the session row path",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "umbrella deployment provider adapters refuses a Kids surface before the provider or the provisioning write",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "umbrella deployment provider adapters constructs Stripe from both the CommonJS and the ES module export shape",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "umbrella deployment provider adapters reads the Neon factory from a CommonJS or an ES module namespace",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "umbrella deployment provider adapters accepts a remote auth origin only over https or an exact loopback host",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "umbrella deployment provider adapters builds its provider loader in a form a production bundler cannot replace",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "umbrella deployment provider adapters pins a Node floor that has the builtin-module accessor its loader needs",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "umbrella Neon credit settlement commits both sale legs and the share record through one transaction",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "umbrella Neon credit settlement replays an identical settlement from the committed rows without appending",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "umbrella Neon credit settlement refuses a second settlement of the same sale carrying different evidence",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "umbrella Neon credit settlement refuses a leg whose account belongs to the other settlement party",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "umbrella Neon credit settlement refuses to settle a sale when the provider offers no transaction",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "umbrella Neon credit settlement keeps a sale leg out of the plain append path",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "Neon Connect and live-mode audit adapters maps a persisted Connect account back to the public ConnectStore record",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "Neon Connect and live-mode audit adapters writes the exact live-mode audit contract through Neon",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "umbrella Better Auth HTTP client resolves the session Better Auth's sign-in answer does not carry",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "umbrella Better Auth HTTP client uses an inline session when the provider states one, without a second request",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "umbrella Better Auth HTTP client refuses credentials only when the sign-in request rejects them",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "umbrella Better Auth HTTP client throws on a provider fault rather than reporting a failed sign-in",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "umbrella Better Auth HTTP client replays a folded set-cookie answer without splitting a cookie date attribute",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "umbrella Better Auth HTTP client reports a provider that accepts the lookup but names no session as a fault",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "umbrella Better Auth HTTP client reports a successful answer that names no session and no token as a fault",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "umbrella Better Auth HTTP client never attributes a session to a user the provider did not name as its owner",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "Neon durable response codec boundary rejects unsupported JS instances before persistence: Map{ 'answer' => 'charged answer' }",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "Neon durable response codec boundary rejects unsupported JS instances before persistence: Thu Jan 01 1970 01:00:00 GMT+0100 (Central European Standard Time)",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "Neon durable response codec boundary rejects unsupported JS instances before persistence: 1n",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "Neon durable response codec boundary does not invoke accessors or toJSON hooks before rejecting a supplied response",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "Neon durable response codec boundary preserves a JSON answer through persisted response-ready restart with an owned frozen snapshot",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/provider-adapters.test.ts",
+          "name": "Neon durable response codec boundary rejects malformed response-ready output rather than returning it as trusted recovery",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/umbrella-login-flow.test.ts",
+          "name": "performLogout clears the browser cookie but exposes failed revocation on the login page",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/umbrella-login-flow.test.ts",
+          "name": "resolveLoginDestination keeps a same-site relative path",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/umbrella-login-flow.test.ts",
+          "name": "resolveLoginDestination survives the form round trip, which confines the same value twice",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/umbrella-login-flow.test.ts",
+          "name": "resolveLoginDestination falls back to the default for anything that could leave this site",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/umbrella-login-flow.test.ts",
+          "name": "readLoginRefusalReason accepts only keys from the refusal registry",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/umbrella-login-flow.test.ts",
+          "name": "readLoginRefusalReason returns null for anything else, so a query value never becomes page copy",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/umbrella-login-flow.test.ts",
+          "name": "loginRefusalHref sends a refused attempt back to the form with the named reason",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/umbrella-login-flow.test.ts",
+          "name": "loginRefusalHref carries a non-default destination through the retry",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/umbrella-login-flow.test.ts",
+          "name": "loginRefusalOutcome shapes a refusal decided before the plane is reached, like a body that would not parse",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/umbrella-login-flow.test.ts",
+          "name": "loginRefusalOutcome confines the carried destination like every other refusal does",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/umbrella-login-flow.test.ts",
+          "name": "verifyLoginRequestOrigin accepts the deployment's own pages",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/umbrella-login-flow.test.ts",
+          "name": "verifyLoginRequestOrigin refuses a cross-site submission, including one aimed at an alias host",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/umbrella-login-flow.test.ts",
+          "name": "verifyLoginRequestOrigin refuses a submission that proves nothing about where it came from",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/umbrella-login-flow.test.ts",
+          "name": "verifyLoginRequestOrigin falls back to the request's own origin only on an unconfigured deployment",
+          "status": "passed"
+        },
+        {
+          "file": "tests/sites/umbrella-login-flow.test.ts",
+          "name": "verifyLoginRequestOrigin refuses instead of falling back when a configured origin is invalid",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/admin.test.ts",
+          "name": "resolveAdminIdentity resolves and normalizes exactly one admin email",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/admin.test.ts",
+          "name": "resolveAdminIdentity refuses when the variable is absent",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/admin.test.ts",
+          "name": "resolveAdminIdentity refuses an empty or whitespace-only value",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/admin.test.ts",
+          "name": "resolveAdminIdentity refuses a syntactically invalid address",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/admin.test.ts",
+          "name": "resolveAdminIdentity refuses more than one address however it is separated",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/admin.test.ts",
+          "name": "resolveAdminIdentity refuses a plural variable outright, even holding one valid address",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/admin.test.ts",
+          "name": "resolveAdminIdentity ignores a plural variable that is present but undefined",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/admin.test.ts",
+          "name": "resolveRole returns admin only for the resolved admin identity",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/admin.test.ts",
+          "name": "resolveRole matches the admin after normalization",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/admin.test.ts",
+          "name": "resolveRole returns user for every other address",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/admin.test.ts",
+          "name": "resolveRole stamps a deterministic assignedAt from the injected clock",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/admin.test.ts",
+          "name": "planAdminBootstrap plans exactly one admin assignment",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/admin.test.ts",
+          "name": "planAdminBootstrap refuses when no user carries the admin email",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/admin.test.ts",
+          "name": "planAdminBootstrap refuses an ambiguous store rather than guessing which captain is real",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/admin.test.ts",
+          "name": "planAdminBootstrap refuses a disabled admin user",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/admin.test.ts",
+          "name": "planAdminBootstrap refuses to persist an admin whose email is unverified",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/admin.test.ts",
+          "name": "planAdminBootstrap refuses a non-finite clock",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/admin.test.ts",
+          "name": "planAdminBootstrap propagates an unresolvable admin identity",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/admin.test.ts",
+          "name": "normalizeEmail is the one normalization every comparison uses",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "in-memory identity store validates, snapshots, and freezes preloaded and written records",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "in-memory identity store rejects duplicate user identifiers and normalized emails",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 sign-in signs the captain in as admin",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 sign-in signs an ordinary user in as user",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 sign-in requires provider and stored verification only for admin elevation",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 sign-in stores only the digest, never the raw token",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 sign-in refuses a client-asserted role before touching the adapter or store",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 sign-in refuses the Kids surface before dispatch, minting nothing",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 sign-in refuses even when an adapter tries to hand back a Kids session",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 sign-in refuses an unknown surface",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 sign-in refuses a malformed request envelope",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 sign-in refuses accessor-bearing requests without invoking getters",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 sign-in distinguishes rejected credentials from a broken provider",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 sign-in refuses an adapter envelope this boundary does not accept",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 sign-in refuses when the provider's user id disagrees with the store",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 sign-in refuses when the stored email disagrees with the provider",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 sign-in binds the provider response to the submitted email",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 sign-in refuses an authenticated address with no SceneAxi user record",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 sign-in refuses a disabled user",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 sign-in refuses rather than allowing when a dependency is missing",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 sign-in derives roles from the same admin identity whose provenance passed",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 sign-in refuses a clock that throws or returns nonsense",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 sign-in refuses when the store throws",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 sign-in requires an exact boolean session deletion result",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 sign-in refuses malformed stored users before reading their fields",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 session verification verifies a live session and re-derives the role",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 session verification refuses a wrong token",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 session verification refuses an unknown session",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 session verification refuses a session from another surface",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 session verification refuses an expired session",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 session verification refuses a stored Kids session written by any other path",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 session verification refuses a corrupt stored session record",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 session verification refuses when the session's user has gone away",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 session verification refuses a corrupt stored user record",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 sign-out removes the session",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 sign-out keeps every principal for the same stored session valid",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 sign-out cannot use an older principal to delete a rotated session",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 sign-out refuses a malformed request and a client role claim",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 sign-out refuses when the store throws",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "identity port \u2014 sign-out refuses a principal issued by another port",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/identity-port.test.ts",
+          "name": "createBetterAuthIdentityAdapter wraps a Better Auth instance and normalizes null to undefined",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/principal-provenance.test.ts",
+          "name": "principal provenance fixture seam issues the validated fixture object and no structural look-alike",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/role-guard.test.ts",
+          "name": "requireRole allows an admin principal sourced from the environment",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/role-guard.test.ts",
+          "name": "requireRole refuses a user principal at an admin guard",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/role-guard.test.ts",
+          "name": "requireRole refuses an admin role whose source is not the environment",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/role-guard.test.ts",
+          "name": "requireRole has no role hierarchy \u2014 admin does not satisfy a user guard",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/role-guard.test.ts",
+          "name": "requireRole refuses an unknown required role rather than guessing",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/role-guard.test.ts",
+          "name": "requireRole refuses a missing or malformed principal",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/role-guard.test.ts",
+          "name": "requireRole refuses a disabled user even at the admin role",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/role-guard.test.ts",
+          "name": "requireRole refuses an admin principal whose email is unverified",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/role-guard.test.ts",
+          "name": "requireRole still allows an ordinary principal whose email is unverified",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/role-guard.test.ts",
+          "name": "requireRole refuses an expired session",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/role-guard.test.ts",
+          "name": "requireRole refuses a session whose surface does not match the guard",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/role-guard.test.ts",
+          "name": "requireRole refuses a Kids session non-overridably, even for admin",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/role-guard.test.ts",
+          "name": "requireRole refuses without a finite clock \u2014 expiry cannot be checked",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/role-guard.test.ts",
+          "name": "requireAuthenticated allows any valid principal regardless of role",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/role-guard.test.ts",
+          "name": "requireAuthenticated still refuses disabled, expired, and Kids principals",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/role-guard.test.ts",
+          "name": "requireAuthenticated hands back the witnessed object, so its own result passes a second guard",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/role-guard.test.ts",
+          "name": "requireAuthenticated refuses a structurally valid principal no identity port issued",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/role-guard.test.ts",
+          "name": "session token digests produces a 64-character lowercase hex digest",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/role-guard.test.ts",
+          "name": "session token digests matches the right token and rejects a wrong one",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/role-guard.test.ts",
+          "name": "session token digests rejects a malformed stored digest without throwing",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/role-guard.test.ts",
+          "name": "session token digests rejects an empty or non-string presented token",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/seam.test.ts",
+          "name": "@sceneaxi/auth public seam identifies itself exactly as its manifest does",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/seam.test.ts",
+          "name": "@sceneaxi/auth public seam is immutable",
+          "status": "passed"
+        },
+        {
+          "file": "packages/auth/test/seam.test.ts",
+          "name": "@sceneaxi/auth public seam freezes its refusal vocabulary with no duplicate reasons",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "hosted-AI routes names both routes and the capabilities each may bill",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "hosted-AI routes ships hosted AI off",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 hosted route, funded runs the provider and debits exactly the configured credits, once",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 hosted route, funded bills a direct port call under its own matrix capability",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 hosted route, funded never debits the captain, and writes no zero-credit row for the allowance",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 hosted route, funded refuses the captain when the hosted ledger is absent or stale",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 hosted route, funded is replay-safe: the same key charges once and calls the provider once",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 hosted route, funded replays a charge the remaining balance can no longer afford",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 hosted route, funded refuses a retry that still holds the pre-debit ledger view",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 hosted route, funded reports a debit a concurrent request committed under the same key",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 hosted route, funded reports a fresh debit as one this call appended",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 hosted route, funded refuses a mutated replay rather than returning the cheaper original",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 hosted route, funded still applies the guard to a replay: a settled session refuses",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 hosted route is default-off refuses when no hosted configuration is supplied at all",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 hosted route is default-off refuses under the shipped default configuration",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 hosted route is default-off refuses a truthy-but-not-true opt-in, so nothing enables it by accident",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 hosted route is default-off refuses before identity or the ledger is consulted",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 hosted route refuses before spending refuses a zero balance without calling the provider or appending a row",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 hosted route refuses before spending refuses an insufficient balance without calling the provider",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 hosted route refuses before spending refuses a stale caller's fresh key before judging its balance",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 hosted route refuses before spending refuses a stale caller even when the persisted balance is sufficient",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 hosted route refuses before spending does not read the account store for a principal that cannot spend",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 hosted route refuses before spending refuses an anonymous hosted call",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 hosted route refuses before spending surfaces the guard's own reason for a settled session",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 hosted route refuses before spending refuses a ledger owned by another user",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 hosted route refuses before spending refuses a fabricated claim on another user's account before reading its history",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 hosted route refuses before spending refuses an absent hosted ledger port before the provider runs",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 hosted route refuses before spending refuses missing debit attribution before the provider runs",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 hosted route refuses before spending accepts an injected store whose methods live on a prototype",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 hosted route refuses before spending refuses a missing or non-positive credit amount",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 failures do not half-apply names a provider failure and appends nothing",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 failures do not half-apply names a rejected async provider the same way",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 failures do not half-apply charges nothing for a value-shaped refusal the integration translates",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 failures do not half-apply names a store failure and leaves no partial debit",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 failures do not half-apply refuses an unreadable ledger before the provider is entered",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 failures do not half-apply refuses an account persistence does not have, before the provider",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 the BYO route stays free runs with no account, no store, and no ledger",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 the BYO route stays free does not need the hosted opt-in \u2014 BYO is not the hosted route",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 the BYO route stays free charges nothing even when the caller is signed in with a balance",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 the BYO route stays free refuses a hosted capability on the BYO route",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 Kids is denied on every route denies the Kids surface before identity, provider, or ledger",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 Kids is denied on every route denies a Kids session even when the surface is not named",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 Kids is denied on every route denies Kids ahead of the default-off refusal, so the deny is not maskable",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 request shape refuses an unnamed or unknown route",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 request shape refuses a non-object request, a bad clock, and a missing provider call",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "runMeteredModelCall \u2014 request shape refuses a capability outside the matrix",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "durable hosted reservation and pricing boundary admits one provider execution for overlapping identical keys",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "durable hosted reservation and pricing boundary different keys cannot reserve the same seven available credits",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "durable hosted reservation and pricing boundary confirmed failure releases funding but uncertain outcome never re-executes",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "durable hosted reservation and pricing boundary a retained provider response resumes an uncertain debit without another call",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/hosted-ai.test.ts",
+          "name": "durable hosted reservation and pricing boundary unknown model/operation, forged policy or caller quote cannot select the debit",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/live-mode.test.ts",
+          "name": "D5 requirement 1 \u2014 one named variable, never a second spelling names exactly one variable",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/live-mode.test.ts",
+          "name": "D5 requirement 1 \u2014 one named variable, never a second spelling authorizes from that variable alone",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/live-mode.test.ts",
+          "name": "D5 requirement 1 \u2014 one named variable, never a second spelling refuses every alias by its presence alone, even holding a correct affirmative",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/live-mode.test.ts",
+          "name": "D5 requirement 1 \u2014 one named variable, never a second spelling does not read the alias itself as an authorization",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/live-mode.test.ts",
+          "name": "D5 requirement 2 \u2014 absent, malformed, or anything else means refused refuses an unset variable",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/live-mode.test.ts",
+          "name": "D5 requirement 2 \u2014 absent, malformed, or anything else means refused refuses every value that is not the exact affirmative",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/live-mode.test.ts",
+          "name": "D5 requirement 2 \u2014 absent, malformed, or anything else means refused refuses a comma-separated list of authorizers",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/live-mode.test.ts",
+          "name": "D5 requirement 2 \u2014 absent, malformed, or anything else means refused hands `assertModeAuthorized` nothing but `true` or `undefined`",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/live-mode.test.ts",
+          "name": "D5 requirement 3 \u2014 the audit record is a precondition records who authorized live mode and when, before answering",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/live-mode.test.ts",
+          "name": "D5 requirement 3 \u2014 the audit record is a precondition refuses when no audit sink is supplied",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/live-mode.test.ts",
+          "name": "D5 requirement 3 \u2014 the audit record is a precondition refuses when the audit sink fails, rather than authorizing unrecorded",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/live-mode.test.ts",
+          "name": "D5 requirement 3 \u2014 the audit record is a precondition waits for an asynchronous audit sink before authorizing",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/live-mode.test.ts",
+          "name": "D5 requirement 3 \u2014 the audit record is a precondition refuses a sink whose answer cannot even be inspected",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/live-mode.test.ts",
+          "name": "D5 requirement 3 \u2014 the audit record is a precondition fingerprints two different authorizations differently",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/live-mode.test.ts",
+          "name": "D5 requirement 4 \u2014 the gate stays a gate reads nothing that merely correlates with production",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/live-mode.test.ts",
+          "name": "D5 requirement 4 \u2014 the gate stays a gate authorizes only the exact object it issued, never a look-alike",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/live-mode.test.ts",
+          "name": "D5 requirement 5 \u2014 the gate runs with no live authorization present resolves nothing from this process's own environment",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/live-mode.test.ts",
+          "name": "D5 requirement 5 \u2014 the gate runs with no live authorization present is wired to no shipped call site, so live activation still needs its own decision",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/metering.test.ts",
+          "name": "meterCredits debits a user account and lowers the balance by exactly the amount",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/metering.test.ts",
+          "name": "meterCredits refuses the Appendix B.1 cross-user debit from an unissued principal",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/metering.test.ts",
+          "name": "meterCredits never debits an admin \u2014 the captain has an unlimited allowance",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/metering.test.ts",
+          "name": "meterCredits refuses a malformed admin ledger before applying unlimited allowance",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/metering.test.ts",
+          "name": "meterCredits refuses a debit larger than the balance and appends nothing",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/metering.test.ts",
+          "name": "meterCredits refuses an account owned by another user",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/metering.test.ts",
+          "name": "meterCredits surfaces the guard's exact reason rather than flattening it",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/metering.test.ts",
+          "name": "meterCredits refuses a surface mismatch when a surface is demanded",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/metering.test.ts",
+          "name": "meterCredits refuses a non-positive, fractional, or non-finite amount",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/metering.test.ts",
+          "name": "meterCredits refuses an empty reason, an empty key, a bad clock, and a bad state",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/metering.test.ts",
+          "name": "meterCredits is replay-safe on the same idempotency key",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/metering.test.ts",
+          "name": "meterCredits scopes the caller's key by account, so two accounts may share one key",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/metering.test.ts",
+          "name": "meterCredits refuses a commit answer that is not this debit, however well-formed",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/metering.test.ts",
+          "name": "meterCredits refuses an unknown or stale persisted account",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/metering.test.ts",
+          "name": "meterCredits a debit whose first response was lost replays on retry and appends exactly one entry",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/metering.test.ts",
+          "name": "meterCredits a debit whose first response was lost does not reconcile a retry that asks for different money",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/metering.test.ts",
+          "name": "meterCredits a debit whose first response was lost still refuses a state made stale by somebody else's entry",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/store-boundary.test.ts",
+          "name": "the reserved sale namespace names the keys both sale legs must carry",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/store-boundary.test.ts",
+          "name": "the reserved sale namespace is refused by appendEntry at the shared boundary, not by the adapter",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/store-boundary.test.ts",
+          "name": "the reserved sale namespace is refused by appendOrReplayEntry too, so no second door exists",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/store-boundary.test.ts",
+          "name": "the reserved sale namespace lets both legs through settleCreditsSale, the one operation that owns them",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/store-boundary.test.ts",
+          "name": "the reserved sale namespace refuses an adapter whose settlement outcome does not say whether it replayed",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/store-boundary.test.ts",
+          "name": "the reserved sale namespace refuses a settlement whose legs are not that sale's own keys",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/store-boundary.test.ts",
+          "name": "the reserved sale namespace refuses legs that do not move the credits their share record claims",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/store-boundary.test.ts",
+          "name": "append-or-replay at the shared boundary appends once and replays the committed entry on retry",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/store-boundary.test.ts",
+          "name": "append-or-replay at the shared boundary refuses an adapter that answers with a different entry",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/store-boundary.test.ts",
+          "name": "append-or-replay at the shared boundary refuses an adapter that calls a rewritten row a fresh append",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/store-boundary.test.ts",
+          "name": "append-or-replay at the shared boundary refuses a replay of a row that landed on a ledger this request never read",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/store-boundary.test.ts",
+          "name": "append-or-replay at the shared boundary accepts a replay that landed on exactly the ledger this request read",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/store-boundary.test.ts",
+          "name": "append-or-replay at the shared boundary refuses an adapter that answers with nothing at all",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/store-boundary.test.ts",
+          "name": "append-or-replay at the shared boundary needs no database to prove any of this",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/store-boundary.test.ts",
+          "name": "append-or-replay at the shared boundary resolves an asynchronous adapter through the same checks",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/store-boundary.test.ts",
+          "name": "ledger persistence initial balance rejects a forged first balance before any naive adapter mutation",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "credit pack catalog loads the canonical committed test-mode catalog",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "credit pack catalog looks a pack up and refuses an unknown one",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "credit pack catalog refuses an invalid catalog",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "credit pack catalog fails closed when no committed historical revision matches",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "createCheckoutSessionIntent builds a test-mode intent carrying the catalog's credits",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "createCheckoutSessionIntent defaults to test mode and cannot reach live without explicit authorization",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "createCheckoutSessionIntent refuses a truthy-but-not-true live authorization",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "createCheckoutSessionIntent refuses an unknown pack",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "createCheckoutSessionIntent refuses a plaintext or relative redirect URL",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "createCheckoutSessionIntent refuses a missing user, a missing key, and a bad clock",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "createCheckoutSessionIntent refuses accessor-bearing requests without invoking getters",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "createCheckoutSessionIntent uses one descriptor snapshot for proxy-backed requests",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "createCheckoutSessionIntent carries no secret-shaped field",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "createCheckoutSessionIntent keeps intent ids distinct when keys sanitize alike",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "verifyStripeWebhookSignature accepts a correctly signed raw payload",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "verifyStripeWebhookSignature accepts a byte-array payload identically",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "verifyStripeWebhookSignature verifies the raw bytes \u2014 re-serialising the JSON must fail",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "verifyStripeWebhookSignature refuses a missing secret rather than accepting an unsigned event",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "verifyStripeWebhookSignature refuses an absent header",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "verifyStripeWebhookSignature refuses a malformed header",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "verifyStripeWebhookSignature refuses a header with no v1 scheme, accepting no substitute",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "verifyStripeWebhookSignature refuses the wrong secret",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "verifyStripeWebhookSignature refuses a payload modified after signing",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "verifyStripeWebhookSignature refuses a stale signature outside the tolerance",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "verifyStripeWebhookSignature refuses a signature dated too far in the future",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "verifyStripeWebhookSignature honours a custom tolerance",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "verifyStripeWebhookSignature accepts a rotated secret when both v1 signatures are present",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "verifyStripeWebhookSignature refuses a bad clock and a non-body payload",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "parseCheckoutCompletedEvent normalizes a verified body into SceneAxi vocabulary",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "parseCheckoutCompletedEvent takes credits from the persisted intent, never from the event",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "parseCheckoutCompletedEvent maps livemode to the billing mode",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "parseCheckoutCompletedEvent carries the event's Checkout Session id onto the completion",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "parseCheckoutCompletedEvent refuses settlement from a different session even when the price matches",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "parseCheckoutCompletedEvent refuses settlement that names no session at all",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "parseCheckoutCompletedEvent refuses an event whose session object carries no id",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "parseCheckoutCompletedEvent refuses a session id that is empty, blank, or not a string",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "parseCheckoutCompletedEvent accepts a long, opaque provider session id and binds settlement to it",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "parseCheckoutCompletedEvent refuses a wholly absent settlement as a payload fault, not a session mismatch",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "parseCheckoutCompletedEvent carries the paid session's own id onto the completion",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "parseCheckoutCompletedEvent refuses unpaid or mismatched settlements",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "parseCheckoutCompletedEvent refuses an absent livemode flag rather than assuming test",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "parseCheckoutCompletedEvent refuses any other event type",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "parseCheckoutCompletedEvent refuses non-JSON, a non-object, a missing id, and missing metadata",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "parseCheckoutCompletedEvent refuses metadata missing any SceneAxi key",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "parseCheckoutCompletedEvent refuses a settlement that does not match the persisted intent",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "applyCheckoutCompletedGrant grants exactly the pack's credits once",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "applyCheckoutCompletedGrant anchors a signed, session-bound grant to the committed revision",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "applyCheckoutCompletedGrant grants nothing on an identical redelivery",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "applyCheckoutCompletedGrant refuses an unknown archived revision before touching the ledger",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "applyCheckoutCompletedGrant refuses a signed, session-bound inflated intent credit amount",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "applyCheckoutCompletedGrant refuses a settled currency the committed revision is not priced in",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "applyCheckoutCompletedGrant refuses a mutated replay of the same event id",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "applyCheckoutCompletedGrant binds replay to the complete normalized completion",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "applyCheckoutCompletedGrant refuses a copy of the completion it just granted",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "applyCheckoutCompletedGrant refuses a live event without explicit go-live authorization",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "applyCheckoutCompletedGrant refuses an event naming another user's account",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "applyCheckoutCompletedGrant refuses an invalid event and an invalid ledger state",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "credit-pack refund reconciliation appends one intent-scoped adjustment for a signature-verified full refund",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "credit-pack refund reconciliation refuses a partial refund and a refund with no original grant",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "credit-pack refund reconciliation refuses a refund whose intent id is only a prefix of the granted intent's id",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "persistCheckoutCompletedGrant reports success only after the grant is in the ledger",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "persistCheckoutCompletedGrant refuses an inflated intent before committing anything",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "persistCheckoutCompletedGrant names a store failure and grants nothing",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "persistCheckoutCompletedGrant refuses an answer that is not this grant, however well-formed",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "persistCheckoutCompletedGrant replays a redelivery whose first response was lost, granting once",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "persistCheckoutCompletedGrant commits nothing when the grant itself refuses",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "persistCheckoutCompletedGrant requires a credit store",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "checkoutPurposeSettlesElsewhere names only the known purposes the credit ledger does not settle",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "checkoutPurposeSettlesElsewhere claims nothing about a purpose it does not know",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "live-mode authorization sourced from configuration (D5) refuses intent creation for every environment that is not the affirmative",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "live-mode authorization sourced from configuration (D5) refuses the grant for every environment that is not the affirmative",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "live-mode authorization sourced from configuration (D5) is a usable source at both ends when the variable is the exact affirmative",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "gate hygiene needs no Stripe credentials in the environment",
+          "status": "passed"
+        },
+        {
+          "file": "packages/billing/test/stripe-checkout.test.ts",
+          "name": "gate hygiene carries no live-mode authorization",
+          "status": "passed"
+        }
+      ],
+      "stdout": "JSON report written to /tmp/sceneaxi-identity-proof-7y8e1cpv.json\n",
+      "stderr": ""
+    }
+  ],
+  "cleanup": "Temporary Vitest JSON removed in finally; no server/container/browser started by this command",
+  "sharedRequests": [],
+  "blockedInputs": [
+    "Approved retention/erasure policy",
+    "Approved real mail/recovery delivery target, authorization and redacted evidence"
+  ],
+  "independentReview": "Pending Astra artifact-specific review; no self-reported PASS transfer",
+  "sourceSha256": {
+    "sites/umbrella/src/lib/provider-adapters.ts": "715db8a4e4e33e3610899328fa45ae13fdc8c0e7b2057fa7ccd4ca3e8f63ebb2",
+    "tests/sites/provider-adapters.test.ts": "5ca9c2ef85f75a1c9750e0b5ffce0b8bc4fb39ee7dbfa40454d6c2bfd80b529d",
+    "tests/sites/billing-final-acceptance.test.ts": "e27dc87decb783c28a09625bfb8b5b17e07e1f769db1e0cd9ed08ac7f933b955",
+    "sites/umbrella/src/app/api/checkout/checkout-handler.ts": "a4c3a2a93dfd3bfa94daefe5fd8e4f655da4330b17aa67d50449056ade6a3ab3",
+    "sites/umbrella/src/provider/account-lifecycle.ts": "2e85dc263ec7ca76787d567c9e3308bee4045ab1ee9b37f8f7f4c1255e9e556e",
+    "sites/umbrella/src/provider/recovery-contract.ts": "57de48030d247026fc8dd58ccf1879f94cbe8422f1c27b429b0fe1b602790338",
+    "sites/umbrella/src/provider/better-auth-provider.ts": "adee6fe1ceba3687e977aabfee2ef4c23a7238a2bcc4793b2cc11bc50679ab8e",
+    "sites/umbrella/src/lib/identity-plane.ts": "e3091b9fc0817439c43364333698097809df7f251a4ad8e9f9fefbc9b33bcd34",
+    "sites/umbrella/src/lib/request-authority.ts": "93ea3d529ea4ea74df4c919a4f4396d2dc4df285c6278c1bffd4951bf1ace207",
+    "sites/umbrella/src/lib/login-flow.ts": "d938a1065480b11dbda031c018002bcbd83ecb7c652d374a16055d08be72afc2"
+  }
+}

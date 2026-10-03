@@ -1,0 +1,271 @@
+{
+  "tip": "fed05a766f1277b23ebf1757022067837d00621e",
+  "approvedResolvedTree": "759adfe932768ef588660fb6de68ab2b948d1a9e",
+  "method": "Per-path reviewed assembly postimages including compatibility function ports; no ours/theirs strategy; ordinary native merge",
+  "paths": [
+    {
+      "path": ".maestro/playbooks/Product-Quality/SceneAxi-Product-Quality-Loop.md",
+      "incoming": "100644 blob 8b7e71c5ea50494ee534eda59c196e79a6204a10\t.maestro/playbooks/Product-Quality/SceneAxi-Product-Quality-Loop.md",
+      "disposition": "UNIQUE_PR310_HISTORICAL_QUALITY_PLAYBOOK_AND_REVIEW_EVIDENCE_RETAINED",
+      "authority": "Historical records only; current user release authorization owns operations; historical patches are published evidence, not private backups"
+    },
+    {
+      "path": ".maestro/playbooks/Product-Quality/Working/current-cycle.md",
+      "incoming": "100644 blob c5a987659589e5d89717d7537526f4a5fdf94263\t.maestro/playbooks/Product-Quality/Working/current-cycle.md",
+      "disposition": "UNIQUE_PR310_HISTORICAL_QUALITY_PLAYBOOK_AND_REVIEW_EVIDENCE_RETAINED",
+      "authority": "Historical records only; current user release authorization owns operations; historical patches are published evidence, not private backups"
+    },
+    {
+      "path": ".maestro/playbooks/Product-Quality/Working/evidence/pq-2026-08-26-02/cross-brain-verdict.md",
+      "incoming": "100644 blob dd2475142249741387ed3dcd09ad334f2b3b4a36\t.maestro/playbooks/Product-Quality/Working/evidence/pq-2026-08-26-02/cross-brain-verdict.md",
+      "disposition": "UNIQUE_PR310_HISTORICAL_QUALITY_PLAYBOOK_AND_REVIEW_EVIDENCE_RETAINED",
+      "authority": "Historical records only; current user release authorization owns operations; historical patches are published evidence, not private backups"
+    },
+    {
+      "path": ".maestro/playbooks/Product-Quality/Working/evidence/pq-2026-08-27-01/candidate-diff.patch",
+      "incoming": "100644 blob f8bda39f91471d72bb832039ddf0f092916f5271\t.maestro/playbooks/Product-Quality/Working/evidence/pq-2026-08-27-01/candidate-diff.patch",
+      "disposition": "UNIQUE_PR310_HISTORICAL_QUALITY_PLAYBOOK_AND_REVIEW_EVIDENCE_RETAINED",
+      "authority": "Historical records only; current user release authorization owns operations; historical patches are published evidence, not private backups"
+    },
+    {
+      "path": ".maestro/playbooks/Product-Quality/Working/evidence/pq-2026-08-27-01/review-request.md",
+      "incoming": "100644 blob 1d60797d3d2e2a442c65d4bbcb0571a03f0e9c80\t.maestro/playbooks/Product-Quality/Working/evidence/pq-2026-08-27-01/review-request.md",
+      "disposition": "UNIQUE_PR310_HISTORICAL_QUALITY_PLAYBOOK_AND_REVIEW_EVIDENCE_RETAINED",
+      "authority": "Historical records only; current user release authorization owns operations; historical patches are published evidence, not private backups"
+    },
+    {
+      "path": ".maestro/playbooks/Product-Quality/Working/evidence/pq-2026-08-27-02/candidate-diff.patch",
+      "incoming": "100644 blob eac708e48fdace4e699546f069914fc486373361\t.maestro/playbooks/Product-Quality/Working/evidence/pq-2026-08-27-02/candidate-diff.patch",
+      "disposition": "UNIQUE_PR310_HISTORICAL_QUALITY_PLAYBOOK_AND_REVIEW_EVIDENCE_RETAINED",
+      "authority": "Historical records only; current user release authorization owns operations; historical patches are published evidence, not private backups"
+    },
+    {
+      "path": ".maestro/playbooks/Product-Quality/Working/evidence/pq-2026-08-27-02/review-request.md",
+      "incoming": "100644 blob 23d8630acd2331c8a09884ae1563ddcb1cc524c1\t.maestro/playbooks/Product-Quality/Working/evidence/pq-2026-08-27-02/review-request.md",
+      "disposition": "UNIQUE_PR310_HISTORICAL_QUALITY_PLAYBOOK_AND_REVIEW_EVIDENCE_RETAINED",
+      "authority": "Historical records only; current user release authorization owns operations; historical patches are published evidence, not private backups"
+    },
+    {
+      "path": ".maestro/playbooks/Product-Quality/Working/evidence/pq-2026-08-27-03/review-request.md",
+      "incoming": "100644 blob 0e8371228464c890f8871b9fee1a6ff61f3588c4\t.maestro/playbooks/Product-Quality/Working/evidence/pq-2026-08-27-03/review-request.md",
+      "disposition": "UNIQUE_PR310_HISTORICAL_QUALITY_PLAYBOOK_AND_REVIEW_EVIDENCE_RETAINED",
+      "authority": "Historical records only; current user release authorization owns operations; historical patches are published evidence, not private backups"
+    },
+    {
+      "path": ".maestro/playbooks/Product-Quality/Working/evidence/pq-2026-08-27-04/candidate-diff.patch",
+      "incoming": "100644 blob 7db13e5d496c0a7c8d98c280006439ee8bbd6bd9\t.maestro/playbooks/Product-Quality/Working/evidence/pq-2026-08-27-04/candidate-diff.patch",
+      "disposition": "UNIQUE_PR310_HISTORICAL_QUALITY_PLAYBOOK_AND_REVIEW_EVIDENCE_RETAINED",
+      "authority": "Historical records only; current user release authorization owns operations; historical patches are published evidence, not private backups"
+    },
+    {
+      "path": ".maestro/playbooks/Product-Quality/Working/evidence/pq-2026-08-27-04/declared-goldens.txt",
+      "incoming": "100644 blob 5f4c1293714849c82b54fcd8cff21c1b0cbb26a6\t.maestro/playbooks/Product-Quality/Working/evidence/pq-2026-08-27-04/declared-goldens.txt",
+      "disposition": "UNIQUE_PR310_HISTORICAL_QUALITY_PLAYBOOK_AND_REVIEW_EVIDENCE_RETAINED",
+      "authority": "Historical records only; current user release authorization owns operations; historical patches are published evidence, not private backups"
+    },
+    {
+      "path": ".maestro/playbooks/Product-Quality/Working/evidence/pq-2026-08-27-04/inventory-amendment.patch",
+      "incoming": "100644 blob a746622f953046595090421948cb129cc89800ba\t.maestro/playbooks/Product-Quality/Working/evidence/pq-2026-08-27-04/inventory-amendment.patch",
+      "disposition": "UNIQUE_PR310_HISTORICAL_QUALITY_PLAYBOOK_AND_REVIEW_EVIDENCE_RETAINED",
+      "authority": "Historical records only; current user release authorization owns operations; historical patches are published evidence, not private backups"
+    },
+    {
+      "path": ".maestro/playbooks/Product-Quality/Working/evidence/pq-2026-08-27-04/review-request.md",
+      "incoming": "100644 blob f37926f7d3530aac20928e5fb700dccdd50119e2\t.maestro/playbooks/Product-Quality/Working/evidence/pq-2026-08-27-04/review-request.md",
+      "disposition": "UNIQUE_PR310_HISTORICAL_QUALITY_PLAYBOOK_AND_REVIEW_EVIDENCE_RETAINED",
+      "authority": "Historical records only; current user release authorization owns operations; historical patches are published evidence, not private backups"
+    },
+    {
+      "path": "desktop/linux/src/lib/bridge.ts",
+      "incoming": "100644 blob 7249e2dbb49c2e78b487363defabea04cd787d55\tdesktop/linux/src/lib/bridge.ts",
+      "chosenPostimage": "100644 blob 6eee0556c183cace969e9f702604a0a5576d7721\tdesktop/linux/src/lib/bridge.ts",
+      "originalPerPathDecision": "CONFLICT_WORKING_MAIN_PENDING_FUNCTION_PORT",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": "desktop/linux/src/lib/desktop-scene.ts",
+      "incoming": "100644 blob 855bae2fa8e5fc333abd50e14779baab5ac2130d\tdesktop/linux/src/lib/desktop-scene.ts",
+      "chosenPostimage": "100644 blob e72be8cc506b240345e66a2ea9752647ce75dc70\tdesktop/linux/src/lib/desktop-scene.ts",
+      "originalPerPathDecision": "THREE_WAY_TEXT_REBASE_ACCEPTANCE_PENDING",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": "docs/audits/initiation/requirements.json",
+      "incoming": "100644 blob a913bf48c3445e366461b0aee9d22e64e8dc3a2c\tdocs/audits/initiation/requirements.json",
+      "chosenPostimage": "100644 blob 2ca457ac15c7d02936614fae0c0457329408d4ef\tdocs/audits/initiation/requirements.json",
+      "originalPerPathDecision": "CONFLICT_WORKING_MAIN_PENDING_FUNCTION_PORT",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": "docs/quality/SceneAxi-Product-Quality-Scorecard.md",
+      "incoming": "100644 blob bbe0625f1c1bbeef96c390a916c433f2d157e843\tdocs/quality/SceneAxi-Product-Quality-Scorecard.md",
+      "chosenPostimage": "100644 blob 46e65824b8b0ec821a61a231cf7368a97a50fbe7\tdocs/quality/SceneAxi-Product-Quality-Scorecard.md",
+      "originalPerPathDecision": "EXPLICIT_MODERN_CHILD_SOURCE_HANDBACK",
+      "assembly": "EXPLICIT_LEGITIMATE_COMPAT_MODULE_TEST_OR_HISTORICAL_VISUAL_PROOF",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": "docs/runnable-surfaces.md",
+      "incoming": "100644 blob b03b9ae1f4a05c646d3edd7e5841bd0ba7810553\tdocs/runnable-surfaces.md",
+      "chosenPostimage": "100644 blob 0da9aeba36de384847e153b8b3e7a0d2c0b807f6\tdocs/runnable-surfaces.md",
+      "originalPerPathDecision": "CURRENT_MAIN_RETAINED_SHARED_UNCHANGED",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": "package.json",
+      "incoming": "100644 blob 63a544c128591baf896c02f921716e56841fc388\tpackage.json",
+      "chosenPostimage": "100644 blob 5537544d4fb09c2ccd8e80146b20d34d19b75f99\tpackage.json",
+      "originalPerPathDecision": "CONFLICT_WORKING_MAIN_PENDING_FUNCTION_PORT",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": "packages/authoring-core/src/propose-apply.ts",
+      "incoming": "100644 blob 9fbdda60dfe8a6ce5b7185fdf7b740318666789e\tpackages/authoring-core/src/propose-apply.ts",
+      "chosenPostimage": "100644 blob b56af20787b93720a5e1fe1b8c98a43c3d521e6a\tpackages/authoring-core/src/propose-apply.ts",
+      "originalPerPathDecision": "PRIVATE_SOURCE_DELTA_MAIN_UNCHANGED",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": "packages/authoring-core/test/transaction-history.test.ts",
+      "incoming": "100644 blob 189d990ff2ede9db72e73ad4af8aab58f65b75c9\tpackages/authoring-core/test/transaction-history.test.ts",
+      "chosenPostimage": "100644 blob a1e495c64cac2b376d44a3be2d48792e65bdd968\tpackages/authoring-core/test/transaction-history.test.ts",
+      "originalPerPathDecision": "CURRENT_MAIN_RETAINED_SHARED_UNCHANGED",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": "packages/schemas/src/desktop-scene-package.ts",
+      "incoming": "100644 blob 06da4cda1af826b2a63081c15140ba011a5402bd\tpackages/schemas/src/desktop-scene-package.ts",
+      "chosenPostimage": "100644 blob af5912be149fbed2ef2352cfaf76972397d78cd7\tpackages/schemas/src/desktop-scene-package.ts",
+      "originalPerPathDecision": "CURRENT_MAIN_RETAINED_SHARED_UNCHANGED",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": "packages/schemas/test/desktop-scene-package.test.ts",
+      "incoming": "100644 blob 0804766652050176c8da445ff526726100a1724b\tpackages/schemas/test/desktop-scene-package.test.ts",
+      "chosenPostimage": "100644 blob 5f36031d6771dce49b14c9c9982c776931268e02\tpackages/schemas/test/desktop-scene-package.test.ts",
+      "originalPerPathDecision": "CURRENT_MAIN_RETAINED_SHARED_UNCHANGED",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": "scripts/check-contracts.test.mjs",
+      "incoming": "100644 blob 59a9bb9160864a7515d937579faa2d3aac57f955\tscripts/check-contracts.test.mjs",
+      "chosenPostimage": "100644 blob ee394bf2e11d10e5b2e0edcdd6315dbc31857055\tscripts/check-contracts.test.mjs",
+      "originalPerPathDecision": "CURRENT_MAIN_RETAINED_SHARED_UNCHANGED",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": "tests/e2e/desktop-package-golden.test.ts",
+      "incoming": "100644 blob fd6d8f0d4197f481897613972f6d5c1c1c4a28a2\ttests/e2e/desktop-package-golden.test.ts",
+      "chosenPostimage": "100644 blob e48b7bc5b4b5e31648ad51d058b2d1ddffe70676\ttests/e2e/desktop-package-golden.test.ts",
+      "originalPerPathDecision": "CURRENT_MAIN_RETAINED_SHARED_UNCHANGED",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    }
+  ]
+}

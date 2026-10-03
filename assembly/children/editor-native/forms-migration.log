@@ -1,0 +1,169 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/tmp/sceneaxi-comprehensive-owned-xd4gdfl1[39m
+
+[33m[39m[32m·[39m[33m[39m[31mx[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[90mstderr[2m | desktop/linux/test/legacy-linux-smoke.test.ts[2m > [22m[2mprivate modal migration to canonical Submit/Approve forms through the real host[2m > [22m[2mdefines real prefab content via fields, writes only on Save and rejects invalid references
+[22m[39m
+Warning! Happy DOM has JavaScript evaluation enabled and is running in an insecure environment.
+
+A VM Context is not an isolated environment, and if you run untrusted code you are at risk of RCE (Remote Code Execution) attacks. The attacker can escape the VM and run code at process level.
+
+It is recommended to disable code generation and freeze all builtins at process level by running node with the flags "--disallow-code-generation-from-strings" and "--frozen-intrinsics". You can suppress this warning by setting "suppressInsecureJavaScriptEnvironmentWarning" to "true" at your own risk.
+
+For more information, see https://github.com/capricorn86/happy-dom/wiki/JavaScript-Evaluation-Warning
+
+
+
+[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[90mstderr[2m | desktop/linux/test/legacy-linux-smoke.test.ts[2m > [22m[2mprivate modal migration to canonical Submit/Approve forms through the real host[2m > [22m[2mreviews and commits persisted bindings, updates keyboard dispatch, then reviews reset
+[22m[39m
+Warning! Happy DOM has JavaScript evaluation enabled and is running in an insecure environment.
+
+A VM Context is not an isolated environment, and if you run untrusted code you are at risk of RCE (Remote Code Execution) attacks. The attacker can escape the VM and run code at process level.
+
+It is recommended to disable code generation and freeze all builtins at process level by running node with the flags "--disallow-code-generation-from-strings" and "--frozen-intrinsics". You can suppress this warning by setting "suppressInsecureJavaScriptEnvironmentWarning" to "true" at your own risk.
+
+For more information, see https://github.com/capricorn86/happy-dom/wiki/JavaScript-Evaluation-Warning
+
+
+
+[33m[39m[31mx[39m[33m[39m[32m·[39m[90mstderr[2m | desktop/linux/test/legacy-linux-smoke.test.ts[2m > [22m[2mprivate modal migration to canonical Submit/Approve forms through the real host[2m > [22m[2mexposes all eight missing commands and keeps Kids mutation controls refused
+[22m[39m
+Warning! Happy DOM has JavaScript evaluation enabled and is running in an insecure environment.
+
+A VM Context is not an isolated environment, and if you run untrusted code you are at risk of RCE (Remote Code Execution) attacks. The attacker can escape the VM and run code at process level.
+
+It is recommended to disable code generation and freeze all builtins at process level by running node with the flags "--disallow-code-generation-from-strings" and "--frozen-intrinsics". You can suppress this warning by setting "suppressInsecureJavaScriptEnvironmentWarning" to "true" at your own risk.
+
+For more information, see https://github.com/capricorn86/happy-dom/wiki/JavaScript-Evaluation-Warning
+
+
+
+[33m[39m[31mx[39m[33m[39m[32m·[39m[33m[39m[31mx[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[31mx[39m[33m[39m[31mx[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[31mx[39m[33m[39m[31mx[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 8 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m tests/e2e/desktop-command-interactions-golden.test.ts[2m > [22mdesktop command menu, palette, and accelerator parity[2m > [22minvokes project-migration-propose from its menu
+[31m[1mAssertionError[22m: expected '' to be 'DESKTOP_COMMAND_TEST_ANSWERED' // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- DESKTOP_COMMAND_TEST_ANSWERED[39m
+
+[36m [2m❯[22m invoke tests/e2e/desktop-command-interactions-golden.test.ts:[2m128:64[22m[39m
+    [90m126|[39m   [35mif[39m ([33mENGINE_ANSWERED_COMMANDS[39m[33m.[39m[34mhas[39m(command[33m.[39mid)) {
+    [90m127|[39m     expect(requests.some((request) => (request.payload as { commandId?…
+    [90m128|[39m     expect(element(window, "[data-outcome-code]").textContent).toBe("D…
+    [90m   |[39m                                                                [31m^[39m
+    [90m129|[39m   }
+    [90m130|[39m   [35mif[39m (command[33m.[39mid [33m===[39m [32m"run-play"[39m) {
+[90m [2m❯[22m tests/e2e/desktop-command-interactions-golden.test.ts:[2m159:7[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/e2e/desktop-command-interactions-golden.test.ts[2m > [22mdesktop command menu, palette, and accelerator parity[2m > [22minvokes project-migration-propose from the palette
+[31m[1mAssertionError[22m: expected '' to be 'DESKTOP_COMMAND_TEST_ANSWERED' // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- DESKTOP_COMMAND_TEST_ANSWERED[39m
+
+[36m [2m❯[22m invoke tests/e2e/desktop-command-interactions-golden.test.ts:[2m128:64[22m[39m
+    [90m126|[39m   [35mif[39m ([33mENGINE_ANSWERED_COMMANDS[39m[33m.[39m[34mhas[39m(command[33m.[39mid)) {
+    [90m127|[39m     expect(requests.some((request) => (request.payload as { commandId?…
+    [90m128|[39m     expect(element(window, "[data-outcome-code]").textContent).toBe("D…
+    [90m   |[39m                                                                [31m^[39m
+    [90m129|[39m   }
+    [90m130|[39m   [35mif[39m (command[33m.[39mid [33m===[39m [32m"run-play"[39m) {
+[90m [2m❯[22m tests/e2e/desktop-command-interactions-golden.test.ts:[2m163:7[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/e2e/desktop-command-interactions-golden.test.ts[2m > [22mdesktop command menu, palette, and accelerator parity[2m > [22minvokes viewport-source-set from its menu
+[31m[1mError[22m: missing command control [data-editor-command-form="viewport-source-set"][39m
+[90m [2m❯[22m commandElement tests/helpers/desktop-chrome-golden.ts:[2m475:29[22m[39m
+[36m [2m❯[22m invoke tests/e2e/desktop-command-interactions-golden.test.ts:[2m112:12[22m[39m
+    [90m110|[39m   [35mif[39m ([33mFORM_NAVIGATION_COMMANDS[39m[33m.[39m[34mhas[39m(command[33m.[39mid)) {
+    [90m111|[39m     [34mexpect[39m(calls)[33m.[39m[34mtoEqual[39m([])[33m;[39m
+    [90m112|[39m     expect(element(window, `[data-editor-command-form="${command.id}"]…
+    [90m   |[39m            [31m^[39m
+    [90m113|[39m     expect(element(window, "[data-outcome-code]").textContent).not.toB…
+    [90m114|[39m     [35mreturn[39m[33m;[39m
+[90m [2m❯[22m tests/e2e/desktop-command-interactions-golden.test.ts:[2m159:7[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/e2e/desktop-command-interactions-golden.test.ts[2m > [22mdesktop command menu, palette, and accelerator parity[2m > [22minvokes viewport-source-set from the palette
+[31m[1mError[22m: missing command control [data-editor-command-form="viewport-source-set"][39m
+[90m [2m❯[22m commandElement tests/helpers/desktop-chrome-golden.ts:[2m475:29[22m[39m
+[36m [2m❯[22m invoke tests/e2e/desktop-command-interactions-golden.test.ts:[2m112:12[22m[39m
+    [90m110|[39m   [35mif[39m ([33mFORM_NAVIGATION_COMMANDS[39m[33m.[39m[34mhas[39m(command[33m.[39mid)) {
+    [90m111|[39m     [34mexpect[39m(calls)[33m.[39m[34mtoEqual[39m([])[33m;[39m
+    [90m112|[39m     expect(element(window, `[data-editor-command-form="${command.id}"]…
+    [90m   |[39m            [31m^[39m
+    [90m113|[39m     expect(element(window, "[data-outcome-code]").textContent).not.toB…
+    [90m114|[39m     [35mreturn[39m[33m;[39m
+[90m [2m❯[22m tests/e2e/desktop-command-interactions-golden.test.ts:[2m163:7[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m apps/desktop-shell/test/chrome.test.ts[2m > [22mengine desktop chrome — document shape[2m > [22memits the shared versioned registry without a desktop-only command copy
+[31m[1mReferenceError[22m: EDITOR_COMMAND_REGISTRY is not defined[39m
+[36m [2m❯[22m apps/desktop-shell/test/chrome.test.ts:[2m61:43[22m[39m
+    [90m 59|[39m     // SAFETY: these JSON bytes come from renderDesktopChrome's own cl…
+    [90m 60|[39m     const tables = JSON.parse(match?.[1] ?? "{}") as { editorCommands?…
+    [90m 61|[39m     [34mexpect[39m(tables[33m.[39meditorCommands)[33m.[39m[34mtoEqual[39m([33mEDITOR_COMMAND_REGISTRY[39m)[33m;[39m
+    [90m   |[39m                                           [31m^[39m
+    [90m 62|[39m   })[33m;[39m
+    [90m 63|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/8]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m desktop/linux/test/legacy-linux-smoke.test.ts[2m > [22mprivate modal migration to canonical Submit/Approve forms through the real host[2m > [22mdefines real prefab content via fields, writes only on Save and rejects invalid references
+[31m[1mReferenceError[22m: retirePreparation is not defined[39m
+[36m [2m❯[22m Object.close desktop/linux/src/lib/bridge.ts:[2m3199:5[22m[39m
+    [90m3197|[39m
+    [90m3198|[39m   const close = (): boolean => {
+    [90m3199|[39m     retirePreparation();
+    [90m   |[39m     [31m^[39m
+    [90m3200|[39m     if (session === null) { preparationClosed = true; return true; }
+    [90m3201|[39m
+[90m [2m❯[22m Object.cleanup desktop/linux/test/legacy-linux-smoke.test.ts:[2m102:34[22m[39m
+[90m [2m❯[22m desktop/linux/test/legacy-linux-smoke.test.ts:[2m147:19[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/8]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m desktop/linux/test/legacy-linux-smoke.test.ts[2m > [22mprivate modal migration to canonical Submit/Approve forms through the real host[2m > [22mreviews and commits persisted bindings, updates keyboard dispatch, then reviews reset
+[31m[1mReferenceError[22m: retirePreparation is not defined[39m
+[36m [2m❯[22m Object.close desktop/linux/src/lib/bridge.ts:[2m3199:5[22m[39m
+    [90m3197|[39m
+    [90m3198|[39m   const close = (): boolean => {
+    [90m3199|[39m     retirePreparation();
+    [90m   |[39m     [31m^[39m
+    [90m3200|[39m     if (session === null) { preparationClosed = true; return true; }
+    [90m3201|[39m
+[90m [2m❯[22m Object.cleanup desktop/linux/test/legacy-linux-smoke.test.ts:[2m102:34[22m[39m
+[90m [2m❯[22m desktop/linux/test/legacy-linux-smoke.test.ts:[2m197:19[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/8]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m desktop/linux/test/legacy-linux-smoke.test.ts[2m > [22mprivate modal migration to canonical Submit/Approve forms through the real host[2m > [22mexposes all eight missing commands and keeps Kids mutation controls refused
+[31m[1mReferenceError[22m: retirePreparation is not defined[39m
+[36m [2m❯[22m Object.close desktop/linux/src/lib/bridge.ts:[2m3199:5[22m[39m
+    [90m3197|[39m
+    [90m3198|[39m   const close = (): boolean => {
+    [90m3199|[39m     retirePreparation();
+    [90m   |[39m     [31m^[39m
+    [90m3200|[39m     if (session === null) { preparationClosed = true; return true; }
+    [90m3201|[39m
+[90m [2m❯[22m Object.cleanup desktop/linux/test/legacy-linux-smoke.test.ts:[2m102:34[22m[39m
+[90m [2m❯[22m desktop/linux/test/legacy-linux-smoke.test.ts:[2m212:19[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/8]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m3 failed[39m[22m[90m (3)[39m
+[2m      Tests [22m [1m[31m8 failed[39m[22m[2m | [22m[1m[32m136 passed[39m[22m[90m (144)[39m
+[2m   Start at [22m 11:34:55
+[2m   Duration [22m 20.65s[2m (transform 14.69s, setup 0ms, import 17.75s, tests 17.23s, environment 0ms)[22m
+

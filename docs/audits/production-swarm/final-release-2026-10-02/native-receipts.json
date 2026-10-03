@@ -1,0 +1,17 @@
+[
+  {
+    "name": "native-smoke-1",
+    "exit": 1,
+    "seconds": 1.077
+  },
+  {
+    "name": "native-smoke-2",
+    "exit": 1,
+    "seconds": 0.62
+  },
+  {
+    "name": "native-smoke-3",
+    "exit": 1,
+    "seconds": 0.719
+  }
+]

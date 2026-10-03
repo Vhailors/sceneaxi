@@ -1,0 +1,30 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/tmp/sceneaxi-comprehensive-owned-xd4gdfl1[39m
+
+ [32m✓[39m packages/engine-presentation/test/legacy-audio-compat.test.ts[2m > [22mpreserves historical object factory, typed tagged nodes, async Play and master volume[32m 16[2mms[22m[39m
+ [32m✓[39m packages/engine-presentation/test/legacy-audio-compat.test.ts[2m > [22mdenies historical Kids before allocating and preserves modern function factory[32m 2[2mms[22m[39m
+ [32m✓[39m packages/engine-presentation/test/legacy-audio-compat.test.ts[2m > [22minvalidates pending and out-of-order decodes through Stop and reset[32m 1[2mms[22m[39m
+ [32m✓[39m packages/engine-presentation/test/legacy-audio-compat.test.ts[2m > [22mrejects post-dispose decoding and closes every source even after host stop errors[32m 2[2mms[22m[39m
+ [32m✓[39m packages/engine-presentation/test/audio-playback.test.ts[2m > [22mpublic offline audio runtime (not audible-device proof)[2m > [22mrequires explicit unlock, decodes PCM, bounds volume, stops on hiding and owns teardown[32m 20[2mms[22m[39m
+ [32m✓[39m packages/engine-presentation/test/audio-playback.test.ts[2m > [22mpublic offline audio runtime (not audible-device proof)[2m > [22mreleases partially allocated nodes and stops a failed start before retrying[32m 7[2mms[22m[39m
+ [32m✓[39m packages/engine-presentation/test/audio-playback.test.ts[2m > [22mpublic offline audio runtime (not audible-device proof)[2m > [22mrefuses malformed/unsupported WAV before allocation, capacity limit+1 and Kids[32m 13[2mms[22m[39m
+ [32m✓[39m packages/engine-presentation/test/audio-playback.test.ts[2m > [22mdisposal cleans every source even when a host stop or disconnect fails[32m 1[2mms[22m[39m
+ [32m✓[39m packages/engine-presentation/test/audio-playback.test.ts[2m > [22mrefuses accessor/proxy audio assets before allocation without conversion hooks[32m 1[2mms[22m[39m
+ [32m✓[39m packages/engine-presentation/test/audio-playback.test.ts[2m > [22mretains strict PCM16 refusal independently of compatible injected codecs[32m 1[2mms[22m[39m
+ [32m✓[39m packages/engine-presentation/test/audio-playback.test.ts[2m > [22mdispose during pending unlock cannot reactivate the runtime[32m 1[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/audio-lifecycle-compat.test.ts[2m > [22mretains descriptor/digest admission and Ogg host codec, refuses bad envelopes before decode[32m 9[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/audio-lifecycle-compat.test.ts[2m > [22mStop cancels before fetch, before digest and before deferred host decode[32m 3[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/audio-lifecycle-compat.test.ts[2m > [22mnew Play wins out-of-order request and decode completions[32m 3[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/audio-lifecycle-compat.test.ts[2m > [22mreset/project/profile cancellation denies Kids before context allocation[32m 1[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/audio-lifecycle-compat.test.ts[2m > [22mrequest/decode/close rejection is named and repeated disposal closes once[32m 9[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/audio-lifecycle-compat.test.ts[2m > [22mfrozen PR310 package refusal preserves modern presentation and physics projection[32m 146[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/audio-lifecycle-compat.test.ts[2m > [22mper-clip Stop leaves other accepted sources playing, reset retires the entire project[32m 1[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/audio-lifecycle-compat.test.ts[2m > [22mrejected close is not reported as successful context disposal[32m 1[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/audio-lifecycle-compat.test.ts[2m > [22mchrome null-profile fence cancels synchronously before a stale request completes[32m 7[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/audio-lifecycle-compat.test.ts[2m > [22mmalformed authority events remain denied and disposed listeners cannot restore authority[32m 0[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m3 passed[39m[22m[90m (3)[39m
+[2m      Tests [22m [1m[32m21 passed[39m[22m[90m (21)[39m
+[2m   Start at [22m 18:40:15
+[2m   Duration [22m 8.61s[2m (transform 10.11s, setup 0ms, import 13.28s, tests 254ms, environment 0ms)[22m
+

@@ -95,30 +95,48 @@ const SECTIONS = [
   { id: "free-path", name: "The free path" },
   { id: "refusals", name: "Why a sculpt is refused" },
   { id: "assets", name: "Asset policy" },
+    { id: "service-status", name: "Service status and support" },
 ] as const;
 
 export default function DocsPage() {
   return (
     <div className="docs-shell">
       <nav className="docs-rail" aria-label="Documents">
+        {/*
+          The reader's location is marked on the server: this is the index, so its own
+          entry carries `aria-current`, and each guide below marks itself on its page.
+        */}
+        <div className="docs-rail-group">
+          <p className="docs-rail-title">Help</p>
+          <a href="/docs" aria-current="page">
+            All documentation
+          </a>
+          {HELP_DOCS.map((doc) => (
+            <a key={doc.slug} href={`/docs/${doc.slug}`}>
+              {doc.title}
+            </a>
+          ))}
+        </div>
         {RAIL_GROUPS.map((group) => (
           <div className="docs-rail-group" key={group}>
             <p className="docs-rail-title">{group}</p>
-            {CONTRACTS.filter((entry) => entry.group === group).map((entry) => (
+            {CONTRACTS.flatMap((entry) => entry.group === group ? [(
               <a key={entry.id} href={`#${entry.id}`}>
                 {entry.title}
               </a>
-            ))}
+            )] : [])}
           </div>
         ))}
       </nav>
 
       <article className="docs-main">
-        <ol className="crumbs">
-          <li>SceneAxi</li>
-          <li>Docs</li>
-          <li>Contracts</li>
-        </ol>
+        <nav aria-label="Breadcrumb">
+          <ol className="crumbs">
+            <li>SceneAxi</li>
+            <li>Docs</li>
+            <li aria-current="page">Contracts</li>
+          </ol>
+        </nav>
 
         <h1>SceneAxi help</h1>
         <p className="lede">Practical guides for installing, opening scenes, credits, and the command line.</p>
@@ -130,7 +148,13 @@ export default function DocsPage() {
             </a>
           ))}
         </nav>
-        <h2>Engine contracts</h2>
+        <section aria-labelledby="service-status">
+                    <h2 id="service-status">Service status and support</h2>
+                    <p>Live service status is not available here. These local help pages are not an uptime report or confirmation that sign-in, checkout, or hosted AI is operational.</p>
+                    <p>No verified support contact is published yet. Do not send passwords, provider keys, payment details, or private project files to an unverified address.</p>
+                    <p>Reviewed terms, privacy, refund, and legal contact information are not yet published. This notice is not a legal policy or approval for a public paid launch.</p>
+                  </section>
+                  <h2>Engine contracts</h2>
         <p className="lede">
           SceneAxi is specified before it is implemented. These are the documents that
           govern the engine, the CLI, and the profiles — the code follows them, not the

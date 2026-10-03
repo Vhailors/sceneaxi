@@ -1,0 +1,7 @@
+{
+  "extends": "../../../desktop/linux/tsconfig.json",
+  "include": [
+    "../../../desktop/linux/test/byo-terminal-lifecycle.test.ts",
+    "../../../desktop/linux/test/viewport-terminal-lifecycle.test.ts"
+  ]
+}

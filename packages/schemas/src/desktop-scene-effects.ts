@@ -5,10 +5,12 @@
  */
 import { digestSculptJson } from "./sculpt-json.js";
 import { isSculptIdentifier } from "./sculpt.js";
-import { isPlainRecord } from "./record-validation.js";
+import { snapshotPlainRecord, isPlainRecord } from "./record-validation.js";
 
 export const SCENE_EFFECTS_SCHEMA_VERSION = 1 as const;
+
 export const SCENE_EFFECTS_CATALOG_KIND = "sceneaxi.scene-effects-catalog" as const;
+
 export const SCENE_EFFECTS_CATALOG_KEY = "sceneEffects" as const;
 
 export const SCENE_EFFECT_EMITTER_KINDS = Object.freeze(["point", "box", "cone"] as const);
@@ -64,6 +66,7 @@ export type SceneEffectsEvaluation = Readonly<{
 }>;
 
 type Failure = Readonly<{ ok: false; reason: SceneEffectsRefusal; message: string }>;
+
 const fail = (reason: SceneEffectsRefusal, message: string): Failure =>
   Object.freeze({ ok: false as const, reason, message });
 
@@ -76,18 +79,30 @@ export function emptySceneEffectsCatalog(): SceneEffectsCatalog {
   });
 }
 
-export function parseSceneEffectsCatalog(value: unknown): SceneEffectsCatalog | null {
+function isEffectEmitter(value: unknown): value is SceneEffectEmitter {
+  const row = snapshotPlainRecord(value);
+
+  return row !== undefined && isMutationString(row["emitterId"])
+    && (row["kind"] === "point" || row["kind"] === "box" || row["kind"] === "cone")
+    && isMutationNumber(row["rate"]) && isMutationNumber(row["lifetimeMs"])
+    && isMutationNumber(row["speed"]) && Number.isFinite(row["speed"]) && row["speed"] >= 0
+    && isMutationNumber(row["spread"]) && Number.isFinite(row["spread"]) && row["spread"] >= 0
+    && (row["instanceId"] === undefined || isSculptIdentifier(row["instanceId"]))
+    && (row["color"] === undefined || (isMutationString(row["color"]) && /^#[0-9a-f]{6}$/i.test(row["color"])))
+    && (row["size"] === undefined || (isMutationNumber(row["size"]) && Number.isFinite(row["size"]) && row["size"] > 0));
+}
+
+function isEffectsCatalog<Input>(value: Input): value is Input & (SceneEffectsCatalog) {
+  const row = snapshotPlainRecord(value);
+
+  return row !== undefined && row["schemaVersion"] === 1 && row["kind"] === SCENE_EFFECTS_CATALOG_KIND
+    && isMutationNumber(row["seed"]) && Array.isArray(row["emitters"]) && row["emitters"].every(isEffectEmitter);
+}
+
+export function parseSceneEffectsCatalog(value: Parameters<typeof snapshotPlainRecord>[0]): SceneEffectsCatalog | null {
   if (value === undefined || value === null) return emptySceneEffectsCatalog();
-  if (typeof value !== "object" || Array.isArray(value)) return null;
-  const record = value as Record<string, unknown>;
-  if (record["schemaVersion"] !== 1 || record["kind"] !== SCENE_EFFECTS_CATALOG_KIND) {
-    return null;
-  }
 
-  // SAFETY: the envelope is checked above and emitter extensions are validated below.
-  const catalog = value as SceneEffectsCatalog;
-
-  return Array.isArray(catalog.emitters) && catalog.emitters.every(validEmitterExtensions) ? catalog : null;
+  return isEffectsCatalog(value) ? value : null;
 }
 
 function validEmitterExtensions(emitter: Pick<SceneEffectEmitter, "instanceId" | "color" | "size" | "speed" | "spread">): boolean {
@@ -115,6 +130,80 @@ export type SceneEffectsMutation =
   | Readonly<{ kind: "remove"; emitterId: string }>
   | Readonly<{ kind: "seed-set"; seed: number }>;
 
+type SceneEffectsMutationBuilder = { -readonly [Key in keyof Extract<SceneEffectsMutation, { kind: "upsert" }>]: Extract<SceneEffectsMutation, { kind: "upsert" }>[Key] };
+
+function isMutationString(value: unknown): value is string {
+  return typeof value === "string";
+}
+
+function isMutationNumber(value: unknown): value is number {
+  return typeof value === "number";
+}
+
+/** Snapshot and check every consumed field; domain diagnostics remain in apply. */
+export function parseSceneEffectsMutation(value: Parameters<typeof snapshotPlainRecord>[0]): SceneEffectsMutation | null {
+  const record = snapshotPlainRecord(value);
+
+  if (record === undefined) return null;
+
+  if (record["kind"] === "upsert") {
+    const emitterId = record["emitterId"];
+    const emitterKind = record["emitterKind"];
+    const rate = record["rate"];
+    const lifetimeMs = record["lifetimeMs"];
+    const speed = record["speed"];
+    const spread = record["spread"];
+    const instanceId = record["instanceId"];
+    const color = record["color"];
+    const size = record["size"];
+
+    if (!isMutationString(emitterId)) return null;
+
+    if (!isMutationString(emitterKind)) return null;
+
+    if (!isMutationNumber(rate)) return null;
+
+    if (!isMutationNumber(lifetimeMs)) return null;
+
+    if (!isMutationNumber(speed)) return null;
+
+    if (!isMutationNumber(spread)) return null;
+
+    if (instanceId !== undefined && !isMutationString(instanceId)) return null;
+
+    if (color !== undefined && !isMutationString(color)) return null;
+
+    if (size !== undefined && !isMutationNumber(size)) return null;
+    const mutation: SceneEffectsMutationBuilder = { kind: "upsert", emitterId, emitterKind, rate, lifetimeMs, speed, spread };
+
+    if (instanceId !== undefined) mutation.instanceId = instanceId;
+
+    if (color !== undefined) mutation.color = color;
+
+    if (size !== undefined) mutation.size = size;
+
+    return Object.freeze(mutation);
+  }
+
+  if (record["kind"] === "remove") {
+    const emitterId = record["emitterId"];
+
+    if (!isMutationString(emitterId)) return null;
+
+    return Object.freeze({ kind: "remove", emitterId });
+  }
+
+  if (record["kind"] === "seed-set") {
+    const seed = record["seed"];
+
+    if (!isMutationNumber(seed)) return null;
+
+    return Object.freeze({ kind: "seed-set", seed });
+  }
+
+  return null;
+}
+
 export function applySceneEffectsMutation(input: Readonly<{
   catalog: SceneEffectsCatalog;
   mutation: SceneEffectsMutation;
@@ -126,16 +215,24 @@ export function applySceneEffectsMutation(input: Readonly<{
   if (input.profile === "kids") {
     return fail(SCENE_EFFECTS_REFUSALS.kidsDenied, "Kids refuses effect authoring.");
   }
-  const mutation = input.mutation;
+
+  const mutation = parseSceneEffectsMutation(input.mutation);
+
+  if (mutation === null) {
+    return fail(SCENE_EFFECTS_REFUSALS.inputUnsupported, "The mutation fields do not match a supported variant.");
+  }
+
   if (mutation.kind === "seed-set") {
     if (!Number.isInteger(mutation.seed) || mutation.seed < 0) {
       return fail(SCENE_EFFECTS_REFUSALS.inputUnsupported, "Seed must be a non-negative integer.");
     }
+
     return Object.freeze({
       ok: true as const,
       catalog: Object.freeze({ ...input.catalog, seed: mutation.seed }),
     });
   }
+
   if (mutation.kind === "remove") {
     return Object.freeze({
       ok: true as const,
@@ -147,15 +244,19 @@ export function applySceneEffectsMutation(input: Readonly<{
       }),
     });
   }
+
   if (!isSculptIdentifier(mutation.emitterId)) {
     return fail(SCENE_EFFECTS_REFUSALS.inputUnsupported, "An emitter requires a lowercase id.");
   }
+
   if (!SCENE_EFFECT_EMITTER_KINDS.some((kind) => kind === mutation.emitterKind)) {
     return fail(SCENE_EFFECTS_REFUSALS.inputUnsupported, `Emitter kind "${mutation.emitterKind}" is unsupported.`);
   }
+
   if (!Number.isFinite(mutation.rate) || mutation.rate <= 0 || mutation.rate > 200) {
     return fail(SCENE_EFFECTS_REFUSALS.inputUnsupported, "Rate must be in (0, 200].");
   }
+
   if (!Number.isFinite(mutation.lifetimeMs) || mutation.lifetimeMs < 16 || mutation.lifetimeMs > 8000) {
     return fail(SCENE_EFFECTS_REFUSALS.inputUnsupported, "Lifetime must be in 16..8000 ms.");
   }
@@ -176,6 +277,7 @@ export function applySceneEffectsMutation(input: Readonly<{
 
   if (mutation.size !== undefined) appearance.size = mutation.size;
 
+  // SAFETY: emitterKind membership was checked against SCENE_EFFECT_EMITTER_KINDS above.
   const emitter: SceneEffectEmitter = Object.freeze({
     emitterId: mutation.emitterId,
     kind: mutation.emitterKind as SceneEffectEmitter["kind"],
@@ -185,6 +287,7 @@ export function applySceneEffectsMutation(input: Readonly<{
     spread: mutation.spread,
     ...appearance,
   });
+
   return Object.freeze({
     ok: true as const,
     catalog: Object.freeze({
@@ -199,10 +302,12 @@ export function applySceneEffectsMutation(input: Readonly<{
 
 function digestUint32(label: string): number {
   let hash = 2166136261;
+
   for (let index = 0; index < label.length; index += 1) {
     hash ^= label.charCodeAt(index);
     hash = Math.imul(hash, 16777619);
   }
+
   return hash >>> 0;
 }
 
@@ -215,9 +320,11 @@ export function sampleSceneEffects(input: Readonly<{
   if (!Number.isFinite(input.timeMs) || input.timeMs < 0 || input.timeMs > 60_000) {
     return fail(SCENE_EFFECTS_REFUSALS.sampleUnstable, "Sample time must be in 0..60000 ms.");
   }
+
   const samples = input.catalog.emitters.map((emitter) => {
     const seed = digestUint32(`sceneaxi.effect:${input.catalog.seed}:${emitter.emitterId}`);
     const alive = Math.min(32, Math.max(1, Math.floor((emitter.rate * emitter.lifetimeMs) / 1000)));
+
     const positions = Array.from({ length: alive }, (_, index) => {
       const phase = ((seed + index * 997 + Math.floor(input.timeMs)) % 1000) / 1000;
       const height = (phase * emitter.speed * emitter.lifetimeMs) / 1000;
@@ -251,7 +358,9 @@ export function sampleSceneEffects(input: Readonly<{
       positions: Object.freeze(positions),
     });
   });
+
   const frozen = Object.freeze(samples);
+
   return Object.freeze({
     ok: true as const,
     evaluation: Object.freeze({

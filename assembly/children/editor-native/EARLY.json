@@ -1,0 +1,11 @@
+{
+  "status": "SOURCE_OWNED_RECONCILIATION_IN_PROGRESS",
+  "owner": "editor-native",
+  "ownedClone": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1",
+  "snapshotTree": "3f25ffea22f19d01ef9a484f317d8b8ca4cde397",
+  "baseline": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+  "features": ["EF-LINUX", "EF-GIT", "private-shell-chrome", "private-asset-preparation", "workspace-cli-build-preflight"],
+  "sourceHandback": false,
+  "publication": "NO_STAGE_COMMIT_PUSH_OR_INDEX_EDITS",
+  "verification": "Root install available from parent; scoped source Vitest only. Native/browser/package/heavy acceptance unrun."
+}

@@ -4,6 +4,7 @@
   "title": "SceneAxi input-action map v1",
   "oneOf": [
     { "$ref": "#/$defs/map" },
+    { "$ref": "#/$defs/legacyMap" },
     { "$ref": "#/$defs/overrides" }
   ],
   "$defs": {
@@ -124,7 +125,11 @@
             "input": { "enum": ["axis", "button"] },
             "control": { "type": "integer", "minimum": 0, "maximum": 31 },
             "direction": { "enum": ["any", "negative", "positive"] }
-          }
+          },
+            "allOf": [{
+              "if": { "properties": { "input": { "const": "axis" } } },
+            "then": { "properties": { "control": { "maximum": 15 } } }
+          }]
         }
       ]
     },
@@ -135,6 +140,35 @@
       "properties": {
         "actionId": { "$ref": "#/$defs/actionId" },
         "binding": { "$ref": "#/$defs/binding" }
+      }
+    },
+    "legacyMap": {
+      "description": "Original Git740c7e9 full v1 map. Runtime normalization retains these bindings and appends modern defaults; other truncations are refused.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "kind", "bindings"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "kind": { "const": "sceneaxi.input-action-map" },
+        "bindings": {
+          "type": "array",
+          "minItems": 11,
+          "maxItems": 11,
+          "items": false,
+          "prefixItems": [
+            { "allOf": [{ "$ref": "#/$defs/entry" }, { "properties": { "actionId": { "const": "editor.palette.open" } } }] },
+            { "allOf": [{ "$ref": "#/$defs/entry" }, { "properties": { "actionId": { "const": "editor.project.open" } } }] },
+            { "allOf": [{ "$ref": "#/$defs/entry" }, { "properties": { "actionId": { "const": "editor.project.save" } } }] },
+            { "allOf": [{ "$ref": "#/$defs/entry" }, { "properties": { "actionId": { "const": "editor.edit.undo" } } }] },
+            { "allOf": [{ "$ref": "#/$defs/entry" }, { "properties": { "actionId": { "const": "editor.edit.redo" } } }] },
+            { "allOf": [{ "$ref": "#/$defs/entry" }, { "properties": { "actionId": { "const": "editor.run.play" } } }] },
+            { "allOf": [{ "$ref": "#/$defs/entry" }, { "properties": { "actionId": { "const": "editor.focus.next" } } }] },
+            { "allOf": [{ "$ref": "#/$defs/entry" }, { "properties": { "actionId": { "const": "editor.overlay.dismiss" } } }] },
+            { "allOf": [{ "$ref": "#/$defs/entry" }, { "properties": { "actionId": { "const": "viewport.orbit" } } }] },
+            { "allOf": [{ "$ref": "#/$defs/entry" }, { "properties": { "actionId": { "const": "viewport.zoom" } } }] },
+            { "allOf": [{ "$ref": "#/$defs/entry" }, { "properties": { "actionId": { "const": "play.primary" } } }] }
+          ]
+        }
       }
     },
     "map": {

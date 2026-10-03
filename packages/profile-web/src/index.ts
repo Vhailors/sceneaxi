@@ -52,6 +52,7 @@ export const SCENEAXI_REFUSAL_REGISTRY_CATALOG = Object.freeze({
 });
 
 export type WebExperienceScope = (typeof WEB_EXPERIENCE_SCOPES)[number];
+
 export type WebExperienceRefusedScope =
   (typeof WEB_EXPERIENCE_REFUSED_SCOPES)[number];
 
@@ -68,6 +69,7 @@ export type WebExperiencePolicyDecision =
     }>;
 
 const webExperienceScopeSet = new Set<string>(WEB_EXPERIENCE_SCOPES);
+
 const refusedWebExperienceScopeSet = new Set<string>(
   WEB_EXPERIENCE_REFUSED_SCOPES,
 );
@@ -77,19 +79,18 @@ const refusedWebExperienceScopeSet = new Set<string>(
  * Unknown values refuse: extending the profile requires an explicit policy edit.
  */
 export function evaluateWebExperienceScope(
-  requestedScope: unknown,
+  requestedScope: Parameters<typeof parseRequestedScope>[0],
 ): WebExperiencePolicyDecision {
-  if (
-    typeof requestedScope === "string" &&
-    webExperienceScopeSet.has(requestedScope)
-  ) {
+  const scope = parseRequestedScope(requestedScope);
+
+  if (isWebExperienceScope(scope)) {
     return Object.freeze({
       ok: true,
-      scope: requestedScope as WebExperienceScope,
+      scope,
     });
   }
 
-  const scope = typeof requestedScope === "string" ? requestedScope : null;
+
   const outsideLockedBoundary =
     scope !== null && refusedWebExperienceScopeSet.has(scope);
 
@@ -142,11 +143,13 @@ export const seam: ProfileSeam = Object.freeze({
  */
 export const openPathPolicy: OpenPathPolicyRow = (() => {
   const row = openPathPolicyRowFor("@sceneaxi/profile-web");
+
   if (row === undefined) {
     throw new Error(
       "@sceneaxi/profile-web has no row in the shared open-path demo policy.",
     );
   }
+
   return row;
 })();
 
@@ -194,3 +197,15 @@ export const mvpGoldenPath = Object.freeze({
     presentation: Object.freeze({ createNullPresentationRuntime }),
   }),
 });
+
+function isScopeText(value: unknown): value is string {
+  return typeof value === "string";
+}
+
+function parseRequestedScope(value: unknown): string | null {
+  return isScopeText(value) ? value : null;
+}
+
+function isWebExperienceScope(value: string | null): value is WebExperienceScope {
+  return value !== null && webExperienceScopeSet.has(value);
+}

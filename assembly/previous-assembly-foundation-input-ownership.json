@@ -1,0 +1,30 @@
+{
+  "paths": [
+    "packages/engine-kernel/src/index.ts",
+    "packages/engine-kernel/src/legacy-digest.ts",
+    "packages/engine-kernel/test/legacy-digest.test.ts",
+    "packages/schemas/src/index.ts",
+    "packages/schemas/src/input-action-registry.ts",
+    "packages/schemas/contracts/input-action-map.schema.json",
+    "packages/schemas/test/input-action-registry.test.ts",
+    "packages/schemas/test/legacy-import-compat.test.ts",
+    "desktop/linux/src/lib/input-action-host.ts",
+    "desktop/linux/test/legacy-input-map.test.ts",
+    "docs/kernel-browser-open.md"
+  ],
+  "task": "Implement LF01 browser-safe original three-argument computeDigest helper using original Git16f312 session semantics caller entity order, restore LF02 type-only root ConformanceCheckResult/ConformanceSuiteResult without Node runtime import (sync runtime old helper remains explicit pending unless safe versioned decision), LF05 doc correct Node subpath. Implement EF-INPUT actual old schemaVersion1 full-map migration/controller override compatibility preserving new gamepad/default held/text-entry/Kids checks. No source-equivalence assertion without vectors/tests. Schemas index reserved exclusively; parent will reconcile PR310 exports after handback.",
+  "ownedClone": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1",
+  "noParentWritesUntilHandback": true,
+  "base": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+  "snapshotTree": "3f25ffea22f19d01ef9a484f317d8b8ca4cde397",
+  "publication": "NO_STAGE_COMMIT_PUSH_OR_GIT_INDEX_EDITS",
+  "verification": "Scoped tests allowed after owning parent installs once; heavy builds parent only; no nested agents",
+  "reports": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/children/foundation-input",
+  "sourceInputs": [
+    "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/legacy-foundation/report.json",
+    "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/editor-features/report.json",
+    "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/docs-checkpoints/report.json",
+    "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/private-source-conflicts.json",
+    "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/source-assembly-manifest.json"
+  ]
+}

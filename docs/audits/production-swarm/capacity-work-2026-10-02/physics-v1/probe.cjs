@@ -1,0 +1,131 @@
+#!/usr/bin/env node
+'use strict';
+
+/* global module, __dirname */
+
+// Uses installed compiler to execute unchanged source, no dist and no on-disk emit.
+const fs=module.require('node:fs'),path=module.require('node:path'),crypto=module.require('node:crypto'),vm=module.require('node:vm'),assert=module.require('node:assert/strict');
+
+const root=path.resolve(__dirname,'../../../../..');
+
+const {createRequire}=module.require('node:module');
+
+const native=createRequire(path.join(root,'package.json'));
+
+const ts=native('typescript');
+
+const hashes={},cache=new Map(),results=[];
+
+const sha=b=>crypto.createHash('sha256').update(b).digest('hex');
+
+const packages={'@sceneaxi/schemas':'packages/schemas/src/index.ts','@sceneaxi/schemas/testing/scene-composition':'packages/schemas/src/testing/scene-composition.ts','@sceneaxi/engine-kernel':'packages/engine-kernel/src/index.ts','@sceneaxi/physics-rapier':'packages/physics-rapier/src/index.ts'};
+
+function load(file){file=path.resolve(file);
+
+if(cache.has(file))return cache.get(file).exports;const text=fs.readFileSync(file,'utf8');hashes[path.relative(root,file)]=sha(text);const mod={exports:{}};cache.set(file,mod);const js=ts.transpileModule(text,{fileName:file,compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS,esModuleInterop:true}}).outputText;
+
+ const local=id=>{if(packages[id])return load(path.join(root,packages[id]));
+
+if(id.startsWith('.')){let f=path.resolve(path.dirname(file),id).replace(/\.js$/,'.ts');
+
+if(fs.existsSync(f))return load(f);}
+
+return createRequire(file)(id);};
+
+ new vm.Script('(function(require,module,exports,__filename,__dirname){'+js+'\n})',{filename:file}).runInThisContext()(local,mod,mod.exports,file,path.dirname(file));
+
+return mod.exports;}
+
+function check(name,fn,input){try{const observed=fn();results.push({name,status:'PASS',input,observed});}catch(e){results.push({name,status:'FAIL',input,error:e.message});}}
+
+const consumer=path.join(__dirname,'legacy-consumer.ts');
+
+function compile(text,proposal=false){const opts={target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.NodeNext,moduleResolution:ts.ModuleResolutionKind.NodeNext,strict:true,noEmit:true,skipLibCheck:true,baseUrl:root,paths:Object.fromEntries(Object.entries(packages).map(([k,v])=>[k,[v]]))};const host=ts.createCompilerHost(opts);const read=host.readFile.bind(host);host.readFile=f=>{let bytes=f===consumer?text:read(f);
+
+if(proposal&&f.endsWith('/schemas/src/desktop-scene-physics.ts'))bytes=bytes.replace('export type ScenePhysicsCatalog = ScenePhysicsColliderCatalog | ScenePhysicsLegacyCatalog;','export type ScenePhysicsCatalog = ScenePhysicsLegacyCatalog & Readonly<{ colliders?: readonly ScenePhysicsCollider[] }>;').replace('export type ScenePhysicsCatalogInput = ScenePhysicsCatalog;','export type ScenePhysicsCatalogInput = ScenePhysicsColliderCatalog | ScenePhysicsLegacyCatalog;');
+
+if(!proposal&&bytes!==undefined&&f.startsWith(root)&&!f.includes('node_modules')&&!f.startsWith(__dirname))hashes[path.relative(root,f)]=sha(bytes);
+
+return bytes;};
+
+const program=ts.createProgram([consumer],opts,host);
+
+return ts.getPreEmitDiagnostics(program).map(d=>({code:d.code,path:d.file?path.relative(root,d.file.fileName):null,line:d.file&&d.start!==undefined?d.file.getLineAndCharacterOfPosition(d.start).line+1:null,message:ts.flattenDiagnosticMessageText(d.messageText,' ')}));}
+
+const diagnostics=compile(fs.readFileSync(consumer,'utf8'));
+
+check('proposal-compile-only-in-memory',()=>{const d=compile(fs.readFileSync(consumer,'utf8'),true);assert.equal(d.length,0,JSON.stringify(d));
+
+return {diagnostics:d,productWritten:false};});
+
+check('legacy-public-consumer-compile',()=>{assert.equal(diagnostics.length,0,JSON.stringify(diagnostics));
+
+return {diagnostics};});
+
+check('compile-negative-control',()=>{const d=compile(fs.readFileSync(consumer,'utf8')+'\nconst physicsNegativeControl: number = "must-fail";\n');assert(d.some(x=>x.code===2322&&x.path.endsWith('legacy-consumer.ts')));
+
+return d.filter(x=>x.code===2322);});
+
+const s=load(path.join(root,packages['@sceneaxi/schemas']));
+
+const legacy={schemaVersion:1,kind:'sceneaxi.scene-physics-catalog',world:{gravityY:-9.81,stepMs:16,seed:1},bodies:[{bodyId:'body',instanceId:'instance',kind:'dynamic',mass:1}],["shapes"]:[{"shapeId":'ball',bodyId:'body',kind:'sphere',size:1}],materials:[],constraints:[]};
+
+const bytes=JSON.stringify(legacy),fixtureHash=sha(bytes);
+
+check('legacy-normalization-and-roundtrip',()=>{const n=s.requireScenePhysicsCatalog(legacy);assert.equal(n.colliders[0].colliderId,'ball');assert.equal(n.shapes[0].shapeId,'ball');assert.equal(n.world.engine,'toy');assert.equal(JSON.stringify(legacy),bytes);assert.deepEqual(s.requireScenePhysicsCatalog(JSON.parse(JSON.stringify(n))),n);
+
+return n;},legacy);
+
+check('legacy-public-exports-and-mutation',()=>{assert.equal(s.SCENE_PHYSICS_SHAPE_KINDS,s.SCENE_PHYSICS_COLLIDER_KINDS);assert.equal(s.SCENE_PHYSICS_REFUSALS.shapeInvalid,'PHYSICS_SHAPE_INVALID');const n=s.applyScenePhysicsMutation({catalog:legacy,instanceIds:['instance'],mutation:{kind:'shape-upsert',"shapeId":'ball',bodyId:'body',"shapeKind":'sphere',size:2}});assert(n.ok);assert.equal(n.catalog.shapes[0].size,2);assert.equal(n.catalog.colliders[0].size,2);assert.equal(JSON.stringify(legacy),bytes);
+
+return n;});
+
+check('toy-save-reload-fixed-step-and-refusal-atomicity',()=>{const host=s.createToyPhysicsWorldHost(),a=host.create(legacy),b=host.create(JSON.parse(bytes));
+
+try{for(let i=0;i<4;i++){a.step(.016);b.step(.016);}
+
+assert.equal(a.serialize(),b.serialize());const before=a.serialize();assert.throws(()=>a.step(.017),/PHYSICS_STEP_UNSTABLE/);assert.equal(a.serialize(),before);
+
+return {terminal:before,digest:sha(before)};}finally{a.dispose();b.dispose();assert.throws(()=>a.snapshot(),/PHYSICS_HOST_NOT_READY/);}});
+
+let getterCalls=0;
+
+const accessor={...legacy};
+
+Object.defineProperty(accessor,'world',{enumerable:true,get(){getterCalls++;throw Error('getter executed');}});
+
+const hostileWorld={};
+
+Object.defineProperty(hostileWorld,'gravityY',{enumerable:true,get(){getterCalls++;throw Error('getter executed');}});
+
+const hostileProxy=new Proxy({}, {get(){throw Error('proxy get');},ownKeys(){throw Error('proxy ownKeys');},getPrototypeOf(){throw Error('proxy proto');}});
+
+const rev=Proxy.revocable({},{});
+
+rev.revoke();
+
+for(const [name,input] of [['null-world',{...legacy,world:null}],['accessor-world',accessor],['accessor-world-field',{...legacy,world:hostileWorld}],['proxy-world',{...legacy,world:hostileProxy}],['revoked-proxy-world',{...legacy,world:rev.proxy}]])check(name,()=>{const before=Object.getOwnPropertyDescriptors(legacy);assert.throws(()=>s.requireScenePhysicsCatalog(input),/^Error: PHYSICS_CATALOG_INVALID$/);assert.equal(s.parseScenePhysicsCatalog(input),null);assert.throws(()=>s.createToyPhysicsWorldHost().create(input),/^Error: PHYSICS_CATALOG_INVALID$/);assert.equal(getterCalls,0);assert.deepEqual(Object.getOwnPropertyDescriptors(legacy),before);assert.equal(JSON.stringify(legacy),bytes);
+
+return {refusal:'PHYSICS_CATALOG_INVALID',getterCalls,fixtureHash};},{construction:name,baseFixtureHash:fixtureHash});
+
+check('runtime-negative-control-conflicting-alias',()=>{const input={...legacy,colliders:[{colliderId:'different',bodyId:'body',kind:'sphere',size:1}]};assert.throws(()=>s.requireScenePhysicsCatalog(input),/PHYSICS_CATALOG_INVALID/);
+
+return {refused:true};});
+
+check('collider-only-and-empty-alias-spread',()=>{const collider={colliderId:'ball',bodyId:'body',kind:'sphere',size:1};const {["shapes"]: legacyColliders,...rest}=legacy;assert.deepEqual(legacyColliders,legacy["shapes"]);assert.equal(s.requireScenePhysicsCatalog({...rest,colliders:[collider]}).shapes[0].shapeId,'ball');assert.equal(s.requireScenePhysicsCatalog({...legacy,colliders:[]}).colliders[0].colliderId,'ball');
+
+return {normalized:true};});
+
+check('kernel-real-source-fixture-save-replay',()=>{const k=load(path.join(root,packages['@sceneaxi/engine-kernel'])),f=load(path.join(root,packages['@sceneaxi/schemas/testing/scene-composition']));const resolved=s.resolveScenePlacements({schemaVersion:s.SCENE_COMPOSITION_SCHEMA_VERSION,kind:s.SCENE_COMPOSITION_INTAKE_KIND,sceneId:'probe',rootInstanceId:'instance',placements:[{instanceId:'instance',artifactId:'artifact',parentInstanceId:null,transform:f.sceneCompositionTransformFixture([0,0,0])},{instanceId:'second',artifactId:'artifact',parentInstanceId:'instance',transform:f.sceneCompositionTransformFixture([2,0,0])}]});assert(resolved.ok);const instances=resolved.value.map(p=>({...p,artifact:f.sceneCompositionArtifactFixture('artifact')}));const draft={schemaVersion:s.SCENE_COMPOSITION_SCHEMA_VERSION,kind:s.COMPOSED_SCENE_KIND,sceneId:'probe',rootInstanceId:'instance',instances,evidence:{intakeDigest:f.sceneCompositionFixtureDigest('e'),placementDigest:s.digestScenePlacements(resolved.value),artifactDigests:instances.map(i=>({instanceId:i.instanceId,artifactDigest:s.digestSceneArtifact(i.artifact)})),sceneDigest:f.sceneCompositionFixtureDigest('0')}};const scene={...draft,evidence:{...draft.evidence,sceneDigest:s.digestComposedScene(draft)}};const a=k.openSceneKernelSession(scene,{seed:1});a.advance({tick:1,deltaMs:16});const save=a.save(),b=k.replaySceneKernelSession(JSON.parse(JSON.stringify(save)));assert.equal(a.observe().digest,b.observe().digest);const before=a.observe().digest;assert.throws(()=>a.advance({tick:1,deltaMs:16}));assert.equal(a.observe().digest,before);
+
+return {terminal:before,physicsCoupled:false};});
+
+(async()=>{if(globalThis.process.argv.includes('--wasm')){const r=load(path.join(root,packages['@sceneaxi/physics-rapier']));const host=await r.createRapierPhysicsWorldHost();check('rapier-public-legacy-save-replay',()=>{const a=host.create({...legacy,world:{...legacy.world,engine:'rapier'}});
+
+try{a.step(.016);const b=host.replay(JSON.parse(JSON.stringify(a.save())));
+
+try{assert.equal(a.serialize(),b.serialize());
+
+return {terminal:sha(a.serialize())};}finally{b.dispose();}}finally{a.dispose();}});}
+
+const evidence={taskid:'physics-v1',subject:'current source transpiled in memory; no dist artifacts',typescript:ts.version,fixture:{input:legacy,bytes,sha256:fixtureHash},diagnostics,results,sourceHashes:hashes,sourceFingerprint:sha(JSON.stringify(Object.entries(hashes).sort())),deferred:globalThis.process.argv.includes('--wasm')?['native','GUI']:['Rapier real WASM (--wasm)','native','GUI'],cleaned:'No files emitted, ports, services or temporary fixtures allocated'};fs.writeFileSync(path.join(__dirname,'evidence.json'),JSON.stringify(evidence,null,2)+'\n');globalThis.console.log(JSON.stringify({checks:results.length,pass:results.filter(r=>r.status==='PASS').length,failed:results.filter(r=>r.status==='FAIL'),fingerprint:evidence.sourceFingerprint,deferred:evidence.deferred},null,2));globalThis.process.exitCode=results.some(r=>r.status==='FAIL')?1:0;})().catch(e=>{globalThis.console.error(e);globalThis.process.exitCode=1;});

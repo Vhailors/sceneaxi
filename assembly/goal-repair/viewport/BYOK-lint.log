@@ -1,0 +1,10 @@
+
+/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/desktop/linux/test/byo-terminal-lifecycle.test.ts
+   67:37  error  '_input' is defined but never used  @typescript-eslint/no-unused-vars
+   99:95  error  '_input' is defined but never used  @typescript-eslint/no-unused-vars
+  110:88  error  '_input' is defined but never used  @typescript-eslint/no-unused-vars
+  116:54  error  '_input' is defined but never used  @typescript-eslint/no-unused-vars
+  125:61  error  '_input' is defined but never used  @typescript-eslint/no-unused-vars
+
+✖ 5 problems (5 errors, 0 warnings)
+

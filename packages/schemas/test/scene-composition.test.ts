@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
 import {
   COMPOSED_SCENE_DOCUMENT_DATA_KEY,
   COMPOSED_SCENE_KIND,
@@ -11,10 +9,10 @@ import {
   composeSculptTransforms,
   composedSceneFromDocumentData,
   contracts,
+  deriveCanonicalLocalSculptTransform,
   digestComposedScene,
   digestSceneArtifact,
   digestScenePlacements,
-  deriveCanonicalLocalSculptTransform,
   identitySculptTransform,
   projectSceneInstanceHierarchy,
   resolveScenePlacements,
@@ -22,6 +20,7 @@ import {
   validateSceneCompositionIntake,
   validateSculptArtifact,
   type ComposedScene,
+  type JsonValue,
   type ComposedSceneInstance,
   type SceneCompositionDiagnosticCode,
   type SceneCompositionIntake,
@@ -34,6 +33,8 @@ import {
   sceneCompositionIdentityTransform as identity,
   sceneCompositionTransformFixture as transform,
 } from "@sceneaxi/schemas/testing/scene-composition";
+import { readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
 
 function exhaustSceneDiagnostic(code: SceneCompositionDiagnosticCode) {
   switch (code) {
@@ -56,12 +57,14 @@ function exhaustSceneDiagnostic(code: SceneCompositionDiagnosticCode) {
       return code;
     default: {
       const exhaustive: never = code;
+
       return exhaustive;
     }
   }
 }
 
 const crateArtifact = artifactFixture("crate-artifact");
+
 const droneArtifact = artifactFixture("drone-artifact");
 
 function intakeFixture(): SceneCompositionIntake {
@@ -97,16 +100,22 @@ function composedSceneFixture(
   sceneDroneArtifact: SculptArtifact = droneArtifact,
 ): ComposedScene {
   const resolved = resolveScenePlacements(intakeFixture());
+
   if (!resolved.ok) throw new Error("fixture intake refused");
+
   const artifacts = new Map<string, SculptArtifact>([
     ["crate-artifact", crateArtifact],
     ["drone-artifact", sceneDroneArtifact],
   ]);
+
   const instances = resolved.value.map((placement): ComposedSceneInstance => {
     const artifact = artifacts.get(placement.artifactId);
+
     if (artifact === undefined) throw new Error("fixture artifact missing");
+
     return { ...placement, artifact };
   });
+
   const scene = {
     schemaVersion: SCENE_COMPOSITION_SCHEMA_VERSION,
     kind: COMPOSED_SCENE_KIND,
@@ -123,6 +132,7 @@ function composedSceneFixture(
       sceneDigest: digest("0"),
     },
   } satisfies ComposedScene;
+
   return { ...scene, evidence: { ...scene.evidence, sceneDigest: digestComposedScene(scene) } };
 }
 
@@ -132,11 +142,13 @@ function refusalOf(
 ) {
   if (result.ok) throw new Error(`${label} unexpectedly succeeded`);
   const first = result.diagnostics[0];
+
   if (first === undefined) throw new Error(`${label} produced no diagnostic`);
+
   return first;
 }
 
-function intakeRefusal(mutate: (intake: SceneCompositionIntake) => unknown, label: string) {
+function intakeRefusal<Value>(mutate: (intake: SceneCompositionIntake) => Value, label: string) {
   return refusalOf(validateSceneCompositionIntake(mutate(intakeFixture())), label);
 }
 
@@ -154,6 +166,7 @@ describe("scene composition contracts", () => {
         "utf8",
       ),
     );
+
     expect(schema).toMatchObject({
       $defs: {
         boundedPositiveNumber: {
@@ -189,6 +202,7 @@ describe("scene composition contracts", () => {
   it("accepts a canonical multi-instance intake and freezes it", () => {
     const result = validateSceneCompositionIntake(intakeFixture());
     expect(result.ok).toBe(true);
+
     if (!result.ok) return;
     expect(Object.isFrozen(result.value)).toBe(true);
     expect(Object.isFrozen(result.value.placements)).toBe(true);
@@ -197,6 +211,7 @@ describe("scene composition contracts", () => {
 
   it("preserves optional names in resolved placements and binds them in digests", () => {
     const intake = intakeFixture();
+
     const named = {
       ...intake,
       placements: intake.placements.map((placement, index) => ({
@@ -204,29 +219,36 @@ describe("scene composition contracts", () => {
         name: index === 0 ? "World" : `Crate (${index})`,
       })),
     };
+
     const resolved = resolveScenePlacements(named);
     expect(resolved.ok).toBe(true);
+
     if (!resolved.ok) throw new Error("named intake refused");
     expect(resolved.value.map((placement) => placement.name)).toEqual([
       "World", "Crate (1)", "Crate (2)",
     ]);
     const legacy = resolveScenePlacements(intake);
+
     if (!legacy.ok) throw new Error("legacy intake refused");
     expect(legacy.value.every((placement) => !Object.hasOwn(placement, "name"))).toBe(true);
     expect(digestScenePlacements(resolved.value)).not.toBe(digestScenePlacements(legacy.value));
 
     const scene = composedSceneFixture();
+
     const renamed = {
       ...scene,
       instances: scene.instances.map((instance) => ({ ...instance, name: "Crate" })),
     };
+
     expect(refusalOf(validateComposedScene(renamed), "unbound names")).toMatchObject({
       code: "invalid-field", path: "$.evidence.placementDigest",
     });
+
     const rebound = {
       ...renamed,
       evidence: { ...renamed.evidence, placementDigest: digestScenePlacements(renamed.instances) },
     };
+
     const valid = { ...rebound, evidence: { ...rebound.evidence, sceneDigest: digestComposedScene(rebound) } };
     expect(validateComposedScene(valid)).toMatchObject({ ok: true, value: valid });
   });
@@ -258,7 +280,9 @@ describe("scene composition contracts", () => {
   it("resolves mesh-less node parents without requiring an artifact reference", () => {
     const intake = intakeFixture();
     const root = intake.placements[0];
+
     if (root === undefined) throw new Error("missing root");
+
     const nodeRoot = {
       instanceId: root.instanceId,
       kind: "node",
@@ -266,12 +290,15 @@ describe("scene composition contracts", () => {
       parentInstanceId: null,
       transform: root.transform,
     };
+
     const input = { ...intake, placements: [nodeRoot, ...intake.placements.slice(1)] };
     expect(validateSceneCompositionIntake(input)).toMatchObject({ ok: true, value: input });
     const resolved = resolveScenePlacements(input);
+
     if (!resolved.ok) throw new Error("node intake refused");
     expect(resolved.value[0]).toMatchObject({ kind: "node", name: "World", depth: 0 });
     expect(resolved.value[1]?.worldTransform.translation).toEqual([1, 2, 2]);
+
     for (const invalid of [
       { ...nodeRoot, artifactId: "crate-artifact" },
       { ...nodeRoot, kind: "mesh" },
@@ -282,6 +309,7 @@ describe("scene composition contracts", () => {
         ...input, placements: [invalid, ...intake.placements.slice(1)],
       }).ok).toBe(false);
     }
+
     expect(validateSceneCompositionIntake({ ...input, placements: [nodeRoot] })).toMatchObject({
       ok: false, diagnostics: [{ code: "instance-count-below-minimum" }],
     });
@@ -314,6 +342,7 @@ describe("scene composition contracts", () => {
       ),
       transform([0.3, 0, 0]),
     );
+
     expect(level3.translation).toEqual([1.6, 0, 0]);
     expect(identitySculptTransform()).toEqual(identity);
   });
@@ -346,6 +375,7 @@ describe("scene composition contracts", () => {
           : placement,
       ),
     };
+
     expect(
       refusalOf(validateSceneCompositionIntake(underflow), "scale underflow"),
     ).toMatchObject({
@@ -364,17 +394,18 @@ describe("scene composition contracts", () => {
       placements: intakeFixture().placements.map((placement, index) =>
         index === 0
           ? {
-              ...placement,
-              transform: transform(
-                [0, 0, 0],
-                [SCENE_MAXIMUM_COMPONENT_MAGNITUDE, 1, 1],
-              ),
-            }
+            ...placement,
+            transform: transform(
+              [0, 0, 0],
+              [SCENE_MAXIMUM_COMPONENT_MAGNITUDE, 1, 1],
+            ),
+          }
           : index === 1
             ? { ...placement, transform: transform([0, 0, 0], [2, 1, 1]) }
-          : placement,
+            : placement,
       ),
     };
+
     expect(
       refusalOf(validateSceneCompositionIntake(overflow), "scale overflow"),
     ).toMatchObject({
@@ -386,6 +417,7 @@ describe("scene composition contracts", () => {
   it("resolves depth, order, and world transforms", () => {
     const resolved = resolveScenePlacements(intakeFixture());
     expect(resolved.ok).toBe(true);
+
     if (!resolved.ok) return;
     expect(resolved.value.map((placement) => placement.instanceId)).toEqual([
       "bay-floor-crate",
@@ -403,10 +435,13 @@ describe("scene composition contracts", () => {
   it("treats a reused artifactId as legal instancing", () => {
     const resolved = resolveScenePlacements(intakeFixture());
     expect(resolved.ok).toBe(true);
+
     if (!resolved.ok) return;
+
     const crateInstances = resolved.value.filter(
       (placement) => placement.artifactId === "crate-artifact",
     );
+
     expect(crateInstances).toHaveLength(2);
     expect(new Set(crateInstances.map((placement) => placement.instanceId)).size).toBe(2);
   });
@@ -424,8 +459,9 @@ describe("scene composition contracts", () => {
     ).toMatchObject({ code: "invalid-kind", path: "$.kind" });
     expect(
       intakeRefusal((intake) => {
-        const withoutSceneId: Record<string, unknown> = { ...intake };
+        const withoutSceneId: Omit<SceneCompositionIntake, "sceneId"> & { sceneId?: string } = { ...intake };
         Reflect.deleteProperty(withoutSceneId, "sceneId");
+
         return withoutSceneId;
       }, "missing sceneId"),
     ).toMatchObject({ code: "missing-field", path: "$.sceneId" });
@@ -530,6 +566,7 @@ describe("scene composition contracts", () => {
 
   it("refuses a two-instance parentage cycle that never reaches the root", () => {
     const intake = intakeFixture();
+
     const cycled = {
       ...intake,
       placements: [
@@ -548,6 +585,7 @@ describe("scene composition contracts", () => {
         },
       ],
     };
+
     expect(refusalOf(validateSceneCompositionIntake(cycled), "cycle")).toMatchObject({
       code: "scene-hierarchy-cycle",
       path: "$.placements",
@@ -572,6 +610,7 @@ describe("scene composition contracts", () => {
         })),
       ],
     };
+
     expect(refusalOf(validateSceneCompositionIntake(wide), "wide scene")).toMatchObject({
       code: "scene-budget-exceeded",
       path: "$.placements",
@@ -595,6 +634,7 @@ describe("scene composition contracts", () => {
         })),
       ],
     };
+
     expect(refusalOf(validateSceneCompositionIntake(deep), "deep scene")).toMatchObject({
       code: "scene-budget-exceeded",
       path: "$.placements",
@@ -604,6 +644,7 @@ describe("scene composition contracts", () => {
   it("projects an instance into scene space without touching its artifact", () => {
     const scene = composedSceneFixture();
     const instance = scene.instances[2];
+
     if (instance === undefined) throw new Error("fixture instance missing");
     const placed = projectSceneInstanceHierarchy(instance);
     expect(placed.instanceId).toBe("bay-drone");
@@ -628,6 +669,7 @@ describe("scene composition contracts", () => {
     const scene = composedSceneFixture();
     const result = validateComposedScene(scene);
     expect(result.ok).toBe(true);
+
     if (!result.ok) return;
     expect(result.value.instances.map((instance) => instance.instanceId)).toEqual([
       "bay-floor-crate",
@@ -636,9 +678,11 @@ describe("scene composition contracts", () => {
     ]);
     expect(Object.isFrozen(result.value)).toBe(true);
 
+    // SAFETY: the schema-owned composed scene fixture consists only of JSON fields accepted by document data.
     const fromDocument = composedSceneFromDocumentData({
-      [COMPOSED_SCENE_DOCUMENT_DATA_KEY]: scene as never,
+      [COMPOSED_SCENE_DOCUMENT_DATA_KEY]: scene as JsonValue,
     });
+
     expect(fromDocument.ok).toBe(true);
     expect(
       refusalOf(composedSceneFromDocumentData({ other: 1 }), "missing key"),
@@ -646,13 +690,14 @@ describe("scene composition contracts", () => {
       code: "missing-field",
       path: `$.${COMPOSED_SCENE_DOCUMENT_DATA_KEY}`,
     });
+    // SAFETY: this JSON scene fixture changes only its string identifier to exercise the embedded-scene refusal.
     expect(
       refusalOf(
         composedSceneFromDocumentData({
           [COMPOSED_SCENE_DOCUMENT_DATA_KEY]: {
             ...scene,
             sceneId: "Bad Scene",
-          } as never,
+          } as JsonValue,
         }),
         "invalid embedded scene",
       ),
@@ -701,6 +746,7 @@ describe("scene composition contracts", () => {
           : instance,
       ),
     };
+
     expect(
       refusalOf(validateComposedScene(driftedWorld), "drifted world transform"),
     ).toMatchObject({
@@ -714,6 +760,7 @@ describe("scene composition contracts", () => {
         index === 2 ? { ...instance, artifactId: "crate-artifact" } : instance,
       ),
     };
+
     expect(
       refusalOf(validateComposedScene(mismatchedArtifact), "artifact id mismatch"),
     ).toMatchObject({
@@ -729,6 +776,7 @@ describe("scene composition contracts", () => {
           : instance,
       ),
     };
+
     expect(
       refusalOf(validateComposedScene(brokenArtifact), "invalid artifact"),
     ).toMatchObject({ code: "invalid-artifact", path: "$.instances[0].artifact" });
@@ -738,7 +786,9 @@ describe("scene composition contracts", () => {
       identity,
       transform([0, 2, 0]),
     );
+
     expect(validateSculptArtifact(divergentCrateArtifact).ok).toBe(true);
+
     const divergentInstance = {
       ...scene,
       instances: scene.instances.map((instance, index) =>
@@ -747,6 +797,7 @@ describe("scene composition contracts", () => {
           : instance,
       ),
     };
+
     expect(
       refusalOf(
         validateComposedScene(divergentInstance),
@@ -792,21 +843,23 @@ describe("scene composition contracts", () => {
 
   it("uses composed-scene field paths and accepts valid artifact root transforms", () => {
     const scene = composedSceneFixture();
+
     const rotatedRoot = {
       ...scene,
       instances: scene.instances.map((instance, index) =>
         index === 0
           ? {
-              ...instance,
-              localTransform: transform(
-                instance.localTransform.translation,
-                instance.localTransform.scale,
-                [0, 1, 0],
-              ),
-            }
+            ...instance,
+            localTransform: transform(
+              instance.localTransform.translation,
+              instance.localTransform.scale,
+              [0, 1, 0],
+            ),
+          }
           : instance,
       ),
     };
+
     expect(
       refusalOf(validateComposedScene(rotatedRoot), "rotated composed root"),
     ).toMatchObject({
@@ -823,17 +876,22 @@ describe("scene composition contracts", () => {
         "drone-artifact",
         rootTransform,
       );
+
       expect(validateSculptArtifact(transformedArtifact).ok).toBe(true);
       const transformedRoot = composedSceneFixture(transformedArtifact);
       expect(validateComposedScene(transformedRoot).ok).toBe(true);
       const transformedInstance = transformedRoot.instances[2];
+
       if (transformedInstance === undefined) {
         throw new Error("transformed fixture instance missing");
       }
+
       const projected = projectSceneInstanceHierarchy(transformedInstance);
+
       const projectedRoot = projected.nodes.find(
         (node) => node.id === projected.rootNodeId,
       );
+
       expect(projectedRoot?.transform).toEqual(
         composeSculptTransforms(transformedInstance.worldTransform, rootTransform),
       );
@@ -846,6 +904,7 @@ describe("scene composition contracts", () => {
       "drone-artifact",
       transform([SCENE_MAXIMUM_COMPONENT_MAGNITUDE, 0, 0]),
     );
+
     expect(validateSculptArtifact(overflowingArtifact).ok).toBe(true);
     expect(
       refusalOf(

@@ -10,7 +10,11 @@ Imports text-canonical SceneAxi documents and bounded project assets through the
 
 ## Refusals
 
-Document imports refuse invalid or ambiguous JSON, schema mismatches, and unsupported multi-document input. Asset imports validate bounded formats before writes. Hot reload creates a reviewable proposal and writes no saved bytes before approval. The importer does not provide a binary asset compiler, CMS, or multi-format registry.
+Document imports refuse invalid or ambiguous JSON, schema mismatches, and unsupported multi-document input. External document input is bounded to 8 MiB, depth 64 (root depth zero), and 250000 JSON values before shared validation; excess returns `invalid-document` rather than throwing. Asset imports validate bounded formats before writes. Hot reload creates a reviewable proposal and writes no saved bytes before approval. The importer does not provide a binary asset compiler, CMS, or multi-format registry.
+
+Contained glTF traverses flat node graphs iteratively in deterministic depth-first order: at most 4096 nodes, depth 256 (root depth zero), and 8192 queued/visited operations. Excess, cycles, or multiple parents return `ASSET_IMPORT_MALFORMED`. Indexed triangles may share vertices: four POSITION vertices with six indices form a supported square; unindexed primitives still require a triangle-aligned vertex count. Canonical bytes and indices survive import, reload, and manifest replay.
+
+Assets are bounded to 16 entries of at most 8 MiB each. Destination symlinks (including in-root and dangling aliases) refuse `ASSET_IMPORT_DESTINATION_SYMLINK` during initial import, reload, and materialization; final revalidation prevents tested copy-time alias replacement from overwriting unrelated files. `test/contained-gltf.test.ts` covers exact limits and limit+1, 16×8 MiB manifest replay, copy-time races, and metadata faults. Its RSS/time measurements are observations, not a responsiveness SLA.
 
 ## Ownership and tests
 

@@ -1,0 +1,100 @@
+{
+  "taskId": "eight-mib",
+  "mappedIds": [
+    "AP-PERF",
+    "06-04"
+  ],
+  "status": "PARTIAL_AUXILIARY_PROOF_NATIVE_NOTRUN",
+  "head": "4e532e2fbf43e9948741578ab6208a3277870405",
+  "currentFingerprint": {
+    "packages/importers/src/contained-gltf.ts": "a1dd9f305203851ca4141cdf066c8f08b356192689c055b057ea952c1e6cea1b",
+    "packages/importers/src/index.ts": "16168577c7d8a1e14a55fcfa615e56e25875d9ff6d056c06f0b9eb5b16cdf508",
+    "desktop/linux/src/electron/main.ts": "3c005ae7977a15ec648c428f0c8f0b30492c11a1ccd98c321e0279d4a53e5997",
+    "desktop/linux/src/lib/bridge.ts": "c84dc5b4199a310da41c3b648a9b817d92460717de03bc726fdb819a676c3019",
+    "desktop/linux/src/lib/project-seed.ts": "4d9b8acc3dc078b29839a07519acf945f4f1ed92ef021216a09b1c3e9c9bd607",
+    "packages/authoring-core/src/project-model.ts": "367c2599795b5fabcfe8464c4c19bf37dfd45465fb633f9fa7380a24ed7086c5"
+  },
+  "executed": {
+    "command": "./docs/audits/production-swarm/capacity-work-2026-10-02/eight-mib/check.py",
+    "exit": 0,
+    "cases": [
+      {
+        "input": "eight-mib.gltf",
+        "byteLength": 8388608,
+        "sha256": "f5ddf7b18daa2b63ab228578a6f0ece99d2510b8028a178b1e2678987743780f",
+        "elapsedMs": 158.05888899999968,
+        "ok": true,
+        "reason": null,
+        "documentUnchanged": true
+      },
+      {
+        "input": "next-byte.gltf",
+        "byteLength": 8388609,
+        "sha256": "61fbe7a29a007a3282c34fb144ff94a7a048b8fe6968abc58fe57a9f9f67ca75",
+        "elapsedMs": 11.04540900000029,
+        "ok": false,
+        "reason": "ASSET_IMPORT_OVERSIZE",
+        "documentUnchanged": true
+      },
+      {
+        "input": "alias.gltf",
+        "byteLength": 8388608,
+        "sha256": "f5ddf7b18daa2b63ab228578a6f0ece99d2510b8028a178b1e2678987743780f",
+        "elapsedMs": 11.750152000000071,
+        "ok": false,
+        "reason": "ASSET_IMPORT_SOURCE_SYMLINK",
+        "documentUnchanged": true
+      }
+    ],
+    "subject": "actual current TS source transpiled in memory; no dist or native GUI",
+    "seed": "seedDesktopProject -> writeNativeProjectSeed",
+    "fixtureSha256": "f5ddf7b18daa2b63ab228578a6f0ece99d2510b8028a178b1e2678987743780f"
+  },
+  "deferred": {
+    "status": "NOTRUN",
+    "command": "./docs/audits/production-swarm/capacity-work-2026-10-02/eight-mib/check.py --native --authorized-heavy --executable /absolute/path/to/approved/packaged-executable --sha256 RECORDED_SHA256",
+    "preconditions": [
+      "Explicit heavy/native authority after Astra handoff",
+      "No other heavy job; disposable display/user-data; existing Playwright and native artifact, no install/build by harness",
+      "Independently hash executable AND app.asar/renderer/preload dependency artifact inventory and bind to frozen source; executable-only hash does not prove app bundle equivalence",
+      "Confirm public native command-map and selectors against exact packaged artifact; mismatch fails closed"
+    ],
+    "budgets": {
+      "importReviewMs": 4000,
+      "acceptMaterializeMs": 4000,
+      "reloadMs": 4000,
+      "mainLoopGapMs": 100,
+      "rendererLoopGapMs": 100,
+      "rssGrowthBytes": 268435456,
+      "rssPlateauGrowthBytes": 33554432,
+      "pickerCancelMs": 500,
+      "reviewRejectMs": 500,
+      "cycles": 3
+    },
+    "cancellationGap": "Picker click+fixed delay UNVERIFIED; changed-source hot reload and in-flight cancellation NOTRUN; driver exits 2. Working-set metrics do not independently establish RSS; post-command heartbeat draining required. Exact integrator edits in handoff.md."
+  },
+  "handoff": "Serial desktop/importers owners profile front door before offload patch; no demonstrated new latency defect, no landed product fix claim. Proposed planning worker + generation token/cancel admission, retained atomic apply/materialization and byte/hash/path guards in patch-proposal.md.",
+  "resourcesCleaned": "Temporary native seed, both padded fixtures and deliberate source alias removed by TemporaryDirectory; no process/port/GUI/browser launched. Native deferred watchdog/finally closes its own app.",
+  "scope": "Not duplicate full review; no source/config/tests/Git writes; all artifacts exclusive auxiliary directory.",
+    "retry": {
+      "taskId": "eight-mib",
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 docs/audits/production-swarm/capacity-work-2026-10-02/eight-mib/acceptance.py --run",
+      "exit": 0,
+      "status": "PASS_SOURCE_ADMISSION_ONLY_NATIVE_NOTRUN",
+      "executed": "Actual public TS API memory-loader; seedDesktopProject -> writeNativeProjectSeed; next-byte and source-symlink refusal only. No maximum accepted parse rerun.",
+      "receipt": "acceptance-receipt.json",
+      "negativeControl": "PASS: falsified receipt claiming next-byte admission is rejected",
+      "canonicalDocumentSha256": "32deceb82b89a4a62445cb2c5da13d42ceb06f1f163f3e67291431fdae294b68",
+      "nextByte": {"bytes": 8388609, "sha256": "61fbe7a29a007a3282c34fb144ff94a7a048b8fe6968abc58fe57a9f9f67ca75", "reason": "ASSET_IMPORT_OVERSIZE", "elapsedMs": 29.220366999999897, "documentUnchanged": true},
+      "sourceSymlink": {"bytes": 8388608, "sha256": "f5ddf7b18daa2b63ab228578a6f0ece99d2510b8028a178b1e2678987743780f", "reason": "ASSET_IMPORT_SOURCE_SYMLINK", "elapsedMs": 14.717741000000387, "documentUnchanged": true},
+      "changedSourceFixture": {"bytes": 8388608, "sha256": "993217f2f8db71521d66dfbd4352ba67a56370e93f9e40c443a4e2c4ebc034bc", "assertion": "deterministic embedded triangle translated +1 x; valid contained JSON; original-byte length unchanged", "nativeHotReload": "NOTRUN"},
+      "harnessSha256": "df2106df9fa0d43a514b2412b2ff5f37de9bec2190c04006bb2ace8e7e17c7c0",
+      "probeSha256": "d179685b91085a1a0515af3878c86f9c0e0e6edf064188a019601333e1b3a100",
+      "harnessValidation": "exit 0 after generator addition; exact current sourceHashes validated against disk",
+      "initialFailure": "IndentationError: unexpected indent, check.py line 80; corrected and rerun successfully",
+      "handoff": "handoff.md: terminal picker acknowledgement, changed-source hotReload:true via public preload, generation-bound cancel seam before atomic commit, OS RSS sampling and drained heartbeat metrics; conditional source planning-worker proposal unchanged",
+      "resourcesCleaned": true,
+      "temporaryFixtureDirectoriesRemaining": 0,
+      "nativeHeavyJobs": 0
+    }
+}

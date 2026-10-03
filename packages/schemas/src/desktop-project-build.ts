@@ -4,9 +4,11 @@
  * package.
  */
 export const PROJECT_BUILD_SCHEMA_VERSION = 1 as const;
+
 export const PROJECT_BUILD_KIND = "sceneaxi.project-build" as const;
 
 export const PROJECT_BUILD_PLATFORMS = Object.freeze(["linux", "macos", "windows"] as const);
+
 export type ProjectBuildPlatform = (typeof PROJECT_BUILD_PLATFORMS)[number];
 
 export const PROJECT_BUILD_REFUSALS = Object.freeze({
@@ -39,14 +41,16 @@ const fail = (reason: ProjectBuildRefusal, message: string): Failure =>
   Object.freeze({ ok: false as const, reason, message, releaseReady: false as const });
 
 export function isProjectBuildPlatform(value: unknown): value is ProjectBuildPlatform {
-  return typeof value === "string" &&
-    (PROJECT_BUILD_PLATFORMS as readonly string[]).includes(value);
+  return value === "linux" || value === "macos" || value === "windows";
 }
 
 export function detectProjectBuildHost(platform = process.platform): ProjectBuildPlatform | "unknown" {
   if (platform === "linux") return "linux";
+
   if (platform === "darwin") return "macos";
+
   if (platform === "win32") return "windows";
+
   return "unknown";
 }
 
@@ -59,38 +63,73 @@ export function evaluateProjectBuild(input: Readonly<{
   if (input.profile === "kids" || input.profile === "@sceneaxi/profile-kids") {
     return fail(PROJECT_BUILD_REFUSALS.kidsDenied, "Project build is denied for Kids before host or signing checks.");
   }
+
   if (!isProjectBuildPlatform(input.target)) {
     return fail(
       PROJECT_BUILD_REFUSALS.inputUnsupported,
       "Project build names one target: linux, macos, or windows.",
     );
   }
+
   if (input.host.platform !== input.target) {
     return fail(
       PROJECT_BUILD_REFUSALS.hostUnsupported,
       `The ${input.target} project target requires a ${input.target} host; this host is ${input.host.platform}.`,
     );
   }
+
   if (!input.host.signingReady) {
     return fail(
       PROJECT_BUILD_REFUSALS.signingMissing,
       `The ${input.target} project target refuses before packaging when signing inputs are absent.`,
     );
   }
+
   if (input.target === "macos" && !input.host.notarizationReady) {
     return fail(
       PROJECT_BUILD_REFUSALS.notarizationMissing,
       "The macOS project target refuses unnotarized output before any release-ready claim.",
     );
   }
+
   if (!input.host.releaseAuthority) {
     return fail(
       PROJECT_BUILD_REFUSALS.releaseAuthorityMissing,
       `The ${input.target} project target keeps local verification distinct from public release authority.`,
     );
   }
+
   return fail(
     PROJECT_BUILD_REFUSALS.releaseAuthorityMissing,
     "A signed public user-project artifact is not authorized from this command without a later release record.",
   );
+}
+
+/** Separate local-only purpose; never changes the signed release evaluator. */
+export function evaluateLocalProjectBuild(input: Readonly<{
+  purpose: unknown;
+  target: unknown;
+  profile: unknown;
+  host: unknown;
+}>): Failure | Readonly<{
+  ok: true;
+  purpose: "local-unsigned";
+  target: "linux";
+  signed: false;
+  releaseReady: false;
+}> {
+  if (input.profile === "kids" || input.profile === "@sceneaxi/profile-kids") {
+    return fail(PROJECT_BUILD_REFUSALS.kidsDenied, "Local project build is denied for Kids.");
+  }
+
+  if (input.purpose !== "local-unsigned" || input.target !== "linux" ||
+      (input.profile !== "game" && input.profile !== "web")) {
+    return fail(PROJECT_BUILD_REFUSALS.inputUnsupported, "Local unsigned builds require an explicit purpose, Linux target and Game or Web profile.");
+  }
+
+  if (input.host !== "linux") {
+    return fail(PROJECT_BUILD_REFUSALS.hostUnsupported, "Local unsigned builds currently require a Linux host.");
+  }
+
+  return Object.freeze({ ok: true, purpose: "local-unsigned", target: "linux", signed: false, releaseReady: false });
 }

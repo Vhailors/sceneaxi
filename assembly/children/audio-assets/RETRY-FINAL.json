@@ -1,0 +1,31 @@
+{
+  "owner": "bg-152",
+  "state": "SOURCE_HANDBACK_NATIVE_ASSEMBLY_NOT_READY",
+  "handback": "Explicit source HANDBACK of all 12 leased paths to current sole root bg-156; parent may write again. No further child source edits.",
+  "ownedClone": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1",
+  "base": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+  "approvedSnapshot": "3f25ffea22f19d01ef9a484f317d8b8ca4cde397",
+  "exactFileReceipts": "RETRY-PROVENANCE.json records each of the 12 paths, source SHA/blob/mode across six immutable Git sources (or explicit absence), current Git blob, filesystem mode and SHA256.",
+  "features": [
+    {"featureID":"EF-ASSET", "sourceSHA":"62e84cbee60471bd2cdd5f2e0e26a8c45f598928", "resolution":"Preserved already-reconciled main importer hardening and public unknown-input admission. Original v1 manifest fixture proves byte-preserving parse/materialization, stable identities, unchanged-before-review semantics and reviewed v2 migration through public E1 apply; negative digests/traversal/duplicates/version/identity/symlinks refused. No old whole-file rollback.", "proof":"legacy-asset-v1.test.ts4; contained-gltf.test.ts18; asset-pipeline-golden.test.ts6"},
+    {"featureID":"EF-AUDIO-API", "sourceSHA":["db8afa68c18e46b426e0c9ac2a846fc8a7d3fdba","346933c105305224d575bf9319256301c1eeabfa"], "resolution":"Preserved strict bounded PCM runtime and modern function factory. Main AudioContextLike name is no longer silently widened: legacy tagged context enters explicit compatible object-input adapter; historical async play/master-volume/Kids denial retained. Added compile-time consumer distinction. Modern Ogg/MP3 remains host-decoder port, never mislabeled as strict PCM runtime.", "proof":"legacy-audio-compat.test.ts4; audio-playback.test.ts7; engine-presentation tsc green"},
+    {"featureID":"EF-AUDIO-LIFECYCLE", "sourceSHA":"db8afa68c18e46b426e0c9ac2a846fc8a7d3fdba", "resolution":"Retained main descriptor fetch/exact fields/canonical base64/SHA256 before codec; generation cancellation after each request/hash/decode await and per-clip Stop/reset/dispose. Retry removed unchecked browser AudioBuffer cast in favor of instanceof and context-local decode provenance, removed duplicate analyser connection, installed synchronous strict null-profile event fence before first bridge await, removed unsafe successful-open-path game fallback. Chrome bg155 supplies current root/profile/generation-confirmed events. New actual EventTarget/lifecycle tests cover cancellation, Kids, malformed confirmations and detached listener refusal.", "proof":"audio-lifecycle-compat.test.ts10; native browser gesture/RMS verification NOT_RUN"},
+    {"featureID":"PR310-desktop-scene", "sourceSHA":"fed05a766f1277b23ebf1757022067837d00621e", "resolution":"Retained pre-existing functionwise frozen package-catalog missing-versus-null/malformed refusal and modern presentation/physics projection; public compatibility tests pass. Expanded hierarchy union errors remain visible, per explicit bg156 instruction lm350 to integrate reviewed mutation149 packet after handback, not duplicate handlers or narrow the public operation union.", "proof":"audio-lifecycle-compat.test.ts frozen package refusal and projection oracle"}
+  ],
+  "checks": [
+    {"command":"pnpm exec vitest run desktop/linux/test/audio-lifecycle-compat.test.ts packages/engine-presentation/test/audio-playback.test.ts packages/engine-presentation/test/legacy-audio-compat.test.ts packages/importers/test/legacy-asset-v1.test.ts packages/importers/test/contained-gltf.test.ts tests/e2e/asset-pipeline-golden.test.ts", "exitCode":0,"testFiles":6,"pass":49,"fail":0,"output":"RETRY-scoped-vitest.log"},
+    {"command":"pnpm exec tsc -p packages/engine-presentation/tsconfig.json --noEmit", "exitCode":0},
+    {"command":"pnpm exec tsc -p packages/importers/tsconfig.json --noEmit", "exitCode":0},
+    {"command":"pnpm exec tsc -p desktop/linux/tsconfig.json --noEmit", "exitCode":2,"errors":10,"output":"RETRY-native-typecheck-final.log"},
+    {"command":"git diff --check -- [owned tracked source paths]", "exitCode":0}
+  ],
+  "redBeforeGreenAfter": {"baselineScopedTests":"29 pass before new profile-boundary oracles; no pre-edit feature-test red was observed or fabricated", "after":"49 passing tests including unchanged hardening suite and two new boundary oracles", "initialNativeRed":"TS5101 baseUrl deprecation under then-current TypeScript6; --ignoreDeprecations6.0 exposed11 native errors", "finalNativeRed":"After parent dependency changes, ignoreDeprecations6.0 produced TS5103; standard tsc now exposes10 native errors. No native green claim."},
+  "remainingParentWork": [
+    "Implement reviewed mutation149 create-node/create-primitive/rename-object hierarchy handlers: desktop-scene.ts1158/1163/1175/1180/1199 remain five TS2339 errors; parent bg156 explicitly owns this post-handback.",
+    "Resolve bridge.ts390/618/1090 DesktopDocumentData and2703 PhysicsWorldHost missing local type/import, plus Electron main.ts759 DesktopBridgeOptions.runLocalAssistant. Ownership request sent bg155/lm352 and root informed.",
+    "Parent public export/source/declaration inventory and full assembly typecheck/build after handbacks. Index remains unmerged where expected: child never stages or edits index."
+  ],
+  "unrunHeavyCriteria": ["trusted native user gesture and actual PCM/Ogg/MP3 browser decode", "real analyser/RMS per-clip Stop/reset/project-switch/Kids cancellation", "native browser/UI/fullbuild/packaging/Docker", "parent public declaration/SDK closure/protection/publication checks"],
+  "publication": "NO_STAGE_COMMIT_PUSH_OR_GIT_INDEX_EDITS; no child install, foreign worktree, nested agents or heavy build",
+  "allCodeMerged": false
+}

@@ -1,0 +1,36 @@
+{
+  "task": "web-inspector-ux",
+  "status": "IMPLEMENTED_BOUNDED_PROOF_PASS_BROWSER_NOT_RUN",
+  "sourceHandback": true,
+  "handbackTo": ["parent", "bg-109"],
+  "sourceFiles": [
+    {"path": "apps/web-shell/src/inspector-app.ts", "symbol": "inspectorPageHtml", "line": 789, "beforeSha256": "50f26b71434c4463a88981d35eb4b948b5fcc264c449eb128ef967afed474ae6", "afterSha256": "30e2ae5c6fb5f893aee29027103211d9095ba5fbc3160050b9373b7edddf8d29"},
+    {"path": "apps/web-shell/test/inspector-accessibility.test.ts", "sha256": "391e27c3a5b524d27cc5f0463e2f995046c8553c466391cb60c18dc25cc2369e", "new": true}
+  ],
+  "relatedLedgerIds": ["SH-T02", "VD-02", "VD-05"],
+  "fullLedgerClosureClaimed": false,
+  "historicalPass3": "FAILED_UNCHANGED",
+  "alreadyPresentAndPreserved": ["focus-visible", "forced-colors Highlight focus", "wrapping", "light/dark danger paint", "exact native user-invalid rules"],
+  "implemented": ["phase-specific review/rejected/applied/pending status", "form/diff busy announcements", "unavailable review/recovery descriptions", "stale token requires explicit authoritative read", "action focus return without stealing moved focus", "JSON invalid state/focus/custom validity/input clearing", "named focusable diff", "explicit light/dark/forced-color invalid borders", "help/button wrapping"],
+  "tested": [
+    {"command": "pnpm exec vitest run apps/web-shell/test/inspector-accessibility.test.ts --reporter=dot", "cwd": "/home/devuser/Documents/Projects/sceneaxi", "before": {"passed": 0, "failed": 8, "exit": 1, "log": "fail-before.log", "sha256": "2518ea2af31e81abb2d50bed5d789681b2739725426345c08a635bb6a73194a0"}, "afterSameEight": {"passed": 8, "failed": 0, "exit": 0, "log": "pass-after.log"}, "final": {"passed": 12, "failed": 0, "exit": 0, "log": "final-owned-tests.log", "sha256": "d561cbf3c166cd48b74bbf657504ba1ec2d7b81d2d2dc7dafc3ea4a4c1ac2457"}},
+    {"command": "pnpm exec vitest run apps/web-shell/test/inspector-accessibility.test.ts apps/web-shell/test/inspector-app.test.ts apps/web-shell/test/refuse-matrix.test.ts apps/web-shell/test/visual-postpr.test.ts --reporter=dot", "initial": {"passed": 56, "failed": 1, "exit": 1, "log": "regression.log", "failure": "Original native-dark user-invalid CSS string changed; restored exact rule, no assertion changes"}, "repair": {"passed": 57, "failed": 0, "exit": 0, "log": "regression-after.log"}, "expanded": {"passed": 61, "failed": 0, "exit": 0, "log": "final-tests.log", "sha256": "64da9afdffef9ef22876cafaece69cff6c743c50d1b81b742b9ea84cee27fde9"}, "finalRefinements": "Expanded suite preceded coefficient assertion removal and faithful typed pending diagnostic fixture; final exact owned twelve rerun passed"},
+    {"command": "pnpm exec eslint apps/web-shell/src/inspector-app.ts apps/web-shell/test/inspector-accessibility.test.ts", "exit": 0, "log": "final-lint.log"},
+    {"command": "git diff --check -- apps/web-shell/src/inspector-app.ts apps/web-shell/test/inspector-accessibility.test.ts", "exit": 0}
+  ],
+  "oracles": ["unavailable IDREF/no native disabled activation", "invalid JSON/no dispatch/focus/input recovery", "review/rejection no write/focus", "second-tab stale review/no acceptance/reconcile exact diff", "busy unresolved request/no duplicate", "typed durable pending recovery refusal", "long genuine containment refusal/no HTML injection", "no focus theft on pending input selection", "lost acceptance response/read-only reconcile/no resend", "abort/nonJSON unknown outcome/no write", "declared contrast positive and old-dark negative", "wrapping/theme/focus/forced-color source rules"],
+  "deferred": [
+    {"predicate": "Actual Tab/Shift+Tab and Enter/Space at 390/1440 in light/dark/forced colors; all enabled controls/diff nonzero, unclipped, unobscured, >=2px focus; native-disabled skipped, IDREF uniquely nonblank", "status": "NOT_RUN"},
+    {"predicate": "Real keyboard malformed JSON field focus/invalid/error description/input recovery; Mark invalid border and Highlight focus visible", "status": "NOT_RUN"},
+    {"predicate": "Real pending/rejected/stale/lost-response controls, focus return/no theft, no write retry and fresh explicit review", "status": "NOT_RUN"},
+    {"predicate": "Real long path/hash/diff/refusal no document/diff overflow, no overlap, full retained evidence; resolved contrast >=4.5:1", "status": "NOT_RUN"},
+    {"predicate": "Full build/typecheck/gate and browser/native/assistive technology", "status": "NOT_RUN", "owner": "parent/bg-109 serialized"}
+  ],
+  "deferredCommand": "node docs/audits/production-swarm/capacity-work-2026-10-02/keyboard-ux/deferred-playwright.mjs --run",
+  "browserBindingRequired": ["current source/HTML/bundle hashes", "raw HTTP", "pageerror", "actual keyboard geometry", "PNG hashes"],
+  "dependencies": ["existing Happy DOM", "existing Vitest", "current source-backed public web-shell/authoring exports"],
+  "exportRequests": [],
+  "sharedWiringRequests": [],
+  "resources": "Every temporary project removed and Happy DOM window closed in afterEach; no persistent processes/ports/browser/native/container/install/provider calls/production DB/network dependency",
+  "warnings": ["Happy DOM trusted own-script evaluation warning retained, not suppressed", "Dedicated project tool found no commands under real absolute root; manual focused pnpm commands used explicit cwd", "No AST edit tool available in harness; anchored unique Python source edits restricted to two owned paths, lint verified"]
+}

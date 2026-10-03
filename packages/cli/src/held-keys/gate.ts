@@ -90,17 +90,18 @@ export interface GateRefusal {
 
 export type GateDecision = GateAllow | GateRefusal;
 
+type MutableGateRefusal = { -readonly [K in keyof GateRefusal]: GateRefusal[K] };
+
 function refuse(
   reason: HeldKeyRefusalReason,
   message: string,
   heldKey?: string,
 ): GateRefusal {
-  return {
-    allow: false,
-    reason,
-    message,
-    ...(heldKey === undefined ? {} : { heldKey }),
-  };
+  const refusal: MutableGateRefusal = { allow: false, reason, message };
+
+  if (heldKey !== undefined) refusal.heldKey = heldKey;
+
+  return refusal;
 }
 
 /**
@@ -115,15 +116,18 @@ export function evaluateHeldKeyGate(
   runtime: HeldKeyRuntime,
 ): GateDecision {
   const mapValidation = validateCommandMap(runtime.commandMap);
+
   if (!mapValidation.ok) {
     return refuse(
       "command-map-invalid",
       `CLI command map is missing or invalid (${mapValidation.errors[0] ?? "unknown error"}); cannot establish whether '${verbPath}' is gated, so it refuses`,
     );
   }
+
   const map = mapValidation.value;
 
   const entry = map.commands.find((c) => c.command === verbPath);
+
   if (entry === undefined) {
     return refuse(
       "verb-undeclared",
@@ -138,6 +142,7 @@ export function evaluateHeldKeyGate(
 
   // Currency check FIRST — before any local snapshot/map rule.
   let probe: EpochProbe;
+
   try {
     probe = runtime.authority.probe();
   } catch (err) {
@@ -146,12 +151,14 @@ export function evaluateHeldKeyGate(
       reason: err instanceof Error ? err.message : String(err),
     };
   }
+
   if (!probe.available) {
     return refuse(
       "currency-unavailable",
       `Cannot establish the current authoritative registry epoch (${probe.reason}); held-key-gated verbs refuse without currency — matching local epochs are never sufficient`,
     );
   }
+
   if (probe.epoch !== map.builtForRegistryEpoch) {
     return refuse(
       "authoritative-epoch-mismatch",
@@ -165,18 +172,32 @@ export function evaluateHeldKeyGate(
       `No held-key registry snapshot is present; gated verb '${verbPath}' refuses`,
     );
   }
+
   const snapshotValidation = validateRegistrySnapshot(runtime.snapshot);
+
   if (!snapshotValidation.ok) {
     return refuse(
       "snapshot-invalid",
       `Held-key registry snapshot is invalid (${snapshotValidation.errors[0] ?? "unknown error"}); gated verbs refuse`,
     );
   }
+
   const snapshot = snapshotValidation.value;
 
   const budget = runtime.freshnessBudgetMs ?? DEFAULT_FRESHNESS_BUDGET_MS;
-  const age = runtime.now() - Date.parse(snapshot.generatedAt);
-  if (age > budget) {
+  const generatedAt = Date.parse(snapshot.generatedAt);
+  let now: number;
+
+  try {
+    now = runtime.now();
+  } catch {
+    return refuse("snapshot-stale", "Snapshot freshness cannot be established: clock unavailable");
+  }
+
+  const age = now - generatedAt;
+
+  if (!Number.isFinite(now) || now < 0 || !Number.isFinite(budget) || budget < 0 ||
+      !Number.isFinite(generatedAt) || generatedAt < 0 || !Number.isFinite(age) || age < 0 || age > budget) {
     return refuse(
       "snapshot-stale",
       `Held-key registry snapshot generated at ${snapshot.generatedAt} exceeds the freshness budget (${String(budget)}ms); refresh the snapshot`,
@@ -191,6 +212,7 @@ export function evaluateHeldKeyGate(
   }
 
   const byKey = new Map(snapshot.keys.map((k) => [k.key, k]));
+
   for (const key of entry.heldKeys) {
     if (!byKey.has(key)) {
       return refuse(
@@ -200,8 +222,10 @@ export function evaluateHeldKeyGate(
       );
     }
   }
+
   for (const key of entry.heldKeys) {
     const record = byKey.get(key);
+
     if (record !== undefined && record.state === "open") {
       return refuse(
         "open-held-key",

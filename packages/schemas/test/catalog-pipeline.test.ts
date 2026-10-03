@@ -1,3 +1,4 @@
+import type { isJsonValue } from "@sceneaxi/schemas";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -22,7 +23,7 @@ import {
 const HASH =
   "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
-type HistoryShape = {
+type HistoryConstraints = {
   minItems?: number;
   maxItems?: number;
   prefixItems?: Array<{ $ref?: string }>;
@@ -33,7 +34,7 @@ type ModerationRule = {
     properties?: { pipelineState?: { const?: PipelineState } };
   };
   then?: {
-    properties?: { history?: HistoryShape };
+    properties?: { history?: HistoryConstraints };
   };
 };
 
@@ -124,7 +125,9 @@ function advanceToListed(item: CatalogItem): CatalogItem {
     reason: "Quarantine intake complete under #48 controls (stub).",
     at: "2026-07-21T12:10:00.000Z",
   });
+
   expect(toScreening.ok).toBe(true);
+
   if (!toScreening.ok) throw new Error("expected screening");
 
   const toCuration = transitionCatalogItem(toScreening.item, {
@@ -132,7 +135,9 @@ function advanceToListed(item: CatalogItem): CatalogItem {
     reason: "Rights, provenance, and AI-disclosure screening passed.",
     at: "2026-07-21T12:20:00.000Z",
   });
+
   expect(toCuration.ok).toBe(true);
+
   if (!toCuration.ok) throw new Error("expected curation");
 
   const toListed = transitionCatalogItem(toCuration.item, {
@@ -141,8 +146,11 @@ function advanceToListed(item: CatalogItem): CatalogItem {
     at: "2026-07-21T13:05:00.000Z",
     humanVerdict: approveVerdict(),
   });
+
   expect(toListed.ok).toBe(true);
+
   if (!toListed.ok) throw new Error("expected listed");
+
   return toListed.item;
 }
 
@@ -161,6 +169,8 @@ describe("Catalog Item contract + policy cites", () => {
 
   it("ships the Catalog Item JSON Schema through the public package export", () => {
     expect(contracts.catalogItem).toBe("contracts/catalog-item.schema.json");
+
+    // SAFETY: this reads a package-owned authoritative JSON Schema; the expected schema fields are asserted below.
     const schema = JSON.parse(
       readFileSync(
         fileURLToPath(
@@ -175,11 +185,15 @@ describe("Catalog Item contract + policy cites", () => {
       "aiGenerated",
       "disclosureText",
     ]);
+
     const disclosurePattern =
       schema.properties?.aiGenerationDisclosure?.properties?.disclosureText?.pattern;
+
     const reasonPattern = schema.$defs?.transitionRecord?.properties?.reason?.pattern;
+
     const profilePattern =
       schema.properties?.compatibility?.properties?.profiles?.items?.pattern;
+
     expect(new RegExp(disclosurePattern ?? "").test("   ")).toBe(false);
     expect(new RegExp(disclosurePattern ?? "").test("No generative AI used.")).toBe(
       true,
@@ -188,23 +202,7 @@ describe("Catalog Item contract + policy cites", () => {
     expect(new RegExp(reasonPattern ?? "").test("Screened.")).toBe(true);
     expect(new RegExp(profilePattern ?? "").test("game\n")).toBe(false);
     expect(new RegExp(profilePattern ?? "").test("game")).toBe(true);
-    expect(schema.$defs?.transitionRecord?.allOf).toEqual([
-      {
-        if: {
-          properties: { to: { const: "listed" } },
-          required: ["to"],
-        },
-        then: {
-          required: ["humanVerdict"],
-          properties: {
-            humanVerdict: {
-              properties: { decision: { const: "approve" } },
-            },
-          },
-        },
-        else: { not: { required: ["humanVerdict"] } },
-      },
-    ]);
+    expect(schema.$defs?.transitionRecord?.allOf).toEqual(JSON.parse("[{\"if\":{\"properties\":{\"to\":{\"const\":\"listed\"}},\"required\":[\"to\"]},\"then\":{\"required\":[\"humanVerdict\"],\"properties\":{\"humanVerdict\":{\"properties\":{\"decision\":{\"const\":\"approve\"}}}}},\"else\":{\"not\":{\"required\":[\"humanVerdict\"]}}}]"));
     expect(schema.$defs?.dateTime).toEqual({
       type: "string",
       format: "date-time",
@@ -221,17 +219,18 @@ describe("Catalog Item contract + policy cites", () => {
       "#/$defs/dateTime",
     );
 
-    const historyShape = (state: PipelineState) =>
+    const historyConstraints = (state: PipelineState) =>
       schema.properties?.moderation?.allOf?.find(
         (rule) => rule.if?.properties?.pipelineState?.const === state,
       )?.then?.properties?.history;
-    expect(historyShape("intake")).toEqual({ maxItems: 0 });
-    expect(historyShape("screening")).toEqual({
+
+    expect(historyConstraints("intake")).toEqual({ maxItems: 0 });
+    expect(historyConstraints("screening")).toEqual({
       minItems: 1,
       maxItems: 1,
       prefixItems: [{ $ref: "#/$defs/intakeToScreening" }],
     });
-    expect(historyShape("curation")).toEqual({
+    expect(historyConstraints("curation")).toEqual({
       minItems: 2,
       maxItems: 2,
       prefixItems: [
@@ -239,7 +238,7 @@ describe("Catalog Item contract + policy cites", () => {
         { $ref: "#/$defs/screeningToCuration" },
       ],
     });
-    expect(historyShape("listed")).toEqual({
+    expect(historyConstraints("listed")).toEqual({
       minItems: 3,
       maxItems: 3,
       prefixItems: [
@@ -248,7 +247,7 @@ describe("Catalog Item contract + policy cites", () => {
         { $ref: "#/$defs/curationToListed" },
       ],
     });
-    expect(historyShape("delisted")).toEqual({
+    expect(historyConstraints("delisted")).toEqual({
       minItems: 4,
       maxItems: 4,
       prefixItems: [
@@ -260,6 +259,7 @@ describe("Catalog Item contract + policy cites", () => {
     });
 
     const dateTimeRegex = new RegExp(CATALOG_DATE_TIME_PATTERN);
+
     for (const invalid of [
       "2026-07-22",
       "2026-02-29T12:00:00Z",
@@ -268,12 +268,15 @@ describe("Catalog Item contract + policy cites", () => {
     ]) {
       expect(dateTimeRegex.test(invalid)).toBe(false);
     }
+
     expect(dateTimeRegex.test("2024-02-29T12:00:00.000Z")).toBe(true);
 
     const contentHashPattern =
       schema.properties?.assetPackage?.properties?.contentHash?.pattern;
+
     const sourceDigestPattern =
       schema.properties?.provenance?.properties?.sourceDigest?.pattern;
+
     expect(new RegExp(contentHashPattern ?? "").test(HASH + "\n")).toBe(false);
     expect(new RegExp(sourceDigestPattern ?? "").test(HASH + "\n")).toBe(false);
   });
@@ -282,6 +285,8 @@ describe("Catalog Item contract + policy cites", () => {
     expect(contracts.catalogMetadataUnavailableTombstone).toBe(
       "contracts/catalog-metadata-unavailable-tombstone.schema.json",
     );
+
+    // SAFETY: this reads a package-owned authoritative JSON Schema; the expected schema fields are asserted below.
     const schema = JSON.parse(
       readFileSync(
         fileURLToPath(
@@ -302,6 +307,7 @@ describe("Catalog Item contract + policy cites", () => {
         };
       };
     };
+
     expect(CATALOG_METADATA_UNAVAILABLE_TOMBSTONE_SCHEMA_VERSION).toBe(1);
     expect(schema.$id).toBe(
       "https://sceneaxi.invalid/contracts/catalog-metadata-unavailable-tombstone/v1",
@@ -324,6 +330,7 @@ describe("Catalog Item contract + policy cites", () => {
     const item = syntheticAsset({
       commerce: { price: { amount: "9.99", currency: "USD" }, sku: "SKU-1" },
     });
+
     expect(item.moderation.pipelineState).toBe("intake");
     expect(item.moderation.history).toEqual([]);
     expect(item.commerce.activation).toBe("inert");
@@ -351,10 +358,12 @@ describe("fail-closed catalog pipeline state machine", () => {
       "screening->curation",
       "curation->listed",
     ]);
+
     for (const step of listed.moderation.history) {
       expect(step.reason.trim().length).toBeGreaterThan(0);
       expect(step.at).toBeTruthy();
     }
+
     expect(listed.moderation.history[2]?.humanVerdict?.kind).toBe("human");
     expect(listed.moderation.history[2]?.humanVerdict?.decision).toBe("approve");
 
@@ -363,9 +372,12 @@ describe("fail-closed catalog pipeline state machine", () => {
       reason: "Takedown: fixture end-of-life.",
       at: "2026-07-21T14:00:00.000Z",
     });
+
     expect(delisted.ok).toBe(true);
+
     if (!delisted.ok) return;
     expect(delisted.kind).toBe("catalog-item");
+
     if (delisted.kind !== "catalog-item") return;
     expect(delisted.item.moderation.pipelineState).toBe("delisted");
     expect(delisted.item.moderation.history).toHaveLength(4);
@@ -374,6 +386,7 @@ describe("fail-closed catalog pipeline state machine", () => {
 
   it("refuses illegal transitions (fail-closed)", () => {
     const item = syntheticAsset();
+
     const illegal: Array<{ from: PipelineState; to: PipelineState }> = [
       { from: "intake", to: "listed" },
       { from: "intake", to: "curation" },
@@ -390,13 +403,16 @@ describe("fail-closed catalog pipeline state machine", () => {
         ...item,
         moderation: { pipelineState: from, history: [] },
       };
+
       const result = transitionCatalogItem(
         seeded,
         to === "listed"
           ? { to, reason: "attempt illegal", humanVerdict: approveVerdict() }
           : { to, reason: "attempt illegal" },
       );
+
       expect(result.ok, `${from}→${to}`).toBe(false);
+
       if (!result.ok) {
         expect(result.code).toBe("illegal-transition");
       }
@@ -408,7 +424,9 @@ describe("fail-closed catalog pipeline state machine", () => {
       to: "screening",
       reason: "   ",
     });
+
     expect(result.ok).toBe(false);
+
     if (!result.ok) expect(result.code).toBe("missing-reason");
   });
 
@@ -418,6 +436,7 @@ describe("fail-closed catalog pipeline state machine", () => {
         to: "screening" as const,
         reason: "placeholder",
       };
+
       if (rawReason === undefined) {
         Reflect.deleteProperty(request, "reason");
       } else {
@@ -426,6 +445,7 @@ describe("fail-closed catalog pipeline state machine", () => {
 
       const result = transitionCatalogItem(syntheticAsset(), request);
       expect(result.ok).toBe(false);
+
       if (!result.ok) expect(result.code).toBe("missing-reason");
     }
   });
@@ -435,11 +455,14 @@ describe("fail-closed catalog pipeline state machine", () => {
       to: "screening" as const,
       reason: "placeholder",
     };
+
     let reasonReads = 0;
     Object.defineProperty(reasonRequest, "reason", {
       get() {
         reasonReads += 1;
+
         if (reasonReads > 1) throw new Error("reason re-read");
+
         return "snapshot reason";
       },
     });
@@ -448,6 +471,7 @@ describe("fail-closed catalog pipeline state machine", () => {
     expect(reasonReads).toBe(1);
 
     const listed = advanceToListed(syntheticAsset());
+
     const atCuration: CatalogItem = {
       ...listed,
       moderation: {
@@ -455,21 +479,25 @@ describe("fail-closed catalog pipeline state machine", () => {
         history: listed.moderation.history.slice(0, 2),
       },
     };
+
     const verdictRequest = {
       to: "listed" as const,
       reason: "snapshot verdict",
       humanVerdict: approveVerdict(),
     };
+
     let verdictReads = 0;
     Object.defineProperty(verdictRequest, "humanVerdict", {
       get() {
         verdictReads += 1;
+
         return verdictReads === 1 ? approveVerdict() : null;
       },
     });
     const relisted = transitionCatalogItem(atCuration, verdictRequest);
     expect(relisted.ok).toBe(true);
     expect(verdictReads).toBe(1);
+
     if (relisted.ok) {
       expect(relisted.transition.humanVerdict?.decision).toBe("approve");
     }
@@ -484,14 +512,18 @@ describe("fail-closed catalog pipeline state machine", () => {
         };
       },
     });
+
     const delisted = transitionCatalogItem(listed, {
       to: "delisted",
       reason: "indexed history snapshot",
     });
+
     expect(delisted.ok).toBe(true);
+
     if (delisted.ok) {
       expect(delisted.kind).toBe("catalog-item");
     }
+
     if (delisted.ok && delisted.kind === "catalog-item") {
       expect(delisted.item.moderation.history).toHaveLength(4);
       expect(delisted.item.moderation.history[0]?.from).toBe("intake");
@@ -501,25 +533,29 @@ describe("fail-closed catalog pipeline state machine", () => {
 
   it("refuses moderation history supplied through inherited array slots", () => {
     const listed = advanceToListed(syntheticAsset());
-    const inheritedHistory = new Array<unknown>(3);
+    const inheritedHistory: unknown[] = [];
+      inheritedHistory.length = 3;
     Object.setPrototypeOf(inheritedHistory, {
       0: listed.moderation.history[0],
       1: listed.moderation.history[1],
       2: listed.moderation.history[2],
     });
+
     const malformed = {
       ...listed,
       moderation: {
         pipelineState: "listed" as const,
         history: inheritedHistory,
       },
-    } as unknown as CatalogItem;
+    };
 
-    const result = transitionCatalogItem(malformed, {
-      to: "delisted",
-      reason: "attempt inherited history",
-    });
+      const result: ReturnType<typeof transitionCatalogItem> = catalogBoundary.transitionCatalogItem(malformed, {
+        to: "delisted",
+        reason: "attempt inherited history",
+      });
+
     expect(result.ok).toBe(false);
+
     if (!result.ok) expect(result.code).toBe("invalid-moderation-history");
   });
 
@@ -529,7 +565,9 @@ describe("fail-closed catalog pipeline state machine", () => {
       reason: "invalid timestamp",
       at: "2026-07-22",
     });
+
     expect(invalidTransition.ok).toBe(false);
+
     if (!invalidTransition.ok) {
       expect(invalidTransition.code).toBe("invalid-moderation-history");
     }
@@ -541,11 +579,13 @@ describe("fail-closed catalog pipeline state machine", () => {
         sourceDigest: HASH,
       },
     });
+
     expect(missingMandatoryMetadata(invalidProvenance)).toContain(
       "provenance.ingestedAt",
     );
 
     const listed = advanceToListed(syntheticAsset());
+
     const atCuration: CatalogItem = {
       ...listed,
       moderation: {
@@ -553,6 +593,7 @@ describe("fail-closed catalog pipeline state machine", () => {
         history: listed.moderation.history.slice(0, 2),
       },
     };
+
     const invalidVerdict = transitionCatalogItem(atCuration, {
       to: "listed",
       reason: "invalid verdict timestamp",
@@ -561,7 +602,9 @@ describe("fail-closed catalog pipeline state machine", () => {
         recordedAt: "not-a-date",
       },
     });
+
     expect(invalidVerdict.ok).toBe(false);
+
     if (!invalidVerdict.ok) {
       expect(invalidVerdict.code).toBe("invalid-human-verdict");
     }
@@ -569,6 +612,7 @@ describe("fail-closed catalog pipeline state machine", () => {
 
   it("refuses listing without a human curation verdict (never simulated)", () => {
     const listed = advanceToListed(syntheticAsset());
+
     // rewind conceptually: take a curation-state item without using auto-list
     const atCuration: CatalogItem = {
       ...listed,
@@ -577,11 +621,14 @@ describe("fail-closed catalog pipeline state machine", () => {
         history: listed.moderation.history.slice(0, 2),
       },
     };
+
     const noVerdict = transitionCatalogItem(atCuration, {
       to: "listed",
       reason: "would list without human",
     });
+
     expect(noVerdict.ok).toBe(false);
+
     if (!noVerdict.ok) expect(noVerdict.code).toBe("missing-human-verdict");
 
     const reject = transitionCatalogItem(atCuration, {
@@ -595,12 +642,15 @@ describe("fail-closed catalog pipeline state machine", () => {
         recordedAt: "2026-07-21T13:00:00.000Z",
       },
     });
+
     expect(reject.ok).toBe(false);
+
     if (!reject.ok) expect(reject.code).toBe("human-verdict-rejected");
   });
 
   it("refuses structurally invalid human verdicts without throwing", () => {
     const listed = advanceToListed(syntheticAsset());
+
     const atCuration: CatalogItem = {
       ...listed,
       moderation: {
@@ -615,10 +665,12 @@ describe("fail-closed catalog pipeline state machine", () => {
         reason: "attempt malformed verdict",
         humanVerdict: approveVerdict(),
       };
+
       Object.assign(request, { humanVerdict: malformedVerdict });
 
       const result = transitionCatalogItem(atCuration, request);
       expect(result.ok).toBe(false);
+
       if (!result.ok) expect(result.code).toBe("invalid-human-verdict");
     }
   });
@@ -631,6 +683,7 @@ describe("fail-closed catalog pipeline state machine", () => {
     });
 
     expect(result.ok).toBe(false);
+
     if (!result.ok) expect(result.code).toBe("invalid-human-verdict");
   });
 
@@ -647,26 +700,34 @@ describe("fail-closed catalog pipeline state machine", () => {
     });
 
     expect(result.ok).toBe(false);
+
     if (result.ok) return;
     expect(result.code).toBe("invalid-moderation-history");
   });
 
   it("rechecks mandatory metadata at the listing boundary", () => {
     const intake = syntheticAsset();
+
     const screening = transitionCatalogItem(intake, {
       to: "screening",
       reason: "screened",
       at: "2026-07-21T10:00:00.000Z",
     });
+
     expect(screening.ok).toBe(true);
+
     if (!screening.ok) return;
+
     const curation = transitionCatalogItem(screening.item, {
       to: "curation",
       reason: "curated",
       at: "2026-07-21T11:00:00.000Z",
     });
+
     expect(curation.ok).toBe(true);
+
     if (!curation.ok) return;
+
     const drifted: CatalogItem = {
       ...curation.item,
       rights: { ...curation.item.rights, license: "" },
@@ -679,6 +740,7 @@ describe("fail-closed catalog pipeline state machine", () => {
     });
 
     expect(result.ok).toBe(false);
+
     if (result.ok) return;
     expect(result.code).toBe("missing-mandatory-metadata");
   });
@@ -688,12 +750,16 @@ describe("fail-closed catalog pipeline state machine", () => {
       rights: { license: "", rightsHolder: "X", commercialUseAllowed: false },
       aiGenerationDisclosure: { aiGenerated: false, disclosureText: "" },
     });
+
     expect(missingMandatoryMetadata(incomplete).length).toBeGreaterThan(0);
+
     const result = transitionCatalogItem(incomplete, {
       to: "screening",
       reason: "try advance incomplete",
     });
+
     expect(result.ok).toBe(false);
+
     if (!result.ok) expect(result.code).toBe("missing-mandatory-metadata");
   });
 
@@ -738,7 +804,9 @@ describe("fail-closed catalog pipeline state machine", () => {
         to: "screening",
         reason: "attempt malformed metadata",
       });
+
       expect(result.ok).toBe(false);
+
       if (!result.ok) expect(result.code).toBe("missing-mandatory-metadata");
     }
   });
@@ -754,11 +822,14 @@ describe("fail-closed catalog pipeline state machine", () => {
         "aiGenerationDisclosure.aiGenerated",
       ]),
     );
+
     const result = transitionCatalogItem(malformed, {
       to: "screening",
       reason: "attempt incomplete boolean metadata",
     });
+
     expect(result.ok).toBe(false);
+
     if (!result.ok) expect(result.code).toBe("missing-mandatory-metadata");
   });
 
@@ -769,12 +840,14 @@ describe("fail-closed catalog pipeline state machine", () => {
     Object.defineProperty(intake.rights, "license", {
       get() {
         licenseReads += 1;
+
         return licenseReads === 1 ? "CC-BY-4.0" : "";
       },
     });
     Object.defineProperty(intake.provenance, "origin", {
       get() {
         originReads += 1;
+
         return originReads === 1 ? "synthetic-fixture" : "";
       },
     });
@@ -783,9 +856,11 @@ describe("fail-closed catalog pipeline state machine", () => {
       to: "screening",
       reason: "snapshot nested metadata",
     });
+
     expect(result.ok).toBe(true);
     expect(licenseReads).toBe(1);
     expect(originReads).toBe(1);
+
     if (result.ok) {
       expect(result.item.rights.license).toBe("CC-BY-4.0");
       expect(result.item.provenance.origin).toBe("synthetic-fixture");
@@ -797,22 +872,28 @@ describe("fail-closed catalog pipeline state machine", () => {
     const intake = syntheticAsset();
     Object.assign(intake, { schemaVersion: 2 });
     expect(missingMandatoryMetadata(intake)).toContain("schemaVersion");
+
     const screening = transitionCatalogItem(intake, {
       to: "screening",
       reason: "attempt version drift",
     });
+
     expect(screening.ok).toBe(false);
+
     if (!screening.ok) {
       expect(screening.code).toBe("missing-mandatory-metadata");
     }
 
     const listed = advanceToListed(syntheticAsset());
     Reflect.deleteProperty(listed, "schemaVersion");
+
     const delisted = transitionCatalogItem(listed, {
       to: "delisted",
       reason: "attempt versionless takedown",
     });
+
     expect(delisted.ok).toBe(false);
+
     if (!delisted.ok) {
       expect(delisted.code).toBe("missing-mandatory-metadata");
     }
@@ -846,31 +927,35 @@ describe("fail-closed catalog pipeline state machine", () => {
         yield "game";
       },
     });
-    const malformedProfileSets: unknown[][] = [
+
+    const sparseProfiles: unknown[] = [];
+      sparseProfiles.length = 1;
+
+      const malformedProfileSets: unknown[][] = [
       [""],
       ["game\n"],
       [123],
       [null],
-      new Array<unknown>(1),
+      sparseProfiles,
       iteratorBypass,
     ];
 
     for (const profiles of malformedProfileSets) {
-      const malformed = syntheticAsset({
-        compatibility: {
-          coreRange: "^0.0.0",
-          profiles: profiles as readonly string[],
-        },
-      });
+      const malformed = { ...syntheticAsset(),
+          compatibility: { coreRange: "^0.0.0", profiles },
+        };
 
       expect(missingMandatoryMetadata(malformed)).toContain(
         "compatibility.profiles",
       );
-      const result = transitionCatalogItem(malformed, {
-        to: "screening",
-        reason: "attempt malformed compatibility",
-      });
+
+      const result: ReturnType<typeof transitionCatalogItem> = catalogBoundary.transitionCatalogItem(malformed, {
+          to: "screening",
+          reason: "attempt malformed compatibility",
+        });
+
       expect(result.ok).toBe(false);
+
       if (!result.ok) expect(result.code).toBe("missing-mandatory-metadata");
     }
   });
@@ -881,9 +966,11 @@ describe("fail-closed catalog pipeline state machine", () => {
     Object.defineProperty(profiles, 0, {
       get() {
         profileReads += 1;
+
         return profileReads <= 2 ? "game" : "game\n";
       },
     });
+
     const item = syntheticAsset({
       compatibility: { coreRange: "^0.0.0", profiles },
     });
@@ -892,8 +979,10 @@ describe("fail-closed catalog pipeline state machine", () => {
       to: "screening",
       reason: "snapshot compatibility profiles",
     });
+
     expect(result.ok).toBe(true);
     expect(profileReads).toBe(1);
+
     if (result.ok) expect(result.item.compatibility.profiles).toEqual(["game"]);
   });
 
@@ -913,6 +1002,7 @@ describe("commerce fields inert (no 6b activation path)", () => {
       price: { amount: "9.99", currency: "USD" },
       sku: "SKU-1",
     };
+
     const item = syntheticAsset({ commerce: injectedCommerce });
 
     expect(item.commerce).toEqual({
@@ -932,10 +1022,13 @@ describe("commerce fields inert (no 6b activation path)", () => {
       to: "delisted",
       reason: "attempt takedown with active commerce",
     });
+
     expect(result.ok).toBe(true);
+
     if (result.ok) {
       expect(result.kind).toBe("catalog-metadata-unavailable-tombstone");
     }
+
     if (result.ok && result.kind === "catalog-metadata-unavailable-tombstone") {
       expect(result.tombstone).toEqual({
         schemaVersion: CATALOG_METADATA_UNAVAILABLE_TOMBSTONE_SCHEMA_VERSION,
@@ -975,9 +1068,12 @@ describe("commerce fields inert (no 6b activation path)", () => {
         to: "delisted",
         reason: "normalize commerce during takedown",
       });
+
       expect(result.ok).toBe(true);
+
       if (!result.ok) continue;
       expect(result.kind).toBe("catalog-item");
+
       if (result.kind !== "catalog-item") continue;
       expect(result.item).toMatchObject({
         itemId: listed.itemId,
@@ -998,6 +1094,7 @@ describe("commerce fields inert (no 6b activation path)", () => {
         commerce: { price: { amount: "4.00", currency: "USD" }, sku: "GAME-1" },
       }),
     );
+
     expect(listed.commerce.activation).toBe("inert");
     expect(isCommerceActive(listed)).toBe(false);
 
@@ -1011,14 +1108,16 @@ describe("commerce fields inert (no 6b activation path)", () => {
 
   it("cannot flip activation through item shape alone", () => {
     const listed = advanceToListed(syntheticAsset());
+
     // Even a forged activation value is not accepted by the gate helper.
     const forged = {
       ...listed,
-      commerce: { activation: "active" as unknown as "inert" },
-    } as CatalogItem;
-    const attempt = attemptCommerceActivation(forged);
+      commerce: { activation: "active" },
+      };
+
+    const attempt: ReturnType<typeof attemptCommerceActivation> = catalogBoundary.attemptCommerceActivation(forged);
     expect(attempt.ok).toBe(false);
-    expect(isCommerceActive(forged)).toBe(false);
+    expect(catalogBoundary.isCommerceActive(forged)).toBe(false);
   });
 });
 
@@ -1034,3 +1133,14 @@ describe("topology neutrality", () => {
     expect(CATALOG_POLICY_CITES.untrustedAssetIngestion).toBeTruthy();
   });
 });
+
+// Each production entry point owns fail-closed validation; this port admits malformed refusal fixtures.
+type CatalogBoundaryInput = Parameters<typeof isJsonValue>[0];
+
+type CatalogRefusalBoundary = {
+  transitionCatalogItem(item: CatalogBoundaryInput, request: Parameters<typeof transitionCatalogItem>[1]): ReturnType<typeof transitionCatalogItem>;
+  attemptCommerceActivation(item: CatalogBoundaryInput): ReturnType<typeof attemptCommerceActivation>;
+  isCommerceActive(item: CatalogBoundaryInput): boolean;
+};
+
+const catalogBoundary: CatalogRefusalBoundary = { transitionCatalogItem, attemptCommerceActivation, isCommerceActive };

@@ -1,0 +1,25 @@
+[96mdesktop/linux/src/lib/desktop-scene.ts[0m:[93m1158[0m:[93m55[0m - [91merror[0m[90m TS2339: [0mProperty 'instanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }> | Readonly<{ kind: "create-primitive"; primitive: "box" | "cylinder" | "sphere"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.
+  Property 'instanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }>'.
+
+[7m1158[0m       (instance) => instance.instanceId === operation.instanceId,
+[7m    [0m [91m                                                      ~~~~~~~~~~[0m
+[96mdesktop/linux/src/lib/desktop-scene.ts[0m:[93m1163[0m:[93m51[0m - [91merror[0m[90m TS2339: [0mProperty 'instanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }> | Readonly<{ kind: "create-primitive"; primitive: "box" | "cylinder" | "sphere"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.
+  Property 'instanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }>'.
+
+[7m1163[0m         `The selected child is stale: ${operation.instanceId}.`,
+[7m    [0m [91m                                                  ~~~~~~~~~~[0m
+[96mdesktop/linux/src/lib/desktop-scene.ts[0m:[93m1175[0m:[93m55[0m - [91merror[0m[90m TS2339: [0mProperty 'parentInstanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }> | Readonly<{ kind: "create-primitive"; primitive: "box" | "cylinder" | "sphere"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.
+  Property 'parentInstanceId' does not exist on type 'Readonly<{ kind: "rename-object"; instanceId: string; name: string; }>'.
+
+[7m1175[0m       (instance) => instance.instanceId === operation.parentInstanceId,
+[7m    [0m [91m                                                      ~~~~~~~~~~~~~~~~[0m
+[96mdesktop/linux/src/lib/desktop-scene.ts[0m:[93m1180[0m:[93m55[0m - [91merror[0m[90m TS2339: [0mProperty 'parentInstanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }> | Readonly<{ kind: "create-primitive"; primitive: "box" | "cylinder" | "sphere"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.
+  Property 'parentInstanceId' does not exist on type 'Readonly<{ kind: "rename-object"; instanceId: string; name: string; }>'.
+
+[7m1180[0m         `The requested parent is missing: ${operation.parentInstanceId}.`,
+[7m    [0m [91m                                                      ~~~~~~~~~~~~~~~~[0m
+[96mdesktop/linux/src/lib/desktop-scene.ts[0m:[93m1199[0m:[93m31[0m - [91merror[0m[90m TS2339: [0mProperty 'transformPolicy' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }> | Readonly<{ kind: "create-primitive"; primitive: "box" | "cylinder" | "sphere"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.
+  Property 'transformPolicy' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }>'.
+
+[7m1199[0m     const derived = operation.transformPolicy === "preserve-world"
+[7m    [0m [91m                              ~~~~~~~~~~~~~~~[0m

@@ -1,0 +1,803 @@
+{
+  "schemaVersion": 1,
+  "graphId": "sceneaxi-production-swarm",
+  "node": "desktop-release-builder",
+  "role": "code",
+  "repository": "/home/devuser/Documents/Projects/sceneaxi",
+  "baselineHead": "4e532e2fbf43e9948741578ab6208a3277870405",
+  "productionStatus": "PARTIAL",
+  "localAcceptanceStatus": "PARTIAL",
+  "sourceImplementationStatus": "DR001\u2013005 implemented; DR006 shared local job unresolved; DR007 installed/typechecked/default-smoked but serial staging/CI unresolved",
+  "filesChanged": [
+    "/home/devuser/Documents/Projects/sceneaxi/desktop/macos/scripts/artifact-validation.mjs",
+    "/home/devuser/Documents/Projects/sceneaxi/desktop/macos/scripts/build.mjs",
+    "/home/devuser/Documents/Projects/sceneaxi/desktop/macos/scripts/dist.mjs",
+    "/home/devuser/Documents/Projects/sceneaxi/desktop/macos/scripts/smoke.mjs",
+    "/home/devuser/Documents/Projects/sceneaxi/desktop/macos/src/electron/main.ts",
+    "/home/devuser/Documents/Projects/sceneaxi/desktop/macos/test/seam.test.ts",
+    "/home/devuser/Documents/Projects/sceneaxi/desktop/windows/scripts/build.mjs",
+    "/home/devuser/Documents/Projects/sceneaxi/desktop/windows/scripts/dist.mjs",
+    "/home/devuser/Documents/Projects/sceneaxi/desktop/windows/scripts/package-release.mjs",
+    "/home/devuser/Documents/Projects/sceneaxi/desktop/windows/scripts/release-preflight.d.mts",
+    "/home/devuser/Documents/Projects/sceneaxi/desktop/windows/scripts/release-preflight.mjs",
+    "/home/devuser/Documents/Projects/sceneaxi/desktop/windows/scripts/release.mjs",
+    "/home/devuser/Documents/Projects/sceneaxi/desktop/windows/scripts/smoke.mjs",
+    "/home/devuser/Documents/Projects/sceneaxi/desktop/windows/src/electron/main.ts",
+    "/home/devuser/Documents/Projects/sceneaxi/desktop/windows/src/lib/update-policy.ts"
+  ],
+  "reports": [
+    "/home/devuser/Documents/Projects/sceneaxi/docs/audits/production-swarm/fix-desktop-release.md",
+    "/home/devuser/Documents/Projects/sceneaxi/docs/audits/production-swarm/fix-desktop-release.json"
+  ],
+  "upstreamApiVerification": {
+    "scope": "Read-only public documentation; no new dependency/API stack or provider calls",
+    "command": "python3 urllib.request public documentation checks",
+    "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+    "timeoutMs": 90000,
+    "passed": [
+      {
+        "url": "https://cli.github.com/manual/gh_release_view",
+        "http": 200,
+        "assertions": [
+          "targetCommitish",
+          "isDraft",
+          "tagName"
+        ]
+      },
+      {
+        "url": "https://cli.github.com/manual/gh_release_upload",
+        "http": 200,
+        "assertions": [
+          "clobber is explicit; uploader does not pass it"
+        ]
+      },
+      {
+        "url": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/electron-updater/src/AppUpdater.ts",
+        "http": 200,
+        "exit": 0,
+        "assertions": [
+          "autoDownload",
+          "autoInstallOnAppQuit compatibility accessor",
+          "checkForUpdates"
+        ],
+        "limits": "Current official upstream API verified; installed 6.8.9 compatibility separately strict-typechecked. Master documents future deprecation; no version change made."
+      }
+    ],
+    "failedAttempts": [
+      {
+        "url": "https://www.electron.build/electron-updater.Class.AppUpdater.html",
+        "http": 404,
+        "exit": 1
+      },
+      {
+        "url": "https://www.electron.build/auto-update.html",
+        "http": 404,
+        "exit": 1
+      },
+      {
+        "url": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/electron-updater/src/AppUpdater.ts",
+        "http": 200,
+        "exit": 1,
+        "reason": "Overstrict direct-initializer spelling assertion failed; actual API is compatibility accessor, verified in subsequent source check"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/electron-userland/electron-builder/v26.15.3/packages/electron-updater/src/AppUpdater.ts",
+        "http": 404,
+        "exit": 1,
+        "reason": "Guessed tag unavailable; no claim of pinned upstream doc proof"
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "id": "B01",
+      "command": "node --input-type=module -e <spawn real pnpm --dir desktop/windows smoke --packaged; assert non-Windows refuses>",
+      "exit": 1,
+      "result": "Before: real child exit0, static smoke ignored --packaged; oracle failed",
+      "assertions": [
+        "DR001 reproduced through actual package script"
+      ],
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "platform": "linux x64",
+      "timeoutMs": 30000,
+      "execution": {
+        "executable": "node",
+        "argv": [
+          "--input-type=module",
+          "-e",
+          "import {spawnSync} from \"node:child_process\";let r=spawnSync(\"pnpm\",[\"--dir\",\"/home/devuser/Documents/Projects/sceneaxi/desktop/windows\",\"smoke\",\"--packaged\"],{cwd:process.cwd(),encoding:\"utf8\",timeout:20000});console.log(JSON.stringify({id:\"DR001-BEFORE\",exit:r.status,stdout:r.stdout,stderr:r.stderr}));if(r.status===0)process.exitCode=1"
+        ],
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi"
+      }
+    },
+    {
+      "id": "B02",
+      "command": "node --input-type=module -e <transpile actual Windows update-policy.ts with pinned TypeScript; invoke exported runWindowsUpdateCheck; require zero calls for config only>",
+      "exit": 1,
+      "result": "Before: result ok:true/checked:true; calls1; oracle failed",
+      "assertions": [
+        "DR004 actual exported policy confirmed, no network"
+      ],
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "platform": "linux x64",
+      "timeoutMs": 30000,
+      "execution": {
+        "executable": "node",
+        "argv": [
+          "--input-type=module",
+          "-e",
+          "import ts from \"typescript\";import {readFileSync} from \"node:fs\";const {outputText}=ts.transpileModule(readFileSync(\"desktop/windows/src/lib/update-policy.ts\",\"utf8\"),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}});const {runWindowsUpdateCheck}=await import(\"data:text/javascript;base64,\"+Buffer.from(outputText).toString(\"base64\"));let n=0;console.log(JSON.stringify({id:\"DR004-BEFORE\",result:await runWindowsUpdateCheck({packaged:true,smokeMode:false,configurationExists:true,checkForUpdates:async()=>n++}),calls:n}));if(n!==0)process.exitCode=1"
+        ],
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi"
+      }
+    },
+    {
+      "id": "I01",
+      "command": "pnpm --dir /home/devuser/Documents/Projects/sceneaxi/desktop/windows install --frozen-lockfile && pnpm --dir /home/devuser/Documents/Projects/sceneaxi/desktop/macos install --frozen-lockfile",
+      "exit": 0,
+      "result": "277/278 packages reused, zero downloaded; manifests/lockfiles unchanged",
+      "assertions": [
+        "both frozen install roots now available"
+      ],
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "platform": "linux x64",
+      "timeoutMs": 120000
+    },
+    {
+      "id": "T01",
+      "command": "pnpm --dir /home/devuser/Documents/Projects/sceneaxi/desktop/macos typecheck && pnpm --dir /home/devuser/Documents/Projects/sceneaxi/desktop/windows typecheck",
+      "exit": 0,
+      "result": "both strict TypeScript commands passed",
+      "assertions": [
+        "native wrapper source typechecks; not native runtime proof"
+      ],
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "platform": "linux x64",
+      "timeoutMs": 120000
+    },
+    {
+      "id": "T02",
+      "command": "pnpm exec vitest run /home/devuser/Documents/Projects/sceneaxi/desktop/macos/test/seam.test.ts /home/devuser/Documents/Projects/sceneaxi/tests/desktop/desktop-macos-packaging.test.ts /home/devuser/Documents/Projects/sceneaxi/tests/desktop/desktop-windows-packaging.test.ts",
+      "exit": 1,
+      "result": "Initial patch check:18 pass/2 fail; shared Windows :86 expects removed implicit publisher; :130 lacks required verified-policy fixture",
+      "assertions": [
+        "FAIL routed to integration, not skipped; shared tests read-only"
+      ],
+      "remaining": "SHARED-WIN-TESTS",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "platform": "linux x64",
+      "timeoutMs": 120000
+    },
+    {
+      "id": "T03",
+      "command": "pnpm exec vitest run /home/devuser/Documents/Projects/sceneaxi/desktop/macos/test/seam.test.ts",
+      "exit": 0,
+      "result": "7 owned tests pass; independent byte-set/update/refusal/zero-port/zero-uploader assertions",
+      "assertions": [
+        "both platform validators tested with inert unsigned byte fixtures",
+        "omitted/duplicate/traversal/size/hash/checksum/update/symlink negatives",
+        "prior output preserved",
+        "implicit publisher rejected before work",
+        "candidate or native verifier failure calls no uploader/draft lookup",
+        "real Windows packaged and both unknown-flag process refusals",
+        "config-only/disabled/malformed/version mismatch/smoke updater calls0",
+        "explicit policy fixture calls one injected port; transport exception redacted"
+      ],
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "platform": "linux x64",
+      "timeoutMs": 120000
+    },
+    {
+      "id": "T04",
+      "command": "pnpm exec vitest run /home/devuser/Documents/Projects/sceneaxi/tests/sites/desktop-offer-lockstep.test.ts /home/devuser/Documents/Projects/sceneaxi/tests/sites/desktop-download.test.ts /home/devuser/Documents/Projects/sceneaxi/tests/e2e/desktop-project-build-golden.test.ts /home/devuser/Documents/Projects/sceneaxi/tests/e2e/desktop-web-export-golden.test.ts",
+      "exit": 0,
+      "result": "60 tests pass",
+      "assertions": [
+        "offer/download remains truthful coming-soon",
+        "project native-build refusal parity unchanged",
+        "offline Web-export golden unchanged"
+      ],
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "platform": "linux x64",
+      "timeoutMs": 120000
+    },
+    {
+      "id": "T05",
+      "command": "pnpm exec vitest run /home/devuser/Documents/Projects/sceneaxi/desktop/macos/test/seam.test.ts /home/devuser/Documents/Projects/sceneaxi/tests/desktop/desktop-macos-packaging.test.ts",
+      "exit": 0,
+      "result": "Final:2 files/17 tests pass; prior intermediate16 pass/1 fail corrected by preserving real unconfigured refusal alongside configured-but-unverified refusal",
+      "assertions": [
+        "existing macOS packaging checks unweakened",
+        "owned new regressions preserved"
+      ],
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "platform": "linux x64",
+      "timeoutMs": 120000
+    },
+    {
+      "id": "F01",
+      "command": "pnpm --dir /home/devuser/Documents/Projects/sceneaxi/desktop/windows smoke && pnpm --dir /home/devuser/Documents/Projects/sceneaxi/desktop/macos smoke",
+      "exit": 0,
+      "result": "both package front-door default smokes pass",
+      "assertions": [
+        "mandatory signing/update/provenance config/refusal assertions; no native claims"
+      ],
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "platform": "linux x64",
+      "timeoutMs": 120000
+    },
+    {
+      "id": "F02",
+      "command": "node --input-type=module -e <spawn both real pnpm smoke --packaged commands; require exit1 + native-host refusal; spawn real Windows dist/draft:upload; require exit1 + host/signing/authority refusals>",
+      "exit": 0,
+      "childExit": 1,
+      "result": "Windows WINDOWS_RELEASE_HOST_REQUIRED; macOS --packaged requires macOS; Windows dist/draft:upload refuse missing host/signing/tool/token/tag",
+      "assertions": [
+        "DR001 passing-after same public subprocess oracle",
+        "no build/sign/upload network path reached"
+      ],
+      "coverageHole": "native Mac/Windows signatures/install/launch/update unavailable",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "platform": "linux x64",
+      "timeoutMs": 120000,
+      "execution": {
+        "executable": "node",
+        "argv": [
+          "--input-type=module",
+          "-e",
+          "import {spawnSync} from \"node:child_process\";import assert from \"node:assert/strict\";for(const p of [\"windows\",\"macos\"]){const r=spawnSync(\"pnpm\",[\"--dir\",`/home/devuser/Documents/Projects/sceneaxi/desktop/${p}`,\"smoke\",\"--packaged\"],{cwd:process.cwd(),encoding:\"utf8\",timeout:20000});assert.equal(r.status,1);assert.ok(p===\"windows\"?r.stderr.includes(\"WINDOWS_RELEASE_HOST_REQUIRED\"):r.stderr.includes(\"--packaged requires macOS\"));console.log(JSON.stringify({platform:p,exit:r.status,result:\"expected-native-host-refusal\",stderr:r.stderr.trim().split(\"\\n\").slice(0,3)}));}for(const args of [[\"dist\"],[\"draft:upload\"]]){const r=spawnSync(\"pnpm\",[\"--dir\",\"/home/devuser/Documents/Projects/sceneaxi/desktop/windows\",...args],{cwd:process.cwd(),encoding:\"utf8\",timeout:20000});assert.equal(r.status,1);assert.ok(r.stderr.includes(\"WINDOWS_RELEASE_HOST_REQUIRED\"));console.log(JSON.stringify({command:args[0],exit:r.status,result:\"refused-before-sign-upload\",stderr:r.stderr.trim()}));}"
+        ],
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi"
+      }
+    },
+    {
+      "id": "G01",
+      "command": "pnpm check:desktop && pnpm check:boundaries && pnpm check:contracts",
+      "exit": 0,
+      "result": "3 desktop roots/27 packages verified; shared authoring/plugin/billing/profile contracts retained",
+      "assertions": [
+        "no matrix widening",
+        "Kids no shared open/identity/commerce path",
+        "held/LIVE boundaries untouched"
+      ],
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "platform": "linux x64",
+      "timeoutMs": 120000
+    },
+    {
+      "id": "L01",
+      "command": "pnpm exec eslint /home/devuser/Documents/Projects/sceneaxi/desktop/macos/test/seam.test.ts /home/devuser/Documents/Projects/sceneaxi/desktop/macos/src/electron/main.ts /home/devuser/Documents/Projects/sceneaxi/desktop/windows/src/electron/main.ts /home/devuser/Documents/Projects/sceneaxi/desktop/windows/src/lib/update-policy.ts",
+      "exit": 0,
+      "result": "Final no issues; intermediate unused readFileSync error fixed by actual runtime policy wiring, rerun typecheck and lint pass",
+      "assertions": [
+        "no lint disables or skipped checks"
+      ],
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "platform": "linux x64",
+      "timeoutMs": 120000
+    },
+    {
+      "id": "C01",
+      "command": "node --input-type=module -e <use each installed pinned esbuild to compile actual wrapper main; write:false; assert one nonempty result>",
+      "exit": 0,
+      "result": {
+        "macos": {
+          "bytes": 601173,
+          "sha256": "b5f9cd410adc785c75f72cdc0a604a46142f208ca6ba03f1f68fcdd229171f22"
+        },
+        "windows": {
+          "bytes": 3648,
+          "sha256": "55a5c818d8114c470708d4a977f1954d8736c03bb8666fa280274e44497c4fb7"
+        }
+      },
+      "assertions": [
+        "real wrapper compile without writing shared Linux dist"
+      ],
+      "coverageHole": "not full staging pnpm build; final serial rebuild still required",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "platform": "linux x64",
+      "timeoutMs": 120000,
+      "execution": {
+        "executable": "node",
+        "argv": [
+          "--input-type=module",
+          "-e",
+          "import {createHash} from \"node:crypto\";import {build} from \"/home/devuser/Documents/Projects/sceneaxi/desktop/macos/node_modules/esbuild/lib/main.js\";for(const p of [\"macos\",\"windows\"]){const r=await build({absWorkingDir:`/home/devuser/Documents/Projects/sceneaxi/desktop/${p}`,entryPoints:[\"src/electron/main.ts\"],bundle:true,write:false,platform:\"node\",format:\"cjs\",target:\"node22\",external:p===\"macos\"?[\"electron\",\"./runtime/main.cjs\"]:[\"electron\",\"electron-updater\"]});if(r.outputFiles.length!==1||r.outputFiles[0].contents.length<1000)throw Error(\"WRAPPER_BUNDLE_EMPTY\");console.log(JSON.stringify({platform:p,assertions:[\"real wrapper esbuild compile\",\"nonempty output\",\"no shared dist writes\"],bytes:r.outputFiles[0].contents.length,sha256:createHash(\"sha256\").update(r.outputFiles[0].contents).digest(\"hex\")}));}"
+        ],
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi"
+      }
+    },
+    {
+      "id": "P01",
+      "command": "node --input-type=module -e <name-only presence check for platform/release inputs>",
+      "exit": 0,
+      "result": "linux x64; CSC_LINK,CSC_KEY_PASSWORD,APPLE_ID,APPLE_APP_SPECIFIC_PASSWORD,APPLE_TEAM_ID,SCENEAXI_MACOS_RELEASE_BASE_URL,WIN_CSC_LINK,WIN_CSC_KEY_PASSWORD,GITHUB_SHA,GITHUB_RELEASE_TOKEN,SCENEAXI_WINDOWS_RELEASE_TAG all absent",
+      "assertions": [
+        "no secret values inspected or printed"
+      ],
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "platform": "linux x64",
+      "timeoutMs": 30000,
+      "execution": {
+        "executable": "node",
+        "argv": [
+          "--input-type=module",
+          "-e",
+          "const names=[\"CSC_LINK\",\"CSC_KEY_PASSWORD\",\"APPLE_ID\",\"APPLE_APP_SPECIFIC_PASSWORD\",\"APPLE_TEAM_ID\",\"SCENEAXI_MACOS_RELEASE_BASE_URL\",\"WIN_CSC_LINK\",\"WIN_CSC_KEY_PASSWORD\",\"GITHUB_SHA\",\"GITHUB_RELEASE_TOKEN\",\"SCENEAXI_WINDOWS_RELEASE_TAG\"];console.log(JSON.stringify({platform:process.platform,architecture:process.arch,inputs:names.map(name=>({name,present:typeof process.env[name]===\"string\"&&process.env[name].trim().length>0}))}))"
+        ],
+        "cwd": "/home/devuser/Documents/Projects/sceneaxi"
+      }
+    },
+    {
+      "id": "D01",
+      "command": "git diff --check -- /home/devuser/Documents/Projects/sceneaxi/desktop/macos /home/devuser/Documents/Projects/sceneaxi/desktop/windows",
+      "exit": 0,
+      "result": "no whitespace errors",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "platform": "linux x64",
+      "timeoutMs": 30000
+    },
+    {
+      "id": "ROUTING",
+      "command": "project(test, absolute owned seam path)",
+      "exit": null,
+      "result": "No test command detected. Recovered with exact pnpm exec vitest run in real cwd; no toolchain configuration modified",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "platform": "linux x64",
+      "timeoutMs": 30000
+    }
+  ],
+  "taskOutcomes": [
+    {
+      "id": "DR-001",
+      "severity": "high",
+      "owner": "desktop-release",
+      "dependencies": [],
+      "files": [
+        "desktop/windows/scripts/smoke.mjs",
+        "desktop/macos/test/seam.test.ts"
+      ],
+      "symbols": [
+        "packaged smoke branch"
+      ],
+      "source": [
+        {
+          "path": "/home/devuser/Documents/Projects/sceneaxi/desktop/windows/scripts/smoke.mjs",
+          "line": 22,
+          "symbol": "flags / packaged branch"
+        }
+      ],
+      "fix": "Unknown flags fail. --packaged refuses non-Windows; on Windows validates exact candidate hashes, real SignTool on installer and runtime, real spawned --smoke WebGL pixels. Unpacked runtime smoke explicitly does not claim clean installed-host acceptance.",
+      "evidence": [
+        "B01",
+        "T03",
+        "F01",
+        "F02"
+      ],
+      "localStatus": "IMPLEMENTED_REGRESSIONS_PASS",
+      "fullStatus": "PARTIAL_EXTERNAL_NATIVE_EVIDENCE"
+    },
+    {
+      "id": "DR-002",
+      "severity": "high",
+      "owner": "desktop-release",
+      "dependencies": [
+        "SHARED-WIN-TESTS",
+        "SHARED-WIN-POLICY-TEST"
+      ],
+      "files": [
+        "desktop/windows/scripts/package-release.mjs",
+        "desktop/windows/scripts/release.mjs",
+        "desktop/windows/scripts/smoke.mjs",
+        "desktop/macos/test/seam.test.ts"
+      ],
+      "symbols": [
+        "packageWindowsRelease",
+        "uploadVerifiedWindowsDraft"
+      ],
+      "source": [
+        {
+          "path": "/home/devuser/Documents/Projects/sceneaxi/desktop/windows/scripts/package-release.mjs",
+          "line": 124,
+          "symbol": "uploadVerifiedWindowsDraft"
+        }
+      ],
+      "fix": "Builder accepts only --publish never. draft:upload consumes existing candidate, integrity and real native verifier precede even draft lookup, draft must name exact tag+SHA, revalidate unchanged manifest/digest before explicit no-clobber upload. Negative verifier ports call zero uploader/lookup.",
+      "evidence": [
+        "T03",
+        "F01",
+        "F02"
+      ],
+      "localStatus": "IMPLEMENTED_REGRESSIONS_PASS_SHARED_TEST_UPDATE_REQUIRED",
+      "fullStatus": "PARTIAL_SHARED_TEST_AND_EXTERNAL_NATIVE"
+    },
+    {
+      "id": "DR-003",
+      "severity": "high",
+      "owner": "desktop-release",
+      "dependencies": [
+        "SHARED-WIN-TESTS",
+        "SHARED-WIN-POLICY-TEST"
+      ],
+      "files": [
+        "desktop/windows/scripts/dist.mjs",
+        "desktop/windows/scripts/release-preflight.mjs",
+        "desktop/windows/scripts/release-preflight.d.mts",
+        "desktop/windows/scripts/package-release.mjs",
+        "desktop/windows/scripts/release.mjs",
+        "desktop/macos/test/seam.test.ts"
+      ],
+      "symbols": [
+        "requireEmptyWindowsOutput",
+        "windowsCheckoutProvenance",
+        "validateWindowsCandidate",
+        "packageWindowsRelease"
+      ],
+      "source": [
+        {
+          "path": "/home/devuser/Documents/Projects/sceneaxi/desktop/windows/scripts/dist.mjs",
+          "line": 11,
+          "symbol": "requireEmptyWindowsOutput"
+        }
+      ],
+      "fix": "No candidate deletion. Nonempty/symlink output refuses. Exact declared HEAD and clean checkout required. Real SignTool precedes signed local record; record is iaLinkable:false. SHA256SUMS covers installer/blockmap/latest.yml with exact manifest sizes/hashes; strict update SHA512/version/size binding.",
+      "evidence": [
+        "T03",
+        "F02"
+      ],
+      "localStatus": "IMPLEMENTED_REGRESSIONS_PASS_SHARED_TEST_UPDATE_REQUIRED",
+      "fullStatus": "PARTIAL_EXTERNAL_SIGNED_BYTES"
+    },
+    {
+      "id": "DR-004",
+      "severity": "high",
+      "owner": "desktop-release",
+      "dependencies": [
+        "SHARED-WIN-TESTS",
+        "SHARED-WIN-POLICY-TEST"
+      ],
+      "files": [
+        "desktop/windows/src/lib/update-policy.ts",
+        "desktop/windows/src/electron/main.ts",
+        "desktop/windows/scripts/build.mjs",
+        "desktop/macos/scripts/build.mjs",
+        "desktop/macos/src/electron/main.ts",
+        "desktop/macos/test/seam.test.ts"
+      ],
+      "symbols": [
+        "runWindowsUpdateCheck",
+        "isVerifiedWindowsUpdatePolicy",
+        "bootstrap",
+        "policy"
+      ],
+      "source": [
+        {
+          "path": "/home/devuser/Documents/Projects/sceneaxi/desktop/windows/src/lib/update-policy.ts",
+          "line": 27,
+          "symbol": "isVerifiedWindowsUpdatePolicy"
+        }
+      ],
+      "fix": "Both current packagers write disabled policy even for credentialed candidate. Windows config-only reaches zero ports; only explicit version/commit/hash/canonical-feed policy admits injected updater. Actual wrapper reads policy and app version; autoDownload/autoInstallOnAppQuit false; all errors named/redacted. Mac packaged/smoke/version/commit/hash/HTTPS policy guards tightened. No enabled-policy writer or real feed activation exists. Embedded policy shape is not cryptographic attestation.",
+      "evidence": [
+        "B02",
+        "T01",
+        "T03",
+        "L01",
+        "C01"
+      ],
+      "localStatus": "IMPLEMENTED_REGRESSIONS_PASS_SHARED_TEST_UPDATE_REQUIRED",
+      "fullStatus": "PARTIAL_VERIFIED_PUBLIC_FEED_AND_NATIVE_UPDATE"
+    },
+    {
+      "id": "DR-005",
+      "severity": "medium",
+      "owner": "desktop-release",
+      "dependencies": [],
+      "files": [
+        "desktop/macos/scripts/artifact-validation.mjs",
+        "desktop/macos/scripts/smoke.mjs",
+        "desktop/macos/scripts/dist.mjs",
+        "desktop/macos/test/seam.test.ts"
+      ],
+      "symbols": [
+        "validateReleaseArtifacts",
+        "hashReleaseFile"
+      ],
+      "source": [
+        {
+          "path": "/home/devuser/Documents/Projects/sceneaxi/desktop/macos/scripts/artifact-validation.mjs",
+          "line": 18,
+          "symbol": "validateReleaseArtifacts"
+        }
+      ],
+      "fix": "Independent platform-neutral exact-set/version/size/SHA256 and single-file update version/size/SHA512 grammar validation; no duplicate/path/symlink/omitted artifacts. Mac smoke retains source/provenance/linkability checks and requires genuine signature/Gatekeeper/stapler/native pixels. Large artifact hashes stream in 64KiB chunks. Windows same algorithm lives in its existing packaging module, avoiding a cross-install-root import.",
+      "evidence": [
+        "T03",
+        "T05",
+        "F01",
+        "F02"
+      ],
+      "localStatus": "IMPLEMENTED_BYTE_INTEGRITY_REGRESSIONS_PASS",
+      "fullStatus": "PARTIAL_EXTERNAL_MAC_NATIVE"
+    },
+    {
+      "id": "DR-006",
+      "severity": "high",
+      "owner": "integration+desktop-linux+shells",
+      "dependencies": [
+        "DR006-LOCAL-JOB"
+      ],
+      "files": [],
+      "symbols": [
+        "evaluateProjectBuild",
+        "createDesktopBridge ship route",
+        "exportDesktopWebProject"
+      ],
+      "source": [
+        {
+          "path": "/home/devuser/Documents/Projects/sceneaxi/packages/schemas/src/desktop-project-build.ts",
+          "line": 53,
+          "symbol": "evaluateProjectBuild"
+        }
+      ],
+      "fix": "NO unauthorized source edit. All native user-project job/wiring targets are schemas/Linux/shells owned, not in this lane. Existing refusal remains strict. Exact shared adapter request below; this is unresolved local implementation, NOT certificates-only/external parking.",
+      "evidence": [
+        "T04"
+      ],
+      "localStatus": "UNRESOLVED_LOCAL_SHARED_OWNERSHIP",
+      "fullStatus": "PARTIAL_LOCAL_JOB_PLUS_EXTERNAL_NATIVE"
+    },
+    {
+      "id": "DR-007",
+      "severity": "medium",
+      "owner": "desktop-release",
+      "dependencies": [
+        "SERIAL-STAGING",
+        "DR007-CI"
+      ],
+      "files": [],
+      "symbols": [
+        "staging builds / CI"
+      ],
+      "source": [
+        {
+          "path": "/home/devuser/Documents/Projects/sceneaxi/.github/workflows/desktop-windows.yml",
+          "line": 1,
+          "symbol": "missing default-off native candidate workflow"
+        }
+      ],
+      "fix": "Both frozen roots installed; actual typechecks/default smokes and write:false wrapper compiles passed. Full wrapper staging builds rebuild shared Linux dist; deferred serial integration check per ownership/concurrent-dist instruction. Workflow/timeout/docs changes reserved integration.",
+      "evidence": [
+        "I01",
+        "T01",
+        "F01",
+        "C01",
+        "G01"
+      ],
+      "localStatus": "PARTIAL_LOCAL_SERIAL_STAGING_CI_REQUIRED",
+      "fullStatus": "PARTIAL_LOCAL_STAGING_CI_AND_EXTERNAL_NATIVE"
+    }
+  ],
+  "backlogCoverage": [
+    {
+      "id": 52,
+      "oldStatus": "parked",
+      "current": "PARTIAL_EXTERNAL_PUBLICATION",
+      "remaining": "Fresh durable Linux release with exact downloaded hashes and separate publication authority; current old expiring offer not rewritten."
+    },
+    {
+      "id": 55,
+      "oldStatus": "parked",
+      "current": "PARTIAL_LOCAL_HARDENED_EXTERNAL_NATIVE",
+      "remaining": [
+        "DR001\u2013005 native proofs",
+        "DR007 serial CI/staging",
+        "Apple/Windows host/signing evidence"
+      ]
+    },
+    {
+      "id": 56,
+      "oldStatus": "parked",
+      "current": "PARTIAL_LOCAL_UPDATE_RELEASE_HARDENING_IMPLEMENTED",
+      "remaining": "No automatic update enabled; real verified public feed/native update still absent. Linux signing belongs Linux/integration."
+    },
+    {
+      "id": 58,
+      "oldStatus": "parked",
+      "current": "PARTIAL_LOCAL_SHARED_ADAPTER_NOT_IMPLEMENTED",
+      "remaining": [
+        "DR006 shared local job+portability work",
+        "actual native signing/launch evidence"
+      ]
+    }
+  ],
+  "requirementsCoverage": [
+    {
+      "id": "REL-001",
+      "status": "PARTIAL",
+      "remaining": "two shared Windows contract test failures and deferred serial staging/CI/full gate"
+    },
+    {
+      "id": "REL-002",
+      "status": "HELD_PRESERVED",
+      "remaining": "Stage1 double gate; no proof executed"
+    },
+    {
+      "id": "REL-003",
+      "status": "AUTHORITY_PRESERVED",
+      "remaining": "future separate external authority"
+    },
+    {
+      "id": "REL-004",
+      "status": "RUNBOOK_ONLY_PRESERVED",
+      "remaining": "exact action/target/window/operator/evidence/rollback authorization"
+    },
+    {
+      "id": "REL-005",
+      "status": "PARTIAL_TRUTHFUL_REFUSALS",
+      "remaining": "native clean-host acceptance/public recorded bytes; no R2 claim"
+    },
+    {
+      "id": "REL-006",
+      "status": "HELD_PRESERVED",
+      "remaining": "Kids/LIVE/marketplace/legal/package/public release gates unchanged"
+    },
+    {
+      "id": "REL-007",
+      "status": "NO_NEW_LINUX_NATIVE_CLAIM",
+      "remaining": "Linux owner fresh packaged evidence; cannot infer Mac/Windows"
+    }
+  ],
+  "sharedIntegrationRequests": [
+    {
+      "id": "SHARED-WIN-TESTS",
+      "owner": "integration",
+      "local": true,
+      "path": "/home/devuser/Documents/Projects/sceneaxi/tests/desktop/desktop-windows-packaging.test.ts",
+      "line": 86,
+      "current": "expect(release).toContain('publish: \"onTagOrDraft\"');",
+      "recommended": "Assert release contains uploadVerifiedWindowsDraft({ and no packageWindowsRelease( call; actual packageWindowsRelease publish != never refusal and zero-uploader-on-integrity/native-failure tests already persist in owned seam suite. Extend shared regression with real non-Windows --packaged exit1 oracle. Preserve existing-draft/no-create assertion.",
+      "acceptance": "unchanged pnpm exec vitest run tests/desktop/desktop-windows-packaging.test.ts plus owned seam tests; zero failures"
+    },
+    {
+      "id": "SHARED-WIN-POLICY-TEST",
+      "owner": "integration",
+      "local": true,
+      "path": "/home/devuser/Documents/Projects/sceneaxi/tests/desktop/desktop-windows-packaging.test.ts",
+      "line": 120,
+      "current": "transport-failure test supplies packaged:true,smokeMode:false,configurationExists:true only",
+      "recommended": "Supply version:\"1.2.3\",releasePolicy:{schemaVersion:1,enabled:true,platform:\"windows-x64\",version:\"1.2.3\",sourceCommit:\"a\".repeat(40),artifactSha256:\"b\".repeat(64),feedUrl:\"https://github.com/Vhailors/sceneaxi/releases\"} as explicitly labeled injected-port fixture; retain checkFailed assertion. Add config-only policy absent => releaseNotVerified and checks0, disabled/smoke/malformed/version mismatch => checks0; validated fixture => calls1. These fixtures are not genuine signed/public release proof.",
+      "acceptance": "all shared and owned updater tests pass without network or fake signing"
+    },
+    {
+      "id": "SERIAL-STAGING",
+      "owner": "integration after desktop-linux build owner",
+      "local": true,
+      "paths": [
+        "/home/devuser/Documents/Projects/sceneaxi/desktop/macos/scripts/build.mjs",
+        "/home/devuser/Documents/Projects/sceneaxi/desktop/windows/scripts/build.mjs"
+      ],
+      "commands": [
+        "pnpm --dir /home/devuser/Documents/Projects/sceneaxi/desktop/macos build",
+        "pnpm --dir /home/devuser/Documents/Projects/sceneaxi/desktop/windows build"
+      ],
+      "reason": "Both intentionally run desktop/linux/scripts/build.mjs, replacing shared dist. Do not run concurrently with Linux/native/shared builds. Write:false actual wrappers compiled here; not a staging PASS.",
+      "acceptance": "exact scripts exit0 and staged four Linux runtime files byte-identical; both packaged policies disabled; no shared dist race"
+    },
+    {
+      "id": "DR006-LOCAL-JOB",
+      "owner": "integration + desktop-linux + shells",
+      "local": true,
+      "paths": [
+        "/home/devuser/Documents/Projects/sceneaxi/packages/schemas/src/desktop-project-build.ts",
+        "/home/devuser/Documents/Projects/sceneaxi/desktop/linux/src/lib/bridge.ts",
+        "/home/devuser/Documents/Projects/sceneaxi/desktop/linux/src/lib/web-export.ts",
+        "/home/devuser/Documents/Projects/sceneaxi/tests/e2e/desktop-project-build-golden.test.ts",
+        "/home/devuser/Documents/Projects/sceneaxi/tests/e2e/desktop-web-export-golden.test.ts"
+      ],
+      "current": "evaluateProjectBuild final branch always Failure even every readiness input true; bridge/Web export refuse non-Linux",
+      "recommended": "Introduce an injected real ProjectBuildJobPort owned by desktop host, transport-neutral request/result vocabulary in schemas, and actual contained no-overwrite package preparation under host-owned resource. Do not flip releaseReady from booleans. Reuse contained-file and Web-export helpers for source/assets/runtime digests, no provider/network/publication. Job returns exact file/hash/size/provenance evidence only after concrete job succeeds; native signed/readiness claims require real verifier. Wire bridge/shell job progress through shared command registry. Audit offline Web-export portability separately and remove Linux-only gate only after Windows/Darwin path semantics tests.",
+      "acceptance": "real front-door job containment/no-overwrite/rollback/idempotent deterministic evidence/refusal assertions and existing native authority/Kids goldens unweakened; retain missing-native acceptance as external distinct from local adapter gap"
+    },
+    {
+      "id": "DR007-CI",
+      "owner": "integration workflow/docs owner",
+      "local": true,
+      "paths": [
+        "/home/devuser/Documents/Projects/sceneaxi/.github/workflows/desktop-windows.yml",
+        "/home/devuser/Documents/Projects/sceneaxi/.github/workflows/desktop-macos.yml",
+        "/home/devuser/Documents/Projects/sceneaxi/docs/desktop-windows.md",
+        "/home/devuser/Documents/Projects/sceneaxi/docs/desktop-macos.md"
+      ],
+      "recommended": "Add bounded Windows packaging workflow with default false workflow_dispatch release_candidate; uncredentialed non-signing frozen install/typecheck/staging/default smoke on Linux by default, windows-latest and real signing only on explicit candidate input under later authority. Add existing Mac job timeout. Do not dispatch or consume new runner spend now. Document Windows dist then independent smoke then separate existing-draft upload, exact SHA target, nonlinkable local manifest/checksum set, and both-platform updates disabled until verified public release/feed. Native smoke proves signed unpacked runtime, not installed-clean-host acceptance.",
+      "acceptance": "workflow assertions/parser + exact frozen package build/typecheck/default smoke locally; no secrets in default jobs; no implicit publish"
+    },
+    {
+      "id": "FINAL-SERIAL-GATE",
+      "owner": "integration",
+      "local": true,
+      "commands": [
+        "pnpm gate"
+      ],
+      "reason": "whole-tree gate/shared compilation reserved serial owner; this node runs only focused checks. Root gate currently cannot PASS until two shared Windows contract tests are updated and full staging verified."
+    }
+  ],
+  "externalMissingInputs": [
+    {
+      "id": "GATE-MACOS",
+      "owner": "Apple/release operator",
+      "request": "Real Intel and Apple Silicon macOS hosts; codesign/hdiutil/security/spctl/xcrun notarytool/stapler; authentic Developer ID through CSC_LINK/CSC_KEY_PASSWORD,APPLE_ID/APPLE_APP_SPECIFIC_PASSWORD/APPLE_TEAM_ID; approved HTTPS SCENEAXI_MACOS_RELEASE_BASE_URL; clean exact source SHA and action-specific signing authorization. Actual signed/stapled universal DMG/zip, clean-host install/uninstall/Gatekeeper/native pixels/update and downloaded-byte evidence.",
+      "status": "ABSENT"
+    },
+    {
+      "id": "GATE-WINDOWS",
+      "owner": "Windows/release operator",
+      "request": "Real Windows x64/SDK SignTool host, authentic WIN_CSC_LINK/WIN_CSC_KEY_PASSWORD, clean exact source SHA and signing authorization. Actual NSIS install/uninstall/publisher/native launch/pixels/update and downloaded hashes; unpacked smoke is not installed acceptance.",
+      "status": "ABSENT"
+    },
+    {
+      "id": "GATE-PUBLICATION",
+      "owner": "publication/release operator",
+      "request": "Later separate action authority naming verified record/hash/tag/feed/target/operator/window/evidence/rollback; genuine durable downloaded release+feed evidence. GITHUB_RELEASE_TOKEN,SCENEAXI_WINDOWS_RELEASE_TAG,gh.exe only for later authorized existing-draft upload. No current public update/feed policy writer or public Mac/Windows record.",
+      "status": "ABSENT"
+    }
+  ],
+  "coverageHoles": [
+    {
+      "id": "LOCAL-SERIAL-STAGING",
+      "kind": "local-shared-check",
+      "state": "DEFERRED_SERIAL_INTEGRATION_NOT_EXTERNAL"
+    },
+    {
+      "id": "LOCAL-NATIVE-PROJECT-JOB",
+      "kind": "local-shared-implementation",
+      "state": "UNIMPLEMENTED_RESERVED_OWNER"
+    },
+    {
+      "id": "LOCAL-CI-TEST-CONTRACT",
+      "kind": "local-shared-implementation",
+      "state": "TWO_WINDOWS_TEST_FAILURES_AND_CI_WORKFLOW_PENDING"
+    },
+    {
+      "id": "EXT-MAC-NATIVE",
+      "kind": "external-host-signing-evidence",
+      "state": "UNRESOLVED"
+    },
+    {
+      "id": "EXT-WIN-NATIVE",
+      "kind": "external-host-signing-evidence",
+      "state": "UNRESOLVED"
+    },
+    {
+      "id": "EXT-RELEASE-DOWNLOAD",
+      "kind": "external-authority-publication-evidence",
+      "state": "UNRESOLVED"
+    },
+    {
+      "id": "PERF-NATIVE",
+      "kind": "unmeasured",
+      "state": "64KiB streaming hashing implemented, actual-sized signed artifact latency/RSS not measured; no performance PASS"
+    }
+  ],
+  "cleanup": {
+    "temporaryFixtures": "Owned mkdtemp byte-fixture directories removed in finally; no prior release output removed or changed.",
+    "installs": "Ignored node_modules populated from existing cache in two owned install roots; no lock/manifest changes.",
+    "sharedDist": "No writes/builds to shared Linux dist; wrapper compilation write:false.",
+    "unapprovedNewPathRequests": "New Windows helper/test and Mac test requests received no answer; none created. Regressions placed in explicitly assigned existing macOS seam test; Windows integrity helper in assigned existing packaging module."
+  },
+  "authority": {
+    "signed": false,
+    "notarized": false,
+    "uploaded": false,
+    "published": false,
+    "deployed": false,
+    "spent": false,
+    "productionDataChanged": false,
+    "committed": false,
+    "pushed": false,
+    "secretValuesPrinted": false,
+    "fakeNativeProofCreated": false,
+    "heldKidsLiveBoundaryChanged": false
+  },
+  "passDefinition": "No full production PASS; local byte/port/config tests are not signatures, native install, clean-host pixels, authenticated public feed or publication evidence."
+}

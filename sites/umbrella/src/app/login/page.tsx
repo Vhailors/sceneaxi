@@ -83,6 +83,23 @@ export default async function LoginPage({
             </button>
           </form>
         </StatePanel>
+        <section aria-labelledby="account-controls">
+          <h2 id="account-controls">Account controls</h2>
+          <p>Sign in again within five minutes and confirm your current password for each sensitive action.</p>
+          <form method="post" action="/api/auth/account/export">
+            <label htmlFor="export-password">Current password for export</label>{" "}
+            <input id="export-password" name="password" type="password" autoComplete="current-password" required maxLength={128} />{" "}
+            <button className="button button-quiet" type="submit">Download identity and billing records</button>
+          </form>
+          <p>This bounded export contains identity, credit account, ledger and checkout records, not a complete legal privacy export.</p>
+          <form method="post" action="/api/auth/account/disable">
+            <label htmlFor="disable-password">Current password to disable access</label>{" "}
+            <input id="disable-password" name="password" type="password" autoComplete="current-password" required maxLength={128} />
+            <p><label><input name="confirm" type="checkbox" value="disable-access" required /> I understand this disables access and revokes all my sessions. It does not erase identity or financial records.</label></p>
+            <button className="button button-quiet" type="submit">Disable my access</button>
+          </form>
+          <p>Financial history remains append-only. Identity records and backups await a reviewed category-level retention policy; no legal retention period is claimed. Self-service erasure, email recovery and MFA are unavailable on this deployment.</p>
+        </section>
       </div>
     );
   }
@@ -121,61 +138,62 @@ export default async function LoginPage({
 
   return (
     <div className="page">
+      <div className="auth-layout">
       <div className="page-head">
         <p className="eyebrow">Sign in</p>
         <h1>Sign in to SceneAxi</h1>
         <p className="lede">
-          Signing in unlocks the Minimum E2 web editor and hosted AI. Your role is
+          Signing in establishes identity for access checks. Editor access still needs an entitlement; hosted AI remains default-off. Your role is
           derived on the server from its own configuration — there is nothing a browser
           can claim.
         </p>
       </div>
 
-      {refusal !== null && (
-        <StatePanel tone="deny" title={refusal.title} reason={refusal.reason}>
-          <p>{refusal.body}</p>
-        </StatePanel>
-      )}
+        <div className="stack">
+          {refusal !== null && (
+            <StatePanel tone="deny" title={refusal.title} reason={refusal.reason}>
+              <p>{refusal.body}</p>
+            </StatePanel>
+          )}
 
-      <form method="post" action="/api/login">
-        {next !== LOGIN_DEFAULT_DESTINATION && (
-          <input type="hidden" name="next" value={next} />
-        )}
-        <div className="row">
-          <div className="field">
-            <label htmlFor="email">Email</label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              required
-              size={28}
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              size={28}
-            />
-          </div>
-          <button className="button" type="submit">
-            Sign in
-          </button>
+          <form className="auth-card" method="post" action="/api/login">
+            {next !== LOGIN_DEFAULT_DESTINATION && (
+              <input type="hidden" name="next" value={next} />
+            )}
+            <div className="field">
+              <label htmlFor="email">Email</label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                size={28}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="password">Password</label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+                size={28}
+              />
+            </div>
+            <button className="button button-block" type="submit">
+              Sign in
+            </button>
+            <p className="note">
+              The session is an HttpOnly cookie scoped to this site, bound to the session
+              the identity provider issued, and it expires when that session does.
+              Accounts are created by the deployment&rsquo;s identity provider; this form
+              only signs an existing account in.
+            </p>
+          </form>
         </div>
-      </form>
-
-      <p className="note">
-        The session is an HttpOnly cookie scoped to this site, bound to the session the
-        identity provider issued, and it expires when that session does. Accounts are
-        created by the deployment&rsquo;s identity provider; this form only signs an
-        existing account in.
-      </p>
+      </div>
     </div>
   );
 }

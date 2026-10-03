@@ -53,6 +53,7 @@ describe("web-shell protocol client", () => {
     });
 
     expect(proposed.ok).toBe(true);
+
     if (!proposed.ok) return;
     expect(proposed.unifiedDiff).toMatch(/^--- a\/scene\.json/m);
     expect(proposed.unifiedDiff).toMatch(/^\+.*"x": 10/m);
@@ -74,6 +75,7 @@ describe("web-shell protocol client", () => {
     });
 
     const session = createInspectorSession({ cwd: dir });
+
     const reviewing = session.proposeEdit({
       documentPath: "scene.json",
       jsonPointer: "/data/entities/0/x",
@@ -96,9 +98,11 @@ describe("web-shell protocol client", () => {
     expect(applied.appliedPaths).toEqual(["scene.json"]);
     expect(applied.renderedDiff).toBeTruthy();
 
+    // SAFETY: The test created this Scene Document fixture and applied only the indicated numeric JSON-pointer edit; authoring serialization retains its entity container and numeric field.
     const after = JSON.parse(readFileSync(join(dir, "scene.json"), "utf8")) as {
       data: { entities: Array<{ x: number }> };
     };
+
     expect(after.data.entities[0]?.x).toBe(99);
   });
 
@@ -134,6 +138,7 @@ describe("web-shell protocol client", () => {
       jsonPointer: "/data/n",
       newValue: 20,
     });
+
     expect(reviewing.phase).toBe("reviewing");
     const applied = session.accept();
 
@@ -223,13 +228,16 @@ describe("web-shell protocol client", () => {
     });
 
     expect(result.ok).toBe(true);
+
     if (!result.ok) return;
     expect(result.appliedPaths).toEqual(["scene.json"]);
     expect(result.renderedDiff).toContain("SceneAxi inspector");
 
+    // SAFETY: The test created this Scene Document fixture and applied only the indicated numeric JSON-pointer edit; authoring serialization retains its entity container and numeric field.
     const after = JSON.parse(readFileSync(join(dir, "scene.json"), "utf8")) as {
       data: { entities: Array<{ y: number }> };
     };
+
     expect(after.data.entities[0]?.y).toBe(7);
   });
 });

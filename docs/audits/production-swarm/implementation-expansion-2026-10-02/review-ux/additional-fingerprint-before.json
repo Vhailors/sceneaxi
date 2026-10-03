@@ -1,0 +1,6 @@
+{
+  "apps/web-shell/test/refuse-matrix.test.ts": "122a1131b1f48390bca336c70e0c05d4a2cd4bcae4faef33028f73d430d1444e",
+  "apps/web-shell/test/visual-postpr.test.ts": "862fbb2f64ee452a2a50dce45630aec724532ce11a95803b4d9d2fa43044f1ca",
+  "apps/web-shell/src/dev-server.ts": "2f86e8bed0355719d2fc9bb68436305569c7bacef14b64c98a57b4f8986b93d4",
+  "tests/e2e/desktop-control-inventory-golden.test.ts": "a805ddd2f271fe299320807c6f0301c82ce23ba0e0518230b893e8704c869dde"
+}

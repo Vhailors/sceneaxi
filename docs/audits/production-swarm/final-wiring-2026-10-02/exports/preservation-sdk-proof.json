@@ -1,0 +1,30 @@
+{
+  "preserved": {
+    "packages/schemas/src/index.ts": {
+      "beforeSha256": "70d2d830c403c6f8f55191f277f13cf875714b0fa9c7e9556ecdf368801984c2",
+      "originalPrefixByteIdentical": true
+    },
+    "packages/authoring-core/src/index.ts": {
+      "beforeSha256": "b8cdb0319d78dd2930c5d7072b7ab1ba48ba5c459c97a43c43de2329d0f5acf4",
+      "originalPrefixByteIdentical": true
+    },
+    "packages/engine-presentation/src/index.ts": {
+      "beforeSha256": "71ccdda8f1ad02b2dc05d091d107f7d71995782816e6d19ddb8817b062782936",
+      "originalPrefixByteIdentical": true
+    }
+  },
+  "inventory": {
+    "entries": 164,
+    "duplicateFree": true,
+    "checkedLocalEdges": 298,
+    "missing": [],
+    "existingEntriesByteIdentical": true,
+    "addedFiles": [
+      "packages/authoring-core/src/local-project-build.ts",
+      "packages/engine-presentation/src/scene-transforms.ts"
+    ],
+    "addedSourceBytes": 30564,
+    "archiveBytes": "not measured; serial SDK build deferred"
+  },
+  "sourceModuleChangesByThisWorker": 0
+}

@@ -1,0 +1,51 @@
+{
+  "sourceSHA": "16f312c61435e3d379a0e54525ac8115e35fee86",
+  "sourceBlob": "8449b4c7ebc36a8bc85f6804fa2211f749dbd931",
+  "mode": "100644",
+  "method": "Execute exact original AST-extracted Git computeDigest function in isolated Node function with native createHash; compare pinned vectors used through modern public root seam. No copied algorithm test.",
+  "vectors": [
+    {
+      "tick": 0,
+      "seed": 0,
+      "entities": [],
+      "digest": "sha256:cda0711dbb7d296bdd0db3c2d7539eb412a93128e819dcd7ac997f7c664b1355",
+      "originalGitFunctionDigest": "sha256:cda0711dbb7d296bdd0db3c2d7539eb412a93128e819dcd7ac997f7c664b1355"
+    },
+    {
+      "tick": 7,
+      "seed": 42,
+      "entities": [
+        {
+          "id": "雪🚀",
+          "x": -12,
+          "y": 0
+        },
+        {
+          "id": "a",
+          "x": 1.5,
+          "y": 0
+        }
+      ],
+      "digest": "sha256:54cf93448d2acf1c3a3ae22701767694b6d14f6f0dbbe0f79b44144777e16e10",
+      "originalGitFunctionDigest": "sha256:54cf93448d2acf1c3a3ae22701767694b6d14f6f0dbbe0f79b44144777e16e10"
+    },
+    {
+      "tick": 7,
+      "seed": 42,
+      "entities": [
+        {
+          "id": "a",
+          "x": 1.5,
+          "y": 0
+        },
+        {
+          "id": "雪🚀",
+          "x": -12,
+          "y": 0
+        }
+      ],
+      "digest": "sha256:9771cf096655109bb5612b6671aff6831ccbc41346af467481d16a9c61477d6a",
+      "originalGitFunctionDigest": "sha256:9771cf096655109bb5612b6671aff6831ccbc41346af467481d16a9c61477d6a"
+    }
+  ]
+}

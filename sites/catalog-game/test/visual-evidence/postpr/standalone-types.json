@@ -1,0 +1,14 @@
+[
+  {
+    "site": "catalog-game",
+    "exitCode": 2
+  },
+  {
+    "site": "catalog-web",
+    "exitCode": 2
+  },
+  {
+    "site": "kids",
+    "exitCode": 0
+  }
+]

@@ -1,0 +1,41 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/tmp/sceneaxi-comprehensive-owned-xd4gdfl1[39m
+
+ [2m[90m↓[39m[22m apps/desktop-shell/test/control-accounting.test.ts[2m > [22mengine desktop chrome — control accounting (model → document)[2m > [22mindexes exactly the controls the view holds
+ [2m[90m↓[39m[22m apps/desktop-shell/test/control-accounting.test.ts[2m > [22mengine desktop chrome — control accounting (model → document)[2m > [22mrenders every control the view builds, with the kind it declares
+ [2m[90m↓[39m[22m apps/desktop-shell/test/control-accounting.test.ts[2m > [22mengine desktop chrome — control accounting (model → document)[2m > [22mkeeps an inert control's reason resolvable wherever it is rendered
+ [2m[90m↓[39m[22m apps/desktop-shell/test/control-accounting.test.ts[2m > [22mengine desktop chrome — control accounting (document → model)[2m > [22mroutes every action button through the one button helper
+ [2m[90m↓[39m[22m apps/desktop-shell/test/control-accounting.test.ts[2m > [22mengine desktop chrome — control accounting (document → model)[2m > [22mmints every rendered control id in the model
+ [2m[90m↓[39m[22m apps/desktop-shell/test/control-accounting.test.ts[2m > [22mengine desktop chrome — control accounting (document → model)[2m > [22madds no interactive element the button helper cannot own
+ [2m[90m↓[39m[22m apps/desktop-shell/test/control-accounting.test.ts[2m > [22mengine desktop chrome — refusal reachability at every tier[2m > [22mresolves a hidden region as hidden, so the check is not vacuous
+ [2m[90m↓[39m[22m apps/desktop-shell/test/control-accounting.test.ts[2m > [22mengine desktop chrome — refusal reachability at every tier[2m > [22mkeeps the Kids lock screen and refusal region on screen at every tier
+ [2m[90m↓[39m[22m apps/desktop-shell/test/control-accounting.test.ts[2m > [22mengine desktop chrome — refusal reachability at every tier[2m > [22mkeeps the product loop's own status on screen at every tier
+ [31m×[39m apps/desktop-shell/test/control-accounting.test.ts[2m > [22mengine desktop chrome — refusal reachability at every tier[2m > [22mrefuses the whole chrome below the minimum, and shows that refusal[32m 49[2mms[22m[39m
+[31m   → expected 'none' to be 'block' // Object.is equality[39m
+ [2m[90m↓[39m[22m apps/desktop-shell/test/control-accounting.test.ts[2m > [22mengine desktop chrome — a declared kind tells the truth[2m > [22mnever declares a control live over a region its profile keeps shut
+ [2m[90m↓[39m[22m apps/desktop-shell/test/control-accounting.test.ts[2m > [22mengine desktop chrome — a declared kind tells the truth[2m > [22mnever lights or presses the assistant toggle over a hidden column
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 1 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m apps/desktop-shell/test/control-accounting.test.ts[2m > [22mengine desktop chrome — refusal reachability at every tier[2m > [22mrefuses the whole chrome below the minimum, and shows that refusal
+[31m[1mAssertionError[22m: expected 'none' to be 'block' // Object.is equality[39m
+
+Expected: [32m"block"[39m
+Received: [31m"none"[39m
+
+[36m [2m❯[22m apps/desktop-shell/test/control-accounting.test.ts:[2m530:77[22m[39m
+    [90m528|[39m     [35mconst[39m shell [33m=[39m [34mshellElement[39m(html)[33m;[39m
+    [90m529|[39m     [34mexpect[39m([34mcomputedDisplay[39m(rules[33m,[39m [body[33m,[39m shell][33m,[39m size))[33m.[39m[34mtoBe[39m([32m"none"[39m)[33m;[39m
+    [90m530|[39m     expect(computedDisplay(rules, [body, element("window-refusal")], s…
+    [90m   |[39m                                                                             [31m^[39m
+    [90m531|[39m   })[33m;[39m
+    [90m532|[39m })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m1 failed[39m[22m[2m | [22m[33m11 skipped[39m[90m (12)[39m
+[2m   Start at [22m 13:08:01
+[2m   Duration [22m 3.26s[2m (transform 2.21s, setup 0ms, import 2.97s, tests 59ms, environment 0ms)[22m
+

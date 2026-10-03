@@ -1,0 +1,39 @@
+{
+  "files": 20,
+  "changed": [
+    "packages/cli/src/project-verbs.ts",
+    "packages/schemas/test/desktop-scene-physics-mutation.test.ts",
+    "packages/engine-presentation/test/three-presentation.test.ts",
+    "packages/schemas/src/desktop-scene-animation.ts",
+    "packages/billing/src/hosted-response.ts",
+    "packages/engine-presentation/src/audio-playback.ts",
+    "packages/cli/test/project-propose-apply.test.ts",
+    "packages/billing/test/hosted-response.test.ts",
+    "packages/schemas/src/desktop-scene-effects.ts",
+    "packages/site-kit/test/catalog-server-fetch.test.ts",
+    "packages/schemas/src/desktop-scene-materials.ts",
+    "packages/schemas/test/desktop-scene-materials-mutation.test.ts",
+    "packages/schemas/test/desktop-scene-environment-mutation.test.ts",
+    "packages/schemas/test/desktop-scene-animation-mutation.test.ts"
+  ],
+  "initialCounts": {
+    "anti-slop(no-unknown-parameters)": 22,
+    "anti-slop(no-runtime-typeof)": 66,
+    "anti-slop(no-conditional-empty-object-spread)": 5,
+    "anti-slop(no-known-value-widening)": 6,
+    "anti-slop(require-readable-spacing)": 2,
+    "anti-slop(no-shape-in-symbol-names)": 4,
+    "anti-slop(require-safety-comment-for-type-assertion)": 20,
+    "anti-slop(no-chained-type-assertions)": 1,
+    "anti-slop(no-unsafe-dictionary-type)": 4,
+    "unicorn(no-useless-spread)": 1,
+    "anti-slop(no-unknown-returns)": 3,
+    "unicorn(no-new-array)": 2
+  },
+  "remainingCounts": {
+    "anti-slop(no-runtime-typeof)": 74
+  },
+  "tests": "ESLint all20 listed files0; focused Vitest57files739testsPASS; billing response rerun24PASS; focused tsc schemas/cli/billing/engine-presentation allPASS. Earlier tsc failures corrected locally or by foreign owners; no full build/gate executed.",
+  "extras": [],
+  "blocker": "Shared no-runtime-typeof.ts still uses checkedPredicateProbe rather than corrected synchronous TSTypePredicate exemption. All74 remaining findings are guarded typeof. Parent policy requests/ask timed out; no done marker written."
+}

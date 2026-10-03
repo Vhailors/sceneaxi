@@ -1,3 +1,4 @@
+// @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Window } from "happy-dom";
 import {
@@ -11,6 +12,7 @@ import {
 } from "../src/renderer/viewport.js";
 
 const windows: Window[] = [];
+
 afterEach(() => {
   for (const window of windows.splice(0)) window.close();
 });
@@ -30,10 +32,12 @@ describe("desktop Play-facing viewport input actions", () => {
     let connected = true;
     let polls = 0;
     const events: Array<readonly [string, boolean, number]> = [];
+
     const poll = createDesktopGamepadInputPoller({
       map: DEFAULT_INPUT_ACTION_MAP,
       getGamepads: () => {
         polls += 1;
+
         return [{
           connected,
           axes: [0, 0, 0, 0],
@@ -42,6 +46,7 @@ describe("desktop Play-facing viewport input actions", () => {
       },
       onAction: (actionId, pressed, value) => events.push([actionId, pressed, value]),
     });
+
     poll("editor");
     expect(polls).toBe(0);
     poll("play");
@@ -59,14 +64,17 @@ describe("desktop Play-facing viewport input actions", () => {
   it("releases held actions when Play context ends without polling", () => {
     const events: Array<readonly [string, boolean, number]> = [];
     let polls = 0;
+
     const poll = createDesktopGamepadInputPoller({
       map: DEFAULT_INPUT_ACTION_MAP,
       getGamepads: () => {
         polls += 1;
+
         return [{ connected: true, axes: [], buttons: [{ value: 1 }] }];
       },
       onAction: (actionId, pressed, value) => events.push([actionId, pressed, value]),
     });
+
     poll("play");
     poll("editor");
     expect(polls).toBe(1);
@@ -85,9 +93,11 @@ describe("desktop Play-facing viewport input actions", () => {
       direction: "positive",
       deadzone: 0.25,
     });
+
     if (!rebound.ok || !("map" in rebound)) throw new Error("gamepad axis rebind refused");
     let axis = 0.1;
     const events: Array<readonly [string, boolean, number]> = [];
+
     const poll = createDesktopGamepadInputPoller({
       map: rebound.map,
       getGamepads: () => [{
@@ -97,6 +107,7 @@ describe("desktop Play-facing viewport input actions", () => {
       }],
       onAction: (actionId, pressed, value) => events.push([actionId, pressed, value]),
     });
+
     poll("play");
     expect(events).toEqual([]);
     axis = 0.5;
@@ -111,30 +122,39 @@ describe("desktop Play-facing viewport input actions", () => {
   });
 
   it("drives pointer and wheel controls only through the effective shared map", () => {
+    const collision = reviewInputActionRebind(DEFAULT_INPUT_ACTION_MAP, "viewport.orbit", {
+      device: "pointer", button: 2, gesture: "drag",
+    });
+
+    expect(collision).toMatchObject({ ok: false, reason: "INPUT_ACTION_BINDING_CONFLICT" });
+
     const rebound = reviewInputActionRebind(
       DEFAULT_INPUT_ACTION_MAP,
       "viewport.orbit",
-      { device: "pointer", button: 2, gesture: "drag" },
+      { device: "pointer", button: 4, gesture: "drag" },
     );
+
     if (!rebound.ok || !("map" in rebound)) throw new Error("pointer fixture refused");
-    const window = new Window();
-    windows.push(window);
+    const window = globalThis.window;
     const canvas = window.document.createElement("canvas");
     const camera = { dragOrbit: vi.fn(), wheelZoom: vi.fn() };
     let context: "editor" | "play" = "editor";
+
+    // SAFETY: Happy DOM’s canvas implements the listener and element APIs consumed by the viewport input adapter; this test exercises real event dispatch, not a GPU canvas.
     const detach = attachDesktopViewportInputActions(
-      canvas as unknown as HTMLCanvasElement,
+      canvas,
       camera,
       rebound.map,
       () => context,
     );
+
     canvas.dispatchEvent(new window.PointerEvent("pointerdown", {
       button: 0, clientX: 1, clientY: 2,
     }));
     canvas.dispatchEvent(new window.PointerEvent("pointermove", { clientX: 5, clientY: 8 }));
     expect(camera.dragOrbit).not.toHaveBeenCalled();
     canvas.dispatchEvent(new window.PointerEvent("pointerdown", {
-      button: 2, clientX: 10, clientY: 20,
+      button: 4, clientX: 10, clientY: 20,
     }));
     canvas.dispatchEvent(new window.PointerEvent("pointermove", { clientX: 14, clientY: 17 }));
     expect(camera.dragOrbit).toHaveBeenCalledWith(4, -3);

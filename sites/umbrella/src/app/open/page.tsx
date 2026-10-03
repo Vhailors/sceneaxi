@@ -62,7 +62,9 @@ export default function OpenPage() {
         would jump from `h1` straight to `h3`.
       */}
       <h2>The live viewport</h2>
-      <LiveViewport scene={opened} />
+      <div className="open-stage">
+        <LiveViewport scene={opened} />
+      </div>
 
       <div className="stack">
         <h2>What you are looking at</h2>
@@ -116,33 +118,40 @@ export default function OpenPage() {
           <code>{opened.sceneDigest}</code>
         </dd>
       </dl>
-      <div className="scroll-x">
-        <table>
-          <thead>
-            <tr>
-              <th>Instance</th>
-              <th>Parent</th>
-              <th>Placement</th>
-              <th className="wrap">Role</th>
-            </tr>
-          </thead>
-          <tbody>
-            {opened.instances.map((instance) => (
-              <tr key={instance.instanceId}>
-                <td>
-                  <code>{instance.instanceId}</code>
-                </td>
-                <td>
-                  <code>{instance.parentInstanceId ?? "—"}</code>
-                </td>
-                <td>
-                  <code>{describePlacement(instance)}</code>
-                </td>
-                <td className="wrap">{instance.label}</td>
+      <div className="scroll-frame">
+        <div
+          className="scroll-x"
+          role="region"
+          tabIndex={0}
+          aria-label="Placed instances, scrollable"
+        >
+          <table>
+            <thead>
+              <tr>
+                <th>Instance</th>
+                <th>Parent</th>
+                <th>Placement</th>
+                <th className="wrap">Role</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {opened.instances.map((instance) => (
+                <tr key={instance.instanceId}>
+                  <td>
+                    <code>{instance.instanceId}</code>
+                  </td>
+                  <td>
+                    <code>{instance.parentInstanceId ?? "—"}</code>
+                  </td>
+                  <td>
+                    <code>{describePlacement(instance)}</code>
+                  </td>
+                  <td className="wrap">{instance.label}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
       <p className="note">
         The scene digest is deterministic, so this page opens the same scene on every

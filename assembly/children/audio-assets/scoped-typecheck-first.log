@@ -1,0 +1,57 @@
+[96mdesktop/linux/src/lib/desktop-scene.ts[0m:[93m1158[0m:[93m55[0m - [91merror[0m[90m TS2339: [0mProperty 'instanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }> | Readonly<{ kind: "create-primitive"; primitive: "box" | "cylinder" | "sphere"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.
+  Property 'instanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }>'.
+
+[7m1158[0m       (instance) => instance.instanceId === operation.instanceId,
+[7m    [0m [91m                                                      ~~~~~~~~~~[0m
+[96mdesktop/linux/src/lib/desktop-scene.ts[0m:[93m1163[0m:[93m51[0m - [91merror[0m[90m TS2339: [0mProperty 'instanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }> | Readonly<{ kind: "create-primitive"; primitive: "box" | "cylinder" | "sphere"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.
+  Property 'instanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }>'.
+
+[7m1163[0m         `The selected child is stale: ${operation.instanceId}.`,
+[7m    [0m [91m                                                  ~~~~~~~~~~[0m
+[96mdesktop/linux/src/lib/desktop-scene.ts[0m:[93m1175[0m:[93m55[0m - [91merror[0m[90m TS2339: [0mProperty 'parentInstanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }> | Readonly<{ kind: "create-primitive"; primitive: "box" | "cylinder" | "sphere"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.
+  Property 'parentInstanceId' does not exist on type 'Readonly<{ kind: "rename-object"; instanceId: string; name: string; }>'.
+
+[7m1175[0m       (instance) => instance.instanceId === operation.parentInstanceId,
+[7m    [0m [91m                                                      ~~~~~~~~~~~~~~~~[0m
+[96mdesktop/linux/src/lib/desktop-scene.ts[0m:[93m1180[0m:[93m55[0m - [91merror[0m[90m TS2339: [0mProperty 'parentInstanceId' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }> | Readonly<{ kind: "create-primitive"; primitive: "box" | "cylinder" | "sphere"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.
+  Property 'parentInstanceId' does not exist on type 'Readonly<{ kind: "rename-object"; instanceId: string; name: string; }>'.
+
+[7m1180[0m         `The requested parent is missing: ${operation.parentInstanceId}.`,
+[7m    [0m [91m                                                      ~~~~~~~~~~~~~~~~[0m
+[96mdesktop/linux/src/lib/desktop-scene.ts[0m:[93m1199[0m:[93m31[0m - [91merror[0m[90m TS2339: [0mProperty 'transformPolicy' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }> | Readonly<{ kind: "create-primitive"; primitive: "box" | "cylinder" | "sphere"; parentInstanceId: string; name: string; }> | Readonly<...> | Readonly<...>'.
+  Property 'transformPolicy' does not exist on type 'Readonly<{ kind: "create-node"; parentInstanceId: string; name: string; }>'.
+
+[7m1199[0m     const derived = operation.transformPolicy === "preserve-world"
+[7m    [0m [91m                              ~~~~~~~~~~~~~~~[0m
+[96mdesktop/linux/test/audio-lifecycle-compat.test.ts[0m:[93m5[0m:[93m58[0m - [91merror[0m[90m TS2305: [0mModule '"../src/index.js"' has no exported member 'inspectDesktopScenePackages'.
+
+[7m5[0m import { desktopOpenScene, desktopSceneFromDocumentData, inspectDesktopScenePackages } from "../src/index.js";
+[7m [0m [91m                                                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[96mdesktop/linux/test/audio-lifecycle-compat.test.ts[0m:[93m49[0m:[93m23[0m - [91merror[0m[90m TS2540: [0mCannot assign to 'decodeAudioData' because it is a read-only property.
+
+[7m49[0m             f.context.decodeAudioData = async () => { await wait.promise; return {}; };
+[7m  [0m [91m                      ~~~~~~~~~~~~~~~[0m
+[96mdesktop/linux/test/audio-lifecycle-compat.test.ts[0m:[93m69[0m:[93m15[0m - [91merror[0m[90m TS2540: [0mCannot assign to 'decodeAudioData' because it is a read-only property.
+
+[7m69[0m     f.context.decodeAudioData = vi.fn().mockImplementationOnce(() => decode.promise).mockResolvedValueOnce({ newer: true });
+[7m  [0m [91m              ~~~~~~~~~~~~~~~[0m
+[96mdesktop/linux/test/audio-lifecycle-compat.test.ts[0m:[93m100[0m:[93m15[0m - [91merror[0m[90m TS2540: [0mCannot assign to 'decodeAudioData' because it is a read-only property.
+
+[7m100[0m     f.context.decodeAudioData = async () => { throw Error("private decoder"); };
+[7m   [0m [91m              ~~~~~~~~~~~~~~~[0m
+[96mdesktop/linux/test/audio-lifecycle-compat.test.ts[0m:[93m102[0m:[93m15[0m - [91merror[0m[90m TS2540: [0mCannot assign to 'close' because it is a read-only property.
+
+[7m102[0m     f.context.close = vi.fn(async () => { throw Error("private close"); });
+[7m   [0m [91m              ~~~~~[0m
+[96mpackages/engine-presentation/test/legacy-audio-compat.test.ts[0m:[93m49[0m:[93m9[0m - [91merror[0m[90m TS2540: [0mCannot assign to 'decodeAudioData' because it is a read-only property.
+
+[7m49[0m     ctx.decodeAudioData = () => new Promise(resolve => complete.push(resolve));
+[7m  [0m [91m        ~~~~~~~~~~~~~~~[0m
+[96mpackages/engine-presentation/test/legacy-audio-compat.test.ts[0m:[93m75[0m:[93m9[0m - [91merror[0m[90m TS2540: [0mCannot assign to 'decodeAudioData' because it is a read-only property.
+
+[7m75[0m     ctx.decodeAudioData = () => new Promise(resolve => { finish = resolve; });
+[7m  [0m [91m        ~~~~~~~~~~~~~~~[0m
+[96mpackages/importers/test/legacy-asset-v1.test.ts[0m:[93m78[0m:[93m49[0m - [91merror[0m[90m TS2345: [0mArgument of type 'unknown' is not assignable to parameter of type 'JsonValue'.
+
+[7m78[0m     expect(projectAssetManifestFromDocumentData(unknownData)).toMatchObject({ ok: false });
+[7m  [0m [91m                                                ~~~~~~~~~~~[0m

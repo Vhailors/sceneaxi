@@ -1,0 +1,107 @@
+{
+  "ownerLane": "authoring",
+  "itemCount": 5,
+  "provenance": {
+    "basis": "Inherited confirmed findings; not newly rerun during report recovery",
+    "applicationSourceEdited": false,
+    "verificationRerun": false,
+    "inheritedTargetedTestsPassed": 159,
+    "reproductionArtifactRoots": [
+      "/tmp/sceneaxi-authoring-audit-jYPXkY",
+      "/tmp/sceneaxi-authoring-refute-ywAwly"
+    ],
+    "artifactAvailabilityRechecked": false,
+    "peerLaneSchemaRechecked": false,
+    "backlogMappingVerified": false
+  },
+  "findings": [
+    {
+      "id": "AUTHORING-001",
+      "severity": "high",
+      "title": "Project propose/apply permits out-of-root document writes",
+      "source": [
+        { "path": "packages/authoring-core/src/propose-apply.ts", "line": 95, "symbol": "resolvePath" },
+        { "path": "packages/authoring-core/src/propose-apply.ts", "line": 244, "symbol": "propose" },
+        { "path": "packages/authoring-core/src/propose-apply.ts", "line": 563, "symbol": "apply" }
+      ],
+      "reproduction": "In an isolated fixture, CLI project propose/apply with --cwd <root> and --document ../outside/victim.json returned proposed exit 0 then applied exit 0; the victim outside the root changed.",
+      "impact": "Bypasses the project-root document write boundary.",
+      "dependencies": ["CLI project document selection", "Authoring path resolution", "writeDocumentFile already enforces containment, unlike these paths"],
+      "recommendedFix": "Enforce canonical root containment before proposal and application, including symlink targets.",
+      "acceptance": ["Reject parent traversal and symlink escapes before mutation", "Outside victim bytes remain unchanged", "Valid in-root propose/apply succeeds"],
+      "ownerLane": "authoring",
+      "status": "reproduced",
+      "existingBacklogMapping": { "status": "unmapped", "ids": [], "note": "No verified identifier inherited; deduplicate against project-root containment work." }
+    },
+    {
+      "id": "AUTHORING-002",
+      "severity": "high",
+      "title": "Recovery and journal storage escape the project root",
+      "source": [
+        { "path": "packages/authoring-core/src/apply-journal.ts", "line": 674, "symbol": "recoverIncompleteApplies" },
+        { "path": "packages/authoring-core/src/apply-journal.ts", "line": 711, "symbol": "recoverIncompleteApplies" }
+      ],
+      "sourceAttributionNote": "Exact journal-storage write lines were not inherited.",
+      "reproduction": "Recovery consumed a valid schemaVersion 4 .active record with documentPath ../outside/victim.json and wrote outside the root. Separately, a .sceneaxi/journal symlink to an outside sink redirected .active, .completion-sequence, and archive writes outside the root.",
+      "impact": "Persisted recovery metadata and journal-directory redirection bypass filesystem write boundaries.",
+      "dependencies": ["Recovery record validation", "Journal-directory confinement"],
+      "recommendedFix": "Validate recovered document paths against the canonical project root and reject escaping journal-directory symlinks before writing any journal artifact.",
+      "acceptance": ["Crafted active records fail without outside mutation", "Journal symlink tests leave the outside sink free of artifacts", "Normal recovery remains functional"],
+      "ownerLane": "authoring",
+      "status": "reproduced",
+      "existingBacklogMapping": { "status": "unmapped", "ids": [], "note": "Deduplicate against recovery integrity and filesystem containment work." }
+    },
+    {
+      "id": "AUTHORING-003",
+      "severity": "medium",
+      "title": "Native seed accepts invalid document bytes",
+      "source": [
+        { "path": "packages/authoring-core/src/project-model.ts", "line": 627, "symbol": "writeNativeProjectSeed" }
+      ],
+      "reproduction": "documentBytes equal to not-json returned ok; reopening failed with PROJECT_MANIFEST_MALFORMED.",
+      "impact": "Successful initialization can persist a project that cannot reopen.",
+      "dependencies": ["Native seed writer", "Reopen document validation"],
+      "recommendedFix": "Validate document bytes with the applicable parser/schema before writing seed files or reporting success.",
+      "acceptance": ["Invalid JSON and invalid document shapes fail before writes", "Valid seeds reopen successfully", "Failed initialization leaves no partial seed artifacts"],
+      "ownerLane": "authoring",
+      "status": "reproduced",
+      "existingBacklogMapping": { "status": "unmapped", "ids": [], "note": "Deduplicate against native initialization validation work." }
+    },
+    {
+      "id": "AUTHORING-004",
+      "severity": "medium",
+      "title": "Targeted tests lack negative containment and validity oracles",
+      "source": [
+        { "path": "packages/authoring-core/src/propose-apply.ts", "line": 95, "symbol": "resolvePath" },
+        { "path": "packages/authoring-core/src/apply-journal.ts", "line": 674, "symbol": "recoverIncompleteApplies" },
+        { "path": "packages/authoring-core/src/project-model.ts", "line": 627, "symbol": "writeNativeProjectSeed" }
+      ],
+      "sourceAttributionNote": "Exact test-file attribution was not inherited.",
+      "reproduction": "Existing 159 targeted tests passed despite the reproduced failures. Repro artifacts were inherited at /tmp/sceneaxi-authoring-audit-jYPXkY and /tmp/sceneaxi-authoring-refute-ywAwly; availability was not rechecked.",
+      "impact": "A green targeted suite does not establish containment or seed validity.",
+      "dependencies": ["AUTHORING-001", "AUTHORING-002", "AUTHORING-003"],
+      "recommendedFix": "Add negative tests for parent traversal, symlink redirection, hostile recovery records, and malformed seed bytes, with no-mutation assertions.",
+      "acceptance": ["New tests fail on vulnerable behavior and pass after fixes", "Preserve the existing 159-test baseline", "Use isolated temporary fixture roots, never real repository projects"],
+      "ownerLane": "authoring",
+      "status": "coverage-hole",
+      "existingBacklogMapping": { "status": "unmapped", "ids": [], "note": "Attach regression coverage to the three reproduced findings." }
+    },
+    {
+      "id": "AUTHORING-005",
+      "severity": "low",
+      "title": "Migration journal reader assumes Linux procfs",
+      "source": [
+        { "path": "packages/authoring-core/src/project-model.ts", "line": 377, "symbol": "readMigrationJournal" },
+        { "path": "packages/authoring-core/src/project-model.ts", "line": 380, "symbol": "readMigrationJournal" }
+      ],
+      "reproduction": "Inherited source observation: readMigrationJournal unconditionally uses /proc/self/fd. Native macOS/Windows failure was not demonstrated.",
+      "impact": "Potential portability failure where Linux procfs is unavailable; not a native-platform-proven defect.",
+      "dependencies": ["OS descriptor-path support", "Migration journal reading"],
+      "recommendedFix": "Remove the unconditional procfs dependency or use a platform-aware safe descriptor-reading strategy.",
+      "acceptance": ["Native Linux, macOS, and Windows tests read valid migration journals without requiring procfs", "Preserve descriptor/path safety"],
+      "ownerLane": "authoring",
+      "status": "observed",
+      "existingBacklogMapping": { "status": "unmapped", "ids": [], "note": "Deduplicate against cross-platform migration-journal support." }
+    }
+  ]
+}

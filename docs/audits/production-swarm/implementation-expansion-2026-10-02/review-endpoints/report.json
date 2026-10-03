@@ -1,0 +1,26 @@
+{
+  "review": "review-endpoints",
+  "verdict": "FAIL",
+  "integrationStatus": "NOT_READY",
+  "productionCertified": false,
+  "sourceReadOnly": true,
+  "completedHandbacksReviewed": ["own-session-endpoint", "catalog-session-adapter", "checkout-deadline"],
+  "fingerprint": {"before": "fingerprint-before.json", "after": "fingerprint-after.json", "files": 21, "changed": [], "stable": true, "wholeCheckoutFrozen": false},
+  "verification": [
+    {"evidence": "root-tests.json", "exitCode": 0, "passed": 104, "failed": 0, "pending": 0, "scope": "catalog adapter47; existing auth/billing/site negative oracles57"},
+    {"evidence": "umbrella-tests.json", "exitCode": 0, "passed": 80, "failed": 0, "pending": 0, "scope": "own-session60; checkout reader20"},
+    {"evidence": "boundary-probe-final.json", "exitCode": 1, "passed": 0, "failed": 6, "scope": "five raw-origin refusals and composed descriptor-only accessor boundary"}
+  ],
+  "findings": [
+    {"id": "ENDPOINT-RAW-ORIGIN", "status": "FAIL", "paths": ["packages/site-kit/src/deep-link.ts:180-188", "sites/umbrella/src/lib/login-flow.ts:81-85", "sites/umbrella/src/provider/own-session.ts:89-102"], "predicate": "Unsafe raw configured origin refuses before principal access", "actual": "path/query/hash/userinfo/whitespace each HTTP200 with principalReads1", "expected": "HTTP403 and principalReads0", "fix": "Reject noncanonical raw deployment origin before normalization; preserve approved canonical and explicit loopback configuration", "owner": "serial shared-source integrator"},
+    {"id": "CATALOG-COMPOSED-ACCESSOR", "status": "FAIL", "paths": ["packages/site-kit/src/catalog-server-fetch.ts:219", "packages/site-kit/src/catalog-identity.ts:50", "packages/site-kit/src/ports.ts:314"], "predicate": "Actual composed transport refuses accessor without evaluating it", "actual": "getterCalls1, networkCalls0, SITE_REQUEST_MALFORMED", "expected": "getterCalls0 and named refusal", "fix": "Descriptor-only bounded validation before outer identity validator, preserving existing refusal ordering", "owner": "serial shared-source integrator"},
+    {"id": "CATALOG-PAGE-WIRING", "status": "NOT_READY", "paths": ["sites/catalog-game/src/app/item/[itemId]/page.tsx:23-26,86", "sites/catalog-web/src/app/item/[itemId]/page.tsx:23-26,86", "packages/site-kit/package.json:7-13"], "predicate": "Both real pages consume exported approved configured-origin transport", "actual": "Both pages use old default-unwired factory; package subpath absent", "fix": "Export ./catalog-server-fetch and wire new local factory with approved raw configuration and explicit credential carry; preserve default-unwired and commerce holds", "owner": "serial shared-source integrator"}
+  ],
+  "probe": {"command": "node --experimental-transform-types docs/audits/production-swarm/implementation-expansion-2026-10-02/review-endpoints/boundary-probe.mjs", "source": "boundary-probe.mjs", "reexports": "site-kit-probe-exports.mjs", "scope": "real targeted source modules, counted fixture principal, no sockets/providers", "initialLauncherErrors": ["ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX parameter property", "unrelated authoring import missing SCENE_COMPOSITION_SCHEMA_VERSION_V2 public export", "narrow real-source reexports initially omitted SITE_LOGIN_PATH"], "diagnostics": ["boundary-probe.stderr", "boundary-probe-transformed.stderr", "boundary-probe-isolated.stderr", "boundary-probe-final.stderr"]},
+  "negativeOracles": {"edited": false, "stableDuringVerification": true, "historicalBaselineEquivalenceClaimed": false},
+  "notRun": ["fullbuild", "fullgate", "install", "real Next HTTP route precedence", "multi-origin sockets", "browser", "native", "container", "provider or DB provenance", "endpoint pending-authority timeout and disconnect cancellation"],
+  "resourcesOutstanding": [],
+  "sourceEdits": [],
+  "parentNotified": true,
+  "passRequires": "All blocking predicates repaired and scoped integrated behavior plus unchanged negative oracles verified on frozen exact fingerprint"
+}

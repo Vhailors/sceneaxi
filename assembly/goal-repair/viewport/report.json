@@ -1,0 +1,98 @@
+{
+  "status": "SCOPED_VERIFIED_REVIEW_HOLD",
+  "ownedRoot": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1",
+  "primaryAndForeignWorktreesTouched": false,
+  "existingCleanupRefutedAsMissing": true,
+  "originalPrivateReference": { "path": "/tmp/sceneaxi-viewport-private-reference.ts", "lines": [1203, 1211] },
+  "viewportLines": { "before": 230, "after": 233 },
+  "confirmedRepairedGaps": [
+    "Terminal audio context disposal delayed 100ms, including retired controls awaiting normal-stop measurement",
+    "Pending context resume could initiate decode after context close",
+    "Late fenced frame-report rejection paints overlay after abort",
+    "Late initial inputActions/scene rejection paints outer-catch refusal after abort"
+  ],
+  "unchangedNormalBehavior": ["100ms normal-stop silence measurement", "per-clip generation fences", "profile/Kids admission", "legacy and modern engine audio factories", "genuine live frame/readiness refusals"],
+  "proof": {
+    "kind": "EXECUTABLE_ACTUAL_MODULE_OWNERSHIP",
+    "actualSourceModules": ["viewport.ts", "features/audio-playback.ts", "features/play-loop.ts", "features/overlay-report.ts"],
+    "realEngineFactories": ["createAudioPlaybackPort", "createSculptMountApi"],
+    "instrumentedPorts": ["DOM/EventTarget", "GPU backend", "AudioContext host/codec/resume", "IPC", "timer/RAF", "SHA256 digest"],
+    "otherStubbedInstallers": ["BYOK", "scene projection/mounting", "camera input remover", "selection", "gizmo", "scene sync", "assistant"],
+    "copiedTeardownAlgorithm": false,
+    "browserProcesses": 0,
+    "hardwarePixelsOrAudioClaimed": false,
+    "neverSettlingCancellationPromise": false,
+    "newTerminalTests": 18
+  },
+  "redEvidence": [
+    { "log": "before.log", "passed": 6, "failed": 7, "actualDefectFailures": 6, "fixtureTimingFailure": "Deferred codec positive checked before asynchronous host digest completed; deterministic real SHA256 host digest substituted, assertion retained" },
+    { "log": "readiness-before.log", "passed": 14, "failed": 2, "failure": "Late input/scene readiness rejection: expected writes 1 to be 0" }
+  ],
+  "verification": [
+    { "command": "pnpm exec vitest run desktop/linux/test/viewport-terminal-lifecycle.test.ts desktop/linux/test/audio-lifecycle-compat.test.ts desktop/linux/test/native-assistant-scene-compat.test.ts desktop/linux/test/viewport-input-actions.test.ts --reporter=verbose", "exit": 0, "files": 4, "passed": 47, "newTerminalTests": 18, "existingTests": 29, "log": "after.log" },
+    { "command": "pnpm exec vitest run desktop/linux/test/audio-lifecycle-compat.test.ts packages/engine-presentation/test/audio-playback.test.ts packages/engine-presentation/test/legacy-audio-compat.test.ts --reporter=verbose", "exit": 0, "files": 3, "passed": 21, "overlapWithFirstCommand": 10, "log": "compatibility.log" },
+    { "command": "pnpm --dir desktop/linux typecheck", "exit": 0, "log": "typecheck.log" },
+    { "command": "pnpm exec tsc --noEmit --target ES2022 --module NodeNext --moduleResolution NodeNext --strict --skipLibCheck desktop/linux/test/viewport-terminal-lifecycle.test.ts", "exit": 0, "log": "test-typecheck.log" },
+    { "command": "pnpm exec eslint desktop/linux/src/renderer/viewport.ts desktop/linux/src/renderer/features/audio-playback.ts desktop/linux/src/renderer/features/overlay-report.ts desktop/linux/test/viewport-terminal-lifecycle.test.ts", "exit": 0, "log": "lint.log", "initialFailure": "Three test-style errors: invalid void generic, empty class, non-null assertion; fixed without changing assertions" },
+    { "command": "git diff --check -- desktop/linux/src/renderer/viewport.ts desktop/linux/src/renderer/features/audio-playback.ts desktop/linux/src/renderer/features/overlay-report.ts desktop/linux/test/viewport-terminal-lifecycle.test.ts", "exit": 0, "readOnly": true }
+  ],
+  "distinctPassedTests": 58,
+  "existingDistinctPassedTests": 40,
+  "historical49TestCommand": "Not supplied/identified; current verified 21 audio and 29 root compatibility tests overlap by 10. Do not relabel as historical49.",
+  "sourceHandback": [
+    { "path": "desktop/linux/src/renderer/viewport.ts", "changedThisRepair": true, "mode": "0644", "bytes": 10309, "sha256": "862353b567b72ccf62a00e85d433a0b1a6a727b9eabc74351316188676e61d02" },
+    { "path": "desktop/linux/src/renderer/features/audio-playback.ts", "changedThisRepair": true, "mode": "0664", "bytes": 17090, "sha256": "06fd1c3001f4e10fc8a4828465d1bcc49a2ef11d80db4a6f7f9f6524cbe91a7d" },
+    { "path": "desktop/linux/src/renderer/features/overlay-report.ts", "changedThisRepair": true, "mode": "0664", "bytes": 5162, "sha256": "d28f34c04ae7993712e6630744e5f6d51de6d58f5bb0fad23e4d43042d995e09" },
+    { "path": "desktop/linux/src/renderer/features/services.ts", "changedThisRepair": false, "mode": "0664", "bytes": 1668, "sha256": "5bacd9aaff7d1cc3c096eb1c283dbd9c06eed133a65598ea515d93818598a4c5" },
+    { "path": "desktop/linux/test/viewport-terminal-lifecycle.test.ts", "changedThisRepair": true, "mode": "0664", "bytes": 17398, "sha256": "dbb03059e472ec1b4a11632b4fecc0170afed7984b3f000c451efe381c77534c" }
+  ],
+  "logHashes": {
+    "before.log": "8dbaddd09953c16856c4f32852e6b0c370272030aed9abba289952fb26a9477c",
+    "readiness-before.log": "5a7f573b803579bc17b6f27e7925855bc4feee9258cffac4484e402fb24530ea",
+    "after.log": "2adb8b08c72be3fd8a6c9d93ff3020f930f68bd32b84ca0af89634bdcdfc2acc",
+    "compatibility.log": "6630ebaf4f456996a75f8331366166a3abc926e64f166d277e11b87f56944f86",
+    "lint.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "typecheck.log": "38ac890c60e7f38d59ddfb410325cdfb5fca83c9411765c5481754e01c021630",
+    "test-typecheck.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "byoTerminalResidual": {
+    "id": "BYOK_CONFIGURE_TERMINAL_LIFETIME",
+    "status": "CLOSED",
+    "ownedRoot": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1",
+    "actualModule": "desktop/linux/src/renderer/byo-configuration.ts",
+    "focusedTest": "desktop/linux/test/byo-terminal-lifecycle.test.ts",
+    "arrivalState": "Optional signal, teardown listener removal/render fences and viewport signal call-site were already present; pending configureByo await still did not settle on abort.",
+    "repair": "Settle renderer request on abort even while privileged IPC is pending; handle both late IPC outcomes; remove per-request abort binding in finally. Retain existing surface/listener removal, route-attribute restoration and no-options behavior.",
+    "viewportTouchedThisRepair": false,
+    "privilegedIpcCancelled": false,
+    "rendererTasksSettleOnAbort": true,
+    "lateDomWrites": 0,
+    "copiedTeardownAlgorithm": false,
+    "realModuleProof": "Actual imported installer and transpiled actual viewport root: pending status/save/remove success and rejection after abort/pagehide leave no surface/listeners or later DOM mutations/IPC. Three added tests release actual per-request abort bindings before resolving IPC; two live-outcome tests retain rendering and release bindings.",
+    "redEvidence": { "passed": 18, "failed": 3, "output": "expected abort bindings to have a length of 2 but got 1" },
+    "fixtureCorrection": "Additional live-success test initially expected literal configured (22 pass/1 fail); actual view states BYOK is ready for this provider. Corrected exact normal-view assertion, not production behavior.",
+    "verification": [
+      { "command": "pnpm exec vitest run desktop/linux/test/byo-terminal-lifecycle.test.ts --reporter=dot", "exit": 0, "files": 1, "passed": 23, "newTestsThisRepair": 5 },
+      { "command": "pnpm exec eslint desktop/linux/src/renderer/byo-configuration.ts desktop/linux/test/byo-terminal-lifecycle.test.ts --max-warnings 0", "exit": 0, "findings": 0 },
+      { "command": "pnpm exec oxlint desktop/linux/src/renderer/byo-configuration.ts desktop/linux/test/byo-terminal-lifecycle.test.ts", "exit": 0, "warnings": 0, "errors": 0, "rules": 115, "initialErrors": 18, "fix": "Readable-spacing fixes and precise test rejection/port/module types; no rule disables or new SAFETY assertions." },
+      { "command": "pnpm --dir desktop/linux typecheck", "exit": 2, "output": "../../packages/schemas/src/profile-conformance-suite.ts(359,64): error TS2307: Cannot find module './json.js' or its corresponding type declarations.", "foreignSourceEdited": false }
+    ],
+    "sourceHandback": [
+      { "path": "desktop/linux/src/renderer/byo-configuration.ts", "changedThisRepair": true, "bytes": 13630, "beforeSha256": "514a1d2fb308da0e4e40ccc7ff1f19f35adaeb817c2d036d9fe3dc72f61aca2a", "sha256": "f14e44367e255f31c5abd18535e36bf97c29ef8ae677657408d1a8ab411a1d58" },
+      { "path": "desktop/linux/test/byo-terminal-lifecycle.test.ts", "changedThisRepair": true, "bytes": 14130, "beforeSha256": "e02436d1105023c89b20b3c3133b537d0a46d57ce804c6c5d3d6431684f38f91", "sha256": "abf245d65537ce2d24905532bb0d7bf2e40bfa92213418ffd99e8bcc9491fa3e" },
+      { "path": "desktop/linux/src/renderer/viewport.ts", "changedThisRepair": false, "bytes": 10338, "sha256": "970979375f3aa919769abbf8b0aa1fe06aef197c8775d51e531692d6230d766a" }
+    ],
+    "primaryAndForeignWorktreesTouched": false,
+    "gitCommands": false,
+    "fullBuildGateBrowserRun": false,
+    "handback": "Scoped files complete; bg-177 owns serial candidate oxlint/build/gate and merge conclusion. No production PASS claim."
+  },
+  "residuals": [
+    "CLOSED: BYOK/configureByo terminal lifetime; real-module proof, settling cancellation, zero lint findings and source hashes are recorded in byoTerminalResidual",
+    "No real-browser pixels, hardware audio or exhaustive chrome teardown certification",
+    "Controller owns final freeze/full build and publication"
+  ],
+  "firstReviewerMergeFinding": "OPEN: actual commits/main/PR receipts absent",
+  "gitMutations": false,
+  "productionPass": false
+}

@@ -1,0 +1,80 @@
+{
+  "verdict": "PASS",
+  "scope": "Exact frozen policy replacement semantic soundness only",
+  "approvedPatchSha256": "5059b62c799b7be9bbeb9dd98187d317f4e2005b31dbdc0c5f62371c688ef9d7",
+  "priorRejectedPatchSha256": "c5bb51cbf0d963c80b301271cf4dbcb9d18daf20050391fdc7c0fc63afcaf2d9",
+  "executionStartedAt": "2026-10-03T14:08:02.335Z",
+  "executionFinishedAt": "2026-10-03T14:08:25.045Z",
+  "packet": "assembly/packets/policy-148-replacement",
+  "sourceOrigin": "/tmp/sceneaxi-pr310-main-first.tSd8ya",
+  "consolidation": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1",
+  "provenance": {
+    "checksumEntriesVerified": 10,
+    "originFilesMatchingReceipt": 5,
+    "receiptSha256": "c6b14ff5020d531a340f024703460acc3a343f99b0d2fafa446a931f276a0dd2",
+    "independentHarnessSha256": "92ec1528ff7699462e0211630b76ee0b354d21449f4e3578a1a3b8c421f6066c",
+    "originAndConsolidationFiveRelevantPathsUnchanged": true,
+    "sourceHashes": {
+      ".oxlintrc.json": "f815dd07e6a8d7e50b8ed37736baa1da63d9baab3be4edb3a31b86140459f0c5",
+      "tools/oxlint/anti-slop/rules/no-runtime-typeof.ts": "bbfe2c0c3398b95a3e663d9c6d54720cd5d4b41eb9edef086af6c4565e28f41c",
+      "tools/oxlint/anti-slop/rules/no-unknown-parameters.ts": "4c58e709c90e8ad9d645dc0c791bb8e7dcdb82e3cdaabe0ae3387ef73d8106d4",
+      "tools/oxlint/anti-slop/shared/checked-boundaries.ts": "5a525a750624db4be8aea6d87a73e2eb12e6f4ea405d9c8c2745429e711ebce0",
+      "tools/oxlint/anti-slop/tests/checked-boundaries.test.mjs": "a49c8f2570f28731c618837a7f77418734740feb72f1ebe5e794be3f8ff3e082"
+    }
+  },
+  "execution": {
+    "method": "node --input-type=module; in-memory harnesses spawn exact origin node_modules/.bin/oxlint --config <temporary-config> --format json <temporary-fixture>",
+    "nativeHarnessChanges": "Only root and temporary-directory substitutions; cases and assertions unchanged",
+    "independentHarnessChanges": "None",
+    "temporaryFixtures": "Created only under assembly/packet-review and removed",
+    "suites": [
+      { "name": "native", "executed": 46, "passed": 46, "exitCode": 0 },
+      { "name": "independent", "executed": 11, "passed": 11, "exitCode": 0 },
+      { "name": "additional", "executed": 12, "passed": 12, "exitCode": 0 }
+    ],
+    "totalExecuted": 69,
+    "totalPassed": 69,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "negativeControlCoverage": [
+    "shadowed validator, Array, Number and Readonly",
+    "always-true and imported unverifiable validators",
+    "guard and subject aliases",
+    "unchecked return, alternate branch, assertion and dictionary",
+    "representation check outside predicate",
+    "async and generator predicate/decoder declarations",
+    "async arrow and expression predicates",
+    "wrong input, wrong return input and modified subject",
+    "object-only domain claim and object shell used as domain decoder"
+  ],
+  "additionalControls": [
+    { "name": "generator expression predicate", "expected": ["no-runtime-typeof"], "passed": true },
+    { "name": "async generator predicate", "expected": ["no-runtime-typeof", "no-unknown-parameters"], "passed": true },
+    { "name": "async arrow decoder", "expected": ["no-unknown-parameters"], "passed": true },
+    { "name": "async expression decoder", "expected": ["no-unknown-parameters"], "passed": true },
+    { "name": "generator expression decoder", "expected": ["no-unknown-parameters"], "passed": true },
+    { "name": "async generator expression decoder", "expected": ["no-unknown-parameters"], "passed": true },
+    { "name": "sync arrow decoder positive", "expected": [], "passed": true },
+    { "name": "sync expression decoder positive", "expected": [], "passed": true },
+    { "name": "reversed bigint predicate positive", "expected": [], "passed": true },
+    { "name": "symbol decoder positive", "expected": [], "passed": true },
+    { "name": "conditional always true alternate", "expected": ["no-runtime-typeof", "no-unknown-parameters"], "passed": true },
+    { "name": "nested scope shadowing", "expected": ["no-unknown-parameters"], "passed": true }
+  ],
+  "newBypassFound": false,
+  "constraints": [
+    "Approval attaches only to the exact patch hash and five frozen source postimages",
+    "Preserve rule error severities; no blanket exceptions or source narrowing",
+    "Primitive same-binding single-return/null decoder proof only; object shells do not establish domain fields or getter safety",
+    "Inherited cause, predicate-subject and undefined-existence exemptions are not new semantic guarantees",
+    "Parent owns integration and normal source-gate/build verification"
+  ],
+  "sourceGuardZero": false,
+  "remainingSourceFindings": { "count": 65, "waived": false, "remeasured": false },
+  "mutation149": "Current adaptation and tests/typechecks reported by user; not rerun, not reapproved against old baseline",
+  "notExecuted": ["full build", "full source gate", "typecheck", "browser", "native application", "Docker", "install", "Git/protection actions"],
+  "persistentWrites": ["assembly/packet-review/replacement-review.md", "assembly/packet-review/replacement-review.json"]
+}

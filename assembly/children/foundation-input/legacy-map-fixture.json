@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "kind": "sceneaxi.input-action-map",
+  "bindings": [
+    {
+      "actionId": "editor.palette.open",
+      "binding": {
+        "device": "keyboard",
+        "code": "KeyK",
+        "modifiers": [
+          "primary"
+        ]
+      }
+    },
+    {
+      "actionId": "editor.project.open",
+      "binding": {
+        "device": "keyboard",
+        "code": "KeyO",
+        "modifiers": [
+          "primary"
+        ]
+      }
+    },
+    {
+      "actionId": "editor.project.save",
+      "binding": {
+        "device": "keyboard",
+        "code": "KeyS",
+        "modifiers": [
+          "primary"
+        ]
+      }
+    },
+    {
+      "actionId": "editor.edit.undo",
+      "binding": {
+        "device": "keyboard",
+        "code": "KeyZ",
+        "modifiers": [
+          "primary"
+        ]
+      }
+    },
+    {
+      "actionId": "editor.edit.redo",
+      "binding": {
+        "device": "keyboard",
+        "code": "KeyZ",
+        "modifiers": [
+          "primary",
+          "shift"
+        ]
+      }
+    },
+    {
+      "actionId": "editor.run.play",
+      "binding": {
+        "device": "keyboard",
+        "code": "KeyP",
+        "modifiers": [
+          "primary"
+        ]
+      }
+    },
+    {
+      "actionId": "editor.focus.next",
+      "binding": {
+        "device": "keyboard",
+        "code": "Tab",
+        "modifiers": []
+      }
+    },
+    {
+      "actionId": "editor.overlay.dismiss",
+      "binding": {
+        "device": "keyboard",
+        "code": "Escape",
+        "modifiers": []
+      }
+    },
+    {
+      "actionId": "viewport.orbit",
+      "binding": {
+        "device": "pointer",
+        "button": 0,
+        "gesture": "drag"
+      }
+    },
+    {
+      "actionId": "viewport.zoom",
+      "binding": {
+        "device": "wheel",
+        "axis": "y",
+        "direction": "any"
+      }
+    },
+    {
+      "actionId": "play.primary",
+      "binding": {
+        "device": "controller",
+        "controller": 0,
+        "input": "button",
+        "control": 0,
+        "direction": "any"
+      }
+    }
+  ]
+}

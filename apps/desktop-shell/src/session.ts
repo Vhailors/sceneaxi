@@ -8,8 +8,11 @@
  * engine import.
  */
 
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { constants, lstatSync, readFileSync } from "node:fs";
+import { open } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { StringDecoder } from "node:string_decoder";
+import { isAbsolute, resolve, sep } from "node:path";
 import {
   canonicalPath,
   contentHash,
@@ -34,6 +37,7 @@ import {
   type ProjectGitDesktopOwner,
 } from "@sceneaxi-internal/project-git-authority";
 import {
+  validateProposal,
   PROJECT_GIT_DIAGNOSTICS,
   type ProjectGitCommitPreparationResult,
   type ProjectGitFailure,
@@ -74,7 +78,7 @@ export type DesktopDocumentStatus =
       readonly undoAvailability: ApplyUndoAvailability;
       readonly redoAvailability: ApplyUndoAvailability;
       /** Validated document data for project-loop proposals; never executable. */
-      readonly data: Readonly<Record<string, unknown>>;
+      readonly data: Readonly<Extract<ReturnType<typeof parseDocumentText>, { ok: true }>["document"]["data"]>;
     }
   | {
       readonly ok: false;
@@ -93,6 +97,12 @@ export type DesktopSession = {
   snapshot(): DesktopSnapshot;
   /** Propose an edit and park it for review (does not write documents). */
   proposeEdit(input: ShellEditInput): DesktopSnapshot;
+  /** Host-prepared E1: validate/fence exact bytes, stage only; accept still owns apply. */
+  stagePreparedProposal(input: Readonly<{
+    proposal: Proposal;
+    unifiedDiff: string;
+    signal?: AbortSignal;
+  }>): Promise<DesktopSnapshot>;
   /** Accept the pending proposal (apply via authoring-core). */
   accept(): DesktopSnapshot;
   /** Discard the pending proposal without writing. */
@@ -122,12 +132,14 @@ export type DesktopSessionOptions = {
 };
 
 type DesktopProjectGitProfile = "game" | "web" | "kids";
+
 type RootProjectGitAuthority = {
   readonly root: string;
   readonly authority: ProjectGitAuthoringAuthority;
   readonly owner: ProjectGitDesktopOwner;
   readonly sessions: Set<WeakRef<DesktopSession>>;
 };
+
 type DesktopProjectGitBinding = Readonly<{
   rootAuthority: RootProjectGitAuthority;
   readProfile: () => DesktopProjectGitProfile;
@@ -135,6 +147,7 @@ type DesktopProjectGitBinding = Readonly<{
 }>;
 
 const projectGitBindings = new WeakMap<object, DesktopProjectGitBinding>();
+
 const rootProjectGitAuthorities = new Map<string, RootProjectGitAuthority>();
 
 export class DesktopProjectMutationOwnerError extends Error {
@@ -149,15 +162,20 @@ export class DesktopProjectMutationOwnerError extends Error {
 
 function liveRootBindings(rootAuthority: RootProjectGitAuthority): readonly DesktopProjectGitBinding[] {
   const live: DesktopProjectGitBinding[] = [];
+
   for (const sessionRef of rootAuthority.sessions) {
     const session = sessionRef.deref();
+
     if (session === undefined) {
       rootAuthority.sessions.delete(sessionRef);
       continue;
     }
+
     const binding = projectGitBindings.get(session);
+
     if (binding?.rootAuthority === rootAuthority) live.push(binding);
   }
+
   return live;
 }
 
@@ -166,20 +184,25 @@ function aggregateProjectGitState(rootAuthority: RootProjectGitAuthority): Proje
   let recoveryPending = false;
   let transactionDirty = false;
   const profiles = new Set<DesktopProjectGitProfile>();
+
   for (const binding of liveRootBindings(rootAuthority)) {
     const session = binding.sessionRef.deref();
+
     if (session === undefined) continue;
     const current = session.snapshot();
     reviewStaged ||= current.phase === "reviewing" && current.proposal !== null;
     recoveryPending ||= current.journalRecoveryPending;
     transactionDirty ||= current.phase === "pending";
+
     try {
       profiles.add(binding.readProfile());
     } catch {
       transactionDirty = true;
     }
   }
+
   transactionDirty ||= profiles.size > 1 && !profiles.has("kids");
+
   return Object.freeze({ reviewStaged, recoveryPending, transactionDirty });
 }
 
@@ -187,36 +210,46 @@ function aggregateProjectGitProfile(
   rootAuthority: RootProjectGitAuthority,
 ): DesktopProjectGitProfile | undefined {
   const profiles = new Set<DesktopProjectGitProfile>();
+
   try {
     for (const binding of liveRootBindings(rootAuthority)) profiles.add(binding.readProfile());
   } catch {
     return undefined;
   }
+
   if (profiles.has("kids")) return "kids";
+
   return profiles.size === 1 ? [...profiles][0] : undefined;
 }
 
 function rootProjectGitAuthority(root: string): RootProjectGitAuthority {
   const canonicalRoot = canonicalPath(root);
   const existing = rootProjectGitAuthorities.get(canonicalRoot);
+
   if (existing !== undefined) return existing;
   const owner = acquireProjectGitDesktopOwner(canonicalRoot);
+
   if ("diagnostic" in owner) throw new DesktopProjectMutationOwnerError(owner.diagnostic);
   const sessions = new Set<WeakRef<DesktopSession>>();
-  const holder: { current: RootProjectGitAuthority | null } = { current: null };
+  const holder: ProjectGitAuthorityHolder = { current: null };
+
   const authority = createProjectGitAuthoringAuthority(
     canonicalRoot,
     () => {
       const current = holder.current;
+
       if (current === null) {
         return { reviewStaged: false, recoveryPending: false, transactionDirty: false };
       }
+
       return aggregateProjectGitState(current);
     },
   );
+
   const rootAuthority = { root: canonicalRoot, authority, owner, sessions };
   holder.current = rootAuthority;
   rootProjectGitAuthorities.set(canonicalRoot, rootAuthority);
+
   return rootAuthority;
 }
 
@@ -232,6 +265,7 @@ export function bindDesktopSessionProjectGitAuthority(
       message: "The previous desktop mutation-owner lease could not be released cleanly.",
     }));
   }
+
   const rootAuthority = rootProjectGitAuthority(root);
   const sessionRef = new WeakRef(session);
   rootAuthority.sessions.add(sessionRef);
@@ -240,13 +274,17 @@ export function bindDesktopSessionProjectGitAuthority(
 
 export function releaseDesktopSessionProjectGitAuthority(session: DesktopSession): boolean {
   const binding = projectGitBindings.get(session);
+
   if (binding === undefined) return true;
+
   if (liveRootBindings(binding.rootAuthority).length === 1) {
     if (!releaseProjectGitDesktopOwner(binding.rootAuthority.owner)) return false;
     rootProjectGitAuthorities.delete(binding.rootAuthority.root);
   }
+
   binding.rootAuthority.sessions.delete(binding.sessionRef);
   projectGitBindings.delete(session);
+
   return true;
 }
 
@@ -272,9 +310,12 @@ export function stageDesktopSessionProjectGitPaths(
   paths: readonly string[],
 ): ProjectGitStateResult {
   const binding = desktopSessionProjectGitBinding(session);
+
   if (binding === undefined) return unavailableProjectGitAuthority();
   const profile = aggregateProjectGitProfile(binding.rootAuthority);
+
   if (profile === undefined) return unavailableProjectGitAuthority();
+
   return stageProjectGitPaths({
     root: binding.rootAuthority.root,
     profile,
@@ -288,9 +329,12 @@ export function prepareDesktopSessionProjectGitCommit(
   message: string,
 ): ProjectGitCommitPreparationResult {
   const binding = desktopSessionProjectGitBinding(session);
+
   if (binding === undefined) return unavailableProjectGitAuthority();
   const profile = aggregateProjectGitProfile(binding.rootAuthority);
+
   if (profile === undefined) return unavailableProjectGitAuthority();
+
   return prepareProjectGitCommit({
     root: binding.rootAuthority.root,
     profile,
@@ -306,8 +350,10 @@ export function prepareDesktopSessionProjectGitCommit(
  * structured-clones, but the CLI and the goldens hold the very same object.
  */
 function deepFreeze<T>(value: T): T {
-  if (typeof value !== "object" || value === null) return value;
+  if (!isProtocolObject(value) || value === null) return value;
+
   for (const nested of Object.values(value)) deepFreeze(nested);
+
   return Object.freeze(value);
 }
 
@@ -331,6 +377,7 @@ export function createDesktopSession(
   options: DesktopSessionOptions = {},
 ): DesktopSession {
   const sessionCwd = canonicalPath(options.cwd ?? ".");
+
   const operations: DesktopSessionOperations = Object.freeze({
     applyProposal: options.operations?.applyProposal ?? shellApply,
     applyUndoAvailability:
@@ -343,6 +390,7 @@ export function createDesktopSession(
     redoLastApply: options.operations?.redoLastApply ?? redoLastApply,
   });
 
+  let revision = 0;
   let phase: DesktopPhase = "idle";
   let unifiedDiff: string | null = null;
   let renderedDiff: string | null = null;
@@ -368,6 +416,7 @@ export function createDesktopSession(
     });
 
   const clearProposal = (nextPhase: DesktopPhase): void => {
+    revision += 1;
     phase = nextPhase;
     unifiedDiff = null;
     renderedDiff = null;
@@ -381,6 +430,7 @@ export function createDesktopSession(
 
   const refusePending = (): DesktopSnapshot => {
     diagnostics = PENDING_DIAGNOSTICS;
+
     return snap();
   };
 
@@ -390,10 +440,12 @@ export function createDesktopSession(
     proposeEdit(input: ShellEditInput): DesktopSnapshot {
       if (journalRecoveryPending) return refusePending();
       const cwd = canonicalPath(input.cwd ?? sessionCwd);
+
       if (phase === "reviewing" && proposal !== null) {
         const conflictCheck = input.expectedContentHash === undefined
           ? null
           : shellPropose({ ...input, cwd });
+
         if (
           conflictCheck !== null &&
           !conflictCheck.ok &&
@@ -403,27 +455,146 @@ export function createDesktopSession(
         ) {
           clearProposal("idle");
           diagnostics = conflictCheck.diagnostics;
+
           return snap();
         }
+
         diagnostics = ACTIVE_PROPOSAL_DIAGNOSTICS;
+
         return snap();
       }
+
       const result = shellPropose({ ...input, cwd });
+
       if (!result.ok) {
         clearProposal("idle");
         diagnostics = result.diagnostics;
+
         return snap();
       }
+
       clearProposal("reviewing");
       unifiedDiff = result.unifiedDiff;
       renderedDiff = result.renderedDiff;
       proposal = result.proposal;
       pendingCwd = cwd;
+
+      return snap();
+    },
+
+    async stagePreparedProposal(input): Promise<DesktopSnapshot> {
+      if (journalRecoveryPending) return refusePending();
+
+      if (phase === "reviewing" && proposal !== null) {
+        diagnostics = ACTIVE_PROPOSAL_DIAGNOSTICS;
+
+        return snap();
+      }
+
+      const startedRevision = revision;
+
+      const refuse = (code: ApplyDiagnostic["code"], message: string) => {
+        // Never clear another review installed while descriptor reads were awaited.
+        if (revision === startedRevision) diagnostics = Object.freeze([{ code, message }]);
+
+        return snap();
+      };
+
+      const signal = input.signal;
+      const exactDiff = input.unifiedDiff;
+      const checked = validateProposal(input.proposal);
+
+      if (!checked.ok) return refuse("invalid-proposal", checked.message);
+
+      if (checked.proposal.edits.length !== 1 || checked.proposal.diffs.length !== 1 ||
+        checked.proposal.diffs[0]?.documentPath !== checked.proposal.edits[0]?.documentPath ||
+        checked.proposal.diffs[0]?.unifiedDiff !== exactDiff) {
+        return refuse("invalid-proposal", "Prepared E1 must carry one exact document edit and its unchanged diff.");
+      }
+
+      // Seal the actual proposal, not a regenerated or compact authoring dialect.
+      const sealed = deepFreeze(input.proposal);
+      const edit = sealed.edits[0];
+
+      if (edit === undefined) return refuse("invalid-proposal", "Prepared E1 has no edit.");
+      const target = resolve(sessionCwd, edit.documentPath);
+
+      if (isAbsolute(edit.documentPath) || edit.documentPath.split(/[\\/]+/).includes("..") ||
+        edit.documentPath.includes("\0") || !target.startsWith(`${sessionCwd}${sep}`)) {
+        return refuse("invalid-proposal", "Prepared document must be contained in the session root.");
+      }
+
+      try {
+        const canonical = canonicalPath(target);
+
+        if (!canonical.startsWith(`${sessionCwd}${sep}`) || lstatSync(target).isSymbolicLink()) {
+          return refuse("invalid-proposal", "Prepared document may not escape or redirect the session root.");
+        }
+
+        const file = await open(target, constants.O_RDONLY | constants.O_NOFOLLOW);
+
+        try {
+          const before = await file.stat();
+          const digest = createHash("sha256");
+          const decoder = new StringDecoder("utf8");
+          const buffer = Buffer.alloc(64 * 1024);
+          const identity = lstatSync(target);
+
+          if (!before.isFile() || identity.dev !== before.dev || identity.ino !== before.ino || identity.isSymbolicLink()) {
+            return refuse("content-hash-conflict", "Prepared document identity changed.");
+          }
+
+          let remaining = before.size;
+
+          while (!signal?.aborted && remaining > 0) {
+            const { bytesRead } = await file.read(buffer, 0, Math.min(buffer.length, remaining), null);
+
+            if (bytesRead === 0) break;
+            remaining -= bytesRead;
+            digest.update(decoder.write(buffer.subarray(0, bytesRead)));
+          }
+
+          if (!signal?.aborted && (remaining !== 0 || (await file.read(buffer, 0, 1, null)).bytesRead !== 0)) {
+            return refuse("content-hash-conflict", "Prepared document length changed during admission.");
+          }
+
+          digest.update(decoder.end());
+          const after = await file.stat();
+          const current = lstatSync(target);
+
+          if (signal?.aborted || revision !== startedRevision || journalRecoveryPending) {
+            return refuse("invalid-proposal", "Prepared review was cancelled or superseded.");
+          }
+
+          if (canonicalPath(target) !== canonical || current.isSymbolicLink() ||
+            before.dev !== current.dev || before.ino !== current.ino ||
+            before.size !== after.size || before.mtimeMs !== after.mtimeMs || before.ctimeMs !== after.ctimeMs ||
+            after.size !== current.size || after.mtimeMs !== current.mtimeMs || after.ctimeMs !== current.ctimeMs ||
+            `sha256:${digest.digest("hex")}` !== edit.baseContentHash) {
+            return refuse("content-hash-conflict", "Prepared document changed before review.");
+          }
+        } finally { await file.close(); }
+      } catch {
+        return refuse("document-read-failed", "Prepared document cannot be safely verified.");
+      }
+
+      if (input.signal?.aborted || revision !== startedRevision) {
+        return refuse("invalid-proposal", "Prepared review was cancelled or superseded.");
+      }
+
+      clearProposal("reviewing");
+      proposal = sealed;
+      unifiedDiff = exactDiff;
+      // Host display projection owns compact framing; retain raw E1 diff unchanged.
+      renderedDiff = exactDiff;
+      pendingCwd = sessionCwd;
+
       return snap();
     },
 
     accept(): DesktopSnapshot {
       if (journalRecoveryPending) return refusePending();
+
       if (phase !== "reviewing" || proposal === null) {
         diagnostics = [
           {
@@ -432,14 +603,16 @@ export function createDesktopSession(
               "No pending proposal to accept. Propose an edit and review the rendered diff first.",
           },
         ];
+
         return snap();
       }
 
       const cwd = pendingCwd;
-      const result = operations.applyProposal({
-        proposal,
-        ...(cwd !== undefined ? { cwd } : {}),
-      });
+
+      const applyInput: MutableOwnerFields<Parameters<typeof operations.applyProposal>[0]> = { proposal };
+
+      if (cwd !== undefined) applyInput.cwd = cwd;
+      const result = operations.applyProposal(applyInput);
 
       if (result.applicationState === "indeterminate") {
         phase = "pending";
@@ -447,11 +620,14 @@ export function createDesktopSession(
         journalRecoveryPending = true;
         pendingTransactionId = result.transactionId;
         diagnostics = result.diagnostics;
+
         return snap();
       }
+
       if (!result.ok) {
         phase = "reviewing";
         diagnostics = result.diagnostics;
+
         return snap();
       }
 
@@ -462,6 +638,7 @@ export function createDesktopSession(
       journalRecoveryPending = result.journalRecoveryPending === true;
       pendingTransactionId = result.transactionId;
       diagnostics = null;
+
       // Keep renderedDiff so the surface can still show what was accepted.
       return snap();
     },
@@ -469,6 +646,7 @@ export function createDesktopSession(
     reject(): DesktopSnapshot {
       if (journalRecoveryPending) return refusePending();
       clearProposal("rejected");
+
       return snap();
     },
 
@@ -476,18 +654,24 @@ export function createDesktopSession(
       if (!journalRecoveryPending || pendingTransactionId === null) {
         return snap();
       }
-      const resolved = operations.resolveTransaction({
-        transactionId: pendingTransactionId,
-        ...(pendingCwd === undefined ? {} : { cwd: pendingCwd }),
-      });
+
+      const recoveryInput: DesktopRecoveryInput = { transactionId: pendingTransactionId };
+
+      if (pendingCwd !== undefined) recoveryInput.cwd = pendingCwd;
+      const resolved = operations.resolveTransaction(recoveryInput);
+
       if (!resolved.ok) {
         diagnostics = resolved.diagnostics;
+
         return snap();
       }
+
       if (resolved.state === "pending") {
         diagnostics = PENDING_DIAGNOSTICS;
+
         return snap();
       }
+
       if (resolved.state === "missing") {
         diagnostics = [
           {
@@ -497,8 +681,10 @@ export function createDesktopSession(
               "Re-read the affected documents and start a new session before continuing.",
           },
         ];
+
         return snap();
       }
+
       if (resolved.state !== "completed") {
         const staleId = resolved.transactionId;
         phase = "reviewing";
@@ -513,27 +699,33 @@ export function createDesktopSession(
               "Re-read the affected documents before accepting another proposal.",
           },
         ];
+
         return snap();
       }
+
       if (phase === "pending") {
         phase = "applied";
         appliedPaths = resolved.documentPaths;
         appliedCwdHistory.push(pendingCwd ?? sessionCwd);
         sessionApplyHistoryStarted = true;
       }
+
       journalRecoveryPending = false;
       pendingTransactionId = null;
       diagnostics = null;
+
       return snap();
     },
 
     status(documentPath: string): DesktopDocumentStatus {
       let text: string;
+
       try {
         text = readFileSync(resolve(sessionCwd, documentPath), "utf8");
       } catch (error) {
-        const missing = typeof error === "object" && error !== null &&
+        const missing = isProtocolObject(error) && error !== null &&
           "code" in error && error.code === "ENOENT";
+
         return {
           ok: false,
           documentPath,
@@ -550,6 +742,7 @@ export function createDesktopSession(
       }
 
       const validation = parseDocumentText(text);
+
       if (!validation.ok) {
         return {
           ok: false,
@@ -565,6 +758,7 @@ export function createDesktopSession(
           ],
         };
       }
+
       return {
         ok: true,
         documentPath,
@@ -575,9 +769,11 @@ export function createDesktopSession(
         undoAvailability: (() => {
           if (journalRecoveryPending) return "recovery-pending";
           const appliedCwd = appliedCwdHistory.at(-1);
+
           if (appliedCwd !== undefined) {
             return operations.applyUndoAvailability({ cwd: appliedCwd });
           }
+
           return sessionApplyHistoryStarted
             ? "unavailable"
             : operations.applyUndoAvailability({ cwd: sessionCwd });
@@ -600,8 +796,10 @@ export function createDesktopSession(
           }],
         };
       }
+
       // Session-originated applies are undone LIFO by canonical root; once exhausted, this session never falls back to another root.
       const appliedCwd = appliedCwdHistory.at(-1);
+
       if (appliedCwd === undefined && sessionApplyHistoryStarted) {
         return {
           ok: false,
@@ -613,14 +811,18 @@ export function createDesktopSession(
           ],
         };
       }
+
       const result = operations.undoLastApply({
         cwd: appliedCwd ?? sessionCwd,
       });
+
       if (!result.ok) {
         return { ok: false, diagnostics: result.diagnostics };
       }
+
       if (appliedCwd !== undefined) appliedCwdHistory.pop();
       clearProposal("idle");
+
       return { ok: true, transactionId: result.transactionId, restoredPaths: result.documentPaths };
     },
 
@@ -635,11 +837,32 @@ export function createDesktopSession(
           }],
         };
       }
+
       const result = operations.redoLastApply({ cwd: sessionCwd });
+
       if (!result.ok) return { ok: false, diagnostics: result.diagnostics };
       clearProposal("idle");
+
       return { ok: true, transactionId: result.transactionId, restoredPaths: result.documentPaths };
     },
   };
+
   return Object.freeze(session);
+}
+
+function isProtocolObject<Value>(value: Value): value is Value & (object | null) {
+  return isBoundaryObjectValue(value);
+}
+
+/** Mutable request builders preserve each owner-defined property type. */
+type MutableOwnerFields<Owner> = { -readonly [Key in keyof Owner]: Owner[Key] };
+
+type ProjectGitAuthorityHolder = { current: RootProjectGitAuthority | null };
+
+type DesktopRecoveryInput = { transactionId: string; cwd?: string };
+
+type BoundaryObjectValue = object | null;
+
+function isBoundaryObjectValue<Input>(value: Input): value is Input & Readonly<BoundaryObjectValue> {
+  return typeof value === "object";
 }

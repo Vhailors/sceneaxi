@@ -1,3 +1,7 @@
+import { snapshotPlainRecord } from "@sceneaxi/schemas";
+
+type SceneCompositionInput = Parameters<typeof snapshotPlainRecord>[0];
+
 /**
  * SceneAxi-owned deterministic scene composition pipeline.
  *
@@ -27,6 +31,18 @@ import {
   type SceneCompositionDiagnosticCode,
   type SceneDocument,
   type SculptArtifact,
+} from "@sceneaxi/schemas";
+import {
+  SCENE_COMPOSITION_INTAKE_KIND,
+  SCENE_COMPOSITION_SCHEMA_VERSION_V2,
+  digestComposedSceneV2,
+  digestScenePlacementsV2,
+  projectSceneInstanceHierarchyV2,
+  resolveScenePlacementsV2,
+  validateComposedSceneV2,
+  validateSceneCompositionIntakeV2,
+  type ComposedSceneV2,
+  type ComposedSceneInstanceV2,
 } from "@sceneaxi/schemas";
 import { canonicalJson, digestJson, snapshotJsonValue } from "./json-invariants.js";
 
@@ -67,7 +83,7 @@ type SceneCompositionOptionsCapture =
 type StableInputCapture =
   | {
       readonly ok: true;
-      readonly value: unknown;
+      readonly value: SceneCompositionInput;
     }
   | {
       readonly ok: false;
@@ -81,6 +97,7 @@ type StableInputCaptureBudget = {
 };
 
 const SCENE_CAPTURE_MAXIMUM_DEPTH = 64;
+
 const SCENE_CAPTURE_MAXIMUM_ENTRIES = 100_000;
 
 function refuse(
@@ -92,7 +109,7 @@ function refuse(
 }
 
 function captureStableInput(
-  value: unknown,
+  value: SceneCompositionInput,
   path: string,
   ancestors = new Set<object>(),
   budget: StableInputCaptureBudget = {
@@ -108,9 +125,11 @@ function captureStableInput(
       budgetExceeded: true,
     };
   }
-  if (value === null || typeof value !== "object") {
+
+  if (value === null || !isBoundaryObjectOrNull(value)) {
     return { ok: true, value };
   }
+
   if (ancestors.has(value)) {
     return {
       ok: false,
@@ -121,9 +140,10 @@ function captureStableInput(
 
   let array: boolean;
   let prototype: object | null;
+
   try {
     array = Array.isArray(value);
-    prototype = Object.getPrototypeOf(value) as object | null;
+    prototype = Object.getPrototypeOf(value);
   } catch {
     return {
       ok: false,
@@ -144,8 +164,10 @@ function captureStableInput(
   }
 
   let arrayLength: number | undefined;
+
   if (array) {
     let lengthDescriptor: PropertyDescriptor | undefined;
+
     try {
       lengthDescriptor = Object.getOwnPropertyDescriptor(value, "length");
     } catch {
@@ -155,12 +177,14 @@ function captureStableInput(
         message: "Scene composition input must expose stable data fields.",
       };
     }
+
     const length =
       lengthDescriptor !== undefined && "value" in lengthDescriptor
-        ? (lengthDescriptor.value as unknown)
+        ? lengthDescriptor.value
         : undefined;
+
     if (
-      typeof length !== "number" ||
+      !isBoundaryNumber(length) ||
       !Number.isSafeInteger(length) ||
       length < 0
     ) {
@@ -170,10 +194,12 @@ function captureStableInput(
         message: "Scene composition arrays must expose a stable length.",
       };
     }
+
     const maximumLength =
       path === "$.placements" || path === "$.artifacts"
         ? SCENE_MAXIMUM_INSTANCES
         : SCENE_CAPTURE_MAXIMUM_ENTRIES;
+
     if (length > maximumLength) {
       return {
         ok: false,
@@ -182,10 +208,12 @@ function captureStableInput(
         budgetExceeded: true,
       };
     }
+
     arrayLength = length;
   }
 
   let keys: readonly PropertyKey[];
+
   try {
     keys = Reflect.ownKeys(value);
   } catch {
@@ -195,6 +223,7 @@ function captureStableInput(
       message: "Scene composition input must expose stable data fields.",
     };
   }
+
   if (keys.length > budget.remainingEntries) {
     return {
       ok: false,
@@ -203,16 +232,18 @@ function captureStableInput(
       budgetExceeded: true,
     };
   }
+
   budget.remainingEntries -= keys.length;
 
   ancestors.add(value);
+
   try {
     if (array) {
       if (
         keys.some(
           (key) =>
             key !== "length" &&
-            (typeof key !== "string" || !/^(0|[1-9][0-9]*)$/.test(key)),
+            (!isBoundaryString(key) || !/^(0|[1-9][0-9]*)$/.test(key)),
         )
       ) {
         return {
@@ -223,8 +254,10 @@ function captureStableInput(
       }
 
       const entries: unknown[] = [];
+
       for (let index = 0; index < (arrayLength ?? 0); index += 1) {
         let descriptor: PropertyDescriptor | undefined;
+
         try {
           descriptor = Object.getOwnPropertyDescriptor(value, String(index));
         } catch {
@@ -234,6 +267,7 @@ function captureStableInput(
             message: "Scene composition input must expose stable data fields.",
           };
         }
+
         if (
           descriptor === undefined ||
           !descriptor.enumerable ||
@@ -245,29 +279,35 @@ function captureStableInput(
             message: "Scene composition arrays must contain stable indexed data fields.",
           };
         }
+
         const captured = captureStableInput(
-          descriptor.value as unknown,
+          descriptor.value,
           `${path}[${String(index)}]`,
           ancestors,
           budget,
           depth + 1,
         );
+
         if (!captured.ok) return captured;
         entries.push(captured.value);
       }
+
       return { ok: true, value: Object.freeze(entries) };
     }
 
     const entries: Array<readonly [string, unknown]> = [];
+
     for (const key of keys) {
-      if (typeof key !== "string") {
+      if (!isBoundaryString(key)) {
         return {
           ok: false,
           path,
           message: "Scene composition objects must contain only string data fields.",
         };
       }
+
       let descriptor: PropertyDescriptor | undefined;
+
       try {
         descriptor = Object.getOwnPropertyDescriptor(value, key);
       } catch {
@@ -277,6 +317,7 @@ function captureStableInput(
           message: "Scene composition input must expose stable data fields.",
         };
       }
+
       if (
         descriptor === undefined ||
         !descriptor.enumerable ||
@@ -288,16 +329,19 @@ function captureStableInput(
           message: "Scene composition objects must contain stable data fields.",
         };
       }
+
       const captured = captureStableInput(
-        descriptor.value as unknown,
+        descriptor.value,
         `${path}.${key}`,
         ancestors,
         budget,
         depth + 1,
       );
+
       if (!captured.ok) return captured;
       entries.push([key, captured.value]);
     }
+
     return {
       ok: true,
       value: Object.freeze(Object.fromEntries(entries)),
@@ -308,9 +352,10 @@ function captureStableInput(
 }
 
 function captureSceneCompositionOptions(
-  value: unknown,
+  value: SceneCompositionInput,
 ): SceneCompositionOptionsCapture {
   let array: boolean;
+
   try {
     array = Array.isArray(value);
   } catch {
@@ -320,7 +365,8 @@ function captureSceneCompositionOptions(
       message: "Scene composition options must expose stable data fields.",
     };
   }
-  if (value === null || typeof value !== "object" || array) {
+
+  if (value === null || !isBoundaryObjectOrNull(value) || array) {
     return {
       ok: false,
       path: "$.options",
@@ -330,6 +376,7 @@ function captureSceneCompositionOptions(
 
   let documentIdDescriptor: PropertyDescriptor | undefined;
   let titleDescriptor: PropertyDescriptor | undefined;
+
   try {
     documentIdDescriptor = Object.getOwnPropertyDescriptor(value, "documentId");
     titleDescriptor = Object.getOwnPropertyDescriptor(value, "title");
@@ -351,6 +398,7 @@ function captureSceneCompositionOptions(
       message: "Scene document id must be a stable data field.",
     };
   }
+
   if (titleDescriptor !== undefined && !("value" in titleDescriptor)) {
     return {
       ok: false,
@@ -359,8 +407,9 @@ function captureSceneCompositionOptions(
     };
   }
 
-  const documentId = documentIdDescriptor?.value as unknown;
-  const title = titleDescriptor?.value as unknown;
+  const documentId: SceneCompositionInput = documentIdDescriptor?.value;
+  const title: SceneCompositionInput = titleDescriptor?.value;
+
   if (documentId !== undefined && !isSculptIdentifier(documentId)) {
     return {
       ok: false,
@@ -368,7 +417,8 @@ function captureSceneCompositionOptions(
       message: "Scene document id must be a lowercase slug.",
     };
   }
-  if (title !== undefined && typeof title !== "string") {
+
+  if (title !== undefined && !isBoundaryString(title)) {
     return {
       ok: false,
       path: "$.options.title",
@@ -376,13 +426,13 @@ function captureSceneCompositionOptions(
     };
   }
 
-  return {
-    ok: true,
-    value: Object.freeze({
-      ...(documentId === undefined ? {} : { documentId }),
-      ...(title === undefined ? {} : { title }),
-    }),
-  };
+  const captured: SceneCompositionOptionsBuilder = {};
+
+  if (documentId !== undefined) captured.documentId = documentId;
+
+  if (title !== undefined) captured.title = title;
+
+  return { ok: true, value: Object.freeze(captured) };
 }
 
 function remapComposedScenePath(
@@ -393,29 +443,39 @@ function remapComposedScenePath(
 ) {
   if (path === "$.instances") return "$.placements";
   const match = /^\$\.instances\[(\d+)\](.*)$/.exec(path);
+
   if (match === null) return path;
   const instance = instances[Number(match[1])];
+
   if (instance === undefined) return path;
   const suffix = match[2] ?? "";
+
   if (suffix === ".artifact" || suffix.startsWith(".artifact.")) {
     const artifactIndex = artifactIndexByArtifactId.get(instance.artifactId);
+
     if (artifactIndex === undefined) return path;
+
     return `$.artifacts[${String(artifactIndex)}]${suffix.slice(".artifact".length)}`;
   }
+
   const placementIndex = placementIndexByInstanceId.get(instance.instanceId);
+
   if (placementIndex === undefined) return path;
+
   if (
     suffix === ".localTransform" ||
     suffix.startsWith(".localTransform.")
   ) {
     return `$.placements[${String(placementIndex)}].transform${suffix.slice(".localTransform".length)}`;
   }
+
   if (
     suffix === ".worldTransform" ||
     suffix.startsWith(".worldTransform.")
   ) {
     return `$.placements[${String(placementIndex)}].transform`;
   }
+
   if (
     suffix === ".instanceId" ||
     suffix === ".artifactId" ||
@@ -423,6 +483,7 @@ function remapComposedScenePath(
   ) {
     return `$.placements[${String(placementIndex)}]${suffix}`;
   }
+
   return `$.placements[${String(placementIndex)}]`;
 }
 
@@ -447,8 +508,10 @@ export function sceneDocumentFromComposedScene(
   options: SceneCompositionOptions = {},
 ): SceneDocument {
   const capturedOptions = captureSceneCompositionOptions(options);
+
   if (!capturedOptions.ok) throw new TypeError(capturedOptions.message);
   const normalizedOptions = capturedOptions.value;
+
   const base = {
     id: normalizedOptions.documentId ?? `${scene.sceneId}-scene`,
     data: {
@@ -456,13 +519,17 @@ export function sceneDocumentFromComposedScene(
       [COMPOSED_SCENE_DOCUMENT_DATA_KEY]: storedScene(scene) as JsonValue,
     },
   } as const;
+
   const document = normalizedOptions.title === undefined
     ? createDocument(base)
     : createDocument({ ...base, title: normalizedOptions.title });
+
   const validated = validateDocument(document);
+
   if (!validated.ok) {
     throw new TypeError(validated.message);
   }
+
   return validated.document;
 }
 
@@ -474,11 +541,12 @@ export function sceneDocumentFromComposedScene(
  * nothing is silently dropped in either direction.
  */
 export function composeScene(
-  intakeValue: unknown,
-  artifactValues: readonly unknown[],
+  intakeValue: SceneCompositionInput,
+  artifactValues: readonly SceneCompositionInput[],
   options: SceneCompositionOptions = {},
 ): SceneCompositionResult {
   const capturedOptions = captureSceneCompositionOptions(options);
+
   if (!capturedOptions.ok) {
     return refuse(
       "invalid-field",
@@ -486,8 +554,10 @@ export function composeScene(
       capturedOptions.message,
     );
   }
+
   const normalizedOptions = capturedOptions.value;
   let artifactArray: boolean;
+
   try {
     artifactArray = Array.isArray(artifactValues);
   } catch {
@@ -497,6 +567,7 @@ export function composeScene(
       "Sculpt Artifacts must expose a stable array.",
     );
   }
+
   if (!artifactArray) {
     return refuse(
       "invalid-artifact",
@@ -504,7 +575,9 @@ export function composeScene(
       "Sculpt Artifacts must be supplied as an array.",
     );
   }
+
   const capturedIntake = captureStableInput(intakeValue, "$");
+
   if (!capturedIntake.ok) {
     return refuse(
       capturedIntake.budgetExceeded &&
@@ -515,16 +588,21 @@ export function composeScene(
       capturedIntake.message,
     );
   }
+
   const intake = validateSceneCompositionIntake(capturedIntake.value);
+
   if (!intake.ok) {
     const diagnostic = intake.diagnostics[0];
+
     return refuse(
       diagnostic?.code ?? "invalid-field",
       diagnostic?.path ?? "$",
       diagnostic?.message ?? "Scene Composition Intake refused.",
     );
   }
+
   const capturedArtifacts = captureStableInput(artifactValues, "$.artifacts");
+
   if (!capturedArtifacts.ok || !Array.isArray(capturedArtifacts.value)) {
     return refuse(
       !capturedArtifacts.ok &&
@@ -538,12 +616,15 @@ export function composeScene(
         : capturedArtifacts.message,
     );
   }
+
   const normalizedArtifactValues = capturedArtifacts.value;
 
   const artifacts = new Map<string, SculptArtifact>();
   const artifactIndexByArtifactId = new Map<string, number>();
+
   for (const [index, artifactValue] of normalizedArtifactValues.entries()) {
     const artifact = validateSculptArtifact(artifactValue);
+
     if (!artifact.ok) {
       return refuse(
         "invalid-artifact",
@@ -551,6 +632,7 @@ export function composeScene(
         artifact.diagnostics[0]?.message ?? "Sculpt Artifact refused.",
       );
     }
+
     if (artifacts.has(artifact.value.artifactId)) {
       return refuse(
         "unknown-artifact-reference",
@@ -558,13 +640,16 @@ export function composeScene(
         `Sculpt Artifact "${artifact.value.artifactId}" was supplied more than once; one artifact may be placed many times, but it is supplied once.`,
       );
     }
+
     artifacts.set(artifact.value.artifactId, artifact.value);
     artifactIndexByArtifactId.set(artifact.value.artifactId, index);
   }
 
   const resolved = resolveScenePlacements(intake.value);
+
   if (!resolved.ok) {
     const diagnostic = resolved.diagnostics[0];
+
     return refuse(
       diagnostic?.code ?? "invalid-field",
       diagnostic?.path ?? "$",
@@ -573,13 +658,16 @@ export function composeScene(
   }
 
   const placedArtifactIds = new Set<string>();
+
   const intakeIndexByInstanceId = new Map(
     intake.value.placements.map((placement, index) => [
       placement.instanceId,
       index,
     ]),
   );
+
   const instances: ComposedSceneInstance[] = [];
+
   for (const placement of resolved.value) {
     if (placement.kind === "node") {
       instances.push(placement);
@@ -587,20 +675,24 @@ export function composeScene(
     }
 
     const artifact = artifacts.get(placement.artifactId);
+
     if (artifact === undefined) {
       const intakeIndex = intakeIndexByInstanceId.get(placement.instanceId);
+
       return refuse(
         "unknown-artifact-reference",
         `$.placements[${String(intakeIndex ?? 0)}].artifactId`,
         `Scene instance "${placement.instanceId}" references Sculpt Artifact "${placement.artifactId}", which was not supplied.`,
       );
     }
+
     placedArtifactIds.add(placement.artifactId);
     instances.push({ ...placement, artifact });
   }
 
   for (const artifactId of artifacts.keys()) {
     if (placedArtifactIds.has(artifactId)) continue;
+
     return refuse(
       "unplaced-artifact",
       "$.artifacts",
@@ -608,14 +700,15 @@ export function composeScene(
     );
   }
 
-  const draft = {
+  // SAFETY: intake and artifacts were validated; their typed, resolved values contain only JSON fields.
+  const draft: ComposedScene = {
     schemaVersion: SCENE_COMPOSITION_SCHEMA_VERSION,
     kind: COMPOSED_SCENE_KIND,
     sceneId: intake.value.sceneId,
     rootInstanceId: intake.value.rootInstanceId,
     instances,
     evidence: {
-      intakeDigest: digestJson(intake.value as unknown as JsonValue),
+      intakeDigest: digestJson(intake.value as JsonValue),
       placementDigest: digestScenePlacements(resolved.value),
       artifactDigests: instances.map((instance) => ({
         instanceId: instance.instanceId,
@@ -623,16 +716,19 @@ export function composeScene(
       })),
       sceneDigest: "",
     },
-  } as unknown as ComposedScene;
+  };
 
+  // SAFETY: snapshotJsonValue clones the validated-field draft without changing its schema or field types.
   const scene = snapshotJsonValue({
     ...draft,
     evidence: { ...draft.evidence, sceneDigest: digestComposedScene(draft) },
   }) as ComposedScene;
 
   const validated = validateComposedScene(scene);
+
   if (!validated.ok) {
     const diagnostic = validated.diagnostics[0];
+
     return refuse(
       diagnostic?.code ?? "invalid-field",
       diagnostic === undefined
@@ -654,4 +750,161 @@ export function composeScene(
     sceneDigest: validated.value.evidence.sceneDigest,
     document: sceneDocumentFromComposedScene(validated.value, normalizedOptions),
   };
+}
+
+export type SceneCompositionResultV2 =
+  | { readonly ok: true; readonly scene: ComposedSceneV2; readonly sceneBytes: string;
+      readonly sceneDigest: string; readonly document: SceneDocument }
+  | Extract<SceneCompositionResult, { readonly ok: false }>;
+
+export function serializeComposedSceneV2(scene: ComposedSceneV2): string {
+  return `${canonicalJson(scene)}\n`;
+}
+
+/** v2 uses the existing text-canonical document/persistence seam, not a new file type. */
+export function sceneDocumentFromComposedSceneV2(scene: ComposedSceneV2, options: SceneCompositionOptions = {}): SceneDocument {
+  const capturedOptions = captureSceneCompositionOptions(options);
+
+  if (!capturedOptions.ok) throw new TypeError(capturedOptions.message);
+  const validated = validateComposedSceneV2(scene);
+
+  if (!validated.ok) throw new TypeError(validated.diagnostics[0]?.message);
+  const normalizedOptions = capturedOptions.value;
+
+  const base = { id: normalizedOptions.documentId ?? `${scene.sceneId}-scene`,
+    data: { [COMPOSED_SCENE_DOCUMENT_DATA_KEY]: validated.value } };
+
+  const document = normalizedOptions.title === undefined ? createDocument(base)
+    : createDocument({ ...base, title: normalizedOptions.title });
+
+  const checked = validateDocument(document);
+
+  if (!checked.ok) throw new TypeError(checked.message);
+
+  return checked.document;
+}
+
+/** Explicit rotation-aware composition; composeScene() remains the v1 entry point. */
+export function composeSceneV2(intakeValue: SceneCompositionInput, artifactValues: readonly SceneCompositionInput[], options: SceneCompositionOptions = {}): SceneCompositionResultV2 {
+  const refusal = (code: SceneCompositionRefusalCode, path: string, message: string): SceneCompositionResultV2 => ({ ok: false, code, path, message });
+  const capturedOptions = captureSceneCompositionOptions(options);
+
+  if (!capturedOptions.ok) return refusal("invalid-field", capturedOptions.path, capturedOptions.message);
+  const capturedIntake = captureStableInput(intakeValue, "$");
+
+  if (!capturedIntake.ok) return refusal(capturedIntake.budgetExceeded ? "scene-budget-exceeded" : "invalid-field", capturedIntake.path, capturedIntake.message);
+  const intake = validateSceneCompositionIntakeV2(capturedIntake.value);
+
+  if (!intake.ok) {
+    const diagnostic = intake.diagnostics[0];
+
+    return refusal(diagnostic?.code ?? "invalid-field", diagnostic?.path ?? "$", diagnostic?.message ?? "Scene v2 intake refused.");
+  }
+
+  const capturedArtifacts = captureStableInput(artifactValues, "$.artifacts");
+
+  if (!capturedArtifacts.ok) return refusal(capturedArtifacts.budgetExceeded ? "scene-budget-exceeded" : "invalid-artifact", capturedArtifacts.path, capturedArtifacts.message);
+
+  if (!Array.isArray(capturedArtifacts.value)) return refusal("invalid-artifact", "$.artifacts", "Sculpt Artifacts must be supplied as an array.");
+  const artifacts = new Map<string, SculptArtifact>();
+
+  for (const [index, value] of capturedArtifacts.value.entries()) {
+    const artifact = validateSculptArtifact(value);
+
+    if (!artifact.ok) return refusal("invalid-artifact", `$.artifacts[${String(index)}]`, artifact.diagnostics[0]?.message ?? "Artifact refused.");
+
+    if (artifacts.has(artifact.value.artifactId)) return refusal("unknown-artifact-reference", `$.artifacts[${String(index)}].artifactId`, "Supply an instanced artifact exactly once.");
+    artifacts.set(artifact.value.artifactId, artifact.value);
+  }
+
+  const resolved = resolveScenePlacementsV2(intake.value);
+
+  if (!resolved.ok) {
+    const diagnostic = resolved.diagnostics[0];
+
+    return refusal(diagnostic?.code ?? "invalid-field", diagnostic?.path ?? "$", diagnostic?.message ?? "Scene placements refused.");
+  }
+
+  const placed = new Set<string>();
+  const instances: ComposedSceneInstanceV2[] = [];
+
+  for (const placement of resolved.value) {
+    const artifact = artifacts.get(placement.artifactId);
+    const index = intake.value.placements.findIndex(p => p.instanceId === placement.instanceId);
+
+    if (!artifact) return refusal("unknown-artifact-reference", `$.placements[${String(index)}].artifactId`, "Referenced artifact was not supplied.");
+    placed.add(placement.artifactId);
+
+    try {
+      const bounds = projectSceneInstanceHierarchyV2({ ...placement, artifact }).bounds;
+      instances.push({ ...placement, artifact, bounds });
+    } catch {
+      return refusal("invalid-artifact", `$.placements[${String(index)}].artifactId`, "Artifact projection exceeds the scene numeric domain.");
+    }
+  }
+
+  for (const id of artifacts.keys()) {
+    if (!placed.has(id)) return refusal("unplaced-artifact", "$.artifacts", "Supplied artifact was never placed.");
+  }
+
+  const draft: ComposedSceneV2 = {
+    schemaVersion: SCENE_COMPOSITION_SCHEMA_VERSION_V2, kind: COMPOSED_SCENE_KIND,
+    sceneId: intake.value.sceneId, rootInstanceId: intake.value.rootInstanceId, instances,
+    evidence: { intakeDigest: digestJson(intake.value), placementDigest: digestScenePlacementsV2(resolved.value),
+      artifactDigests: instances.map(i => ({ instanceId: i.instanceId, artifactDigest: digestSceneArtifact(i.artifact) })), sceneDigest: "" },
+  };
+
+  const scene: ComposedSceneV2 = { ...draft, evidence: { ...draft.evidence, sceneDigest: digestComposedSceneV2(draft) } };
+  const validated = validateComposedSceneV2(scene);
+
+  if (!validated.ok) {
+    const diagnostic = validated.diagnostics[0];
+
+    return refusal(diagnostic?.code ?? "invalid-field", diagnostic?.path ?? "$", diagnostic?.message ?? "Scene refused its own validator.");
+  }
+
+  return { ok: true, scene: validated.value, sceneBytes: serializeComposedSceneV2(validated.value),
+    sceneDigest: validated.value.evidence.sceneDigest,
+    document: sceneDocumentFromComposedSceneV2(validated.value, capturedOptions.value) };
+}
+
+/** Migrate a validated persisted v1 scene explicitly, keeping all artifact bytes. */
+export function migrateComposedSceneV1ToV2(value: SceneCompositionInput, options: SceneCompositionOptions = {}): SceneCompositionResultV2 {
+  const captured = captureStableInput(value, "$");
+
+  if (!captured.ok) return { ok: false, code: "invalid-field", path: captured.path, message: captured.message };
+  const legacy = validateComposedScene(captured.value);
+
+  if (!legacy.ok) {
+    const diagnostic = legacy.diagnostics[0];
+
+    return { ok: false, code: diagnostic?.code ?? "invalid-field", path: diagnostic?.path ?? "$", message: diagnostic?.message ?? "Legacy scene refused." };
+  }
+
+  const artifacts = new Map(legacy.value.instances.map(i => [i.artifactId, i.artifact]));
+
+  return composeSceneV2({ schemaVersion: 2, kind: SCENE_COMPOSITION_INTAKE_KIND,
+    sceneId: legacy.value.sceneId, rootInstanceId: legacy.value.rootInstanceId,
+    placements: legacy.value.instances.map(i => ({ instanceId: i.instanceId, artifactId: i.artifactId,
+      parentInstanceId: i.parentInstanceId, transform: i.localTransform })) }, [...artifacts.values()], options);
+}
+
+function isBoundaryNumber(value: SceneCompositionInput): value is number {
+  return typeof value === "number";
+}
+
+function isBoundaryString(value: SceneCompositionInput): value is string {
+  return typeof value === "string";
+}
+
+function isBoundaryObjectOrNull(value: SceneCompositionInput): value is object | null {
+  return isBoundaryObjectValue(value);
+}
+
+type SceneCompositionOptionsBuilder = { -readonly [Key in keyof SceneCompositionOptions]: SceneCompositionOptions[Key] };
+
+type BoundaryObjectValue = object | null;
+
+function isBoundaryObjectValue<Input>(value: Input): value is Input & Readonly<BoundaryObjectValue> {
+  return typeof value === "object";
 }

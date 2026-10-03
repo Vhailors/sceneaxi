@@ -1,0 +1,89 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/tmp/sceneaxi-comprehensive-owned-xd4gdfl1[39m
+
+ [32m✓[39m packages/schemas/test/desktop-scene-animation-mutation.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m packages/schemas/test/desktop-scene-materials-mutation.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m packages/schemas/test/desktop-scene-physics-mutation.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m packages/schemas/test/desktop-scene-environment-mutation.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+ [32m✓[39m packages/schemas/test/desktop-scene-effects-mutation.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/scene-environment-mutation-consumer.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 166[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/scene-effects-mutation-consumer.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 207[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/scene-materials-mutation-consumer.test.ts [2m([22m[2m2 tests[22m[2m)[22m[33m 1101[2mms[22m[39m
+     [33m[2m✓[22m[39m public desktop consumer refuses malformed fields with zero partial apply/accessor hooks [33m 1014[2mms[22m[39m
+ [31m❯[39m desktop/linux/test/native-assistant-scene-compat.test.ts [2m([22m[2m13 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[33m 885[2mms[22m[39m
+[31m     [31m×[31m dispatches the real injected compiler with trimmed prompt/profile/progress and publishes its result[39m[32m 49[2mms[22m[39m
+     [32m✓[39m keeps default local compilation when no executor is injected[32m 21[2mms[22m[39m
+     [32m✓[39m refuses Kids/hosted/BYO before calling a private local executor[32m 4[2mms[22m[39m
+     [32m✓[39m settles false async/sync injected failures as runtime refusals[32m 2[2mms[22m[39m
+     [32m✓[39m settles true async/sync injected failures as runtime refusals[32m 2[2mms[22m[39m
+     [32m✓[39m fences progress and completion from an abandoned injected job[32m 4[2mms[22m[39m
+     [32m✓[39m stages a named empty node and reproduces the digest without changing source bytes[32m 121[2mms[22m[39m
+     [32m✓[39m reconstructs and stages exactly one real box primitive[32m 71[2mms[22m[39m
+     [32m✓[39m reconstructs and stages exactly one real cylinder primitive[32m 75[2mms[22m[39m
+     [32m✓[39m reconstructs and stages exactly one real sphere primitive[32m 87[2mms[22m[39m
+     [32m✓[39m renames an existing artifact without changing artifact bytes, placement or selection[32m 87[2mms[22m[39m
+[31m     [31m×[31m preserves node kind/name through rename, legacy reparent, transform edits and reopen[39m[32m 282[2mms[22m[39m
+     [32m✓[39m keeps document/profile/policy refusal precedence and distinguishes absent creation parent from stale rename target[32m 78[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/scene-animation-mutation-consumer.test.ts [2m([22m[2m2 tests[22m[2m)[22m[33m 1745[2mms[22m[39m
+     [33m[2m✓[22m[39m public desktop consumer refuses malformed fields with zero partial apply/accessor hooks [33m 1657[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/scene-physics-mutation-consumer.test.ts [2m([22m[2m2 tests[22m[2m)[22m[33m 1772[2mms[22m[39m
+     [33m[2m✓[22m[39m public desktop consumer refuses malformed fields with zero partial apply/accessor hooks [33m 1679[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 2 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m desktop/linux/test/native-assistant-scene-compat.test.ts[2m > [22mprivate injected local assistant execution[2m > [22mdispatches the real injected compiler with trimmed prompt/profile/progress and publishes its result
+[31m[1mAssertionError[22m: expected { ok: true, action: 'assistant', …(1) } to match object { ok: true, data: { …(3) } }
+(28 matching properties omitted from actual)[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[33m@@ -28,11 +28,10 @@[39m
+[2m                  0,[22m
+[2m                ],[22m
+[2m              },[22m
+[2m            },[22m
+[2m          ],[22m
+[32m-         "schemaVersion": 1,[39m
+[2m        },[22m
+[2m        "ok": true,[22m
+[2m        "route": "local",[22m
+[2m      },[22m
+[2m      "status": "ready",[22m
+
+[36m [2m❯[22m desktop/linux/test/native-assistant-scene-compat.test.ts:[2m53:79[22m[39m
+
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m desktop/linux/test/native-assistant-scene-compat.test.ts[2m > [22mcomplete current scene-operation compatibility[2m > [22mpreserves node kind/name through rename, legacy reparent, transform edits and reopen
+[31m[1mAssertionError[22m: expected { name: 'Renamed Node', …(8) } to match object { kind: 'node', …(3) }
+(17 matching properties omitted from actual)[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[33m@@ -1,10 +1,10 @@[39m
+[2m  {[22m
+[2m    "kind": "node",[22m
+[2m    "localTransform": {[22m
+[2m      "translation": [[22m
+[32m-       0,[39m
+[31m+       4.4,[39m
+[2m        2,[22m
+[2m        0,[22m
+[2m      ],[22m
+[2m    },[22m
+[2m    "name": "Renamed Node",[22m
+
+[36m [2m❯[22m desktop/linux/test/native-assistant-scene-compat.test.ts:[2m145:83[22m[39m
+
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m10 passed[39m[22m[90m (11)[39m
+[2m      Tests [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m108 passed[39m[22m[90m (110)[39m
+[2m   Start at [22m 13:19:38
+[2m   Duration [22m 5.15s[2m (transform 19.84s, setup 0ms, import 25.54s, tests 5.98s, environment 2ms)[22m
+

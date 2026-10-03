@@ -11,6 +11,7 @@ import {
 import {
   DESKTOP_ASSISTANT_RUNTIME_EVENT,
   DESKTOP_MODE_IDS,
+  DESKTOP_MINIMUM_WINDOW,
   DESKTOP_VISUAL_REFUSALS,
   desktopVisualView,
   dockTabsFor,
@@ -161,6 +162,7 @@ const T = ${JSON.stringify(tables).replace(/</g, "\\u003c")};
 const shell = document.querySelector('.shell');
 if (shell) {
   const q = (sel) => Array.from(shell.querySelectorAll(sel));
+  const minimumWindowQuery = window.matchMedia('(max-width:${DESKTOP_MINIMUM_WINDOW.width - 1}px),(max-height:${DESKTOP_MINIMUM_WINDOW.height - 1}px)');
 
   // The model's own staging decision, not a paraphrase of it: this is the exact
   // function \`stageWebHtml()\` and \`stageWebAssetInjection()\` call, so the shipped
@@ -437,7 +439,12 @@ ${settingsGitValidationScript()}
     if (!isSessionSnapshot(snapshot)) return null;
     const proposal = snapshot && snapshot.proposal;
     const edits = proposal && Array.isArray(proposal.edits) ? proposal.edits : [];
-    const first = edits[0];
+    const compact = snapshot?.preparedReview;
+    const first = edits[0] || (snapshot.proposal === null && snapshot.preparedAsset &&
+      Number.isSafeInteger(snapshot.preparedAsset.canonicalBase64ByteLength) &&
+      snapshot.preparedAsset.canonicalBase64ByteLength > 0 && compact &&
+      typeof compact.documentPath === 'string' && compact.documentPath.length > 0 &&
+      typeof compact.baseContentHash === 'string' && compact.baseContentHash.length > 0 ? compact : null);
     const diff = snapshot && typeof snapshot.renderedDiff === 'string'
       ? snapshot.renderedDiff
       : null;
@@ -681,11 +688,36 @@ ${inspectorCatalogScript()}
     return candidate && typeof candidate.browseProject === 'function' ? candidate : null;
   };
 
+  // Audio authority is never inferred from a scene/frame or an offline reply.
+  let desktopAudioGeneration = 0;
+  const invalidateDesktopAudio = () => {
+    desktopAudioGeneration += 1;
+    document.dispatchEvent(new CustomEvent('sceneaxi:desktop-audio-invalidate', { detail: { profile: null } }));
+    return desktopAudioGeneration;
+  };
+
   const runtimeRequest = async (request) => {
+    const confirmsProfile = request.action === 'profile';
+    const invalidatesAudio = confirmsProfile || request.action === 'open-path' || request.action === 'project-open' ||
+      request.action === 'authoring' && ['restart', 'status'].includes(request.payload?.op);
+    const audioGeneration = invalidatesAudio ? invalidateDesktopAudio() : desktopAudioGeneration;
+    const audioRoot = activeProject?.root ?? null;
+    const audioProfile = shell.dataset.profile;
     const port = desktopPort();
     if (port === null) return null;
     try {
-      return await port.request(request);
+      const response = await port.request(request);
+      if (confirmsProfile) {
+        const profile = request.payload?.profile;
+        // A rootless shell may switch business profiles, but cannot grant audio.
+        const current = audioGeneration === desktopAudioGeneration &&
+          (activeProject?.root ?? null) === audioRoot && shell.dataset.profile === audioProfile;
+        if (!current) return { ok: false, reason: T.product.refusals.runtimeRequestRefused, message: 'Stale profile response.' };
+        if (audioRoot !== null && response?.ok === true && response.data?.profile === profile && ['game', 'web', 'kids'].includes(profile)) {
+          document.dispatchEvent(new CustomEvent('sceneaxi:desktop-audio-invalidate', { detail: { profile } }));
+        }
+      }
+      return response;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       return {
@@ -698,6 +730,7 @@ ${inspectorCatalogScript()}
   };
 
   const projectRequest = async (request) => {
+    if (['choose-new', 'choose-open', 'open-recent'].includes(request.action)) invalidateDesktopAudio();
     const port = projectPort();
     if (port === null) return null;
     try {
@@ -744,6 +777,9 @@ ${inspectorCatalogScript()}
     if (files.length !== status.files.length ||
         !files.some((file) => file.path === status.selectedPath)) return false;
     projectBrowserStatus = status;
+    const browserRevision = Number(shell.dataset.projectBrowserRevision || '0') + 1;
+    shell.dataset.projectBrowserRevision = String(browserRevision);
+    shell.dataset.projectBrowserSelectedPath = status.selectedPath;
     const list = shell.querySelector('#project-browser-file-select');
     if (list && list.tagName === 'SELECT') {
       list.replaceChildren();
@@ -809,6 +845,7 @@ ${inspectorCatalogScript()}
 
   const clearProjectBrowser = () => {
     projectBrowserStatus = null;
+    delete shell.dataset.projectBrowserSelectedPath;
     const list = shell.querySelector('#project-browser-file-select');
     if (list) list.replaceChildren();
     const detail = shell.querySelector('[data-project-browser-detail]');
@@ -958,6 +995,7 @@ ${inspectorCatalogScript()}
       ? candidate
       : null;
     if ((activeProject?.root ?? null) !== previousRoot) {
+      invalidateDesktopAudio();
       sceneSelectionGeneration += 1;
       clearProjectBrowser();
       // Deferred: this can run while the script is still defining its helpers.
@@ -1328,6 +1366,7 @@ ${inspectorCatalogScript()}
   };
 
   const openProject = async (refuseDirty = false) => {
+    invalidateDesktopAudio();
     await beginSceneLifecycleTransition();
     if (activeProject === null && projectPort() !== null) {
       productStatus('refused', 'Open refused · no project root selected');
@@ -1365,7 +1404,9 @@ ${inspectorCatalogScript()}
       showOutcome('Open refused', code, 'The active Scene Document was not opened.');
       return false;
     }
-    return applyOpenedProjectStatus(status, authoringSnapshot, true);
+    const opened = await applyOpenedProjectStatus(status, authoringSnapshot, true);
+    if (opened) await runtimeRequest({ action: 'profile', payload: { profile: shell.dataset.profile } });
+    return opened;
   };
 
   const stageWebEdit = async (kind) => {
@@ -1855,10 +1896,12 @@ ${dockTabsScript()}
   // would contain nothing at all.
   const overlayStops = () => {
     const open = shell.querySelector('.overlay:not([hidden])');
-    return open === null ? [] : Array.from(open.querySelectorAll('button'));
+    return open === null ? [] : Array.from(open.querySelectorAll('button, input:not([disabled]), textarea:not([disabled]), select:not([disabled])'));
   };
 
   const setOverlay = (id) => {
+    // Pending replies must not reopen a dialog behind the size refusal.
+    if (minimumWindowQuery.matches && id !== 'none') return;
     const wasOpen = shell.dataset.overlay !== 'none';
     if (id !== 'none' && !wasOpen) {
       const active = document.activeElement;
@@ -1869,7 +1912,7 @@ ${dockTabsScript()}
     if (id === 'none') {
       const back = overlayReturn;
       overlayReturn = null;
-      if (back !== null && shell.contains(back)) back.focus();
+      if (!minimumWindowQuery.matches && back !== null && shell.contains(back)) back.focus();
       return;
     }
     const stops = overlayStops();
@@ -1937,8 +1980,51 @@ ${dockTabsScript()}
       }
     });
     hideMenus();
-    if (restore !== null && typeof restore.focus === 'function') restore.focus();
+    if (!minimumWindowQuery.matches && restore !== null && typeof restore.focus === 'function') restore.focus();
   };
+
+  // The CSS refusal is a sibling of the hidden shell. Mirror its actual media
+  // state for navigation, dismiss covered UI, and return to the original opener
+  // only once the editor can be used again. Resizing is the only dismissal.
+  const windowRefusal = document.querySelector('.window-refusal');
+  let minimumWindowReturn = null;
+  const syncMinimumWindow = () => {
+    const refused = minimumWindowQuery.matches;
+    const wasRefused = shell.dataset.window === 'refused';
+    // Capture focus before hiding the refusal: browsers can blur hidden nodes.
+    const refusalHadFocus = document.activeElement === windowRefusal;
+    shell.dataset.window = refused ? 'refused' : 'ready';
+    shell.inert = refused;
+    if (windowRefusal) {
+      windowRefusal.dataset.window = shell.dataset.window;
+      windowRefusal.hidden = !refused;
+    }
+    if (refused && !wasRefused) {
+      const active = document.activeElement;
+      const menu = active && typeof active.closest === 'function' ? active.closest('.menu-panel') : null;
+      minimumWindowReturn = overlayReturn || (menu ? menuTrigger(menu) : (shell.contains(active) ? active : null));
+      setOverlay('none');
+      closeMenus();
+      shell.dataset.drawerLeft = 'closed';
+      shell.dataset.drawerInspector = 'closed';
+      shell.dataset.drawerAssistant = 'closed';
+      q('.drawer-toggle, .assistant-toggle').forEach((el) => el.setAttribute('aria-expanded', 'false'));
+      const legend = shell.querySelector('#refusal-legend');
+      if (legend) legend.hidden = true;
+      q('[data-action="refusal-help"]').forEach((el) => el.setAttribute('aria-expanded', 'false'));
+      if (windowRefusal) {
+        windowRefusal.tabIndex = -1;
+        windowRefusal.focus();
+      }
+    } else if (!refused && wasRefused) {
+      const back = minimumWindowReturn;
+      minimumWindowReturn = null;
+      if (!refusalHadFocus) return;
+      if (back && shell.contains(back) && !back.closest('[hidden], [inert]') && back.getClientRects().length > 0) back.focus();
+      else { shell.tabIndex = -1; shell.focus(); }
+    }
+  };
+  minimumWindowQuery.addEventListener('change', syncMinimumWindow);
 
   // The panel declares role="menu", so the arrow keys have to move between its
   // items for that role to be true. The items keep their plain Tab stop as
@@ -1978,6 +2064,27 @@ ${dockTabsScript()}
   };
 
 ${assistantScript()}
+  const compactDrawerQuery = window.matchMedia('${belowTier("compact")}');
+  // Undocked panels occlude the viewport/dock. Keep covered controls out of
+  // keyboard and pointer navigation until the drawer is closed again.
+  const syncDrawerNavigation = () => {
+    const assistantDrawer = drawerQuery.matches && shell.dataset.assistant !== 'denied' && shell.dataset.drawerAssistant === 'open';
+    const leftDrawer = compactDrawerQuery.matches && shell.dataset.drawerLeft === 'open';
+    const inspectorDrawer = compactDrawerQuery.matches && shell.dataset.drawerInspector === 'open';
+    q('.viewport-region, .dock').forEach((el) => { el.inert = assistantDrawer || leftDrawer || inspectorDrawer; });
+    q('.left-dock').forEach((el) => { el.inert = assistantDrawer || inspectorDrawer; });
+    q('.inspector').forEach((el) => { el.inert = assistantDrawer || leftDrawer; });
+  };
+  const drawerNavigationObserver = new MutationObserver(syncDrawerNavigation);
+  drawerNavigationObserver.observe(shell, { attributes: true, attributeFilter: ['data-drawer-left', 'data-drawer-inspector', 'data-drawer-assistant', 'data-assistant'] });
+  drawerQuery.addEventListener('change', syncDrawerNavigation);
+  compactDrawerQuery.addEventListener('change', syncDrawerNavigation);
+  window.addEventListener('pagehide', () => {
+    drawerNavigationObserver.disconnect();
+    drawerQuery.removeEventListener('change', syncDrawerNavigation);
+    compactDrawerQuery.removeEventListener('change', syncDrawerNavigation);
+  }, { once: true });
+  syncDrawerNavigation();
 
   // An inert control keeps its focus stop and names its refusal, so a control
   // that becomes inert in the browser has to gain all of that, not just dim.
@@ -2116,11 +2223,13 @@ ${dockTimelineScript()}
       'physics-evaluate', 'scene-prefab-inspect', 'scene-prefab-define', 'scene-prefab-instance',
       'scene-prefab-override', 'scene-prefab-refresh',
     ].map((id) => [id, () => ['package-install', 'package-remove', 'project-migration-commit', 'extension-start',
-      'input-action-rebind', 'input-actions-reset'].includes(id) ? focusEditorCommandForm(id) : runEditorCommand(id)])),
+      'input-action-rebind', 'input-actions-reset', 'scene-prefab-define', 'scene-prefab-instance',
+      'scene-prefab-override', 'scene-prefab-refresh', 'viewport-source-set', 'physics-evaluate'].includes(id) ? focusEditorCommandForm(id) : runEditorCommand(id)])),
 
   });
 
   const executeCommand = (id) => {
+    if (minimumWindowQuery.matches) return;
     closeMenus();
 ${paletteScript()}
     const registryCommand = T.editorCommands.find((candidate) => candidate.id === id);
@@ -2171,6 +2280,7 @@ ${paletteScript()}
   shell.addEventListener('change', invalidateEditedReview);
 
   shell.addEventListener('click', (event) => {
+    if (minimumWindowQuery.matches) return;
     const command = event.target instanceof Element ? event.target.closest('[data-command]') : null;
     if (command && command.getAttribute('aria-disabled') !== 'true') {
       executeCommand(command.dataset.command);
@@ -2343,6 +2453,7 @@ ${paletteScript()}
   // still the ancestor, but a restored or lost focus must not silently drop the
   // Escape key, and the trap has to see every Tab.
   document.addEventListener('keydown', (event) => {
+    if (minimumWindowQuery.matches) return;
     const action = resolveKeyboardAction(event);
     if (action && (action.id === T.paletteShortcut.actionId || action.commandId)) {
       const textEntry = isTextEntryTarget(event.target);
@@ -2408,6 +2519,7 @@ ${paletteScript()}
   syncReview(null);
   syncAssistantTier();
   syncCommandAvailability();
+  syncMinimumWindow();
   void syncProjectLifecycle().then(hydrateInputActions).then(updateEditorCommandControls);
 }
 `;

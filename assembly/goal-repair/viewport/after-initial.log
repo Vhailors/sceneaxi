@@ -1,0 +1,32 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/tmp/sceneaxi-comprehensive-owned-xd4gdfl1[39m
+
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mstops all allocated root resources once and fences retained entry points[33m 380[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mpagehide during input readiness cannot allocate or issue later IPC[32m 93[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mpagehide during scene readiness cannot allocate or issue later IPC[32m 87[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mpagehide during actual openPath fences its late report[32m 76[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mreleases partial allocations after mount-failure even if a release throws[32m 89[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mreleases partial allocations after observe-failure even if a release throws[32m 83[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mreleases partial allocations after cleanup-failure even if a release throws[32m 114[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mterminal shutdown initiates close synchronously during ready and suppresses late audio work[32m 107[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mterminal shutdown initiates close synchronously during request and suppresses late audio work[32m 34[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mterminal shutdown initiates close synchronously during digest and suppresses late audio work[32m 30[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mterminal shutdown initiates close synchronously during resume and suppresses late audio work[32m 33[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mterminal shutdown initiates close synchronously during decode and suppresses late audio work[32m 30[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts[2m > [22mactual viewport terminal resource ownership[2m > [22mterminal shutdown also closes controls retired by a normal stop before its 100ms measurement[32m 34[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/audio-lifecycle-compat.test.ts[2m > [22mretains descriptor/digest admission and Ogg host codec, refuses bad envelopes before decode[32m 7[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/audio-lifecycle-compat.test.ts[2m > [22mStop cancels before fetch, before digest and before deferred host decode[32m 3[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/audio-lifecycle-compat.test.ts[2m > [22mnew Play wins out-of-order request and decode completions[32m 2[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/audio-lifecycle-compat.test.ts[2m > [22mreset/project/profile cancellation denies Kids before context allocation[32m 1[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/audio-lifecycle-compat.test.ts[2m > [22mrequest/decode/close rejection is named and repeated disposal closes once[32m 1[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/audio-lifecycle-compat.test.ts[2m > [22mfrozen PR310 package refusal preserves modern presentation and physics projection[32m 99[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/audio-lifecycle-compat.test.ts[2m > [22mper-clip Stop leaves other accepted sources playing, reset retires the entire project[32m 1[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/audio-lifecycle-compat.test.ts[2m > [22mrejected close is not reported as successful context disposal[32m 1[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/audio-lifecycle-compat.test.ts[2m > [22mchrome null-profile fence cancels synchronously before a stale request completes[32m 1[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/audio-lifecycle-compat.test.ts[2m > [22mmalformed authority events remain denied and disposed listeners cannot restore authority[32m 0[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m2 passed[39m[22m[90m (2)[39m
+[2m      Tests [22m [1m[32m23 passed[39m[22m[90m (23)[39m
+[2m   Start at [22m 18:32:06
+[2m   Duration [22m 8.33s[2m (transform 9.63s, setup 0ms, import 11.67s, tests 1.31s, environment 0ms)[22m
+

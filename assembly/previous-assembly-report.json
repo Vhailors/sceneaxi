@@ -1,0 +1,132 @@
+{
+  "status": "MERGE_IN_PROGRESS",
+  "owner": "bg-156",
+    "takeoverStatus": "ROOT_ASSEMBLY_ACTIVE_NOT_FROZEN",
+    "takeoverAt": "2026-10-03T09:48:00Z",
+    "sourceHandbacks": {"foundation-input": "FINAL_11_PATHS_RELEASED", "audio-assets": "LEASED_BG152", "maintenance-sites": "LEASED_BG154", "editor-native": "LEASED_BG155_INCLUDING_FRAME_SCRIPT"},
+    "policyApproval": "INDEPENDENT_ASTRA_APPROVAL_REQUIRED",
+    "publicationOwner": "PARENT_CONTROLLER_ONLY",
+  "clone": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1",
+  "createdAt": "2026-10-03T08:59:45.137977+00:00",
+  "baseline": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+  "commitsCreated": [],
+  "publication": "FORBIDDEN_PENDING_PARENT_REVIEW",
+  "semanticAcceptance": "PENDING",
+  "foreignUncommitted": "OWNER_EXPORT_REQUIRED",
+  "checkpoints": [
+    {
+      "action": "verified backups and captured all bundle refs before assembly",
+      "refs": [
+        "1e5ea6043946afbdddeac049ee01d7019dceec03 refs/captured/heads/bb/luna-repository-sceneaxi-sceneaxi-monorepo-read-thr_7svfbah827",
+        "db8afa68c18e46b426e0c9ac2a846fc8a7d3fdba refs/captured/heads/bb/luna-repository-sceneaxi-sceneaxi-monorepo-read-thr_rww6kh273z",
+        "45866fc43f1d45920bbbfc32274685d61cf061c9 refs/captured/heads/bb/opus-go-live-loop-2-for-sceneaxi-the-previous-lo-thr_cgpu4vbkib",
+        "4e532e2fbf43e9948741578ab6208a3277870405 refs/captured/heads/go-live-loop",
+        "fed05a766f1277b23ebf1757022067837d00621e refs/captured/heads/maestro/product-quality-loop-2",
+        "5698f78d5bff24513ee53ec181d28bfebbdf0a83 refs/captured/heads/main",
+        "4e532e2fbf43e9948741578ab6208a3277870405 refs/captured/heads/production-swarm",
+        "e26f30bca3b4800cd7301606c7271244c1d6ea29 refs/captured/heads/rescue/sceneaxi-release-dd77cc9",
+        "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16 refs/captured/remotes/origin/HEAD",
+        "1d2fe8aa089772c87271580deb158d87dd68cb64 refs/captured/remotes/origin/cursor/setup-dev-environment-e97a",
+        "907d1d5db146189b0e50db49450feb3d635abc72 refs/captured/remotes/origin/engine-redesign",
+        "60cd238d0fafa427c0bd1b363f6cc21e1a885727 refs/captured/remotes/origin/fm/sceneaxi-contracts-e1e2-v1",
+        "d1a676ea53bd4e8f368f027fb80f6b0097ab6aa3 refs/captured/remotes/origin/fm/sceneaxi-docs-adr-v1",
+        "9b2fd5d6ff24f08855c2669c011d7aba79e0211b refs/captured/remotes/origin/fm/sceneaxi-docs-program-v1",
+        "62e84cbee60471bd2cdd5f2e0e26a8c45f598928 refs/captured/remotes/origin/fm/sceneaxi-full-editor-asset-pipeline-20260812",
+        "f1b468fa6b319ffede42f6d8d6bb40480818c08e refs/captured/remotes/origin/fm/sceneaxi-full-editor-contained-git-20260812",
+        "740c7e950cf5eb6528e6629ee6f7041ef50dde5c refs/captured/remotes/origin/fm/sceneaxi-full-editor-input-actions-20260812",
+        "21c135b3eb671a79c37444513fe775dc5ff6cefd refs/captured/remotes/origin/fm/sceneaxi-wave2-catalogs-v1",
+        "1471150caeda3db7624f206753c566851182c688 refs/captured/remotes/origin/fm/sceneaxi-wave2-cli-v1",
+        "136fee1103d650baf3dc40ebbc4fc3d3f6fb2f45 refs/captured/remotes/origin/fm/sceneaxi-wave2-kernel-v1",
+        "ac1440670a8ad4eb8532cb20b4b85a9fbd0458df refs/captured/remotes/origin/fm/sceneaxi-wave3-authoring-v1",
+        "7e7767a44c7ab20942b93469295c97aa972ba54d refs/captured/remotes/origin/fm/sceneaxi-wave3-heldkeys-v1",
+        "d53d180beccfd11e1178fbc9abf3b08282d2ed44 refs/captured/remotes/origin/fm/sceneaxi-wave3-proof0-v1",
+        "07f0a3e8b27d2c6deb76856c3376243df490b822 refs/captured/remotes/origin/fm/sceneaxi-wave4-profile-v1",
+        "b63dc23d61e883332f85d272c980a404530b70a7 refs/captured/remotes/origin/fm/sceneaxi-wave4-proof1-v1",
+        "8729660a5cdaed2e5ced97124ac85311f3cef7ba refs/captured/remotes/origin/fm/sceneaxi-wave4-shells-v1",
+        "16f312c61435e3d379a0e54525ac8115e35fee86 refs/captured/remotes/origin/fm/sceneaxi-wave5-proof15-v1",
+        "89c7aa5e9fbaa7e31b9c7e879841684651426d07 refs/captured/remotes/origin/maestro/phase-01-toolchain",
+        "94a4503050def7641f78faa24ae756497ceb3292 refs/captured/remotes/origin/maestro/phase-02-audit-baseline",
+        "fed05a766f1277b23ebf1757022067837d00621e refs/captured/remotes/origin/maestro/product-quality-loop-2",
+        "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16 refs/captured/remotes/origin/main",
+        "23413eb7889ad2cdb41ab8d729c32c7512917394 refs/captured/remotes/origin/maintenance/checkpoint-20260929",
+        "346933c105305224d575bf9319256301c1eeabfa refs/captured/remotes/origin/production-swarm",
+        "e26f30bca3b4800cd7301606c7271244c1d6ea29 refs/captured/remotes/origin/rescue/sceneaxi-release-dd77cc9"
+      ]
+    },
+    {
+      "action": "reconstructed verified snapshot native tree from owned alternate index",
+      "paths": 2333,
+      "approvedUntracked": 1057,
+      "excluded": 62
+    },
+    {
+      "action": "normal foundation native merge in progress and full approved private snapshot rebased into working source",
+      "conflicts": 15,
+      "counts": {
+        "CURRENT_MAIN_RETAINED_SHARED_UNCHANGED": 883,
+        "PRIVATE_SOURCE_DELTA_MAIN_UNCHANGED": 1420,
+        "CONFLICT_WORKING_MAIN_PENDING_FUNCTION_PORT": 14,
+        "THREE_WAY_TEXT_REBASE_ACCEPTANCE_PENDING": 11,
+        "CONFLICT_WORKING_MAIN_PENDING_PATH_PORT": 1,
+        "MAIN_AND_SNAPSHOT_IDENTICAL": 4
+      }
+    },
+    {
+      "action": "exact34capturedRef checks + perUniqueCommit/source/path/blob/mode matrix and105 native conflicts saved",
+      "refs": 34,
+      "tips": 30,
+      "uniqueCommits": 73
+    }
+  ],
+  "reconstructedSnapshotTree": "3f25ffea22f19d01ef9a484f317d8b8ca4cde397",
+  "snapshotIsCommit": false,
+  "nativeMergeHead": "16f312c61435e3d379a0e54525ac8115e35fee86",
+  "nativeMergeConflicts": 105,
+  "privateSourceConflicts": 15,
+  "assembledPaths": 2333,
+  "checks": {
+    "rootFrozenInstall": {
+      "exit": 0,
+      "log": "install-root.log"
+    },
+    "boundaries": {
+      "exit": 0,
+      "log": "boundaries-before.log"
+    },
+    "contracts": {
+      "exit": 0,
+      "log": "contracts-before.log"
+    },
+    "traceability": {
+      "exit": 1,
+      "errors": 34,
+      "log": "traceability-before.log"
+    },
+    "securityDelivery": {
+      "exit": 1,
+      "pass": 3,
+      "fail": 5,
+      "log": "security-delivery-test-after-install.log"
+    },
+    "buildBeforeLeaves": {
+      "exit": 2,
+      "log": "build-before-leaf-handbacks.log"
+    },
+    "liveRuntimeObservation": {
+      "exit": 0,
+      "config": "normal vitest.config.ts",
+      "counts": {
+        "cliVerbs": 30,
+        "heldKeyEntries": 30,
+        "editorCommands": 66,
+        "desktopControls": 215,
+        "bridgeActions": 12,
+        "authoringOperations": 10,
+        "assistantOperations": 3,
+        "localAgentTools": 67,
+        "providerEntrypoints": 8,
+        "refusalRegistries": 73
+      }
+    }
+  }
+}

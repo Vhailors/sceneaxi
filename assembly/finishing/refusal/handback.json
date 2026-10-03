@@ -1,0 +1,50 @@
+{
+  "status": "DONE_IMPLEMENTED_VERIFIED_FOCUSED",
+  "checkout": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1",
+  "files": [
+    {
+      "path": "apps/desktop-shell/src/chrome/core/script.ts",
+      "absolutePath": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell/src/chrome/core/script.ts",
+      "sha256": "dab3926500881a00b9699a5614ec6ff94fdea626d6f9ff343ba8a6d2cf4f8c05",
+      "bytes": 115499
+    },
+    {
+      "path": "apps/desktop-shell/src/chrome/core/styles.ts",
+      "absolutePath": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell/src/chrome/core/styles.ts",
+      "sha256": "c9ef0aca16b88f1816608e6948539f71b1b8357c276618596334cbb2edf628a8",
+      "bytes": 44666
+    },
+    {
+      "path": "apps/desktop-shell/test/control-accounting.test.ts",
+      "absolutePath": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell/test/control-accounting.test.ts",
+      "sha256": "dc2733dea2fdb0fdd92beb8bca0aae28b46681326eba1a1e1c52e7a14ab333c9",
+      "bytes": 28035
+    },
+    {
+      "path": "apps/desktop-shell/test/minimum-window.test.ts",
+      "absolutePath": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/apps/desktop-shell/test/minimum-window.test.ts",
+      "sha256": "0f5b9d41b8d26682a4625f3906fb4ba5f5de69135bbf4c54ee27f5ae693b094d",
+      "bytes": 6307
+    }
+  ],
+  "tests": {
+    "command": "./node_modules/.bin/vitest run apps/desktop-shell/test/control-accounting.test.ts apps/desktop-shell/test/minimum-window.test.ts apps/desktop-shell/test/visual-refinement.test.ts apps/desktop-shell/test/visual-model.test.ts apps/desktop-shell/test/legacy-editor-compat.test.ts --reporter=verbose",
+    "exit": 0,
+    "filesPassed": 5,
+    "testsPassed": 66,
+    "testsFailed": 0,
+    "skipped": 0,
+    "log": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/finishing/refusal/retry-focused.log",
+    "proofKind": "emitted-source CSS cascade + shipped-client DOM emulator; NOT browser pixels/native audio"
+  },
+  "reports": [
+    {
+      "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/finishing/refusal/report.md",
+      "sha256": "9377d37e0ba14cb8ea6abc87d0b4423bf60dad8d0e134dae6da491b239331461"
+    },
+    {
+      "path": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/finishing/refusal/report.json",
+      "sha256": "c5a6dd6f6e47ec7d8d951546dff0733d0567de03e7f084e62b6748ef9b86efaf"
+    }
+  ]
+}

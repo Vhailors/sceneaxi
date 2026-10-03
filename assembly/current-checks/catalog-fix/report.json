@@ -1,0 +1,36 @@
+{
+  "status": "SOURCE_VERIFIED_HANDED_BACK",
+  "ownedRoot": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1",
+  "sourceVerified": true,
+  "productionClaim": false,
+  "baseline": {
+    "passed": 26, "failed": 5, "exitCode": 1,
+    "command": "pnpm exec vitest run tests/e2e/desktop-control-dispatch-real-bridge-golden.test.ts --reporter=dot",
+    "evidence": "/home/devuser/.local/share/empryo/tee/2026-10-03T14-52-50-333Z_shell-full.txt"
+  },
+  "rootCause": "Renderer-realm plain protocol mutation objects fail host-realm snapshotPlainRecord prototype identity check. Catalog routes also hid proposal phase/diagnostics inside authoringSnapshot, producing completed transaction metadata or ok:true for refused proposals.",
+  "repair": [
+    "Descriptor-only bounded ordinary foreign protocol tree translation in new bridge/catalog-authoring.ts; no getters/proxy traps/coercion/unchecked casts",
+    "Only five catalog apply route blocks plus helper import changed in bridge.ts; existing domain parsers and shared authoring proposal pipeline retained",
+    "Real diagnostic-free reviewing proposal required; actual proposal phase and evidence projected into transaction; stale-base and invalid-phase refusals truthful"
+  ],
+  "verification": [
+    {"kind":"focused-public-suites","exitCode":0,"files":14,"passed":150,"failed":0,"evidence":"focused-final.log","originalGuiGoldenPassed":31,"newProtocolPassed":14,"includes":"Five existing desktop public mutation consumers, five schema mutation suites, original animation/physics public goldens, unchanged GUI rendered-control real bridge golden"},
+    {"kind":"lint","exitCode":0,"command":"pnpm exec eslint desktop/linux/src/lib/bridge.ts desktop/linux/src/lib/bridge/catalog-authoring.ts desktop/linux/test/catalog-authoring-protocol.test.ts","evidence":"lint-final.log"},
+    {"kind":"desktop-typecheck","exitCode":0,"command":"pnpm exec tsc --project desktop/linux/tsconfig.json --noEmit","evidence":"typecheck-final.log"}
+  ],
+  "negativeOracles": ["malformed foreign fields","domain range refusal","NaN/Infinity retained for domain refusal","record/nested accessors without invocation","proxy values/prototypes without traps","prototype carrying/exotic values","cycles","sparse/extended arrays","symbols/executable values","stale content hash","depth/node/array budgets","zero saved-byte writes before acceptance"],
+  "preserved": ["original real bridge golden assertions","desktop-scene.ts five domain staging functions","all schema parsers","collider and legacy shape aliases and precedence","canonical/range/accessor domain guards","v2 environment fields","audio","public index","chrome/harness","root policy/manifests"],
+  "developmentFailures": ["New stale oracle exposed actual ok:true/idle result; routes repaired","New test transaction shape/refusal-constant expectation errors corrected to actual public contract","New sparse array fixture lint corrected; inherited unused boundary alias now used by translated mutation"],
+  "changedFiles": [
+    {"path":"desktop/linux/src/lib/bridge.ts","sha256":"2747f9ce773b4df482ff9e40fc696eb66d7da0a092e6da7d6d978445aba75417"},
+    {"path":"desktop/linux/src/lib/bridge/catalog-authoring.ts","sha256":"cd31f2ac542c79a7a88b1e476ee648f7485fe40fd997918f72121bc08f79a43b"},
+    {"path":"desktop/linux/test/catalog-authoring-protocol.test.ts","sha256":"2e53aae3eb38ea357e8c212a5d7551d7cc212c12652164a02ce3303ec0b93127"}
+  ],
+  "unchangedFiles": [
+    {"path":"tests/e2e/desktop-control-dispatch-real-bridge-golden.test.ts","sha256":"ff312c9ff97138325aae5444c501eb7a28354e878273506019af6fda5e84fe69","readFingerprint":"598119f6b52f3ef1"},
+    {"path":"desktop/linux/src/lib/desktop-scene.ts","sha256":"97f9f507197494179799e4baf52160ccf245f5c02d744f43c87bbbf6c8fb4bd5","readFingerprint":"8cc5c691a7c6ae0a"}
+  ],
+  "handoff": "Three changed files handed back; no remaining scoped source defect or shared-file request",
+  "notRun": ["full gate","full build","install","browser","native execution","Docker","Git","root comprehensive source guard"]
+}

@@ -1,0 +1,23 @@
+
+/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/desktop/linux/test/scene-animation-mutation-consumer.test.ts
+  2:73   error  'applySceneAnimationMutation' is defined but never used  @typescript-eslint/no-unused-vars
+  2:102  error  'emptySceneAnimationCatalog' is defined but never used   @typescript-eslint/no-unused-vars
+
+/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/desktop/linux/test/scene-effects-mutation-consumer.test.ts
+  2:71  error  'applySceneEffectsMutation' is defined but never used  @typescript-eslint/no-unused-vars
+  2:98  error  'emptySceneEffectsCatalog' is defined but never used   @typescript-eslint/no-unused-vars
+
+/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/desktop/linux/test/scene-environment-mutation-consumer.test.ts
+  2:75   error  'applySceneEnvironmentMutation' is defined but never used  @typescript-eslint/no-unused-vars
+  2:106  error  'emptySceneEnvironmentCatalog' is defined but never used   @typescript-eslint/no-unused-vars
+
+/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/desktop/linux/test/scene-materials-mutation-consumer.test.ts
+  2:73   error  'applySceneMaterialsMutation' is defined but never used  @typescript-eslint/no-unused-vars
+  2:102  error  'emptySceneMaterialsCatalog' is defined but never used   @typescript-eslint/no-unused-vars
+
+/tmp/sceneaxi-comprehensive-owned-xd4gdfl1/desktop/linux/test/scene-physics-mutation-consumer.test.ts
+  2:71  error  'applyScenePhysicsMutation' is defined but never used  @typescript-eslint/no-unused-vars
+  2:98  error  'emptyScenePhysicsCatalog' is defined but never used   @typescript-eslint/no-unused-vars
+
+✖ 10 problems (10 errors, 0 warnings)
+

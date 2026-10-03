@@ -1,0 +1,296 @@
+[
+  {
+    "scheme": "light",
+    "scenario": "idle",
+    "screenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-inspector-idle-light.png",
+    "focusScreenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-inspector-idle-light-focus.png",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "errors": [],
+    "metrics": {
+      "documentOverflow": false,
+      "diffOverflow": false,
+      "refusalColor": "rgb(0, 0, 0)",
+      "canvas": "rgba(0, 0, 0, 0)",
+      "disabledOpacity": "0.45",
+      "hiddenRecovery": true
+    },
+    "focus": [
+      {
+        "id": "documentPath",
+        "focusVisible": true,
+        "outline": "auto",
+        "width": "1px",
+        "color": "rgb(16, 16, 16)"
+      },
+      {
+        "id": "jsonPointer",
+        "focusVisible": true,
+        "outline": "auto",
+        "width": "1px",
+        "color": "rgb(16, 16, 16)"
+      },
+      {
+        "id": "newValue",
+        "focusVisible": true,
+        "outline": "auto",
+        "width": "1px",
+        "color": "rgb(16, 16, 16)"
+      },
+      {
+        "id": "propose",
+        "focusVisible": true,
+        "outline": "auto",
+        "width": "1px",
+        "color": "rgb(16, 16, 16)"
+      }
+    ]
+  },
+  {
+    "scheme": "light",
+    "scenario": "long-diff",
+    "screenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-inspector-long-diff-light.png",
+    "focusScreenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-inspector-long-diff-light-focus.png",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "errors": [],
+    "metrics": {
+      "documentOverflow": false,
+      "diffOverflow": true,
+      "refusalColor": "rgb(0, 0, 0)",
+      "canvas": "rgba(0, 0, 0, 0)",
+      "disabledOpacity": "0.45",
+      "hiddenRecovery": true
+    },
+    "focus": [
+      {
+        "id": "documentPath",
+        "focusVisible": true,
+        "outline": "auto",
+        "width": "1px",
+        "color": "rgb(16, 16, 16)"
+      },
+      {
+        "id": "jsonPointer",
+        "focusVisible": true,
+        "outline": "auto",
+        "width": "1px",
+        "color": "rgb(16, 16, 16)"
+      },
+      {
+        "id": "newValue",
+        "focusVisible": true,
+        "outline": "auto",
+        "width": "1px",
+        "color": "rgb(16, 16, 16)"
+      },
+      {
+        "id": "propose",
+        "focusVisible": true,
+        "outline": "auto",
+        "width": "1px",
+        "color": "rgb(16, 16, 16)"
+      }
+    ]
+  },
+  {
+    "scheme": "light",
+    "scenario": "refusal",
+    "screenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-inspector-refusal-light.png",
+    "focusScreenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-inspector-refusal-light-focus.png",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "errors": [],
+    "metrics": {
+      "documentOverflow": true,
+      "diffOverflow": true,
+      "refusalColor": "rgb(179, 38, 30)",
+      "canvas": "rgba(0, 0, 0, 0)",
+      "disabledOpacity": "0.45",
+      "hiddenRecovery": true
+    },
+    "focus": [
+      {
+        "id": "documentPath",
+        "focusVisible": true,
+        "outline": "auto",
+        "width": "1px",
+        "color": "rgb(16, 16, 16)"
+      },
+      {
+        "id": "jsonPointer",
+        "focusVisible": true,
+        "outline": "auto",
+        "width": "1px",
+        "color": "rgb(16, 16, 16)"
+      },
+      {
+        "id": "newValue",
+        "focusVisible": true,
+        "outline": "auto",
+        "width": "1px",
+        "color": "rgb(16, 16, 16)"
+      },
+      {
+        "id": "propose",
+        "focusVisible": true,
+        "outline": "auto",
+        "width": "1px",
+        "color": "rgb(16, 16, 16)"
+      }
+    ]
+  },
+  {
+    "scheme": "dark",
+    "scenario": "idle",
+    "screenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-inspector-idle-dark.png",
+    "focusScreenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-inspector-idle-dark-focus.png",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "errors": [],
+    "metrics": {
+      "documentOverflow": false,
+      "diffOverflow": false,
+      "refusalColor": "rgb(255, 255, 255)",
+      "canvas": "rgba(0, 0, 0, 0)",
+      "disabledOpacity": "0.45",
+      "hiddenRecovery": true
+    },
+    "focus": [
+      {
+        "id": "documentPath",
+        "focusVisible": true,
+        "outline": "auto",
+        "width": "1px",
+        "color": "rgb(16, 16, 16)"
+      },
+      {
+        "id": "jsonPointer",
+        "focusVisible": true,
+        "outline": "auto",
+        "width": "1px",
+        "color": "rgb(16, 16, 16)"
+      },
+      {
+        "id": "newValue",
+        "focusVisible": true,
+        "outline": "auto",
+        "width": "1px",
+        "color": "rgb(16, 16, 16)"
+      },
+      {
+        "id": "propose",
+        "focusVisible": true,
+        "outline": "auto",
+        "width": "1px",
+        "color": "rgb(16, 16, 16)"
+      }
+    ]
+  },
+  {
+    "scheme": "dark",
+    "scenario": "long-diff",
+    "screenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-inspector-long-diff-dark.png",
+    "focusScreenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-inspector-long-diff-dark-focus.png",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "errors": [],
+    "metrics": {
+      "documentOverflow": false,
+      "diffOverflow": true,
+      "refusalColor": "rgb(255, 255, 255)",
+      "canvas": "rgba(0, 0, 0, 0)",
+      "disabledOpacity": "0.45",
+      "hiddenRecovery": true
+    },
+    "focus": [
+      {
+        "id": "documentPath",
+        "focusVisible": true,
+        "outline": "auto",
+        "width": "1px",
+        "color": "rgb(16, 16, 16)"
+      },
+      {
+        "id": "jsonPointer",
+        "focusVisible": true,
+        "outline": "auto",
+        "width": "1px",
+        "color": "rgb(16, 16, 16)"
+      },
+      {
+        "id": "newValue",
+        "focusVisible": true,
+        "outline": "auto",
+        "width": "1px",
+        "color": "rgb(16, 16, 16)"
+      },
+      {
+        "id": "propose",
+        "focusVisible": true,
+        "outline": "auto",
+        "width": "1px",
+        "color": "rgb(16, 16, 16)"
+      }
+    ]
+  },
+  {
+    "scheme": "dark",
+    "scenario": "refusal",
+    "screenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-inspector-refusal-dark.png",
+    "focusScreenshot": "apps/desktop-shell/test/visual-postpr-evidence/retry/before-inspector-refusal-dark-focus.png",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "errors": [],
+    "metrics": {
+      "documentOverflow": true,
+      "diffOverflow": true,
+      "refusalColor": "rgb(179, 38, 30)",
+      "canvas": "rgba(0, 0, 0, 0)",
+      "disabledOpacity": "0.45",
+      "hiddenRecovery": true
+    },
+    "focus": [
+      {
+        "id": "documentPath",
+        "focusVisible": true,
+        "outline": "auto",
+        "width": "1px",
+        "color": "rgb(16, 16, 16)"
+      },
+      {
+        "id": "jsonPointer",
+        "focusVisible": true,
+        "outline": "auto",
+        "width": "1px",
+        "color": "rgb(16, 16, 16)"
+      },
+      {
+        "id": "newValue",
+        "focusVisible": true,
+        "outline": "auto",
+        "width": "1px",
+        "color": "rgb(16, 16, 16)"
+      },
+      {
+        "id": "propose",
+        "focusVisible": true,
+        "outline": "auto",
+        "width": "1px",
+        "color": "rgb(16, 16, 16)"
+      }
+    ]
+  }
+]

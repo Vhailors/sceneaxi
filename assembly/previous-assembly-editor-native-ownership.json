@@ -1,0 +1,40 @@
+{
+  "paths": [
+    "apps/desktop-shell/src/chrome.ts",
+    "apps/desktop-shell/src/visual-tokens.ts",
+    "apps/desktop-shell/test/chrome.test.ts",
+    "apps/desktop-shell/test/legacy-editor-compat.test.ts",
+    "desktop/linux/scripts/smoke.mjs",
+    "desktop/linux/src/electron/main.ts",
+    "desktop/linux/src/lib/bridge.ts",
+    "desktop/linux/test/legacy-linux-smoke.test.ts",
+    "tests/e2e/desktop-command-interactions-golden.test.ts",
+    ".github/workflows/desktop-linux.yml",
+    "apps/desktop-shell/src/chrome/core/script.ts",
+    "apps/desktop-shell/src/chrome/core/styles.ts",
+    "apps/desktop-shell/src/chrome/settings/script.ts",
+    "apps/desktop-shell/src/chrome/tree/script.ts",
+    "apps/desktop-shell/src/chrome/frame/script.ts"
+  ],
+  "task": "Resolve exact private/main shell chrome/tokens/tests and electron/bridge/smoke conflicts. Preserve main modular chrome, new controls/seams and all private source handlers; old historical chrome must never whole-file overwrite modern. EF-LINUX union actual nonroot copy/reparent persisted parent, y transform, named smoke-body, child CLI handshake using current discovery protocol; keep modern GUI/audio RMS/lifecycle smoke checks. Preserve contained-Git read-only public/private mutation authority. Add workspace CLI build preflight workflow while preserving all required contexts. Acceptance source/security tests not browser/native green claim.",
+  "ownedClone": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1",
+  "noParentWritesUntilHandback": true,
+  "base": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+  "snapshotTree": "3f25ffea22f19d01ef9a484f317d8b8ca4cde397",
+  "publication": "NO_STAGE_COMMIT_PUSH_OR_GIT_INDEX_EDITS",
+  "verification": "Scoped tests allowed after owning parent installs once; heavy builds parent only; no nested agents",
+  "reports": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/children/editor-native",
+  "sourceInputs": [
+    "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/legacy-foundation/report.json",
+    "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/editor-features/report.json",
+    "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/docs-checkpoints/report.json",
+    "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/private-source-conflicts.json",
+    "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/source-assembly-manifest.json"
+  ],
+  "additionalParentGrant": {
+    "path": "apps/desktop-shell/src/chrome/frame/script.ts",
+    "reason": "Exact modifier matcher fix with positive and undeclared-modifier negatives",
+    "grantedBy": "parent tab controller",
+    "parentNoWriteUntilHandback": true
+  }
+}

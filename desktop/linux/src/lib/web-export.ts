@@ -8,22 +8,8 @@
  * existing, non-identical directory.
  */
 import { createHash } from "node:crypto";
-import { execFileSync } from "node:child_process";
-import {
-  closeSync,
-  constants,
-  fstatSync,
-  lstatSync,
-  mkdirSync,
-  mkdtempSync,
-  openSync,
-  opendirSync,
-  readSync,
-  realpathSync,
-  statSync,
-  writeFileSync,
-  writeSync,
-} from "node:fs";
+import * as nodeProcess from "node:child_process";
+import * as nodeFileSystem from "node:fs";
 import { basename, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { contentHash, parseDocumentText } from "@sceneaxi/authoring-core";
 import {
@@ -43,20 +29,26 @@ import {
   type DeliveryHandoff,
   type DeliveryHandoffArtifact,
   type DeliveryHandoffArtifacts,
+  isJsonValue,
+  type JsonObject,
   type JsonValue,
   type SceneDocument,
 } from "@sceneaxi/schemas";
 import { DESKTOP_ACTIVE_DOCUMENT_PATH } from "./bridge-contract.js";
 import {
-  openContainedRegularFile,
-  readContainedRegularFile,
+  openContainedRegularFile as nodeOpenContainedRegularFile,
+  readContainedRegularFile as nodeReadContainedRegularFile,
 } from "./contained-file.js";
 import { desktopSceneFromDocumentData } from "./desktop-scene.js";
 
 export const DESKTOP_WEB_EXPORT_VERSION = 1 as const;
+
 export const DESKTOP_WEB_EXPORT_TOOL_VERSION = "0.0.0" as const;
+
 export const DESKTOP_WEB_EXPORT_ROOT = "exports/web" as const;
+
 export const DESKTOP_WEB_EXPORT_HANDOFF_PATH = "delivery-handoff.json" as const;
+
 export const DESKTOP_WEB_EXPORT_ASSET_MAX_TOTAL_BYTES = 64 * 1024 * 1024;
 
 export const DESKTOP_WEB_EXPORT_REFUSALS = Object.freeze({
@@ -140,11 +132,104 @@ type ExportWorkspace = Readonly<{
 }>;
 
 const DIGEST_RE = /^sha256:[0-9a-f]{64}$/;
+
 const SAFE_ASSET_PATH_RE = new RegExp(DESKTOP_WEB_STAGE_CONFIG.assetPathPattern);
+
 const CREATED_AT = "1970-01-01T00:00:00.000Z";
+
 const STREAM_BUFFER_BYTES = 64 * 1024;
 
 class UnsafeExportPathError extends Error {}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+type StreamedFile =
+  | Readonly<{ ok: true; byteLength: number; digest: string }>
+  | Readonly<{
+      ok: false;
+      kind: "missing" | "unsafe" | "invalid" | "budget" | "write";
+      detail: string;
+    }>;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/** Export one validated, clean project without deploying or overwriting bytes. */
+
+
+/** Owner-supplied syscall interface for fault and race proofs; production defaults are Node. */
+export type DesktopWebExportHost = Readonly<{
+  files: Pick<typeof nodeFileSystem, "closeSync" | "constants" | "fstatSync" | "lstatSync" | "mkdirSync" | "mkdtempSync" | "openSync" | "opendirSync" | "readSync" | "realpathSync" | "statSync" | "writeFileSync" | "writeSync">;
+  execFileSync: typeof nodeProcess.execFileSync;
+}>;
+
+const NODE_EXPORT_HOST: DesktopWebExportHost = { files: nodeFileSystem, execFileSync: nodeProcess.execFileSync };
+
+/** One export's dependencies are captured locally, never installed process-wide. */
+export function exportDesktopWebProject(input: DesktopWebExportInput, host: DesktopWebExportHost = NODE_EXPORT_HOST): DesktopWebExportResult {
+  const { closeSync, constants, fstatSync, lstatSync, mkdirSync, mkdtempSync, openSync, opendirSync, readSync, realpathSync, statSync, writeFileSync, writeSync } = host.files;
+  const { execFileSync } = host;
+  const openContainedRegularFile = (root: string, target: string) => nodeOpenContainedRegularFile(root, target, host.files);
+  const readContainedRegularFile = (root: string, target: string, limits: Parameters<typeof nodeReadContainedRegularFile>[2] = {}) => nodeReadContainedRegularFile(root, target, limits, host.files);
+
+  return runExport(input);
 
 function refuse(
   reason: DesktopWebExportRefusalReason,
@@ -153,16 +238,18 @@ function refuse(
   return Object.freeze({ ok: false as const, reason, message });
 }
 
-function exportPreparationRefusal(error: unknown, operation: string) {
+function exportPreparationRefusal<Failure>(error: Failure, operation: string) {
   const code =
-    typeof error === "object" && error !== null && "code" in error
+    isBoundaryObjectValue(error) && error !== null && "code" in error
       ? error.code
       : null;
+
   const unsafe =
     error instanceof UnsafeExportPathError ||
     code === "ELOOP" ||
     code === "ENOTDIR" ||
     code === "ENOENT";
+
   return refuse(
     unsafe
       ? DESKTOP_WEB_EXPORT_REFUSALS.unsafePath
@@ -176,11 +263,15 @@ function sha256(bytes: Uint8Array | string) {
 }
 
 function canonicalJson(value: JsonValue): string {
-  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (value === null || !(isBoundaryObjectValue(value))) return JSON.stringify(value);
+
   if (Array.isArray(value)) {
     return `[${value.map((entry) => canonicalJson(entry)).join(",")}]`;
   }
-  const record = value as Readonly<Record<string, JsonValue>>;
+
+  // SAFETY: value is a checked JsonValue; the preceding object and array branches leave only its string-keyed JsonObject case.
+  const record = value as JsonObject;
+
   return `{${Object.keys(record)
     .sort()
     .map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key] ?? null)}`)
@@ -198,10 +289,13 @@ function runtimeBoundToolVersion(runtimeDigest: string): string {
 function deliveryDisplayName(document: SceneDocument): string {
   const source = document.title?.trim() || document.id;
   const scalars: string[] = [];
+
   for (let index = 0; index < source.length && scalars.length < 200;) {
     const first = source.charCodeAt(index);
+
     if (first >= 0xd800 && first <= 0xdbff) {
       const second = source.charCodeAt(index + 1);
+
       if (second >= 0xdc00 && second <= 0xdfff) {
         scalars.push(source.slice(index, index + 2));
         index += 2;
@@ -217,6 +311,7 @@ function deliveryDisplayName(document: SceneDocument): string {
       index += 1;
     }
   }
+
   return scalars.join("");
 }
 
@@ -248,16 +343,18 @@ function contentType(path: string): string {
 
 function within(parent: string, candidate: string): boolean {
   const rel = relative(parent, candidate);
+
   return rel === "" || (rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel));
 }
 
 function pathEntryExists(path: string): boolean {
   try {
     lstatSync(path);
+
     return true;
   } catch (error) {
     if (
-      typeof error === "object" &&
+      isBoundaryObjectValue(error) &&
       error !== null &&
       "code" in error &&
       error.code === "ENOENT"
@@ -271,16 +368,20 @@ function openContainedDirectory(root: string, target: string) {
     target,
     constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW,
   );
+
   try {
     if (!fstatSync(descriptor).isDirectory()) {
       throw new UnsafeExportPathError("the opened path is not a directory");
     }
+
     const canonical = realpathSync(`/proc/self/fd/${String(descriptor)}`);
+
     if (!within(root, canonical)) {
       throw new UnsafeExportPathError(
         "the opened directory resolves outside its containment root",
       );
     }
+
     return descriptor;
   } catch (error) {
     closeSync(descriptor);
@@ -294,24 +395,28 @@ function openOrCreateDirectory(
   name: string,
 ) {
   const target = join(`/proc/self/fd/${String(parentDescriptor)}`, name);
+
   try {
     mkdirSync(target);
   } catch (error) {
     if (
-      typeof error !== "object" ||
+      !(isBoundaryObjectValue(error)) ||
       error === null ||
       !("code" in error) ||
       error.code !== "EEXIST"
     ) throw error;
   }
+
   const directory = join(parent, name);
   const descriptor = openContainedDirectory(directory, target);
+
   if (realpathSync(`/proc/self/fd/${String(descriptor)}`) !== directory) {
     closeSync(descriptor);
     throw new UnsafeExportPathError(
       "the prepared export directory moved unexpectedly",
     );
   }
+
   return Object.freeze({ descriptor, directory });
 }
 
@@ -321,12 +426,14 @@ function prepareExportParent(
   let rootDescriptor: number | null = null;
   let exportsDescriptor: number | null = null;
   let webDescriptor: number | null = null;
+
   try {
     rootDescriptor = openContainedDirectory(root, root);
     const exports = openOrCreateDirectory(rootDescriptor, root, "exports");
     exportsDescriptor = exports.descriptor;
     const web = openOrCreateDirectory(exportsDescriptor, exports.directory, "web");
     webDescriptor = web.descriptor;
+
     return Object.freeze({
       rootDescriptor,
       exportsDescriptor,
@@ -340,12 +447,14 @@ function prepareExportParent(
       rootDescriptor,
     ]) {
       if (descriptor === null) continue;
+
       try {
         closeSync(descriptor);
       } catch {
         // Preserve the preparation refusal that triggered cleanup.
       }
     }
+
     return exportPreparationRefusal(error, "workspace");
   }
 }
@@ -358,10 +467,12 @@ function prepareExportWorkspace(
     const stagingAccess = mkdtempSync(join(stableWeb, ".sceneaxi-export-"));
     const stagingName = basename(stagingAccess);
     const stagingDirectory = join(parent.webDirectory, stagingName);
+
     const stagingDescriptor = openContainedDirectory(
       stagingDirectory,
       stagingAccess,
     );
+
     return Object.freeze({
       stagingDescriptor,
       stagingDirectory,
@@ -380,12 +491,14 @@ function cleanupExportWorkspace(
 ) {
   try {
     const held = fstatSync(workspace.stagingDescriptor);
+
     const occupant = lstatSync(
       join(
         `/proc/self/fd/${String(parent.webDescriptor)}`,
         workspace.stagingName,
       ),
     );
+
     if (
       held.isDirectory() &&
       occupant.isDirectory() &&
@@ -400,6 +513,7 @@ function cleanupExportWorkspace(
   } catch {
     // Cleanup is best-effort after the export result has been decided.
   }
+
   try {
     closeSync(workspace.stagingDescriptor);
   } catch {
@@ -423,29 +537,38 @@ function matchesContainedFileSet(
   expectedPaths: ReadonlySet<string>,
 ): boolean {
   const expectedDirectories = new Set<string>();
+
   for (const path of expectedPaths) {
     const segments = path.split("/");
+
     if (segments.some((segment) => segment === "")) return false;
+
     for (let index = 1; index < segments.length; index += 1) {
       expectedDirectories.add(segments.slice(0, index).join("/"));
     }
   }
+
   let foundFiles = 0;
+
   const visit = (target: string, prefix: string): boolean => {
     let descriptor: number | null = null;
     let entries: ReturnType<typeof opendirSync> | null = null;
+
     try {
       descriptor = openContainedDirectory(root, target);
       const stableDirectory = `/proc/self/fd/${String(descriptor)}`;
       entries = opendirSync(stableDirectory);
+
       for (
         let entry = entries.readSync();
         entry !== null;
         entry = entries.readSync()
       ) {
         const path = prefix === "" ? entry.name : `${prefix}/${entry.name}`;
+
         if (entry.isDirectory()) {
           if (!expectedDirectories.has(path)) return false;
+
           if (!visit(join(stableDirectory, entry.name), path)) return false;
         } else if (entry.isFile()) {
           if (!expectedPaths.has(path)) return false;
@@ -454,14 +577,17 @@ function matchesContainedFileSet(
           return false;
         }
       }
+
       return within(root, realpathSync(stableDirectory));
     } catch {
       return false;
     } finally {
       if (entries !== null) entries.closeSync();
+
       if (descriptor !== null) closeSync(descriptor);
     }
   };
+
   return visit(directory, "") && foundFiles === expectedPaths.size;
 }
 
@@ -472,29 +598,36 @@ function openOutputFile(
 ) {
   const segments = path.split("/");
   const name = segments.pop();
+
   if (name === undefined || name === "") throw new Error("invalid export path");
   let descriptor = rootDescriptor;
   const opened: number[] = [];
+
   try {
     for (const segment of segments) {
       const target = join(`/proc/self/fd/${String(descriptor)}`, segment);
+
       try {
         mkdirSync(target);
       } catch (error) {
         if (
-          typeof error !== "object" ||
+          !(isBoundaryObjectValue(error)) ||
           error === null ||
           !("code" in error) ||
           error.code !== "EEXIST"
         ) throw error;
       }
+
       descriptor = openContainedDirectory(destination, target);
       opened.push(descriptor);
     }
+
     const stableDirectory = `/proc/self/fd/${String(descriptor)}`;
+
     if (!within(destination, realpathSync(stableDirectory))) {
       throw new Error("the export directory moved outside its destination");
     }
+
     return openSync(
       join(stableDirectory, name),
       constants.O_WRONLY |
@@ -515,20 +648,13 @@ function writeOutputFile(
   bytes: Uint8Array,
 ) {
   const descriptor = openOutputFile(rootDescriptor, destination, path);
+
   try {
     writeFileSync(descriptor, bytes);
   } finally {
     closeSync(descriptor);
   }
 }
-
-type StreamedFile =
-  | Readonly<{ ok: true; byteLength: number; digest: string }>
-  | Readonly<{
-      ok: false;
-      kind: "missing" | "unsafe" | "invalid" | "budget" | "write";
-      detail: string;
-    }>;
 
 function streamContainedFile(
   root: string,
@@ -546,12 +672,15 @@ function streamContainedFile(
 ): StreamedFile {
   let sourceDescriptor: number | null = null;
   let destinationDescriptor: number | null = null;
+
   const streamed = (() => {
     try {
       const opened = openContainedRegularFile(root, source);
+
       if (!opened.ok) return opened;
       sourceDescriptor = opened.descriptor;
       const before = opened.stats;
+
       if (
         !Number.isSafeInteger(before.size) ||
         before.size < 0 ||
@@ -564,6 +693,7 @@ function streamContainedFile(
           detail: "the opened file length is outside its accepted bounds",
         });
       }
+
       if (
         limits.remainingBudgetBytes !== undefined &&
         before.size > limits.remainingBudgetBytes
@@ -574,6 +704,7 @@ function streamContainedFile(
           detail: "the aggregate asset byte budget would be exceeded",
         });
       }
+
       if (destination !== undefined) {
         try {
           destinationDescriptor = openOutputFile(
@@ -589,11 +720,15 @@ function streamContainedFile(
           });
         }
       }
+
       const hash = createHash("sha256");
+
       const buffer = Buffer.alloc(
         Math.min(STREAM_BUFFER_BYTES, Math.max(1, before.size)),
       );
+
       let byteLength = 0;
+
       while (byteLength < before.size) {
         const count = readSync(
           sourceDescriptor,
@@ -602,6 +737,7 @@ function streamContainedFile(
           Math.min(buffer.byteLength, before.size - byteLength),
           null,
         );
+
         if (count === 0) {
           return Object.freeze({
             ok: false as const,
@@ -609,10 +745,13 @@ function streamContainedFile(
             detail: "the opened file ended before its verified length",
           });
         }
+
         hash.update(buffer.subarray(0, count));
+
         if (destinationDescriptor !== null) {
           try {
             let written = 0;
+
             while (written < count) {
               const next = writeSync(
                 destinationDescriptor,
@@ -620,9 +759,11 @@ function streamContainedFile(
                 written,
                 count - written,
               );
+
               if (next === 0) {
                 throw new Error("the export file write made no progress");
               }
+
               written += next;
             }
           } catch (error) {
@@ -633,9 +774,12 @@ function streamContainedFile(
             });
           }
         }
+
         byteLength += count;
       }
+
       const trailing = Buffer.alloc(1);
+
       if (readSync(sourceDescriptor, trailing, 0, 1, null) !== 0) {
         return Object.freeze({
           ok: false as const,
@@ -643,6 +787,7 @@ function streamContainedFile(
           detail: "the opened file grew beyond its verified length",
         });
       }
+
       if (fstatSync(sourceDescriptor).size !== before.size) {
         return Object.freeze({
           ok: false as const,
@@ -650,6 +795,7 @@ function streamContainedFile(
           detail: "the opened file length changed while it was being read",
         });
       }
+
       return Object.freeze({
         ok: true as const,
         byteLength,
@@ -657,9 +803,10 @@ function streamContainedFile(
       });
     } catch (error) {
       const code =
-        typeof error === "object" && error !== null && "code" in error
+        isBoundaryObjectValue(error) && error !== null && "code" in error
           ? error.code
           : null;
+
       return Object.freeze({
         ok: false as const,
         kind:
@@ -672,10 +819,12 @@ function streamContainedFile(
       });
     }
   })();
+
   let destinationCloseFailed = false;
   let destinationCloseError: unknown;
   let sourceCloseFailed = false;
   let sourceCloseError: unknown;
+
   if (destinationDescriptor !== null) {
     try {
       closeSync(destinationDescriptor);
@@ -684,6 +833,7 @@ function streamContainedFile(
       destinationCloseError = error;
     }
   }
+
   if (sourceDescriptor !== null) {
     try {
       closeSync(sourceDescriptor);
@@ -692,6 +842,7 @@ function streamContainedFile(
       sourceCloseError = error;
     }
   }
+
   if (destinationCloseFailed) {
     return Object.freeze({
       ok: false as const,
@@ -702,6 +853,7 @@ function streamContainedFile(
           : String(destinationCloseError),
     });
   }
+
   if (sourceCloseFailed) {
     return Object.freeze({
       ok: false as const,
@@ -712,6 +864,7 @@ function streamContainedFile(
           : String(sourceCloseError),
     });
   }
+
   return streamed;
 }
 
@@ -727,6 +880,7 @@ function projectDocumentReadRefusal(
       "The active Scene Document must be a regular project file.",
     );
   }
+
   return refuse(
     DESKTOP_WEB_EXPORT_REFUSALS.sceneInvalid,
     `The active Scene Document could not be read: ${read.detail}`,
@@ -739,32 +893,36 @@ function readProjectDocument(
 ): Readonly<{ ok: true; bytes: Buffer }> | DesktopWebExportRefusal {
   const documentFile = join(root, DESKTOP_ACTIVE_DOCUMENT_PATH);
   const read = readContainedRegularFile(root, documentFile, { expectedBytes });
+
   return read.ok ? read : projectDocumentReadRefusal(read);
 }
 
-function referencedWebAssets(data: Readonly<Record<string, unknown>>):
+function referencedWebAssets(data: JsonObject):
   | Readonly<{ ok: true; paths: readonly string[] }>
   | DesktopWebExportRefusal {
   const value = data["webExperience"];
+
   if (value === undefined) return Object.freeze({ ok: true as const, paths: Object.freeze([]) });
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+
+  if (!(isBoundaryObjectValue(value)) || value === null || Array.isArray(value)) {
     return refuse(
       DESKTOP_WEB_EXPORT_REFUSALS.sceneInvalid,
       "The stored webExperience value is not an object.",
     );
   }
-  const record = value as Record<string, unknown>;
-  const html = record["html"];
-  const assets = record["assets"];
+
+  const html = "html" in value ? value.html : undefined;
+  const assets = "assets" in value ? value.assets : undefined;
+
   if (
-    typeof html !== "string" ||
+    !(isBoundaryTextValue(html)) ||
     html.length > DESKTOP_WEB_STAGE_CONFIG.htmlMaxLength ||
     html.includes("\0") ||
     !Array.isArray(assets) ||
     assets.length > DESKTOP_WEB_STAGE_CONFIG.assetMaxCount ||
     !assets.every(
       (path) =>
-        typeof path === "string" &&
+        isBoundaryTextValue(path) &&
         path.length <= DESKTOP_WEB_STAGE_CONFIG.assetPathMaxLength &&
         SAFE_ASSET_PATH_RE.test(path),
     )
@@ -774,6 +932,7 @@ function referencedWebAssets(data: Readonly<Record<string, unknown>>):
       "The stored Web Experience HTML or asset list is outside the accepted desktop bounds.",
     );
   }
+
   return Object.freeze({
     ok: true as const,
     paths: Object.freeze(assets.map((path) => String(path)).sort()),
@@ -793,25 +952,20 @@ function readProjectAsset(
       `Referenced asset path ${JSON.stringify(path)} is not a normalized project-relative assets/ path.`,
     );
   }
+
   const target = resolve(root, path);
+
   if (!within(root, target)) {
     return refuse(
       DESKTOP_WEB_EXPORT_REFUSALS.unsafePath,
       `Referenced project asset ${path} resolves outside the project root.`,
     );
   }
+
   const read = streamContainedFile(
     root,
     target,
-    {
-      maximumBytes: PROJECT_ASSET_MAX_BYTES,
-      ...(manifestEntry === undefined
-        ? {}
-        : { expectedBytes: manifestEntry.byteLength }),
-      ...(remainingBudgetBytes === undefined
-        ? {}
-        : { remainingBudgetBytes }),
-    },
+    assetReadLimits(manifestEntry, remainingBudgetBytes),
     workspace === undefined
       ? undefined
       : {
@@ -820,6 +974,7 @@ function readProjectAsset(
           path,
         },
   );
+
   if (!read.ok) {
     if (read.kind === "missing") {
       return refuse(
@@ -827,36 +982,43 @@ function readProjectAsset(
         `Referenced project asset ${path} is missing.`,
       );
     }
+
     if (read.kind === "unsafe") {
       return refuse(
         DESKTOP_WEB_EXPORT_REFUSALS.unsafePath,
         `Referenced project asset ${path} must be a contained regular file: ${read.detail}.`,
       );
     }
+
     if (read.kind === "write") {
       return refuse(
         DESKTOP_WEB_EXPORT_REFUSALS.writeFailed,
         `Referenced project asset ${path} could not be written to export staging: ${read.detail}.`,
       );
     }
+
     if (read.kind === "budget") {
       return refuse(
         DESKTOP_WEB_EXPORT_REFUSALS.assetBudgetExceeded,
         `Referenced project assets exceed the ${String(DESKTOP_WEB_EXPORT_ASSET_MAX_TOTAL_BYTES)} byte aggregate Web export budget.`,
       );
     }
+
     return refuse(
       DESKTOP_WEB_EXPORT_REFUSALS.assetInvalid,
       `Referenced project asset ${path} could not be verified: ${read.detail}.`,
     );
   }
+
   const digest = read.digest;
+
   if (manifestEntry !== undefined && digest !== manifestEntry.digest) {
     return refuse(
       DESKTOP_WEB_EXPORT_REFUSALS.assetInvalid,
       `Referenced project asset ${path} does not match its accepted manifest digest and length.`,
     );
   }
+
   return Object.freeze({
     path,
     byteLength: read.byteLength,
@@ -878,25 +1040,31 @@ function stageProjectAsset(
     `/proc/self/fd/${String(workspace.stagingDescriptor)}`,
     ...captured.path.split("/"),
   );
+
   if (pathEntryExists(target)) {
     const staged = streamContainedFile(
       workspace.stagingDirectory,
       target,
       { expectedBytes: captured.byteLength },
     );
+
     if (staged.ok && staged.digest === captured.artifact.digest) return null;
+
     return refuse(
       DESKTOP_WEB_EXPORT_REFUSALS.writeFailed,
       `Retained export staging for ${captured.path} has unexpected bytes.`,
     );
   }
+
   const staged = readProjectAsset(
     root,
     captured.path,
     manifestEntry,
     workspace,
   );
+
   if ("ok" in staged) return staged;
+
   if (
     staged.byteLength !== captured.byteLength ||
     staged.artifact.digest !== captured.artifact.digest
@@ -906,6 +1074,7 @@ function stageProjectAsset(
       `Referenced project asset ${captured.path} changed while export staging was prepared.`,
     );
   }
+
   return null;
 }
 
@@ -917,12 +1086,9 @@ function revalidateProjectAssets(
   for (const captured of files) {
     const target = resolve(root, captured.path);
     const manifestEntry = manifestByPath.get(captured.path);
-    const current = streamContainedFile(root, target, {
-      maximumBytes: PROJECT_ASSET_MAX_BYTES,
-      ...(manifestEntry === undefined
-        ? {}
-        : { expectedBytes: manifestEntry.byteLength }),
-    });
+
+    const current = streamContainedFile(root, target, assetReadLimits(manifestEntry));
+
     if (!current.ok) {
       return refuse(
         current.kind === "missing"
@@ -933,6 +1099,7 @@ function revalidateProjectAssets(
         `Referenced project asset ${captured.path} could not be revalidated: ${current.detail}.`,
       );
     }
+
     if (
       current.byteLength !== captured.byteLength ||
       current.digest !== captured.artifact.digest
@@ -943,16 +1110,19 @@ function revalidateProjectAssets(
       );
     }
   }
+
   return null;
 }
 
 function staticIndex(document: SceneDocument, sourceDigest: string): string {
   const title = document.title?.trim() || document.id;
+
   const escapedTitle = title
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;");
+
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -1012,17 +1182,21 @@ function verifyExistingOutput(
 ): boolean {
   try {
     const expectedPaths = new Set(expected.keys());
+
     if (!matchesContainedFileSet(directory, accessPath, expectedPaths)) {
       return false;
     }
+
     for (const [path, file] of expected) {
       const actual = streamContainedFile(
         directory,
         join(accessPath, ...path.split("/")),
         { expectedBytes: file.byteLength },
       );
+
       if (!actual.ok || actual.digest !== file.digest) return false;
     }
+
     return matchesContainedFileSet(directory, accessPath, expectedPaths);
   } catch {
     return false;
@@ -1037,6 +1211,7 @@ function inspectExistingOutput(
   const destinationName = relative(parent.webDirectory, destination);
   const stableParent = `/proc/self/fd/${String(parent.webDescriptor)}`;
   const stableDestination = join(stableParent, destinationName);
+
   try {
     if (
       destinationName === "" ||
@@ -1047,10 +1222,13 @@ function inspectExistingOutput(
     ) {
       throw new Error("the export parent moved or the destination name is unsafe");
     }
+
     if (!pathEntryExists(stableDestination)) return null;
+
     if (verifyExistingOutput(destination, expected, stableDestination)) {
       return Object.freeze({ ok: true as const, replayed: true as const });
     }
+
     return refuse(
       DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
       `The content-addressed export directory already exists with different or unsafe bytes: ${destination}`,
@@ -1074,6 +1252,7 @@ function writeOutput(
   const destinationName = relative(parent.webDirectory, destination);
   const stableDestination = join(stableParent, destinationName);
   const stableStaging = join(stableParent, workspace.stagingName);
+
   try {
     if (
       destinationName === "" ||
@@ -1084,10 +1263,12 @@ function writeOutput(
     ) {
       throw new Error("the export parent moved or the destination name is unsafe");
     }
+
     if (pathEntryExists(stableDestination)) {
       if (verifyExistingOutput(destination, expected, stableDestination)) {
         return Object.freeze({ ok: true as const, replayed: true });
       }
+
       return refuse(
         DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
         `The content-addressed export directory already exists with different or unsafe bytes: ${destination}`,
@@ -1096,12 +1277,14 @@ function writeOutput(
 
     for (const [path, file] of expected) {
       const target = join(stableStaging, ...path.split("/"));
+
       if (pathEntryExists(target)) {
         const staged = streamContainedFile(
           workspace.stagingDirectory,
           target,
           { expectedBytes: file.byteLength },
         );
+
         if (!staged.ok || staged.digest !== file.digest) {
           throw new Error(`staged export file ${path} has unexpected bytes`);
         }
@@ -1144,20 +1327,24 @@ function writeOutput(
       if (verifyExistingOutput(destination, expected, stableDestination)) {
         return Object.freeze({ ok: true as const, replayed: true });
       }
+
       return refuse(
         DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
         `The content-addressed export directory was occupied during publication: ${destination}`,
       );
     }
+
     if (realpathSync(stableParent) !== parent.webDirectory) {
       throw new Error("the export parent moved during commit");
     }
+
     if (!verifyExistingOutput(destination, expected, stableDestination)) {
       return refuse(
         DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
         `The published content-addressed export changed before verification: ${destination}`,
       );
     }
+
     return Object.freeze({ ok: true as const, replayed: false });
   } catch (error) {
     try {
@@ -1171,6 +1358,7 @@ function writeOutput(
             replayed: pathEntryExists(stableStaging),
           });
         }
+
         return refuse(
           DESKTOP_WEB_EXPORT_REFUSALS.destinationConflict,
           `The content-addressed export directory was occupied during publication: ${destination}`,
@@ -1182,6 +1370,7 @@ function writeOutput(
         `The content-addressed export destination could not be inspected after a failed commit: ${destination}`,
       );
     }
+
     return refuse(
       DESKTOP_WEB_EXPORT_REFUSALS.writeFailed,
       `The static Web export could not be committed exclusively: ${error instanceof Error ? error.message : String(error)}`,
@@ -1189,8 +1378,7 @@ function writeOutput(
   }
 }
 
-/** Export one validated, clean project without deploying or overwriting bytes. */
-export function exportDesktopWebProject(
+function runExport(
   input: DesktopWebExportInput,
 ): DesktopWebExportResult {
   if (
@@ -1206,6 +1394,7 @@ export function exportDesktopWebProject(
       "Web export requires absolute project and publisher paths, scene.json, and the exact current content hash and byte length.",
     );
   }
+
   if (input.runtimeJavaScript.byteLength === 0) {
     return refuse(
       DESKTOP_WEB_EXPORT_REFUSALS.runtimeMissing,
@@ -1214,8 +1403,10 @@ export function exportDesktopWebProject(
   }
 
   let root: string;
+
   try {
     root = realpathSync(input.projectRoot);
+
     if (!statSync(root).isDirectory()) throw new Error("project root is not a directory");
   } catch (error) {
     return refuse(
@@ -1223,56 +1414,71 @@ export function exportDesktopWebProject(
       `The project root could not be read: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
+
   const sourceDocument = readProjectDocument(
     root,
     input.expectedContentByteLength,
   );
+
   if (!sourceDocument.ok) {
     if (sourceDocument.reason === DESKTOP_WEB_EXPORT_REFUSALS.unsafePath) {
       return sourceDocument;
     }
+
     return refuse(
       DESKTOP_WEB_EXPORT_REFUSALS.projectChanged,
       "scene.json changed while its verified bytes were being opened for export.",
     );
   }
+
   const documentBytes = sourceDocument.bytes;
 
   const exactHash = contentHash(documentBytes.toString("utf8"));
+
   if (exactHash !== input.expectedContentHash) {
     return refuse(
       DESKTOP_WEB_EXPORT_REFUSALS.projectChanged,
       "scene.json changed after the desktop authoring status was read; reopen it before exporting.",
     );
   }
+
   const parsed = parseDocumentText(documentBytes.toString("utf8"));
+
   if (!parsed.ok) {
     return refuse(
       DESKTOP_WEB_EXPORT_REFUSALS.sceneInvalid,
       `The active Scene Document is invalid: ${parsed.message}`,
     );
   }
+
   const scene = desktopSceneFromDocumentData(parsed.document.data);
+
   if (!scene.ok) {
     return refuse(DESKTOP_WEB_EXPORT_REFUSALS.sceneInvalid, scene.message);
   }
 
   const manifest = projectAssetManifestFromDocumentData(parsed.document.data);
+
   if (!manifest.ok) {
     return refuse(DESKTOP_WEB_EXPORT_REFUSALS.assetManifestInvalid, manifest.message);
   }
+
   const webAssets = referencedWebAssets(parsed.document.data);
+
   if (!webAssets.ok) return webAssets;
 
   const manifestByPath = new Map(
     manifest.value.assets.map((entry) => [entry.relativePath, entry] as const),
   );
+
   const assetPaths = [...new Set([
     ...manifest.value.assets.map((entry) => entry.relativePath),
     ...webAssets.paths,
   ])].sort();
+
   const assetFiles: ExportFile[] = [];
   let assetTotalBytes = 0;
+
   for (const path of assetPaths) {
     const file = readProjectAsset(
       root,
@@ -1281,6 +1487,7 @@ export function exportDesktopWebProject(
       undefined,
       DESKTOP_WEB_EXPORT_ASSET_MAX_TOTAL_BYTES - assetTotalBytes,
     );
+
     if ("ok" in file) return file;
     assetFiles.push(file);
     assetTotalBytes += file.byteLength;
@@ -1290,12 +1497,14 @@ export function exportDesktopWebProject(
   const runtimeDigest = sha256(input.runtimeJavaScript);
   const toolVersion = runtimeBoundToolVersion(runtimeDigest);
   const toolVersionBytes = utf8(`${toolVersion}\n`);
+
   if (sourceDigest !== exactHash) {
     return refuse(
       DESKTOP_WEB_EXPORT_REFUSALS.sceneInvalid,
       "The source project byte digest disagrees with the authoring content hash.",
     );
   }
+
   const coreFiles = [
     Object.freeze({
       path: "index.html",
@@ -1304,7 +1513,7 @@ export function exportDesktopWebProject(
     }),
     Object.freeze({
       path: "sceneaxi-scene.js",
-      bytes: utf8(sceneBridgeJavaScript(scene.mountable as unknown as JsonValue)),
+      bytes: utf8(sceneBridgeJavaScript(checkedMountableJson(scene.mountable))),
       artifact: Object.freeze({ role: "asset-bundle" as const, contentType: "application/javascript", digest: "" }),
     }),
     Object.freeze({
@@ -1331,12 +1540,15 @@ export function exportDesktopWebProject(
         : file.artifact,
     }),
   );
+
   const files: ExportFile[] = [...coreFiles, ...assetFiles].sort((left, right) =>
     left.path < right.path ? -1 : left.path > right.path ? 1 : 0,
   );
-  const artifacts = Object.freeze(
+
+  const artifacts: DeliveryHandoffArtifacts = Object.freeze(
     Object.fromEntries(files.map((file) => [file.path, file.artifact])),
-  ) as DeliveryHandoffArtifacts;
+  );
+
   const handoff: DeliveryHandoff = Object.freeze({
     schemaVersion: DELIVERY_HANDOFF_SCHEMA_VERSION,
     kind: DELIVERY_HANDOFF_KIND,
@@ -1360,24 +1572,25 @@ export function exportDesktopWebProject(
     notes:
       "Deterministic offline export. Provenance timestamps are the fixed v1 build epoch, not a wall-clock claim. source/scene.json contains the exact source project bytes. Creating this handoff performed no upload, deployment, signing, approval, or release.",
   });
+
   const validated = validateDeliveryHandoff(handoff);
+
   if (!validated.ok) {
     return refuse(
       DESKTOP_WEB_EXPORT_REFUSALS.handoffInvalid,
       validated.diagnostics[0]?.message ?? "The generated Delivery Handoff failed validation.",
     );
   }
+
   const handoffBytes = utf8(`${JSON.stringify(validated.handoff, null, 2)}\n`);
+
   const expected = new Map<string, ExpectedFile>(
     files.map((file) => [
       file.path,
-      Object.freeze({
-        byteLength: file.byteLength,
-        digest: file.artifact.digest,
-        ...(file.bytes === undefined ? {} : { bytes: file.bytes }),
-      }),
+      expectedFile(file),
     ] as const),
   );
+
   expected.set(
     DESKTOP_WEB_EXPORT_HANDOFF_PATH,
     Object.freeze({
@@ -1388,21 +1601,26 @@ export function exportDesktopWebProject(
   );
 
   const parent = prepareExportParent(root);
+
   if ("ok" in parent) return parent;
   let workspace: ExportWorkspace | null = null;
   let workspacePublished = false;
+
   try {
     const digestName = validated.handoff.artifactSetDigest.slice("sha256:".length);
     const destination = join(parent.webDirectory, digestName);
     const existing = inspectExistingOutput(parent, destination, expected);
     let written: Readonly<{ ok: true; replayed: boolean }>;
+
     if (existing !== null) {
       if (!existing.ok) return existing;
       written = existing;
     } else {
       const prepared = prepareExportWorkspace(parent);
+
       if ("ok" in prepared) return prepared;
       workspace = prepared;
+
       for (const asset of assetFiles) {
         const staged = stageProjectAsset(
           root,
@@ -1410,8 +1628,10 @@ export function exportDesktopWebProject(
           workspace,
           manifestByPath.get(asset.path),
         );
+
         if (staged !== null) return staged;
       }
+
       const result = writeOutput(
         parent,
         workspace,
@@ -1419,27 +1639,32 @@ export function exportDesktopWebProject(
         expected,
         input.publisherExecutable,
       );
+
       if (!result.ok) return result;
       workspacePublished = !result.replayed;
       written = result;
     }
 
     const movedAsset = revalidateProjectAssets(root, assetFiles, manifestByPath);
+
     if (movedAsset !== null) return movedAsset;
 
     // A source change during output construction refuses the result. The
     // content-addressed output remains valid evidence for the earlier bytes, but
     // it is not reported as the current project export.
     const currentDocument = readProjectDocument(root, documentBytes.byteLength);
+
     if (!currentDocument.ok) {
       if (currentDocument.reason === DESKTOP_WEB_EXPORT_REFUSALS.unsafePath) {
         return currentDocument;
       }
+
       return refuse(
         DESKTOP_WEB_EXPORT_REFUSALS.projectChanged,
         "scene.json could not be re-read after the static Web export was written.",
       );
     }
+
     if (sha256(currentDocument.bytes) !== sourceDigest) {
       return refuse(
         DESKTOP_WEB_EXPORT_REFUSALS.projectChanged,
@@ -1477,6 +1702,46 @@ export function exportDesktopWebProject(
         workspacePublished,
       );
     }
+
     cleanupExportParent(parent);
   }
 }
+}
+
+function checkedMountableJson<Scene>(scene: Scene): JsonValue {
+  if (!isJsonValue(scene)) throw new Error("MountableScene contains non-JSON values");
+
+  return scene;
+}
+
+function assetReadLimits(manifestEntry?: ProjectAssetManifestEntry, remainingBudgetBytes?: number) {
+  const limits: AssetReadLimits = { maximumBytes: PROJECT_ASSET_MAX_BYTES };
+
+  if (manifestEntry !== undefined) limits.expectedBytes = manifestEntry.byteLength;
+
+  if (remainingBudgetBytes !== undefined) limits.remainingBudgetBytes = remainingBudgetBytes;
+
+  return limits;
+}
+
+function expectedFile(file: ExportFile): ExpectedFile {
+  const result: MutableExpectedFile = { byteLength: file.byteLength, digest: file.artifact.digest };
+
+  if (file.bytes !== undefined) result.bytes = file.bytes;
+
+  return Object.freeze(result);
+}
+
+type BoundaryObjectValue = object | null;
+
+function isBoundaryObjectValue<Input>(value: Input): value is Input & Readonly<BoundaryObjectValue> {
+  return typeof value === "object";
+}
+
+function isBoundaryTextValue<Input>(value: Input): value is Input & string {
+  return typeof value === "string";
+}
+
+type AssetReadLimits = { maximumBytes: number; expectedBytes?: number; remainingBudgetBytes?: number };
+
+type MutableExpectedFile = { -readonly [Key in keyof ExpectedFile]: ExpectedFile[Key] };

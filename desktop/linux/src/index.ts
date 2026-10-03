@@ -246,3 +246,5 @@ export {
   desktopLinuxIndexHtml,
   type DesktopIndexHtmlOptions,
 } from "./lib/chrome-document.js";
+
+export { inspectDesktopScenePackages } from "./lib/desktop-scene.js";

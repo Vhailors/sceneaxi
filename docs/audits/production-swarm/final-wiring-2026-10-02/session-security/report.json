@@ -1,0 +1,324 @@
+{
+  "status": "SOURCE_HANDBACK_COMPLETE",
+  "sourceHandback": true,
+  "sourcePaths": [
+    "sites/umbrella/src/provider/own-session.ts",
+    "sites/umbrella/src/app/api/auth/own-session/route.ts",
+    "sites/umbrella/src/lib/request-authority.ts",
+    "packages/site-kit/src/catalog-server-fetch.ts",
+    "sites/catalog-game/src/lib/identity-plane.ts",
+    "sites/catalog-web/src/lib/identity-plane.ts",
+    "sites/catalog-game/src/app/item/[itemId]/page.tsx",
+    "sites/catalog-web/src/app/item/[itemId]/page.tsx"
+  ],
+  "beforeHashes": {
+    "sites/umbrella/src/provider/own-session.ts": "6132cefa4127131d8371858ad25388015eeb6196044957da8fee35cf33439d87",
+    "sites/umbrella/src/app/api/auth/own-session/route.ts": "931dfdfb8208ecba18fb58b5323b29beadba0b61819155ee362a57dcfd716173",
+    "sites/umbrella/src/lib/request-authority.ts": "93ea3d529ea4ea74df4c919a4f4396d2dc4df285c6278c1bffd4951bf1ace207",
+    "packages/site-kit/src/catalog-server-fetch.ts": "d902013c74c02b02bb524f82adb49aa4f09a31586d2289e9f460d602f94274e0",
+    "sites/catalog-game/src/lib/identity-plane.ts": "efde73461c78226a9640f63cef13706e00c1e23bf66dba6bea4a0344e9362cf3",
+    "sites/catalog-web/src/lib/identity-plane.ts": "efde73461c78226a9640f63cef13706e00c1e23bf66dba6bea4a0344e9362cf3",
+    "sites/catalog-game/src/app/item/[itemId]/page.tsx": "b8c30fc3c3852db1702d58bf85abb316598e64761e7020fbcf1cd27acd5bd9cd",
+    "sites/catalog-web/src/app/item/[itemId]/page.tsx": "b8c30fc3c3852db1702d58bf85abb316598e64761e7020fbcf1cd27acd5bd9cd"
+  },
+  "confirmedGaps": [
+    "raw origin normalized before request authority verification",
+    "composed outer plane evaluates sessionToken getter before adapter validation",
+    "both actual item pages invoke old unwired factory"
+  ],
+  "redBefore": {
+    "freshPermanent": {
+      "red-catalog.log": {
+        "exit": 1,
+        "passed": 47,
+        "failed": 2,
+        "output": [
+          "credential getter called once before composed refusal",
+          "configured-origin accessor accepted/wired=true"
+        ]
+      },
+      "red-origin.log": {
+        "exit": 1,
+        "passed": 1,
+        "failed": 9,
+        "output": "Eight unsafe/empty raw configurations plus absent configuration returned200, expected403; same positive canonical fixture passed"
+      }
+    },
+    "independentHistorical": "implementation-expansion-2026-10-02/review-endpoints/boundary-probe-final.json: five unsafe raw origins HTTP200/principalReads1, composed getterReads1. Attributed historical evidence, not a new run."
+  },
+  "greenAfter": {
+    "final-root.log": {
+      "exit": 0,
+      "files": 5,
+      "passed": 107,
+      "failed": 0
+    },
+    "final-raw-focused.log": {
+      "exit": 0,
+      "files": 1,
+      "passed": 11,
+      "failed": 0
+    },
+    "final-preservation.log": {
+      "exit": 0,
+      "files": 2,
+      "passed": 80,
+      "failed": 0
+    },
+    "final-pages.log": {
+      "exit": 0,
+      "files": 2,
+      "passed": 30,
+      "failed": 0
+    },
+    "focusedDisjointTests": 228,
+    "prior184Preserved": true,
+    "exact-review-probe.json": {
+      "exit": 0,
+      "predicates": 6,
+      "allPass": true,
+      "rawOriginStatus": 403,
+      "principalReads": 0,
+      "credentialGetterReads": 0,
+      "networkReads": 0
+    },
+    "final-lint.log": {
+      "exit": 0
+    },
+    "final-origin-lint.log": {
+      "exit": 0
+    },
+    "final-boundaries.log": {
+      "exit": 0,
+      "matrix": "unchanged"
+    },
+    "ownedDiffCheck": {
+      "exit": 0
+    }
+  },
+  "assertions": [
+    "strict canonical deployment origin before authority/provider/principal reads",
+    "descriptor-only configured options and carried request validation",
+    "explicit approval/default-unwired/no Host fallback/no SSO/no client roles/Kids denial/no-store",
+    "own-session requires explicit raw deployment callback even with an injected normalizing verifier; omitted raw always403 before authority",
+    "actual item pages approved transport1/carry header and unsafe/missing origin0 header/cookie/transport reads",
+    "original root57 and checkout20 negative files byte-equal independent endpoint-review fingerprints",
+    "typecheck failure preserved, not presented as green"
+  ],
+  "cleanup": "All fixtures in memory. Env/fetch restored in finally or vi.unstubAllEnvs. Existing transport tests verify timer/body cancellation/late cleanup. No sockets/providers/DB/browser/native/container/service/install/temp execution resources created. Timed-out command left no matching vitest/pnpm processes (ps exit1). No commit/push/merge/deploy/spend.",
+  "deferredChecks": [
+    "Ordered serial emitted schema/authoring/presentation dependency build then site-kit/sites declaration/typecheck; typecheck.log exit2 is NOT green.",
+    "Full root gate/site production builds only by serial owner after all source handbacks.",
+    "Fresh Next own-session route precedence/no-store/multi-origin HTTP/provider provenance and disconnect/timeout propagation.",
+    "Browser/native/provider/DB/production deployment acceptance.",
+    "Serial explicit registration of sites/umbrella/test/own-session-raw-origin.test.ts plus both node --test sites/catalog-{game,web}/test/item-session-wiring.test.ts; site tests are not discovered by root Vitest.",
+    "Deployment/docs owner must document new server-only SCENEAXI_CATALOG_OWN_SESSION_APPROVED flag; only exact true enables the existing reader."
+  ],
+  "semanticRemainingRisk": [
+    "Standalone deep-link/verifyLoginRequestOrigin normalization and the old direct catalog-identity/ports credential getter behavior remain outside exclusive scope. Actual own-session requires raw origin; request facade rejects unsafe raw before handles; new catalog compositions put descriptors before shared validator. Future bypass/direct consumers must not infer universal helper repair.",
+    "GET provider authority has no proved timeout/disconnect cancellation; catalog2000ms deadline is not provider-endpoint cancellation proof.",
+    "Server approval must be configured/documented by deployment owner; no default SSO/cross-site browser carry/provider provenance claimed.",
+    "Node TS5.9 source-backed static render/fixture transport with actual export maps is not emitted declaration, Next production build/route precedence, multi-origin HTTP/browser or real provider proof.",
+    "Commerce holds, Kids denial, signed release, held-key/LIVE and public v1 untouched; no closure of whole production acceptance."
+  ],
+  "productionStatus": "NOT_CERTIFIED",
+  "testPaths": [
+    "packages/site-kit/test/catalog-server-fetch.test.ts",
+    "sites/umbrella/test/own-session.test.ts",
+    "sites/umbrella/test/own-session-raw-origin.test.ts",
+    "sites/catalog-game/test/item-session-wiring.test.ts",
+    "sites/catalog-web/test/item-session-wiring.test.ts"
+  ],
+  "afterHashes": {
+    "sites/umbrella/src/provider/own-session.ts": "db1dc2eb71eb2b28b6837723c9e891d90713862c5e1b317bff69875d1d0e8a9d",
+    "sites/umbrella/src/app/api/auth/own-session/route.ts": "45655a3bdb745daba31b3e2f98cbad9302ab6e00913d376f96659067790258ae",
+    "sites/umbrella/src/lib/request-authority.ts": "05f9e93d8564ce15c637fc585ef635c087d301376206f05bebc557c9cb3e0e06",
+    "packages/site-kit/src/catalog-server-fetch.ts": "b6081c6f8edfa15cd0961850f2d252a53668fc58d9de004e876371ba93956c34",
+    "sites/catalog-game/src/lib/identity-plane.ts": "efde73461c78226a9640f63cef13706e00c1e23bf66dba6bea4a0344e9362cf3",
+    "sites/catalog-web/src/lib/identity-plane.ts": "efde73461c78226a9640f63cef13706e00c1e23bf66dba6bea4a0344e9362cf3",
+    "sites/catalog-game/src/app/item/[itemId]/page.tsx": "8147332bc9e9f6c106147d2007356e2709b0015d1d8e78de524dd0add408e130",
+    "sites/catalog-web/src/app/item/[itemId]/page.tsx": "8147332bc9e9f6c106147d2007356e2709b0015d1d8e78de524dd0add408e130",
+    "packages/site-kit/test/catalog-server-fetch.test.ts": "574a88893a22ccc64dac04510572ed50eac821a028fb605f02eddd46d8131692",
+    "sites/umbrella/test/own-session.test.ts": "fb78f11153a74905829b722d94bd7424f55961c5cc55b4131aa178642cd953c5",
+    "sites/umbrella/test/own-session-raw-origin.test.ts": "01d58c1b3af8e4de6009ba5c1289682c607d0ec7921bbcdb5531da12244178c3",
+    "sites/catalog-game/test/item-session-wiring.test.ts": "16b8725cd99c152b6e4f74df324ac810fe41a8609996b52204af8de1b3032351",
+    "sites/catalog-web/test/item-session-wiring.test.ts": "58ebc257375323c841f4704dbe9a20af5da0d55aae3612f410ec0287fb76412c"
+  },
+  "changedSourcePaths": [
+    "sites/umbrella/src/provider/own-session.ts",
+    "sites/umbrella/src/app/api/auth/own-session/route.ts",
+    "sites/umbrella/src/lib/request-authority.ts",
+    "packages/site-kit/src/catalog-server-fetch.ts",
+    "sites/catalog-game/src/app/item/[itemId]/page.tsx",
+    "sites/catalog-web/src/app/item/[itemId]/page.tsx"
+  ],
+  "commands": [
+    {
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "command": "pnpm exec vitest run packages/site-kit/test/catalog-server-fetch.test.ts tests/sites/billing-final-acceptance.test.ts tests/sites/site-response-hardening.test.ts tests/sites/credit-pack-purchase-ux.test.ts tests/e2e/auth-credits-refuse-matrix.test.ts --reporter=dot",
+      "log": "final-root.log",
+      "exit": 0
+    },
+    {
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "command": "pnpm --dir sites/umbrella exec vitest run --config vitest.config.ts test/own-session-raw-origin.test.ts --reporter=dot",
+      "log": "final-raw-focused.log",
+      "exit": 0
+    },
+    {
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "command": "pnpm --dir sites/umbrella exec vitest run --config vitest.config.ts test/own-session.test.ts test/checkout-reader-bounds.test.ts --reporter=dot",
+      "log": "final-preservation.log",
+      "exit": 0
+    },
+    {
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "command": "node --test sites/catalog-game/test/item-session-wiring.test.ts sites/catalog-web/test/item-session-wiring.test.ts",
+      "log": "final-pages.log",
+      "exit": 0
+    },
+    {
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "command": "node --experimental-transform-types docs/audits/production-swarm/implementation-expansion-2026-10-02/review-endpoints/boundary-probe.mjs",
+      "log": "exact-review-probe.json",
+      "exit": 0
+    },
+    {
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "command": "pnpm exec tsc -p packages/site-kit/tsconfig.json --noEmit",
+      "log": "typecheck.log",
+      "exit": 2
+    }
+  ],
+  "verificationFailures": [
+    {
+      "log": "typecheck.log",
+      "exit": 2,
+      "output": "scene-transforms.ts TS2724: schemas resolved declaration lacks projectSceneInstanceHierarchyV2, validateComposedSceneV2, ComposedSceneV2, PlacedSceneInstanceHierarchyV2",
+      "classification": "Shared stale schema declarations; bg-127 receipt lm_266 verifies source exports/noEmit, intentionally no emitted build. Ordered serial build/typecheck remains deferred; no alias/suppression."
+    },
+    {
+      "log": "green-origin.log",
+      "exit": 1,
+      "passed": 88,
+      "failed": 2,
+      "classification": "Existing positive actual-route fixtures omitted raw deployment configuration; supplied explicit configured env only, retained all expected statuses/principal assertions."
+    },
+    {
+      "log": "green-catalog.log",
+      "exit": 1,
+      "passed": 48,
+      "failed": 1,
+      "classification": "New positive Proxy fixture omitted deterministic clock; added existing test clock, retained positive outcome/getReads0/network1."
+    },
+    {
+      "log": "item-pages.log",
+      "exit": 1,
+      "passed": 14,
+      "failed": 16,
+      "classification": "Generated fixture accidentally replaced literal SITE_REQUEST_CROSS_ORIGIN with catalog-game/web_REQUEST_CROSS_ORIGIN. Corrected literal registry reason, no source workaround; zero private/network reads already passed."
+    },
+    {
+      "log": "item-pages-lint.log",
+      "exit": 1,
+      "output": "no-dynamic-delete on env restoration",
+      "classification": "Used Reflect.deleteProperty, no lint disabling."
+    },
+    {
+      "log": "fixture-config-root-failure.log",
+      "exit": 1,
+      "passed": 105,
+      "failed": 1,
+      "classification": "In-memory real endpoint fixture lacked new mandatory raw configuration. Added configured callback; identity/transport assertions unchanged."
+    },
+    {
+      "log": "final-umbrella-v3.log",
+      "exit": "shell timeout30s",
+      "output": "Vitest RUN header only, no test results",
+      "classification": "No assertion failures inferred; no Vitest budgets altered. ps check found no remaining vitest/pnpm processes. Reran new raw11 and unchanged preservation80 separately; both exit0."
+    }
+  ],
+  "dependencyReceipt": {
+    "from": "bg-127 lm_259",
+    "actualManifest": "packages/site-kit/package.json ./catalog-server-fetch -> ./src/catalog-server-fetch.ts",
+    "consumerProof": "Both new Node page suites resolve actual package.json export strings; no export-only aliases/stubs. Framework Next request plumbing and fixture fetch only are mocked; real identity/page/session credential precedence/wire parser execute."
+  },
+  "deploymentContract": {
+    "approval": "SCENEAXI_CATALOG_OWN_SESSION_APPROVED exactly true; absent/false/1/TRUE stays unwired",
+    "rawOrigin": "NEXT_PUBLIC_SCENEAXI_UMBRELLA_ORIGIN exact canonical safe origin, no normalization/Host fallback",
+    "loopback": "Only explicit NODE_ENV=development and exact canonical HTTP localhost/127.0.0.1/[::1]; production HTTPS dotted DNS",
+    "ambient": "Existing readSessionToken explicit server carry; no cookie/header transfer between origins implied, no default SSO. Transport credentials omit; only Accept/Origin/x-sceneaxi-session."
+  },
+  "preservedNegativeOracleHashes": {
+    "tests/sites/billing-final-acceptance.test.ts": {
+      "sha256": "e27dc87decb783c28a09625bfb8b5b17e07e1f769db1e0cd9ed08ac7f933b955",
+      "matchesIndependentReview": true
+    },
+    "tests/sites/site-response-hardening.test.ts": {
+      "sha256": "d709c286e3624ff5e7350ea50431dae1039be247a29f92e8a7b021df1dca3a25",
+      "matchesIndependentReview": true
+    },
+    "tests/sites/credit-pack-purchase-ux.test.ts": {
+      "sha256": "aeb4fffeb4cf6b63e218ab2702cc54d1839907393d90fc7fe250e0f97b3feb86",
+      "matchesIndependentReview": true
+    },
+    "tests/e2e/auth-credits-refuse-matrix.test.ts": {
+      "sha256": "d0baae196d02625df49e1dfdffe97817cb50637dd09376b6d036b87a18d7a47a",
+      "matchesIndependentReview": true
+    },
+    "sites/umbrella/test/checkout-reader-bounds.test.ts": {
+      "sha256": "08f11c8b54ad2c7ab12a1bcd2b36bed68c8b61c785abe8f5bdcfb8c2d56f8edf",
+      "matchesIndependentReview": true
+    }
+  },
+  "evidenceHashes": {
+    "item-pages-green.log": "d79e6ef3ec438b0aa5416fa04e42a5f43514dcc58cc42ebb4a2502c0a8627b9d",
+    "typecheck.log": "8b9c53244fabd56fa53b1967b151ce6bf6c51bf076302c8c2aca045e60138325",
+    "red-origin.txt": "aded1bf1a4f0bdb84448471348f89ece5d30142922c4e52c02f605c606dfa106",
+    "fixture-config-root-failure.log": "62354c3918306106a857af5bb3bec6724705c2176a79b1481fae0d230f1f8ecf",
+    "item-pages-green.txt": "d79e6ef3ec438b0aa5416fa04e42a5f43514dcc58cc42ebb4a2502c0a8627b9d",
+    "final-raw-focused.txt": "6eae514d913584129191dbf0deff16384d814123b53867d6fcb2add7274cf625",
+    "fixture-config-root-failure.txt": "1f2c36fa430c412b457356bd85ff52b16fdb690b1f9437fe3504b7d7ff1a2e16",
+    "item-pages.log": "b09548a8b813953c9bd02b8fb3f867f3fe5061b2c6c1324580e094a8f48c8d25",
+    "final-raw-focused.log": "73dafbeed1265c7cbd0841acdcf1c1009a2d98d840828912fdb6a1f91feaf3fe",
+    "final-pages.log": "4fe4781fb7a07fe471bea08e11026920034387ee905208ed837623b677ffcc61",
+    "green-origin.log": "58b712b5998892f336bd2ca4f4f1c9f887239bc61d8b181756fd4682f7131155",
+    "final-lint.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "focused-root.txt": "22eacaf2f08189cf9948e2820c7362bf0668451d276ff8a58fe3f3b19fbfdeb4",
+    "final-umbrella.log": "84298c4943c148d8e0935b907ed97c23bc28006266e4854f945ef38cb523f1c2",
+    "red-catalog.log": "2d5120e3f7421741f4721c44b49694a1d0131405d2ee2a38ecaae3e20d925dab",
+    "item-pages-lint.log": "a1843df0c1f3c156e4614989f2cfbb8249c821f16cac62f48ce913e87508fc5c",
+    "lint.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "red-catalog.txt": "47ff3a374b52bf691a966463e13fe646f7854cd3a15d56375c19fdfab11138d3",
+    "lint.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "focused-umbrella.txt": "ba76c455f9c98abf60efa66cd1504a8665c2296cef7cf4e194c2012a43e04674",
+    "focused-umbrella.log": "4a19e8f7a67691b46fd01d9bc975952264d7416e69c0cd2bfd3887526051be6d",
+    "final-preservation.txt": "244afe954e5d41751bae8348fba7e5f31b6942dedffd7934d4d2beffeb8794b6",
+    "exact-review-probe.json": "b6f3b40e7874f660067dd64f7a0d416e224fce367fc9b33e95364092d6dbdc4e",
+    "green-origin.txt": "7cf2bbc9230a7c34b854cf073e5a01b321acabc242fc08bcb0a7eec9ca24aa63",
+    "final-umbrella-v3.txt": "7fc03a65c32c0aca1aba3bc9330801d2486b231e32cab5c4e13b46f1617bf45b",
+    "typecheck.txt": "8b9c53244fabd56fa53b1967b151ce6bf6c51bf076302c8c2aca045e60138325",
+    "red-origin.log": "de3ec2ee26093ea7ec747749db7cca9f04c301e1fa3e47289a94034ba0eed290",
+    "exact-review-probe.stderr": "1bb5cbf027a473f6991a867102026c3a865273aa029ec459d9572b22f620d6e0",
+    "final-umbrella-v2.log": "530953a4f1ee7683f4f5a1a1dc7a3a5c688582d8902bba5558c2eb483fd22fd4",
+    "final-origin-lint.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "focused-root.log": "9d876e6816950f2b87b9c038b2f7f19a79c664b36b313caea309e2244a85a506",
+    "final-pages.txt": "4fe4781fb7a07fe471bea08e11026920034387ee905208ed837623b677ffcc61",
+    "final-boundaries.txt": "3b17aa4cc14dd9b4b41bb33991161ac2fb61c3d19642faf961d533b2a64ac92d",
+    "final-root.txt": "ed704846f3aff224f6a1b31eec7d0acc59ba041dd588d307e0bf02b0fc6459bd",
+    "final-boundaries.log": "3b17aa4cc14dd9b4b41bb33991161ac2fb61c3d19642faf961d533b2a64ac92d",
+    "item-pages-lint.txt": "a1843df0c1f3c156e4614989f2cfbb8249c821f16cac62f48ce913e87508fc5c",
+    "final-umbrella.txt": "3ea527a642237c293d0a88a93683ad399e7fcdedc772510e2719319641248950",
+    "item-pages.txt": "b09548a8b813953c9bd02b8fb3f867f3fe5061b2c6c1324580e094a8f48c8d25",
+    "final-origin-lint.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "final-umbrella-v2.txt": "12812de779d97dc3b3f90348ef07e8088264b6a663f1bd367fa1d0446803ded7",
+    "green-catalog.log": "2726e22378d21bc3e978c933ab10820b18670ed12aa0fea8f2ef32812fd1aaa4",
+    "final-preservation.log": "122e5cc9e621f4f15f296d21131d8602f4a0690bb6002f6efa6620248e422772",
+    "final-root.log": "9fdfa8d3669fd7bf2313afc7fdb4ca471698df4f0d83e8212e8dbf221f9e37ec",
+    "boundaries.log": "3b17aa4cc14dd9b4b41bb33991161ac2fb61c3d19642faf961d533b2a64ac92d",
+    "final-umbrella-v3.log": "b3a79c345d3a4399249305fe1912d11ca7aa7eff9a6d8151ebb5713649ac0fc6",
+    "final-lint.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "green-catalog.txt": "9ebd44a27e65753c94c483f205abc8233ebe781e45fbdf3eeaae8a6e370fe751",
+    "boundaries.txt": "3b17aa4cc14dd9b4b41bb33991161ac2fb61c3d19642faf961d533b2a64ac92d"
+  }
+}

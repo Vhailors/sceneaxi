@@ -1,3 +1,10 @@
+import { isJsonValue } from "./document.js";
+import type { snapshotPlainRecord } from "./record-validation.js";
+
+type CatalogInput = Parameters<typeof isJsonValue>[0];
+
+type RawCatalogRecord = NonNullable<ReturnType<typeof snapshotPlainRecord>>;
+
 /**
  * Catalog Item contract + fail-closed pipeline state machine (dormant stubs).
  *
@@ -196,18 +203,20 @@ export type TransitionRequest = {
 };
 
 const DATE_TIME_RE = new RegExp(CATALOG_DATE_TIME_PATTERN);
+
 const SHA256_RE = /^sha256:[0-9a-f]{64}(?![\s\S])/;
+
 const ID_RE = /^[a-z0-9][a-z0-9-]*(?![\s\S])/;
 
-function nonEmptyString(value: unknown): value is string {
-  return typeof value === "string" && value.trim().length > 0;
+function nonEmptyString(value: CatalogInput): value is string {
+  return isBoundaryString(value) && value.trim().length > 0;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+function isRecord(value: CatalogInput): value is RawCatalogRecord {
+  return isBoundaryObjectOrNull(value) && value !== null && !Array.isArray(value);
 }
 
-function isPipelineState(value: unknown): value is PipelineState {
+function isPipelineState(value: CatalogInput): value is PipelineState {
   return (
     value === "intake" ||
     value === "screening" ||
@@ -217,194 +226,233 @@ function isPipelineState(value: unknown): value is PipelineState {
   );
 }
 
-function validId(value: unknown): value is string {
-  return typeof value === "string" && ID_RE.test(value);
+function validId(value: CatalogInput): value is string {
+  return isBoundaryString(value) && ID_RE.test(value);
 }
 
-function validSha256(value: unknown): value is string {
-  return typeof value === "string" && SHA256_RE.test(value);
+function validSha256(value: CatalogInput): value is string {
+  return isBoundaryString(value) && SHA256_RE.test(value);
 }
 
-function validDateTime(value: unknown): value is string {
-  return typeof value === "string" && DATE_TIME_RE.test(value);
+function validDateTime(value: CatalogInput): value is string {
+  return isBoundaryString(value) && DATE_TIME_RE.test(value);
 }
 
-function normalizeProfiles(value: unknown): readonly string[] | undefined {
+function normalizeProfiles(value: CatalogInput): readonly string[] | undefined {
   if (!Array.isArray(value) || value.length === 0) return undefined;
   const normalized: string[] = [];
+
   for (let index = 0; index < value.length; index += 1) {
     if (!Object.hasOwn(value, index)) return undefined;
     const profile = value[index];
+
     if (!validId(profile)) return undefined;
     normalized.push(profile);
   }
+
   return normalized;
 }
 
-function normalizeStringArray(value: unknown): readonly string[] | undefined {
+function normalizeStringArray(value: CatalogInput): readonly string[] | undefined {
   if (!Array.isArray(value)) return undefined;
 
   const normalized: string[] = [];
+
   for (let index = 0; index < value.length; index += 1) {
     if (!Object.hasOwn(value, index)) return undefined;
     const entry = value[index];
-    if (typeof entry !== "string") return undefined;
+
+    if (!isBoundaryString(entry)) return undefined;
     normalized.push(entry);
   }
+
   return normalized;
 }
 
 type CatalogMetadata = Omit<CatalogItem, "moderation">;
 
-function normalizeCatalogMetadata(item: unknown): {
-  readonly metadata?: CatalogMetadata;
-  readonly itemId?: string;
-  readonly missing: string[];
-} {
+type CatalogMetadataNormalization = { metadata?: CatalogMetadata; itemId?: string; missing: string[] };
+
+function normalizeCatalogMetadata(item: CatalogInput): CatalogMetadataNormalization {
   const missing: string[] = [];
+
   if (!isRecord(item)) return { missing: ["catalogItem"] };
 
   const schemaVersion = item["schemaVersion"];
+
   if (schemaVersion !== CATALOG_ITEM_SCHEMA_VERSION) {
     missing.push("schemaVersion");
   }
 
   const rawItemId = item["itemId"];
   const itemId = validId(rawItemId) ? rawItemId : undefined;
+
   if (itemId === undefined) missing.push("itemId");
 
   const rawAssetPackage = item["assetPackage"];
   const assetPackage = isRecord(rawAssetPackage) ? rawAssetPackage : undefined;
+
   if (assetPackage === undefined) missing.push("assetPackage");
   const rawPackageId = assetPackage?.["packageId"];
   const rawContentHash = assetPackage?.["contentHash"];
   const packageId = validId(rawPackageId) ? rawPackageId : undefined;
   const contentHash = validSha256(rawContentHash) ? rawContentHash : undefined;
+
   if (assetPackage !== undefined && packageId === undefined) {
     missing.push("assetPackage.packageId");
   }
+
   if (assetPackage !== undefined && contentHash === undefined) {
     missing.push("assetPackage.contentHash");
   }
 
   const rawRights = item["rights"];
   const rights = isRecord(rawRights) ? rawRights : undefined;
+
   if (rights === undefined) missing.push("rights");
   const rawLicense = rights?.["license"];
   const rawRightsHolder = rights?.["rightsHolder"];
   const rawCommercialUseAllowed = rights?.["commercialUseAllowed"];
   const license = nonEmptyString(rawLicense) ? rawLicense : undefined;
+
   const rightsHolder = nonEmptyString(rawRightsHolder)
     ? rawRightsHolder
     : undefined;
+
   const commercialUseAllowed =
-    typeof rawCommercialUseAllowed === "boolean"
+    isBoundaryBoolean(rawCommercialUseAllowed)
       ? rawCommercialUseAllowed
       : undefined;
+
   if (rights !== undefined && license === undefined) {
     missing.push("rights.license");
   }
+
   if (rights !== undefined && rightsHolder === undefined) {
     missing.push("rights.rightsHolder");
   }
+
   if (rights !== undefined && commercialUseAllowed === undefined) {
     missing.push("rights.commercialUseAllowed");
   }
 
   const rawProvenance = item["provenance"];
   const provenance = isRecord(rawProvenance) ? rawProvenance : undefined;
+
   if (provenance === undefined) missing.push("provenance");
   const rawOrigin = provenance?.["origin"];
   const rawIngestedAt = provenance?.["ingestedAt"];
   const rawSourceDigest = provenance?.["sourceDigest"];
   const origin = nonEmptyString(rawOrigin) ? rawOrigin : undefined;
   const ingestedAt = validDateTime(rawIngestedAt) ? rawIngestedAt : undefined;
+
   const sourceDigest = validSha256(rawSourceDigest)
     ? rawSourceDigest
     : undefined;
+
   if (provenance !== undefined && origin === undefined) {
     missing.push("provenance.origin");
   }
+
   if (provenance !== undefined && ingestedAt === undefined) {
     missing.push("provenance.ingestedAt");
   }
+
   if (provenance !== undefined && sourceDigest === undefined) {
     missing.push("provenance.sourceDigest");
   }
 
   const rawDisclosure = item["aiGenerationDisclosure"];
   const disclosure = isRecord(rawDisclosure) ? rawDisclosure : undefined;
+
   if (disclosure === undefined) missing.push("aiGenerationDisclosure");
   const rawAiGenerated = disclosure?.["aiGenerated"];
   const rawDisclosureText = disclosure?.["disclosureText"];
   const rawTools = disclosure?.["tools"];
+
   const aiGenerated =
-    typeof rawAiGenerated === "boolean" ? rawAiGenerated : undefined;
+    isBoundaryBoolean(rawAiGenerated) ? rawAiGenerated : undefined;
+
   const disclosureText = nonEmptyString(rawDisclosureText)
     ? rawDisclosureText
     : undefined;
+
   const tools =
     rawTools === undefined ? undefined : normalizeStringArray(rawTools);
+
   if (disclosure !== undefined && aiGenerated === undefined) {
     missing.push("aiGenerationDisclosure.aiGenerated");
   }
+
   if (disclosure !== undefined && disclosureText === undefined) {
     missing.push("aiGenerationDisclosure.disclosureText");
   }
+
   if (disclosure !== undefined && rawTools !== undefined && tools === undefined) {
     missing.push("aiGenerationDisclosure.tools");
   }
 
   const rawCompatibility = item["compatibility"];
+
   const compatibility = isRecord(rawCompatibility)
     ? rawCompatibility
     : undefined;
+
   if (compatibility === undefined) missing.push("compatibility");
   const rawCoreRange = compatibility?.["coreRange"];
   const rawProfiles = compatibility?.["profiles"];
   const coreRange = nonEmptyString(rawCoreRange) ? rawCoreRange : undefined;
   const profiles = normalizeProfiles(rawProfiles);
+
   if (compatibility !== undefined && coreRange === undefined) {
     missing.push("compatibility.coreRange");
   }
+
   if (compatibility !== undefined && profiles === undefined) {
     missing.push("compatibility.profiles");
   }
 
   const rawCommerce = item["commerce"];
   const commerce = isRecord(rawCommerce) ? rawCommerce : undefined;
+
   if (commerce === undefined) missing.push("commerce");
   const rawActivation = commerce?.["activation"];
+
   if (commerce !== undefined && rawActivation !== "inert") {
     missing.push("commerce.activation");
   }
+
   const rawPrice = commerce?.["price"];
   const price = isRecord(rawPrice) ? rawPrice : undefined;
   const rawAmount = price?.["amount"];
   const rawCurrency = price?.["currency"];
+
   if (
     commerce !== undefined &&
     rawPrice !== undefined &&
     (price === undefined ||
-      typeof rawAmount !== "string" ||
-      typeof rawCurrency !== "string")
+      !isBoundaryString(rawAmount) ||
+      !isBoundaryString(rawCurrency))
   ) {
     missing.push("commerce.price");
   }
+
   const rawSku = commerce?.["sku"];
+
   if (
     commerce !== undefined &&
     rawSku !== undefined &&
-    typeof rawSku !== "string"
+    !isBoundaryString(rawSku)
   ) {
     missing.push("commerce.sku");
   }
 
   const normalizedPrice =
-    typeof rawAmount === "string" && typeof rawCurrency === "string"
+    isBoundaryString(rawAmount) && isBoundaryString(rawCurrency)
       ? { amount: rawAmount, currency: rawCurrency }
       : undefined;
-  const normalizedSku = typeof rawSku === "string" ? rawSku : undefined;
+
+  const normalizedSku = isBoundaryString(rawSku) ? rawSku : undefined;
 
   if (
     schemaVersion !== CATALOG_ITEM_SCHEMA_VERSION ||
@@ -423,8 +471,21 @@ function normalizeCatalogMetadata(item: unknown): {
     coreRange === undefined ||
     profiles === undefined
   ) {
-    return { missing, ...(itemId === undefined ? {} : { itemId }) };
+    const normalized: CatalogMetadataNormalization = { missing };
+
+    if (itemId !== undefined) normalized.itemId = itemId;
+
+    return normalized;
   }
+
+  const normalizedDisclosure: CatalogDisclosureBuilder = { aiGenerated, disclosureText };
+
+  if (tools !== undefined) normalizedDisclosure.tools = tools;
+  const normalizedCommerce: CatalogCommerceBuilder = { activation: "inert" };
+
+  if (normalizedPrice !== undefined) normalizedCommerce.price = normalizedPrice;
+
+  if (normalizedSku !== undefined) normalizedCommerce.sku = normalizedSku;
 
   return {
     missing,
@@ -446,20 +507,12 @@ function normalizeCatalogMetadata(item: unknown): {
         ingestedAt,
         sourceDigest,
       },
-      aiGenerationDisclosure: {
-        aiGenerated,
-        disclosureText,
-        ...(tools === undefined ? {} : { tools }),
-      },
+      aiGenerationDisclosure: normalizedDisclosure,
       compatibility: {
         coreRange,
         profiles,
       },
-      commerce: {
-        activation: "inert",
-        ...(normalizedPrice === undefined ? {} : { price: normalizedPrice }),
-        ...(normalizedSku === undefined ? {} : { sku: normalizedSku }),
-      },
+      commerce: normalizedCommerce,
     },
   };
 }
@@ -470,7 +523,7 @@ function normalizeCatalogMetadata(item: unknown): {
  * rights/provenance/AI-disclosure screening in the program catalog pipeline;
  * deeper #48 controls stay factories-helpers SoT.
  */
-export function missingMandatoryMetadata(item: unknown): string[] {
+export function missingMandatoryMetadata(item: CatalogInput): string[] {
   return normalizeCatalogMetadata(item).missing;
 }
 
@@ -478,7 +531,7 @@ type HumanVerdictNormalization =
   | { readonly ok: true; readonly verdict: HumanCurationVerdict }
   | { readonly ok: false; readonly refusal: TransitionRefuse };
 
-function normalizeHumanVerdict(verdict: unknown): HumanVerdictNormalization {
+function normalizeHumanVerdict(verdict: CatalogInput): HumanVerdictNormalization {
   if (verdict === undefined) {
     return {
       ok: false,
@@ -490,6 +543,7 @@ function normalizeHumanVerdict(verdict: unknown): HumanVerdictNormalization {
       },
     };
   }
+
   if (!isRecord(verdict)) {
     return {
       ok: false,
@@ -506,6 +560,7 @@ function normalizeHumanVerdict(verdict: unknown): HumanVerdictNormalization {
   const curatorId = verdict["curatorId"];
   const rationale = verdict["rationale"];
   const recordedAt = verdict["recordedAt"];
+
   if (kind !== "human") {
     return {
       ok: false,
@@ -516,6 +571,7 @@ function normalizeHumanVerdict(verdict: unknown): HumanVerdictNormalization {
       },
     };
   }
+
   if (
     !nonEmptyString(curatorId) ||
     !nonEmptyString(rationale)
@@ -529,6 +585,7 @@ function normalizeHumanVerdict(verdict: unknown): HumanVerdictNormalization {
       },
     };
   }
+
   if (!validDateTime(recordedAt)) {
     return {
       ok: false,
@@ -539,6 +596,7 @@ function normalizeHumanVerdict(verdict: unknown): HumanVerdictNormalization {
       },
     };
   }
+
   if (decision === "reject") {
     return {
       ok: false,
@@ -549,6 +607,7 @@ function normalizeHumanVerdict(verdict: unknown): HumanVerdictNormalization {
       },
     };
   }
+
   if (decision !== "approve") {
     return {
       ok: false,
@@ -559,6 +618,7 @@ function normalizeHumanVerdict(verdict: unknown): HumanVerdictNormalization {
       },
     };
   }
+
   return {
     ok: true,
     verdict: { kind, decision, curatorId, rationale, recordedAt },
@@ -591,7 +651,7 @@ type ModerationNormalization =
   | { readonly ok: true; readonly moderation: ModerationState }
   | { readonly ok: false; readonly refusal: TransitionRefuse };
 
-function normalizeModerationHistory(item: unknown): ModerationNormalization {
+function normalizeModerationHistory(item: CatalogInput): ModerationNormalization {
   if (!isRecord(item)) {
     return {
       ok: false,
@@ -604,6 +664,7 @@ function normalizeModerationHistory(item: unknown): ModerationNormalization {
   }
 
   const moderation = item["moderation"];
+
   if (
     !isRecord(moderation) ||
     !isPipelineState(moderation["pipelineState"]) ||
@@ -622,6 +683,7 @@ function normalizeModerationHistory(item: unknown): ModerationNormalization {
   const pipelineState = moderation["pipelineState"];
   const history = moderation["history"];
   const required = REQUIRED_HISTORY[pipelineState];
+
   if (history.length !== required.length) {
     return {
       ok: false,
@@ -634,8 +696,10 @@ function normalizeModerationHistory(item: unknown): ModerationNormalization {
   }
 
   const normalizedHistory: TransitionRecord[] = [];
+
   for (let index = 0; index < required.length; index += 1) {
     const expected = required[index];
+
     if (!Object.hasOwn(history, index)) {
       return {
         ok: false,
@@ -649,7 +713,9 @@ function normalizeModerationHistory(item: unknown): ModerationNormalization {
         },
       };
     }
+
     const record = history[index];
+
     if (!isRecord(record)) {
       return {
         ok: false,
@@ -669,6 +735,7 @@ function normalizeModerationHistory(item: unknown): ModerationNormalization {
     const reason = record["reason"];
     const at = record["at"];
     const rawHumanVerdict = record["humanVerdict"];
+
     if (
       expected === undefined ||
       !isPipelineState(from) ||
@@ -693,6 +760,7 @@ function normalizeModerationHistory(item: unknown): ModerationNormalization {
 
     if (to === "listed") {
       const verdict = normalizeHumanVerdict(rawHumanVerdict);
+
       if (!verdict.ok) {
         return {
           ok: false,
@@ -703,6 +771,7 @@ function normalizeModerationHistory(item: unknown): ModerationNormalization {
           },
         };
       }
+
       normalizedHistory.push({
         from,
         to,
@@ -722,6 +791,7 @@ function normalizeModerationHistory(item: unknown): ModerationNormalization {
           },
         };
       }
+
       normalizedHistory.push({ from, to, reason, at });
     }
   }
@@ -732,33 +802,40 @@ function normalizeModerationHistory(item: unknown): ModerationNormalization {
   };
 }
 
-function sameCatalogValue(left: unknown, right: unknown): boolean {
+function sameCatalogValue(left: CatalogInput, right: CatalogInput): boolean {
   if (left === right) return true;
+
   if (Array.isArray(left) || Array.isArray(right)) {
     if (!Array.isArray(left) || !Array.isArray(right)) return false;
+
     if (left.length !== right.length) return false;
+
     return left.every(
       (value, index) =>
         Object.hasOwn(right, index) &&
         sameCatalogValue(value, right[index]),
     );
   }
+
   if (!isRecord(left) || !isRecord(right)) return false;
   const leftKeys = Object.keys(left).sort();
   const rightKeys = Object.keys(right).sort();
+
   if (
     leftKeys.length !== rightKeys.length ||
     leftKeys.some((key, index) => key !== rightKeys[index])
   ) {
     return false;
   }
+
   return leftKeys.every((key) => sameCatalogValue(left[key], right[key]));
 }
 
 export function validateCatalogItem(
-  value: unknown,
+  value: CatalogInput,
 ): CatalogItemValidationResult {
   const metadata = normalizeCatalogMetadata(value);
+
   if (metadata.metadata === undefined || metadata.missing.length > 0) {
     return {
       ok: false,
@@ -768,20 +845,25 @@ export function validateCatalogItem(
         ".",
     };
   }
+
   const moderation = normalizeModerationHistory(value);
+
   if (!moderation.ok) {
     return { ok: false, message: moderation.refusal.message };
   }
+
   const item: CatalogItem = {
     ...metadata.metadata,
     moderation: moderation.moderation,
   };
+
   if (!sameCatalogValue(value, item)) {
     return {
       ok: false,
       message: "Catalog item contains fields outside the v1 contract.",
     };
   }
+
   return { ok: true, item };
 }
 
@@ -808,6 +890,7 @@ export function transitionCatalogItem(
   request: TransitionRequest,
 ): TransitionResult {
   const requestValue: unknown = request;
+
   if (!isRecord(requestValue)) {
     return {
       ok: false,
@@ -820,6 +903,7 @@ export function transitionCatalogItem(
   const rawTo = requestValue["to"];
   const rawHumanVerdict = requestValue["humanVerdict"];
   const rawAt = requestValue["at"];
+
   if (!nonEmptyString(rawReason)) {
     return {
       ok: false,
@@ -827,9 +911,11 @@ export function transitionCatalogItem(
       message: "Every pipeline transition requires a non-empty reason.",
     };
   }
+
   const reason = rawReason.trim();
 
   const itemValue: unknown = item;
+
   if (!isRecord(itemValue)) {
     return {
       ok: false,
@@ -839,12 +925,14 @@ export function transitionCatalogItem(
   }
 
   const rawModeration = itemValue["moderation"];
+
   const moderationSnapshot = isRecord(rawModeration)
     ? {
         pipelineState: rawModeration["pipelineState"],
         history: rawModeration["history"],
       }
     : rawModeration;
+
   const itemSnapshot = {
     schemaVersion: itemValue["schemaVersion"],
     itemId: itemValue["itemId"],
@@ -855,7 +943,7 @@ export function transitionCatalogItem(
     compatibility: itemValue["compatibility"],
     moderation: moderationSnapshot,
     commerce: itemValue["commerce"],
-  } as unknown as CatalogItem;
+  };
 
   if (itemSnapshot.schemaVersion !== CATALOG_ITEM_SCHEMA_VERSION) {
     return {
@@ -875,7 +963,9 @@ export function transitionCatalogItem(
       message: "Catalog item must contain a valid moderation history.",
     };
   }
+
   const from = moderationSnapshot["pipelineState"];
+
   if (!isPipelineState(rawTo)) {
     return {
       ok: false,
@@ -883,8 +973,10 @@ export function transitionCatalogItem(
       message: "Pipeline transition target is invalid (fail-closed).",
     };
   }
+
   const to = rawTo;
   const allowed = LEGAL_TRANSITIONS.get(from);
+
   if (!allowed?.has(to)) {
     return {
       ok: false,
@@ -895,6 +987,7 @@ export function transitionCatalogItem(
   }
 
   const moderation = normalizeModerationHistory(itemSnapshot);
+
   if (!moderation.ok) return moderation.refusal;
 
   if (to !== "listed" && rawHumanVerdict !== undefined) {
@@ -906,13 +999,16 @@ export function transitionCatalogItem(
   }
 
   let humanVerdict: HumanCurationVerdict | undefined;
+
   if (to === "listed") {
     const verdict = normalizeHumanVerdict(rawHumanVerdict);
+
     if (!verdict.ok) return verdict.refusal;
     humanVerdict = verdict.verdict;
   }
 
   const at = rawAt ?? new Date().toISOString();
+
   if (!validDateTime(at)) {
     return {
       ok: false,
@@ -920,7 +1016,9 @@ export function transitionCatalogItem(
       message: "Pipeline transition timestamp must be a valid date-time.",
     };
   }
+
   const normalizedMetadata = normalizeCatalogMetadata(itemSnapshot);
+
   if (to !== "delisted" && normalizedMetadata.missing.length > 0) {
     return {
       ok: false,
@@ -931,6 +1029,7 @@ export function transitionCatalogItem(
         ".",
     };
   }
+
   const transition: TransitionRecord =
     humanVerdict === undefined
       ? { from, to, reason, at }
@@ -1032,6 +1131,7 @@ export function attemptCommerceActivation(
   item: CatalogItem,
 ): CommerceActivationResult {
   void item; // signature reserved for future per-item 6b checks; always inert now
+
   return {
     ok: false,
     code: "commerce-inert",
@@ -1048,4 +1148,26 @@ export function isCommerceActive(item: CatalogItem): boolean {
 /** Legal successors for a state (empty for terminal delisted). */
 export function legalSuccessors(state: PipelineState): readonly PipelineState[] {
   return [...(LEGAL_TRANSITIONS.get(state) ?? [])];
+}
+
+function isBoundaryString(value: CatalogInput): value is string {
+  return typeof value === "string";
+}
+
+function isBoundaryBoolean(value: CatalogInput): value is boolean {
+  return typeof value === "boolean";
+}
+
+function isBoundaryObjectOrNull(value: CatalogInput): value is object | null {
+  return isBoundaryObjectValue(value);
+}
+
+type CatalogDisclosureBuilder = { -readonly [Key in keyof AiGenerationDisclosure]: AiGenerationDisclosure[Key] };
+
+type CatalogCommerceBuilder = { -readonly [Key in keyof CommerceFields]: CommerceFields[Key] };
+
+type BoundaryObjectValue = object | null;
+
+function isBoundaryObjectValue<Input>(value: Input): value is Input & Readonly<BoundaryObjectValue> {
+  return typeof value === "object";
 }

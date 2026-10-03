@@ -6,13 +6,16 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   gate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4 — official upstream commit verified by git ls-remote
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4 — official upstream commit verified by git ls-remote
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4 — official upstream commit verified by git ls-remote
         with:
           node-version: 24
           cache: pnpm
@@ -44,9 +47,9 @@ jobs:
       matrix:
         site: [umbrella, catalog-game, catalog-web]
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4 — official upstream commit verified by git ls-remote
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4 — official upstream commit verified by git ls-remote
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4 — official upstream commit verified by git ls-remote
         with:
           node-version: 24
           cache: pnpm
@@ -60,3 +63,42 @@ jobs:
         working-directory: sites/${{ matrix.site }}
       - run: pnpm build
         working-directory: sites/${{ matrix.site }}
+
+  # Image security acceptance uses each independently frozen install root, not a root
+  # hoist or historical lockfile green. No build, credentials, deployment or publication.
+  security-delivery:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile
+        working-directory: sites/umbrella
+      - run: pnpm install --frozen-lockfile
+        working-directory: sites/catalog-game
+      - run: pnpm install --frozen-lockfile
+        working-directory: sites/catalog-web
+      - run: pnpm install --frozen-lockfile
+        working-directory: sites/kids
+      - run: pnpm test:security-delivery
+
+  # Isolated local build coverage only: no deployment, secrets or shared imports.
+  kids-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: sites/kids/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+        working-directory: sites/kids
+      - run: pnpm typecheck
+        working-directory: sites/kids
+      - run: pnpm build
+        working-directory: sites/kids

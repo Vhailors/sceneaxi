@@ -1,0 +1,76 @@
+{
+  "manifestCheckOutput": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/packets/policy-148/code.patch: OK\n/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/packets/policy-148/report.json: OK\n/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/packets/mutations-149/mutation-only.patch: OK\n/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/packets/mutations-149/report.json: OK\n",
+  "postimageHashesReverified": [
+    {
+      "file": ".oxlintrc.json",
+      "sha256": "f815dd07e6a8d7e50b8ed37736baa1da63d9baab3be4edb3a31b86140459f0c5"
+    },
+    {
+      "file": "tools/oxlint/anti-slop/rules/no-runtime-typeof.ts",
+      "sha256": "bbfe2c0c3398b95a3e663d9c6d54720cd5d4b41eb9edef086af6c4565e28f41c"
+    },
+    {
+      "file": "tools/oxlint/anti-slop/rules/no-unknown-parameters.ts",
+      "sha256": "4c58e709c90e8ad9d645dc0c791bb8e7dcdb82e3cdaabe0ae3387ef73d8106d4"
+    },
+    {
+      "file": "tools/oxlint/anti-slop/shared/checked-boundaries.ts",
+      "sha256": "8b4811cc490d3eb590a09d4d60ace2a3065261a5e35d93e2fd162699bcef9293"
+    },
+    {
+      "file": "tools/oxlint/anti-slop/tests/checked-boundaries.test.mjs",
+      "sha256": "73899be9f7a737d69ef3f68a5d3fff9edba8453bb971bef45093484e6a43c9cd"
+    },
+    {
+      "file": "packages/schemas/src/desktop-scene-animation.ts",
+      "sha256": "ea7eaa54429f4401d1f596ff05064db22c5224b1085050968312163e8c4884d8"
+    },
+    {
+      "file": "packages/schemas/src/desktop-scene-physics.ts",
+      "sha256": "1c08b1bde4ca768bd5d24f95f8496c7b10e477319edfdeb1620f393511f1fddf"
+    },
+    {
+      "file": "packages/schemas/src/desktop-scene-environment.ts",
+      "sha256": "8be1625db2e618052317e8c969ee2887ecfaa0b2462ba7e08f7f22b1a2533476"
+    },
+    {
+      "file": "packages/schemas/src/desktop-scene-materials.ts",
+      "sha256": "ca64fb4d6f340bce506321c87bbc9a9c5610b06c67653471086af81d525b200a"
+    },
+    {
+      "file": "packages/schemas/src/desktop-scene-effects.ts",
+      "sha256": "af61fb0b04c22e619838ed0deda349e3061f91643593f1a9a5a717c27f9b113a"
+    },
+    {
+      "file": "desktop/linux/src/lib/desktop-scene.ts",
+      "sha256": "4d6f3dcccd91ab7ef263272d6cd01e1123627573066d0d014c9d223a95c55e40"
+    },
+    {
+      "file": "packages/schemas/src/index.ts",
+      "sha256": "062f31fdc04f3b226e0f6cd20e79389d7c9cb41f6cad2c011360e5539e30447e"
+    },
+    {
+      "file": "packages/schemas/test/desktop-scene-animation-mutation.test.ts",
+      "sha256": "f5b5095f0710fb3a6c3f74fe95b218f15b60532f29803f0eed91e92b3b259dbb"
+    },
+    {
+      "file": "packages/schemas/test/desktop-scene-physics-mutation.test.ts",
+      "sha256": "aff118e2337c1153d7d680ab495938d56d4bb35a0567ceaadedb99f5946f2268"
+    },
+    {
+      "file": "packages/schemas/test/desktop-scene-environment-mutation.test.ts",
+      "sha256": "829d3d276fdca2f7a1bd6b761933145d74c59b3c00b4ef109237f993812916b1"
+    },
+    {
+      "file": "packages/schemas/test/desktop-scene-materials-mutation.test.ts",
+      "sha256": "d9597b4254dd66e84bef07c1327d5f0dce8e3f11dc683d907f67df0b3909cfe2"
+    },
+    {
+      "file": "packages/schemas/test/desktop-scene-effects-mutation.test.ts",
+      "sha256": "178f357fe449255891e77e57e698aeb6ad588f4b1c2cdc6f06dc9bdd599e4fd2"
+    }
+  ],
+  "reportJsonValid": true,
+  "approvedHash": "6597a311f1749a860a05f2182c2beaa37b3e4a6a05b63bfd3ca223e0c3c10227",
+  "candidateMutable": true
+}

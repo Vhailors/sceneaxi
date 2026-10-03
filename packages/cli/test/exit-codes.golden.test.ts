@@ -29,6 +29,7 @@ const GOLDEN_FAILURE_EXIT: Record<FailureClass, number> = {
 
 describe("deterministic exit-code map", () => {
   it("matches the golden failure-class table", () => {
+    // SAFETY: GOLDEN_FAILURE_EXIT is a local exhaustive FailureClass-keyed table with numeric values.
     for (const [cls, code] of Object.entries(GOLDEN_FAILURE_EXIT) as Array<
       [FailureClass, number]
     >) {
@@ -55,6 +56,7 @@ describe("exit codes at every nesting level (anti gh-axi wart)", () => {
     expect(r.exitCode).toBe(ExitCode.USAGE);
     expect(r.exitCode).not.toBe(0);
     expect(r.envelope.ok).toBe(false);
+
     if (!r.envelope.ok) {
       expect(r.envelope.error.code).toBe("UNKNOWN_COMMAND");
     }
@@ -64,6 +66,7 @@ describe("exit codes at every nesting level (anti gh-axi wart)", () => {
     const r = runCli(["project", "bogus-verb"]);
     expect(r.exitCode).toBe(ExitCode.USAGE);
     expect(r.exitCode).not.toBe(0);
+
     if (!r.envelope.ok) {
       expect(r.envelope.error.code).toBe("UNKNOWN_COMMAND");
       expect(r.envelope.error.path).toEqual(["project", "bogus-verb"]);
@@ -75,6 +78,7 @@ describe("exit codes at every nesting level (anti gh-axi wart)", () => {
     const r = runCli(["protocol", "version", "extra-depth"]);
     expect(r.exitCode).toBe(ExitCode.USAGE);
     expect(r.exitCode).not.toBe(0);
+
     if (!r.envelope.ok) {
       expect(r.envelope.error.code).toBe("UNKNOWN_COMMAND");
       expect(r.envelope.error.path).toEqual([
@@ -90,6 +94,7 @@ describe("exit codes at every nesting level (anti gh-axi wart)", () => {
     const r = runCli(["project", "new", "extra-depth"]);
     expect(r.exitCode).toBe(ExitCode.USAGE);
     expect(r.exitCode).not.toBe(0);
+
     if (!r.envelope.ok) {
       expect(r.envelope.error.code).toBe("AMBIGUOUS_INPUT");
       expect(r.envelope.error.path).toEqual(["project", "new"]);
@@ -116,6 +121,7 @@ describe("exit codes at every nesting level (anti gh-axi wart)", () => {
   it("incomplete group path (no verb) → USAGE, never 0", () => {
     const r = runCli(["project"]);
     expect(r.exitCode).toBe(ExitCode.USAGE);
+
     if (!r.envelope.ok) {
       expect(r.envelope.error.code).toBe("AMBIGUOUS_INPUT");
     }
@@ -149,6 +155,7 @@ describe("exit codes at every nesting level (anti gh-axi wart)", () => {
       const r = runCli(path);
       expect(r.exitCode, path.join(" ")).toBe(ExitCode.USAGE);
       expect(r.envelope.ok, path.join(" ")).toBe(false);
+
       if (!r.envelope.ok) {
         expect(r.envelope.error.code, path.join(" ")).toBe("VALIDATION");
       }

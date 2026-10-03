@@ -35,6 +35,7 @@ import {
   createFixtureTransport,
   createOpenRouterAdapter,
   type OpenRouterTransportRequest,
+  type OpenRouterFixtureTransportOptions,
 } from "@sceneaxi/provider-openrouter";
 import {
   ADMIN_EMAIL_ENV_VAR,
@@ -44,6 +45,7 @@ import {
 import {
   BILLING_REFUSE_REASONS,
   HOSTED_AI_DEFAULT_CONFIG,
+  createHostedAiPricingPolicy,
   HOSTED_AI_ROUTE_CAPABILITIES,
   appendCreditEntry,
   createInMemoryCreditStore,
@@ -66,11 +68,15 @@ import type { CreditAccount } from "@sceneaxi/schemas";
 import { issuePrincipalForTest } from "@sceneaxi/auth/testing/principal-issuance";
 
 const NOW = Date.parse("2026-07-27T10:00:00Z");
+
 const clock = () => NOW;
+
 const adminResolution = resolveAdminIdentity({
   [ADMIN_EMAIL_ENV_VAR]: "captain@example.com",
 });
+
 if (!adminResolution.ok) throw new Error(adminResolution.message);
+
 // Resolved, never hand-built: the guard behind the panel checks the identity's
 // runtime provenance, so a structurally identical `{ email, source }` literal
 // is refused `AUTH_ADMIN_IDENTITY_UNPROVEN` before any assistant work happens.
@@ -91,6 +97,7 @@ const EVAL = Object.freeze({
 });
 
 /** The recorded OpenRouter completion the provider package already ships. */
+// SAFETY: recorded JSON deliberately remains unknown; the fixture transport checks lossless JSON and the real adapter parses the response envelope.
 const COMPLETE_FIXTURE = JSON.parse(
   readFileSync(
     new URL(
@@ -101,6 +108,7 @@ const COMPLETE_FIXTURE = JSON.parse(
   ),
 ) as unknown;
 
+// SAFETY: the frozen literal supplies the credit-account schema/discriminator and matches the user/account IDs in the issued fixture principal.
 const ACCOUNT = Object.freeze({
   schemaVersion: 1,
   kind: "sceneaxi.credit-account",
@@ -109,6 +117,7 @@ const ACCOUNT = Object.freeze({
   createdAt: "2026-07-27T09:00:00Z",
 }) as CreditAccount;
 
+// SAFETY: issuePrincipalForTest validates the complete principal schema and throws on invalid input, so its returned principal is defined.
 const PRINCIPAL = issuePrincipalForTest({
   user: {
     schemaVersion: 1,
@@ -141,6 +150,7 @@ const PRINCIPAL = issuePrincipalForTest({
 
 const funded = (credits: number): LedgerState => {
   if (credits === 0) return createLedgerState(ACCOUNT);
+
   const appended = appendCreditEntry(createLedgerState(ACCOUNT), {
     entryId: "ent_grant",
     movement: "grant",
@@ -149,7 +159,9 @@ const funded = (credits: number): LedgerState => {
     idempotencyKey: "fixture:grant",
     now: NOW,
   });
+
   if (!appended.ok) throw new Error("fixture funding failed");
+
   return appended.value.state;
 };
 
@@ -157,18 +169,21 @@ const funded = (credits: number): LedgerState => {
  * The whole provider stack, assembled the way a product surface would.
  * `transportRequests` is the ground truth for whether the provider was reached.
  */
-const providerStack = (completionFixture: unknown = COMPLETE_FIXTURE) => {
+const providerStack = (responses: OpenRouterFixtureTransportOptions["responses"] = { complete: COMPLETE_FIXTURE }) => {
   const transportRequests: OpenRouterTransportRequest[] = [];
+
   const fixtureTransport = createFixtureTransport({
     model: MODEL,
-    responses: { complete: completionFixture },
+    responses,
   });
+
   const port = createModelProviderPort({
     adapter: createOpenRouterAdapter({
       model: MODEL,
       eval: EVAL,
       transport(request) {
         transportRequests.push(request);
+
         return fixtureTransport(request);
       },
     }),
@@ -177,6 +192,7 @@ const providerStack = (completionFixture: unknown = COMPLETE_FIXTURE) => {
       "@sceneaxi/profile-game": () => ({ ok: true }),
     },
   });
+
   return { transportRequests, port };
 };
 
@@ -184,14 +200,17 @@ const providerStack = (completionFixture: unknown = COMPLETE_FIXTURE) => {
 const assistant = (
   overrides: Partial<CreateAssistantPanelOptions> = {},
   credits = 10,
-  completionFixture: unknown = COMPLETE_FIXTURE,
+  responses: OpenRouterFixtureTransportOptions["responses"] = { complete: COMPLETE_FIXTURE },
 ) => {
   const state = funded(credits);
+
   const store = createInMemoryCreditStore({
     accounts: [state.account],
     entries: state.entries,
   });
-  const stack = providerStack(completionFixture);
+
+  const stack = providerStack(responses);
+
   const created = createAssistantPanel({
     surface: "web-shell",
     profile: "@sceneaxi/profile-web",
@@ -207,12 +226,16 @@ const assistant = (
     credits: {
       async ledgerFor(userId: string) {
         const account = await store.findAccountByUserId(userId);
+
         if (account === undefined) return undefined;
+
         const loaded = loadLedgerState(
           account,
           await store.listEntries(account.accountId),
         );
+
         if (!loaded.ok) throw new Error(loaded.message);
+
         return loaded.value;
       },
     },
@@ -220,6 +243,7 @@ const assistant = (
     hostedTurnCredits: 4,
     ...overrides,
   });
+
   return { created, stack, store, state };
 };
 
@@ -227,13 +251,14 @@ const panelOf = (result: ReturnType<typeof assistant>) => {
   if (!result.created.ok) {
     throw new Error(`assistant panel refused: ${result.created.reason}`);
   }
+
   return result.created.panel;
 };
 
 describe("in-app AI assistant golden path", () => {
   it("reaches the model through the port in every mode, metering only the hosted one", async () => {
     for (const mode of ASSISTANT_MODES) {
-      const wired = assistant({ mode, hostedAi: { enabled: true } });
+      const wired = assistant({ mode, hostedAi: { enabled: true, pricing: createHostedAiPricingPolicy([{ model: MODEL.model, operation: "complete", capability: "hosted-ai-assistant", credits: 4 }]) } });
       const panel = panelOf(wired);
 
       const snapshot = await panel.ask({ prompt: "fixture prompt", turnId: mode });
@@ -270,7 +295,7 @@ describe("in-app AI assistant golden path", () => {
   });
 
   it("defaults to the fixture transport, so nothing live is reached by default", async () => {
-    const wired = assistant({ mode: undefined, hostedAi: { enabled: true } });
+    const wired = assistant({ mode: undefined, hostedAi: { enabled: true, pricing: createHostedAiPricingPolicy([{ model: MODEL.model, operation: "complete", capability: "hosted-ai-assistant", credits: 4 }]) } });
     const panel = panelOf(wired);
 
     expect(panel.snapshot().mode).toBe(ASSISTANT_DEFAULT_MODE);
@@ -283,7 +308,7 @@ describe("in-app AI assistant golden path", () => {
   });
 
   it("debits exactly the configured credits for one hosted turn", async () => {
-    const wired = assistant({ mode: "hosted", hostedAi: { enabled: true } });
+    const wired = assistant({ mode: "hosted", hostedAi: { enabled: true, pricing: createHostedAiPricingPolicy([{ model: MODEL.model, operation: "complete", capability: "hosted-ai-assistant", credits: 4 }]) } });
     const panel = panelOf(wired);
 
     const snapshot = await panel.ask({ prompt: "fixture prompt", turnId: "t1" });
@@ -347,6 +372,7 @@ describe("in-app AI assistant golden path", () => {
         ],
       },
     };
+
     const completionFixture = {
       id: "fixture-hosted-sculpt",
       model: MODEL.model,
@@ -357,11 +383,13 @@ describe("in-app AI assistant golden path", () => {
         },
       ],
     };
+
     const wired = assistant(
-      { mode: "hosted", hostedAi: { enabled: true } },
+      { mode: "hosted", hostedAi: { enabled: true, pricing: createHostedAiPricingPolicy([{ model: MODEL.model, operation: "complete", capability: "hosted-ai-assistant", credits: 4 }]) } },
       10,
-      completionFixture,
+      { complete: completionFixture },
     );
+
     const panel = panelOf(wired);
 
     const snapshot = await panel.ask({ prompt: "Build a crate", turnId: "sculpt-1" });
@@ -369,13 +397,16 @@ describe("in-app AI assistant golden path", () => {
     const turn = snapshot.turns[0];
     expect(turn?.metered).toBe(true);
     expect(turn?.credits).toBe(4);
+
     if (turn === undefined) return;
 
     const sculpt = sculptArtifactFromAssistantCompletion(turn.text, {
       profile: snapshot.profile,
       providerEvidence: turn.evidence,
     });
+
     expect(sculpt.ok).toBe(true);
+
     if (!sculpt.ok) return;
     expect(sculpt.route).toBe("validated-completion");
     expect(sculpt.artifact.kind).toBe("sceneaxi.sculpt-artifact");
@@ -384,7 +415,7 @@ describe("in-app AI assistant golden path", () => {
   });
 
   it("answers a retried hosted turn without re-entering the transport", async () => {
-    const wired = assistant({ mode: "hosted", hostedAi: { enabled: true } });
+    const wired = assistant({ mode: "hosted", hostedAi: { enabled: true, pricing: createHostedAiPricingPolicy([{ model: MODEL.model, operation: "complete", capability: "hosted-ai-assistant", credits: 4 }]) } });
     const panel = panelOf(wired);
 
     await panel.ask({ prompt: "fixture prompt", turnId: "t1" });
@@ -403,6 +434,7 @@ describe("in-app AI assistant golden path", () => {
       mode: "hosted",
       hostedAi: HOSTED_AI_DEFAULT_CONFIG,
     });
+
     const panel = panelOf(wired);
 
     const snapshot = await panel.ask({ prompt: "fixture prompt", turnId: "t1" });
@@ -416,7 +448,7 @@ describe("in-app AI assistant golden path", () => {
   });
 
   it("refuses an insufficient balance before the transport is entered", async () => {
-    const wired = assistant({ mode: "hosted", hostedAi: { enabled: true } }, 3);
+    const wired = assistant({ mode: "hosted", hostedAi: { enabled: true, pricing: createHostedAiPricingPolicy([{ model: MODEL.model, operation: "complete", capability: "hosted-ai-assistant", credits: 4 }]) } }, 3);
     const panel = panelOf(wired);
 
     const snapshot = await panel.ask({ prompt: "fixture prompt", turnId: "t1" });
@@ -431,9 +463,10 @@ describe("in-app AI assistant golden path", () => {
   it("refuses an absent ledger before the transport is entered", async () => {
     const wired = assistant({
       mode: "hosted",
-      hostedAi: { enabled: true },
+      hostedAi: { enabled: true, pricing: createHostedAiPricingPolicy([{ model: MODEL.model, operation: "complete", capability: "hosted-ai-assistant", credits: 4 }]) },
       credits: { ledgerFor: () => undefined },
     });
+
     const panel = panelOf(wired);
 
     const snapshot = await panel.ask({ prompt: "fixture prompt", turnId: "t1" });
@@ -452,9 +485,11 @@ describe("in-app AI assistant golden path", () => {
       const wired = assistant({
         surface: "kids",
         mode,
-        hostedAi: { enabled: true },
+        hostedAi: { enabled: true, pricing: createHostedAiPricingPolicy([{ model: MODEL.model, operation: "complete", capability: "hosted-ai-assistant", credits: 4 }]) },
       });
+
       expect(wired.created.ok).toBe(false);
+
       if (wired.created.ok) continue;
       expect(wired.created.reason).toBe(
         ASSISTANT_PANEL_REASONS.kidsSurfaceDenied,
@@ -468,10 +503,11 @@ describe("in-app AI assistant golden path", () => {
     const wired = assistant({
       profile: "@sceneaxi/profile-kids",
       mode: "hosted",
-      hostedAi: { enabled: true },
+      hostedAi: { enabled: true, pricing: createHostedAiPricingPolicy([{ model: MODEL.model, operation: "complete", capability: "hosted-ai-assistant", credits: 4 }]) },
     });
 
     expect(wired.created.ok).toBe(false);
+
     if (wired.created.ok) return;
     expect(wired.created.reason).toBe(
       ASSISTANT_PANEL_REASONS.kidsProfileDenied,
@@ -488,7 +524,7 @@ describe("in-app AI assistant golden path", () => {
   });
 
   it("needs no network and no credential on any assistant path", async () => {
-    const wired = assistant({ mode: "hosted", hostedAi: { enabled: true } });
+    const wired = assistant({ mode: "hosted", hostedAi: { enabled: true, pricing: createHostedAiPricingPolicy([{ model: MODEL.model, operation: "complete", capability: "hosted-ai-assistant", credits: 4 }]) } });
     const panel = panelOf(wired);
 
     await panel.ask({ prompt: "fixture prompt", turnId: "t1" });

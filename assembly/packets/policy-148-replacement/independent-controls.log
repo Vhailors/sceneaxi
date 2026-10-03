@@ -1,0 +1,19 @@
+✔ async predicate (455.444824ms)
+✔ generator predicate (445.5867ms)
+✔ aliased subject (360.353959ms)
+✔ aliased guard (367.958702ms)
+✔ early success (358.372051ms)
+✔ assertion contract (482.882639ms)
+✔ numeric invalid claim (466.181874ms)
+✔ typed readonly alias (482.768742ms)
+✔ parameter shadow guard (531.433858ms)
+✔ ordinary cast (404.125467ms)
+✔ object shell not domain decoder (618.347208ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5063.097499

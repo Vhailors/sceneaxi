@@ -8,6 +8,7 @@ import { PROFILE_ROLLOUT_ORDER_HELD_KEY } from "@sceneaxi/schemas";
 import { runProfileConformanceSuite } from "@sceneaxi/schemas/node/profile-conformance-suite";
 import { claim, conformance, seam } from "@sceneaxi/profile-game";
 
+// SAFETY: The repository-owned package.json is the package manifest fixture, with name and sceneaxi metadata checked against its public seam below.
 const manifest = JSON.parse(
   readFileSync(new URL("../package.json", import.meta.url), "utf8"),
 ) as {
@@ -29,7 +30,7 @@ describe("@sceneaxi/profile-game Profile Conformance (shared suite)", () => {
   });
 
   it("pins a real core range matching the package manifest and seam", () => {
-    expect(typeof manifest.sceneaxi.corePin).toBe("string");
+    expect(isCorePinText(manifest.sceneaxi.corePin)).toBe(true);
     expect(manifest.sceneaxi.corePin.length).toBeGreaterThan(0);
     expect(manifest.sceneaxi.corePin).toMatch(/[\d*]/);
     expect(seam.corePin).toBe(manifest.sceneaxi.corePin);
@@ -56,3 +57,5 @@ describe("@sceneaxi/profile-game Profile Conformance (shared suite)", () => {
     expect(claim.claimStatus).toBe("development-consumer");
   });
 });
+
+function isCorePinText(value: unknown): value is string { return typeof value === "string"; }

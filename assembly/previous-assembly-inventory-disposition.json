@@ -1,0 +1,20 @@
+{
+  "status": "STRUCTURAL_INVENTORY_RECONCILED_PENDING_EXECUTABLE_CHECK",
+  "paths": [
+    "docs/audits/initiation/requirements.json",
+    "docs/audits/initiation/runtime-surfaces.json"
+  ],
+  "assertions": "all109statements/owners/classifications/coverage/statuses exactly main; directory resolutions actual; executable runtime normalconfig observation; no acceptance promoted",
+  "runtimeCounts": {
+    "cliVerbs": 30,
+    "heldKeyEntries": 30,
+    "editorCommands": 66,
+    "desktopControls": 215,
+    "bridgeActions": 12,
+    "authoringOperations": 10,
+    "assistantOperations": 3,
+    "localAgentTools": 67,
+    "providerEntrypoints": 8,
+    "refusalRegistries": 73
+  }
+}

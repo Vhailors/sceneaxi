@@ -1,0 +1,34 @@
+{
+  "independentMutation": [
+    {
+      "name": "Animation",
+      "checked": 67
+    },
+    {
+      "name": "Physics",
+      "checked": 63
+    },
+    {
+      "name": "Environment",
+      "checked": 35
+    },
+    {
+      "name": "Materials",
+      "checked": 27
+    },
+    {
+      "name": "Effects",
+      "checked": 31
+    }
+  ],
+  "modifier": [
+    {
+      "prefix": "async function",
+      "uncheckedResult": 42
+    },
+    {
+      "prefix": "function*",
+      "uncheckedResult": 42
+    }
+  ]
+}

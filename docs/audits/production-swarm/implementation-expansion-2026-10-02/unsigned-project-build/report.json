@@ -1,0 +1,103 @@
+{
+  "status": "SOURCE_HANDBACK_IMPLEMENTED_NOT_INTEGRATED",
+  "sourceHandback": true,
+  "sourceEditsComplete": true,
+  "sourceOwnershipReleasedTo": "parent/serial bg-109 integration",
+  "ledgerIds": [
+    "DR-006",
+    "GA-005",
+    "IR-07"
+  ],
+  "files": [
+    {
+      "path": "packages/schemas/src/desktop-project-build.ts",
+      "sha256": "9493b82e88d6eea649be33a91b3d133d5daddc2bc160744b9599a5750dd8cff5",
+      "bytes": 4610,
+      "lines": 122
+    },
+    {
+      "path": "packages/authoring-core/src/local-project-build.ts",
+      "sha256": "6465dba1a3d3e4a0bf42af916b882cc938c19d1a5f52ca5b86a5a753233342f0",
+      "bytes": 25710,
+      "lines": 309
+    },
+    {
+      "path": "packages/schemas/test/local-project-build.test.ts",
+      "sha256": "5a71f3f7e718a900a3fa3965fd530e7dd18444551b37f6c54df5ed7531a617dd",
+      "bytes": 1884,
+      "lines": 21
+    },
+    {
+      "path": "packages/authoring-core/test/local-project-build.test.ts",
+      "sha256": "72af6656f72870e608af20c0b8128c0950a7f769902621bf78f086035ae5f404",
+      "bytes": 9473,
+      "lines": 116
+    }
+  ],
+  "symbols": [
+    "evaluateLocalProjectBuild",
+    "buildLocalProject",
+    "verifyLocalProjectBuild",
+    "launchLocalProjectBuild",
+    "LOCAL_PROJECT_BUILD_LIMITS",
+    "LOCAL_PROJECT_BUILD_REFUSALS"
+  ],
+  "signedReleasePreserved": {
+    "originalFileSha256": "ec7b86e27314891af86e662279d6ea835b12ccfec63155c7e022578ebfee0588",
+    "original97LinesByteIdentical": true,
+    "evaluateProjectBuildBehavior": "unchanged failure-only signed release gate"
+  },
+  "implemented": [
+    "Explicit separate local-unsigned Linux purpose; Kids-before-IO denial and unsupported host/input refusals",
+    "Stage only hash-verified existing Web DeliveryHandoff artifacts and exact current saved scene.json; no Editor distribution rebuild",
+    "Linux O_NOFOLLOW descriptor-anchored source/destination paths, exclusive mkdir/write wx, refusal on overwrite, 256 artifact/128MiB aggregate limits, 16-level path bounds, source revalidation",
+    "Generated standalone Electron runtime script, deterministic local-project-build.json receipt binding every staged byte and document; verification rejects duplicate/noncanonical receipt/unknown files/tampered bytes/artifact omissions",
+    "Approved absolute executable spawn via pinned inherited descriptor, no shell or inherited Electron flags, 15s deadline/16KiB output ceiling, terminal timeout/output refusal and process-group kill",
+    "Runtime opens only export file paths, denies HTTP/network/window-open/navigation; smoke requires correct document source digest meta, actual rendered meta, captured bitmap >=16 distinct colors, PNG signature, matching capture SHA256 and exact exit0; returns actual PNG bytes",
+    "Failed receipt-write rollback checked, retry succeeds, staged source unchanged; hanging/flooding/zero-exit-without-proof child negatives executable"
+  ],
+  "exportRequests": {
+    "packages/schemas/src/index.ts": "Add evaluateLocalProjectBuild to existing desktop-project-build.js named export block.",
+    "packages/authoring-core/src/index.ts": "export { LOCAL_PROJECT_BUILD_LIMITS, LOCAL_PROJECT_BUILD_REFUSALS, buildLocalProject, verifyLocalProjectBuild, launchLocalProjectBuild, type LocalProjectBuildRefusal, type LocalProjectBuildReceipt, type LocalProjectBuildSuccess, type LocalProjectBuildResult, type LocalProjectBuildInput, type LocalProjectLaunchInput, type LocalProjectLaunchSuccess } from \"./local-project-build.js\";"
+  },
+  "integrationRequest": {
+    "owner": "bg-109 only",
+    "source": "desktop/linux existing exportDesktopWebProject / CLI / desktop action",
+    "instruction": "Expose an explicitly local-unsigned action under existing held-key/profile authority: produce existing saved-project Web export; call buildLocalProject({projectRoot,exportPath:relative(projectRoot,export.outputDirectory),name,profile:trustedSessionProfile,purpose:\"local-unsigned\",target:\"linux\"}); call verifyLocalProjectBuild before launch; launchLocalProjectBuild({projectRoot,name,executable:approvedSymlinkFreeElectronBinary}); expose receipt/PNG smoke proof with releaseReady:false. Do not repurpose signed evaluateProjectBuild, mark published/signed, or infer readiness from child creation."
+  },
+  "proofs": {
+    "schemaFailBefore": "\u001b[31m\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u001b[39m\u001b[1m\u001b[41m Failed Tests 8 \u001b[49m\u001b[22m\u001b[31m\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u001b[39m\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[31m1 failed\u001b[39m\u001b[22m\u001b[90m (1)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[31m8 failed\u001b[39m\u001b[22m\u001b[2m | \u001b[22m\u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[90m (9)\u001b[39m",
+    "schemaPassAfter": "\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[90m (1)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m9 passed\u001b[39m\u001b[22m\u001b[90m (9)\u001b[39m",
+    "missingModuleBefore": "authoring-before.log: module local-project-build absent, suite load failure",
+    "publicSeamCurrent": "public-seam-pending.log: root export symbols absent; 18 authoring cases fail / 9 schema pass",
+    "focusedImplementation": "\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m2 passed\u001b[39m\u001b[22m\u001b[90m (2)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m27 passed\u001b[39m\u001b[22m\u001b[90m (27)\u001b[39m",
+    "existingSignedGateRegression": "\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m3 passed\u001b[39m\u001b[22m\u001b[90m (3)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m28 passed\u001b[39m\u001b[22m\u001b[90m (28)\u001b[39m",
+    "lint": "lint-handback.log exit0",
+    "boundaries": "",
+    "focusedTypecheck": "typecheck-focused-handback.log: ownedErrors0/allErrors10; foreign active transform lane missing schema-v2 exports. Earlier own-only schema bridge graph allErrors0. No typecasts/check suppression."
+  },
+  "bridgeDisclosure": "focused.config.ts only reexports exact actual source symbols through an auxiliary bridge while public index owner wires exports. Permanent tests use the real @sceneaxi/authoring-core public seam. Bridge proof is NOT normal-config/package-export acceptance. Initial 7 failures reproduced descriptor-dot path bug and fixed in implementation; root alias subpath harness error corrected using exact-match aliases; all failures retained in logs.",
+  "notRun": [
+    "normal-config green until serial export wiring",
+    "root fullbuild/fullgate",
+    "site builds/browser/native/Electron positive smoke",
+    "portable Linux runtime redistribution; artifact uses explicit approved host Electron binary",
+    "macOS/Windows local build",
+    "signing/notarization/publication/provider/productionDB"
+  ],
+  "deferredAcceptance": {
+    "command": "sh docs/audits/production-swarm/implementation-expansion-2026-10-02/unsigned-project-build/deferred-native-smoke.sh",
+    "requires": [
+      "existing built package exports wired by serial owner",
+      "SCENEAXI_LOCAL_ELECTRON approved symlink-free binary",
+      "SCENEAXI_LOCAL_RENDERER actual existing desktop renderer.js",
+      "SCENEAXI_LOCAL_PUBLISHER existing sceneaxi-publish-no-replace binary"
+    ],
+    "driver": "native-smoke.ts materializes a titled user SceneDocument with existing seed API; invokes real existing Web exporter; stages local build; requires exact child exit/document hash/pixels/PNG; persists PNG+manifest+source+receipt to this report folder; removes own temp project/driver."
+  },
+  "resources": {
+    "created": "temporary unit-test fixture dirs and bounded shell child negative fixtures; no server/browser/native/container",
+    "cleanup": "afterEach removes fixture dirs; deadline/output process groups killed and child close awaited; launch evidence temp dirs removed. No surviving heavy resource started. Native driver NOT RUN.",
+    "limitations": "Host-runtime-dependent local artifact is not a signed/portable platform release. Native success is NOT CLAIMED."
+  }
+}

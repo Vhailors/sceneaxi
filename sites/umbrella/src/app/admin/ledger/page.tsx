@@ -83,6 +83,10 @@ export default async function LedgerSupportPage({ searchParams }: {
           <p>Positive credits add to the balance. Negative credits subtract from it. A debit below zero refuses. This does not issue a money refund or resolve a dispute.</p>
           <form method="post" action="/api/admin/ledger" className="stack">
             <input type="hidden" name="userId" value={view.user.userId} />
+              <div className="field">
+                <label htmlFor="admin-password">Confirm administrator password</label>
+                <input id="admin-password" name="adminPassword" type="password" required maxLength={1024} autoComplete="current-password" />
+              </div>
             <div className="field">
               <label htmlFor="adjustment-delta">Signed credits</label>
               <input id="adjustment-delta" name="delta" type="text" pattern="[+\-]?[0-9]+" required placeholder="For example, 25 or -25" />

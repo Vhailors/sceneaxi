@@ -1,0 +1,10 @@
+{
+  "path": "apps/desktop-shell/test/chrome.test.ts",
+  "line": 510,
+  "equalToHEAD": false,
+  "sha256": "753f112f09a459516c3e140444627aa5ad88a492e6d85ab7e0cff4f1aa525256",
+  "oracle": "  it(\"keeps an inert control focusable and pointed at its reason\", () => {\n    const html = render();\n    // `disabled` would remove the focus stop; `aria-disabled` keeps it.\n    expect(html).not.toMatch(/<button[^>]*\\sdisabled[\\s>]/);\n    const inert = [...html.matchAll(/<button[^>]*aria-disabled=\"true\"[^>]*>/g)];\n    expect(inert.length).toBeGreaterThan(0);\n\n    for (const [tag] of inert) {\n      expect(tag).toMatch(/aria-describedby=\"refusal-[A-Z_]+\"/);\n    }\n\n    // Every referenced reason exists as an element in the same document.\n    for (const [, code] of html.matchAll(/aria-describedby=\"refusal-([A-Z_]+)\"/g)) {\n      expect(html).toContain(`id=\"refusal-${code}\"`);\n    }\n  });",
+  "equalToHEADIgnoringBlankLines": true,
+  "headDiff": "--- HEAD\n+++ current\n@@ -4,9 +4,11 @@\n     expect(html).not.toMatch(/<button[^>]*\\sdisabled[\\s>]/);\n     const inert = [...html.matchAll(/<button[^>]*aria-disabled=\"true\"[^>]*>/g)];\n     expect(inert.length).toBeGreaterThan(0);\n+\n     for (const [tag] of inert) {\n       expect(tag).toMatch(/aria-describedby=\"refusal-[A-Z_]+\"/);\n     }\n+\n     // Every referenced reason exists as an element in the same document.\n     for (const [, code] of html.matchAll(/aria-describedby=\"refusal-([A-Z_]+)\"/g)) {\n       expect(html).toContain(`id=\"refusal-${code}\"`);\n",
+  "stableDuringReview": true
+}

@@ -1,0 +1,36 @@
+{
+  "compared": 1512,
+  "mismatches": [],
+  "malformed": [
+    {
+      "name": "Animation",
+      "beforeThrows": true,
+      "afterReason": "ANIMATION_INPUT_UNSUPPORTED",
+      "afterGetterReads": 0
+    },
+    {
+      "name": "Physics",
+      "beforeThrows": true,
+      "afterReason": "PHYSICS_INPUT_UNSUPPORTED",
+      "afterGetterReads": 0
+    },
+    {
+      "name": "Environment",
+      "beforeThrows": true,
+      "afterReason": "ENVIRONMENT_INPUT_UNSUPPORTED",
+      "afterGetterReads": 0
+    },
+    {
+      "name": "Materials",
+      "beforeThrows": true,
+      "afterReason": "MATERIALS_INPUT_UNSUPPORTED",
+      "afterGetterReads": 0
+    },
+    {
+      "name": "Effects",
+      "beforeThrows": true,
+      "afterReason": "EFFECTS_INPUT_UNSUPPORTED",
+      "afterGetterReads": 0
+    }
+  ]
+}

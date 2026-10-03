@@ -46,14 +46,17 @@ describe("desktop-shell protocol client", () => {
     });
 
     expect(result.ok).toBe(true);
+
     if (!result.ok) return;
     expect(result.unifiedDiff).toMatch(/^--- a\/scene\.json/m);
     expect(result.renderedDiff).toContain(result.unifiedDiff.trimEnd());
     expect(result.appliedPaths).toEqual(["scene.json"]);
 
+    // SAFETY: The test created this Scene Document fixture and applied only the indicated numeric JSON-pointer edit; authoring serialization retains its entity container and numeric field.
     const after = JSON.parse(readFileSync(join(dir, "scene.json"), "utf8")) as {
       data: { entities: Array<{ x: number }> };
     };
+
     expect(after.data.entities[0]?.x).toBe(42);
   });
 
@@ -67,6 +70,7 @@ describe("desktop-shell protocol client", () => {
       newValue: 9,
       cwd: dir,
     });
+
     expect(proposed.ok).toBe(true);
 
     const text = readFileSync(join(dir, "scene.json"), "utf8");
@@ -77,6 +81,7 @@ describe("desktop-shell protocol client", () => {
     const dir = fixtureDir();
     writeScene(dir, "scene.json", { n: 5 });
     const opened = createDesktopSession({ cwd: dir }).status("scene.json");
+
     if (!opened.ok) throw new Error("fixture document did not open");
     writeScene(dir, "scene.json", { n: 7 });
 

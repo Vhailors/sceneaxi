@@ -1,0 +1,169 @@
+{
+  "Animation": [
+    {
+      "kind": "clip-upsert",
+      "clipId": "idle",
+      "name": "Idle",
+      "startMs": 0,
+      "durationMs": 1000
+    },
+    {
+      "kind": "clip-remove",
+      "clipId": "idle"
+    },
+    {
+      "kind": "track-upsert",
+      "trackId": "tx",
+      "clipId": "idle",
+      "targetInstanceId": "desktop-crate-beside",
+      "propertyId": "translation-x"
+    },
+    {
+      "kind": "track-remove",
+      "trackId": "tx"
+    },
+    {
+      "kind": "keyframe-upsert",
+      "keyframeId": "k0",
+      "trackId": "tx",
+      "timeMs": 0,
+      "value": 1,
+      "interpolation": "linear"
+    },
+    {
+      "kind": "keyframe-remove",
+      "keyframeId": "k0"
+    },
+    {
+      "kind": "bind-asset",
+      "assetId": "motion",
+      "digest": "sha256:abababababababababababababababababababababababababababababababab",
+      "clipIds": [
+        "idle"
+      ]
+    }
+  ],
+  "Physics": [
+    {
+      "kind": "body-upsert",
+      "bodyId": "b1",
+      "instanceId": "desktop-crate-beside",
+      "bodyKind": "dynamic",
+      "mass": 1
+    },
+    {
+      "kind": "shape-upsert",
+      "shapeId": "s1",
+      "bodyId": "b1",
+      "shapeKind": "box",
+      "size": 1
+    },
+    {
+      "kind": "material-upsert",
+      "bodyId": "b1",
+      "friction": 1,
+      "restitution": 0.5
+    },
+    {
+      "kind": "constraint-upsert",
+      "constraintId": "c1",
+      "constraintKind": "fixed",
+      "bodyA": "b1",
+      "bodyB": "b1"
+    },
+    {
+      "kind": "world-set",
+      "gravityY": -9.81,
+      "stepMs": 16,
+      "seed": 1,
+      "engine": "toy"
+    },
+    {
+      "kind": "body-remove",
+      "bodyId": "b1"
+    }
+  ],
+  "Environment": [
+    {
+      "kind": "set",
+      "background": "#112233",
+      "ambientIntensity": 0.4,
+      "ambientColor": "#ffffff",
+      "keyIntensity": 2,
+      "keyColor": "#ffffff",
+      "keyDirection": [
+        4,
+        6,
+        5
+      ],
+      "fillIntensity": 0.6,
+      "exposure": 1,
+      "toneMapping": "none",
+      "shadows": false,
+      "fog": {
+        "enabled": true,
+        "color": "#ffffff",
+        "near": 1,
+        "far": 10
+      },
+      "effects": [
+        "bloom"
+      ],
+      "sky": {
+        "top": "#112233",
+        "horizon": "#445566",
+        "ground": "#778899"
+      },
+      "shadowBudget": {
+        "mapSize": 1024,
+        "maxDistance": 50
+      },
+      "bloom": {
+        "strength": 1,
+        "threshold": 0.5,
+        "radius": 0.5
+      }
+    }
+  ],
+  "Materials": [
+    {
+      "kind": "upsert",
+      "instanceId": "desktop-crate-beside",
+      "emissiveColor": "#ffffff",
+      "emissiveIntensity": 1,
+      "opacity": 0.5,
+      "baseColorMapAssetId": null,
+      "normalMapAssetId": null,
+      "roughnessMapAssetId": null,
+      "baseColor": "#112233",
+      "metallic": 0.4,
+      "roughness": 0.5
+    },
+    {
+      "kind": "remove",
+      "instanceId": "desktop-crate-beside"
+    }
+  ],
+  "Effects": [
+    {
+      "kind": "upsert",
+      "emitterId": "spark",
+      "emitterKind": "point",
+      "rate": 8,
+      "lifetimeMs": 800,
+      "speed": 1,
+      "spread": 0.4,
+      "instanceId": "desktop-crate-beside",
+      "color": "#ffffff",
+      "size": 1
+    },
+    {
+      "kind": "remove",
+      "emitterId": "spark"
+    },
+    {
+      "kind": "seed-set",
+      "seed": 1
+    }
+  ]
+}

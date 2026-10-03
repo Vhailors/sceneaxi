@@ -1,0 +1,111 @@
+{
+  "task": "desktop-keyboard",
+  "status": "SOURCE_READY_BROWSER_NOT_RUN",
+  "sourceHandback": true,
+  "ledgerIds": [
+    "IR-06",
+    "VD-03",
+    "VD-04",
+    "VD-05",
+    "VS-05"
+  ],
+  "historicalPass3": "FAIL_UNCHANGED",
+  "sourceHashesSha256": {
+    "apps/desktop-shell/src/chrome.ts": "4187b4378cc9535eb9194c57445856dd455e1adf6d8ec9196428c942c73aea8a",
+    "apps/desktop-shell/test/keyboard-geometry.test.ts": "61ab39549b7b86ca8c93c4bb5c5b762560d010f406856661078a73f63c2f705f",
+    "apps/desktop-shell/test/visual-postpr-evidence/retry/capture.mjs": "0c552d679c94f361a96c4ccd10a072b31067912e2f750b3ba617409b0b0163f5",
+    "apps/desktop-shell/src/visual-tokens.ts": "a23536b1f566347ccccd7d23d40e1e9849f403021fcdedd27b26798d5f4740e7"
+  },
+  "prechangeSourceHashesSha256": {
+    "apps/desktop-shell/src/chrome.ts": "1c45e9cdb94fdd251cdf2703b7801c63db54ae36f867693a36121d409662008f",
+    "apps/desktop-shell/src/visual-tokens.ts": "a23536b1f566347ccccd7d23d40e1e9849f403021fcdedd27b26798d5f4740e7",
+    "apps/desktop-shell/test/visual-postpr-evidence/retry/capture.mjs": "212dfa0f9e041bff72a96387829efda97fa8e4b89d5ede03384eb6066f18a363"
+  },
+  "symbols": {
+    "apps/desktop-shell/src/chrome.ts": [
+      "styles (intrinsic inspector sections; catalogue rows/labels/textareas)"
+    ],
+    "apps/desktop-shell/test/visual-postpr-evidence/retry/capture.mjs": [
+      "assertKeyboardGeometry",
+      "assertDiagnosticEvidence",
+      "assertDiagnosticGeometry",
+      "--oracle-self-test",
+      "--keyboard-only"
+    ]
+  },
+  "reproduction": {
+    "kind": "CURRENT_PUBLIC_RENDER_LAYOUT_ORACLE_NOT_PIXELS",
+    "correctedPrechangeTestResult": {
+      "passed": 3,
+      "failed": 5
+    },
+    "failure": "Missing layout rule .scene-catalog-editor: expected -1 to be greater than or equal to 0 at900/1100/1280; driver oracle/traversal extensions absent",
+    "initialHarnessCorrections": "Initial8fail included3 incorrectly text-only description matches and an invented dismiss attribute; corrected to actual nested code+message and actual overlay none action before product editing. First20s invocation timed out; unguarded old capture received --oracle-self-test and unintentionally executed part of browser driver: two empty-scenario prechange PNGs preserved, not acceptance. Later guarded selftest refuses execution until supported and branches before browser setup. No matching browser/capture process or temporary sceneaxi-visual fixture directory remains."
+  },
+  "verified": [
+    {
+      "command": "pnpm exec vitest run apps/desktop-shell/test/keyboard-geometry.test.ts apps/desktop-shell/test/visual-refinement.test.ts apps/desktop-shell/test/chrome.test.ts --reporter=dot",
+      "exit": 0,
+      "files": 3,
+      "tests": 84,
+      "log": "pass-after.log"
+    },
+    {
+      "command": "node apps/desktop-shell/test/visual-postpr-evidence/retry/capture.mjs --oracle-self-test",
+      "exit": 0,
+      "focusPositive": 1,
+      "focusRejected": 12,
+      "diagnosticPositive": 1,
+      "diagnosticRejected": 4,
+      "browser": "NOT_RUN"
+    },
+    {
+      "command": "node --check apps/desktop-shell/test/visual-postpr-evidence/retry/capture.mjs",
+      "exit": 0
+    },
+    {
+      "command": "pnpm exec eslint apps/desktop-shell/src/chrome.ts apps/desktop-shell/test/keyboard-geometry.test.ts",
+      "exit": 0
+    }
+  ],
+  "deferred": [
+    "Real Chromium Tab/Shift+Tab geometry at900x600,1100x800,1280x900 incl forced colors and live refusal/dismissal",
+    "Root fullbuild/fullgate/typecheck, native/browser/site builds, exact frozen-candidate acceptance"
+  ],
+  "serialAcceptance": {
+    "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+    "owner": "bg-109",
+    "command": "node apps/desktop-shell/test/visual-postpr-evidence/retry/capture.mjs expansion-desktop-keyboard --keyboard-only",
+    "prerequisites": [
+      "All child source handbacks/frozen candidate",
+      "Serial owner rebuilt workspace dist (external schemas/authoring host runtime modules)",
+      "Existing desktop Linux esbuild, umbrella Playwright and existing Chromium1223 executable"
+    ]
+  },
+  "scopeLimits": "Static renderer rules and executable hostile observation oracle are green; current actual clipping/occlusion is NOT certified. Historical pass3 FAIL retained. No assertion weakened or unavailable stop removed.",
+  "exports": [],
+  "sharedWiringRequests": [],
+  "dependenciesChanged": false,
+  "tokensChanged": false,
+  "resourceCleanup": "Two own accidental old-driver PNGs moved out of retry/ into report evidence; no matching browser/capture processes or temporary sceneaxi-visual fixture directories remain. No retained process/port/container. Successful focused proofs use browser-free selftest only. Driver finally closes contexts/browser, removes own fixture and writes failed partial receipts.",
+  "handback": "All three owned edited source/test paths released to parent/serial owner; no further source writes from this worker. visual-tokens.ts unchanged and released.",
+  "evidenceHashesSha256": {
+    "fail-before.log": "f6c39a54a9991972ecde3c76d89404726a26a58c94c4c836f5361c5cf0602b80",
+    "pass-after.log": "d281078856603533bcbbe55fdab059cc7f187e9d8ea36e32ecdeb477b2ec155b",
+    "prechange-hashes.json": "5d3c9f31e6bfc867f997d87a5bcf2635862da7049f51e278cc739b71aa701d1f"
+  },
+  "unintendedPartialPrechangeAttempt": [
+    {
+      "original": "apps/desktop-shell/test/visual-postpr-evidence/retry/--oracle-self-test-empty-keyboard.png",
+      "preserved": "docs/audits/production-swarm/implementation-expansion-2026-10-02/desktop-keyboard/unintended-before-empty-keyboard.png",
+      "sha256": "0c53db4a1cadb807c70ee6ac2c7ed6637e3a0dacb590b801564743df6a3a881a",
+      "status": "UNINTENDED_PARTIAL_PRECHANGE_NOT_ACCEPTANCE"
+    },
+    {
+      "original": "apps/desktop-shell/test/visual-postpr-evidence/retry/--oracle-self-test-empty.png",
+      "preserved": "docs/audits/production-swarm/implementation-expansion-2026-10-02/desktop-keyboard/unintended-before-empty.png",
+      "sha256": "fdcfdd0a25a42e295b2c857db705e799313a0ecd1090aa2b6a1840ed3712f39e",
+      "status": "UNINTENDED_PARTIAL_PRECHANGE_NOT_ACCEPTANCE"
+    }
+  ]
+}

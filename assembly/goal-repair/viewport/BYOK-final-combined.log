@@ -1,0 +1,31 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/tmp/sceneaxi-comprehensive-owned-xd4gdfl1[39m
+
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts [2m([22m[2m18 tests[22m[2m)[22m[33m 419[2mms[22m[39m
+ [32m✓[39m packages/engine-presentation/test/audio-playback.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+ [32m✓[39m packages/engine-presentation/test/legacy-audio-compat.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-input-actions.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 37[2mms[22m[39m
+ [32m✓[39m packages/importers/test/legacy-asset-v1.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 313[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/viewport-terminal-lifecycle.test.ts [2m([22m[2m18 tests[22m[2m)[22m[33m 1536[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/audio-lifecycle-compat.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 176[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/native-assistant-scene-compat.test.ts [2m([22m[2m14 tests[22m[2m)[22m[33m 1609[2mms[22m[39m
+     [33m[2m✓[22m[39m runs create/rename through real E1 review, accept and fresh bridge reopen [33m 627[2mms[22m[39m
+     [33m[2m✓[22m[39m preserves node kind/name through rename, legacy reparent, transform edits and reopen [33m 411[2mms[22m[39m
+ [32m✓[39m tests/e2e/asset-pipeline-golden.test.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 1712[2mms[22m[39m
+     [33m[2m✓[22m[39m admits every required family with deterministic validation, preview, provenance, and contained copies [33m 845[2mms[22m[39m
+     [33m[2m✓[22m[39m stages digest hot reload by stable identity and keeps accepted bytes untouched until approval [33m 314[2mms[22m[39m
+[90mstdout[2m | packages/importers/test/contained-gltf.test.ts[2m > [22m[2mAP-08 reparses16x8MiB canonical binary bytes and refuses the seventeenth asset
+[22m[39m{"task":"AP-PERF","case":"16x8MiB-and-count17","durationMs":6221,"maxRssKiB":843420,"platform":"linux","arch":"x64"}
+
+[90mstdout[2m | packages/importers/test/contained-gltf.test.ts[2m > [22m[2mAP-PERF admits250000 triangles and refuses250001 deterministically
+[22m[39m{"task":"AP-PERF","case":"triangles250000-and250001","durationMs":537,"maxRssKiB":843420,"platform":"linux","arch":"x64"}
+
+ [32m✓[39m packages/importers/test/contained-gltf.test.ts [2m([22m[2m18 tests[22m[2m)[22m[33m 8705[2mms[22m[39m
+   [33m[2m✓[22m[39m AP-08 reparses16x8MiB canonical binary bytes and refuses the seventeenth asset [33m 6227[2mms[22m[39m
+   [33m[2m✓[22m[39m AP-PERF admits250000 triangles and refuses250001 deterministically [33m 544[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m10 passed[39m[22m[90m (10)[39m
+[2m      Tests [22m [1m[32m104 passed[39m[22m[90m (104)[39m
+[2m   Start at [22m 19:07:53
+[2m   Duration [22m 12.06s[2m (transform 23.25s, setup 0ms, import 32.71s, tests 14.56s, environment 1ms)[22m
+

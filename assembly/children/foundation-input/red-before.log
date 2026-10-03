@@ -1,0 +1,129 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/tmp/sceneaxi-comprehensive-owned-xd4gdfl1[39m
+
+[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[31mx[39m[33m[39m[31mx[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[31mx[39m[33m[39m[32m·[39m[33m[39m[31mx[39m[33m[39m[31mx[39m[33m[39m[31mx[39m[33m[39m[31mx[39m[33m[39m[31mx[39m[33m[39m[31mx[39m[33m[39m[31mx[39m[33m[39m[32m·[39m
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 10 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m packages/engine-kernel/test/legacy-digest.test.ts[2m > [22mLF-01 original three-argument digest[2m > [22mpins original Git16f312 vector 'sha256:cda0711dbb7d296bdd0db3c2d7539e…'
+[41m[1m FAIL [22m[49m packages/engine-kernel/test/legacy-digest.test.ts[2m > [22mLF-01 original three-argument digest[2m > [22mpins original Git16f312 vector 'sha256:54cf93448d2acf1c3a3ae227017676…'
+[41m[1m FAIL [22m[49m packages/engine-kernel/test/legacy-digest.test.ts[2m > [22mLF-01 original three-argument digest[2m > [22mpins original Git16f312 vector 'sha256:9771cf096655109bb5612b6671aff6…'
+[31m[1mTypeError[22m: computeDigest is not a function[39m
+[36m [2m❯[22m packages/engine-kernel/test/legacy-digest.test.ts:[2m7:16[22m[39m
+
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m packages/engine-kernel/test/legacy-digest.test.ts[2m > [22mLF-01 original three-argument digest[2m > [22mkeeps caller order, projects only id/x/y and does not mutate
+[31m[1mTypeError[22m: computeDigest is not a function[39m
+[36m [2m❯[22m packages/engine-kernel/test/legacy-digest.test.ts:[2m11:16[22m[39m
+    [90m  9|[39m     it("keeps caller order, projects only id/x/y and does not mutate",…
+    [90m 10|[39m         const entities = Object.freeze([Object.freeze({ id: "z", x: -3…
+    [90m 11|[39m         expect(computeDigest(1, 2, entities)).not.toBe(computeDigest(1…
+    [90m   |[39m                [31m^[39m
+    [90m 12|[39m         expect(computeDigest(1, 2, entities)).toBe(computeDigest(1, 2,…
+    [90m 13|[39m         [34mexpect[39m(entities[[34m0[39m][33m?.[39mid)[33m.[39m[34mtoBe[39m([32m"z"[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m packages/engine-kernel/test/legacy-digest.test.ts[2m > [22mLF-01 original three-argument digest[2m > [22mmatches current no-rarity public session snapshots through save/replay
+[31m[1mKernelSessionError[22m: productManifest.productId is required[39m
+[36m [2m❯[22m validateManifest packages/engine-kernel/src/session.ts:[2m255:11[22m[39m
+    [90m253|[39m     [33m![39m[33mID_RE[39m[33m.[39m[34mtest[39m(manifest[33m.[39mproductId)
+    [90m254|[39m   ) {
+    [90m255|[39m     throw new KernelSessionError("productManifest.productId is require…
+    [90m   |[39m           [31m^[39m
+    [90m256|[39m   }
+    [90m257|[39m
+[90m [2m❯[22m Module.open packages/engine-kernel/src/session.ts:[2m118:5[22m[39m
+[90m [2m❯[22m packages/engine-kernel/test/legacy-digest.test.ts:[2m16:25[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m packages/schemas/test/input-action-registry.test.ts[2m > [22mEF-INPUT historical full-map migration[2m > [22mupgrades the exact original eleven-row map without losing controller intent
+[31m[1mAssertionError[22m: Target cannot be null or undefined.[39m
+[36m [2m❯[22m packages/schemas/test/input-action-registry.test.ts:[2m358:36[22m[39m
+    [90m356|[39m     it("upgrades the exact original eleven-row map without losing cont…
+    [90m357|[39m         [35mconst[39m migrated [33m=[39m [34mvalidateInputActionMap[39m(legacy)[33m;[39m
+    [90m358|[39m         expect(migrated?.bindings).toHaveLength(INPUT_ACTION_REGISTRY.…
+    [90m   |[39m                                    [31m^[39m
+    [90m359|[39m         expect(migrated?.bindings.slice(0, 11)).toEqual(legacy.binding…
+    [90m360|[39m         expect(migrated?.bindings.slice(11)).toEqual(DEFAULT_INPUT_ACT…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m packages/schemas/test/input-action-registry.test.ts[2m > [22mEF-INPUT historical full-map migration[2m > [22maccepts persisted full-map bytes as minimal scope overrides without rewriting defaults
+[31m[1mAssertionError[22m: expected null to deeply equal { schemaVersion: 1, …(3) }[39m
+
+[32m- Expected:[39m
+{
+  "bindings": [
+    {
+      "actionId": "play.primary",
+      "binding": {
+        "control": 0,
+        "controller": 0,
+        "device": "controller",
+        "direction": "any",
+        "input": "button",
+      },
+    },
+  ],
+  "kind": "sceneaxi.input-action-overrides",
+  "schemaVersion": 1,
+  "scope": "project",
+}
+
+[31m+ Received:[39m
+null
+
+[36m [2m❯[22m packages/schemas/test/input-action-registry.test.ts:[2m366:24[22m[39m
+    [90m364|[39m     it("accepts persisted full-map bytes as minimal scope overrides wi…
+    [90m365|[39m         const parsed = parseInputActionOverrides(JSON.stringify(legacy…
+    [90m366|[39m         expect(parsed).toEqual({ schemaVersion: 1, kind: "sceneaxi.inp…
+    [90m   |[39m                        [31m^[39m
+    [90m367|[39m         expect(DEFAULT_INPUT_ACTION_MAP.bindings[10]?.binding.device).…
+    [90m368|[39m     })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m packages/schemas/test/legacy-import-compat.test.ts[2m > [22mLF-02 legacy conformance import policy[2m > [22mrestores both original root types as erased exports only
+[31m[1mAssertionError[22m: expected [] to have a length of 1 but got +0[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 1[39m
+[31m+ 0[39m
+
+[36m [2m❯[22m packages/schemas/test/legacy-import-compat.test.ts:[2m15:26[22m[39m
+
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m desktop/linux/test/legacy-input-map.test.ts[2m > [22mEF-INPUT public desktop settings migration[2m > [22mloads legacy project bytes and only writes migration on exact approved review
+[41m[1m FAIL [22m[49m desktop/linux/test/legacy-input-map.test.ts[2m > [22mEF-INPUT public desktop settings migration[2m > [22mloads legacy workspace bytes and only writes migration on exact approved review
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m desktop/linux/test/legacy-input-map.test.ts:[2m127:30[22m[39m
+    [90m125|[39m         [34mwriteFileSync[39m(path[33m,[39m bytes)[33m;[39m
+    [90m126|[39m         [35mconst[39m inspected [33m=[39m host[33m.[39m[34minspect[39m()[33m;[39m
+    [90m127|[39m         [34mexpect[39m(inspected[33m.[39mok)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   |[39m                              [31m^[39m
+    [90m128|[39m         [35mif[39m ([33m![39minspected[33m.[39mok)
+    [90m129|[39m             [35mthrow[39m [33mError[39m(inspected[33m.[39mreason)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/10]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m4 failed[39m[22m[90m (4)[39m
+[2m      Tests [22m [1m[31m10 failed[39m[22m[2m | [22m[1m[32m43 passed[39m[22m[90m (53)[39m
+[2m   Start at [22m 11:22:37
+[2m   Duration [22m 2.54s[2m (transform 5.24s, setup 0ms, import 6.69s, tests 116ms, environment 0ms)[22m
+

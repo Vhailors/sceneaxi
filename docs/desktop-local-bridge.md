@@ -55,6 +55,19 @@ The socket is Unix-only: no TCP listener, HTTP port, remote bind, CORS surface,
 or renderer-only action exists. Request and response bodies are bounded to 1
 MiB and one request per connection.
 
+## Diagnostics and assistant boundaries
+
+Local Ask is read-only. Build stages an artifact in the existing Change Review;
+Accept/Save remain explicit authoring actions. A fixture or injected provider runner
+does not establish real provider readiness, billing authority or another provider's
+availability. These rules apply equally to IPC and the same-user socket adapter.
+
+Raw crash dumps are off by default; `SCENEAXI_LOCAL_CRASH_DUMPS=1` is local opt-in
+only. Dumps and bridge descriptors can contain sensitive material. Never attach
+raw descriptors, capabilities, credentials or unreviewed dumps to shared evidence.
+Retention and real default/BYOK dump-absence proof are distinct from a synthetic
+purge test and remain recorded as acceptance requirements in `FINAL.json`.
+
 ## Permission boundary
 
 Every request names exactly one permission. The host checks three things before

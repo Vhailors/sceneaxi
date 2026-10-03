@@ -1,0 +1,57 @@
+[96mapps/desktop-shell/src/session.ts[0m:[93m38[0m:[93m8[0m - [91merror[0m[90m TS2307: [0mCannot find module '@sceneaxi-internal/project-git-authority' or its corresponding type declarations.
+
+[7m38[0m } from "@sceneaxi-internal/project-git-authority";
+[7m  [0m [91m       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[96mdesktop/linux/src/lib/bridge.ts[0m:[93m86[0m:[93m8[0m - [91merror[0m[90m TS2307: [0mCannot find module '@sceneaxi-internal/desktop-session-project-git' or its corresponding type declarations.
+
+[7m86[0m } from "@sceneaxi-internal/desktop-session-project-git";
+[7m  [0m [91m       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[96mdesktop/linux/src/lib/bridge.ts[0m:[93m372[0m:[93m9[0m - [91merror[0m[90m TS18046: [0m'cause' is of type 'unknown'.
+
+[7m372[0m         cause.diagnostic.code === PROJECT_GIT_DIAGNOSTICS.repositoryUnavailable
+[7m   [0m [91m        ~~~~~[0m
+[96mdesktop/linux/src/lib/bridge.ts[0m:[93m390[0m:[93m19[0m - [91merror[0m[90m TS2552: [0mCannot find name 'DesktopDocumentData'. Did you mean 'DesktopDocumentStatus'?
+
+[7m390[0m     documentData: DesktopDocumentData,
+[7m   [0m [91m                  ~~~~~~~~~~~~~~~~~~~[0m
+[96mdesktop/linux/src/lib/bridge.ts[0m:[93m618[0m:[93m56[0m - [91merror[0m[90m TS2552: [0mCannot find name 'DesktopDocumentData'. Did you mean 'DesktopDocumentStatus'?
+
+[7m618[0m         const optional: DesktopOptionalFields<{ data?: DesktopDocumentData; dataKeys?: readonly string[] }> = {};
+[7m   [0m [91m                                                       ~~~~~~~~~~~~~~~~~~~[0m
+[96mdesktop/linux/src/lib/bridge.ts[0m:[93m800[0m:[93m32[0m - [91merror[0m[90m TS18046: [0m'cause' is of type 'unknown'.
+
+[7m800[0m       return immediate(refused(cause.diagnostic.code, cause.diagnostic.message));
+[7m   [0m [91m                               ~~~~~[0m
+[96mdesktop/linux/src/lib/bridge.ts[0m:[93m800[0m:[93m55[0m - [91merror[0m[90m TS18046: [0m'cause' is of type 'unknown'.
+
+[7m800[0m       return immediate(refused(cause.diagnostic.code, cause.diagnostic.message));
+[7m   [0m [91m                                                      ~~~~~[0m
+[96mdesktop/linux/src/lib/bridge.ts[0m:[93m1090[0m:[93m33[0m - [91merror[0m[90m TS2552: [0mCannot find name 'DesktopDocumentData'. Did you mean 'DesktopDocumentStatus'?
+
+[7m1090[0m     const rarityStatus = (data: DesktopDocumentData) => {
+[7m    [0m [91m                                ~~~~~~~~~~~~~~~~~~~[0m
+[96mdesktop/linux/src/lib/bridge.ts[0m:[93m2703[0m:[93m72[0m - [91merror[0m[90m TS2304: [0mCannot find name 'PhysicsWorldHost'.
+
+[7m2703[0m             const optional: DesktopOptionalFields<{ physicsWorldHost?: PhysicsWorldHost }> = {};
+[7m    [0m [91m                                                                       ~~~~~~~~~~~~~~~~[0m
+[96mdesktop/linux/src/lib/bridge.ts[0m:[93m3221[0m:[93m11[0m - [91merror[0m[90m TS18046: [0m'cause' is of type 'unknown'.
+
+[7m3221[0m           cause.diagnostic.code,
+[7m    [0m [91m          ~~~~~[0m
+[96mdesktop/linux/src/lib/bridge.ts[0m:[93m3222[0m:[93m11[0m - [91merror[0m[90m TS18046: [0m'cause' is of type 'unknown'.
+
+[7m3222[0m           cause.diagnostic.message,
+[7m    [0m [91m          ~~~~~[0m
+[96mdesktop/linux/src/lib/bridge.ts[0m:[93m3223[0m:[93m11[0m - [91merror[0m[90m TS18046: [0m'cause' is of type 'unknown'.
+
+[7m3223[0m           cause.diagnostic.path,
+[7m    [0m [91m          ~~~~~[0m
+[96mdesktop/linux/src/renderer/features/audio-controls.ts[0m:[93m85[0m:[93m19[0m - [91merror[0m[90m TS7006: [0mParameter 'destination' implicitly has an 'any' type.
+
+[7m85[0m         connect: (destination) => { node.connect(resolve(destination)); },
+[7m  [0m [91m                  ~~~~~~~~~~~[0m
+[96mpackages/schemas/src/scene-composition.ts[0m:[93m1460[0m:[93m76[0m - [91merror[0m[90m TS2379: [0mArgument of type '{ kind: "node"; artifactId: string; artifact: SculptArtifact; instanceId: string; parentInstanceId: string | null; depth: number; localTransform: SculptTransform; worldMatrix: SceneMatrixV2; name?: never; } | { ...; }' is not assignable to parameter of type 'ResolvedScenePlacementV2' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Object literal may only specify known properties, but 'artifact' does not exist in type 'ResolvedScenePlacementV2'. Did you mean to write 'artifactId'?
+
+[7m1460[0m         placements.push({ ...pose, kind: "node", artifactId: p.artifactId, artifact: p.artifact });
+[7m    [0m [91m                                                                           ~~~~~~~~[0m

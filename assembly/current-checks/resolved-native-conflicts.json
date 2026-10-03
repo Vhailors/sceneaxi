@@ -1,0 +1,1083 @@
+{
+  "status": "SOURCE_BUILD_PASSED_CI_TESTS_REMAIN_RED",
+  "head": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+  "mergeParent": "16f312c61435e3d379a0e54525ac8115e35fee86",
+  "rows": [
+    {
+      "path": ".github/workflows/gate.yml",
+      "stages": [
+        "100644 ad8503de76cd072713219c5987dc75b06f1a7b0d 2\t.github/workflows/gate.yml",
+        "100644 09394bb0358b49d147d2ba7d8adace75550848bb 3\t.github/workflows/gate.yml"
+      ],
+      "selectedSha256": "264b8bf0d8a7cdf9bc5a64cf8277d991063195a5decd0173145795ee9b989516",
+      "mode": "100644",
+      "selectedGitBlob": "45359135272f35a570b6a55cd2b0fb4a373676e1"
+    },
+    {
+      "path": "AGENTS.md",
+      "stages": [
+        "100644 248dffcad8479c44c633b1b3b06d5fe30bd4f325 1\tAGENTS.md",
+        "100644 b85ad299135386a383c24381b07562db29eaf5c4 2\tAGENTS.md",
+        "100644 2a27df2261ca0d97595e96a119abfa9c6aba85ff 3\tAGENTS.md"
+      ],
+      "selectedSha256": "6e3478956ac9871781f0cf96851d5fe0bacf0850b91a491b86b5e98b54cc0133",
+      "mode": "100644",
+      "selectedGitBlob": "b85ad299135386a383c24381b07562db29eaf5c4"
+    },
+    {
+      "path": "MANIFEST.md",
+      "stages": [
+        "100644 1495c0b61868d4594cf695178c61dc3f3ec95464 1\tMANIFEST.md",
+        "100644 9917998672257bff95ded228b425b99af64d5744 2\tMANIFEST.md",
+        "100644 19a5e4ff36bbc8e20e54c25461558774b4b6b988 3\tMANIFEST.md"
+      ],
+      "selectedSha256": "2879ac61d9b97839972f9463c4c801ad9070231ee42566738b6b3661f62fe622",
+      "mode": "100644",
+      "selectedGitBlob": "9917998672257bff95ded228b425b99af64d5744"
+    },
+    {
+      "path": "README.md",
+      "stages": [
+        "100644 efbbd68122c5cd2840dd665ccb48ac2b59ec24c8 1\tREADME.md",
+        "100644 6cfc2d6717f4c90fe94727bd4858a0bdd84b2aa0 2\tREADME.md",
+        "100644 e1c93b0d819e3f18ed20276568270d536423d613 3\tREADME.md"
+      ],
+      "selectedSha256": "9e8d248a71cfe5e245990db6a0f211313e104ae3ded4d655dbe538dab68ba7d6",
+      "mode": "100644",
+      "selectedGitBlob": "6cfc2d6717f4c90fe94727bd4858a0bdd84b2aa0"
+    },
+    {
+      "path": "apps/catalog-game/README.md",
+      "stages": [
+        "100644 6f323096f31c496621ab426dcc9f567ea6e71ad2 1\tapps/catalog-game/README.md",
+        "100644 89b302643c556e9bde36b8783683e3453d3eff26 2\tapps/catalog-game/README.md",
+        "100644 a7d276e48f89d904b570302e850637ed11789118 3\tapps/catalog-game/README.md"
+      ],
+      "selectedSha256": "0fef13e22ea4a29844df47872877ff7c8fc2b3ae40ece5cae99ab60c4067359e",
+      "mode": "100644",
+      "selectedGitBlob": "89b302643c556e9bde36b8783683e3453d3eff26"
+    },
+    {
+      "path": "apps/catalog-game/src/index.ts",
+      "stages": [
+        "100644 6643517abdd3b56fc4c1f75d0a4ed35caed61db5 2\tapps/catalog-game/src/index.ts",
+        "100644 e481463eaeadd6db9223fd364bd9a54e9f55f926 3\tapps/catalog-game/src/index.ts"
+      ],
+      "selectedSha256": "2ced0675f775dc5bbbaffaf9b525f9e3167b0c4c57ee27682c8a8af7c7b8d5cc",
+      "mode": "100644",
+      "selectedGitBlob": "6643517abdd3b56fc4c1f75d0a4ed35caed61db5"
+    },
+    {
+      "path": "apps/catalog-web/README.md",
+      "stages": [
+        "100644 2a97638bb1734fcca0a6da60e6bb33222a7334ab 1\tapps/catalog-web/README.md",
+        "100644 3f6f86c77ca1832b9f8ed97589c4a20dc3f8f356 2\tapps/catalog-web/README.md",
+        "100644 06c05c8d9a5481579ccc671f0f6b2f405128bbb6 3\tapps/catalog-web/README.md"
+      ],
+      "selectedSha256": "8fe97fa657d993eb50b62538dde8a42f38870117446b4e600889d44dc790df6f",
+      "mode": "100644",
+      "selectedGitBlob": "3f6f86c77ca1832b9f8ed97589c4a20dc3f8f356"
+    },
+    {
+      "path": "apps/catalog-web/src/index.ts",
+      "stages": [
+        "100644 4f3fa8edbf877c29f4e5b6c2d03d3ba0ffe85ad4 2\tapps/catalog-web/src/index.ts",
+        "100644 76778c35f25724ad37547b024b2968f677274684 3\tapps/catalog-web/src/index.ts"
+      ],
+      "selectedSha256": "50a699f3282167fd45544ede7be91d253dbcb317298c9c601e2fb520c0189c1e",
+      "mode": "100644",
+      "selectedGitBlob": "4f3fa8edbf877c29f4e5b6c2d03d3ba0ffe85ad4"
+    },
+    {
+      "path": "apps/desktop-shell/README.md",
+      "stages": [
+        "100644 e0816fd9573765df7cd33dd44a4c1143070f6327 1\tapps/desktop-shell/README.md",
+        "100644 e1dc9b687d82144c7df89499f57fd2a5dd90e74c 2\tapps/desktop-shell/README.md",
+        "100644 63cd4ae8ec56532ecc89ed558ced7ac80737c51f 3\tapps/desktop-shell/README.md"
+      ],
+      "selectedSha256": "e47a53ed7c9aa3be4f5982eee7cf54f77e743f0ddc1b41479e3eacdf030db5de",
+      "mode": "100644",
+      "selectedGitBlob": "e1dc9b687d82144c7df89499f57fd2a5dd90e74c"
+    },
+    {
+      "path": "apps/desktop-shell/package.json",
+      "stages": [
+        "100644 aa36ae562f9f2227e2979ba76a5aa2b059783570 1\tapps/desktop-shell/package.json",
+        "100644 3804ac0817ba6d1a4c6a10fa821695ad8c775806 2\tapps/desktop-shell/package.json",
+        "100644 fe4d474072f29742ca8f2bf53451c577b6f887ac 3\tapps/desktop-shell/package.json"
+      ],
+      "selectedSha256": "4d64e7635957562b8ee6628e554f22b1d597f6e909b284fb92f3333a864898d6",
+      "mode": "100644",
+      "selectedGitBlob": "3804ac0817ba6d1a4c6a10fa821695ad8c775806"
+    },
+    {
+      "path": "apps/desktop-shell/src/index.ts",
+      "stages": [
+        "100644 0005b6c43ffdf05ccd711873b472c0f4aa4ed5d1 2\tapps/desktop-shell/src/index.ts",
+        "100644 9cd3bbfc0f9e32b1228ac8c59ff21515ed07692b 3\tapps/desktop-shell/src/index.ts"
+      ],
+      "selectedSha256": "e3f3c40819c404a3d2752875a8f6210d738f9d5ab265ebfb69b481a65b4210de",
+      "mode": "100644",
+      "selectedGitBlob": "0005b6c43ffdf05ccd711873b472c0f4aa4ed5d1"
+    },
+    {
+      "path": "apps/desktop-shell/src/protocol-client.ts",
+      "stages": [
+        "100644 d6a5f4bbb5e1b1b0ad90b70682eecd8aa2a886d0 2\tapps/desktop-shell/src/protocol-client.ts",
+        "100644 0078cad82cfd4a617c41c5cb961c54d021fdd2a6 3\tapps/desktop-shell/src/protocol-client.ts"
+      ],
+      "selectedSha256": "95092fe7fae3b138d1f1313026af5b9b5e8d1b0e403274301a298b29c86c2e2a",
+      "mode": "100644",
+      "selectedGitBlob": "d6a5f4bbb5e1b1b0ad90b70682eecd8aa2a886d0"
+    },
+    {
+      "path": "apps/desktop-shell/test/protocol-client.test.ts",
+      "stages": [
+        "100644 4435bb6b72f4218efa81618c109de23d209df843 2\tapps/desktop-shell/test/protocol-client.test.ts",
+        "100644 228e48c1f35db8415c554d9e28cdc93816789dad 3\tapps/desktop-shell/test/protocol-client.test.ts"
+      ],
+      "selectedSha256": "04e679e3de431ec8c8da4d5ed46fdfff85096e5e8d02f3b8d92de113aabdabb9",
+      "mode": "100644",
+      "selectedGitBlob": "4435bb6b72f4218efa81618c109de23d209df843"
+    },
+    {
+      "path": "apps/desktop-shell/test/seam.test.ts",
+      "stages": [
+        "100644 7492aeb78e9c375e93f823e952d9379ba6e3f6e8 2\tapps/desktop-shell/test/seam.test.ts",
+        "100644 93ddf70d479485d3e2f3dec704ea26571c6da999 3\tapps/desktop-shell/test/seam.test.ts"
+      ],
+      "selectedSha256": "f528f89df458d2938ff2db2b3377d050fc46d2bf22456ad79b298f555dfc4bd3",
+      "mode": "100644",
+      "selectedGitBlob": "7492aeb78e9c375e93f823e952d9379ba6e3f6e8"
+    },
+    {
+      "path": "apps/desktop-shell/tsconfig.json",
+      "stages": [
+        "100644 5bd42de20de95fdf14c52a6a62419ca5920d5d80 2\tapps/desktop-shell/tsconfig.json",
+        "100644 ebaea3f95083ab9b85b14743707203caabda890d 3\tapps/desktop-shell/tsconfig.json"
+      ],
+      "selectedSha256": "f4c8705c3b51ef96f2752dfef9f8285fbdc411fb3baf009a3374809f9fd02f81",
+      "mode": "100644",
+      "selectedGitBlob": "5bd42de20de95fdf14c52a6a62419ca5920d5d80"
+    },
+    {
+      "path": "apps/web-shell/README.md",
+      "stages": [
+        "100644 de002b87e2ab3f018054a7bb59f2f5e71d9ec5cc 1\tapps/web-shell/README.md",
+        "100644 89052145eb0a4d8a27b5dd66118790b9ac369944 2\tapps/web-shell/README.md",
+        "100644 e8cb0bf987d9494cd5f9ccaf12e42bf65a7729c9 3\tapps/web-shell/README.md"
+      ],
+      "selectedSha256": "2e0469fe1b059a0133156569b41dc9a64aefb1009f296749eafcf22d12c449f6",
+      "mode": "100644",
+      "selectedGitBlob": "89052145eb0a4d8a27b5dd66118790b9ac369944"
+    },
+    {
+      "path": "apps/web-shell/package.json",
+      "stages": [
+        "100644 4a74df0c697e88581db12eb46887645dd276e00e 1\tapps/web-shell/package.json",
+        "100644 50ab747871aa7a57f651d501342020118c27ff7e 2\tapps/web-shell/package.json",
+        "100644 84e1bc3fc63f7732cf4647c9dd7daa06220a4a38 3\tapps/web-shell/package.json"
+      ],
+      "selectedSha256": "6212e5a0c38da92c732d10b47b8931740f957963efb8c059b888c24d04626747",
+      "mode": "100644",
+      "selectedGitBlob": "50ab747871aa7a57f651d501342020118c27ff7e"
+    },
+    {
+      "path": "apps/web-shell/src/index.ts",
+      "stages": [
+        "100644 02f4c680bdd13449baae46609f086de6d0f4bb18 2\tapps/web-shell/src/index.ts",
+        "100644 2c121418c9108dd6bdd0a9807b57f17567971b9c 3\tapps/web-shell/src/index.ts"
+      ],
+      "selectedSha256": "f0a4ca4cfaf62ff0aadd0eae568a9d825914f506003ea46856e051f1961bcbed",
+      "mode": "100644",
+      "selectedGitBlob": "02f4c680bdd13449baae46609f086de6d0f4bb18"
+    },
+    {
+      "path": "apps/web-shell/src/inspector.ts",
+      "stages": [
+        "100644 6d08f22908868504fc37eec5707e2ffdc3cb33a9 2\tapps/web-shell/src/inspector.ts",
+        "100644 640a5d7cc0b3df2ecef63d7524e0b3590c6ad948 3\tapps/web-shell/src/inspector.ts"
+      ],
+      "selectedSha256": "d394c0f19873439794ca7a2fbe7bb80cef40ecc76832d994cb0d7f6eb5926858",
+      "mode": "100644",
+      "selectedGitBlob": "6d08f22908868504fc37eec5707e2ffdc3cb33a9"
+    },
+    {
+      "path": "apps/web-shell/src/protocol-client.ts",
+      "stages": [
+        "100644 b46f93819d41c11bc764a7a11d8958c263550c91 2\tapps/web-shell/src/protocol-client.ts",
+        "100644 dd9ae1685a3af9dfd8f4885604eb80eaca79f5c1 3\tapps/web-shell/src/protocol-client.ts"
+      ],
+      "selectedSha256": "7a90fc3885674dee1f0ceb921e9c4c438ce818ce31125c5c1030467c315aa3bc",
+      "mode": "100644",
+      "selectedGitBlob": "b46f93819d41c11bc764a7a11d8958c263550c91"
+    },
+    {
+      "path": "apps/web-shell/test/inspector.test.ts",
+      "stages": [
+        "100644 d26d39a5ff9c9f39e85ad3838163b08fbf1bebf9 2\tapps/web-shell/test/inspector.test.ts",
+        "100644 367d36a6ac02f68c588e8e02fc238c8214ec8bb9 3\tapps/web-shell/test/inspector.test.ts"
+      ],
+      "selectedSha256": "1a93a6b8856aaf2b0703267adc0cde1bea3b880415aea2eb7cccba13c801972e",
+      "mode": "100644",
+      "selectedGitBlob": "d26d39a5ff9c9f39e85ad3838163b08fbf1bebf9"
+    },
+    {
+      "path": "apps/web-shell/tsconfig.json",
+      "stages": [
+        "100644 81ee1f6793db3e8527fcbe47b91ace15617b22d8 2\tapps/web-shell/tsconfig.json",
+        "100644 ebaea3f95083ab9b85b14743707203caabda890d 3\tapps/web-shell/tsconfig.json"
+      ],
+      "selectedSha256": "cece8bc746f4e517a825b164a22ed3a1c8cadb01e5feb88b597d0369dfac70ac",
+      "mode": "100644",
+      "selectedGitBlob": "81ee1f6793db3e8527fcbe47b91ace15617b22d8"
+    },
+    {
+      "path": "docs/adr/0002-presentation-runtime-deep-seam.md",
+      "stages": [
+        "100644 5df614d9dc3ecd24c08b6f7db39dac4f318bd5bd 2\tdocs/adr/0002-presentation-runtime-deep-seam.md",
+        "100644 421688dcf6208b9b5856fda7f4442dc47c368cb9 3\tdocs/adr/0002-presentation-runtime-deep-seam.md"
+      ],
+      "selectedSha256": "eb8bb8963c794f26ef79efd5a7e69f32dec79e49e0956b7dc550dd689aa2a497",
+      "mode": "100644",
+      "selectedGitBlob": "5df614d9dc3ecd24c08b6f7db39dac4f318bd5bd"
+    },
+    {
+      "path": "docs/adr/0003-editor-sequencing-e1-first-e2-specified.md",
+      "stages": [
+        "100644 aa77296d5ac4b7c5be7dd01695c2f6494a92c27a 2\tdocs/adr/0003-editor-sequencing-e1-first-e2-specified.md",
+        "100644 135d1343f564b51ed33d9cb6909c445342822455 3\tdocs/adr/0003-editor-sequencing-e1-first-e2-specified.md"
+      ],
+      "selectedSha256": "f579e8fc43fb969e165e77745e0f3eeea3e5108887009dde011b48316c21e4d2",
+      "mode": "100644",
+      "selectedGitBlob": "aa77296d5ac4b7c5be7dd01695c2f6494a92c27a"
+    },
+    {
+      "path": "docs/adr/0004-no-plugin-ports-before-two-adapters.md",
+      "stages": [
+        "100644 c651d4f5aa8f3a62221248f8b91d535b5db899f5 2\tdocs/adr/0004-no-plugin-ports-before-two-adapters.md",
+        "100644 898c9b4f57350051cb85450f9183ec8043644fd5 3\tdocs/adr/0004-no-plugin-ports-before-two-adapters.md"
+      ],
+      "selectedSha256": "db19711ad29ea9e342746c288f896e41267e4662b96a5ee747524991b9a11476",
+      "mode": "100644",
+      "selectedGitBlob": "c651d4f5aa8f3a62221248f8b91d535b5db899f5"
+    },
+    {
+      "path": "docs/adr/README.md",
+      "stages": [
+        "100644 959587ae83ea70c3baacadd891feb6dbaecc3446 2\tdocs/adr/README.md",
+        "100644 288ca3ef9630c9a6f9d6a2e13f307560f8ff9a01 3\tdocs/adr/README.md"
+      ],
+      "selectedSha256": "5ab791504fb2e66a01500ffb545e97558e2d425a8d30b837a964c81e12d76221",
+      "mode": "100644",
+      "selectedGitBlob": "959587ae83ea70c3baacadd891feb6dbaecc3446"
+    },
+    {
+      "path": "docs/authoring-contracts.md",
+      "stages": [
+        "100644 baabd4e62453ca04cebc06348ac9348169e522e6 2\tdocs/authoring-contracts.md",
+        "100644 1552a64cb380471a2bbd265287d5548d09ea2f00 3\tdocs/authoring-contracts.md"
+      ],
+      "selectedSha256": "17f013beff9481a79f87d086afde1983aef00e5ac0b2cb100f11090966e25a9d",
+      "mode": "100644",
+      "selectedGitBlob": "baabd4e62453ca04cebc06348ac9348169e522e6"
+    },
+    {
+      "path": "docs/program/SPEC.md",
+      "stages": [
+        "100644 a534d32520dfdef2ba95e1d426e5f596ef38aeee 2\tdocs/program/SPEC.md",
+        "100644 1b36dcb2e6265aa2c9f5cf25698eec1339d2ca15 3\tdocs/program/SPEC.md"
+      ],
+      "selectedSha256": "6507fd27081190ac031962fa999c3cc6f0d7262a7a52ef35605a8289a4b862fc",
+      "mode": "100644",
+      "selectedGitBlob": "a534d32520dfdef2ba95e1d426e5f596ef38aeee"
+    },
+    {
+      "path": "docs/program/spec-41.md",
+      "stages": [
+        "100644 d7f48a2466f9e8169f0f3cff5d9148cc058d12f5 2\tdocs/program/spec-41.md",
+        "100644 8351b8d2aba0d9245584b1e80b9acae99ebade30 3\tdocs/program/spec-41.md"
+      ],
+      "selectedSha256": "a00b05d3d2fc1c0697d342d62fe449a6219b9e9b2b349321fe621a4bf6f03987",
+      "mode": "100644",
+      "selectedGitBlob": "d7f48a2466f9e8169f0f3cff5d9148cc058d12f5"
+    },
+    {
+      "path": "docs/proof/stage-0-acceptance-contract-template.md",
+      "stages": [
+        "100644 4ad21205688d7e1e86cd91391ecd8ba0053228ca 2\tdocs/proof/stage-0-acceptance-contract-template.md",
+        "100644 6d7f0e826f928d9ab75ee9f8dfdd936ad2c4bb36 3\tdocs/proof/stage-0-acceptance-contract-template.md"
+      ],
+      "selectedSha256": "9498a26b887ab0fe4a9c88dff21f0c159511289b1f12ab10e6eaec22e1ca53e9",
+      "mode": "100644",
+      "selectedGitBlob": "4ad21205688d7e1e86cd91391ecd8ba0053228ca"
+    },
+    {
+      "path": "docs/proof/stage-1-counting-adjudication-worksheet.md",
+      "stages": [
+        "100644 d1e7f9d353be7182564f50255a48c3f19d355eb4 2\tdocs/proof/stage-1-counting-adjudication-worksheet.md",
+        "100644 60943fba7c32f0208b5a4a0f69a8af09b2f2a6f1 3\tdocs/proof/stage-1-counting-adjudication-worksheet.md"
+      ],
+      "selectedSha256": "130225ef93ca38382620ba141bc5928dd0fb3883541f5b88f1b539dd51064d3f",
+      "mode": "100644",
+      "selectedGitBlob": "d1e7f9d353be7182564f50255a48c3f19d355eb4"
+    },
+    {
+      "path": "docs/proof/stage-1-paired-replicate-run-sheet.md",
+      "stages": [
+        "100644 744624ad7b19d734047c5150bd098b6ff250ad04 2\tdocs/proof/stage-1-paired-replicate-run-sheet.md",
+        "100644 ff3fb8fa6efd7bf2659fd50aed4154c3dd28f001 3\tdocs/proof/stage-1-paired-replicate-run-sheet.md"
+      ],
+      "selectedSha256": "2e077fd38ab87ab292cf4a907ee02395b01c6461666e83918652f20bba1ab74d",
+      "mode": "100644",
+      "selectedGitBlob": "744624ad7b19d734047c5150bd098b6ff250ad04"
+    },
+    {
+      "path": "eslint.config.mjs",
+      "stages": [
+        "100644 de5874289b21b4ee666056e7eecc0ce670e8877e 2\teslint.config.mjs",
+        "100644 f4f3ed5305ef476e90e69e75d556cb22eb601259 3\teslint.config.mjs"
+      ],
+      "selectedSha256": "49f77815f1c6002048fbe780e0a0a4cefef51d0927cb9cc06236a76a865b7423",
+      "mode": "100644",
+      "selectedGitBlob": "de5874289b21b4ee666056e7eecc0ce670e8877e"
+    },
+    {
+      "path": "package.json",
+      "stages": [
+        "100644 58359b1abf6faaef24a7f4e2e6babffa8b1ee9f4 1\tpackage.json",
+        "100644 765ec55e98683ab5ab1c0691cc4edf417416615b 2\tpackage.json",
+        "100644 09ae70f2a127f1a4dd5b46884c520f2d40f1f68b 3\tpackage.json"
+      ],
+      "selectedSha256": "4a7bcde79d22893bef30b80e416b0cf7409b882da2d26fe8f7114af50cb689e0",
+      "mode": "100644",
+      "selectedGitBlob": "5537544d4fb09c2ccd8e80146b20d34d19b75f99"
+    },
+    {
+      "path": "packages/authoring-core/README.md",
+      "stages": [
+        "100644 582858b5a6cc72bbe0583688b550bb2d1170a4dc 1\tpackages/authoring-core/README.md",
+        "100644 936103779655a092d07fe273470d97a87445e300 2\tpackages/authoring-core/README.md",
+        "100644 462524c561e693c29e1cfccdb26aa340cc5cbaeb 3\tpackages/authoring-core/README.md"
+      ],
+      "selectedSha256": "7b2dd1e89c907ec9108e8acee1d539c77752d3059ec66610f37af5f14e22e35a",
+      "mode": "100644",
+      "selectedGitBlob": "936103779655a092d07fe273470d97a87445e300"
+    },
+    {
+      "path": "packages/authoring-core/src/atomic-write.ts",
+      "stages": [
+        "100644 dfa26c2268d3d699d3d0d89908be3558a7e83aba 2\tpackages/authoring-core/src/atomic-write.ts",
+        "100644 bc781ac935a17dc684b0300074a345fd881c8f80 3\tpackages/authoring-core/src/atomic-write.ts"
+      ],
+      "selectedSha256": "39fbb2d720350e17a31060ff2166c94544af059a1d230320692166b1b9ec5e5d",
+      "mode": "100644",
+      "selectedGitBlob": "f98aca65840250ca54a3ce5899bbbba454158b7c"
+    },
+    {
+      "path": "packages/authoring-core/src/index.ts",
+      "stages": [
+        "100644 e9c445562e3919b690841d7da95d748982ebda9a 1\tpackages/authoring-core/src/index.ts",
+        "100644 1ff4424ed631c2910641712355acf01c16be57b7 2\tpackages/authoring-core/src/index.ts",
+        "100644 2001724f467abdf770b3cf9ec4ed8aa74fe59466 3\tpackages/authoring-core/src/index.ts"
+      ],
+      "selectedSha256": "ba6e2f852e7517f1ebafc27ef3bb508627225c37714f100e69a6aacd78f7f505",
+      "mode": "100644",
+      "selectedGitBlob": "3efdf5ee320eadd5cdf9f78bf09c5ef0ef95c5fc"
+    },
+    {
+      "path": "packages/authoring-core/src/json-pointer.ts",
+      "stages": [
+        "100644 919b7e05ca6083abb8d00850402411dee31ceab5 2\tpackages/authoring-core/src/json-pointer.ts",
+        "100644 4fa894e402e24e959bf3c49857ce8a8f319b6f8c 3\tpackages/authoring-core/src/json-pointer.ts"
+      ],
+      "selectedSha256": "68195c35dfb45ce1f1de7e05d6da8a374998d549c8b75045a953cb7efc29d2ab",
+      "mode": "100644",
+      "selectedGitBlob": "919b7e05ca6083abb8d00850402411dee31ceab5"
+    },
+    {
+      "path": "packages/authoring-core/src/propose-apply.ts",
+      "stages": [
+        "100644 3a6ced86e6871e14e8c4eafe0fae228bfbbba281 2\tpackages/authoring-core/src/propose-apply.ts",
+        "100644 f8d445e86a2c1a21161251ac7571436a5f05049c 3\tpackages/authoring-core/src/propose-apply.ts"
+      ],
+      "selectedSha256": "47fc6d05ae2d786772dc068aaaf3cc620af2c0c610e3fcd2807e0472639fe22a",
+      "mode": "100644",
+      "selectedGitBlob": "72b9b1caa8b6a038ec182815f48a3ee80e6771b9"
+    },
+    {
+      "path": "packages/authoring-core/tsconfig.json",
+      "stages": [
+        "100644 b3efbf6da692b91228d4db66a789dcf212c8d8b5 2\tpackages/authoring-core/tsconfig.json",
+        "100644 b9cbe260d42737a408c1faa90e826760bf2c74e4 3\tpackages/authoring-core/tsconfig.json"
+      ],
+      "selectedSha256": "3a46768f8dabb50449a25a2f4c034ed711a8e7c177fbcd123c1bb7fd22aad369",
+      "mode": "100644",
+      "selectedGitBlob": "b3efbf6da692b91228d4db66a789dcf212c8d8b5"
+    },
+    {
+      "path": "packages/cli/README.md",
+      "stages": [
+        "100644 70e97ceb0e2aeecc2e87fa3345c93c34accc0751 1\tpackages/cli/README.md",
+        "100644 5afd5202accb7bfb848cc9c518beb3cb7deadbbf 2\tpackages/cli/README.md",
+        "100644 69f47ef0d1ebef33afd3e2c54fe72b70ef6085a4 3\tpackages/cli/README.md"
+      ],
+      "selectedSha256": "e0dd579becbcf04319f311ca7368caafbaeb69b6986d0020ed2678d47eb9a0a8",
+      "mode": "100644",
+      "selectedGitBlob": "485129324c8e4d752da16f3a6a2534deab2f40e3"
+    },
+    {
+      "path": "packages/cli/src/commands.ts",
+      "stages": [
+        "100644 21428ffeeff8c4dfbe1fb0bfe8e8fb8483cd0329 2\tpackages/cli/src/commands.ts",
+        "100644 6b9838dbba1caf50e0efe1a44c4bceb2fcb1e8d9 3\tpackages/cli/src/commands.ts"
+      ],
+      "selectedSha256": "cda69af812ba5c2d15d080cbd5b68ed78bd8ff71ecfd4958df8d14ad01d39837",
+      "mode": "100644",
+      "selectedGitBlob": "81bc54868d294195ff2dd8440d25634b753ad097"
+    },
+    {
+      "path": "packages/cli/src/dispatcher.ts",
+      "stages": [
+        "100644 e29d85d93eb4b7d34fa20a743aeb3a701badbaa9 2\tpackages/cli/src/dispatcher.ts",
+        "100644 963f449ea847fe9f1e0ea33dd02a9464739bd95d 3\tpackages/cli/src/dispatcher.ts"
+      ],
+      "selectedSha256": "346392ab563ea6a795c8b7bd28eabfb78fe20b97040ff42c621f0e24d19cdcc5",
+      "mode": "100644",
+      "selectedGitBlob": "40652c6ac800fe9bd3ba73bb8f64346e96a768a7"
+    },
+    {
+      "path": "packages/cli/src/envelope.ts",
+      "stages": [
+        "100644 f6277da4a5662ab669f1a7888117335f48876668 2\tpackages/cli/src/envelope.ts",
+        "100644 66a1bff3b0e100bcc8ccb99bdd00da981cb1ee79 3\tpackages/cli/src/envelope.ts"
+      ],
+      "selectedSha256": "64f590ccfc461e1135ff66aea028816d04f2fc8b55fd0253912cfb21ee85eff6",
+      "mode": "100644",
+      "selectedGitBlob": "f6277da4a5662ab669f1a7888117335f48876668"
+    },
+    {
+      "path": "packages/cli/src/exit-codes.ts",
+      "stages": [
+        "100644 8b1b38106ea2178301ea5ca5e0a65fc64ec33a3b 2\tpackages/cli/src/exit-codes.ts",
+        "100644 3b985313a743150db9b34d8142d67c91d6f69224 3\tpackages/cli/src/exit-codes.ts"
+      ],
+      "selectedSha256": "558152357619593dc084d1fa5575c1853a37fa95a6f092099f77f0d858dace39",
+      "mode": "100644",
+      "selectedGitBlob": "2707b109a4f6d507993c5148ace1cb948f4cceb1"
+    },
+    {
+      "path": "packages/cli/src/held-keys/gate.ts",
+      "stages": [
+        "100644 c82a97078449ab1b181d70d49acf896195a19cdf 2\tpackages/cli/src/held-keys/gate.ts",
+        "100644 d45e0ec41491dc628b823d8d7ad68e6306085e1d 3\tpackages/cli/src/held-keys/gate.ts"
+      ],
+      "selectedSha256": "4b77ec42d0ccc06745195e812d08afcb95ee91f46e1bedf1da70cb68723dbf9f",
+      "mode": "100644",
+      "selectedGitBlob": "c89b97d49c8c00ee35d6e0d83f8ac117ab5b53d3"
+    },
+    {
+      "path": "packages/cli/src/held-keys/registry.ts",
+      "stages": [
+        "100644 b9403ab66b2d1c45f2984642c4011a886c338685 2\tpackages/cli/src/held-keys/registry.ts",
+        "100644 ba8703224f0574e14f6a825a7470ebc65e6fb3e2 3\tpackages/cli/src/held-keys/registry.ts"
+      ],
+      "selectedSha256": "ac349b5e4ebbfb11be473cfd2823abd5134035c2740b8b1500c4ba96fee5e123",
+      "mode": "100644",
+      "selectedGitBlob": "b9403ab66b2d1c45f2984642c4011a886c338685"
+    },
+    {
+      "path": "packages/cli/src/held-keys/shipped.ts",
+      "stages": [
+        "100644 5843cd4d77bcaf894aa35474396f28fe3829f4ca 2\tpackages/cli/src/held-keys/shipped.ts",
+        "100644 c1cb0933a4fafd7e0d5cafab2cca7f43649f43b0 3\tpackages/cli/src/held-keys/shipped.ts"
+      ],
+      "selectedSha256": "881d69ff5aad90db0b10990b5ed80817ecd7d233aca0156d21b45f7e417e5c99",
+      "mode": "100644",
+      "selectedGitBlob": "77830f98ce629bdb7a3deb5746cfbc210d821ab9"
+    },
+    {
+      "path": "packages/cli/src/index.ts",
+      "stages": [
+        "100644 d7642c4a88b6501bd630602a0808da533da42149 1\tpackages/cli/src/index.ts",
+        "100644 d53365f59b9edd4749cbac3dc87dfea256d50134 2\tpackages/cli/src/index.ts",
+        "100644 607c56f6286e1429f0de28c029d1495c17cfda0f 3\tpackages/cli/src/index.ts"
+      ],
+      "selectedSha256": "f728b4147a38014b7092e31a7a232c022693f44bcbc9c68daa8618edaea178ff",
+      "mode": "100644",
+      "selectedGitBlob": "d53365f59b9edd4749cbac3dc87dfea256d50134"
+    },
+    {
+      "path": "packages/cli/src/project-verbs.ts",
+      "stages": [
+        "100644 f0f7529e61c7845756dab92b2a2dfbe82a15ac37 2\tpackages/cli/src/project-verbs.ts",
+        "100644 1f6a162aa6283c0df442fcbcb377886c26e65713 3\tpackages/cli/src/project-verbs.ts"
+      ],
+      "selectedSha256": "f1097213d37853026a1160c1aed5967a312f02d5bb03206f8f1813d88b0c1c82",
+      "mode": "100644",
+      "selectedGitBlob": "f0f7529e61c7845756dab92b2a2dfbe82a15ac37"
+    },
+    {
+      "path": "packages/cli/src/run.ts",
+      "stages": [
+        "100644 e10b90e835796ac863db705d5675fda7dcc125e6 2\tpackages/cli/src/run.ts",
+        "100644 44ec617ad0147802d967de956d6fd1c829a30337 3\tpackages/cli/src/run.ts"
+      ],
+      "selectedSha256": "a79cdfbf9b951915b8c273c78f1e8f59da87de1f5d72042937efa42bf679b0de",
+      "mode": "100644",
+      "selectedGitBlob": "29f5d1058ccb43fd427607a36dd2d507132a224a"
+    },
+    {
+      "path": "packages/cli/src/verb-args.ts",
+      "stages": [
+        "100644 63db31873476005a6112ee1225e6c44d3d67bf77 2\tpackages/cli/src/verb-args.ts",
+        "100644 22ca7968f080d92cb24b0c406da0119ccbf9be53 3\tpackages/cli/src/verb-args.ts"
+      ],
+      "selectedSha256": "85771f95fecbc2470a7418d22ebfd364764fb1b93e73b11f00ae1ab71009ce7f",
+      "mode": "100644",
+      "selectedGitBlob": "63db31873476005a6112ee1225e6c44d3d67bf77"
+    },
+    {
+      "path": "packages/cli/test/exit-codes.golden.test.ts",
+      "stages": [
+        "100644 af593c47c631f030ffd5a6ecd68a072fc2ff84a2 2\tpackages/cli/test/exit-codes.golden.test.ts",
+        "100644 faa2daf75e70e35737f6e81acbec51fa0d87104f 3\tpackages/cli/test/exit-codes.golden.test.ts"
+      ],
+      "selectedSha256": "565574d795f60fff160eaeabf5c5923720ff7722ef11689c24560ae1886774e9",
+      "mode": "100644",
+      "selectedGitBlob": "af593c47c631f030ffd5a6ecd68a072fc2ff84a2"
+    },
+    {
+      "path": "packages/cli/test/held-keys.command-map.test.ts",
+      "stages": [
+        "100644 49fe186dc452c6250c11e41f84407fc59e9930f6 2\tpackages/cli/test/held-keys.command-map.test.ts",
+        "100644 3e8de82d38dba4591c27581432bf2cf0fa4aa133 3\tpackages/cli/test/held-keys.command-map.test.ts"
+      ],
+      "selectedSha256": "7c698cac82bc4d10eceab7f0853622fb76ddeacbf4fbc3531dc39d6d54a9b326",
+      "mode": "100644",
+      "selectedGitBlob": "49fe186dc452c6250c11e41f84407fc59e9930f6"
+    },
+    {
+      "path": "packages/cli/test/held-keys.generator.test.ts",
+      "stages": [
+        "100644 61f1b66d8fefa205b4a438dacf86bc017e90cfe9 2\tpackages/cli/test/held-keys.generator.test.ts",
+        "100644 19bdd68ab71636286f94843a9f0172ccf59bcb7a 3\tpackages/cli/test/held-keys.generator.test.ts"
+      ],
+      "selectedSha256": "1037de1a3e5e54a51ccf985a7d0650ffacf7a5a441302413bb18beb6b6a95f47",
+      "mode": "100644",
+      "selectedGitBlob": "61f1b66d8fefa205b4a438dacf86bc017e90cfe9"
+    },
+    {
+      "path": "packages/cli/test/held-keys.refusal-table.test.ts",
+      "stages": [
+        "100644 b1d85cd0421f7c37f569a91bee4f2b0f4ff2db78 2\tpackages/cli/test/held-keys.refusal-table.test.ts",
+        "100644 be0b37928555572a72ef542fc6b740ee27fd67df 3\tpackages/cli/test/held-keys.refusal-table.test.ts"
+      ],
+      "selectedSha256": "e763508f82b45edb307c8d6192dc6aa250f66b5b506e7d19251a9a5f73378aa2",
+      "mode": "100644",
+      "selectedGitBlob": "6822bde742727081efe7101c46a8022748d1bf1f"
+    },
+    {
+      "path": "packages/cli/test/json-equivalence.test.ts",
+      "stages": [
+        "100644 c39d674dde83582dcafeec3aa290a0bfe2d7211a 2\tpackages/cli/test/json-equivalence.test.ts",
+        "100644 61717dfb3eda3ac28a3ca0b6e3b77e0aa9b04635 3\tpackages/cli/test/json-equivalence.test.ts"
+      ],
+      "selectedSha256": "2746fa6988e1d5b531d2bf3a9d134853ea78309b2de9e0fbd19bbeb82d00e580",
+      "mode": "100644",
+      "selectedGitBlob": "c39d674dde83582dcafeec3aa290a0bfe2d7211a"
+    },
+    {
+      "path": "packages/cli/test/project-propose-apply.test.ts",
+      "stages": [
+        "100644 23f0972cde8b26e004205daec7c06f40e039a031 2\tpackages/cli/test/project-propose-apply.test.ts",
+        "100644 9550bb47d234a740b9ba0860d67507e6423efaa2 3\tpackages/cli/test/project-propose-apply.test.ts"
+      ],
+      "selectedSha256": "fe36e2154a4ac2b55cb918b4084f3bd692be0739b0bf731600ede9e4f4c9428f",
+      "mode": "100644",
+      "selectedGitBlob": "23f0972cde8b26e004205daec7c06f40e039a031"
+    },
+    {
+      "path": "packages/cli/test/refusal.test.ts",
+      "stages": [
+        "100644 db916beb57767933582060f2b5e2d77e7c9af169 2\tpackages/cli/test/refusal.test.ts",
+        "100644 6c4516ba01e57aa3119ab7cfd3f99b6b7f45a65b 3\tpackages/cli/test/refusal.test.ts"
+      ],
+      "selectedSha256": "1f775ee5bb7f9c440fdcf5eeb46caee4ca4e08f2c49bc4f879cef0fb488d1080",
+      "mode": "100644",
+      "selectedGitBlob": "2c59dadf24940aa80fd060f2392f24af984534d2"
+    },
+    {
+      "path": "packages/cli/tsconfig.json",
+      "stages": [
+        "100644 1df1a5c35b7acff27b6c77382a23d8787534d98e 2\tpackages/cli/tsconfig.json",
+        "100644 eea7de6fe2048307927aa6bf13fd4ee35a959100 3\tpackages/cli/tsconfig.json"
+      ],
+      "selectedSha256": "930f0ce7355add1b93a7470f61eee0a8c3cfe83d8d0313b952d2292e287d8058",
+      "mode": "100644",
+      "selectedGitBlob": "1df1a5c35b7acff27b6c77382a23d8787534d98e"
+    },
+    {
+      "path": "packages/engine-kernel/README.md",
+      "stages": [
+        "100644 74770cd023434495ed0dd9220276111d58a62f74 1\tpackages/engine-kernel/README.md",
+        "100644 3536232b72d837508d09053b704cdf2c0385da9c 2\tpackages/engine-kernel/README.md",
+        "100644 00411421ea863b5c234dde1bb6f6f93959c6b01d 3\tpackages/engine-kernel/README.md"
+      ],
+      "selectedSha256": "050e2e215d9670bb34145013ea65c396fef329ed58c74757bb9f365c31574fd4",
+      "mode": "100644",
+      "selectedGitBlob": "aa0fc9cf7fa9e74269cdf67ca451ec7ed6408562"
+    },
+    {
+      "path": "packages/engine-kernel/src/index.ts",
+      "stages": [
+        "100644 4ff2872bd34c424d31f7f609343d8829d2910dd8 1\tpackages/engine-kernel/src/index.ts",
+        "100644 2d79ab4247070545a8f820927cf046dff252cf80 2\tpackages/engine-kernel/src/index.ts",
+        "100644 ea57257c51296d6a8bf4baaef756761604dfc142 3\tpackages/engine-kernel/src/index.ts"
+      ],
+      "selectedSha256": "ec7527967a7eb9b8499ef8f3e4d73802b2ac75d8aa20ecea5452af8f42c7bcfe",
+      "mode": "100644",
+      "selectedGitBlob": "965b6e671e37caae67dcfab1069c7a865cbc2d5a"
+    },
+    {
+      "path": "packages/engine-kernel/src/session.ts",
+      "stages": [
+        "100644 a1315bcc846c24af23e6ca2728eb80693e1fe1b5 2\tpackages/engine-kernel/src/session.ts",
+        "100644 8449b4c7ebc36a8bc85f6804fa2211f749dbd931 3\tpackages/engine-kernel/src/session.ts"
+      ],
+      "selectedSha256": "d219019e2d6e487743b30e44d035b0e2f6f5e5118b1581b126790af83a9026af",
+      "mode": "100644",
+      "selectedGitBlob": "2180ef2cbf30be7bd6f4c0c7319eada4597380a5"
+    },
+    {
+      "path": "packages/engine-kernel/test/seam.test.ts",
+      "stages": [
+        "100644 8e0aeebe0c74334e9bc500c59add53700c995090 2\tpackages/engine-kernel/test/seam.test.ts",
+        "100644 361abbbee4e9520666ad9ab5a8755dd835d1d683 3\tpackages/engine-kernel/test/seam.test.ts"
+      ],
+      "selectedSha256": "005ffdd047407383945cc4f309e9d61f70c9176a17134617a8c7f4977d72907a",
+      "mode": "100644",
+      "selectedGitBlob": "8e0aeebe0c74334e9bc500c59add53700c995090"
+    },
+    {
+      "path": "packages/engine-kernel/test/session.test.ts",
+      "stages": [
+        "100644 5006c131b6c7f166b66035f103a832c28a2720bb 2\tpackages/engine-kernel/test/session.test.ts",
+        "100644 f96dac9253ff29884e00a6667b4da6ee7df04729 3\tpackages/engine-kernel/test/session.test.ts"
+      ],
+      "selectedSha256": "4d582a4695aaa856b97d93d31fc00694c99ae2775bceb321de59648bc4bacddb",
+      "mode": "100644",
+      "selectedGitBlob": "5006c131b6c7f166b66035f103a832c28a2720bb"
+    },
+    {
+      "path": "packages/engine-orchestrator/src/index.ts",
+      "stages": [
+        "100644 3eba276ebb360e669e6acc7d514859b7d1ec0c54 1\tpackages/engine-orchestrator/src/index.ts",
+        "100644 8c17bb12bf7c08692e5f941ef058ea941494caa7 2\tpackages/engine-orchestrator/src/index.ts",
+        "100644 78b35b67c318227d9c05df8730dd2ce693f24b0f 3\tpackages/engine-orchestrator/src/index.ts"
+      ],
+      "selectedSha256": "44e2e3dca469bc551d3a9ef3eeca305e6c337e425a140e15e384339de722f08a",
+      "mode": "100644",
+      "selectedGitBlob": "aabd59c8969aa72e60c626425b262964feaf3364"
+    },
+    {
+      "path": "packages/engine-orchestrator/tsconfig.json",
+      "stages": [
+        "100644 4a07fa62049f16fede7ee4ef6aaf1fe9ab2fb44f 2\tpackages/engine-orchestrator/tsconfig.json",
+        "100644 b9cbe260d42737a408c1faa90e826760bf2c74e4 3\tpackages/engine-orchestrator/tsconfig.json"
+      ],
+      "selectedSha256": "1cc70f590444269567e315124f7c9cb583143c3b30f4f58ce2b3c6ebcd66d534",
+      "mode": "100644",
+      "selectedGitBlob": "4a07fa62049f16fede7ee4ef6aaf1fe9ab2fb44f"
+    },
+    {
+      "path": "packages/engine-presentation/src/index.ts",
+      "stages": [
+        "100644 9aeafcbc3c6a5000dcbc83f9e73514a7f702dc28 1\tpackages/engine-presentation/src/index.ts",
+        "100644 ef10ad62cf2f5893dbac01119e663c14091505c8 2\tpackages/engine-presentation/src/index.ts",
+        "100644 c555042f17bd70bb866695e4fbd71eb80a889631 3\tpackages/engine-presentation/src/index.ts"
+      ],
+      "selectedSha256": "86e74386e4aea2dd9e8836e0124b6ae3ececead29d7a5c43d15af09f19c4a1c6",
+      "mode": "100644",
+      "selectedGitBlob": "3c77aa4ef3082647a782c008e5813388e3f610bc"
+    },
+    {
+      "path": "packages/engine-presentation/test/seam.test.ts",
+      "stages": [
+        "100644 47407478e1de656291ffd21084a22e08bfa46ff0 2\tpackages/engine-presentation/test/seam.test.ts",
+        "100644 ac45a011766dd2c645940e8bd13364686d978d27 3\tpackages/engine-presentation/test/seam.test.ts"
+      ],
+      "selectedSha256": "ed6a7caff1a9077f0804f0ba594e187bf988cfb93220b75a4be1eaec6d04117d",
+      "mode": "100644",
+      "selectedGitBlob": "47407478e1de656291ffd21084a22e08bfa46ff0"
+    },
+    {
+      "path": "packages/engine-presentation/tsconfig.json",
+      "stages": [
+        "100644 89a9e8d9d7f5dd60b1d1f344623824419e8c560a 2\tpackages/engine-presentation/tsconfig.json",
+        "100644 b9cbe260d42737a408c1faa90e826760bf2c74e4 3\tpackages/engine-presentation/tsconfig.json"
+      ],
+      "selectedSha256": "b969b313be6be28f89bd507b548968c52b85f79e0cd55ef2572f0181b7291ce4",
+      "mode": "100644",
+      "selectedGitBlob": "89a9e8d9d7f5dd60b1d1f344623824419e8c560a"
+    },
+    {
+      "path": "packages/importers/src/index.ts",
+      "stages": [
+        "100644 366ecb966e6cee4d88f0fe524fe55527af9500bd 1\tpackages/importers/src/index.ts",
+        "100644 5d87e3a6765273aea42be733b2ec5b87dd74b938 2\tpackages/importers/src/index.ts",
+        "100644 18906712d43a930d0f0ab6ebe4b5a02efd511a7c 3\tpackages/importers/src/index.ts"
+      ],
+      "selectedSha256": "c51c0fe6b0d6155bd38f51040a377b87a2b8bf18f73b9b8334caa82a841ee827",
+      "mode": "100644",
+      "selectedGitBlob": "f316099f9cf17323af49d5fbfb5f60b19b746e43"
+    },
+    {
+      "path": "packages/importers/test/seam.test.ts",
+      "stages": [
+        "100644 66330d7176207895ef9e17b830a6096eff32e00f 2\tpackages/importers/test/seam.test.ts",
+        "100644 9208925a057b1b3e42e96ab5e716742d3b738f12 3\tpackages/importers/test/seam.test.ts"
+      ],
+      "selectedSha256": "ffe616f343c806723b8ef4c69c2c4d8e1790cd60bf97aa5cb929fcd5531d5a8d",
+      "mode": "100644",
+      "selectedGitBlob": "66330d7176207895ef9e17b830a6096eff32e00f"
+    },
+    {
+      "path": "packages/importers/tsconfig.json",
+      "stages": [
+        "100644 d8a6a7ef3ed19fb135e2ccd46d053613fc878215 2\tpackages/importers/tsconfig.json",
+        "100644 b9cbe260d42737a408c1faa90e826760bf2c74e4 3\tpackages/importers/tsconfig.json"
+      ],
+      "selectedSha256": "bf707b5d7b78d1458d13e3fb86dc59b8b91179c03ff8b33f758993868de3c8e4",
+      "mode": "100644",
+      "selectedGitBlob": "d8a6a7ef3ed19fb135e2ccd46d053613fc878215"
+    },
+    {
+      "path": "packages/profile-game/README.md",
+      "stages": [
+        "100644 3ee11287e8a276de69d739ec55fa57021c6138ba 1\tpackages/profile-game/README.md",
+        "100644 72ef66e85a74078c0f70ea217415233566850b0b 2\tpackages/profile-game/README.md",
+        "100644 81949c41e11ff35c31ca0f605b1f27e6b19953f8 3\tpackages/profile-game/README.md"
+      ],
+      "selectedSha256": "4bea031d3ecf7ce6bc7ac7e0a011edb9ace45750da7c2c9d6ef98a5fc1a59db5",
+      "mode": "100644",
+      "selectedGitBlob": "72ef66e85a74078c0f70ea217415233566850b0b"
+    },
+    {
+      "path": "packages/profile-game/src/index.ts",
+      "stages": [
+        "100644 aa459d42d692d742d87e9dad417c15c89fd2f3e3 1\tpackages/profile-game/src/index.ts",
+        "100644 767494fb3eca0023b925bb5d41fc01258be35b7c 2\tpackages/profile-game/src/index.ts",
+        "100644 0a514fdaef4dbb41324436844712a29992401dcf 3\tpackages/profile-game/src/index.ts"
+      ],
+      "selectedSha256": "4ebf5c198d79382a207e83ff7a16c3609b361d42157163bb89366a1a739e0a28",
+      "mode": "100644",
+      "selectedGitBlob": "767494fb3eca0023b925bb5d41fc01258be35b7c"
+    },
+    {
+      "path": "packages/profile-game/test/conformance.test.ts",
+      "stages": [
+        "100644 bb907ecc68e8c8ec7d406b5bbde77cb626db5e9d 2\tpackages/profile-game/test/conformance.test.ts",
+        "100644 9d7dbf51ad8e7ddf75baa3f3f55a207f3b5cc626 3\tpackages/profile-game/test/conformance.test.ts"
+      ],
+      "selectedSha256": "7499bb2ddbaf0463ad6a69c9a1b5d08bd2d01c859d6f2aacbd4ae58a6b6dd763",
+      "mode": "100644",
+      "selectedGitBlob": "bb907ecc68e8c8ec7d406b5bbde77cb626db5e9d"
+    },
+    {
+      "path": "packages/profile-game/tsconfig.json",
+      "stages": [
+        "100644 84860c29120901d5ec06db297bfdfa92c5463938 2\tpackages/profile-game/tsconfig.json",
+        "100644 4483865745cc72d8386f57d85f8d509fb06c00b9 3\tpackages/profile-game/tsconfig.json"
+      ],
+      "selectedSha256": "c68be0d047437bcf8bd44e20efd1046898e298e8f69ee9687a1349e7daa5e4b1",
+      "mode": "100644",
+      "selectedGitBlob": "84860c29120901d5ec06db297bfdfa92c5463938"
+    },
+    {
+      "path": "packages/profile-kids/src/index.ts",
+      "stages": [
+        "100644 cdc803b1805e8eb34a611e85563cce02887ddb3e 1\tpackages/profile-kids/src/index.ts",
+        "100644 498731d2fce0c761dc7e2ef7b1fcc35230809cba 2\tpackages/profile-kids/src/index.ts",
+        "100644 b5008d5c05a5ec0b361584a944491156fcbe4b48 3\tpackages/profile-kids/src/index.ts"
+      ],
+      "selectedSha256": "09cb726d66b248ee07ffc2262402ce8197d1da97da25c4525eb7362de5524746",
+      "mode": "100644",
+      "selectedGitBlob": "498731d2fce0c761dc7e2ef7b1fcc35230809cba"
+    },
+    {
+      "path": "packages/profile-web/src/index.ts",
+      "stages": [
+        "100644 719a3ae4a63a4b538bd6f4d724c65d01728a8238 1\tpackages/profile-web/src/index.ts",
+        "100644 79630d66c005d8492967e44bc33959f77ba4d8e3 2\tpackages/profile-web/src/index.ts",
+        "100644 538a11ba33505688568e413dc36f1f4f9d908f12 3\tpackages/profile-web/src/index.ts"
+      ],
+      "selectedSha256": "33655fcf57f5789b5178118945ca54fe8d05fa8263ef0e874059a89513aeeb27",
+      "mode": "100644",
+      "selectedGitBlob": "79630d66c005d8492967e44bc33959f77ba4d8e3"
+    },
+    {
+      "path": "packages/profile-web/tsconfig.json",
+      "stages": [
+        "100644 54c323fd7bfbca3fdc933754054d64f8b2315b62 2\tpackages/profile-web/tsconfig.json",
+        "100644 b9cbe260d42737a408c1faa90e826760bf2c74e4 3\tpackages/profile-web/tsconfig.json"
+      ],
+      "selectedSha256": "45d3ac19a0af80e067fd262e00a6c926e20e3123845715c1937fb442721f9a78",
+      "mode": "100644",
+      "selectedGitBlob": "54c323fd7bfbca3fdc933754054d64f8b2315b62"
+    },
+    {
+      "path": "packages/schemas/README.md",
+      "stages": [
+        "100644 ab4f5e410f442b7a3149387c192e78e30c9e5b66 1\tpackages/schemas/README.md",
+        "100644 e84aa7fcafaf15eaf2182966aff15d19bb287c6d 2\tpackages/schemas/README.md",
+        "100644 b709791b0b67514031cfb85046be511ac165727f 3\tpackages/schemas/README.md"
+      ],
+      "selectedSha256": "0a630c584c5eed6b98a5ece3372a004eb3d3b365265a0e25a0395c1e2ab80e0e",
+      "mode": "100644",
+      "selectedGitBlob": "e84aa7fcafaf15eaf2182966aff15d19bb287c6d"
+    },
+    {
+      "path": "packages/schemas/contracts/catalog-item.schema.json",
+      "stages": [
+        "100644 e776ac392ea2ff80f553709c4e411c04223acd52 2\tpackages/schemas/contracts/catalog-item.schema.json",
+        "100644 1eaa4926bc86b9f1129b502ca4174437aea8a1d8 3\tpackages/schemas/contracts/catalog-item.schema.json"
+      ],
+      "selectedSha256": "11e99f2edd19fd95f62a62d29710e637825ab89f162d30fd1c5bb1c693d39d2e",
+      "mode": "100644",
+      "selectedGitBlob": "e776ac392ea2ff80f553709c4e411c04223acd52"
+    },
+    {
+      "path": "packages/schemas/contracts/cli-protocol-envelope.schema.json",
+      "stages": [
+        "100644 c49f1f58d02c8a9c33f79d975924b8ad7c85e968 2\tpackages/schemas/contracts/cli-protocol-envelope.schema.json",
+        "100644 ccf36d322096dba025a6d5ca67c88b8aa33ac13c 3\tpackages/schemas/contracts/cli-protocol-envelope.schema.json"
+      ],
+      "selectedSha256": "5db5f27421627f10a4ab4d8138f8dfc49bc3bd215f9f9dad1fcb3939b3e6a0a9",
+      "mode": "100644",
+      "selectedGitBlob": "c49f1f58d02c8a9c33f79d975924b8ad7c85e968"
+    },
+    {
+      "path": "packages/schemas/contracts/kernel-session.schema.json",
+      "stages": [
+        "100644 2a8ce9646e2dce9e0bed38c9065f056140db6bbf 2\tpackages/schemas/contracts/kernel-session.schema.json",
+        "100644 06f4a19f6f27d72e64c4705e30501ecd034aff52 3\tpackages/schemas/contracts/kernel-session.schema.json"
+      ],
+      "selectedSha256": "07f59bd1dd4602dfdcca55b522bab69fc61c554ee3e729fff1174a46e41bb841",
+      "mode": "100644",
+      "selectedGitBlob": "7545c69795a29ae9c904200eda479b424395b522"
+    },
+    {
+      "path": "packages/schemas/contracts/profile-conformance.schema.json",
+      "stages": [
+        "100644 770154ed1509e9eec7303874f4e4c448e4d4c72b 2\tpackages/schemas/contracts/profile-conformance.schema.json",
+        "100644 fd84742ddb4afe7be586fc66f32f82f689444116 3\tpackages/schemas/contracts/profile-conformance.schema.json"
+      ],
+      "selectedSha256": "d6214a4510eea7812faa4fbc7e363f7c55afd68547930a982b276796993994b4",
+      "mode": "100644",
+      "selectedGitBlob": "770154ed1509e9eec7303874f4e4c448e4d4c72b"
+    },
+    {
+      "path": "packages/schemas/src/catalog.ts",
+      "stages": [
+        "100644 db472bf799aedc0e27b9f9c0661f693fef596040 2\tpackages/schemas/src/catalog.ts",
+        "100644 6ad68c4f4a38db54e18c45079818749735eb3977 3\tpackages/schemas/src/catalog.ts"
+      ],
+      "selectedSha256": "712100185fd7c88bafc2f93afec7a6fa16d06e4576ed6274e9e598a656954191",
+      "mode": "100644",
+      "selectedGitBlob": "db472bf799aedc0e27b9f9c0661f693fef596040"
+    },
+    {
+      "path": "packages/schemas/src/document.ts",
+      "stages": [
+        "100644 f0e953a78d151e1ca3e64e5abbcf46935f3fb611 2\tpackages/schemas/src/document.ts",
+        "100644 4e260822b402ba36d64b58e60c059010dd529a41 3\tpackages/schemas/src/document.ts"
+      ],
+      "selectedSha256": "3a50c64a37bd781a68ef9ecf119d4a87fcdc6dcd361c354bc586963eb08a3004",
+      "mode": "100644",
+      "selectedGitBlob": "6372e58e5764200858ad91fc5610114a926dcd76"
+    },
+    {
+      "path": "packages/schemas/src/index.ts",
+      "stages": [
+        "100644 21b0ff4303413b5141d7a8307a05ef2f776b2f19 1\tpackages/schemas/src/index.ts",
+        "100644 b3467cef92f626e377497fa8a3ab82b56bf5ff70 2\tpackages/schemas/src/index.ts",
+        "100644 a274dbfac35c09c3723f4b91e6d31a9c69b92c90 3\tpackages/schemas/src/index.ts"
+      ],
+      "selectedSha256": "4cc1763a04b6287f274691057e04ca7812538499cfdd5e7bd9e6b23be27dc250",
+      "mode": "100644",
+      "selectedGitBlob": "d5b63567c221151c7269c070491f3b32fa145203"
+    },
+    {
+      "path": "packages/schemas/src/kernel-session.ts",
+      "stages": [
+        "100644 58060d9574f8251e02f39abd76d6e160b2589819 2\tpackages/schemas/src/kernel-session.ts",
+        "100644 c0b6fb462431c29a3cbde22a6b20c727d8a4463a 3\tpackages/schemas/src/kernel-session.ts"
+      ],
+      "selectedSha256": "bbc1526e5b4c9be8357a085448f7d0cbf1a0838f892808c85ece4089b43f85d9",
+      "mode": "100644",
+      "selectedGitBlob": "dfce9dd3156dddcca724797173ad1cc2756d8607"
+    },
+    {
+      "path": "packages/schemas/src/profile-conformance-suite.ts",
+      "stages": [
+        "100644 300fe1716a59b7f1d7f8d35a6abdf3626b1d45c7 2\tpackages/schemas/src/profile-conformance-suite.ts",
+        "100644 c3e3d972684374f3cab5e2e7b84f790da8a4bd18 3\tpackages/schemas/src/profile-conformance-suite.ts"
+      ],
+      "selectedSha256": "23e820572b81663fd5f815b27fc080d2bc922fd55326b548413ae8d3dc42c172",
+      "mode": "100644",
+      "selectedGitBlob": "300fe1716a59b7f1d7f8d35a6abdf3626b1d45c7"
+    },
+    {
+      "path": "packages/schemas/src/profile-conformance.ts",
+      "stages": [
+        "100644 ae505cfbe7b19dddf23db200c9bab4c587b2fb60 2\tpackages/schemas/src/profile-conformance.ts",
+        "100644 53630aed8de3819411a8e798929a7c9e4ec751e3 3\tpackages/schemas/src/profile-conformance.ts"
+      ],
+      "selectedSha256": "01cd902017d64bb68c43dba7aa8177cc2b365da42c03071923872abc2f2d37e6",
+      "mode": "100644",
+      "selectedGitBlob": "ae505cfbe7b19dddf23db200c9bab4c587b2fb60"
+    },
+    {
+      "path": "packages/schemas/src/proposal.ts",
+      "stages": [
+        "100644 516a43e7c2ab7649b050126b6023281ed0c9a9d3 2\tpackages/schemas/src/proposal.ts",
+        "100644 664c305294e50bf8100e76c2ac268331e5ae3615 3\tpackages/schemas/src/proposal.ts"
+      ],
+      "selectedSha256": "849d72ab519d6a8087f18b121a0e0b3ddef3cb385fb562650bff0a96073516ad",
+      "mode": "100644",
+      "selectedGitBlob": "516a43e7c2ab7649b050126b6023281ed0c9a9d3"
+    },
+    {
+      "path": "packages/schemas/test/catalog-pipeline.test.ts",
+      "stages": [
+        "100644 aa784b28f02850fe126a887d1d6cb921b69e831f 2\tpackages/schemas/test/catalog-pipeline.test.ts",
+        "100644 a42648ca072eafb32846476cfe9f30562eaf8052 3\tpackages/schemas/test/catalog-pipeline.test.ts"
+      ],
+      "selectedSha256": "a3be9b370efe593d45017bf1bcd30a8eeb3a61b9b6e20acea79097725591e247",
+      "mode": "100644",
+      "selectedGitBlob": "aa784b28f02850fe126a887d1d6cb921b69e831f"
+    },
+    {
+      "path": "packages/schemas/test/document-proposal.test.ts",
+      "stages": [
+        "100644 f5246599059ce30d5dd53bbbd22405fe029e49ee 2\tpackages/schemas/test/document-proposal.test.ts",
+        "100644 690b0d79a376b0ca0287ca0c83820e71bed35b1e 3\tpackages/schemas/test/document-proposal.test.ts"
+      ],
+      "selectedSha256": "8e1683fa54c8d010c712f82c6a83ee73448246383be37540a7c119a344cde9a1",
+      "mode": "100644",
+      "selectedGitBlob": "f5246599059ce30d5dd53bbbd22405fe029e49ee"
+    },
+    {
+      "path": "packages/schemas/test/seam.test.ts",
+      "stages": [
+        "100644 195e2d5272a6fe19d7f2023308919b7865fd76b2 2\tpackages/schemas/test/seam.test.ts",
+        "100644 5407b11885b85d745ad13616f5acf8d789d0e09c 3\tpackages/schemas/test/seam.test.ts"
+      ],
+      "selectedSha256": "5aa40c9fdab3fe17ca61a464d6a805e5a32e665f468f57e16283314f6300af4b",
+      "mode": "100644",
+      "selectedGitBlob": "195e2d5272a6fe19d7f2023308919b7865fd76b2"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "stages": [
+        "100644 c4b79352a106af4588a1afd1b37304a8ec83a085 1\tpnpm-lock.yaml",
+        "100644 4be08523a9c0e16945782b76d105a438cdf8d930 2\tpnpm-lock.yaml",
+        "100644 294fdc9849904318ce605916cff312987b2419eb 3\tpnpm-lock.yaml"
+      ],
+      "selectedSha256": "e7d1bd672b3241baf2825e11c5a815cc1393667dd29c5cbbb20098ba7f730f89",
+      "mode": "100644",
+      "selectedGitBlob": "c0ac98ffd0df3ee8445516e69cd43d5625fcaf0c"
+    },
+    {
+      "path": "scripts/check-contracts.mjs",
+      "stages": [
+        "100644 4ae1f9042a53236156121f9f13a0f36740781e56 2\tscripts/check-contracts.mjs",
+        "100644 4d12387ab6c4e04cd171926c043e1acb6e61bb67 3\tscripts/check-contracts.mjs"
+      ],
+      "selectedSha256": "c019a524a0e92a62df9bdd123e214c69da8a7ab1b39f3ac70026a3bbac7b6943",
+      "mode": "100644",
+      "selectedGitBlob": "4ae1f9042a53236156121f9f13a0f36740781e56"
+    },
+    {
+      "path": "scripts/check-contracts.test.mjs",
+      "stages": [
+        "100644 1d3ce7d1263c0aabbb9ee80384968daecae943e9 2\tscripts/check-contracts.test.mjs",
+        "100644 8a75a9080328dcbf0982b0d00e309eee2414e52e 3\tscripts/check-contracts.test.mjs"
+      ],
+      "selectedSha256": "d34e1512be895254444d4705e58e0de05c907e7a972c53d7cd72177506cfe1d3",
+      "mode": "100644",
+      "selectedGitBlob": "1d3ce7d1263c0aabbb9ee80384968daecae943e9"
+    },
+    {
+      "path": "tests/boundary/injected-violations.test.ts",
+      "stages": [
+        "100644 3dc13cd69e53b28e166c18eb2f48f5ffecf44334 2\ttests/boundary/injected-violations.test.ts",
+        "100644 032e1f4fde56b4f556d66e2b12fec8565f803c7d 3\ttests/boundary/injected-violations.test.ts"
+      ],
+      "selectedSha256": "dee866c20d1e1b3b15bb9b6f9a258fe37c7788ff4c0ea051b24dbd2766b1814e",
+      "mode": "100644",
+      "selectedGitBlob": "3dc13cd69e53b28e166c18eb2f48f5ffecf44334"
+    },
+    {
+      "path": "tests/helpers/fixture.ts",
+      "stages": [
+        "100644 282656ebafb592bc1bb9183a6d84866a98652f87 2\ttests/helpers/fixture.ts",
+        "100644 1efbea62a3a0df42e556711efdb8c879b9eaceb8 3\ttests/helpers/fixture.ts"
+      ],
+      "selectedSha256": "3b4d953560a4b56e9440fc1e6d43a95ee2ed31093bb4c4d713fec55127b17710",
+      "mode": "100644",
+      "selectedGitBlob": "282656ebafb592bc1bb9183a6d84866a98652f87"
+    },
+    {
+      "path": "tests/parity/shell-cli-parity.test.ts",
+      "stages": [
+        "100644 6eccfeff074baff4abc1d5417758332593d6533a 2\ttests/parity/shell-cli-parity.test.ts",
+        "100644 be8e59d4ab1ff5bb1e6c2f80128aab73dc42f9ac 3\ttests/parity/shell-cli-parity.test.ts"
+      ],
+      "selectedSha256": "cb8d8d75e882a3ebf17675b7a37168e40070083b3255abcc70a62dc677923127",
+      "mode": "100644",
+      "selectedGitBlob": "6eccfeff074baff4abc1d5417758332593d6533a"
+    },
+    {
+      "path": "tests/syntax/check-syntax.test.ts",
+      "stages": [
+        "100644 cb87e8390ebeeb5be83e5b5002990a30e254c4b9 2\ttests/syntax/check-syntax.test.ts",
+        "100644 6f71e59b65e9e7459ab15c7f8d09d7aac9234798 3\ttests/syntax/check-syntax.test.ts"
+      ],
+      "selectedSha256": "8a88b3efc6e2ba8eb6d8dba6ac24b4bb1fcf5955c6a911f09113fea47ccc8f8c",
+      "mode": "100644",
+      "selectedGitBlob": "cb87e8390ebeeb5be83e5b5002990a30e254c4b9"
+    },
+    {
+      "path": "tsconfig.json",
+      "stages": [
+        "100644 a59235ce851d57a88fe94f2713e03ed9bc953452 2\ttsconfig.json",
+        "100644 e0ac71c49fe20d8a6209389f03a40bacc48a800f 3\ttsconfig.json"
+      ],
+      "selectedSha256": "48b2207188fb7fdb7e32b1e180bf5cbbcd82fc4fdb0994ff2de0416106a9f2ef",
+      "mode": "100644",
+      "selectedGitBlob": "a59235ce851d57a88fe94f2713e03ed9bc953452"
+    },
+    {
+      "path": "tsconfig.tests.json",
+      "stages": [
+        "100644 dd1c1d8b1405849cc61556a8ff31d04d9a519ee0 2\ttsconfig.tests.json",
+        "100644 38a175e6441111b002ce97157609a580ba8efebe 3\ttsconfig.tests.json"
+      ],
+      "selectedSha256": "fd0129d9c1e06e33e11f4c14372fbd5b0eff9fd2f9b5e26c136c244c96f7894c",
+      "mode": "100644",
+      "selectedGitBlob": "8a32fe882f541becf48434df0b3e89f72b9f80bb"
+    },
+    {
+      "path": "vitest.config.ts",
+      "stages": [
+        "100644 1a9743dbdefd4f43c67c26fa61adca73c07d7593 2\tvitest.config.ts",
+        "100644 4b116d6cef9db2b26250f29add79b589fcec2ac3 3\tvitest.config.ts"
+      ],
+      "selectedSha256": "b482020c39576b8116b5dfd0fce2332cdaeb9e6c7463626d5d097ea8efff415d",
+      "mode": "100644",
+      "selectedGitBlob": "223e146c34365b3e6f731c7c67be5c01e7ce55e3"
+    }
+  ]
+}

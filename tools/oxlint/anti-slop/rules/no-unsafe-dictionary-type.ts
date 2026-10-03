@@ -8,7 +8,7 @@ import {
 } from "../shared/dictionary-types.ts";
 import { visibleTypeAlias } from "../shared/type-alias-resolution.ts";
 
-import type { ESTree } from "@oxlint/plugins";
+import type { ESTree, SourceCode } from "@oxlint/plugins";
 
 const typeNodeKinds: ReadonlySet<string> = new Set([
 	"JSDocNonNullableType",
@@ -88,6 +88,25 @@ function isInsideTypeParameterConstraint(node: ESTree.TSType): boolean {
 	return false;
 }
 
+/**
+ * An exported type alias explicitly tagged @rawTransportContract is a frozen public
+ * transport boundary: its dictionary shape is the contract, so the declaration is
+ * exempt. Untagged or non-exported declarations stay under the strict rule.
+ */
+function isRawTransportContractAlias(node: ESTree.Node, source: SourceCode): boolean {
+  let current: ESTree.Node | null = node.parent;
+  while (current !== null && current.type !== "Program") {
+    if (current.type === "TSTypeAliasDeclaration") {
+      const exported = current.parent !== null && current.parent !== undefined && current.parent.type === "ExportNamedDeclaration";
+      const comments = [...source.getCommentsBefore(current), ...(current.parent ? source.getCommentsBefore(current.parent) : [])];
+      const text = comments.map((comment) => comment.value ?? "").join("\n");
+      return exported && text.includes("@rawTransportContract");
+    }
+    current = current.parent;
+  }
+  return false;
+}
+
 function shouldReportType(node: ESTree.TSType, environment: TypeEnvironment): boolean {
 	if (isInsideTypeParameterConstraint(node)) return false;
 	if (isPlainAliasConsumerUse(node, environment)) return false;
@@ -121,6 +140,7 @@ export const noUnsafeDictionaryTypeRule = defineRule({
 		};
 		const reportIfUnsafe = (node: ESTree.TSType) => {
 			if (environment === null || !shouldReportType(node, environment)) return;
+			if (isRawTransportContractAlias(node, context.sourceCode)) return;
 			const unsafe = classifyUnsafeDictionary(node, environment);
 			if (unsafe === null) return;
 			report(node, unsafe.unsafeValue);

@@ -1,0 +1,566 @@
+{
+  "phase": "before",
+  "assertions": 79,
+  "screenshots": [
+    {
+      "site": "catalog-game",
+      "surface": "home",
+      "viewport": "desktop",
+      "path": "sites/catalog-game/test/visual-evidence/before-home-desktop.png",
+      "bytes": 449905,
+      "sha256": "bc3fe25f8b87d7ad2fbe57e188ab3b3dbcae6c2acfdf8fb4599a26822e47df76",
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "headingCount": 1,
+        "headingSize": "42px",
+        "controls": [
+          {
+            "tag": "INPUT",
+            "height": 21,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(59, 59, 59)"
+          },
+          {
+            "tag": "SELECT",
+            "height": 19,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(107, 107, 107)"
+          },
+          {
+            "tag": "SELECT",
+            "height": 19,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(107, 107, 107)"
+          },
+          {
+            "tag": "BUTTON",
+            "height": 21,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(107, 107, 107)"
+          }
+        ]
+      }
+    },
+    {
+      "site": "catalog-game",
+      "surface": "detail",
+      "viewport": "desktop",
+      "path": "sites/catalog-game/test/visual-evidence/before-detail-desktop.png",
+      "bytes": 420481,
+      "sha256": "ca4ad4026f95206af263ad7b3c78eaebb39276fdd7b5873b821360049f46704b",
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "headingCount": 1,
+        "headingSize": "24px",
+        "controls": []
+      }
+    },
+    {
+      "site": "catalog-game",
+      "surface": "publish",
+      "viewport": "desktop",
+      "path": "sites/catalog-game/test/visual-evidence/before-publish-desktop.png",
+      "bytes": 282660,
+      "sha256": "4dbf206fd36b52163e94d502399a46ff27936a3aefd37e968b61acb31ce24b79",
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "headingCount": 1,
+        "headingSize": "42px",
+        "controls": []
+      }
+    },
+    {
+      "site": "catalog-game",
+      "surface": "empty",
+      "viewport": "desktop",
+      "path": "sites/catalog-game/test/visual-evidence/before-empty-desktop.png",
+      "bytes": 296300,
+      "sha256": "a22c1c98f1b20362fa58ebdfc1998b441ff5ff7efc9b707933cc28982654c412",
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "headingCount": 1,
+        "headingSize": "42px",
+        "controls": [
+          {
+            "tag": "INPUT",
+            "height": 21,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(59, 59, 59)"
+          },
+          {
+            "tag": "SELECT",
+            "height": 19,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(107, 107, 107)"
+          },
+          {
+            "tag": "SELECT",
+            "height": 19,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(107, 107, 107)"
+          },
+          {
+            "tag": "BUTTON",
+            "height": 21,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(107, 107, 107)"
+          }
+        ]
+      }
+    },
+    {
+      "site": "catalog-game",
+      "surface": "refused",
+      "viewport": "desktop",
+      "path": "sites/catalog-game/test/visual-evidence/before-refused-desktop.png",
+      "bytes": 78673,
+      "sha256": "eec25b6fdfdab6bc6980a1f83703d1e73be9a4fc296c160e4d2e6e31e5b9876f",
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "headingCount": 0,
+        "headingSize": "13px",
+        "controls": []
+      }
+    },
+    {
+      "site": "catalog-game",
+      "surface": "home",
+      "viewport": "mobile",
+      "path": "sites/catalog-game/test/visual-evidence/before-home-mobile.png",
+      "bytes": 468825,
+      "sha256": "479f734b9a483e78b464f99cbcd911e36403b746ba3ef152e85b52e0cfaf57da",
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "headingCount": 1,
+        "headingSize": "28px",
+        "controls": [
+          {
+            "tag": "INPUT",
+            "height": 21,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(59, 59, 59)"
+          },
+          {
+            "tag": "SELECT",
+            "height": 19,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(107, 107, 107)"
+          },
+          {
+            "tag": "SELECT",
+            "height": 19,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(107, 107, 107)"
+          },
+          {
+            "tag": "BUTTON",
+            "height": 21,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(107, 107, 107)"
+          }
+        ]
+      }
+    },
+    {
+      "site": "catalog-game",
+      "surface": "detail",
+      "viewport": "mobile",
+      "path": "sites/catalog-game/test/visual-evidence/before-detail-mobile.png",
+      "bytes": 327726,
+      "sha256": "b2bab49af219b27d4c4448db1aa031734cdd2164cc86ba0ca719ca6d3ebe381f",
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "headingCount": 1,
+        "headingSize": "20px",
+        "controls": []
+      }
+    },
+    {
+      "site": "catalog-game",
+      "surface": "publish",
+      "viewport": "mobile",
+      "path": "sites/catalog-game/test/visual-evidence/before-publish-mobile.png",
+      "bytes": 247485,
+      "sha256": "f2b92f2863e3b8982c4425014bf509d0eb5255b0aca528009b6101aa2abffc8e",
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "headingCount": 1,
+        "headingSize": "28px",
+        "controls": []
+      }
+    },
+    {
+      "site": "catalog-game",
+      "surface": "empty",
+      "viewport": "mobile",
+      "path": "sites/catalog-game/test/visual-evidence/before-empty-mobile.png",
+      "bytes": 202029,
+      "sha256": "d901d6e9053041d8394c706c3369f3b722e8843b467e24f8d68ea616bdb05312",
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "headingCount": 1,
+        "headingSize": "28px",
+        "controls": [
+          {
+            "tag": "INPUT",
+            "height": 21,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(59, 59, 59)"
+          },
+          {
+            "tag": "SELECT",
+            "height": 19,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(107, 107, 107)"
+          },
+          {
+            "tag": "SELECT",
+            "height": 19,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(107, 107, 107)"
+          },
+          {
+            "tag": "BUTTON",
+            "height": 21,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(107, 107, 107)"
+          }
+        ]
+      }
+    },
+    {
+      "site": "catalog-game",
+      "surface": "refused",
+      "viewport": "mobile",
+      "path": "sites/catalog-game/test/visual-evidence/before-refused-mobile.png",
+      "bytes": 67012,
+      "sha256": "fb70464cab183a521b9f5cc3eb2342f260ab8ab0e5e6deff6f7fb985dd1e1388",
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "headingCount": 0,
+        "headingSize": "13px",
+        "controls": []
+      }
+    },
+    {
+      "site": "catalog-web",
+      "surface": "home",
+      "viewport": "desktop",
+      "path": "sites/catalog-web/test/visual-evidence/before-home-desktop.png",
+      "bytes": 514790,
+      "sha256": "119f65c2a51fb4ffa9b021d07cc9d57cb299e5e9c5a82840b8b0d420703143b6",
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "headingCount": 1,
+        "headingSize": "42px",
+        "controls": [
+          {
+            "tag": "INPUT",
+            "height": 21,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(59, 59, 59)"
+          },
+          {
+            "tag": "SELECT",
+            "height": 19,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(107, 107, 107)"
+          },
+          {
+            "tag": "SELECT",
+            "height": 19,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(107, 107, 107)"
+          },
+          {
+            "tag": "BUTTON",
+            "height": 21,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(107, 107, 107)"
+          }
+        ]
+      }
+    },
+    {
+      "site": "catalog-web",
+      "surface": "detail",
+      "viewport": "desktop",
+      "path": "sites/catalog-web/test/visual-evidence/before-detail-desktop.png",
+      "bytes": 343304,
+      "sha256": "b97b4cb0dcc4ab3affe8b88e895bf26d978f886868640182b63db075bb4e9401",
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "headingCount": 1,
+        "headingSize": "24px",
+        "controls": []
+      }
+    },
+    {
+      "site": "catalog-web",
+      "surface": "publish",
+      "viewport": "desktop",
+      "path": "sites/catalog-web/test/visual-evidence/before-publish-desktop.png",
+      "bytes": 286987,
+      "sha256": "ca9b93ba2c6d8da0081617957940d67a0afecf531fe95a083c37941e9f2eae5b",
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "headingCount": 1,
+        "headingSize": "42px",
+        "controls": []
+      }
+    },
+    {
+      "site": "catalog-web",
+      "surface": "empty",
+      "viewport": "desktop",
+      "path": "sites/catalog-web/test/visual-evidence/before-empty-desktop.png",
+      "bytes": 333484,
+      "sha256": "7f2d9566240c023411afa905b866db8fdc8af212e29e2a22771802db7eec1f7a",
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "headingCount": 1,
+        "headingSize": "42px",
+        "controls": [
+          {
+            "tag": "INPUT",
+            "height": 21,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(59, 59, 59)"
+          },
+          {
+            "tag": "SELECT",
+            "height": 19,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(107, 107, 107)"
+          },
+          {
+            "tag": "SELECT",
+            "height": 19,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(107, 107, 107)"
+          },
+          {
+            "tag": "BUTTON",
+            "height": 21,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(107, 107, 107)"
+          }
+        ]
+      }
+    },
+    {
+      "site": "catalog-web",
+      "surface": "refused",
+      "viewport": "desktop",
+      "path": "sites/catalog-web/test/visual-evidence/before-refused-desktop.png",
+      "bytes": 79602,
+      "sha256": "80e9ae1489df1c1c39a66357292d9c9687a6f487aa2405e99cae47dcc4e64565",
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "headingCount": 0,
+        "headingSize": "13px",
+        "controls": []
+      }
+    },
+    {
+      "site": "catalog-web",
+      "surface": "home",
+      "viewport": "mobile",
+      "path": "sites/catalog-web/test/visual-evidence/before-home-mobile.png",
+      "bytes": 327095,
+      "sha256": "8effd73356e73d7593230c2622888122a48e194cc2f955e2aee7d167f1ef3dca",
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "headingCount": 1,
+        "headingSize": "28px",
+        "controls": [
+          {
+            "tag": "INPUT",
+            "height": 21,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(59, 59, 59)"
+          },
+          {
+            "tag": "SELECT",
+            "height": 19,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(107, 107, 107)"
+          },
+          {
+            "tag": "SELECT",
+            "height": 19,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(107, 107, 107)"
+          },
+          {
+            "tag": "BUTTON",
+            "height": 21,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(107, 107, 107)"
+          }
+        ]
+      }
+    },
+    {
+      "site": "catalog-web",
+      "surface": "detail",
+      "viewport": "mobile",
+      "path": "sites/catalog-web/test/visual-evidence/before-detail-mobile.png",
+      "bytes": 270685,
+      "sha256": "9501d947926ccc36e00e3dbaf1099ebaf91a1db013142f561a7e47629f956583",
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "headingCount": 1,
+        "headingSize": "20px",
+        "controls": []
+      }
+    },
+    {
+      "site": "catalog-web",
+      "surface": "publish",
+      "viewport": "mobile",
+      "path": "sites/catalog-web/test/visual-evidence/before-publish-mobile.png",
+      "bytes": 249638,
+      "sha256": "10989395d1a192620b80773385690f9ac3e4865d913890d6d90cbb99a41e1397",
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "headingCount": 1,
+        "headingSize": "28px",
+        "controls": []
+      }
+    },
+    {
+      "site": "catalog-web",
+      "surface": "empty",
+      "viewport": "mobile",
+      "path": "sites/catalog-web/test/visual-evidence/before-empty-mobile.png",
+      "bytes": 212204,
+      "sha256": "a87f0333f55926477f00ce9aa116a6869747a804b760b25a6b52d21bd562fdae",
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "headingCount": 1,
+        "headingSize": "28px",
+        "controls": [
+          {
+            "tag": "INPUT",
+            "height": 21,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(59, 59, 59)"
+          },
+          {
+            "tag": "SELECT",
+            "height": 19,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(107, 107, 107)"
+          },
+          {
+            "tag": "SELECT",
+            "height": 19,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(107, 107, 107)"
+          },
+          {
+            "tag": "BUTTON",
+            "height": 21,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(107, 107, 107)"
+          }
+        ]
+      }
+    },
+    {
+      "site": "catalog-web",
+      "surface": "refused",
+      "viewport": "mobile",
+      "path": "sites/catalog-web/test/visual-evidence/before-refused-mobile.png",
+      "bytes": 67811,
+      "sha256": "276942798be0c67b59b8d984a17e3ea9794e214301b78e2b932863b25d066693",
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "headingCount": 0,
+        "headingSize": "13px",
+        "controls": []
+      }
+    },
+    {
+      "site": "kids",
+      "surface": "activity",
+      "viewport": "desktop",
+      "path": "sites/kids/test/visual-evidence/before-activity-desktop.png",
+      "bytes": 162530,
+      "sha256": "b361fe5f199a6b2239953f03caac9209031381d4c911ff3c078fdc53441a6894",
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "headingCount": 1,
+        "headingSize": "75.2px",
+        "controls": []
+      }
+    },
+    {
+      "site": "kids",
+      "surface": "playing",
+      "viewport": "desktop",
+      "path": "sites/kids/test/visual-evidence/before-playing-desktop.png",
+      "bytes": 159697,
+      "sha256": "8ef0b1aa7947797cd1a991538434cda6d510c70367e461dace9c097bf6378a21",
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "headingCount": 1,
+        "headingSize": "75.2px",
+        "controls": []
+      }
+    },
+    {
+      "site": "kids",
+      "surface": "activity",
+      "viewport": "mobile",
+      "path": "sites/kids/test/visual-evidence/before-activity-mobile.png",
+      "bytes": 108634,
+      "sha256": "424a9a2d8432018db86f12a8975aee93698b171f61de78b8f568059d2019d599",
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "headingCount": 1,
+        "headingSize": "37.6px",
+        "controls": []
+      }
+    },
+    {
+      "site": "kids",
+      "surface": "playing",
+      "viewport": "mobile",
+      "path": "sites/kids/test/visual-evidence/before-playing-mobile.png",
+      "bytes": 104132,
+      "sha256": "f78b181ed15a769806153eb7d1df823d113d3f9f2ab27b4e29d5ad48ec65f24b",
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "headingCount": 1,
+        "headingSize": "37.6px",
+        "controls": []
+      }
+    }
+  ]
+}

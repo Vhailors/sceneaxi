@@ -1,0 +1,289 @@
+{
+  "status": "PASS_SCOPED_STABLE_SOURCE_FIXES",
+  "sourceReadOnly": true,
+  "candidateFrozen": false,
+  "excludedActiveWriterPaths": [
+    "desktop/linux/src/lib/bridge.ts",
+    "apps/desktop-shell/src/session.ts",
+    "desktop/linux/scripts/build.mjs"
+  ],
+  "fingerprintsBefore": {
+    "packages/authoring-core/src/local-project-build.ts": "c57134d87891c2b2b7098a9efb18c58094788a9f24a04ec4df066bd37f83447f",
+    "packages/authoring-core/test/local-project-build.test.ts": "194fe7b6bb6cc59b3958a4249ce0021b6b8ff547bb1587cf6c249659540b0fc7",
+    "packages/schemas/src/desktop-project-build.ts": "9493b82e88d6eea649be33a91b3d133d5daddc2bc160744b9599a5750dd8cff5",
+    "packages/schemas/test/local-project-build.test.ts": "5a71f3f7e718a900a3fa3965fd530e7dd18444551b37f6c54df5ed7531a617dd",
+    "packages/schemas/test/desktop-project-build.test.ts": "2817768bc6a929e2de65b5ae6ab08e33660a3ee455d101be503f74d091613623",
+    "packages/engine-kernel/src/index.ts": "b3ede52b5c6787587c56359262999dc56dfa38f2a29251f18ae524f617160340",
+    "packages/engine-kernel/src/scene-session.ts": "420983f70a9a16aba5dcd5ce7fcc8f03fc68bd8e3b6302018738bd93d513b294",
+    "packages/engine-kernel/src/session.ts": "d219019e2d6e487743b30e44d035b0e2f6f5e5118b1581b126790af83a9026af",
+    "packages/engine-presentation/src/three-sculpt.ts": "7b2a73bb61b22d1fcf171acdce521279257e66447e3eb77ba30f85035c995f03",
+    "packages/engine-presentation/src/scene-transforms.ts": "897136ce433d2750a7817481dab87319e2d0b077ff25cfe3b6097bad31079634",
+    "packages/engine-presentation/test/scene-runtime-v2.test.ts": "d32d0e7ee0f34cc616404ece8a3970d94d934f905335191446d8ead50159899b",
+    "packages/engine-kernel/test/scene-session.test.ts": "aeb2f091944d3e99845b716a315d180e05f7519acd05e9d34bd15ec51002ea9a",
+    "packages/schemas/test/scene-transform-v2.test.ts": "ea417049a7d2b5219ed59a42e8ae0c6ebc9fff8d6a7e40587d863189be114558",
+    "packages/authoring-core/test/scene-transform-v2.test.ts": "8545c8f90e03e1a2edcfee2928d8d5cdf1c0f0d5ed2432cb16eb10238837a3b2",
+    "tests/e2e/scene-composition-golden.test.ts": "da317ed9a577802996029f8cb84876f5fea855a09b76f89425d8a58aef47d55e",
+    "packages/site-kit/src/catalog-server-fetch.ts": "b6081c6f8edfa15cd0961850f2d252a53668fc58d9de004e876371ba93956c34",
+    "packages/site-kit/test/catalog-server-fetch.test.ts": "574a88893a22ccc64dac04510572ed50eac821a028fb605f02eddd46d8131692",
+    "sites/umbrella/src/provider/own-session.ts": "db1dc2eb71eb2b28b6837723c9e891d90713862c5e1b317bff69875d1d0e8a9d",
+    "sites/umbrella/src/app/api/auth/own-session/route.ts": "45655a3bdb745daba31b3e2f98cbad9302ab6e00913d376f96659067790258ae",
+    "sites/umbrella/src/lib/request-authority.ts": "05f9e93d8564ce15c637fc585ef635c087d301376206f05bebc557c9cb3e0e06",
+    "sites/umbrella/test/own-session-raw-origin.test.ts": "01d58c1b3af8e4de6009ba5c1289682c607d0ec7921bbcdb5531da12244178c3",
+    "apps/web-shell/src/dev-server.ts": "3d473ad1a960711a369d57c6d66c020d71d995849a6a3b44370a21f40604b610",
+    "apps/web-shell/src/inspector-app.ts": "30e2ae5c6fb5f893aee29027103211d9095ba5fbc3160050b9373b7edddf8d29",
+    "apps/web-shell/test/dev-server.test.ts": "5502f3af21d913afc4d44ae46e4f6ee43dfcfa101ef8997efae908a8403d7bd7",
+    "docs/dependency-matrix.json": "22d41e989e089fc34f15d854f9b33a159c987b2c62f451ee89c17c715d73d47c",
+    "vitest.config.ts": "fc37bb4f76c6f57159ce3e2afd7345686839e26efb63fbda291cfca3a9e19326",
+    "sites/catalog-game/src/app/item/[itemId]/page.tsx": "8147332bc9e9f6c106147d2007356e2709b0015d1d8e78de524dd0add408e130",
+    "sites/catalog-game/src/lib/identity-plane.ts": "efde73461c78226a9640f63cef13706e00c1e23bf66dba6bea4a0344e9362cf3",
+    "sites/catalog-game/test/item-session-wiring.test.ts": "16b8725cd99c152b6e4f74df324ac810fe41a8609996b52204af8de1b3032351",
+    "sites/catalog-web/src/app/item/[itemId]/page.tsx": "8147332bc9e9f6c106147d2007356e2709b0015d1d8e78de524dd0add408e130",
+    "sites/catalog-web/src/lib/identity-plane.ts": "efde73461c78226a9640f63cef13706e00c1e23bf66dba6bea4a0344e9362cf3",
+    "sites/catalog-web/test/item-session-wiring.test.ts": "58ebc257375323c841f4704dbe9a20af5da0d55aae3612f410ec0287fb76412c"
+  },
+  "fingerprintsAfter": {
+    "packages/authoring-core/src/local-project-build.ts": "c57134d87891c2b2b7098a9efb18c58094788a9f24a04ec4df066bd37f83447f",
+    "packages/authoring-core/test/local-project-build.test.ts": "194fe7b6bb6cc59b3958a4249ce0021b6b8ff547bb1587cf6c249659540b0fc7",
+    "packages/schemas/src/desktop-project-build.ts": "9493b82e88d6eea649be33a91b3d133d5daddc2bc160744b9599a5750dd8cff5",
+    "packages/schemas/test/local-project-build.test.ts": "5a71f3f7e718a900a3fa3965fd530e7dd18444551b37f6c54df5ed7531a617dd",
+    "packages/schemas/test/desktop-project-build.test.ts": "2817768bc6a929e2de65b5ae6ab08e33660a3ee455d101be503f74d091613623",
+    "packages/engine-kernel/src/index.ts": "b3ede52b5c6787587c56359262999dc56dfa38f2a29251f18ae524f617160340",
+    "packages/engine-kernel/src/scene-session.ts": "420983f70a9a16aba5dcd5ce7fcc8f03fc68bd8e3b6302018738bd93d513b294",
+    "packages/engine-kernel/src/session.ts": "d219019e2d6e487743b30e44d035b0e2f6f5e5118b1581b126790af83a9026af",
+    "packages/engine-presentation/src/three-sculpt.ts": "7b2a73bb61b22d1fcf171acdce521279257e66447e3eb77ba30f85035c995f03",
+    "packages/engine-presentation/src/scene-transforms.ts": "897136ce433d2750a7817481dab87319e2d0b077ff25cfe3b6097bad31079634",
+    "packages/engine-presentation/test/scene-runtime-v2.test.ts": "d32d0e7ee0f34cc616404ece8a3970d94d934f905335191446d8ead50159899b",
+    "packages/engine-kernel/test/scene-session.test.ts": "aeb2f091944d3e99845b716a315d180e05f7519acd05e9d34bd15ec51002ea9a",
+    "packages/schemas/test/scene-transform-v2.test.ts": "ea417049a7d2b5219ed59a42e8ae0c6ebc9fff8d6a7e40587d863189be114558",
+    "packages/authoring-core/test/scene-transform-v2.test.ts": "8545c8f90e03e1a2edcfee2928d8d5cdf1c0f0d5ed2432cb16eb10238837a3b2",
+    "tests/e2e/scene-composition-golden.test.ts": "da317ed9a577802996029f8cb84876f5fea855a09b76f89425d8a58aef47d55e",
+    "packages/site-kit/src/catalog-server-fetch.ts": "b6081c6f8edfa15cd0961850f2d252a53668fc58d9de004e876371ba93956c34",
+    "packages/site-kit/test/catalog-server-fetch.test.ts": "574a88893a22ccc64dac04510572ed50eac821a028fb605f02eddd46d8131692",
+    "sites/umbrella/src/provider/own-session.ts": "db1dc2eb71eb2b28b6837723c9e891d90713862c5e1b317bff69875d1d0e8a9d",
+    "sites/umbrella/src/app/api/auth/own-session/route.ts": "45655a3bdb745daba31b3e2f98cbad9302ab6e00913d376f96659067790258ae",
+    "sites/umbrella/src/lib/request-authority.ts": "05f9e93d8564ce15c637fc585ef635c087d301376206f05bebc557c9cb3e0e06",
+    "sites/umbrella/test/own-session-raw-origin.test.ts": "01d58c1b3af8e4de6009ba5c1289682c607d0ec7921bbcdb5531da12244178c3",
+    "apps/web-shell/src/dev-server.ts": "3d473ad1a960711a369d57c6d66c020d71d995849a6a3b44370a21f40604b610",
+    "apps/web-shell/src/inspector-app.ts": "30e2ae5c6fb5f893aee29027103211d9095ba5fbc3160050b9373b7edddf8d29",
+    "apps/web-shell/test/dev-server.test.ts": "5502f3af21d913afc4d44ae46e4f6ee43dfcfa101ef8997efae908a8403d7bd7",
+    "docs/dependency-matrix.json": "22d41e989e089fc34f15d854f9b33a159c987b2c62f451ee89c17c715d73d47c",
+    "vitest.config.ts": "fc37bb4f76c6f57159ce3e2afd7345686839e26efb63fbda291cfca3a9e19326",
+    "sites/catalog-game/src/app/item/[itemId]/page.tsx": "8147332bc9e9f6c106147d2007356e2709b0015d1d8e78de524dd0add408e130",
+    "sites/catalog-game/src/lib/identity-plane.ts": "efde73461c78226a9640f63cef13706e00c1e23bf66dba6bea4a0344e9362cf3",
+    "sites/catalog-game/test/item-session-wiring.test.ts": "16b8725cd99c152b6e4f74df324ac810fe41a8609996b52204af8de1b3032351",
+    "sites/catalog-web/src/app/item/[itemId]/page.tsx": "8147332bc9e9f6c106147d2007356e2709b0015d1d8e78de524dd0add408e130",
+    "sites/catalog-web/src/lib/identity-plane.ts": "efde73461c78226a9640f63cef13706e00c1e23bf66dba6bea4a0344e9362cf3",
+    "sites/catalog-web/test/item-session-wiring.test.ts": "58ebc257375323c841f4704dbe9a20af5da0d55aae3612f410ec0287fb76412c"
+  },
+  "stable": true,
+  "commands": [
+    {
+      "id": "public-source",
+      "command": "timeout 100s pnpm exec vitest run packages/authoring-core/test/local-project-build.test.ts packages/schemas/test/local-project-build.test.ts packages/schemas/test/desktop-project-build.test.ts packages/engine-presentation/test/scene-runtime-v2.test.ts packages/site-kit/test/catalog-server-fetch.test.ts apps/web-shell/test/dev-server.test.ts packages/engine-kernel/test/scene-session.test.ts packages/engine-presentation/test/three-presentation.test.ts packages/engine-presentation/test/sculpt-mount.test.ts packages/schemas/test/scene-transform-v2.test.ts packages/authoring-core/test/scene-transform-v2.test.ts tests/e2e/scene-composition-golden.test.ts --maxWorkers=1 --reporter=dot",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "exit": 0,
+      "seconds": 11.312,
+      "stdout": "\n\u001b[1m\u001b[30m\u001b[46m RUN \u001b[49m\u001b[39m\u001b[22m \u001b[36mv4.1.11 \u001b[39m\u001b[90m/home/devuser/Documents/Projects/sceneaxi\u001b[39m\n\n\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m12 passed\u001b[39m\u001b[22m\u001b[90m (12)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m210 passed\u001b[39m\u001b[22m\u001b[90m (210)\u001b[39m\n\u001b[2m   Start at \u001b[22m 20:08:28\n\u001b[2m   Duration \u001b[22m 10.27s\u001b[2m (transform 3.59s, setup 0ms, import 3.33s, tests 5.14s, environment 1ms)\u001b[22m\n\n",
+      "stderr": "\u001b[90mstderr\u001b[2m | apps/web-shell/test/dev-server.test.ts\u001b[2m > \u001b[22m\u001b[2mthe started server serves the inspector\u001b[2m > \u001b[22m\u001b[2mkeeps the hash-authorized served inspector interactive with invalid/reject focus return and no write\n\u001b[22m\u001b[39m\nWarning! Happy DOM has JavaScript evaluation enabled and is running in an insecure environment.\n\nA VM Context is not an isolated environment, and if you run untrusted code you are at risk of RCE (Remote Code Execution) attacks. The attacker can escape the VM and run code at process level.\n\nIt is recommended to disable code generation and freeze all builtins at process level by running node with the flags \"--disallow-code-generation-from-strings\" and \"--frozen-intrinsics\". You can suppress this warning by setting \"suppressInsecureJavaScriptEnvironmentWarning\" to \"true\" at your own risk.\n\nFor more information, see https://github.com/capricorn86/happy-dom/wiki/JavaScript-Evaluation-Warning\n\n\n\n\u001b[90mstderr\u001b[2m | packages/engine-presentation/test/three-presentation.test.ts\u001b[2m > \u001b[22m\u001b[2mThree presentation core \u2014 sculpt backend\u001b[2m > \u001b[22m\u001b[2mbuilds a real WebGLRenderer for the canvas path\n\u001b[22m\u001b[39mTHREE.WebGLRenderer: THREE.WebGLRenderer: Error creating WebGL context.\n\n",
+      "testFiles": 12,
+      "passed": 210,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "id": "own-session-route",
+      "command": "timeout 80s pnpm --dir sites/umbrella exec vitest run --config vitest.config.ts test/own-session-raw-origin.test.ts test/own-session.test.ts test/checkout-reader-bounds.test.ts --maxWorkers=1 --reporter=dot",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "exit": 0,
+      "seconds": 6.245,
+      "stdout": "\n\u001b[1m\u001b[30m\u001b[46m RUN \u001b[49m\u001b[39m\u001b[22m \u001b[36mv4.1.11 \u001b[39m\u001b[90m/home/devuser/Documents/Projects/sceneaxi/sites/umbrella\u001b[39m\n\n\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\u001b[33m\u001b[39m\u001b[32m\u00b7\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m3 passed\u001b[39m\u001b[22m\u001b[90m (3)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m91 passed\u001b[39m\u001b[22m\u001b[90m (91)\u001b[39m\n\u001b[2m   Start at \u001b[22m 20:08:28\n\u001b[2m   Duration \u001b[22m 5.06s\u001b[2m (transform 3.14s, setup 0ms, import 4.33s, tests 232ms, environment 0ms)\u001b[22m\n\n",
+      "stderr": "",
+      "testFiles": 3,
+      "passed": 91,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "id": "actual-catalog-consumers",
+      "command": "timeout 80s node --test sites/catalog-game/test/item-session-wiring.test.ts sites/catalog-web/test/item-session-wiring.test.ts",
+      "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+      "exit": 0,
+      "seconds": 3.627,
+      "stdout": "\u2714 default public consumer is honestly unwired (2531.671419ms)\n\u2714 actual page consumes approved public adapter and explicit carry, never unknown Host (126.754398ms)\n\u2714 actual page unsafe/missing raw configuration skips credentials/network: undefined (36.308159ms)\n\u2714 actual page unsafe/missing raw configuration skips credentials/network:  (39.249759ms)\n\u2714 actual page unsafe/missing raw configuration skips credentials/network: https://umbrella.example.invalid/path (35.982721ms)\n\u2714 actual page unsafe/missing raw configuration skips credentials/network: https://umbrella.example.invalid?query=x (41.088886ms)\n\u2714 actual page unsafe/missing raw configuration skips credentials/network: https://umbrella.example.invalid#fragment (73.464936ms)\n\u2714 actual page unsafe/missing raw configuration skips credentials/network: https://user:pass@umbrella.example.invalid (30.502001ms)\n\u2714 actual page unsafe/missing raw configuration skips credentials/network:  https://umbrella.example.invalid  (35.474136ms)\n\u2714 actual page unsafe/missing raw configuration skips credentials/network: https://127.0.0.1 (35.194919ms)\n\u2714 actual page unsafe/missing raw configuration skips credentials/network: https://umbrella.local (36.338898ms)\n\u2714 actual page requires exact server approval: undefined (33.163854ms)\n\u2714 actual page requires exact server approval: false (31.503107ms)\n\u2714 actual page requires exact server approval: 1 (29.951171ms)\n\u2714 actual page requires exact server approval: TRUE (45.675887ms)\n\u2714 default public consumer is honestly unwired (2560.694359ms)\n\u2714 actual page consumes approved public adapter and explicit carry, never unknown Host (116.968527ms)\n\u2714 actual page unsafe/missing raw configuration skips credentials/network: undefined (36.06572ms)\n\u2714 actual page unsafe/missing raw configuration skips credentials/network:  (35.339415ms)\n\u2714 actual page unsafe/missing raw configuration skips credentials/network: https://umbrella.example.invalid/path (37.07563ms)\n\u2714 actual page unsafe/missing raw configuration skips credentials/network: https://umbrella.example.invalid?query=x (38.422035ms)\n\u2714 actual page unsafe/missing raw configuration skips credentials/network: https://umbrella.example.invalid#fragment (53.659191ms)\n\u2714 actual page unsafe/missing raw configuration skips credentials/network: https://user:pass@umbrella.example.invalid (31.08922ms)\n\u2714 actual page unsafe/missing raw configuration skips credentials/network:  https://umbrella.example.invalid  (31.295403ms)\n\u2714 actual page unsafe/missing raw configuration skips credentials/network: https://127.0.0.1 (28.414227ms)\n\u2714 actual page unsafe/missing raw configuration skips credentials/network: https://umbrella.local (32.793404ms)\n\u2714 actual page requires exact server approval: undefined (30.716718ms)\n\u2714 actual page requires exact server approval: false (25.0708ms)\n\u2714 actual page requires exact server approval: 1 (26.892697ms)\n\u2714 actual page requires exact server approval: TRUE (40.261491ms)\n\u2139 tests 30\n\u2139 suites 0\n\u2139 pass 30\n\u2139 fail 0\n\u2139 cancelled 0\n\u2139 skipped 0\n\u2139 todo 0\n\u2139 duration_ms 3579.732597\n",
+      "stderr": "",
+      "testFiles": 2,
+      "passed": 30,
+      "failed": 0,
+      "skipped": 0
+    }
+  ],
+  "bytePreservation": {
+    "v1SceneReconstructionSha256": "6819196c063040f6266fdd4a25b4e6a12fd7813f86ea665166657518b088fbb4",
+    "v1SceneExpectedPreFinalWiringSha256": "6819196c063040f6266fdd4a25b4e6a12fd7813f86ea665166657518b088fbb4",
+    "v1SceneReconstructionMatchesPreFinalWiring": true,
+    "signed96LinePrefixBytes": 3524,
+    "signed96LinePrefixSha256": "ec7b86e27314891af86e662279d6ea835b12ccfec63155c7e022578ebfee0588",
+    "signedEvaluatorMatchesHEAD": true,
+    "reconstructionMethod": "Remove ten additive v2 import lines and appended v2 block including its one separating blank line. Retain existing v1 final newline.",
+    "initialMeasurement": "First calculation included the additive separator newline and produced850968aa, not the claimed v1 hash; exact separator removal reproduces6819196c. No source mismatch inferred.",
+    "baselineWarning": "Pre-final-wiring implementation hash is not HEAD identity: earlier v1 hardening differs from HEAD. Existing public v1 golden regressions pass; whole v1 codebase byte identity not claimed."
+  },
+  "unchangedContractsAndMatrix": {
+    "docs/dependency-matrix.json": {
+      "sha256": "22d41e989e089fc34f15d854f9b33a159c987b2c62f451ee89c17c715d73d47c",
+      "matchesHEAD": true
+    },
+    "packages/schemas/contracts/scene-composition.schema.json": {
+      "sha256": "0d9a8f274aa4d6e6e8adf74865da63d2066112819bc42cbde0e031ec26b9f313",
+      "matchesHEAD": true
+    }
+  },
+  "head": "4e532e2fbf43e9948741578ab6208a3277870405",
+  "branch": "production-swarm",
+  "verifiedDisjointTests": 331,
+  "failedTests": 0,
+  "skippedTests": 0,
+  "productionStatus": "NOT_CERTIFIED",
+  "publishedPR": {
+    "expectedReference": "346933c",
+    "status": "EXPECTED_STILL_BROKEN_NOT_PUSHED",
+    "independentlyInspectedRemote": false,
+    "localGreensCertifyPR": false
+  },
+  "sourceEdits": [],
+  "ownedOutputs": [
+    "docs/audits/production-swarm/final-wiring-2026-10-02/independent-security/report.json",
+    "docs/audits/production-swarm/final-wiring-2026-10-02/independent-security/report.md"
+  ],
+  "overlappingPreliminaryRun": {
+    "exit": 0,
+    "files": 5,
+    "passed": 125,
+    "countedAgain": false,
+    "command": "timeout 100s pnpm exec vitest run packages/authoring-core/test/local-project-build.test.ts packages/schemas/test/local-project-build.test.ts packages/engine-presentation/test/scene-runtime-v2.test.ts packages/site-kit/test/catalog-server-fetch.test.ts apps/web-shell/test/dev-server.test.ts --maxWorkers=1 --reporter=dot"
+  },
+  "toolingFallback": "project(test, absolute launcher test path) returned No test command detected; used bounded explicit shell commands at actual root, without changing configuration.",
+  "receipts": [
+    {
+      "id": "CAP-01",
+      "status": "PASS_SCOPED",
+      "source": "packages/authoring-core/src/local-project-build.ts:335-369",
+      "repro": "packages/authoring-core/test/local-project-build.test.ts:128-194 in public-source command",
+      "verified": "Real child process, safe marker absent before/after named refusal for original-path and owned-runtime/bootstrap symlink substitutions; pre-spawn substitutions spawn zero children; snapshot cleanup asserted. Pinned bootstrap approved by digest before spawn.",
+      "limits": "Stock Node negative only; no Electron-positive proof or hostile same-UID/root immutability assurance."
+    },
+    {
+      "id": "SESSION-RAW-ORIGIN",
+      "status": "PASS_SCOPED",
+      "source": "sites/umbrella/src/provider/own-session.ts:93-110; sites/umbrella/src/lib/request-authority.ts:71-87",
+      "repro": "sites/umbrella/test/own-session-raw-origin.test.ts:19-55",
+      "verified": "Malformed raw origin refused403/no-store; authority handles/principal reads0; missing raw cannot delegate to normalizing verifier; canonical positive200 preserved.",
+      "limits": "Actual route module with deployment handle mocks, not Next HTTP/provider provenance; direct standalone normalization helpers not certified."
+    },
+    {
+      "id": "SESSION-CREDENTIAL-GETTER",
+      "status": "PASS_SCOPED",
+      "source": "packages/site-kit/src/catalog-server-fetch.ts:223-254",
+      "repro": "packages/site-kit/test/catalog-server-fetch.test.ts:23-58; both catalog item-session-wiring.test.ts",
+      "verified": "Composed accessor refusal has getter0/network0; descriptor data Proxy requests bypass get trap without executing it; explicit approved raw-origin pages skip credential reads when unwired/unsafe.",
+      "limits": "Descriptor traps themselves can run; no claim all Proxy traps are side-effect free; no default SSO/cross-site carry acceptance."
+    },
+    {
+      "id": "SCENE-V2-PUBLIC",
+      "status": "PASS_SCOPED",
+      "source": "packages/engine-kernel/src/index.ts:96; packages/engine-kernel/src/scene-session.ts:306-447; packages/engine-presentation/src/three-sculpt.ts:515-560",
+      "repro": "packages/engine-presentation/test/scene-runtime-v2.test.ts:19-186; public schema/authoring scene-transform-v2 tests",
+      "verified": "Public exports now resolve; open/advance/save/reopen/replay deterministic, original evidence unchanged; parent*local matrices preserve shear; no decomposition/double placement; full-batch malformed/accessor/matrix/bounds refusal keeps prior renderables; world-overflow preflight preserves history; late mount allocation cleanup.",
+      "limits": "Headless object matrices, not pixels; static placement parents/toy local driver, not Rapier/skin/triangle-v2 support or maximum-capacity benchmark."
+    },
+    {
+      "id": "CSP-EXACT-HASH",
+      "status": "PASS_SCOPED",
+      "source": "apps/web-shell/src/dev-server.ts:282-328,445-449,534-543",
+      "repro": "apps/web-shell/test/dev-server.test.ts:203-315",
+      "verified": "Actual HTTP headers hash exact UTF8 trusted static bytes; unsafe-inline/eval absent; MIME-variant/tampered extra HTML refused500. Served script maintains invalid/propose/reject focus/no-write through real socket in Happy DOM.",
+      "limits": "Happy DOM explicitly does not enforce CSP. Browser-enforced interactivity, accept/recovery matrix, geometry and forced-colors remain unverified."
+    }
+  ],
+  "deferredAcceptance": [
+    {
+      "id": "HANDOFF-ACTIVE",
+      "status": "NOT_REVIEWED",
+      "paths": [
+        "desktop/linux/src/lib/bridge.ts",
+        "apps/desktop-shell/src/session.ts",
+        "desktop/linux/scripts/build.mjs"
+      ],
+      "acceptance": "Await bg133 explicit handback, hash new source, run owning prepared-asset-handoff tests; no inference from these stable-fix receipts."
+    },
+    {
+      "id": "DECLARATIONS-GATE",
+      "status": "NOT_RUN",
+      "acceptance": "Serial dependency rebuild/typecheck and unchanged root fullgate after all handbacks; builder stale-declaration typecheck failures are not reclassified green by source-backed Vitest."
+    },
+    {
+      "id": "CAP-NATIVE",
+      "status": "NOT_RUN",
+      "command": "sh docs/audits/production-swarm/implementation-expansion-2026-10-02/unsigned-project-build/deferred-native-smoke.sh",
+      "acceptance": "Approved Electron, renderer and publisher: fd5 loading, exact saved-document digest, real pixels/PNG, exit0, cleanup; no held-key bypass."
+    },
+    {
+      "id": "CSP-BROWSER",
+      "status": "NOT_RUN",
+      "acceptance": "Rebuilt real dev-server390/1440 light/dark/forced-colors: trusted hashes execute, unauthorized inline script/style/handler blocked, no legitimate CSP violations, propose/reject/accept/focus/pending/stale/lost-response no-write retries preserved."
+    },
+    {
+      "id": "GEOMETRY-BROWSER",
+      "status": "NOT_RUN",
+      "command": "node apps/desktop-shell/test/visual-postpr-evidence/retry/capture.mjs final-wiring-desktop-keyboard --keyboard-only",
+      "acceptance": "Actual bidirectional effect controls900x600/1100x800/1280x900 plus forced colors; unclipped/unoccluded2px focus and real diagnostics/dismissal."
+    },
+    {
+      "id": "V2-BROWSER",
+      "status": "NOT_RUN",
+      "command": "node --loader ./scripts/workspace-dist-resolver.mjs packages/engine-presentation/test/browser-scene-v2-proof.mjs docs/audits/production-swarm/final-wiring-2026-10-02/scene-runtime/browser-scene-v2.png",
+      "acceptance": "Stable emitted public runtime actual rotation/shear/advance pixels, replay/refusal image identity,10 remount plateau and terminal GL0."
+    },
+    {
+      "id": "PR-PUBLICATION",
+      "status": "NOT_CERTIFIED",
+      "acceptance": "Parent native Git repair/publication after serial acceptance; no push, commit, fetch, merge or deployment performed by verifier."
+    }
+  ],
+  "warnings": "Happy DOM insecure-JS warning and expected headless THREE WebGL context error retained verbatim in command stderr; neither is browser proof. No assertion failed.",
+  "resources": "All three bounded subprocess jobs exited0. Existing launch afterEach asserts namespace removal; child timeout/output oracles await terminal refusal; socket/window fixtures close. No persistent service/browser/native/container/install/provider resources created by verifier.",
+  "fingerprintsFinal": {
+    "packages/authoring-core/src/local-project-build.ts": "c57134d87891c2b2b7098a9efb18c58094788a9f24a04ec4df066bd37f83447f",
+    "packages/authoring-core/test/local-project-build.test.ts": "194fe7b6bb6cc59b3958a4249ce0021b6b8ff547bb1587cf6c249659540b0fc7",
+    "packages/schemas/src/desktop-project-build.ts": "9493b82e88d6eea649be33a91b3d133d5daddc2bc160744b9599a5750dd8cff5",
+    "packages/schemas/test/local-project-build.test.ts": "5a71f3f7e718a900a3fa3965fd530e7dd18444551b37f6c54df5ed7531a617dd",
+    "packages/schemas/test/desktop-project-build.test.ts": "2817768bc6a929e2de65b5ae6ab08e33660a3ee455d101be503f74d091613623",
+    "packages/engine-kernel/src/index.ts": "b3ede52b5c6787587c56359262999dc56dfa38f2a29251f18ae524f617160340",
+    "packages/engine-kernel/src/scene-session.ts": "420983f70a9a16aba5dcd5ce7fcc8f03fc68bd8e3b6302018738bd93d513b294",
+    "packages/engine-kernel/src/session.ts": "d219019e2d6e487743b30e44d035b0e2f6f5e5118b1581b126790af83a9026af",
+    "packages/engine-presentation/src/three-sculpt.ts": "7b2a73bb61b22d1fcf171acdce521279257e66447e3eb77ba30f85035c995f03",
+    "packages/engine-presentation/src/scene-transforms.ts": "897136ce433d2750a7817481dab87319e2d0b077ff25cfe3b6097bad31079634",
+    "packages/engine-presentation/test/scene-runtime-v2.test.ts": "d32d0e7ee0f34cc616404ece8a3970d94d934f905335191446d8ead50159899b",
+    "packages/engine-kernel/test/scene-session.test.ts": "aeb2f091944d3e99845b716a315d180e05f7519acd05e9d34bd15ec51002ea9a",
+    "packages/schemas/test/scene-transform-v2.test.ts": "ea417049a7d2b5219ed59a42e8ae0c6ebc9fff8d6a7e40587d863189be114558",
+    "packages/authoring-core/test/scene-transform-v2.test.ts": "8545c8f90e03e1a2edcfee2928d8d5cdf1c0f0d5ed2432cb16eb10238837a3b2",
+    "tests/e2e/scene-composition-golden.test.ts": "da317ed9a577802996029f8cb84876f5fea855a09b76f89425d8a58aef47d55e",
+    "packages/site-kit/src/catalog-server-fetch.ts": "b6081c6f8edfa15cd0961850f2d252a53668fc58d9de004e876371ba93956c34",
+    "packages/site-kit/test/catalog-server-fetch.test.ts": "574a88893a22ccc64dac04510572ed50eac821a028fb605f02eddd46d8131692",
+    "sites/umbrella/src/provider/own-session.ts": "db1dc2eb71eb2b28b6837723c9e891d90713862c5e1b317bff69875d1d0e8a9d",
+    "sites/umbrella/src/app/api/auth/own-session/route.ts": "45655a3bdb745daba31b3e2f98cbad9302ab6e00913d376f96659067790258ae",
+    "sites/umbrella/src/lib/request-authority.ts": "05f9e93d8564ce15c637fc585ef635c087d301376206f05bebc557c9cb3e0e06",
+    "sites/umbrella/test/own-session-raw-origin.test.ts": "01d58c1b3af8e4de6009ba5c1289682c607d0ec7921bbcdb5531da12244178c3",
+    "apps/web-shell/src/dev-server.ts": "3d473ad1a960711a369d57c6d66c020d71d995849a6a3b44370a21f40604b610",
+    "apps/web-shell/src/inspector-app.ts": "30e2ae5c6fb5f893aee29027103211d9095ba5fbc3160050b9373b7edddf8d29",
+    "apps/web-shell/test/dev-server.test.ts": "5502f3af21d913afc4d44ae46e4f6ee43dfcfa101ef8997efae908a8403d7bd7",
+    "docs/dependency-matrix.json": "22d41e989e089fc34f15d854f9b33a159c987b2c62f451ee89c17c715d73d47c",
+    "vitest.config.ts": "fc37bb4f76c6f57159ce3e2afd7345686839e26efb63fbda291cfca3a9e19326",
+    "sites/catalog-game/src/app/item/[itemId]/page.tsx": "8147332bc9e9f6c106147d2007356e2709b0015d1d8e78de524dd0add408e130",
+    "sites/catalog-game/src/lib/identity-plane.ts": "efde73461c78226a9640f63cef13706e00c1e23bf66dba6bea4a0344e9362cf3",
+    "sites/catalog-game/test/item-session-wiring.test.ts": "16b8725cd99c152b6e4f74df324ac810fe41a8609996b52204af8de1b3032351",
+    "sites/catalog-web/src/app/item/[itemId]/page.tsx": "8147332bc9e9f6c106147d2007356e2709b0015d1d8e78de524dd0add408e130",
+    "sites/catalog-web/src/lib/identity-plane.ts": "efde73461c78226a9640f63cef13706e00c1e23bf66dba6bea4a0344e9362cf3",
+    "sites/catalog-web/test/item-session-wiring.test.ts": "58ebc257375323c841f4704dbe9a20af5da0d55aae3612f410ec0287fb76412c"
+  }
+}

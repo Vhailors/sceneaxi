@@ -1,0 +1,40 @@
+{
+  "task": "checkout-deadline",
+  "status": "IMPLEMENTED_FOCUSED_VERIFIED",
+  "productionAcceptance": "NOT_CLAIMED",
+  "root": "/home/devuser/Documents/Projects/sceneaxi",
+  "sourceHandback": true,
+  "handoffOwner": "bg-109",
+  "furtherSourceEdits": false,
+  "ownedSourcePaths": ["sites/umbrella/src/app/api/checkout/checkout-handler.ts", "sites/umbrella/test/checkout-reader-bounds.test.ts"],
+  "changes": [
+    {"path": "sites/umbrella/src/app/api/checkout/checkout-handler.ts", "symbol": "createCheckoutHandler", "lines": "89-128", "beforeSha256": "a4c3a2a93dfd3bfa94daefe5fd8e4f655da4330b17aa67d50449056ade6a3ab3", "afterSha256": "4377d08acb85c83db2014634dfe25458e9b2dbe4034c863faf6c23c656475675", "behavior": ["already-aborted request refuses before reader acquisition", "read races abort and total deadline", "post-read abort guard covers fulfilled-read microtask race", "non-awaited cancellation catches rejection", "finally clears timer/listener and releases lock"]},
+    {"path": "sites/umbrella/test/checkout-reader-bounds.test.ts", "symbol": "real checkout reader bounds", "afterSha256": "08f11c8b54ad2c7ab12a1bcd2b36bed68c8b61c785abe8f5bdcfb8c2d56f8edf", "permanentOracles": 20, "timing": "fake clock; no sleeps", "subject": "actual handler with genuine Request and native streams and dependency seam", "coverage": ["pre-abort", "concurrent queued-read abort", "hanging read", "total deadline", "trickle does not reset", "hanging/rejected cancellation", "abort/deadline/overflow cancellation", "read-error cleanup", "success timer/listener/lock cleanup", "exact8192 positive", "split8193 refusal", "4999ms completion positive", "duplicate/forged/incomplete fields", "origin before body", "verified user/credential/configured redirect/idempotency metadata", "JSON429 Retry-After300 and HTML303 budget refusal"]}
+  ],
+  "policy": {"bodyBytes": 8192, "totalReadDeadlineMs": 5000, "rationale": "Conservative total small-form parser budget below existing authoritative10000ms server transport at identity-plane.ts:690 and transaction timeout; not a provider or production transport SLA", "resetsPerChunk": false},
+  "preserved": ["origin-before-body", "8192byte budget", "duplicate field refusal", "auth authority", "429 Retry-After", "form presentation status", "idempotency metadata", "publicv1 exports", "matrix", "TS5.9"],
+  "evidence": [
+    {"path": "capacity-before.json", "subject": "exact current pre-edit source", "pass": 22, "fail": 3, "exit": 1, "failures": ["request abort did not terminate reader within100ms", "no bounded reader deadline observed", "await reader.cancel holds oversize refusal"]},
+    {"path": "permanent-before.json", "pass": 8, "fail": 8, "exit": 1, "pending": 0, "sameInitial16AssertionsPassedAfter": true},
+    {"path": "abort-race-before.json", "pass": 19, "fail": 1, "exit": 1, "failure": "queued fulfilled-read concurrent abort: expected303 to be400"},
+    {"path": "permanent-after.json", "pass": 20, "fail": 0, "exit": 0, "pending": 0, "todo": 0, "command": "pnpm exec vitest run --config vitest.config.ts test/checkout-reader-bounds.test.ts", "cwd": "sites/umbrella"},
+    {"path": "capacity-after.json", "pass": 25, "fail": 0, "exit": 0, "subject": "exact final source; no proposal mutation", "harnessClockAdaptation": "Capacity loader unchanged except owned report destination and global deterministic timeout map. delay advances due timers and drains60 promise jobs. Deadline observation changed from100ms to5000ms consistent with explicit policy; permanent oracle independently verifies4999 pending/5000 refusal."},
+    {"path": "negative-control-after.json", "pass": 20, "fail": 5, "exit": 1, "expectedFailure": true, "mutation": "origin guard removed IN_MEMORY ONLY", "failures": ["four origin getter traps400 instead403", "invalid configured origin402 instead403"]},
+    {"path": "regressions-after.json", "pass": 37, "fail": 0, "exit": 0, "pending": 0, "command": "pnpm exec vitest run tests/sites/billing-final-acceptance.test.ts tests/sites/site-response-hardening.test.ts tests/sites/credit-pack-purchase-ux.test.ts", "cwd": "."}
+  ],
+  "focusedChecks": [
+    {"check": "TypeScript", "version": "5.9.3", "diagnostics": 0, "rootFile": "sites/umbrella/test/checkout-reader-bounds.test.ts", "configuration": "Parsed existing sites/umbrella/tsconfig.test.json inherited options, incremental:false; no emit. Existing compiler strictness/skipLibCheck untouched."},
+    {"command": "pnpm exec eslint sites/umbrella/src/app/api/checkout/checkout-handler.ts sites/umbrella/test/checkout-reader-bounds.test.ts", "exit": 0},
+    {"command": "pnpm -s check:boundaries", "exit": 0, "packages": 27},
+    {"command": "git diff --check -- sites/umbrella/src/app/api/checkout/checkout-handler.ts sites/umbrella/test/checkout-reader-bounds.test.ts docs/audits/production-swarm/implementation-expansion-2026-10-02/checkout-deadline", "exit": 0}
+  ],
+  "publicExportRequests": [],
+  "sharedDependencyChangesRequired": [],
+  "sourceImportsChanged": false,
+  "deferred": [{"commands": ["full build", "full gate", "full site typecheck", "site production build", "real Next HTTP/disconnect", "browser", "native", "provider/DB"], "status": "NOT_RUN", "owner": "bg-109"}],
+  "serialAcceptanceRequest": "Run exact new test command in umbrella install root; explicit existing provider script does not automatically discover this file. Then serial full checks/current HTTP artifact proof. No earlier failed pass promoted.",
+  "limitations": ["focused hermetic authority fixtures, not actual Next transport SLA proof", "full ledger semantic review not claimed", "no provider/publication/production certification"],
+  "toolCorrections": ["Initial file creation launcher used redundant site prefix with site cwd and created nothing; corrected before source edits", "First reader replacement refused due whitespace mismatch, no bytes changed; read-once line-anchored retry succeeded", "Focused TS initially reported exactOptionalPropertyTypes signal undefined; fixed conditional RequestInit property omission with no cast/assertion weakening", "ast_edit unavailable; checked shell edits used", "project tool did not detect site test/lint command; explicit owning commands used"],
+  "resourceCleanup": "All pending native readers errored/cancelled; deferred cancellation promises released; timers/listeners removed; fake clocks restored. No servers, ports, workers, browsers, containers, external fixtures, credentials, accounts, install/build outputs or DB transactions created.",
+  "authorization": "New user implementation scope; no stage/commit/push/merge/deploy/spend/install/provider/productionDB"
+}

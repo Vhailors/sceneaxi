@@ -1,0 +1,14 @@
+{
+  "status": "EXECUTING_NOT_READY",
+  "owner": "foundation-input",
+  "ownedClone": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1",
+  "snapshotTree": "3f25ffea22f19d01ef9a484f317d8b8ca4cde397",
+  "baseline": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+  "features": ["LF-01", "LF-02", "LF-05", "EF-INPUT"],
+  "sourceOwnership": "11 exact manifest leaves; schemas index exclusively reserved until HANDBACK",
+  "sourceInputs": "All five supplied JSON inputs parsed; instruction/layout read. Older docs are historical evidence, not authority.",
+  "legacyDigestSource": {"sha":"16f312c61435e3d379a0e54525ac8115e35fee86","blob":"8449b4c7ebc36a8bc85f6804fa2211f749dbd931","mode":"100644"},
+  "verification": "Parent confirms existing install. Scoped Vitest only; heavy validation/publication parent-owned.",
+  "publication": "NO_STAGE_COMMIT_PUSH_OR_GIT_INDEX_EDITS",
+  "handback": false
+}

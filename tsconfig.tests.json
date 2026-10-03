@@ -18,6 +18,9 @@
       "@sceneaxi/site-kit": [
         "./packages/site-kit/src/index.ts"
       ],
+      "@sceneaxi/site-kit/catalog-server-fetch": [
+        "./packages/site-kit/src/catalog-server-fetch.ts"
+      ],
       "@sceneaxi/site-kit/catalog-identity": [
         "./packages/site-kit/src/catalog-identity.ts"
       ],

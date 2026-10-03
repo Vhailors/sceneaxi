@@ -1,0 +1,133 @@
+[
+  {
+    "command": "node /home/devuser/Documents/Projects/sceneaxi/packages/cli/bin/sceneaxi.mjs protocol version --json",
+    "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+    "timeoutSeconds": 90,
+    "exit": 0,
+    "timedOut": false,
+    "durationSeconds": 0.18,
+    "output": "{\n  \"schemaVersion\": 1,\n  \"cliVersion\": \"0.0.0\",\n  \"ok\": true,\n  \"result\": {\n    \"cliVersion\": \"0.0.0\",\n    \"schemaVersion\": 1,\n    \"releaseGroup\": \"cli-protocol\"\n  },\n  \"help\": [\n    \"Run `sceneaxi protocol version --help` for this verb\",\n    \"Run `sceneaxi protocol inspect` for the exit-code map\"\n  ]\n}\n",
+    "assertions": "Exit 0, envelope ok true and version data present.",
+    "oracle": {
+      "zeroExit": true,
+      "envelopeOk": true,
+      "dataPresent": true
+    }
+  },
+  {
+    "command": "node /home/devuser/Documents/Projects/sceneaxi/packages/cli/bin/sceneaxi.mjs profile open-path --json",
+    "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+    "timeoutSeconds": 90,
+    "exit": 0,
+    "timedOut": false,
+    "durationSeconds": 0.18,
+    "output": "{\n  \"schemaVersion\": 1,\n  \"cliVersion\": \"0.0.0\",\n  \"ok\": true,\n  \"result\": {\n    \"status\": \"listed\",\n    \"policy\": {\n      \"schemaVersion\": 1,\n      \"policyCount\": 3,\n      \"refuseOnlyProfile\": \"@sceneaxi/profile-kids\",\n      \"shippingClaim\": false,\n      \"rows\": [\n        {\n          \"profile\": \"@sceneaxi/profile-game\",\n          \"demoLevel\": \"demo-driveable\",\n          \"sessionKind\": \"scene-kernel-session\",\n          \"operations\": [\n            \"open\",\n            \"dispatch\",\n            \"advance\",\n            \"observe\",\n            \"save\",\n            \"replay\"\n          ],\n          \"evidence\": \"tests/e2e/profile-game-scene-golden.test.ts\",\n          \"shippingClaim\": false,\n          \"summary\": \"Opens a composed multi-object scene kernel session offline; a development demo, not a shippable game.\"\n        },\n        {\n          \"profile\": \"@sceneaxi/profile-web\",\n          \"demoLevel\": \"demo-driveable\",\n          \"sessionKind\": \"kernel-session\",\n          \"operations\": [\n            \"open\",\n            \"dispatch\",\n            \"advance\",\n            \"observe\",\n            \"save\",\n            \"replay\"\n          ],\n          \"evidence\": \"tests/e2e/profile-web-golden-path.test.ts\",\n          \"shippingClaim\": false,\n          \"summary\": \"Opens a single-object kernel session inside the locked Web Experience scope; a development demo, not a shipped website.\"\n        },\n        {\n          \"profile\": \"@sceneaxi/profile-kids\",\n          \"demoLevel\": \"refuse-only\",\n          \"sessionKind\": \"none\",\n          \"operations\": [],\n          \"evidence\": \"tests/e2e/profile-kids-refuse-golden.test.ts\",\n          \"shippingClaim\": false,\n          \"summary\": \"Refuses every shared engine open-path demo; the separate Kids origin allows only its curated in-memory activity, with no commerce, identity, external data, or model route.\"\n        }\n      ],\n      \"notes\": [\n        \"Demo levels grade demonstrations only \u2014 no row is a shipping, publication, or production-readiness claim\",\n        \"Every level names the committed test that proves it; a level without evidence refuses\",\n        \"@sceneaxi/profile-kids is refuse-only: no open path, no UI, no commerce\"\n      ]\n    }\n  },\n  \"help\": [\n    \"Demo levels are demonstrations, never a shipping or production-readiness claim\",\n    \"@sceneaxi/profile-kids is refuse-only and stays that way\",\n    \"Add --profile and --operation to evaluate one demo against the shared policy\"\n  ]\n}\n",
+    "assertions": "Exit 0 and shared policy shippingClaim false, Kids refusal retained.",
+    "oracle": {
+      "zeroExit": true,
+      "envelopeOk": true,
+      "dataPresent": true
+    }
+  },
+  {
+    "command": "node /home/devuser/Documents/Projects/sceneaxi/packages/cli/bin/sceneaxi.mjs --definitely-unknown --json",
+    "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+    "timeoutSeconds": 90,
+    "exit": 2,
+    "timedOut": false,
+    "durationSeconds": 0.18,
+    "output": "{\n  \"schemaVersion\": 1,\n  \"cliVersion\": \"0.0.0\",\n  \"ok\": false,\n  \"error\": {\n    \"code\": \"UNKNOWN_FLAG\",\n    \"message\": \"Unknown flag: --definitely-unknown\",\n    \"path\": []\n  },\n  \"help\": [\n    \"Unknown flag '--definitely-unknown' refused (fail-closed)\",\n    \"Global flags: --json, --help, -h, -v, -V, --version\",\n    \"Run `sceneaxi --help` for usage\"\n  ]\n}\n",
+    "assertions": "Nonzero exit, envelope ok false, unknown-flag refusal.",
+    "oracle": {
+      "nonzeroExit": true,
+      "envelopeRefused": true
+    }
+  },
+  {
+    "command": "node /home/devuser/Documents/Projects/sceneaxi/apps/desktop-shell/bin/sceneaxi-desktop.mjs --help",
+    "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+    "timeoutSeconds": 90,
+    "exit": 0,
+    "timedOut": false,
+    "durationSeconds": 0.18,
+    "output": "ok: help\n  app: sceneaxi-desktop\n  description: SceneAxi desktop shell \u2014 protocol client of authoring-core (same operations as the CLI)\n  commands: {\"status\":\"Report a document's id, content hash, and top-level data keys\",\"propose\":\"Propose a JSON Pointer edit and render the diff for review\",\"apply\":\"Propose and accept an edit in one non-interactive step\",\"undo\":\"Undo the last completed apply\",\"redo\":\"Redo the next undone apply\",\"open-path\":\"Report the shared open-path demo policy, or evaluate one demo operation against it (demo only; never a shipping claim)\",\"chrome\":\"Render the Engine Desktop editor chrome for one visual state as a self-contained HTML document (draws no pixels; mounts no renderer)\"}\n  Usage: sceneaxi-desktop <command> [flags]\n\n    status    Report a document's id, content hash, and top-level data keys\n    propose   Propose a JSON Pointer edit and render the diff for review\n    apply     Propose and accept an edit in one non-interactive step\n    undo      Undo the last completed apply\n    redo      Redo the next undone apply\n    open-path Report the shared open-path demo policy, or evaluate one demo operation against it (demo only; never a shipping claim)\n    chrome    Render the Engine Desktop editor chrome for one visual state as a self-contained HTML document (draws no pixels; mounts no renderer)\n\n  Flags: --document <path> --pointer <json-pointer> --value <json> --cwd <dir> --json\n  open-path flags: --profile <@sceneaxi/profile-name> --operation <open|dispatch|advance|observe|save|replay>\n  chrome flags: --mode <build|sculpt|compose|animate|run|ship|plugins> --profile <game|web|kids>\n                --overlay <none|palette> --assistant-mode <ask|build|agent>\n                --sculpt <idle|running> --width <px> --height <px>\n",
+    "assertions": "Exit 0 and desktop shell help, not a packaged launch.",
+    "oracle": {
+      "zeroExit": true,
+      "outputPresent": true
+    }
+  },
+  {
+    "command": "node /home/devuser/Documents/Projects/sceneaxi/apps/desktop-shell/bin/sceneaxi-desktop.mjs chrome",
+    "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+    "timeoutSeconds": 90,
+    "exit": 0,
+    "timedOut": false,
+    "durationSeconds": 0.19,
+    "output": "<!doctype html>\n<html lang=\"en\" data-surface=\"engine-desktop\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<meta name=\"color-scheme\" content=\"dark\">\n<meta name=\"generator\" content=\"@sceneaxi/desktop-shell chrome\">\n<meta name=\"sceneaxi-visual-sou",
+    "assertions": "Exit 0, real chrome HTML and standalone DESKTOP_RUNTIME_UNAVAILABLE refusal; no pixel assertion.",
+    "outputBytes": 424588,
+    "oracle": {
+      "html": true,
+      "runtimeRefusal": true
+    }
+  },
+  {
+    "command": "pnpm --dir /home/devuser/Documents/Projects/sceneaxi/sites/umbrella test:provider",
+    "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+    "timeoutSeconds": 90,
+    "exit": 0,
+    "timedOut": false,
+    "durationSeconds": 7.53,
+    "output": "\n> @sceneaxi/site-umbrella@0.0.0 test:provider /home/devuser/Documents/Projects/sceneaxi/sites/umbrella\n> vitest run --config vitest.config.ts test/better-auth-provider.test.ts test/docs-page.test.ts\n\n\n\u001b[1m\u001b[30m\u001b[46m RUN \u001b[49m\u001b[39m\u001b[22m \u001b[36mv4.1.10 \u001b[39m\u001b[90m/home/devuser/Documents/Projects/sceneaxi/sites/umbrella\u001b[39m\n\n \u001b[32m\u2713\u001b[39m test/docs-page.test.ts \u001b[2m(\u001b[22m\u001b[2m1 test\u001b[22m\u001b[2m)\u001b[22m\u001b[32m 19\u001b[2mms\u001b[22m\u001b[39m\n\u001b[90mstderr\u001b[2m | test/better-auth-provider.test.ts\u001b[2m > \u001b[22m\u001b[2mumbrella Better Auth provider\u001b[2m > \u001b[22m\u001b[2mthe hosted logout flow revokes both sessions, including after a provider delete failure (true)\n\u001b[22m\u001b[39m{\"event\":\"umbrella.auth.provider_warning\",\"provider\":\"better-auth\"}\n\n\u001b[90mstderr\u001b[2m | test/better-auth-provider.test.ts\u001b[2m > \u001b[22m\u001b[2mumbrella Better Auth provider\u001b[2m > \u001b[22m\u001b[2mthrottles both endpoints through provider storage\n\u001b[22m\u001b[39m{\"event\":\"umbrella.auth.provider_warning\",\"provider\":\"better-auth\"}\n\n\u001b[90mstderr\u001b[2m | test/better-auth-provider.test.ts\u001b[2m > \u001b[22m\u001b[2mumbrella Better Auth provider\u001b[2m > \u001b[22m\u001b[2mthrottles both endpoints through provider storage\n\u001b[22m\u001b[39m{\"event\":\"umbrella.auth.provider_warning\",\"provider\":\"better-auth\"}\n\n\u001b[90mstderr\u001b[2m | test/better-auth-provider.test.ts\u001b[2m > \u001b[22m\u001b[2mumbrella Better Auth provider\u001b[2m > \u001b[22m\u001b[2mthrottles both endpoints through provider storage\n\u001b[22m\u001b[39m{\"event\":\"umbrella.auth.provider_warning\",\"provider\":\"better-auth\"}\n\n\u001b[90mstderr\u001b[2m | test/better-auth-provider.test.ts\u001b[2m > \u001b[22m\u001b[2mumbrella Better Auth provider\u001b[2m > \u001b[22m\u001b[2mthrottles both endpoints through provider storage\n\u001b[22m\u001b[39m{\"event\":\"umbrella.auth.provider_warning\",\"provider\":\"better-auth\"}\n\n\u001b[90mstderr\u001b[2m | test/better-auth-provider.test.ts\u001b[2m > \u001b[22m\u001b[2mumbrella Better Auth provider\u001b[2m > \u001b[22m\u001b[2mthrottles both endpoints through provider storage\n\u001b[22m\u001b[39m{\"event\":\"umbrella.auth.provider_warning\",\"provider\":\"better-auth\"}\n\n\u001b[90mstderr\u001b[2m | test/better-auth-provider.test.ts\u001b[2m > \u001b[22m\u001b[2mumbrella Better Auth provider\u001b[2m > \u001b[22m\u001b[2mrejects a wrong credential without exposing it or creating a session\n\u001b[22m\u001b[39m{\"event\":\"umbrella.auth.provider_warning\",\"provider\":\"better-auth\"}\n\n\u001b[90mstderr\u001b[2m | test/better-auth-provider.test.ts\u001b[2m > \u001b[22m\u001b[2mumbrella Better Auth provider\u001b[2m > \u001b[22m\u001b[2mredacts storage failures and never dispatches the provider after readiness fails\n\u001b[22m\u001b[39m{\"event\":\"umbrella.auth.provider_request_failed\",\"provider\":\"better-auth\",\"outcome\":\"sign-in\"}\n\n \u001b[32m\u2713\u001b[39m test/better-auth-provider.test.ts \u001b[2m(\u001b[22m\u001b[2m22 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[33m 4192\u001b[2mms\u001b[22m\u001b[39m\n     \u001b[33m\u001b[2m\u2713\u001b[22m\u001b[39m revokes only the presented provider session by bearer and rejects its cookie and bearer afterwards \u001b[33m 468\u001b[2mms\u001b[22m\u001b[39m\n     \u001b[33m\u001b[2m\u2713\u001b[22m\u001b[39m the hosted logout flow revokes both sessions, including after a provider delete failure (false) \u001b[33m 622\u001b[2mms\u001b[22m\u001b[39m\n     \u001b[33m\u001b[2m\u2713\u001b[22m\u001b[39m serves the header shape its own server-to-server adapter sends \u001b[33m 399\u001b[2mms\u001b[22m\u001b[39m\n     \u001b[33m\u001b[2m\u2713\u001b[22m\u001b[39m accepts matching persisted provider state as an idempotent no-op \u001b[33m 616\u001b[2mms\u001b[22m\u001b[39m\n     \u001b[33m\u001b[2m\u2713\u001b[22m\u001b[39m throttles both endpoints through provider storage \u001b[33m 541\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m2 passed\u001b[39m\u001b[22m\u001b[90m (2)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m23 passed\u001b[39m\u001b[22m\u001b[90m (23)\u001b[39m\n\u001b[2m   Start at \u001b[22m 13:47:40\n\u001b[2m   Duration \u001b[22m 6.58s\u001b[2m (transform 3.36s, setup 0ms, import 4.71s, tests 4.21s, environment 0ms)\u001b[22m\n\n",
+    "assertions": "Installed-root real Better Auth provider suite; distinct from gate.",
+    "oracle": {
+      "zeroExit": true,
+      "outputPresent": true
+    }
+  },
+  {
+    "command": "pnpm --dir /home/devuser/Documents/Projects/sceneaxi/sites/umbrella test:integration",
+    "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+    "timeoutSeconds": 90,
+    "exit": 0,
+    "timedOut": false,
+    "durationSeconds": 7.45,
+    "output": "\n> @sceneaxi/site-umbrella@0.0.0 test:integration /home/devuser/Documents/Projects/sceneaxi/sites/umbrella\n> vitest run --config vitest.config.ts test/provider-adapters.integration.test.ts\n\n\n\u001b[1m\u001b[30m\u001b[46m RUN \u001b[49m\u001b[39m\u001b[22m \u001b[36mv4.1.10 \u001b[39m\u001b[90m/home/devuser/Documents/Projects/sceneaxi/sites/umbrella\u001b[39m\n\n \u001b[32m\u2713\u001b[39m test/provider-adapters.integration.test.ts \u001b[2m(\u001b[22m\u001b[2m7 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[33m 3534\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[90m (1)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m7 passed\u001b[39m\u001b[22m\u001b[90m (7)\u001b[39m\n\u001b[2m   Start at \u001b[22m 13:47:40\n\u001b[2m   Duration \u001b[22m 6.45s\u001b[2m (transform 2.21s, setup 0ms, import 2.78s, tests 3.53s, environment 0ms)\u001b[22m\n\n",
+    "assertions": "Installed-root PGlite persistence/migration suite; not live PostgreSQL proof.",
+    "oracle": {
+      "zeroExit": true,
+      "outputPresent": true
+    }
+  },
+  {
+    "command": "node /home/devuser/Documents/Projects/sceneaxi/apps/web-shell/bin/sceneaxi-web-shell.mjs --cwd /tmp/sceneaxi-baseline-shell-3xjq5ki7 --port 35523",
+    "cwd": "/home/devuser/Documents/Projects/sceneaxi",
+    "fixture": "temporary empty project, removed only by its context owner",
+    "requests": [
+      {
+        "request": "GET /",
+        "status": 200,
+        "assertionHtml": true,
+        "bodyBytes": 4155
+      },
+      {
+        "request": "GET /api/state",
+        "status": 200,
+        "body": "{\n  \"app\": \"sceneaxi-web-shell\",\n  \"ok\": true,\n  \"action\": \"state\",\n  \"projectRoot\": \"/tmp/sceneaxi-baseline-shell-3xjq5ki7\",\n  \"reviewToken\": null,\n  \"snapshot\": {\n    \"phase\": \"idle\",\n    \"unifiedDiff\": null,\n    \"renderedDiff\": null,\n    \"proposal\": null,\n    \"appliedPaths\": null,\n    \"journalRecoveryPending\": false,\n    \"diagnostics\": null\n  }\n}\n"
+      },
+      {
+        "request": "GET /definitely-unknown-route",
+        "status": 404,
+        "body": "{\n  \"app\": \"sceneaxi-web-shell\",\n  \"ok\": false,\n  \"action\": \"unknown\",\n  \"reason\": \"route-unknown\",\n  \"message\": \"No inspector route serves /definitely-unknown-route.\",\n  \"routes\": [\n    \"GET /api/state\",\n    \"GET /api/document\",\n    \"POST /api/propose\",\n    \"POST /api/accept\",\n    \"POST /api/reject\",\n    \"POST /api/recover\",\n    \"POST /api/assistant\"\n  ]\n}\n"
+      }
+    ],
+    "assertions": "Real loopback binary: inspector loads, read-only snapshot returns JSON, unknown route refuses 404. No authored document or provider call.",
+    "exit": 0,
+    "oracle": {
+      "html": true,
+      "stateJson": true,
+      "unknownRoute404": true
+    }
+  }
+]

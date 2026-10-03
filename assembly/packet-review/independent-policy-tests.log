@@ -1,0 +1,84 @@
+✖ async predicate (508.062249ms)
+✖ generator predicate (336.225723ms)
+✔ aliased subject (467.898085ms)
+✔ aliased guard (296.278651ms)
+✔ early success (477.959939ms)
+✔ assertion contract (450.286197ms)
+✔ numeric invalid claim (357.149272ms)
+✔ typed readonly alias (426.767601ms)
+✔ parameter shadow guard (361.772993ms)
+✔ ordinary cast (520.29671ms)
+✔ object shell not domain decoder (372.538696ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 9
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4670.450451
+
+✖ failing tests:
+
+test at ../../home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/packet-review/independent-policy-tests.mjs:14:3
+✖ async predicate (508.062249ms)
+  AssertionError [ERR_ASSERTION]: { "diagnostics": [{"message": "Function 'decode' is declared but never used.","code": "eslint(no-unused-vars)","severity": "warning","url": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/no-unused-vars.html","help": "Consider removing this declaration.","filename": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/packet-review/sceneaxi-rule-hKffLq/fixture.ts","labels": [{"label": "'decode' is declared here","span": {"offset": 101,"length": 6,"line": 1,"column": 102}}]}],
+                "number_of_files": 1,
+                "number_of_rules": 99,
+                "threads_count": 12,
+                "start_time": 0.374149885
+              }
+              
+  + actual - expected
+  
+  + []
+  - [
+  -   'no-runtime-typeof',
+  -   'no-unknown-parameters'
+  - ]
+  
+      at TestContext.<anonymous> (file:///home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/packet-review/independent-policy-tests.mjs:30:14)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [ 'no-runtime-typeof', 'no-unknown-parameters' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at ../../home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/packet-review/independent-policy-tests.mjs:14:3
+✖ generator predicate (336.225723ms)
+  AssertionError [ERR_ASSERTION]: { "diagnostics": [{"message": "Function 'decode' is declared but never used.","code": "eslint(no-unused-vars)","severity": "warning","url": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/no-unused-vars.html","help": "Consider removing this declaration.","filename": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/packet-review/sceneaxi-rule-BoY3ud/fixture.ts","labels": [{"label": "'decode' is declared here","span": {"offset": 96,"length": 6,"line": 1,"column": 97}}]},
+  {"message": "This generator function does not have `yield`","code": "eslint(require-yield)","severity": "warning","url": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/require-yield.html","help": "Add a `yield` expression inside the generator body, or convert it to a regular function if iteration behavior is not needed.","filename": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/packet-review/sceneaxi-rule-BoY3ud/fixture.ts","labels": [{"span": {"offset": 10,"length": 5,"line": 1,"column": 11}}]}],
+                "number_of_files": 1,
+                "number_of_rules": 99,
+                "threads_count": 12,
+                "start_time": 0.266975761
+              }
+              
+  + actual - expected
+  
+  + []
+  - [
+  -   'no-runtime-typeof',
+  -   'no-unknown-parameters'
+  - ]
+  
+      at TestContext.<anonymous> (file:///home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly/packet-review/independent-policy-tests.mjs:30:14)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [ 'no-runtime-typeof', 'no-unknown-parameters' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

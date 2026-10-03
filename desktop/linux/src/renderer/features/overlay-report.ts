@@ -5,13 +5,18 @@ import type { BridgeGlobal } from "./services.js";
 
 // Retry a rejected call, but stop burning IPC on structural channel failures.
 const FRAME_REPORT_MAX_ATTEMPTS = 3;
+
 const REPORT_ID = "desktop-live-viewport-report";
+
 const OPEN_PATH_ID = "desktop-live-viewport-open-path";
+
 const FRAME_REPORT_ID = "desktop-live-viewport-frame-report";
+
 const RARITY_EVIDENCE_ID = "desktop-live-viewport-rarity-evidence";
 
 function overlayLine(host: Element, id: string, kind: string, bottom: string, text: string): void {
   let line = document.getElementById(id);
+
   if (line === null) {
     line = document.createElement("p");
     line.id = id;
@@ -30,6 +35,7 @@ function overlayLine(host: Element, id: string, kind: string, bottom: string, te
     line.style.whiteSpace = "pre-wrap";
     host.append(line);
   }
+
   line.textContent = text;
 }
 
@@ -42,12 +48,13 @@ export function openPathLine(host: Element, text: string): void {
   overlayLine(host, OPEN_PATH_ID, "open-path", "52px", text);
 }
 
-export function refusalText(error: unknown): string {
+export function refusalText<Input>(error: Input): string {
   return error instanceof Error ? error.message : String(error);
 }
 
 function updatePixelsMeta(frame: SculptPresentationFrame): void {
   const content = pixelsMetaContent(frame);
+
   if (content === null) return;
   document
     .querySelector(`meta[name="${PIXELS_META_NAME}"]`)
@@ -65,46 +72,58 @@ function frameText(frame: SculptPresentationFrame): string {
   ].join(" · ");
 }
 
-export function installOverlayReport(stage: HTMLElement, request: BridgeGlobal["request"]) {
+export function installOverlayReport(stage: HTMLElement, request: BridgeGlobal["request"], signal?: AbortSignal) {
   let printed = false;
   let frameReportSettled = false;
   let frameReportInFlight = false;
   let frameReportAttempts = 0;
+
   const frameReportLine = (text: string) =>
     overlayLine(stage, FRAME_REPORT_ID, "frame-report", "96px", text);
+
   return {
-    reportLine: (text: string) => reportLine(stage, text),
-    openPathLine: (text: string) => openPathLine(stage, text),
+    reportLine: (text: string) => { if (!signal?.aborted) reportLine(stage, text); },
+    openPathLine: (text: string) => { if (!signal?.aborted) openPathLine(stage, text); },
     rarityEvidenceLine: (text: string) =>
-      overlayLine(stage, RARITY_EVIDENCE_ID, "rarity-evidence", "140px", text),
+      { if (!signal?.aborted) overlayLine(stage, RARITY_EVIDENCE_ID, "rarity-evidence", "140px", text); },
     // Remove the previous run's evidence rather than leaving stale provenance.
-    clearRarityEvidence: () => document.getElementById(RARITY_EVIDENCE_ID)?.remove(),
-    updatePixelsMeta,
+    clearRarityEvidence: () => { if (!signal?.aborted) document.getElementById(RARITY_EVIDENCE_ID)?.remove(); },
+    updatePixelsMeta: (frame: SculptPresentationFrame) => { if (!signal?.aborted) updatePixelsMeta(frame); },
     reportNextFrame: () => {
+      if (signal?.aborted) return;
       frameReportSettled = false;
       frameReportAttempts = 0;
     },
     reportFrame: (frame: SculptPresentationFrame, sceneId: string) => {
+      if (signal?.aborted) return;
       updatePixelsMeta(frame);
+
       if (!printed || frame.frame % 15 === 0) {
         printed = true;
         reportLine(stage, `${frameText(frame)} · scene ${sceneId}`);
       }
+
       if (!frameReportSettled && !frameReportInFlight) {
         frameReportInFlight = true;
         frameReportAttempts += 1;
         request({ action: "frame-report", payload: frame }).then(
           (response) => {
             frameReportInFlight = false;
+
+            if (signal?.aborted) return;
             frameReportSettled = true;
+
             // The host now holds this frame, observable by the smoke proof.
             if (response.ok) stage.dataset.frameReported = String(frame.frame);
+
             if (!response.ok) {
               frameReportLine(`frame report refused: ${response.reason} — ${response.message}`);
             }
           },
-          (error: unknown) => {
+          (error) => {
             frameReportInFlight = false;
+
+            if (signal?.aborted) return;
             const exhausted = frameReportAttempts >= FRAME_REPORT_MAX_ATTEMPTS;
             frameReportSettled = exhausted;
             frameReportLine(

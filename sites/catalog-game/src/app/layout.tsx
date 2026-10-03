@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
+
+export const dynamic = "force-dynamic";
+
 import { Archivo, JetBrains_Mono } from "next/font/google";
 import {
   CATALOG_SITE_BRAND,
+  catalogCanonical,
   CATALOG_SITE_FOUNDATION_SURFACE,
   CATALOG_SITE_SURFACE,
   resolveUmbrellaOrigin,
@@ -9,14 +14,22 @@ import {
 import { foundationsStylesheet } from "../lib/foundations.js";
 import { resolveFamilyBar, resolveStoreDomain } from "../lib/family-bar.js";
 import { FamilyBar } from "./_components/family-bar.js";
+import { StoreNav } from "./_components/store-nav.js";
 import "./globals.css";
 
 /**
  * Foundations v2 names Archivo and JetBrains Mono, and a package must not inject a network
  * font, so the site loads them itself. `next/font` self-hosts both at build time, which
- * keeps the deployed storefront free of a third-party font request at runtime.
+ * keeps the deployed storefront free of a third-party font request at runtime. Archivo
+ * keeps its width axis, which the Foundations display step is specified against.
  */
-const archivo = Archivo({ subsets: ["latin"], display: "swap", variable: "--site-font-ui" });
+const archivo = Archivo({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--site-font-ui",
+  axes: ["wdth"],
+});
+
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   display: "swap",
@@ -34,10 +47,42 @@ const jetbrainsMono = JetBrains_Mono({
  */
 const foundations = foundationsStylesheet(CATALOG_SITE_FOUNDATION_SURFACE);
 
-export const metadata: Metadata = {
-  title: `${CATALOG_SITE_BRAND.name} — SceneAxi game assets`,
-  description: CATALOG_SITE_BRAND.tagline,
-};
+/**
+ * The chrome copy this storefront words differently from its sibling. It is the only
+ * part of this file that differs between the two storefronts; everything below it is the
+ * shared skeleton, reading these words and `CATALOG_SITE_BRAND`.
+ */
+const STORE_COPY = Object.freeze({
+  metadataTitle: `${CATALOG_SITE_BRAND.name} — SceneAxi game assets`,
+  surfaceBlurb: "The SceneAxi game-asset storefront.",
+  publishLabel: "Sell your work",
+  publishGroup: "Sell",
+  publishRules: "What listing will require",
+  cardTitle: "Sell what you sculpt",
+  cardBody:
+    "Listing will be reviewed against the artifact's own evidence, not its render. Publishing is not open yet, so the share rule and what a listing would pay are published ahead of it.",
+  cardAction: "Read the listing rules",
+  baseNote: "A separate storefront from Web assets — its own origin and its own catalogue.",
+});
+
+const metadataOrigin = catalogCanonical(process.env, "/");
+
+export async function generateMetadata(): Promise<Metadata> {
+  const route = (await headers()).get("x-sceneaxi-route") ?? "/";
+  const path = route.startsWith("/") && !route.startsWith("//") && !/[?#\\]/.test(route) ? route : "/";
+  const canonical = catalogCanonical(process.env, path);
+
+  const metadata: Metadata = {
+    title: `${CATALOG_SITE_BRAND.name} — SceneAxi game assets`,
+    description: CATALOG_SITE_BRAND.tagline,
+  };
+
+  if (metadataOrigin !== null) metadata.metadataBase = new URL(metadataOrigin);
+
+  if (canonical !== null) metadata.alternates = { canonical };
+
+  return metadata;
+}
 
 export default function RootLayout({ children }: { readonly children: React.ReactNode }) {
   // Ordinary cross-links, carrying no identity, session, or telemetry across the surface
@@ -62,7 +107,7 @@ export default function RootLayout({ children }: { readonly children: React.Reac
       </head>
       <body>
         <a className="skip-link" href="#main">
-          Skip to the catalogue
+          Skip to the {CATALOG_SITE_BRAND.catalogueWord.toLowerCase()}
         </a>
 
         <FamilyBar entries={family} domain={domain} />
@@ -76,11 +121,11 @@ export default function RootLayout({ children }: { readonly children: React.Reac
                 <span className="storetag">{CATALOG_SITE_BRAND.storeTag}</span>
               </span>
             </a>
-            <nav className="nav" aria-label="Primary">
-              <a href="/">{CATALOG_SITE_BRAND.catalogueWord}</a>
-              <a href="/publish">Sell your work</a>
-              {umbrella.ok && <a href={umbrella.value}>SceneAxi engine</a>}
-            </nav>
+            <StoreNav
+              catalogueLabel={CATALOG_SITE_BRAND.catalogueWord}
+              publishLabel={STORE_COPY.publishLabel}
+              engine={umbrella.ok ? { href: umbrella.value, label: "SceneAxi engine" } : null}
+            />
           </div>
         </header>
 
@@ -94,7 +139,7 @@ export default function RootLayout({ children }: { readonly children: React.Reac
                 {CATALOG_SITE_BRAND.name}
               </p>
               <p className="footer-blurb">
-                The SceneAxi game-asset storefront. {CATALOG_SITE_BRAND.audience}
+                {STORE_COPY.surfaceBlurb} {CATALOG_SITE_BRAND.audience}
               </p>
             </div>
 
@@ -106,18 +151,18 @@ export default function RootLayout({ children }: { readonly children: React.Reac
                     <a href="/">{CATALOG_SITE_BRAND.catalogueWord}</a>
                   </li>
                   <li>
-                    <a href="/#pricing">How pricing reads</a>
+                    <a href="/#pricing">{CATALOG_SITE_BRAND.heroSecondaryCta}</a>
                   </li>
                 </ul>
               </div>
               <div className="footer-col">
-                <p className="micro">Sell</p>
+                <p className="micro">{STORE_COPY.publishGroup}</p>
                 <ul>
                   <li>
-                    <a href="/publish">Sell your work</a>
+                    <a href="/publish">{STORE_COPY.publishLabel}</a>
                   </li>
                   <li>
-                    <a href="/publish#requirements">What listing will require</a>
+                    <a href="/publish#requirements">{STORE_COPY.publishRules}</a>
                   </li>
                 </ul>
               </div>
@@ -126,7 +171,12 @@ export default function RootLayout({ children }: { readonly children: React.Reac
                 <ul>
                   <li>
                     {umbrella.ok ? (
-                      <a href={umbrella.value}>The engine and the SDK</a>
+                      <a href={umbrella.value}>
+                        The engine and the SDK
+                        <span className="glyph" aria-hidden="true">
+                          ↗
+                        </span>
+                      </a>
                     ) : (
                       <span>Engine origin not configured for this deployment</span>
                     )}
@@ -136,26 +186,17 @@ export default function RootLayout({ children }: { readonly children: React.Reac
             </div>
 
             <div className="footer-card">
-              <p>
-                <strong>Sell what you sculpt</strong>
-              </p>
-              <p className="footer-blurb">
-                Listing will be reviewed against the artifact&apos;s own evidence, not
-                its render. Publishing is not open yet, so the share rule and what a
-                listing would pay are published ahead of it.
-              </p>
+              <p className="footer-card-title">{STORE_COPY.cardTitle}</p>
+              <p className="footer-blurb">{STORE_COPY.cardBody}</p>
               <a className="button button-quiet" href="/publish">
-                Read the listing rules
+                {STORE_COPY.cardAction}
               </a>
             </div>
           </div>
 
           <div className="shell footer-base">
             <span>© 2026 SceneAxi</span>
-            <span className="footer-note">
-              A separate storefront from Web assets — its own origin and its own
-              catalogue.
-            </span>
+            <span className="footer-note">{STORE_COPY.baseNote}</span>
           </div>
         </footer>
       </body>

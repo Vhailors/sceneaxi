@@ -1,0 +1,46 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/tmp/sceneaxi-comprehensive-owned-xd4gdfl1[39m
+
+ [31m❯[39m desktop/linux/test/native-assistant-scene-compat.test.ts [2m([22m[2m14 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[33m 1045[2mms[22m[39m
+     [32m✓[39m dispatches the real injected compiler with trimmed prompt/profile/progress and publishes its result[32m 19[2mms[22m[39m
+     [32m✓[39m keeps default local compilation when no executor is injected[32m 4[2mms[22m[39m
+     [32m✓[39m refuses Kids/hosted/BYO before calling a private local executor[32m 1[2mms[22m[39m
+     [32m✓[39m settles false async/sync injected failures as runtime refusals[32m 2[2mms[22m[39m
+     [32m✓[39m settles true async/sync injected failures as runtime refusals[32m 2[2mms[22m[39m
+     [32m✓[39m fences progress and completion from an abandoned injected job[32m 4[2mms[22m[39m
+[31m     [31m×[31m runs create/rename through real E1 review, accept and fresh bridge reopen[39m[32m 207[2mms[22m[39m
+     [32m✓[39m stages a named empty node and reproduces the digest without changing source bytes[32m 80[2mms[22m[39m
+     [32m✓[39m reconstructs and stages exactly one real box primitive[32m 80[2mms[22m[39m
+     [32m✓[39m reconstructs and stages exactly one real cylinder primitive[32m 75[2mms[22m[39m
+     [32m✓[39m reconstructs and stages exactly one real sphere primitive[32m 87[2mms[22m[39m
+     [32m✓[39m renames an existing artifact without changing artifact bytes, placement or selection[32m 89[2mms[22m[39m
+     [33m[2m✓[22m[39m preserves node kind/name through rename, legacy reparent, transform edits and reopen [33m 314[2mms[22m[39m
+     [32m✓[39m keeps document/profile/policy refusal precedence and distinguishes absent creation parent from stale rename target[32m 79[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 1 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m desktop/linux/test/native-assistant-scene-compat.test.ts[2m > [22mcomplete current scene-operation compatibility[2m > [22mruns create/rename through real E1 review, accept and fresh bridge reopen
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m desktop/linux/test/native-assistant-scene-compat.test.ts:[2m123:53[22m[39m
+    [90m121|[39m       expect(desktopSceneFromDocumentData(parsed.document.data).ok).to…
+    [90m122|[39m       bridge = createDesktopBridge({ cwd: dir, commandCapabilities: ["…
+    [90m123|[39m       [34mexpect[39m(bridge[33m.[39m[34mhandle[39m({ action[33m:[39m [32m"scene"[39m })[33m.[39mok)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   |[39m                                                     [31m^[39m
+    [90m124|[39m     }
+    [90m125|[39m   })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m13 passed[39m[22m[90m (14)[39m
+[2m   Start at [22m 13:24:41
+[2m   Duration [22m 5.12s[2m (transform 3.21s, setup 0ms, import 3.88s, tests 1.04s, environment 0ms)[22m
+

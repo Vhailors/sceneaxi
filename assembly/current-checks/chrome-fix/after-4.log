@@ -1,0 +1,84 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/tmp/sceneaxi-comprehensive-owned-xd4gdfl1[39m
+
+[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[90mstderr[2m | tests/e2e/desktop-linux-bridge-golden.test.ts[2m > [22m[2mdesktop bridge — the packaged app's engine paths are real[2m > [22m[2mbuilds a real WebGLRenderer on the canvas path, so node must refuse it
+[22m[39mTHREE.WebGLRenderer: THREE.WebGLRenderer: Error creating WebGL context.
+
+[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[31mx[39m[33m[39m[32m·[39m[33m[39m[31mx[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 2 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m tests/e2e/desktop-product-loop-golden.test.ts[2m > [22mdesktop first-release product loop[2m > [22mrenders the active proposal and atomically accepts, rejects, and refuses stale hashes
+[31m[1mAssertionError[22m: expected [ { action: 'profile', …(1) }, …(28) ] to have a length of 28 but got 29[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 28[39m
+[31m+ 29[39m
+
+[36m [2m❯[22m tests/e2e/desktop-product-loop-golden.test.ts:[2m340:22[22m[39m
+    [90m338|[39m     [90m// Re-reading the document is that resolution.[39m
+    [90m339|[39m     [35mawait[39m [34mclick[39m(window[33m,[39m [32m"#project-open"[39m)[33m;[39m
+    [90m340|[39m     [34mexpect[39m(requests)[33m.[39m[34mtoHaveLength[39m(stageConflictRequests [33m+[39m [34m2[39m)[33m;[39m
+    [90m   |[39m                      [31m^[39m
+    [90m341|[39m     [35mawait[39m [34mclick[39m(window[33m,[39m [32m"#change-review-reject"[39m)[33m;[39m
+    [90m342|[39m     expect(status()).toContain("nothing under review · DESKTOP_PROPOSA…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/e2e/desktop-product-loop-golden.test.ts[2m > [22mdesktop first-release product loop[2m > [22mdrives profile switching, open, save recovery, and viewport play through the emitted UI
+[31m[1mAssertionError[22m: expected [ 'profile', 'status', …(33) ] to deeply equal [ 'profile', 'status', …(28) ][39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[33m@@ -1,26 +1,31 @@[39m
+[2m  [[22m
+[2m    "profile",[22m
+[2m    "status",[22m
+[2m    "scene-hierarchy-inspect",[22m
+[31m+   "profile",[39m
+[2m    "propose",[22m
+[2m    "status",[22m
+[2m    "scene-hierarchy-inspect",[22m
+[31m+   "profile",[39m
+[2m    "propose",[22m
+[2m    "reject",[22m
+[2m    "status",[22m
+[2m    "scene-hierarchy-inspect",[22m
+[2m    "profile",[22m
+[2m    "profile",[22m
+[31m+   "profile",[39m
+[2m    "status",[22m
+[2m    "scene-hierarchy-inspect",[22m
+[31m+   "profile",[39m
+[2m    "propose",[22m
+[2m    "accept",[22m
+[2m    "restart",[22m
+[2m    "scene-hierarchy-inspect",[22m
+[2m    "status",[22m
+[2m    "scene-hierarchy-inspect",[22m
+[31m+   "profile",[39m
+[2m    "propose",[22m
+[2m    "accept",[22m
+[2m    "recover",[22m
+[2m    "restart",[22m
+[2m    "scene-hierarchy-inspect",[22m
+
+[36m [2m❯[22m tests/e2e/desktop-product-loop-golden.test.ts:[2m655:84[22m[39m
+    [90m653|[39m     [34mexpect[39m(shell[33m?.[39mdataset[33m.[39mmode)[33m.[39m[34mtoBe[39m([32m"run"[39m)[33m;[39m
+    [90m654|[39m
+    [90m655|[39m     expect(requests.map((request) => requestOperation(request) ?? requ…
+    [90m   |[39m                                                                                    [31m^[39m
+    [90m656|[39m       [32m"profile"[39m[33m,[39m
+    [90m657|[39m       [32m"status"[39m[33m,[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m4 passed[39m[22m[90m (5)[39m
+[2m      Tests [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m183 passed[39m[22m[90m (185)[39m
+[2m   Start at [22m 17:04:59
+[2m   Duration [22m 28.42s[2m (transform 20.39s, setup 0ms, import 30.18s, tests 43.09s, environment 1ms)[22m
+

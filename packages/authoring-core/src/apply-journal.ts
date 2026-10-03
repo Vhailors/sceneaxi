@@ -13,7 +13,32 @@ import {
 } from "node:fs";
 import { randomBytes } from "node:crypto";
 import { join, resolve } from "node:path";
-import type { ApplyDiagnostic } from "@sceneaxi/schemas";
+import { parseDocumentText, type ApplyDiagnostic, type JsonValue } from "@sceneaxi/schemas";
+
+type JsonObject = { [key: string]: JsonValue };
+
+type Mutable<Value> = { -readonly [Key in keyof Value]: Value[Key] };
+
+type WriteOptions = Mutable<NonNullable<Parameters<typeof atomicWriteFile>[2]>>;
+
+type RecoverySuccess = Mutable<RecoveryOperationOk>;
+
+function isJsonObject(value: JsonValue): value is JsonObject {
+  return value !== null && isBoundaryObjectValue(value) && !Array.isArray(value);
+}
+
+function isString(value: unknown): value is string {
+  return typeof value === "string";
+}
+
+function isNumber(value: unknown): value is number {
+  return typeof value === "number";
+}
+
+function isJournalState(value: unknown): value is ApplyJournalEntry["state"] {
+  return isString(value) && ["prepared", "completed", "undoing", "redoing", "undone", "aborted"].includes(value);
+}
+
 import {
   AtomicWriteConflictError,
   AtomicWriteError,
@@ -22,6 +47,8 @@ import {
   atomicWriteAll,
   atomicWriteFile,
   canonicalPath,
+  containedProjectPath,
+  ProjectPathEscapeError,
   fileExists,
   releaseAtomicWriteLocks,
   releaseAtomicWriteLocksChecked,
@@ -31,6 +58,7 @@ import {
 import { contentHash } from "./content-hash.js";
 
 export const APPLY_JOURNAL_SCHEMA_VERSION = 4 as const;
+
 export const APPLY_JOURNAL_KIND = "sceneaxi.authoring-apply-journal" as const;
 
 export type ApplyJournalDocument = {
@@ -105,7 +133,9 @@ export function journalRecoveryPendingDiagnostics(): readonly ApplyDiagnostic[] 
 }
 
 const TRANSACTION_ID_RE = /^\d{13}-[0-9a-f]{16}$/;
+
 const CANONICAL_JOURNAL_NAME_RE = /^\d{13}-[0-9a-f]{16}\.json$/;
+
 const JOURNAL_KEYS = new Set([
   "schemaVersion",
   "kind",
@@ -116,6 +146,7 @@ const JOURNAL_KEYS = new Set([
   "completionOrder",
   "documents",
 ]);
+
 const JOURNAL_DOCUMENT_KEYS = new Set([
   "documentPath",
   "beforeContent",
@@ -125,30 +156,30 @@ const JOURNAL_DOCUMENT_KEYS = new Set([
 ]);
 
 function hasOnlyKeys(
-  value: Record<string, unknown>,
+  value: JsonObject,
   keys: ReadonlySet<string>,
 ): boolean {
   return Object.keys(value).every((key) => keys.has(key));
 }
 
 function journalDirectory(cwd: string): string {
-  return resolve(cwd, ".sceneaxi", "journal");
+  return containedProjectPath(cwd, ".sceneaxi/journal");
 }
 
 function journalPath(cwd: string, transactionId: string): string {
-  return join(journalDirectory(cwd), `${transactionId}.json`);
+  return containedProjectPath(cwd, join(journalDirectory(cwd), `${transactionId}.json`));
 }
 
 export function applyJournalOperationResource(cwd: string): string {
-  return resolve(cwd, ".sceneaxi-authoring-operation");
+  return containedProjectPath(cwd, ".sceneaxi-authoring-operation");
 }
 
 function activeJournalPath(cwd: string): string {
-  return join(journalDirectory(cwd), ".active");
+  return containedProjectPath(cwd, join(journalDirectory(cwd), ".active"));
 }
 
 function completionSequencePath(cwd: string): string {
-  return join(journalDirectory(cwd), ".completion-sequence");
+  return containedProjectPath(cwd, join(journalDirectory(cwd), ".completion-sequence"));
 }
 
 type ApplyUndoCandidate = Readonly<{
@@ -171,9 +202,11 @@ export function beginApplyJournalTransaction(
   cwd: string,
   absoluteDocumentPaths: readonly string[],
 ): AtomicWriteLockSet {
+  journalDirectory(cwd);
+
   return acquireAtomicWriteLocks([
     applyJournalOperationResource(cwd),
-    ...absoluteDocumentPaths,
+    ...absoluteDocumentPaths.map((path) => containedProjectPath(cwd, path)),
   ]);
 }
 
@@ -197,6 +230,7 @@ function writeJournal(cwd: string, entry: ApplyJournalEntry): void {
     serializeJournal(entry),
     { token: `journal-${entry.transactionId}` },
   );
+
   if (latestCompletedJournalCache?.directory === journalDirectory(cwd)) {
     latestCompletedJournalCache = undefined;
   }
@@ -211,38 +245,46 @@ function writeActiveJournal(cwd: string, entry: ApplyJournalEntry | null): void 
 }
 
 function parseJournal(text: string): ApplyJournalEntry | null {
-  let value: unknown;
+  let value: JsonValue;
+
   try {
-    value = JSON.parse(text) as unknown;
+    // SAFETY: JSON.parse produces a JSON value; the journal contract is validated below.
+    value = JSON.parse(text) as JsonValue;
   } catch {
     return null;
   }
-  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+
+  if (!isJsonObject(value)) {
     return null;
   }
-  const raw = value as Record<string, unknown>;
+
+  const raw = value;
   const state = String(raw["state"]);
+
   const isCompletedState =
     state === "completed" || state === "undoing" || state === "redoing" || state === "undone";
+
   const hasReservedOrder = state === "prepared" || isCompletedState;
+
   if (
     raw["schemaVersion"] !== APPLY_JOURNAL_SCHEMA_VERSION ||
     raw["kind"] !== APPLY_JOURNAL_KIND ||
-    typeof raw["transactionId"] !== "string" ||
+    !isString(raw["transactionId"]) ||
     !TRANSACTION_ID_RE.test(raw["transactionId"]) ||
-    typeof raw["createdAt"] !== "string" ||
+    !isString(raw["createdAt"]) ||
     !Number.isFinite(Date.parse(raw["createdAt"])) ||
     !["prepared", "completed", "undoing", "redoing", "undone", "aborted"].includes(
       String(raw["state"]),
     ) ||
+    !isJournalState(raw["state"]) ||
     !Array.isArray(raw["documents"]) ||
     raw["documents"].length === 0 ||
     (hasReservedOrder &&
-      (!Number.isSafeInteger(raw["completionOrder"]) ||
-        (raw["completionOrder"] as number) <= 0)) ||
+      (!isNumber(raw["completionOrder"]) || !Number.isSafeInteger(raw["completionOrder"]) ||
+        raw["completionOrder"] <= 0)) ||
     (!hasReservedOrder && Object.hasOwn(raw, "completionOrder")) ||
     (isCompletedState &&
-      (typeof raw["completedAt"] !== "string" ||
+      (!isString(raw["completedAt"]) ||
         !Number.isFinite(Date.parse(raw["completedAt"])))) ||
     (!isCompletedState && Object.hasOwn(raw, "completedAt")) ||
     !hasOnlyKeys(raw, JOURNAL_KEYS)
@@ -252,29 +294,36 @@ function parseJournal(text: string): ApplyJournalEntry | null {
 
   const documents: ApplyJournalDocument[] = [];
   const documentPaths = new Set<string>();
+
   for (const value of raw["documents"]) {
-    if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    if (!isJsonObject(value)) {
       return null;
     }
-    const document = value as Record<string, unknown>;
+
+    const document = value;
+
     if (
-      typeof document["documentPath"] !== "string" ||
+      !isString(document["documentPath"]) ||
       document["documentPath"].length === 0 ||
-      typeof document["beforeContent"] !== "string" ||
-      typeof document["beforeContentHash"] !== "string" ||
-      typeof document["afterContent"] !== "string" ||
-      typeof document["afterContentHash"] !== "string" ||
+      !isString(document["beforeContent"]) ||
+      !isString(document["beforeContentHash"]) ||
+      !isString(document["afterContent"]) ||
+      !isString(document["afterContentHash"]) ||
       !hasOnlyKeys(document, JOURNAL_DOCUMENT_KEYS) ||
       documentPaths.has(document["documentPath"])
     ) {
       return null;
     }
+
     if (
+      !parseDocumentText(document["beforeContent"]).ok ||
+      !parseDocumentText(document["afterContent"]).ok ||
       contentHash(document["beforeContent"]) !== document["beforeContentHash"] ||
       contentHash(document["afterContent"]) !== document["afterContentHash"]
     ) {
       return null;
     }
+
     documents.push({
       documentPath: document["documentPath"],
       beforeContent: document["beforeContent"],
@@ -290,16 +339,20 @@ function parseJournal(text: string): ApplyJournalEntry | null {
     kind: APPLY_JOURNAL_KIND,
     transactionId: raw["transactionId"],
     createdAt: raw["createdAt"],
-    state: raw["state"] as ApplyJournalEntry["state"],
+    state: raw["state"],
     documents,
   };
+
   if (isCompletedState) {
+    // SAFETY: completed states require a date string and positive safe-integer order in the validation above.
     return {
       ...base,
       completedAt: raw["completedAt"] as string,
       completionOrder: raw["completionOrder"] as number,
     };
   }
+
+  // SAFETY: reserved states require a positive safe-integer completionOrder in the validation above.
   return hasReservedOrder
     ? { ...base, completionOrder: raw["completionOrder"] as number }
     : base;
@@ -311,10 +364,13 @@ function readActiveJournal(
   | { readonly ok: true; readonly entry: ApplyJournalEntry | null }
   | { readonly ok: false; readonly diagnostics: readonly ApplyDiagnostic[] } {
   const path = activeJournalPath(cwd);
+
   if (!fileExists(path)) return { ok: true, entry: null };
   const text = readFileSync(path, "utf8");
+
   if (text.trim() === "null") return { ok: true, entry: null };
   const entry = parseJournal(text);
+
   if (
     entry === null ||
     (entry.state !== "prepared" && entry.state !== "undoing" && entry.state !== "redoing")
@@ -329,12 +385,16 @@ function readActiveJournal(
       ],
     };
   }
+
+  for (const document of entry.documents) containedProjectPath(cwd, document.documentPath);
+
   return { ok: true, entry };
 }
 
 export function applyJournalRecoveryPending(cwd: string): boolean {
   try {
     const active = readActiveJournal(cwd);
+
     return !active.ok || active.entry !== null;
   } catch {
     return true;
@@ -352,7 +412,10 @@ export function prepareApplyJournal(
   if (documents.length === 0) {
     throw new Error("Apply journal requires at least one document.");
   }
+
+  for (const document of documents) containedProjectPath(cwd, document.documentPath);
   const active = readActiveJournal(cwd);
+
   if (!active.ok || active.entry !== null) {
     throw new Error(
       active.ok
@@ -360,8 +423,10 @@ export function prepareApplyJournal(
         : (active.diagnostics[0]?.message ?? "Apply journal is invalid."),
     );
   }
+
   const transactionId = `${Date.now()}-${randomBytes(8).toString("hex")}`;
   const completionOrder = reserveCompletionOrder(cwd);
+
   const entry: ApplyJournalEntry = {
     schemaVersion: APPLY_JOURNAL_SCHEMA_VERSION,
     kind: APPLY_JOURNAL_KIND,
@@ -377,7 +442,9 @@ export function prepareApplyJournal(
       afterContentHash: contentHash(document.afterContent),
     })),
   };
+
   writeActiveJournal(cwd, entry);
+
   return entry;
 }
 
@@ -388,11 +455,13 @@ export function completeApplyJournal(
   if (entry.completionOrder === undefined) {
     throw new Error("Apply journal completion order was not reserved.");
   }
+
   const completed = {
     ...entry,
     state: "completed" as const,
     completedAt: new Date().toISOString(),
   };
+
   writeJournal(cwd, completed);
   writeActiveJournal(cwd, null);
   cacheLatestCompletedJournal(cwd, completed);
@@ -401,44 +470,51 @@ export function completeApplyJournal(
 function reserveCompletionOrder(cwd: string): number {
   const path = completionSequencePath(cwd);
   let current = 0;
+
   if (fileExists(path)) {
-    let parsed: unknown;
+    let parsed: JsonValue;
+
     try {
-      parsed = JSON.parse(readFileSync(path, "utf8")) as unknown;
+      // SAFETY: JSON.parse produces JSON values; sequence fields are validated below.
+      parsed = JSON.parse(readFileSync(path, "utf8")) as JsonValue;
     } catch {
       parsed = null;
     }
+
     if (
-      parsed === null ||
-      typeof parsed !== "object" ||
-      Array.isArray(parsed) ||
+      !isJsonObject(parsed) ||
       Object.keys(parsed).length !== 3 ||
-      (parsed as Record<string, unknown>)["schemaVersion"] !== 1 ||
-      (parsed as Record<string, unknown>)["kind"] !==
-        "sceneaxi.authoring-completion-sequence" ||
-      !Number.isSafeInteger((parsed as Record<string, unknown>)["value"]) ||
-      ((parsed as Record<string, unknown>)["value"] as number) < 0
+      parsed["schemaVersion"] !== 1 ||
+      parsed["kind"] !== "sceneaxi.authoring-completion-sequence" ||
+      !isNumber(parsed["value"]) ||
+      !Number.isSafeInteger(parsed["value"]) ||
+      parsed["value"] < 0
     ) {
       // Fall back to the journal scan below.
     } else {
-      current = (parsed as Record<string, unknown>)["value"] as number;
+      current = parsed["value"];
     }
   }
+
   if (!fileExists(path) || current === 0) {
     const journals = readJournals(cwd);
+
     if (!journals.ok) {
       throw new Error(
         journals.diagnostics[0]?.message ?? "Apply journal is invalid.",
       );
     }
+
     current = Math.max(
       0,
       ...journals.entries.map((candidate) => candidate.completionOrder ?? 0),
     );
   }
+
   if (current >= Number.MAX_SAFE_INTEGER) {
     throw new Error("Apply journal completion sequence is exhausted.");
   }
+
   const next = current + 1;
   atomicWriteFile(
     path,
@@ -453,6 +529,7 @@ function reserveCompletionOrder(cwd: string): number {
     )}\n`,
     { token: "completion-sequence" },
   );
+
   return next;
 }
 
@@ -477,15 +554,19 @@ function readJournals(
   | { readonly ok: true; readonly entries: readonly ApplyJournalEntry[] }
   | { readonly ok: false; readonly diagnostics: readonly ApplyDiagnostic[] } {
   const dir = journalDirectory(cwd);
+
   if (!fileExists(dir)) return { ok: true, entries: [] };
 
   const entries: ApplyJournalEntry[] = [];
+
   const names = readdirSync(dir)
     .filter((entry) => CANONICAL_JOURNAL_NAME_RE.test(entry))
     .sort();
+
   for (const name of names) {
-    const path = join(dir, name);
+    const path = containedProjectPath(cwd, join(dir, name));
     const parsed = parseJournal(readFileSync(path, "utf8"));
+
     if (
       parsed === null ||
       `${parsed.transactionId}.json` !== name ||
@@ -503,8 +584,11 @@ function readJournals(
         ],
       };
     }
+
+    for (const document of parsed.documents) containedProjectPath(cwd, document.documentPath);
     entries.push(parsed);
   }
+
   return { ok: true, entries };
 }
 
@@ -529,6 +613,7 @@ function applyUndoCandidate(
   entry: ApplyJournalEntry | undefined,
 ): ApplyUndoCandidate | undefined {
   if (entry?.completionOrder === undefined) return undefined;
+
   return Object.freeze({
     completionOrder: entry.completionOrder,
     documents: Object.freeze(
@@ -544,13 +629,16 @@ function applyUndoCandidate(
 
 function journalFileSignature(cwd: string): string | undefined {
   const directory = journalDirectory(cwd);
+
   if (!fileExists(directory)) return undefined;
+
   return JSON.stringify(
     readdirSync(directory)
       .filter((name) => CANONICAL_JOURNAL_NAME_RE.test(name))
       .sort()
       .map((name) => {
-        const stat = statSync(join(directory, name), { bigint: true });
+        const stat = statSync(containedProjectPath(cwd, join(directory, name)), { bigint: true });
+
         return [name, stat.mtimeNs.toString(), stat.size.toString()];
       }),
   );
@@ -563,17 +651,21 @@ function cacheLatestCompletedJournal(
 ): void {
   const directory = journalDirectory(cwd);
   let signature: string | undefined;
+
   try {
     signature = capturedSignature ?? journalFileSignature(cwd);
   } catch {
     signature = undefined;
   }
+
   if (signature === undefined) {
     if (latestCompletedJournalCache?.directory === directory) {
       latestCompletedJournalCache = undefined;
     }
+
     return;
   }
+
   latestCompletedJournalCache = Object.freeze({
     directory,
     signature,
@@ -588,17 +680,22 @@ function readLatestCompletedJournal(
   | { readonly ok: false; readonly diagnostics: readonly ApplyDiagnostic[] } {
   const directory = journalDirectory(cwd);
   const signature = journalFileSignature(cwd);
+
   if (signature === undefined) return { ok: true, entry: undefined };
+
   if (
     latestCompletedJournalCache?.directory === directory &&
     latestCompletedJournalCache.signature === signature
   ) {
     return { ok: true, entry: latestCompletedJournalCache.entry };
   }
+
   const journals = readJournals(cwd);
+
   if (!journals.ok) return journals;
   const entry = latestCompletedJournal(journals.entries);
   cacheLatestCompletedJournal(cwd, entry, signature);
+
   return { ok: true, entry: applyUndoCandidate(entry) };
 }
 
@@ -608,13 +705,18 @@ export function applyUndoAvailability(
   try {
     const cwd = input.cwd ?? process.cwd();
     const active = readActiveJournal(cwd);
+
     if (!active.ok) return "unavailable";
+
     if (active.entry !== null) return "recovery-pending";
     const latestJournal = readLatestCompletedJournal(cwd);
+
     if (!latestJournal.ok) return "unavailable";
     const latest = latestJournal.entry;
+
     return latest !== undefined && latest.documents.every((document) => {
-      const path = canonicalPath(resolve(cwd, document.documentPath));
+      const path = containedProjectPath(cwd, document.documentPath);
+
       return (
         fileExists(path) &&
         contentHash(readFileSync(path, "utf8")) === document.afterContentHash
@@ -631,9 +733,9 @@ function nextRedoJournal(entries: readonly ApplyJournalEntry[]): ApplyJournalEnt
   const completedOrder = Math.max(
     0,
     ...entries
-      .filter((entry) => entry.state === "completed")
-      .map((entry) => entry.completionOrder ?? 0),
+      .flatMap((entry) => entry.state === "completed" ? [entry.completionOrder ?? 0] : []),
   );
+
   return entries
     .filter(
       (entry) => entry.state === "undone" && (entry.completionOrder ?? 0) > completedOrder,
@@ -647,13 +749,18 @@ export function applyRedoAvailability(
   try {
     const cwd = input.cwd ?? process.cwd();
     const active = readActiveJournal(cwd);
+
     if (!active.ok) return "unavailable";
+
     if (active.entry !== null) return "recovery-pending";
     const journals = readJournals(cwd);
+
     if (!journals.ok) return "unavailable";
     const next = nextRedoJournal(journals.entries);
+
     return next !== undefined && next.documents.every((document) => {
-      const path = canonicalPath(resolve(cwd, document.documentPath));
+      const path = containedProjectPath(cwd, document.documentPath);
+
       return fileExists(path) && contentHash(readFileSync(path, "utf8")) === document.beforeContentHash;
     })
       ? "available"
@@ -670,8 +777,10 @@ function recoverJournalEntry(
   lockSet?: AtomicWriteLockSet,
 ): JournalOperationResult {
   const expectedHashes = new Map<string, string>();
+
   for (const document of entry.documents) {
-    const absolutePath = canonicalPath(resolve(cwd, document.documentPath));
+    const absolutePath = containedProjectPath(cwd, document.documentPath);
+
     if (!fileExists(absolutePath)) {
       return {
         ok: false,
@@ -685,7 +794,9 @@ function recoverJournalEntry(
         ],
       };
     }
+
     const currentHash = contentHash(readFileSync(absolutePath, "utf8"));
+
     if (
       currentHash !== document.beforeContentHash &&
       currentHash !== document.afterContentHash
@@ -702,22 +813,23 @@ function recoverJournalEntry(
         ],
       };
     }
+
     expectedHashes.set(document.documentPath, currentHash);
   }
 
   try {
-    atomicWriteAll(
-      entry.documents.map((document) => ({
-        path: canonicalPath(resolve(cwd, document.documentPath)),
-        contents:
-          target === "after" ? document.afterContent : document.beforeContent,
-        expectedContentHash: expectedHashes.get(document.documentPath) as string,
-      })),
-      {
-        token: entry.transactionId,
-        ...(lockSet === undefined ? {} : { lockSet }),
-      },
-    );
+    const options: WriteOptions = { token: entry.transactionId };
+
+    if (lockSet !== undefined) options.lockSet = lockSet;
+
+    // SAFETY: the preceding loop stores a string currentHash for every entry document before any write.
+    const plans = entry.documents.map((document) => ({
+      path: containedProjectPath(cwd, document.documentPath),
+      contents: target === "after" ? document.afterContent : document.beforeContent,
+      expectedContentHash: expectedHashes.get(document.documentPath) as string,
+    }));
+
+    atomicWriteAll(plans, options);
   } catch (error) {
     if (
       error instanceof AtomicWriteConflictError ||
@@ -736,8 +848,10 @@ function recoverJournalEntry(
         ],
       };
     }
+
     throw error;
   }
+
   try {
     if (target === "after") {
       completeApplyJournal(cwd, entry);
@@ -753,6 +867,7 @@ function recoverJournalEntry(
       journalRecoveryPending: true,
     };
   }
+
   return {
     ok: true,
     transactionId: entry.transactionId,
@@ -770,10 +885,13 @@ export function recoverPreparedApply(
 
 function recoverIncompleteAppliesLocked(cwd: string): RecoveryOperationResult {
   const active = readActiveJournal(cwd);
+
   if (!active.ok) return active;
+
   if (active.entry === null) {
     return { ok: true, transactionIds: [], documentPaths: [] };
   }
+
   const recovered = recoverJournalEntry(
     cwd,
     active.entry,
@@ -781,15 +899,18 @@ function recoverIncompleteAppliesLocked(cwd: string): RecoveryOperationResult {
       ? "after"
       : "before",
   );
+
   if (!recovered.ok) return recovered;
-  return {
+
+  const result: RecoverySuccess = {
     ok: true,
     transactionIds: [recovered.transactionId],
     documentPaths: recovered.documentPaths,
-    ...(recovered.journalRecoveryPending === true
-      ? { journalRecoveryPending: true }
-      : {}),
   };
+
+  if (recovered.journalRecoveryPending === true) result.journalRecoveryPending = true;
+
+  return result;
 }
 
 function readApplyTransactionLocked(
@@ -797,7 +918,9 @@ function readApplyTransactionLocked(
   transactionId: string,
 ): ApplyTransactionResolutionResult {
   const active = readActiveJournal(cwd);
+
   if (!active.ok) return active;
+
   if (active.entry?.transactionId === transactionId) {
     return {
       ok: true,
@@ -810,6 +933,7 @@ function readApplyTransactionLocked(
   }
 
   const path = journalPath(cwd, transactionId);
+
   if (!fileExists(path)) {
     return {
       ok: true,
@@ -818,7 +942,9 @@ function readApplyTransactionLocked(
       documentPaths: [],
     };
   }
+
   const entry = parseJournal(readFileSync(path, "utf8"));
+
   if (
     entry === null ||
     entry.transactionId !== transactionId ||
@@ -836,6 +962,11 @@ function readApplyTransactionLocked(
       ],
     };
   }
+
+  // Transaction resolution must admit the same contained archive documents as
+  // undo/redo, even though it does not itself write the canonical document.
+  for (const document of entry.documents) containedProjectPath(cwd, document.documentPath);
+
   return {
     ok: true,
     transactionId,
@@ -844,7 +975,7 @@ function readApplyTransactionLocked(
   };
 }
 
-export function resolveApplyTransaction(input: {
+function resolveApplyTransactionContained(input: {
   readonly transactionId: string;
   readonly cwd?: string;
 }): ApplyTransactionResolutionResult {
@@ -859,7 +990,10 @@ export function resolveApplyTransaction(input: {
       ],
     };
   }
+
   const cwd = canonicalPath(resolve(input.cwd ?? process.cwd()));
+  applyJournalOperationResource(cwd);
+
   if (!fileExists(journalDirectory(cwd))) {
     return {
       ok: true,
@@ -868,7 +1002,9 @@ export function resolveApplyTransaction(input: {
       documentPaths: [],
     };
   }
+
   let operationLock: AtomicWriteLockSet;
+
   try {
     operationLock = acquireAtomicWriteLocks([applyJournalOperationResource(cwd)]);
   } catch (error) {
@@ -884,25 +1020,34 @@ export function resolveApplyTransaction(input: {
         ],
       };
     }
+
     throw error;
   }
+
   try {
     const recovered = recoverIncompleteAppliesLocked(cwd);
+
     if (!recovered.ok) return recovered;
+
     return readApplyTransactionLocked(cwd, input.transactionId);
   } finally {
     releaseAtomicWriteLocks(operationLock);
   }
 }
 
-export function recoverIncompleteApplies(
+function recoverIncompleteAppliesContained(
   input: { readonly cwd?: string } = {},
 ): RecoveryOperationResult {
   const cwd = input.cwd ?? process.cwd();
+  // Refuse redirected authority resources even on the empty-journal fast path.
+  applyJournalOperationResource(cwd);
+
   if (!fileExists(journalDirectory(cwd))) {
     return { ok: true, transactionIds: [], documentPaths: [] };
   }
+
   let operationLock: AtomicWriteLockSet;
+
   try {
     operationLock = acquireAtomicWriteLocks([applyJournalOperationResource(cwd)]);
   } catch (error) {
@@ -918,8 +1063,10 @@ export function recoverIncompleteApplies(
         ],
       };
     }
+
     throw error;
   }
+
   try {
     return recoverIncompleteAppliesLocked(cwd);
   } finally {
@@ -936,7 +1083,10 @@ export function writeCanonicalDocument(input: {
 }):
   | { readonly ok: true }
   | { readonly ok: false; readonly diagnostics: readonly ApplyDiagnostic[] } {
+  containedProjectPath(input.cwd, input.path);
+  journalDirectory(input.cwd);
   let operationLock: AtomicWriteLockSet;
+
   try {
     operationLock = acquireAtomicWriteLocks([
       applyJournalOperationResource(input.cwd),
@@ -954,11 +1104,15 @@ export function writeCanonicalDocument(input: {
         ],
       };
     }
+
     throw error;
   }
+
   try {
     const recovered = recoverIncompleteAppliesLocked(input.cwd);
+
     if (!recovered.ok) return recovered;
+
     if (recovered.journalRecoveryPending === true) {
       return {
         ok: false,
@@ -967,6 +1121,7 @@ export function writeCanonicalDocument(input: {
     }
 
     let documentLock: AtomicWriteLockSet;
+
     try {
       documentLock = acquireAtomicWriteLocks([input.path]);
     } catch (error) {
@@ -982,21 +1137,21 @@ export function writeCanonicalDocument(input: {
           ],
         };
       }
+
       throw error;
     }
+
     try {
-      atomicWriteFile(input.path, input.contents, {
-        ...(input.expectedContentHash === undefined
-          ? {}
-          : { expectedContentHash: input.expectedContentHash }),
-        ...(input.mustBeAbsent === undefined
-          ? {}
-          : { mustBeAbsent: input.mustBeAbsent }),
-        lockSet: documentLock,
-      });
+      const options: WriteOptions = { lockSet: documentLock };
+
+      if (input.expectedContentHash !== undefined) options.expectedContentHash = input.expectedContentHash;
+
+      if (input.mustBeAbsent !== undefined) options.mustBeAbsent = input.mustBeAbsent;
+      atomicWriteFile(input.path, input.contents, options);
     } finally {
       releaseAtomicWriteLocks(documentLock);
     }
+
     return { ok: true };
   } finally {
     releaseAtomicWriteLocks(operationLock);
@@ -1004,10 +1159,11 @@ export function writeCanonicalDocument(input: {
 }
 
 /** Restore the exact prior bytes from the most recent completed apply. */
-export function undoLastApply(
+function undoLastApplyContained(
   input: { readonly cwd?: string } = {},
 ): JournalOperationResult {
   const cwd = input.cwd ?? process.cwd();
+
   if (!fileExists(journalDirectory(cwd))) {
     return {
       ok: false,
@@ -1019,7 +1175,9 @@ export function undoLastApply(
       ],
     };
   }
+
   let operationLock: AtomicWriteLockSet;
+
   try {
     operationLock = acquireAtomicWriteLocks([applyJournalOperationResource(cwd)]);
   } catch (error) {
@@ -1035,21 +1193,28 @@ export function undoLastApply(
         ],
       };
     }
+
     throw error;
   }
+
   try {
     const recovered = recoverIncompleteAppliesLocked(cwd);
+
     if (!recovered.ok) return recovered;
+
     if (recovered.journalRecoveryPending === true) {
       return {
         ok: false,
         diagnostics: journalRecoveryPendingDiagnostics(),
       };
     }
+
     const journals = readJournals(cwd);
+
     if (!journals.ok) return journals;
 
     const latest = latestCompletedJournal(journals.entries);
+
     if (latest === undefined) {
       return {
         ok: false,
@@ -1061,6 +1226,7 @@ export function undoLastApply(
         ],
       };
     }
+
     const nextLatest = latestCompletedJournal(
       journals.entries.filter(
         (entry) => entry.transactionId !== latest.transactionId,
@@ -1068,11 +1234,13 @@ export function undoLastApply(
     );
 
     const plans = latest.documents.map((document) => ({
-      path: canonicalPath(resolve(cwd, document.documentPath)),
+      path: containedProjectPath(cwd, document.documentPath),
       contents: document.beforeContent,
       expectedContentHash: document.afterContentHash,
     }));
+
     let documentLocks: AtomicWriteLockSet;
+
     try {
       documentLocks = acquireAtomicWriteLocks(plans.map((plan) => plan.path));
     } catch (error) {
@@ -1090,12 +1258,15 @@ export function undoLastApply(
           ],
         };
       }
+
       throw error;
     }
+
     try {
       verifyAtomicWritePreconditions(plans, documentLocks);
     } catch (error) {
       releaseAtomicWriteLocks(documentLocks);
+
       if (
         error instanceof AtomicWriteConflictError ||
         error instanceof AtomicWriteLockError
@@ -1113,11 +1284,14 @@ export function undoLastApply(
           ],
         };
       }
+
       throw error;
     }
+
     try {
       const undoing = { ...latest, state: "undoing" as const };
       writeActiveJournal(cwd, undoing);
+
       try {
         atomicWriteAll(plans, {
           token: latest.transactionId,
@@ -1127,7 +1301,9 @@ export function undoLastApply(
         if (error instanceof AtomicWriteError && !error.rollbackComplete) {
           return recoverJournalEntry(cwd, undoing, "before", documentLocks);
         }
+
         writeActiveJournal(cwd, null);
+
         if (
           error instanceof AtomicWriteConflictError ||
           error instanceof AtomicWriteLockError ||
@@ -1146,8 +1322,10 @@ export function undoLastApply(
             ],
           };
         }
+
         throw error;
       }
+
       try {
         writeJournal(cwd, { ...undoing, state: "undone" });
         writeActiveJournal(cwd, null);
@@ -1162,6 +1340,7 @@ export function undoLastApply(
           journalRecoveryPending: true,
         };
       }
+
       return {
         ok: true,
         transactionId: latest.transactionId,
@@ -1176,17 +1355,20 @@ export function undoLastApply(
 }
 
 /** Restore the exact after-image from the next entry on the durable redo branch. */
-export function redoLastApply(
+function redoLastApplyContained(
   input: { readonly cwd?: string } = {},
 ): JournalOperationResult {
   const cwd = input.cwd ?? process.cwd();
+
   if (!fileExists(journalDirectory(cwd))) {
     return {
       ok: false,
       diagnostics: [{ code: "journal-not-found", message: "No undone apply journal is available to redo." }],
     };
   }
+
   let operationLock: AtomicWriteLockSet;
+
   try {
     operationLock = acquireAtomicWriteLocks([applyJournalOperationResource(cwd)]);
   } catch (error) {
@@ -1200,29 +1382,39 @@ export function redoLastApply(
         }],
       };
     }
+
     throw error;
   }
+
   try {
     const recovered = recoverIncompleteAppliesLocked(cwd);
+
     if (!recovered.ok) return recovered;
+
     if (recovered.journalRecoveryPending === true) {
       return { ok: false, diagnostics: journalRecoveryPendingDiagnostics() };
     }
+
     const journals = readJournals(cwd);
+
     if (!journals.ok) return journals;
     const next = nextRedoJournal(journals.entries);
+
     if (next === undefined) {
       return {
         ok: false,
         diagnostics: [{ code: "journal-not-found", message: "No undone apply journal is available to redo." }],
       };
     }
+
     const plans = next.documents.map((document) => ({
-      path: canonicalPath(resolve(cwd, document.documentPath)),
+      path: containedProjectPath(cwd, document.documentPath),
       contents: document.afterContent,
       expectedContentHash: document.beforeContentHash,
     }));
+
     let documentLocks: AtomicWriteLockSet;
+
     try {
       documentLocks = acquireAtomicWriteLocks(plans.map((plan) => plan.path));
     } catch (error) {
@@ -1236,8 +1428,10 @@ export function redoLastApply(
           }],
         };
       }
+
       throw error;
     }
+
     try {
       try {
         verifyAtomicWritePreconditions(plans, documentLocks);
@@ -1252,17 +1446,22 @@ export function redoLastApply(
             }],
           };
         }
+
         throw error;
       }
+
       const redoing = { ...next, state: "redoing" as const };
       writeActiveJournal(cwd, redoing);
+
       try {
         atomicWriteAll(plans, { token: next.transactionId, lockSet: documentLocks });
       } catch (error) {
         if (error instanceof AtomicWriteError && !error.rollbackComplete) {
           return recoverJournalEntry(cwd, redoing, "after", documentLocks);
         }
+
         writeActiveJournal(cwd, null);
+
         if (error instanceof AtomicWriteConflictError || error instanceof AtomicWriteLockError || error instanceof AtomicWriteError) {
           return {
             ok: false,
@@ -1273,8 +1472,10 @@ export function redoLastApply(
             }],
           };
         }
+
         throw error;
       }
+
       try {
         writeJournal(cwd, { ...redoing, state: "completed" });
         writeActiveJournal(cwd, null);
@@ -1287,6 +1488,7 @@ export function redoLastApply(
           journalRecoveryPending: true,
         };
       }
+
       return {
         ok: true,
         transactionId: next.transactionId,
@@ -1298,4 +1500,42 @@ export function redoLastApply(
   } finally {
     releaseAtomicWriteLocks(operationLock);
   }
+}
+
+export function recoverIncompleteApplies(input: { readonly cwd?: string } = {}): RecoveryOperationResult {
+  try { return recoverIncompleteAppliesContained(input); } catch (error) {
+    if (!(error instanceof ProjectPathEscapeError)) throw error;
+
+    return { ok: false, diagnostics: [{ code: "journal-invalid", message: error.message, documentPath: error.documentPath }] };
+  }
+}
+
+export function undoLastApply(input: { readonly cwd?: string } = {}): JournalOperationResult {
+  try { return undoLastApplyContained(input); } catch (error) {
+    if (!(error instanceof ProjectPathEscapeError)) throw error;
+
+    return { ok: false, diagnostics: [{ code: "journal-invalid", message: error.message, documentPath: error.documentPath }] };
+  }
+}
+
+export function redoLastApply(input: { readonly cwd?: string } = {}): JournalOperationResult {
+  try { return redoLastApplyContained(input); } catch (error) {
+    if (!(error instanceof ProjectPathEscapeError)) throw error;
+
+    return { ok: false, diagnostics: [{ code: "journal-invalid", message: error.message, documentPath: error.documentPath }] };
+  }
+}
+
+export function resolveApplyTransaction(input: { readonly cwd?: string; readonly transactionId: string }): ApplyTransactionResolutionResult {
+  try { return resolveApplyTransactionContained(input); } catch (error) {
+    if (!(error instanceof ProjectPathEscapeError)) throw error;
+
+    return { ok: false, diagnostics: [{ code: "journal-invalid", message: error.message, documentPath: error.documentPath }] };
+  }
+}
+
+type BoundaryObjectValue = object | null;
+
+function isBoundaryObjectValue<Input>(value: Input): value is Input & Readonly<BoundaryObjectValue> {
+  return typeof value === "object";
 }

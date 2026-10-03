@@ -9,6 +9,8 @@ import {
   type DesktopVisualState,
 } from "@sceneaxi/desktop-shell";
 
+import { chromeDocument } from "./helpers/desktop-chrome-golden.js";
+
 const render = (state: DesktopVisualState = createDesktopVisualState()): string =>
   renderDesktopChrome(desktopVisualView(state));
 
@@ -27,7 +29,9 @@ describe("engine desktop chrome — frame", () => {
     expect(html).toContain('aria-controls="refusal-legend"');
     expect(html).toContain('aria-labelledby="refusal-legend-title" hidden>');
     expect(html).not.toContain("<details");
-    expect(html).not.toMatch(/refusal-legend[^>]*tabindex/);
+    const legendElement = chromeDocument().querySelector("#refusal-legend");
+    expect(legendElement).not.toBeNull();
+    expect(legendElement?.getAttribute("tabindex")).toBeNull();
     expect(html).toContain(".refusal-legend-panel{position:absolute");
     expect(html).toContain("overflow:auto;padding:10px 12px");
     expect(html).toContain("else if (action === 'refusal-help')");
@@ -35,9 +39,11 @@ describe("engine desktop chrome — frame", () => {
 
   it("renders File, Edit, and Run with their real command ids", () => {
     const html = render();
+
     for (const id of DESKTOP_MENU_IDS) {
       expect(html).toContain(`id="menu-${id}" data-kind="view"`);
     }
+
     for (const command of DESKTOP_INTERACTION_COMMANDS) {
       expect(html).toContain(`data-command="${command.id}"`);
     }
@@ -60,6 +66,7 @@ describe("engine desktop chrome — frame", () => {
     // render seven live-looking buttons.
     const view = desktopVisualView(createDesktopVisualState());
     const html = render();
+
     for (const mode of view.modes) {
       expect(html).toContain(
         `id="${mode.control.id}" data-kind="${mode.control.kind}"`,

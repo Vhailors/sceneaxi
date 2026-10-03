@@ -1,0 +1,1127 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/tmp/sceneaxi-comprehensive-owned-xd4gdfl1[39m
+
+[33m[39m[31mx[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[90mstderr[2m | tests/e2e/desktop-linux-bridge-golden.test.ts[2m > [22m[2mdesktop bridge — the packaged app's engine paths are real[2m > [22m[2mbuilds a real WebGLRenderer on the canvas path, so node must refuse it
+[22m[39mTHREE.WebGLRenderer: THREE.WebGLRenderer: Error creating WebGL context.
+
+[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[31mx[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[31mx[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[31mx[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[31mx[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[31mx[39m[33m[39m[31mx[39m[33m[39m[31mx[39m[33m[39m[31mx[39m[33m[39m[32m·[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 9 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m tests/e2e/desktop-command-interactions-golden.test.ts[2m > [22mdesktop command menu, palette, and accelerator parity[2m > [22mkeeps Undo inert while journal recovery is pending
+[31m[1mAssertionError[22m: expected [ { plane: 'engine', …(2) } ] to have a length of +0 but got 1[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 0[39m
+[31m+ 1[39m
+
+[36m [2m❯[22m tests/e2e/desktop-command-interactions-golden.test.ts:[2m462:19[22m[39m
+    [90m460|[39m     [35mawait[39m [34msettle[39m(window)[33m;[39m
+    [90m461|[39m     [34mexpect[39m(event[33m.[39mdefaultPrevented)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m462|[39m     [34mexpect[39m(calls)[33m.[39m[34mtoHaveLength[39m([34m0[39m)[33m;[39m
+    [90m   |[39m                   [31m^[39m
+    [90m463|[39m     [34mexpect[39m([34melement[39m(window[33m,[39m [32m"[data-outcome-code]"[39m)[33m.[39mtextContent)[33m.[39m[34mtoBe[39m(
+    [90m464|[39m       [33mDESKTOP_PRODUCT_REFUSALS[39m[33m.[39mrecoveryPending[33m,[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/9]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/e2e/desktop-command-interactions-golden.test.ts[2m > [22mdesktop command menu, palette, and accelerator parity[2m > [22mnames the refusal when an accelerator reaches an unavailable command
+[31m[1mAssertionError[22m: expected [ { plane: 'engine', …(2) } ] to have a length of +0 but got 1[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 0[39m
+[31m+ 1[39m
+
+[36m [2m❯[22m tests/e2e/desktop-command-interactions-golden.test.ts:[2m477:19[22m[39m
+    [90m475|[39m     [35mawait[39m [34msettle[39m(window)[33m;[39m
+    [90m476|[39m     [34mexpect[39m(event[33m.[39mdefaultPrevented)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m477|[39m     [34mexpect[39m(calls)[33m.[39m[34mtoHaveLength[39m([34m0[39m)[33m;[39m
+    [90m   |[39m                   [31m^[39m
+    [90m478|[39m     expect(element(window, '.overlay[data-overlay="outcome"]').hidden)…
+    [90m479|[39m     [34mexpect[39m([34melement[39m(window[33m,[39m [32m"[data-outcome-code]"[39m)[33m.[39mtextContent)[33m.[39m[34mtoBe[39m(
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/9]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/e2e/desktop-command-interactions-golden.test.ts[2m > [22mdesktop command menu, palette, and accelerator parity[2m > [22mnames the Kids refusal when an accelerator is pressed on that profile
+[31m[1mAssertionError[22m: expected [ { plane: 'engine', …(2) } ] to have a length of +0 but got 1[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 0[39m
+[31m+ 1[39m
+
+[36m [2m❯[22m tests/e2e/desktop-command-interactions-golden.test.ts:[2m501:19[22m[39m
+    [90m499|[39m     [34mshortcut[39m(window[33m,[39m [32m"s"[39m)[33m;[39m
+    [90m500|[39m     [35mawait[39m [34msettle[39m(window)[33m;[39m
+    [90m501|[39m     [34mexpect[39m(calls)[33m.[39m[34mtoHaveLength[39m([34m0[39m)[33m;[39m
+    [90m   |[39m                   [31m^[39m
+    [90m502|[39m     expect(element(window, '.overlay[data-overlay="outcome"]').hidden)…
+    [90m503|[39m     expect(element(window, "[data-outcome-code]").textContent).toBe(sa…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/9]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/e2e/desktop-command-interactions-golden.test.ts[2m > [22mdesktop command menu, palette, and accelerator parity[2m > [22mignores a Shift-modified chord that no menu advertises
+[31m[1mAssertionError[22m: expected [ { plane: 'engine', …(2) } ] to have a length of +0 but got 1[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 0[39m
+[31m+ 1[39m
+
+[36m [2m❯[22m tests/e2e/desktop-command-interactions-golden.test.ts:[2m518:19[22m[39m
+    [90m516|[39m     [35mawait[39m [34msettle[39m(window)[33m;[39m
+    [90m517|[39m     [34mexpect[39m(event[33m.[39mdefaultPrevented)[33m.[39m[34mtoBe[39m([35mfalse[39m)[33m;[39m
+    [90m518|[39m     [34mexpect[39m(calls)[33m.[39m[34mtoHaveLength[39m([34m0[39m)[33m;[39m
+    [90m   |[39m                   [31m^[39m
+    [90m519|[39m   })[33m;[39m
+    [90m520|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/9]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/e2e/desktop-linux-bridge-golden.test.ts[2m > [22mdesktop chrome document — the shell's chrome, unforked, plus two injections[2m > [22mactivates only after runtime binding and preserves refusal across profiles
+[31m[1mAssertionError[22m: expected 'live' to be 'inert' // Object.is equality[39m
+
+Expected: [32m"inert"[39m
+Received: [31m"live"[39m
+
+[36m [2m❯[22m expectRefusal tests/e2e/desktop-linux-bridge-golden.test.ts:[2m866:38[22m[39m
+    [90m864|[39m     const expectRefusal = (reason: string): void => {
+    [90m865|[39m       for (const control of controls) {
+    [90m866|[39m         expect(control.dataset.kind).toBe("inert");
+    [90m   |[39m                                      [31m^[39m
+    [90m867|[39m         expect(control.dataset.refusal).toBe(reason);
+    [90m868|[39m         expect(control.getAttribute("aria-disabled")).toBe("true");
+[90m [2m❯[22m tests/e2e/desktop-linux-bridge-golden.test.ts:[2m893:5[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/9]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/e2e/desktop-linux-bridge-golden.test.ts[2m > [22mdesktop chrome document — the shell's chrome, unforked, plus two injections[2m > [22mrefreshes every mounted surface after a rarity retirement event
+[31m[1mAssertionError[22m: expected 4 to be 3 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 3[39m
+[31m+ 4[39m
+
+[36m [2m❯[22m tests/e2e/desktop-linux-bridge-golden.test.ts:[2m2376:27[22m[39m
+    [90m2374|[39m     });
+    [90m2375|[39m     await vi.waitFor(() => {
+    [90m2376|[39m       expect(statusReads).toBe(3);
+    [90m   |[39m                           [31m^[39m
+    [90m2377|[39m       expect(status.textContent).toContain("authoring state refreshed"…
+    [90m2378|[39m     });
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/9]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/e2e/desktop-product-loop-golden.test.ts[2m > [22mdesktop first-release product loop[2m > [22mrenders the active proposal and atomically accepts, rejects, and refuses stale hashes
+[31m[1mAssertionError[22m: expected [ { action: 'profile', …(1) }, …(28) ] to have a length of 28 but got 29[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 28[39m
+[31m+ 29[39m
+
+[36m [2m❯[22m tests/e2e/desktop-product-loop-golden.test.ts:[2m340:22[22m[39m
+    [90m338|[39m     [90m// Re-reading the document is that resolution.[39m
+    [90m339|[39m     [35mawait[39m [34mclick[39m(window[33m,[39m [32m"#project-open"[39m)[33m;[39m
+    [90m340|[39m     [34mexpect[39m(requests)[33m.[39m[34mtoHaveLength[39m(stageConflictRequests [33m+[39m [34m2[39m)[33m;[39m
+    [90m   |[39m                      [31m^[39m
+    [90m341|[39m     [35mawait[39m [34mclick[39m(window[33m,[39m [32m"#change-review-reject"[39m)[33m;[39m
+    [90m342|[39m     expect(status()).toContain("nothing under review · DESKTOP_PROPOSA…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/9]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/e2e/desktop-product-loop-golden.test.ts[2m > [22mdesktop first-release product loop[2m > [22mdrives profile switching, open, save recovery, and viewport play through the emitted UI
+[31m[1mAssertionError[22m: expected [ 'profile', 'status', …(33) ] to deeply equal [ 'profile', 'status', …(28) ][39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[33m@@ -1,26 +1,31 @@[39m
+[2m  [[22m
+[2m    "profile",[22m
+[2m    "status",[22m
+[2m    "scene-hierarchy-inspect",[22m
+[31m+   "profile",[39m
+[2m    "propose",[22m
+[2m    "status",[22m
+[2m    "scene-hierarchy-inspect",[22m
+[31m+   "profile",[39m
+[2m    "propose",[22m
+[2m    "reject",[22m
+[2m    "status",[22m
+[2m    "scene-hierarchy-inspect",[22m
+[2m    "profile",[22m
+[2m    "profile",[22m
+[31m+   "profile",[39m
+[2m    "status",[22m
+[2m    "scene-hierarchy-inspect",[22m
+[31m+   "profile",[39m
+[2m    "propose",[22m
+[2m    "accept",[22m
+[2m    "restart",[22m
+[2m    "scene-hierarchy-inspect",[22m
+[2m    "status",[22m
+[2m    "scene-hierarchy-inspect",[22m
+[31m+   "profile",[39m
+[2m    "propose",[22m
+[2m    "accept",[22m
+[2m    "recover",[22m
+[2m    "restart",[22m
+[2m    "scene-hierarchy-inspect",[22m
+
+[36m [2m❯[22m tests/e2e/desktop-product-loop-golden.test.ts:[2m655:84[22m[39m
+    [90m653|[39m     [34mexpect[39m(shell[33m?.[39mdataset[33m.[39mmode)[33m.[39m[34mtoBe[39m([32m"run"[39m)[33m;[39m
+    [90m654|[39m
+    [90m655|[39m     expect(requests.map((request) => requestOperation(request) ?? requ…
+    [90m   |[39m                                                                                    [31m^[39m
+    [90m656|[39m       [32m"profile"[39m[33m,[39m
+    [90m657|[39m       [32m"status"[39m[33m,[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/9]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m apps/desktop-shell/test/chrome-frame.test.ts[2m > [22mengine desktop chrome — frame[2m > [22mkeeps modelled refusal help collapsed with a bounded scroll panel
+[31m[1mAssertionError[22m: expected '<!doctype html>\n<html lang="en" data…' not to match /refusal-legend[^>]*tabindex/[39m
+
+[32m- Expected:[39m
+/refusal-legend[^>]*tabindex/
+
+[31m+ Received:[39m
+"<!doctype html>
+<html lang=\"en\" data-surface=\"engine-desktop\">
+<head>
+<meta charset=\"utf-8\">
+<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">
+<meta name=\"color-scheme\" content=\"dark\">
+<meta name=\"generator\" content=\"@sceneaxi/desktop-shell chrome\">
+<meta name=\"sceneaxi-visual-source\" content=\"direction-1-cinematic-pro.html · sha256 c4ecfce14440b56342781e53abd02f915446795d8ba2bf2fdf18d895bc950b51\">
+<meta name=\"sceneaxi-pixels-drawn\" content=\"false\">
+<title>SceneAxi — Engine Desktop</title>
+<style>
+:root{
+  --canvas:#0A0F1A;--well:#070B13;--assistant:#0F1624;
+  --panel:#0F1624;--overlay:#131B2C;--raised:#131B2C;
+  --header:#182236;--hover:#182236;--backdrop:#05080E;
+  --line:#243044;--line-card:#243044;--line-row:#1A2436;
+  --line-control:#2A3850;--line-raised:#334563;--line-hover:#3D5274;
+  --accent:#46D8EC;--accent-hover:#74E3F2;--on-accent:#05121A;
+  --ok:#5FE3C0;--refuse:#FF4D5E;--info:#5B9CFF;--scene:#A78BFA;
+  --text:#EAF0F9;--text-2:#ACB8CC;--text-3:#ACB8CC;
+  --dim:#ACB8CC;--faint:#95A2B8;
+  --inert:#95A2B8;--inert-on-accent:#0A2A34;--inert-glyph:#3D5274;
+  --rail:56px;--left:274px;
+  --inspector:326px;--assistant-w:344px;
+  --title-h:36px;--tabs-h:32px;
+  --status-h:27px;
+  --sans:-apple-system, \"SF Pro Display\", \"Segoe UI Variable Display\", \"Segoe UI\", system-ui, \"Helvetica Neue\", Arial, sans-serif;--mono:ui-monospace, \"SF Mono\", \"Cascadia Code\", Menlo, Consolas, monospace;
+  --r-panel:18px;--r-card:13px;--r-control:10px;
+  --space-1:4px;--space-2:8px;--space-3:12px;
+  --space-4:16px;--space-6:24px;
+}
+*{box-sizing:border-box}
+/* Every hidden region here is an explicit model or runtime decision. */
+[hidden]{display:none !important}
+html,body{margin:0;padding:0;height:100%;overflow:hidden}
+body{background:var(--backdrop);color:var(--text);font-family:var(--sans);font-size:13px;-webkit-font-smoothing:antialiased}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-control);box-shadow:0 0 0 4px var(--well)}
+.view-tab:focus-visible,.dock-tab:focus-visible,.rail-mode:focus-visible{outline-offset:-3px;box-shadow:none}
+/* Rings remain inside clipped listboxes and popovers; filled controls retain the well halo. */
+:is(.menu-command,.project-files select,.project-recent-select,.assistant-route,.assistant-manipulator):focus-visible{outline-offset:-3px;box-shadow:none}
+:is(button,input,select,textarea,a[href],[tabindex]):focus-visible{scroll-margin:var(--space-3)}
+@media (forced-colors:active){:focus-visible{outline:2px solid Highlight;outline-offset:-2px;box-shadow:none}button[aria-pressed=\"true\"],button[aria-selected=\"true\"]{border:1px solid Highlight}}
+:is(.menu-item,.profile-chip,.icon-button,.assistant-toggle,.assistant-mode):not(.is-inert):not([aria-pressed=\"true\"]):hover{background:var(--hover);color:var(--text)}
+button:not(.is-inert):not(:disabled):not([aria-disabled=\"true\"]):active{box-shadow:inset 0 0 0 2px var(--line-hover)}
+button:not(.is-inert):not(:disabled):not([aria-disabled=\"true\"]):active:focus-visible{box-shadow:0 0 0 4px var(--well),inset 0 0 0 2px var(--line-hover)}
+:is(.left-dock,.inspector,.dock-body,.assistant-body,.assistant-composer,.palette-list,.overlay-card){scrollbar-gutter:stable;scroll-padding:var(--space-3)}
+button{transition:background-color .14s ease,border-color .14s ease,color .14s ease}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+/* An inert control is dimmed by paint, never by element opacity: opacity
+   composites the label toward whatever is behind it, and both the token gate and
+   a browser's getComputedStyle read the declared colour, so that dimming was
+   measured by nothing. --inert is the dimmest tier that still clears 4.5:1, so
+   the refusal stays readable. The [aria-pressed]/[aria-selected] pair is here
+   because an active tab or mode sets its own colour at a higher specificity. */
+button.is-inert{cursor:not-allowed;color:var(--inert)}
+button.is-inert[aria-pressed=\"true\"],button.is-inert[aria-selected=\"true\"]{color:var(--inert)}
+button.is-inert .rail-glyph{border-color:var(--inert-glyph)}
+code,kbd{font-family:var(--mono);font-size:.86em}
+
+.shell{display:grid;grid-template-rows:var(--title-h) 1fr var(--status-h);height:100dvh;min-height:100dvh;background:var(--canvas);position:relative;overflow:hidden}
+/* A denied assistant keeps its column: the archive shows the Kids lock screen
+   there, and hiding it would turn a named refusal into an absent panel. Only a
+   closed assistant removes the column. */
+.shell-body{display:grid;grid-template-columns:var(--rail) var(--left) minmax(0,1fr) var(--inspector) var(--assistant-w);min-height:0}
+.shell[data-assistant=\"closed\"] .shell-body{grid-template-columns:var(--rail) var(--left) minmax(0,1fr) var(--inspector)}
+.shell[data-assistant=\"closed\"] .assistant{display:none}
+
+.title-bar{display:flex;align-items:center;gap:12px;padding:0 11px;background:var(--panel);border-bottom:1px solid var(--line)}
+.window-dots{display:flex;gap:7px}
+.window-dots i{width:11px;height:11px;border-radius:50%;background:#334563}
+.menu-bar{display:flex;gap:1px}
+.menu-root{position:relative}
+.menu-item{font-size:12px;color:var(--text-3);padding:0 8px;height:22px;border-radius:3px}
+.menu-item[aria-expanded=\"true\"]{background:var(--hover);color:var(--text)}
+.menu-panel{position:absolute;left:0;top:25px;z-index:45;min-width:220px;padding:5px;background:var(--raised);border:1px solid var(--line-raised);border-radius:6px;box-shadow:0 18px 45px -16px color-mix(in srgb, var(--backdrop) 90%, transparent)}
+.menu-command{display:flex;align-items:center;justify-content:space-between;gap:22px;width:100%;padding:7px 9px;border-radius:4px;color:var(--text-2);font-size:12px;text-align:left}
+.menu-command:hover,.menu-command:focus-visible{background:var(--hover);color:var(--text)}
+.menu-command.is-inert:hover,.menu-command.is-inert:focus-visible{background:none;color:var(--inert)}
+.menu-command kbd{font-size:9px;color:var(--dim)}
+.profile-switch{display:flex;gap:2px;padding:2px;background:var(--well);border:1px solid var(--line-control);border-radius:5px}
+.profile-chip{display:flex;align-items:center;gap:6px;height:22px;padding:0 10px;border-radius:3px;font-size:11px;color:var(--dim);white-space:nowrap}
+.profile-chip[aria-pressed=\"true\"]{background:var(--hover);color:var(--text);font-weight:600}
+.profile-chip .dot{background:#2A3850}
+.profile-chip[aria-pressed=\"true\"] [data-profile-dot=\"game\"]{background:var(--accent)}
+.profile-chip[aria-pressed=\"true\"] [data-profile-dot=\"web\"]{background:#5B9CFF}
+.profile-chip[aria-pressed=\"true\"] [data-profile-dot=\"kids\"]{background:var(--scene)}
+.chip-tag{font-family:var(--mono);font-size:8.5px;letter-spacing:.06em;color:var(--faint)}
+.dot{width:5px;height:5px;border-radius:50%;flex:none;display:inline-block}
+.dot-ok{background:var(--ok)}
+.title-centre{flex:1;display:flex;justify-content:center;min-width:0}
+.project-pill{display:flex;align-items:center;gap:8px;height:22px;padding:0 11px;border-radius:11px;background:var(--header);border:1px solid var(--line-control);font-size:11px;white-space:nowrap}
+.project-pill[data-project-state=\"dirty\"],.project-pill[data-project-state=\"recovering\"]{border-color:var(--accent);color:var(--accent)}
+.project-pill[data-project-state=\"refused\"]{border-color:#5A2B32;color:var(--refuse)}
+.title-actions{display:flex;align-items:center;gap:9px;flex:none}
+/* Drawer toggles exist at every size but only matter once a column undocks.
+   Scoped so the later .ghost-button rule cannot win on equal specificity. */
+.title-actions .drawer-toggle{display:none}
+.ghost-button{display:flex;align-items:center;gap:7px;height:22px;padding:0 10px;border-radius:4px;background:var(--header);border:1px solid var(--line-control);font-size:11px;color:var(--dim)}
+.ghost-button:hover{border-color:var(--line-hover);color:var(--text)}
+/* A single-class :hover outranks button.is-inert, so every control class whose
+   hover repaints its label has to say what the inert one does under the pointer
+   — otherwise an inert control becomes indistinguishable from a live one there,
+   which is the same dimmed-by-nothing state the paint rule above replaced. */
+.ghost-button.is-inert:hover{border-color:var(--line-control);color:var(--inert)}
+.ghost-button kbd{background:var(--well);border:1px solid var(--line-control);border-radius:2px;padding:1px 4px;color:var(--faint)}
+.primary-button{background:var(--accent);color:var(--on-accent);font-weight:600;font-size:11px;border-radius:var(--r-control);height:22px;padding:0 11px}
+.primary-button:hover{background:var(--accent-hover)}
+/* The accent fill stays and only the mark on it is demoted: --inert on orange is
+   1.29:1, and the fill is what says which control this is. --inert-on-accent is
+   5.72:1 there against the live 7.05:1. */
+.primary-button.is-inert,.primary-button.is-inert:hover{color:var(--inert-on-accent)}
+.primary-button.is-inert:hover{background:var(--accent)}
+.block-button{width:100%;height:32px;font-size:12px;margin-top:10px}
+.assistant-toggle{display:flex;align-items:center;gap:7px;height:22px;padding:0 10px;border-radius:4px;font-size:11px;font-weight:500;background:var(--header);border:1px solid var(--line-control);color:var(--dim)}
+/* Where the assistant is docked the toggle reads the column's own state; below
+   that tier the drawer rule takes over. Which one applies is a stylesheet
+   decision on the two complementary media conditions rather than an attribute
+   chosen at render time, because the document can be opened at a viewport the
+   render never saw and the toggle must never light up over a column that
+   viewport does not show. */
+@media (min-width:1440px) and (min-height:720px){
+  .shell[data-assistant=\"open\"] .assistant-toggle{background:#10242C;border-color:#1E5A66;color:var(--accent)}
+  .shell[data-assistant=\"open\"] [data-assistant-dot]{background:var(--accent)}
+}
+.shell[data-assistant=\"denied\"] [data-assistant-dot]{background:var(--scene)}
+
+.mode-rail{background:var(--well);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:9px 0;gap:2px}
+.brand{width:28px;height:28px;border-radius:7px;background:var(--accent);margin-bottom:9px;display:grid;place-items:center;box-shadow:0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent),0 5px 16px -5px color-mix(in srgb, var(--accent) 60%, transparent)}
+.brand::before{content:\"\";width:10px;height:10px;border:2px solid var(--on-accent);border-radius:1px;transform:rotate(45deg)}
+.rail-mode{width:44px;height:42px;border-radius:var(--r-control);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;position:relative;color:var(--faint)}
+.rail-mode:hover{background:var(--header)}
+.rail-mode[aria-pressed=\"true\"]{background:var(--header);color:var(--accent)}
+.rail-mode[aria-pressed=\"true\"]::before{content:\"\";position:absolute;left:-9px;top:10px;bottom:10px;width:2px;border-radius:0 2px 2px 0;background:var(--accent)}
+.rail-glyph{width:14px;height:14px;border:1.5px solid currentColor;display:block}
+.rail-label{font-family:var(--mono);font-size:8px;letter-spacing:.05em}
+
+.left-dock,.inspector{background:var(--panel);display:flex;flex-direction:column;min-height:0;overflow-y:auto}
+.left-dock{border-right:1px solid var(--line)}
+.inspector{border-left:1px solid var(--line)}
+.editor-command-tools,.project-command-tools{display:grid;gap:7px;padding:8px;border-top:1px solid var(--line)}
+.editor-command-form{display:grid;gap:5px;padding:8px;border:1px solid var(--line-card);border-radius:5px;background:var(--well)}
+.editor-command-form h3{margin:0;font-size:10px;font-weight:600}
+.editor-command-form label,.viewport-source-control{display:grid;gap:3px;font-size:9px;color:var(--dim)}
+.editor-command-form input,.editor-command-form select,.editor-command-form textarea,.viewport-source-control select{min-width:0;width:100%;padding:5px;border:1px solid var(--line-control);border-radius:4px;background:var(--raised);color:var(--text);font:9px var(--mono)}
+.editor-command-form textarea{min-height:48px;resize:vertical}
+.editor-command-form [aria-live]{margin:0;font-size:8px;line-height:1.4;color:var(--dim);overflow-wrap:anywhere}
+.editor-command-form button,.view-tabs>[data-editor-command-submit]{min-height:24px;padding:3px 7px;border:1px solid var(--line-control);border-radius:4px;text-align:left;font-size:9px}
+.editor-command-form button:disabled,.view-tabs>[data-editor-command-submit]:disabled{color:var(--inert);cursor:not-allowed}
+.viewport-source-control{display:flex;align-items:center;white-space:nowrap}
+.viewport-source-control select{width:auto}
+/* Intrinsic section heights contribute to the inspector's scroll extent. */
+.inspector > section{flex-shrink:0;min-width:0}
+/* Catalogue textareas must not share an inline baseline with Stage: native
+   multiline controls otherwise paint below the label's line box at the scroll edge. */
+.scene-catalog-editor{display:grid;gap:var(--space-2);min-width:0;padding:var(--space-3)}
+.scene-catalog-editor label{display:grid;gap:var(--space-1);min-width:0}
+.scene-catalog-editor textarea{display:block;width:100%;min-width:0;resize:vertical}
+.scene-catalog-editor button{justify-self:start}
+.scene-catalog-editor pre{min-width:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.panel-head{margin:0;height:32px;flex:none;display:flex;align-items:center;padding:0 var(--space-3);background:var(--header);border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.08em;color:var(--text-3)}
+.panel-empty{margin:var(--space-2);padding:var(--space-3);border:1px dashed var(--line-control);border-radius:var(--r-control);background:var(--well);font-size:12px;line-height:1.65;color:var(--dim);overflow-wrap:anywhere}
+.panel-empty[aria-live]{border-style:solid;border-left:2px solid var(--line-hover)}
+.panel-note{display:flex;gap:9px;align-items:flex-start;margin:0 10px 11px;padding:10px 11px;border:1px solid;border-radius:4px;font-size:11px;line-height:1.55}
+.panel-note .dot{margin-top:5px}
+.project-panel{flex:none;border-bottom:1px solid var(--line)}
+.project-panel .panel-head{justify-content:space-between}
+.project-name{max-width:126px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dim);font-size:8px;letter-spacing:.04em}
+.project-launcher{display:grid;gap:var(--space-2);padding:var(--space-3);border-bottom:1px solid var(--line)}
+.project-launcher p,.project-root{margin:0;color:var(--dim);font-size:11px;line-height:1.6;overflow-wrap:anywhere}
+.project-lifecycle-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px}
+.project-lifecycle-actions button{min-width:0;padding-inline:7px}
+.project-recent-label{font-family:var(--mono);font-size:10px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em}
+.project-recent-select{width:100%;min-width:0;height:26px;padding:0 7px;border:1px solid var(--line-control);border-radius:4px;background:var(--raised);color:var(--text);font-family:var(--mono);font-size:9px}
+.project-recent-select.is-inert{color:var(--inert);border-color:var(--line-control)}
+.project-bound{min-width:0}
+.project-files{padding:7px}
+.project-files select{width:100%;min-width:0;padding:3px;border:1px solid var(--line-control);border-radius:4px;background:var(--raised);color:var(--dim);font-family:var(--mono);font-size:9px}
+.project-files select[aria-disabled=\"true\"]{color:var(--inert);cursor:not-allowed}
+.project-files option{padding:6px;color:var(--dim)}
+.project-files option:checked{background:#10242C;color:var(--text)}
+.project-browser-detail{margin:0 7px 8px;padding:8px;border:1px solid var(--line);border-radius:4px;background:var(--well);min-width:0}
+.project-browser-detail>strong{display:block;overflow-wrap:anywhere;font-family:var(--mono);font-size:9px;color:var(--text)}
+.project-browser-detail dl{display:grid;gap:var(--space-2);margin:var(--space-3) 0}
+.project-browser-detail dl div{display:grid;grid-template-columns:54px minmax(0,1fr);gap:6px;min-width:0}
+.project-browser-detail dt{font-family:var(--mono);font-size:10px;color:var(--faint);text-transform:uppercase}
+.project-browser-detail dd{margin:0;min-width:0;overflow-wrap:anywhere;font-family:var(--mono);font-size:10px;line-height:1.6;color:var(--dim)}
+.project-browser-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:5px}
+.project-browser-actions button{min-width:0;height:auto;min-height:24px;padding:4px 6px;font-size:8px;white-space:normal}
+.project-browser-actions button:first-child{grid-column:1/-1}
+.asset-browser{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr));gap:8px;padding:10px;min-width:0}
+.asset-browser .panel-empty{grid-column:1/-1}
+.asset-browser-card{min-width:0;padding:9px 10px;border:1px solid var(--line-card);border-radius:4px;background:var(--well)}
+.asset-browser-card strong,.asset-browser-card span{display:block;overflow-wrap:anywhere}
+.asset-browser-card strong{font-family:var(--mono);font-size:9px;color:var(--text)}
+.asset-browser-card span{margin-top:var(--space-1);font-family:var(--mono);font-size:10px;line-height:1.6;color:var(--dim);font-variant-numeric:tabular-nums;user-select:text}
+.asset-browser-card .asset-browser-meta{display:none}
+.scene-entities{padding:0 var(--space-2) var(--space-3)}
+.scene-entities-label{margin:0 3px 5px;font-size:10px;letter-spacing:.02em;color:var(--dim)}
+.scene-entities select{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+/* The canonical multi-select remains a keyboard control, not an invisible focus stop. */
+.scene-entities select:focus-visible{position:static;width:100%;height:auto;min-height:96px;padding:6px;margin:0;overflow:auto;clip:auto;white-space:normal;border:1px solid var(--line-card)}
+.scene-entity-identities{display:grid;gap:var(--space-2);min-width:0;margin:var(--space-2) 0 0;padding:0;list-style:none}
+.scene-entity-identity{min-width:0;margin-left:calc(var(--scene-depth,0) * var(--space-2));padding:var(--space-2) var(--space-3);border:1px solid var(--line-card);border-left:2px solid var(--line-card);border-radius:6px;background:var(--well);cursor:pointer;transition:background-color .14s ease,border-color .14s ease}
+.scene-entity-identity:focus-visible{outline-offset:-3px;box-shadow:none}
+.scene-entity-identity:hover{border-color:var(--line-hover)}
+.scene-entity-identity.is-selected{border-color:var(--accent);background:#10242C}
+.scene-entity-identity>span{display:block;margin-bottom:var(--space-1);font-size:12px;line-height:1.5;font-weight:600;color:var(--text);overflow-wrap:anywhere}
+.scene-entity-identity dl{display:none;gap:var(--space-1);margin:var(--space-2) 0 0}
+.shell[data-details-open=\"true\"] .scene-entity-identity dl{display:grid}
+.scene-entity-identity dl div{display:grid;grid-template-columns:42px minmax(0,1fr);gap:var(--space-2);min-width:0;padding:var(--space-1) 0;border-top:1px solid var(--line-row)}
+.scene-entity-identity dt{font-family:var(--mono);font-size:10px;line-height:1.6;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
+.scene-entity-identity dd{min-width:0;margin:0}
+.scene-entity-identity code{display:block;min-width:0;font-size:10px;line-height:1.6;color:var(--dim);white-space:normal;overflow-wrap:anywhere;font-variant-numeric:tabular-nums;user-select:text}
+.scene-entity{width:100%;min-width:0;padding:8px 9px;border:1px solid var(--line-card);border-radius:4px;background:var(--raised);color:var(--dim);text-align:left}
+.scene-entity span,.scene-entity code{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scene-entity span{font-size:10px;color:var(--text)}.scene-entity code{margin-top:3px;font-size:8px;color:var(--dim)}
+.scene-entity[aria-pressed=\"true\"]{border-color:var(--accent);background:#10242C}
+.scene-entities-refusal{margin:0;padding:0 10px 9px;font-size:9px;line-height:1.45;color:var(--dim);overflow-wrap:anywhere}
+.project-file-state,.project-root,.scene-entities-refusal,.left-dock .panel-note{display:none}
+.ship-export-evidence,.project-git-controls{display:none}
+.shell[data-details-open=\"true\"] .ship-export-evidence,
+.shell[data-details-open=\"true\"] .project-git-controls{display:grid}
+.scene-property-editor{display:grid;gap:6px;padding:8px 10px}
+.scene-property-entity{margin:0;padding-bottom:5px;border-bottom:1px solid var(--line);min-width:0}
+.scene-property-entity b,.scene-property-entity code{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scene-property-entity b{font-size:12px}.scene-property-entity code{display:none}
+.scene-property-editor label{display:grid;gap:3px;font-size:9px;color:var(--dim)}
+.scene-transform-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+.scene-advanced{display:none;min-width:0;border:1px solid var(--line-row);border-radius:5px;padding:8px}
+.shell[data-details-open=\"true\"] .scene-advanced{display:grid;gap:7px}
+.scene-review-details .scene-property-review{margin-top:4px}
+.scene-instance-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px}
+.scene-instance-actions button{min-width:0;padding-inline:6px}
+.scene-parenting{display:grid;gap:7px;padding-top:2px}.scene-parenting label{display:grid;gap:4px}.scene-parenting select{width:100%;min-width:0;height:28px;border:1px solid var(--line-control);border-radius:4px;background:var(--raised);color:var(--text);font-family:var(--mono);font-size:9px}
+.scene-property-input{width:100%;min-width:0;height:28px;padding:0 8px;border:1px solid var(--line-control);border-radius:4px;background:var(--raised);color:var(--text);font-family:var(--mono);font-size:11px}
+.scene-property-input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.scene-property-input.is-inert{color:var(--inert)}
+.scene-property-diagnostic{margin:0;font-size:9px;line-height:1.45;color:var(--dim);overflow-wrap:anywhere}
+.scene-property-review{max-height:150px;margin:0;padding:var(--space-2);overflow:auto;border:1px solid var(--line);border-radius:4px;background:var(--well);color:var(--dim);font-family:var(--mono);font-size:10px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
+.ship-export-panel{padding:0 12px 12px}.ship-export-evidence{display:grid;gap:8px;margin:12px 0 0}.ship-export-evidence div{min-width:0}.ship-export-evidence dt{font:9px/1.4 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}.ship-export-evidence dd{margin:2px 0 0;color:var(--dim);overflow-wrap:anywhere}.ship-export-evidence code{font-size:9px}
+.pass-list{list-style:none;margin:0;padding:10px 11px;display:flex;flex-direction:column;gap:6px}
+.pass-row{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-3);background:var(--raised);border:1px solid var(--line);border-radius:4px;min-width:0}
+.pass-row>div{min-width:0;overflow-wrap:anywhere}
+.pass-row:nth-child(even){background:var(--well)}
+.pass-order{width:14px;height:14px;border-radius:3px;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font-size:9px;font-weight:700;flex:none}
+.pass-row b{display:block;font-size:11px;font-weight:400;color:var(--text)}
+.pass-row em{display:block;font-style:normal;font-size:10px;color:var(--dim)}
+
+.viewport-column{display:flex;flex-direction:column;min-width:0;min-height:0}
+.viewport-region{display:flex;flex-direction:column;flex:1;min-width:0;min-height:0;background:var(--canvas)}
+.stage-host{flex:1;min-height:0;display:flex;flex-direction:column}
+.profile-surfaces{flex:none;background:var(--panel);border-bottom:1px solid var(--line);position:relative}
+.profile-surface{min-height:56px;padding:10px 14px;display:grid;grid-template-columns:120px minmax(0,1fr);gap:14px;align-items:center}
+.capability-list{display:none}
+.shell[data-profile=\"web\"] .profile-surface[data-profile-surface=\"web\"]{min-height:88px;grid-template-columns:140px minmax(0,1.4fr)}
+.shell[data-profile=\"web\"] .mode-rail,
+.shell[data-profile=\"web\"] .scene-entities,
+.shell[data-profile=\"web\"] .scene-property-editor,
+.shell[data-profile=\"web\"] .inspector-panel,
+.shell[data-profile=\"web\"] .project-browser-detail,
+.shell[data-profile=\"web\"] .view-tabs,
+.shell[data-profile=\"web\"] .axis-widget,
+.shell[data-profile=\"web\"] .assistant-manipulators,
+.shell[data-profile=\"web\"] .sculpt-progress,
+.shell[data-profile=\"web\"] .game-runtime-note,
+.shell[data-profile=\"game\"] .site-page-tail,
+.shell[data-profile=\"game\"] .assistant-empty-web,
+.shell[data-profile=\"game\"] .assistant-foot-web,
+.shell[data-profile=\"web\"] .assistant-empty-game,
+.shell[data-profile=\"web\"] .assistant-foot-game,
+.shell[data-profile=\"kids\"] .assistant-empty-web,
+.shell[data-profile=\"kids\"] .assistant-foot-web{display:none}
+.shell[data-profile=\"web\"] [data-files-title]{font-size:0}
+.shell[data-profile=\"web\"] [data-files-title]::after{content:\"Pages\";font-size:11px;letter-spacing:.08em}
+.shell[data-profile=\"web\"] .profile-runtime-actions .primary-button{font-size:0}
+.shell[data-profile=\"web\"] .profile-runtime-actions .primary-button::after{content:\"Preview\";font-size:11px;font-weight:600}
+.profile-surface[data-profile-surface=\"web\"]{display:none}
+.shell[data-profile=\"web\"] .profile-surface[data-profile-surface=\"game\"]{display:none}
+.shell[data-profile=\"web\"] .profile-surface[data-profile-surface=\"web\"]{display:grid}
+.profile-kicker{display:block;font-family:var(--mono);font-size:8px;letter-spacing:.14em;color:var(--accent);margin-bottom:4px}
+.profile-surface strong{font-size:13px}
+.capability-list{list-style:none;margin:0;padding:0;display:flex;gap:6px;min-width:0;overflow:hidden}
+.capability-list li{min-width:0;flex:1;padding:6px 8px;background:var(--raised);border:1px solid var(--line-card);border-radius:4px}
+.capability-list b,.capability-list span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.capability-list b{font-size:10px}.capability-list span{font-size:8.5px;color:var(--dim);margin-top:2px}
+.game-runtime-note,.web-authoring-tools p{margin:0;font-size:10px;line-height:1.45;color:var(--dim)}
+.web-authoring-note{display:none}
+.shell[data-details-open=\"true\"] .web-authoring-note{display:block}
+.web-authoring-tools{display:flex;flex-direction:column;gap:8px;min-width:0}
+.web-authoring-tools p{font-size:12px;color:var(--text-2)}
+.web-authoring-tools code{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#5B9CFF}
+.profile-actions{display:flex;gap:6px;align-items:center}
+.profile-runtime-actions{min-height:30px;padding:0 12px 7px;display:flex;align-items:center;justify-content:flex-end;gap:9px}
+.runtime-report{margin:0;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--mono);font-size:8.5px;color:var(--dim)}
+.view-tabs{height:var(--tabs-h);flex:none;display:flex;align-items:stretch;background:var(--panel);border-bottom:1px solid var(--line)}
+/* The tablist owns only its tabs: ARIA restricts a tablist's children to tabs,
+   so the spacer and the tool glyphs stay siblings in the same flex row. */
+.view-tablist{display:flex;align-items:stretch}
+.view-tab{padding:0 15px;font-size:11px;color:var(--dim);border-right:1px solid var(--line)}
+.view-tab[aria-selected=\"true\"]{color:var(--text);font-weight:600;background:var(--panel);box-shadow:inset 0 2px 0 var(--accent)}
+.spacer{flex:1}
+.view-tools{display:flex;align-items:center;gap:3px;padding:0 8px}
+.view-tools i{width:10px;height:10px;border:1.4px solid var(--faint);border-radius:1px}
+.viewport{flex:1;position:relative;min-height:0;overflow:hidden;background:radial-gradient(130% 95% at 50% 0%, #182236 0%, #0A0F1A 48%, #0A0F1A 100%);display:grid;place-items:center}
+.viewport-backdrop{position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 0 1px var(--line-row)}
+.site-stage{display:none}
+.shell[data-profile=\"web\"] .stage-host{overflow:auto;background:#131820;padding:18px 20px 28px}
+.shell[data-profile=\"web\"] .site-stage{display:block}
+.site-browser-bar{display:flex;align-items:center;gap:6px;height:32px;padding:0 12px;border:1px solid var(--line);border-bottom:0;border-radius:10px 10px 0 0;background:var(--header)}
+.site-browser-bar i{width:8px;height:8px;border-radius:50%;background:var(--line-hover)}
+.site-browser-bar span{margin-left:8px;font-size:11px;color:var(--dim)}
+.site-page{border:1px solid var(--line);border-bottom:0;background:var(--raised);padding:18px 24px 14px}
+.site-nav{display:flex;gap:16px;margin:0 0 18px;font-size:12px;color:var(--dim)}
+.site-eyebrow{margin:0 0 6px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+.site-hero-copy h3{margin:0 0 8px;font-size:32px;line-height:1.1;color:var(--text)}
+.site-hero-copy p{margin:0;max-width:44ch;font-size:14px;line-height:1.55;color:var(--text-2)}
+.site-page-tail{display:none;border:1px solid var(--line);border-top:0;border-radius:0 0 10px 10px;background:var(--panel);padding:8px 24px 20px}
+.shell[data-profile=\"web\"] .site-page-tail{display:block}
+.site-band{margin:16px 0;padding:14px 0;border-top:1px solid var(--line-row)}
+.site-band h4{margin:0 0 6px;font-size:16px}
+.site-band p{margin:0;max-width:48ch;font-size:13px;line-height:1.55;color:var(--text-2)}
+.site-foot{margin:18px 0 0;font-size:11px;color:var(--dim)}
+.shell[data-profile=\"web\"] .shell-body{grid-template-columns:var(--left) minmax(0,1fr) var(--inspector) var(--assistant-w)}
+.shell[data-profile=\"web\"] .profile-surfaces{background:transparent;border:0}
+.shell[data-profile=\"web\"] .viewport{flex:none;height:min(46vh,420px);min-height:220px;border:1px solid var(--line);border-top:0;border-radius:0 0 10px 10px}
+.shell[data-profile=\"web\"] .viewport-note-inert,.shell[data-profile=\"game\"] .viewport-note-web{display:none}
+.shell[data-profile=\"web\"] .viewport-note-web{display:block;position:relative;z-index:2;max-width:36ch}
+.web-page-inspector{display:none;padding:0 0 16px}
+.shell[data-profile=\"web\"] .web-page-inspector{display:block}
+.web-page-sections{list-style:none;margin:0;padding:8px 12px;display:grid;gap:8px}
+.web-page-sections li{padding:10px 11px;border:1px solid var(--line-card);border-radius:8px;background:var(--raised)}
+.web-page-sections b,.web-page-sections span{display:block}
+.web-page-sections b{font-size:12px}
+.web-page-sections span{margin-top:3px;font-size:11px;color:var(--dim)}
+.viewport-note{margin:0;font-size:11px;line-height:1.5;color:var(--dim);max-width:44ch;text-align:center}
+.axis-widget{position:absolute;right:12px;top:11px;display:flex;gap:4px}
+.axis-widget i{width:18px;height:2px;border-radius:1px;display:block}
+.assistant-manipulators{position:absolute;left:12px;top:12px;z-index:8;display:flex;gap:4px}
+.assistant-manipulator{border:1px solid var(--line-hover);border-radius:3px;background:var(--header);color:var(--text);padding:5px 7px;font-size:10px}
+.assistant-manipulator:hover{border-color:var(--accent);color:var(--accent)}
+.assistant-manipulator.is-inert:hover{border-color:var(--line-hover);color:var(--inert)}
+
+.sculpt-progress{position:absolute;left:50%;bottom:64px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:9px;animation:rise .3s ease-out}
+.sculpt-label{margin:0;font-size:14px;font-weight:600}
+.sculpt-track{width:320px;height:3px;background:var(--hover);border-radius:2px;overflow:hidden;position:relative}
+.sculpt-fill{position:absolute;left:0;top:0;bottom:0;background:var(--accent)}
+.sculpt-sweep{position:absolute;inset:0;width:28%;background:linear-gradient(90deg,transparent,color-mix(in srgb, var(--text) 35%, transparent),transparent);animation:sweep 1.1s linear infinite}
+.sculpt-detail{margin:0;font-family:var(--mono);font-size:9px;color:var(--faint)}
+
+.dock{height:var(--dock-h);flex:none;background:var(--panel);border-top:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.dock-tabs{height:30px;flex:none;display:flex;align-items:stretch;background:var(--header);border-bottom:1px solid var(--line)}
+/* Same rule as the viewport strip: the bulk accept/reject are the highest
+   consequence controls here, so they must not sit inside the tablist. */
+.dock-tablist{display:flex;align-items:stretch}
+.dock-tab{display:flex;align-items:center;gap:7px;padding:0 13px;font-size:11px;color:var(--dim);border-right:1px solid var(--line)}
+.dock-tab[aria-selected=\"true\"]{color:var(--text);font-weight:600;background:var(--panel);box-shadow:inset 0 2px 0 var(--accent)}
+.badge{min-width:15px;height:15px;padding:0 4px;border-radius:8px;background:var(--accent);color:var(--on-accent);font-family:var(--mono);font-size:9px;font-weight:700;display:grid;place-items:center}
+.dock-body{flex:1;min-height:0;overflow-y:auto}
+.dock-caption{margin:0;padding:8px 14px;font-size:10.5px;color:var(--dim);border-bottom:1px solid var(--line-row);background:var(--well)}
+.change-proposal{padding:12px 14px;display:grid;grid-template-columns:minmax(220px,.42fr) minmax(0,1fr) auto;gap:14px;align-items:start}
+.change-meta{margin:0;display:grid;gap:9px;min-width:0}
+.change-meta div{min-width:0}
+.change-meta dt{font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+.change-meta dd{margin:3px 0 0;min-width:0;color:var(--text-2)}
+.change-meta code{display:block;overflow-wrap:anywhere;font-size:10px}
+.change-diff{min-width:0;max-height:min(46vh,280px);overflow:auto;margin:0;padding:9px 10px;border:1px solid var(--line-control);border-radius:4px;background:var(--well);color:var(--text-2);font:10px/1.45 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere}
+.change-actions{display:flex;gap:7px;justify-content:flex-end}
+.change-actions .primary-button,.change-actions .ghost-button{height:30px;padding:0 13px}
+.change-empty{margin:auto;padding:var(--space-6) var(--space-4);max-width:52ch;text-align:center;font-size:13px;line-height:1.65;color:var(--dim)}
+.change-empty::before{content:\"\";display:block;width:24px;height:24px;margin:0 auto var(--space-3);border:1px solid var(--line-hover);border-radius:6px;background:var(--raised)}
+
+.assistant{background:var(--assistant);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.assistant-head{height:40px;flex:none;display:flex;align-items:center;gap:9px;padding:0 12px;background:var(--raised);border-bottom:1px solid var(--line)}
+.assistant-head h2{margin:0;font-size:12px;font-weight:600;flex:1}
+.assistant-mark{width:16px;height:16px;border-radius:4px;background:#10242C;display:grid;place-items:center}
+.assistant-mark::before{content:\"\";width:6px;height:6px;border-radius:1px;background:var(--accent);transform:rotate(45deg)}
+/* One live-bars signal confirms work; the canvas and labels stay visually still. */
+.shell[data-assistant-busy=\"true\"] .assistant-mark{box-shadow:0 0 0 4px #10242C}
+.shell[data-assistant=\"denied\"] .assistant-mark{background:#1B1626}
+.shell[data-assistant=\"denied\"] .assistant-mark::before{background:var(--scene)}
+.assistant-model{font-family:var(--mono);font-size:9px;color:var(--dim);background:var(--header);border:1px solid var(--line-control);border-radius:3px;padding:2px 6px}
+.icon-button{width:26px;height:26px;flex:none;border-radius:4px;display:grid;place-items:center;color:var(--dim);line-height:1}
+:is(.dot,.rail-glyph,.assistant-mark,.overlay-mark,.badge){flex-shrink:0}
+/* An icon button on the accent fill keeps the on-accent glyph colour: without
+   this the later single-class rule wins and paints --dim on orange (1.1:1). */
+.primary-button.icon-button{color:var(--on-accent)}
+.primary-button.icon-button.is-inert{color:var(--inert-on-accent)}
+.assistant-body{flex:1;min-height:0;overflow-y:auto;padding:var(--space-4) var(--space-3)}
+.assistant-empty{margin:0;padding:var(--space-3);border:1px dashed var(--line-card);border-radius:var(--r-control);background:var(--well);font-size:13px;line-height:1.65;color:var(--dim);max-width:40ch}
+.assistant-live{display:none;align-items:end;gap:4px;height:28px;margin:14px 0 0}
+.shell[data-assistant-busy=\"true\"] .assistant-live{display:flex}
+.assistant-live i{width:5px;border-radius:99px;background:var(--accent);animation:assistant-bars 0.9s ease-in-out infinite}
+.assistant-live i:nth-child(1){height:8px;animation-delay:0s}
+.assistant-live i:nth-child(2){height:16px;animation-delay:.12s}
+.assistant-live i:nth-child(3){height:22px;animation-delay:.24s}
+.assistant-thinking{display:flex;align-items:center;gap:6px;margin:12px 0 0;font-size:12px;color:var(--accent)}
+.assistant-thinking .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.assistant-progress{min-width:0;min-height:44px;margin:var(--space-3) 0;overflow-wrap:anywhere;font-size:11px;line-height:1.5;color:var(--text-2);padding:var(--space-3);border:1px solid var(--line-control);border-radius:4px;background:var(--header);transition:border-color .2s ease,color .2s ease}
+.shell[data-assistant-busy=\"true\"] .assistant-progress{border-color:var(--accent);color:var(--text)}
+.assistant-result{min-width:0;padding:var(--space-3);border-left:2px solid var(--line-hover);background:var(--well);font-size:12px;line-height:1.65;color:var(--text-3);white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;animation:rise .16s ease-out}
+.assistant-foot{font-size:10px;color:var(--dim);line-height:1.5;margin:12px 0 0}
+.assistant-composer{flex:none;max-height:65%;min-height:0;overflow-y:auto;scroll-padding:var(--space-2);border-top:1px solid var(--line);background:var(--panel);padding:var(--space-3);display:flex;flex-direction:column;gap:var(--space-2)}
+.assistant-prompt{width:100%;min-height:72px;flex-shrink:0;resize:vertical;border:1px solid var(--line-control);border-radius:6px;background:var(--well);color:var(--text);font:12px/1.6 var(--sans);padding:var(--space-3)}
+.assistant-prompt::placeholder{color:var(--faint)}
+.assistant-prompt.is-inert{color:var(--inert);cursor:not-allowed}
+.assistant-routes{display:none;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px}
+.shell[data-details-open=\"true\"] .assistant-routes{display:grid}
+.assistant-route{min-width:0;padding:var(--space-2) var(--space-1);border:1px solid var(--line-control);border-radius:3px;color:var(--dim);font-size:9px;line-height:1.2}
+.assistant-route-refusal{display:block;margin-top:var(--space-1);font-size:10px;line-height:1.5;overflow-wrap:anywhere;color:var(--scene)}
+.assistant-route[aria-pressed=\"true\"]{border-color:var(--accent);color:var(--accent);background:#10242C}
+.composer-actions{display:flex;align-items:center;gap:7px}
+.assistant-modes{display:flex;background:var(--header);border:1px solid var(--line-control);border-radius:4px;padding:2px}
+.assistant-mode{height:24px;padding:0 11px;font-size:11px;color:var(--dim);border-radius:3px}
+.assistant-mode[aria-pressed=\"true\"]{background:var(--accent);color:var(--on-accent);font-weight:600}
+.assistant-mode.is-inert[aria-pressed=\"true\"]{color:var(--inert-on-accent)}
+/* Both assistant bodies ship in every document and the state chooses between
+   them, so a profile switched in the browser reaches the same named denial the
+   model reports — the rule the editor body's refusal region already follows. */
+.assistant-denied{display:none;flex:1;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:34px 26px;text-align:center}
+.shell[data-assistant=\"denied\"] .assistant-denied{display:flex}
+.shell[data-assistant=\"denied\"] .assistant-body,
+.shell[data-assistant=\"denied\"] .assistant-composer{display:none}
+.assistant-denied p{margin:0;font-size:12px;color:var(--dim);line-height:1.6}
+.assistant-denied-title{font-size:16px;font-weight:700;color:var(--text)}
+.assistant-denied-detail,.assistant-denied-code{display:none}
+.shell[data-details-open=\"true\"] .assistant-denied-detail,
+.shell[data-details-open=\"true\"] .assistant-denied-code{display:block}
+.assistant-denied code{color:#C3B0F0;border:1px solid #3A2E52;background:#1B1626;border-radius:3px;padding:4px 8px;display:inline-block}
+
+/* Kids: one refusal region replaces the whole editor body, so the grid drops to
+   rail + body + assistant. */
+.shell[data-profile=\"kids\"] .shell-body{grid-template-columns:var(--rail) minmax(0,1fr) var(--assistant-w)}
+.shell[data-profile=\"kids\"] .left-dock,
+.shell[data-profile=\"kids\"] .viewport-column,
+.shell[data-profile=\"kids\"] .inspector{display:none}
+.profile-refusal{display:none;place-items:center;padding:32px;background:radial-gradient(120% 90% at 50% 0%, #1B1626 0%, var(--canvas) 70%);min-width:0}
+.shell[data-profile=\"kids\"] .profile-refusal{display:grid}
+.shell[data-profile=\"kids\"]{--accent:#A78BFA;--on-accent:#1B1626}
+.profile-refusal-card{max-width:46ch;text-align:center;background:#1B1626;border:1px solid #3A2E52;border-radius:18px;padding:28px 28px 24px;box-shadow:0 18px 40px -24px #A78BFA}
+.profile-refusal-card h2{margin:12px 0;font-size:22px;color:#C3B0F0}
+.profile-refusal-card p{margin:0 0 10px;font-size:13px;line-height:1.65;color:#C3B0F0}
+.kids-studio-mark{display:grid;place-items:center;width:42px;height:42px;margin:0 auto;border-radius:14px;background:#A78BFA;color:#1B1626;font-size:20px}
+.profile-refusal-code{display:none}
+.shell[data-details-open=\"true\"] .profile-refusal-code{display:block}
+.profile-refusal-code code{color:var(--scene)}
+.profile-refusal-foot{color:var(--dim) !important}
+.mark-scene{background:#1B1626;border:1px solid #3A2E52;color:#A78BFA;margin:0 auto}
+.project-browser-status{margin:4px 0 0;font-size:10px;color:var(--dim)}
+.project-browser-advanced{display:none;margin-top:6px}
+.shell[data-details-open=\"true\"] .project-browser-advanced{display:block}
+
+.status-bar{position:relative;background:var(--well);border-top:1px solid var(--line);display:flex;align-items:center;padding:0 12px;gap:13px}
+.status-text{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text-3)}
+.status-pin{font-family:var(--mono);font-size:10px;color:var(--faint)}
+.status-project{min-width:0;flex:0 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--mono);font-size:10px;color:var(--dim)}
+.divider{width:1px;height:12px;background:var(--line-card)}
+.state-shortcut{font-family:var(--mono);font-size:9px;letter-spacing:.07em;color:var(--faint);border:1px solid var(--line-control);border-radius:3px;padding:2px 7px}
+.state-shortcut:hover{border-color:var(--line-hover);color:var(--text)}
+
+.overlay{position:absolute;inset:0;background:color-mix(in srgb, var(--backdrop) 68%, transparent);display:grid;place-items:center;z-index:50;padding:24px}
+.overlay-card{width:min(620px,100%);max-height:80%;overflow:auto;background:var(--overlay);border:1px solid var(--line-raised);border-radius:9px;box-shadow:0 40px 90px -20px color-mix(in srgb, var(--backdrop) 90%, transparent);animation:rise .16s ease-out}
+.overlay-card.overlay-refused{border-color:#5A2B32}
+.overlay-head{display:flex;align-items:center;gap:12px;padding:15px 18px;border-bottom:1px solid var(--line)}
+.overlay-head h2{margin:0;font-size:15px;font-weight:600}
+.overlay-mark{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;flex:none}
+.mark-refuse{background:#211316;border:1px solid #5A2B32;color:var(--refuse)}
+.mark-complete{background:#131820;border:1px solid #223040;color:var(--info)}
+.overlay-body{margin:0;min-width:0;padding:var(--space-4);font-size:12px;line-height:1.6;color:var(--text-2);overflow-wrap:anywhere}
+.overlay-refused .overlay-body{border-left:2px solid var(--refuse);margin:var(--space-4);padding:0 var(--space-3)}
+.overlay-actions{display:flex;gap:9px;justify-content:flex-end;padding:13px 18px;background:var(--well);border-top:1px solid var(--line)}
+.overlay-actions .primary-button,.overlay-actions .ghost-button{height:31px;padding:0 14px;font-size:12px}
+.palette-list{list-style:none;margin:0;padding:6px 0;max-height:352px;overflow-y:auto}
+.palette-group h3{margin:0;padding:8px 16px 4px;font-family:var(--mono);font-size:9px;font-weight:400;letter-spacing:.14em;color:var(--faint)}
+.palette-group ul{list-style:none;margin:0;padding:0}
+.palette-item{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-4);width:100%;min-height:36px;text-align:left}
+.palette-name{min-width:0;overflow-wrap:anywhere}
+.palette-item kbd{flex:none;white-space:nowrap}
+.palette-item:hover,.palette-item:focus-visible{background:var(--hover)}
+.palette-item:focus-visible{outline-offset:-3px;box-shadow:none}
+.palette-name{flex:1;font-size:13px}
+.palette-item kbd{font-size:9px;color:var(--dim);border:1px solid var(--line-control);border-radius:3px;padding:2px 5px}
+.overlay-foot{margin:0;padding:10px 16px;background:var(--well);border-top:1px solid var(--line);font-size:10.5px;color:var(--dim)}
+
+.refusal-help-toggle[aria-expanded=\"true\"]{border-color:var(--line-hover);color:var(--text)}
+.refusal-legend-panel{position:absolute;right:8px;bottom:calc(100% + 8px);z-index:45;width:min(520px,calc(100vw - 16px));max-height:min(360px,calc(100dvh - var(--title-h) - var(--status-h) - 24px));overflow:auto;padding:10px 12px;background:var(--well);border:1px solid var(--line-raised);border-radius:6px;box-shadow:0 18px 48px -18px color-mix(in srgb, var(--backdrop) 90%, transparent)}
+.refusal-legend-panel h2{margin:0 0 8px;font-family:var(--mono);font-size:9px;font-weight:400;letter-spacing:.15em;color:var(--text-3)}
+.refusal-row{margin:0 0 6px;font-size:11px;line-height:1.5;color:var(--dim)}
+.refusal-row code{color:var(--accent);margin-right:8px}
+
+.window-refusal{display:none;max-width:52ch;margin:0 auto;padding:48px var(--space-6);text-align:center;overflow-wrap:anywhere}
+.window-refusal h1{font-size:17px;margin:0 0 12px}
+.window-refusal p{font-size:13px;line-height:1.65;color:var(--dim);margin:0 0 10px}
+.window-refusal code{color:var(--accent)}
+
+@keyframes rise{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+@keyframes sweep{0%{transform:translateX(-120%)}100%{transform:translateX(420%)}}
+
+@keyframes assistant-bars{0%,100%{opacity:.4}50%{opacity:1}}
+
+
+/* Compact: the assistant leaves the grid and becomes an overlay drawer. Its
+   existing toggle opens and closes it, so nothing becomes unreachable. */
+@media (max-width:1439px),(max-height:719px){
+  .shell-body,.shell[data-assistant=\"closed\"] .shell-body,.shell[data-profile=\"kids\"] .shell-body{grid-template-columns:var(--rail) var(--left) minmax(0,1fr) var(--inspector)}
+  .shell[data-profile=\"kids\"] .shell-body{grid-template-columns:var(--rail) minmax(0,1fr)}
+  .assistant{position:absolute;top:var(--title-h);bottom:var(--status-h);right:0;width:min(var(--assistant-w),100%);z-index:40;box-shadow:0 0 60px -10px color-mix(in srgb, var(--backdrop) 90%, transparent)}
+  /* An undocked assistant starts closed: a drawer nobody opened must not sit
+     on top of the panel it undocked from. Its toggle still opens it. The
+     emitted bytes always carry a closed drawer, so this holds at every viewport
+     the document is opened at, script or no script. */
+  .shell:not([data-drawer-assistant=\"open\"]) .assistant{display:none}
+  /* And the toggle follows the drawer here, not the column state: an open
+     column that is not on screen must not leave the toggle lit. */
+  .shell[data-drawer-assistant=\"open\"] .assistant-toggle{background:#10242C;border-color:#1E5A66;color:var(--accent)}
+  .shell[data-drawer-assistant=\"open\"] [data-assistant-dot]{background:var(--accent)}
+  /* Except a denied one, which never becomes a drawer at all. Its body is the
+     Kids lock screen — a named refusal — and the only control that could open a
+     drawer is the toggle that same refusal makes inert, so undocking it would
+     leave THIRD_PARTY_LLM_DENIED_BY_DEFAULT on no reachable surface. It keeps a
+     real column at every tier instead. */
+  .shell[data-assistant=\"denied\"] .shell-body{grid-template-columns:var(--rail) var(--left) minmax(0,1fr) var(--inspector) var(--assistant-w)}
+  .shell[data-profile=\"kids\"][data-assistant=\"denied\"] .shell-body{grid-template-columns:var(--rail) minmax(0,1fr) var(--assistant-w)}
+  .shell[data-assistant=\"denied\"] .assistant{position:static;display:flex;width:auto;box-shadow:none}
+}
+/* Narrow: the left dock and the inspector become drawers too, and the two
+   title-bar toggles that open them appear. They start closed, because a drawer
+   nobody opened should not be covering the viewport. */
+@media (max-width:1179px),(max-height:659px){
+  .shell-body,.shell[data-assistant=\"closed\"] .shell-body,.shell[data-profile=\"kids\"] .shell-body{grid-template-columns:var(--rail) minmax(0,1fr)}
+  .title-actions .drawer-toggle{display:inline-flex}
+  .title-centre,.menu-bar{display:none}
+  .left-dock,.inspector{position:absolute;top:var(--title-h);bottom:var(--status-h);z-index:35;box-shadow:0 0 60px -10px color-mix(in srgb, var(--backdrop) 90%, transparent)}
+  .left-dock{left:var(--rail);width:min(var(--left),calc(100% - var(--rail)))}
+  .inspector{right:0;width:min(var(--inspector),100%)}
+  .shell:not([data-drawer-left=\"open\"]) .left-dock{display:none}
+  .shell:not([data-drawer-inspector=\"open\"]) .inspector{display:none}
+  .change-proposal{grid-template-columns:minmax(0,1fr) auto}
+  .change-meta{grid-column:1/-1}
+  .profile-surface{grid-template-columns:120px minmax(0,1fr);min-height:76px}
+  .profile-surface .capability-list,.game-runtime-note{display:none}
+  .runtime-report{display:none}
+  .shell[data-assistant=\"denied\"] .shell-body,.shell[data-profile=\"kids\"][data-assistant=\"denied\"] .shell-body{grid-template-columns:var(--rail) minmax(0,1fr) var(--assistant-w)}
+  .shell[data-profile=\"web\"] .shell-body,.shell[data-profile=\"web\"][data-assistant=\"closed\"] .shell-body{grid-template-columns:minmax(0,1fr)}
+  .shell[data-profile=\"web\"] .left-dock{left:0}
+}
+/* Below the declared minimum the chrome refuses instead of laying out. The
+   breakpoints are interpolated from DESKTOP_MINIMUM_WINDOW, so the CSS and the
+   model refuse at exactly the same size and cannot be raised apart. */
+@media (max-width:899px),(max-height:599px){
+  .shell{display:none}
+  /* Keep the named refusal visible even if a later refinement repeats its base rule. */
+  .window-refusal.window-refusal{display:block}
+}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}
+  .sculpt-sweep,.assistant-live{display:none}
+}
+
+/* Private source usability additions, after canonical regional cascade. */
+  --space-1:4px;--space-2:8px;--space-3:12px;
+  --space-4:16px;--space-6:24px;
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-control);box-shadow:0 0 0 4px var(--well)}
+.view-tab:focus-visible,.dock-tab:focus-visible,.rail-mode:focus-visible{outline-offset:-3px;box-shadow:none}
+/* Rings remain inside clipped listboxes and popovers; filled controls retain the well halo. */
+:is(.menu-command,.project-files select,.project-recent-select,.assistant-route,.assistant-manipulator):focus-visible{outline-offset:-3px;box-shadow:none}
+:is(button,input,select,textarea,a[href],[tabindex]):focus-visible{scroll-margin:var(--space-3)}
+@media (forced-colors:active){:focus-visible{outline:2px solid Highlight;outline-offset:-2px;box-shadow:none}button[aria-pressed=\"true\"],button[aria-selected=\"true\"]{border:1px solid Highlight}}
+:is(.menu-item,.profile-chip,.icon-button,.assistant-toggle,.assistant-mode):not(.is-inert):not([aria-pressed=\"true\"]):hover{background:var(--hover);color:var(--text)}
+button:not(.is-inert):not(:disabled):not([aria-disabled=\"true\"]):active{box-shadow:inset 0 0 0 2px var(--line-hover)}
+button:not(.is-inert):not(:disabled):not([aria-disabled=\"true\"]):active:focus-visible{box-shadow:0 0 0 4px var(--well),inset 0 0 0 2px var(--line-hover)}
+:is(.left-dock,.inspector,.dock-body,.assistant-body,.assistant-composer,.palette-list,.overlay-card){scrollbar-gutter:stable;scroll-padding:var(--space-3)}
+button{transition:background-color .14s ease,border-color .14s ease,color .14s ease}
+/* Intrinsic section heights contribute to the inspector's scroll extent. */
+.inspector > section{flex-shrink:0;min-width:0}
+/* Catalogue textareas must not share an inline baseline with Stage: native
+   multiline controls otherwise paint below the label's line box at the scroll edge. */
+.scene-catalog-editor{display:grid;gap:var(--space-2);min-width:0;padding:var(--space-3)}
+.scene-catalog-editor label{display:grid;gap:var(--space-1);min-width:0}
+.scene-catalog-editor textarea{display:block;width:100%;min-width:0;resize:vertical}
+.scene-catalog-editor button{justify-self:start}
+.scene-catalog-editor pre{min-width:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.panel-head{margin:0;height:32px;flex:none;display:flex;align-items:center;padding:0 var(--space-3);background:var(--header);border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.08em;color:var(--text-3)}
+.panel-empty{margin:var(--space-2);padding:var(--space-3);border:1px dashed var(--line-control);border-radius:var(--r-control);background:var(--well);font-size:12px;line-height:1.65;color:var(--dim);overflow-wrap:anywhere}
+.panel-empty[aria-live]{border-style:solid;border-left:2px solid var(--line-hover)}
+.project-launcher{display:grid;gap:var(--space-2);padding:var(--space-3);border-bottom:1px solid var(--line)}
+.project-launcher p,.project-root{margin:0;color:var(--dim);font-size:11px;line-height:1.6;overflow-wrap:anywhere}
+.project-recent-label{font-family:var(--mono);font-size:10px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em}
+.project-browser-detail dl{display:grid;gap:var(--space-2);margin:var(--space-3) 0}
+.project-browser-detail dt{font-family:var(--mono);font-size:10px;color:var(--faint);text-transform:uppercase}
+.project-browser-detail dd{margin:0;min-width:0;overflow-wrap:anywhere;font-family:var(--mono);font-size:10px;line-height:1.6;color:var(--dim)}
+.asset-browser-card span{margin-top:var(--space-1);font-family:var(--mono);font-size:10px;line-height:1.6;color:var(--dim);font-variant-numeric:tabular-nums;user-select:text}
+.scene-entities{padding:0 var(--space-2) var(--space-3)}
+/* The canonical multi-select remains a keyboard control, not an invisible focus stop. */
+.scene-entities select:focus-visible{position:static;width:100%;height:auto;min-height:96px;padding:6px;margin:0;overflow:auto;clip:auto;white-space:normal;border:1px solid var(--line-card)}
+.scene-entity-identities{display:grid;gap:var(--space-2);min-width:0;margin:var(--space-2) 0 0;padding:0;list-style:none}
+.scene-entity-identity{min-width:0;margin-left:calc(var(--scene-depth,0) * var(--space-2));padding:var(--space-2) var(--space-3);border:1px solid var(--line-card);border-left:2px solid var(--line-card);border-radius:6px;background:var(--well);cursor:pointer;transition:background-color .14s ease,border-color .14s ease}
+.scene-entity-identity:focus-visible{outline-offset:-3px;box-shadow:none}
+.scene-entity-identity>span{display:block;margin-bottom:var(--space-1);font-size:12px;line-height:1.5;font-weight:600;color:var(--text);overflow-wrap:anywhere}
+.scene-entity-identity dl{display:none;gap:var(--space-1);margin:var(--space-2) 0 0}
+.scene-entity-identity dl div{display:grid;grid-template-columns:42px minmax(0,1fr);gap:var(--space-2);min-width:0;padding:var(--space-1) 0;border-top:1px solid var(--line-row)}
+.scene-entity-identity dt{font-family:var(--mono);font-size:10px;line-height:1.6;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
+.scene-entity-identity code{display:block;min-width:0;font-size:10px;line-height:1.6;color:var(--dim);white-space:normal;overflow-wrap:anywhere;font-variant-numeric:tabular-nums;user-select:text}
+.scene-property-input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.scene-property-input.is-inert{color:var(--inert)}
+.scene-property-review{max-height:150px;margin:0;padding:var(--space-2);overflow:auto;border:1px solid var(--line);border-radius:4px;background:var(--well);color:var(--dim);font-family:var(--mono);font-size:10px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
+.pass-row{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-3);background:var(--raised);border:1px solid var(--line);border-radius:4px;min-width:0}
+.pass-row>div{min-width:0;overflow-wrap:anywhere}
+.pass-row:nth-child(even){background:var(--well)}
+.viewport-backdrop{position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 0 1px var(--line-row)}
+.change-empty{margin:auto;padding:var(--space-6) var(--space-4);max-width:52ch;text-align:center;font-size:13px;line-height:1.65;color:var(--dim)}
+.change-empty::before{content:\"\";display:block;width:24px;height:24px;margin:0 auto var(--space-3);border:1px solid var(--line-hover);border-radius:6px;background:var(--raised)}
+.assistant-head{height:40px;flex:none;display:flex;align-items:center;gap:9px;padding:0 12px;background:var(--raised);border-bottom:1px solid var(--line)}
+/* One live-bars signal confirms work; the canvas and labels stay visually still. */
+.shell[data-assistant-busy=\"true\"] .assistant-mark{box-shadow:0 0 0 4px #10242C}
+.icon-button{width:26px;height:26px;flex:none;border-radius:4px;display:grid;place-items:center;color:var(--dim);line-height:1}
+:is(.dot,.rail-glyph,.assistant-mark,.overlay-mark,.badge){flex-shrink:0}
+.assistant-body{flex:1;min-height:0;overflow-y:auto;padding:var(--space-4) var(--space-3)}
+.assistant-empty{margin:0;padding:var(--space-3);border:1px dashed var(--line-card);border-radius:var(--r-control);background:var(--well);font-size:13px;line-height:1.65;color:var(--dim);max-width:40ch}
+.assistant-thinking .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.assistant-progress{min-width:0;min-height:44px;margin:var(--space-3) 0;overflow-wrap:anywhere;font-size:11px;line-height:1.5;color:var(--text-2);padding:var(--space-3);border:1px solid var(--line-control);border-radius:4px;background:var(--header);transition:border-color .2s ease,color .2s ease}
+.shell[data-assistant-busy=\"true\"] .assistant-progress{border-color:var(--accent);color:var(--text)}
+.assistant-result{min-width:0;padding:var(--space-3);border-left:2px solid var(--line-hover);background:var(--well);font-size:12px;line-height:1.65;color:var(--text-3);white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;animation:rise .16s ease-out}
+.assistant-composer{flex:none;max-height:65%;min-height:0;overflow-y:auto;scroll-padding:var(--space-2);border-top:1px solid var(--line);background:var(--panel);padding:var(--space-3);display:flex;flex-direction:column;gap:var(--space-2)}
+.assistant-prompt{width:100%;min-height:72px;flex-shrink:0;resize:vertical;border:1px solid var(--line-control);border-radius:6px;background:var(--well);color:var(--text);font:12px/1.6 var(--sans);padding:var(--space-3)}
+.assistant-prompt::placeholder{color:var(--faint)}
+.assistant-route{min-width:0;padding:var(--space-2) var(--space-1);border:1px solid var(--line-control);border-radius:3px;color:var(--dim);font-size:9px;line-height:1.2}
+.assistant-route-refusal{display:block;margin-top:var(--space-1);font-size:10px;line-height:1.5;overflow-wrap:anywhere;color:var(--scene)}
+.overlay-body{margin:0;min-width:0;padding:var(--space-4);font-size:12px;line-height:1.6;color:var(--text-2);overflow-wrap:anywhere}
+.overlay-refused .overlay-body{border-left:2px solid var(--refuse);margin:var(--space-4);padding:0 var(--space-3)}
+.palette-item{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-4);width:100%;min-height:36px;text-align:left}
+.palette-name{min-width:0;overflow-wrap:anywhere}
+.palette-item kbd{flex:none;white-space:nowrap}
+.palette-item:hover,.palette-item:focus-visible{background:var(--hover)}
+.palette-item:focus-visible{outline-offset:-3px;box-shadow:none}
+.window-refusal{padding:48px var(--space-6);overflow-wrap:anywhere;max-height:100dvh;overflow:auto}
+/* Runtime visibility mirrors the media refusal before moving focus. */
+.window-refusal[data-window=\"refused\"]{display:block}
+
+</style>
+</head>
+<body>
+<div class=\"window-refusal\" role=\"alert\">
+  <h1>Window below the minimum size</h1>
+  <p>The editor chrome refuses below its minimum window size rather than rendering an unusable layout.</p>
+  <p>Minimum: <code>900×600</code> · refusal <code>DESKTOP_WINDOW_BELOW_MINIMUM</code></p>
+</div>
+<div class=\"shell\" data-mode=\"build\" data-profile=\"game\" data-assistant=\"open\" data-assistant-mode=\"build\" data-assistant-route=\"byo\" data-assistant-runtime=\"none\" data-assistant-runtime-event=\"sceneaxi:desktop-assistant-runtime\" data-assistant-busy=\"false\" data-overlay=\"none\" data-tier=\"regular\" data-details-open=\"false\" data-drawer-left=\"closed\" data-drawer-inspector=\"closed\" data-drawer-assistant=\"closed\">
+
+<header class=\"title-bar\">
+  <div class=\"window-dots\" aria-hidden=\"true\"><i></i><i></i><i></i></div>
+  <nav class=\"menu-bar\" aria-label=\"Application menu\"><div class=\"menu-root\" data-menu-root=\"file\"><button type=\"button\" class=\"menu-item\" id=\"menu-file\" data-kind=\"view\" data-menu-trigger=\"file\" aria-haspopup=\"menu\" aria-expanded=\"false\">File</button><div class=\"menu-panel\" id=\"menu-panel-file\" role=\"menu\" hidden><button type=\"button\" class=\"menu-command\" id=\"menu-command-project-new\" data-kind=\"live\" role=\"menuitem\" data-command=\"project-new\"><span>New Project</span><kbd data-input-binding-label=\"editor.project.new\">Ctrl/Cmd+N</kbd></button><button type=\"button\" class=\"menu-command\" id=\"menu-command-project-open\" data-kind=\"live\" role=\"menuitem\" data-command=\"project-open\"><span>Open Project…</span><kbd data-input-binding-label=\"editor.project.open\">Ctrl/Cmd+O</kbd></button><button type=\"button\" class=\"menu-command\" id=\"menu-command-project-save\" data-kind=\"live\" role=\"menuitem\" data-command=\"project-save\"><span>Save</span><kbd data-input-binding-label=\"editor.project.save\">Ctrl/Cmd+S</kbd></button><button type=\"button\" class=\"menu-command\" id=\"menu-command-project-git-status\" data-kind=\"live\" role=\"menuitem\" data-command=\"project-git-status\"><span>Repository Status</span></button><button type=\"button\" class=\"menu-command\" id=\"menu-command-project-git-diff\" data-kind=\"live\" role=\"menuitem\" data-command=\"project-git-diff\"><span>Repository Diff</span></button><button type=\"button\" class=\"menu-command\" id=\"menu-command-project-git-stage\" data-kind=\"live\" role=\"menuitem\" data-command=\"project-git-stage\"><span>Stage Selected Paths</span></button><button type=\"button\" class=\"menu-command\" id=\"menu-command-project-git-commit-prepare\" data-kind=\"live\" role=\"menuitem\" data-command=\"project-git-commit-prepare\"><span>Prepare Git Commit</span></button><button type=\"button\" class=\"menu-command\" id=\"menu-command-ship-export-web\" data-kind=\"live\" role=\"menuitem\" data-command=\"ship-export-web\"><span>Export Web</span></button><button type=\"button\" class=\"menu-command\" id=\"menu-command-package-inspect\" data-kind=\"live\" role=\"menuitem\" data-command=\"package-inspect\"><span>Inspect Packages</span></button><button type=\"button\" class=\"menu-command\" id=\"menu-command-package-install\" data-kind=\"live\" role=\"menuitem\" data-command=\"package-install\"><span>Install Package</span></button><button type=\"button\" class=\"menu-command\" id=\"menu-command-package-remove\" data-kind=\"live\" role=\"menuitem\" data-command=\"package-remove\"><span>Remove Package</span></button><button type=\"button\" class=\"menu-command\" id=\"menu-command-workspace-layout-inspect\" data-kind=\"live\" role=\"menuitem\" data-command=\"workspace-layout-inspect\"><span>Inspect Workspace Layout</span></button><button type=\"button\" class=\"menu-command\" id=\"menu-command-workspace-layout-apply\" data-kind=\"live\" role=\"menuitem\" data-command=\"workspace-layout-apply\"><span>Apply Workspace Layout</span></button><button type=\"button\" class=\"menu-command\" id=\"menu-command-workspace-layout-reset\" data-kind=\"live\" role=\"menuitem\" data-command=\"workspace-layout-reset\"><span>Reset Workspace Layout</span></button><button type=\"button\" class=\"menu-command\" id=\"menu-command-project-migration-propose\" data-kind=\"live\" role=\"menuitem\" data-command=\"project-migration-propose\"><span>Propose Project Migration</span></button><button type=\"button\" class=\"menu-command\" id=\"menu-command-project-migration-commit\" data-kind=\"live\" role=\"menuitem\" data-command=\"project-migration-commit\"><span>Commit Approved Project Migration</span></button><button type=\"button\" class=\"menu-command\" id=\"menu-command-project-migration-recover\" data-kind=\"live\" role=\"menuitem\" data-command=\"project-migration-recover\"><span>Recover Project Migration</span></button><button type=\"button\" class=\"menu-command\" id=\"menu-command-project-build\" data-kind=\"live\" role=\"menuitem\" data-command=\"project-build\"><span>Build Project Target</span></button><button type=\"button\" class=\"menu-command\" id=\"menu-command-extension-inspect\" data-kind=\"live\" role=\"menuitem\" data-command=\"extension-inspect\"><span>Inspect Extension Seams</span></button><button type=\"button\" class=\"menu-command\" id=\"menu-command-extension-start\" data-kind=\"live\" role=\"menuitem\" data-command=\"extension-start\"><span>Start Extension Seam</span></button><button type=\"button\" class=\"menu-command\" id=\"menu-command-profile-inspect\" data-kind=\"live\" role=\"menuitem\" data-command=\"profile-inspect\"><span>Inspect Play Profile</span></button><button type=\"button\" class=\"menu-command\" id=\"menu-command-project-inspect\" data-kind=\"live\" role=\"menuitem\" data-command=\"project-inspect\"><span>Inspect Project Version</span></button><button type=\"button\" class=\"menu-command\" id=\"menu-command-input-actions-inspect\" data-kind=\"live\" role=\"menuitem\" data-command=\"input-actions-inspect\"><span>Inspect Input Actions</span></button><button type=\"button\" class=\"menu-command\" id=\"menu-command-input-action-rebind\" data-kind=\"live\" role=\"menuitem\" data-command=\"input-action-rebind\"><span>Rebind Input Action</span></button><button type=\"button\" class=\"menu-command\" id=\"menu-command-input-actions-reset\" data-kind=\"live\" role=\"menuitem\" data-command=\"input-actions-reset\"><span>Reset Input Actions</span></button><button type=\"button\" class=\"menu-command\" id=\"menu-command-scene-prefab-inspect\" data-kind=\"live\" role=\"menuitem\" data-command=\"scene-prefab-inspect\"><span>Inspect Reusable Content</span></button><button type=\"button\" class=\"menu-command\" id=\"menu-command-scene-prefab-define\" data-kind=\"live\" role=\"menuitem\" data-command=\"scene-prefab-define\"><span>Define Reusable Content</span></button><button type=\"button\" class=\"menu-command\" id=\"menu-command-scene-prefab-instance\" data-kind=\"live\" role=\"menuitem\" data-command=\"scene-prefab-instance\"><span>Instance Reusable Content</span></button><button type=\"button\" class=\"menu-command\" id=\"menu-command-scene-prefab-override\" data-kind=\"live\" role=\"menuitem\" data-command=\"scene-prefab-override\"><span>Override Reusable Instance</span></button><button type=\"button\" class=\"menu-command\" id=\"menu-command-scene-prefab-refresh\" data-kind=\"live\" role=\"menuitem\" data-command=\"scene-prefab-refresh\"><span>Refresh Reusable Content</span></button><button type=\"button\" class=\"menu-command\" id=\"menu-command-viewport-source-set\" data-kind=\"live\" role=\"menuitem\" data-command=\"viewport-source-set\"><span>Set Viewport Source</span></button><button type=\"button\" class=\"menu-command\" id=\"menu-command-physics-evaluate\" data-kind=\"live\" role=\"menuitem\" data-command=\"physics-evaluate\"><span>Evaluate Physics Replay</span></button></div></div><div class=\"menu-root\" data-menu-root=\"edit\"><button type=\"button\" class=\"menu-item\" id=\"menu-edit\" data-kind=\"view\" data-menu-trigger=\"edit\" aria-haspopup=\"menu\" aria-expanded=\"false\">Edit</button><div class=\"menu-panel\" id=\"menu-panel-edit\" role=\"menu\" hidden><button type=\"button\" class=\"menu-command is-inert\" id=\"menu-command-edit-undo\" data-kind=\"inert\" aria-disabled=\"true\" data-refusal=\"DESKTOP_UNDO_UNAVAILABLE\" title=\"DESKTOP_UNDO_UNAVAILABLE: Undo becomes available when the active project authoring journal reports a completed Save.\" aria-describedby=\"refusal-DESKTOP_UNDO_UNAVAILABLE\" role=\"menuitem\" data-command=\"edit-undo\"><span>Undo</span><kbd data-input-binding-label=\"editor.edit.undo\">Ctrl/Cmd+Z</kbd></button><button type=\"button\" class=\"menu-command is-inert\" id=\"menu-command-edit-redo\" data-kind=\"inert\" aria-disabled=\"true\" data-refusal=\"DESKTOP_REDO_UNAVAILABLE\" title=\"DESKTOP_REDO_UNAVAILABLE: Redo becomes available after Undo and remains available until a new mutation commits.\" aria-describedby=\"refusal-DESKTOP_REDO_UNAVAILABLE\" role=\"menuitem\" data-command=\"edit-redo\"><span>Redo</span><kbd data-input-binding-label=\"editor.edit.redo\">Ctrl/Cmd+Shift+Z</kbd></button></div></div><div class=\"menu-root\" data-menu-root=\"run\"><button type=\"button\" class=\"menu-item\" id=\"menu-run\" data-kind=\"view\" data-menu-trigger=\"run\" aria-haspopup=\"menu\" aria-expanded=\"false\">Run</button><div class=\"menu-panel\" id=\"menu-panel-run\" role=\"menu\" hidden><button type=\"button\" class=\"menu-command\" id=\"menu-command-run-play\" data-kind=\"live\" role=\"menuitem\" data-command=\"run-play\"><span>Play</span><kbd data-input-binding-label=\"editor.run.play\">Ctrl/Cmd+P</kbd></button></div></div></nav>
+  <div class=\"profile-switch\" role=\"group\" aria-label=\"Profile\"><button type=\"button\" class=\"profile-chip\" id=\"profile-game\" data-kind=\"view\" data-product-action data-action=\"profile\" data-value=\"game\" aria-pressed=\"true\" title=\"@sceneaxi/profile-game — demo-driveable · scene-kernel-session\"><span class=\"dot\" data-profile-dot=\"game\" aria-hidden=\"true\"></span><span>Engine</span></button><button type=\"button\" class=\"profile-chip\" id=\"profile-web\" data-kind=\"view\" data-product-action data-action=\"profile\" data-value=\"web\" aria-pressed=\"false\" title=\"@sceneaxi/profile-web — demo-driveable · kernel-session\"><span class=\"dot\" data-profile-dot=\"web\" aria-hidden=\"true\"></span><span>Website</span></button><button type=\"button\" class=\"profile-chip\" id=\"profile-kids\" data-kind=\"view\" data-product-action data-action=\"profile\" data-value=\"kids\" aria-pressed=\"false\" title=\"@sceneaxi/profile-kids — refuse-only · none\"><span class=\"dot\" data-profile-dot=\"kids\" aria-hidden=\"true\"></span><span>Kids</span><span class=\"chip-tag\">safe</span></button></div>
+  <div class=\"title-centre\">
+    <span class=\"project-pill\" data-project-state=\"closed\"><span class=\"dot dot-ok\" aria-hidden=\"true\"></span><span data-project-status>No project selected</span></span>
+  </div>
+  <div class=\"title-actions\">
+    <button type=\"button\" class=\"ghost-button\" id=\"project-open\" data-kind=\"live\" data-product-action data-action=\"document-reload\">Reload</button>
+    <button type=\"button\" class=\"primary-button\" id=\"project-save\" data-kind=\"live\" data-product-action data-command=\"project-save\">Save</button>
+    <button type=\"button\" class=\"ghost-button drawer-toggle\" id=\"drawer-left\" data-kind=\"view\" data-action=\"drawer\" data-value=\"left\" aria-expanded=\"false\" aria-controls=\"left-dock\">Panels</button><button type=\"button\" class=\"ghost-button drawer-toggle\" id=\"drawer-inspector\" data-kind=\"view\" data-action=\"drawer\" data-value=\"inspector\" aria-expanded=\"false\" aria-controls=\"inspector\">Inspector</button>
+    <button type=\"button\" class=\"ghost-button\" id=\"overlay-open-palette\" data-kind=\"view\" data-command=\"palette-open\">Commands <kbd data-input-binding-label=\"editor.palette.open\">Ctrl/Cmd+K</kbd></button>
+    <button type=\"button\" class=\"assistant-toggle\" id=\"assistant-toggle\" data-kind=\"view\" data-action=\"assistant\" aria-pressed=\"true\"><span class=\"dot\" data-assistant-dot aria-hidden=\"true\"></span><span>Assistant</span></button>
+  </div>
+</header>
+<div class=\"shell-body\">
+<nav class=\"mode-rail\" aria-label=\"Editor mode\"><span class=\"brand\" aria-hidden=\"true\"></span><button type=\"button\" class=\"rail-mode\" id=\"mode-build\" data-kind=\"view\" data-action=\"mode\" data-value=\"build\" aria-pressed=\"true\" title=\"Build\"><span class=\"rail-glyph\" aria-hidden=\"true\" style=\"border-radius:2px;transform:none\"></span><span class=\"rail-label\">BUILD</span><span class=\"sr-only\">Build mode</span></button><button type=\"button\" class=\"rail-mode\" id=\"mode-sculpt\" data-kind=\"view\" data-action=\"mode\" data-value=\"sculpt\" aria-pressed=\"false\" title=\"Sculpt\"><span class=\"rail-glyph\" aria-hidden=\"true\" style=\"border-radius:50%;transform:none\"></span><span class=\"rail-label\">SCULPT</span><span class=\"sr-only\">Sculpt mode</span></button><button type=\"button\" class=\"rail-mode is-inert\" id=\"mode-compose\" data-kind=\"inert\" aria-disabled=\"true\" data-refusal=\"DESKTOP_NO_DOCUMENT_BOUND\" title=\"DESKTOP_NO_DOCUMENT_BOUND: This control has no bound authoring operation, so it writes nothing.\" aria-describedby=\"refusal-DESKTOP_NO_DOCUMENT_BOUND\" data-action=\"mode\" data-value=\"compose\" aria-pressed=\"false\" title=\"Scene composition\" hidden><span class=\"rail-glyph\" aria-hidden=\"true\" style=\"border-radius:2px;transform:rotate(45deg)\"></span><span class=\"rail-label\">SCENE</span><span class=\"sr-only\">Scene composition mode</span></button><button type=\"button\" class=\"rail-mode\" id=\"mode-animate\" data-kind=\"view\" data-action=\"mode\" data-value=\"animate\" aria-pressed=\"false\" title=\"Animate\"><span class=\"rail-glyph\" aria-hidden=\"true\" style=\"border-radius:2px 9px 2px 9px;transform:none\"></span><span class=\"rail-label\">ANIM</span><span class=\"sr-only\">Animate mode</span></button><button type=\"button\" class=\"rail-mode\" id=\"mode-run\" data-kind=\"view\" data-action=\"mode\" data-value=\"run\" aria-pressed=\"false\" title=\"Run\"><span class=\"rail-glyph\" aria-hidden=\"true\" style=\"border-radius:50% 2px 50% 2px;transform:none\"></span><span class=\"rail-label\">RUN</span><span class=\"sr-only\">Run mode</span></button><button type=\"button\" class=\"rail-mode\" id=\"mode-ship\" data-kind=\"view\" data-action=\"mode\" data-value=\"ship\" aria-pressed=\"false\" title=\"Ship\"><span class=\"rail-glyph\" aria-hidden=\"true\" style=\"border-radius:2px;transform:rotate(20deg)\"></span><span class=\"rail-label\">SHIP</span><span class=\"sr-only\">Ship mode</span></button><button type=\"button\" class=\"rail-mode is-inert\" id=\"mode-plugins\" data-kind=\"inert\" aria-disabled=\"true\" data-refusal=\"DESKTOP_NO_DOCUMENT_BOUND\" title=\"DESKTOP_NO_DOCUMENT_BOUND: This control has no bound authoring operation, so it writes nothing.\" aria-describedby=\"refusal-DESKTOP_NO_DOCUMENT_BOUND\" data-action=\"mode\" data-value=\"plugins\" aria-pressed=\"false\" title=\"Plugins\" hidden><span class=\"rail-glyph\" aria-hidden=\"true\" style=\"border-radius:3px;transform:none\"></span><span class=\"rail-label\">PLUG</span><span class=\"sr-only\">Plugins mode</span></button></nav>
+<aside class=\"left-dock\" id=\"left-dock\" aria-label=\"Project files and editor panels\">
+<section class=\"project-panel\" aria-labelledby=\"project-files-title\">
+  <h2 class=\"panel-head\" id=\"project-files-title\"><span data-files-title>Objects</span><span class=\"project-name\" data-project-name>SceneAxi Project</span></h2>
+  <div class=\"project-launcher\" data-project-launcher>
+    <p>No project is selected. New Project creates the starter only after you choose its directory.</p>
+    <div class=\"project-lifecycle-actions\">
+      <button type=\"button\" class=\"primary-button\" id=\"project-new-root\" data-kind=\"live\" data-product-action data-command=\"project-new\">New Project</button>
+      <button type=\"button\" class=\"ghost-button\" id=\"project-open-root\" data-kind=\"live\" data-product-action data-command=\"project-open\">Open Project</button>
+    </div>
+    <label class=\"project-recent-label\" for=\"project-recent-select\">Recent</label>
+    <select id=\"project-recent-select\" data-kind=\"view\" class=\"project-recent-select\" aria-label=\"Recent project\"><option value=\"\">No recent projects</option></select>
+    <div class=\"project-lifecycle-actions\">
+      <button type=\"button\" class=\"ghost-button\" id=\"project-open-recent\" data-kind=\"live\" data-product-action data-action=\"project-open-recent\">Open Recent</button>
+      <button type=\"button\" class=\"ghost-button\" id=\"project-remove-recent\" data-kind=\"live\" data-product-action data-action=\"project-remove-recent\">Remove</button>
+    </div>
+  </div>
+  <div class=\"project-bound\" data-project-bound hidden>
+    <div class=\"project-files\" data-project-files><select id=\"project-browser-file-select\" data-kind=\"live\" data-product-action data-action=\"project-browser-select\" size=\"1\"<option value=\"scene.json\" selected>scene.json · Scene document</option></select></div>
+    <section class=\"project-browser-detail\" data-project-browser-detail hidden aria-live=\"polite\">
+      <strong data-project-browser-path></strong>
+      <p class=\"project-browser-status\" data-project-browser-validation></p>
+      <div class=\"project-browser-advanced\">
+        <dl>
+          <div><dt>Type</dt><dd data-project-browser-type></dd></div>
+          <div><dt>Digest</dt><dd data-project-browser-digest></dd></div>
+          <div><dt>Provenance</dt><dd data-project-browser-provenance></dd></div>
+        </dl>
+      </div>
+      <div class=\"project-browser-actions\">
+        <button type=\"button\" class=\"ghost-button\" id=\"project-browser-open\" data-kind=\"live\" data-product-action data-action=\"project-browser-open\">Open</button>
+        <button type=\"button\" class=\"ghost-button is-inert\" id=\"project-browser-rename\" data-kind=\"inert\" aria-disabled=\"true\" data-refusal=\"DESKTOP_PROJECT_BROWSER_OPERATION_NOT_PERMITTED\" title=\"DESKTOP_PROJECT_BROWSER_OPERATION_NOT_PERMITTED: Project-browser rename and delete are not permitted by the current project lifecycle contract.\" aria-describedby=\"refusal-DESKTOP_PROJECT_BROWSER_OPERATION_NOT_PERMITTED\" data-product-action data-action=\"project-browser-rename\">Rename…</button>
+        <button type=\"button\" class=\"ghost-button is-inert\" id=\"project-browser-delete\" data-kind=\"inert\" aria-disabled=\"true\" data-refusal=\"DESKTOP_PROJECT_BROWSER_OPERATION_NOT_PERMITTED\" title=\"DESKTOP_PROJECT_BROWSER_OPERATION_NOT_PERMITTED: Project-browser rename and delete are not permitted by the current project lifecycle contract.\" aria-describedby=\"refusal-DESKTOP_PROJECT_BROWSER_OPERATION_NOT_PERMITTED\" data-product-action data-action=\"project-browser-delete\">Delete…</button>
+      </div>
+      <p class=\"panel-empty\">DESKTOP_PROJECT_BROWSER_OPERATION_NOT_PERMITTED · Project-browser rename and delete are not permitted by the current project lifecycle contract.</p>
+    </section>
+    <div class=\"scene-entities\" data-scene-entities hidden>
+      <p class=\"scene-entities-label\">Objects · click to select</p>
+      <select id=\"scene-entity-desktop-crate-beside\" data-kind=\"view\" data-product-action data-action=\"scene-entity-select\" aria-label=\"Ordered scene object selection\" multiple size=\"6\"><option value=\"\">No validated hierarchy opened</option></select>
+      <ol class=\"scene-entity-identities\" data-scene-identities aria-label=\"Hierarchy object identities and parentage\"></ol>
+    </div>
+    <p class=\"scene-entities-refusal\" data-scene-entities-refusal aria-live=\"polite\" hidden></p>
+    <p class=\"project-root\" data-project-root></p>
+    <section class=\"project-command-tools\" aria-label=\"Project commands\">
+      <section class=\"editor-command-form\" data-editor-command-form=\"project-migration-commit\" aria-label=\"Commit approved project migration\">
+    <h3>Commit approved project migration</h3>
+    <p data-migration-proposal-refusal>Run Propose Project Migration first.</p>
+    <p data-editor-command-refusal=\"project-migration-commit\" aria-live=\"polite\">Complete the required fields before submitting.</p>
+    <button type=\"button\" class=\"ghost-button\" id=\"editor-command-submit-project-migration-commit\" data-kind=\"live\" data-action=\"editor-command-submit\" data-value=\"project-migration-commit\" data-editor-command-submit=\"project-migration-commit\">Commit approved project migration</button>
+    
+  </section>
+      <section class=\"editor-command-form\" data-editor-command-form=\"input-actions-inspect\" aria-label=\"Inspect input actions\">
+    <h3>Inspect input actions</h3>
+    
+    <p data-editor-command-refusal=\"input-actions-inspect\" aria-live=\"polite\">Complete the required fields before submitting.</p>
+    <button type=\"button\" class=\"ghost-button\" id=\"editor-command-submit-input-actions-inspect\" data-kind=\"live\" data-action=\"editor-command-submit\" data-value=\"input-actions-inspect\" data-editor-command-submit=\"input-actions-inspect\">Inspect input actions</button>
+    
+  </section>
+      <section class=\"editor-command-form\" data-editor-command-form=\"input-action-rebind\" aria-label=\"Rebind input action\">
+    <h3>Rebind input action</h3><label>Scope<select id=\"command-field-input-action-rebind-scope\" data-kind=\"live\" data-command-field=\"scope\" aria-label=\"Scope\"><option value=\"\">Choose after inspection</option><option value=\"project\">project</option><option value=\"workspace\">workspace</option></select></label><label>Inspected action ID<select id=\"command-field-input-action-rebind-actionId\" data-kind=\"live\" data-command-field=\"actionId\" aria-label=\"Inspected action ID\"><option value=\"\">Choose after inspection</option></select></label><label>New binding JSON<textarea id=\"command-field-input-action-rebind-binding\" data-kind=\"live\" data-command-field=\"binding\" aria-label=\"New binding JSON\"></textarea></label>
+    
+    <p data-editor-command-refusal=\"input-action-rebind\" aria-live=\"polite\">Inspect input actions before choosing a target.</p>
+    <button type=\"button\" class=\"ghost-button\" id=\"editor-command-submit-input-action-rebind\" data-kind=\"live\" data-action=\"editor-command-submit\" data-value=\"input-action-rebind\" data-editor-command-submit=\"input-action-rebind\">Rebind input action</button>
+    <button type=\"button\" class=\"ghost-button\" id=\"editor-command-review-input-action-rebind\" data-kind=\"live\" data-action=\"editor-command-review\" data-value=\"input-action-rebind\" data-editor-command-review=\"input-action-rebind\" hidden>Approve reviewed change</button>
+  </section>
+      <section class=\"editor-command-form\" data-editor-command-form=\"input-actions-reset\" aria-label=\"Reset input actions\">
+    <h3>Reset input actions</h3><label>Scope<select id=\"command-field-input-actions-reset-scope\" data-kind=\"live\" data-command-field=\"scope\" aria-label=\"Scope\"><option value=\"\">Choose after inspection</option><option value=\"project\">project</option><option value=\"workspace\">workspace</option></select></label>
+    
+    <p data-editor-command-refusal=\"input-actions-reset\" aria-live=\"polite\">Inspect input actions before choosing a target.</p>
+    <button type=\"button\" class=\"ghost-button\" id=\"editor-command-submit-input-actions-reset\" data-kind=\"live\" data-action=\"editor-command-submit\" data-value=\"input-actions-reset\" data-editor-command-submit=\"input-actions-reset\">Reset input actions</button>
+    <button type=\"button\" class=\"ghost-button\" id=\"editor-command-review-input-actions-reset\" data-kind=\"live\" data-action=\"editor-command-review\" data-value=\"input-actions-reset\" data-editor-command-review=\"input-actions-reset\" hidden>Approve reviewed change</button>
+  </section>
+    </section>
+  </div>
+  <p class=\"project-file-state\" data-project-file-state>Active · not opened</p>
+</section>
+<section class=\"dock-panel\" data-mode-panel=\"build\" aria-label=\"SCENE\">
+  <h2 class=\"panel-head\"><span>SCENE</span></h2>
+  <p class=\"panel-empty\">The active Scene Document is listed above; Play sends its composed scene to the live viewport.</p>
+  
+  <p class=\"panel-note\" style=\"background:#131820;border-color:#223040;color:#5B9CFF\"><span class=\"dot\" style=\"background:#5B9CFF\" aria-hidden=\"true\"></span>Generated edits arrive as proposals and land in Change Review before they touch a document.</p>
+</section><section class=\"dock-panel\" data-mode-panel=\"sculpt\" aria-label=\"SCULPT LIBRARY\" hidden>
+  <h2 class=\"panel-head\"><span>SCULPT LIBRARY</span></h2>
+  <p class=\"panel-empty\">Sculpt authoring is not available on this surface; use packaged Assistant Build for a supported artifact path.</p>
+  
+  <p class=\"panel-note\" style=\"background:#10242C;border-color:#1E5A66;color:#74E3F2\"><span class=\"dot\" style=\"background:#46D8EC\" aria-hidden=\"true\"></span>Standalone Sculpt authoring writes nothing on this surface. DESKTOP_NO_DOCUMENT_BOUND</p>
+</section><section class=\"dock-panel\" data-mode-panel=\"compose\" aria-label=\"SCENE INSTANCES\" hidden>
+  <h2 class=\"panel-head\"><span>SCENE INSTANCES</span></h2>
+  <p class=\"panel-empty\">Scene composition is consumed by Run; no composition editor is bound here.</p>
+  
+  <p class=\"panel-note\" style=\"background:#1B1626;border-color:#3A2E52;color:#C3B0F0\"><span class=\"dot\" style=\"background:#A78BFA\" aria-hidden=\"true\"></span>This surface does not author placement transforms. DESKTOP_NO_DOCUMENT_BOUND</p>
+</section><section class=\"dock-panel\" data-mode-panel=\"animate\" aria-label=\"CLIPS\" hidden>
+  <h2 class=\"panel-head\"><span>CLIPS</span></h2>
+  <p class=\"panel-empty\">Animation authoring is not available on this surface.</p>
+  
+  <p class=\"panel-note\" style=\"background:#131820;border-color:#223040;color:#5B9CFF\"><span class=\"dot\" style=\"background:#5B9CFF\" aria-hidden=\"true\"></span>No timeline edits are staged here. DESKTOP_NO_DOCUMENT_BOUND</p>
+</section><section class=\"dock-panel\" data-mode-panel=\"run\" aria-label=\"RUNTIME\" hidden>
+  <h2 class=\"panel-head\"><span>RUNTIME</span></h2>
+  <p class=\"panel-empty\" data-run-session-report>No kernel session is open on this surface, so there is no tick, frame, or body to report.</p>
+  <pre class=\"change-diff\" data-run-rarity-evidence hidden tabindex=\"0\" role=\"region\" aria-label=\"Safe rarity provenance for this run\"></pre>
+  <p class=\"panel-note\" style=\"background:#131820;border-color:#223040;color:#5B9CFF\"><span class=\"dot\" style=\"background:#5B9CFF\" aria-hidden=\"true\"></span>Every run records frames and ends with a digest. Replay plays the exact sequence back; a differing digest is reported as an error, never smoothed over.</p>
+</section><section class=\"dock-panel\" data-mode-panel=\"ship\" aria-label=\"TARGETS\" hidden>
+  <h2 class=\"panel-head\"><span>TARGETS</span></h2>
+  <p class=\"panel-empty\">Static Web · contained project files · Delivery Handoff v1.</p>
+  
+  <p class=\"panel-note\" style=\"background:#10242C;border-color:#1E5A66;color:#74E3F2\"><span class=\"dot\" style=\"background:#46D8EC\" aria-hidden=\"true\"></span>Export writes a local content-addressed bundle. It never signs, uploads, deploys, approves, or releases it.</p>
+</section><section class=\"dock-panel\" data-mode-panel=\"plugins\" aria-label=\"LOCKED\" hidden>
+  <h2 class=\"panel-head\"><span>LOCKED</span></h2>
+  <p class=\"panel-empty\">No contained packages are locked in this project.</p>
+  
+  <p class=\"panel-note\" style=\"background:#10242C;border-color:#1E5A66;color:#74E3F2\"><span class=\"dot\" style=\"background:#46D8EC\" aria-hidden=\"true\"></span>Inspect the project lock; marketplace and network stay disabled. DESKTOP_NO_DOCUMENT_BOUND</p>
+</section></aside>
+<div class=\"viewport-column\">
+
+<section class=\"viewport-region\" aria-label=\"Viewport\">
+  <div class=\"profile-surfaces\"><section class=\"profile-surface\" data-profile-surface=\"game\" aria-label=\"Game product surface\">
+  <div><strong>Scene</strong></div>
+  <ul class=\"capability-list\"><li><b>Scene authoring</b><span>Open and save the active Scene Document through the shared authoring session.</span></li><li><b>Composed scene play</b><span>Run the composed scene through the existing orchestrated kernel path.</span></li><li><b>FreeJS behavior</b><span>Game behavior remains project-local and never becomes a site dependency.</span></li></ul>
+  <p class=\"game-runtime-note\">Play the scene in the middle. Ask Flash to make or change objects.</p>
+</section><section class=\"profile-surface\" data-profile-surface=\"web\" aria-label=\"Web Experience product surface\">
+  <div><strong>Website studio</strong></div>
+  <ul class=\"capability-list\"><li><b>HTML</b><span>Author stored markup as data; the desktop never executes it in the chrome.</span></li><li><b>Site canvas</b><span>Compose the Web Experience around the same live scene viewport.</span></li><li><b>Asset injection</b><span>Stage project-relative asset references through propose/review/save.</span></li><li><b>Composed scene play</b><span>Run the composed scene through the existing orchestrated kernel path.</span></li></ul>
+  <div class=\"web-authoring-tools\">
+  <p>This is a website, not a game scene. Ask Flash for a Three.js hero, a headline motion, or a new section.</p>
+  <p class=\"web-authoring-note\">Stored HTML is data, never executed by this chrome.</p>
+  <div class=\"profile-actions\">
+    <button type=\"button\" class=\"primary-button is-inert\" id=\"web-stage-html\" data-kind=\"inert\" aria-disabled=\"true\" data-refusal=\"DESKTOP_WEB_CAPABILITY_REQUIRED\" title=\"DESKTOP_WEB_CAPABILITY_REQUIRED: HTML, site-canvas, and asset-injection authoring are available only on the Web Experience profile.\" aria-describedby=\"refusal-DESKTOP_WEB_CAPABILITY_REQUIRED\" data-product-action data-action=\"web-stage-html\">Edit page</button>
+    <button type=\"button\" class=\"ghost-button is-inert\" id=\"web-inject-asset\" data-kind=\"inert\" aria-disabled=\"true\" data-refusal=\"DESKTOP_WEB_CAPABILITY_REQUIRED\" title=\"DESKTOP_WEB_CAPABILITY_REQUIRED: HTML, site-canvas, and asset-injection authoring are available only on the Web Experience profile.\" aria-describedby=\"refusal-DESKTOP_WEB_CAPABILITY_REQUIRED\" data-product-action data-action=\"web-inject-asset\">Add hero scene</button>
+  </div>
+</div>
+</section><div class=\"profile-runtime-actions\">
+  <button type=\"button\" class=\"primary-button\" id=\"scene-play\" data-kind=\"live\" data-product-action data-command=\"run-play\">Play</button>
+  <p class=\"runtime-report\" data-product-run-report aria-live=\"polite\">Ready.</p>
+</div></div>
+  <div class=\"view-tabs\">
+    <div class=\"view-tablist\" role=\"tablist\" aria-label=\"Viewport source\">
+      <button type=\"button\" class=\"view-tab is-inert\" id=\"viewport-source-scene\" data-kind=\"inert\" aria-disabled=\"true\" data-refusal=\"DESKTOP_NO_PRESENTATION_RUNTIME\" title=\"DESKTOP_NO_PRESENTATION_RUNTIME: No presentation runtime is mounted on this surface, so the viewport draws no pixels.\" aria-describedby=\"refusal-DESKTOP_NO_PRESENTATION_RUNTIME\" role=\"tab\" aria-selected=\"true\" tabindex=\"0\">Scene</button><button type=\"button\" class=\"view-tab is-inert\" id=\"viewport-source-game\" data-kind=\"inert\" aria-disabled=\"true\" data-refusal=\"DESKTOP_NO_PRESENTATION_RUNTIME\" title=\"DESKTOP_NO_PRESENTATION_RUNTIME: No presentation runtime is mounted on this surface, so the viewport draws no pixels.\" aria-describedby=\"refusal-DESKTOP_NO_PRESENTATION_RUNTIME\" role=\"tab\" aria-selected=\"false\" tabindex=\"-1\">Game</button><button type=\"button\" class=\"view-tab is-inert\" id=\"viewport-source-sculpt-preview\" data-kind=\"inert\" aria-disabled=\"true\" data-refusal=\"DESKTOP_NO_PRESENTATION_RUNTIME\" title=\"DESKTOP_NO_PRESENTATION_RUNTIME: No presentation runtime is mounted on this surface, so the viewport draws no pixels.\" aria-describedby=\"refusal-DESKTOP_NO_PRESENTATION_RUNTIME\" role=\"tab\" aria-selected=\"false\" tabindex=\"-1\">Sculpt preview</button>
+    </div>
+    <label class=\"viewport-source-control\">Set source<select id=\"command-field-viewport-source-set-source\" data-kind=\"live\" data-command-field=\"source\" aria-label=\"Viewport source command\"><option value=\"\">Choose source</option><option value=\"scene\">Scene</option><option value=\"game\">Game</option><option value=\"sculpt-preview\">Sculpt preview</option></select></label>
+    <button type=\"button\" class=\"ghost-button\" id=\"editor-command-submit-viewport-source-set\" data-kind=\"live\" data-action=\"editor-command-submit\" data-value=\"viewport-source-set\" data-editor-command-submit=\"viewport-source-set\">Apply source</button>
+    <span class=\"spacer\"></span>
+    <span class=\"view-tools\" aria-hidden=\"true\"><i></i><i></i><i></i><i></i></span>
+  </div>
+  <div class=\"stage-host\">
+  <div class=\"site-stage\" aria-hidden=\"true\">
+    <div class=\"site-browser-bar\"><i></i><i></i><i></i><span>example.com</span></div>
+    <article class=\"site-page\">
+      <div class=\"site-nav\"><span>Home</span><span>Story</span><span>Contact</span></div>
+      <header class=\"site-hero-copy\">
+        <p class=\"site-eyebrow\">Your site</p>
+        <h3>Build a real page</h3>
+        <p>This is a website creator. Ask Flash for a Three.js hero, a headline motion, or a new section. Engine tools stay on Engine.</p>
+      </header>
+    </article>
+  </div>
+  <div class=\"viewport\">
+    <div class=\"viewport-backdrop\" role=\"img\" aria-label=\"No renderer is mounted on this surface — the viewport is inert and draws no pixels.\"></div>
+    <p class=\"viewport-note viewport-note-inert\">No renderer is mounted on this surface — the viewport is inert and draws no pixels.</p>
+    <p class=\"viewport-note viewport-note-web\">Hero stage. This is the Three.js embed on the page.</p>
+    <div class=\"axis-widget\" aria-hidden=\"true\">
+      <i style=\"background:#E4655F\"></i><i style=\"background:#7CC96B\"></i><i style=\"background:#5B9CFF\"></i>
+    </div>
+    <div class=\"assistant-manipulators\" data-assistant-manipulators=\"translation rotation scale\" aria-label=\"Assistant artifact manipulators\" hidden>
+      <button type=\"button\" class=\"assistant-manipulator is-inert\" id=\"assistant-manipulator-move-x\" data-kind=\"inert\" aria-disabled=\"true\" data-refusal=\"DESKTOP_NO_PRESENTATION_RUNTIME\" title=\"DESKTOP_NO_PRESENTATION_RUNTIME: No presentation runtime is mounted on this surface, so the viewport draws no pixels.\" aria-describedby=\"refusal-DESKTOP_NO_PRESENTATION_RUNTIME\" data-action=\"assistant-manipulator\" data-value=\"move-x\">Move +X</button><button type=\"button\" class=\"assistant-manipulator is-inert\" id=\"assistant-manipulator-move-y\" data-kind=\"inert\" aria-disabled=\"true\" data-refusal=\"DESKTOP_NO_PRESENTATION_RUNTIME\" title=\"DESKTOP_NO_PRESENTATION_RUNTIME: No presentation runtime is mounted on this surface, so the viewport draws no pixels.\" aria-describedby=\"refusal-DESKTOP_NO_PRESENTATION_RUNTIME\" data-action=\"assistant-manipulator\" data-value=\"move-y\">Move +Y</button><button type=\"button\" class=\"assistant-manipulator is-inert\" id=\"assistant-manipulator-rotate-y\" data-kind=\"inert\" aria-disabled=\"true\" data-refusal=\"DESKTOP_NO_PRESENTATION_RUNTIME\" title=\"DESKTOP_NO_PRESENTATION_RUNTIME: No presentation runtime is mounted on this surface, so the viewport draws no pixels.\" aria-describedby=\"refusal-DESKTOP_NO_PRESENTATION_RUNTIME\" data-action=\"assistant-manipulator\" data-value=\"rotate-y\">Rotate Y</button><button type=\"button\" class=\"assistant-manipulator is-inert\" id=\"assistant-manipulator-scale-up\" data-kind=\"inert\" aria-disabled=\"true\" data-refusal=\"DESKTOP_NO_PRESENTATION_RUNTIME\" title=\"DESKTOP_NO_PRESENTATION_RUNTIME: No presentation runtime is mounted on this surface, so the viewport draws no pixels.\" aria-describedby=\"refusal-DESKTOP_NO_PRESENTATION_RUNTIME\" data-action=\"assistant-manipulator\" data-value=\"scale-up\">Scale +</button>
+    </div>
+    <div class=\"sculpt-progress\" role=\"status\" data-sculpt-progress hidden>
+      <p class=\"sculpt-label\">Adding surface detail</p>
+      <div class=\"sculpt-track\" role=\"progressbar\" aria-valuemin=\"0\" aria-valuemax=\"100\" aria-valuenow=\"64\" aria-label=\"Pass 3 of 5\">
+        <span class=\"sculpt-fill\" style=\"width:64%\"></span>
+        <span class=\"sculpt-sweep\" aria-hidden=\"true\"></span>
+      </div>
+      <p class=\"sculpt-detail\">pass 3 of 5</p>
+      <button type=\"button\" class=\"ghost-button is-inert\" id=\"sculpt-cancel\" data-kind=\"inert\" aria-disabled=\"true\" data-refusal=\"DESKTOP_NO_PRESENTATION_RUNTIME\" title=\"DESKTOP_NO_PRESENTATION_RUNTIME: No presentation runtime is mounted on this surface, so the viewport draws no pixels.\" aria-describedby=\"refusal-DESKTOP_NO_PRESENTATION_RUNTIME\" data-action=\"sculpt-cancel\" data-editor-command=\"assistant-cancel\" data-command-schema-version=\"1\" data-command-permission=\"assistant:run\">Cancel after this pass</button>
+    </div>
+  </div>
+  <div class=\"site-page-tail\" aria-hidden=\"true\">
+    <section class=\"site-band\"><h4>Story</h4><p>Page copy lives here. Ask Flash to write this section.</p></section>
+    <section class=\"site-band\"><h4>Hero motion</h4><p>The stage above is the Three.js embed. Later you customize it here.</p></section>
+    <footer class=\"site-foot\">example.com · SceneAxi Website</footer>
+  </div>
+  </div>
+</section>
+
+<section class=\"dock\" aria-label=\"Dock\" style=\"--dock-h:228px\">
+  <div class=\"dock-tabs\">
+    <div class=\"dock-tablist\" role=\"tablist\" aria-label=\"Dock panel\">
+      <button type=\"button\" class=\"dock-tab\" id=\"dock-changes\" data-kind=\"view\" role=\"tab\" data-action=\"dock-tab\" data-value=\"changes\" aria-selected=\"true\" aria-controls=\"dock-panel-changes\" tabindex=\"0\">Changes<span class=\"badge\" data-change-badge>0</span></button><button type=\"button\" class=\"dock-tab\" id=\"dock-assets\" data-kind=\"view\" role=\"tab\" data-action=\"dock-tab\" data-value=\"assets\" aria-selected=\"false\" aria-controls=\"dock-panel-assets\" tabindex=\"-1\">Assets</button><button type=\"button\" class=\"dock-tab\" id=\"dock-console\" data-kind=\"view\" role=\"tab\" data-action=\"dock-tab\" data-value=\"console\" aria-selected=\"false\" aria-controls=\"dock-panel-console\" tabindex=\"-1\" hidden>Console</button><button type=\"button\" class=\"dock-tab\" id=\"dock-evidence\" data-kind=\"view\" role=\"tab\" data-action=\"dock-tab\" data-value=\"evidence\" aria-selected=\"false\" aria-controls=\"dock-panel-evidence\" tabindex=\"-1\">Evidence</button>
+    </div>
+    <span class=\"spacer\"></span>
+  </div>
+
+  <div class=\"dock-body\">
+    <div role=\"tabpanel\" id=\"dock-panel-changes\" class=\"dock-tabpanel\" data-dock-panel=\"changes\">
+      <p class=\"dock-caption\">One active E1 proposal at a time. Accept applies the whole proposal through the shared authoring session; Rej...
+
+[36m [2m❯[22m apps/desktop-shell/test/chrome-frame.test.ts:[2m30:22[22m[39m
+    [90m 28|[39m     expect(html).toContain('aria-labelledby="refusal-legend-title" hid…
+    [90m 29|[39m     [34mexpect[39m(html)[33m.[39mnot[33m.[39m[34mtoContain[39m([32m"<details"[39m)[33m;[39m
+    [90m 30|[39m     [34mexpect[39m(html)[33m.[39mnot[33m.[39m[34mtoMatch[39m([36m/refusal-legend[^>]*tabindex/[39m)[33m;[39m
+    [90m   |[39m                      [31m^[39m
+    [90m 31|[39m     [34mexpect[39m(html)[33m.[39m[34mtoContain[39m([32m".refusal-legend-panel{position:absolute"[39m)[33m;[39m
+    [90m 32|[39m     [34mexpect[39m(html)[33m.[39m[34mtoContain[39m([32m"overflow:auto;padding:10px 12px"[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/9]⎯[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Unhandled Errors [49m[22m[31m⎯⎯⎯⎯⎯⎯[39m
+[31m[1m
+Vitest caught 2 unhandled errors during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.[22m[39m
+
+[31m⎯⎯⎯⎯[39m[1m[41m Unhandled Rejection [49m[22m[31m⎯⎯⎯⎯⎯[39m
+[31m[1mReferenceError[22m: CustomEvent is not defined[39m
+[90m [2m❯[22m invalidateDesktopAudio evalmachine.<anonymous>:[2m975:32[22m[39m
+[90m [2m❯[22m runtimeRequest evalmachine.<anonymous>:[2m983:48[22m[39m
+[90m [2m❯[22m switchProfile evalmachine.<anonymous>:[2m2467:28[22m[39m
+[90m [2m❯[22m evalmachine.<anonymous>:[2m3359:70[22m[39m
+[90m [2m❯[22m productAction evalmachine.<anonymous>:[2m2219:13[22m[39m
+[90m [2m❯[22m FakeShell.clickListener evalmachine.<anonymous>:[2m3359:50[22m[39m
+[36m [2m❯[22m switchTo tests/e2e/desktop-linux-bridge-golden.test.ts:[2m861:13[22m[39m
+    [90m859|[39m         throw new Error(`profile switch harness missing ${profile}`);
+    [90m860|[39m       }
+    [90m861|[39m       shell.clickListener({ target: chip });
+    [90m   |[39m             [31m^[39m
+    [90m862|[39m       for (let turn = 0; turn < 8; turn += 1) await Promise.resolve();
+    [90m863|[39m     };
+[90m [2m❯[22m tests/e2e/desktop-linux-bridge-golden.test.ts:[2m890:11[22m[39m
+[90m [2m❯[22m node_modules/.pnpm/@vitest+runner@4.1.11/node_modules/@vitest/runner/dist/chunk-artifact.js:[2m302:11[22m[39m
+[90m [2m❯[22m node_modules/.pnpm/@vitest+runner@4.1.11/node_modules/@vitest/runner/dist/chunk-artifact.js:[2m1903:26[22m[39m
+
+[31mThis error originated in "[1mtests/e2e/desktop-linux-bridge-golden.test.ts[22m" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.[39m
+[31mThe latest test that might've caused the error is "[1mreports runtime absence, request failure, and in-flight product state through mounted chrome[22m". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.[39m
+
+[31m⎯⎯⎯⎯[39m[1m[41m Unhandled Rejection [49m[22m[31m⎯⎯⎯⎯⎯[39m
+[31m[1mReferenceError[22m: CustomEvent is not defined[39m
+[90m [2m❯[22m invalidateDesktopAudio evalmachine.<anonymous>:[2m975:32[22m[39m
+[90m [2m❯[22m runtimeRequest evalmachine.<anonymous>:[2m983:48[22m[39m
+[90m [2m❯[22m switchProfile evalmachine.<anonymous>:[2m2467:28[22m[39m
+[90m [2m❯[22m evalmachine.<anonymous>:[2m3359:70[22m[39m
+[90m [2m❯[22m productAction evalmachine.<anonymous>:[2m2219:13[22m[39m
+[90m [2m❯[22m FakeShell.clickListener evalmachine.<anonymous>:[2m3359:50[22m[39m
+[36m [2m❯[22m switchTo tests/e2e/desktop-linux-bridge-golden.test.ts:[2m861:13[22m[39m
+    [90m859|[39m         throw new Error(`profile switch harness missing ${profile}`);
+    [90m860|[39m       }
+    [90m861|[39m       shell.clickListener({ target: chip });
+    [90m   |[39m             [31m^[39m
+    [90m862|[39m       for (let turn = 0; turn < 8; turn += 1) await Promise.resolve();
+    [90m863|[39m     };
+[90m [2m❯[22m tests/e2e/desktop-linux-bridge-golden.test.ts:[2m892:11[22m[39m
+[90m [2m❯[22m processTicksAndRejections node:internal/process/task_queues:[2m104:5[22m[39m
+[90m [2m❯[22m node_modules/.pnpm/@vitest+runner@4.1.11/node_modules/@vitest/runner/dist/chunk-artifact.js:[2m1903:20[22m[39m
+
+[31mThis error originated in "[1mtests/e2e/desktop-linux-bridge-golden.test.ts[22m" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.[39m
+[31mThe latest test that might've caused the error is "[1mreports runtime absence, request failure, and in-flight product state through mounted chrome[22m". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.[39m
+[31m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[39m
+
+
+[2m Test Files [22m [1m[31m4 failed[39m[22m[2m | [22m[1m[32m1 passed[39m[22m[90m (5)[39m
+[2m      Tests [22m [1m[31m9 failed[39m[22m[2m | [22m[1m[32m176 passed[39m[22m[90m (185)[39m
+[2m     Errors [22m [1m[31m2 errors[39m[22m
+[2m   Start at [22m 16:57:11
+[2m   Duration [22m 51.95s[2m (transform 27.87s, setup 0ms, import 36.09s, tests 76.52s, environment 1ms)[22m
+

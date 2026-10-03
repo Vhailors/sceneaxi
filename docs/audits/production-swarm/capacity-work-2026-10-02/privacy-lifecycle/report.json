@@ -1,0 +1,39 @@
+{
+  "taskId": "privacy-lifecycle",
+  "status": "PASS_SCOPED_FIXTURE_NOT_PRODUCTION_ACCEPTANCE",
+  "scope": "Auxiliary proof only; not duplicate full review and no product fixes landed",
+  "ledgerTasks": ["IDENTITY-01", "GATE-RETENTION", "GATE-MAIL", "REQ-PROOF-IDENT-001..007"],
+  "root": "/home/devuser/Documents/Projects/sceneaxi",
+  "currentFingerprint": {
+    "accountLifecycleSha256": "2e85dc263ec7ca76787d567c9e3308bee4045ab1ee9b37f8f7f4c1255e9e556e",
+    "completeSubjectHashes": "evidence.json#/hashes",
+    "subject": "Current TS source transpiled in memory with TypeScript 5.9.3; not app dist or published PR",
+    "cryptoArtifactSha256": "eda1857eadcf2dea50618c61da26e5fb5e79efd7755e665cc3d9f244a322c2a0"
+  },
+  "sourceReferences": [
+    "sites/umbrella/src/provider/account-lifecycle.ts:130 createAccountLifecycle / dispatch",
+    "sites/umbrella/src/provider/account-lifecycle.ts:223 execute",
+    "sites/umbrella/src/provider/account-lifecycle.ts:9 ACCOUNT_LIFECYCLE_POLICY",
+    "sites/umbrella/src/provider/better-auth-provider.ts:652 createBetterAuthProviderHandler",
+    "sites/umbrella/src/app/api/auth/[...all]/route.ts:6 GET/POST",
+    "sites/umbrella/src/app/login/page.tsx:89 export form; :95 disable form",
+    "sites/umbrella/src/app/account/page.tsx:71 purchaseHistory.read; :153 history UI",
+    "packages/auth/src/admin.ts:95 resolveAdminIdentity; :73 hasAdminIdentityProvenance",
+    "packages/auth/src/principal-provenance.ts:18 hasPrincipalProvenance",
+    "packages/site-kit/src/admin-reauth.ts:6 verifySiteAdminReauthentication"
+  ],
+  "executed": {
+    "command": "python3 docs/audits/production-swarm/capacity-work-2026-10-02/privacy-lifecycle/check.py",
+    "exit": 0,
+    "requestCases": 20,
+    "negativeControl": "Unknown-field guard removed only in memory: cross-user-field oracle expected 400, observed mutant 200, mutation detected",
+    "evidence": "evidence.json",
+    "limitations": ["Recording SQL fixture does not execute SQL predicates, transaction rollback or PostgreSQL locks", "Session replay refusal follows fixture revocation state, not independent database proof", "Recovery reset token is never consumed while mail is unconfigured; no successful recovery/token-single-use claim", "Handler Request/Response consumer, not deployed socket/browser or outer provider runtime", "Principal structural-forgery negative only; no freshly issued member principal positive"]
+  },
+  "refutedGaps": ["Lifecycle endpoints absent: catch-all provider dispatch includes export/disable/reauth", "Export and disable UI absent: actual forms on /login", "Purchase history UI absent: /account reads and renders own-user history"],
+  "remainingGaps": ["Reviewed complete privacy category inventory, retention policy and pseudonymization workflow not established", "Email recovery transport remains explicitly unconfigured", "Current database-backed lifecycle and browser acceptance NOT_RUN"],
+  "patchProposal": "handoff.md; no source defect reproduced requiring a blind product patch; preserve existing forms/handlers, integrate reusable probe after explicit serial handoff",
+  "deferred": {"status": "NOT_RUN", "artifact": "deferred.sh", "preconditions": "Separate explicit heavy-resource authorization; existing installed dependencies, cached PostgreSQL image and browser; disposable fixtures only; no provider credentials"},
+  "resourcesCleaned": {"servers": 0, "containers": 0, "temporaryFiles": 0, "networkCalls": 0, "productWrites": 0},
+  "verification": "20 actual-handler fixture cases and mutation control passed; full gate/build/DB/browser skipped under zero-heavy budget"
+}

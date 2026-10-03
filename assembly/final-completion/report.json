@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "status": "BLOCKED_TRUE_ZERO_FLEET_POLICY_HANDOFF",
+  "updatedAt": "2026-10-03T17:45:42.941407+00:00",
+  "owner": "bg-177",
+  "ownedCheckout": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1",
+  "head": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+  "foundationMergeHead": "16f312c61435e3d379a0e54525ac8115e35fee86",
+  "mergeCommits": [],
+  "frontierOrder": [
+    "f1b468",
+    "62e84c",
+    "740c7e",
+    "1e5ea6",
+    "db8afa",
+    "94a450",
+    "1d2fe8",
+    "23413e",
+    "fed05a7",
+    "private-export-overlay"
+  ],
+  "verification": {
+    "oxlint": "NOT_FULL_CANDIDATE_RERUN_AWAITING_FLEET_TRUE_ZERO",
+    "build": "NOT_RERUN_AWAITING_TRUE_ZERO",
+    "gate": "NOT_RERUN_AWAITING_TRUE_ZERO",
+    "reportJsonAndDiffCheck": "PASS"
+  },
+  "ancestryProof": "PENDING_ALL_34_CAPTURED_REFS",
+  "inventoryProof": "PENDING",
+  "prReceipts": [],
+  "residuals": [
+    "Anti-slop fleet handoff not yet true-zero; broad predicate exemption policy implementation pending parent approval/routing.",
+    "Full root oxlint/build/gate not rerun while source agents remain active.",
+    "Foundation and frontier native commits, final ancestry/inventory, pushes and PR merge receipts remain unexecuted.",
+    "Foreign uncommitted work OWNER_EXPORT_REQUIRED; not silently included."
+  ],
+  "preliminaryInventory": {
+    "trackedCandidates": 1201,
+    "untrackedCandidates": 1300,
+    "noDeletedMainPaths": true,
+    "noLostExecutableMainModes": true,
+    "proof": "assembly/final-completion/preliminary-inventory.json",
+    "notFinal": true
+  },
+  "foundationObservedStages": {
+    "conflictPaths": 105,
+    "stages": 236,
+    "proof": "assembly/final-completion/observed-unmerged-stages.json",
+    "originalResolutionManifestMissing": true
+  },
+  "githubObserved": {
+    "pr310": "OPEN",
+    "pr312": "OPEN",
+    "enforceAdmins": true,
+    "requiredContexts": [
+      "gate",
+      "engine-sdk"
+    ],
+    "notFinalCAS": true
+  },
+  "evidenceRequests": {
+    "originalManifest": "RECOVERED",
+    "familyReports": "RECOVERED",
+    "all34CapturedRefs": "RECOVERED"
+  },
+  "evidenceImport": {
+    "source": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly",
+    "importedFiles": 198,
+    "status": "RECOVERED_ORIGINAL_MANIFEST_AND_RESOLUTION_RECORDS",
+    "receipt": "assembly/final-completion/evidence-import.json",
+    "excluded": "Private source backups/patches and non-proof source copies; existing owned files never overwritten"
+  },
+  "byokHandback": {
+    "status": "COMPLETE",
+    "focusedTests": 23,
+    "eslint": "0 findings",
+    "oxlint": "0 warnings/0 errors",
+    "scopedTypecheck": "EXIT2 schemas/src/profile-conformance-suite.ts359 TS2307 missing ./json.js; full root build pending"
+  },
+  "mergeReadiness": {
+    "originalManifest": "2475 paths recovered; all present and modes match",
+    "originalNativeStages": "105 paths /236stages match original records exactly",
+    "resolutionPostimages": {
+      "unchanged": 69,
+      "changed": 36,
+      "status": "ACTIVE_FLEET_POSTIMAGES_RECORDED_NOT_YET_APPROVED_FROZEN"
+    },
+    "capturedRefs": {
+      "total": 34,
+      "matchingTips": 34,
+      "commitObjectsAvailable": 34,
+      "baselineAncestors": 9
+    },
+    "fullChangedSourceGuardPaths": 443,
+    "extraGeneratedArtifactsExcluded": 4,
+    "secretScan": "No real credential identified; explicit invalid-key boundary test fixture retained"
+  },
+  "finalEntry": {
+    "fullyMerged": false,
+    "foundationMergeSha": null,
+    "foundationMergeHeadStillOpen": "16f312c61435e3d379a0e54525ac8115e35fee86",
+    "frontierMergeShas": [],
+    "all34CapturedRefProof": "assembly/final-completion/ancestry-preflight.json \u2014 all34 immutable tips match/objects exist; only9 current baseline ancestors; FINAL_ANCESTRY_NOT_ACHIEVED",
+    "inventory": "assembly/final-completion/resolution-preflight.json and preliminary-inventory.json \u2014 2475manifest paths present/modes match; no deleted main paths/executable losses; not a frozen final candidate",
+    "prMergeReceipts": [],
+    "observedPrUrls": [
+      "https://github.com/Vhailors/sceneaxi/pull/310",
+      "https://github.com/Vhailors/sceneaxi/pull/312"
+    ],
+    "remainingHonestResiduals": [
+      "No fleet true-zero handoff: chunk01 released source with74 genuine synchronous-predicate typeof diagnostics under unchanged strict policy; other chunks not globally certified.",
+      "Parent policy approval/routing requests timed out; no lint exemption invented or disabled.",
+      "Root full-candidate oxlint/build/gate not run under required post-zero sequencing; prior gate5194pass22fail is historical, not final verification.",
+      "Foundation105-resolutions native merge remains uncommitted; all frontier normal merges, final ancestry/inventory, fresh mainCAS publication and PR receipts remain outstanding.",
+      "PR310 immutable resolved-tree92facf absent from owned objectdb; foreign uncommitted trees untouched OWNER_EXPORT_REQUIRED, independent owned reconciliation needs handoff/approval.",
+      "Foreign uncommitted work outside owned scope remains OWNER_EXPORT_REQUIRED and disclosed."
+    ]
+  }
+}

@@ -1,0 +1,136 @@
+[
+  {
+    "name": "sdk",
+    "command": [
+      "pnpm",
+      "-s",
+      "build:sdk"
+    ],
+    "exit": 0,
+    "seconds": 0.516,
+    "log": "sdk.log"
+  },
+  {
+    "name": "docs-api",
+    "command": [
+      "pnpm",
+      "-s",
+      "docs:api"
+    ],
+    "exit": 1,
+    "seconds": 20.131,
+    "log": "docs-api.log"
+  },
+  {
+    "name": "umbrella-typecheck",
+    "command": [
+      "pnpm",
+      "--dir",
+      "sites/umbrella",
+      "exec",
+      "tsc",
+      "--noEmit",
+      "--incremental",
+      "false"
+    ],
+    "exit": 2,
+    "seconds": 9.259,
+    "log": "umbrella-typecheck.log"
+  },
+  {
+    "name": "umbrella-build",
+    "command": [
+      "pnpm",
+      "--dir",
+      "sites/umbrella",
+      "build"
+    ],
+    "exit": 1,
+    "seconds": 48.036,
+    "log": "umbrella-build.log"
+  },
+  {
+    "name": "catalog-game-typecheck",
+    "command": [
+      "pnpm",
+      "--dir",
+      "sites/catalog-game",
+      "exec",
+      "tsc",
+      "--noEmit",
+      "--incremental",
+      "false"
+    ],
+    "exit": 2,
+    "seconds": 7.617,
+    "log": "catalog-game-typecheck.log"
+  },
+  {
+    "name": "catalog-game-build",
+    "command": [
+      "pnpm",
+      "--dir",
+      "sites/catalog-game",
+      "build"
+    ],
+    "exit": 1,
+    "seconds": 37.134,
+    "log": "catalog-game-build.log"
+  },
+  {
+    "name": "catalog-web-typecheck",
+    "command": [
+      "pnpm",
+      "--dir",
+      "sites/catalog-web",
+      "exec",
+      "tsc",
+      "--noEmit",
+      "--incremental",
+      "false"
+    ],
+    "exit": 2,
+    "seconds": 7.241,
+    "log": "catalog-web-typecheck.log"
+  },
+  {
+    "name": "catalog-web-build",
+    "command": [
+      "pnpm",
+      "--dir",
+      "sites/catalog-web",
+      "build"
+    ],
+    "exit": 1,
+    "seconds": 36.686,
+    "log": "catalog-web-build.log"
+  },
+  {
+    "name": "kids-typecheck",
+    "command": [
+      "pnpm",
+      "--dir",
+      "sites/kids",
+      "exec",
+      "tsc",
+      "--noEmit",
+      "--incremental",
+      "false"
+    ],
+    "exit": 0,
+    "seconds": 2.321,
+    "log": "kids-typecheck.log"
+  },
+  {
+    "name": "kids-build",
+    "command": [
+      "pnpm",
+      "--dir",
+      "sites/kids",
+      "build"
+    ],
+    "exit": 0,
+    "seconds": 15.209,
+    "log": "kids-build.log"
+  }
+]

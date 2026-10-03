@@ -1,0 +1,50 @@
+{
+  "status": "SOURCE_HANDED_BACK_FOCUSED_PASS_RENDERED_NOT_RUN",
+  "sourceHandback": true,
+  "root": "/home/devuser/Documents/Projects/sceneaxi",
+  "beforeSha256": {
+    "apps/web-shell/src/dev-server.ts": "2f86e8bed0355719d2fc9bb68436305569c7bacef14b64c98a57b4f8986b93d4",
+    "apps/web-shell/test/dev-server.test.ts": "a205468ba84476ac5b3becbbb2593af3d5248ba9745207c7c2bc70fc9a94681a",
+    "apps/desktop-shell/src/chrome.ts": "4187b4378cc9535eb9194c57445856dd455e1adf6d8ec9196428c942c73aea8a",
+    "apps/desktop-shell/test/keyboard-geometry.test.ts": "61ab39549b7b86ca8c93c4bb5c5b762560d010f406856661078a73f63c2f705f",
+    "apps/desktop-shell/test/visual-postpr-evidence/retry/capture.mjs": "0c552d679c94f361a96c4ccd10a072b31067912e2f750b3ba617409b0b0163f5"
+  },
+  "confirmedGap": "Before editing, real dev-server unsafe-inline; desktop grid repair already present and fresh geometry unmeasured. CSP repaired; no speculative chrome edit.",
+  "afterSha256": {
+    "apps/web-shell/src/dev-server.ts": "3d473ad1a960711a369d57c6d66c020d71d995849a6a3b44370a21f40604b610",
+    "apps/web-shell/test/dev-server.test.ts": "5502f3af21d913afc4d44ae46e4f6ee43dfcfa101ef8997efae908a8403d7bd7",
+    "apps/desktop-shell/src/chrome.ts": "4187b4378cc9535eb9194c57445856dd455e1adf6d8ec9196428c942c73aea8a",
+    "apps/desktop-shell/test/keyboard-geometry.test.ts": "637243b0db641694a51e3093ac52a847ddfcfea910bdcfd2d9d7d6e662154a40",
+    "apps/desktop-shell/test/visual-postpr-evidence/retry/capture.mjs": "26c82e9f4f50603e15e15c4dc2579441448284348911dd28b78c0dfdc2529116"
+  },
+  "literalAriaDisabledOracle": {
+    "path": "apps/desktop-shell/test/chrome.test.ts:510-524",
+    "fileSha256": "b1b22f1f2037dc57ff44226c7cc4b30e4a94edbe778b47fdead1eb1ef3dfaaa3",
+    "edited": false,
+    "executed": "PASS"
+  },
+  "redBefore": [
+    {"suite":"dev-server", "passed":16, "failed":8, "exit":1, "log":"red-before.log", "sha256":"caf8e238997eaebe2a29437f5cf38d4525693362fdf7f03aa6ec6f0d15e4cc86", "output":"Expected exact SHA256 script-src, received unsafe-inline; expected500 for six changed responses, received200; served script hash missing"},
+    {"suite":"keyboard-geometry", "passed":7, "failed":1, "exit":1, "log":"geometry-red-before.log", "sha256":"7c0c71f306945dfdf221af4135d21e870efd6d9bbca7179cee59ceb8b6de3066", "output":"Missing expected exception: malformed focus observation accepted"}
+  ],
+  "greenAfter": [
+    {"suite":"dev-server", "passed":24, "failed":0, "exit":0, "log":"green-after.log"},
+    {"suite":"keyboard-geometry", "passed":8, "failed":0, "exit":0, "log":"geometry-green-after.log"},
+    {"suite":"final public-consumer and handback focus fixtures", "files":9, "passed":178, "failed":0, "exit":0, "log":"focused-final.log", "sha256":"edba34fefb46ba3d906e03dd8e3fa12238a54e538032d261fdf7bede25025701", "aliases":false, "countsOverlapEarlierRuns":true}
+  ],
+  "fixtureCorrection": "First after CSP run23pass/1fail: idle expected reviewing because HappyDOM does not track native fetch. Explicit expect.poll waits actual socket response; no product/check change. Later MIME-whitespace/case negative added; final dev-server25 tests.",
+  "assertions": ["Exact trusted renderer-only static UTF8 script/style SHA256 authorization, never returned-content hashing", "Startup rejects root-dependent static-block hash drift", "Response HTML byte drift, additional tags/handlers and MIME variants refuse500 WEB_SHELL_CHROME_INTEGRITY_INVALID before delivery", "Default-none, self-connect, Host/Origin/body, frame/base/form guards unchanged; attributes deny", "Hash-authorized served inspector invalidity/review/reject focus/no-write remains interactive", "No source exports/manifests/matrix/aliases changed", "Geometry hostile oracle strengthened to1positive18reject focus plus1positive4reject diagnostics; no actual geometry claim"],
+  "verification": {
+    "typescriptLint":{"exit":0,"log":"typescript-lint.log"},
+    "driverSyntax":{"command":"node --check apps/desktop-shell/test/visual-postpr-evidence/retry/capture.mjs","exit":0},
+    "hostileOracle":{"command":"node apps/desktop-shell/test/visual-postpr-evidence/retry/capture.mjs --oracle-self-test","exit":0,"browser":"NOT_RUN"},
+    "diffCheck":{"exit":0,"scope":"owned paths"},
+    "directDriverLint":{"exit":1,"errors":43,"log":"final-lint.log","output":"Contextual Node/browser globals no-undef; no suppression applied; driver lint not certified"},
+    "focusedTypecheck":{"exit":2,"command":"pnpm exec tsc -p apps/web-shell/tsconfig.json --noEmit --tsBuildInfoFile <owned temporary path>","diagnostics":36,"log":"typecheck.log","sha256":"da5c433250c2d3a69a699cc0957ad0ad740ed459ee0abbd3ae8dae339d1fa958","output":"Missing shared schemas v2 exports in scene-session, scene-transforms and three-sculpt and dependent diagnostics; no owned CSP diagnostic; no alias used"}
+  },
+  "cleanup": "Sockets and HappyDOM closed; own temporary fixture/typecheck directories removed. No persistent services/browser/native/provider/container/install/build/fullgate/site jobs, global ledger edits, commit/push/publication.",
+  "remainingSemanticRisk": ["Current desktop clipping/occlusion and effect reachability unmeasured; existing grid fix cannot be certified from static green", "Actual browser CSP enforcement and web keyboard/contrast/recovery unrun", "Shared-export integration blocks focused noEmit; rerun after export handback", "Direct MJS ESLint invocation failed43 contextual globals; syntax/oracle pass is not lint pass"],
+  "deferredChecks": ["Fresh strict-CSP enforcement on rebuilt real dev-server: owned blocks execute, unauthorized inline scripts/styles/handlers blocked, zero legitimate CSP violations", "Web390/1440 light/dark/forced-colors keyboard/theme/contrast/pending/stale/recovery/no-write-retry", "node apps/desktop-shell/test/visual-postpr-evidence/retry/capture.mjs final-wiring-desktop-keyboard --keyboard-only: actual bidirectional900x600/1100x800/1280x900 and forced-colors,2px visible focus/unclipped/unoccluded effect controls, genuine diagnostic/dismissal", "Repeat focused noEmit after shared exports; serial stable fullbuild/root gate/native"],
+  "sourceHandbackStatement": "SOURCE HANDED BACK to parent/serial owner: all four edited paths and unchanged chrome released; no further source writes. Focused PASS does not close rendered acceptance."
+
+}

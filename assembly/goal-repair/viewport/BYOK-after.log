@@ -1,0 +1,27 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/tmp/sceneaxi-comprehensive-owned-xd4gdfl1[39m
+
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22minstaller abort: pending status success settles without late DOM or IPC[32m 89[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22minstaller abort: pending status rejection settles without late DOM or IPC[32m 15[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22minstaller abort: pending save success settles without late DOM or IPC[32m 19[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22minstaller abort: pending save rejection settles without late DOM or IPC[32m 9[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22minstaller abort: pending remove success settles without late DOM or IPC[32m 10[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22minstaller abort: pending remove rejection settles without late DOM or IPC[32m 7[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22mroot pagehide: pending status success settles without late DOM or IPC[33m 364[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22mroot pagehide: pending status rejection settles without late DOM or IPC[32m 189[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22mroot pagehide: pending save success settles without late DOM or IPC[32m 112[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22mroot pagehide: pending save rejection settles without late DOM or IPC[32m 43[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22mroot pagehide: pending remove success settles without late DOM or IPC[32m 30[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22mroot pagehide: pending remove rejection settles without late DOM or IPC[32m 38[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22mphysically removes all registered listeners and fences a queued route microtask[32m 7[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22ma pre-aborted lifetime refuses installation before DOM allocation or IPC[32m 3[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22mthe original boolean/no-options API retains normal status, provider, save and remove behavior[32m 6[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22msame-turn Kids save clears the field without secure-storage admission[32m 11[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22mlive IPC failure still renders a generic refusal without thrown key internals[32m 23[2mms[22m[39m
+ [32m✓[39m desktop/linux/test/byo-terminal-lifecycle.test.ts[2m > [22mactual BYOK installer terminal lifetime[2m > [22mmissing privileged channel retains the named unavailable surface[32m 42[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m18 passed[39m[22m[90m (18)[39m
+[2m   Start at [22m 19:04:05
+[2m   Duration [22m 3.96s[2m (transform 803ms, setup 0ms, import 2.44s, tests 1.02s, environment 0ms)[22m
+

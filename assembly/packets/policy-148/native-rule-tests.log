@@ -1,0 +1,48 @@
+✔ primitive predicate (363.815062ms)
+✔ finite predicate (303.986653ms)
+✔ optional raw object shell (270.925674ms)
+✔ checked same-input decoder (267.86663ms)
+✔ renamed checked decoder (281.791325ms)
+✔ option remains opt-in (268.652459ms)
+✔ boolean predicate (233.583207ms)
+✔ arrow predicate (254.220741ms)
+✔ function expression predicate (255.559744ms)
+✔ reassigned validator (283.65546ms)
+✔ contract mismatch (258.870462ms)
+✔ shadowed Readonly (256.942356ms)
+✔ unchecked default return (268.61542ms)
+✔ generic unknown (258.645921ms)
+✔ cause existing exemption (236.833531ms)
+✔ representation only (273.034792ms)
+✔ unrelated typeof in predicate (304.614596ms)
+✔ unrelated predicate statement (257.537909ms)
+✔ lying domain predicate (268.500151ms)
+✔ inverted predicate (259.081642ms)
+✔ alternate unchecked predicate (268.9031ms)
+✔ always-true decoder (280.664473ms)
+✔ shadowed validator (286.457893ms)
+✔ imported unverifiable validator (673.357586ms)
+✔ wrong validated input (254.241252ms)
+✔ wrong return input (249.374131ms)
+✔ unchecked decoder return (293.981818ms)
+✔ unchecked alternate branch (230.818584ms)
+✔ pre-validation property access (280.633644ms)
+✔ unchecked parse assertion (342.969065ms)
+✔ modified subject (304.940767ms)
+✔ shadowed Number (292.445867ms)
+✔ shadowed Array (248.793504ms)
+✔ required unknown shell (301.760183ms)
+✔ typed shell field (256.91239ms)
+✔ unvalidated dictionary (267.304911ms)
+✔ unchecked compatibility dictionary (266.062848ms)
+✔ concrete dictionary (243.08105ms)
+✔ raw public port not exempted by name (276.243429ms)
+✔ transport not exempted by apply name (253.457516ms)
+ℹ tests 40
+ℹ suites 0
+ℹ pass 40
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 11393.122396

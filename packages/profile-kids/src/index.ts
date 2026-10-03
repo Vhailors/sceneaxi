@@ -1,3 +1,9 @@
+import { isJsonValue } from "@sceneaxi/schemas";
+
+type KidsBoundaryInput = Parameters<typeof isJsonValue>[0];
+
+type RawKidsClaim = { kind?: unknown; plane?: unknown; profile?: unknown; action?: unknown; destination?: unknown };
+
 /**
  * @sceneaxi/profile-kids — fully isolated Kids profile with a fail-closed
  * policy compiled into the package. Nothing outside Kids surfaces may depend
@@ -92,13 +98,13 @@ const kidsIsolationPlaneSet = new Set<string>(KIDS_ISOLATION_PLANES);
  * Shared modes, unknown modes, and unknown planes all refuse.
  */
 export function evaluateKidsIsolation(
-  plane: unknown,
-  mode: unknown,
+  plane: KidsBoundaryInput,
+  mode: KidsBoundaryInput,
 ): KidsIsolationDecision {
-  if (typeof plane !== "string" || !kidsIsolationPlaneSet.has(plane)) {
+  if (!isBoundaryString(plane) || !kidsIsolationPlaneSet.has(plane)) {
     return Object.freeze({
       ok: false,
-      plane: typeof plane === "string" ? plane : null,
+      plane: isBoundaryString(plane) ? plane : null,
       reason: "UNKNOWN_ISOLATION_PLANE",
       message: "Unknown Kids isolation plane refused; policy expansion must be explicit.",
     });
@@ -113,6 +119,7 @@ export function evaluateKidsIsolation(
     });
   }
 
+  // SAFETY: kidsIsolationPlaneSet was constructed only from KIDS_ISOLATION_PLANES and membership was checked above.
   return Object.freeze({
     ok: true,
     plane: plane as KidsIsolationPlane,
@@ -125,9 +132,9 @@ export function evaluateKidsIsolation(
  * route refuses; third-party routes receive the stable default-denial reason.
  */
 export function evaluateKidsLlmRoute(
-  routeKind: unknown,
+  routeKind: KidsBoundaryInput,
 ): KidsLlmRouteDecision {
-  const normalizedRouteKind = typeof routeKind === "string" ? routeKind : null;
+  const normalizedRouteKind = isBoundaryString(routeKind) ? routeKind : null;
   const thirdParty = normalizedRouteKind === "third-party";
 
   return Object.freeze({
@@ -142,21 +149,23 @@ export function evaluateKidsLlmRoute(
   });
 }
 
-function claimString(value: unknown) {
-  return typeof value === "string" && value.trim().length > 0
+function claimString(value: KidsBoundaryInput) {
+  return isBoundaryString(value) && value.trim().length > 0
     ? value
     : undefined;
 }
 
 function claimProperty(
-  claim: object,
+  claim: RawKidsClaim,
   key: "plane" | "profile" | "action" | "destination",
 ) {
   try {
     const descriptor = Object.getOwnPropertyDescriptor(claim, key);
+
     if (descriptor === undefined) {
       return { ok: true as const, value: undefined };
     }
+
     return "value" in descriptor
       ? { ok: true as const, value: descriptor.value }
       : { ok: false as const };
@@ -165,13 +174,16 @@ function claimProperty(
   }
 }
 
-function inspectBoundaryClaim(claim: unknown) {
+function inspectBoundaryClaim(claim: KidsBoundaryInput) {
   try {
-    if (typeof claim !== "object" || claim === null || Array.isArray(claim)) {
+    if (!isBoundaryObjectOrNull(claim) || claim === null || Array.isArray(claim)) {
       return undefined;
     }
+
     const descriptor = Object.getOwnPropertyDescriptor(claim, "kind");
+
     if (descriptor === undefined || !("value" in descriptor)) return undefined;
+
     return { claim, kind: descriptor.value };
   } catch {
     return undefined;
@@ -193,16 +205,19 @@ function invalidBoundaryClaim(): KidsBoundaryRefusal {
  * destination; an explicit future safety decision must add any allow path.
  */
 export function evaluateKidsBoundaryClaim(
-  claim: unknown,
+  claim: KidsBoundaryInput,
 ): KidsBoundaryRefusal {
   const inspected = inspectBoundaryClaim(claim);
+
   if (inspected === undefined) return invalidBoundaryClaim();
   const { kind } = inspected;
 
   if (kind === "external-data-plane") {
     const property = claimProperty(inspected.claim, "plane");
+
     if (!property.ok) return invalidBoundaryClaim();
     const plane = claimString(property.value);
+
     return Object.freeze({
       ok: false,
       claimKind: kind,
@@ -219,8 +234,10 @@ export function evaluateKidsBoundaryClaim(
 
   if (kind === "catalog") {
     const property = claimProperty(inspected.claim, "profile");
+
     if (!property.ok) return invalidBoundaryClaim();
     const profile = claimString(property.value);
+
     return Object.freeze({
       ok: false,
       claimKind: kind,
@@ -237,7 +254,9 @@ export function evaluateKidsBoundaryClaim(
 
   if (kind === "commerce") {
     const property = claimProperty(inspected.claim, "action");
+
     if (!property.ok) return invalidBoundaryClaim();
+
     return Object.freeze({
       ok: false,
       claimKind: kind,
@@ -248,7 +267,9 @@ export function evaluateKidsBoundaryClaim(
 
   if (kind === "network") {
     const property = claimProperty(inspected.claim, "destination");
+
     if (!property.ok) return invalidBoundaryClaim();
+
     return Object.freeze({
       ok: false,
       claimKind: kind,
@@ -283,3 +304,17 @@ export const seam: ProfileSeam = Object.freeze({
   releaseGroup: "profile",
   corePin: "^0.0.0",
 });
+
+function isBoundaryString(value: KidsBoundaryInput): value is string {
+  return typeof value === "string";
+}
+
+function isBoundaryObjectOrNull(value: KidsBoundaryInput): value is object | null {
+  return isBoundaryObjectValue(value);
+}
+
+type BoundaryObjectValue = object | null;
+
+function isBoundaryObjectValue<Input>(value: Input): value is Input & Readonly<BoundaryObjectValue> {
+  return typeof value === "object";
+}

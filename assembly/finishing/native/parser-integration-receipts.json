@@ -1,0 +1,57 @@
+[
+  {
+    "path": "packages/schemas/src/desktop-scene-animation.ts",
+    "before": "c5b5c8e86dc3c349b0008d3cbf563d7a1d208da62824cd8df5bf8d5730da5350",
+    "after": "001757687a00add4c017c7242064366bb42aab94f8198d4be5318e19600057e1"
+  },
+  {
+    "path": "packages/schemas/test/desktop-scene-animation-mutation.test.ts",
+    "before": null,
+    "after": "f5b5095f0710fb3a6c3f74fe95b218f15b60532f29803f0eed91e92b3b259dbb"
+  },
+  {
+    "path": "packages/schemas/src/desktop-scene-physics.ts",
+    "before": "77efd8aa05900dc319303dc96f502b927f77db473ba84d106a11d54cafc5d9d3",
+    "after": "aa028ba303579b1a7a4c4cf19cfac8093ae5d7fe68c0dc63fd5e49fbed9bbae9"
+  },
+  {
+    "path": "packages/schemas/test/desktop-scene-physics-mutation.test.ts",
+    "before": null,
+    "after": "aff118e2337c1153d7d680ab495938d56d4bb35a0567ceaadedb99f5946f2268"
+  },
+  {
+    "path": "packages/schemas/src/desktop-scene-environment.ts",
+    "before": "294933a51cddfe53bffb4f7c14d6bc89ab641c012a558504fcd77a2546199674",
+    "after": "279ffd546797e80643cb23d607d856cb8b51bb5c822283adef9fa590a6f26024"
+  },
+  {
+    "path": "packages/schemas/test/desktop-scene-environment-mutation.test.ts",
+    "before": null,
+    "after": "829d3d276fdca2f7a1bd6b761933145d74c59b3c00b4ef109237f993812916b1"
+  },
+  {
+    "path": "packages/schemas/src/desktop-scene-materials.ts",
+    "before": "c2c7027ec1ced13aa5a07cec28f4e3b7393b80eca82075f52f6bec81dc678f6b",
+    "after": "82e2aa187fc2220bd0b4fce686dc513617a7edd8680eecba29526a1060ad6fc2"
+  },
+  {
+    "path": "packages/schemas/test/desktop-scene-materials-mutation.test.ts",
+    "before": null,
+    "after": "d9597b4254dd66e84bef07c1327d5f0dce8e3f11dc683d907f67df0b3909cfe2"
+  },
+  {
+    "path": "packages/schemas/src/desktop-scene-effects.ts",
+    "before": "159adefbebe49a69ccfa6de4a7c40657ae1730cd7c532ad70160f55f756ef895",
+    "after": "97b86d1f80b7c90790688e3ca7d57b5c19a7a07ba48fb9c117ae675f8edefaaa"
+  },
+  {
+    "path": "packages/schemas/test/desktop-scene-effects-mutation.test.ts",
+    "before": null,
+    "after": "178f357fe449255891e77e57e698aeb6ad588f4b1c2cdc6f06dc9bdd599e4fd2"
+  },
+  {
+    "path": "packages/schemas/src/index.ts",
+    "before": "5537e93189e4a1135718120e21958f7f53f730b6c92d09b0dc454d265ff16963",
+    "after": "4cc1763a04b6287f274691057e04ca7812538499cfdd5e7bd9e6b23be27dc250"
+  }
+]

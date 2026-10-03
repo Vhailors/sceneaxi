@@ -11,12 +11,10 @@ import {
   createSculptMountApi,
   createThreeRenderLoop,
   createThreeSculptPresentationBackend,
-  type ThreePresentationCoreOptions,
-} from "@sceneaxi/engine-presentation";
-import { DEFAULT_INPUT_ACTION_MAP, type InputActionMap } from "@sceneaxi/schemas";
+  type ThreePresentationCoreOptions, releaseThreeCanvas } from "@sceneaxi/engine-presentation";
+import { DEFAULT_INPUT_ACTION_MAP, isJsonObject, validateInputActionMap } from "@sceneaxi/schemas";
 import {
   DESKTOP_ACTIVE_DOCUMENT_PATH,
-  DESKTOP_BRIDGE_GLOBAL,
 } from "../lib/bridge-contract.js";
 import { desktopMountablePayload, mountDesktopScene } from "./viewport-playback.js";
 import { installDesktopByoConfigurationSurface } from "./byo-configuration.js";
@@ -36,18 +34,19 @@ import {
   signalAssistantRuntimeUnavailable,
 } from "./features/assistant-flow.js";
 import { installPlayLoop } from "./features/play-loop.js";
-import { installAudioControls } from "./features/audio-controls.js";
+import { installAudioControls, installDesktopAudioProfileBoundary } from "./features/audio-playback.js";
 import type { BridgeGlobal, ViewportServices } from "./features/services.js";
 
 export { attachDesktopViewportInputActions } from "./features/camera-input.js";
+
 export { createDesktopGamepadInputPoller, dispatchDesktopPlayInput } from "./features/play-input.js";
+
 export { installAssistantProductFlow } from "./features/assistant-flow.js";
 
 function bridge(): BridgeGlobal | null {
-  const candidate = (globalThis as Record<string, unknown>)[DESKTOP_BRIDGE_GLOBAL];
-  if (typeof candidate !== "object" || candidate === null) return null;
-  const request = (candidate as Record<string, unknown>)["request"];
-  return typeof request === "function" ? (candidate as BridgeGlobal) : null;
+  const candidate = globalThis.sceneaxiDesktopLinux;
+
+  return isBridgeGlobal(candidate) ? candidate : null;
 }
 
 /** Refuse both the viewport and the assistant that needs it to mount output. */
@@ -66,149 +65,207 @@ export function createDesktopPresentationBackend(
 
 async function mountLiveViewport(): Promise<void> {
   const stage = document.querySelector<HTMLElement>(".viewport");
+
   if (stage === null) {
     refuseLiveViewport(null, "the chrome document has no viewport stage.");
+
     return;
   }
 
   const port = bridge();
+
   if (port === null) {
     refuseLiveViewport(stage, "the desktop bridge is not exposed.");
+
     return;
   }
-  let inputActionMap = DEFAULT_INPUT_ACTION_MAP;
-  if (port.inputActions !== undefined) {
-    const inspection = await port.inputActions();
-    if (typeof inspection !== "object" || inspection === null ||
-      !("ok" in inspection) || inspection.ok !== true || !("data" in inspection) ||
-      typeof inspection.data !== "object" || inspection.data === null ||
-      !("map" in inspection.data)) {
-      refuseLiveViewport(stage, "the persisted input-action map was refused.");
+
+  const lifetime = new AbortController();
+  const cleanup: Array<() => void> = [];
+  let mounted = false;
+
+  const dispose = (): void => {
+    if (lifetime.signal.aborted) return;
+    lifetime.abort();
+    const failures: unknown[] = [];
+
+    for (const release of cleanup.reverse()) {
+      try { release(); } catch (cause) { failures.push(cause); }
+    }
+
+    if (failures.length > 0) throw new AggregateError(failures, "Viewport cleanup failed");
+  };
+
+  const pagehide = (): void => {
+    try { dispose(); } catch (cause) { refuseLiveViewport(stage, refusalText(cause)); }
+  };
+
+  window.addEventListener("pagehide", pagehide, { once: true });
+  cleanup.push(() => window.removeEventListener("pagehide", pagehide));
+  let stopAudio: () => void = () => undefined;
+  const audioBoundary = installDesktopAudioProfileBoundary(document, () => stopAudio());
+  cleanup.push(() => audioBoundary.dispose());
+
+  try {
+    let inputActionMap = DEFAULT_INPUT_ACTION_MAP;
+
+    if (port.inputActions !== undefined) {
+      const inspection = await port.inputActions();
+
+      if (lifetime.signal.aborted) return;
+
+      if (inspection.ok !== true || !isJsonObject(inspection.data) || !("map" in inspection.data)) {
+        refuseLiveViewport(stage, "the persisted input-action map was refused.");
+
+        return;
+      }
+
+      const parsedMap = validateInputActionMap(inspection.data.map);
+
+        if (parsedMap === null) {
+          refuseLiveViewport(stage, "the persisted input-action map is malformed.");
+
+          return;
+        }
+
+        inputActionMap = parsedMap;
+    }
+
+    if (!installDesktopByoConfigurationSurface(port, { signal: lifetime.signal })) {
+      openPathLine(stage, "BYOK configuration refused: the chrome document did not expose the assistant route controls the configuration surface binds to.");
+    }
+
+    const sceneResponse = await port.request({ action: "scene", payload: { documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH } });
+
+    if (lifetime.signal.aborted) return;
+
+    if (!sceneResponse.ok) {
+      refuseLiveViewport(stage, `${sceneResponse.reason} — ${sceneResponse.message}`);
+
       return;
     }
-    inputActionMap = inspection.data.map as InputActionMap;
-  }
-  const byoConfigurationBound = installDesktopByoConfigurationSurface(port);
-  if (!byoConfigurationBound) {
-    openPathLine(
-      stage,
-      "BYOK configuration refused: the chrome document did not expose the assistant route controls the configuration surface binds to.",
-    );
-  }
 
-  const sceneResponse = await port.request({
-    action: "scene",
-    payload: { documentPath: DESKTOP_ACTIVE_DOCUMENT_PATH },
-  });
-  if (!sceneResponse.ok) {
-    refuseLiveViewport(stage, `${sceneResponse.reason} — ${sceneResponse.message}`);
-    return;
-  }
-  if (!desktopMountablePayload(sceneResponse.data)) {
-    refuseLiveViewport(stage, "the active Scene Document payload is invalid.");
-    return;
-  }
+    if (!desktopMountablePayload(sceneResponse.data)) {
+      refuseLiveViewport(stage, "the active Scene Document payload is invalid.");
 
-  const canvas = document.createElement("canvas");
-  canvas.setAttribute("data-live-viewport", "canvas");
-  canvas.style.position = "absolute";
-  canvas.style.inset = "0";
-  canvas.style.width = "100%";
-  canvas.style.height = "100%";
-  const width = Math.max(1, stage.clientWidth);
-  const height = Math.max(1, stage.clientHeight);
-  canvas.width = width;
-  canvas.height = height;
-  // Painted above the decorative backdrop, below the notes and sculpt progress.
-  const backdrop = stage.querySelector(".viewport-backdrop");
-  if (backdrop !== null) backdrop.insertAdjacentElement("afterend", canvas);
-  else stage.prepend(canvas);
-
-  let backend: ReturnType<typeof createThreeSculptPresentationBackend>;
-  try {
-    backend = createDesktopPresentationBackend({
-      canvas,
-      // Keep the chrome's viewport gradient visible behind the mounted scene.
-      background: null,
-      viewport: {
-        width,
-        height,
-        pixelRatio: Math.min(globalThis.devicePixelRatio || 1, 2),
-      },
-    });
-  } catch (error) {
-    canvas.remove();
-    refuseLiveViewport(stage, `no WebGL surface — ${refusalText(error)}`);
-    return;
-  }
-
-  const mounts = createSculptMountApi(backend);
-  const frameCallbacks: Array<() => void> = [];
-  const services: ViewportServices = {
-    stage,
-    canvas,
-    backend,
-    mounts,
-    request: (request) => port.request(request),
-    inputActionMap,
-    inputContext: "editor",
-    scene: sceneResponse.data,
-    onFrame: (callback) => { frameCallbacks.push(callback); },
-    frameMountedContent: () => backend.frameMountedContent(),
-    report: installOverlayReport(stage, (request) => port.request(request)),
-    createAudioPlaybackPort,
-    createSculptMountApi,
-    createThreeRenderLoop,
-  };
-  installPlayInput(services);
-  try {
-    const mounted = mountDesktopScene(mounts, services.scene, backend);
-    for (const instanceId of mounted.refusedMaterialOverrides) {
-      services.report.reportLine(`Material override refused for "${instanceId}": texture asset binding is unresolved (ADR 0026).`);
+      return;
     }
-    services.frameMountedContent();
-    installCameraInput(services);
-    installSelection(services);
-    installGizmo(services);
-  } catch (error) {
-    mounts.dispose();
-    canvas.remove();
-    refuseLiveViewport(stage, `could not mount the composed scene — ${refusalText(error)}`);
-    return;
-  }
 
-  // Resize the drawing buffer as well as the CSS-stretched canvas.
-  const applyViewport = (): void => {
-    backend.resize(
-      Math.max(1, stage.clientWidth),
-      Math.max(1, stage.clientHeight),
-      Math.min(globalThis.devicePixelRatio || 1, 2),
-    );
-  };
-  if (typeof ResizeObserver === "function") new ResizeObserver(applyViewport).observe(stage);
+    const canvas = document.createElement("canvas");
+    canvas.setAttribute("data-live-viewport", "canvas");
+    canvas.style.position = "absolute";
+    canvas.style.inset = "0";
+    canvas.style.width = "100%";
+    canvas.style.height = "100%";
+    const width = Math.max(1, stage.clientWidth);
+    const height = Math.max(1, stage.clientHeight);
+    canvas.width = width;
+    canvas.height = height;
+    const backdrop = stage.querySelector(".viewport-backdrop");
 
-  // Only remove the inert note once a real backend owns the canvas.
-  stage.querySelector(".viewport-note-inert")?.remove();
+    if (backdrop !== null) backdrop.insertAdjacentElement("afterend", canvas);
+    else stage.prepend(canvas);
+    cleanup.push(() => canvas.remove());
+    cleanup.push(() => releaseThreeCanvas(canvas));
+    let backend: ReturnType<typeof createThreeSculptPresentationBackend>;
 
-  const loop = createThreeRenderLoop({
-    onFrame: () => {
+    try {
+      backend = createDesktopPresentationBackend({ canvas, background: null, viewport: { width, height, pixelRatio: Math.min(globalThis.devicePixelRatio || 1, 2) } });
+    } catch (cause) {
+      refuseLiveViewport(stage, `no WebGL surface — ${refusalText(cause)}`);
+
+      return;
+    }
+
+    const mounts = createSculptMountApi(backend);
+    cleanup.push(() => mounts.dispose());
+    const frameCallbacks: Array<() => void> = [];
+    cleanup.push(() => { frameCallbacks.length = 0; });
+
+    const request: BridgeGlobal["request"] = async (input) => {
+      if (lifetime.signal.aborted) throw new Error("DESKTOP_VIEWPORT_DISPOSED");
+      const result = await port.request(input);
+
+      if (lifetime.signal.aborted) throw new Error("DESKTOP_VIEWPORT_DISPOSED");
+
+      return result;
+    };
+
+    const services: ViewportServices = {
+      stage, canvas, backend, mounts,
+      signal: lifetime.signal,
+      request,
+      inputActionMap,
+      inputContext: "editor",
+      scene: sceneResponse.data,
+      onFrame: (callback) => { if (!lifetime.signal.aborted) frameCallbacks.push(callback); },
+      frameMountedContent: () => { if (!lifetime.signal.aborted) backend.frameMountedContent(); },
+      report: installOverlayReport(stage, request, lifetime.signal),
+      createAudioPlaybackPort, createSculptMountApi, createThreeRenderLoop,
+    };
+
+    installPlayInput(services);
+
+    try {
+      const scene = mountDesktopScene(mounts, services.scene, backend);
+
+      for (const id of scene.refusedMaterialOverrides) services.report.reportLine(`Material override refused for "${id}": texture asset binding is unresolved (ADR 0026).`);
+      services.frameMountedContent();
+      cleanup.push(installCameraInput(services));
+      installSelection(services);
+      installGizmo(services);
+    } catch (cause) {
+      refuseLiveViewport(stage, `could not mount the composed scene — ${refusalText(cause)}`);
+
+      return;
+    }
+
+    const applyViewport = (): void => {
+      if (lifetime.signal.aborted) return;
+      backend.resize(Math.max(1, stage.clientWidth), Math.max(1, stage.clientHeight), Math.min(globalThis.devicePixelRatio || 1, 2));
+    };
+
+    if (isCallable(globalThis.ResizeObserver)) {
+      const observer = new ResizeObserver(applyViewport);
+      cleanup.push(() => observer.disconnect());
+      observer.observe(stage);
+    }
+
+    stage.querySelector(".viewport-note-inert")?.remove();
+
+    const loop = createThreeRenderLoop({ onFrame: () => {
+      if (lifetime.signal.aborted) return;
+
       for (const callback of frameCallbacks) callback();
+
       if (services.scene.effects !== undefined) backend.sampleEffects(services.scene.effects, performance.now());
       const frame = mounts.render();
       services.report.reportFrame(frame, services.scene.sceneId);
-    },
-  });
-  loop.start();
-  installAssistantFlow(services);
-  const audio = installAudioControls(services);
-  const play = installPlayLoop(services, audio);
-  installSceneSync(services, audio.stop, play.resetAnimation);
-  await play.openPath();
+    } });
+
+    cleanup.push(() => loop.stop());
+    loop.start();
+    installAssistantFlow(services);
+    const audio = installAudioControls(services, { getProfile: audioBoundary.getProfile });
+    stopAudio = audio.stop;
+    cleanup.push(() => audio.stop());
+    const play = installPlayLoop(services, audio);
+    installSceneSync(services, audio.stop, play.resetAnimation);
+    await play.openPath();
+
+    if (!lifetime.signal.aborted) mounted = true;
+  } catch (cause) {
+    // Readiness IPC can reject after pagehide, before services.request exists.
+    // It is cancellation, not a refusal to paint into a dead viewport.
+    if (!lifetime.signal.aborted) throw cause;
+  } finally {
+    if (!mounted) dispose();
+  }
 }
 
 // A thrown bridge call must leave a named refusal, not an unhandled rejection.
 function startLiveViewport(): void {
-  void mountLiveViewport().catch((error: unknown) => {
+  void mountLiveViewport().catch((error) => {
     refuseLiveViewport(document.querySelector(".viewport"), refusalText(error));
   });
 }
@@ -220,3 +277,13 @@ if (typeof document !== "undefined") {
     startLiveViewport();
   }
 }
+
+export { createDesktopAudioLifecycle, type DesktopAudioLifecycleOptions, type DesktopAudioClip } from "./features/audio-playback.js";
+
+function isCallable<Input>(value: Input): value is Input & ((...args: never[]) => void) { return value instanceof Function; }
+
+function isBridgeGlobal(value: BridgeGlobal | undefined): value is BridgeGlobal {
+  return value instanceof Object && isCallable(value.request) && (value.inputActions === undefined || isCallable(value.inputActions)) && (value.configureByo === undefined || isCallable(value.configureByo));
+}
+
+declare global { var sceneaxiDesktopLinux: BridgeGlobal | undefined; }

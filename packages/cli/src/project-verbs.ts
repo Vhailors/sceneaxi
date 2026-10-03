@@ -26,15 +26,19 @@ const PROPOSE_FLAGS = new Set([
   "--out",
   "--cwd",
 ]);
+
 const APPLY_FLAGS = new Set(["--proposal", "--cwd"]);
+
+type ProjectInputBuilder<Contract> = { -readonly [Field in keyof Contract]: Contract[Field] };
 
 function parseJsonValue(
   raw: string,
 ): { ok: true; value: unknown } | { ok: false; message: string } {
   try {
-    return { ok: true, value: JSON.parse(raw) as unknown };
+    return { ok: true, value: JSON.parse(raw) };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+
     return {
       ok: false,
       message: `--value must be valid JSON: ${message}`,
@@ -49,9 +53,11 @@ export function runProjectPropose(
 ): CliOutcome {
   const args = parseVerbArgs(tokens);
   const unknown = refuseUnknownArgs(args, PROPOSE_FLAGS, path);
+
   if (unknown) return unknown;
 
   const document = requireFlag(args, "--document");
+
   if (!document.ok) {
     return failure("VALIDATION", document.message, {
       path,
@@ -60,8 +66,10 @@ export function runProjectPropose(
       ],
     });
   }
+
   // Empty pointer is valid RFC 6901 (whole document).
   const pointer = requireFlag(args, "--pointer", { allowEmpty: true });
+
   if (!pointer.ok) {
     return failure("VALIDATION", pointer.message, {
       path,
@@ -70,7 +78,9 @@ export function runProjectPropose(
       ],
     });
   }
+
   const valueFlag = requireFlag(args, "--value");
+
   if (!valueFlag.ok) {
     return failure("VALIDATION", valueFlag.message, {
       path,
@@ -81,36 +91,41 @@ export function runProjectPropose(
   }
 
   const parsedValue = parseJsonValue(valueFlag.value);
+
   if (!parsedValue.ok) {
     return failure("VALIDATION", parsedValue.message, { path });
   }
 
   const cwd = args.flags.get("--cwd");
-  const result = propose({
-    documentPath: document.value,
-    jsonPointer: pointer.value,
-    newValue: parsedValue.value,
-    ...(cwd !== undefined ? { cwd } : {}),
-  });
+
+  const proposalInput: ProjectInputBuilder<Parameters<typeof propose>[0]> = { documentPath: document.value, jsonPointer: pointer.value, newValue: parsedValue.value };
+
+  if (cwd !== undefined) proposalInput.cwd = cwd;
+  const result = propose(proposalInput);
 
   if (!result.ok) {
     return mapDiagnosticsToFailure(result.diagnostics, path);
   }
 
   const out = args.flags.get("--out");
+
   if (out !== undefined) {
     const outPath = cwd !== undefined ? resolve(cwd, out) : out;
     writeProposalFile(outPath, result.proposal);
   }
 
-  const payload: ResultPayload = Object.freeze({
+  type ProposalPayload = { status: string; documentPath: string; jsonPointer: string; unifiedDiff: string; proposal: Proposal; proposalPath?: string };
+
+  const proposalPayload: ProposalPayload = {
     status: "proposed",
     documentPath: document.value,
     jsonPointer: pointer.value,
     unifiedDiff: result.unifiedDiff,
-    proposal: result.proposal as unknown as Record<string, unknown>,
-    ...(out !== undefined ? { proposalPath: out } : {}),
-  });
+    proposal: result.proposal,
+  };
+
+  if (out !== undefined) proposalPayload.proposalPath = out;
+  const payload: ResultPayload = Object.freeze(proposalPayload);
 
   return success(payload, [
     out !== undefined
@@ -127,9 +142,11 @@ export function runProjectApply(
 ): CliOutcome {
   const args = parseVerbArgs(tokens);
   const unknown = refuseUnknownArgs(args, APPLY_FLAGS, path);
+
   if (unknown) return unknown;
 
   const proposalFlag = requireFlag(args, "--proposal");
+
   if (!proposalFlag.ok) {
     return failure("VALIDATION", proposalFlag.message, {
       path,
@@ -140,33 +157,34 @@ export function runProjectApply(
   }
 
   const cwd = args.flags.get("--cwd");
-  const result = apply({
-    proposal: proposalFlag.value,
-    ...(cwd !== undefined ? { cwd } : {}),
-  });
+
+  const applyInput: ProjectInputBuilder<Parameters<typeof apply>[0]> = { proposal: proposalFlag.value };
+
+  if (cwd !== undefined) applyInput.cwd = cwd;
+  const result = apply(applyInput);
 
   if (!result.ok) {
     return mapDiagnosticsToFailure(result.diagnostics, path);
   }
 
   const projectRoot = resolve(cwd ?? process.cwd());
+
   const assetCopies = result.appliedPaths.map((documentPath) => ({
     documentPath,
     result: materializeProjectAssetCopies({ projectRoot, documentPath }),
   }));
 
+  type AppliedPayload = { status: string; appliedPaths: typeof result.appliedPaths; assetCopies: typeof assetCopies; journalRecoveryPending?: true; transactionId?: typeof result.transactionId };
+
+  const appliedPayload: AppliedPayload = { status: "applied", appliedPaths: result.appliedPaths, assetCopies };
+
+  if (result.journalRecoveryPending === true) {
+    appliedPayload.journalRecoveryPending = true;
+    appliedPayload.transactionId = result.transactionId;
+  }
+
   return success(
-    Object.freeze({
-      status: "applied",
-      appliedPaths: result.appliedPaths,
-      assetCopies,
-      ...(result.journalRecoveryPending === true
-        ? {
-            journalRecoveryPending: true,
-            transactionId: result.transactionId,
-          }
-        : {}),
-    }),
+    Object.freeze(appliedPayload),
     [
       "Documents updated atomically via tmp-then-rename",
       "Run `sceneaxi project apply --help` for usage",

@@ -1,0 +1,12 @@
+# Foundation/input source HANDBACK
+
+Assigned code implemented in `/tmp/sceneaxi-comprehensive-owned-xd4gdfl1`. All 11 exact source leaves, including the exclusively reserved schemas index, are released to parent; no further child source writes. This is scoped reconciliation evidence, **not all code merged or publication-ready**.
+
+- **LF-01:** New `packages/engine-kernel/src/legacy-digest.ts` and root export restore original three-argument `computeDigest`, caller entity order, id/x/y projection and portable SHA-256. Three pinned vectors independently match the actual Git16f312 function. Public no-rarity session/save/replay and original consumer signature tests pass.
+- **LF-02:** `packages/schemas/src/index.ts` restores both conformance result types through erased type-only exports. Actual synchronous suite remains at `@sceneaxi/schemas/node/profile-conformance-suite`. Old synchronous **root runtime** helper remains explicitly pending, not reinstated.
+- **LF-05:** `docs/kernel-browser-open.md` corrects the stale Node-barrel/testing-subpath description and documents actual migration policy.
+- **EF-INPUT:** Input registry/schema recognize exact ordered historical eleven-action v1 maps, retain controller bindings, append modern 45-action defaults, and refuse new-default collisions. Persisted full maps migrate to minimal scope overrides in memory; original bytes remain atomic-write witnesses until exact approved commit. Tests cover restart, precedence/reset, gamepad defaults, context/reserved/text metadata, corruption, stale approval and actual bridge Kids/capability refusals.
+
+Exact scoped Vitest command and source SHA/blob/mode/resolution/hashes are in `FINAL.json`; `before.json`, `after.json`, `three-stage-root-exports.json`, `original-digest-vectors.json` and raw logs preserve evidence. First run: **10 failed / 43 passed** (one invalid new manifest fixture, separately classified). Final: **4 files / 63 passed**. Owned `git diff --check` passes. Native index stages unchanged; source modes 100644.
+
+Parent must add `legacy-digest.ts` to SDK inventory and preserve added erased types during PR310 export integration. Heavy builds, whole-project checks, related existing goldens, browser/native/device/provider validation and publication were not run by child. First receipt/progress reached bg-150; its endpoint later disappeared. Explicit source HANDBACK was delivered to root owner tab by lm_329.

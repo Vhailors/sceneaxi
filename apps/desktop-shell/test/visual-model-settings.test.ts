@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import { createDesktopVisualState, desktopVisualView } from "@sceneaxi/desktop-shell";
-import { regionControls } from "../../../tests/helpers/desktop-chrome-golden.js";
+import { regionControls } from "./helpers/desktop-chrome-golden.js";
 
 it("renders settings forms with the model's declared controls", () => {
   const state = createDesktopVisualState();

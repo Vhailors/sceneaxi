@@ -1,0 +1,1 @@
+{"command": "pnpm -s build", "exit": 1, "timeoutSeconds": 105}

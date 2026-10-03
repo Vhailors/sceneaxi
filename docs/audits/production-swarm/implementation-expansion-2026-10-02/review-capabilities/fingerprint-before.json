@@ -1,0 +1,39 @@
+{
+  "at": "2026-10-02T13:53:23.135Z",
+  "lanes": {
+    "versioned-transforms": {
+      "sourceHandback": true,
+      "status": "OWNED_IMPLEMENTATION_VERIFIED_WITH_EXPORT_PROBE; SHARED_INTEGRATION_NOT_READY",
+      "reportHash": "5dd1f19aa037bb9ab60435eff5a38de29cb140e24f8ed9e5d369f6fc3d039632"
+    },
+    "unsigned-project-build": {
+      "sourceHandback": true,
+      "status": "SOURCE_HANDBACK_IMPLEMENTED_NOT_INTEGRATED",
+      "reportHash": "8b9c7825dea7038608a0f5a968adb62aa69f7632558f10ab792e237c6b938cf9"
+    },
+    "importer-capacity": {
+      "sourceHandback": true,
+      "status": "IMPLEMENTED_SHARED_EXPORT_BLOCKED",
+      "reportHash": "8b9935b9ef8b9dfd725f8715e78e12f2744589c0936f32bbcf8121b38ebf203b"
+    }
+  },
+  "files": {
+    "packages/schemas/src/scene-composition.ts": "3ffd88fa60166409acc381fc921e7bd1bd81adab2060b7b9b384d2822ae573aa",
+    "packages/authoring-core/src/scene-composition.ts": "509f85a54af188f993aa7cbe615b04ee6c2ed0f6b8104ee57e81bfd4133b2383",
+    "packages/engine-presentation/src/scene-transforms.ts": "c77e395f2a50b4a7f46c46e5e640d6ef664b65f213d04a19489f64dceec22a04",
+    "packages/schemas/test/scene-transform-v2.test.ts": "373e313d4421d951089c6d46def343ce846f88608230942c723f44ba30e3fae7",
+    "packages/authoring-core/test/scene-transform-v2.test.ts": "521683c6ba8ba28715bfa531746d36255d72a253f8b0bac366513f15829e5702",
+    "packages/schemas/src/desktop-project-build.ts": "9493b82e88d6eea649be33a91b3d133d5daddc2bc160744b9599a5750dd8cff5",
+    "packages/authoring-core/src/local-project-build.ts": "6465dba1a3d3e4a0bf42af916b882cc938c19d1a5f52ca5b86a5a753233342f0",
+    "packages/schemas/test/local-project-build.test.ts": "5a71f3f7e718a900a3fa3965fd530e7dd18444551b37f6c54df5ed7531a617dd",
+    "packages/authoring-core/test/local-project-build.test.ts": "72af6656f72870e608af20c0b8128c0950a7f769902621bf78f086035ae5f404",
+    "packages/importers/src/contained-gltf.ts": "72c8b5a140f0252ee2bad11b2b367c6ecc7c7c8b476f9eb1d9e8bd6c0e8b46a1",
+    "packages/importers/src/asset-preparation-worker.ts": "4d05057f457ac0a76510e270163285d480f18510362c8a6b65fcd61d41a42746",
+    "packages/importers/test/asset-preparation-bounds.test.ts": "8f88d2a91bba560733a117bcf094e8571e17deb457dd71f8f04332e0ff21ef4d",
+    "packages/schemas/src/index.ts": "70d2d830c403c6f8f55191f277f13cf875714b0fa9c7e9556ecdf368801984c2",
+    "packages/authoring-core/src/index.ts": "b8cdb0319d78dd2930c5d7072b7ab1ba48ba5c459c97a43c43de2329d0f5acf4",
+    "packages/importers/src/index.ts": "16168577c7d8a1e14a55fcfa615e56e25875d9ff6d056c06f0b9eb5b16cdf508",
+    "packages/engine-presentation/src/index.ts": "71ccdda8f1ad02b2dc05d091d107f7d71995782816e6d19ddb8817b062782936",
+    "vitest.config.ts": "fc37bb4f76c6f57159ce3e2afd7345686839e26efb63fbda291cfca3a9e19326"
+  }
+}

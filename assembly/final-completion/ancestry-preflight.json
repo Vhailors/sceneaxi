@@ -1,0 +1,347 @@
+{
+  "head": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+  "totalRefs": 34,
+  "refs": [
+    {
+      "original": "refs/heads/bb/luna-repository-sceneaxi-sceneaxi-monorepo-read-thr_7svfbah827",
+      "captured": "refs/captured/heads/bb/luna-repository-sceneaxi-sceneaxi-monorepo-read-thr_7svfbah827",
+      "expectedTip": "1e5ea6043946afbdddeac049ee01d7019dceec03",
+      "actualCapturedTip": "1e5ea6043946afbdddeac049ee01d7019dceec03",
+      "capturedTipMatches": true,
+      "commitAvailable": true,
+      "ancestorOfCurrentHead": false,
+      "disposition": "ANCESTRY_PENDING_ORDINARY_MERGES"
+    },
+    {
+      "original": "refs/heads/bb/luna-repository-sceneaxi-sceneaxi-monorepo-read-thr_rww6kh273z",
+      "captured": "refs/captured/heads/bb/luna-repository-sceneaxi-sceneaxi-monorepo-read-thr_rww6kh273z",
+      "expectedTip": "db8afa68c18e46b426e0c9ac2a846fc8a7d3fdba",
+      "actualCapturedTip": "db8afa68c18e46b426e0c9ac2a846fc8a7d3fdba",
+      "capturedTipMatches": true,
+      "commitAvailable": true,
+      "ancestorOfCurrentHead": false,
+      "disposition": "ANCESTRY_PENDING_ORDINARY_MERGES"
+    },
+    {
+      "original": "refs/heads/bb/opus-go-live-loop-2-for-sceneaxi-the-previous-lo-thr_cgpu4vbkib",
+      "captured": "refs/captured/heads/bb/opus-go-live-loop-2-for-sceneaxi-the-previous-lo-thr_cgpu4vbkib",
+      "expectedTip": "45866fc43f1d45920bbbfc32274685d61cf061c9",
+      "actualCapturedTip": "45866fc43f1d45920bbbfc32274685d61cf061c9",
+      "capturedTipMatches": true,
+      "commitAvailable": true,
+      "ancestorOfCurrentHead": true,
+      "disposition": "ALREADY_ANCESTOR_OF_BASELINE"
+    },
+    {
+      "original": "refs/heads/go-live-loop",
+      "captured": "refs/captured/heads/go-live-loop",
+      "expectedTip": "4e532e2fbf43e9948741578ab6208a3277870405",
+      "actualCapturedTip": "4e532e2fbf43e9948741578ab6208a3277870405",
+      "capturedTipMatches": true,
+      "commitAvailable": true,
+      "ancestorOfCurrentHead": true,
+      "disposition": "ALREADY_ANCESTOR_OF_BASELINE"
+    },
+    {
+      "original": "refs/heads/production-swarm",
+      "captured": "refs/captured/heads/production-swarm",
+      "expectedTip": "4e532e2fbf43e9948741578ab6208a3277870405",
+      "actualCapturedTip": "4e532e2fbf43e9948741578ab6208a3277870405",
+      "capturedTipMatches": true,
+      "commitAvailable": true,
+      "ancestorOfCurrentHead": true,
+      "disposition": "ALREADY_ANCESTOR_OF_BASELINE"
+    },
+    {
+      "original": "refs/heads/maestro/product-quality-loop-2",
+      "captured": "refs/captured/heads/maestro/product-quality-loop-2",
+      "expectedTip": "fed05a766f1277b23ebf1757022067837d00621e",
+      "actualCapturedTip": "fed05a766f1277b23ebf1757022067837d00621e",
+      "capturedTipMatches": true,
+      "commitAvailable": true,
+      "ancestorOfCurrentHead": false,
+      "disposition": "ANCESTRY_PENDING_ORDINARY_MERGES"
+    },
+    {
+      "original": "refs/remotes/origin/maestro/product-quality-loop-2",
+      "captured": "refs/captured/remotes/origin/maestro/product-quality-loop-2",
+      "expectedTip": "fed05a766f1277b23ebf1757022067837d00621e",
+      "actualCapturedTip": "fed05a766f1277b23ebf1757022067837d00621e",
+      "capturedTipMatches": true,
+      "commitAvailable": true,
+      "ancestorOfCurrentHead": false,
+      "disposition": "ANCESTRY_PENDING_ORDINARY_MERGES"
+    },
+    {
+      "original": "refs/heads/main",
+      "captured": "refs/captured/heads/main",
+      "expectedTip": "5698f78d5bff24513ee53ec181d28bfebbdf0a83",
+      "actualCapturedTip": "5698f78d5bff24513ee53ec181d28bfebbdf0a83",
+      "capturedTipMatches": true,
+      "commitAvailable": true,
+      "ancestorOfCurrentHead": true,
+      "disposition": "ALREADY_ANCESTOR_OF_BASELINE"
+    },
+    {
+      "original": "refs/heads/rescue/sceneaxi-release-dd77cc9",
+      "captured": "refs/captured/heads/rescue/sceneaxi-release-dd77cc9",
+      "expectedTip": "e26f30bca3b4800cd7301606c7271244c1d6ea29",
+      "actualCapturedTip": "e26f30bca3b4800cd7301606c7271244c1d6ea29",
+      "capturedTipMatches": true,
+      "commitAvailable": true,
+      "ancestorOfCurrentHead": true,
+      "disposition": "ALREADY_ANCESTOR_OF_BASELINE"
+    },
+    {
+      "original": "refs/remotes/origin/rescue/sceneaxi-release-dd77cc9",
+      "captured": "refs/captured/remotes/origin/rescue/sceneaxi-release-dd77cc9",
+      "expectedTip": "e26f30bca3b4800cd7301606c7271244c1d6ea29",
+      "actualCapturedTip": "e26f30bca3b4800cd7301606c7271244c1d6ea29",
+      "capturedTipMatches": true,
+      "commitAvailable": true,
+      "ancestorOfCurrentHead": true,
+      "disposition": "ALREADY_ANCESTOR_OF_BASELINE"
+    },
+    {
+      "original": "refs/remotes/origin/HEAD",
+      "captured": "refs/captured/remotes/origin/HEAD",
+      "expectedTip": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+      "actualCapturedTip": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+      "capturedTipMatches": true,
+      "commitAvailable": true,
+      "ancestorOfCurrentHead": true,
+      "disposition": "ALREADY_ANCESTOR_OF_BASELINE"
+    },
+    {
+      "original": "refs/remotes/origin/main",
+      "captured": "refs/captured/remotes/origin/main",
+      "expectedTip": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+      "actualCapturedTip": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
+      "capturedTipMatches": true,
+      "commitAvailable": true,
+      "ancestorOfCurrentHead": true,
+      "disposition": "ALREADY_ANCESTOR_OF_BASELINE"
+    },
+    {
+      "original": "refs/remotes/origin/cursor/setup-dev-environment-e97a",
+      "captured": "refs/captured/remotes/origin/cursor/setup-dev-environment-e97a",
+      "expectedTip": "1d2fe8aa089772c87271580deb158d87dd68cb64",
+      "actualCapturedTip": "1d2fe8aa089772c87271580deb158d87dd68cb64",
+      "capturedTipMatches": true,
+      "commitAvailable": true,
+      "ancestorOfCurrentHead": false,
+      "disposition": "ANCESTRY_PENDING_ORDINARY_MERGES"
+    },
+    {
+      "original": "refs/remotes/origin/engine-redesign",
+      "captured": "refs/captured/remotes/origin/engine-redesign",
+      "expectedTip": "907d1d5db146189b0e50db49450feb3d635abc72",
+      "actualCapturedTip": "907d1d5db146189b0e50db49450feb3d635abc72",
+      "capturedTipMatches": true,
+      "commitAvailable": true,
+      "ancestorOfCurrentHead": true,
+      "disposition": "ALREADY_ANCESTOR_OF_BASELINE"
+    },
+    {
+      "original": "refs/remotes/origin/fm/sceneaxi-contracts-e1e2-v1",
+      "captured": "refs/captured/remotes/origin/fm/sceneaxi-contracts-e1e2-v1",
+      "expectedTip": "60cd238d0fafa427c0bd1b363f6cc21e1a885727",
+      "actualCapturedTip": "60cd238d0fafa427c0bd1b363f6cc21e1a885727",
+      "capturedTipMatches": true,
+      "commitAvailable": true,
+      "ancestorOfCurrentHead": false,
+      "disposition": "ANCESTRY_PENDING_ORDINARY_MERGES"
+    },
+    {
+      "original": "refs/remotes/origin/fm/sceneaxi-docs-adr-v1",
+      "captured": "refs/captured/remotes/origin/fm/sceneaxi-docs-adr-v1",
+      "expectedTip": "d1a676ea53bd4e8f368f027fb80f6b0097ab6aa3",
+      "actualCapturedTip": "d1a676ea53bd4e8f368f027fb80f6b0097ab6aa3",
+      "capturedTipMatches": true,
+      "commitAvailable": true,
+      "ancestorOfCurrentHead": false,
+      "disposition": "ANCESTRY_PENDING_ORDINARY_MERGES"
+    },
+    {
+      "original": "refs/remotes/origin/fm/sceneaxi-docs-program-v1",
+      "captured": "refs/captured/remotes/origin/fm/sceneaxi-docs-program-v1",
+      "expectedTip": "9b2fd5d6ff24f08855c2669c011d7aba79e0211b",
+      "actualCapturedTip": "9b2fd5d6ff24f08855c2669c011d7aba79e0211b",
+      "capturedTipMatches": true,
+      "commitAvailable": true,
+      "ancestorOfCurrentHead": false,
+      "disposition": "ANCESTRY_PENDING_ORDINARY_MERGES"
+    },
+    {
+      "original": "refs/remotes/origin/fm/sceneaxi-full-editor-asset-pipeline-20260812",
+      "captured": "refs/captured/remotes/origin/fm/sceneaxi-full-editor-asset-pipeline-20260812",
+      "expectedTip": "62e84cbee60471bd2cdd5f2e0e26a8c45f598928",
+      "actualCapturedTip": "62e84cbee60471bd2cdd5f2e0e26a8c45f598928",
+      "capturedTipMatches": true,
+      "commitAvailable": true,
+      "ancestorOfCurrentHead": false,
+      "disposition": "ANCESTRY_PENDING_ORDINARY_MERGES"
+    },
+    {
+      "original": "refs/remotes/origin/fm/sceneaxi-full-editor-contained-git-20260812",
+      "captured": "refs/captured/remotes/origin/fm/sceneaxi-full-editor-contained-git-20260812",
+      "expectedTip": "f1b468fa6b319ffede42f6d8d6bb40480818c08e",
+      "actualCapturedTip": "f1b468fa6b319ffede42f6d8d6bb40480818c08e",
+      "capturedTipMatches": true,
+      "commitAvailable": true,
+      "ancestorOfCurrentHead": false,
+      "disposition": "ANCESTRY_PENDING_ORDINARY_MERGES"
+    },
+    {
+      "original": "refs/remotes/origin/fm/sceneaxi-full-editor-input-actions-20260812",
+      "captured": "refs/captured/remotes/origin/fm/sceneaxi-full-editor-input-actions-20260812",
+      "expectedTip": "740c7e950cf5eb6528e6629ee6f7041ef50dde5c",
+      "actualCapturedTip": "740c7e950cf5eb6528e6629ee6f7041ef50dde5c",
+      "capturedTipMatches": true,
+      "commitAvailable": true,
+      "ancestorOfCurrentHead": false,
+      "disposition": "ANCESTRY_PENDING_ORDINARY_MERGES"
+    },
+    {
+      "original": "refs/remotes/origin/fm/sceneaxi-wave2-catalogs-v1",
+      "captured": "refs/captured/remotes/origin/fm/sceneaxi-wave2-catalogs-v1",
+      "expectedTip": "21c135b3eb671a79c37444513fe775dc5ff6cefd",
+      "actualCapturedTip": "21c135b3eb671a79c37444513fe775dc5ff6cefd",
+      "capturedTipMatches": true,
+      "commitAvailable": true,
+      "ancestorOfCurrentHead": false,
+      "disposition": "ANCESTRY_PENDING_ORDINARY_MERGES"
+    },
+    {
+      "original": "refs/remotes/origin/fm/sceneaxi-wave2-cli-v1",
+      "captured": "refs/captured/remotes/origin/fm/sceneaxi-wave2-cli-v1",
+      "expectedTip": "1471150caeda3db7624f206753c566851182c688",
+      "actualCapturedTip": "1471150caeda3db7624f206753c566851182c688",
+      "capturedTipMatches": true,
+      "commitAvailable": true,
+      "ancestorOfCurrentHead": false,
+      "disposition": "ANCESTRY_PENDING_ORDINARY_MERGES"
+    },
+    {
+      "original": "refs/remotes/origin/fm/sceneaxi-wave2-kernel-v1",
+      "captured": "refs/captured/remotes/origin/fm/sceneaxi-wave2-kernel-v1",
+      "expectedTip": "136fee1103d650baf3dc40ebbc4fc3d3f6fb2f45",
+      "actualCapturedTip": "136fee1103d650baf3dc40ebbc4fc3d3f6fb2f45",
+      "capturedTipMatches": true,
+      "commitAvailable": true,
+      "ancestorOfCurrentHead": false,
+      "disposition": "ANCESTRY_PENDING_ORDINARY_MERGES"
+    },
+    {
+      "original": "refs/remotes/origin/fm/sceneaxi-wave3-authoring-v1",
+      "captured": "refs/captured/remotes/origin/fm/sceneaxi-wave3-authoring-v1",
+      "expectedTip": "ac1440670a8ad4eb8532cb20b4b85a9fbd0458df",
+      "actualCapturedTip": "ac1440670a8ad4eb8532cb20b4b85a9fbd0458df",
+      "capturedTipMatches": true,
+      "commitAvailable": true,
+      "ancestorOfCurrentHead": false,
+      "disposition": "ANCESTRY_PENDING_ORDINARY_MERGES"
+    },
+    {
+      "original": "refs/remotes/origin/fm/sceneaxi-wave3-heldkeys-v1",
+      "captured": "refs/captured/remotes/origin/fm/sceneaxi-wave3-heldkeys-v1",
+      "expectedTip": "7e7767a44c7ab20942b93469295c97aa972ba54d",
+      "actualCapturedTip": "7e7767a44c7ab20942b93469295c97aa972ba54d",
+      "capturedTipMatches": true,
+      "commitAvailable": true,
+      "ancestorOfCurrentHead": false,
+      "disposition": "ANCESTRY_PENDING_ORDINARY_MERGES"
+    },
+    {
+      "original": "refs/remotes/origin/fm/sceneaxi-wave3-proof0-v1",
+      "captured": "refs/captured/remotes/origin/fm/sceneaxi-wave3-proof0-v1",
+      "expectedTip": "d53d180beccfd11e1178fbc9abf3b08282d2ed44",
+      "actualCapturedTip": "d53d180beccfd11e1178fbc9abf3b08282d2ed44",
+      "capturedTipMatches": true,
+      "commitAvailable": true,
+      "ancestorOfCurrentHead": false,
+      "disposition": "ANCESTRY_PENDING_ORDINARY_MERGES"
+    },
+    {
+      "original": "refs/remotes/origin/fm/sceneaxi-wave4-profile-v1",
+      "captured": "refs/captured/remotes/origin/fm/sceneaxi-wave4-profile-v1",
+      "expectedTip": "07f0a3e8b27d2c6deb76856c3376243df490b822",
+      "actualCapturedTip": "07f0a3e8b27d2c6deb76856c3376243df490b822",
+      "capturedTipMatches": true,
+      "commitAvailable": true,
+      "ancestorOfCurrentHead": false,
+      "disposition": "ANCESTRY_PENDING_ORDINARY_MERGES"
+    },
+    {
+      "original": "refs/remotes/origin/fm/sceneaxi-wave4-proof1-v1",
+      "captured": "refs/captured/remotes/origin/fm/sceneaxi-wave4-proof1-v1",
+      "expectedTip": "b63dc23d61e883332f85d272c980a404530b70a7",
+      "actualCapturedTip": "b63dc23d61e883332f85d272c980a404530b70a7",
+      "capturedTipMatches": true,
+      "commitAvailable": true,
+      "ancestorOfCurrentHead": false,
+      "disposition": "ANCESTRY_PENDING_ORDINARY_MERGES"
+    },
+    {
+      "original": "refs/remotes/origin/fm/sceneaxi-wave4-shells-v1",
+      "captured": "refs/captured/remotes/origin/fm/sceneaxi-wave4-shells-v1",
+      "expectedTip": "8729660a5cdaed2e5ced97124ac85311f3cef7ba",
+      "actualCapturedTip": "8729660a5cdaed2e5ced97124ac85311f3cef7ba",
+      "capturedTipMatches": true,
+      "commitAvailable": true,
+      "ancestorOfCurrentHead": false,
+      "disposition": "ANCESTRY_PENDING_ORDINARY_MERGES"
+    },
+    {
+      "original": "refs/remotes/origin/fm/sceneaxi-wave5-proof15-v1",
+      "captured": "refs/captured/remotes/origin/fm/sceneaxi-wave5-proof15-v1",
+      "expectedTip": "16f312c61435e3d379a0e54525ac8115e35fee86",
+      "actualCapturedTip": "16f312c61435e3d379a0e54525ac8115e35fee86",
+      "capturedTipMatches": true,
+      "commitAvailable": true,
+      "ancestorOfCurrentHead": false,
+      "disposition": "ANCESTRY_PENDING_ORDINARY_MERGES"
+    },
+    {
+      "original": "refs/remotes/origin/maestro/phase-01-toolchain",
+      "captured": "refs/captured/remotes/origin/maestro/phase-01-toolchain",
+      "expectedTip": "89c7aa5e9fbaa7e31b9c7e879841684651426d07",
+      "actualCapturedTip": "89c7aa5e9fbaa7e31b9c7e879841684651426d07",
+      "capturedTipMatches": true,
+      "commitAvailable": true,
+      "ancestorOfCurrentHead": false,
+      "disposition": "ANCESTRY_PENDING_ORDINARY_MERGES"
+    },
+    {
+      "original": "refs/remotes/origin/maestro/phase-02-audit-baseline",
+      "captured": "refs/captured/remotes/origin/maestro/phase-02-audit-baseline",
+      "expectedTip": "94a4503050def7641f78faa24ae756497ceb3292",
+      "actualCapturedTip": "94a4503050def7641f78faa24ae756497ceb3292",
+      "capturedTipMatches": true,
+      "commitAvailable": true,
+      "ancestorOfCurrentHead": false,
+      "disposition": "ANCESTRY_PENDING_ORDINARY_MERGES"
+    },
+    {
+      "original": "refs/remotes/origin/maintenance/checkpoint-20260929",
+      "captured": "refs/captured/remotes/origin/maintenance/checkpoint-20260929",
+      "expectedTip": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+      "actualCapturedTip": "23413eb7889ad2cdb41ab8d729c32c7512917394",
+      "capturedTipMatches": true,
+      "commitAvailable": true,
+      "ancestorOfCurrentHead": false,
+      "disposition": "ANCESTRY_PENDING_ORDINARY_MERGES"
+    },
+    {
+      "original": "refs/remotes/origin/production-swarm",
+      "captured": "refs/captured/remotes/origin/production-swarm",
+      "expectedTip": "346933c105305224d575bf9319256301c1eeabfa",
+      "actualCapturedTip": "346933c105305224d575bf9319256301c1eeabfa",
+      "capturedTipMatches": true,
+      "commitAvailable": true,
+      "ancestorOfCurrentHead": false,
+      "disposition": "ANCESTRY_PENDING_ORDINARY_MERGES"
+    }
+  ],
+  "status": "NOT_FINAL_ANCESTRY"
+}
