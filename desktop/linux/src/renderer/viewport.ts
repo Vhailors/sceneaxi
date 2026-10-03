@@ -280,10 +280,18 @@ if (typeof document !== "undefined") {
 
 export { createDesktopAudioLifecycle, type DesktopAudioLifecycleOptions, type DesktopAudioClip } from "./features/audio-playback.js";
 
-function isCallable<Input>(value: Input): value is Input & ((...args: never[]) => void) { return value instanceof Function; }
+function isCallable<Input>(value: Input): value is Input & ((...args: never[]) => void) {
+  try {
+    Function.prototype.toString.call(value);
+
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function isBridgeGlobal(value: BridgeGlobal | undefined): value is BridgeGlobal {
-  return value instanceof Object && isCallable(value.request) && (value.inputActions === undefined || isCallable(value.inputActions)) && (value.configureByo === undefined || isCallable(value.configureByo));
+  return isJsonObject(value) && isCallable(value.request) && (value.inputActions === undefined || isCallable(value.inputActions)) && (value.configureByo === undefined || isCallable(value.configureByo));
 }
 
 declare global { var sceneaxiDesktopLinux: BridgeGlobal | undefined; }
