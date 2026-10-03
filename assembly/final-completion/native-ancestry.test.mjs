@@ -5,6 +5,7 @@ import { execFileSync } from "node:child_process";
 const incorporatedFrontiers = [
   "16f312c61435e3d379a0e54525ac8115e35fee86",
   "f1b468fa6b319ffede42f6d8d6bb40480818c08e",
+  "62e84cbee60471bd2cdd5f2e0e26a8c45f598928",
 ];
 
 for (const tip of incorporatedFrontiers) {
