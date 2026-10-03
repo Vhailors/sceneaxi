@@ -280,6 +280,7 @@ if (typeof document !== "undefined") {
 
 export { createDesktopAudioLifecycle, type DesktopAudioLifecycleOptions, type DesktopAudioClip } from "./features/audio-playback.js";
 
+// Bridge functions can come from a different renderer realm, so instanceof is not a callable contract.
 function isCallable<Input>(value: Input): value is Input & ((...args: never[]) => void) {
   try {
     Function.prototype.toString.call(value);
