@@ -1,0 +1,71 @@
+{
+  "tip": "94a4503050def7641f78faa24ae756497ceb3292",
+  "approvedResolvedTree": "759adfe932768ef588660fb6de68ab2b948d1a9e",
+  "method": "Per-path reviewed assembly postimages including compatibility function ports; no ours/theirs strategy; ordinary native merge",
+  "paths": [
+    {
+      "path": ".maestro/playbooks/Initiation/Phase-01-Trusted-Baseline-and-Live-Prototype.md",
+      "incoming": "100644 blob ba8885baccb4077fd3529a74bad93f1de3ebab26\t.maestro/playbooks/Initiation/Phase-01-Trusted-Baseline-and-Live-Prototype.md",
+      "chosenPostimage": "100644 blob 47da06f1db4c87a3f794e193277888f81ab92e47\t.maestro/playbooks/Initiation/Phase-01-Trusted-Baseline-and-Live-Prototype.md",
+      "originalPerPathDecision": "CURRENT_MAIN_RETAINED_SHARED_UNCHANGED",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": ".maestro/playbooks/Initiation/Phase-02-Executable-Spec-Traceability-Audit.md",
+      "incoming": "100644 blob e78b6d6190f4b50857242d0cb3bad5a945627482\t.maestro/playbooks/Initiation/Phase-02-Executable-Spec-Traceability-Audit.md",
+      "chosenPostimage": "100644 blob b697b197419a2766e61b6163e2908ca0e3f3a352\t.maestro/playbooks/Initiation/Phase-02-Executable-Spec-Traceability-Audit.md",
+      "originalPerPathDecision": "CURRENT_MAIN_RETAINED_SHARED_UNCHANGED",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": ".maestro/playbooks/Initiation/Working/Phase-01/Baseline.md",
+      "incoming": "100644 blob bffa33d90753cfb8edd8cfa00f62ca206d8455df\t.maestro/playbooks/Initiation/Working/Phase-01/Baseline.md",
+      "chosenPostimage": "100644 blob b6c4748be26c47cb8441fe923db92573cc2f5c10\t.maestro/playbooks/Initiation/Working/Phase-01/Baseline.md",
+      "originalPerPathDecision": "CURRENT_MAIN_RETAINED_SHARED_UNCHANGED",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    },
+    {
+      "path": "docs/audits/initiation/Initiation-Audit.md",
+      "incoming": "100644 blob 800e6e01c7b407883009e7ab9ed9431a7755065e\tdocs/audits/initiation/Initiation-Audit.md",
+      "chosenPostimage": "100644 blob 9c0392ad282405425d2e8cf0bae46c1e72c91eee\tdocs/audits/initiation/Initiation-Audit.md",
+      "originalPerPathDecision": "CURRENT_MAIN_RETAINED_SHARED_UNCHANGED",
+      "assembly": "CAPTURED_APPROVED_SOURCE_ASSEMBLY_WITH_REVIEWED_FUNCTION_PORTS",
+      "proofs": [
+        "assembly/final-completion/approved-candidate-manifest.json",
+        "assembly/children/foundation-input/FINAL.json",
+        "assembly/children/audio-assets/RETRY-FINAL.json",
+        "assembly/children/maintenance-sites/FINAL.json",
+        "assembly/family-reports/editor-features/report.json",
+        "assembly/family-reports/docs-checkpoints/report.json"
+      ],
+      "acceptance": "Scoped child and final focused receipts; full gate RED explicitly disclosed"
+    }
+  ]
+}
