@@ -744,7 +744,7 @@ function validPostgresUrl(value: string): boolean {
   try {
     const url = new URL(value.trim());
 
-    return (url.protocol === "postgres:" || url.protocol === "postgresql:") && url.hostname !== "" && url.pathname.length > 1;
+    return (url.protocol === "postgres:" || url.protocol === "postgresql:") && url.hostname !== "" && url.pathname.length >= 1;
   } catch {
     return false;
   }
