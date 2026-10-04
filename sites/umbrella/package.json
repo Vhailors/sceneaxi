@@ -46,5 +46,11 @@
   "sceneaxi": {
     "releaseGroup": "sites"
   },
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.6.0"
+    }
+  }
 }

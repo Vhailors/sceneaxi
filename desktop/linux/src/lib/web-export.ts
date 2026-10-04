@@ -1471,7 +1471,7 @@ function runExport(
     manifest.value.assets.map((entry) => [entry.relativePath, entry] as const),
   );
 
-  const assetPaths = [...new Set([
+  const assetPaths: string[] = [...new Set([
     ...manifest.value.assets.map((entry) => entry.relativePath),
     ...webAssets.paths,
   ])].sort();
