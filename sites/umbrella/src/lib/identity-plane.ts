@@ -597,6 +597,12 @@ export function bindProviderOrigin(origin: string, fetcher: ProviderFetch): Prov
   };
 }
 
+const constructionDiagnostics = new Map<string, string>();
+
+export function umbrellaConstructionDiagnostics(): Readonly<Record<string, string>> {
+  return Object.freeze(Object.fromEntries(constructionDiagnostics));
+}
+
 function providerClientsFromEnvironment(
   env: Readonly<Record<string, string | undefined>>,
 ): DeploymentProviderOverrides {
@@ -606,7 +612,8 @@ function providerClientsFromEnvironment(
   if (databaseUrl !== undefined) {
     try {
       database = createNeonDatabase(databaseUrl);
-    } catch {
+    } catch (cause) {
+      constructionDiagnostics.set("database", cause === undefined ? "unknown" : String(cause instanceof Error ? cause.message : cause).slice(0, 140));
       serverLog("error", "umbrella.provider.construction_failed", { provider: "database" });
       database = undefined;
     }
@@ -619,7 +626,8 @@ function providerClientsFromEnvironment(
   if (authOrigin !== undefined && fetcher !== undefined) {
     try {
       betterAuth = createBetterAuthHttpClient({ origin: authOrigin, fetch: bindProviderOrigin(authOrigin, fetcher) });
-    } catch {
+    } catch (cause) {
+      constructionDiagnostics.set("better-auth", cause === undefined ? "unknown" : String(cause instanceof Error ? cause.message : cause).slice(0, 140));
       serverLog("error", "umbrella.provider.construction_failed", { provider: "better-auth" });
     }
   }
@@ -630,7 +638,8 @@ function providerClientsFromEnvironment(
   if (stripeKey !== undefined) {
     try {
       stripe = createStripeClient(stripeKey);
-    } catch {
+    } catch (cause) {
+      constructionDiagnostics.set("stripe", cause === undefined ? "unknown" : String(cause instanceof Error ? cause.message : cause).slice(0, 140));
       serverLog("error", "umbrella.provider.construction_failed", { provider: "stripe" });
       stripe = undefined;
     }
