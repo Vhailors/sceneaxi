@@ -59,6 +59,7 @@ export type UmbrellaRequestAuthority = Readonly<{
   plane(request?: UmbrellaRequestEvidence): UmbrellaIdentityPlane;
   verifyFormOrigin(signals: Omit<SiteFormOriginSignals, "configuredOrigin">): SiteResult<string>;
   health(): Readonly<{
+    configuration: import("./identity-plane.js").UmbrellaConfigurationReport;
     planes: Readonly<{ identity: "wired" | "absent" | "misconfigured"; credits: "wired" | "absent" | "misconfigured"; billing: "wired" | "absent" | "misconfigured" }>;
   }>;
   applyCreditWebhook(request: UmbrellaWebhookRequestEvidence): Promise<CreditWebhookOutcome>;
@@ -80,6 +81,7 @@ export function umbrellaRequestAuthority(): UmbrellaRequestAuthority {
       const configuration = deployment.configuration;
 
       return Object.freeze({
+        configuration,
         planes: Object.freeze({
           identity: classifyUmbrellaPlane(configuration, ["DATABASE_URL", "BETTER_AUTH_ORIGIN", "BETTER_AUTH_SECRET", "SCENEAXI_ADMIN_EMAIL", "SCENEAXI_ADMIN_BOOTSTRAP_SECRET"], deployment.identityPort !== undefined),
           credits: classifyUmbrellaPlane(configuration, ["DATABASE_URL", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"], deployment.creditStore !== undefined && deployment.creditWebhook !== undefined),

@@ -8,7 +8,8 @@ export const dynamic = "force-dynamic";
 const reported = new Set<string>();
 
 export function GET() {
-  const { planes } = umbrellaRequestAuthority().health();
+  const { planes, configuration } = umbrellaRequestAuthority().health();
+
   for (const [plane, state] of Object.entries(planes)) {
     if (state !== "misconfigured" || reported.has(plane)) continue;
     reported.add(plane);
@@ -19,6 +20,7 @@ export function GET() {
     {
       ok: Object.values(planes).every((state) => state !== "misconfigured"),
       planes,
+      variables: configuration,
       commit: process.env.SCENEAXI_BUILD_COMMIT ?? "unknown",
     },
     { headers: { "Cache-Control": "no-store" } },
