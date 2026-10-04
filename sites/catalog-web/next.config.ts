@@ -19,6 +19,9 @@ const nextConfig: NextConfig = {
   transpilePackages: ["@sceneaxi/site-kit",
     "@sceneaxi/engine-kernel",
     "@sceneaxi/engine-presentation", "@sceneaxi/schemas", "@sceneaxi/authoring-core"],
+  outputFileTracingIncludes: {
+    "/**": ["./node_modules/@sceneaxi/site-kit/**"],
+  },
   reactStrictMode: true,
   // Baseline response headers for every route. The CSP is deliberately narrow — it
   // forbids framing, `<base>` rewriting, and plugins without restricting scripts or
