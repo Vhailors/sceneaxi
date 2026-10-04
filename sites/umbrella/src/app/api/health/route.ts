@@ -1,5 +1,6 @@
 import { umbrellaRequestAuthority } from "../../../lib/request-authority.js";
 import { serverLog } from "../../../lib/server-logger.js";
+import { umbrellaConstructionDiagnostics } from "../../../lib/identity-plane.js";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,7 @@ export function GET() {
       ok: Object.values(planes).every((state) => state !== "misconfigured"),
       planes,
       variables: configuration,
+      construction: umbrellaConstructionDiagnostics(),
       commit: process.env.SCENEAXI_BUILD_COMMIT ?? "unknown",
     },
     { headers: { "Cache-Control": "no-store" } },
