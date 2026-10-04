@@ -47,7 +47,6 @@
     "releaseGroup": "sites"
   },
   "license": "UNLICENSED",
-  "packageManager": "pnpm@12.6.0",
   "pnpm": {
     "overrides": {
       "fast-uri@3": "3.1.8",

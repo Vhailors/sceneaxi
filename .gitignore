@@ -42,3 +42,4 @@ desktop/*/dist-build/
 # and a second `.env*` after this negation would silently defeat it.
 .env*
 !.env.example
+.vercel

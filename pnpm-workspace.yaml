@@ -1,3 +1,7 @@
 packages:
   - "packages/*"
   - "apps/*"
+  - "sites/umbrella"
+  - "sites/catalog-game"
+  - "sites/catalog-web"
+
