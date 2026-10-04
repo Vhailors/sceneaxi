@@ -49,9 +49,6 @@ const nextConfig: NextConfig = {
   // Better Auth and pg are statically imported only by the provider host and stay
   // server-external for the same trace reason; no browser graph reaches this module.
   serverExternalPackages: ["@neondatabase/serverless", "better-auth", "pg", "stripe"],
-  outputFileTracingIncludes: {
-    "/**": ["./node_modules/@sceneaxi/site-kit/package.json"],
-  },
   reactStrictMode: true,
   // Baseline response headers for every route. The CSP is deliberately narrow — it
   // forbids framing, `<base>` rewriting, and plugins without restricting scripts or
