@@ -7,6 +7,11 @@ packages:
 - desktop/linux
 - desktop/windows
 - desktop/macos
+allowBuilds:
+  electron-winstaller: true
+  esbuild: true
+  sharp: true
+  unrs-resolver: true
 overrides:
   fast-uri@3: 3.1.8
   brace-expansion@5: 5.0.12

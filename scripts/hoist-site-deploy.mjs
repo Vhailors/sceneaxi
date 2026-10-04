@@ -109,6 +109,17 @@ try {
   };
 
   sweep(target);
+
+  for (const dup of ["next", "react", "react-dom", "styled-jsx"]) {
+    const pnpmDir = join(target, ".pnpm");
+
+    if (!existsSync(pnpmDir)) break;
+
+    for (const entry of readdirSync(pnpmDir)) {
+      if (entry.startsWith(`${dup}@`)) rmSync(join(pnpmDir, entry), { recursive: true, force: true });
+    }
+  }
+
   console.log(`hoist-site-deploy: real node_modules installed for ${manifest.name}`);
 } finally {
   rmSync(stage, { recursive: true, force: true });

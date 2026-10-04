@@ -33,6 +33,7 @@ const nextConfig: NextConfig = {
     "@sceneaxi/schemas",
     "@sceneaxi/authoring-core",
     "@sceneaxi/engine-presentation",
+    "@sceneaxi/engine-kernel",
     "@sceneaxi/auth",
     "@sceneaxi/billing",
   ],
@@ -50,6 +51,7 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@neondatabase/serverless", "better-auth", "pg", "stripe"],
   outputFileTracingIncludes: {
     "/**": [
+      "./node_modules/@sceneaxi/site-kit/package.json",
       "./node_modules/@neondatabase/serverless/**",
       "./node_modules/better-auth/**",
       "./node_modules/pg/**",
