@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 
 const site = process.argv[2];
 
@@ -23,12 +23,14 @@ run("pnpm", ["run", "build"]);
 
 run("node", ["scripts/hoist-site-deploy.mjs", siteDir]);
 
+run("node", ["scripts/restore-workspace-links.mjs", siteDir]);
+
 if (manifest.name === "@sceneaxi/site-umbrella") {
   run("node", ["scripts/build-engine-sdk.mjs", "--out", join("sites", site, "public", "engine-sdk")]);
 }
 
-run(join(siteDir, "node_modules", ".bin", "next"), ["build"], { cwd: siteDir });
+run(process.execPath, [join(siteDir, "node_modules", "next", "dist", "bin", "next"), "build"], { cwd: siteDir });
 
 run("node", ["scripts/materialize-site-links.mjs", siteDir]);
 
-run("node", ["scripts/check-vercel-package.mjs", siteDir], { cwd: siteDir });
+run("node", [join(root, "scripts", "check-vercel-package.mjs"), "."], { cwd: siteDir });
