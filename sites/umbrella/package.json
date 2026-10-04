@@ -29,9 +29,15 @@
     "better-auth": "^1.6.26",
     "next": "15.5.24",
     "pg": "^8.22.0",
-    "react": "19.1.1",
-    "react-dom": "19.1.1",
-    "stripe": "^22.4.0"
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "stripe": "^22.4.0",
+    "styled-jsx": "^5.1.6",
+    "@swc/helpers": "^0.5.15",
+    "@next/env": "^15.5.24",
+    "@playwright/test": "^1.63.0",
+    "caniuse-lite": "^1.0.30001814",
+    "postcss": "^8"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
