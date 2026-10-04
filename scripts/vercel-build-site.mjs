@@ -31,6 +31,8 @@ if (manifest.name === "@sceneaxi/site-umbrella") {
 
 run(process.execPath, [join(siteDir, "node_modules", "next", "dist", "bin", "next"), "build"], { cwd: siteDir });
 
+run("node", [join(root, "scripts", "fix-trace-entries.mjs"), siteDir]);
+
 run("node", ["scripts/materialize-site-links.mjs", siteDir]);
 
 run("node", [join(root, "scripts", "check-vercel-package.mjs"), "."], { cwd: siteDir });
