@@ -1,119 +1,118 @@
 {
-  "schemaVersion": 1,
-  "status": "BLOCKED_TRUE_ZERO_FLEET_POLICY_HANDOFF",
-  "updatedAt": "2026-10-03T17:45:42.941407+00:00",
-  "owner": "bg-177",
+  "schemaVersion": 2,
+  "status": "merged-cli-registry-publication-blocked",
+  "updatedAt": "2026-10-03T22:20:00Z",
+  "owner": "sole-final-release-operator",
   "ownedCheckout": "/tmp/sceneaxi-comprehensive-owned-xd4gdfl1",
-  "head": "c202bfcbf3e93f5414596e7fc0fbec5d51d82a16",
-  "foundationMergeHead": "16f312c61435e3d379a0e54525ac8115e35fee86",
-  "mergeCommits": [],
-  "frontierOrder": [
-    "f1b468",
-    "62e84c",
-    "740c7e",
-    "1e5ea6",
-    "db8afa",
-    "94a450",
-    "1d2fe8",
-    "23413e",
-    "fed05a7",
-    "private-export-overlay"
+  "mergedMain": "6420f5b70fd1a21d505929c318e2ad56165dd3f2",
+  "pushedCandidate": "c6f139a546ee7f098986b8ed9ae256614bf73ea7",
+  "priorDetailedReportCommit": "c6f139a546ee7f098986b8ed9ae256614bf73ea7",
+  "foundation": {
+    "commit": "759adfe",
+    "mergedTip": "16f312c61435e3d379a0e54525ac8115e35fee86",
+    "semanticResolutions": 105,
+    "originalStages": "assembly/current-checks/resolved-native-conflicts.json",
+    "method": "normal two-parent merge commit; preflight not bypassed"
+  },
+  "mergeCommits": [
+    { "family": "contained-git", "commit": "d55679b", "tip": "f1b468fa" },
+    { "family": "assets", "commit": "2fe0608", "tip": "62e84cbe" },
+    { "family": "input", "commit": "faff66c", "tip": "740c7e95" },
+    { "family": "smoke", "commit": "fb2e630", "tip": "1e5ea604" },
+    { "family": "audio", "commit": "1fb7762", "tip": "db8afa68" },
+    { "family": "audit", "commit": "7eeb184", "tip": "94a45030", "included": "89c7aa5e" },
+    { "family": "cloud", "commit": "e585f69", "tip": "1d2fe8aa" },
+    { "family": "maintenance", "commit": "f558443", "tip": "23413eb7" },
+    { "family": "pr310", "commit": "a4fb190898acc2a592c5934c4609b723145b33c5", "tip": "fed05a76" },
+    { "family": "production-snapshot", "commit": "7690a7e4c0185488519ae96ad9187fd925db0e99", "tip": "346933c" }
   ],
   "verification": {
-    "oxlint": "NOT_FULL_CANDIDATE_RERUN_AWAITING_FLEET_TRUE_ZERO",
-    "build": "NOT_RERUN_AWAITING_TRUE_ZERO",
-    "gate": "NOT_RERUN_AWAITING_TRUE_ZERO",
-    "reportJsonAndDiffCheck": "PASS"
+    "build": { "result": "passed", "repeatedFromMergedMain": true },
+    "focusedSchemaSiteKitViewport": { "result": "passed", "tests": 87 },
+    "declarationConsumer": { "result": "passed", "tests": 1, "assertionsPreserved": true },
+    "cliBinarySmoke": { "result": "passed", "tests": 9, "fromMergedMain": true },
+    "secretScanner": { "result": "passed-after-fixture-log-redaction", "tests": 16, "testContractUnchanged": true },
+    "sourceGuard": { "recordedFiles": 446, "warnings": 0, "errors": 0, "receipt": "assembly/final-completion/final-sourceguard.json", "finalEditedFileRun": "passed" },
+    "editedFileEslint": "passed",
+    "fullLintRetry": "exceeded 120-second execution budget; not claimed green",
+    "gate": {
+      "result": "RED",
+      "command": "pnpm gate",
+      "recordedEarlierExit": 1,
+      "latestForegroundRun": "exceeded 600-second execution budget during test phase",
+      "passedPhases": ["syntax", "boundaries", "contracts", "traceability", "sites", "desktop", "publish-ready", "build"],
+      "greenClaim": false,
+      "log": "/tmp/sceneaxi-release-gate.log",
+      "authorization": "standing user authorization to merge with RED CI; required workflows and contexts never disabled"
+    }
   },
-  "ancestryProof": "PENDING_ALL_34_CAPTURED_REFS",
-  "inventoryProof": "PENDING",
-  "prReceipts": [],
-  "residuals": [
-    "Anti-slop fleet handoff not yet true-zero; broad predicate exemption policy implementation pending parent approval/routing.",
-    "Full root oxlint/build/gate not rerun while source agents remain active.",
-    "Foundation and frontier native commits, final ancestry/inventory, pushes and PR merge receipts remain unexecuted.",
-    "Foreign uncommitted work OWNER_EXPORT_REQUIRED; not silently included."
+  "ancestryProof": {
+    "capturedRefCount": 34,
+    "allAncestors": true,
+    "nativeTestsPassed": 34,
+    "receipt": "assembly/final-completion/final-ancestry.json",
+    "test": "assembly/final-completion/native-ancestry.test.mjs"
+  },
+  "inventoryProof": {
+    "receipt": "assembly/final-completion/final-inventory.json",
+    "manifest": "assembly/final-completion/approved-candidate-manifest.json",
+    "explicitManifestPathsStaged": 2475,
+    "deletedMainPaths": 0,
+    "lostExecutableModes": 0,
+    "privateBackupsStaged": false,
+    "gitAddAllUsed": false,
+    "excludedGeneratedTestOutputs": ["tests/helpers/desktop-chrome-golden.js", "tests/helpers/desktop-chrome-golden.js.map", "tests/helpers/desktop-chrome-golden.d.ts", "tests/helpers/desktop-chrome-golden.d.ts.map"]
+  },
+  "prReceipts": [
+    {
+      "number": 310,
+      "url": "https://github.com/Vhailors/sceneaxi/pull/310",
+      "head": "a4fb190898acc2a592c5934c4609b723145b33c5",
+      "mergeCommit": "3d5284c2b1ed64b75a45da85133e075f634dc4fa",
+      "mergedAt": "2026-10-03T22:12:44Z",
+      "method": "gh pr merge --merge --admin --match-head-commit",
+      "readyForReview": true,
+      "enforceAdminsRestoredAndVerified": true
+    },
+    {
+      "number": 312,
+      "url": "https://github.com/Vhailors/sceneaxi/pull/312",
+      "head": "c6f139a546ee7f098986b8ed9ae256614bf73ea7",
+      "mergeCommit": "6420f5b70fd1a21d505929c318e2ad56165dd3f2",
+      "mergedAt": "2026-10-03T22:13:07Z",
+      "method": "gh pr merge --merge --admin --match-head-commit",
+      "bodyUpdatedTruthfully": true,
+      "enforceAdminsRestoredAndVerified": true
+    }
   ],
-  "preliminaryInventory": {
-    "trackedCandidates": 1201,
-    "untrackedCandidates": 1300,
-    "noDeletedMainPaths": true,
-    "noLostExecutableMainModes": true,
-    "proof": "assembly/final-completion/preliminary-inventory.json",
-    "notFinal": true
-  },
-  "foundationObservedStages": {
-    "conflictPaths": 105,
-    "stages": 236,
-    "proof": "assembly/final-completion/observed-unmerged-stages.json",
-    "originalResolutionManifestMissing": true
-  },
-  "githubObserved": {
-    "pr310": "OPEN",
-    "pr312": "OPEN",
-    "enforceAdmins": true,
-    "requiredContexts": [
-      "gate",
-      "engine-sdk"
-    ],
-    "notFinalCAS": true
-  },
-  "evidenceRequests": {
-    "originalManifest": "RECOVERED",
-    "familyReports": "RECOVERED",
-    "all34CapturedRefs": "RECOVERED"
-  },
-  "evidenceImport": {
-    "source": "/home/devuser/Documents/SceneAxi/.empryo/merge-analysis/sceneaxi-comprehensive-2026-10-02/assembly",
-    "importedFiles": 198,
-    "status": "RECOVERED_ORIGINAL_MANIFEST_AND_RESOLUTION_RECORDS",
-    "receipt": "assembly/final-completion/evidence-import.json",
-    "excluded": "Private source backups/patches and non-proof source copies; existing owned files never overwritten"
-  },
-  "byokHandback": {
-    "status": "COMPLETE",
-    "focusedTests": 23,
-    "eslint": "0 findings",
-    "oxlint": "0 warnings/0 errors",
-    "scopedTypecheck": "EXIT2 schemas/src/profile-conformance-suite.ts359 TS2307 missing ./json.js; full root build pending"
-  },
-  "mergeReadiness": {
-    "originalManifest": "2475 paths recovered; all present and modes match",
-    "originalNativeStages": "105 paths /236stages match original records exactly",
-    "resolutionPostimages": {
-      "unchanged": 69,
-      "changed": 36,
-      "status": "ACTIVE_FLEET_POSTIMAGES_RECORDED_NOT_YET_APPROVED_FROZEN"
+  "branchProtection": { "enforceAdmins": true, "requiredContexts": ["gate", "engine-sdk"], "workflowsDisabled": false },
+  "cliRedeploy": {
+    "status": "blocked-not-published",
+    "sourceCommit": "6420f5b70fd1a21d505929c318e2ad56165dd3f2",
+    "publishReadyChecks": { "passed": 17, "failed": 0 },
+    "build": "passed",
+    "engineSdk": {
+      "artifact": "dist-sdk/sceneaxi-engine-sdk-0.0.0.zip",
+      "bytes": 495266,
+      "entries": 173,
+      "sha256": "33b7f59f468632aa33f19082b9006e22f22d8c0965bdc5562cdb3a48ef13544f"
     },
-    "capturedRefs": {
-      "total": 34,
-      "matchingTips": 34,
-      "commitObjectsAvailable": 34,
-      "baselineAncestors": 9
+    "cliPack": {
+      "command": "npm pack --pack-destination /tmp/sceneaxi-cli-release-20261003 (cwd packages/cli)",
+      "artifact": "/tmp/sceneaxi-cli-release-20261003/sceneaxi-cli-0.0.0.tgz",
+      "sha256": "5b2a3fe5fc630f16db9aef462bf0957c8b0118796edcb22db21ebbcaeba10465",
+      "files": 27,
+      "result": "produced; not claimed as a standalone deployable registry package"
     },
-    "fullChangedSourceGuardPaths": 443,
-    "extraGeneratedArtifactsExcluded": 4,
-    "secretScan": "No real credential identified; explicit invalid-key boundary test fixture retained"
+    "credentialBlocker": "npm whoami --registry=https://registry.npmjs.org returned ENEEDAUTH; this machine has no authenticated npm registry credential (npm adduser or an authorized npm token required)",
+    "repositoryPipelineBlocker": "PUBLISH_PLAN.registryPublishAuthorized is false; manifests are private and no registry publish lifecycle pipeline is configured",
+    "registryPublishAttempted": false,
+    "publishSuccessClaimed": false
   },
-  "finalEntry": {
-    "fullyMerged": false,
-    "foundationMergeSha": null,
-    "foundationMergeHeadStillOpen": "16f312c61435e3d379a0e54525ac8115e35fee86",
-    "frontierMergeShas": [],
-    "all34CapturedRefProof": "assembly/final-completion/ancestry-preflight.json \u2014 all34 immutable tips match/objects exist; only9 current baseline ancestors; FINAL_ANCESTRY_NOT_ACHIEVED",
-    "inventory": "assembly/final-completion/resolution-preflight.json and preliminary-inventory.json \u2014 2475manifest paths present/modes match; no deleted main paths/executable losses; not a frozen final candidate",
-    "prMergeReceipts": [],
-    "observedPrUrls": [
-      "https://github.com/Vhailors/sceneaxi/pull/310",
-      "https://github.com/Vhailors/sceneaxi/pull/312"
-    ],
-    "remainingHonestResiduals": [
-      "No fleet true-zero handoff: chunk01 released source with74 genuine synchronous-predicate typeof diagnostics under unchanged strict policy; other chunks not globally certified.",
-      "Parent policy approval/routing requests timed out; no lint exemption invented or disabled.",
-      "Root full-candidate oxlint/build/gate not run under required post-zero sequencing; prior gate5194pass22fail is historical, not final verification.",
-      "Foundation105-resolutions native merge remains uncommitted; all frontier normal merges, final ancestry/inventory, fresh mainCAS publication and PR receipts remain outstanding.",
-      "PR310 immutable resolved-tree92facf absent from owned objectdb; foreign uncommitted trees untouched OWNER_EXPORT_REQUIRED, independent owned reconciliation needs handoff/approval.",
-      "Foreign uncommitted work outside owned scope remains OWNER_EXPORT_REQUIRED and disclosed."
-    ]
-  }
+  "residuals": [
+    "Full gate and latest full lint execution did not complete within execution budgets; CI remains disclosed RED.",
+    "CLI registry redeployment is blocked by missing npm authentication and the repository's private/no-registry publication plan.",
+    "Foreign-owner export gaps remain documented in assembly/final-completion/foreign-owner-export-gaps.json; no primary or foreign worktree was edited.",
+    "A historical audit log echoed a deny-list Postgres scheme literal, not a credential; the literal was redacted without weakening the 16-test secret-scanner contract. This is a post-merge follow-up change."
+  ]
 }

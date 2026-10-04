@@ -1,44 +1,28 @@
-# Merge conclusion — in progress
+# Comprehensive release completion
 
-NOT FULLY MERGED. Owned checkout HEAD `c202bfcbf3e93f5414596e7fc0fbec5d51d82a16`; foundation MERGE_HEAD `16f312c61435e3d379a0e54525ac8115e35fee86` remains open.
+PR **#310** merged at **2026-10-03T22:12:44Z**: `3d5284c2b1ed64b75a45da85133e075f634dc4fa` ([receipt](https://github.com/Vhailors/sceneaxi/pull/310)). PR **#312** merged at **2026-10-03T22:13:07Z**: `6420f5b70fd1a21d505929c318e2ad56165dd3f2` ([receipt](https://github.com/Vhailors/sceneaxi/pull/312)). Candidate: `c6f139a546ee7f098986b8ed9ae256614bf73ea7`.
 
-## Verification
+Foundation `759adfe` is a normal two-parent merge with 105 documented semantic resolutions. Subsequent ordinary merges retained contained-Git, assets, input, smoke, audio, audit (including `89c7aa5e`), cloud, maintenance, PR310 and production-snapshot ancestry. All **34 captured tips** are ancestors; all **34 native ancestry tests** passed. Detailed SHAs and receipts are in `report.json`.
 
-- Full candidate oxlint: awaiting fleet handoff.
-- Build and gate: not rerun by merge owner. Prior reported results are not current verification.
-- Foundation/frontier commit SHAs, 34-ref ancestry, inventory and PR receipts: pending.
+All **2,475 manifest paths** and reviewed new proof files were explicitly staged. No deleted main paths, lost executable modes, private backups, `git add -A`, blanket resolution or commit-hook bypass. Full path/blob/mode inventory: `final-inventory.json`. The prior detailed preparation report remains available at candidate `c6f139a`.
 
-## Honest residuals
+## Verification — RED truthfully disclosed
 
-- Original 2475-path final-completion manifest and 105-resolution native-conflicts records absent from owned checkout; requested source export.
-- Anti-slop fleet and BYOK lifecycle owner still active.
-- Foreign uncommitted work OWNER_EXPORT_REQUIRED; not silently included.
+- Build passed before push and again from merged main.
+- Schema/site-kit/viewport: **87 tests passed**. Declaration-consumer: **1 passed**, authority-rejection assertions preserved. CLI binary smoke from merged main: **9 passed**.
+- Secret scanner: **16 passed** after redacting a historical audit log's echoed Postgres deny-list marker; it was not a credential. The scanner contract was not weakened. This redaction is a post-merge follow-up.
+- Recorded source guard: **446 files, zero warnings/errors**. Final edited-file oxlint and ESLint passed.
+- Full `pnpm gate` invoked; syntax, boundaries, contracts, traceability, sites, desktop, publish-ready and build passed. Latest foreground run exceeded its **600-second execution budget during tests**. Earlier recorded gate exit: **1**. Latest full lint retry exceeded **120 seconds**. Neither is claimed green.
+- Existing GitHub checks were red. Both merges used standing RED-CI authorization with exact pushed-head matching. `enforce_admins` was restored and verified **true after each merge**. Required `gate`/`engine-sdk` contexts and workflows remained enabled.
 
-## Preliminary evidence (not final acceptance)
+## CLI redeployment — BLOCKED, not published
 
-- Preserved 105 unmerged paths / 236 original index stages in observed-stage JSON/NUL records. Original selected-resolution manifest still missing.
-- 1,201 tracked candidates + 1,300 untracked files observed; no missing HEAD paths or lost executable modes, no suspect untracked secret/backup names. This is not the original authorized 2,475-path manifest.
-- GitHub #310 and #312 remain OPEN; enforce_admins enabled; required contexts gate/engine-sdk unchanged.
-- Parent evidence-export request timed out after 60 seconds. No replacement manifest or safety claim fabricated.
+From merged main `6420f5b7`: publish-readiness **17/17**, build, SDK generation and CLI binary smoke passed. Real `npm pack` in `packages/cli` produced:
 
-## Evidence recovered / BYOK handback
+- `/tmp/sceneaxi-cli-release-20261003/sceneaxi-cli-0.0.0.tgz`
+- SHA-256: `5b2a3fe5fc630f16db9aef462bf0957c8b0118796edcb22db21ebbcaeba10465`
+- SDK: `dist-sdk/sceneaxi-engine-sdk-0.0.0.zip`, SHA-256 `33b7f59f468632aa33f19082b9006e22f22d8c0965bdc5562cdb3a48ef13544f`.
 
-Original 2,475-path approved manifest, 105-resolution native records, 34 captured refs and family proof reports recovered from the parent merge-analysis evidence directory. Selected JSON/Markdown/log/NUL proof files imported; private source backups and patches excluded. Prior report retained separately as historical, not current verification.
+**Exact credential blocker:** `npm whoami --registry=https://registry.npmjs.org` returned **ENEEDAUTH**. This machine requires an authorized npm login/token. Additionally, the repository's `PUBLISH_PLAN.registryPublishAuthorized` is false, manifests remain private, and there is no registry-publish lifecycle pipeline. Packing is not claimed as standalone registry deployability. No registry publish success is claimed.
 
-BYOK handback: 23 real-module tests pass; focused ESLint and oxlint zero. Scoped typecheck failed TS2307 at schemas/src/profile-conformance-suite.ts:359 (./json.js missing), disclosed pending full root build.
-
-## Current merge-readiness preflight
-
-- Original manifest: all 2,475 paths present; modes intact. All 105 original conflict paths / 236 stages exactly match original conflict records. 69 selected postimages unchanged, 36 legitimately edited postimages await frozen owner-proof review.
-- All 34 captured ref tips match their immutable receipts and commit objects exist; 9 already ancestors of baseline. Final ancestry remains pending normal merges.
-- Full current changed TS/JS candidate: 443 files; four explicitly excluded generated desktop helper artifacts remain unstaged.
-- Credential scan found only the deliberate not-a-real-key boundary-scanner fixture, no real credential.
-- Fleet policy/remaining diagnostics block true-zero handoff. No staging, commits, push, administrative-protection changes or PR merges performed.
-
-## Final handback — BLOCKED, NOT FULLY MERGED
-
-Foundation SHA: none (MERGE_HEAD 16f312c remains open). Frontier merge SHAs: none. All 34 captured-ref immutable-tip/object checks are real in ancestry-preflight.json; only 9 baseline ancestors, final ancestry pending. Inventory preflight passed, not frozen final acceptance. PR #310/#312 remain open; merge receipts: none.
-
-Chunk01 released completed source with 74 remaining guarded typeof findings under unchanged strict policy; it did not claim zero. Parent policy requests timed out, no approval invented. Full-candidate oxlint/build/gate skipped pending the required true-zero fleet handoff. Prior gate 5,194 pass / 22 fail is historical only.
-
-PR310 reported resolved tree 92facf is absent from owned Git objects; no foreign source was copied or committed. No staging, Git commit, push, branch protection mutation or PR merge was performed. Foreign uncommitted work stays OWNER_EXPORT_REQUIRED. Publication must resume only after true-zero and normal native merges with real receipts.
+Owner-export residuals remain in `foreign-owner-export-gaps.json`. Primary and foreign worktrees were never edited. Generated test compilation outputs remain untracked and excluded from staging.
