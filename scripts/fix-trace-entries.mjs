@@ -33,7 +33,7 @@ for (const glob of ["packages", "apps", "sites"]) {
     if (!existsSync(pkg)) continue;
     const name = JSON.parse(readFileSync(pkg, "utf8")).name;
 
-    if (workspaceNames.has(name)) workspacePathByName.set(name, join(glob, entry));
+    workspacePathByName.set(name, join(glob, entry));
   }
 }
 
