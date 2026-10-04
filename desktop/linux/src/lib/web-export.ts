@@ -1467,7 +1467,7 @@ function runExport(
 
   if (!webAssets.ok) return webAssets;
 
-  const manifestByPath = new Map(
+  const manifestByPath = new Map<string, ProjectAssetManifestEntry>(
     manifest.value.assets.map((entry) => [entry.relativePath, entry] as const),
   );
 
