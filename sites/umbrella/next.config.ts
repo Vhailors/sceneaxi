@@ -50,13 +50,7 @@ const nextConfig: NextConfig = {
   // server-external for the same trace reason; no browser graph reaches this module.
   serverExternalPackages: ["@neondatabase/serverless", "better-auth", "pg", "stripe"],
   outputFileTracingIncludes: {
-    "/**": [
-      "./node_modules/@sceneaxi/site-kit/package.json",
-      "./node_modules/@neondatabase/serverless/**",
-      "./node_modules/better-auth/**",
-      "./node_modules/pg/**",
-      "./node_modules/stripe/**",
-    ],
+    "/**": ["./node_modules/@sceneaxi/site-kit/package.json"],
   },
   reactStrictMode: true,
   // Baseline response headers for every route. The CSP is deliberately narrow — it
