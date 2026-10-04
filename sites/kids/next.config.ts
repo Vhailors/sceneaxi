@@ -19,6 +19,7 @@ const nextConfig: NextConfig = {
       ".js": [".ts", ".tsx", ".js"],
       ".mjs": [".mts", ".mjs"],
     };
+
     return config;
   },
 };
@@ -28,6 +29,7 @@ export default function kidsNextConfig(phase: string): NextConfig {
     phase === "phase-development-server"
       ? securityPolicy.developmentServerHeaders
       : securityPolicy.headers;
+
   return {
     ...nextConfig,
     async headers() {

@@ -16,7 +16,9 @@ const nextConfig: NextConfig = {
   // it. Vercel materializes serverless functions from Next's file traces, so the trace
   // root must contain both the app and those package sources.
   outputFileTracingRoot: resolve(dirname(fileURLToPath(import.meta.url)), "../.."),
-  transpilePackages: ["@sceneaxi/site-kit", "@sceneaxi/schemas", "@sceneaxi/authoring-core"],
+  transpilePackages: ["@sceneaxi/site-kit",
+    "@sceneaxi/engine-kernel",
+    "@sceneaxi/engine-presentation", "@sceneaxi/schemas", "@sceneaxi/authoring-core"],
   reactStrictMode: true,
   // Baseline response headers for every route. The CSP is deliberately narrow — it
   // forbids framing, `<base>` rewriting, and plugins without restricting scripts or
@@ -36,6 +38,7 @@ const nextConfig: NextConfig = {
       ".js": [".ts", ".tsx", ".js"],
       ".mjs": [".mts", ".mjs"],
     };
+
     return config;
   },
 };
